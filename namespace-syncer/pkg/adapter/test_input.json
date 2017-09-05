@@ -1,0 +1,15 @@
+[
+	{"name": "myNamespace", "workingNamespace": true, "parent": "myFolder",
+		"policies": {
+			"roles": [{
+				"rules": [
+					{"resources": ["pods"],
+						"verbs": [ "get", "watch"]
+					}
+				]
+			}],
+			"roleBindings": []
+		}
+	},
+	{"name": "myFolder"	}
+]
