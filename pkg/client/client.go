@@ -42,7 +42,7 @@ type ClusterState struct {
 
 // GetState returns a ClusterState of the clusteer
 func (c *Client) GetState() (*ClusterState, error) {
-	namespaceList, err := c.clientSet.Namespaces().List(meta_v1.ListOptions{})
+	namespaceList, err := c.clientSet.CoreV1().Namespaces().List(meta_v1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to list namespaces")
 	}
