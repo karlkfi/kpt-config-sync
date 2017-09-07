@@ -17,10 +17,17 @@ limitations under the License.
 package client
 
 import (
+	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
+
+var reservedNamespaces = map[string]bool{
+	"default":     true,
+	"kube-public": true,
+	"kube-system": true,
+}
 
 // Client is a container for the kubernetes Clientset and adds some functionality on top of it for
 // mostly reference purposes.
@@ -50,4 +57,48 @@ func (c *Client) GetState() (*ClusterState, error) {
 // ClientSet returns the clientset in the client
 func (c *Client) ClientSet() *kubernetes.Clientset {
 	return c.clientSet
+}
+
+// SyncNamespaces updates / deletes namespaces on the cluster to match the list of namespaces
+// provided in the arg.  This ignores kube-public, kube-system and default.
+func (c *Client) SyncNamespaces(namespaces []string) error {
+	glog.Infof("Syncing %d namespaces", len(namespaces))
+
+	clusterState, err := c.GetState()
+	if err != nil {
+		return errors.Wrapf(err, "Failed to get state from cluster")
+	}
+
+	definedNamespaces := map[string]bool{}
+	for _, namespace := range namespaces {
+		definedNamespaces[namespace] = true
+	}
+	existingNamespaces := map[string]bool{}
+	for _, namespace := range clusterState.Namespaces {
+		existingNamespaces[namespace] = true
+	}
+
+	namespaceActions := []NamespaceAction{}
+	for ns := range existingNamespaces {
+		if reservedNamespaces[ns] {
+			continue
+		}
+		if !definedNamespaces[ns] {
+			namespaceActions = append(namespaceActions, &NamespaceDeleteAction{namespace: ns})
+		} else {
+			glog.Infof("Namespace %s exists, no change needed", ns)
+		}
+	}
+
+	for ns := range definedNamespaces {
+		if !existingNamespaces[ns] {
+			namespaceActions = append(namespaceActions, &NamespaceCreateAction{namespace: ns})
+		}
+	}
+
+	for _, action := range namespaceActions {
+		action.Execute(c)
+	}
+
+	return nil
 }

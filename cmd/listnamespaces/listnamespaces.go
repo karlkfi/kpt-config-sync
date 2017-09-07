@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -24,17 +25,43 @@ import (
 )
 
 func main() {
+	flag.Parse()
+
 	client, err := client.NewClient("minikube")
 	if err != nil {
 		glog.Fatalf("Error creating client: %v\n", err)
 	}
 	state, err := client.GetState()
 	if err != nil {
-		glog.Fatalf("Error fetching state: %s\n", err)
+		glog.Fatalf("Error fetching state: %v\n", err)
 	}
 
 	fmt.Printf("Found namespaces:\n")
 	for _, namespace := range state.Namespaces {
 		fmt.Printf(" %s\n", namespace)
+	}
+
+	// generate some namespaces
+	namespaces := []string{}
+	for i := 0; i < 100; i++ {
+		namespaces = append(namespaces, fmt.Sprintf("namespace-%d", i))
+	}
+
+	// Create them
+	err = client.SyncNamespaces(namespaces)
+	if err != nil {
+		glog.Fatalf("Failed to sync namespaces %v", err)
+	}
+
+	// Delete some of them
+	err = client.SyncNamespaces(namespaces[50:])
+	if err != nil {
+		glog.Fatalf("Failed to sync namespaces %v", err)
+	}
+
+	// Delete all of them
+	err = client.SyncNamespaces([]string{})
+	if err != nil {
+		glog.Fatalf("Failed to sync namespaces %v", err)
 	}
 }
