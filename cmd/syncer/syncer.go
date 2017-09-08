@@ -20,7 +20,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/mdruskin/kubernetes-enterprise-control/namespace-syncer/pkg/adapter"
+
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/adapter"
 )
 
 func main() {
