@@ -1,0 +1,18 @@
+apiVersion: "settings.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: policy-node-ns1
+spec:
+  Name: nameSpace1
+  WorkingNamespace: true
+  Parent: orgUnit1
+  Policies:
+    Roles:
+    - kind: Role
+      apiVersion: rbac.authorization.k8s.io/v1beta1
+      metadata:
+        namespace: nameSpace1
+        name: pod-writer
+      rules:
+      - resources: ["pods"]
+        verbs: ["write"]

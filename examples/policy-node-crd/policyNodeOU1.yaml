@@ -1,0 +1,17 @@
+apiVersion: "settings.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: policy-node-ou1
+spec:
+  Name: orgUnit1
+  WorkingNamespace: false
+  Policies:
+    Roles:
+    - kind: Role
+      apiVersion: rbac.authorization.k8s.io/v1beta1
+      metadata:
+        namespace: orgUnit1
+        name: pod-reader
+      rules:
+      - resources: ["pods"]
+        verbs: ["get"]
