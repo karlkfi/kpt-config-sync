@@ -17,7 +17,7 @@
 # a statically linked binary.
 FROM scratch
 # TODO(filmil): Will need to add the CA and server keys.
-ADD webhook_authorizer webhook_authorizer
+ADD authorizer authorizer
 EXPOSE 443
-ENTRYPOINT ["/webhook_authorizer"]
+ENTRYPOINT ["/authorizer"]
 

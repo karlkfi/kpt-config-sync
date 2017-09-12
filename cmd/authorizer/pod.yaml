@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Pod
 metadata:
-        name: webhook-authorizer-example
+        name: authorizer
 spec:
         containers:
-        - name: webhook-authorizer
-          image: webhook_authorizer:experimental
+        - name: authorizer
+          image: authorizer:experimental
           ports:
                 - containerPort: 443
           args: ["--logtostderr"]

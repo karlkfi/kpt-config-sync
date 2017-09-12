@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: build clean test docker_minikube docker_clean webhook_authorizer
+.PHONY: build clean test docker_minikube docker_clean authorizer
 
-PREFIX := webhook_authorizer
+PREFIX := authorizer
 TAG := experimental
 
 DOCKER_ENV := $(shell minikube docker-env)
@@ -22,12 +22,12 @@ DOCKER_ENV := $(shell minikube docker-env)
 all: docker_minikube
 
 
-build: webhook_authorizer
+build: authorizer
 
 # CGO_ENABLED=0 will build a statically linked binary, which allows us to
 # build a Docker container from scratch and get a very tiny container.
 # TODO(filmil): CGO_ENABLED=0 build is too slow.  See if it can be sped up.
-webhook_authorizer:
+authorizer:
 	CGO_ENABLED=0 go build .
 
 
@@ -40,7 +40,9 @@ clean:
 
 # Build a docker container for the minikube docker repository.
 docker_minikube: build test
-	eval $(DOCKER_ENV) && docker build -t $(PREFIX):$(TAG) .
+	eval $(DOCKER_ENV) && \
+	docker build -t $(PREFIX):$(TAG) .
 
 docker_clean:
-	eval $(DOCKER_ENV) && docker rmi $(PREFIX):$(TAG)
+	eval $(DOCKER_ENV) && \
+	docker rmi $(PREFIX):$(TAG)
