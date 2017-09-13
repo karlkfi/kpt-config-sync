@@ -18,6 +18,7 @@ package client
 
 import (
 	"github.com/golang/glog"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -32,7 +33,8 @@ var reservedNamespaces = map[string]bool{
 // Client is a container for the kubernetes Clientset and adds some functionality on top of it for
 // mostly reference purposes.
 type Client struct {
-	clientSet *kubernetes.Clientset
+	clientSet                *kubernetes.Clientset
+	policyHierarchyClientset *policyhierarchy.Clientset
 }
 
 // ClusterState is the state of a cluster, which currently is just the list of namespaces.
