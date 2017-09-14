@@ -29,9 +29,9 @@ import (
 
 var (
 	listenAddr = flag.String(
-		"listen_hostport", ":443", "The hostport to listen to.")
+		"listen_hostport", ":8443", "The hostport to listen to.")
 	certFile = flag.String(
-		"cert_file", "server.crt", "The server certificate file")
+		"cert_file", "server.crt", "The server certificate file.")
 	serverKeyFile = flag.String(
 		"server_key", "server.key", "The server key file.")
 	handlerUrlPath = flag.String(
@@ -98,6 +98,7 @@ func Responder(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// TODO(filmil): Check the request sanity
+	log.V(1).Infof("Request: %+v", string(body))
 
 	reviewResponse := authz.SubjectAccessReview{
 		TypeMeta: metav1.TypeMeta{
@@ -113,6 +114,7 @@ func Responder(writer http.ResponseWriter, req *http.Request) {
 		log.Errorf("While marshalling response: %v", err)
 		return
 	}
+	log.V(2).Infof("Response: %+v", string(resp))
 	writer.Write(resp)
 }
 
@@ -152,7 +154,9 @@ func Server(handler handlerFunc) *http.Server {
 func main() {
 	flag.Parse()
 	srv := Server(ServeFunc())
-	log.Infof("Listening at: %v", *listenAddr)
+	log.Infof("Webhook authorizer listening at: %v", *listenAddr)
+	log.Infof("Using server certificate file: %v", *certFile)
+	log.Infof("Using server private key file: %v", *serverKeyFile)
 	err := srv.ListenAndServeTLS(*certFile, *serverKeyFile)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)

@@ -15,9 +15,10 @@
 # Note 'scratch' doesn't contain any of the possibly required dynamic libraries.
 # So, this deployment only makes sense if we know that webhook_authorizer is
 # a statically linked binary.
-FROM scratch
-# TODO(filmil): Will need to add the CA and server keys.
+FROM busybox
 ADD authorizer authorizer
-EXPOSE 443
+ADD server.key server.key
+ADD server.crt server.crt
+EXPOSE 8443
 ENTRYPOINT ["/authorizer"]
 

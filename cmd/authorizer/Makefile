@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: build clean test docker_minikube docker_clean authorizer
+.PHONY: build clean test docker_minikube docker_clean authorizer cert
+.PHONY: debug_authorizer_start minikube_start minikube_stop
 
 PREFIX := authorizer
 TAG := experimental
@@ -37,12 +38,34 @@ test: build
 
 clean:
 	go clean .
+	rm -f *.crt *.key *.pem *.csr
+	rm $(HOME)/.minikube/addons/webhook.kubeconfig
+
+# Use this target to run the test authorizer on your machine, with a debug
+# setup
+debug_authorizer_start: authorizer server.key server.crt
+	./authorizer --logtostderr --vmodule=main=2
 
 # Build a docker container for the minikube docker repository.
-docker_minikube: build test
+docker_minikube: build test server.key server.crt
 	eval $(DOCKER_ENV) && \
 	docker build -t $(PREFIX):$(TAG) .
 
 docker_clean:
 	eval $(DOCKER_ENV) && \
 	docker rmi $(PREFIX):$(TAG)
+
+.NOTPARALLEL: server.key server.csr server.pem server.crt
+server.key server.csr server.pem server.crt:
+	./gencert.sh
+
+
+$(HOME)/.minikube/addons/webhook.kubeconfig: minikube/init.sh
+	minikube/init.sh
+
+minikube_start: $(HOME)/.minikube/addons/webhook.kubeconfig minikube/start.sh
+	minikube/start.sh
+
+minikube_stop:
+	minikube stop
+
