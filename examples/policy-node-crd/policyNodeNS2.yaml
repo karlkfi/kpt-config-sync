@@ -1,13 +1,13 @@
-apiVersion: "settings.k8s.io/v1"
+apiVersion: "k8us.k8s.io/v1"
 kind: PolicyNode
 metadata:
   name: policy-node-ns2
 spec:
-  Name: nameSpace2
-  WorkingNamespace: true
-  Parent: orgUnit1
-  Policies:
-    ResourceQuotas:
+  name: nameSpace2
+  workingNamespace: true
+  parent: orgUnit1
+  policies:
+    resourceQuotas:
     - kind: ResourceQuota
       apiVersion: v1
       metadata:

@@ -1,13 +1,13 @@
-apiVersion: "settings.k8s.io/v1"
+apiVersion: "k8us.k8s.io/v1"
 kind: PolicyNode
 metadata:
   name: policy-node-ns1
 spec:
-  Name: nameSpace1
-  WorkingNamespace: true
-  Parent: orgUnit1
-  Policies:
-    Roles:
+  name: nameSpace1
+  workingNamespace: true
+  parent: orgUnit1
+  policies:
+    roles:
     - kind: Role
       apiVersion: rbac.authorization.k8s.io/v1beta1
       metadata:
