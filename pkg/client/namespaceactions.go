@@ -50,7 +50,7 @@ func (n *NamespaceDeleteAction) Execute(client *Client) error {
 	}
 
 	glog.Infof("Deleting namespace %s", n.namespace)
-	return client.ClientSet().CoreV1().Namespaces().Delete(n.namespace, &meta_v1.DeleteOptions{})
+	return client.Kubernetes().CoreV1().Namespaces().Delete(n.namespace, &meta_v1.DeleteOptions{})
 }
 
 func (n *NamespaceDeleteAction) Name() string {
@@ -75,7 +75,7 @@ func (n *NamespaceCreateAction) Execute(client *Client) error {
 	}
 
 	glog.Infof("Creating namespace %s", n.namespace)
-	createdNamespace, err := client.ClientSet().CoreV1().Namespaces().Create(&core_v1.Namespace{
+	createdNamespace, err := client.Kubernetes().CoreV1().Namespaces().Create(&core_v1.Namespace{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: n.namespace,
 		},

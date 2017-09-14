@@ -17,11 +17,16 @@ limitations under the License.
 package client
 
 import (
+	"strings"
+
+	"github.com/docker/machine/libmachine/log"
 	"github.com/golang/glog"
+	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 var reservedNamespaces = map[string]bool{
@@ -33,8 +38,32 @@ var reservedNamespaces = map[string]bool{
 // Client is a container for the kubernetes Clientset and adds some functionality on top of it for
 // mostly reference purposes.
 type Client struct {
-	clientSet                *kubernetes.Clientset
+	kubernetesClientset      *kubernetes.Clientset
 	policyHierarchyClientset *policyhierarchy.Clientset
+}
+
+// New creates a new Client from the clientsets it will use.
+func New(
+	kubernetesClientset *kubernetes.Clientset,
+	policyHierarchyClientset *policyhierarchy.Clientset) *Client {
+	return &Client{
+		kubernetesClientset:      kubernetesClientset,
+		policyHierarchyClientset: policyHierarchyClientset,
+	}
+}
+
+func NewForConfig(cfg *rest.Config) (*Client, error) {
+	kubernetesClientset, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to create kubernetes clientset")
+	}
+
+	policyHierarchyClientSet, err := policyhierarchy.NewForConfig(cfg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to create policyhierarchy clientset")
+	}
+
+	return New(kubernetesClientset, policyHierarchyClientSet), nil
 }
 
 // ClusterState is the state of a cluster, which currently is just the list of namespaces.
@@ -44,7 +73,7 @@ type ClusterState struct {
 
 // GetState returns a ClusterState of the clusteer
 func (c *Client) GetState() (*ClusterState, error) {
-	namespaceList, err := c.clientSet.CoreV1().Namespaces().List(meta_v1.ListOptions{})
+	namespaceList, err := c.kubernetesClientset.CoreV1().Namespaces().List(meta_v1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to list namespaces")
 	}
@@ -57,8 +86,13 @@ func (c *Client) GetState() (*ClusterState, error) {
 }
 
 // ClientSet returns the clientset in the client
-func (c *Client) ClientSet() *kubernetes.Clientset {
-	return c.clientSet
+func (c *Client) Kubernetes() *kubernetes.Clientset {
+	return c.kubernetesClientset
+}
+
+// PolicyHierarchy returns the clientset for the policyhierarchy custom resource
+func (c *Client) PolicyHierarchy() *policyhierarchy.Clientset {
+	return c.policyHierarchyClientset
 }
 
 // SyncNamespaces updates / deletes namespaces on the cluster to match the list of namespaces
@@ -103,4 +137,34 @@ func (c *Client) SyncNamespaces(namespaces []string) error {
 	}
 
 	return nil
+}
+
+func (c *Client) FetchPolicyHierarchy() ([]policyhierarchy_v1.PolicyNode, error) {
+	glog.Info("Fetching policy hierarchy")
+
+	nodeList, err := c.policyHierarchyClientset.K8usV1().PolicyNodes().List(meta_v1.ListOptions{})
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to list policy hierarchy")
+	}
+
+	return nodeList.Items, nil
+}
+
+func (c *Client) SyncPolicyHierarchy() error {
+	policyNodes, err := c.FetchPolicyHierarchy()
+	if err != nil {
+		return err
+	}
+
+	var namespaces []string
+	for _, policyNode := range policyNodes {
+		// log.Infof("PolicyNode %#v", policyNode)
+		// spew.Dump("PolicyNode ", policyNode)
+		ns := policyNode.Spec.Name
+		log.Infof("Found namespace %s", ns)
+
+		namespaces = append(namespaces, strings.ToLower(ns))
+	}
+
+	return c.SyncNamespaces(namespaces)
 }

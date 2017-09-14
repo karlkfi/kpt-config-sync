@@ -27,6 +27,9 @@ import (
 )
 
 var (
+	flagSyncPolicyHierarchy = flag.Bool(
+		"sync_policy_hierarchy", false, "demonstrate syncing policy hierarchy from custom resource")
+
 	flagSyncNamespacesDemo = flag.Bool(
 		"sync_namespaces_demo", false, "demonstrate syncing namespaces")
 
@@ -71,6 +74,10 @@ func main() {
 	if *flagSyncNamespacesDemo {
 		syncNamespacesDemo(clusterClient)
 	}
+
+	if *flagSyncPolicyHierarchy {
+		syncPolicyHierarchyDemo(clusterClient)
+	}
 }
 
 // Demonstrate namespace sync by syncing list of NS (create), then part of list (update)
@@ -98,5 +105,12 @@ func syncNamespacesDemo(clusterClient *client.Client) {
 	err = clusterClient.SyncNamespaces([]string{})
 	if err != nil {
 		glog.Fatalf("Failed to sync namespaces %v", err)
+	}
+}
+
+func syncPolicyHierarchyDemo(clusterClient *client.Client) {
+	err := clusterClient.SyncPolicyHierarchy()
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to sync policy hierarchy"))
 	}
 }

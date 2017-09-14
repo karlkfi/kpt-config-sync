@@ -26,7 +26,6 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/clientcmd/api/v1"
@@ -62,15 +61,7 @@ func NewServiceAccountClient(secretPath string) (*Client, error) {
 		return nil, err
 	}
 
-	clientSet, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to create kubernetes client")
-	}
-	if clientSet == nil {
-		return nil, errors.Errorf("Got nil client with nil error")
-	}
-
-	return &Client{clientSet: clientSet}, nil
+	return NewForConfig(cfg)
 }
 
 func loadKubectlConfig() (*api.Config, error) {
@@ -123,13 +114,5 @@ func NewMiniKubeClient() (*Client, error) {
 		},
 	}
 
-	clientSet, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to create kubernetes client")
-	}
-	if clientSet == nil {
-		return nil, errors.Errorf("Got nil client with nil error")
-	}
-
-	return &Client{clientSet: clientSet}, nil
+	return NewForConfig(cfg)
 }
