@@ -54,6 +54,7 @@ func New(
 	}
 }
 
+// NewForConfig will r
 func NewForConfig(cfg *rest.Config) (*Client, error) {
 	kubernetesClientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -144,6 +145,8 @@ func (c *Client) SyncNamespaces(namespaces []string) error {
 	return nil
 }
 
+// FetchPolicyHierarchy returns all policy nodes from the custom resource as well as
+// the resource version they were read at.
 func (c *Client) FetchPolicyHierarchy() ([]policyhierarchy_v1.PolicyNode, string, error) {
 	glog.Info("Fetching policy hierarchy")
 
@@ -176,14 +179,36 @@ var (
 
 // ExtractNamespace returns the sanitized namespace name from a PolicyNode
 func ExtractNamespace(policyNode *policyhierarchy_v1.PolicyNode) string {
-	// TODO: add check for invalid characters
-	ns := policyNode.Spec.Name
-	if !namespaceRe.MatchString(ns) {
-		panic(errors.Errorf("Namespace %s does not satisfy valid namespace patter %s", ns, namespaceRegexPattern))
-	}
-	return strings.ToLower(ns)
+	return SanitizeNamespace(policyNode.Spec.Name)
 }
 
+// SanitizeNamespace will convert the namespace name to lowercase and assert it matches the
+// formatting rules for namespaces.
+func SanitizeNamespace(ns string) string {
+	ns = strings.ToLower(ns)
+	if !namespaceRe.MatchString(ns) {
+		panic(errors.Errorf("Namespace \"%s\" does not satisfy valid namespace pattern %s", ns, namespaceRegexPattern))
+	}
+	return ns
+}
+
+// WrapPolicyNodeSpec will take a PolicyNodeSpec, wrap it in a PolicyNode and populate the appropriate
+// fields.
+func WrapPolicyNodeSpec(spec *policyhierarchy_v1.PolicyNodeSpec) *policyhierarchy_v1.PolicyNode {
+	return &policyhierarchy_v1.PolicyNode{
+		TypeMeta: meta_v1.TypeMeta{
+			APIVersion: policyhierarchy_v1.GroupName,
+			Kind:       "PolicyNode",
+		},
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: SanitizeNamespace(spec.Name),
+		},
+		Spec: *spec,
+	}
+}
+
+// SyncPolicyHierarchy will read PolicyNodes from the custom resource then synchronize the
+// namespaces to match the ones defined in the PolicyNodes custom resource.
 func (c *Client) SyncPolicyHierarchy() error {
 	policyNodes, _, err := c.FetchPolicyHierarchy()
 	if err != nil {
@@ -193,6 +218,7 @@ func (c *Client) SyncPolicyHierarchy() error {
 	return c.SyncNamespaces(nss)
 }
 
+// NamespaceCreateAction will return a NamespaceAction that will create a namespace.
 func (c *Client) NamespaceCreateAction(namespace string) *NamespaceCreateAction {
 	return &NamespaceCreateAction{
 		namespaceActionBase{
@@ -202,6 +228,7 @@ func (c *Client) NamespaceCreateAction(namespace string) *NamespaceCreateAction 
 	}
 }
 
+// NamespaceDeleteAction will return a NamespaceAction that will delete a namespace
 func (c *Client) NamespaceDeleteAction(namespace string) *NamespaceDeleteAction {
 	return &NamespaceDeleteAction{
 		namespaceActionBase{
@@ -235,6 +262,7 @@ func (c *Client) RunSyncerDaemon() service.Stoppable {
 		panic(errors.Wrapf(err, "Failed to watch policy hierarchy"))
 	}
 
+	// TODO: refactor this into wrapper which re-opens watch on resultChan closing
 	go func() {
 		glog.Infof("Watching changes to policynodes at %s", resourceVersion)
 		resultChan := watchIface.ResultChan()
@@ -246,7 +274,7 @@ func (c *Client) RunSyncerDaemon() service.Stoppable {
 					return
 				}
 				node := event.Object.(*policyhierarchy_v1.PolicyNode)
-				glog.Infof("Got event %s %s", event.Type, node.Spec.Name)
+				glog.Infof("Got event %s %s resourceVersion %s", event.Type, node.Spec.Name, node.ResourceVersion)
 
 				namespace := ExtractNamespace(node)
 

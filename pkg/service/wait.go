@@ -47,9 +47,9 @@ func WaitForShutdownSignal(stoppable Stoppable) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	glog.Info("Waiting for shutdown signal INT/TERM...")
+	glog.Infof("Waiting for shutdown signal INT/TERM...")
 	s := <-c
-	glog.Info("Got signal %v, shutting down", s)
+	glog.Infof("Got signal %v, shutting down", s)
 	stoppable.Stop()
 }
 

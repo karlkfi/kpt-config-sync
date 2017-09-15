@@ -89,7 +89,7 @@ func (n *NamespaceCreateAction) Execute() error {
 		glog.Infof("Failed to create namespace %s: %v", n.namespace, err)
 		return err
 	}
-	glog.Infof("Created namespace %#v", createdNamespace)
+	glog.Infof("Created namespace %s, resourceVersion %s", n.namespace, createdNamespace.ResourceVersion)
 	return nil
 }
 
