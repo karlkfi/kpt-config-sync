@@ -20,15 +20,25 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/golang/glog"
+	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client"
 	"github.com/pkg/errors"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
 	flagSyncPolicyHierarchy = flag.Bool(
 		"sync_policy_hierarchy", false, "demonstrate syncing policy hierarchy from custom resource")
+
+	flagWatchPolicyHierarchy = flag.Bool(
+		"watch_policy_hierarchy", false, "demonstrate watching policy hierarchy from custom resource")
 
 	flagSyncNamespacesDemo = flag.Bool(
 		"sync_namespaces_demo", false, "demonstrate syncing namespaces")
@@ -78,6 +88,10 @@ func main() {
 	if *flagSyncPolicyHierarchy {
 		syncPolicyHierarchyDemo(clusterClient)
 	}
+
+	if *flagWatchPolicyHierarchy {
+		WatchSyncPolicyHierarchy(clusterClient)
+	}
 }
 
 // Demonstrate namespace sync by syncing list of NS (create), then part of list (update)
@@ -113,4 +127,75 @@ func syncPolicyHierarchyDemo(clusterClient *client.Client) {
 	if err != nil {
 		panic(errors.Wrapf(err, "Failed to sync policy hierarchy"))
 	}
+}
+
+// WatchSyncPolicyHierarchy will sync the namespaces then watch the policynodes custom resource
+// for changes and sync namespaces as appropriate.
+func WatchSyncPolicyHierarchy(clusterClient *client.Client) {
+	policyNodes, resourceVersion, err := clusterClient.FetchPolicyHierarchy()
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to fetch policies"))
+	}
+
+	namespaces := client.ExtractNamespaces(policyNodes)
+
+	err = clusterClient.SyncNamespaces(namespaces)
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to sync namespaces"))
+	}
+
+	watchIface, err := clusterClient.PolicyHierarchy().K8usV1().PolicyNodes().Watch(
+		meta_v1.ListOptions{ResourceVersion: resourceVersion})
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to watch policy hierarchy"))
+	}
+
+	go func() {
+		glog.Infof("Watching changes to policynodes at %s", resourceVersion)
+		resultChan := watchIface.ResultChan()
+		for {
+			select {
+			case event, ok := <-resultChan:
+				if !ok {
+					glog.Info("Channel closed, exiting")
+					return
+				}
+				node := event.Object.(*policyhierarchy_v1.PolicyNode)
+				glog.Infof("Got event %s %s", event.Type, node.Spec.Name)
+
+				namespace := client.ExtractNamespace(node)
+
+				var action client.NamespaceAction
+				switch event.Type {
+				case watch.Added:
+					// add the ns
+					action = clusterClient.NamespaceCreateAction(namespace)
+				case watch.Modified:
+				case watch.Deleted:
+					// delete the ns
+					action = clusterClient.NamespaceDeleteAction(namespace)
+				case watch.Error:
+					panic(errors.Wrapf(err, "Got error during watch operation"))
+				}
+
+				if action == nil {
+					continue
+				}
+
+				err := action.Execute()
+				if err != nil {
+					glog.Errorf("Failed to perform action %s on %s: %s", action.Operation(), action.Name(), err)
+				}
+			}
+		}
+	}()
+
+	// wait for signal
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	glog.Info("Waiting for shutdown signal...")
+	s := <-c
+	glog.Info("Got signal %v, shutting down", s)
+	watchIface.Stop()
 }

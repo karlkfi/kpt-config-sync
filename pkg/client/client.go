@@ -17,9 +17,9 @@ limitations under the License.
 package client
 
 import (
+	"regexp"
 	"strings"
 
-	"github.com/docker/machine/libmachine/log"
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
@@ -120,7 +120,7 @@ func (c *Client) SyncNamespaces(namespaces []string) error {
 			continue
 		}
 		if !definedNamespaces[ns] {
-			namespaceActions = append(namespaceActions, &NamespaceDeleteAction{namespace: ns})
+			namespaceActions = append(namespaceActions, c.NamespaceDeleteAction(ns))
 		} else {
 			glog.Infof("Namespace %s exists, no change needed", ns)
 		}
@@ -128,43 +128,87 @@ func (c *Client) SyncNamespaces(namespaces []string) error {
 
 	for ns := range definedNamespaces {
 		if !existingNamespaces[ns] {
-			namespaceActions = append(namespaceActions, &NamespaceCreateAction{namespace: ns})
+			namespaceActions = append(namespaceActions, c.NamespaceCreateAction(ns))
 		}
 	}
 
 	for _, action := range namespaceActions {
-		action.Execute(c)
+		err := action.Execute()
+		if err != nil {
+			glog.Infof("Action %s %s failed due to %s", action.Name(), action.Operation(), err)
+		}
 	}
 
 	return nil
 }
 
-func (c *Client) FetchPolicyHierarchy() ([]policyhierarchy_v1.PolicyNode, error) {
+func (c *Client) FetchPolicyHierarchy() ([]policyhierarchy_v1.PolicyNode, string, error) {
 	glog.Info("Fetching policy hierarchy")
 
 	nodeList, err := c.policyHierarchyClientset.K8usV1().PolicyNodes().List(meta_v1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to list policy hierarchy")
+		return nil, "", errors.Wrapf(err, "Failed to list policy hierarchy")
 	}
 
-	return nodeList.Items, nil
+	return nodeList.Items, nodeList.ResourceVersion, nil
+}
+
+// ExtractNamespaces returns all the namespace names from a list of policy nodes.
+func ExtractNamespaces(policyNodes []policyhierarchy_v1.PolicyNode) []string {
+	var namespaces []string
+	for _, policyNode := range policyNodes {
+		namespaces = append(namespaces, ExtractNamespace(&policyNode))
+	}
+
+	return namespaces
+}
+
+// Pattern from output returned by kubectl
+var namespaceRegexPattern = "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
+var namespaceRe *regexp.Regexp
+
+func init() {
+	// Have to declare err here because golang won't let me use := on the next line.  Behold the perfect beauty of go.
+	var err error
+	namespaceRe, err = regexp.Compile(namespaceRegexPattern)
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to compile regex"))
+	}
+}
+
+// ExtractNamespace returns the sanitized namespace name from a PolicyNode
+func ExtractNamespace(policyNode *policyhierarchy_v1.PolicyNode) string {
+	// TODO: add check for invalid characters
+	ns := policyNode.Spec.Name
+	if !namespaceRe.MatchString(ns) {
+		panic(errors.Errorf("Namespace %s does not satisfy valid namespace patter %s", ns, namespaceRegexPattern))
+	}
+	return strings.ToLower(ns)
 }
 
 func (c *Client) SyncPolicyHierarchy() error {
-	policyNodes, err := c.FetchPolicyHierarchy()
+	policyNodes, _, err := c.FetchPolicyHierarchy()
 	if err != nil {
 		return err
 	}
+	nss := ExtractNamespaces(policyNodes)
+	return c.SyncNamespaces(nss)
+}
 
-	var namespaces []string
-	for _, policyNode := range policyNodes {
-		// log.Infof("PolicyNode %#v", policyNode)
-		// spew.Dump("PolicyNode ", policyNode)
-		ns := policyNode.Spec.Name
-		log.Infof("Found namespace %s", ns)
-
-		namespaces = append(namespaces, strings.ToLower(ns))
+func (c *Client) NamespaceCreateAction(namespace string) *NamespaceCreateAction {
+	return &NamespaceCreateAction{
+		namespaceActionBase{
+			namespace:     namespace,
+			clusterClient: c,
+		},
 	}
+}
 
-	return c.SyncNamespaces(namespaces)
+func (c *Client) NamespaceDeleteAction(namespace string) *NamespaceDeleteAction {
+	return &NamespaceDeleteAction{
+		namespaceActionBase{
+			namespace:     namespace,
+			clusterClient: c,
+		},
+	}
 }

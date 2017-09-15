@@ -28,13 +28,18 @@ var dryRun = flag.Bool(
 // NamespaceAction represents a CRUD action on a namespace
 type NamespaceAction interface {
 	Operation() string
-	Execute(client *Client) error
+	Execute() error
 	Name() string
+}
+
+type namespaceActionBase struct {
+	namespace     string
+	clusterClient *Client
 }
 
 // NamespaceDeleteAction will delete a namespace when executed
 type NamespaceDeleteAction struct {
-	namespace string
+	namespaceActionBase
 }
 
 var _ NamespaceAction = &NamespaceDeleteAction{}
@@ -43,14 +48,14 @@ func (n *NamespaceDeleteAction) Operation() string {
 	return "delete"
 }
 
-func (n *NamespaceDeleteAction) Execute(client *Client) error {
+func (n *NamespaceDeleteAction) Execute() error {
 	if *dryRun {
 		glog.Infof("Would have deleted namespace %s", n.namespace)
 		return nil
 	}
 
 	glog.Infof("Deleting namespace %s", n.namespace)
-	return client.Kubernetes().CoreV1().Namespaces().Delete(n.namespace, &meta_v1.DeleteOptions{})
+	return n.clusterClient.Kubernetes().CoreV1().Namespaces().Delete(n.namespace, &meta_v1.DeleteOptions{})
 }
 
 func (n *NamespaceDeleteAction) Name() string {
@@ -59,7 +64,7 @@ func (n *NamespaceDeleteAction) Name() string {
 
 // NamespaceCreateAction will create a namespace when executed
 type NamespaceCreateAction struct {
-	namespace string
+	namespaceActionBase
 }
 
 var _ NamespaceAction = &NamespaceCreateAction{}
@@ -68,14 +73,14 @@ func (n *NamespaceCreateAction) Operation() string {
 	return "create"
 }
 
-func (n *NamespaceCreateAction) Execute(client *Client) error {
+func (n *NamespaceCreateAction) Execute() error {
 	if *dryRun {
 		glog.Infof("Would have created namespace %s", n.namespace)
 		return nil
 	}
 
 	glog.Infof("Creating namespace %s", n.namespace)
-	createdNamespace, err := client.Kubernetes().CoreV1().Namespaces().Create(&core_v1.Namespace{
+	createdNamespace, err := n.clusterClient.Kubernetes().CoreV1().Namespaces().Create(&core_v1.Namespace{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: n.namespace,
 		},
