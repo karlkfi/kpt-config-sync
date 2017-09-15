@@ -23,8 +23,10 @@ import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/service"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -211,4 +213,71 @@ func (c *Client) NamespaceDeleteAction(namespace string) *NamespaceDeleteAction 
 			clusterClient: c,
 		},
 	}
+}
+
+// RunSyncerDaemon will read the policynodes custom resource then proceed to synchronize the namespaces in the cluster
+// once synced, it will watch the policynodes resource for changes and incrementally apply those changes.
+// Note that this may need to be modified to deal with the hysterisis between deleting a namespace and having it fully
+// removed from k8s since the operation is not synchronous and a delete-create-delete may cause issues.
+// Returns a callback to stop the daemon.
+func (c *Client) RunSyncerDaemon() service.Stoppable {
+	policyNodes, resourceVersion, err := c.FetchPolicyHierarchy()
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to fetch policies"))
+	}
+
+	namespaces := ExtractNamespaces(policyNodes)
+
+	err = c.SyncNamespaces(namespaces)
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to sync namespaces"))
+	}
+
+	watchIface, err := c.PolicyHierarchy().K8usV1().PolicyNodes().Watch(
+		meta_v1.ListOptions{ResourceVersion: resourceVersion})
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to watch policy hierarchy"))
+	}
+
+	go func() {
+		glog.Infof("Watching changes to policynodes at %s", resourceVersion)
+		resultChan := watchIface.ResultChan()
+		for {
+			select {
+			case event, ok := <-resultChan:
+				if !ok {
+					glog.Info("Channel closed, exiting")
+					return
+				}
+				node := event.Object.(*policyhierarchy_v1.PolicyNode)
+				glog.Infof("Got event %s %s", event.Type, node.Spec.Name)
+
+				namespace := ExtractNamespace(node)
+
+				var action NamespaceAction
+				switch event.Type {
+				case watch.Added:
+					// add the ns
+					action = c.NamespaceCreateAction(namespace)
+				case watch.Modified:
+				case watch.Deleted:
+					// delete the ns
+					action = c.NamespaceDeleteAction(namespace)
+				case watch.Error:
+					panic(errors.Wrapf(err, "Got error during watch operation"))
+				}
+
+				if action == nil {
+					continue
+				}
+
+				err := action.Execute()
+				if err != nil {
+					glog.Errorf("Failed to perform action %s on %s: %s", action.Operation(), action.Name(), err)
+				}
+			}
+		}
+	}()
+
+	return watchIface
 }
