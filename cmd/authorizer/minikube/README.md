@@ -10,10 +10,6 @@ appropriate Makefile target in the directory above.
   for webhook.   You should not need to invoke it directly though.  Use the
   Makefile target `minikube_start` instead.  It expects that an authorizer
   server is already running.
-* `webhook.kubeconfig`: the kubeconfig-formatted file used to declare the
-  webhook auth configuration of the apiserver.
-
-`webhook.kubeconfig` is currently set up to look for the webhook authorizer on
-the minikube host machine.  This is not the ideal, nor the final setup, but is
-useful for the time being as we're bootstrapping the work here.
+* `bootlocal.sh`: A shell script that installs the content copied by `init.sh`
+  and runs the authorizer via systemd.
 

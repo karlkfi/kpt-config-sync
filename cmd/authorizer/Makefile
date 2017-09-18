@@ -56,11 +56,11 @@ docker_clean:
 	docker rmi $(PREFIX):$(TAG)
 
 .NOTPARALLEL: server.key server.csr server.pem server.crt
-server.key server.csr server.pem server.crt:
+server.key server.csr server.pem server.crt: gencert.sh
 	./gencert.sh
 
 
-$(HOME)/.minikube/addons/webhook.kubeconfig: minikube/init.sh
+$(HOME)/.minikube/addons/webhook.kubeconfig: build minikube/init.sh server.key server.crt
 	minikube/init.sh
 
 minikube_start: $(HOME)/.minikube/addons/webhook.kubeconfig minikube/start.sh

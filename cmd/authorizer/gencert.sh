@@ -31,7 +31,7 @@ SERVER_CERTIFICATE_SIGNING_REQUEST="server.csr"
 ## says that CA has seen the certificate and testifies that it checks out.
 SERVER_CERTIFICATE="server.crt"
 
-CANONICAL_NAME=$(hostname)
+CANONICAL_NAME=localhost
 
 echo "Generating server private key."
 openssl genrsa -out ${SERVER_PRIVATE_KEY} 2048

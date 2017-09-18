@@ -12,4 +12,6 @@ minikube start \
   "$@"
 
 minikube ip
+minikube ssh -- "sudo chmod ug+x /etc/kubernetes/addons/bootlocal.sh"
+minikube ssh -- "sudo /etc/kubernetes/addons/bootlocal.sh &"
 

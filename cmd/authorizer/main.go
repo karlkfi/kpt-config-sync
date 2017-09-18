@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"flag"
+	"github.com/coreos/go-systemd/daemon"
 	log "github.com/golang/glog"
 	"io/ioutil"
 	authz "k8s.io/api/authorization/v1beta1"
@@ -36,6 +37,7 @@ var (
 		"server_key", "server.key", "The server key file.")
 	handlerUrlPath = flag.String(
 		"handler_url_path", "/authorize", "The default handler URL path.")
+	notifySystemd = flag.Bool("notify_systemd", false, "Whether to notify systemd that the daemon is ready to serve.")
 )
 
 // handleFunc is a shorthand for a HTTP handler function.
@@ -157,6 +159,14 @@ func main() {
 	log.Infof("Webhook authorizer listening at: %v", *listenAddr)
 	log.Infof("Using server certificate file: %v", *certFile)
 	log.Infof("Using server private key file: %v", *serverKeyFile)
+
+	// Notifies the monitor daemon that we're ready to start serving.
+	// But only if the daemon is actually on the other side, since
+	// the notification writes into a Unix socket under the hood.
+	if *notifySystemd {
+		daemon.SdNotify( /*unsetEnvironment=*/ false, "READY=1")
+	}
+
 	err := srv.ListenAndServeTLS(*certFile, *serverKeyFile)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
