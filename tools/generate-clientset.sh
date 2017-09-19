@@ -34,8 +34,8 @@ CLIENTSET_NAME=policyhierarchy
 echo "Building gen tools..."
 go install k8s.io/code-generator/cmd/client-gen
 go install k8s.io/code-generator/cmd/deepcopy-gen
-go install k8s.io/code-generator/cmd/informer-gen
-go install k8s.io/code-generator/cmd/lister-gen
+#go install k8s.io/code-generator/cmd/informer-gen
+#go install k8s.io/code-generator/cmd/lister-gen
 
 echo "Using GOPATH base ${GOBASE}"
 echo "Using GOPATH work ${GOWORK}"
@@ -57,19 +57,19 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
     --output-file-base="types.generated" \
     --output-base="${OUTPUT_BASE}"
 
-  ${GOBASE}/bin/lister-gen \
-    --logtostderr \
-    -v 5 \
-    --input-dirs="${INPUT_BASE}/${api}" \
-    --output-base="$GOWORK/src" \
-    --output-package="${OUTPUT_CLIENT}/listers"
+  #${GOBASE}/bin/lister-gen \
+  #  --logtostderr \
+  #  -v 5 \
+  #  --input-dirs="${INPUT_BASE}/${api}" \
+  #  --output-base="$GOWORK/src" \
+  #  --output-package="${OUTPUT_CLIENT}/listers"
 
-  ${GOBASE}/bin/informer-gen \
-    --logtostderr \
-    -v 5 \
-    --input-dirs="${INPUT_BASE}/${api}" \
-    --versioned-clientset-package="${OUTPUT_CLIENT}/${CLIENTSET_NAME}" \
-    --listers-package="${OUTPUT_CLIENT}/listers" \
-    --output-base="$GOWORK/src" \
-    --output-package="${OUTPUT_CLIENT}/informers"
+  #${GOBASE}/bin/informer-gen \
+  #  --logtostderr \
+  #  -v 5 \
+  #  --input-dirs="${INPUT_BASE}/${api}" \
+  #  --versioned-clientset-package="${OUTPUT_CLIENT}/${CLIENTSET_NAME}" \
+  #  --listers-package="${OUTPUT_CLIENT}/listers" \
+  #  --output-base="$GOWORK/src" \
+  #  --output-package="${OUTPUT_CLIENT}/informers"
 done
