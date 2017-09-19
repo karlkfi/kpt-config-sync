@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1 has client stuff for our custom resource
-// To generate clientset and deepcopy stuff (why aren't these done in one tool?) run:
-// tools/generate-clientset.sh
 package v1
 
 import (
@@ -29,22 +26,38 @@ import (
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PolicyNode holds a namespace policy
+// PolicyNode is the top-level object for the policy node data definition.
+//
+// It holds a policy defined for a single org unit (namespace).
 type PolicyNode struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              PolicyNodeSpec `json:"spec"`
+
+	// The actual object definition, per K8S object definition style.
+	Spec PolicyNodeSpec `json:"spec"`
 }
 
+// PolicyNodeSpec contains all the information about a policy linkage.
 type PolicyNodeSpec struct {
-	Name             string      `json:"name"`             // The name of the org unit or the namespace
-	WorkingNamespace bool        `json:"workingNamespace"` // True for leaf namespaces where pods will actually be scheduled, false for the parent org unit namespace where policy is attached but no containers should run
-	Parent           string      `json:"parent"`           // The parent org unit
-	Policies         PolicyLists `json:"policies"`         // The policies attached to that node
+	// The name of the org unit or the namespace.
+	Name string `json:"name"`
+
+	// True for leaf namespaces where pods will actually be scheduled,
+	// false for the parent org unit namespace where this policy is linked
+	// to, but no containers should run
+	WorkingNamespace bool `json:"workingNamespace"`
+
+	// The parent org unit
+	Parent string `json:"parent"`
+
+	// The policies attached to that node
+	Policies PolicyLists `json:"policies"`
 }
 
+// PolicyLists contains all the defined policies that are linked to a particular
+// PolicyNode.
 type PolicyLists struct {
 	Roles          []rbac_v1.Role              `json:"roles"`
 	RoleBindings   []rbac_v1.RoleBinding       `json:"roleBindings"`
@@ -53,13 +66,14 @@ type PolicyLists struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PolicyNodeList holds a list of namespace policies
+// PolicyNodeList holds a list of namespace policies, as response to a List
+// call on the policy hierarchy API.
 type PolicyNodeList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
-	// Items is a list of Roles
+	// Items is a list of policy nodes that apply.
 	Items []PolicyNode `json:"items"`
 }

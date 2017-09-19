@@ -18,4 +18,12 @@ limitations under the License.
 // +k8s:openapi-gen=true
 
 // +groupName=k8us.k8s.io
+
+// Package v1 contains the version 1 data definition for the PolicyNode custom
+// resource.
+//
+// To regenerate clientset and deepcopy (why aren't these done in
+// one tool?) run:
+//
+//     tools/generate-clientset.sh
 package v1
