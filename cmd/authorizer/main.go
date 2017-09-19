@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/coreos/go-systemd/daemon"
-	log "github.com/golang/glog"
+	"github.com/golang/glog"
 	"io/ioutil"
 	authz "k8s.io/api/authorization/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +60,7 @@ func NoCache(handler handlerFunc) handlerFunc {
 // method and the URL requested.
 func WithRequestLogging(handler handlerFunc) handlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		log.Infof("Method: %v, URL: %v", req.Method, req.URL)
+		glog.Infof("Method: %v, URL: %v", req.Method, req.URL)
 		handler(w, req)
 	}
 }
@@ -87,7 +87,7 @@ func Responder(writer http.ResponseWriter, req *http.Request) {
 	}
 	contentType := req.Header.Get("Content-Type")
 	if contentType != "application/json" {
-		log.Errorf(
+		glog.Errorf(
 			"contentType='%v', expect application/json", contentType)
 		writer.WriteHeader(http.StatusUnsupportedMediaType)
 		return
@@ -96,11 +96,11 @@ func Responder(writer http.ResponseWriter, req *http.Request) {
 	var reviewRequest authz.SubjectAccessReview
 	err := json.Unmarshal(body, &reviewRequest)
 	if err != nil {
-		log.Errorf("Could not unmarshal as request spec: %v", body)
+		glog.Errorf("Could not unmarshal as request spec: %v", body)
 		return
 	}
 	// TODO(filmil): Check the request sanity
-	log.V(1).Infof("Request: %+v", string(body))
+	glog.V(1).Infof("Request: %+v", string(body))
 
 	reviewResponse := authz.SubjectAccessReview{
 		TypeMeta: metav1.TypeMeta{
@@ -113,10 +113,10 @@ func Responder(writer http.ResponseWriter, req *http.Request) {
 	}
 	resp, err := json.Marshal(reviewResponse)
 	if err != nil {
-		log.Errorf("While marshalling response: %v", err)
+		glog.Errorf("While marshalling response: %v", err)
 		return
 	}
-	log.V(2).Infof("Response: %+v", string(resp))
+	glog.V(2).Infof("Response: %+v", string(resp))
 	writer.Write(resp)
 }
 
@@ -156,9 +156,9 @@ func Server(handler handlerFunc) *http.Server {
 func main() {
 	flag.Parse()
 	srv := Server(ServeFunc())
-	log.Infof("Webhook authorizer listening at: %v", *listenAddr)
-	log.Infof("Using server certificate file: %v", *certFile)
-	log.Infof("Using server private key file: %v", *serverKeyFile)
+	glog.Infof("Webhook authorizer listening at: %v", *listenAddr)
+	glog.Infof("Using server certificate file: %v", *certFile)
+	glog.Infof("Using server private key file: %v", *serverKeyFile)
 
 	// Notifies the monitor daemon that we're ready to start serving.
 	// But only if the daemon is actually on the other side, since
@@ -169,6 +169,6 @@ func main() {
 
 	err := srv.ListenAndServeTLS(*certFile, *serverKeyFile)
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		glog.Fatal("ListenAndServe: ", err)
 	}
 }
