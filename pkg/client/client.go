@@ -165,18 +165,14 @@ func ExtractNamespaces(policyNodes []policyhierarchy_v1.PolicyNode) []string {
 	return namespaces
 }
 
-// Pattern from output returned by kubectl
-var namespaceRegexPattern = "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
-var namespaceRe *regexp.Regexp
-
-func init() {
-	// Have to declare err here because golang won't let me use := on the next line.  Behold the perfect beauty of go.
-	var err error
-	namespaceRe, err = regexp.Compile(namespaceRegexPattern)
-	if err != nil {
-		panic(errors.Wrapf(err, "Failed to compile regex"))
-	}
-}
+var (
+	// Should match all allowed Kubernetes namespace names.
+	namespaceRegexPattern string = "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
+	// Pattern from output returned by kubectl
+	// Matches: "namespace", "namespace-42", "42-namespace----43".
+	// Does not match: "-namespace", "namespace-", "намеспаце".
+	namespaceRe *regexp.Regexp = regexp.MustCompile(namespaceRegexPattern)
+)
 
 // ExtractNamespace returns the sanitized namespace name from a PolicyNode
 func ExtractNamespace(policyNode *policyhierarchy_v1.PolicyNode) string {
