@@ -24,20 +24,34 @@ import (
 	"github.com/golang/glog"
 	"io/ioutil"
 	authz "k8s.io/api/authorization/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"net/http"
 )
 
 var (
 	listenAddr = flag.String(
 		"listen_hostport", ":8443", "The hostport to listen to.")
+	caCertFile = flag.String(
+		"ca_cert_file", "ca.crt", "The Certificate Authority certificate used to verify the identity of the remote end at TLS handshake time.")
 	certFile = flag.String(
 		"cert_file", "server.crt", "The server certificate file.")
 	serverKeyFile = flag.String(
-		"server_key", "server.key", "The server key file.")
+		"server_key", "server.key", "The server private key file.")
 	handlerUrlPath = flag.String(
 		"handler_url_path", "/authorize", "The default handler URL path.")
-	notifySystemd = flag.Bool("notify_systemd", false, "Whether to notify systemd that the daemon is ready to serve.")
+	notifySystemd = flag.Bool(
+		"notify_systemd", false, "Whether to notify systemd that the daemon is ready to serve.")
+
+	// Normally, outside of a cluster, we would get this information from
+	// the cluster configuration.  Inside a cluster, for example within a pod,
+	// this information we'd get from the default "in-cluster" client.  But
+	// for a program that runs on the master, we must assemble the required
+	// information directly.
+	apiserverAddr = flag.String(
+		"apiserver_hostport", "localhost:8443", "The hostport address of the Kubernetes API server")
 )
 
 // handleFunc is a shorthand for a HTTP handler function.
@@ -153,6 +167,44 @@ func Server(handler handlerFunc) *http.Server {
 	}
 }
 
+// LogApiVersion logs the API server version before proceeding.
+func LogApiVersion(kubernetesConfig *rest.Config) {
+	clientSet, err := kubernetes.NewForConfig(kubernetesConfig)
+	if err != nil {
+		log.Error(pkgerrors.Wrapf(
+			err, "Could not contact the Kubernetes API server at: %v", *apiserverAddr))
+		return
+	}
+	_, err = clientSet.CoreV1().Pods("default").Get("", metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		log.Error(pkgerrors.Wrapf(err, "Pod not found."))
+		return
+	}
+	if statusError, isStatus := err.(*errors.StatusError); isStatus {
+		log.Error(pkgerrors.Wrapf(statusError, "Error getting pod"))
+	}
+
+	log.Infof("Found some pods.")
+}
+
+// newKubernetesClientConfig creates a configuration for the client-go code.
+//
+// From outside a cluster, this information comes from the cluster
+// configuration file.  From inside the cluster, this information comes
+// from the "in-cluster" Kubernetes client.  For a daemon running on
+// the master, we have to assemble this information from the information set
+// given to us in flags.
+func newKubernetesClientConfig() *rest.Config {
+	return &rest.Config{
+		Host: *apiserverAddr,
+		TLSClientConfig: rest.TLSClientConfig{
+			CertFile: *certFile,
+			KeyFile:  *serverKeyFile,
+			CAFile:   *caCertFile,
+		},
+	}
+}
+
 func main() {
 	flag.Parse()
 	srv := Server(ServeFunc())
@@ -166,6 +218,9 @@ func main() {
 	if *notifySystemd {
 		daemon.SdNotify( /*unsetEnvironment=*/ false, "READY=1")
 	}
+
+	// Demo the connection to the apiserver.
+	go LogApiVersion(newKubernetesClientConfig())
 
 	err := srv.ListenAndServeTLS(*certFile, *serverKeyFile)
 	if err != nil {

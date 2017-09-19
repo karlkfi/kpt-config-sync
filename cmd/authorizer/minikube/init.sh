@@ -50,7 +50,12 @@ Type=notify
 Restart=always
 RestartSec=3
 
-ExecStart=/etc/kubernetes/addons/authorizer --notify_systemd --logtostderr --vmodule=main=2 --listen_hostport=:${PORTNAME} --cert_file=/etc/kubernetes/addons/server.crt --server_key=/etc/kubernetes/addons/server.key
+ExecStart=/etc/kubernetes/addons/authorizer       \
+  --notify_systemd --logtostderr --vmodule=main=2 \
+  --listen_hostport=:${PORTNAME}                  \
+  --cert_file=/etc/kubernetes/addons/server.crt   \
+  --server_key=/etc/kubernetes/addons/server.key  \
+  --ca_cert_file=/var/lib/localkube/certs/ca.crt
 
 ExecReload=/bin/kill -s HUP \$MAINPID
 
