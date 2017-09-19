@@ -20,14 +20,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
 )
 
-func Load(filename string) ([]PolicyNode, error) {
+func Load(filename string) ([]v1.PolicyNode, error) {
 	config, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading file: %s", err)
 	}
-	var nodes []PolicyNode
+	var nodes []v1.PolicyNode
 	err = json.Unmarshal(config, &nodes)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing file: %s", err)

@@ -22,10 +22,10 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/restconfig"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/clientcmd/api/v1"
@@ -43,6 +43,25 @@ func NewClient(clientType string) (*Client, error) {
 		return NewMiniKubeClient()
 	}
 	return nil, errors.Errorf("Invalid client type %s", clientType)
+}
+
+func NewServiceAccountClient(secretPath string) (*Client, error) {
+	kubectlConfig, err := loadKubectlConfig()
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to load kubectl config")
+	}
+
+	minikubeCluster, ok := kubectlConfig.Clusters[minikube]
+	if !ok {
+		return nil, errors.Wrapf(err, "Kubectl config did not have minikube Clusters entry")
+	}
+
+	cfg, err := restconfig.NewConfigFromSecret(minikubeCluster.Server, secretPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewForConfig(cfg)
 }
 
 func loadKubectlConfig() (*api.Config, error) {
@@ -95,13 +114,5 @@ func NewMiniKubeClient() (*Client, error) {
 		},
 	}
 
-	clientSet, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to create kubernetes client")
-	}
-	if clientSet == nil {
-		return nil, errors.Errorf("Got nil client with nil error")
-	}
-
-	return &Client{clientSet: clientSet}, nil
+	return NewForConfig(cfg)
 }

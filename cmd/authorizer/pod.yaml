@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+        name: authorizer
+spec:
+        selector:
+                name: authorizer
+        ports:
+        - name: foo
+          port: 443
+---
+apiVersion: v1
+kind: Pod
+metadata:
+        name: authorizer
+        namespace: default
+spec:
+        containers:
+        - name: authorizer
+          image: authorizer:experimental
+          ports:
+                - containerPort: 443
+          args: ["--logtostderr"]
+        restartPolicy: Always
+

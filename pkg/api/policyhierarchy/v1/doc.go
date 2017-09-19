@@ -1,5 +1,6 @@
 /*
 Copyright 2017 The Kubernetes Authors.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -13,26 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Command line util to sync a text file representation of a namespace hierarchy
-// to a Kubernetes cluster.
-package main
+// +k8s:deepcopy-gen=package,register
+// +k8s:openapi-gen=true
 
-import (
-	"flag"
-	"fmt"
+// +groupName=k8us.k8s.io
 
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/adapter"
-)
-
-func main() {
-	filename := flag.String("f", "", "Filename for hierarchical namespace configuration")
-	flag.Parse()
-
-	nodes, err := adapter.Load(*filename)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println("Number of org units: ", len(nodes))
-	fmt.Printf("Org units %+v\n", nodes)
-}
+// Package v1 contains the version 1 data definition for the PolicyNode custom
+// resource.
+//
+// To regenerate clientset and deepcopy (why aren't these done in
+// one tool?) run:
+//
+//     tools/generate-clientset.sh
+package v1
