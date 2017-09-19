@@ -22,6 +22,7 @@ import (
 	"flag"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/golang/glog"
+	apierrors "github.com/pkg/errors"
 	"io/ioutil"
 	authz "k8s.io/api/authorization/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -171,20 +172,20 @@ func Server(handler handlerFunc) *http.Server {
 func LogApiVersion(kubernetesConfig *rest.Config) {
 	clientSet, err := kubernetes.NewForConfig(kubernetesConfig)
 	if err != nil {
-		log.Error(pkgerrors.Wrapf(
+		glog.Error(apierrors.Wrapf(
 			err, "Could not contact the Kubernetes API server at: %v", *apiserverAddr))
 		return
 	}
 	_, err = clientSet.CoreV1().Pods("default").Get("", metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		log.Error(pkgerrors.Wrapf(err, "Pod not found."))
+		glog.Error(apierrors.Wrapf(err, "Pod not found."))
 		return
 	}
 	if statusError, isStatus := err.(*errors.StatusError); isStatus {
-		log.Error(pkgerrors.Wrapf(statusError, "Error getting pod"))
+		glog.Error(apierrors.Wrapf(statusError, "Error getting pod"))
 	}
 
-	log.Infof("Found some pods.")
+	glog.Infof("Found some pods.")
 }
 
 // newKubernetesClientConfig creates a configuration for the client-go code.

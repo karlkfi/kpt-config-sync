@@ -20,26 +20,27 @@ TAG := experimental
 
 DOCKER_ENV := $(shell minikube docker-env)
 
-all: docker_minikube
-
+test: build
+	go test .
 
 build: authorizer
+
+authorizer:
+	go build .
+
 
 # CGO_ENABLED=0 will build a statically linked binary, which allows us to
 # build a Docker container from scratch and get a very tiny container.
 # TODO(filmil): CGO_ENABLED=0 build is too slow.  See if it can be sped up.
-authorizer:
+.PHONY: authorizer_no_cgo
+authorizer_no_cgo:
 	CGO_ENABLED=0 go build .
 
-
-test: build
-	go test .
 
 
 clean:
 	go clean .
 	rm -f *.crt *.key *.pem *.csr
-	rm $(HOME)/.minikube/addons/webhook.kubeconfig
 
 # Use this target to run the test authorizer on your machine, with a debug
 # setup
@@ -47,7 +48,7 @@ debug_authorizer_start: authorizer server.key server.crt
 	./authorizer --logtostderr --vmodule=main=2
 
 # Build a docker container for the minikube docker repository.
-docker_minikube: build test server.key server.crt
+docker_minikube: authorizer_no_cgo test server.key server.crt
 	eval $(DOCKER_ENV) && \
 	docker build -t $(PREFIX):$(TAG) .
 
@@ -60,7 +61,7 @@ server.key server.csr server.pem server.crt: gencert.sh
 	./gencert.sh
 
 
-$(HOME)/.minikube/addons/webhook.kubeconfig: build minikube/init.sh server.key server.crt
+$(HOME)/.minikube/addons/webhook.kubeconfig: authorizer_no_cgo minikube/init.sh server.key server.crt
 	minikube/init.sh
 
 minikube_start: $(HOME)/.minikube/addons/webhook.kubeconfig minikube/start.sh
