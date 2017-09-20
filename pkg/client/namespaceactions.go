@@ -20,21 +20,27 @@ import (
 	"github.com/golang/glog"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 var dryRun = flag.Bool(
 	"dry_run", false, "Don't perform actions, just log what would have happened")
 
+// TODO: Move this file out of client package
+
 // NamespaceAction represents a CRUD action on a namespace
 type NamespaceAction interface {
+	// Operation returns the operation name
 	Operation() string
+	// Execute will execute the operation then return an error on failure
 	Execute() error
+	// Name returns the name of the namespace being operated on
 	Name() string
 }
 
 type namespaceActionBase struct {
-	namespace     string
-	clusterClient *Client
+	namespace           string
+	kubernetesInterface kubernetes.Interface
 }
 
 // NamespaceDeleteAction will delete a namespace when executed
@@ -43,6 +49,16 @@ type NamespaceDeleteAction struct {
 }
 
 var _ NamespaceAction = &NamespaceDeleteAction{}
+
+// NewNamespaceDeleteAction creates a new NamespaceDeleteAction for the given namespace
+func NewNamespaceDeleteAction(kubernetesInterface kubernetes.Interface, namespace string) *NamespaceDeleteAction {
+	return &NamespaceDeleteAction{
+		namespaceActionBase: namespaceActionBase{
+			kubernetesInterface: kubernetesInterface,
+			namespace:           namespace,
+		},
+	}
+}
 
 func (n *NamespaceDeleteAction) Operation() string {
 	return "delete"
@@ -55,7 +71,7 @@ func (n *NamespaceDeleteAction) Execute() error {
 	}
 
 	glog.Infof("Deleting namespace %s", n.namespace)
-	return n.clusterClient.Kubernetes().CoreV1().Namespaces().Delete(n.namespace, &meta_v1.DeleteOptions{})
+	return n.kubernetesInterface.CoreV1().Namespaces().Delete(n.namespace, &meta_v1.DeleteOptions{})
 }
 
 func (n *NamespaceDeleteAction) Name() string {
@@ -69,6 +85,16 @@ type NamespaceCreateAction struct {
 
 var _ NamespaceAction = &NamespaceCreateAction{}
 
+// NewNamespaceCreateAction creates a new NamespaceCreateAction for the given namespace
+func NewNamespaceCreateAction(kubernetesInterface kubernetes.Interface, namespace string) *NamespaceCreateAction {
+	return &NamespaceCreateAction{
+		namespaceActionBase: namespaceActionBase{
+			kubernetesInterface: kubernetesInterface,
+			namespace:           namespace,
+		},
+	}
+}
+
 func (n *NamespaceCreateAction) Operation() string {
 	return "create"
 }
@@ -80,7 +106,7 @@ func (n *NamespaceCreateAction) Execute() error {
 	}
 
 	glog.Infof("Creating namespace %s", n.namespace)
-	createdNamespace, err := n.clusterClient.Kubernetes().CoreV1().Namespaces().Create(&core_v1.Namespace{
+	createdNamespace, err := n.kubernetesInterface.CoreV1().Namespaces().Create(&core_v1.Namespace{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: n.namespace,
 		},

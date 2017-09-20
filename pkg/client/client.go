@@ -193,22 +193,12 @@ func (c *Client) SyncPolicyHierarchy() error {
 
 // NamespaceCreateAction will return a NamespaceAction that will create a namespace.
 func (c *Client) NamespaceCreateAction(namespace string) *NamespaceCreateAction {
-	return &NamespaceCreateAction{
-		namespaceActionBase{
-			namespace:     namespace,
-			clusterClient: c,
-		},
-	}
+	return NewNamespaceCreateAction(c.kubernetesClientset, namespace)
 }
 
 // NamespaceDeleteAction will return a NamespaceAction that will delete a namespace
 func (c *Client) NamespaceDeleteAction(namespace string) *NamespaceDeleteAction {
-	return &NamespaceDeleteAction{
-		namespaceActionBase{
-			namespace:     namespace,
-			clusterClient: c,
-		},
-	}
+	return NewNamespaceDeleteAction(c.kubernetesClientset, namespace)
 }
 
 // RunSyncerDaemon will read the policynodes custom resource then proceed to synchronize the namespaces in the cluster
