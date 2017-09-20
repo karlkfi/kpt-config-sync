@@ -17,25 +17,17 @@ limitations under the License.
 package client
 
 import (
-	"regexp"
-	"strings"
-
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/service"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
-
-var reservedNamespaces = map[string]bool{
-	"default":     true,
-	"kube-public": true,
-	"kube-system": true,
-}
 
 // Client is a container for the kubernetes Clientset and adds some functionality on top of it for
 // mostly reference purposes.
@@ -83,6 +75,9 @@ func (c *Client) GetState() (*ClusterState, error) {
 
 	var namespaces []string
 	for _, ns := range namespaceList.Items {
+		if namespaceutil.IsReserved(ns) {
+			continue
+		}
 		namespaces = append(namespaces, ns.Name)
 	}
 	return &ClusterState{Namespaces: namespaces}, nil
@@ -119,9 +114,6 @@ func (c *Client) SyncNamespaces(namespaces []string) error {
 
 	namespaceActions := []NamespaceAction{}
 	for ns := range existingNamespaces {
-		if reservedNamespaces[ns] {
-			continue
-		}
 		if !definedNamespaces[ns] {
 			namespaceActions = append(namespaceActions, c.NamespaceDeleteAction(ns))
 		} else {
@@ -168,28 +160,9 @@ func ExtractNamespaces(policyNodes []policyhierarchy_v1.PolicyNode) []string {
 	return namespaces
 }
 
-var (
-	// Should match all allowed Kubernetes namespace names.
-	namespaceRegexPattern string = "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
-	// Pattern from output returned by kubectl
-	// Matches: "namespace", "namespace-42", "42-namespace----43".
-	// Does not match: "-namespace", "namespace-", "намеспаце".
-	namespaceRe *regexp.Regexp = regexp.MustCompile(namespaceRegexPattern)
-)
-
 // ExtractNamespace returns the sanitized namespace name from a PolicyNode
 func ExtractNamespace(policyNode *policyhierarchy_v1.PolicyNode) string {
-	return SanitizeNamespace(policyNode.Spec.Name)
-}
-
-// SanitizeNamespace will convert the namespace name to lowercase and assert it matches the
-// formatting rules for namespaces.
-func SanitizeNamespace(ns string) string {
-	ns = strings.ToLower(ns)
-	if !namespaceRe.MatchString(ns) {
-		panic(errors.Errorf("Namespace \"%s\" does not satisfy valid namespace pattern %s", ns, namespaceRegexPattern))
-	}
-	return ns
+	return namespaceutil.SanitizeNamespace(policyNode.Spec.Name)
 }
 
 // WrapPolicyNodeSpec will take a PolicyNodeSpec, wrap it in a PolicyNode and populate the appropriate
@@ -201,7 +174,7 @@ func WrapPolicyNodeSpec(spec *policyhierarchy_v1.PolicyNodeSpec) *policyhierarch
 			Kind:       "PolicyNode",
 		},
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: SanitizeNamespace(spec.Name),
+			Name: namespaceutil.SanitizeNamespace(spec.Name),
 		},
 		Spec: *spec,
 	}
