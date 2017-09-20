@@ -13,26 +13,38 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Command line util to sync a text file representation of a namespace hierarchy
-// to a Kubernetes cluster.
+// Command line util to sync the PolicyNode custom resource to the active namespaces.
 package main
 
 import (
 	"flag"
-	"fmt"
 
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/adapter"
+	"github.com/golang/glog"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/service"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/syncer"
+	"github.com/pkg/errors"
 )
 
 func main() {
-	filename := flag.String("f", "", "Filename for hierarchical namespace configuration")
 	flag.Parse()
 
-	nodes, err := adapter.Load(*filename)
+	clusterClient, err := client.NewMiniKubeClient()
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(errors.Wrapf(err, "Failed to create client"))
 	}
-	fmt.Println("Number of org units: ", len(nodes))
-	fmt.Printf("Org units %+v\n", nodes)
+
+	stopChannel := make(chan struct{})
+	errorCallback := func(err error) {
+		glog.Errorf("Got error from error callback: %s", err)
+		close(stopChannel)
+	}
+
+	clusterSyncer := syncer.New(clusterClient.PolicyHierarchy(), clusterClient.Kubernetes())
+	clusterSyncer.Run(errorCallback)
+
+	service.WaitForShutdownWithChannel(stopChannel)
+
+	clusterSyncer.Stop()
+	clusterSyncer.Wait()
 }

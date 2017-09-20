@@ -189,6 +189,7 @@ func (i *Importer) Synchronize() error {
 		clusterPolicyNode, ok := clusterPolicyNodes[name]
 		if !ok {
 			// create it
+			glog.Infof("%s needs creation, queueing for create", name)
 			updates = append(updates, NewUpdate(CreatePolicy, incomingPolicyNode))
 		} else {
 			// check for modify
@@ -265,18 +266,18 @@ func (i *Importer) applyUpdate(update *Update) error {
 		}
 
 	case CreatePolicy:
-		glog.Infof("Creating %s", resourceName)
-		_, err = policyNodesIface.Create(policyNode)
+		newPolicyNode, err := policyNodesIface.Create(policyNode)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to create policy %s", resourceName)
 		}
+		glog.Infof("Created %s at resourceversion %s", resourceName, newPolicyNode.ResourceVersion)
 
 	case UpdatePolicy:
-		glog.Infof("Updating %s", resourceName)
-		_, err = policyNodesIface.Update(policyNode)
+		newPolicyNode, err := policyNodesIface.Update(policyNode)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to update policy %s", resourceName)
 		}
+		glog.Infof("Modified %s at resourceversion %s", resourceName, newPolicyNode.ResourceVersion)
 	}
 
 	return nil
