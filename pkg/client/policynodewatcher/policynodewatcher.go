@@ -19,6 +19,8 @@ limitations under the License.
 package policynodewatcher
 
 import (
+	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
@@ -63,7 +65,7 @@ type Interface interface {
 	// ResourceVersion returns the resource version state which is initially set on construction
 	// and then tracks the resource version at which new changes will be watched then finally
 	// stores the last resource version on which something was seen when stopped.
-	ResourceVersion() string
+	ResourceVersion() int64
 
 	// Stop instructs the watcher to stop.  This will tear down the watch, however, a callback may be
 	// invoked after stop returns.
@@ -80,8 +82,11 @@ type PolicyNodeWatcher struct {
 	policyHierarchyInterface policyhierarchy.Interface
 
 	eventHandler         EventHandler
-	resourceVersion      string
+	resourceVersion      int64
 	resourceVersionMutex sync.Mutex
+
+	// Map of resource versions where a delete has occurred without a subsequent add or modify.
+	deletedVersions map[int64]bool
 
 	// Constructs for stopping
 	stop          chan struct{}
@@ -96,10 +101,11 @@ var _ Interface = &PolicyNodeWatcher{}
 // New will create a new PolicyNodeWatcher from a ClientInterface, event handler and resourceVersion.
 func New(
 	policyHierarchyInterface policyhierarchy.Interface,
-	resourceVersion string) *PolicyNodeWatcher {
+	resourceVersion int64) *PolicyNodeWatcher {
 	return &PolicyNodeWatcher{
 		policyHierarchyInterface: policyHierarchyInterface,
 		stop:            make(chan struct{}),
+		deletedVersions: map[int64]bool{},
 		resourceVersion: resourceVersion,
 	}
 }
@@ -116,7 +122,7 @@ func (w *PolicyNodeWatcher) Run(eventHandler EventHandler) {
 
 // runInternal handles wrapping the watch with a retry loop for resuming on watcher timeout.
 func (w *PolicyNodeWatcher) runInternal() {
-	glog.Infof("Starting PolicyNodeWatcher at resource version %s", w.ResourceVersion())
+	glog.Infof("Starting PolicyNodeWatcher at resource version %d", w.ResourceVersion())
 	for atomic.LoadInt64(&w.stoppedAtomic) == 0 {
 		nextResourceVersion, err := w.watch()
 		if err != nil {
@@ -131,33 +137,58 @@ func (w *PolicyNodeWatcher) runInternal() {
 	w.wait.Done()
 }
 
-func (w *PolicyNodeWatcher) watch() (string, error) {
+func (w *PolicyNodeWatcher) watch() (int64, error) {
 	nextResourceVersion := w.ResourceVersion()
 	watchIface, err := w.policyHierarchyInterface.K8usV1().PolicyNodes().Watch(
-		meta_v1.ListOptions{ResourceVersion: nextResourceVersion})
+		meta_v1.ListOptions{ResourceVersion: fmt.Sprintf("%d", nextResourceVersion)})
 
 	if err != nil {
-		return "", errors.Wrapf(err, "Failed to watch policy hierarchy")
+		return 0, errors.Wrapf(err, "Failed to watch policy hierarchy")
 	}
 
 	for {
 		select {
 		case event, ok := <-watchIface.ResultChan():
-			// invoke callback?  pass to channel?
 			if !ok {
 				glog.Infof("Client closed, exiting loop")
 				return nextResourceVersion, nil
 			}
 			if event.Type == watch.Error {
 				if event.Object == nil {
-					return "", errors.Errorf("Got error event from watch result channel")
+					return 0, errors.Errorf("Got error event from watch result channel")
 				}
-				return "", errors.Errorf("Got error event from watch result channel with object: %#v", event.Object)
+				return 0, errors.Errorf("Got error event from watch result channel with object: %#v", event.Object)
 			}
 
 			node := event.Object.(*policyhierarchy_v1.PolicyNode)
-			nextResourceVersion = node.ResourceVersion
-			w.eventHandler.OnEvent(fromWatcherType(event.Type), node)
+			nodeResourceVersion, err := strconv.ParseInt(node.ResourceVersion, 10, 64)
+			if err != nil {
+				return 0, errors.Wrapf(err, "Failed to parse resource version from %#v", node)
+			}
+
+			// Based on emperical evidence, the resource version for the deleted node is in the past, so
+			// we can only update the resource version for watches on create / update.  This means that
+			// any user of the watch API must be able to handle multiple duplicate delete events which
+			// can occur if a delete is the last event encountered prior to the server disconnecting us.
+			glog.V(1).Infof("Handling %s event", event.Type)
+			switch event.Type {
+			case watch.Deleted:
+				if !w.deletedVersions[nextResourceVersion] {
+					w.deletedVersions[nextResourceVersion] = true
+					w.eventHandler.OnEvent(fromWatcherType(event.Type), node)
+				} else {
+					glog.V(1).Infof("Suppressing %s event", event.Type)
+				}
+
+			case watch.Added:
+				fallthrough
+			case watch.Modified:
+				if len(w.deletedVersions) != 0 {
+					w.deletedVersions = map[int64]bool{}
+				}
+				nextResourceVersion = nodeResourceVersion
+				w.eventHandler.OnEvent(fromWatcherType(event.Type), node)
+			}
 
 		case _, ok := <-w.stop:
 			if !ok {
@@ -181,17 +212,17 @@ func (w *PolicyNodeWatcher) Wait() {
 }
 
 // ResourceVersion implements Interface
-func (w *PolicyNodeWatcher) ResourceVersion() string {
+func (w *PolicyNodeWatcher) ResourceVersion() int64 {
 	w.resourceVersionMutex.Lock()
 	defer w.resourceVersionMutex.Unlock()
 	return w.resourceVersion
 }
 
 // setResourceVerision updates the resource version for the watcher.
-func (w *PolicyNodeWatcher) setResourceVerision(resourceVersion string) {
+func (w *PolicyNodeWatcher) setResourceVerision(resourceVersion int64) {
 	w.resourceVersionMutex.Lock()
 	prevResourceVersion := w.resourceVersion
 	w.resourceVersion = resourceVersion
 	w.resourceVersionMutex.Unlock()
-	glog.Infof("Advanced resourceVersion %s -> %s", prevResourceVersion, resourceVersion)
+	glog.Infof("Advanced resourceVersion %d -> %d", prevResourceVersion, resourceVersion)
 }
