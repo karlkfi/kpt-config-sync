@@ -22,6 +22,8 @@ import (
 	"flag"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/golang/glog"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/authorizer"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
 	apierrors "github.com/pkg/errors"
 	"io/ioutil"
 	authz "k8s.io/api/authorization/v1beta1"
@@ -93,51 +95,66 @@ func WithStrictTransport(handler handlerFunc) handlerFunc {
 // Responder writes a basic message out.
 // See "Request Payloads" at:
 // https://kubernetes-v1-4.github.io/docs/admin/authorization for details.
-func Responder(writer http.ResponseWriter, req *http.Request) {
-	var body []byte
-	if req.Body != nil {
-		if data, err := ioutil.ReadAll(req.Body); err == nil {
-			body = data
+func Responder(a *authorizer.Authorizer) handlerFunc {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		var body []byte
+		if req.Body != nil {
+			if data, err := ioutil.ReadAll(req.Body); err == nil {
+				body = data
+			}
 		}
-	}
-	contentType := req.Header.Get("Content-Type")
-	if contentType != "application/json" {
-		glog.Errorf(
-			"contentType='%v', expect application/json", contentType)
-		writer.WriteHeader(http.StatusUnsupportedMediaType)
-		return
-	}
 
-	var reviewRequest authz.SubjectAccessReview
-	err := json.Unmarshal(body, &reviewRequest)
-	if err != nil {
-		glog.Errorf("Could not unmarshal as request spec: %v", body)
-		return
-	}
-	// TODO(filmil): Check the request sanity
-	glog.V(1).Infof("Request: %+v", string(body))
+		// Run the type sanity checks: expect the correct content type,
+		// then try to deserialize, and bomb out on invalid TypeMeta.
+		contentType := req.Header.Get("Content-Type")
+		if contentType != "application/json" {
+			glog.Errorf(
+				"contentType='%v', expect application/json",
+				contentType)
+			writer.WriteHeader(http.StatusUnsupportedMediaType)
+			return
+		}
+		var reviewRequest authz.SubjectAccessReview
+		err := json.Unmarshal(body, &reviewRequest)
+		if err != nil {
+			glog.Errorf(
+				"Could not unmarshal as request spec: %v",
+				body)
+			writer.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// TODO(filmil): Is there a "canonical" way to check this?
+		if reviewRequest.TypeMeta != authorizer.TypeMeta {
+			glog.Errorf("Invalid TypeMeta: %v",
+				reviewRequest.TypeMeta)
+			writer.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
-	reviewResponse := authz.SubjectAccessReview{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "SubjectAccessReview",
-			APIVersion: "authorization.k8s.io/v1beta1",
-		},
-		Status: authz.SubjectAccessReviewStatus{
-			Allowed: true,
-		},
+		// Process the request: call authorizer here.
+		glog.V(1).Infof("Request: %+v", string(body))
+		resp, err := json.Marshal(authz.SubjectAccessReview{
+			TypeMeta: authorizer.TypeMeta,
+			Status:   *a.Authorize(&reviewRequest.Spec),
+		})
+		if err != nil {
+			glog.Errorf("While marshalling response: %v", err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// If we survived up to here, write the response out and done.
+		glog.V(2).Infof("Response: %+v", string(resp))
+		writer.Write(resp)
 	}
-	resp, err := json.Marshal(reviewResponse)
-	if err != nil {
-		glog.Errorf("While marshalling response: %v", err)
-		return
-	}
-	glog.V(2).Infof("Response: %+v", string(resp))
-	writer.Write(resp)
 }
 
 // ServeFunc returns the serving function for this server.  Use for testing.
-func ServeFunc() handlerFunc {
-	return WithStrictTransport(WithRequestLogging(NoCache(Responder)))
+func ServeFunc(a *authorizer.Authorizer) handlerFunc {
+	return WithStrictTransport(
+		WithRequestLogging(
+			NoCache(
+				Responder(a))))
 }
 
 // Server configures and runs a TLS-enabled server from passed-in flags using
@@ -149,8 +166,11 @@ func Server(handler handlerFunc) *http.Server {
 	// everything else.
 
 	cfg := &tls.Config{
-		MinVersion:               tls.VersionTLS12,
-		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+		MinVersion: tls.VersionTLS12,
+		CurvePreferences: []tls.CurveID{
+			tls.CurveP521,
+			tls.CurveP384,
+			tls.CurveP256},
 		PreferServerCipherSuites: true,
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
@@ -172,8 +192,9 @@ func Server(handler handlerFunc) *http.Server {
 func LogApiVersion(kubernetesConfig *rest.Config) {
 	clientSet, err := kubernetes.NewForConfig(kubernetesConfig)
 	if err != nil {
-		glog.Error(apierrors.Wrapf(
-			err, "Could not contact the Kubernetes API server at: %v", *apiserverAddr))
+		glog.Error(apierrors.Wrapf(err,
+			"Could not contact the Kubernetes API server at: %v",
+			*apiserverAddr))
 		return
 	}
 	_, err = clientSet.CoreV1().Pods("default").Get("", metav1.GetOptions{})
@@ -208,10 +229,20 @@ func newKubernetesClientConfig() *rest.Config {
 
 func main() {
 	flag.Parse()
-	srv := Server(ServeFunc())
 	glog.Infof("Webhook authorizer listening at: %v", *listenAddr)
 	glog.Infof("Using server certificate file: %v", *certFile)
 	glog.Infof("Using server private key file: %v", *serverKeyFile)
+
+	clientConfig := newKubernetesClientConfig()
+	policyHierarchyClient, err := policyhierarchy.NewForConfig(clientConfig)
+	if err != nil {
+		glog.Fatalf("Could not create Kubernetes API client: %v", err)
+	}
+
+	srv := Server(ServeFunc(authorizer.New(policyHierarchyClient.K8usV1())))
+
+	// Demo the connection to the apiserver.
+	go LogApiVersion(clientConfig)
 
 	// Notifies the monitor daemon that we're ready to start serving.
 	// But only if the daemon is actually on the other side, since
@@ -220,10 +251,7 @@ func main() {
 		daemon.SdNotify( /*unsetEnvironment=*/ false, "READY=1")
 	}
 
-	// Demo the connection to the apiserver.
-	go LogApiVersion(newKubernetesClientConfig())
-
-	err := srv.ListenAndServeTLS(*certFile, *serverKeyFile)
+	err = srv.ListenAndServeTLS(*certFile, *serverKeyFile)
 	if err != nil {
 		glog.Fatal("ListenAndServe: ", err)
 	}
