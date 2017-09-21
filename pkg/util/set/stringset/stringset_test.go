@@ -68,50 +68,70 @@ func TestBasicOps(t *testing.T) {
 }
 
 type SetOperationTestcase struct {
-	LeftHandSide  []string
-	RightHandSide []string
-	Result        []string
+	LeftHandSide       []string
+	RightHandSide      []string
+	DifferenceResult   []string
+	IntersectionResult []string
 }
 
-func TestDifference(t *testing.T) {
-	for _, testcase := range []SetOperationTestcase{
+func TestSetOperations(t *testing.T) {
+	for idx, testcase := range []SetOperationTestcase{
 		{
-			LeftHandSide:  []string{},
-			RightHandSide: []string{},
-			Result:        []string{},
+			LeftHandSide:       []string{},
+			RightHandSide:      []string{},
+			DifferenceResult:   []string{},
+			IntersectionResult: []string{},
 		},
 		{
-			LeftHandSide:  []string{},
-			RightHandSide: []string{"foo", "bar"},
-			Result:        []string{},
+			LeftHandSide:       []string{},
+			RightHandSide:      []string{"foo", "bar"},
+			DifferenceResult:   []string{},
+			IntersectionResult: []string{},
 		},
 		{
-			LeftHandSide:  []string{"foo", "bar"},
-			RightHandSide: []string{},
-			Result:        []string{"foo", "bar"},
+			LeftHandSide:       []string{"foo", "bar"},
+			RightHandSide:      []string{},
+			DifferenceResult:   []string{"foo", "bar"},
+			IntersectionResult: []string{},
 		},
 		{
-			LeftHandSide:  []string{"foo", "bar"},
-			RightHandSide: []string{"bar"},
-			Result:        []string{"foo"},
+			LeftHandSide:       []string{"foo", "bar"},
+			RightHandSide:      []string{"bar"},
+			DifferenceResult:   []string{"foo"},
+			IntersectionResult: []string{"bar"},
 		},
 		{
-			LeftHandSide:  []string{"foo", "bar"},
-			RightHandSide: []string{"foo", "bar"},
-			Result:        []string{},
+			LeftHandSide:       []string{"foo", "bar"},
+			RightHandSide:      []string{"foo", "bar"},
+			DifferenceResult:   []string{},
+			IntersectionResult: []string{"foo", "bar"},
 		},
 		{
-			LeftHandSide:  []string{"foo", "bar"},
-			RightHandSide: []string{"baz", "foobar"},
-			Result:        []string{"foo", "bar"},
+			LeftHandSide:       []string{"foo", "bar"},
+			RightHandSide:      []string{"baz", "foobar"},
+			DifferenceResult:   []string{"foo", "bar"},
+			IntersectionResult: []string{},
+		},
+		{
+			LeftHandSide:       []string{"foo", "bar"},
+			RightHandSide:      []string{"foo", "bar"},
+			DifferenceResult:   []string{},
+			IntersectionResult: []string{"foo", "bar"},
 		},
 	} {
 		lhs := NewFromSlice(testcase.LeftHandSide)
 		rhs := NewFromSlice(testcase.RightHandSide)
-		expectedResult := NewFromSlice(testcase.Result)
-		result := lhs.Difference(rhs)
-		if !result.Equals(expectedResult) {
-			t.Errorf("Unexpected result %#v in testcase %#v", result, testcase)
+
+		expectedDifferenceResult := NewFromSlice(testcase.DifferenceResult)
+		differenceResult := lhs.Difference(rhs)
+		if !differenceResult.Equals(expectedDifferenceResult) {
+			t.Errorf("Unexpected difference result %#v in testcase %d %#v", differenceResult, idx, testcase)
+		}
+
+		expectedIntersectionResult := NewFromSlice(testcase.IntersectionResult)
+		intersectionResult := lhs.Intersection(rhs)
+		if !intersectionResult.Equals(expectedIntersectionResult) {
+			t.Errorf("Unexpected intersection result %#v in testcase %d %#v", intersectionResult, idx, testcase)
 		}
 	}
 }

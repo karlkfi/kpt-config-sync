@@ -106,3 +106,14 @@ func (s *StringSet) Difference(other *StringSet) *StringSet {
 	}
 	return differenceSet
 }
+
+// Intersection computes the set intersection between s and other
+func (s *StringSet) Intersection(other *StringSet) *StringSet {
+	intersection := New()
+	for value := range s.set {
+		if other.set[value] {
+			intersection.Add(value)
+		}
+	}
+	return intersection
+}
