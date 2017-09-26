@@ -28,8 +28,8 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/service"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/util/policynode"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	rbac_v1 "k8s.io/api/rbac/v1"
@@ -108,7 +108,7 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 						ResourceQuotas: []core_v1.ResourceQuotaSpec{},
 					},
 				}
-				policyNode := client.WrapPolicyNodeSpec(nodeSpec)
+				policyNode := policynode.WrapPolicyNodeSpec(nodeSpec)
 
 				policyNodeBytes, err := json.MarshalIndent(policyNode, "", "  ")
 				if err != nil {
