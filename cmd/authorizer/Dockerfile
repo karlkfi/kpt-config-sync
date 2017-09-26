@@ -19,7 +19,6 @@ FROM busybox
 ADD authorizer authorizer
 ADD server.key server.key
 ADD server.crt server.crt
-ADD ca.crt ca.crt
 EXPOSE 8443
 ENTRYPOINT ["/authorizer"]
 

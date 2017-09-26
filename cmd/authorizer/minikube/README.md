@@ -1,5 +1,4 @@
-This directory contains deployment-specific files for
-minikube.
+This directory contains deployment-specific files for minikube.
 
 The scripts here should not be invoked directly, but rather through an
 appropriate Makefile target in the directory above.
@@ -10,6 +9,7 @@ appropriate Makefile target in the directory above.
   for webhook.   You should not need to invoke it directly though.  Use the
   Makefile target `minikube_start` instead.  It expects that an authorizer
   server is already running.
-* `bootlocal.sh`: A shell script that installs the content copied by `init.sh`
-  and runs the authorizer via systemd.
+* `gencert.sh`: Creates the public and private keys to be used for the
+  authorizer, and the server certificate, signed by the same certificate
+  authority that was generated for the minikube cluster.
 

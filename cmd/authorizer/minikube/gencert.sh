@@ -32,6 +32,7 @@ SERVER_CERTIFICATE_SIGNING_REQUEST="server.csr"
 SERVER_CERTIFICATE="server.crt"
 
 CANONICAL_NAME=localhost
+AUTHORIZER_CLUSTER_IP_ADDRESS=${AUTHORIZER_CLUSTER_IP_ADDRESS:-10.0.0.112}
 
 echo "Generating server private key."
 openssl genrsa -out ${SERVER_PRIVATE_KEY} 2048
@@ -70,7 +71,7 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1=${CANONICAL_NAME}
 DNS.2=authorizer.default.svc.cluster.local
-IP.1=10.0.0.112
+IP.1=${AUTHORIZER_CLUSTER_IP_ADDRESS}
 
 EOF
 SUBJECT="/C=US/ST=California/L=San Francisco/O=ExampleDotCom/OU=ExampleOU/CN=${CANONICAL_NAME}/"
@@ -98,6 +99,4 @@ openssl x509 -req \
 
 echo "The content of the generated certificate in file: ${SERVER_CERTIFICATE}"
 openssl x509 -in ${SERVER_CERTIFICATE} -text
-
-cp ${CA_CERTIFICATE} ca.crt
 

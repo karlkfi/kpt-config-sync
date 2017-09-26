@@ -11,10 +11,12 @@ minikube start \
   --logtostderr \
   "$@"
 
-MINIKUBE_HOST_ADDRESS=$(minikube ip)
+eval $(minikube docker-env)
 
+MINIKUBE_HOST_ADDRESS=$(minikube ip)
 echo "Minkube cluster IP: ${MINIKUBE_HOST_ADDRESS}"
-minikube ssh -- "sudo chmod ug+x /etc/kubernetes/addons/bootlocal.sh"
-minikube ssh -- "sudo MINIKUBE_HOST_ADDRESS=${MINIKUBE_HOST_ADDRESS} \
-  /etc/kubernetes/addons/bootlocal.sh &"
+
+echo "Deploying authorizer POD:"
+kubectl replace --force -f minikube/authorizer_deploy.yaml
+
 

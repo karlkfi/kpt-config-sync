@@ -34,7 +34,7 @@ import (
 
 func TestRequest(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(ServeFunc(
-		authorizer.New(newPolicyHierarchyClient(
+		authorizer.New(newFakePolicyHierarchyClient(
 			// The objects listed here will appear as if they have
 			// already been present in the storage that the test
 			// client is reading from.
@@ -133,10 +133,11 @@ func TestRequest(t *testing.T) {
 	}
 }
 
-// newPolicyHierarchyClient creates a new fake policyhierarchy client, injecting
+// newFakePolicyHierarchyClient creates a new fake policyhierarchy client, injecting
 // 'presets' into the backing store.  Later calls on the client will pretend as
 // if those objects were already inserted.
-func newPolicyHierarchyClient(presets ...runtime.Object) k8usv1.K8usV1Interface {
+func newFakePolicyHierarchyClient(
+	presets ...runtime.Object) k8usv1.K8usV1Interface {
 	// fake.Clientset (which you get from fake.NewSimpleClientSet) is not
 	// interface-compatible with the "real" client set.  But, the clients
 	// are.  So we inject them instead.

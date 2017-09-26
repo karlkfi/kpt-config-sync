@@ -20,6 +20,10 @@ TAG := experimental
 
 DOCKER_ENV := $(shell minikube docker-env)
 
+# The fixed Cluster IP address that is currently used for the minikube authorzer
+# deployment.  For the time being this must be an IP address, and not a FQDN.
+MINIKUBE_AUTHORIZER_CLUSTER_IP_ADDRESS := 10.0.0.112
+
 test:
 	go test .
 
@@ -40,7 +44,7 @@ authorizer_no_cgo:
 
 clean:
 	go clean .
-	rm -f *.crt *.key *.pem *.csr *.tmp
+	rm -f *.crt *.key *.pem *.csr *.tmp minikube/*.yaml
 
 # Use this target to run the test authorizer on your machine, with a debug
 # setup
@@ -58,11 +62,17 @@ docker_clean:
 
 .NOTPARALLEL: server.key server.csr server.pem server.crt ca.crt
 server.key server.csr server.pem server.crt: minikube/gencert.sh
-	./minikube/gencert.sh
+	AUTHORIZER_CLUSTER_IP_ADDRESS=$(MINIKUBE_AUTHORIZER_CLUSTER_IP_ADDRESS) \
+		./minikube/gencert.sh
 
 
-$(HOME)/.minikube/addons/webhook.kubeconfig: authorizer_no_cgo minikube/init.sh server.key server.crt
-	minikube/init.sh
+$(HOME)/.minikube/addons/webhook.kubeconfig: \
+  authorizer_no_cgo \
+  minikube/init.sh \
+  server.key \
+  server.crt
+	WEBHOOK_ADDRESS=$(MINIKUBE_AUTHORIZER_CLUSTER_IP_ADDRESS) \
+        	minikube/init.sh
 
 minikube_start: $(HOME)/.minikube/addons/webhook.kubeconfig minikube/start.sh
 	minikube/start.sh

@@ -37,8 +37,6 @@ import (
 var (
 	listenAddr = flag.String(
 		"listen_hostport", ":8443", "The hostport to listen to.")
-	caCertFile = flag.String(
-		"ca_cert_file", "ca.crt", "The Certificate Authority certificate used to verify the identity of the remote end at TLS handshake time.")
 	certFile = flag.String(
 		"cert_file", "server.crt", "The server certificate file.")
 	serverKeyFile = flag.String(
@@ -46,15 +44,9 @@ var (
 	handlerUrlPath = flag.String(
 		"handler_url_path", "/authorize", "The default handler URL path.")
 	notifySystemd = flag.Bool(
-		"notify_systemd", false, "Whether to notify systemd that the daemon is ready to serve.")
-
-	// Normally, outside of a cluster, we would get this information from
-	// the cluster configuration.  Inside a cluster, for example within a pod,
-	// this information we'd get from the default "in-cluster" client.  But
-	// for a program that runs on the master, we must assemble the required
-	// information directly.
-	apiserverAddr = flag.String(
-		"apiserver_hostport", "localhost:8443", "The hostport address of the Kubernetes API server")
+		"notify_systemd", false,
+		"Whether to notify systemd that the daemon is ready to serve. "+
+			"Used if the service is ran from systemd, as opposed from a pod.")
 )
 
 // handleFunc is a shorthand for a HTTP handler function.
@@ -193,11 +185,13 @@ func LogApiVersion(kubernetesConfig *rest.Config) {
 	clientSet, err := kubernetes.NewForConfig(kubernetesConfig)
 	if err != nil {
 		glog.Error(apierrors.Wrapf(err,
-			"Could not contact the Kubernetes API server at: %v",
-			*apiserverAddr))
+			"Could not contact the Kubernetes API server"))
 		return
 	}
-	_, err = clientSet.CoreV1().Pods("default").Get("", metav1.GetOptions{})
+	resp, err := clientSet.
+		CoreV1().
+		Pods("default").
+		Get("", metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		glog.Error(apierrors.Wrapf(err, "Pod not found."))
 		return
@@ -206,24 +200,42 @@ func LogApiVersion(kubernetesConfig *rest.Config) {
 		glog.Error(apierrors.Wrapf(statusError, "Error getting pod"))
 	}
 
-	glog.Infof("Found some pods.")
+	glog.V(2).Infof("Got a response from apiserver:\n%v", resp)
 }
 
-// newKubernetesClientConfig creates a configuration for the client-go code.
-//
-// From outside a cluster, this information comes from the cluster
-// configuration file.  From inside the cluster, this information comes
-// from the "in-cluster" Kubernetes client.  For a daemon running on
-// the master, we have to assemble this information from the information set
-// given to us in flags.
+// newKubernetesClientConfig obtains the k8s configuration from the background
+// context supplied to pods by Kubernetes.
 func newKubernetesClientConfig() *rest.Config {
-	return &rest.Config{
-		Host: *apiserverAddr,
-		TLSClientConfig: rest.TLSClientConfig{
-			CertFile: *certFile,
-			KeyFile:  *serverKeyFile,
-			CAFile:   *caCertFile,
-		},
+	clientConfig, err := rest.InClusterConfig()
+	if err != nil {
+		glog.Fatalf("Could not get Kubernetes cluster configuration.")
+	}
+	return clientConfig
+}
+
+// maybeNotifySystemd notifies the monitor daemon that we're ready to start
+// serving.  But only if the daemon is actually on the other side, since the
+// notification writes into a Unix socket under the hood.
+func maybeNotifySystemd() {
+	if *notifySystemd {
+		daemon.SdNotify( /*unsetEnvironment=*/ false, "READY=1")
+	}
+}
+
+// newPolicyHierarchyClient creates a new client for the CRD, or dies trying.
+func newPolicyHierarchyClient(config *rest.Config) *policyhierarchy.Clientset {
+	client, err := policyhierarchy.NewForConfig(config)
+	if err != nil {
+		glog.Fatalf("Could not create Kubernetes API client: %v", err)
+	}
+	return client
+}
+
+// listenAndServe blocks while serving the authorizer webhook.
+func listenAndServe(srv *http.Server) {
+	err := srv.ListenAndServeTLS(*certFile, *serverKeyFile)
+	if err != nil {
+		glog.Fatalf("ListenAndServe: %+v", err)
 	}
 }
 
@@ -232,28 +244,15 @@ func main() {
 	glog.Infof("Webhook authorizer listening at: %v", *listenAddr)
 	glog.Infof("Using server certificate file: %v", *certFile)
 	glog.Infof("Using server private key file: %v", *serverKeyFile)
-	glog.Infof("Using CA file: %v", *caCertFile)
 
 	clientConfig := newKubernetesClientConfig()
-	policyHierarchyClient, err := policyhierarchy.NewForConfig(clientConfig)
-	if err != nil {
-		glog.Fatalf("Could not create Kubernetes API client: %v", err)
-	}
+	policyHierarchyClient := newPolicyHierarchyClient(clientConfig)
 
 	srv := Server(ServeFunc(authorizer.New(policyHierarchyClient.K8usV1())))
 
 	// Demo the connection to the apiserver.
 	go LogApiVersion(clientConfig)
 
-	// Notifies the monitor daemon that we're ready to start serving.
-	// But only if the daemon is actually on the other side, since
-	// the notification writes into a Unix socket under the hood.
-	if *notifySystemd {
-		daemon.SdNotify( /*unsetEnvironment=*/ false, "READY=1")
-	}
-
-	err = srv.ListenAndServeTLS(*certFile, *serverKeyFile)
-	if err != nil {
-		glog.Fatal("ListenAndServe: ", err)
-	}
+	maybeNotifySystemd()
+	listenAndServe(srv)
 }
