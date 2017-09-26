@@ -19,8 +19,10 @@ package main
 import (
 	"flag"
 
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/meta"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/restconfig"
+
 	"github.com/golang/glog"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/service"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/syncer"
 	"github.com/pkg/errors"
@@ -29,7 +31,12 @@ import (
 func main() {
 	flag.Parse()
 
-	clusterClient, err := client.NewMiniKubeClient()
+	config, err := restconfig.NewRestConfig()
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to create rest config"))
+	}
+
+	client, err := meta.NewForConfig(config)
 	if err != nil {
 		panic(errors.Wrapf(err, "Failed to create client"))
 	}
@@ -40,7 +47,7 @@ func main() {
 		close(stopChannel)
 	}
 
-	clusterSyncer := syncer.New(clusterClient.PolicyHierarchy(), clusterClient.Kubernetes())
+	clusterSyncer := syncer.New(client)
 	clusterSyncer.Run(errorCallback)
 
 	service.WaitForShutdownWithChannel(stopChannel)

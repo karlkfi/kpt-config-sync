@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/meta/fake"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policynodewatcher"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/util/set/stringset"
 	core_v1 "k8s.io/api/core/v1"
@@ -43,8 +44,12 @@ func createNamespace(name string, phase core_v1.NamespacePhase) core_v1.Namespac
 	}
 }
 
+func newTestSyncer() *Syncer {
+	return &Syncer{client: fake.NewClient()}
+}
+
 func TestSyncerComputeActions(t *testing.T) {
-	syncer := &Syncer{}
+	syncer := newTestSyncer()
 
 	for idx, testcase := range []ComputeActionsTestCase{
 		{ // encounter error
@@ -126,7 +131,7 @@ type GetEventActionTestCase struct {
 }
 
 func TestSyncerGetEventAction(t *testing.T) {
-	syncer := &Syncer{}
+	syncer := newTestSyncer()
 
 	namespaceName := "ns-name"
 	policyNode := &policyhierarchy_v1.PolicyNode{

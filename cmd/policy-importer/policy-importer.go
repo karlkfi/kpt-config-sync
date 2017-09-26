@@ -18,7 +18,8 @@ package main
 import (
 	"flag"
 
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/meta"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/restconfig"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/importer"
 	"github.com/pkg/errors"
 )
@@ -31,8 +32,12 @@ var flagDaemon = flag.Bool(
 func main() {
 	flag.Parse()
 
-	// TODO: add flag for service account credentials, flag for server address.
-	kubeClient, err := client.NewMiniKubeClient()
+	config, err := restconfig.NewRestConfig()
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to create rest config"))
+	}
+
+	client, err := meta.NewForConfig(config)
 	if err != nil {
 		panic(errors.Wrapf(err, "Failed to create kube client"))
 	}
@@ -40,7 +45,7 @@ func main() {
 	importerInstance := importer.New(importer.ImporterOptions{
 		Daemon:        *flagDaemon,
 		ConfigDirPath: *flagSyncDir,
-		Client:        kubeClient,
+		Client:        client,
 	})
 
 	err = importerInstance.Run()

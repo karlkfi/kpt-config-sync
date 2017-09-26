@@ -21,14 +21,13 @@ import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/meta"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policynodewatcher"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/util/namespaceutil"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/util/set/stringset"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // ErrorCallback is a callback which is called if Syncer encounters an error during execution
@@ -41,21 +40,17 @@ type Interface interface {
 	Wait()
 }
 
-// Syncer implements the namespace syncer.  This will watch
+// Syncer implements the namespace syncer.  This will watch the policynodes then sync changes to
+// namespaces.
 type Syncer struct {
-	policyHierarchyInterface policyhierarchy.Interface
-	kubernetesInterface      kubernetes.Interface
-
+	client            meta.Interface
 	policyNodeWatcher policynodewatcher.Interface
 	errorCallback     ErrorCallback
 }
 
-func New(
-	policyHierarchyInterface policyhierarchy.Interface,
-	kubernetesInterface kubernetes.Interface) *Syncer {
+func New(client meta.Interface) *Syncer {
 	return &Syncer{
-		policyHierarchyInterface: policyHierarchyInterface,
-		kubernetesInterface:      kubernetesInterface,
+		client: client,
 	}
 }
 
@@ -107,10 +102,10 @@ func (s *Syncer) computeActions(
 
 	namespaceActions := []client.NamespaceAction{}
 	needsCreate.ForEach(func(ns string) {
-		namespaceActions = append(namespaceActions, client.NewNamespaceCreateAction(s.kubernetesInterface, ns))
+		namespaceActions = append(namespaceActions, client.NewNamespaceCreateAction(s.client.Kubernetes(), ns))
 	})
 	needsDelete.ForEach(func(ns string) {
-		namespaceActions = append(namespaceActions, client.NewNamespaceDeleteAction(s.kubernetesInterface, ns))
+		namespaceActions = append(namespaceActions, client.NewNamespaceDeleteAction(s.client.Kubernetes(), ns))
 	})
 
 	return namespaceActions, nil
@@ -118,7 +113,7 @@ func (s *Syncer) computeActions(
 
 func (s *Syncer) initialSync() (int64, error) {
 	glog.Info("Performing initial sync on namespaces")
-	namespaceList, err := s.kubernetesInterface.CoreV1().Namespaces().List(meta_v1.ListOptions{})
+	namespaceList, err := s.client.Kubernetes().CoreV1().Namespaces().List(meta_v1.ListOptions{})
 	if err != nil {
 		return 0, err
 	}
@@ -128,7 +123,7 @@ func (s *Syncer) initialSync() (int64, error) {
 		return 0, err
 	}
 
-	policyNodeList, err := s.policyHierarchyInterface.K8usV1().PolicyNodes().List(meta_v1.ListOptions{})
+	policyNodeList, err := s.client.PolicyHierarchy().K8usV1().PolicyNodes().List(meta_v1.ListOptions{})
 	if err != nil {
 		return 0, err
 	}
@@ -163,7 +158,7 @@ func (s *Syncer) runInternal() {
 		s.errorCallback(errors.Wrapf(err, "Failed to perform initial sync"))
 		return
 	}
-	s.policyNodeWatcher = policynodewatcher.New(s.policyHierarchyInterface, resourceVersion)
+	s.policyNodeWatcher = policynodewatcher.New(s.client.PolicyHierarchy(), resourceVersion)
 	s.policyNodeWatcher.Run(policynodewatcher.NewEventHandler(s.onPolicyNodeEvent, s.onPolicyNodeError))
 }
 
@@ -173,9 +168,9 @@ func (s *Syncer) getEventAction(eventType policynodewatcher.EventType, policyNod
 	glog.V(3).Infof("Got event %s namespace %s resourceVersion %s", eventType, policyNode.Name, policyNode.ResourceVersion)
 	switch eventType {
 	case policynodewatcher.Added:
-		action = client.NewNamespaceCreateAction(s.kubernetesInterface, namespace)
+		action = client.NewNamespaceCreateAction(s.client.Kubernetes(), namespace)
 	case policynodewatcher.Deleted:
-		action = client.NewNamespaceDeleteAction(s.kubernetesInterface, namespace)
+		action = client.NewNamespaceDeleteAction(s.client.Kubernetes(), namespace)
 	case policynodewatcher.Modified:
 		glog.Info("Got modified event for %s, ignoring", policyNode.Name)
 	}

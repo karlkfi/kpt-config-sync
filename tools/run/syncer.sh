@@ -7,4 +7,5 @@ source $(dirname ${0:-})/common.sh
 
 exec ${bin}/$(basename ${main}) \
   --logtostderr \
-  -v=5
+  -v=5 \
+  "$@"
