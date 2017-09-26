@@ -11,7 +11,10 @@ minikube start \
   --logtostderr \
   "$@"
 
-minikube ip
+MINIKUBE_HOST_ADDRESS=$(minikube ip)
+
+echo "Minkube cluster IP: ${MINIKUBE_HOST_ADDRESS}"
 minikube ssh -- "sudo chmod ug+x /etc/kubernetes/addons/bootlocal.sh"
-minikube ssh -- "sudo /etc/kubernetes/addons/bootlocal.sh &"
+minikube ssh -- "sudo MINIKUBE_HOST_ADDRESS=${MINIKUBE_HOST_ADDRESS} \
+  /etc/kubernetes/addons/bootlocal.sh &"
 
