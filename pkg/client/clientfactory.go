@@ -18,6 +18,7 @@ limitations under the License.
 package client
 
 import (
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/metaclient"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/restconfig"
 	"github.com/pkg/errors"
 )
@@ -25,7 +26,7 @@ import (
 const minikube = "minikube"
 
 // NewClient creates a new client of a given type.
-func NewClient(clientType string) (*Client, error) {
+func NewClient(clientType string) (*metaclient.MetaClient, error) {
 	switch clientType {
 	case minikube:
 		return NewMiniKubeClient()
@@ -34,7 +35,7 @@ func NewClient(clientType string) (*Client, error) {
 }
 
 // NewMinikubeServiceAccountClient returns a new client for a minikube service account.
-func NewMinikubeServiceAccountClient(secretPath string) (*Client, error) {
+func NewMinikubeServiceAccountClient(secretPath string) (*metaclient.MetaClient, error) {
 	minikubeConfig, err := restconfig.NewMinikubeConfig()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to load kubectl config")
@@ -45,15 +46,15 @@ func NewMinikubeServiceAccountClient(secretPath string) (*Client, error) {
 		return nil, err
 	}
 
-	return NewForConfig(cfg)
+	return metaclient.NewForConfig(cfg)
 }
 
 // NewMiniKubeClient creates a client that will talk to minikube
-func NewMiniKubeClient() (*Client, error) {
+func NewMiniKubeClient() (*metaclient.MetaClient, error) {
 	cfg, err := restconfig.NewKubectlConfig()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to load kubectl config")
 	}
 
-	return NewForConfig(cfg)
+	return metaclient.NewForConfig(cfg)
 }
