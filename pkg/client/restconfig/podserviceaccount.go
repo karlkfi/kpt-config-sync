@@ -15,27 +15,13 @@ limitations under the License.
 
 package restconfig
 
-import (
-	"os/user"
-	"path/filepath"
+import "k8s.io/client-go/rest"
 
-	"github.com/pkg/errors"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
+const (
+	serviceAccountTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
-const kubectlConfigPath = ".kube/config"
-
-// NewKubectlConfig creates a config for whichever context is active in kubectl.
-func NewKubectlConfig() (*rest.Config, error) {
-	curentUser, err := user.Current()
-	if err != nil {
-		return nil, errors.Wrapf(err, "Faild to get current user")
-	}
-
-	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(curentUser.HomeDir, kubectlConfigPath))
-	if err != nil {
-		return nil, err
-	}
-	return config, nil
+// NewPodServiceAccountConfig creates a config for connecting to the API server from within a pod.
+func NewPodServiceAccountConfig() (*rest.Config, error) {
+	return rest.InClusterConfig()
 }

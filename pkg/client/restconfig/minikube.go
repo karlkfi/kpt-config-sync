@@ -16,6 +16,9 @@ limitations under the License.
 package restconfig
 
 import (
+	"os/user"
+	"path/filepath"
+
 	"github.com/pkg/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -26,8 +29,14 @@ const minikube = "minikube"
 // NewMinikubeConfig creates a new configuration for connnecting to minikube from the kubectl
 // config file on localhost.
 func NewMinikubeConfig() (*rest.Config, error) {
+	curentUser, err := user.Current()
+	if err != nil {
+		return nil, errors.Wrapf(err, "Faild to get current user")
+	}
+
+	configPath := filepath.Join(curentUser.HomeDir, kubectlConfigPath)
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: KubectlConfigPath}, &clientcmd.ConfigOverrides{})
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath}, &clientcmd.ConfigOverrides{})
 
 	rawConfig, err := clientConfig.RawConfig()
 	if err != nil {
