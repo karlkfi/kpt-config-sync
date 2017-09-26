@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: syncer
+spec:
+  automountServiceAccountToken: true
+  serviceAccountName: syncer-service
+  containers:
+  - name: syncer
+    image: IMAGE_NAME
+    ports:
+    - containerPort: 80
