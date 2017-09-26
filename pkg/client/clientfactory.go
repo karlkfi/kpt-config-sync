@@ -18,23 +18,11 @@ limitations under the License.
 package client
 
 import (
-	"io/ioutil"
-	"os/user"
-	"path/filepath"
-
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/restconfig"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
-const (
-	kubectlConfigPath = ".kube/config"
-	minikube          = "minikube"
-)
+const minikube = "minikube"
 
 // NewClient creates a new client of a given type.
 func NewClient(clientType string) (*Client, error) {
@@ -45,18 +33,14 @@ func NewClient(clientType string) (*Client, error) {
 	return nil, errors.Errorf("Invalid client type %s", clientType)
 }
 
-func NewServiceAccountClient(secretPath string) (*Client, error) {
-	kubectlConfig, err := loadKubectlConfig()
+// NewMinikubeServiceAccountClient returns a new client for a minikube service account.
+func NewMinikubeServiceAccountClient(secretPath string) (*Client, error) {
+	minikubeConfig, err := restconfig.NewMinikubeConfig()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to load kubectl config")
 	}
 
-	minikubeCluster, ok := kubectlConfig.Clusters[minikube]
-	if !ok {
-		return nil, errors.Wrapf(err, "Kubectl config did not have minikube Clusters entry")
-	}
-
-	cfg, err := restconfig.NewConfigFromSecret(minikubeCluster.Server, secretPath)
+	cfg, err := restconfig.NewConfigFromSecret(minikubeConfig.Host, secretPath)
 	if err != nil {
 		return nil, err
 	}
@@ -64,54 +48,11 @@ func NewServiceAccountClient(secretPath string) (*Client, error) {
 	return NewForConfig(cfg)
 }
 
-func loadKubectlConfig() (*api.Config, error) {
-	curentUser, err := user.Current()
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to get current user")
-	}
-
-	fileBytes, err := ioutil.ReadFile(filepath.Join(curentUser.HomeDir, kubectlConfigPath))
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to read kubectl config")
-	}
-
-	scheme := runtime.NewScheme()
-	v1.AddToScheme(scheme)
-	api.AddToScheme(scheme)
-	codecFactory := serializer.NewCodecFactory(scheme)
-
-	config := &api.Config{}
-	loadedConfig, _, err := codecFactory.UniversalDecoder(api.SchemeGroupVersion).Decode(fileBytes, nil, config)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to deserialize using codec factory")
-	}
-
-	return loadedConfig.(*api.Config), nil
-}
-
 // NewMiniKubeClient creates a client that will talk to minikube
 func NewMiniKubeClient() (*Client, error) {
-	kubectlConfig, err := loadKubectlConfig()
+	cfg, err := restconfig.NewKubectlConfig()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to load kubectl config")
-	}
-
-	minikubeCluster, ok := kubectlConfig.Clusters[minikube]
-	if !ok {
-		return nil, errors.Wrapf(err, "Kubectl config did not have minikube Clusters entry")
-	}
-	minikubeAuthInfo, ok := kubectlConfig.AuthInfos[minikube]
-	if !ok {
-		return nil, errors.Wrapf(err, "Kubectl config did not have minikube AuthInfos entry")
-	}
-
-	cfg := &rest.Config{
-		Host: minikubeCluster.Server,
-		TLSClientConfig: rest.TLSClientConfig{
-			CertFile: minikubeAuthInfo.ClientCertificate,
-			KeyFile:  minikubeAuthInfo.ClientKey,
-			CAFile:   minikubeCluster.CertificateAuthority,
-		},
 	}
 
 	return NewForConfig(cfg)
