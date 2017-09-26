@@ -20,7 +20,7 @@ TAG := experimental
 
 DOCKER_ENV := $(shell minikube docker-env)
 
-test: build
+test:
 	go test .
 
 build: authorizer
@@ -40,7 +40,7 @@ authorizer_no_cgo:
 
 clean:
 	go clean .
-	rm -f *.crt *.key *.pem *.csr
+	rm -f *.crt *.key *.pem *.csr *.tmp
 
 # Use this target to run the test authorizer on your machine, with a debug
 # setup
@@ -48,7 +48,7 @@ debug_authorizer_start: authorizer server.key server.crt
 	./authorizer --logtostderr --vmodule=main=2
 
 # Build a docker container for the minikube docker repository.
-docker_minikube: authorizer_no_cgo test server.key server.crt
+docker_minikube: test authorizer_no_cgo server.key server.crt
 	eval $(DOCKER_ENV) && \
 	docker build -t $(PREFIX):$(TAG) .
 
@@ -56,9 +56,9 @@ docker_clean:
 	eval $(DOCKER_ENV) && \
 	docker rmi $(PREFIX):$(TAG)
 
-.NOTPARALLEL: server.key server.csr server.pem server.crt
-server.key server.csr server.pem server.crt: gencert.sh
-	./gencert.sh
+.NOTPARALLEL: server.key server.csr server.pem server.crt ca.crt
+server.key server.csr server.pem server.crt: minikube/gencert.sh
+	./minikube/gencert.sh
 
 
 $(HOME)/.minikube/addons/webhook.kubeconfig: authorizer_no_cgo minikube/init.sh server.key server.crt

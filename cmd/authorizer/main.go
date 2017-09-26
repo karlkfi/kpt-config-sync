@@ -232,6 +232,7 @@ func main() {
 	glog.Infof("Webhook authorizer listening at: %v", *listenAddr)
 	glog.Infof("Using server certificate file: %v", *certFile)
 	glog.Infof("Using server private key file: %v", *serverKeyFile)
+	glog.Infof("Using CA file: %v", *caCertFile)
 
 	clientConfig := newKubernetesClientConfig()
 	policyHierarchyClient, err := policyhierarchy.NewForConfig(clientConfig)

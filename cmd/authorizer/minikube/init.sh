@@ -10,14 +10,14 @@ set -v
 # While it has not been called out explicitly, it seems that the webhook config
 # is just reusing the file format and repurposing it to configure a webhook.
 # This may explain the non-intuitive names of the fields in the config file.
-HOSTNAME=localhost
-PORTNUMBER=10443
+WEBHOOK_HOSTNAME=${WEBHOOK_HOSTNAME:-10.0.0.112}
+PORTNUMBER=443
 cat > $HOME/.minikube/addons/webhook.kubeconfig << EOF
 clusters:
   - name: authorizer
     cluster:
       certificate-authority: /var/lib/localkube/certs/ca.crt
-      server: https://${HOSTNAME}:${PORTNUMBER}/authorize
+      server: https://${WEBHOOK_HOSTNAME}:${PORTNUMBER}/authorize
 users:
   - name: minikube
     user:

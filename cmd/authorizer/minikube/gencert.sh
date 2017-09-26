@@ -44,21 +44,60 @@ echo "Generating server certificate for hostname: CN=${CANONICAL_NAME}"
 # First generate a certificate signing request (CSR).  It must be signed with
 # the server's private key.  The CN= field must match the FQDN that will appear
 # in client HTTPS requests.
+cat <<EOF > csr_config.tmp
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+
+[req_distinguished_name]
+countryName = Country Name (2 letter code)
+countryName_default = US
+stateOrProvinceName = State or Province Name (full name)
+stateOrProvinceName_default = CA
+localityName = Locality Name (eg, city)
+localityName_default = San Francisco
+organizationalUnitName = Organizational Unit Name (eg, section)
+organizationalUnitName_default = Example Org Unit
+commonName = Example Authorizer in a Pod.
+commonName_max = 64
+
+[ v3_req ]
+# Extensions to add to a certificate request
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1=${CANONICAL_NAME}
+DNS.2=authorizer.default.svc.cluster.local
+IP.1=10.0.0.112
+
+EOF
 SUBJECT="/C=US/ST=California/L=San Francisco/O=ExampleDotCom/OU=ExampleOU/CN=${CANONICAL_NAME}/"
 openssl req -out \
   ${SERVER_CERTIFICATE_SIGNING_REQUEST} -new \
+  -config csr_config.tmp \
+  -extensions v3_req \
   -key ${SERVER_PRIVATE_KEY} \
-  -subj "${SUBJECT}"
+  -subj "${SUBJECT}" \
 
 # Verify that the result makes sense.  Suppresses output since it is not
 # relevant.
 openssl req -verify -in ${SERVER_CERTIFICATE_SIGNING_REQUEST} -text -noout
 
 # Sign the CSR using the CA's private key.
-openssl x509 -req -days 360 -in ${SERVER_CERTIFICATE_SIGNING_REQUEST} \
-  -CA ${CA_CERTIFICATE} -CAkey ${CA_PRIVATE_KEY} \
-  -CAcreateserial -out ${SERVER_CERTIFICATE}
+openssl x509 -req \
+  -days 360 \
+  -in ${SERVER_CERTIFICATE_SIGNING_REQUEST} \
+  -CA ${CA_CERTIFICATE} \
+  -CAkey ${CA_PRIVATE_KEY} \
+  -CAcreateserial \
+  -extensions v3_req \
+  -extfile csr_config.tmp \
+  -out ${SERVER_CERTIFICATE}
 
-echo "The content of the generated certificate:"
+echo "The content of the generated certificate in file: ${SERVER_CERTIFICATE}"
 openssl x509 -in ${SERVER_CERTIFICATE} -text
+
+cp ${CA_CERTIFICATE} ca.crt
 

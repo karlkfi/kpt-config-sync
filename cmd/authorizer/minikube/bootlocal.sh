@@ -2,7 +2,7 @@
 # This script starts the authorizer on the master machine.
 
 MINIKUBE_HOST_ADDRESS=${MINIKUBE_HOST_ADDRESS:-localhost}
-APISERVER_PORT=8433
+APISERVER_PORT=8443
 PORTNUMBER=10443
 
 chmod ug+x /etc/kubernetes/addons/authorizer &> /var/log/bootlocal.sh.log
