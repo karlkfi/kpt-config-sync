@@ -13,9 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package metaclient sets up a set of client sets that we use for communicating with core Kubernetes
+// Package meta sets up a set of client sets that we use for communicating with core Kubernetes
 // as well as the custom resources.
-package metaclient
+package meta
 
 import (
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
@@ -24,42 +24,42 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// Interface specifies the interface for metaclient.
+// Interface specifies the interface for Client.
 type Interface interface {
 	Kubernetes() kubernetes.Interface
 	PolicyHierarchy() policyhierarchy.Interface
 }
 
-// MetaClient is a container for the kubernetes Clientset and the policyhierarchy clientset.
-type MetaClient struct {
+// Client is a container for the kubernetes Clientset and the policyhierarchy clientset.
+type Client struct {
 	kubernetesClientset      *kubernetes.Clientset
 	policyHierarchyClientset *policyhierarchy.Clientset
 }
 
-var _ Interface = &MetaClient{}
+var _ Interface = &Client{}
 
 // Kubernetes returns the kubernetes clientset
-func (c *MetaClient) Kubernetes() kubernetes.Interface {
+func (c *Client) Kubernetes() kubernetes.Interface {
 	return c.kubernetesClientset
 }
 
 // PolicyHierarchy returns the policyhierarchy clientse
-func (c *MetaClient) PolicyHierarchy() policyhierarchy.Interface {
+func (c *Client) PolicyHierarchy() policyhierarchy.Interface {
 	return c.policyHierarchyClientset
 }
 
-// New creates a new MetaClient directly from member client sets.
+// New creates a new Client directly from member client sets.
 func New(
 	kubernetesClientset *kubernetes.Clientset,
-	policyHierarchyClientset *policyhierarchy.Clientset) *MetaClient {
-	return &MetaClient{
+	policyHierarchyClientset *policyhierarchy.Clientset) *Client {
+	return &Client{
 		kubernetesClientset:      kubernetesClientset,
 		policyHierarchyClientset: policyHierarchyClientset,
 	}
 }
 
 // NewForConfig will r
-func NewForConfig(cfg *rest.Config) (*MetaClient, error) {
+func NewForConfig(cfg *rest.Config) (*Client, error) {
 	kubernetesClientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to create kubernetes clientset")
@@ -73,9 +73,9 @@ func NewForConfig(cfg *rest.Config) (*MetaClient, error) {
 	return New(kubernetesClientset, policyHierarchyClientSet), nil
 }
 
-// NewForConfigOrDie creates a new MetaClient from the given config and panics if there is an error.
-func NewForConfigOrDie(cfg *rest.Config) *MetaClient {
-	return &MetaClient{
+// NewForConfigOrDie creates a new Client from the given config and panics if there is an error.
+func NewForConfigOrDie(cfg *rest.Config) *Client {
+	return &Client{
 		kubernetesClientset:      kubernetes.NewForConfigOrDie(cfg),
 		policyHierarchyClientset: policyhierarchy.NewForConfigOrDie(cfg),
 	}

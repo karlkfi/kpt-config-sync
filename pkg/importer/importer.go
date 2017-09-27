@@ -28,7 +28,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/golang/glog"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/metaclient"
+	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/meta"
 	"github.com/mdruskin/kubernetes-enterprise-control/pkg/service"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,7 +41,7 @@ type ImporterOptions struct {
 	// ConfigDirPath is the directory we will watch for changes to files.
 	ConfigDirPath string
 	// Client is the kubernetes cluster client.
-	Client *metaclient.MetaClient
+	Client *meta.Client
 }
 
 // Importer handles importing yaml or json files containing a PolicyNodeSpec into the kubernetes
