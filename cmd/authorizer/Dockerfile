@@ -20,5 +20,5 @@ ADD authorizer authorizer
 ADD server.key server.key
 ADD server.crt server.crt
 EXPOSE 8443
-ENTRYPOINT ["/authorizer"]
+ENTRYPOINT ["/authorizer", "--motd='TLS Logging (golang)'"]
 
