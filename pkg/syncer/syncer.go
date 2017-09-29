@@ -69,11 +69,10 @@ func (s *Syncer) Wait() {
 
 func (s *Syncer) computeActions(
 	existingNamespaceList *core_v1.NamespaceList,
-	policyNodeList *policyhierarchy_v1.PolicyNodeList) ([]client.NamespaceAction, error) {
+	policyNodeList *policyhierarchy_v1.PolicyNodeList) []client.NamespaceAction {
 
 	// Get the set of non-reserved, active namespaces
 	existingNamespaces := stringset.New()
-	terminatingNamespaces := stringset.New()
 	for _, namespaceItem := range existingNamespaceList.Items {
 		if namespaceutil.IsReserved(namespaceItem) {
 			continue
@@ -82,7 +81,6 @@ func (s *Syncer) computeActions(
 		case core_v1.NamespaceActive:
 			existingNamespaces.Add(namespaceItem.Name)
 		case core_v1.NamespaceTerminating:
-			terminatingNamespaces.Add(namespaceItem.Name)
 		}
 	}
 
@@ -93,22 +91,18 @@ func (s *Syncer) computeActions(
 
 	needsCreate := declaredNamespaces.Difference(existingNamespaces)
 	needsDelete := existingNamespaces.Difference(declaredNamespaces)
-	terminatingNeedsCreate := terminatingNamespaces.Intersection(needsCreate)
-
-	if terminatingNeedsCreate.Size() != 0 {
-		// TODO: add retry for this situation.
-		return nil, errors.Errorf("Need to create namesapace %s which is currently terminating")
-	}
 
 	namespaceActions := []client.NamespaceAction{}
 	needsCreate.ForEach(func(ns string) {
+		glog.Infof("Adding create operation for %s", ns)
 		namespaceActions = append(namespaceActions, client.NewNamespaceCreateAction(s.client.Kubernetes(), ns))
 	})
 	needsDelete.ForEach(func(ns string) {
+		glog.Infof("Adding delete operation for %s", ns)
 		namespaceActions = append(namespaceActions, client.NewNamespaceDeleteAction(s.client.Kubernetes(), ns))
 	})
 
-	return namespaceActions, nil
+	return namespaceActions
 }
 
 func (s *Syncer) initialSync() (int64, error) {
@@ -135,11 +129,7 @@ func (s *Syncer) initialSync() (int64, error) {
 		"Listed namespaces at resource version %d, policy nodes at %d",
 		namespaceResourceVersion, policyNodeResourceVersion)
 
-	namespaceActions, err := s.computeActions(namespaceList, policyNodeList)
-	if err != nil {
-		return 0, err
-	}
-
+	namespaceActions := s.computeActions(namespaceList, policyNodeList)
 	for _, action := range namespaceActions {
 		err := action.Execute()
 		if err != nil {

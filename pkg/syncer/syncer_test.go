@@ -32,7 +32,6 @@ type ComputeActionsTestCase struct {
 	existingNamespaces    []string // namespaces in the active state
 	terminatingNamespaces []string // namespaces in the "terminating" state
 
-	expectError bool     // True if we expect the function to error out
 	needsCreate []string // namespaces that will be deleted
 	needsDelete []string // namespaces that will be created
 }
@@ -51,20 +50,18 @@ func newTestSyncer() *Syncer {
 func TestSyncerComputeActions(t *testing.T) {
 	syncer := newTestSyncer()
 
-	for idx, testcase := range []ComputeActionsTestCase{
-		{ // encounter error
+	for _, testcase := range []ComputeActionsTestCase{
+		{ // Create terminating ns
 			policyNodeNamespaces:  []string{"foo"},
 			existingNamespaces:    []string{"bar"},
 			terminatingNamespaces: []string{"foo"},
-			expectError:           true,
-			needsCreate:           []string{},
+			needsCreate:           []string{"foo"},
 			needsDelete:           []string{},
 		},
 		{ // need create, need delete
 			policyNodeNamespaces:  []string{"foo", "foo2"},
 			existingNamespaces:    []string{"bar", "bar2"},
 			terminatingNamespaces: []string{"baz"},
-			expectError:           false,
 			needsCreate:           []string{"foo", "foo2"},
 			needsDelete:           []string{"bar", "bar2"},
 		},
@@ -72,7 +69,6 @@ func TestSyncerComputeActions(t *testing.T) {
 			policyNodeNamespaces:  []string{"foo", "bar"},
 			existingNamespaces:    []string{"bar"},
 			terminatingNamespaces: []string{},
-			expectError:           false,
 			needsCreate:           []string{"foo"},
 			needsDelete:           []string{},
 		},
@@ -80,7 +76,6 @@ func TestSyncerComputeActions(t *testing.T) {
 			policyNodeNamespaces:  []string{"foo"},
 			existingNamespaces:    []string{"bar", "foo"},
 			terminatingNamespaces: []string{"baz"},
-			expectError:           false,
 			needsCreate:           []string{},
 			needsDelete:           []string{"bar"},
 		},
@@ -100,13 +95,7 @@ func TestSyncerComputeActions(t *testing.T) {
 			namespaceList.Items = append(namespaceList.Items, createNamespace(value, core_v1.NamespaceTerminating))
 		}
 
-		actions, err := syncer.computeActions(namespaceList, policyNodeList)
-		if testcase.expectError {
-			if err != nil {
-				t.Errorf("Testcase %d failed to produce error.  %#v", idx, testcase)
-			}
-			continue
-		}
+		actions := syncer.computeActions(namespaceList, policyNodeList)
 
 		nsCreate := stringset.New()
 		nsDelete := stringset.New()
