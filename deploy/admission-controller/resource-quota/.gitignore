@@ -1,0 +1,7 @@
+*.pem
+*.crt
+*.key
+*.srl
+resource-quota
+pod.yaml
+registration.yaml
