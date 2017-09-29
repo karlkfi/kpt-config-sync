@@ -18,9 +18,9 @@ package main
 import (
 	"flag"
 
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/meta"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/restconfig"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/importer"
+	"github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/client/restconfig"
+	"github.com/google/stolos/pkg/importer"
 	"github.com/pkg/errors"
 )
 

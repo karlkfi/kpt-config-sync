@@ -17,10 +17,10 @@ package main
 
 import (
 	"bytes"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/authorizer"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy/fake"
-	k8usv1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy/typed/k8us/v1"
+	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/authorizer"
+	"github.com/google/stolos/pkg/client/policyhierarchy/fake"
+	k8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/k8us/v1"
 	"io/ioutil"
 	authz "k8s.io/api/authorization/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

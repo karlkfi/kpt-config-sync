@@ -24,7 +24,7 @@ import (
 	"net/http"
 
 	"github.com/golang/glog"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/admission-controller"
+	"github.com/google/stolos/pkg/admission-controller"
 	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
 )
 

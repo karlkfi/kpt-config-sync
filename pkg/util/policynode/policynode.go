@@ -17,9 +17,9 @@ limitations under the License.
 package policynode
 
 import (
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/util/namespaceutil"
+	"github.com/google/stolos/pkg/util/namespaceutil"
 
-	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

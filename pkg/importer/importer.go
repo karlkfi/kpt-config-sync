@@ -27,9 +27,9 @@ import (
 	"github.com/docker/machine/libmachine/log"
 	"github.com/fsnotify/fsnotify"
 	"github.com/golang/glog"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/meta"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/service"
+	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/service"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

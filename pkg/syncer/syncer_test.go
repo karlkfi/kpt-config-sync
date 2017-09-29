@@ -19,10 +19,10 @@ package syncer
 import (
 	"testing"
 
-	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/meta/fake"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policynodewatcher"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/util/set/stringset"
+	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/client/meta/fake"
+	"github.com/google/stolos/pkg/client/policynodewatcher"
+	"github.com/google/stolos/pkg/util/set/stringset"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

@@ -25,8 +25,8 @@ import (
 
 	"github.com/golang/glog"
 
-	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy/fake"
+	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/client/policyhierarchy/fake"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	api_testing "k8s.io/client-go/testing"

@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
-	k8usv1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy/typed/k8us/v1"
+	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	k8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/k8us/v1"
 	apierrors "github.com/pkg/errors"
 	authz "k8s.io/api/authorization/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

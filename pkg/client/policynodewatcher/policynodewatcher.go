@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/golang/glog"
-	policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
+	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/client/policyhierarchy"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

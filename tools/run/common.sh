@@ -6,7 +6,7 @@ mkdir -p ${sync_dir}
 cmd=$(basename ${0:-} .sh)
 
 bin=$(echo ${GOPATH} | sed -e 's/.*://')/bin
-repo=github.com/mdruskin/kubernetes-enterprise-control
+repo=github.com/google/stolos
 main=cmd/${cmd}
 
 target=${repo}/${main}

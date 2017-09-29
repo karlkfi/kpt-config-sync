@@ -19,7 +19,7 @@ DOCKER_ENV ?= $(shell minikube docker-env)
 
 TAG := experimental
 IMAGE := gcr.io/$(GCP_PROJECT)/resource-quota:$(TAG)
-REPO := github.com/mdruskin/kubernetes-enterprise-control
+REPO := github.com/google/stolos
 PACKAGE_PATH := $(REPO)/cmd/admission-controller/resource-quota
 
 test:

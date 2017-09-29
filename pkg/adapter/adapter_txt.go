@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
 )
 
 func Load(filename string) ([]v1.PolicyNode, error) {

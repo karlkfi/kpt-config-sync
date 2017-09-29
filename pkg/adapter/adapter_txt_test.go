@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 

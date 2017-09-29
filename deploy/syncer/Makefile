@@ -23,7 +23,7 @@ INSTALL := install
 TEST := test
 
 PACKAGE := syncer
-REPO := github.com/mdruskin/kubernetes-enterprise-control
+REPO := github.com/google/stolos
 PACKAGE_PATH := $(REPO)/cmd/$(PACKAGE)
 BUILD_DIR := build
 

@@ -23,12 +23,12 @@ GOBASE=$(echo $GOPATH | sed 's/:.*//')
 GOWORK=$(echo $GOPATH | sed 's/.*://')
 
 # Comma separted list of APIs to generate for clientset.
-INPUT_BASE="github.com/mdruskin/kubernetes-enterprise-control/pkg/api"
+INPUT_BASE="github.com/google/stolos/pkg/api"
 INPUT_APIS="policyhierarchy/v1"
 
 # Where to put the generated client set
 OUTPUT_BASE="${GOWORK}/src"
-OUTPUT_CLIENT="github.com/mdruskin/kubernetes-enterprise-control/pkg/client"
+OUTPUT_CLIENT="github.com/google/stolos/pkg/client"
 CLIENTSET_NAME=policyhierarchy
 
 echo "Building gen tools..."

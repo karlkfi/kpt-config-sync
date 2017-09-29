@@ -15,7 +15,7 @@ limitations under the License.
 
 package importer
 
-import "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
+import "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 
 // Op represents an update operation type enum
 type Op string

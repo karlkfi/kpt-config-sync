@@ -16,7 +16,7 @@ limitations under the License.
 
 package policynodewatcher
 
-import policyhierarchy_v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
+import policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 
 // EventHandler is an interface for handling events from the PolicyNodeWatcher.  Note that events
 // will be called from a goroutine, but all callbacks are guaranteed to be serialized

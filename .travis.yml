@@ -3,5 +3,5 @@ language: go
 go:
   - 1.9
 
-go_import_path: github.com/mdruskin/kubernetes-enterprise-control
+go_import_path: github.com/google/stolos
 

@@ -17,8 +17,8 @@ limitations under the License.
 package v1
 
 import (
-	v1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/api/policyhierarchy/v1"
-	scheme "github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy/scheme"
+	v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	scheme "github.com/google/stolos/pkg/client/policyhierarchy/scheme"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

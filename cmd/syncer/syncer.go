@@ -19,12 +19,12 @@ package main
 import (
 	"flag"
 
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/meta"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/restconfig"
+	"github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/client/restconfig"
 
 	"github.com/golang/glog"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/service"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/syncer"
+	"github.com/google/stolos/pkg/service"
+	"github.com/google/stolos/pkg/syncer"
 	"github.com/pkg/errors"
 )
 

@@ -18,8 +18,8 @@ limitations under the License.
 package client
 
 import (
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/meta"
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/restconfig"
+	"github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/client/restconfig"
 	"github.com/pkg/errors"
 )
 

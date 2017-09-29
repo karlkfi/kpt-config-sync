@@ -18,7 +18,7 @@ limitations under the License.
 package meta
 
 import (
-	"github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
+	"github.com/google/stolos/pkg/client/policyhierarchy"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"

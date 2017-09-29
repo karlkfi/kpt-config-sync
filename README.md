@@ -7,4 +7,4 @@
 
 <center style="font-family: Arial; font-size: 80%;"><img src="img/boqtus-k8us.jpg"><br><i>In K8us we trust.</i></center>
 
-[ci results]: https://travis-ci.org/mdruskin/kubernetes-enterprise-control.svg?branch=master
+[ci results]: https://travis-ci.org/google/stolos.svg?branch=master

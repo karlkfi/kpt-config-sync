@@ -17,9 +17,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy"
-	k8usv1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy/typed/k8us/v1"
-	fakek8usv1 "github.com/mdruskin/kubernetes-enterprise-control/pkg/client/policyhierarchy/typed/k8us/v1/fake"
+	clientset "github.com/google/stolos/pkg/client/policyhierarchy"
+	k8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/k8us/v1"
+	fakek8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/k8us/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
