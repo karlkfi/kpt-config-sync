@@ -47,7 +47,7 @@ spec:
     app: authz
   ports:
   - name: foo
-    port: 443
+    port: ${PORTNUMBER}
     targetPort: 8443
   clusterIP: ${WEBHOOK_ADDRESS}
 ---

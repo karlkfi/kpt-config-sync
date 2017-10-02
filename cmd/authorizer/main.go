@@ -47,6 +47,7 @@ var (
 		"notify_systemd", false,
 		"Whether to notify systemd that the daemon is ready to serve. "+
 			"Used if the service is ran from systemd, as opposed from a pod.")
+	motd = flag.String("motd", "", "This message is printed first.")
 )
 
 // handleFunc is a shorthand for a HTTP handler function.
@@ -158,7 +159,9 @@ func Server(handler handlerFunc) *http.Server {
 	// everything else.
 
 	cfg := &tls.Config{
-		MinVersion: tls.VersionTLS12,
+		// TODO(fmil): Figure out how to not skip verify.
+		InsecureSkipVerify: true,
+		MinVersion:         tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP521,
 			tls.CurveP384,
@@ -241,6 +244,7 @@ func listenAndServe(srv *http.Server) {
 
 func main() {
 	flag.Parse()
+	glog.Infof("Motd: %v", *motd)
 	glog.Infof("Webhook authorizer listening at: %v", *listenAddr)
 	glog.Infof("Using server certificate file: %v", *certFile)
 	glog.Infof("Using server private key file: %v", *serverKeyFile)

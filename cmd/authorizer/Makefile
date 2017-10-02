@@ -24,6 +24,10 @@ DOCKER_ENV := $(shell minikube docker-env)
 # deployment.  For the time being this must be an IP address, and not a FQDN.
 MINIKUBE_AUTHORIZER_CLUSTER_IP_ADDRESS := 10.0.0.112
 
+KUBERNETES_VERSION := 1.8.0
+
+PROJECT_NAME := fmil-k8s-test
+
 test:
 	go test .
 
@@ -80,3 +84,10 @@ minikube_start: $(HOME)/.minikube/addons/webhook.kubeconfig minikube/start.sh
 minikube_stop:
 	minikube stop
 
+
+.PHONY: docker_gce
+docker_gce: docker_minikube
+	eval $(DOCKER_ENV) && \
+	docker tag $(PREFIX):$(TAG) \
+	  gcr.io/$(PROJECT_NAME)/$(PREFIX):$(TAG) && \
+	gcloud docker -- push gcr.io/$(PROJECT_NAME)/$(PREFIX):$(TAG)
