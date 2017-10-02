@@ -22,7 +22,7 @@ source $(dirname ${0:-})/common.sh
 
 restore_context_on_exit
 
-PROJECT_ID=""
+PROJECT_ID=$(gcloud config get-value project)
 CONTEXT=""
 while [[ $# -gt 0 ]]; do
   arg="${1:-}"

@@ -23,8 +23,48 @@ set -euo pipefail
 
 REPO=$(dirname ${0:-})/..
 
-# Create Custom Resource
-kubectl create -f ${REPO}/manifests/policy-node-crd.yaml
+function create_resource() {
+  local cfg_file=${1:-}
 
-# Create service account for syncer
-$REPO/deploy/syncer/create-service-account.sh
+  if ! kubectl get -f ${cfg_file} &> /dev/null; then
+    kubectl create -f ${cfg_file}
+  else
+    echo "Already created: ${cfg_file}"
+  fi
+}
+
+function delete_resource() {
+  local cfg_file=${1:-}
+
+  if kubectl get -f ${cfg_file} &> /dev/null; then
+    kubectl delete -f ${cfg_file}
+  else
+    echo "Does not exist: ${cfg_file}"
+  fi
+}
+
+# Create Custom Resource
+policy_node_crd=${REPO}/manifests/policy-node-crd.yaml
+
+# Syncer service account, role, rolebinding
+syncer_service_account=${REPO}/deploy/syncer-service-account.yaml
+syncer_role=${REPO}/deploy/syncer-role.yaml
+syncer_rolebinding=${REPO}/deploy/syncer-rolebinding.yaml
+
+ACTION=${ACTION:-create}
+action_resource=${ACTION}_resource
+
+case $ACTION in
+  create|delete)
+    echo "Will perform ${ACTION}"
+    ;;
+  *)
+    echo "Invalid action ${ACTION}"
+    exit 1
+    ;;
+esac
+
+${action_resource} ${policy_node_crd}
+${action_resource} ${syncer_service_account}
+${action_resource} ${syncer_role}
+${action_resource} ${syncer_rolebinding}
