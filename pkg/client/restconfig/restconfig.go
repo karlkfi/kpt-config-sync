@@ -69,9 +69,11 @@ func NewRestConfig() (*rest.Config, error) {
 
 	var errorStrs []string
 	for _, source := range configSources {
+		glog.V(1).Infof("Attempting to create rest config for %s", source.name)
 		config, err := source.create()
 		if err == nil {
 			glog.V(1).Infof("Created rest config from source %s", source.name)
+			glog.V(7).Infof("Config: %#v", *config)
 			return config, nil
 		}
 		glog.V(5).Infof("Failed to create from %s: %s", source.name, err)

@@ -30,6 +30,7 @@ import (
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/policyhierarchy"
 	"github.com/pkg/errors"
+	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -122,6 +123,11 @@ func (w *PolicyNodeWatcher) Run(eventHandler EventHandler) {
 
 // runInternal handles wrapping the watch with a retry loop for resuming on watcher timeout.
 func (w *PolicyNodeWatcher) runInternal() {
+	defer func() {
+		glog.Infof("PolicyNodeWatcher exiting loop at resource version %d", w.ResourceVersion())
+		w.wait.Done()
+	}()
+
 	glog.Infof("Starting PolicyNodeWatcher at resource version %d", w.ResourceVersion())
 	for atomic.LoadInt64(&w.stoppedAtomic) == 0 {
 		nextResourceVersion, err := w.watch()
@@ -134,7 +140,6 @@ func (w *PolicyNodeWatcher) runInternal() {
 
 		w.setResourceVerision(nextResourceVersion)
 	}
-	w.wait.Done()
 }
 
 func (w *PolicyNodeWatcher) watch() (int64, error) {
@@ -154,10 +159,8 @@ func (w *PolicyNodeWatcher) watch() (int64, error) {
 				return nextResourceVersion, nil
 			}
 			if event.Type == watch.Error {
-				if event.Object == nil {
-					return 0, errors.Errorf("Got error event from watch result channel")
-				}
-				return 0, errors.Errorf("Got error event from watch result channel with object: %#v", event.Object)
+				err := api_errors.FromObject(event.Object)
+				return 0, errors.Wrapf(err, "Got error event from watch result channel")
 			}
 
 			node := event.Object.(*policyhierarchy_v1.PolicyNode)

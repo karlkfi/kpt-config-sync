@@ -17,6 +17,7 @@ package syncer
 
 import (
 	"strconv"
+	"sync"
 
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
@@ -27,6 +28,7 @@ import (
 	"github.com/google/stolos/pkg/util/set/stringset"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
+	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -43,28 +45,44 @@ type Interface interface {
 // Syncer implements the namespace syncer.  This will watch the policynodes then sync changes to
 // namespaces.
 type Syncer struct {
-	client            meta.Interface
-	policyNodeWatcher policynodewatcher.Interface
-	errorCallback     ErrorCallback
+	client                meta.Interface
+	errorCallback         ErrorCallback
+	policyNodeWatcher     policynodewatcher.Interface
+	stopped               bool
+	policyNodeWatcherLock sync.Mutex // Guards policyNodeWatcher and stopped
 }
 
+// New creates a new syncer that will use the given client interface
 func New(client meta.Interface) *Syncer {
 	return &Syncer{
 		client: client,
 	}
 }
 
+// Run starts the syncer, any errors encountered will be returned through the error
+// callback
 func (s *Syncer) Run(errorCallback ErrorCallback) {
 	s.errorCallback = errorCallback
 	go s.runInternal()
 }
 
+// Stop asynchronously instructs the syncer to stop.
 func (s *Syncer) Stop() {
-	s.policyNodeWatcher.Stop()
+	s.policyNodeWatcherLock.Lock()
+	defer s.policyNodeWatcherLock.Unlock()
+	s.stopped = true
+	if s.policyNodeWatcher != nil {
+		s.policyNodeWatcher.Stop()
+	}
 }
 
+// Wait will wait for the syncer to complete then exit
 func (s *Syncer) Wait() {
-	s.policyNodeWatcher.Wait()
+	s.policyNodeWatcherLock.Lock()
+	defer s.policyNodeWatcherLock.Unlock()
+	if s.policyNodeWatcher != nil {
+		s.policyNodeWatcher.Wait()
+	}
 }
 
 func (s *Syncer) computeActions(
@@ -142,10 +160,29 @@ func (s *Syncer) initialSync() (int64, error) {
 	return policyNodeResourceVersion, nil
 }
 
+// isStopped returns if the syncer is stopped
+func (s *Syncer) isStopped() bool {
+	s.policyNodeWatcherLock.Lock()
+	defer s.policyNodeWatcherLock.Unlock()
+	return s.stopped
+}
+
 func (s *Syncer) runInternal() {
+	if s.isStopped() {
+		glog.Info("Syncer stopped, exiting.")
+		return
+	}
+
 	resourceVersion, err := s.initialSync()
 	if err != nil {
 		s.errorCallback(errors.Wrapf(err, "Failed to perform initial sync"))
+		return
+	}
+
+	s.policyNodeWatcherLock.Lock()
+	defer s.policyNodeWatcherLock.Unlock()
+	if s.stopped {
+		glog.Info("Syncer exiting loop")
 		return
 	}
 	s.policyNodeWatcher = policynodewatcher.New(s.client.PolicyHierarchy(), resourceVersion)
@@ -185,5 +222,11 @@ func (s *Syncer) onPolicyNodeEvent(eventType policynodewatcher.EventType, policy
 }
 
 func (s *Syncer) onPolicyNodeError(err error) {
+	if cause := errors.Cause(err); api_errors.IsGone(cause) {
+		glog.Infof("Got IsGone error, restarting sync: %s", cause)
+		s.runInternal()
+		return
+	}
+
 	s.errorCallback(errors.Wrapf(err, "Got error from PolicyNodeWatcher"))
 }

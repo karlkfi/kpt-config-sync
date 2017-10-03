@@ -142,7 +142,7 @@ func TestSyncerGetEventAction(t *testing.T) {
 			continue
 		}
 		if action.Name() != namespaceName {
-			t.Errorf("Added event should have name %s, got %s", namespaceName)
+			t.Errorf("Added event should have name %s, got %s", namespaceName, action.Name())
 		}
 		if action.Operation() != testcase.expectedOperation {
 			t.Errorf("Got unexpected operation %s for testcase %d, data %#v", action.Operation(), idx, testcase)
