@@ -28,7 +28,11 @@ import (
 var flagRestConfigSource = flag.String(
 	"restConfigSource",
 	"",
-	"Rest config source for the NewRestConfig call, values minikube, podServiceAccount, kubectl")
+	"Rest config source for the NewRestConfig call, values podServiceAccount, kubectl")
+var flagKubectlContext = flag.String(
+	"kubectlContext",
+	"",
+	"Select a specific context to use when loading kubectl config")
 
 // A source for creating a rest config
 type configSource struct {
@@ -39,16 +43,12 @@ type configSource struct {
 // List of config sources that will be tried in order for creating a rest.Config
 var configSources = []configSource{
 	{
-		name:   "minikube",
-		create: NewMinikubeConfig,
+		name:   "podServiceAccount",
+		create: NewPodServiceAccountConfig,
 	},
 	{
 		name:   "kubectl",
 		create: NewKubectlConfig,
-	},
-	{
-		name:   "podServiceAccount",
-		create: NewPodServiceAccountConfig,
 	},
 }
 

@@ -28,6 +28,10 @@ const kubectlConfigPath = ".kube/config"
 
 // NewKubectlConfig creates a config for whichever context is active in kubectl.
 func NewKubectlConfig() (*rest.Config, error) {
+	if *flagKubectlContext != "" {
+		return NewKubectlContextConfig(*flagKubectlContext)
+	}
+
 	curentUser, err := user.Current()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Faild to get current user")
@@ -38,4 +42,21 @@ func NewKubectlConfig() (*rest.Config, error) {
 		return nil, err
 	}
 	return config, nil
+}
+
+// NewKubectlContextConfig creates a new configuration for connnecting to kubernetes from the kubectl
+// config file on localhost.
+func NewKubectlContextConfig(contextName string) (*rest.Config, error) {
+	curentUser, err := user.Current()
+	if err != nil {
+		return nil, errors.Wrapf(err, "Faild to get current user")
+	}
+
+	configPath := filepath.Join(curentUser.HomeDir, kubectlConfigPath)
+	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath},
+		&clientcmd.ConfigOverrides{
+			CurrentContext: contextName,
+		})
+	return clientConfig.ClientConfig()
 }
