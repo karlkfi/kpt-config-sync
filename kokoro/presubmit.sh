@@ -3,6 +3,7 @@
 # Fail on any error.
 set -e
 
+echo "============= Setting up STOLOS environment ========"
 export GOPATH=/tmpfs/src/git/go
 mkdir -p $GOPATH/src/github.com/google/stolos
 
