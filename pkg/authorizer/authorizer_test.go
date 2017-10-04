@@ -54,8 +54,7 @@ func TestAuthorize(t *testing.T) {
 				},
 				&v1.PolicyNode{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ponies",
-						Namespace: "kitties",
+						Name: "ponies",
 					},
 				},
 			},
@@ -76,7 +75,7 @@ func TestAuthorize(t *testing.T) {
 		a := New(fakeClientSet.K8usV1())
 		actual := a.Authorize(&ttt.request)
 		if !reflect.DeepEqual(*actual, ttt.expected) {
-			t.Errorf("Expected:\n%+v\n---\nActual:\n%+v", ttt, actual)
+			t.Errorf("Expected:\n%+v\n---\nActual:\n%+v", ttt.expected, *actual)
 		}
 	}
 }
