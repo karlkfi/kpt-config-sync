@@ -2,8 +2,6 @@
 
 # Fail on any error.
 set -e
-# Display commands being run.
-set -x
 
 export GOPATH=/tmpfs/src/git/go
 mkdir -p $GOPATH/src/github.com/google/stolos
@@ -11,8 +9,12 @@ mkdir -p $GOPATH/src/github.com/google/stolos
 # Copy our code over to github.com/stolos because that's the import path
 cp -r git/stolos/* $GOPATH/src/github.com/google/stolos/
 
-# Go get dependencies: Verbose, don't install, include test
-go get -v -d -t ../...
+# Go get dependencies: Don't install, include test
+echo "Go get ..."
+go get -d -t ../...
 
-# Test!
+echo "Go build ..."
+go build github.com/google/stolos/...
+
+echo "======================== TEST ======================"
 go test -v github.com/google/stolos/...
