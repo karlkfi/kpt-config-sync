@@ -8,4 +8,6 @@ source $(dirname ${0:-})/common.sh
 exec ${bin}/$(basename ${main}) \
   --logtostderr \
   -v=5 \
-  --sync_dir ${sync_dir}
+  --sync_dir ${sync_dir} \
+  --use_fakeorg \
+  "$@"

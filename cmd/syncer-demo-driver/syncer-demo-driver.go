@@ -29,6 +29,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/service"
+	"github.com/google/stolos/pkg/testing/fakeorg"
+	"github.com/google/stolos/pkg/testing/orgdriver"
 	"github.com/google/stolos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
@@ -42,6 +44,12 @@ var flagUpdatePeriod = flag.Duration(
 	"update_period", time.Millisecond*2500, "Frequency of updates expressed wtih time unit suffix (see time.ParseDuration)")
 var flagMaxNamespaces = flag.Int(
 	"max_namespaces", 20, "Max namespaces to create")
+var flagUseFakeOrg = flag.Bool(
+	"use_fakeorg", false, "Use the fakeorg for generating stuff")
+var flagGenFakeOrg = flag.Bool(
+	"gen_fakeorg", false, "Generate namespaces for a fake org")
+var flagRngSeed = flag.Int64(
+	"rng_seed", 0, "Seed to use for RNG")
 
 func main() {
 	flag.Parse()
@@ -50,7 +58,71 @@ func main() {
 		panic("Define --sync_dir")
 	}
 
-	Run(*flagSyncDir, *flagUpdatePeriod, *flagMaxNamespaces)
+	switch {
+	case *flagGenFakeOrg:
+		GenFakeOrg(*flagSyncDir, *flagMaxNamespaces)
+	case *flagUseFakeOrg:
+		RunFakeOrg(*flagSyncDir, *flagUpdatePeriod, *flagMaxNamespaces)
+	default:
+		Run(*flagSyncDir, *flagUpdatePeriod, *flagMaxNamespaces)
+	}
+}
+
+func setupDir(syncDir string) {
+	err := os.MkdirAll(syncDir, 0750)
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to create sync dir %s", syncDir))
+	}
+
+	glog.Infof("Clearing sync dir %s", syncDir)
+	fileInfos, err := ioutil.ReadDir(syncDir)
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to read sync dir %s", syncDir))
+	}
+	for _, fileInfo := range fileInfos {
+		filePath := filepath.Join(syncDir, fileInfo.Name())
+		glog.Infof("Deleting %s", filePath)
+		err = os.Remove(filePath)
+		if err != nil {
+			panic(errors.Wrapf(err, "Failed to remove %s", filePath))
+		}
+	}
+}
+
+func createOptions(seed int64, numNamespaces int) *orgdriver.Options {
+	if seed == 0 {
+		seed = time.Now().UnixNano()
+	}
+	glog.Infof("Creating RNG with seed %d", seed)
+	return orgdriver.NewOptions(rand.New(rand.NewSource(seed)), numNamespaces)
+}
+
+func GenFakeOrg(syncDir string, numNamespaces int) {
+	setupDir(syncDir)
+
+	fakeOrg := fakeorg.New("my-fake-organization")
+	options := createOptions(*flagRngSeed, numNamespaces)
+	orgDriver := orgdriver.New(fakeOrg, options)
+	orgDriver.GrowFakeOrg()
+	orgDriver.WritePolicyNodes(syncDir)
+}
+
+func RunFakeOrg(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
+	setupDir(syncDir)
+
+	fakeOrg := fakeorg.New("my-fake-organization")
+	options := createOptions(*flagRngSeed, maxNamespaces)
+	orgDriver := orgdriver.New(fakeOrg, options)
+
+	ticker := time.NewTicker(updatePeriod)
+	go func() {
+		for range ticker.C {
+			orgDriver.RandSteps(5)
+			orgDriver.WriteDirtyPolicyNodes(syncDir)
+		}
+	}()
+
+	service.WaitForShutdownSignal(ticker)
 }
 
 // Run is a loop that will randomly create / delete JSON formatted PolicyNode objects in the
