@@ -86,7 +86,7 @@ func (s *Syncer) computeActions(
 
 	declaredNamespaces := stringset.New()
 	for _, policyNode := range policyNodeList.Items {
-		declaredNamespaces.Add(policyNode.Spec.Name)
+		declaredNamespaces.Add(policyNode.ObjectMeta.Name)
 	}
 
 	needsCreate := declaredNamespaces.Difference(existingNamespaces)

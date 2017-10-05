@@ -62,11 +62,14 @@ func panicWrapper(f func() string) (functionPanic bool, result string) {
 
 func TestSanitizeNamespace(t *testing.T) {
 	for _, testcase := range []sanitizeNamespaceTestcase{
-		{"Foo-Bar", "foo-bar", false},
+		{"Foo-Bar", "", true},
 		{"Foo_Bar", "", true},
 		{"-Foo_Bar", "", true},
 		{"Foo_Bar-", "", true},
-		{"ALL-CAPS", "all-caps", false},
+		{"ALL-CAPS", "", true},
+		{"foo-bar", "foo-bar", false},
+		{"-foo-bar", "", true},
+		{"foo-bar-", "", true},
 	} {
 		panics, sanitized := panicWrapper(func() string { return SanitizeNamespace(testcase.Name) })
 		if panics != testcase.Panic {

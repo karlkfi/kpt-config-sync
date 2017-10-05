@@ -17,7 +17,6 @@ package namespaceutil
 
 import (
 	"regexp"
-	"strings"
 
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
@@ -47,7 +46,6 @@ func IsReserved(namespace core_v1.Namespace) bool {
 // SanitizeNamespace will convert the namespace name to lowercase and assert it matches the
 // formatting rules for namespaces.
 func SanitizeNamespace(ns string) string {
-	ns = strings.ToLower(ns)
 	if !namespaceRe.MatchString(ns) {
 		panic(errors.Errorf("Namespace \"%s\" does not satisfy valid namespace pattern %s", ns, namespaceRegexPattern))
 	}

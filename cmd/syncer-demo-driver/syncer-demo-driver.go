@@ -88,7 +88,6 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 				namespaceGeneratorNum++
 
 				nodeSpec := &v1.PolicyNodeSpec{
-					Name:             name,
 					WorkingNamespace: true,
 					Policies: v1.PolicyLists{
 						Roles: []rbac_v1.Role{
@@ -108,7 +107,7 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 						ResourceQuotas: []core_v1.ResourceQuotaSpec{},
 					},
 				}
-				policyNode := policynode.WrapPolicyNodeSpec(nodeSpec)
+				policyNode := policynode.WrapPolicyNodeSpec(name, nodeSpec)
 
 				policyNodeBytes, err := json.MarshalIndent(policyNode, "", "  ")
 				if err != nil {

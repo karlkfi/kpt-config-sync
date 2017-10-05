@@ -25,14 +25,14 @@ import (
 
 // WrapPolicyNodeSpec will take a PolicyNodeSpec, wrap it in a PolicyNode and populate the appropriate
 // fields.
-func WrapPolicyNodeSpec(spec *policyhierarchy_v1.PolicyNodeSpec) *policyhierarchy_v1.PolicyNode {
+func WrapPolicyNodeSpec(namespace string, spec *policyhierarchy_v1.PolicyNodeSpec) *policyhierarchy_v1.PolicyNode {
 	return &policyhierarchy_v1.PolicyNode{
 		TypeMeta: meta_v1.TypeMeta{
 			APIVersion: policyhierarchy_v1.GroupName,
 			Kind:       "PolicyNode",
 		},
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: namespaceutil.SanitizeNamespace(spec.Name),
+			Name: namespaceutil.SanitizeNamespace(namespace),
 		},
 		Spec: *spec,
 	}

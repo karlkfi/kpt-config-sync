@@ -31,7 +31,8 @@ import (
 // It holds a policy defined for a single org unit (namespace).
 type PolicyNode struct {
 	metav1.TypeMeta `json:",inline"`
-	// Standard object's metadata.
+
+	// Standard object's metadata. The Name field of the policy node must match the namespace name.
 	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
@@ -41,9 +42,6 @@ type PolicyNode struct {
 
 // PolicyNodeSpec contains all the information about a policy linkage.
 type PolicyNodeSpec struct {
-	// The name of the org unit or the namespace.
-	Name string `json:"name"`
-
 	// True for leaf namespaces where pods will actually be scheduled,
 	// false for the parent org unit namespace where this policy is linked
 	// to, but no containers should run
