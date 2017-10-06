@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	_ "k8s.io/client-go/plugin/pkg/client/auth" // kubectl auth provider plugins
 	"k8s.io/client-go/rest"
 )
 
