@@ -18,9 +18,9 @@
 #
 
 
-GO := go
-INSTALL := install
-TEST := test
+GO ?= go
+INSTALL ?= install
+TEST ?= test
 
 PACKAGE := syncer
 REPO := github.com/google/stolos
@@ -32,8 +32,6 @@ IMAGE_REPOSITORY := $(PACKAGE)
 IMAGE_TAG ?= test
 IMAGE := $(IMAGE_REPOSITORY):$(IMAGE_TAG)
 
-GO_BIN := $(shell sed -e 's/.*://' <<< "$(GOPATH)")/bin
-
 .PHONY: all build-go test-go build-docker
 all: build-docker
 
@@ -44,7 +42,9 @@ build-docker: build-go Dockerfile
 	docker build -t $(IMAGE) .
 
 Dockerfile: tpl/Dockerfile
-	m4 -DBUILD_DIR=$(BUILD_DIR) -DBINARY_NAME=$(PACKAGE) -DGEN_NOTE="Generated file, do not edit!" < $^ > $@
+	m4 -DBUILD_DIR=$(BUILD_DIR) \
+	   -DBINARY_NAME=$(PACKAGE) \
+	   -DGEN_NOTE="Generated file, do not edit!" < $^ > $@
 
 build-go: test-go
 	$(GO) $(INSTALL) $(PACKAGE_PATH)
@@ -53,4 +53,14 @@ build-go: test-go
 
 clean:
 	rm -rf build Dockerfile
-	docker image rm $(IMAGE) || true
+	docker rmi $(IMAGE) || true
+
+deploy:
+	@echo "*** TODO(fmil): Implement target: $@"
+
+undeploy:
+	@echo "*** TODO(fmil): Implement target: $@"
+
+push-docker:
+	@echo "*** TODO(fmil): Implement target: $@"
+

@@ -11,14 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-# Note 'scratch' doesn't contain any of the possibly required dynamic libraries.
-# So, this deployment only makes sense if we know that webhook_authorizer is
-# a statically linked binary.
+# GEN_NOTE
+
+# This likely requires the binary to be statically linked.
 FROM busybox
-ADD authorizer authorizer
-ADD server.key server.key
-ADD server.crt server.crt
+
+COPY BINARY_NAME .
+ADD server.key .
+ADD server.crt .
 EXPOSE 8443
-ENTRYPOINT ["/authorizer", "--motd='TLS Logging (golang)'"]
+ENTRYPOINT ["BINARY_NAME", "--motd='TLS Logging (golang)'"]
 

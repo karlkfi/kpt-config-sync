@@ -22,7 +22,7 @@ source $(dirname ${0:-})/common.sh
 
 restore_context_on_exit
 
-PROJECT_ID=$(gcloud config get-value project)
+PROJECT_ID=${PROJECT_ID:-$(gcloud config get-value project)}
 CONTEXT=""
 while [[ $# -gt 0 ]]; do
   arg="${1:-}"
@@ -46,7 +46,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "${PROJECT_ID}" == "" ]]; then
-  echo "Speicfy project id -p|--project <id>"
+  echo "Specify project id -p|--project <id>"
   exit 1
 fi
 if [[ "${CONTEXT}" != "" ]]; then
