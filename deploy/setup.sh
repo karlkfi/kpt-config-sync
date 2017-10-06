@@ -66,5 +66,10 @@ esac
 
 ${action_resource} ${policy_node_crd}
 ${action_resource} ${syncer_service_account}
-${action_resource} ${syncer_role}
-${action_resource} ${syncer_rolebinding}
+
+if kubectl config current-context | grep "^gke_" &> /dev/null; then
+  echo "On GKE, skipping setup for syncer ClusterRole/ClusteRoleBinding"
+else
+  ${action_resource} ${syncer_role}
+  ${action_resource} ${syncer_rolebinding}
+fi
