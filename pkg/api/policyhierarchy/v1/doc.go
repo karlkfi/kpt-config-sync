@@ -14,11 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// +k8s:deepcopy-gen=package,register
-// +k8s:openapi-gen=true
-
-// +groupName=k8us.k8s.io
-
 // Package v1 contains the version 1 data definition for the PolicyNode custom
 // resource.
 //
@@ -26,4 +21,9 @@ limitations under the License.
 // one tool?) run:
 //
 //     tools/generate-clientset.sh
+//
+// DO NOT MOVE THESE OUT OF THE PACKAGE DOCSTRING, GENERATING CODE PROPERLY DEPENDS ON THEM BEING HERE.
+// +k8s:deepcopy-gen=package,register
+// +k8s:openapi-gen=true
+// +groupName=k8us.k8s.io
 package v1
