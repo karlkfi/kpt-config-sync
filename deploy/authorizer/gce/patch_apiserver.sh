@@ -5,6 +5,8 @@
 
 set -v
 
+echo "PWD: $PWD"
+
 PROJECT_ID=${PROJECT_ID:-fmil-k8s-test}
 INSTANCE_ID=${INSTANCE_ID:-kubernetes-master}
 ZONE=${ZONE:-us-central1-b}

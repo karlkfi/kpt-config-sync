@@ -41,7 +41,7 @@ export GCP_PROJECT := $(shell gcloud config get-value project)
 export GCP_ZONE := us-central1-b
 
 # The Kubernetes version currently used for deployment.
-export KUBERNETES_VERSION := 1.8.0
+export KUBERNETES_VERSION := 1.8.0-stolos
 
 ######################################################################
 # Do not edit beyond this point.
@@ -134,7 +134,7 @@ build-go:
 # small containers, e.g. built off of "scratch" or "busybox" or some such.
 .PHONY: build-go-static
 build-go-static: .build-out
-	GOBIN=$(GO_BIN) \
+	CGO_ENABLED=0 GOBIN=$(GO_BIN) \
 	      go install -installsuffix="static" $(REPO)/cmd/...
 
 ### make build-docker ...
@@ -178,7 +178,7 @@ undeploy:
 	make -C deploy undeploy
 
 undeploy-%:
-	make -e -C undeploy $@
+	make -e -C deploy $@
 
 ### make clean ...
 

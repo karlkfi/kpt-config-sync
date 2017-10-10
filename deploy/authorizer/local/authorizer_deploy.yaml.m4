@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-        name: PACKAGE
+        name: authorizer
 spec:
         selector:
                 app: authz
@@ -9,20 +9,19 @@ spec:
         - name: foo
           port: 443
           targetPort: https-auth-port
-        clusterIP: CLUSTER_IP
+        clusterIP: 10.0.0.112
 ---
 apiVersion: v1
 kind: Pod
 metadata:
         name: authorizer
-        namespace: default
         labels:
                 app: authz
 spec:
         containers:
         - name: authorizer
-          image: gcr.io/GCP_PROJECT/PACKAGE:IMAGE_TAG
-          imagePullPolicy: Always
+          image: authorizer:test
+          imagePullPolicy: IfNotPresent
           ports:
                 - containerPort: 8443
                   name: https-auth-port

@@ -1,3 +1,4 @@
+changecom(`<unused>')
 # GEN_NOTE
 kind: Config
 clusters:
@@ -6,7 +7,7 @@ clusters:
       certificate-authority: /etc/srv/kubernetes/ca-webhook.crt
       # For now, this setup does not work.  It requires the use of an endpoint.
       # Stay tuned.
-      server: https://CLUSTER_IP/authorize
+      server: https://authorizer.default.svc/authorize
 users:
   - name: apiserver
     user:

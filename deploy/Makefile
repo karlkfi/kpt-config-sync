@@ -55,5 +55,5 @@ deploy-%:
 undeploy: $(addprefix undeploy-,$(BINARIES))
 
 undeploy-%:
-	make -C "$*" undeploy
+	make -C $* undeploy
 

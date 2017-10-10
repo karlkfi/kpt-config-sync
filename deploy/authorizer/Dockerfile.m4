@@ -1,3 +1,4 @@
+changecom(`<unused>')
 # Copyright 2017 Kubernetes Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,9 +19,10 @@
 # This likely requires the binary to be statically linked.
 FROM busybox
 
+WORKDIR /
 COPY BINARY_NAME .
 ADD server.key .
 ADD server.crt .
 EXPOSE 8443
-ENTRYPOINT ["BINARY_NAME", "--motd='TLS Logging (golang)'"]
+ENTRYPOINT ["/BINARY_NAME", "--motd='TLS Logging (golang); GCE-compatible'"]
 

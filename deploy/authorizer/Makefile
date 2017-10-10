@@ -28,7 +28,7 @@ MINIKUBE_AUTHORIZER_CLUSTER_IP_ADDRESS := 10.0.0.112
 ### make clean
 
 .PHONY: clean
-clean:
+clean: clean-docker-$(DEPLOYMENT_TYPE)
 	rm -f Dockerfile $(PACKAGE)
 	rm -f *.crt *.key *.pem *.csr *.tmp minikube/*.yaml
 	rm -f gce/*.yaml
@@ -38,12 +38,12 @@ clean-docker: clean-docker-$(DEPLOYMENT_TYPE)
 
 .PHONY: clean-docker-gce
 clean-docker-gce:
-	docker rmi $(PACKAGE):$(IMAGE_TAG)
+	rm -fr gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.orig
+	rm -fr gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.patched
 
 .PHONY: clean-docker-minikube
 clean-docker-minikube:
-	eval $(MINIKUBE_DOCKER_ENV)
-	docker rmi $(PACKAGE):$(IMAGE_TAG)
+	@true
 
 .NOTPARALLEL: server.key server.csr server.pem server.crt ca.crt
 server.key server.csr server.pem server.crt: minikube/gencert.sh
@@ -65,18 +65,19 @@ minikube_start: $(HOME)/.minikube/addons/webhook.kubeconfig minikube/start.sh
 minikube_stop:
 	minikube stop
 
-Dockerfile: Dockerfile.in
+Dockerfile: Dockerfile.m4
 	m4 -DBUILD_DIR=$(GO_BIN) \
 	   -DBINARY_NAME=$(PACKAGE) \
-	   -DGEN_NOTE="Generated file, do not edit." < $^ > $@
+	   -DGEN_NOTE="Generated file, do not edit." - < $^ > $@
 
 ### make build-docker ...
 
 # Only invoked in case the binary has not been built by top-level Makefile.
 $(GO_BIN)/$(PACKAGE):
-	CGO_ENABLED=0
-	go install -installsuffix "static" $(REPO)/cmd/$(PACKAGE)
+	CGO_ENABLED=0 GOBIN=$(GO_BIN) \
+		    go install -installsuffix "static" $(REPO)/cmd/$(PACKAGE)
 
+.PHONY: $(PACKAGE)
 $(PACKAGE): $(GO_BIN)/$(PACKAGE)
 	cp $(GO_BIN)/$(PACKAGE) $@
 
@@ -112,16 +113,48 @@ deploy: deploy-$(DEPLOYMENT_TYPE)
 .PHONY: deploy-minikube
 deploy-minikube: minikube_start
 
-gce/%.yaml: gce/%.yaml.in
+gce/%.yaml: gce/%.yaml.m4
 	m4 -DGCP_PROJECT=$(GCP_PROJECT) \
 	   -DPACKAGE=$(PACKAGE) \
 	   -DCLUSTER_IP=$(MINIKUBE_AUTHORIZER_CLUSTER_IP_ADDRESS) \
 	   -DIMAGE_TAG=$(IMAGE_TAG) \
 	   -DGEN_NOTE="Generated file, do not edit." < $^ > $@
 
+# Evaluates the image name used for the API server and the advertised IP
+# address.
+.PHONY: gce_env
+gce_env:
+	$(eval APISERVER_IMAGE_NAME = $(shell \
+		kubectl get pods --namespace=kube-system \
+		kube-apiserver-kubernetes-master \
+		-o jsonpath="{.spec.containers[0].image}"))
+	$(eval APISERVER_IP_ADDRESS = $(shell \
+		kubectl get endpoints kubernetes \
+		-o jsonpath="{.subsets[0].addresses[0].ip}"))
+	@true
+
+gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.orig: \
+	gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.orig.m4 \
+	gce_env
+	m4 -DAPISERVER_IMAGE_NAME=$(APISERVER_IMAGE_NAME) \
+	   -DAPISERVER_IP_ADDRESS=$(APISERVER_IP_ADDRESS) \
+	   < $< > $@
+
+gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.patched: \
+	gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.patched.m4 \
+	gce_env
+	m4 -DAPISERVER_IMAGE_NAME=$(APISERVER_IMAGE_NAME) \
+	   -DAPISERVER_IP_ADDRESS=$(APISERVER_IP_ADDRESS) \
+	   < $< > $@
+
 # Requires:
 # KUBERNETES_VERSION
-deploy-gce: gce/authorizer_deploy.yaml gce/authz.yaml
+deploy-gce: gce/authorizer_deploy.yaml gce/authz.yaml server.key server.crt \
+	push-docker-gce \
+	gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.orig \
+	gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.patched \
+	# kubectl replace -f gce/authorizer_deploy.yaml --force
+	cd gce && VERSION=$(KUBERNETES_VERSION) ./patch_apiserver.sh
 
 .PHONY: undeploy
 undeploy: undeploy-$(DEPLOYMENT_TYPE)
@@ -130,8 +163,7 @@ undeploy: undeploy-$(DEPLOYMENT_TYPE)
 undeploy-minikube: minikube_stop
 
 .PHONY: undeploy-gce
-undeploy-gce:
-	@echo "*** TODO(fmil): Implement target: $@"
-
+undeploy-gce: gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.orig
+	cd gce && VERSION=$(KUBERNETES_VERSION) ./unpatch_apiserver.sh
 
 
