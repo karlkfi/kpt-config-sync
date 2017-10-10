@@ -29,11 +29,12 @@ const (
 
 // Update encapsulates info required for updating the PolicyNode CR
 type Update struct {
-	Operation  Op
-	PolicyNode *v1.PolicyNode
+	Operation       Op             // Operation for update
+	PolicyNode      *v1.PolicyNode // Policy node for update
+	ResourceVersion string         // resource version to use for optimistic concurrency (update only)
 }
 
 // NewUpdate creates a new update.
-func NewUpdate(op Op, policyNode *v1.PolicyNode) *Update {
-	return &Update{Operation: op, PolicyNode: policyNode}
+func NewUpdate(op Op, policyNode *v1.PolicyNode, resourceVersion string) *Update {
+	return &Update{Operation: op, PolicyNode: policyNode, ResourceVersion: resourceVersion}
 }

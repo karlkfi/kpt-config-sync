@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/docker/machine/libmachine/log"
 	"github.com/fsnotify/fsnotify"
 	"github.com/golang/glog"
@@ -93,17 +95,12 @@ func (i *Importer) Run() error {
 
 				glog.Infof("Got event %#v", event)
 				var runSyncer bool
-				if event.Op&fsnotify.Create == fsnotify.Create {
-					err := watcher.Add(event.Name)
-					if err != nil {
-						panic(errors.Wrapf(err, "Failed to add file %s", event.Name))
-					}
-					runSyncer = true
-				}
-
-				if event.Op&fsnotify.Remove == fsnotify.Remove ||
+				if event.Op&fsnotify.Create == fsnotify.Create ||
+					event.Op&fsnotify.Remove == fsnotify.Remove ||
 					event.Op&fsnotify.Write == fsnotify.Write {
 					runSyncer = true
+				} else {
+					glog.V(3).Infof("Unhandled event type %s", event.Op.String())
 				}
 
 				// TODO: Schedule a sync in the future to debounce bulk writes, likely need to have a separate
@@ -114,6 +111,7 @@ func (i *Importer) Run() error {
 					for try := 0; try < tries; try++ {
 						err = i.Synchronize()
 						if err != nil {
+							glog.V(3).Infof("Failed to sync: %s", err)
 							time.Sleep(50 * time.Millisecond)
 							continue
 						}
@@ -190,11 +188,12 @@ func (i *Importer) Synchronize() error {
 		if !ok {
 			// create it
 			glog.Infof("%s needs creation, queueing for create", name)
-			updates = append(updates, NewUpdate(CreatePolicy, incomingPolicyNode))
+			updates = append(updates, NewUpdate(CreatePolicy, incomingPolicyNode, ""))
 		} else {
 			// check for modify
 			if !reflect.DeepEqual(incomingPolicyNode.Spec, clusterPolicyNode.Spec) {
-				updates = append(updates, NewUpdate(UpdatePolicy, incomingPolicyNode))
+				glog.V(5).Infof("Resource changed:\nOrig: %sNew: %s", spew.Sdump(clusterPolicyNode), spew.Sdump(incomingPolicyNode))
+				updates = append(updates, NewUpdate(UpdatePolicy, incomingPolicyNode, clusterPolicyNode.ObjectMeta.ResourceVersion))
 			}
 		}
 	}
@@ -204,7 +203,7 @@ func (i *Importer) Synchronize() error {
 		if incomingPolicyNodes[name] == nil {
 			// delete it
 			glog.Infof("%s not found in incoming policy, queueing for delete", name)
-			updates = append(updates, NewUpdate(DeletePolicy, policyNode))
+			updates = append(updates, NewUpdate(DeletePolicy, policyNode, ""))
 		}
 	}
 
@@ -273,6 +272,7 @@ func (i *Importer) applyUpdate(update *Update) error {
 		glog.Infof("Created %s at resourceversion %s", resourceName, newPolicyNode.ResourceVersion)
 
 	case UpdatePolicy:
+		policyNode.ObjectMeta.ResourceVersion = update.ResourceVersion
 		newPolicyNode, err := policyNodesIface.Update(policyNode)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to update policy %s", resourceName)
