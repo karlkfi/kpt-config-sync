@@ -35,6 +35,7 @@ function create_pod() {
       echo -n "."
       sleep 1
     done
+    echo
     echo "Pod terminated"
   fi
   kubectl create -f ${yaml_file}

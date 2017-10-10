@@ -21,6 +21,7 @@
 GO ?= go
 INSTALL ?= install
 TEST ?= test
+GO_BIN ?= $(shell sed -e 's/.*://' <<< "$(GOPATH)")/bin
 
 PACKAGE := syncer
 REPO := github.com/google/stolos
