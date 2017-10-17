@@ -4,10 +4,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/client/policyhierarchy/fake"
 	authz "k8s.io/api/authorization/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -30,7 +30,7 @@ func TestAuthorize(t *testing.T) {
 		{
 			storage: []runtime.Object{
 				&v1.PolicyNode{
-					ObjectMeta: metav1.ObjectMeta{
+					ObjectMeta: meta.ObjectMeta{
 						Name: "kitties",
 					},
 				},
@@ -48,12 +48,12 @@ func TestAuthorize(t *testing.T) {
 		{
 			storage: []runtime.Object{
 				&v1.PolicyNode{
-					ObjectMeta: metav1.ObjectMeta{
+					ObjectMeta: meta.ObjectMeta{
 						Name: "kitties",
 					},
 				},
 				&v1.PolicyNode{
-					ObjectMeta: metav1.ObjectMeta{
+					ObjectMeta: meta.ObjectMeta{
 						Name: "ponies",
 					},
 				},
@@ -70,12 +70,12 @@ func TestAuthorize(t *testing.T) {
 		},
 	}
 
-	for _, ttt := range tt {
-		fakeClientSet := fake.NewSimpleClientset(ttt.storage...)
-		a := New(fakeClientSet.K8usV1())
+	for i, ttt := range tt {
+		a := New(NewTestInformer(ttt.storage...))
 		actual := a.Authorize(&ttt.request)
 		if !reflect.DeepEqual(*actual, ttt.expected) {
-			t.Errorf("Expected:\n%+v\n---\nActual:\n%+v", ttt.expected, *actual)
+			t.Errorf("[%v] Expected:\n%v\n---\nActual:\n%+v",
+				i, spew.Sdump(ttt.expected), spew.Sdump(*actual))
 		}
 	}
 }

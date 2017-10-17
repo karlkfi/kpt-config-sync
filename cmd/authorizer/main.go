@@ -20,16 +20,15 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"flag"
+	"time"
+
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/authorizer"
-	"github.com/google/stolos/pkg/client/policyhierarchy"
-	apierrors "github.com/pkg/errors"
+	"github.com/google/stolos/pkg/client/informers/externalversions"
+	meta "github.com/google/stolos/pkg/client/meta"
 	"io/ioutil"
 	authz "k8s.io/api/authorization/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"net/http"
 )
@@ -183,37 +182,13 @@ func Server(handler handlerFunc) *http.Server {
 	}
 }
 
-// LogApiVersion logs the API server version before proceeding.
-func LogApiVersion(kubernetesConfig *rest.Config) {
-	clientSet, err := kubernetes.NewForConfig(kubernetesConfig)
+// must strips the error from a two-valued result.  Use type assertion to
+// restore the original type of 'i'.
+func must(i interface{}, err error) interface{} {
 	if err != nil {
-		glog.Error(apierrors.Wrapf(err,
-			"Could not contact the Kubernetes API server"))
-		return
+		glog.Fatalf("Error occurred: %v", err)
 	}
-	resp, err := clientSet.
-		CoreV1().
-		Pods("default").
-		Get("", metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		glog.Error(apierrors.Wrapf(err, "Pod not found."))
-		return
-	}
-	if statusError, isStatus := err.(*errors.StatusError); isStatus {
-		glog.Error(apierrors.Wrapf(statusError, "Error getting pod"))
-	}
-
-	glog.V(2).Infof("Got a response from apiserver:\n%v", resp)
-}
-
-// newKubernetesClientConfig obtains the k8s configuration from the background
-// context supplied to pods by Kubernetes.
-func newKubernetesClientConfig() *rest.Config {
-	clientConfig, err := rest.InClusterConfig()
-	if err != nil {
-		glog.Fatalf("Could not get Kubernetes cluster configuration.")
-	}
-	return clientConfig
+	return i
 }
 
 // maybeNotifySystemd notifies the monitor daemon that we're ready to start
@@ -223,15 +198,6 @@ func maybeNotifySystemd() {
 	if *notifySystemd {
 		daemon.SdNotify( /*unsetEnvironment=*/ false, "READY=1")
 	}
-}
-
-// newPolicyHierarchyClient creates a new client for the CRD, or dies trying.
-func newPolicyHierarchyClient(config *rest.Config) *policyhierarchy.Clientset {
-	client, err := policyhierarchy.NewForConfig(config)
-	if err != nil {
-		glog.Fatalf("Could not create Kubernetes API client: %v", err)
-	}
-	return client
 }
 
 // listenAndServe blocks while serving the authorizer webhook.
@@ -249,13 +215,15 @@ func main() {
 	glog.Infof("Using server certificate file: %v", *certFile)
 	glog.Infof("Using server private key file: %v", *serverKeyFile)
 
-	clientConfig := newKubernetesClientConfig()
-	policyHierarchyClient := newPolicyHierarchyClient(clientConfig)
+	config := must(rest.InClusterConfig()).(*rest.Config)
+	client := must(meta.NewForConfig(config)).(*meta.Client)
+	factory := externalversions.NewSharedInformerFactory(
+		client.PolicyHierarchy(), time.Minute,
+	)
+	factory.Start(nil)
 
-	srv := Server(ServeFunc(authorizer.New(policyHierarchyClient.K8usV1())))
-
-	// Demo the connection to the apiserver.
-	go LogApiVersion(clientConfig)
+	srv := Server(ServeFunc(authorizer.New(
+		factory.K8us().V1().PolicyNodes().Informer())))
 
 	maybeNotifySystemd()
 	listenAndServe(srv)

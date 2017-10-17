@@ -61,7 +61,7 @@ metadata:
 spec:
   containers:
   - name: authorizer
-    image: ${DOCKER_IMAGE_REGISTRY}authorizer:experimental
+    image: ${DOCKER_IMAGE_REGISTRY}authorizer:test
     ports:
       - containerPort: 8443
     args: [
