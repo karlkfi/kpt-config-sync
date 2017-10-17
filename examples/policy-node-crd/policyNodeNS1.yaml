@@ -3,7 +3,6 @@ kind: PolicyNode
 metadata:
   name: policy-node-ns1
 spec:
-  name: nameSpace1
   workingNamespace: true
   parent: orgUnit1
   policies:
@@ -16,3 +15,7 @@ spec:
       rules:
       - resources: ["pods"]
         verbs: ["write"]
+    resourceQuotas:
+    - hard:
+        pods: "7"
+        configmaps: "10"

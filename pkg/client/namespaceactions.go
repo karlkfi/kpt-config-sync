@@ -15,7 +15,6 @@ limitations under the License.
 package client
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -26,9 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 )
-
-var dryRun = flag.Bool(
-	"dry_run", false, "Don't perform actions, just log what would have happened")
 
 // TODO: Move this file out of client package
 
@@ -76,11 +72,6 @@ func (n *NamespaceDeleteAction) Operation() string {
 
 // Execute implements NamespaceAction
 func (n *NamespaceDeleteAction) Execute() error {
-	if *dryRun {
-		glog.Infof("Would have deleted namespace %s", n.namespace)
-		return nil
-	}
-
 	glog.Infof("Deleting namespace %s", n.namespace)
 	return n.kubernetesInterface.CoreV1().Namespaces().Delete(n.namespace, &meta_v1.DeleteOptions{})
 }
@@ -158,11 +149,6 @@ func (n *NamespaceCreateAction) handleTerminatingNamespace() error {
 
 // Execute implements NamespaceAction
 func (n *NamespaceCreateAction) Execute() error {
-	if *dryRun {
-		glog.Infof("Would have created namespace %s", n.namespace)
-		return nil
-	}
-
 	err := n.handleTerminatingNamespace()
 	if err != nil {
 		return err

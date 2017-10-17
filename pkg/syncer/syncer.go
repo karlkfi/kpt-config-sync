@@ -16,6 +16,7 @@ limitations under the License.
 package syncer
 
 import (
+	"flag"
 	"strconv"
 	"sync"
 
@@ -30,7 +31,12 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"reflect"
 )
+
+var dryRun = flag.Bool(
+	"dry_run", false, "Don't perform actions, just log what would have happened")
 
 // ErrorCallback is a callback which is called if Syncer encounters an error during execution
 type ErrorCallback func(error)
@@ -85,8 +91,17 @@ func (s *Syncer) Wait() {
 	}
 }
 
-func (s *Syncer) computeActions(
-	existingNamespaceList *core_v1.NamespaceList,
+func (s *Syncer) computeNamespaceActions(policyNodeList *policyhierarchy_v1.PolicyNodeList) ([]client.NamespaceAction, error) {
+
+	existingNamespaceList, err := s.client.Kubernetes().CoreV1().Namespaces().List(meta_v1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.computeNamespaceActionsWithNamespaceList(existingNamespaceList, policyNodeList), nil
+}
+
+func (s *Syncer) computeNamespaceActionsWithNamespaceList(existingNamespaceList *core_v1.NamespaceList,
 	policyNodeList *policyhierarchy_v1.PolicyNodeList) []client.NamespaceAction {
 
 	// Get the set of non-reserved, active namespaces
@@ -123,40 +138,100 @@ func (s *Syncer) computeActions(
 	return namespaceActions
 }
 
-func (s *Syncer) initialSync() (int64, error) {
-	glog.Info("Performing initial sync on namespaces")
-	namespaceList, err := s.client.Kubernetes().CoreV1().Namespaces().List(meta_v1.ListOptions{})
+func (s *Syncer) computeResourceQuotaActions(policyNodeList *policyhierarchy_v1.PolicyNodeList) ([]ResourceQuotaAction, error) {
+
+	resourceQuotaList, err := s.client.Kubernetes().CoreV1().ResourceQuotas(meta_v1.NamespaceAll).List(meta_v1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("metadata.name", ResourceQuotaObjectName).String(),
+	})
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	namespaceResourceVersion, err := strconv.ParseInt(namespaceList.ResourceVersion, 10, 64)
-	if err != nil {
-		return 0, err
+	return s.computeResourceQuotaActionsWithResourceQuotaList(resourceQuotaList, policyNodeList), nil
+}
+
+func (s *Syncer) computeResourceQuotaActionsWithResourceQuotaList(resourceQuotaList *core_v1.ResourceQuotaList,
+	policyNodeList *policyhierarchy_v1.PolicyNodeList) []ResourceQuotaAction {
+
+	existing := map[string]core_v1.ResourceQuota{}
+	for _, rq := range resourceQuotaList.Items {
+		existing[rq.Namespace] = rq
 	}
+
+	declaring := map[string]core_v1.ResourceQuotaSpec{}
+	for _, pn := range policyNodeList.Items {
+		// TODO(mdruskin): If not working namespace, we should create a hierarchical resource quota
+		if pn.Spec.WorkingNamespace {
+			declaring[pn.Name] = pn.Spec.Policies.ResourceQuotas[0]
+		}
+	}
+
+	actions := []ResourceQuotaAction{}
+	// Creates and updates
+	for ns, rq := range declaring {
+		if _, exists := existing[ns]; !exists {
+			actions = append(actions, NewResourceQuotaCreateAction(s.client.Kubernetes(), ns, rq))
+		} else if !reflect.DeepEqual(rq, existing[ns].Spec) {
+			actions = append(actions, NewResourceQuotaUpdateAction(s.client.Kubernetes(), ns, rq, existing[ns].ResourceVersion))
+		}
+	}
+	// Deletions
+	for ns, _ := range existing {
+		if _, exists := declaring[ns]; !exists {
+			actions = append(actions, NewResourceQuotaDeleteAction(s.client.Kubernetes(), ns))
+		}
+	}
+
+	return actions
+}
+
+func (s *Syncer) initialSync() (int64, error) {
+	glog.Info("Performing initial sync on namespaces")
 
 	policyNodeList, err := s.client.PolicyHierarchy().K8usV1().PolicyNodes().List(meta_v1.ListOptions{})
 	if err != nil {
 		return 0, err
 	}
-	policyNodeResourceVersion, err := strconv.ParseInt(namespaceList.ResourceVersion, 10, 64)
+	policyNodeResourceVersion, err := strconv.ParseInt(policyNodeList.ResourceVersion, 10, 64)
 	if err != nil {
 		return 0, err
 	}
-	glog.Infof(
-		"Listed namespaces at resource version %d, policy nodes at %d",
-		namespaceResourceVersion, policyNodeResourceVersion)
 
-	namespaceActions := s.computeActions(namespaceList, policyNodeList)
+	glog.Infof("Listed policy nodes at resource version at %d", policyNodeResourceVersion)
+
+	namespaceActions, err := s.computeNamespaceActions(policyNodeList)
+	if err != nil {
+		return 0, err
+	}
 	for _, action := range namespaceActions {
+		if *dryRun {
+			glog.Infof("DryRun: Would execute namespace action %s on namespace %s", action.Operation(), action.Name())
+			continue
+		}
 		err := action.Execute()
 		if err != nil {
-			glog.Infof("Action %s %s failed due to %s", action.Name(), action.Operation(), err)
+			glog.Infof("Namespace Action %s %s failed due to %s", action.Name(), action.Operation(), err)
 			return 0, err
 		}
 	}
 
-	glog.Infof("Finished initial sync, will use resource version %s", namespaceList.ResourceVersion)
+	resourceQuotaActions, err := s.computeResourceQuotaActions(policyNodeList)
+	if err != nil {
+		return 0, err
+	}
+	for _, action := range resourceQuotaActions {
+		if *dryRun {
+			glog.Infof("DryRun: Would execute resource quota action %s on namespace %s", action.Operation(), action.Name())
+			continue
+		}
+		err := action.Execute()
+		if err != nil {
+			glog.Infof("Resource Quota Action %s %s failed due to %s", action.Name(), action.Operation(), err)
+			return 0, err
+		}
+	}
+
+	glog.Infof("Finished initial sync, will use resource version %s", policyNodeResourceVersion)
 	return policyNodeResourceVersion, nil
 }
 
@@ -189,7 +264,12 @@ func (s *Syncer) runInternal() {
 	s.policyNodeWatcher.Run(policynodewatcher.NewEventHandler(s.onPolicyNodeEvent, s.onPolicyNodeError))
 }
 
-func (s *Syncer) getEventAction(eventType policynodewatcher.EventType, policyNode *policyhierarchy_v1.PolicyNode) client.NamespaceAction {
+func (s *Syncer) onPolicyNodeEvent(eventType policynodewatcher.EventType, policyNode *policyhierarchy_v1.PolicyNode) {
+	s.onPolicyNodeEventNamespace(eventType, policyNode)
+	s.onPolicyNodeEventResourceQuota(eventType, policyNode)
+}
+
+func (s *Syncer) getEventNamespaceAction(eventType policynodewatcher.EventType, policyNode *policyhierarchy_v1.PolicyNode) client.NamespaceAction {
 	var action client.NamespaceAction
 	namespace := policyNode.Name
 	glog.V(3).Infof("Got event %s namespace %s resourceVersion %s", eventType, policyNode.Name, policyNode.ResourceVersion)
@@ -199,24 +279,76 @@ func (s *Syncer) getEventAction(eventType policynodewatcher.EventType, policyNod
 	case policynodewatcher.Deleted:
 		action = client.NewNamespaceDeleteAction(s.client.Kubernetes(), namespace)
 	case policynodewatcher.Modified:
-		glog.Info("Got modified event for %s, ignoring", policyNode.Name)
+		glog.Infof("Got modified event for %s, ignoring", policyNode.Name)
 	}
 	return action
 }
 
-func (s *Syncer) onPolicyNodeEvent(eventType policynodewatcher.EventType, policyNode *policyhierarchy_v1.PolicyNode) {
+func (s *Syncer) onPolicyNodeEventNamespace(eventType policynodewatcher.EventType, policyNode *policyhierarchy_v1.PolicyNode) {
 	// NOTE: There is a bug here where the namespace create action can operate on a namespace that is presently
-	// terminating.  This needs to undersand when the namespace is finally deleted then attempt creation, preferably
+	// terminating.  This needs to understand when the namespace is finally deleted then attempt creation, preferably
 	// with some sort of timeout.
-	action := s.getEventAction(eventType, policyNode)
+	action := s.getEventNamespaceAction(eventType, policyNode)
 	if action == nil {
 		return
 	}
 
+	if *dryRun {
+		glog.Infof("DryRun: Would execute namespace action %s on namespace %s", action.Operation(), action.Name())
+		return
+	}
 	err := action.Execute()
 	if err != nil {
 		s.errorCallback(errors.Wrapf(
-			err, "Failed to perform action %s on %s: %s", action.Operation(), action.Name(), err))
+			err, "Failed to perform namespace action %s on %s: %s", action.Operation(), action.Name(), err))
+		return
+	}
+}
+
+func (s *Syncer) getEventResourceQuotaAction(eventType policynodewatcher.EventType, policyNode *policyhierarchy_v1.PolicyNode) ResourceQuotaAction {
+	namespace := policyNode.Name
+	glog.V(3).Infof("Got event %s namespace %s resourceVersion %s", eventType, policyNode.Name, policyNode.ResourceVersion)
+	switch eventType {
+	case policynodewatcher.Added:
+		if policyNode.Spec.WorkingNamespace && len(policyNode.Spec.Policies.ResourceQuotas) > 0 {
+			return NewResourceQuotaCreateAction(s.client.Kubernetes(), namespace, policyNode.Spec.Policies.ResourceQuotas[0])
+		}
+	case policynodewatcher.Deleted:
+		glog.Infof("Got deleted policy node event %s, ignoring since the resource quota will be auto-deleted", namespace)
+	case policynodewatcher.Modified:
+		var neededResourceQuotaSpec *core_v1.ResourceQuotaSpec
+		if policyNode.Spec.WorkingNamespace && len(policyNode.Spec.Policies.ResourceQuotas) > 0 {
+			neededResourceQuotaSpec = &policyNode.Spec.Policies.ResourceQuotas[0]
+		}
+		// TODO: Replace with with a get from the informer instead.
+		existingResourceQuota, _ := s.client.Kubernetes().CoreV1().ResourceQuotas(namespace).Get(ResourceQuotaObjectName, meta_v1.GetOptions{})
+		if existingResourceQuota == nil && neededResourceQuotaSpec != nil {
+			return NewResourceQuotaCreateAction(s.client.Kubernetes(), namespace, *neededResourceQuotaSpec)
+		}
+		if existingResourceQuota != nil && neededResourceQuotaSpec == nil {
+			return NewResourceQuotaDeleteAction(s.client.Kubernetes(), namespace)
+		}
+		if existingResourceQuota != nil && neededResourceQuotaSpec != nil && !reflect.DeepEqual(existingResourceQuota.Spec, *neededResourceQuotaSpec) {
+			return NewResourceQuotaUpdateAction(s.client.Kubernetes(), namespace, *neededResourceQuotaSpec, existingResourceQuota.ObjectMeta.ResourceVersion)
+		}
+	}
+	return nil
+}
+
+func (s *Syncer) onPolicyNodeEventResourceQuota(eventType policynodewatcher.EventType, policyNode *policyhierarchy_v1.PolicyNode) {
+	action := s.getEventResourceQuotaAction(eventType, policyNode)
+	if action == nil {
+		return
+	}
+
+	if *dryRun {
+		glog.Infof("DryRun: Would execute resource quota action %s on namespace %s", action.Operation(), action.Name())
+		return
+	}
+	err := action.Execute()
+	if err != nil {
+		s.errorCallback(errors.Wrapf(
+			err, "Failed to perform resource quota action %s on %s: %s", action.Operation(), action.Name(), err))
 		return
 	}
 }

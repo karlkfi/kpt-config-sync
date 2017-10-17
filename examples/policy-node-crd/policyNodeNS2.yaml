@@ -3,16 +3,9 @@ kind: PolicyNode
 metadata:
   name: policy-node-ns2
 spec:
-  name: nameSpace2
   workingNamespace: true
   parent: orgUnit1
   policies:
     resourceQuotas:
-    - kind: ResourceQuota
-      apiVersion: v1
-      metadata:
-        namespace: nameSpace2
-        name: object-counts
-      spec:
-        hard:
-          services: "10"
+    - hard:
+        services: "10"

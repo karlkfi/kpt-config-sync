@@ -3,7 +3,6 @@ kind: PolicyNode
 metadata:
   name: policy-node-ou1
 spec:
-  name: orgUnit1
   workingNamespace: false
   policies:
     roles:
@@ -15,3 +14,6 @@ spec:
       rules:
       - resources: ["pods"]
         verbs: ["get"]
+    resourceQuotas:
+    - hard:
+        services: "11"
