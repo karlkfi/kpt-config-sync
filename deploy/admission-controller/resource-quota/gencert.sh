@@ -16,6 +16,5 @@ openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr -subj "/CN=${CN_BASE}" -config server-cert.conf
 openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 100000 -extensions v3_req -extfile server-cert.conf
 
-rm *.conf
 rm *.csr
 rm *.srl

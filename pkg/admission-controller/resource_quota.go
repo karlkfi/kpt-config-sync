@@ -23,12 +23,22 @@ import (
 	"github.com/golang/glog"
 	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
+	informerscorev1 "k8s.io/client-go/informers/core/v1"
 )
 
 type ResourceQuotaAdmitter struct {
-
+	policyNodeInformer informerspolicynodev1.PolicyNodeInformer
+	resourceQuotaInformer informerscorev1.ResourceQuotaInformer
 }
+
 var _ Admitter = (*ResourceQuotaAdmitter)(nil)
+
+func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
+	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) Admitter {
+	return &ResourceQuotaAdmitter{policyNodeInformer: policyNodeInformer, resourceQuotaInformer: resourceQuotaInformer}
+}
 
 // Decides whether to admit a request
 func (r* ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) *admissionv1alpha1.AdmissionReviewStatus {

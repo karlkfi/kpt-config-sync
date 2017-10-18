@@ -22,10 +22,21 @@ import (
 	"flag"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/admission-controller"
+	"k8s.io/client-go/rest"
 	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
+	policynodemeta "github.com/google/stolos/pkg/client/meta"
+	policynodeversions "github.com/google/stolos/pkg/client/informers/externalversions"
+	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
+
+	informerscorev1 "k8s.io/client-go/informers/core/v1"
 )
 
 
@@ -104,8 +115,8 @@ func WithStrictTransport(handler handlerFunc) handlerFunc {
 }
 
 // ServeFunc returns the serving function for this server.  Use for testing.
-func ServeFunc() handlerFunc {
-	return WithStrictTransport(NoCache(serve(&admission_controller.ResourceQuotaAdmitter{})))
+func ServeFunc(controller admission_controller.Admitter) handlerFunc {
+	return WithStrictTransport(NoCache(serve(controller)))
 }
 
 // Server configures and runs a TLS-enabled server from passed-in flags using
@@ -134,12 +145,59 @@ func Server(handler handlerFunc) *http.Server {
 	}
 }
 
+func setupPolicyNodeInformer(config *rest.Config) (informerspolicynodev1.PolicyNodeInformer, error) {
+	policyNodeClient, err := policynodemeta.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	policyNodeFactory := policynodeversions.NewSharedInformerFactory(
+		policyNodeClient.PolicyHierarchy(), time.Minute,
+	)
+	policyNodeInformer := policyNodeFactory.K8us().V1().PolicyNodes()
+	policyNodeInformer.Informer()
+	policyNodeFactory.Start(nil)
+
+	return policyNodeInformer, nil
+}
+
+func setupResourceQuotaInformer(config *rest.Config) (informerscorev1.ResourceQuotaInformer, error) {
+	k8sClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	k8sFactory := informers.NewSharedInformerFactory(k8sClient, time.Minute)
+	resourceQuotaInformer := k8sFactory.Core().V1().ResourceQuotas()
+	resourceQuotaInformer.Informer()
+	k8sFactory.Start(nil)
+
+	return resourceQuotaInformer, nil
+}
+
 func main() {
 	flag.Parse()
-	server := Server(ServeFunc())
+	glog.Infof("Hierarchical Resource Quota Admission Controller starting up")
 
-	glog.Infof("Webhook Admission Controller listening at: %v", *listenAddr)
-	err := server.ListenAndServeTLS(*certFile, *serverKeyFile)
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		glog.Fatal("Failed to load in cluster config: ", err)
+	}
+	policyNodeInformer, err := setupPolicyNodeInformer(config)
+	if err != nil {
+		glog.Fatal("Failed setting up policyNode informer: ", err)
+	}
+	resourceQuotaInformer, err := setupResourceQuotaInformer(config)
+	if err != nil {
+		glog.Fatal("Failed setting up resourceQuota informer: ", err)
+	}
+	glog.Infof("Waiting for informers to sync...")
+	if !cache.WaitForCacheSync(nil,	policyNodeInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
+		glog.Fatal("Failure while waiting for informers to sync")
+	}
+
+	server := Server(ServeFunc(admission_controller.NewResourceQuotaAdmitter(policyNodeInformer, resourceQuotaInformer)))
+
+	glog.Infof("Hierarchical Resource Quota Admission Controller listening at: %v", *listenAddr)
+	err = server.ListenAndServeTLS(*certFile, *serverKeyFile)
 	if err != nil {
 		glog.Fatal("ListenAndServe error: ", err)
 	}

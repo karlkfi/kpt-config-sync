@@ -23,10 +23,11 @@ import (
 	"net/http/httptest"
 	"testing"
 	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
+	"github.com/google/stolos/pkg/admission-controller"
 )
 
 func TestRequest(t *testing.T) {
-	ts := httptest.NewTLSServer(http.HandlerFunc(ServeFunc()))
+	ts := httptest.NewTLSServer(http.HandlerFunc(ServeFunc(&admission_controller.ResourceQuotaAdmitter{})))
 	defer ts.Close()
 
 	request := admissionv1alpha1.AdmissionReview{}
