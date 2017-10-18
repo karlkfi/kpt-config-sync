@@ -18,17 +18,18 @@ package authorizer
 import (
 	"fmt"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	k8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/k8us/v1"
-	apierrors "github.com/pkg/errors"
+	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/pkg/errors"
 	authz "k8s.io/api/authorization/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
 var (
 	// TypeMeta is the SubjectAccessReview type meta.
-	TypeMeta = metav1.TypeMeta{
+	TypeMeta = meta.TypeMeta{
 		Kind:       "SubjectAccessReview",
 		APIVersion: "authorization.k8s.io/v1beta1",
 	}
@@ -38,44 +39,54 @@ var (
 // using a New() call below.
 type Authorizer struct {
 	// client is used to read the policy hierarchy.
-	client k8usv1.K8usV1Interface
+	informer cache.SharedIndexInformer
 }
 
-// New creates a new authorizer based on the supplied policy hierarchy 'client'.
-func New(client k8usv1.K8usV1Interface) *Authorizer {
-	return &Authorizer{client}
+// New creates an authorizer that watches the supplied informer for changes in
+// the policy nodes structure.
+func New(informer cache.SharedIndexInformer) *Authorizer {
+	return &Authorizer{informer}
 }
 
 // policyRulesFor lists all policy rules that apply for the given 'namespace'.
 // The returned PolicyNodeSpec index 0 is the policy node spec for the leaf
 // namespace.  The last is for the root namespace.
-// TODO(fmil): Fix the approach below: this should rely on examining Namespace;
-// but in that case I don't know what the resulting objects for enforcement
-// will be.
 func (a *Authorizer) policyRulesFor(
-	namespace string) (*[]v1.PolicyNodeSpec, error) {
+	namespace string) (*[]policyhierarchy.PolicyNodeSpec, error) {
 	// Perhaps it is OK to return any policy node spec that has been
 	// built so far.
-	policies := make([]v1.PolicyNodeSpec, 0)
+	policies := make([]policyhierarchy.PolicyNodeSpec, 0)
+
+	glog.V(5).Infof("PolicyNodes: %v", spew.Sdump(a.informer.GetStore().List()))
+
+	// Follows a trail of namespaces starting from 'namespace', then
+	// following the back-pointers to parents, up to the root PolicyNode.
 	var err error
-	resolvedNamespace := namespace
-	for resolvedNamespace != "" || err != nil {
-		glog.V(1).Infof("Getting namespace: '%v'", resolvedNamespace)
-		result, loopErr := a.client.PolicyNodes().Get(
-			resolvedNamespace, metav1.GetOptions{})
+	nextNamespace := namespace
+	for nextNamespace != "" {
+		glog.V(4).Infof("policyRulesFor: resolving namespace: %v", nextNamespace)
+		rawPolicyNode, exists, loopErr := a.informer.GetStore().
+			GetByKey(nextNamespace)
 		if loopErr != nil {
-			glog.V(2).Infof("while resolving: %v: %v",
-				resolvedNamespace, err)
-			err = loopErr
+			err = errors.Wrapf(
+				loopErr, "while resolving namespace: %v",
+				nextNamespace)
 			break
 		}
-		spec := result.Spec
-		policies = append(policies, spec)
-		// For the next iteration.
-		resolvedNamespace = spec.Parent
+		if !exists {
+			err = errors.Errorf("partial policy rules, missing namespace: %v",
+				nextNamespace)
+			break
+		}
+		policyNode := rawPolicyNode.(*policyhierarchy.PolicyNode)
+		policyNodeSpec := policyNode.Spec
+		policies = append(policies, policyNodeSpec)
+		nextNamespace = policyNodeSpec.Parent
 	}
+	glog.V(3).Infof("policyRulesFor: policies=%v, err=%v",
+		spew.Sdump(policies), err)
 	if err != nil {
-		return &policies, apierrors.Wrapf(
+		return &policies, errors.Wrapf(
 			err, "while getting policy node: %s", namespace)
 	}
 	return &policies, nil
