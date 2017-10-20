@@ -220,10 +220,9 @@ func main() {
 	factory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), time.Minute,
 	)
-	factory.Start(nil)
-
 	srv := Server(ServeFunc(authorizer.New(
 		factory.K8us().V1().PolicyNodes().Informer())))
+	factory.Start(nil)
 
 	maybeNotifySystemd()
 	listenAndServe(srv)
