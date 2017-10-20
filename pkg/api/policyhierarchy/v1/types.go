@@ -41,6 +41,8 @@ type PolicyNode struct {
 	Spec PolicyNodeSpec `json:"spec"`
 }
 
+const NoParentNamespace string = ""
+
 // PolicyNodeSpec contains all the information about a policy linkage.
 type PolicyNodeSpec struct {
 	// True for leaf namespaces where pods will actually be scheduled,
