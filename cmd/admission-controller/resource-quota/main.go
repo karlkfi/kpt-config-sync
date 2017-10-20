@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
@@ -26,19 +25,17 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/admission-controller"
-	"k8s.io/client-go/rest"
-	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
-	policynodemeta "github.com/google/stolos/pkg/client/meta"
 	policynodeversions "github.com/google/stolos/pkg/client/informers/externalversions"
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
-
-	"k8s.io/client-go/kubernetes"
+	policynodemeta "github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/service"
+	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/tools/cache"
-
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
-
 
 var (
 	listenAddr = flag.String(
@@ -51,11 +48,8 @@ var (
 		"handler_url_path", "/", "The default handler URL path.")
 )
 
-// handleFunc is a shorthand for a HTTP handler function.
-type handlerFunc func(http.ResponseWriter, *http.Request)
-
-func serve(controller admission_controller.Admitter) handlerFunc {
-	return func (w http.ResponseWriter, r *http.Request) {
+func serve(controller admission_controller.Admitter) service.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		var body []byte
 		if r.Body != nil {
 			if data, err := ioutil.ReadAll(r.Body); err == nil {
@@ -91,58 +85,9 @@ func serve(controller admission_controller.Admitter) handlerFunc {
 	}
 }
 
-// NoCache positively turns off page caching.
-func NoCache(handler handlerFunc) handlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set(
-			"Cache-Control",
-			"no-cache, no-store, must-revalidate")
-		w.Header().Set("Pragma", "no-cache")
-		w.Header().Set("Expires", "0")
-		handler(w, req)
-	}
-
-}
-
-// WithStrictTransport decorates handler to require strict transport security
-// when serving HTTPS request.
-func WithStrictTransport(handler handlerFunc) handlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Add("Strict-Transport-Security",
-			"max-age=86400; includeSubdomains")
-		handler(w, req)
-	}
-}
-
 // ServeFunc returns the serving function for this server.  Use for testing.
-func ServeFunc(controller admission_controller.Admitter) handlerFunc {
-	return WithStrictTransport(NoCache(serve(controller)))
-}
-
-// Server configures and runs a TLS-enabled server from passed-in flags using
-// the supplied handler.
-func Server(handler handlerFunc) *http.Server {
-	mux := http.NewServeMux()
-	mux.HandleFunc(*handlerUrlPath, handler)
-
-	cfg := &tls.Config{
-		MinVersion:               tls.VersionTLS12,
-		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
-		PreferServerCipherSuites: true,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-		},
-	}
-	return &http.Server{
-		Addr:      *listenAddr,
-		Handler:   mux,
-		TLSConfig: cfg,
-		TLSNextProto: make(map[string]func(
-			*http.Server, *tls.Conn, http.Handler), 0),
-	}
+func ServeFunc(controller admission_controller.Admitter) service.HandlerFunc {
+	return service.WithStrictTransport(service.NoCache(serve(controller)))
 }
 
 func setupPolicyNodeInformer(config *rest.Config) (informerspolicynodev1.PolicyNodeInformer, error) {
@@ -190,11 +135,14 @@ func main() {
 		glog.Fatal("Failed setting up resourceQuota informer: ", err)
 	}
 	glog.Infof("Waiting for informers to sync...")
-	if !cache.WaitForCacheSync(nil,	policyNodeInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
+	if !cache.WaitForCacheSync(nil, policyNodeInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
 		glog.Fatal("Failure while waiting for informers to sync")
 	}
 
-	server := Server(ServeFunc(admission_controller.NewResourceQuotaAdmitter(policyNodeInformer, resourceQuotaInformer)))
+	server := service.Server(
+		*listenAddr, *handlerUrlPath, ServeFunc(
+			admission_controller.NewResourceQuotaAdmitter(
+				policyNodeInformer, resourceQuotaInformer)))
 
 	glog.Infof("Hierarchical Resource Quota Admission Controller listening at: %v", *listenAddr)
 	err = server.ListenAndServeTLS(*certFile, *serverKeyFile)

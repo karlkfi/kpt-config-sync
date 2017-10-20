@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"time"
@@ -27,6 +26,7 @@ import (
 	"github.com/google/stolos/pkg/authorizer"
 	"github.com/google/stolos/pkg/client/informers/externalversions"
 	meta "github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/service"
 	"io/ioutil"
 	authz "k8s.io/api/authorization/v1beta1"
 	"k8s.io/client-go/rest"
@@ -49,45 +49,10 @@ var (
 	motd = flag.String("motd", "", "This message is printed first.")
 )
 
-// handleFunc is a shorthand for a HTTP handler function.
-type handlerFunc func(http.ResponseWriter, *http.Request)
-
-// NoCache positively turns off page caching.
-func NoCache(handler handlerFunc) handlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set(
-			"Cache-Control",
-			"no-cache, no-store, must-revalidate")
-		w.Header().Set("Pragma", "no-cache")
-		w.Header().Set("Expires", "0")
-		handler(w, req)
-	}
-
-}
-
-// WithRequestLogging decorates handler with a log statement that prints the
-// method and the URL requested.
-func WithRequestLogging(handler handlerFunc) handlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		glog.Infof("Method: %v, URL: %v", req.Method, req.URL)
-		handler(w, req)
-	}
-}
-
-// WithStrictTransport decorates handler to require strict transport security
-// when serving HTTPS request.
-func WithStrictTransport(handler handlerFunc) handlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Add("Strict-Transport-Security",
-			"max-age=86400; includeSubdomains")
-		handler(w, req)
-	}
-}
-
 // Responder writes a basic message out.
 // See "Request Payloads" at:
 // https://kubernetes-v1-4.github.io/docs/admin/authorization for details.
-func Responder(a *authorizer.Authorizer) handlerFunc {
+func Responder(a *authorizer.Authorizer) service.HandlerFunc {
 	return func(writer http.ResponseWriter, req *http.Request) {
 		var body []byte
 		if req.Body != nil {
@@ -142,44 +107,11 @@ func Responder(a *authorizer.Authorizer) handlerFunc {
 }
 
 // ServeFunc returns the serving function for this server.  Use for testing.
-func ServeFunc(a *authorizer.Authorizer) handlerFunc {
-	return WithStrictTransport(
-		WithRequestLogging(
-			NoCache(
+func ServeFunc(a *authorizer.Authorizer) service.HandlerFunc {
+	return service.WithStrictTransport(
+		service.WithRequestLogging(
+			service.NoCache(
 				Responder(a))))
-}
-
-// Server configures and runs a TLS-enabled server from passed-in flags using
-// the supplied handler.
-func Server(handler handlerFunc) *http.Server {
-	mux := http.NewServeMux()
-	mux.HandleFunc(*handlerUrlPath, handler)
-	// TODO(filmil): Check how to install a handler that returns 404 for
-	// everything else.
-
-	cfg := &tls.Config{
-		// TODO(fmil): Figure out how to not skip verify.
-		InsecureSkipVerify: true,
-		MinVersion:         tls.VersionTLS12,
-		CurvePreferences: []tls.CurveID{
-			tls.CurveP521,
-			tls.CurveP384,
-			tls.CurveP256},
-		PreferServerCipherSuites: true,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-		},
-	}
-	return &http.Server{
-		Addr:      *listenAddr,
-		Handler:   mux,
-		TLSConfig: cfg,
-		TLSNextProto: make(map[string]func(
-			*http.Server, *tls.Conn, http.Handler), 0),
-	}
 }
 
 // must strips the error from a two-valued result.  Use type assertion to
@@ -220,8 +152,11 @@ func main() {
 	factory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), time.Minute,
 	)
-	srv := Server(ServeFunc(authorizer.New(
-		factory.K8us().V1().PolicyNodes().Informer())))
+	factory.Start(nil)
+
+	srv := service.Server(*listenAddr, *handlerUrlPath,
+		ServeFunc(authorizer.New(
+			factory.K8us().V1().PolicyNodes().Informer())))
 	factory.Start(nil)
 
 	maybeNotifySystemd()
