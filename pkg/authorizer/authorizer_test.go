@@ -9,6 +9,7 @@ import (
 	authz "k8s.io/api/authorization/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/google/stolos/pkg/testing/fakeinformers"
 )
 
 func TestAuthorize(t *testing.T) {
@@ -71,7 +72,7 @@ func TestAuthorize(t *testing.T) {
 	}
 
 	for i, ttt := range tt {
-		a := New(NewTestInformer(ttt.storage...))
+		a := New(fakeinformers.NewPolicyNodeInformer(ttt.storage...).Informer())
 		actual := a.Authorize(&ttt.request)
 		if !reflect.DeepEqual(*actual, ttt.expected) {
 			t.Errorf("[%v] Expected:\n%v\n---\nActual:\n%+v",

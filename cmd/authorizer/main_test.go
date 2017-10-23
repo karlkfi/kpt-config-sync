@@ -30,6 +30,7 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
+	"github.com/google/stolos/pkg/testing/fakeinformers"
 )
 
 type testCase struct {
@@ -47,7 +48,7 @@ type testCase struct {
 
 func newTestServer(policynodes ...runtime.Object) *httptest.Server {
 	return httptest.NewTLSServer(http.HandlerFunc(ServeFunc(
-		authorizer.New(authorizer.NewTestInformer(policynodes...)))))
+		authorizer.New(fakeinformers.NewPolicyNodeInformer(policynodes...).Informer()))))
 }
 
 // testRequest is a repeating test case. 't' is the test harness, 'policynodes'
