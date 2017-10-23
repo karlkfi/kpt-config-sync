@@ -24,10 +24,12 @@ import (
 	"testing"
 	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
 	"github.com/google/stolos/pkg/admission-controller"
+	"github.com/google/stolos/pkg/testing/fakeinformers"
 )
 
 func TestRequest(t *testing.T) {
-	ts := httptest.NewTLSServer(http.HandlerFunc(ServeFunc(&admission_controller.ResourceQuotaAdmitter{})))
+	ts := httptest.NewTLSServer(http.HandlerFunc(ServeFunc(admission_controller.NewResourceQuotaAdmitter(
+		fakeinformers.NewPolicyNodeInformer(), fakeinformers.NewResourceQuotaInformer()))))
 	defer ts.Close()
 
 	request := admissionv1alpha1.AdmissionReview{}

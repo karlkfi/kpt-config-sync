@@ -18,58 +18,82 @@ limitations under the License.
 package admission_controller
 
 import (
-	"fmt"
-
-	"github.com/golang/glog"
 	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 
-
+	"k8s.io/apiserver/pkg/admission"
+	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/quota"
 	quotainstall "k8s.io/kubernetes/pkg/quota/install"
-
 )
 
 type ResourceQuotaAdmitter struct {
 	policyNodeInformer informerspolicynodev1.PolicyNodeInformer
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer
+	quotaRegistry quota.Registry
 }
 
 var _ Admitter = (*ResourceQuotaAdmitter)(nil)
 
 func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) Admitter {
-	quota.IsZero(nil)
-	quotainstall.NewRegistry(nil, nil)
-	return &ResourceQuotaAdmitter{policyNodeInformer: policyNodeInformer, resourceQuotaInformer: resourceQuotaInformer}
+	// Nil, because we don't need to do any watches, we will only be doing evaluation checks.
+	quotaRegistry := quotainstall.NewRegistry(nil, nil)
+	return &ResourceQuotaAdmitter{
+		policyNodeInformer: policyNodeInformer,
+		resourceQuotaInformer: resourceQuotaInformer,
+		quotaRegistry: quotaRegistry,
+	}
 }
 
 // Decides whether to admit a request
 func (r* ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) *admissionv1alpha1.AdmissionReviewStatus {
-	reviewStatus := admissionv1alpha1.AdmissionReviewStatus{
-		Allowed: true,
-		Result:  &metav1.Status{
-			Reason: "ADMITTED, yay!",
-		},
+	cache, err := NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
+	if err != nil {
+		return internalErrorDeny(err)
 	}
 
-	blockSecrets(review, &reviewStatus)
-	glog.Infof("Admitting resource [%v], Admission result: [%v, %v], ",
-		review.Spec.Kind, reviewStatus.Allowed, reviewStatus.Result.Status)
-	return &reviewStatus
+	reviewSpec := AdmissionReviewSpec(review.Spec)
+	attributes := admission.Attributes(&reviewSpec)
+	evaluator := r.quotaRegistry.Evaluators()[attributes.GetKind().GroupKind()]
+
+	if evaluator != nil && evaluator.Handles(attributes) {
+		newUsage, err := evaluator.Usage(attributes.GetObject())
+		if err != nil {
+			return internalErrorDeny(err)
+		}
+
+		v1NewUsage := core_v1.ResourceList{}
+		for key, val := range newUsage {
+			v1NewUsage[core_v1.ResourceName(key)] = val
+		}
+
+		admitError := cache.admit(review.Spec.Namespace, v1NewUsage)
+
+		if admitError != nil {
+			return &admissionv1alpha1.AdmissionReviewStatus{
+				Allowed: false,
+				Result: &metav1.Status{
+					Message: admitError.Error(),
+					Reason: metav1.StatusReason(metav1.StatusReasonForbidden),
+				},
+			}
+		}
+	}
+	return &admissionv1alpha1.AdmissionReviewStatus{
+		Allowed: true,
+	}
 }
 
-// Blocks creation of secrets. This is just an example in this sample resource quota controller to allow testing of
-// DENY decisions.
-func blockSecrets(review admissionv1alpha1.AdmissionReview, reviewStatus *admissionv1alpha1.AdmissionReviewStatus) {
-	secretResourceType := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}
-	if review.Spec.Resource == secretResourceType && review.Spec.Operation == admissionv1alpha1.Create {
-		reviewStatus.Allowed = false
-		reviewStatus.Result =  &metav1.Status{
-			Reason: metav1.StatusReason(fmt.Sprintf("New secrets not allowed")),
-		}
+func internalErrorDeny(err error) *admissionv1alpha1.AdmissionReviewStatus {
+	return &admissionv1alpha1.AdmissionReviewStatus{
+		Allowed: false,
+		Result: &metav1.Status{
+			Message: err.Error(),
+			Reason: metav1.StatusReason(metav1.StatusReasonInternalError),
+		},
 	}
 }

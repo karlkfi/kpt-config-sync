@@ -71,6 +71,8 @@ func serve(controller admission_controller.Admitter) service.HandlerFunc {
 		}
 
 		reviewStatus := controller.Admit(review)
+		glog.Infof("Admission decision for namespace %s, object %s: %v",
+			review.Spec.Namespace, review.Spec.Name, reviewStatus)
 		ar := admissionv1alpha1.AdmissionReview{
 			Status: *reviewStatus,
 		}

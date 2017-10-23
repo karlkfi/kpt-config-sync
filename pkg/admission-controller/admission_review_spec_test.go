@@ -5,10 +5,11 @@ import(
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/api/admission/v1alpha1"
 )
 
 func TestConversion(t *testing.T) {
-	x := AdmissionReviewSpec{
+	x := v1alpha1.AdmissionReviewSpec{
 		Name: "ice cream",
 		Operation: "DELETE",
 		UserInfo: authenticationv1.UserInfo {
@@ -19,7 +20,8 @@ func TestConversion(t *testing.T) {
 		},
 	}
 
-	attributes := admission.Attributes(&x)
+	spec := AdmissionReviewSpec(x)
+	attributes := admission.Attributes(&spec)
 
 	if attributes.GetName() != "ice cream" {
 		t.Error("Bad conversion for name")

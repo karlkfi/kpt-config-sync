@@ -2,6 +2,7 @@ package admission_controller
 
 import (
 	"testing"
+	"strings"
 
 	pn_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -9,7 +10,6 @@ import (
 	"github.com/google/stolos/pkg/testing/fakeinformers"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"strings"
 	"github.com/google/stolos/pkg/syncer"
 )
 
@@ -128,9 +128,9 @@ func TestCanAdmit(t *testing.T) {
 			expectedErrorSubstring: "resource [hay] in namespace [kittiesandponies]",
 		},
 	} {
-		canAdmitActual, err := cache.canAdmit(tt.namespace, tt.newUsageList)
-		if canAdmitActual != tt.canAdmitExpected {
-			t.Errorf("Expected %s but got %s admitting test case [%d]", tt.canAdmitExpected, canAdmitActual, i)
+		err := cache.admit(tt.namespace, tt.newUsageList)
+		if (err == nil) != tt.canAdmitExpected {
+			t.Errorf("Expected %s but got %s admitting test case [%d]", tt.canAdmitExpected, err == nil, i)
 		}
 		if err != nil && len(tt.expectedErrorSubstring) > 0 {
 			if !strings.Contains(err.Error(), tt.expectedErrorSubstring) {

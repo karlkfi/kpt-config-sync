@@ -123,16 +123,15 @@ func (c *HierarchicalQuotaCache) initCache() error {
 	return nil
 }
 
-// canAdmit whether the new usage can be applied to the provided namespace and its ancestors.
-// If cannot admit returns false and an error describing the quota that was violated.
-func (c *HierarchicalQuotaCache) canAdmit(namespace string, newUsageList core_v1.ResourceList) (bool, error) {
+// admit checks whether the new usage can be applied to the provided namespace and its ancestors.
+// If cannot admit returns an error describing the quota that was violated.
+func (c *HierarchicalQuotaCache) admit(namespace string, newUsageList core_v1.ResourceList) error {
 	for namespace != pn_v1.NoParentNamespace {
 		namespaceQuota, exists := c.quotas[namespace]
 		if !exists {
 			// No namespace defined in policy nodes so this is not a namespace controlled by stolos.
-			return true, nil
+			return nil
 		}
-
 		for resourceName, newUsage := range newUsageList {
 			current, exists := namespaceQuota.Status.Used[resourceName]
 			if !exists {
@@ -143,12 +142,12 @@ func (c *HierarchicalQuotaCache) canAdmit(namespace string, newUsageList core_v1
 				newTotalUsage := current.Copy()
 				newTotalUsage.Add(newUsage)
 				if newTotalUsage.Cmp(limit) > 0 {
-					return false, errors.Errorf("quota for resource [%s] in namespace [%s] is over the limit %s > %s",
+					return errors.Errorf("quota for resource [%s] in namespace [%s] is over the limit %s > %s",
 						resourceName, namespace, newTotalUsage, limit)
 				}
 			}
 		}
 		namespace = c.parents[namespace]
 	}
-	return true, nil
+	return nil
 }
