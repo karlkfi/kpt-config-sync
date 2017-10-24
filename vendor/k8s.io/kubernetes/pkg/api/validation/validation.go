@@ -45,7 +45,6 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/helper"
-	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	apiservice "k8s.io/kubernetes/pkg/api/service"
 	k8s_api_v1 "k8s.io/kubernetes/pkg/api/v1"
 	v1helper "k8s.io/kubernetes/pkg/api/v1/helper"
@@ -1088,17 +1087,6 @@ func validateRBDVolumeSource(rbd *api.RBDVolumeSource, fldPath *field.Path) fiel
 	return allErrs
 }
 
-func validateRBDPersistentVolumeSource(rbd *api.RBDPersistentVolumeSource, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	if len(rbd.CephMonitors) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("monitors"), ""))
-	}
-	if len(rbd.RBDImage) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("image"), ""))
-	}
-	return allErrs
-}
-
 func validateCinderVolumeSource(cd *api.CinderVolumeSource, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(cd.VolumeID) == 0 {
@@ -1391,7 +1379,7 @@ func ValidatePersistentVolume(pv *api.PersistentVolume) field.ErrorList {
 			allErrs = append(allErrs, field.Forbidden(specPath.Child("rbd"), "may not specify more than 1 volume type"))
 		} else {
 			numVolumes++
-			allErrs = append(allErrs, validateRBDPersistentVolumeSource(pv.Spec.RBD, specPath.Child("rbd"))...)
+			allErrs = append(allErrs, validateRBDVolumeSource(pv.Spec.RBD, specPath.Child("rbd"))...)
 		}
 	}
 	if pv.Spec.Quobyte != nil {
@@ -1767,7 +1755,7 @@ func validateObjectFieldSelector(fs *api.ObjectFieldSelector, expressions *sets.
 	} else if len(fs.FieldPath) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("fieldPath"), ""))
 	} else {
-		internalFieldPath, _, err := legacyscheme.Scheme.ConvertFieldLabel(fs.APIVersion, "Pod", fs.FieldPath, "")
+		internalFieldPath, _, err := api.Scheme.ConvertFieldLabel(fs.APIVersion, "Pod", fs.FieldPath, "")
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("fieldPath"), fs.FieldPath, fmt.Sprintf("error converting fieldPath: %v", err)))
 		} else if !expressions.Has(internalFieldPath) {
