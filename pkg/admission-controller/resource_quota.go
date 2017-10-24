@@ -26,6 +26,11 @@ import (
 
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
+
+
+	"k8s.io/kubernetes/pkg/quota"
+	quotainstall "k8s.io/kubernetes/pkg/quota/install"
+
 )
 
 type ResourceQuotaAdmitter struct {
@@ -37,6 +42,8 @@ var _ Admitter = (*ResourceQuotaAdmitter)(nil)
 
 func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) Admitter {
+	quota.IsZero(nil)
+	quotainstall.NewRegistry(nil, nil)
 	return &ResourceQuotaAdmitter{policyNodeInformer: policyNodeInformer, resourceQuotaInformer: resourceQuotaInformer}
 }
 
