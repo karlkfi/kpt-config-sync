@@ -142,8 +142,8 @@ func (c *HierarchicalQuotaCache) admit(namespace string, newUsageList core_v1.Re
 				newTotalUsage := current.Copy()
 				newTotalUsage.Add(newUsage)
 				if newTotalUsage.Cmp(limit) > 0 {
-					return errors.Errorf("quota for resource [%s] in namespace [%s] is over the limit %s > %s",
-						resourceName, namespace, newTotalUsage, limit)
+					return errors.Errorf("quota for resource [%s] in namespace [%s] is over the limit %d > %d",
+						resourceName, namespace, newTotalUsage.Value(), limit.Value())
 				}
 			}
 		}
