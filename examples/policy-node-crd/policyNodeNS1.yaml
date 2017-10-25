@@ -4,13 +4,13 @@ metadata:
   name: policy-node-ns1
 spec:
   workingNamespace: true
-  parent: orgUnit1
+  parent: policy-node-ou1
   policies:
     roles:
     - kind: Role
       apiVersion: rbac.authorization.k8s.io/v1beta1
       metadata:
-        namespace: nameSpace1
+        namespace: policy-node-ns1
         name: pod-writer
       rules:
       - resources: ["pods"]
@@ -18,4 +18,5 @@ spec:
     resourceQuotas:
     - hard:
         pods: "7"
-        configmaps: "10"
+        configmaps: "2"
+        secrets: "3"
