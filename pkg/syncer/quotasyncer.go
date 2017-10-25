@@ -27,19 +27,24 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
+	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 )
 
 // QuotaSyncer handles syncing quota from PolicyNodes.
 type QuotaSyncer struct {
-	client kubernetes.Interface
+	client              kubernetes.Interface
+	resourceQuotaLister listers_core_v1.ResourceQuotaLister
 }
 
 var _ PolicyNodeSyncerInterface = &QuotaSyncer{}
 
 // NewQuotaSyncer creates a quota syncer that will use the given client.
-func NewQuotaSyncer(client meta.Interface) *QuotaSyncer {
+func NewQuotaSyncer(
+	client meta.Interface,
+	resourceQuotaLister listers_core_v1.ResourceQuotaLister) *QuotaSyncer {
 	return &QuotaSyncer{
-		client: client.Kubernetes(),
+		client:              client.Kubernetes(),
+		resourceQuotaLister: resourceQuotaLister,
 	}
 }
 

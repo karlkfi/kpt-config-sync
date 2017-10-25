@@ -17,12 +17,14 @@ package syncer
 
 import (
 	"testing"
+	"time"
 
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta/fake"
 	"github.com/google/stolos/pkg/util/set/stringset"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 )
 
 type ComputeNamespaceActionsTestCase struct {
@@ -34,15 +36,22 @@ type ComputeNamespaceActionsTestCase struct {
 	needsDelete []string // namespaces that will be created
 }
 
-func createNamespace(name string, phase core_v1.NamespacePhase) core_v1.Namespace {
-	return core_v1.Namespace{
+func createNamespace(name string, phase core_v1.NamespacePhase) *core_v1.Namespace {
+	return &core_v1.Namespace{
 		ObjectMeta: meta_v1.ObjectMeta{Name: name},
 		Status:     core_v1.NamespaceStatus{Phase: phase},
 	}
 }
 
+func NewTestNamespaceSyncer() *NamespaceSyncer {
+	fakeClient := fake.NewClient()
+	kubernetesInformerFactory := informers.NewSharedInformerFactory(
+		fakeClient.Kubernetes(), time.Minute)
+	return NewNamespaceSyncer(fakeClient, kubernetesInformerFactory.Core().V1().Namespaces().Lister())
+}
+
 func TestSyncerComputeNamespaceActions(t *testing.T) {
-	syncer := NewNamespaceSyncer(fake.NewClient())
+	syncer := NewTestNamespaceSyncer()
 
 	for _, testcase := range []ComputeNamespaceActionsTestCase{
 		{ // Create terminating ns
@@ -87,15 +96,15 @@ func TestSyncerComputeNamespaceActions(t *testing.T) {
 				policyNodes, &policyhierarchy_v1.PolicyNode{ObjectMeta: meta_v1.ObjectMeta{Name: value}})
 		}
 
-		namespaceList := &core_v1.NamespaceList{}
+		namespaces := []*core_v1.Namespace{}
 		for _, value := range testcase.existingNamespaces {
-			namespaceList.Items = append(namespaceList.Items, createNamespace(value, core_v1.NamespaceActive))
+			namespaces = append(namespaces, createNamespace(value, core_v1.NamespaceActive))
 		}
 		for _, value := range testcase.terminatingNamespaces {
-			namespaceList.Items = append(namespaceList.Items, createNamespace(value, core_v1.NamespaceTerminating))
+			namespaces = append(namespaces, createNamespace(value, core_v1.NamespaceTerminating))
 		}
 
-		actions := syncer.computeActions(namespaceList, policyNodes)
+		actions := syncer.computeActions(namespaces, policyNodes)
 
 		nsCreate := stringset.New()
 		nsDelete := stringset.New()

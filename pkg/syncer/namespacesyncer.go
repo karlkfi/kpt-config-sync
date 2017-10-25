@@ -24,31 +24,36 @@ import (
 	"github.com/google/stolos/pkg/util/set/stringset"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 )
 
 // NamespaceSyncer handles syncing namespaces from policy nodes.
 type NamespaceSyncer struct {
-	client meta.Interface
+	client          meta.Interface
+	namespaceLister listers_core_v1.NamespaceLister
 }
 
 var _ PolicyNodeSyncerInterface = &NamespaceSyncer{}
 
-func NewNamespaceSyncer(client meta.Interface) *NamespaceSyncer {
+// NewNamespaceSyncer creates a new namespace syncer from the client.
+func NewNamespaceSyncer(
+	client meta.Interface,
+	namespaceLister listers_core_v1.NamespaceLister) *NamespaceSyncer {
 	return &NamespaceSyncer{
-		client: client,
+		client:          client,
+		namespaceLister: namespaceLister,
 	}
 }
 
 // InitialSync implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) InitialSync(nodes []*policyhierarchy_v1.PolicyNode) error {
-	// TODO: Use informer for this list operation
-	existingNamespaceList, err := s.client.Kubernetes().CoreV1().Namespaces().List(meta_v1.ListOptions{})
+	existingNamespaces, err := s.namespaceLister.List(labels.Everything())
 	if err != nil {
 		return err
 	}
 
-	namespaceActions := s.computeActions(existingNamespaceList, nodes)
+	namespaceActions := s.computeActions(existingNamespaces, nodes)
 	for _, action := range namespaceActions {
 		if *dryRun {
 			glog.Infof("DryRun: Would execute namespace action %s on namespace %s", action.Operation(), action.Name())
@@ -95,17 +100,18 @@ func (s *NamespaceSyncer) runAction(action client.NamespaceAction) error {
 
 // computeActions determines which namespaces to create and delete on initial sync.
 func (s *NamespaceSyncer) computeActions(
-	existingNamespaceList *core_v1.NamespaceList,
+	existingNamespaceList []*core_v1.Namespace,
 	nodes []*policyhierarchy_v1.PolicyNode) []client.NamespaceAction {
 	existingNamespaces := stringset.New()
-	for _, namespaceItem := range existingNamespaceList.Items {
-		if namespaceutil.IsReserved(namespaceItem) {
+	for _, namespace := range existingNamespaceList {
+		if namespaceutil.IsReserved(*namespace) {
 			continue
 		}
-		switch namespaceItem.Status.Phase {
+		switch namespace.Status.Phase {
 		case core_v1.NamespaceActive:
-			existingNamespaces.Add(namespaceItem.Name)
+			existingNamespaces.Add(namespace.Name)
 		case core_v1.NamespaceTerminating:
+			// noop, handled by namespaceactions
 		}
 	}
 

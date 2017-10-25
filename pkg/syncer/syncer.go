@@ -17,6 +17,7 @@ package syncer
 
 import (
 	"flag"
+	"reflect"
 	"sync"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/google/stolos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -54,17 +56,28 @@ type Syncer struct {
 	stopMutex       sync.Mutex                  // Concurrency control for calling Stop()
 	resourceVersion int64                       // The highest resource version we have seen for a PollicyNode
 	syncers         []PolicyNodeSyncerInterface // Syncers that this will call into on change events
+
+	kubernetesInformerFactory      informers.SharedInformerFactory
+	policyHierarchyInformerFactory externalversions.SharedInformerFactory
 }
 
 // New creates a new syncer that will use the given client interface
 func New(client meta.Interface) *Syncer {
+	kubernetesInformerFactory := informers.NewSharedInformerFactory(
+		client.Kubernetes(), time.Minute)
+	policyHierarchyInformerFactory := externalversions.NewSharedInformerFactory(
+		client.PolicyHierarchy(), time.Minute)
+	kubernetesCoreV1 := kubernetesInformerFactory.Core().V1()
 	return &Syncer{
 		client:   client,
 		stopChan: make(chan struct{}),
 		syncers: []PolicyNodeSyncerInterface{
-			NewNamespaceSyncer(client), // Namespace syncer must be first since quota depends on it
-			NewQuotaSyncer(client),
+			// Namespace syncer must be first since quota depends on it
+			NewNamespaceSyncer(client, kubernetesCoreV1.Namespaces().Lister()),
+			NewQuotaSyncer(client, kubernetesCoreV1.ResourceQuotas().Lister()),
 		},
+		kubernetesInformerFactory:      kubernetesInformerFactory,
+		policyHierarchyInformerFactory: policyHierarchyInformerFactory,
 	}
 }
 
@@ -117,24 +130,27 @@ func (s *Syncer) initialSync(lister k8us_v1.PolicyNodeLister) error {
 }
 
 func (s *Syncer) runInternal() {
-	informerFactory := externalversions.NewSharedInformerFactory(s.client.PolicyHierarchy(), time.Minute)
-	policyNodesInformer := informerFactory.K8us().V1().PolicyNodes()
+	policyNodesInformer := s.policyHierarchyInformerFactory.K8us().V1().PolicyNodes()
 	informer := policyNodesInformer.Informer()
 	lister := policyNodesInformer.Lister()
 
-	informerFactory.Start(s.stopChan)
+	// Start informer factories
+	s.kubernetesInformerFactory.Start(s.stopChan)
+	s.policyHierarchyInformerFactory.Start(s.stopChan)
 
-	glog.Infof("Waiting for cache to sync")
-	syncTypes := informerFactory.WaitForCacheSync(s.stopChan)
-	for syncType, ok := range syncTypes {
-		if !ok {
-			elemType := syncType.Elem()
-			glog.Errorf("Failed to sync %s:%s", elemType.PkgPath(), elemType.Name())
-			return
+	glog.Infof("Waiting for cache to sync...")
+	kubernetesSyncTypes := s.kubernetesInformerFactory.WaitForCacheSync(s.stopChan)
+	policyHierarchySyncTypes := s.policyHierarchyInformerFactory.WaitForCacheSync(s.stopChan)
+	for _, syncTypes := range []map[reflect.Type]bool{kubernetesSyncTypes, policyHierarchySyncTypes} {
+		for syncType, ok := range syncTypes {
+			if !ok {
+				elemType := syncType.Elem()
+				glog.Errorf("Failed to sync %s:%s", elemType.PkgPath(), elemType.Name())
+				return
+			}
 		}
 	}
 
-	glog.Infof("Synced: %#v", syncTypes)
 	err := s.initialSync(lister)
 	if err != nil {
 		s.onError(err)

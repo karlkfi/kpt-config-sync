@@ -18,6 +18,7 @@ package syncer
 
 import (
 	"testing"
+	"time"
 
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta/fake"
@@ -25,6 +26,7 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 )
 
 type ComputeResourceQuotaActionsTestCase struct {
@@ -34,8 +36,15 @@ type ComputeResourceQuotaActionsTestCase struct {
 	expectedActions map[string]string // A map of namespaces to the expected resource quota operation
 }
 
+func NewTestQuotaSyncer() *QuotaSyncer {
+	fakeClient := fake.NewClient()
+	kubernetesInformerFactory := informers.NewSharedInformerFactory(
+		fakeClient.Kubernetes(), time.Minute)
+	return NewQuotaSyncer(fakeClient, kubernetesInformerFactory.Core().V1().ResourceQuotas().Lister())
+}
+
 func TestSyncerComputeResourceQuotaActions(t *testing.T) {
-	syncer := NewQuotaSyncer(fake.NewClient())
+	syncer := NewTestQuotaSyncer()
 
 	for i, testcase := range []ComputeResourceQuotaActionsTestCase{
 		{ // Create
@@ -106,7 +115,7 @@ type GetResourceQuotaEventActionTestCase struct {
 }
 
 func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
-	syncer := NewQuotaSyncer(fake.NewClient())
+	syncer := NewTestQuotaSyncer()
 
 	namespaceName := "ns-name"
 	syncer.client.CoreV1().ResourceQuotas("ns-name").Create(&core_v1.ResourceQuota{
