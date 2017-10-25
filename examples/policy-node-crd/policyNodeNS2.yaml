@@ -4,8 +4,8 @@ metadata:
   name: policy-node-ns2
 spec:
   workingNamespace: true
-  parent: orgUnit1
+  parent: policy-node-ns1
   policies:
     resourceQuotas:
     - hard:
-        services: "10"
+        secrets: "2"

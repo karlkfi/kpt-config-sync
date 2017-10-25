@@ -9,11 +9,11 @@ spec:
     - kind: Role
       apiVersion: rbac.authorization.k8s.io/v1beta1
       metadata:
-        namespace: orgUnit1
+        namespace: policy-node-ou1
         name: pod-reader
       rules:
       - resources: ["pods"]
         verbs: ["get"]
     resourceQuotas:
     - hard:
-        services: "11"
+        secrets: "3"
