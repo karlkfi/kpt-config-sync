@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"github.com/google/stolos/pkg/syncer"
 	"github.com/pkg/errors"
+	"github.com/golang/glog"
 )
 
 // A cache of package quotas that keeps usage and limits in memory for the whole namespace tree.
@@ -97,7 +98,8 @@ func (c *HierarchicalQuotaCache) initCache() error {
 
 		quota, exists := c.quotas[resourceQuota.Namespace]
 		if !exists {
-			return errors.Errorf("Resource Quota exists for namespace not defined in policy nodes")
+			glog.Infof("Resource Quota exists for namespace %s not defined in policy nodes", resourceQuota.Namespace)
+			continue // This can happen frequently during deletions and while adjusting the tree.
 		}
 		// For leaf
 		resourceQuota.Status.DeepCopyInto(&quota.Status)
@@ -107,7 +109,9 @@ func (c *HierarchicalQuotaCache) initCache() error {
 		for parent != pn_v1.NoParentNamespace {
 			quota, exists := c.quotas[parent]
 			if !exists {
-				return errors.Errorf("Resource Quota exists for namespace %s not defined in policy nodes", parent)
+				glog.Warningf("Parent namespace %s not defined in policy nodes for child namespace %s",
+					parent, resourceQuota.Namespace)
+				break
 			}
 			for resourceName, quantity := range resourceQuota.Status.Used {
 				if current, exists := quota.Status.Used[resourceName]; exists {
