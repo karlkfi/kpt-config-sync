@@ -1,0 +1,35 @@
+apiVersion: "k8us.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: twix-corp
+spec:
+  workingNamespace: false
+  policies:
+    resourceQuotas:
+    - hard:
+        configmaps: "1"
+---
+apiVersion: "k8us.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: left-twix
+spec:
+  workingNamespace: true
+  parent: twix-corp
+  policies:
+    resourceQuotas:
+    - hard:
+        pods: "7"
+        configmaps: "10"
+---
+apiVersion: "k8us.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: right-twix
+spec:
+  workingNamespace: true
+  parent: twix-corp
+  policies:
+    resourceQuotas:
+    - hard:
+        configmaps: "0"
