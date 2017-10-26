@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package internal contains support packages for oauth2 package.
 package internal
 
 import (
@@ -187,7 +188,7 @@ func RetrieveToken(ctx context.Context, clientID, clientSecret, tokenURL string,
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if !bustedAuth {
-		req.SetBasicAuth(url.QueryEscape(clientID), url.QueryEscape(clientSecret))
+		req.SetBasicAuth(clientID, clientSecret)
 	}
 	r, err := ctxhttp.Do(ctx, hc, req)
 	if err != nil {
