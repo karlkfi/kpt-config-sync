@@ -13,17 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 // The actions needed by the syncer to perform operations on leaf (K8s native) Resource Quota objects
-package syncer
+package actions
 
 import (
 	"github.com/golang/glog"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"github.com/google/stolos/pkg/resource-quota"
 )
-
-// We only allow one resource quota per namespace, and this is the meta name of that object.
-const ResourceQuotaObjectName = "stolos-resource-quota"
 
 // ResourceQuotaAction represents a CRUD action on a resource quota spec
 type ResourceQuotaAction interface {
@@ -75,7 +73,7 @@ func (n *ResourceQuotaDeleteAction) Operation() string {
 }
 
 func (n *ResourceQuotaDeleteAction) Execute() error {
-	err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Delete(ResourceQuotaObjectName, &meta_v1.DeleteOptions{})
+	err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Delete(resource_quota.ResourceQuotaObjectName, &meta_v1.DeleteOptions{})
 	if err != nil {
 		glog.Infof("Failed to delete resource quota for namespace %s: %v", n.namespace, err)
 		return err
@@ -109,7 +107,7 @@ func (n *ResourceQuotaCreateAction) Operation() string {
 func (n *ResourceQuotaCreateAction) Execute() error {
 	createdResourceQuota, err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Create(&core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: ResourceQuotaObjectName,
+			Name: resource_quota.ResourceQuotaObjectName,
 		},
 		Spec: n.resourceQuotaSpec,
 	})
@@ -148,7 +146,7 @@ func (n *ResourceQuotaUpdateAction) Operation() string {
 
 func (n *ResourceQuotaUpdateAction) Execute() error {
 	createdResourceQuota, err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Update(&core_v1.ResourceQuota{
-		ObjectMeta: meta_v1.ObjectMeta{Name: ResourceQuotaObjectName, ResourceVersion: n.resourceVersion},
+		ObjectMeta: meta_v1.ObjectMeta{Name: resource_quota.ResourceQuotaObjectName, ResourceVersion: n.resourceVersion},
 		Spec: n.resourceQuotaSpec,
 	})
 	if err != nil {

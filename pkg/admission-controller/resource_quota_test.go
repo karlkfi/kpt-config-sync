@@ -9,16 +9,31 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	core_v1 "k8s.io/api/core/v1"
 	"github.com/google/stolos/pkg/testing/fakeinformers"
+	pn_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 )
 
 func TestAuthorize(t *testing.T) {
 	// Initial setup of quotas
 	// Limits and structure
 	policyNodes := []runtime.Object{
-		makePolicyNode("kitties", "", core_v1.ResourceList{
-			"pods":    resource.MustParse("1"),
-			"secrets": resource.MustParse("0"),},
-		),
+		&pn_v1.PolicyNode{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "kitties",
+			},
+			Spec: pn_v1.PolicyNodeSpec{
+				Parent: "",
+				Policies: pn_v1.PolicyLists{
+					ResourceQuotas: []core_v1.ResourceQuotaSpec{
+						{
+							Hard: core_v1.ResourceList{
+								"pods":    resource.MustParse("1"),
+								"secrets": resource.MustParse("0"),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	policyNodeInformer := fakeinformers.NewPolicyNodeInformer(policyNodes...)

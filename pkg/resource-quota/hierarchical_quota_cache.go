@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package admission_controller
+package resource_quota
 
 import (
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
@@ -22,7 +22,6 @@ import (
 	pn_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/labels"
-	"github.com/google/stolos/pkg/syncer"
 	"github.com/pkg/errors"
 	"github.com/golang/glog"
 )
@@ -92,7 +91,7 @@ func (c *HierarchicalQuotaCache) initCache() error {
 
 	// Set the usage based on the quota informer
 	for _, resourceQuota := range resourceQuotas {
-		if resourceQuota.Name != syncer.ResourceQuotaObjectName {
+		if resourceQuota.Name != ResourceQuotaObjectName {
 			continue // Only care about stolos resource quota objects
 		}
 
@@ -129,7 +128,7 @@ func (c *HierarchicalQuotaCache) initCache() error {
 
 // admit checks whether the new usage can be applied to the provided namespace and its ancestors.
 // If cannot admit returns an error describing the quota that was violated.
-func (c *HierarchicalQuotaCache) admit(namespace string, newUsageList core_v1.ResourceList) error {
+func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList core_v1.ResourceList) error {
 	for namespace != pn_v1.NoParentNamespace {
 		namespaceQuota, exists := c.quotas[namespace]
 		if !exists {

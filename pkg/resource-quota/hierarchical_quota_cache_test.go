@@ -1,4 +1,4 @@
-package admission_controller
+package resource_quota
 
 import (
 	"testing"
@@ -10,7 +10,6 @@ import (
 	"github.com/google/stolos/pkg/testing/fakeinformers"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"github.com/google/stolos/pkg/syncer"
 )
 
 type CacheTestCase struct {
@@ -40,7 +39,7 @@ func TestCanAdmit(t *testing.T) {
 	quotas := []runtime.Object{
 		&core_v1.ResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name: syncer.ResourceQuotaObjectName,
+				Name: ResourceQuotaObjectName,
 				Namespace: "kitties",
 			},
 			Status: core_v1.ResourceQuotaStatus{
@@ -51,7 +50,7 @@ func TestCanAdmit(t *testing.T) {
 		},
 		&core_v1.ResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name: syncer.ResourceQuotaObjectName,
+				Name: ResourceQuotaObjectName,
 				Namespace: "ponies",
 			},
 			Status: core_v1.ResourceQuotaStatus{
@@ -128,7 +127,7 @@ func TestCanAdmit(t *testing.T) {
 			expectedErrorSubstring: "resource [hay] in namespace [kittiesandponies]",
 		},
 	} {
-		err := cache.admit(tt.namespace, tt.newUsageList)
+		err := cache.Admit(tt.namespace, tt.newUsageList)
 		if (err == nil) != tt.canAdmitExpected {
 			t.Errorf("Expected %s but got %s admitting test case [%d]", tt.canAdmitExpected, err == nil, i)
 		}
@@ -156,5 +155,4 @@ func makePolicyNode(name string, parent string, limits core_v1.ResourceList) *pn
 			},
 		},
 	}
-
 }

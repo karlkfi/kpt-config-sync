@@ -18,7 +18,6 @@ package syncer
 import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/client"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/util/namespaceutil"
 	"github.com/google/stolos/pkg/util/set/stringset"
@@ -26,6 +25,7 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
+	"github.com/google/stolos/pkg/syncer/actions"
 )
 
 // NamespaceSyncer handles syncing namespaces from policy nodes.
@@ -70,7 +70,7 @@ func (s *NamespaceSyncer) InitialSync(nodes []*policyhierarchy_v1.PolicyNode) er
 
 // OnCreate implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) OnCreate(node *policyhierarchy_v1.PolicyNode) error {
-	return s.runAction(client.NewNamespaceCreateAction(s.client.Kubernetes(), node.Name))
+	return s.runAction(actions.NewNamespaceCreateAction(s.client.Kubernetes(), node.Name))
 }
 
 // OnUpdate implements PolicyNodeSyncerInterface
@@ -82,10 +82,10 @@ func (s *NamespaceSyncer) OnUpdate(
 
 // OnDelete implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) OnDelete(node *policyhierarchy_v1.PolicyNode) error {
-	return s.runAction(client.NewNamespaceDeleteAction(s.client.Kubernetes(), node.Name))
+	return s.runAction(actions.NewNamespaceDeleteAction(s.client.Kubernetes(), node.Name))
 }
 
-func (s *NamespaceSyncer) runAction(action client.NamespaceAction) error {
+func (s *NamespaceSyncer) runAction(action actions.NamespaceAction) error {
 	if *dryRun {
 		glog.Infof("DryRun: Would execute namespace action %s on namespace %s", action.Operation(), action.Name())
 		return nil
@@ -101,7 +101,7 @@ func (s *NamespaceSyncer) runAction(action client.NamespaceAction) error {
 // computeActions determines which namespaces to create and delete on initial sync.
 func (s *NamespaceSyncer) computeActions(
 	existingNamespaceList []*core_v1.Namespace,
-	nodes []*policyhierarchy_v1.PolicyNode) []client.NamespaceAction {
+	nodes []*policyhierarchy_v1.PolicyNode) []actions.NamespaceAction {
 	existingNamespaces := stringset.New()
 	for _, namespace := range existingNamespaceList {
 		if namespaceutil.IsReserved(*namespace) {
@@ -123,14 +123,14 @@ func (s *NamespaceSyncer) computeActions(
 	needsCreate := declaredNamespaces.Difference(existingNamespaces)
 	needsDelete := existingNamespaces.Difference(declaredNamespaces)
 
-	namespaceActions := []client.NamespaceAction{}
+	namespaceActions := []actions.NamespaceAction{}
 	needsCreate.ForEach(func(ns string) {
 		glog.Infof("Adding create operation for %s", ns)
-		namespaceActions = append(namespaceActions, client.NewNamespaceCreateAction(s.client.Kubernetes(), ns))
+		namespaceActions = append(namespaceActions, actions.NewNamespaceCreateAction(s.client.Kubernetes(), ns))
 	})
 	needsDelete.ForEach(func(ns string) {
 		glog.Infof("Adding delete operation for %s", ns)
-		namespaceActions = append(namespaceActions, client.NewNamespaceDeleteAction(s.client.Kubernetes(), ns))
+		namespaceActions = append(namespaceActions, actions.NewNamespaceDeleteAction(s.client.Kubernetes(), ns))
 	})
 
 	return namespaceActions

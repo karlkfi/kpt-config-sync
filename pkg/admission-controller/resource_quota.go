@@ -28,6 +28,7 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/quota"
 	quotainstall "k8s.io/kubernetes/pkg/quota/install"
+	"github.com/google/stolos/pkg/resource-quota"
 )
 
 type ResourceQuotaAdmitter struct {
@@ -51,7 +52,7 @@ func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNod
 
 // Decides whether to admit a request
 func (r* ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) *admissionv1alpha1.AdmissionReviewStatus {
-	cache, err := NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
+	cache, err := resource_quota.NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
 	if err != nil {
 		return internalErrorDeny(err)
 	}
@@ -71,7 +72,7 @@ func (r* ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) 
 			v1NewUsage[core_v1.ResourceName(key)] = val
 		}
 
-		admitError := cache.admit(review.Spec.Namespace, v1NewUsage)
+		admitError := cache.Admit(review.Spec.Namespace, v1NewUsage)
 
 		if admitError != nil {
 			return &admissionv1alpha1.AdmissionReviewStatus{

@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
+	"github.com/google/stolos/pkg/resource-quota"
 )
 
 type ComputeResourceQuotaActionsTestCase struct {
@@ -90,7 +91,7 @@ func TestSyncerComputeResourceQuotaActions(t *testing.T) {
 			existingResourceQuotaList.Items = append(
 				existingResourceQuotaList.Items,
 				core_v1.ResourceQuota{
-					ObjectMeta: meta_v1.ObjectMeta{Name: ResourceQuotaObjectName, Namespace: ns},
+					ObjectMeta: meta_v1.ObjectMeta{Name: resource_quota.ResourceQuotaObjectName, Namespace: ns},
 					Spec:       rq},
 			)
 		}
@@ -120,7 +121,7 @@ func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
 	namespaceName := "ns-name"
 	syncer.client.CoreV1().ResourceQuotas("ns-name").Create(&core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: ResourceQuotaObjectName,
+			Name: resource_quota.ResourceQuotaObjectName,
 		},
 		Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("42")}},
 	})
