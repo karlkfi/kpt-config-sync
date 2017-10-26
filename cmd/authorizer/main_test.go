@@ -26,11 +26,12 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/authorizer"
+	"github.com/google/stolos/pkg/testing/fakeinformers"
 	authz "k8s.io/api/authorization/v1beta1"
+	rbac "k8s.io/api/rbac/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
-	"github.com/google/stolos/pkg/testing/fakeinformers"
 )
 
 type testCase struct {
@@ -51,34 +52,52 @@ func newTestServer(policynodes ...runtime.Object) *httptest.Server {
 		authorizer.New(fakeinformers.NewPolicyNodeInformer(policynodes...).Informer()))))
 }
 
-// testRequest is a repeating test case. 't' is the test harness, 'policynodes'
-// are the policy node objects injected in the fake policy nodes hierarchy, and
-// tt is the test case to run.
-func testRequest(name string, t *testing.T, policynodes *[]runtime.Object, tt *[]testCase) {
-	// The objects listed here will appear as if they have
-	// already been present in the storage that the test
-	// client is reading from.
-	ts := newTestServer(*policynodes...)
-	defer ts.Close()
-	for i, ttt := range *tt {
-		actual, actualStatus := requestReview(t,
-			ts.Client(), ts.URL, ttt.contentType, ttt.request)
-		if !reflect.DeepEqual(ttt.expected, actual) ||
-			actualStatus != ttt.expectedStatusCode {
-			t.Errorf("[%v:%v] Actual:\n%v\nactualStatus:\n%v\nfor:\n%v",
-				name, i, spew.Sdump(actual), spew.Sdump(actualStatus),
-				spew.Sdump(ttt))
-		}
-	}
-}
-
 // TestSimpleRequest tests namespace finding in a simple policy nodes
-// hierarchy.
+// hierarchy.  This is a basic test that confirms the integration between the
+// server and the authorizer proper.  See authorizer proper for policy
+// evaluation tests.
 func TestSimpleRequest(t *testing.T) {
+
+	// Only one namespace, with a singe role binding allowing user Jane to
+	// do a GET on pods.
 	policynodes := []runtime.Object{
 		&policyhierarchy.PolicyNode{
 			ObjectMeta: meta.ObjectMeta{
 				Name: "kittiesandponies",
+			},
+			Spec: policyhierarchy.PolicyNodeSpec{
+				Policies: policyhierarchy.PolicyLists{
+					Roles: []rbac.Role{
+						rbac.Role{
+							ObjectMeta: meta.ObjectMeta{
+								Name: "pod-getter",
+							},
+							Rules: []rbac.PolicyRule{
+								rbac.PolicyRule{
+									APIGroups: []string{""},
+									Verbs:     []string{"get"},
+									Resources: []string{"pods"},
+								},
+							},
+						},
+					},
+					RoleBindings: []rbac.RoleBinding{
+						rbac.RoleBinding{
+							RoleRef: rbac.RoleRef{
+								APIGroup: "rbac.authorization.k8s.io",
+								Kind:     "Role",
+								Name:     "pod-getter",
+							},
+							Subjects: []rbac.Subject{
+								rbac.Subject{
+									Name:     "jane",
+									Kind:     "User",
+									APIGroup: "rbac.authorization.k8s.io",
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -99,13 +118,10 @@ func TestSimpleRequest(t *testing.T) {
 					User:   "jane",
 					Groups: []string{"group1", "group2"},
 					ResourceAttributes: &authz.ResourceAttributes{
-						Verb:        "GET",
-						Namespace:   "kittiesandponies",
-						Group:       "group3",
-						Version:     "v7beta3",
-						Resource:    "pods",
-						Subresource: "proxy",
-						Name:        "my-pod",
+						Verb:      "get",
+						Namespace: "kittiesandponies",
+						Resource:  "pods",
+						Name:      "my-pod",
 					},
 				},
 			},
@@ -129,7 +145,7 @@ func TestSimpleRequest(t *testing.T) {
 						Namespace:   "onlyponies",
 						Group:       "group3",
 						Version:     "v7beta3",
-						Resource:    "pods",
+						Resource:    "services",
 						Subresource: "proxy",
 						Name:        "my-pod",
 					},
@@ -138,166 +154,28 @@ func TestSimpleRequest(t *testing.T) {
 			expected: authz.SubjectAccessReview{
 				TypeMeta: authorizer.TypeMeta,
 				Status: authz.SubjectAccessReviewStatus{
-					Allowed:         false,
-					EvaluationError: "while getting hierarchical policy rules: while getting policy node: onlyponies: partial policy rules, missing namespace: onlyponies",
+					Allowed: false,
+					Reason:  "while looking up role bindings: namespace=onlyponies: while getting policy node: onlyponies: partial policy rules, missing namespace: onlyponies",
 				},
 			},
 			expectedStatusCode: http.StatusOK,
 		},
 	}
-	testRequest("TestSimpleRequest", t, &policynodes, &tt)
-}
-
-func TestTreeHierarchy(t *testing.T) {
-	// animals
-	// `- kittiesandponies
-	//    |- kitties
-	//    `- ponies
-	policynodes := []runtime.Object{
-		&policyhierarchy.PolicyNode{
-			ObjectMeta: meta.ObjectMeta{
-				Name: "animals",
-			},
-			Spec: policyhierarchy.PolicyNodeSpec{
-				Parent: "",
-			},
-		},
-		&policyhierarchy.PolicyNode{
-			ObjectMeta: meta.ObjectMeta{
-				Name: "kittiesandponies",
-			},
-			Spec: policyhierarchy.PolicyNodeSpec{
-				Parent: "animals",
-			},
-		},
-		&policyhierarchy.PolicyNode{
-			ObjectMeta: meta.ObjectMeta{
-				Name: "kitties",
-			},
-			Spec: policyhierarchy.PolicyNodeSpec{
-				Parent: "kittiesandponies",
-			},
-		},
-		&policyhierarchy.PolicyNode{
-			ObjectMeta: meta.ObjectMeta{
-				Name: "ponies",
-			},
-			Spec: policyhierarchy.PolicyNodeSpec{
-				Parent: "kittiesandponies",
-			},
-		},
+	// The objects listed here will appear as if they have
+	// already been present in the storage that the test
+	// client is reading from.
+	ts := newTestServer(policynodes...)
+	defer ts.Close()
+	for i, ttt := range tt {
+		actual, actualStatus := requestReview(t,
+			ts.Client(), ts.URL, ttt.contentType, ttt.request)
+		if !reflect.DeepEqual(ttt.expected, actual) ||
+			actualStatus != ttt.expectedStatusCode {
+			t.Errorf("[%v] Actual:\n%v\nactualStatus:\n%v\nfor:\n%v",
+				i, spew.Sdump(actual), spew.Sdump(actualStatus),
+				spew.Sdump(ttt))
+		}
 	}
-	// The test setup approach was taken from:
-	// https://github.com/kubernetes/kubernetes/blob/73326ef01d2d7c7eb3b8738ab57bf3b3d268ef97/staging/src/k8s.io/apiserver/plugin/pkg/authorizer/webhook/webhook_test.go#L504
-	tt := []testCase{
-		{
-			contentType: "application/json",
-			request: authz.SubjectAccessReview{
-				TypeMeta: authorizer.TypeMeta,
-				Spec: authz.SubjectAccessReviewSpec{
-					User:   "jane",
-					Groups: []string{"group1", "group2"},
-					ResourceAttributes: &authz.ResourceAttributes{
-						Verb:        "GET",
-						Namespace:   "kittiesandponies",
-						Group:       "group3",
-						Version:     "v7beta3",
-						Resource:    "pods",
-						Subresource: "proxy",
-						Name:        "my-pod",
-					},
-				},
-			},
-			expected: authz.SubjectAccessReview{
-				TypeMeta: authorizer.TypeMeta,
-				Status: authz.SubjectAccessReviewStatus{
-					Allowed: true,
-				},
-			},
-			expectedStatusCode: http.StatusOK,
-		},
-		{
-			contentType: "application/json",
-			request: authz.SubjectAccessReview{
-				TypeMeta: authorizer.TypeMeta,
-				Spec: authz.SubjectAccessReviewSpec{
-					User:   "jane",
-					Groups: []string{"group1", "group2"},
-					ResourceAttributes: &authz.ResourceAttributes{
-						Verb:        "GET",
-						Namespace:   "kitties",
-						Group:       "group3",
-						Version:     "v7beta3",
-						Resource:    "pods",
-						Subresource: "proxy",
-						Name:        "my-pod",
-					},
-				},
-			},
-			expected: authz.SubjectAccessReview{
-				TypeMeta: authorizer.TypeMeta,
-				Status: authz.SubjectAccessReviewStatus{
-					Allowed: true,
-				},
-			},
-			expectedStatusCode: http.StatusOK,
-		},
-		{
-			contentType: "application/json",
-			request: authz.SubjectAccessReview{
-				TypeMeta: authorizer.TypeMeta,
-				Spec: authz.SubjectAccessReviewSpec{
-					User:   "jane",
-					Groups: []string{"group1", "group2"},
-					ResourceAttributes: &authz.ResourceAttributes{
-						Verb:        "GET",
-						Namespace:   "ponies",
-						Group:       "group3",
-						Version:     "v7beta3",
-						Resource:    "pods",
-						Subresource: "proxy",
-						Name:        "my-pod",
-					},
-				},
-			},
-			expected: authz.SubjectAccessReview{
-				TypeMeta: authorizer.TypeMeta,
-				Status: authz.SubjectAccessReviewStatus{
-					Allowed: true,
-				},
-			},
-			expectedStatusCode: http.StatusOK,
-		},
-		{
-			contentType: "application/json",
-			request: authz.SubjectAccessReview{
-				TypeMeta: authorizer.TypeMeta,
-				Spec: authz.SubjectAccessReviewSpec{
-					User:   "jane",
-					Groups: []string{"group1", "group2"},
-					ResourceAttributes: &authz.ResourceAttributes{
-						Verb:        "GET",
-						Namespace:   "onlyponies",
-						Group:       "group3",
-						Version:     "v7beta3",
-						Resource:    "pods",
-						Subresource: "proxy",
-						Name:        "my-pod",
-					},
-				},
-			},
-			expected: authz.SubjectAccessReview{
-				TypeMeta: authorizer.TypeMeta,
-				Status: authz.SubjectAccessReviewStatus{
-					Allowed:         false,
-					EvaluationError: "while getting hierarchical policy rules: while getting policy node: onlyponies: partial policy rules, missing namespace: onlyponies",
-				},
-			},
-			expectedStatusCode: http.StatusOK,
-		},
-	}
-	testRequest("TestTreeHierarchy", t, &policynodes, &tt)
-
 }
 
 // requestReview sends 'request' to 'url' with the given 'contentType'.  Returns
