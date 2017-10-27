@@ -32,9 +32,10 @@ var (
 
 	// Namespaces that exist on the kubernetes cluster by default.
 	reservedNamespaces = map[string]bool{
-		"default":     true,
-		"kube-public": true,
-		"kube-system": true,
+		"default":       true,
+		"kube-public":   true,
+		"kube-system":   true,
+		"stolos-system": true,
 	}
 )
 

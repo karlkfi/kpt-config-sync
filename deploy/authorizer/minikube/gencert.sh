@@ -31,7 +31,7 @@ SERVER_CERTIFICATE_SIGNING_REQUEST="server.csr"
 ## says that CA has seen the certificate and testifies that it checks out.
 SERVER_CERTIFICATE="server.crt"
 
-CANONICAL_NAME=authorizer.default.svc
+CANONICAL_NAME=authorizer.stolos-system.svc
 AUTHORIZER_CLUSTER_IP_ADDRESS=${AUTHORIZER_CLUSTER_IP_ADDRESS:-10.0.0.112}
 
 echo "Generating server private key."

@@ -43,13 +43,16 @@ function delete_resource() {
   fi
 }
 
+# Create the stolos system namespace
+namespace=${REPO}/manifests/namespace.yaml
+
 # Create Custom Resource
 policy_node_crd=${REPO}/manifests/policy-node-crd.yaml
 
 # Syncer service account, role, rolebinding
-syncer_service_account=${REPO}/deploy/syncer-service-account.yaml
-syncer_role=${REPO}/deploy/syncer-role.yaml
-syncer_rolebinding=${REPO}/deploy/syncer-rolebinding.yaml
+service_account=${REPO}/manifests/service-account.yaml
+role=${REPO}/manifests/cluster-role.yaml
+rolebinding=${REPO}/manifests/cluster-rolebinding.yaml
 
 ACTION=${ACTION:-create}
 action_resource=${ACTION}_resource
@@ -64,12 +67,14 @@ case $ACTION in
     ;;
 esac
 
+${action_resource} ${namespace}
+sleep 2
 ${action_resource} ${policy_node_crd}
-${action_resource} ${syncer_service_account}
+${action_resource} ${service_account}
 
 if kubectl config current-context | grep "^gke_" &> /dev/null; then
   echo "On GKE, skipping setup for syncer ClusterRole/ClusteRoleBinding"
 else
-  ${action_resource} ${syncer_role}
-  ${action_resource} ${syncer_rolebinding}
+  ${action_resource} ${role}
+  ${action_resource} ${rolebinding}
 fi

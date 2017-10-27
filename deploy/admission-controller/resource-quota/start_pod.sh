@@ -5,11 +5,11 @@
 YAML=pod.yaml
 POD=admit-resource-quota
 
-if kubectl get pod ${POD} &> /dev/null || kubectl get svc ${POD} &> /dev/null; then
+if kubectl --namespace=stolos-system get pod ${POD} &> /dev/null || kubectl --namespace=stolos-system get svc ${POD} &> /dev/null; then
 echo "Found existing pod, deleting..."
 kubectl delete -f ${YAML}
 echo -n "Waiting for pod to terminate..."
-while kubectl get pod ${POD} &> /dev/null || kubectl get svc ${POD} &> /dev/null; do
+while kubectl --namespace=stolos-system get pod ${POD} &> /dev/null || kubectl --namespace=stolos-system get svc ${POD} &> /dev/null; do
   echo -n "."
   sleep 1
 done

@@ -9,6 +9,7 @@ apiVersion: admissionregistration.k8s.io/v1alpha1
 kind: ExternalAdmissionHookConfiguration
 metadata:
   name: admit-resource-quota-reg
+  namespace: stolos-system
 externalAdmissionHooks:
   - name: resourcequota.external.io
     rules:
@@ -24,12 +25,12 @@ externalAdmissionHooks:
     failurePolicy: Ignore
     clientConfig:
       service:
-        namespace: default
+        namespace: stolos-system
         name: admit-resource-quota
       caBundle: ${CA_BUNDLE}
 EOF
 
-kubectl delete externaladmissionhookconfiguration admit-resource-quota-reg
+kubectl delete -f registration.yaml
 sleep 1
 kubectl create -f registration.yaml
 rm registration.yaml
