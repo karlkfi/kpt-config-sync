@@ -43,7 +43,11 @@ clean-docker-gce:
 
 .PHONY: clean-docker-minikube
 clean-docker-minikube:
-	@true
+	@echo +++ $@ is an empty target.
+
+.PHONY: clean-docker-local
+clean-docker-local:
+	@echo +++ $@ is an empty target.
 
 .NOTPARALLEL: server.key server.csr server.pem server.crt ca.crt
 server.key server.csr server.pem server.crt: minikube/gencert.sh
@@ -101,6 +105,14 @@ push-docker-gce: build-docker
 push-docker-minikube: Dockerfile $(PACKAGE) server.key
 	eval $(MINIKUBE_DOCKER_ENV)
 	docker build -t $(PACKAGE):$(IMAGE_TAG) .
+
+# The env variables below ensure that a local push goes to the local docker
+# daemon.
+.PHONY: push-docker-local
+push-docker-local: Dockerfile $(PACKAGE) server.key
+	DOCKER_TLS_VERIFY="" DOCKER_HOST="" \
+	DOCKER_CERT_PATH="" DOCKER_API_VERSION="" \
+	  docker build -t $(PACKAGE):$(IMAGE_TAG) .
 
 # Invoked if $(DEPLOYMENT_TYPE) is not found.
 push-docker-%:
