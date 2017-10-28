@@ -90,8 +90,13 @@ Environment Variables
 Alternatives are {a|b}
 The first alternative is the default.
 
-DEPLOYMENT_TYPE: {gce|minikube}
+DEPLOYMENT_TYPE: {gce|minikube|local}
 	Used to choose system-specific deployment where it applies.
+	  - gce: deploy to GCE.  Requires gcloud setup.
+      - minikube: deploy to minikube.  Requries minikube up and running.
+	  - local: deploy to a locally running docker.  Please note, only some
+	  targets support this deployment, e.g. build-docker-local, and
+	  push-docker-local.  Requires docker to be running on your local machine.
 
 GCP_PROJECT:
 	The GCP project name used to push containers or to deploy.

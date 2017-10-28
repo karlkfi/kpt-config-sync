@@ -31,13 +31,14 @@ build-docker-%:
 .PHONY: push-docker
 push-docker: $(addprefix push-docker-,$(BINARIES))
 
-push-docker-%:
+push-docker-%: build-docker-%
 	make -C $* push-docker
 
 # Deploys all components to a target DEPLOYMENT_TYPE.
 #
 # Example:
-# DEPLOYMENT_TYPE=minikube make deploy-authorizer
+#
+#    make DEPLOYMENT_TYPE=minikube deploy-authorizer
 
 .PHONY: deploy
 deploy: $(addprefix deploy-,$(BINARIES))
