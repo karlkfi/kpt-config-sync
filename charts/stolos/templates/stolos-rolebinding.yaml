@@ -1,0 +1,14 @@
+{{ if .Values.rbac.install }}
+apiVersion: rbac.authorization.k8s.io/{{ .Values.rbac.apiVersion }}
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.RoleBindingName }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.RoleName }}
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.ServiceAccountName }}
+  namespace: {{ .Release.Namespace }}
+{{ end }}

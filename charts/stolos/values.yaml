@@ -1,0 +1,20 @@
+# Default values for stolos
+# This is a YAML-formatted file.
+# Declare name/value pairs to be passed into your templates.
+# name: value
+
+registry: ""
+
+ServiceAccountName: "stolos"
+RoleName: "stolos"
+RoleBindingName: "stolos"
+
+Syncer:
+  PodName: "syncer"
+  Image: "syncer"
+  ImageTag: "test"
+  ImagePullPolicy: "Always"
+
+rbac:
+  enabled: true
+  apiVersion: "v1beta1"  # helm is a bit behind
