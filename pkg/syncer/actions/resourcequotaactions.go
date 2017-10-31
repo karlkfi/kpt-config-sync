@@ -108,6 +108,7 @@ func (n *ResourceQuotaCreateAction) Execute() error {
 	createdResourceQuota, err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Create(&core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: resource_quota.ResourceQuotaObjectName,
+			Labels: resource_quota.StolosQuotaLabels,
 		},
 		Spec: n.resourceQuotaSpec,
 	})

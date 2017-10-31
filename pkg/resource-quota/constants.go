@@ -17,3 +17,5 @@ package resource_quota
 
 // We only allow one resource quota per namespace, and this is the meta name of that object.
 const ResourceQuotaObjectName = "stolos-resource-quota"
+
+var StolosQuotaLabels = map[string]string{"stolos": "true"}
