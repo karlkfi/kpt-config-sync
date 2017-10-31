@@ -1,0 +1,20 @@
+{{ if .Values.rbac.enabled }}
+apiVersion:  rbac.authorization.k8s.io/{{ .Values.rbac.apiVersion }}
+kind: ClusterRole
+metadata:
+  name: {{ .Values.RoleName }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - resourcequotas
+  verbs:
+  - '*'
+- apiGroups:
+  - k8us.k8s.io
+  resources:
+  - policynodes
+  verbs:
+  - '*'
+{{ end }}
