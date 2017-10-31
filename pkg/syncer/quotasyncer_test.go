@@ -18,7 +18,6 @@ package syncer
 
 import (
 	"testing"
-	"time"
 
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta/fake"
@@ -26,8 +25,9 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/informers"
 	"github.com/google/stolos/pkg/resource-quota"
+	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/google/stolos/pkg/testing/fakeinformers"
 )
 
 type ComputeResourceQuotaActionsTestCase struct {
@@ -37,11 +37,9 @@ type ComputeResourceQuotaActionsTestCase struct {
 	expectedActions map[string]string // A map of namespaces to the expected resource quota operation
 }
 
-func NewTestQuotaSyncer() *QuotaSyncer {
-	fakeClient := fake.NewClient()
-	kubernetesInformerFactory := informers.NewSharedInformerFactory(
-		fakeClient.Kubernetes(), time.Minute)
-	return NewQuotaSyncer(fakeClient, kubernetesInformerFactory.Core().V1().ResourceQuotas().Lister())
+func NewTestQuotaSyncer(quotas... runtime.Object) *QuotaSyncer {
+	informer := fakeinformers.NewResourceQuotaInformer(quotas...)
+	return NewQuotaSyncer(fake.NewClient(), informer.Lister())
 }
 
 func TestSyncerComputeResourceQuotaActions(t *testing.T) {
@@ -86,13 +84,15 @@ func TestSyncerComputeResourceQuotaActions(t *testing.T) {
 						Policies:         policyhierarchy_v1.PolicyLists{ResourceQuotas: []core_v1.ResourceQuotaSpec{rq}}}})
 		}
 
-		existingResourceQuotaList := &core_v1.ResourceQuotaList{}
+		existingResourceQuotaList := []*core_v1.ResourceQuota{}
 		for ns, rq := range testcase.existingResourceQuotas {
-			existingResourceQuotaList.Items = append(
-				existingResourceQuotaList.Items,
-				core_v1.ResourceQuota{
-					ObjectMeta: meta_v1.ObjectMeta{Name: resource_quota.ResourceQuotaObjectName, Namespace: ns},
-					Spec:       rq},
+			resourceQuota := &core_v1.ResourceQuota{
+				ObjectMeta: meta_v1.ObjectMeta{
+					Name: resource_quota.ResourceQuotaObjectName, Namespace: ns, Labels: resource_quota.StolosQuotaLabels},
+				Spec:       rq}
+			existingResourceQuotaList = append(
+				existingResourceQuotaList,
+				resourceQuota,
 			)
 		}
 
@@ -116,12 +116,10 @@ type GetResourceQuotaEventActionTestCase struct {
 }
 
 func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
-	syncer := NewTestQuotaSyncer()
-
 	namespaceName := "ns-name"
-	syncer.client.CoreV1().ResourceQuotas("ns-name").Create(&core_v1.ResourceQuota{
+	syncer := NewTestQuotaSyncer(&core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: resource_quota.ResourceQuotaObjectName,
+			Name: resource_quota.ResourceQuotaObjectName, Labels: resource_quota.StolosQuotaLabels, Namespace: namespaceName,
 		},
 		Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("42")}},
 	})

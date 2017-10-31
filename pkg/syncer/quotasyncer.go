@@ -25,11 +25,11 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/google/stolos/pkg/resource-quota"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // QuotaSyncer handles syncing quota from PolicyNodes.
@@ -52,12 +52,9 @@ func NewQuotaSyncer(
 
 // InitialSync implements PolicyNodeSyncerInterface
 func (s *QuotaSyncer) InitialSync(nodes []*policyhierarchy_v1.PolicyNode) error {
-	// TODO: Use informer for this list operation
-	resourceQuotaList, err := s.client.CoreV1().ResourceQuotas(meta_v1.NamespaceAll).List(
-		meta_v1.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector("metadata.name", resource_quota.ResourceQuotaObjectName).String(),
-		},
-	)
+
+	resourceQuotaList, err := s.resourceQuotaLister.ResourceQuotas(meta_v1.NamespaceAll).List(
+		labels.SelectorFromSet(resource_quota.StolosQuotaLabels))
 	if err != nil {
 		return err
 	}
@@ -76,10 +73,10 @@ func (s *QuotaSyncer) InitialSync(nodes []*policyhierarchy_v1.PolicyNode) error 
 }
 
 func (s *QuotaSyncer) computeActions(
-	resourceQuotaList *core_v1.ResourceQuotaList, policyNodes []*policyhierarchy_v1.PolicyNode) []actions.ResourceQuotaAction {
+	resourceQuotaList []*core_v1.ResourceQuota, policyNodes []*policyhierarchy_v1.PolicyNode) []actions.ResourceQuotaAction {
 	existing := map[string]core_v1.ResourceQuota{}
-	for _, rq := range resourceQuotaList.Items {
-		existing[rq.Namespace] = rq
+	for _, rq := range resourceQuotaList {
+		existing[rq.Namespace] = *rq
 	}
 
 	declaring := map[string]core_v1.ResourceQuotaSpec{}
@@ -129,10 +126,9 @@ func (s *QuotaSyncer) OnCreate(policyNode *policyhierarchy_v1.PolicyNode) error 
 func (s *QuotaSyncer) getUpdateAction(
 	policyNode *policyhierarchy_v1.PolicyNode) (actions.ResourceQuotaAction, error) {
 	namespace := policyNode.Name
-	// TODO: Replace with with a get from the informer instead.
 	// NOTE: Get will return a non-nil ResourceQutoa even if the API returns not found.
-	existingResourceQuota, err := s.client.CoreV1().ResourceQuotas(namespace).Get(
-		resource_quota.ResourceQuotaObjectName, meta_v1.GetOptions{})
+	existingResourceQuota, err := s.resourceQuotaLister.ResourceQuotas(namespace).Get(
+		resource_quota.ResourceQuotaObjectName)
 	hasExistingResourceQuota := true
 	if err != nil {
 		if api_errors.IsNotFound(err) {
