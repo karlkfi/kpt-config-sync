@@ -21,17 +21,18 @@ import (
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/util/namespaceutil"
 	"github.com/google/stolos/pkg/util/set/stringset"
-	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 	"github.com/google/stolos/pkg/syncer/actions"
+	"k8s.io/client-go/util/workqueue"
 )
 
 // NamespaceSyncer handles syncing namespaces from policy nodes.
 type NamespaceSyncer struct {
 	client          meta.Interface
 	namespaceLister listers_core_v1.NamespaceLister
+	queue           workqueue.RateLimitingInterface
 }
 
 var _ PolicyNodeSyncerInterface = &NamespaceSyncer{}
@@ -39,10 +40,12 @@ var _ PolicyNodeSyncerInterface = &NamespaceSyncer{}
 // NewNamespaceSyncer creates a new namespace syncer from the client.
 func NewNamespaceSyncer(
 	client meta.Interface,
-	namespaceLister listers_core_v1.NamespaceLister) *NamespaceSyncer {
+	namespaceLister listers_core_v1.NamespaceLister,
+	queue workqueue.RateLimitingInterface) *NamespaceSyncer {
 	return &NamespaceSyncer{
 		client:          client,
 		namespaceLister: namespaceLister,
+		queue:           queue,
 	}
 }
 
@@ -55,53 +58,33 @@ func (s *NamespaceSyncer) InitialSync(nodes []*policyhierarchy_v1.PolicyNode) er
 
 	namespaceActions := s.computeActions(existingNamespaces, nodes)
 	for _, action := range namespaceActions {
-		if *dryRun {
-			glog.Infof("DryRun: Would execute namespace action %s on namespace %s", action.Operation(), action.Name())
-			continue
-		}
-		err := action.Execute()
-		if err != nil {
-			glog.Infof("Namespace Action %s %s failed due to %s", action.Name(), action.Operation(), err)
-			return err
-		}
+		s.queue.Add(action)
 	}
 	return nil
 }
 
 // OnCreate implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) OnCreate(node *policyhierarchy_v1.PolicyNode) error {
-	return s.runAction(actions.NewNamespaceCreateAction(s.client.Kubernetes(), node.Name))
+	s.queue.Add(actions.NewNamespaceCreateAction(s.client.Kubernetes(), node.Name))
+	return nil
 }
 
 // OnUpdate implements PolicyNodeSyncerInterface
-func (s *NamespaceSyncer) OnUpdate(
-	old *policyhierarchy_v1.PolicyNode, new *policyhierarchy_v1.PolicyNode) error {
+func (s *NamespaceSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *policyhierarchy_v1.PolicyNode) error {
 	// Noop
 	return nil
 }
 
 // OnDelete implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) OnDelete(node *policyhierarchy_v1.PolicyNode) error {
-	return s.runAction(actions.NewNamespaceDeleteAction(s.client.Kubernetes(), node.Name))
-}
-
-func (s *NamespaceSyncer) runAction(action actions.NamespaceAction) error {
-	if *dryRun {
-		glog.Infof("DryRun: Would execute namespace action %s on namespace %s", action.Operation(), action.Name())
-		return nil
-	}
-	err := action.Execute()
-	if err != nil {
-		return errors.Wrapf(
-			err, "Failed to perform namespace action %s on %s: %s", action.Operation(), action.Name(), err)
-	}
+	s.queue.Add(actions.NewNamespaceDeleteAction(s.client.Kubernetes(), node.Name))
 	return nil
 }
 
 // computeActions determines which namespaces to create and delete on initial sync.
 func (s *NamespaceSyncer) computeActions(
 	existingNamespaceList []*core_v1.Namespace,
-	nodes []*policyhierarchy_v1.PolicyNode) []actions.NamespaceAction {
+	nodes []*policyhierarchy_v1.PolicyNode) []actions.Interface {
 	existingNamespaces := stringset.New()
 	for _, namespace := range existingNamespaceList {
 		if namespaceutil.IsReserved(*namespace) {
@@ -123,7 +106,7 @@ func (s *NamespaceSyncer) computeActions(
 	needsCreate := declaredNamespaces.Difference(existingNamespaces)
 	needsDelete := existingNamespaces.Difference(declaredNamespaces)
 
-	namespaceActions := []actions.NamespaceAction{}
+	namespaceActions := []actions.Interface{}
 	needsCreate.ForEach(func(ns string) {
 		glog.Infof("Adding create operation for %s", ns)
 		namespaceActions = append(namespaceActions, actions.NewNamespaceCreateAction(s.client.Kubernetes(), ns))

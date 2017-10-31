@@ -31,10 +31,14 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+	"github.com/google/stolos/pkg/syncer/actions"
 )
 
 var dryRun = flag.Bool(
 	"dry_run", false, "Don't perform actions, just log what would have happened")
+
+const WorkerNumRetries = 3
 
 // ErrorCallback is a callback which is called if Syncer encounters an error during execution
 type ErrorCallback func(error)
@@ -46,16 +50,17 @@ type Interface interface {
 	Wait()
 }
 
-// Syncer implements the namespace syncer.  This will watch the policynodes then sync changes to
-// namespaces.
+// Syncer implements the policy node syncer.  This will watch the policynodes then sync changes to
+// namespaces and resource quotas.
 type Syncer struct {
-	client          meta.Interface              // Kubernetes/CRD client
-	errorCallback   ErrorCallback               // Callback invoked on error
-	stopped         bool                        // Tracks internal state for stopping
-	stopChan        chan struct{}               // Channel will be closed when Stop() is called
-	stopMutex       sync.Mutex                  // Concurrency control for calling Stop()
-	resourceVersion int64                       // The highest resource version we have seen for a PollicyNode
-	syncers         []PolicyNodeSyncerInterface // Syncers that this will call into on change events
+	client          meta.Interface                  // Kubernetes/CRD client
+	errorCallback   ErrorCallback                   // Callback invoked on error
+	stopped         bool                            // Tracks internal state for stopping
+	stopChan        chan struct{}                   // Channel will be closed when Stop() is called
+	stopMutex       sync.Mutex                      // Concurrency control for calling Stop()
+	resourceVersion int64                           // The highest resource version we have seen for a PollicyNode
+	syncers         []PolicyNodeSyncerInterface     // Syncers that this will call into on change events
+	queue           workqueue.RateLimitingInterface // A work queue for items to be processed
 
 	kubernetesInformerFactory      informers.SharedInformerFactory
 	policyHierarchyInformerFactory externalversions.SharedInformerFactory
@@ -68,16 +73,18 @@ func New(client meta.Interface) *Syncer {
 	policyHierarchyInformerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), time.Minute)
 	kubernetesCoreV1 := kubernetesInformerFactory.Core().V1()
+	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 	return &Syncer{
 		client:   client,
 		stopChan: make(chan struct{}),
 		syncers: []PolicyNodeSyncerInterface{
 			// Namespace syncer must be first since quota depends on it
-			NewNamespaceSyncer(client, kubernetesCoreV1.Namespaces().Lister()),
-			NewQuotaSyncer(client, kubernetesCoreV1.ResourceQuotas().Lister()),
+			NewNamespaceSyncer(client, kubernetesCoreV1.Namespaces().Lister(), queue),
+			NewQuotaSyncer(client, kubernetesCoreV1.ResourceQuotas().Lister(), queue),
 		},
 		kubernetesInformerFactory:      kubernetesInformerFactory,
 		policyHierarchyInformerFactory: policyHierarchyInformerFactory,
+		queue:                          queue,
 	}
 }
 
@@ -85,7 +92,9 @@ func New(client meta.Interface) *Syncer {
 // callback
 func (s *Syncer) Run(errorCallback ErrorCallback) {
 	s.errorCallback = errorCallback
+
 	go s.runInternal()
+	go s.runWorker()
 }
 
 // Stop asynchronously instructs the syncer to stop.
@@ -95,6 +104,7 @@ func (s *Syncer) Stop() {
 	if !s.stopped {
 		s.stopped = true
 		close(s.stopChan)
+		s.queue.ShutDown()
 	}
 }
 
@@ -231,4 +241,47 @@ func (s *Syncer) onUpdate(oldObj, newObj interface{}) {
 func (s *Syncer) onError(err error) {
 	s.errorCallback(err)
 	s.Stop()
+}
+
+func (s *Syncer) runWorker() {
+	for s.processAction() {
+	}
+}
+
+// processAction takes one item from the work queue and processes it.
+// In the case of an error, it will retry the action up to 3 times.
+// Will return false if ready to shutdown, true otherwise.
+func (s *Syncer) processAction() bool {
+	actionItem, shutdown := s.queue.Get()
+	if shutdown {
+		glog.Infof("Shutting down Syncer queue processing worker")
+		return false
+	}
+	defer s.queue.Done(actionItem)
+
+	action := actionItem.(actions.Interface)
+	if *dryRun {
+		s.queue.Forget(actionItem)
+		glog.Infof("Would have executed action %s", action.String())
+		return true
+	}
+	err := action.Execute()
+
+	// All good!
+	if err == nil {
+		s.queue.Forget(actionItem)
+		return true
+	}
+
+	// Drop forever
+	if s.queue.NumRequeues(actionItem) > WorkerNumRetries {
+		glog.Errorf("Discarding action %s due to %s", action.String(), err)
+		s.queue.Forget(actionItem)
+		return true
+	}
+
+	// Retry
+	glog.Errorf("Error processing action %s due to %s, retrying", action.String(), err)
+	s.queue.AddRateLimited(actionItem)
+	return true
 }

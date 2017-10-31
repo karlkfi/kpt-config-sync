@@ -28,6 +28,7 @@ import (
 	"github.com/google/stolos/pkg/resource-quota"
 	"k8s.io/apimachinery/pkg/runtime"
 	"github.com/google/stolos/pkg/testing/fakeinformers"
+	"k8s.io/client-go/util/workqueue"
 )
 
 type ComputeResourceQuotaActionsTestCase struct {
@@ -39,7 +40,7 @@ type ComputeResourceQuotaActionsTestCase struct {
 
 func NewTestQuotaSyncer(quotas... runtime.Object) *QuotaSyncer {
 	informer := fakeinformers.NewResourceQuotaInformer(quotas...)
-	return NewQuotaSyncer(fake.NewClient(), informer.Lister())
+	return NewQuotaSyncer(fake.NewClient(), informer.Lister(), workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()))
 }
 
 func TestSyncerComputeResourceQuotaActions(t *testing.T) {

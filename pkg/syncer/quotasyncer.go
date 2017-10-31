@@ -30,12 +30,14 @@ import (
 	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/google/stolos/pkg/resource-quota"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/util/workqueue"
 )
 
 // QuotaSyncer handles syncing quota from PolicyNodes.
 type QuotaSyncer struct {
 	client              kubernetes.Interface
 	resourceQuotaLister listers_core_v1.ResourceQuotaLister
+	queue               workqueue.RateLimitingInterface
 }
 
 var _ PolicyNodeSyncerInterface = &QuotaSyncer{}
@@ -43,10 +45,12 @@ var _ PolicyNodeSyncerInterface = &QuotaSyncer{}
 // NewQuotaSyncer creates a quota syncer that will use the given client.
 func NewQuotaSyncer(
 	client meta.Interface,
-	resourceQuotaLister listers_core_v1.ResourceQuotaLister) *QuotaSyncer {
+	resourceQuotaLister listers_core_v1.ResourceQuotaLister,
+	queue workqueue.RateLimitingInterface) *QuotaSyncer {
 	return &QuotaSyncer{
 		client:              client.Kubernetes(),
 		resourceQuotaLister: resourceQuotaLister,
+		queue:               queue,
 	}
 }
 
@@ -62,11 +66,7 @@ func (s *QuotaSyncer) InitialSync(nodes []*policyhierarchy_v1.PolicyNode) error 
 	actions := s.computeActions(resourceQuotaList, nodes)
 
 	for _, action := range actions {
-		err := s.runAction(action)
-		if err != nil {
-			glog.Infof("Resource Quota Action %s %s failed due to %s", action.Name(), action.Operation(), err)
-			return err
-		}
+		s.queue.Add(action)
 	}
 
 	return nil
@@ -117,7 +117,7 @@ func (s *QuotaSyncer) getCreateAction(policyNode *policyhierarchy_v1.PolicyNode)
 // OnCreate implements PolicyNodeSyncerInterface
 func (s *QuotaSyncer) OnCreate(policyNode *policyhierarchy_v1.PolicyNode) error {
 	if action := s.getCreateAction(policyNode); action != nil {
-		return s.runAction(action)
+		s.queue.Add(action)
 	}
 	return nil
 }
@@ -159,14 +159,13 @@ func (s *QuotaSyncer) getUpdateAction(
 }
 
 // OnUpdate implements PolicyNodeSyncerInterface
-func (s *QuotaSyncer) OnUpdate(
-	old *policyhierarchy_v1.PolicyNode, newPolicyNode *policyhierarchy_v1.PolicyNode) error {
+func (s *QuotaSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, newPolicyNode *policyhierarchy_v1.PolicyNode) error {
 	action, err := s.getUpdateAction(newPolicyNode)
 	if err != nil {
 		return err
 	}
 	if action != nil {
-		return s.runAction(action)
+		s.queue.Add(action)
 	}
 	return nil
 }
@@ -174,20 +173,5 @@ func (s *QuotaSyncer) OnUpdate(
 // OnDelete implements PolicyNodeSyncerInterface
 func (s *QuotaSyncer) OnDelete(node *policyhierarchy_v1.PolicyNode) error {
 	glog.Infof("Got deleted policy node event %s, ignoring since the resource quota will be auto-deleted", node.Name)
-	return nil
-}
-
-func (s *QuotaSyncer) runAction(action actions.ResourceQuotaAction) error {
-	if *dryRun {
-		glog.Infof(
-			"DryRun: Would execute resource quota action %s on namespace %s", action.Operation(), action.Name())
-		return nil
-	}
-
-	err := action.Execute()
-	if err != nil {
-		return errors.Wrapf(
-			err, "Failed to perform resource quota action %s on %s", action.Operation(), action.Name())
-	}
 	return nil
 }

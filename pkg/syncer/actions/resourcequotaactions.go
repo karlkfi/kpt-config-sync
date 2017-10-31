@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 // The actions needed by the syncer to perform operations on leaf (K8s native) Resource Quota objects
 package actions
 
@@ -21,25 +22,22 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"github.com/google/stolos/pkg/resource-quota"
+	"fmt"
 )
 
 // ResourceQuotaAction represents a CRUD action on a resource quota spec
 type ResourceQuotaAction interface {
-	// Operation returns the operation name
-	Operation() string
-	// Execute will execute the operation then return an error on failure
-	Execute() error
-	// Name returns the name of the namespace the resource quota is in
-	Name() string
+	Interface
 	// The resource quota spec
 	ResourceQuotaSpec() core_v1.ResourceQuotaSpec
 }
 
 type resourceQuotaActionBase struct {
 	// The resource quota spec to be created/updated by the action
-	resourceQuotaSpec   core_v1.ResourceQuotaSpec
+	resourceQuotaSpec core_v1.ResourceQuotaSpec
 	// The namespace in which the resource quota object lives
-	namespace           string
+	namespace string
+	operation string
 	// The kubernetes interface
 	kubernetesInterface kubernetes.Interface
 }
@@ -48,8 +46,17 @@ func (n *resourceQuotaActionBase) ResourceQuotaSpec() core_v1.ResourceQuotaSpec 
 	return n.resourceQuotaSpec
 }
 
-func (n *resourceQuotaActionBase) Name() string {
+func (n *resourceQuotaActionBase) Namespace() string {
 	return n.namespace
+}
+
+func (n *resourceQuotaActionBase) Operation() string {
+	return n.operation
+}
+
+// Resource implements Action
+func (n *resourceQuotaActionBase) String() string {
+	return fmt.Sprintf("resourcequota.%s.%s", n.Namespace(), n.Operation())
 }
 
 // ------- Delete -------
@@ -64,12 +71,9 @@ func NewResourceQuotaDeleteAction(kubernetesInterface kubernetes.Interface, name
 		resourceQuotaActionBase: resourceQuotaActionBase{
 			kubernetesInterface: kubernetesInterface,
 			namespace:           namespace,
+			operation:           "delete",
 		},
 	}
-}
-
-func (n *ResourceQuotaDeleteAction) Operation() string {
-	return "delete"
 }
 
 func (n *ResourceQuotaDeleteAction) Execute() error {
@@ -96,18 +100,15 @@ func NewResourceQuotaCreateAction(kubernetesInterface kubernetes.Interface, name
 			kubernetesInterface: kubernetesInterface,
 			resourceQuotaSpec:   resourceQuotaSpec,
 			namespace:           namespace,
+			operation:           "create",
 		},
 	}
-}
-
-func (n *ResourceQuotaCreateAction) Operation() string {
-	return "create"
 }
 
 func (n *ResourceQuotaCreateAction) Execute() error {
 	createdResourceQuota, err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Create(&core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: resource_quota.ResourceQuotaObjectName,
+			Name:   resource_quota.ResourceQuotaObjectName,
 			Labels: resource_quota.StolosQuotaLabels,
 		},
 		Spec: n.resourceQuotaSpec,
@@ -136,19 +137,16 @@ func NewResourceQuotaUpdateAction(kubernetesInterface kubernetes.Interface, name
 			kubernetesInterface: kubernetesInterface,
 			resourceQuotaSpec:   resourceQuotaSpec,
 			namespace:           namespace,
+			operation:           "update",
 		},
-		resourceVersion: 	 resourceVersion,
+		resourceVersion: resourceVersion,
 	}
-}
-
-func (n *ResourceQuotaUpdateAction) Operation() string {
-	return "update"
 }
 
 func (n *ResourceQuotaUpdateAction) Execute() error {
 	createdResourceQuota, err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Update(&core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{Name: resource_quota.ResourceQuotaObjectName, ResourceVersion: n.resourceVersion},
-		Spec: n.resourceQuotaSpec,
+		Spec:       n.resourceQuotaSpec,
 	})
 	if err != nil {
 		glog.Infof("Failed to update resource quota for namespace %s: %v", n.namespace, err)

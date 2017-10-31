@@ -25,6 +25,7 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
+	"k8s.io/client-go/util/workqueue"
 )
 
 type ComputeNamespaceActionsTestCase struct {
@@ -47,7 +48,8 @@ func NewTestNamespaceSyncer() *NamespaceSyncer {
 	fakeClient := fake.NewClient()
 	kubernetesInformerFactory := informers.NewSharedInformerFactory(
 		fakeClient.Kubernetes(), time.Minute)
-	return NewNamespaceSyncer(fakeClient, kubernetesInformerFactory.Core().V1().Namespaces().Lister())
+	return NewNamespaceSyncer(fakeClient, kubernetesInformerFactory.Core().V1().Namespaces().Lister(),
+		workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()))
 }
 
 func TestSyncerComputeNamespaceActions(t *testing.T) {

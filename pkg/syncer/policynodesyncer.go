@@ -22,7 +22,6 @@ import (
 // PolicyNodeSyncerInterface defines the interface for a sycner that consumes PolicyNodes, caller
 // must filter for duplicate add events from the initial sync if re-creation is not desired.
 type PolicyNodeSyncerInterface interface {
-
 	// InitialSync performs the initial sync for the resource
 	InitialSync(node []*policyhierarchy_v1.PolicyNode) error
 

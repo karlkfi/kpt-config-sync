@@ -26,21 +26,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// TODO: Move this file out of client package
-
-// NamespaceAction represents a CRUD action on a namespace
-type NamespaceAction interface {
-	// Operation returns the operation name
-	Operation() string
-	// Execute will execute the operation then return an error on failure
-	Execute() error
-	// Name returns the name of the namespace being operated on
-	Name() string
-}
-
 type namespaceActionBase struct {
 	namespace           string
 	kubernetesInterface kubernetes.Interface
+	operation           string
 }
 
 // NamespaceDeleteAction will delete a namespace when executed
@@ -48,12 +37,22 @@ type NamespaceDeleteAction struct {
 	namespaceActionBase
 }
 
-// Name implements NamespaceAction
-func (n *namespaceActionBase) Name() string {
+// Name implements Action
+func (n *namespaceActionBase) Namespace() string {
 	return n.namespace
 }
 
-var _ NamespaceAction = &NamespaceDeleteAction{}
+// Name implements Action
+func (n *namespaceActionBase) Operation() string {
+	return n.operation
+}
+
+// String implements Action
+func (n *namespaceActionBase) String() string {
+	return fmt.Sprintf("namespace.%s.%s", n.Namespace(), n.Operation())
+}
+
+var _ Interface = &NamespaceDeleteAction{}
 
 // NewNamespaceDeleteAction creates a new NamespaceDeleteAction for the given namespace
 func NewNamespaceDeleteAction(kubernetesInterface kubernetes.Interface, namespace string) *NamespaceDeleteAction {
@@ -61,13 +60,9 @@ func NewNamespaceDeleteAction(kubernetesInterface kubernetes.Interface, namespac
 		namespaceActionBase: namespaceActionBase{
 			kubernetesInterface: kubernetesInterface,
 			namespace:           namespace,
+			operation:           "delete",
 		},
 	}
-}
-
-// Operation implements NamespaceAction
-func (n *NamespaceDeleteAction) Operation() string {
-	return "delete"
 }
 
 // Execute implements NamespaceAction
@@ -81,7 +76,7 @@ type NamespaceCreateAction struct {
 	namespaceActionBase
 }
 
-var _ NamespaceAction = &NamespaceCreateAction{}
+var _ Interface = &NamespaceCreateAction{}
 
 // NewNamespaceCreateAction creates a new NamespaceCreateAction for the given namespace
 func NewNamespaceCreateAction(kubernetesInterface kubernetes.Interface, namespace string) *NamespaceCreateAction {
@@ -89,13 +84,9 @@ func NewNamespaceCreateAction(kubernetesInterface kubernetes.Interface, namespac
 		namespaceActionBase: namespaceActionBase{
 			kubernetesInterface: kubernetesInterface,
 			namespace:           namespace,
+			operation:           "create",
 		},
 	}
-}
-
-// Operation implements NamespaceAction
-func (n *NamespaceCreateAction) Operation() string {
-	return "create"
 }
 
 // waitForTerminatingNamespace waits for a namespace to go from terminating to fully deleted.
