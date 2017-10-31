@@ -1461,6 +1461,11 @@
 			"Rev": "2ae454230481a7cb5544325e12ad7658ecccd19b"
 		},
 		{
+			"ImportPath": "k8s.io/client-go/util/workqueue",
+			"Comment": "kubernetes-1.8.1",
+			"Rev": "2ae454230481a7cb5544325e12ad7658ecccd19b"
+		},
+		{
 			"ImportPath": "k8s.io/kube-openapi/pkg/common",
 			"Rev": "61b46af70dfed79c6d24530cd23b41440a7f22a5"
 		},
