@@ -29,14 +29,12 @@ import (
 
 type Validator struct {
 	policyNodes map[string]*policyhierarchy_v1.PolicyNode // name -> node
-	children    map[string][]string                       // parent -> []children
 	parents     map[string]string                         // child -> parent
 }
 
 func New() *Validator {
 	return &Validator{
 		policyNodes: map[string]*policyhierarchy_v1.PolicyNode{},
-		children:    map[string][]string{},
 		parents:     map[string]string{},
 	}
 }
@@ -54,7 +52,37 @@ func (s *Validator) Add(policyNode *policyhierarchy_v1.PolicyNode) error {
 	s.policyNodes[nodeName] = policyNode
 	parentName := policyNode.Spec.Parent
 	s.parents[nodeName] = parentName
-	s.children[parentName] = append(s.children[parentName], nodeName)
+	return nil
+}
+
+// Update updates a node in the validator
+func (s *Validator) Update(policyNode *policyhierarchy_v1.PolicyNode) error {
+	nodeName := policyNode.Name
+	if s.policyNodes[nodeName] == nil {
+		return errors.Errorf("Policy node %s does not exist for update", nodeName)
+	}
+
+	s.policyNodes[nodeName] = policyNode
+
+	newParent := policyNode.Spec.Parent
+	oldParent := s.parents[nodeName]
+	if oldParent == newParent {
+		return nil
+	}
+
+	s.parents[nodeName] = newParent
+	return nil
+}
+
+// Remove removes a node from the validator
+func (s *Validator) Remove(policyNode *policyhierarchy_v1.PolicyNode) error {
+	nodeName := policyNode.Name
+	if s.policyNodes[nodeName] == nil {
+		return errors.Errorf("Policy node %s does not exist for remove", nodeName)
+	}
+
+	delete(s.parents, nodeName)
+	delete(s.policyNodes, nodeName)
 	return nil
 }
 
@@ -75,10 +103,15 @@ func (s *Validator) Validate() error {
 // checkMultipleRoots validates that there is only one root by checking that children of empty string
 // (no parent) is of size 1
 func (s *Validator) checkMultipleRoots() error {
-	rootNodeList := s.children[""]
-	if len(rootNodeList) != 1 {
+	noParent := []string{}
+	for child, parent := range s.parents {
+		if parent == "" {
+			noParent = append(noParent, child)
+		}
+	}
+	if len(noParent) != 1 {
 		return errors.Errorf(
-			"Exactly one root (organization) node is required, found %d", len(rootNodeList))
+			"Exactly one root (organization) node is required, found: %s", strings.Join(noParent, ", "))
 	}
 	return nil
 }
@@ -86,23 +119,22 @@ func (s *Validator) checkMultipleRoots() error {
 // checkWorkingNamespace checks that all non-root leaves are working namespaces while internal nodes
 // are not working namespaces
 func (s *Validator) checkWorkingNamespace() error {
+	isParent := map[string]bool{}
+	for _, parent := range s.parents {
+		isParent[parent] = true
+	}
+
 	for nodeName, node := range s.policyNodes {
 		if node.Spec.Parent == "" {
-			// Root node should not be a working namespace
 			if node.Spec.WorkingNamespace {
 				return errors.Errorf("Root node %s should not be a working namespace", nodeName)
 			}
 			continue
 		}
 
-		children := s.children[nodeName]
-		if node.Spec.WorkingNamespace && len(children) != 0 {
+		if node.Spec.WorkingNamespace && isParent[nodeName] {
 			return errors.Errorf(
-				"Node %s designated as working namespace, but has children %s", nodeName, strings.Join(children, ", "))
-		}
-		if !node.Spec.WorkingNamespace && len(children) == 0 {
-			return errors.Errorf(
-				"Node %s not designated as working namespace, but has no children", nodeName)
+				"Node %s designated as working namespace, but has children", nodeName)
 		}
 	}
 	return nil
@@ -126,6 +158,5 @@ func (s *Validator) checkCycles() error {
 	if len(cycles) != 0 {
 		return errors.Errorf("Found cycles %s, graph %s", cycles, spew.Sdump(graph))
 	}
-
 	return nil
 }
