@@ -3,7 +3,7 @@ kind: PolicyNode
 metadata:
   name: policy-node-ns1
 spec:
-  workingNamespace: true
+  policyspace: false
   parent: policy-node-ou1
   policies:
     roles:
@@ -15,8 +15,8 @@ spec:
       rules:
       - resources: ["pods"]
         verbs: ["write"]
-    resourceQuotas:
-    - hard:
+    resourceQuota:
+      hard:
         pods: "7"
         configmaps: "2"
         secrets: "3"

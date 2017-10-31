@@ -160,8 +160,8 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 				namespaceGeneratorNum++
 
 				nodeSpec := &v1.PolicyNodeSpec{
-					WorkingNamespace: true,
-					Policies: v1.PolicyLists{
+					Policyspace: false,
+					Policies: v1.Policies{
 						Roles: []rbac_v1.Role{
 							rbac_v1.Role{
 								ObjectMeta: metav1.ObjectMeta{
@@ -176,7 +176,7 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 							},
 						},
 						RoleBindings:   []rbac_v1.RoleBinding{},
-						ResourceQuotas: []core_v1.ResourceQuotaSpec{},
+						ResourceQuota: 	core_v1.ResourceQuotaSpec{},
 					},
 				}
 				policyNode := policynode.WrapPolicyNodeSpec(name, nodeSpec)

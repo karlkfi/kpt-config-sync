@@ -22,13 +22,11 @@ func TestAuthorize(t *testing.T) {
 			},
 			Spec: pn_v1.PolicyNodeSpec{
 				Parent: "",
-				Policies: pn_v1.PolicyLists{
-					ResourceQuotas: []core_v1.ResourceQuotaSpec{
-						{
-							Hard: core_v1.ResourceList{
-								"pods":    resource.MustParse("1"),
-								"secrets": resource.MustParse("0"),
-							},
+				Policies: pn_v1.Policies{
+					ResourceQuota: core_v1.ResourceQuotaSpec{
+						Hard: core_v1.ResourceList{
+							"pods":    resource.MustParse("1"),
+							"secrets": resource.MustParse("0"),
 						},
 					},
 				},

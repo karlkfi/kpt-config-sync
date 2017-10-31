@@ -27,7 +27,7 @@ func TestCanAdmit(t *testing.T) {
 			"milk": resource.MustParse("5"),
 		}, ),
 		makePolicyNode("kitties", "kittiesandponies", core_v1.ResourceList{
-			"hay":  resource.MustParse("5"),
+			"hay": resource.MustParse("5"),
 		}, ),
 		makePolicyNode("ponies", "kittiesandponies", core_v1.ResourceList{
 			"hay":  resource.MustParse("15"),
@@ -39,7 +39,7 @@ func TestCanAdmit(t *testing.T) {
 	quotas := []runtime.Object{
 		&core_v1.ResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name: ResourceQuotaObjectName,
+				Name:      ResourceQuotaObjectName,
 				Namespace: "kitties",
 			},
 			Status: core_v1.ResourceQuotaStatus{
@@ -50,7 +50,7 @@ func TestCanAdmit(t *testing.T) {
 		},
 		&core_v1.ResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name: ResourceQuotaObjectName,
+				Name:      ResourceQuotaObjectName,
 				Namespace: "ponies",
 			},
 			Status: core_v1.ResourceQuotaStatus{
@@ -71,7 +71,7 @@ func TestCanAdmit(t *testing.T) {
 	}
 
 	for i, tt := range []CacheTestCase{
-		{	// Basic admit
+		{// Basic admit
 			namespace: "kitties",
 			newUsageList: core_v1.ResourceList{
 				"hay":  resource.MustParse("1"),
@@ -79,49 +79,49 @@ func TestCanAdmit(t *testing.T) {
 			},
 			canAdmitExpected: true,
 		},
-		{	// Admit no quota set
+		{// Admit no quota set
 			namespace: "kitties",
 			newUsageList: core_v1.ResourceList{
-				"bamboo":  resource.MustParse("1"),
+				"bamboo": resource.MustParse("1"),
 			},
 			canAdmitExpected: true,
 		},
-		{	// violate at leaf
+		{// violate at leaf
 			namespace: "kitties",
 			newUsageList: core_v1.ResourceList{
-				"hay":  resource.MustParse("7"),
+				"hay": resource.MustParse("7"),
 			},
 			canAdmitExpected: false,
 			expectedErrorSubstring: "namespace kitties, requested: hay",
 		},
-		{	// violate at top (no limit at leaf)
+		{// violate at top (no limit at leaf)
 			namespace: "kitties",
 			newUsageList: core_v1.ResourceList{
-				"milk":  resource.MustParse("7"),
+				"milk": resource.MustParse("7"),
 			},
 			canAdmitExpected: false,
 			expectedErrorSubstring: "namespace kittiesandponies, requested: milk",
 		},
-		{	// violate at top (higher limit at leaf)
+		{// violate at top (higher limit at leaf)
 			namespace: "ponies",
 			newUsageList: core_v1.ResourceList{
-				"hay":  resource.MustParse("12"),
+				"hay": resource.MustParse("12"),
 			},
 			canAdmitExpected: false,
 			expectedErrorSubstring: "namespace kittiesandponies, requested: hay",
 		},
-		{	// violate counting starting usage at leaf
+		{// violate counting starting usage at leaf
 			namespace: "ponies",
 			newUsageList: core_v1.ResourceList{
-				"milk":  resource.MustParse("4"),
+				"milk": resource.MustParse("4"),
 			},
 			canAdmitExpected: false,
 			expectedErrorSubstring: "namespace ponies, requested: milk",
 		},
-		{	// violate counting starting usage at top (current = 2 + 2, limit at top = 10)
+		{// violate counting starting usage at top (current = 2 + 2, limit at top = 10)
 			namespace: "ponies",
 			newUsageList: core_v1.ResourceList{
-				"hay":  resource.MustParse("7"),
+				"hay": resource.MustParse("7"),
 			},
 			canAdmitExpected: false,
 			expectedErrorSubstring: "namespace kittiesandponies, requested: hay",
@@ -146,11 +146,9 @@ func makePolicyNode(name string, parent string, limits core_v1.ResourceList) *pn
 		},
 		Spec: pn_v1.PolicyNodeSpec{
 			Parent: parent,
-			Policies: pn_v1.PolicyLists{
-				ResourceQuotas: []core_v1.ResourceQuotaSpec{
-					{
-						Hard: limits,
-					},
+			Policies: pn_v1.Policies{
+				ResourceQuota: core_v1.ResourceQuotaSpec{
+					Hard: limits,
 				},
 			},
 		},

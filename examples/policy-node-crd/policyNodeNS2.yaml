@@ -3,9 +3,9 @@ kind: PolicyNode
 metadata:
   name: policy-node-ns2
 spec:
-  workingNamespace: true
+  policyspace: false
   parent: policy-node-ns1
   policies:
-    resourceQuotas:
-    - hard:
+    resourceQuota:
+      hard:
         secrets: "2"

@@ -23,47 +23,47 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func newNode(name string, parent string, workingNamespace bool) *policyhierarchy_v1.PolicyNode {
+func newNode(name string, parent string, policyspace bool) *policyhierarchy_v1.PolicyNode {
 	return &policyhierarchy_v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: name,
 		},
 		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			WorkingNamespace: workingNamespace,
-			Parent:           parent,
+			Policyspace: policyspace,
+			Parent:      parent,
 		},
 	}
 }
 
 func TestDuplicateName(t *testing.T) {
 	v := New()
-	if err := v.Add(newNode("root", "", false)); err != nil {
+	if err := v.Add(newNode("root", "", true)); err != nil {
 		t.Errorf("Add should have been ok")
 	}
-	if err := v.Add(newNode("child1", "root", false)); err != nil {
+	if err := v.Add(newNode("child1", "root", true)); err != nil {
 		t.Errorf("Add should have been ok")
 	}
-	if err := v.Add(newNode("child2", "child1", true)); err != nil {
+	if err := v.Add(newNode("child2", "child1", false)); err != nil {
 		t.Errorf("Add should have been ok")
 	}
-	if err := v.Add(newNode("child1-1", "root", false)); err != nil {
+	if err := v.Add(newNode("child1-1", "root", true)); err != nil {
 		t.Errorf("Add should have been ok")
 	}
-	if err := v.Add(newNode("child2", "child1-1", true)); err == nil {
+	if err := v.Add(newNode("child2", "child1-1", false)); err == nil {
 		t.Errorf("Add duplicate node should have encountered error")
 	}
-	if err := v.Add(newNode("", "child1-1", true)); err == nil {
+	if err := v.Add(newNode("", "child1-1", false)); err == nil {
 		t.Errorf("Add unnamed node should have encountered error")
 	}
 }
 
 func TestMove(t *testing.T) {
 	v := New()
-	v.Add(newNode("root", "", false))
-	v.Add(newNode("child1", "root", false))
-	v.Add(newNode("child2", "root", false))
+	v.Add(newNode("root", "", true))
+	v.Add(newNode("child1", "root", true))
+	v.Add(newNode("child2", "root", true))
 
-	child1_1 := newNode("child1-1", "child1", true)
+	child1_1 := newNode("child1-1", "child1", false)
 	v.Add(child1_1)
 
 	if err := v.Validate(); err != nil {
@@ -84,11 +84,11 @@ func TestMove(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	v := New()
-	v.Add(newNode("root", "", false))
-	v.Add(newNode("child1", "root", false))
-	v.Add(newNode("child2", "root", false))
+	v.Add(newNode("root", "", true))
+	v.Add(newNode("child1", "root", true))
+	v.Add(newNode("child2", "root", true))
 
-	child1_1 := newNode("child1-1", "child1", true)
+	child1_1 := newNode("child1-1", "child1", false)
 	v.Add(child1_1)
 
 	if err := v.Validate(); err != nil {
@@ -103,9 +103,9 @@ func TestRemove(t *testing.T) {
 
 func TestMultipleRoots(t *testing.T) {
 	v := New()
-	v.Add(newNode("root", "", false))
-	v.Add(newNode("child1", "root", false))
-	v.Add(newNode("child2", "child1", true))
+	v.Add(newNode("root", "", true))
+	v.Add(newNode("child1", "root", true))
+	v.Add(newNode("child2", "child1", false))
 
 	if err := v.checkMultipleRoots(); err != nil {
 		t.Errorf("Multiple roots state should be OK %s %s", err, spew.Sdump(v))
@@ -114,8 +114,8 @@ func TestMultipleRoots(t *testing.T) {
 		t.Errorf("Multiple roots state should be OK %s %s", err, spew.Sdump(v))
 	}
 
-	v.Add(newNode("root2", "", false))
-	v.Add(newNode("child2-1", "root2", true))
+	v.Add(newNode("root2", "", true))
+	v.Add(newNode("child2-1", "root2", false))
 	if err := v.checkMultipleRoots(); err == nil {
 		t.Errorf("Should have detected multiple roots error")
 	}
@@ -126,9 +126,9 @@ func TestMultipleRoots(t *testing.T) {
 
 func TestWorkingNamespace(t *testing.T) {
 	v := New()
-	root := newNode("root", "", false)
-	child1 := newNode("child1", "root", false)
-	child2 := newNode("child2", "child1", true)
+	root := newNode("root", "", true)
+	child1 := newNode("child1", "root", true)
+	child2 := newNode("child2", "child1", false)
 	v.Add(root)
 	v.Add(child1)
 	v.Add(child2)
@@ -140,7 +140,7 @@ func TestWorkingNamespace(t *testing.T) {
 		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
 	}
 
-	child1.Spec.WorkingNamespace = true
+	child1.Spec.Policyspace = false
 	if err := v.checkWorkingNamespace(); err == nil {
 		t.Errorf("Should have detected intermediate node working namespace error")
 	}
@@ -151,7 +151,7 @@ func TestWorkingNamespace(t *testing.T) {
 
 func TestRootWorkingNamespace(t *testing.T) {
 	v := New()
-	root := newNode("root", "", false)
+	root := newNode("root", "", true)
 	v.Add(root)
 	if err := v.checkWorkingNamespace(); err != nil {
 		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
@@ -160,7 +160,7 @@ func TestRootWorkingNamespace(t *testing.T) {
 		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
 	}
 
-	root.Spec.WorkingNamespace = true
+	root.Spec.Policyspace = false
 	if err := v.checkWorkingNamespace(); err == nil {
 		t.Errorf("Should have detected leaf node working namespace error")
 	}
@@ -171,9 +171,9 @@ func TestRootWorkingNamespace(t *testing.T) {
 
 func TestCycle(t *testing.T) {
 	v := New()
-	v.Add(newNode("root", "", false))
-	v.Add(newNode("child1", "root", false))
-	v.Add(newNode("child2", "child1", true))
+	v.Add(newNode("root", "", true))
+	v.Add(newNode("child1", "root", true))
+	v.Add(newNode("child2", "child1", false))
 
 	if err := v.checkCycles(); err != nil {
 		t.Errorf("No cycle should exist %s %s", err, spew.Sdump(v))
@@ -182,8 +182,8 @@ func TestCycle(t *testing.T) {
 		t.Errorf("No cycle should exist %s %s", err, spew.Sdump(v))
 	}
 
-	v.Add(newNode("child3", "child4", false))
-	v.Add(newNode("child4", "child3", false))
+	v.Add(newNode("child3", "child4", true))
+	v.Add(newNode("child4", "child3", true))
 	if err := v.checkCycles(); err == nil {
 		t.Errorf("Should have detected cycle")
 	}

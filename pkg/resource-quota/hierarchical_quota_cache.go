@@ -69,23 +69,11 @@ func (c *HierarchicalQuotaCache) initCache() error {
 	for _, policyNode := range policyNodes {
 		c.parents[policyNode.Name] = policyNode.Spec.Parent
 
-		// If there's any quota spec, we set it
-		if len(policyNode.Spec.Policies.ResourceQuotas) > 0 {
-			c.quotas[policyNode.Name] = &core_v1.ResourceQuota{
-				// We enforce that there's only one resource quota
-				Spec: *policyNode.Spec.Policies.ResourceQuotas[0].DeepCopy(),
-				Status: core_v1.ResourceQuotaStatus{
-					Used: core_v1.ResourceList{},
-				},
-			}
-		// Otherwise create an empty quota object
-		} else {
-			c.quotas[policyNode.Name] = &core_v1.ResourceQuota{
-				Spec: core_v1.ResourceQuotaSpec{},
-				Status: core_v1.ResourceQuotaStatus{
-					Used: core_v1.ResourceList{},
-				},
-			}
+		c.quotas[policyNode.Name] = &core_v1.ResourceQuota{
+			Spec: *policyNode.Spec.Policies.ResourceQuota.DeepCopy(),
+			Status: core_v1.ResourceQuotaStatus{
+				Used: core_v1.ResourceList{},
+			},
 		}
 	}
 

@@ -80,8 +80,8 @@ func TestSyncerComputeResourceQuotaActions(t *testing.T) {
 				&policyhierarchy_v1.PolicyNode{
 					ObjectMeta: meta_v1.ObjectMeta{Name: ns},
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						WorkingNamespace: true,
-						Policies:         policyhierarchy_v1.PolicyLists{ResourceQuotas: []core_v1.ResourceQuotaSpec{rq}}}})
+						Policyspace: false,
+						Policies:    policyhierarchy_v1.Policies{ResourceQuota: rq}}})
 		}
 
 		existingResourceQuotaList := []*core_v1.ResourceQuota{}
@@ -129,10 +129,9 @@ func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
 			Name: namespaceName,
 		},
 		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			WorkingNamespace: true,
-			Policies: policyhierarchy_v1.PolicyLists{
-				ResourceQuotas: []core_v1.ResourceQuotaSpec{
-					{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("42")}}}},
+			Policyspace: false,
+			Policies: policyhierarchy_v1.Policies{
+				ResourceQuota: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("42")}}},
 		},
 	}
 
@@ -141,10 +140,9 @@ func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
 			Name: namespaceName,
 		},
 		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			WorkingNamespace: true,
-			Policies: policyhierarchy_v1.PolicyLists{
-				ResourceQuotas: []core_v1.ResourceQuotaSpec{
-					{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("43")}}}},
+			Policyspace: false,
+			Policies: policyhierarchy_v1.Policies{
+				ResourceQuota: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("43")}}},
 		},
 	}
 	policyNodeWithoutRq := policyhierarchy_v1.PolicyNode{
@@ -152,7 +150,7 @@ func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
 			Name: namespaceName,
 		},
 		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			WorkingNamespace: true,
+			Policyspace: false,
 		},
 	}
 

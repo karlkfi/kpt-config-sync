@@ -82,8 +82,8 @@ func (s *QuotaSyncer) computeActions(
 	declaring := map[string]core_v1.ResourceQuotaSpec{}
 	for _, pn := range policyNodes {
 		// TODO(mdruskin): If not working namespace, we should create a hierarchical resource quota
-		if pn.Spec.WorkingNamespace {
-			declaring[pn.Name] = pn.Spec.Policies.ResourceQuotas[0]
+		if !pn.Spec.Policyspace {
+			declaring[pn.Name] = pn.Spec.Policies.ResourceQuota
 		}
 	}
 
@@ -107,11 +107,11 @@ func (s *QuotaSyncer) computeActions(
 }
 
 func (s *QuotaSyncer) getCreateAction(policyNode *policyhierarchy_v1.PolicyNode) actions.ResourceQuotaAction {
-	if !policyNode.Spec.WorkingNamespace || len(policyNode.Spec.Policies.ResourceQuotas) == 0 {
+	if policyNode.Spec.Policyspace || len(policyNode.Spec.Policies.ResourceQuota.Hard) == 0 {
 		return nil
 	}
 	return actions.NewResourceQuotaCreateAction(
-		s.client, policyNode.Name, policyNode.Spec.Policies.ResourceQuotas[0])
+		s.client, policyNode.Name, policyNode.Spec.Policies.ResourceQuota)
 }
 
 // OnCreate implements PolicyNodeSyncerInterface
@@ -140,8 +140,8 @@ func (s *QuotaSyncer) getUpdateAction(
 	}
 
 	var neededResourceQuotaSpec *core_v1.ResourceQuotaSpec
-	if policyNode.Spec.WorkingNamespace && len(policyNode.Spec.Policies.ResourceQuotas) > 0 {
-		neededResourceQuotaSpec = &policyNode.Spec.Policies.ResourceQuotas[0]
+	if !policyNode.Spec.Policyspace && len(policyNode.Spec.Policies.ResourceQuota.Hard) > 0 {
+		neededResourceQuotaSpec = &policyNode.Spec.Policies.ResourceQuota
 	}
 	if !hasExistingResourceQuota && neededResourceQuotaSpec != nil {
 		return actions.NewResourceQuotaCreateAction(s.client, namespace, *neededResourceQuotaSpec), nil

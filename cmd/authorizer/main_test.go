@@ -66,14 +66,14 @@ func TestSimpleRequest(t *testing.T) {
 				Name: "kittiesandponies",
 			},
 			Spec: policyhierarchy.PolicyNodeSpec{
-				Policies: policyhierarchy.PolicyLists{
+				Policies: policyhierarchy.Policies{
 					Roles: []rbac.Role{
-						rbac.Role{
+						{
 							ObjectMeta: meta.ObjectMeta{
 								Name: "pod-getter",
 							},
 							Rules: []rbac.PolicyRule{
-								rbac.PolicyRule{
+								{
 									APIGroups: []string{""},
 									Verbs:     []string{"get"},
 									Resources: []string{"pods"},
@@ -82,14 +82,14 @@ func TestSimpleRequest(t *testing.T) {
 						},
 					},
 					RoleBindings: []rbac.RoleBinding{
-						rbac.RoleBinding{
+						{
 							RoleRef: rbac.RoleRef{
 								APIGroup: "rbac.authorization.k8s.io",
 								Kind:     "Role",
 								Name:     "pod-getter",
 							},
 							Subjects: []rbac.Subject{
-								rbac.Subject{
+								{
 									Name:     "jane",
 									Kind:     "User",
 									APIGroup: "rbac.authorization.k8s.io",

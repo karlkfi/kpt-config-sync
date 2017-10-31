@@ -45,24 +45,24 @@ const NoParentNamespace string = ""
 
 // PolicyNodeSpec contains all the information about a policy linkage.
 type PolicyNodeSpec struct {
-	// True for leaf namespaces where pods will actually be scheduled,
-	// false for the parent org unit namespace where this policy is linked
+	// False for leaf namespaces where pods will actually be scheduled,
+	// True for the parent org unit namespace where this policy is linked
 	// to, but no containers should run
-	WorkingNamespace bool `json:"workingNamespace"`
+	Policyspace bool `json:"policyspace"`
 
 	// The parent org unit
 	Parent string `json:"parent"`
 
 	// The policies attached to that node
-	Policies PolicyLists `json:"policies"`
+	Policies Policies `json:"policies"`
 }
 
-// PolicyLists contains all the defined policies that are linked to a particular
+// Policies contains all the defined policies that are linked to a particular
 // PolicyNode.
-type PolicyLists struct {
+type Policies struct {
 	Roles          []rbac_v1.Role              `json:"roles"`
 	RoleBindings   []rbac_v1.RoleBinding       `json:"roleBindings"`
-	ResourceQuotas []core_v1.ResourceQuotaSpec `json:"resourceQuotas"`
+	ResourceQuota  core_v1.ResourceQuotaSpec   `json:"resourceQuota"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

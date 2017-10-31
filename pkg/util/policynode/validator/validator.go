@@ -126,13 +126,14 @@ func (s *Validator) checkWorkingNamespace() error {
 
 	for nodeName, node := range s.policyNodes {
 		if node.Spec.Parent == "" {
-			if node.Spec.WorkingNamespace {
+			// Root node should not be a working namespace
+			if !node.Spec.Policyspace {
 				return errors.Errorf("Root node %s should not be a working namespace", nodeName)
 			}
 			continue
 		}
 
-		if node.Spec.WorkingNamespace && isParent[nodeName] {
+		if !node.Spec.Policyspace && isParent[nodeName] {
 			return errors.Errorf(
 				"Node %s designated as working namespace, but has children", nodeName)
 		}
