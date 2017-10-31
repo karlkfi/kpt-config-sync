@@ -57,6 +57,50 @@ func TestDuplicateName(t *testing.T) {
 	}
 }
 
+func TestMove(t *testing.T) {
+	v := New()
+	v.Add(newNode("root", "", false))
+	v.Add(newNode("child1", "root", false))
+	v.Add(newNode("child2", "root", false))
+
+	child1_1 := newNode("child1-1", "child1", true)
+	v.Add(child1_1)
+
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should be ok %s %s", err, spew.Sdump(v))
+	}
+
+	child1_1.Spec.Parent = "child2"
+	if err := v.Update(child1_1); err != nil {
+		t.Errorf("Should be ok %s %s", err, spew.Sdump(v))
+	}
+	if v.parents["child1-1"] != "child2" {
+		t.Errorf("Wrong parent for child")
+	}
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should be ok %s %s", err, spew.Sdump(v))
+	}
+}
+
+func TestRemove(t *testing.T) {
+	v := New()
+	v.Add(newNode("root", "", false))
+	v.Add(newNode("child1", "root", false))
+	v.Add(newNode("child2", "root", false))
+
+	child1_1 := newNode("child1-1", "child1", true)
+	v.Add(child1_1)
+
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should be ok %s %s", err, spew.Sdump(v))
+	}
+
+	child1_1.Spec.Parent = "child2"
+	if err := v.Remove(child1_1); err != nil {
+		t.Errorf("Should be ok %s %s", err, spew.Sdump(v))
+	}
+}
+
 func TestMultipleRoots(t *testing.T) {
 	v := New()
 	v.Add(newNode("root", "", false))
@@ -102,15 +146,6 @@ func TestWorkingNamespace(t *testing.T) {
 	}
 	if err := v.Validate(); err == nil {
 		t.Errorf("Should have detected intermediate node working namespace error")
-	}
-
-	child1.Spec.WorkingNamespace = false
-	child2.Spec.WorkingNamespace = false
-	if err := v.checkWorkingNamespace(); err == nil {
-		t.Errorf("Should have detected leaf node working namespace error")
-	}
-	if err := v.Validate(); err == nil {
-		t.Errorf("Should have detected leaf node working namespace error")
 	}
 }
 
