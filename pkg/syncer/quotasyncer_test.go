@@ -102,8 +102,8 @@ func TestSyncerComputeResourceQuotaActions(t *testing.T) {
 			t.Errorf("[T%d]: Expected %d actions but got %d", i, len(testcase.expectedActions), len(actions))
 		}
 		for _, action := range actions {
-			if testcase.expectedActions[action.Name()] != action.Operation() {
-				t.Errorf("[T%d]: Unexpected resource quota action %s %s", i, action.Operation(), action.Name())
+			if testcase.expectedActions[action.Namespace()] != action.Operation() {
+				t.Errorf("[T%d]: Unexpected resource quota action %s %s", i, action.Operation(), action.Namespace())
 			}
 		}
 	}
@@ -159,7 +159,7 @@ func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
 	if action == nil {
 		t.Error("Faild to make create action")
 	}
-	if action.Name() != namespaceName {
+	if action.Namespace() != namespaceName {
 		t.Error("Wrong namespace name")
 	}
 	if action.Operation() != "create" {
@@ -187,8 +187,8 @@ func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
 			t.Errorf("Got unexpected nil action for testcase %d, data %#v", idx, testcase)
 			continue
 		}
-		if action.Name() != namespaceName {
-			t.Errorf("Added event should have name %s, got %s", namespaceName, action.Name())
+		if action.Namespace() != namespaceName {
+			t.Errorf("Added event should have name %s, got %s", namespaceName, action.Namespace())
 		}
 		if action.Operation() != testcase.expectedOperation {
 			t.Errorf("Got unexpected operation %s for testcase %d, data %#v", action.Operation(), idx, testcase)

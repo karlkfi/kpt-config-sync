@@ -113,9 +113,9 @@ func TestSyncerComputeNamespaceActions(t *testing.T) {
 		for _, action := range actions {
 			switch action.Operation() {
 			case "create":
-				nsCreate.Add(action.Name())
+				nsCreate.Add(action.Namespace())
 			case "delete":
-				nsDelete.Add(action.Name())
+				nsDelete.Add(action.Namespace())
 			default:
 				t.Errorf("Got invalid action operation %s", action.Operation())
 			}
