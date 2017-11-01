@@ -29,6 +29,7 @@ import (
 	"k8s.io/kubernetes/pkg/quota"
 	quotainstall "k8s.io/kubernetes/pkg/quota/install"
 	"github.com/google/stolos/pkg/resource-quota"
+	"github.com/golang/glog"
 )
 
 type ResourceQuotaAdmitter struct {
@@ -64,7 +65,12 @@ func (r* ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) 
 	if evaluator != nil && evaluator.Handles(attributes) {
 		newUsage, err := evaluator.Usage(attributes.GetObject())
 		if err != nil {
-			return internalErrorDeny(err)
+			// Until b/68666077 is done, this can happen for legit objects. So not throwing error right now.
+			// return internalErrorDeny(err)
+			glog.Infof("Got error calculating usage due to %s but ignoring", err)
+			return &admissionv1alpha1.AdmissionReviewStatus{
+				Allowed: true,
+			}
 		}
 
 		v1NewUsage := core_v1.ResourceList{}
