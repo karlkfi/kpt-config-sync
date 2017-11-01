@@ -33,8 +33,7 @@ type ComputeNamespaceActionsTestCase struct {
 	existingNamespaces    []string // namespaces in the active state
 	terminatingNamespaces []string // namespaces in the "terminating" state
 
-	needsCreate []string // namespaces that will be deleted
-	needsDelete []string // namespaces that will be created
+	needsDelete []string // namespaces that will be deleted
 }
 
 func createNamespace(name string, phase core_v1.NamespacePhase) *core_v1.Namespace {
@@ -60,35 +59,30 @@ func TestSyncerComputeNamespaceActions(t *testing.T) {
 			policyNodeNamespaces:  []string{"foo"},
 			existingNamespaces:    []string{"bar"},
 			terminatingNamespaces: []string{"foo"},
-			needsCreate:           []string{"foo"},
 			needsDelete:           []string{"bar"},
 		},
 		{ // need create, need delete
 			policyNodeNamespaces:  []string{"foo", "foo2"},
 			existingNamespaces:    []string{"bar", "bar2"},
 			terminatingNamespaces: []string{"baz"},
-			needsCreate:           []string{"foo", "foo2"},
 			needsDelete:           []string{"bar", "bar2"},
 		},
 		{ // need create
 			policyNodeNamespaces:  []string{"foo", "bar"},
 			existingNamespaces:    []string{"bar"},
 			terminatingNamespaces: []string{},
-			needsCreate:           []string{"foo"},
 			needsDelete:           []string{},
 		},
 		{ // need delete
 			policyNodeNamespaces:  []string{"foo"},
 			existingNamespaces:    []string{"bar", "foo"},
 			terminatingNamespaces: []string{"baz"},
-			needsCreate:           []string{},
 			needsDelete:           []string{"bar"},
 		},
 		{ // No diff
 			policyNodeNamespaces:  []string{"foo"},
 			existingNamespaces:    []string{"foo"},
 			terminatingNamespaces: []string{"baz"},
-			needsCreate:           []string{},
 			needsDelete:           []string{},
 		},
 	} {
@@ -108,24 +102,17 @@ func TestSyncerComputeNamespaceActions(t *testing.T) {
 
 		actions := syncer.computeActions(namespaces, policyNodes)
 
-		nsCreate := stringset.New()
 		nsDelete := stringset.New()
 		for _, action := range actions {
 			switch action.Operation() {
-			case "create":
-				nsCreate.Add(action.Namespace())
 			case "delete":
 				nsDelete.Add(action.Namespace())
 			default:
 				t.Errorf("Got invalid action operation %s", action.Operation())
 			}
 		}
-		expectedCreate := stringset.NewFromSlice(testcase.needsCreate)
 		expectedDelete := stringset.NewFromSlice(testcase.needsDelete)
 
-		if !nsCreate.Equals(expectedCreate) {
-			t.Errorf("Expected creations to be %v but got %v", expectedCreate, nsCreate)
-		}
 		if !nsDelete.Equals(expectedDelete) {
 			t.Errorf("Expected deletions to be %v but got %v", expectedDelete, nsDelete)
 		}

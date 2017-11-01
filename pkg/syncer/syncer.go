@@ -24,16 +24,18 @@ import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/informers/externalversions"
-	k8us_v1 "github.com/google/stolos/pkg/client/listers/k8us/v1"
+	policynodelister_v1 "github.com/google/stolos/pkg/client/listers/k8us/v1"
 	"github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/google/stolos/pkg/util/policynode"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	"github.com/google/stolos/pkg/syncer/actions"
 )
+
+var flagResyncPeriod = flag.Duration(
+	"resync_period", time.Minute, "The resync period for the syncer system")
 
 var dryRun = flag.Bool(
 	"dry_run", false, "Don't perform actions, just log what would have happened")
@@ -53,14 +55,13 @@ type Interface interface {
 // Syncer implements the policy node syncer.  This will watch the policynodes then sync changes to
 // namespaces and resource quotas.
 type Syncer struct {
-	client          meta.Interface                  // Kubernetes/CRD client
-	errorCallback   ErrorCallback                   // Callback invoked on error
-	stopped         bool                            // Tracks internal state for stopping
-	stopChan        chan struct{}                   // Channel will be closed when Stop() is called
-	stopMutex       sync.Mutex                      // Concurrency control for calling Stop()
-	resourceVersion int64                           // The highest resource version we have seen for a PollicyNode
-	syncers         []PolicyNodeSyncerInterface     // Syncers that this will call into on change events
-	queue           workqueue.RateLimitingInterface // A work queue for items to be processed
+	client        meta.Interface                  // Kubernetes/CRD client
+	errorCallback ErrorCallback                   // Callback invoked on error
+	stopped       bool                            // Tracks internal state for stopping
+	stopChan      chan struct{}                   // Channel will be closed when Stop() is called
+	stopMutex     sync.Mutex                      // Concurrency control for calling Stop()
+	syncers       []PolicyNodeSyncerInterface     // Syncers that this will call into on change events
+	queue         workqueue.RateLimitingInterface // A work queue for items to be processed
 
 	kubernetesInformerFactory      informers.SharedInformerFactory
 	policyHierarchyInformerFactory externalversions.SharedInformerFactory
@@ -69,9 +70,9 @@ type Syncer struct {
 // New creates a new syncer that will use the given client interface
 func New(client meta.Interface) *Syncer {
 	kubernetesInformerFactory := informers.NewSharedInformerFactory(
-		client.Kubernetes(), time.Minute)
+		client.Kubernetes(), *flagResyncPeriod)
 	policyHierarchyInformerFactory := externalversions.NewSharedInformerFactory(
-		client.PolicyHierarchy(), time.Minute)
+		client.PolicyHierarchy(), *flagResyncPeriod)
 	kubernetesCoreV1 := kubernetesInformerFactory.Core().V1()
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 	return &Syncer{
@@ -84,7 +85,7 @@ func New(client meta.Interface) *Syncer {
 		},
 		kubernetesInformerFactory:      kubernetesInformerFactory,
 		policyHierarchyInformerFactory: policyHierarchyInformerFactory,
-		queue:                          queue,
+		queue: queue,
 	}
 }
 
@@ -93,7 +94,7 @@ func New(client meta.Interface) *Syncer {
 func (s *Syncer) Run(errorCallback ErrorCallback) {
 	s.errorCallback = errorCallback
 
-	go s.runInternal()
+	go s.runInformer()
 	go s.runWorker()
 }
 
@@ -110,39 +111,20 @@ func (s *Syncer) Stop() {
 
 // Wait will wait for the syncer to complete then exit
 func (s *Syncer) Wait() {
-	// TODO: figure out if we need a wait function.
 }
 
-func (s *Syncer) initialSync(lister k8us_v1.PolicyNodeLister) error {
-	nodes, err := lister.List(labels.Everything())
-	if err != nil {
-		return err
-	}
-
-	// Set resource version
-	for _, node := range nodes {
-		resourceVersion, err := policynode.GetResourceVersion(node)
-		if err != nil {
-			return errors.Wrapf(err, "Failed to get resource version from %#v", node)
-		}
-		if s.resourceVersion < resourceVersion {
-			s.resourceVersion = resourceVersion
-		}
-	}
-
-	for _, syncerInstance := range s.syncers {
-		err := syncerInstance.InitialSync(nodes)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *Syncer) runInternal() {
+func (s *Syncer) runInformer() {
 	policyNodesInformer := s.policyHierarchyInformerFactory.K8us().V1().PolicyNodes()
 	informer := policyNodesInformer.Informer()
 	lister := policyNodesInformer.Lister()
+
+	// Subscribe to informer prior to starting the factories.
+	handler := cache.ResourceEventHandlerFuncs{
+		AddFunc:    s.onAdd,
+		UpdateFunc: s.onUpdate,
+		DeleteFunc: s.onDelete,
+	}
+	informer.AddEventHandler(handler)
 
 	// Start informer factories
 	s.kubernetesInformerFactory.Start(s.stopChan)
@@ -156,23 +138,36 @@ func (s *Syncer) runInternal() {
 			if !ok {
 				elemType := syncType.Elem()
 				glog.Errorf("Failed to sync %s:%s", elemType.PkgPath(), elemType.Name())
+				s.Stop()
 				return
 			}
 		}
 	}
 
-	err := s.initialSync(lister)
-	if err != nil {
-		s.onError(err)
-		return
-	}
+	go s.runResync(lister)
+}
 
-	handler := cache.ResourceEventHandlerFuncs{
-		AddFunc:    s.onAdd,
-		UpdateFunc: s.onUpdate,
-		DeleteFunc: s.onDelete,
+func (s *Syncer) runResync(lister policynodelister_v1.PolicyNodeLister) {
+	ticker := time.NewTicker(*flagResyncPeriod)
+	for {
+		select {
+		case <-ticker.C:
+			policyNodes, err := lister.List(labels.Everything())
+			if err != nil {
+				s.onError(err)
+				return
+			}
+			for _, syncerInstance := range s.syncers {
+				err := syncerInstance.PeriodicResync(policyNodes)
+				if err != nil {
+					glog.V(1).Infof("Got error in periodic resync: %#v", err)
+				}
+			}
+		case <-s.stopChan:
+			glog.V(1).Infof("Got stop channel close, exiting.")
+			return
+		}
 	}
-	informer.AddEventHandler(handler)
 }
 
 // onAdd handles add events from the informer and de-duplicates the initial creates after the first
@@ -181,11 +176,6 @@ func (s *Syncer) onAdd(obj interface{}) {
 	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
 	resourceVersion := policynode.GetResourceVersionOrDie(policyNode)
 	glog.V(1).Infof("onAdd %s (%d)", policyNode.Name, resourceVersion)
-	if resourceVersion <= s.resourceVersion {
-		glog.V(2).Infof("suppressed onAdd %s (%s <= %d)", policyNode.Name, policyNode.ResourceVersion, s.resourceVersion)
-		return
-	}
-	s.resourceVersion = resourceVersion
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnCreate(policyNode)
@@ -215,19 +205,8 @@ func (s *Syncer) onDelete(obj interface{}) {
 func (s *Syncer) onUpdate(oldObj, newObj interface{}) {
 	oldPolicyNode := oldObj.(*policyhierarchy_v1.PolicyNode)
 	newPolicyNode := newObj.(*policyhierarchy_v1.PolicyNode)
-	if oldPolicyNode.ResourceVersion == newPolicyNode.ResourceVersion {
-		glog.V(2).Infof("SUPPRESSED: onUpdate due to same resource version %s (%d)", oldPolicyNode.Name, oldPolicyNode.ResourceVersion)
-		return
-	}
-
-	newResourceVersion := policynode.GetResourceVersionOrDie(newPolicyNode)
-	if newResourceVersion <= s.resourceVersion {
-		panic(errors.Errorf("Unexpected resource version replay at %d: %#v", s.resourceVersion, newPolicyNode))
-		return
-	}
-
-	glog.V(1).Infof("onUpdate %s (%s) -> (%s)", oldPolicyNode.Name, oldPolicyNode.ResourceVersion, newPolicyNode.ResourceVersion)
-	s.resourceVersion = newResourceVersion
+	glog.V(1).Infof(
+		"onUpdate %s (%s->%s)", newPolicyNode.Name, oldPolicyNode.ResourceVersion, newPolicyNode.ResourceVersion)
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnUpdate(oldPolicyNode, newPolicyNode)

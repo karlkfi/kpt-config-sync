@@ -21,15 +21,13 @@ import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/resource-quota"
+	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
-	"github.com/google/stolos/pkg/syncer/actions"
-	"github.com/google/stolos/pkg/resource-quota"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -54,72 +52,14 @@ func NewQuotaSyncer(
 	}
 }
 
-// InitialSync implements PolicyNodeSyncerInterface
-func (s *QuotaSyncer) InitialSync(nodes []*policyhierarchy_v1.PolicyNode) error {
-
-	resourceQuotaList, err := s.resourceQuotaLister.ResourceQuotas(meta_v1.NamespaceAll).List(
-		labels.SelectorFromSet(resource_quota.StolosQuotaLabels))
-	if err != nil {
-		return err
-	}
-
-	actions := s.computeActions(resourceQuotaList, nodes)
-
-	for _, action := range actions {
-		s.queue.Add(action)
-	}
-
+// PeriodicResync implements PolicyNodeSyncerInterface
+func (s *QuotaSyncer) PeriodicResync(nodes []*policyhierarchy_v1.PolicyNode) error {
 	return nil
-}
-
-func (s *QuotaSyncer) computeActions(
-	resourceQuotaList []*core_v1.ResourceQuota, policyNodes []*policyhierarchy_v1.PolicyNode) []actions.ResourceQuotaAction {
-	existing := map[string]core_v1.ResourceQuota{}
-	for _, rq := range resourceQuotaList {
-		existing[rq.Namespace] = *rq
-	}
-
-	declaring := map[string]core_v1.ResourceQuotaSpec{}
-	for _, pn := range policyNodes {
-		// TODO(mdruskin): If not working namespace, we should create a hierarchical resource quota
-		if !pn.Spec.Policyspace {
-			declaring[pn.Name] = pn.Spec.Policies.ResourceQuota
-		}
-	}
-
-	quotaActions := []actions.ResourceQuotaAction{}
-	// Creates and updates
-	for ns, rq := range declaring {
-		if _, exists := existing[ns]; !exists {
-			quotaActions = append(quotaActions, actions.NewResourceQuotaCreateAction(s.client, ns, rq))
-		} else if !reflect.DeepEqual(rq, existing[ns].Spec) {
-			quotaActions = append(quotaActions, actions.NewResourceQuotaUpdateAction(s.client, ns, rq, existing[ns].ResourceVersion))
-		}
-	}
-	// Deletions
-	for ns, _ := range existing {
-		if _, exists := declaring[ns]; !exists {
-			quotaActions = append(quotaActions, actions.NewResourceQuotaDeleteAction(s.client, ns))
-		}
-	}
-
-	return quotaActions
-}
-
-func (s *QuotaSyncer) getCreateAction(policyNode *policyhierarchy_v1.PolicyNode) actions.ResourceQuotaAction {
-	if policyNode.Spec.Policyspace || len(policyNode.Spec.Policies.ResourceQuota.Hard) == 0 {
-		return nil
-	}
-	return actions.NewResourceQuotaCreateAction(
-		s.client, policyNode.Name, policyNode.Spec.Policies.ResourceQuota)
 }
 
 // OnCreate implements PolicyNodeSyncerInterface
 func (s *QuotaSyncer) OnCreate(policyNode *policyhierarchy_v1.PolicyNode) error {
-	if action := s.getCreateAction(policyNode); action != nil {
-		s.queue.Add(action)
-	}
-	return nil
+	return s.onUpdate(policyNode)
 }
 
 // getUpdateAction returns the appropraite action when handling an update event.
@@ -159,8 +99,13 @@ func (s *QuotaSyncer) getUpdateAction(
 }
 
 // OnUpdate implements PolicyNodeSyncerInterface
-func (s *QuotaSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, newPolicyNode *policyhierarchy_v1.PolicyNode) error {
-	action, err := s.getUpdateAction(newPolicyNode)
+func (s *QuotaSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *policyhierarchy_v1.PolicyNode) error {
+	return s.onUpdate(new)
+}
+
+// onUpdate handles both create and update for quota from a policy node.
+func (s *QuotaSyncer) onUpdate(policyNode *policyhierarchy_v1.PolicyNode) error {
+	action, err := s.getUpdateAction(policyNode)
 	if err != nil {
 		return err
 	}

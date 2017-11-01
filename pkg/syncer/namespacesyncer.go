@@ -19,12 +19,12 @@ import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/google/stolos/pkg/util/namespaceutil"
 	"github.com/google/stolos/pkg/util/set/stringset"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
-	"github.com/google/stolos/pkg/syncer/actions"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -49,8 +49,29 @@ func NewNamespaceSyncer(
 	}
 }
 
-// InitialSync implements PolicyNodeSyncerInterface
-func (s *NamespaceSyncer) InitialSync(nodes []*policyhierarchy_v1.PolicyNode) error {
+// OnCreate implements PolicyNodeSyncerInterface
+func (s *NamespaceSyncer) OnCreate(node *policyhierarchy_v1.PolicyNode) error {
+	return s.onSet(node)
+}
+
+// OnUpdate implements PolicyNodeSyncerInterface
+func (s *NamespaceSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *policyhierarchy_v1.PolicyNode) error {
+	return s.onSet(new)
+}
+
+func (s *NamespaceSyncer) onSet(node *policyhierarchy_v1.PolicyNode) error {
+	s.queue.Add(actions.NewNamespaceCreateAction(s.client.Kubernetes(), node.Name, s.namespaceLister))
+	return nil
+}
+
+// OnDelete implements PolicyNodeSyncerInterface
+func (s *NamespaceSyncer) OnDelete(node *policyhierarchy_v1.PolicyNode) error {
+	s.queue.Add(actions.NewNamespaceDeleteAction(s.client.Kubernetes(), node.Name, s.namespaceLister))
+	return nil
+}
+
+// PeriodicResync implements PolicyNodeSyncerInterface
+func (s *NamespaceSyncer) PeriodicResync(nodes []*policyhierarchy_v1.PolicyNode) error {
 	existingNamespaces, err := s.namespaceLister.List(labels.Everything())
 	if err != nil {
 		return err
@@ -63,25 +84,10 @@ func (s *NamespaceSyncer) InitialSync(nodes []*policyhierarchy_v1.PolicyNode) er
 	return nil
 }
 
-// OnCreate implements PolicyNodeSyncerInterface
-func (s *NamespaceSyncer) OnCreate(node *policyhierarchy_v1.PolicyNode) error {
-	s.queue.Add(actions.NewNamespaceCreateAction(s.client.Kubernetes(), node.Name))
-	return nil
-}
-
-// OnUpdate implements PolicyNodeSyncerInterface
-func (s *NamespaceSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *policyhierarchy_v1.PolicyNode) error {
-	// Noop
-	return nil
-}
-
-// OnDelete implements PolicyNodeSyncerInterface
-func (s *NamespaceSyncer) OnDelete(node *policyhierarchy_v1.PolicyNode) error {
-	s.queue.Add(actions.NewNamespaceDeleteAction(s.client.Kubernetes(), node.Name))
-	return nil
-}
-
-// computeActions determines which namespaces to create and delete on initial sync.
+// computeActions determines which namespaces to delete during the resync. Creates will be handled
+// by OnUpdate since every resource is "updated" during the resync. Deletes are handled by OnDelete
+// but if we miss a delete due to being off, crashed, etc, this will garbage collect ones that
+// we missed.
 func (s *NamespaceSyncer) computeActions(
 	existingNamespaceList []*core_v1.Namespace,
 	nodes []*policyhierarchy_v1.PolicyNode) []actions.Interface {
@@ -94,7 +100,7 @@ func (s *NamespaceSyncer) computeActions(
 		case core_v1.NamespaceActive:
 			existingNamespaces.Add(namespace.Name)
 		case core_v1.NamespaceTerminating:
-			// noop, handled by namespaceactions
+			// noop since this will go away shortly
 		}
 	}
 
@@ -103,17 +109,13 @@ func (s *NamespaceSyncer) computeActions(
 		declaredNamespaces.Add(policyNode.ObjectMeta.Name)
 	}
 
-	needsCreate := declaredNamespaces.Difference(existingNamespaces)
 	needsDelete := existingNamespaces.Difference(declaredNamespaces)
 
 	namespaceActions := []actions.Interface{}
-	needsCreate.ForEach(func(ns string) {
-		glog.Infof("Adding create operation for %s", ns)
-		namespaceActions = append(namespaceActions, actions.NewNamespaceCreateAction(s.client.Kubernetes(), ns))
-	})
 	needsDelete.ForEach(func(ns string) {
 		glog.Infof("Adding delete operation for %s", ns)
-		namespaceActions = append(namespaceActions, actions.NewNamespaceDeleteAction(s.client.Kubernetes(), ns))
+		namespaceActions = append(namespaceActions, actions.NewNamespaceDeleteAction(
+			s.client.Kubernetes(), ns, s.namespaceLister))
 	})
 
 	return namespaceActions
