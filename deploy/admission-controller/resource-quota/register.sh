@@ -15,7 +15,7 @@ externalAdmissionHooks:
     rules:
       - operations:
           - CREATE
-          - DELETE
+          - UPDATE
         apiGroups:
           - "*"
         apiVersions:
