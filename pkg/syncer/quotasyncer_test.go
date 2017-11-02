@@ -17,8 +17,8 @@ limitations under the License.
 package syncer
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta/fake"
@@ -28,9 +28,9 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 type ComputeResourceQuotaActionsTestCase struct {
@@ -91,10 +91,10 @@ func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
 
 	for idx, testcase := range []GetResourceQuotaEventActionTestCase{
 		{event: policynodewatcher.Modified, expectedOperation: "delete", policyNode: policyNodeWithoutRq},
-		{event: policynodewatcher.Modified, expectedOperation: "update", policyNode: policyNodeWithDifferentRq},
-		{event: policynodewatcher.Modified, noOperation: true, policyNode: policyNodeWithSameRq},
+		{event: policynodewatcher.Modified, expectedOperation: "upsert", policyNode: policyNodeWithDifferentRq},
+		{event: policynodewatcher.Modified, expectedOperation: "upsert", policyNode: policyNodeWithSameRq},
 	} {
-		action, _ := syncer.getUpdateAction(&testcase.policyNode)
+		action := syncer.getUpdateAction(&testcase.policyNode)
 		if testcase.noOperation {
 			if action != nil {
 				t.Errorf("Got unexpected non-nil action %#v for testcase %d, data %#v", action, idx, testcase)

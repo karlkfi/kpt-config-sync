@@ -15,7 +15,21 @@ limitations under the License.
 
 package resource_quota
 
-// We only allow one resource quota per namespace, and this is the meta name of that object.
+// NamespaceTypeLabel is the label key used for stolos quotas.
+const NamespaceTypeLabel = "stolos-namespace-type"
+const (
+	// NamespaceTypePolicy is the value used for policy namespaces
+	NamespaceTypePolicy = "policyspace"
+	// NamespaceTypeWorkload is the value used for workload namespaces
+	NamespaceTypeWorkload = "workload"
+)
+
+// ResourceQuotaObjectName is the resource name for quotas set by stolos.  We only allow one resource
+// quota per namespace, so we hardcode the resource name.
 const ResourceQuotaObjectName = "stolos-resource-quota"
 
-var StolosQuotaLabels = map[string]string{"stolos": "true"}
+// StolosQuotaLabels are the labels applied to a workload namespace's quota object
+var StolosQuotaLabels = map[string]string{NamespaceTypeLabel: NamespaceTypeWorkload}
+
+// PolicySpaceQuotaLabels are the labels applied to a policyspace's quota object
+var PolicySpaceQuotaLabels = map[string]string{NamespaceTypeLabel: NamespaceTypePolicy}

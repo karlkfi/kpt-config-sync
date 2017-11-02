@@ -16,8 +16,6 @@ limitations under the License.
 package syncer
 
 import (
-	"reflect"
-
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	informers_policynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
@@ -25,10 +23,9 @@ import (
 	"github.com/google/stolos/pkg/resource-quota"
 	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/pkg/errors"
-	core_v1 "k8s.io/api/core/v1"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	informers_corev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
+	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -36,6 +33,7 @@ import (
 type QuotaSyncer struct {
 	client                kubernetes.Interface
 	resourceQuotaInformer informers_corev1.ResourceQuotaInformer
+	resourceQuotaLister   listers_core_v1.ResourceQuotaLister
 	policyNodeInformer    informers_policynodev1.PolicyNodeInformer
 	queue                 workqueue.RateLimitingInterface
 }
@@ -48,13 +46,10 @@ func NewQuotaSyncer(
 	resourceQuotaInformer informers_corev1.ResourceQuotaInformer,
 	policyNodeInformer informers_policynodev1.PolicyNodeInformer,
 	queue workqueue.RateLimitingInterface) *QuotaSyncer {
-
-	// Need to call this so that it gets populated.
-	resourceQuotaInformer.Informer()
-
 	return &QuotaSyncer{
 		client:                client.Kubernetes(),
 		resourceQuotaInformer: resourceQuotaInformer,
+		resourceQuotaLister:   resourceQuotaInformer.Lister(),
 		policyNodeInformer:    policyNodeInformer,
 		queue:                 queue,
 	}
@@ -114,8 +109,8 @@ func (s *QuotaSyncer) fillResourceQuotaLeafGaps(nodes []*policyhierarchy_v1.Poli
 
 		if needsUpdate {
 			glog.Infof("Need to update quota for leaf %s to fill in limits from parent policyspaces", quota.Namespace)
-			resultActions = append(resultActions,
-				actions.NewResourceQuotaUpdateAction(s.client, quota.Namespace, quota.Spec, quota.ResourceVersion))
+			resultActions = append(resultActions, actions.NewResourceQuotaUpsertAction(
+				quota.Namespace, resource_quota.StolosQuotaLabels, quota.Spec, s.client, s.resourceQuotaLister))
 		}
 	}
 	return resultActions, nil
@@ -127,39 +122,29 @@ func (s *QuotaSyncer) OnCreate(policyNode *policyhierarchy_v1.PolicyNode) error 
 }
 
 // getUpdateAction returns the appropraite action when handling an update event.
-func (s *QuotaSyncer) getUpdateAction(
-	policyNode *policyhierarchy_v1.PolicyNode) (actions.ResourceQuotaAction, error) {
-	namespace := policyNode.Name
-	// NOTE: Get will return a non-nil ResourceQutoa even if the API returns not found.
-	existingResourceQuota, err := s.resourceQuotaInformer.Lister().ResourceQuotas(namespace).Get(
-		resource_quota.ResourceQuotaObjectName)
-	hasExistingResourceQuota := true
-	if err != nil {
-		if api_errors.IsNotFound(err) {
-			hasExistingResourceQuota = false
-			existingResourceQuota = nil
-		} else {
-			return nil, errors.Wrapf(err, "Failed to fetch quota for %s", namespace)
-		}
+func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode) actions.ResourceQuotaAction {
+	if policyNode.Spec.Policyspace {
+		return actions.NewResourceQuotaUpsertAction(
+			policyNode.Namespace,
+			resource_quota.PolicySpaceQuotaLabels,
+			policyNode.Spec.Policies.ResourceQuota,
+			s.client,
+			s.resourceQuotaLister)
 	}
 
-	var neededResourceQuotaSpec *core_v1.ResourceQuotaSpec
-	if !policyNode.Spec.Policyspace && len(policyNode.Spec.Policies.ResourceQuota.Hard) > 0 {
-		neededResourceQuotaSpec = &policyNode.Spec.Policies.ResourceQuota
+	// TODO(mdruskin): have this evaluate hierarchical policy instead of this.
+	if 0 < len(policyNode.Spec.Policies.ResourceQuota.Hard) {
+		return actions.NewResourceQuotaUpsertAction(
+			policyNode.Name,
+			resource_quota.PolicySpaceQuotaLabels,
+			policyNode.Spec.Policies.ResourceQuota,
+			s.client,
+			s.resourceQuotaLister)
 	}
-	if !hasExistingResourceQuota && neededResourceQuotaSpec != nil {
-		return actions.NewResourceQuotaCreateAction(s.client, namespace, *neededResourceQuotaSpec), nil
-	}
-	if hasExistingResourceQuota && neededResourceQuotaSpec == nil {
-		glog.V(1).Infof("Will delete ns %s quota %#v", namespace, existingResourceQuota)
-		return actions.NewResourceQuotaDeleteAction(s.client, namespace), nil
-	}
-	if hasExistingResourceQuota && neededResourceQuotaSpec != nil &&
-		!reflect.DeepEqual(existingResourceQuota.Spec, *neededResourceQuotaSpec) {
-		return actions.NewResourceQuotaUpdateAction(
-			s.client, namespace, *neededResourceQuotaSpec, existingResourceQuota.ObjectMeta.ResourceVersion), nil
-	}
-	return nil, nil
+	return actions.NewResourceQuotaDeleteAction(
+		policyNode.Name,
+		s.client,
+		s.resourceQuotaLister)
 }
 
 // OnUpdate implements PolicyNodeSyncerInterface
@@ -169,13 +154,7 @@ func (s *QuotaSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *policyhi
 
 // onUpdate handles both create and update for quota from a policy node.
 func (s *QuotaSyncer) onUpdate(policyNode *policyhierarchy_v1.PolicyNode) error {
-	action, err := s.getUpdateAction(policyNode)
-	if err != nil {
-		return err
-	}
-	if action != nil {
-		s.queue.Add(action)
-	}
+	s.queue.Add(s.getUpdateAction(policyNode))
 	return nil
 }
 
