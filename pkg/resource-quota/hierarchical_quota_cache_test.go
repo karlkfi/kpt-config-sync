@@ -1,6 +1,7 @@
 package resource_quota
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -136,6 +137,40 @@ func TestCanAdmit(t *testing.T) {
 				t.Errorf("Expected error [%s] to contain substring [%s]", err, tt.expectedErrorSubstring)
 			}
 		}
+	}
+}
+
+func TestGetParentQuotaLimits(t *testing.T) {
+	// Limits and structure
+	policyNodes := []runtime.Object{
+		makePolicyNode("kittiesandponies", "", core_v1.ResourceList{
+			"hay":  resource.MustParse("10"),
+			"milk": resource.MustParse("5"),
+		}),
+		makePolicyNode("kitties", "kittiesandponies", core_v1.ResourceList{
+			"milk":  resource.MustParse("8"),
+			"cream": resource.MustParse("2"),
+		}),
+		makePolicyNode("subkitties", "kitties", core_v1.ResourceList{}),
+	}
+
+	policyNodeInformer := fakeinformers.NewPolicyNodeInformer(policyNodes...)
+	resourceQuotaInformer := fakeinformers.NewResourceQuotaInformer()
+	cache, err := NewHierarchicalQuotaCache(policyNodeInformer, resourceQuotaInformer)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	limits := cache.GetParentQuotaLimits("subkitties")
+	expectedLimits := core_v1.ResourceList{
+		"hay":   resource.MustParse("10"),
+		"milk":  resource.MustParse("8"),
+		"cream": resource.MustParse("2"),
+	}
+
+	if !reflect.DeepEqual(limits, expectedLimits) {
+		t.Errorf("Expected %v, but got %v", expectedLimits, limits)
 	}
 }
 

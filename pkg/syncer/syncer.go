@@ -76,13 +76,15 @@ func New(client meta.Interface) *Syncer {
 		client.PolicyHierarchy(), *flagResyncPeriod)
 	kubernetesCoreV1 := kubernetesInformerFactory.Core().V1()
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+
 	return &Syncer{
 		client:   client,
 		stopChan: make(chan struct{}),
 		syncers: []PolicyNodeSyncerInterface{
 			// Namespace syncer must be first since quota depends on it
 			NewNamespaceSyncer(client, kubernetesCoreV1.Namespaces().Lister(), queue),
-			NewQuotaSyncer(client, kubernetesCoreV1.ResourceQuotas().Lister(), queue),
+			NewQuotaSyncer(client, kubernetesCoreV1.ResourceQuotas(),
+				policyHierarchyInformerFactory.K8us().V1().PolicyNodes(), queue),
 		},
 		kubernetesInformerFactory:      kubernetesInformerFactory,
 		policyHierarchyInformerFactory: policyHierarchyInformerFactory,
@@ -176,6 +178,7 @@ func (s *Syncer) resync(lister policynodelister_v1.PolicyNodeLister) error {
 	if err != nil {
 		return errors.Wrapf(err, "Failed to list policy nodes")
 	}
+	glog.V(1).Infof("Periodic Resync")
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.PeriodicResync(policyNodes)
 		if err != nil {

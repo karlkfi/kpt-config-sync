@@ -20,7 +20,6 @@ spec:
     resourceQuota:
       hard:
         pods: "7"
-        configmaps: "10"
 ---
 apiVersion: "k8us.k8s.io/v1"
 kind: PolicyNode
