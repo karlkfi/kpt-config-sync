@@ -28,6 +28,7 @@ import (
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/google/stolos/pkg/util/policynode"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -143,31 +144,45 @@ func (s *Syncer) runInformer() {
 			}
 		}
 	}
+	glog.Infof("Caches synced.")
 
 	go s.runResync(lister)
 }
 
 func (s *Syncer) runResync(lister policynodelister_v1.PolicyNodeLister) {
 	ticker := time.NewTicker(*flagResyncPeriod)
+	err := s.resync(lister)
+	if err != nil {
+		s.onError(err)
+		return
+	}
 	for {
 		select {
 		case <-ticker.C:
-			policyNodes, err := lister.List(labels.Everything())
+			err := s.resync(lister)
 			if err != nil {
 				s.onError(err)
 				return
-			}
-			for _, syncerInstance := range s.syncers {
-				err := syncerInstance.PeriodicResync(policyNodes)
-				if err != nil {
-					glog.V(1).Infof("Got error in periodic resync: %#v", err)
-				}
 			}
 		case <-s.stopChan:
 			glog.V(1).Infof("Got stop channel close, exiting.")
 			return
 		}
 	}
+}
+
+func (s *Syncer) resync(lister policynodelister_v1.PolicyNodeLister) error {
+	policyNodes, err := lister.List(labels.Everything())
+	if err != nil {
+		return errors.Wrapf(err, "Failed to list policy nodes")
+	}
+	for _, syncerInstance := range s.syncers {
+		err := syncerInstance.PeriodicResync(policyNodes)
+		if err != nil {
+			return errors.Wrapf(err, "Failed to run periodic resync")
+		}
+	}
+	return nil
 }
 
 // onAdd handles add events from the informer and de-duplicates the initial creates after the first
