@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
         name: authorizer
+        namespace: stolos-system
 spec:
         selector:
                 app: authz
@@ -15,9 +16,11 @@ apiVersion: v1
 kind: Pod
 metadata:
         name: authorizer
+        namespace: stolos-system
         labels:
                 app: authz
 spec:
+        serviceAccountName: stolos-service
         containers:
         - name: authorizer
           image: authorizer:test
