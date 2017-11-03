@@ -60,13 +60,13 @@ func (s *NamespaceSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *poli
 }
 
 func (s *NamespaceSyncer) onSet(node *policyhierarchy_v1.PolicyNode) error {
-	s.queue.Add(actions.NewNamespaceCreateAction(s.client.Kubernetes(), node.Name, s.namespaceLister))
+	s.queue.Add(actions.NewNamespaceCreateAction(node.Name, s.client.Kubernetes(), s.namespaceLister))
 	return nil
 }
 
 // OnDelete implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) OnDelete(node *policyhierarchy_v1.PolicyNode) error {
-	s.queue.Add(actions.NewNamespaceDeleteAction(s.client.Kubernetes(), node.Name, s.namespaceLister))
+	s.queue.Add(actions.NewNamespaceDeleteAction(node.Name, s.client.Kubernetes(), s.namespaceLister))
 	return nil
 }
 
@@ -115,7 +115,7 @@ func (s *NamespaceSyncer) computeActions(
 	needsDelete.ForEach(func(ns string) {
 		glog.Infof("Adding delete operation for %s", ns)
 		namespaceActions = append(namespaceActions, actions.NewNamespaceDeleteAction(
-			s.client.Kubernetes(), ns, s.namespaceLister))
+			ns, s.client.Kubernetes(), s.namespaceLister))
 	})
 
 	return namespaceActions

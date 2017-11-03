@@ -57,8 +57,8 @@ var _ Interface = &NamespaceDeleteAction{}
 
 // NewNamespaceDeleteAction creates a new NamespaceDeleteAction for the given namespace
 func NewNamespaceDeleteAction(
-	kubernetesInterface kubernetes.Interface,
 	namespace string,
+	kubernetesInterface kubernetes.Interface,
 	namespaceLister listers_core_v1.NamespaceLister) *NamespaceDeleteAction {
 	return &NamespaceDeleteAction{
 		namespaceActionBase: namespaceActionBase{
@@ -97,8 +97,8 @@ var _ Interface = &NamespaceCreateAction{}
 
 // NewNamespaceCreateAction creates a new NamespaceCreateAction for the given namespace
 func NewNamespaceCreateAction(
-	kubernetesInterface kubernetes.Interface,
 	namespace string,
+	kubernetesInterface kubernetes.Interface,
 	namespaceLister listers_core_v1.NamespaceLister) *NamespaceCreateAction {
 	return &NamespaceCreateAction{
 		namespaceActionBase: namespaceActionBase{
@@ -130,7 +130,7 @@ func (n *NamespaceCreateAction) Execute() error {
 
 	if err != nil {
 		if api_errors.IsAlreadyExists(err) {
-			glog.Infof("Namespace %s already exists in phase %s", createdNamespace.Status.Phase)
+			glog.Infof("Namespace %s already exists")
 			return nil
 		}
 		glog.Infof("Failed to create namespace %s: %v", n.namespace, err)

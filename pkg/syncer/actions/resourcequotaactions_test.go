@@ -30,7 +30,6 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	// policyhierarchy_fake "github.com/google/stolos/pkg/client/policyhierarchy/fake"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 )
 
@@ -146,10 +145,6 @@ var resourceQuotaTestCases = []ResourceQuotaTestCase{
 }
 
 func TestResourceQuotaActions(t *testing.T) {
-	// cases
-	// not found -> create
-	// found -> no update
-	// found -> update
 	client := fake.NewClient()
 
 	// Setup, each testcase gets it's own namespace
@@ -194,13 +189,20 @@ func TestResourceQuotaActions(t *testing.T) {
 				t.Errorf("Should have gotten not found error.")
 			}
 		} else {
-			// compare labels
-			// compare spec
-			if !reflect.DeepEqual(testcase.SpecifiedState, actualQuota.Spec) {
-				t.Errorf("Specified state does not match actual state")
-			}
-			if !reflect.DeepEqual(testcase.SpecifiedLabels, actualQuota.ObjectMeta.Labels) {
-				t.Errorf("Specified labels do not match actual labels")
+			if err != nil {
+				if api_errors.IsNotFound(err) {
+					t.Errorf("Expected quota object to exist at end of testcase")
+				}
+				t.Errorf("Unexpected error during testcase")
+			} else {
+				// compare labels
+				if !reflect.DeepEqual(testcase.SpecifiedState, actualQuota.Spec) {
+					t.Errorf("Specified state does not match actual state")
+				}
+				// compare spec
+				if !reflect.DeepEqual(testcase.SpecifiedLabels, actualQuota.ObjectMeta.Labels) {
+					t.Errorf("Specified labels do not match actual labels")
+				}
 			}
 		}
 	}
