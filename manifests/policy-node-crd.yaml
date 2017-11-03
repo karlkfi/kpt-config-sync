@@ -16,4 +16,5 @@ spec:
     plural: policynodes
     singular: policynode
     kind: PolicyNode
-
+    shortNames:
+    - pn
