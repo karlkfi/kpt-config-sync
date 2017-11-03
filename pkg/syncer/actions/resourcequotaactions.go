@@ -109,7 +109,8 @@ func (n *resourceQuotaActionBase) reallyUpdate(current *core_v1.ResourceQuota) e
 				Labels:          n.labels,
 				ResourceVersion: current.ResourceVersion,
 			},
-			Spec: n.resourceQuotaSpec,
+			Spec:   n.resourceQuotaSpec,
+			Status: current.Status,
 		})
 	if err != nil {
 		return errors.Wrapf(err, "Failed to update quota for namespace %s", n.namespace)

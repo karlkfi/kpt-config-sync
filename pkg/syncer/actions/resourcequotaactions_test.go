@@ -48,6 +48,9 @@ type ResourceQuotaTestCase struct {
 	SpecifiedState  core_v1.ResourceQuotaSpec
 	ExpectNotFound  bool
 	ActionCtor      ResourceQuotaTestActionCtor
+
+	// For testing that status is preserved on update.
+	Status core_v1.ResourceQuotaStatus
 }
 
 // Namespace creates the unique namespace for the test based off of test index in the testcase slice
@@ -58,13 +61,21 @@ func (r *ResourceQuotaTestCase) Namespace(idx int) string {
 // NewResourceQuota creates a resoruce quota for the testcase in a namespace based off the test index
 // so that each testcase is isolated to a unique namespace in the fake client.
 func (r *ResourceQuotaTestCase) NewResourceQuota(idx int) *core_v1.ResourceQuota {
+	r.Status = core_v1.ResourceQuotaStatus{
+		Hard: r.InitialState.Hard,
+		Used: core_v1.ResourceList{
+			"pods": *resource.NewQuantity(int64(idx+5), resource.DecimalSI),
+		},
+	}
+
 	return &core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:      resource_quota.ResourceQuotaObjectName,
 			Namespace: r.Namespace(idx),
 			Labels:    r.InitialLabels,
 		},
-		Spec: r.InitialState,
+		Spec:   r.InitialState,
+		Status: r.Status,
 	}
 }
 
@@ -97,15 +108,15 @@ var zeroPods = newQuotaspec(0)
 var onePod = newQuotaspec(1)
 var twoPods = newQuotaspec(2)
 
-var resourceQuotaTestCases = []ResourceQuotaTestCase{
-	ResourceQuotaTestCase{
+var resourceQuotaTestCases = []*ResourceQuotaTestCase{
+	&ResourceQuotaTestCase{
 		Name:            "Create during upsert",
 		InitialNotFound: true,
 		SpecifiedLabels: resource_quota.StolosQuotaLabels,
 		SpecifiedState:  onePod,
 		ActionCtor:      upsertQuotaTestAction,
 	},
-	ResourceQuotaTestCase{
+	&ResourceQuotaTestCase{
 		Name:            "Update spec during upsert",
 		InitialLabels:   resource_quota.StolosQuotaLabels,
 		InitialState:    onePod,
@@ -113,7 +124,7 @@ var resourceQuotaTestCases = []ResourceQuotaTestCase{
 		SpecifiedState:  twoPods,
 		ActionCtor:      upsertQuotaTestAction,
 	},
-	ResourceQuotaTestCase{
+	&ResourceQuotaTestCase{
 		Name:            "Update labels during upsert",
 		InitialLabels:   resource_quota.PolicySpaceQuotaLabels,
 		InitialState:    zeroPods,
@@ -121,7 +132,7 @@ var resourceQuotaTestCases = []ResourceQuotaTestCase{
 		SpecifiedState:  zeroPods,
 		ActionCtor:      upsertQuotaTestAction,
 	},
-	ResourceQuotaTestCase{
+	&ResourceQuotaTestCase{
 		Name:            "No update during upsert",
 		InitialLabels:   resource_quota.PolicySpaceQuotaLabels,
 		InitialState:    zeroPods,
@@ -129,13 +140,13 @@ var resourceQuotaTestCases = []ResourceQuotaTestCase{
 		SpecifiedState:  zeroPods,
 		ActionCtor:      upsertQuotaTestAction,
 	},
-	ResourceQuotaTestCase{
+	&ResourceQuotaTestCase{
 		Name:            "Delete non existing item",
 		InitialNotFound: true,
 		ExpectNotFound:  true,
 		ActionCtor:      deleteQuotaTestAction,
 	},
-	ResourceQuotaTestCase{
+	&ResourceQuotaTestCase{
 		Name:           "Delete existing item",
 		InitialLabels:  resource_quota.StolosQuotaLabels,
 		InitialState:   twoPods,
@@ -202,6 +213,12 @@ func TestResourceQuotaActions(t *testing.T) {
 				// compare spec
 				if !reflect.DeepEqual(testcase.SpecifiedLabels, actualQuota.ObjectMeta.Labels) {
 					t.Errorf("Specified labels do not match actual labels")
+				}
+				if !testcase.InitialNotFound {
+					// compare status
+					if !reflect.DeepEqual(testcase.Status, actualQuota.Status) {
+						t.Errorf("%d) Status was not preserved during update! %#v != %#v", idx, testcase.Status, actualQuota.Status)
+					}
 				}
 			}
 		}
