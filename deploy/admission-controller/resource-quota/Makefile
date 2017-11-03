@@ -14,7 +14,7 @@
 
 .PHONY: test build certs deploy restart register
 
-GCP_PROJECT ?= mdruskin-gketest1
+GCP_PROJECT ?= $(shell gcloud config get-value project)
 DOCKER_ENV ?= $(shell minikube docker-env)
 
 TAG := experimental
