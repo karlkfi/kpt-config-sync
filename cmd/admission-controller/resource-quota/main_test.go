@@ -17,14 +17,14 @@ package main
 
 import (
 	"bytes"
+	"github.com/google/stolos/pkg/admission-controller"
+	"github.com/google/stolos/pkg/testing/fakeinformers"
 	"io/ioutil"
+	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
-	"github.com/google/stolos/pkg/admission-controller"
-	"github.com/google/stolos/pkg/testing/fakeinformers"
 )
 
 func TestRequest(t *testing.T) {
@@ -58,7 +58,7 @@ func TestRequest(t *testing.T) {
 		t.Errorf("json.Unmarshal: %+v: %+v", ts.URL, err)
 	}
 
-	if (!respStruct.Status.Allowed) {
+	if !respStruct.Status.Allowed {
 		t.Errorf("Unexpected response status %v", respStruct)
 	}
 }

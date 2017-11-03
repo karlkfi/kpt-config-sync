@@ -3,13 +3,13 @@ package admission_controller
 import (
 	"testing"
 
+	pn_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/testing/fakeinformers"
 	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
+	core_v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/api/resource"
-	core_v1 "k8s.io/api/core/v1"
-	"github.com/google/stolos/pkg/testing/fakeinformers"
-	pn_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 )
 
 func TestAuthorize(t *testing.T) {

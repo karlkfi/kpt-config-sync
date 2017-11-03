@@ -24,18 +24,18 @@ import (
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 
-	"k8s.io/apiserver/pkg/admission"
+	"github.com/golang/glog"
+	"github.com/google/stolos/pkg/resource-quota"
 	core_v1 "k8s.io/api/core/v1"
+	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/kubernetes/pkg/quota"
 	quotainstall "k8s.io/kubernetes/pkg/quota/install"
-	"github.com/google/stolos/pkg/resource-quota"
-	"github.com/golang/glog"
 )
 
 type ResourceQuotaAdmitter struct {
-	policyNodeInformer informerspolicynodev1.PolicyNodeInformer
+	policyNodeInformer    informerspolicynodev1.PolicyNodeInformer
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer
-	quotaRegistry quota.Registry
+	quotaRegistry         quota.Registry
 }
 
 var _ Admitter = (*ResourceQuotaAdmitter)(nil)
@@ -45,14 +45,14 @@ func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNod
 	// Nil, because we don't need to do any watches, we will only be doing evaluation checks.
 	quotaRegistry := quotainstall.NewRegistry(nil, nil)
 	return &ResourceQuotaAdmitter{
-		policyNodeInformer: policyNodeInformer,
+		policyNodeInformer:    policyNodeInformer,
 		resourceQuotaInformer: resourceQuotaInformer,
-		quotaRegistry: quotaRegistry,
+		quotaRegistry:         quotaRegistry,
 	}
 }
 
 // Decides whether to admit a request
-func (r* ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) *admissionv1alpha1.AdmissionReviewStatus {
+func (r *ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) *admissionv1alpha1.AdmissionReviewStatus {
 	cache, err := resource_quota.NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
 	if err != nil {
 		return internalErrorDeny(err)
@@ -85,7 +85,7 @@ func (r* ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) 
 				Allowed: false,
 				Result: &metav1.Status{
 					Message: admitError.Error(),
-					Reason: metav1.StatusReason(metav1.StatusReasonForbidden),
+					Reason:  metav1.StatusReason(metav1.StatusReasonForbidden),
 				},
 			}
 		}
@@ -100,7 +100,7 @@ func internalErrorDeny(err error) *admissionv1alpha1.AdmissionReviewStatus {
 		Allowed: false,
 		Result: &metav1.Status{
 			Message: err.Error(),
-			Reason: metav1.StatusReason(metav1.StatusReasonInternalError),
+			Reason:  metav1.StatusReason(metav1.StatusReasonInternalError),
 		},
 	}
 }

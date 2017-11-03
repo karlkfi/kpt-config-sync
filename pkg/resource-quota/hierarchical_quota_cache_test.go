@@ -1,15 +1,15 @@
 package resource_quota
 
 import (
-	"testing"
 	"strings"
+	"testing"
 
 	pn_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"github.com/google/stolos/pkg/testing/fakeinformers"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type CacheTestCase struct {
@@ -25,14 +25,14 @@ func TestCanAdmit(t *testing.T) {
 		makePolicyNode("kittiesandponies", "", core_v1.ResourceList{
 			"hay":  resource.MustParse("10"),
 			"milk": resource.MustParse("5"),
-		}, ),
+		}),
 		makePolicyNode("kitties", "kittiesandponies", core_v1.ResourceList{
 			"hay": resource.MustParse("5"),
-		}, ),
+		}),
 		makePolicyNode("ponies", "kittiesandponies", core_v1.ResourceList{
 			"hay":  resource.MustParse("15"),
 			"milk": resource.MustParse("5"),
-		}, ),
+		}),
 	}
 
 	// Starting usages
@@ -71,7 +71,7 @@ func TestCanAdmit(t *testing.T) {
 	}
 
 	for i, tt := range []CacheTestCase{
-		{// Basic admit
+		{ // Basic admit
 			namespace: "kitties",
 			newUsageList: core_v1.ResourceList{
 				"hay":  resource.MustParse("1"),
@@ -79,51 +79,51 @@ func TestCanAdmit(t *testing.T) {
 			},
 			canAdmitExpected: true,
 		},
-		{// Admit no quota set
+		{ // Admit no quota set
 			namespace: "kitties",
 			newUsageList: core_v1.ResourceList{
 				"bamboo": resource.MustParse("1"),
 			},
 			canAdmitExpected: true,
 		},
-		{// violate at leaf
+		{ // violate at leaf
 			namespace: "kitties",
 			newUsageList: core_v1.ResourceList{
 				"hay": resource.MustParse("7"),
 			},
-			canAdmitExpected: false,
+			canAdmitExpected:       false,
 			expectedErrorSubstring: "namespace kitties, requested: hay",
 		},
-		{// violate at top (no limit at leaf)
+		{ // violate at top (no limit at leaf)
 			namespace: "kitties",
 			newUsageList: core_v1.ResourceList{
 				"milk": resource.MustParse("7"),
 			},
-			canAdmitExpected: false,
+			canAdmitExpected:       false,
 			expectedErrorSubstring: "namespace kittiesandponies, requested: milk",
 		},
-		{// violate at top (higher limit at leaf)
+		{ // violate at top (higher limit at leaf)
 			namespace: "ponies",
 			newUsageList: core_v1.ResourceList{
 				"hay": resource.MustParse("12"),
 			},
-			canAdmitExpected: false,
+			canAdmitExpected:       false,
 			expectedErrorSubstring: "namespace kittiesandponies, requested: hay",
 		},
-		{// violate counting starting usage at leaf
+		{ // violate counting starting usage at leaf
 			namespace: "ponies",
 			newUsageList: core_v1.ResourceList{
 				"milk": resource.MustParse("4"),
 			},
-			canAdmitExpected: false,
+			canAdmitExpected:       false,
 			expectedErrorSubstring: "namespace ponies, requested: milk",
 		},
-		{// violate counting starting usage at top (current = 2 + 2, limit at top = 10)
+		{ // violate counting starting usage at top (current = 2 + 2, limit at top = 10)
 			namespace: "ponies",
 			newUsageList: core_v1.ResourceList{
 				"hay": resource.MustParse("7"),
 			},
-			canAdmitExpected: false,
+			canAdmitExpected:       false,
 			expectedErrorSubstring: "namespace kittiesandponies, requested: hay",
 		},
 	} {

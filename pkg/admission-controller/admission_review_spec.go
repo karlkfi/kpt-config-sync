@@ -17,11 +17,11 @@ limitations under the License.
 // for the admission review spec struct.
 package admission_controller
 
-import(
+import (
 	"k8s.io/api/admission/v1alpha1"
-	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
@@ -29,49 +29,49 @@ type AdmissionReviewSpec v1alpha1.AdmissionReviewSpec
 
 var _ admission.Attributes = (*AdmissionReviewSpec)(nil)
 
-func (spec* AdmissionReviewSpec) GetName() string {
+func (spec *AdmissionReviewSpec) GetName() string {
 	return spec.Name
 }
 
-func (spec* AdmissionReviewSpec) GetNamespace() string {
+func (spec *AdmissionReviewSpec) GetNamespace() string {
 	return spec.Namespace
 }
 
-func (spec* AdmissionReviewSpec) GetResource() schema.GroupVersionResource {
+func (spec *AdmissionReviewSpec) GetResource() schema.GroupVersionResource {
 	return schema.GroupVersionResource(spec.Resource)
 }
 
-func (spec* AdmissionReviewSpec) GetSubresource() string {
+func (spec *AdmissionReviewSpec) GetSubresource() string {
 	return spec.SubResource
 }
 
-func (spec* AdmissionReviewSpec) GetOperation() admission.Operation {
+func (spec *AdmissionReviewSpec) GetOperation() admission.Operation {
 	return admission.Operation(spec.Operation)
 }
 
-func (spec* AdmissionReviewSpec) GetObject() runtime.Object {
+func (spec *AdmissionReviewSpec) GetObject() runtime.Object {
 	return spec.Object.Object
 }
 
-func (spec* AdmissionReviewSpec) GetOldObject() runtime.Object {
+func (spec *AdmissionReviewSpec) GetOldObject() runtime.Object {
 	return spec.OldObject.Object
 }
 
-func (spec* AdmissionReviewSpec) GetKind() schema.GroupVersionKind {
+func (spec *AdmissionReviewSpec) GetKind() schema.GroupVersionKind {
 	return schema.GroupVersionKind(spec.Kind)
 }
 
-func (spec* AdmissionReviewSpec) GetUserInfo() user.Info {
+func (spec *AdmissionReviewSpec) GetUserInfo() user.Info {
 
 	extra := map[string][]string{}
 
-	for key,val := range spec.UserInfo.Extra {
+	for key, val := range spec.UserInfo.Extra {
 		extra[key] = val
 	}
-	return &user.DefaultInfo {
-		Name: spec.UserInfo.Username,
-		UID: spec.UserInfo.UID,
+	return &user.DefaultInfo{
+		Name:   spec.UserInfo.Username,
+		UID:    spec.UserInfo.UID,
 		Groups: spec.UserInfo.Groups,
-		Extra: extra,
+		Extra:  extra,
 	}
 }

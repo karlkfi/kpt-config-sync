@@ -8,10 +8,10 @@ import (
 	pn_v1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
 	pn_fake "github.com/google/stolos/pkg/client/policyhierarchy/fake"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/cache"
-	core_fake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/informers"
 	core_v1 "k8s.io/client-go/informers/core/v1"
+	core_fake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/cache"
 )
 
 // NewTestInformer creates a fake SharedIndexInformer, injecting 'content'
@@ -30,7 +30,6 @@ func NewPolicyNodeInformer(content ...runtime.Object) pn_v1.PolicyNodeInformer {
 	}
 	return informer
 }
-
 
 // NewTestInformer creates a fake SharedIndexInformer, injecting 'content'
 // into the backing store.  Later calls on the client will pretend as if those

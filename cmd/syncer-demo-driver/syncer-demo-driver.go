@@ -175,8 +175,8 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 								},
 							},
 						},
-						RoleBindings:   []rbac_v1.RoleBinding{},
-						ResourceQuota: 	core_v1.ResourceQuotaSpec{},
+						RoleBindings:  []rbac_v1.RoleBinding{},
+						ResourceQuota: core_v1.ResourceQuotaSpec{},
 					},
 				}
 				policyNode := policynode.WrapPolicyNodeSpec(name, nodeSpec)

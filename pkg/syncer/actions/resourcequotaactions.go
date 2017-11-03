@@ -17,12 +17,12 @@ limitations under the License.
 package actions
 
 import (
+	"fmt"
 	"github.com/golang/glog"
+	"github.com/google/stolos/pkg/resource-quota"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"github.com/google/stolos/pkg/resource-quota"
-	"fmt"
 )
 
 // ResourceQuotaAction represents a CRUD action on a resource quota spec

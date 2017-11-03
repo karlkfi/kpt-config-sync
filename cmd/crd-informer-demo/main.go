@@ -23,11 +23,11 @@ import (
 	"time"
 
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/client/informers/externalversions"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/client/restconfig"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/cache"
-	"github.com/google/stolos/pkg/client/informers/externalversions"
 )
 
 func main() {

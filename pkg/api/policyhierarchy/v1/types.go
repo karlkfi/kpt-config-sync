@@ -60,9 +60,9 @@ type PolicyNodeSpec struct {
 // Policies contains all the defined policies that are linked to a particular
 // PolicyNode.
 type Policies struct {
-	Roles          []rbac_v1.Role              `json:"roles"`
-	RoleBindings   []rbac_v1.RoleBinding       `json:"roleBindings"`
-	ResourceQuota  core_v1.ResourceQuotaSpec   `json:"resourceQuota"`
+	Roles         []rbac_v1.Role            `json:"roles"`
+	RoleBindings  []rbac_v1.RoleBinding     `json:"roleBindings"`
+	ResourceQuota core_v1.ResourceQuotaSpec `json:"resourceQuota"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

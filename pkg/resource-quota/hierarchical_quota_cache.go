@@ -16,14 +16,14 @@ limitations under the License.
 package resource_quota
 
 import (
-	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
-	informerscorev1 "k8s.io/client-go/informers/core/v1"
-	core_v1 "k8s.io/api/core/v1"
+	"github.com/golang/glog"
 	pn_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
+	"github.com/pkg/errors"
+	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/labels"
-	"github.com/pkg/errors"
-	"github.com/golang/glog"
+	informerscorev1 "k8s.io/client-go/informers/core/v1"
 )
 
 // A cache of package quotas that keeps usage and limits in memory for the whole namespace tree.
@@ -41,8 +41,8 @@ type HierarchicalQuotaCache struct {
 
 func NewHierarchicalQuotaCache(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) (*HierarchicalQuotaCache, error) {
-	cache := &HierarchicalQuotaCache {
-		policyNodeInformer: policyNodeInformer,
+	cache := &HierarchicalQuotaCache{
+		policyNodeInformer:    policyNodeInformer,
 		resourceQuotaInformer: resourceQuotaInformer,
 	}
 	err := cache.initCache()
