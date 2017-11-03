@@ -18,6 +18,7 @@ limitations under the License.
 package admission_controller
 
 import (
+	"github.com/golang/glog"
 	"k8s.io/api/admission/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -74,4 +75,38 @@ func (spec *AdmissionReviewSpec) GetUserInfo() user.Info {
 		Groups: spec.UserInfo.Groups,
 		Extra:  extra,
 	}
+}
+
+// For convenience, unpack the object and oldObject raw bytes into a runtimeobject (so that this doesn't
+// need to happen every time we call GetObject() above.) This is a utility method that should be performed
+// before casting the spec to AdmissionReviewSpec.
+//
+// This unpack may currently not work in many cases due to a bug in Kubernetes that passes in the wrong version of
+// the object (internal) in the raw extension.
+func unpackRawSpec(decoder runtime.Decoder, spec v1alpha1.AdmissionReviewSpec) v1alpha1.AdmissionReviewSpec {
+	if spec.Object.Object != nil {
+		// Already unpacked
+		return spec
+	}
+	if len(spec.Object.Raw) > 0 {
+		spec.Object.Object = unpackRawBytes(decoder, schema.GroupVersionKind(spec.Kind), spec.Object.Raw)
+	}
+
+	if len(spec.OldObject.Raw) > 0 {
+		spec.OldObject.Object = unpackRawBytes(decoder, schema.GroupVersionKind(spec.Kind), spec.OldObject.Raw)
+	}
+
+	return spec
+}
+
+// Helper method for unpackRawSpec
+func unpackRawBytes(decoder runtime.Decoder, gvk schema.GroupVersionKind, raw []byte) runtime.Object {
+	obj, _, err := decoder.Decode(raw, &gvk, nil)
+
+	if err != nil {
+		glog.V(7).Infof("Error un-marshalling review object, continuing: %s", err)
+		return nil
+	}
+
+	return obj
 }

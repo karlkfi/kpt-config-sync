@@ -24,10 +24,12 @@ import (
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 
-	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/resource-quota"
 	core_v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/quota"
 	quotainstall "k8s.io/kubernetes/pkg/quota/install"
 )
@@ -36,6 +38,7 @@ type ResourceQuotaAdmitter struct {
 	policyNodeInformer    informerspolicynodev1.PolicyNodeInformer
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer
 	quotaRegistry         quota.Registry
+	decoder               runtime.Decoder
 }
 
 var _ Admitter = (*ResourceQuotaAdmitter)(nil)
@@ -44,10 +47,18 @@ func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNod
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) Admitter {
 	// Nil, because we don't need to do any watches, we will only be doing evaluation checks.
 	quotaRegistry := quotainstall.NewRegistry(nil, nil)
+
+	// Decoder. Right now, only v1 and internal types are needed as they are the only ones being monitored
+	scheme := runtime.NewScheme()
+	core_v1.AddToScheme(scheme)
+	api.AddToScheme(scheme)
+	decoder := serializer.NewCodecFactory(scheme).UniversalDecoder()
+
 	return &ResourceQuotaAdmitter{
 		policyNodeInformer:    policyNodeInformer,
 		resourceQuotaInformer: resourceQuotaInformer,
 		quotaRegistry:         quotaRegistry,
+		decoder:               decoder,
 	}
 }
 
@@ -57,20 +68,15 @@ func (r *ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) 
 	if err != nil {
 		return internalErrorDeny(err)
 	}
-
-	reviewSpec := AdmissionReviewSpec(review.Spec)
+	unpackedSpec := unpackRawSpec(r.decoder, review.Spec)
+	reviewSpec := AdmissionReviewSpec(unpackedSpec)
 	attributes := admission.Attributes(&reviewSpec)
 	evaluator := r.quotaRegistry.Evaluators()[attributes.GetKind().GroupKind()]
 
 	if evaluator != nil && evaluator.Handles(attributes) {
 		newUsage, err := evaluator.Usage(attributes.GetObject())
 		if err != nil {
-			// Until b/68666077 is done, this can happen for legit objects. So not throwing error right now.
-			// return internalErrorDeny(err)
-			glog.Infof("Got error calculating usage due to %s but ignoring", err)
-			return &admissionv1alpha1.AdmissionReviewStatus{
-				Allowed: true,
-			}
+			return internalErrorDeny(err)
 		}
 
 		v1NewUsage := core_v1.ResourceList{}
