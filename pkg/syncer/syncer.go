@@ -41,6 +41,7 @@ var flagResyncPeriod = flag.Duration(
 var dryRun = flag.Bool(
 	"dry_run", false, "Don't perform actions, just log what would have happened")
 
+// WorkerNumRetries is the number of times an action will be retried in the work queue.
 const WorkerNumRetries = 3
 
 // ErrorCallback is a callback which is called if Syncer encounters an error during execution
@@ -75,6 +76,8 @@ func New(client meta.Interface) *Syncer {
 	policyHierarchyInformerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), *flagResyncPeriod)
 	kubernetesCoreV1 := kubernetesInformerFactory.Core().V1()
+	rbacV1 := kubernetesInformerFactory.Rbac().V1()
+	policyHierarchyV1 := policyHierarchyInformerFactory.K8us().V1()
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	return &Syncer{
@@ -83,8 +86,9 @@ func New(client meta.Interface) *Syncer {
 		syncers: []PolicyNodeSyncerInterface{
 			// Namespace syncer must be first since quota depends on it
 			NewNamespaceSyncer(client, kubernetesCoreV1.Namespaces().Lister(), queue),
-			NewQuotaSyncer(client, kubernetesCoreV1.ResourceQuotas(),
-				policyHierarchyInformerFactory.K8us().V1().PolicyNodes(), queue),
+			NewQuotaSyncer(client, kubernetesCoreV1.ResourceQuotas(), policyHierarchyV1.PolicyNodes(), queue),
+			NewRoleBindingSyncer(client, rbacV1.RoleBindings().Lister(), queue),
+			NewRoleSyncer(client, rbacV1.Roles().Lister(), queue),
 		},
 		kubernetesInformerFactory:      kubernetesInformerFactory,
 		policyHierarchyInformerFactory: policyHierarchyInformerFactory,
