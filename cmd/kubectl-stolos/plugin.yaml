@@ -1,0 +1,20 @@
+name: "stolos"
+shortDesc: "Stolos Stuff"
+longDesc: "Stolos is a thing that manages other things and also prints this message."
+example: "stolos nope nope nope"
+command: "./kubectl-stolos"
+flags:
+  - name: "demo"
+    shorthand: "d"
+    desc: "This is a demo flag with empty default value"
+    defValue: ""
+  - name: "yep"
+    shorthand: "o" # n, s, v are taken =(
+    desc: "This is a demo flag with a default value"
+    defValue: "nope"
+tree:
+  - name: "get"
+    shortDesc: "get stolos things"
+    longDesc: "Stolos is a thing that manages other things and also prints this message."
+    example: "stolos nope nope nope"
+    command: "./kubectl-stolos get"
