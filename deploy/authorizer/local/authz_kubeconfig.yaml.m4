@@ -3,8 +3,8 @@ kind: Config
 clusters:
   - name: authorizer
     cluster:
-      certificate-authority: /usr/local/google/home/fmil/.minikube/ca.crt
-      server: https://authorizer.default.svc/authorize
+      certificate-authority: WEBHOOK_CA_CERT
+      server: https://authorizer.stolos-system.svc/authorize
 users:
   - name: apiserver
     user:

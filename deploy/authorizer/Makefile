@@ -132,6 +132,10 @@ gce/%.yaml: gce/%.yaml.m4
 	   -DIMAGE_TAG=$(IMAGE_TAG) \
 	   -DGEN_NOTE="Generated file, do not edit." < $^ > $@
 
+local/authz_kubeconfig.yaml: local/authz_kubeconfig.yaml.m4
+	m4 -DWEBHOOK_CA_CERT=${HOME}/.minikube/ca.crt \
+	   -DGEN_NOTE="Generated file, do not edit." local/authz_kubeconfig.yaml.m4 > $@
+
 # Evaluates the image name used for the API server and the advertised IP
 # address.
 .PHONY: gce_env
@@ -161,7 +165,7 @@ gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.patched: \
 
 # Requires:
 # KUBERNETES_VERSION
-deploy-gce: gce/authorizer_deploy.yaml gce/authz.yaml server.key server.crt \
+deploy-gce: gce/authorizer_deploy.yaml gce/authz_kubeconfig.yaml server.key server.crt \
 	push-docker-gce \
 	gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.orig \
 	gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.patched \

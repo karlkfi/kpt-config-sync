@@ -13,7 +13,7 @@ ZONE=${ZONE:-us-central1-b}
 VERSION=${VERSION:-"1.8.0"}
 
 gcloud compute --project="${PROJECT_ID}" scp --zone="${ZONE}" \
-  authz.yaml \
+  authz_kubeconfig.yaml \
   install.sh \
   ${VERSION}/kube-apiserver.manifest.patched \
   ${VERSION}/kube-apiserver.manifest.orig \
