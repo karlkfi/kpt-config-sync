@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -30,22 +31,12 @@ import (
 	policynodemeta "github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/service"
 	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-)
-
-var (
-	listenAddr = flag.String(
-		"listen_hostport", ":8000", "The hostport to listen to.")
-	certFile = flag.String(
-		"cert_file", "server.crt", "The server certificate file.")
-	serverKeyFile = flag.String(
-		"server_key", "server.key", "The server private key file.")
-	handlerUrlPath = flag.String(
-		"handler_url_path", "/", "The default handler URL path.")
 )
 
 func serve(controller admission_controller.Admitter) service.HandlerFunc {
@@ -120,6 +111,27 @@ func setupResourceQuotaInformer(config *rest.Config) (informerscorev1.ResourceQu
 	return resourceQuotaInformer, nil
 }
 
+// getAPIServerCert retrieves the client certificate used to sign requests from api-server.
+//
+// See --proxy-client-cert-file flag description:
+// https://kubernetes.io/docs/admin/kube-apiserver
+func getAPIServerCert(config *rest.Config) ([]byte, error) {
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	c, err := clientset.CoreV1().ConfigMaps("kube-system").Get("extension-apiserver-authentication", metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get client auth from configmap: %v", err)
+	}
+
+	pem, ok := c.Data["requestheader-client-ca-file"]
+	if !ok {
+		return nil, fmt.Errorf("cannot find the ca.crt in the configmap, configMap.Data is %#v", c.Data)
+	}
+	return []byte(pem), nil
+}
+
 func main() {
 	flag.Parse()
 	glog.Infof("Hierarchical Resource Quota Admission Controller starting up")
@@ -127,6 +139,10 @@ func main() {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		glog.Fatal("Failed to load in cluster config: ", err)
+	}
+	clientCert, err := getAPIServerCert(config)
+	if err != nil {
+		glog.Fatal("Failed to get client cert: ", err)
 	}
 	policyNodeInformer, err := setupPolicyNodeInformer(config)
 	if err != nil {
@@ -142,12 +158,12 @@ func main() {
 	}
 
 	server := service.Server(
-		*listenAddr, *handlerUrlPath, ServeFunc(
+		ServeFunc(
 			admission_controller.NewResourceQuotaAdmitter(
-				policyNodeInformer, resourceQuotaInformer)))
+				policyNodeInformer, resourceQuotaInformer)), clientCert)
 
-	glog.Infof("Hierarchical Resource Quota Admission Controller listening at: %v", *listenAddr)
-	err = server.ListenAndServeTLS(*certFile, *serverKeyFile)
+	glog.Infof("Hierarchical Resource Quota Admission Controller starting")
+	err = server.ListenAndServeTLS("", "")
 	if err != nil {
 		glog.Fatal("ListenAndServe error: ", err)
 	}
