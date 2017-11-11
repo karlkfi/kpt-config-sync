@@ -130,7 +130,7 @@ func TestCanAdmit(t *testing.T) {
 	} {
 		err := cache.Admit(tt.namespace, tt.newUsageList)
 		if (err == nil) != tt.canAdmitExpected {
-			t.Errorf("Expected %s but got %s admitting test case [%d]", tt.canAdmitExpected, err == nil, i)
+			t.Errorf("Expected %t but got %t admitting test case [%d]", tt.canAdmitExpected, err == nil, i)
 		}
 		if err != nil && len(tt.expectedErrorSubstring) > 0 {
 			if !strings.Contains(err.Error(), tt.expectedErrorSubstring) {

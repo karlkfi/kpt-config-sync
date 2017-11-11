@@ -82,7 +82,7 @@ func main() {
 }
 
 func printAll(store cache.Store) {
-	fmt.Println("============= Listing all CRDs =========\n")
+	fmt.Println("============= Listing all CRDs =========")
 	all := store.List()
 	for _, each := range all {
 		crd := each.(*v1.PolicyNode)

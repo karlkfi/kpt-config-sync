@@ -36,6 +36,9 @@ export IMAGE_TAG ?= test
 # This is the list of binaries to build.
 export BINARIES := admission-controller authorizer syncer
 
+# List of dirs containing go code owned by Stolos
+export STOLOS_CODE_DIRS := pkg cmd
+
 # The GCP project that will be used to deploy all artifacts.
 export GCP_PROJECT := $(shell gcloud config get-value project)
 export GCP_ZONE := us-central1-b
@@ -84,6 +87,8 @@ undeploy-%:
 	Undeploys a specific binary.
 clean:
 	Clean everything up
+lint:
+	Runs all static analyzers such as gofmt and go vet.
 
 Environment Variables
 ----------------------
@@ -196,3 +201,8 @@ clean:
 clean-%:
 	make -C deploy $@
 
+# Run all static analyzers.
+.PHONY: lint
+lint:
+	gofmt -w $(STOLOS_CODE_DIRS)
+	go tool vet $(STOLOS_CODE_DIRS)
