@@ -38,7 +38,9 @@ var (
 		"notify_systemd", false,
 		"Whether to notify systemd that the daemon is ready to serve. "+
 			"Used if the service is ran from systemd, as opposed from a pod.")
-	motd = flag.String("motd", "", "This message is printed first.")
+	motd           = flag.String("motd", "", "This message is printed first.")
+	clientCertFile = flag.String(
+		"client_cert", "", "The client certificate file.")
 )
 
 // Responder writes a basic message out.
@@ -134,9 +136,13 @@ func main() {
 	)
 	factory.Start(nil)
 
+	var clientCert []byte
+	if *clientCertFile != "" {
+		clientCert = must(ioutil.ReadFile(*clientCertFile)).([]byte)
+	}
 	srv := service.Server(
 		ServeFunc(authorizer.New(
-			factory.K8us().V1().PolicyNodes().Informer())), nil)
+			factory.K8us().V1().PolicyNodes().Informer())), clientCert)
 	factory.Start(nil)
 
 	maybeNotifySystemd()
