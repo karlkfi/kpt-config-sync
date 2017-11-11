@@ -4,9 +4,22 @@ package service
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"flag"
 	"net/http"
 
 	"github.com/golang/glog"
+)
+
+var (
+	listenAddr = flag.String(
+		"listen_hostport", ":8000", "The hostport to listen to.")
+	serverCertFile = flag.String(
+		"server_cert", "server.crt", "The server certificate file.")
+	serverKeyFile = flag.String(
+		"server_key", "server.key", "The server private key file.")
+	handlerUrlPath = flag.String(
+		"handler_url_path", "/", "The default handler URL path.")
 )
 
 // HandleFunc is a shorthand for a HTTP handler function.
@@ -44,17 +57,17 @@ func WithStrictTransport(handler HandlerFunc) HandlerFunc {
 	}
 }
 
-// Server configures and runs a TLS-enabled server from passed-in flags using
-// the supplied handler.  Listenaddr is the address to listen to (e.g. "localhost:8080"),
-// handlerUrlPath is the URL path to respond to (e.g. "/handler").
-func Server(listenAddr, handlerUrlPath string, handler HandlerFunc) *http.Server {
-	mux := http.NewServeMux()
-	mux.HandleFunc(handlerUrlPath, handler)
-	// TODO(filmil): Check how to install a handler that returns 404 for
-	// everything else.
+func configTLS(clientCert []byte) *tls.Config {
+	glog.Infof("Using server certificate file: %v", *serverCertFile)
+	glog.Infof("Using server private key file: %v", *serverKeyFile)
+	sCert, err := tls.LoadX509KeyPair(*serverCertFile, *serverKeyFile)
+	if err != nil {
+		glog.Fatal(err)
+	}
 
-	cfg := &tls.Config{
-		// TODO(fmil): Figure out how to not skip verify.
+	config := tls.Config{
+		Certificates: []tls.Certificate{sCert},
+		// TODO(b/69073598): Figure out how to not skip verify.
 		InsecureSkipVerify: true,
 		MinVersion:         tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
@@ -69,10 +82,34 @@ func Server(listenAddr, handlerUrlPath string, handler HandlerFunc) *http.Server
 			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
 		},
 	}
+
+	if clientCert != nil {
+		clientCertPool := x509.NewCertPool()
+		clientCertPool.AppendCertsFromPEM(clientCert)
+		config.ClientCAs = clientCertPool
+		config.ClientAuth = tls.RequireAndVerifyClientCert
+	} else {
+		glog.Warning("Not verifying client cert")
+	}
+
+	return &config
+}
+
+// Server configures and a https server from passed-in flags using
+// the supplied handler. If clientCert is not nil,
+func Server(handler HandlerFunc, clientCert []byte) *http.Server {
+	glog.Infof("Server listening at: %v", *listenAddr)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(*handlerUrlPath, handler)
+
+	// TODO(filmil): Check how to install a handler that returns 404 for
+	// everything else.
+
 	return &http.Server{
-		Addr:      listenAddr,
+		Addr:      *listenAddr,
 		Handler:   mux,
-		TLSConfig: cfg,
+		TLSConfig: configTLS(clientCert),
 		TLSNextProto: make(map[string]func(
 			*http.Server, *tls.Conn, http.Handler), 0),
 	}

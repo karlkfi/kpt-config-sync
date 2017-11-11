@@ -24,5 +24,8 @@ COPY BINARY_NAME .
 ADD server.key .
 ADD server.crt .
 EXPOSE 8443
-ENTRYPOINT ["/BINARY_NAME", "--motd='TLS Logging (golang); GCE-compatible'"]
+ENTRYPOINT ["/BINARY_NAME", \
+            "--listen_hostport", ":8443", \
+            "--handler_url_path", "/authorize", \
+            "--motd", "TLS Logging (golang); GCE-compatible"]
 

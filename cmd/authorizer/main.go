@@ -34,14 +34,6 @@ import (
 )
 
 var (
-	listenAddr = flag.String(
-		"listen_hostport", ":8443", "The hostport to listen to.")
-	certFile = flag.String(
-		"cert_file", "server.crt", "The server certificate file.")
-	serverKeyFile = flag.String(
-		"server_key", "server.key", "The server private key file.")
-	handlerUrlPath = flag.String(
-		"handler_url_path", "/authorize", "The default handler URL path.")
 	notifySystemd = flag.Bool(
 		"notify_systemd", false,
 		"Whether to notify systemd that the daemon is ready to serve. "+
@@ -132,21 +124,9 @@ func maybeNotifySystemd() {
 	}
 }
 
-// listenAndServe blocks while serving the authorizer webhook.
-func listenAndServe(srv *http.Server) {
-	err := srv.ListenAndServeTLS(*certFile, *serverKeyFile)
-	if err != nil {
-		glog.Fatalf("ListenAndServe: %+v", err)
-	}
-}
-
 func main() {
 	flag.Parse()
 	glog.Infof("Motd: %v", *motd)
-	glog.Infof("Webhook authorizer listening at: %v", *listenAddr)
-	glog.Infof("Using server certificate file: %v", *certFile)
-	glog.Infof("Using server private key file: %v", *serverKeyFile)
-
 	config := must(rest.InClusterConfig()).(*rest.Config)
 	client := must(meta.NewForConfig(config)).(*meta.Client)
 	factory := externalversions.NewSharedInformerFactory(
@@ -154,11 +134,14 @@ func main() {
 	)
 	factory.Start(nil)
 
-	srv := service.Server(*listenAddr, *handlerUrlPath,
+	srv := service.Server(
 		ServeFunc(authorizer.New(
-			factory.K8us().V1().PolicyNodes().Informer())))
+			factory.K8us().V1().PolicyNodes().Informer())), nil)
 	factory.Start(nil)
 
 	maybeNotifySystemd()
-	listenAndServe(srv)
+	err := srv.ListenAndServeTLS("", "")
+	if err != nil {
+		glog.Fatalf("ListenAndServe: %+v", err)
+	}
 }
