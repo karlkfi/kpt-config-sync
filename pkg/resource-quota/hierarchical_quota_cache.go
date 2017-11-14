@@ -142,30 +142,3 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList core_v1.Re
 	}
 	return nil
 }
-
-// Collect all the limits (max for each) that are set above this leaf quota. This should not be used to make admission
-// decisions. See Quota Syncer for usage.
-func (c *HierarchicalQuotaCache) GetParentQuotaLimits(namespace string) core_v1.ResourceList {
-	parentQuotaLimits := core_v1.ResourceList{}
-
-	parentNamespace := c.parents[namespace]
-	for parentNamespace != pn_v1.NoParentNamespace {
-		parentSpec, exists := c.quotas[parentNamespace]
-		if !exists {
-			glog.Infof("Parent %s does not have a policyNode", parentNamespace)
-			break
-		}
-		for resource, limit := range parentSpec.Spec.Hard {
-			if limitSoFar, exists := parentQuotaLimits[resource]; exists {
-				if limitSoFar.Cmp(limit) < 0 {
-					parentQuotaLimits[resource] = limit
-				}
-			} else {
-				parentQuotaLimits[resource] = limit
-			}
-		}
-		parentNamespace = c.parents[parentNamespace]
-	}
-
-	return parentQuotaLimits
-}

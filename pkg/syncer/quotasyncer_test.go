@@ -22,7 +22,6 @@ import (
 
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta/fake"
-	"github.com/google/stolos/pkg/client/policynodewatcher"
 	"github.com/google/stolos/pkg/resource-quota"
 	"github.com/google/stolos/pkg/testing/fakeinformers"
 	core_v1 "k8s.io/api/core/v1"
@@ -33,21 +32,21 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-type ComputeResourceQuotaActionsTestCase struct {
-	policyNodeResourceQuotas map[string]core_v1.ResourceQuotaSpec // Input policy node resource quota
-	existingResourceQuotas   map[string]core_v1.ResourceQuotaSpec // Existing resource quotas in the cluster
-
-	expectedActions map[string]string // A map of namespaces to the expected resource quota operation
-}
-
 type GetResourceQuotaEventActionTestCase struct {
-	event             policynodewatcher.EventType
 	expectedOperation string
+	expectedQuota     core_v1.ResourceList
 	noOperation       bool
 	policyNode        policyhierarchy_v1.PolicyNode
 }
 
-func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
+var policyNodes = []runtime.Object{
+	makePolicyspaceNode("top", "", core_v1.ResourceList{"configmaps": resource.MustParse("10")}, true),
+	makePolicyspaceNode("mid", "top", core_v1.ResourceList{"memory": resource.MustParse("5")}, true),
+	makePolicyspaceNode("child1", "mid", core_v1.ResourceList{}, false),
+	makePolicyspaceNode("child2", "mid", core_v1.ResourceList{}, false),
+}
+
+func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 	namespaceName := "ns-name"
 	informer := fakeinformers.NewResourceQuotaInformer(&core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
@@ -55,7 +54,7 @@ func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
 		},
 		Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("42")}},
 	})
-	policyNodeInformer := fakeinformers.NewPolicyNodeInformer()
+	policyNodeInformer := fakeinformers.NewPolicyNodeInformer(policyNodes...)
 	syncer := NewQuotaSyncer(fake.NewClient(), informer, policyNodeInformer,
 		workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()))
 
@@ -89,10 +88,26 @@ func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
 		},
 	}
 
+	policyNodeWithGap := policyhierarchy_v1.PolicyNode{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: namespaceName,
+		},
+		Spec: policyhierarchy_v1.PolicyNodeSpec{
+			Policyspace: false,
+			Parent:      "mid",
+			Policies: policyhierarchy_v1.Policies{
+				ResourceQuota: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"memory": resource.MustParse("2")}}},
+		},
+	}
+	expectedGapQuotaLimits := core_v1.ResourceList{
+		"memory":     resource.MustParse("2"),
+		"configmaps": resource.MustParse("10")}
+
 	for idx, testcase := range []GetResourceQuotaEventActionTestCase{
-		{event: policynodewatcher.Modified, expectedOperation: "delete", policyNode: policyNodeWithoutRq},
-		{event: policynodewatcher.Modified, expectedOperation: "upsert", policyNode: policyNodeWithDifferentRq},
-		{event: policynodewatcher.Modified, expectedOperation: "upsert", policyNode: policyNodeWithSameRq},
+		{expectedOperation: "delete", policyNode: policyNodeWithoutRq},
+		{expectedOperation: "upsert", policyNode: policyNodeWithDifferentRq},
+		{expectedOperation: "upsert", policyNode: policyNodeWithSameRq},
+		{expectedOperation: "upsert", expectedQuota: expectedGapQuotaLimits, policyNode: policyNodeWithGap},
 	} {
 		action := syncer.getUpdateAction(&testcase.policyNode)
 		if testcase.noOperation {
@@ -111,6 +126,9 @@ func TestSyncerGetEventFesourceQuotaAction(t *testing.T) {
 		if action.Operation() != testcase.expectedOperation {
 			t.Errorf("Got unexpected operation %s for testcase %d, data %#v", action.Operation(), idx, testcase)
 		}
+		if testcase.expectedQuota != nil && !reflect.DeepEqual(action.ResourceQuotaSpec().Hard, testcase.expectedQuota) {
+			t.Errorf("Got unexpected resource quota %s for testcase %d, expected %v", action.ResourceQuotaSpec().Hard, idx, testcase.expectedQuota)
+		}
 	}
 }
 
@@ -128,13 +146,6 @@ func TestFillResourceQuotaLeafGaps(t *testing.T) {
 			},
 			Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"configmaps": resource.MustParse("3")}},
 		}}
-
-	policyNodes := []runtime.Object{
-		makePolicyspaceNode("top", "", core_v1.ResourceList{"configmaps": resource.MustParse("10")}, true),
-		makePolicyspaceNode("mid", "top", core_v1.ResourceList{"memory": resource.MustParse("5")}, true),
-		makePolicyspaceNode("child1", "mid", core_v1.ResourceList{}, false),
-		makePolicyspaceNode("child2", "mid", core_v1.ResourceList{}, false),
-	}
 
 	informer := fakeinformers.NewResourceQuotaInformer(quotas...)
 	policyNodeInformer := fakeinformers.NewPolicyNodeInformer(policyNodes...)

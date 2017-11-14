@@ -22,7 +22,7 @@ import (
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/resource-quota"
 	"github.com/google/stolos/pkg/syncer/actions"
-	"github.com/pkg/errors"
+	core_v1 "k8s.io/api/core/v1"
 	informers_corev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
@@ -77,18 +77,14 @@ func (s *QuotaSyncer) PeriodicResync(nodes []*policyhierarchy_v1.PolicyNode) err
 func (s *QuotaSyncer) fillResourceQuotaLeafGaps(nodes []*policyhierarchy_v1.PolicyNode) ([]actions.ResourceQuotaAction, error) {
 	resultActions := []actions.ResourceQuotaAction{}
 
-	cache, err := resource_quota.NewHierarchicalQuotaCache(s.policyNodeInformer, s.resourceQuotaInformer)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed constructing hierarchical quota cache during periodic resync")
-	}
-
 	for _, node := range nodes {
 		if node.Spec.Policyspace {
 			continue
 		}
 
 		// Get the limits that are set above this leaf quota in the policyspace hierarchy
-		parentQuotaLimits := cache.GetParentQuotaLimits(node.Name)
+		parentQuotaLimits := s.getHierarchicalQuotaLimits(*node)
+
 		quota, err := s.resourceQuotaInformer.Lister().ResourceQuotas(node.Name).Get(resource_quota.ResourceQuotaObjectName)
 		if err != nil {
 			glog.Infof("Error getting quota object for leaf namespace %s during resync, continuing", node.Name)
@@ -132,12 +128,13 @@ func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode)
 			s.resourceQuotaLister)
 	}
 
-	// TODO(mdruskin): have this evaluate hierarchical policy instead of this.
-	if 0 < len(policyNode.Spec.Policies.ResourceQuota.Hard) {
+	hierarchicalLimits := s.getHierarchicalQuotaLimits(*policyNode)
+
+	if len(hierarchicalLimits) > 0 {
 		return actions.NewResourceQuotaUpsertAction(
 			policyNode.Name,
 			resource_quota.PolicySpaceQuotaLabels,
-			policyNode.Spec.Policies.ResourceQuota,
+			core_v1.ResourceQuotaSpec{Hard: hierarchicalLimits},
 			s.client,
 			s.resourceQuotaLister)
 	}
@@ -145,6 +142,26 @@ func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode)
 		policyNode.Name,
 		s.client,
 		s.resourceQuotaLister)
+}
+
+// getHierarchicalQuotaLimits takes in the limits of a policyNode and adds in the limits of the node's ancestors if
+// the limits are not already present. This is needed to ensure that the native quota controllers monitor usage of
+// resources for quotas only defined in the parent nodes.
+func (q *QuotaSyncer) getHierarchicalQuotaLimits(policyNode policyhierarchy_v1.PolicyNode) core_v1.ResourceList {
+	var parentNamespace string
+	var err error
+	hierarchicalLimits := core_v1.ResourceList{}
+
+	for parentNode := &policyNode; err == nil; parentNode, err = q.policyNodeInformer.Lister().Get(parentNamespace) {
+		for resource, limit := range parentNode.Spec.Policies.ResourceQuota.Hard {
+			if _, exists := hierarchicalLimits[resource]; !exists {
+				hierarchicalLimits[resource] = limit
+			}
+		}
+		parentNamespace = parentNode.Spec.Parent
+	}
+
+	return hierarchicalLimits
 }
 
 // OnUpdate implements PolicyNodeSyncerInterface
