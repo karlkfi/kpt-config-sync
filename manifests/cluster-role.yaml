@@ -12,6 +12,12 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - externaladmissionhookconfigurations
+  verbs:
+  - '*'
+- apiGroups:
   - k8us.k8s.io
   resources:
   - policynodes

@@ -31,6 +31,7 @@ import (
 	policynodemeta "github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/service"
 	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
+	"k8s.io/api/admissionregistration/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
@@ -38,6 +39,11 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
+
+const externalAdmissionHookConfigName = "stolos-resource-quota"
+
+var caBundleFile = flag.String(
+	"ca_cert", "ca.crt", "Webhook server bundle cert used by api-server to authenticate the webhook server.")
 
 func serve(controller admission_controller.Admitter) service.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -115,11 +121,7 @@ func setupResourceQuotaInformer(config *rest.Config) (informerscorev1.ResourceQu
 //
 // See --proxy-client-cert-file flag description:
 // https://kubernetes.io/docs/admin/kube-apiserver
-func getAPIServerCert(config *rest.Config) ([]byte, error) {
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
+func getAPIServerCert(clientset *kubernetes.Clientset) ([]byte, error) {
 	c, err := clientset.CoreV1().ConfigMaps("kube-system").Get("extension-apiserver-authentication", metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get client auth from configmap: %v", err)
@@ -132,6 +134,54 @@ func getAPIServerCert(config *rest.Config) ([]byte, error) {
 	return []byte(pem), nil
 }
 
+// register the webhook admission controller with the kube-apiserver.
+func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
+	caCert, err := ioutil.ReadFile(caCertFile)
+	if err != nil {
+		return fmt.Errorf("Failed to read ca bundle file: %v", err)
+	}
+	client := clientset.AdmissionregistrationV1alpha1().ExternalAdmissionHookConfigurations()
+	_, err = client.Get(externalAdmissionHookConfigName, metav1.GetOptions{})
+	if err == nil {
+		glog.Infof("Deleting the existing ExternalAdmissionHookConfiguration")
+		if err2 := client.Delete(externalAdmissionHookConfigName, nil); err2 != nil {
+			return fmt.Errorf("Failed to delete ExternalAdmissionHookConfiguration: %v", err2)
+		}
+	}
+	failurePolicy := v1alpha1.Ignore
+	webhookConfig := &v1alpha1.ExternalAdmissionHookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: externalAdmissionHookConfigName,
+		},
+		ExternalAdmissionHooks: []v1alpha1.ExternalAdmissionHook{
+			{
+				Name: "resourcequota.k8us.k8s.io",
+				Rules: []v1alpha1.RuleWithOperations{{
+					Operations: []v1alpha1.OperationType{v1alpha1.Create, v1alpha1.Update},
+					Rule: v1alpha1.Rule{
+						APIGroups:   []string{"*"},
+						APIVersions: []string{"*"},
+						Resources:   []string{"*"},
+					},
+				}},
+				FailurePolicy: &failurePolicy,
+				ClientConfig: v1alpha1.AdmissionHookClientConfig{
+					Service: v1alpha1.ServiceReference{
+						Namespace: "stolos-system",
+						Name:      "admit-resource-quota",
+					},
+					CABundle: caCert,
+				},
+			},
+		},
+	}
+	glog.Infof("Creating ExternalAdmissionHookConfiguration")
+	if _, err := client.Create(webhookConfig); err != nil {
+		return fmt.Errorf("Failed to create ExternalAdmissionHookConfiguration: %v", err)
+	}
+	return nil
+}
+
 func main() {
 	flag.Parse()
 	glog.Infof("Hierarchical Resource Quota Admission Controller starting up")
@@ -140,7 +190,11 @@ func main() {
 	if err != nil {
 		glog.Fatal("Failed to load in cluster config: ", err)
 	}
-	clientCert, err := getAPIServerCert(config)
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		glog.Fatal("Failed to create client set: ", err)
+	}
+	clientCert, err := getAPIServerCert(clientset)
 	if err != nil {
 		glog.Fatal("Failed to get client cert: ", err)
 	}
@@ -156,13 +210,17 @@ func main() {
 	if !cache.WaitForCacheSync(nil, policyNodeInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
 		glog.Fatal("Failure while waiting for informers to sync")
 	}
+	// In the time window when webhook is registered but the server is not yet up, GenericAdmissionWebhook will admit
+	// requests since we use the Ignore FailurePolicy.
+	if err := selfRegister(clientset, *caBundleFile); err != nil {
+		glog.Fatal("Failed to register webhook: ", err)
+	}
 
 	server := service.Server(
 		ServeFunc(
 			admission_controller.NewResourceQuotaAdmitter(
 				policyNodeInformer, resourceQuotaInformer)), clientCert)
 
-	glog.Infof("Hierarchical Resource Quota Admission Controller starting")
 	err = server.ListenAndServeTLS("", "")
 	if err != nil {
 		glog.Fatal("ListenAndServe error: ", err)

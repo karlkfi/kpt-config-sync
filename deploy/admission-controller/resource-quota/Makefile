@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: test build certs deploy restart register
+.PHONY: test build certs deploy restart
 
 GCP_PROJECT ?= $(shell gcloud config get-value project)
 DOCKER_ENV ?= $(shell minikube docker-env)
@@ -43,6 +43,3 @@ restart:
 	m4 -DIMAGE_NAME=$(IMAGE) < pod-template.m4 > pod.yaml
 	./start_pod.sh
 	rm pod.yaml
-
-register:
-	./register.sh

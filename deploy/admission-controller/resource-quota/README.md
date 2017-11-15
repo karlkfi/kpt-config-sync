@@ -19,7 +19,7 @@ export GCP_PROJECT=<my GCP project id>
 ```
 make certs
 ```
-Will generate certificates for the service. Must be done before deploy/register! Generally should only be done once.
+Will generate certificates for the service. Must be done before deploy! Generally should only be done once.
 
 ```
 make deploy
@@ -28,8 +28,3 @@ Will build a docker image, push it to GCR in your project and start a pod using 
 This should be done every time the code changes.
 
 ```
-make register
-```
-Will register your controller to be called by the kubernetes api server. This should normally only be done once, but
-the registration includes the certs, so this should be done again if you generate new certificates.
-

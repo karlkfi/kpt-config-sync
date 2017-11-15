@@ -16,6 +16,7 @@ FROM busybox
 ADD resource-quota resource-quota
 ADD server.key server.key
 ADD server.crt server.crt
+ADD ca.crt ca.crt
 EXPOSE 8000
 ENTRYPOINT ["/resource-quota"]
 
