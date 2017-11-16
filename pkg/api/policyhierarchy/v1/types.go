@@ -113,9 +113,6 @@ type StolosRoleBindingList struct {
 	Items []StolosRoleBinding `json:"items"`
 }
 
-// Directive for StolosRoleBindingSpec
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // StolosRoleBindingSpec is equivalent to the payload of the rbac_v1.RoleBinding
 type StolosRoleBindingSpec struct {
 	// List of role bindings that are set in the current namespace.
