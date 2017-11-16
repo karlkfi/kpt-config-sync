@@ -30,6 +30,10 @@ func (c *FakeK8usV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
 }
 
+func (c *FakeK8usV1) StolosRoleBindings(namespace string) v1.StolosRoleBindingInterface {
+	return &FakeStolosRoleBindings{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeK8usV1) RESTClient() rest.Interface {

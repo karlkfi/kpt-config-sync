@@ -21,3 +21,11 @@ package v1
 // PolicyNodeListerExpansion allows custom methods to be added to
 // PolicyNodeLister.
 type PolicyNodeListerExpansion interface{}
+
+// StolosRoleBindingListerExpansion allows custom methods to be added to
+// StolosRoleBindingLister.
+type StolosRoleBindingListerExpansion interface{}
+
+// StolosRoleBindingNamespaceListerExpansion allows custom methods to be added to
+// StolosRoleBindingNamespaceLister.
+type StolosRoleBindingNamespaceListerExpansion interface{}

@@ -26,6 +26,7 @@ import (
 type K8usV1Interface interface {
 	RESTClient() rest.Interface
 	PolicyNodesGetter
+	StolosRoleBindingsGetter
 }
 
 // K8usV1Client is used to interact with features provided by the k8us.k8s.io group.
@@ -35,6 +36,10 @@ type K8usV1Client struct {
 
 func (c *K8usV1Client) PolicyNodes() PolicyNodeInterface {
 	return newPolicyNodes(c)
+}
+
+func (c *K8usV1Client) StolosRoleBindings(namespace string) StolosRoleBindingInterface {
+	return newStolosRoleBindings(c, namespace)
 }
 
 // NewForConfig creates a new K8usV1Client for the given config.

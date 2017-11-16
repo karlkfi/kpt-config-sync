@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// PolicyNodes returns a PolicyNodeInformer.
 	PolicyNodes() PolicyNodeInformer
+	// StolosRoleBindings returns a StolosRoleBindingInformer.
+	StolosRoleBindings() StolosRoleBindingInformer
 }
 
 type version struct {
@@ -40,4 +42,9 @@ func New(f internalinterfaces.SharedInformerFactory) Interface {
 // PolicyNodes returns a PolicyNodeInformer.
 func (v *version) PolicyNodes() PolicyNodeInformer {
 	return &policyNodeInformer{factory: v.SharedInformerFactory}
+}
+
+// StolosRoleBindings returns a StolosRoleBindingInformer.
+func (v *version) StolosRoleBindings() StolosRoleBindingInformer {
+	return &stolosRoleBindingInformer{factory: v.SharedInformerFactory}
 }

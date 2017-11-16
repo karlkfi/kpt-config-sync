@@ -54,6 +54,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=K8us, Version=V1
 	case v1.SchemeGroupVersion.WithResource("policynodes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.K8us().V1().PolicyNodes().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("stolosrolebindings"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.K8us().V1().StolosRoleBindings().Informer()}, nil
 
 	}
 
