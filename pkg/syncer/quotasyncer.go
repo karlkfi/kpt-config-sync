@@ -121,7 +121,7 @@ func (s *QuotaSyncer) OnCreate(policyNode *policyhierarchy_v1.PolicyNode) error 
 func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode) actions.ResourceQuotaAction {
 	if policyNode.Spec.Policyspace {
 		return actions.NewResourceQuotaUpsertAction(
-			policyNode.Namespace,
+			policyNode.Name,
 			resource_quota.PolicySpaceQuotaLabels,
 			policyNode.Spec.Policies.ResourceQuota,
 			s.client,
@@ -160,7 +160,6 @@ func (q *QuotaSyncer) getHierarchicalQuotaLimits(policyNode policyhierarchy_v1.P
 		}
 		parentNamespace = parentNode.Spec.Parent
 	}
-
 	return hierarchicalLimits
 }
 

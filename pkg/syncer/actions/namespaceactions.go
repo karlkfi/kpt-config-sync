@@ -130,7 +130,7 @@ func (n *NamespaceCreateAction) Execute() error {
 
 	if err != nil {
 		if api_errors.IsAlreadyExists(err) {
-			glog.Infof("Namespace %s already exists")
+			glog.Infof("Namespace %s already exists", n.namespace)
 			return nil
 		}
 		glog.Infof("Failed to create namespace %s: %v", n.namespace, err)
