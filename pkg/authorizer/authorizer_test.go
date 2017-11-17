@@ -12,6 +12,42 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// TestAttributes tests the implicit contracts on Attributes method that are
+// not formally documented, but are a consequence of the way the K8S RBAC
+// authorizer works.
+func TestAttributes(t *testing.T) {
+	tests := []struct {
+		input                     authz.SubjectAccessReviewSpec
+		expectedIsResourceRequest bool
+		expectedNamespace         string
+	}{
+		{
+			// Base case.
+			input: request("jane", "meowie", "kitties", "pods", "get"),
+			expectedIsResourceRequest: true,
+			expectedNamespace:         "kitties",
+		},
+		{
+			// GetNamespace() call should succeed even on a non-resource request.
+			input: nonResourceRequest("jane", "/some/path", "get"),
+			expectedIsResourceRequest: false,
+			expectedNamespace:         "",
+		},
+	}
+	for i, tt := range tests {
+		attr := NewAttributes(&tt.input)
+		isResourceRequest := attr.IsResourceRequest()
+		if isResourceRequest != tt.expectedIsResourceRequest {
+			t.Errorf("[%v] IsResourceRequest mismatch: expected: %v, actual: %v for: %v",
+				i, tt.expectedIsResourceRequest, isResourceRequest, tt.input)
+		}
+		if attr.GetNamespace() != tt.expectedNamespace {
+			t.Errorf("[%v] GetNamespace mismatch: expected: %v, actual: %v for: %v",
+				i, tt.expectedNamespace, attr.GetNamespace(), tt.input)
+		}
+	}
+}
+
 type testAuthorizeTestCase struct {
 	// The content of the policy node storage in the test.
 	storage []runtime.Object
@@ -351,6 +387,18 @@ func request(user, resourceName, namespace, resourceType, verb string,
 			Namespace: namespace,
 			Resource:  resourceType,
 			Verb:      verb,
+		},
+		User: user,
+	}
+}
+
+// Example:
+//   nonResourceRequest("jane", "/some/path", "get).
+func nonResourceRequest(user, path, verb string) authz.SubjectAccessReviewSpec {
+	return authz.SubjectAccessReviewSpec{
+		NonResourceAttributes: &authz.NonResourceAttributes{
+			Path: path,
+			Verb: verb,
 		},
 		User: user,
 	}
