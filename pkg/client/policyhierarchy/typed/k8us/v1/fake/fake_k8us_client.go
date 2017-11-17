@@ -30,6 +30,10 @@ func (c *FakeK8usV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
 }
 
+func (c *FakeK8usV1) StolosResourceQuotas(namespace string) v1.StolosResourceQuotaInterface {
+	return &FakeStolosResourceQuotas{c, namespace}
+}
+
 func (c *FakeK8usV1) StolosRoleBindings(namespace string) v1.StolosRoleBindingInterface {
 	return &FakeStolosRoleBindings{c, namespace}
 }

@@ -26,6 +26,7 @@ import (
 type K8usV1Interface interface {
 	RESTClient() rest.Interface
 	PolicyNodesGetter
+	StolosResourceQuotasGetter
 	StolosRoleBindingsGetter
 }
 
@@ -36,6 +37,10 @@ type K8usV1Client struct {
 
 func (c *K8usV1Client) PolicyNodes() PolicyNodeInterface {
 	return newPolicyNodes(c)
+}
+
+func (c *K8usV1Client) StolosResourceQuotas(namespace string) StolosResourceQuotaInterface {
+	return newStolosResourceQuotas(c, namespace)
 }
 
 func (c *K8usV1Client) StolosRoleBindings(namespace string) StolosRoleBindingInterface {

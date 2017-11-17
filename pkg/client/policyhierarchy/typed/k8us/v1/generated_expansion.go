@@ -18,4 +18,6 @@ package v1
 
 type PolicyNodeExpansion interface{}
 
+type StolosResourceQuotaExpansion interface{}
+
 type StolosRoleBindingExpansion interface{}

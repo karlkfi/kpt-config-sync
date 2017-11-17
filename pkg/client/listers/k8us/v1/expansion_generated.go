@@ -22,6 +22,14 @@ package v1
 // PolicyNodeLister.
 type PolicyNodeListerExpansion interface{}
 
+// StolosResourceQuotaListerExpansion allows custom methods to be added to
+// StolosResourceQuotaLister.
+type StolosResourceQuotaListerExpansion interface{}
+
+// StolosResourceQuotaNamespaceListerExpansion allows custom methods to be added to
+// StolosResourceQuotaNamespaceLister.
+type StolosResourceQuotaNamespaceListerExpansion interface{}
+
 // StolosRoleBindingListerExpansion allows custom methods to be added to
 // StolosRoleBindingLister.
 type StolosRoleBindingListerExpansion interface{}
