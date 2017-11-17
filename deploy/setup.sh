@@ -48,7 +48,8 @@ namespace=${REPO}/manifests/namespace.yaml
 
 # Create Custom Resource
 policy_node_crd=${REPO}/manifests/policy-node-crd.yaml
-stolos_role_binding_crd=${REPO}/manifests/policy-node-crd.yaml
+stolos_role_binding_crd=${REPO}/manifests/stolos-rolebinding-crd.yaml
+stolos_resource_quota_crd=${REPO}/manifests/stolos-resourcequota-crd.yaml
 
 # Syncer service account, role, rolebinding
 service_account=${REPO}/manifests/service-account.yaml
@@ -72,6 +73,7 @@ ${action_resource} ${namespace}
 sleep 2
 ${action_resource} ${policy_node_crd}
 ${action_resource} ${stolos_role_binding_crd}
+${action_resource} ${stolos_resource_quota_crd}
 ${action_resource} ${service_account}
 
 if kubectl config current-context | grep "^gke_" &> /dev/null; then

@@ -81,6 +81,8 @@ type PolicyNodeList struct {
 	Items []PolicyNode `json:"items"`
 }
 
+///////////////// Stolos Role Binding //////////////////
+
 // StolosRoleBindingResource contains the name of the lone StolosRoleBinding resource.
 const StolosRoleBindingResource = "rolebindings"
 
@@ -117,4 +119,41 @@ type StolosRoleBindingList struct {
 type StolosRoleBindingSpec struct {
 	// List of role bindings that are set in the current namespace.
 	RoleBindings []rbac_v1.RoleBinding `json:"roleBindings"`
+}
+
+///////////////// Stolos Resource Quota //////////////////
+
+// Genclient directive for StolosResourceQuota
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// StolosResourceQuota represents a resource quota object set on a policyspace.
+// This is needed as it will be controlled by a stolos resource quota controller
+// which will monitor usage in all the descendants of that policyspace.
+type StolosResourceQuota struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// +optional
+	metav1.ObjectMeta `json:"metadata"`
+
+	// The actual object definition, per K8S object definition style.
+	Spec StolosResurceQuotaSpec `json:"spec"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// StolosResourceQuotaList holds a list of stolos resource quotas
+type StolosResourceQuotaList struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
+
+	// Items is a list of stolos resource quotas.
+	Items []StolosResourceQuota `json:"items"`
+}
+
+// StolosResurceQuotaSpec is equivalent to the payload of the core_v1.ResourceQuotaStatus
+type StolosResurceQuotaSpec struct {
+	Status core_v1.ResourceQuotaStatus `json:"status"`
 }
