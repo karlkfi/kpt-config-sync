@@ -314,6 +314,11 @@ func (a *Attributes) IsReadOnly() bool {
 }
 
 func (a *Attributes) GetNamespace() string {
+	if !a.IsResourceRequest() {
+		// For some reason the RBAC authorizer still requests this even if
+		// it's a non-resource request.
+		return ""
+	}
 	return a.resource().Namespace
 }
 
