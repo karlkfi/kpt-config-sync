@@ -67,9 +67,7 @@ func configTLS(clientCert []byte) *tls.Config {
 
 	config := tls.Config{
 		Certificates: []tls.Certificate{sCert},
-		// TODO(b/69073598): Figure out how to not skip verify.
-		InsecureSkipVerify: true,
-		MinVersion:         tls.VersionTLS12,
+		MinVersion:   tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP521,
 			tls.CurveP384,

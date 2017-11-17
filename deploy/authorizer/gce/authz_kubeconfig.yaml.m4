@@ -7,7 +7,7 @@ clusters:
       certificate-authority: /etc/srv/kubernetes/ca-webhook.crt
       # For now, this setup does not work.  It requires the use of an endpoint.
       # Stay tuned.
-      server: https://authorizer.default.svc/authorize
+      server: https://authorizer.stolos-system.svc/authorize
 users:
   - name: apiserver
     user:
