@@ -35,6 +35,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	clientpolicyhierarchy "github.com/google/stolos/pkg/client/policyhierarchy"
 	"github.com/pkg/errors"
 	authz "k8s.io/api/authorization/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -150,44 +151,7 @@ func (r *rbacInformerAdapter) ListRoleBindings(namespace string) ([]*apisrbac.Ro
 // namespace.  The last is for the root namespace.
 func (r *rbacInformerAdapter) policyRulesFor(
 	namespace string) (*[]policyhierarchy.PolicyNodeSpec, error) {
-	// Perhaps it is OK to return any policy node spec that has been
-	// built so far.
-	policies := make([]policyhierarchy.PolicyNodeSpec, 0)
-
-	glog.V(5).Infof("PolicyNodes: %v", spew.Sdump(r.informer.GetStore().List()))
-
-	// Follows a trail of namespaces starting from 'namespace', then
-	// following the back-pointers to parents, up to the root PolicyNode.
-	var err error
-	nextNamespace := namespace
-	for nextNamespace != policyhierarchy.NoParentNamespace {
-		glog.V(6).Infof("policyRulesFor: resolving namespace: %v", nextNamespace)
-		// TODO(fmil): Use a typed informer instead.
-		rawPolicyNode, exists, loopErr := r.informer.GetStore().
-			GetByKey(nextNamespace)
-		if loopErr != nil {
-			err = errors.Wrapf(
-				loopErr, "while resolving namespace: %v",
-				nextNamespace)
-			break
-		}
-		if !exists {
-			err = errors.Errorf("partial policy rules, missing namespace: %v",
-				nextNamespace)
-			break
-		}
-		policyNode := rawPolicyNode.(*policyhierarchy.PolicyNode)
-		policyNodeSpec := policyNode.Spec
-		policies = append(policies, policyNodeSpec)
-		nextNamespace = policyNodeSpec.Parent
-	}
-	glog.V(5).Infof("policyRulesFor: policies=%v, err=%v",
-		spew.Sdump(policies), err)
-	if err != nil {
-		return &policies, errors.Wrapf(
-			err, "while getting policy node: %s", namespace)
-	}
-	return &policies, nil
+	return clientpolicyhierarchy.GetPolicyRules(r.informer, namespace)
 }
 
 // Authorizer deals with the authorization mechanics.  Instantiate
