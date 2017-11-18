@@ -1,0 +1,106 @@
+apiVersion: "k8us.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: acme
+spec:
+  policyspace: true
+  policies:
+    resourceQuota:
+      hard:
+        secrets: "10"
+    roles:
+    - kind: Role
+      apiVersion: rbac.authorization.k8s.io/v1
+      metadata:
+        namespace: acme
+        name: admin
+      rules:
+      - resources: ["pods"]
+        verbs: ["*"]
+      - resources: ["namespaces", "roles", "rolebindings"]
+        verbs: ["get"]
+---
+apiVersion: "k8us.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: eng
+spec:
+  policyspace: true
+  parent: acme
+  policies:
+    resourceQuota:
+      hard:
+        pods: "1"
+        secrets: "5"
+    rolebindings:
+    - kind: RoleBinding
+      apiVersion: rbac.authorization.k8s.io/v1
+      metadata:
+        namespace: acme
+        name: alice-rolebinding
+      subjects:
+      - kind: User
+        name: alice@google.com
+        apiGroup: rbac.authorization.k8s.io
+      roleRef:
+        kind: Role
+        name: admin
+        apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: "k8us.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: rnd
+spec:
+  policyspace: true
+  parent: acme
+  policies:
+    resourceQuota:
+      hard:
+        configmaps: "0"
+---
+apiVersion: "k8us.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: backend
+spec:
+  policyspace: false
+  parent: eng
+  policies:
+    resourceQuota:
+      hard:
+        pods: "1"
+    rolebindings:
+    - kind: RoleBinding
+      apiVersion: rbac.authorization.k8s.io/v1
+      metadata:
+        namespace: acme
+        name: bob-rolebinding
+      subjects:
+      - kind: User
+        name: bob@google.com
+        apiGroup: rbac.authorization.k8s.io
+      roleRef:
+        kind: Role
+        name: admin
+        apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: "k8us.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: frontend
+spec:
+  policyspace: false
+  parent: eng
+  policies:
+    resourceQuota:
+      hard:
+        pods: "1"
+---
+apiVersion: "k8us.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: new-prj
+spec:
+  policyspace: false
+  parent: rnd

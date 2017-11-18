@@ -1,0 +1,7 @@
+apiVersion: "k8us.k8s.io/v1"
+kind: PolicyNode
+metadata:
+  name: new-prj
+spec:
+  policyspace: false
+  parent: eng
