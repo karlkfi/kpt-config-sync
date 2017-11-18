@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,9 +30,11 @@ import (
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 )
 
-func createNamespaceTestAction(
+const parentLabelValue = "parent-team"
+
+func upsertNamespaceTestAction(
 	ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) Interface {
-	return NewNamespaceCreateAction(ns, client, nsLister)
+	return NewNamespaceUpsertAction(ns, parentLabelValue, client, nsLister)
 }
 
 func deleteNamespaceTestAction(
@@ -55,13 +58,13 @@ var namespaceTestCases = []NamespaceTestCase{
 	NamespaceTestCase{
 		Name:         "Create non-existing namespace",
 		Exists:       false,
-		ActionCtor:   createNamespaceTestAction,
+		ActionCtor:   upsertNamespaceTestAction,
 		ExpectExists: true,
 	},
 	NamespaceTestCase{
-		Name:         "Create existing namespace",
+		Name:         "Update existing namespace",
 		Exists:       true,
-		ActionCtor:   createNamespaceTestAction,
+		ActionCtor:   upsertNamespaceTestAction,
 		ExpectExists: true,
 	},
 	NamespaceTestCase{
@@ -86,7 +89,9 @@ func TestNamespaceActions(t *testing.T) {
 	for idx, testcase := range namespaceTestCases {
 		if testcase.Exists {
 			_, err := nsClient.Create(&core_v1.Namespace{
-				ObjectMeta: meta_v1.ObjectMeta{Name: testcase.Namespace(idx)}})
+				ObjectMeta: meta_v1.ObjectMeta{
+					Name: testcase.Namespace(idx),
+				}})
 			if err != nil {
 				t.Errorf("Failed to create initial state: %#v", err)
 			}
@@ -108,13 +113,16 @@ func TestNamespaceActions(t *testing.T) {
 			t.Errorf("Failed to execute action %s", action)
 		}
 
-		_, err = nsClient.Get(namespace, meta_v1.GetOptions{})
+		ns, err := nsClient.Get(namespace, meta_v1.GetOptions{})
 		if testcase.ExpectExists {
 			if err != nil {
 				if api_errors.IsNotFound(err) {
 					t.Errorf("Testcase should have created namespace")
 				}
 				t.Errorf("Unexpected error during testcase")
+			}
+			if ns.Labels[policyhierarchy.ParentLabelKey] != parentLabelValue {
+				t.Errorf("Failed to update the parent label")
 			}
 		} else {
 			if err != nil {

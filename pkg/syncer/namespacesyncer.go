@@ -51,16 +51,16 @@ func NewNamespaceSyncer(
 
 // OnCreate implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) OnCreate(node *policyhierarchy_v1.PolicyNode) error {
-	return s.onSet(node)
+	return s.onUpsert(node)
 }
 
 // OnUpdate implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *policyhierarchy_v1.PolicyNode) error {
-	return s.onSet(new)
+	return s.onUpsert(new)
 }
 
-func (s *NamespaceSyncer) onSet(node *policyhierarchy_v1.PolicyNode) error {
-	s.queue.Add(actions.NewNamespaceCreateAction(node.Name, s.client.Kubernetes(), s.namespaceLister))
+func (s *NamespaceSyncer) onUpsert(node *policyhierarchy_v1.PolicyNode) error {
+	s.queue.Add(actions.NewNamespaceUpsertAction(node.Name, node.Spec.Parent, s.client.Kubernetes(), s.namespaceLister))
 	return nil
 }
 

@@ -19,12 +19,12 @@ import (
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 )
 
-// PolicyNodeSyncerInterface defines the interface for a sycner that consumes PolicyNodes, caller
+// PolicyNodeSyncerInterface defines the interface for a syncer that consumes PolicyNodes, caller
 // must filter for duplicate add events from the initial sync if re-creation is not desired.
 type PolicyNodeSyncerInterface interface {
 
 	// OnCreate notifies the syncer to handle a creation event. On startup, this will be called with
-	// a create event for each resource existing PolicyNode resource. Once all existing resources
+	// a create event for each existing PolicyNode resource. Once all existing resources
 	// have passed through a create event, all future creates will correspond to an actual PolicyNode
 	// creation event.
 	OnCreate(node *policyhierarchy_v1.PolicyNode) error

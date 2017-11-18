@@ -43,7 +43,11 @@ type PolicyNode struct {
 
 // NoParentNamespace is the constant we use (empty string) for indicating that no parent exists
 // for the policy node spec.  Only one policy node should have a parent with this value.
+// This is also used as the value for the label set on a namespace.
 const NoParentNamespace string = ""
+
+// Key of a label set on a namespace with value set to the parent namespace's name.
+const ParentLabelKey = "stolos-parent-ns"
 
 // PolicyNodeSpec contains all the information about a policy linkage.
 type PolicyNodeSpec struct {
