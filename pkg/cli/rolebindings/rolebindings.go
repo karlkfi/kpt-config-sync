@@ -14,16 +14,93 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package rolebindings defines a Stolos CLI plugin that allows viewing
+// hierarchical roles and rolebindings.  See package 'registration' for the
+// plugin registration code.
 package rolebindings
 
 import (
-	"fmt"
+	"os"
 
 	"github.com/google/stolos/pkg/cli"
+	"github.com/google/stolos/pkg/cli/output"
+	ns "github.com/google/stolos/pkg/client/namespace"
+	"github.com/pkg/errors"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// GetHierarchicalRoleBindings will get the hierarchical role bindings from the cluster.
+// Load this many items at a time on a List operation.
+const maxItemsPerPage = 100
+
+// GetHierarchicalRoleBindings gets the hierarchical role bindings from the
+// cluster.
 func GetHierarchicalRoleBindings(ctx *cli.CommandContext, args []string) error {
-	fmt.Printf("TODO: actually get role bindings\n")
-	return nil
+	namespaces, _, err := ns.GetAncestryFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	clientSet := ctx.Client.Kubernetes().RbacV1()
+	for _, ns := range namespaces {
+		nsName := ns.ObjectMeta.Name
+		client := clientSet.RoleBindings(ns.ObjectMeta.Name)
+		continueToken := ""
+		for {
+			result, innerErr := client.List(meta.ListOptions{
+				Limit:    maxItemsPerPage,
+				Continue: continueToken,
+			})
+			if innerErr != nil {
+				err = errors.Wrapf(
+					innerErr, "while getting rolebindings for namespace: %q", ns)
+				break
+			}
+			innerErr = output.PrintForNamespace(nsName, result, os.Stdout)
+			if innerErr != nil {
+				err = errors.Wrapf(
+					innerErr, "while encoding rolebindings for namespace: %q", ns)
+				break
+			}
+			if result.Continue == "" {
+				break
+			}
+			continueToken = result.Continue
+		}
+	}
+	return err
+}
+
+// GetHierarchicalRoles gets the hierarchical roles from the cluster.
+func GetHierarchicalRoles(ctx *cli.CommandContext, args []string) error {
+	namespaces, _, err := ns.GetAncestryFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	clientSet := ctx.Client.Kubernetes().RbacV1()
+	for _, ns := range namespaces {
+		nsName := ns.ObjectMeta.Name
+		client := clientSet.Roles(ns.ObjectMeta.Name)
+		continueToken := ""
+		for {
+			result, innerErr := client.List(meta.ListOptions{
+				Limit:    maxItemsPerPage,
+				Continue: continueToken,
+			})
+			if innerErr != nil {
+				err = errors.Wrapf(
+					innerErr, "while getting roles for namespace: %q", ns)
+				break
+			}
+			innerErr = output.PrintForNamespace(nsName, result, os.Stdout)
+			if innerErr != nil {
+				err = errors.Wrapf(
+					innerErr, "while encoding roles for namespace: %q", ns)
+				break
+			}
+			if result.Continue == "" {
+				break
+			}
+			continueToken = result.Continue
+		}
+	}
+	return err
 }

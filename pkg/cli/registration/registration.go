@@ -26,6 +26,7 @@ import (
 func init() {
 	// Register CLI commands here, try to keep these alphabetized.
 	cli.RegisterKubectlPluginFunction([]string{"get", "namespaces"}, namespaces.GetHierarchicalNamespaces)
-	cli.RegisterKubectlPluginFunction([]string{"get", "rolebindings"}, rolebindings.GetHierarchicalRoleBindings)
 	cli.RegisterKubectlPluginFunction([]string{"get", "quota"}, quota.GetHierarchical)
+	cli.RegisterKubectlPluginFunction([]string{"get", "rolebindings"}, rolebindings.GetHierarchicalRoleBindings)
+	cli.RegisterKubectlPluginFunction([]string{"get", "roles"}, rolebindings.GetHierarchicalRoles)
 }

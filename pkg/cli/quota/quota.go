@@ -15,62 +15,42 @@ limitations under the License.
 */
 
 // Package quota defines a Stolos CLI plugin that allows viewing Stolos quota
-// objects.
+// objects.  See package 'registration' for the plugin registration code.
 package quota
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/golang/glog"
-	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/cli"
-	namespacewalker "github.com/google/stolos/pkg/client/namespace"
+	"github.com/google/stolos/pkg/cli/output"
+	ns "github.com/google/stolos/pkg/client/namespace"
 	"github.com/pkg/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 )
 
-const (
-	// Maximum number of quota items requested at once from the Kubernetes API server.
-	resourceQuotaPageSizeItems = 100
-)
-
-func printForNamespace(
-	namespace string, list *policyhierarchy.StolosResourceQuotaList) error {
-	fmt.Printf("# Namespace: %q\n", namespace)
-	fmt.Printf("#\n")
-	e := json.NewYAMLSerializer(json.DefaultMetaFactory, nil, nil)
-	return e.Encode(list, os.Stdout)
-}
+const maxItemsPerPage = 100
 
 // GetHierarchical implements the 'kubectl plugin stolos get quota' command.
 func GetHierarchical(ctx *cli.CommandContext, args []string) error {
-	apiGroupClient := ctx.Client.Kubernetes().CoreV1()
-	namespaces, _, err := namespacewalker.GetAncestry(
-		apiGroupClient.Namespaces(), ctx.Namespace)
+	namespaces, _, err := ns.GetAncestryFromContext(ctx)
 	if err != nil {
-		return errors.Wrapf(err, "while getting ancestry for %q", ctx.Namespace)
+		return err
 	}
-	// Now, get quota objects for everything.
-	glog.V(5).Infof("Namespace hierarchy: %v", namespaces)
-
-	policyHierarchyClient := ctx.Client.PolicyHierarchy().K8usV1()
+	clientSet := ctx.Client.PolicyHierarchy().K8usV1()
 	for _, ns := range namespaces {
 		nsName := ns.ObjectMeta.Name
-		quotaClient := policyHierarchyClient.StolosResourceQuotas(
-			ns.ObjectMeta.Name)
+		client := clientSet.StolosResourceQuotas(ns.ObjectMeta.Name)
 		continueToken := ""
 		for {
-			result, err := quotaClient.List(meta.ListOptions{
-				Limit:    resourceQuotaPageSizeItems,
+			result, err := client.List(meta.ListOptions{
+				Limit:    maxItemsPerPage,
 				Continue: continueToken,
 			})
 			if err != nil {
 				return errors.Wrapf(
 					err, "while getting quota for namespace: %q", ns)
 			}
-			err = printForNamespace(nsName, result)
+			err = output.PrintForNamespace(nsName, result, os.Stdout)
 			if err != nil {
 				return errors.Wrapf(
 					err, "while encoding quota for namespace: %q", ns)

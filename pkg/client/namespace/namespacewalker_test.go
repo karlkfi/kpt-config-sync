@@ -1,13 +1,15 @@
 package namespacewalker
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/cli"
 	"github.com/google/stolos/pkg/client/meta/fake"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	client_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"reflect"
-	"testing"
 )
 
 type namespaceConfig struct {
@@ -92,17 +94,28 @@ var testCases = []testCase{
 	},
 }
 
-func TestNamespaceActions(t *testing.T) {
-	client := fake.NewClient().Kubernetes().CoreV1().Namespaces()
+// runNamespaceActions is the common part of the tests below.  testFunction is
+// an adaptor that allows us to call different functions across test cases.
+func runNamespaceActions(
+	t *testing.T,
+	testFunction func(
+		fakeClient *fake.Client,
+		namespaceInterface client_v1.NamespaceInterface,
+		namespace string) ([]*core_v1.Namespace, bool, error),
+) {
+	fakeClient := fake.NewClient()
+	client := fakeClient.Kubernetes().CoreV1().Namespaces()
 
 	setUpNamespaces(t, client)
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
-			namespaces, includesRoot, err := GetAncestry(client, tc.namespace)
+
+			namespaces, includesRoot, err := testFunction(fakeClient, client, tc.namespace)
+
 			if tc.expectedError {
 				if err == nil {
-					t.Errorf("Expected fucntion to return an error")
+					t.Errorf("Expected function to return an error")
 				}
 				return
 			} else if !tc.expectedError && err != nil {
@@ -124,4 +137,26 @@ func TestNamespaceActions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNamespaceActions(t *testing.T) {
+	runNamespaceActions(t, func(
+		fakeClient *fake.Client,
+		namespaceInterface client_v1.NamespaceInterface,
+		namespace string) ([]*core_v1.Namespace, bool, error) {
+		return GetAncestry(namespaceInterface, namespace)
+	})
+}
+
+func TestNamespaceActionsFromClient(t *testing.T) {
+	runNamespaceActions(t, func(
+		fakeClient *fake.Client,
+		namespaceInterface client_v1.NamespaceInterface,
+		namespace string) ([]*core_v1.Namespace, bool, error) {
+		ctx := cli.CommandContext{
+			Client:    fakeClient,
+			Namespace: namespace,
+		}
+		return GetAncestryFromContext(&ctx)
+	})
 }

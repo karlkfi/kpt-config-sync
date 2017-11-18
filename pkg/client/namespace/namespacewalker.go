@@ -16,7 +16,9 @@ limitations under the License.
 package namespacewalker
 
 import (
+	"github.com/golang/glog"
 	apipolicyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/cli"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -24,14 +26,15 @@ import (
 	client_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-// GetAncestry returns the ancestors of the given namespace by following
-// the hierarchy using stolos parent label set on a namespace.
-// The first element of the returned slice represents the given namespace itself, second element
-// is the parent, and so on. The last element represents the closest namespace to the root
-// that the caller is authorized to get.
-// includesRoot indicates whether the returned namespaces includes the root namespace. This is
-// false if the user is not authorized to get namespaces above a certain level in the hierarchy.
-// If the user is not authorized to get the given namespace itself, error is returned.
+// GetAncestry returns the ancestors of the given namespace by following the
+// hierarchy using stolos parent label set on a namespace.  The first element
+// of the returned slice represents the given namespace itself, second element
+// is the parent, and so on. The last element represents the closest namespace
+// to the root that the caller is authorized to get.  includesRoot indicates
+// whether the returned namespaces includes the root namespace. This is false
+// if the user is not authorized to get namespaces above a certain level in the
+// hierarchy.  If the user is not authorized to get the given namespace itself,
+// error is returned.
 func GetAncestry(client client_v1.NamespaceInterface, namespace string) (
 	namespaces []*core_v1.Namespace, includesRoot bool, error error) {
 	nsAncestry := make([]*core_v1.Namespace, 0)
@@ -61,4 +64,15 @@ func GetAncestry(client client_v1.NamespaceInterface, namespace string) (
 
 		namespace = parent
 	}
+}
+
+// GetAncestryFromContext returns namespace ancestry as suppplied in the cli
+// context.
+func GetAncestryFromContext(ctx *cli.CommandContext) (
+	[]*core_v1.Namespace, bool, error) {
+	apiGroupClient := ctx.Client.Kubernetes().CoreV1()
+	namespaces, isRoot, err := GetAncestry(
+		apiGroupClient.Namespaces(), ctx.Namespace)
+	glog.V(5).Infof("Namespace hierarchy: %+v", namespaces)
+	return namespaces, isRoot, err
 }

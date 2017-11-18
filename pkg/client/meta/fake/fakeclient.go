@@ -34,11 +34,24 @@ type Client struct {
 
 var _ meta.Interface = &Client{}
 
-// NewClient creates a FakeClient with default simple clientsets
+// NewClient creates a FakeClient with default simple clientsets and empty
+// storage.
 func NewClient() *Client {
+	empty := []runtime.Object{}
+	return NewClientWithStorage(empty, empty)
+}
+
+// NewClientWithStorage creates a fake meta-client and injects objects from
+// kubernetesStorage as kubernetes objects, and policyHierarchyStorage as
+// objects from policy hierarchy.
+//
+// Note, with some additional registration it may be possible to unify the two
+// parameters into just one, but it's probably less hassle for the tests to
+// punt on that and simply keep the two fake stores separate.
+func NewClientWithStorage(kubernetesStorage, policyHierarchyStorage []runtime.Object) *Client {
 	return &Client{
-		KubernetesClientset:      fakekubernetes.NewSimpleClientset(),
-		PolicyhierarchyClientset: fakepolicyhierarchy.NewSimpleClientset(),
+		KubernetesClientset:      fakekubernetes.NewSimpleClientset(kubernetesStorage...),
+		PolicyhierarchyClientset: fakepolicyhierarchy.NewSimpleClientset(policyHierarchyStorage...),
 	}
 }
 
