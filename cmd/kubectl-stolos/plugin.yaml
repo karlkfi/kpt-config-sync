@@ -18,3 +18,9 @@ tree:
     longDesc: "Stolos is a thing that manages other things and also prints this message."
     example: "stolos nope nope nope"
     command: "./kubectl-stolos get"
+    tree:
+      - name: "rolebindings"
+        shortDesc: "get stolos things"
+        longDesc: "Stolos is a thing that manages other things and also prints this message."
+        example: "stolos nope nope nope"
+        command: "./kubectl-stolos get rolebindings"
