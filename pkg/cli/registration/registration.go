@@ -14,29 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package registration
 
 import (
-	"flag"
-	"os"
-	"strings"
-
-	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/cli"
-
-	_ "github.com/google/stolos/pkg/cli/registration"
+	"github.com/google/stolos/pkg/cli/rolebindings"
 )
 
-func main() {
-	flag.Parse()
-	context, err := cli.NewCommandContext()
-	if err != nil {
-		glog.Fatalf("Failed to create command context: %s", err)
-	}
-
-	args := flag.Args()
-	if err := context.Invoke(args); err != nil {
-		glog.Errorf("Failed to invoke command %q: %s", strings.Join(args, " "), err)
-		os.Exit(1)
-	}
+func init() {
+	// Register CLI commands here, try to keep these alphabetized.
+	cli.RegisterKubectlPluginFunction([]string{"get", "rolebindings"}, rolebindings.GetHierarchicalRoleBindings)
 }

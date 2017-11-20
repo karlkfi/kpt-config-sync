@@ -15,3 +15,15 @@ limitations under the License.
 */
 
 package rolebindings
+
+import (
+	"fmt"
+
+	"github.com/google/stolos/pkg/cli"
+)
+
+// GetHierarchicalRoleBindings will get the hierarchical role bindings from the cluster.
+func GetHierarchicalRoleBindings(ctx *cli.CommandContext, args []string) error {
+	fmt.Printf("TODO: actually get role bindings\n")
+	return nil
+}
