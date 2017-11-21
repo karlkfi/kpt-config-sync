@@ -41,6 +41,7 @@ func TestCanAdmit(t *testing.T) {
 			ObjectMeta: meta_v1.ObjectMeta{
 				Name:      ResourceQuotaObjectName,
 				Namespace: "kitties",
+				Labels:    StolosQuotaLabels,
 			},
 			Status: core_v1.ResourceQuotaStatus{
 				Used: core_v1.ResourceList{
@@ -52,6 +53,7 @@ func TestCanAdmit(t *testing.T) {
 			ObjectMeta: meta_v1.ObjectMeta{
 				Name:      ResourceQuotaObjectName,
 				Namespace: "ponies",
+				Labels:    StolosQuotaLabels,
 			},
 			Status: core_v1.ResourceQuotaStatus{
 				Used: core_v1.ResourceList{

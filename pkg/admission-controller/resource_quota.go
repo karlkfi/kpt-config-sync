@@ -72,7 +72,6 @@ func (r *ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) 
 	reviewSpec := AdmissionReviewSpec(unpackedSpec)
 	attributes := admission.Attributes(&reviewSpec)
 	evaluator := r.quotaRegistry.Evaluators()[attributes.GetKind().GroupKind()]
-
 	if evaluator != nil && evaluator.Handles(attributes) {
 		newUsage, err := evaluator.Usage(attributes.GetObject())
 		if err != nil {

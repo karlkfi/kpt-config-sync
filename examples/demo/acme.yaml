@@ -57,7 +57,7 @@ spec:
   policies:
     resourceQuota:
       hard:
-        configmaps: "0"
+        configmaps: "1"
 ---
 apiVersion: "k8us.k8s.io/v1"
 kind: PolicyNode
