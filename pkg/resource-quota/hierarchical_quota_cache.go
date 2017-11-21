@@ -55,7 +55,7 @@ func NewHierarchicalQuotaCache(policyNodeInformer informerspolicynodev1.PolicyNo
 //                 cache each time we want to do an admission decision. This might add unnecessary complexity for
 //                 not that much performance gain.
 func (c *HierarchicalQuotaCache) initCache() error {
-	resourceQuotas, err := c.resourceQuotaInformer.Lister().List(labels.Everything())
+	resourceQuotas, err := c.resourceQuotaInformer.Lister().List(labels.SelectorFromSet(StolosQuotaLabels))
 	if err != nil {
 		return err
 	}

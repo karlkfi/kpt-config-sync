@@ -133,7 +133,7 @@ func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode)
 	if len(hierarchicalLimits) > 0 {
 		return actions.NewResourceQuotaUpsertAction(
 			policyNode.Name,
-			resource_quota.PolicySpaceQuotaLabels,
+			resource_quota.StolosQuotaLabels,
 			core_v1.ResourceQuotaSpec{Hard: hierarchicalLimits},
 			s.client,
 			s.resourceQuotaLister)

@@ -8,7 +8,7 @@ metadata:
 spec:
   group: k8us.k8s.io
   version: v1
-  scope: Namespace
+  scope: Namespaced
   names:
     plural: stolosresourcequota
     singular: stolosresourcequota
