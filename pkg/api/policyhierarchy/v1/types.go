@@ -141,7 +141,7 @@ type StolosResourceQuota struct {
 	metav1.ObjectMeta `json:"metadata"`
 
 	// The actual object definition, per K8S object definition style.
-	Spec StolosResurceQuotaSpec `json:"spec"`
+	Spec StolosResourceQuotaSpec `json:"spec"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -157,7 +157,7 @@ type StolosResourceQuotaList struct {
 	Items []StolosResourceQuota `json:"items"`
 }
 
-// StolosResurceQuotaSpec is equivalent to the payload of the core_v1.ResourceQuotaStatus
-type StolosResurceQuotaSpec struct {
+// StolosResourceQuotaSpec is equivalent to the payload of the core_v1.ResourceQuotaStatus
+type StolosResourceQuotaSpec struct {
 	Status core_v1.ResourceQuotaStatus `json:"status"`
 }
