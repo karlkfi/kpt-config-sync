@@ -20,48 +20,31 @@ type CacheTestCase struct {
 }
 
 func TestCanAdmit(t *testing.T) {
+
 	// Limits and structure
 	policyNodes := []runtime.Object{
 		makePolicyNode("kittiesandponies", "", core_v1.ResourceList{
 			"hay":  resource.MustParse("10"),
 			"milk": resource.MustParse("5"),
-		}),
+		}, true),
 		makePolicyNode("kitties", "kittiesandponies", core_v1.ResourceList{
 			"hay": resource.MustParse("5"),
-		}),
+		}, false),
 		makePolicyNode("ponies", "kittiesandponies", core_v1.ResourceList{
 			"hay":  resource.MustParse("15"),
 			"milk": resource.MustParse("5"),
-		}),
+		}, false),
 	}
 
 	// Starting usages
 	quotas := []runtime.Object{
-		&core_v1.ResourceQuota{
-			ObjectMeta: meta_v1.ObjectMeta{
-				Name:      ResourceQuotaObjectName,
-				Namespace: "kitties",
-				Labels:    StolosQuotaLabels,
-			},
-			Status: core_v1.ResourceQuotaStatus{
-				Used: core_v1.ResourceList{
-					"hay": resource.MustParse("2"),
-				},
-			},
-		},
-		&core_v1.ResourceQuota{
-			ObjectMeta: meta_v1.ObjectMeta{
-				Name:      ResourceQuotaObjectName,
-				Namespace: "ponies",
-				Labels:    StolosQuotaLabels,
-			},
-			Status: core_v1.ResourceQuotaStatus{
-				Used: core_v1.ResourceList{
-					"hay":  resource.MustParse("2"),
-					"milk": resource.MustParse("2"),
-				},
-			},
-		},
+		makeResourceQuota("kitties", core_v1.ResourceList{
+			"hay": resource.MustParse("2"),
+		}),
+		makeResourceQuota("ponies", core_v1.ResourceList{
+			"hay":  resource.MustParse("2"),
+			"milk": resource.MustParse("2"),
+		}),
 	}
 
 	policyNodeInformer := fakeinformers.NewPolicyNodeInformer(policyNodes...)
@@ -141,18 +124,32 @@ func TestCanAdmit(t *testing.T) {
 	}
 }
 
-func makePolicyNode(name string, parent string, limits core_v1.ResourceList) *pn_v1.PolicyNode {
+func makePolicyNode(name string, parent string, limits core_v1.ResourceList, policyspace bool) *pn_v1.PolicyNode {
 	return &pn_v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: name,
 		},
 		Spec: pn_v1.PolicyNodeSpec{
-			Parent: parent,
+			Parent:      parent,
+			Policyspace: policyspace,
 			Policies: pn_v1.Policies{
 				ResourceQuota: core_v1.ResourceQuotaSpec{
 					Hard: limits,
 				},
 			},
+		},
+	}
+}
+
+func makeResourceQuota(namespace string, used core_v1.ResourceList) *core_v1.ResourceQuota {
+	return &core_v1.ResourceQuota{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name:      ResourceQuotaObjectName,
+			Namespace: namespace,
+			Labels:    StolosQuotaLabels,
+		},
+		Status: core_v1.ResourceQuotaStatus{
+			Used: used,
 		},
 	}
 }

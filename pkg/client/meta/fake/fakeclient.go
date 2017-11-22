@@ -21,6 +21,7 @@ import (
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/client/policyhierarchy"
 	fakepolicyhierarchy "github.com/google/stolos/pkg/client/policyhierarchy/fake"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 )
@@ -38,6 +39,14 @@ func NewClient() *Client {
 	return &Client{
 		KubernetesClientset:      fakekubernetes.NewSimpleClientset(),
 		PolicyhierarchyClientset: fakepolicyhierarchy.NewSimpleClientset(),
+	}
+}
+
+// NewClient creates a FakeClient with some pre-made data to put into the clients
+func NewClientWithData(kubeObjects, stolosObjects []runtime.Object) *Client {
+	return &Client{
+		KubernetesClientset:      fakekubernetes.NewSimpleClientset(kubeObjects...),
+		PolicyhierarchyClientset: fakepolicyhierarchy.NewSimpleClientset(stolosObjects...),
 	}
 }
 

@@ -34,9 +34,14 @@ type HierarchicalQuotaCache struct {
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer
 
 	// Map of namespaces to quota objects
-	quotas map[string]*core_v1.ResourceQuota
-	// Parent pointers from one namespace to another
-	parents map[string]string
+	quotas map[string]*QuotaNode
+}
+
+// Contains information about a quota, mainly the resource quota itself, but also its place in the hierarchy.
+type QuotaNode struct {
+	quota       *core_v1.ResourceQuota // The quota itself, both hard and used.
+	parent      string                 // The parent of the namespace for this quota based on the policyNode
+	policyspace bool                   // Whether this is a leaf namespace or a non-leaf policynode
 }
 
 func NewHierarchicalQuotaCache(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
@@ -63,17 +68,19 @@ func (c *HierarchicalQuotaCache) initCache() error {
 	if err != nil {
 		return err
 	}
-	c.parents = map[string]string{}
-	c.quotas = map[string]*core_v1.ResourceQuota{}
+	c.quotas = map[string]*QuotaNode{}
 
 	for _, policyNode := range policyNodes {
-		c.parents[policyNode.Name] = policyNode.Spec.Parent
-
-		c.quotas[policyNode.Name] = &core_v1.ResourceQuota{
-			Spec: *policyNode.Spec.Policies.ResourceQuota.DeepCopy(),
-			Status: core_v1.ResourceQuotaStatus{
-				Used: core_v1.ResourceList{},
+		c.quotas[policyNode.Name] = &QuotaNode{
+			quota: &core_v1.ResourceQuota{
+				Spec: *policyNode.Spec.Policies.ResourceQuota.DeepCopy(),
+				Status: core_v1.ResourceQuotaStatus{
+					Hard: policyNode.Spec.Policies.ResourceQuota.Hard,
+					Used: core_v1.ResourceList{},
+				},
 			},
+			parent:      policyNode.Spec.Parent,
+			policyspace: policyNode.Spec.Policyspace,
 		}
 	}
 
@@ -83,38 +90,38 @@ func (c *HierarchicalQuotaCache) initCache() error {
 			continue // Only care about stolos resource quota objects
 		}
 
-		quota, exists := c.quotas[resourceQuota.Namespace]
+		quotaNode, exists := c.quotas[resourceQuota.Namespace]
 		if !exists {
 			glog.Infof("Resource Quota exists for namespace %s not defined in policy nodes", resourceQuota.Namespace)
 			continue // This can happen frequently during deletions and while adjusting the tree.
 		}
 		// For leaf
-		resourceQuota.Status.DeepCopyInto(&quota.Status)
+		resourceQuota.Status.DeepCopyInto(&quotaNode.quota.Status)
 
 		// For all the parents, add up quantities
-		parent := c.parents[resourceQuota.Namespace]
+		parent := quotaNode.parent
 		for parent != pn_v1.NoParentNamespace {
-			quota, exists := c.quotas[parent]
+			quotaNode, exists := c.quotas[parent]
 			if !exists {
 				glog.Warningf("Parent namespace %s not defined in policy nodes for child namespace %s",
 					parent, resourceQuota.Namespace)
 				break
 			}
 			for resourceName, quantity := range resourceQuota.Status.Used {
-				if current, exists := quota.Status.Used[resourceName]; exists {
+				if current, exists := quotaNode.quota.Status.Used[resourceName]; exists {
 					current.Add(quantity)
-					quota.Status.Used[resourceName] = current
+					quotaNode.quota.Status.Used[resourceName] = current
 				} else {
-					quota.Status.Used[resourceName] = quantity
+					quotaNode.quota.Status.Used[resourceName] = quantity
 				}
 			}
-			parent = c.parents[parent]
+			parent = quotaNode.parent
 		}
 	}
 	return nil
 }
 
-// admit checks whether the new usage can be applied to the provided namespace and its ancestors.
+// Admit checks whether the new usage can be applied to the provided namespace and its ancestors.
 // If cannot admit returns an error describing the quota that was violated.
 func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList core_v1.ResourceList) error {
 	for namespace != pn_v1.NoParentNamespace {
@@ -124,11 +131,11 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList core_v1.Re
 			return nil
 		}
 		for resourceName, newUsage := range newUsageList {
-			current, exists := namespaceQuota.Status.Used[resourceName]
+			current, exists := namespaceQuota.quota.Status.Used[resourceName]
 			if !exists {
 				current = resource.MustParse("0")
 			}
-			limit, exists := namespaceQuota.Spec.Hard[resourceName]
+			limit, exists := namespaceQuota.quota.Spec.Hard[resourceName]
 			if exists {
 				newTotalUsage := current.Copy()
 				newTotalUsage.Add(newUsage)
@@ -138,7 +145,7 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList core_v1.Re
 				}
 			}
 		}
-		namespace = c.parents[namespace]
+		namespace = namespaceQuota.parent
 	}
 	return nil
 }
