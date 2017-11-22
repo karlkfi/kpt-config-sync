@@ -165,12 +165,8 @@ gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.patched: \
 
 # Requires:
 # KUBERNETES_VERSION
-deploy-gce: gce/authorizer_deploy.yaml gce/authz_kubeconfig.yaml server.key server.crt \
-	push-docker-gce \
-	gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.orig \
-	gce/$(KUBERNETES_VERSION)/kube-apiserver.manifest.patched \
-	# kubectl replace -f gce/authorizer_deploy.yaml --force
-	cd gce && VERSION=$(KUBERNETES_VERSION) ./patch_apiserver.sh
+deploy-gce: gce/authorizer_deploy.yaml server.key server.crt push-docker-gce
+	kubectl replace -f gce/authorizer_deploy.yaml --force
 
 .PHONY: undeploy
 undeploy: undeploy-$(DEPLOYMENT_TYPE)

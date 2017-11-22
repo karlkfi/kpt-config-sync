@@ -198,6 +198,8 @@ func main() {
 	if err != nil {
 		glog.Fatal("Failed to get client cert: ", err)
 	}
+	// TODO(b/69692030): Enable client cert verification.
+	clientCert = nil
 	policyNodeInformer, err := setupPolicyNodeInformer(config)
 	if err != nil {
 		glog.Fatal("Failed setting up policyNode informer: ", err)

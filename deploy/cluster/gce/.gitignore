@@ -1,0 +1,3 @@
+_kubernetes/
+kube-apiserver.manifest.orig
+kube-apiserver.manifest.patched
