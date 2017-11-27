@@ -34,7 +34,7 @@ func TestFullSync(t *testing.T) {
 		makePolicyNode("turtles", "animals", core_v1.ResourceList{}, false),
 	}
 
-	// Quotas at each level. Note a mix of
+	// Quotas at leaf levels
 	quotas := []runtime.Object{
 		makeResourceQuota("kitties", core_v1.ResourceList{
 			"hay": resource.MustParse("2"),

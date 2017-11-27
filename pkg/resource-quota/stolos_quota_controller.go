@@ -10,7 +10,9 @@ import (
 	"github.com/google/stolos/pkg/client/informers/externalversions"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/pkg/errors"
+	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -26,6 +28,7 @@ type Controller struct {
 
 	policyHierarchyInformerFactory externalversions.SharedInformerFactory // StolosInformers for policynodes and quota
 	kubernetesInformerFactory      informers.SharedInformerFactory        // Core informers for native quota
+	quotaCache                     *HierarchicalQuotaCache                // A cache of quotas to use between full re-syncs
 }
 
 // Number of times the worker will try to modify resource quota before giving up.
@@ -78,6 +81,14 @@ func (c *Controller) runInformer() {
 	c.kubernetesInformerFactory.WaitForCacheSync(nil)
 	c.policyHierarchyInformerFactory.WaitForCacheSync(nil)
 	glog.Infof("Caches synced.")
+
+	// Add handler for Quotas
+	quotaHandler := cache.ResourceEventHandlerFuncs{
+		UpdateFunc: c.onQuotaUpdate,
+		// Add and Delete imply changes in the PolicyNode hierarchy and should be handled
+		// by a watch on the policy node instead.
+	}
+	c.kubernetesInformerFactory.Core().V1().ResourceQuotas().Informer().AddEventHandler(quotaHandler)
 }
 
 // Starts up the periodic full sync loop.
@@ -134,7 +145,38 @@ func (c *Controller) fullSync() error {
 		}
 	}
 
+	c.quotaCache = hierarchicalCache
+
 	return nil
+}
+
+func (c *Controller) onQuotaUpdate(oldObj, newObj interface{}) {
+	if c.quotaCache == nil {
+		return // Not initialized yet, we will let full sync handle things.
+	}
+
+	newQuota := newObj.(*core_v1.ResourceQuota)
+	if newQuota.Name != ResourceQuotaObjectName || newQuota.Labels[NamespaceTypeLabel] != NamespaceTypeWorkload {
+		return // Some other quota object which we don't care about.
+	}
+
+	stolosQuotaNamespacesToUpdate, err := c.quotaCache.UpdateLeaf(*newQuota)
+	if err != nil {
+		// This can happen when the cache is malformed, defer to full sync.
+		glog.Infof("Failed on quota update event for namespace %q due to %s. Ignoring update.")
+	}
+
+	stolosQuotaLister := c.policyHierarchyInformerFactory.K8us().V1().StolosResourceQuotas().Lister()
+	for _, namespace := range stolosQuotaNamespacesToUpdate {
+		c.queue.Add(&UpsertStolosQuota{
+			namespace: namespace,
+			quotaSpec: v1.StolosResourceQuotaSpec{
+				Status: c.quotaCache.quotas[namespace].quota.Status,
+			},
+			stolosQuotaLister:        stolosQuotaLister,
+			policyHierarchiInterface: c.client.PolicyHierarchy(),
+		})
+	}
 }
 
 // processAction takes one item from the work queue and processes it.

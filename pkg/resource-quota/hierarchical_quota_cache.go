@@ -149,3 +149,42 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList core_v1.Re
 	}
 	return nil
 }
+
+// UpdateLeaf updates the usage quota on a leaf quota namespace and propagates the changes up the tree
+// to reflect the new usage in all the parent quotas as well. The function returns a list of namespaces
+// that had their quota changed.
+func (c *HierarchicalQuotaCache) UpdateLeaf(newQuota core_v1.ResourceQuota) ([]string, error) {
+	updatedNamespaces := []string{}
+	namespace := newQuota.Namespace
+	currentQuota, exists := c.quotas[namespace]
+	if !exists {
+		return nil, errors.Errorf("Namespace %q does not have a quota in cache", newQuota.Namespace)
+	}
+
+	usageDiffs := diffResourceLists(currentQuota.quota.Status.Used, newQuota.Status.Used)
+
+	if len(usageDiffs) == 0 {
+		return updatedNamespaces, nil // No diffs, nothing to do.
+	}
+	// We have diffs, let's update the cache
+	for namespace != pn_v1.NoParentNamespace {
+		quotaNode, exists := c.quotas[namespace]
+		if !exists {
+			return nil, errors.Errorf("Parent namespace %q does not have a quota in cache", namespace)
+		}
+
+		for resourceName, usageDiff := range usageDiffs {
+			if current, exists := quotaNode.quota.Status.Used[resourceName]; exists {
+				current.Add(usageDiff)
+				quotaNode.quota.Status.Used[resourceName] = current
+			} else {
+				quotaNode.quota.Status.Used[resourceName] = usageDiff
+			}
+		}
+		if quotaNode.policyspace {
+			updatedNamespaces = append(updatedNamespaces, namespace)
+		}
+		namespace = quotaNode.parent
+	}
+	return updatedNamespaces, nil
+}

@@ -7,7 +7,6 @@ import (
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	listers_v1 "github.com/google/stolos/pkg/client/listers/k8us/v1"
 	"github.com/google/stolos/pkg/client/policyhierarchy"
-	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -54,27 +53,6 @@ func (a *UpsertStolosQuota) Execute() error {
 		return err
 	}
 	return nil
-}
-
-// Returns true if the two stolos quota specs are equal. Reflection.deepEqual is not appropriate as
-// the order of the items in the two maps may be different, and the same quantity can be expressed
-// in multiple ways (i.e. 1.0 and 1 as strings)
-func specEqual(left, right v1.StolosResourceQuotaSpec) bool {
-	return resourceListEqual(left.Status.Hard, right.Status.Hard) &&
-		resourceListEqual(left.Status.Used, right.Status.Used)
-}
-
-func resourceListEqual(left, right core_v1.ResourceList) bool {
-	if len(left) != len(right) {
-		return false
-	}
-
-	for resource, quantity := range left {
-		if quantity.Cmp(right[resource]) != 0 {
-			return false
-		}
-	}
-	return true
 }
 
 func (a *UpsertStolosQuota) String() string {

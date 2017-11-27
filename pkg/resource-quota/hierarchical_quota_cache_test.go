@@ -124,6 +124,65 @@ func TestCanAdmit(t *testing.T) {
 	}
 }
 
+func TestUpdateLeaf(t *testing.T) {
+
+	// Limits and structure
+	policyNodes := []runtime.Object{
+		makePolicyNode("kittiesandponies", "", core_v1.ResourceList{
+			"hay":  resource.MustParse("10"),
+			"milk": resource.MustParse("5"),
+		}, true),
+		makePolicyNode("kitties", "kittiesandponies", core_v1.ResourceList{
+			"hay": resource.MustParse("5"),
+		}, false),
+		makePolicyNode("ponies", "kittiesandponies", core_v1.ResourceList{
+			"hay":  resource.MustParse("15"),
+			"milk": resource.MustParse("5"),
+		}, false),
+	}
+
+	// Starting usages
+	quotas := []runtime.Object{
+		makeResourceQuota("kitties", core_v1.ResourceList{
+			"hay": resource.MustParse("2"),
+		}),
+		makeResourceQuota("ponies", core_v1.ResourceList{
+			"hay":  resource.MustParse("2"),
+			"milk": resource.MustParse("2"),
+		}),
+	}
+
+	policyNodeInformer := fakeinformers.NewPolicyNodeInformer(policyNodes...)
+	resourceQuotaInformer := fakeinformers.NewResourceQuotaInformer(quotas...)
+	cache, err := NewHierarchicalQuotaCache(policyNodeInformer, resourceQuotaInformer)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Remove milk and change hay to 3.
+	namespaces, err := cache.UpdateLeaf(*makeResourceQuota("ponies", core_v1.ResourceList{
+		"hay": resource.MustParse("3"),
+	}))
+
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+
+	if len(namespaces) != 1 || namespaces[0] != "kittiesandponies" {
+		t.Errorf("Unexpected namespaces to updated %s", namespaces)
+	}
+
+	expectedNewUsage := core_v1.ResourceList{
+		"hay":  resource.MustParse("5"),
+		"milk": resource.MustParse("0"),
+	}
+
+	if !resourceListEqual(cache.quotas["kittiesandponies"].quota.Status.Used, expectedNewUsage) {
+		t.Errorf("Unexpected new usage %s", cache.quotas["kittiesandponies"].quota.Status.Used)
+	}
+}
+
 func makePolicyNode(name string, parent string, limits core_v1.ResourceList, policyspace bool) *pn_v1.PolicyNode {
 	return &pn_v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{
