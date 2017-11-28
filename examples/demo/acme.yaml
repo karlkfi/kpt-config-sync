@@ -17,8 +17,10 @@ spec:
       rules:
       - resources: ["pods"]
         verbs: ["*"]
+        apiGroups: [""]
       - resources: ["namespaces", "roles", "rolebindings"]
         verbs: ["get"]
+        apiGroups: [""]
 ---
 apiVersion: "k8us.k8s.io/v1"
 kind: PolicyNode
@@ -36,7 +38,7 @@ spec:
     - kind: RoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
-        namespace: acme
+        namespace: eng
         name: alice-rolebinding
       subjects:
       - kind: User

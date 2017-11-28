@@ -20,7 +20,7 @@ func GetPolicyRules(i cache.SharedIndexInformer, namespace string) (
 	// built so far.
 	policies := make([]apipolicyhierarchy.PolicyNodeSpec, 0)
 
-	glog.V(5).Info("PolicyNodes: %v", spew.Sdump())
+	glog.V(5).Infof("GetPolicyRules: namespace=%v", namespace)
 
 	// Follows a trail of namespaces starting from 'namespace', then
 	// following the back-pointers to parents, up to the root PolicyNode.

@@ -241,7 +241,7 @@ func TestAuthorizeHierarchical(t *testing.T) {
 				request("jane", "meowie", "life", "pods", "get"),
 				request("joe", "meowie", "animals", "pods", "get"),
 				request("joe", "meowie", "animals", "pods", "get"),
-				// Jill is a getter, lister, and watcaher in namespace "kitties".
+				// Jill is a getter, lister, and watcher in namespace "kitties".
 				request("jill", "meowie", "kitties", "pods", "get"),
 				request("jill", "meowie", "kitties", "pods", "get"),
 				request("jill", "meowie", "kitties", "pods", "get"),
@@ -277,6 +277,85 @@ func TestAuthorizeHierarchical(t *testing.T) {
 				// the policy node that currently does not seem to exist.
 				request("jane", "meowie", "kitties", "pods", "list"),
 				request("jane", "meowie", "kitties", "pods", "get"),
+			},
+		},
+		testAuthorizeTestCase{
+			// The canonical "acme corp" test case.
+			//
+			// Note that APIGroup in the policy rule must be filled in with
+			// something, otherwise that policy rule is effectively defunct.
+			//
+			// acme (Admin: pod.*)
+			// + corp
+			// + eng (alice@google.com -> Admin)
+			// |  + backend (bob@google.com -> Admin)
+			// |  ` frontend
+			// ` rnd
+			//   ` new-prj
+			storage: []runtime.Object{
+				policyNode("acme", "",
+					[]rbac.Role{
+						namespaceRole("admin", "acme",
+							[]rbac.PolicyRule{
+								policyRule(
+									[]string{""},
+									[]string{"*"},
+									[]string{"pods"},
+								),
+								policyRule(
+									[]string{""},
+									[]string{"get"},
+									[]string{"namespaces", "roles", "rolebindings"},
+								),
+							}),
+					},
+					[]rbac.RoleBinding{}),
+				policyNode("eng", "acme",
+					[]rbac.Role{},
+					[]rbac.RoleBinding{
+						namespaceRoleBinding("alice-rolebinding", "eng", "admin",
+							"User:alice@google.com"),
+					}),
+				policyNode("corp", "acme", []rbac.Role{}, []rbac.RoleBinding{}),
+				policyNode("rnd", "acme", []rbac.Role{}, []rbac.RoleBinding{}),
+				policyNode("new-prj", "rnd", []rbac.Role{}, []rbac.RoleBinding{}),
+				policyNode("backend", "eng", []rbac.Role{}, []rbac.RoleBinding{
+					namespaceRoleBinding("bob-rolebinding", "backend", "admin",
+						"User:bob@google.com"),
+				}),
+				policyNode("frontend", "eng", []rbac.Role{}, []rbac.RoleBinding{}),
+			},
+			shouldPass: requests{
+				// alice@google.com can do all the operations that admin is
+				// allowed to do.
+				request("alice@google.com", "", "eng", "pods", "get"),
+				request("alice@google.com", "", "eng", "namespaces", "get"),
+				request("alice@google.com", "", "eng", "roles", "get"),
+				request("alice@google.com", "", "eng", "rolebindings", "get"),
+				request("alice@google.com", "", "backend", "rolebindings", "get"),
+				request("alice@google.com", "", "frontend", "rolebindings", "get"),
+
+				// bob@google.com as admin in "backend" can do all the admin ops
+				// like alice@, but in its namespace only.
+				request("bob@google.com", "", "backend", "rolebindings", "get"),
+				request("bob@google.com", "", "backend", "namespaces", "get"),
+				request("bob@google.com", "", "backend", "roles", "get"),
+				request("bob@google.com", "", "backend", "rolebindings", "get"),
+				// ...and operate on pods every which way.
+				request("bob@google.com", "", "backend", "pods", "get"),
+				request("bob@google.com", "", "backend", "pods", "create"),
+				request("bob@google.com", "", "backend", "pods", "list"),
+			},
+			shouldFail: requests{
+				// alice@google.com has no permissions in 'corp' and 'rnd.
+				request("alice@google.com", "", "corp", "rolebindings", "get"),
+				request("alice@google.com", "", "rnd", "rolebindings", "get"),
+				// bob@google.com is not admin in frontend, but in backend.
+				request("bob@google.com", "", "frontend", "rolebindings", "get"),
+				// bob@google.com is not admin in eng.
+				request("bob@google.com", "", "eng", "rolebindings", "get"),
+				// bob@google.com is admin, but admins can not 'create'.
+				request("bob@google.com", "", "frontend", "rolebindings", "create"),
 			},
 		},
 	}
@@ -325,6 +404,10 @@ func policyNode(
 
 // Example: roleBinding("pod-reader", "User:jane")
 func roleBinding(roleName string, subjects ...string) rbac.RoleBinding {
+	return namespaceRoleBinding("", "", roleName, subjects...)
+}
+
+func namespaceRoleBinding(name, namespace, roleName string, subjects ...string) rbac.RoleBinding {
 	subjectList := []rbac.Subject{}
 	for _, subject := range subjects {
 		// "User:joe" -> ["User", "joe"]
@@ -337,6 +420,10 @@ func roleBinding(roleName string, subjects ...string) rbac.RoleBinding {
 		subjectList = append(subjectList, r)
 	}
 	ret := rbac.RoleBinding{
+		ObjectMeta: meta.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
 		RoleRef:  roleRef(roleName),
 		Subjects: subjectList,
 	}
@@ -359,17 +446,30 @@ func roleRef(name string) rbac.RoleRef {
 //     policyRule([]string{""}, []string{"get"}, []string{"pods"}),
 // }),
 func role(name string, policyRules []rbac.PolicyRule) rbac.Role {
+	return namespaceRole(name, "", policyRules)
+}
+
+func namespaceRole(name, namespace string, policyRules []rbac.PolicyRule) rbac.Role {
 	return rbac.Role{
 		ObjectMeta: meta.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: namespace,
 		},
 		Rules: policyRules,
 	}
+
 }
 
+// policyRule creates a new component of a Role.
+//
+// Note that apiGroups must be set to a non-empty slice in order for it to ever
+// take effect.  This is a tacit requirement of the native K8S RBAC authz.
 // Example:
 // policyRule([]string{"someapigroup"}, []string{"get"}, []string{"pods"}),
 func policyRule(apiGroups, verbs, resources []string) rbac.PolicyRule {
+	if len(apiGroups) == 0 {
+		panic("apiGroups must have at least one element to be effective.")
+	}
 	return rbac.PolicyRule{
 		APIGroups: apiGroups,
 		Verbs:     verbs,
