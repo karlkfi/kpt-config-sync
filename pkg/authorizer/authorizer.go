@@ -36,8 +36,10 @@ import (
 	"github.com/golang/glog"
 	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	clientpolicyhierarchy "github.com/google/stolos/pkg/client/policyhierarchy"
+	"github.com/google/stolos/pkg/util/set/stringset"
 	"github.com/pkg/errors"
 	authz "k8s.io/api/authorization/v1beta1"
+	apicore "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -103,6 +105,7 @@ func (r *rbacInformerAdapter) GetRole(namespace, name string) (*apisrbac.Role, e
 					&newRole,
 					nil, /*scope; what is it good for?!*/
 				)
+				expandResourceQuotaPermissions(&newRole)
 				role = &newRole
 			}
 		}
@@ -114,6 +117,70 @@ func (r *rbacInformerAdapter) GetRole(namespace, name string) (*apisrbac.Role, e
 	}
 	glog.V(4).Infof("GetRole found role: %v", spew.Sdump(*role))
 	return role, nil
+}
+
+// matchesCoreResourceQuota returns true if the cross-product of api groups and
+// resource types specified includes the resource quota resource from the core
+// API group.
+func matchesCoreResourceQuota(apiGroups []string, resources []string) bool {
+	apiGroupSet := stringset.NewFromSlice(apiGroups)
+	glog.V(1).Infof("false: %v", apiGroupSet)
+	if !apiGroupSet.Contains("") && !apiGroupSet.Contains("*") {
+		// If the api groups don't refer to the core API group, then no quotas
+		// are involved.
+		glog.V(1).Infof("false")
+		return false
+	}
+	resourceSet := stringset.NewFromSlice(resources)
+	result := resourceSet.Contains(string(apicore.ResourceQuotas)) &&
+		!resourceSet.Contains(string(policyhierarchy.StolosResourceQuotaResource))
+	glog.V(1).Infof("result: %v", result)
+	return result
+}
+
+// newStolosPolicyRule creates a new policy rule that applies to Stolos
+// resource quotas, based on a policy rule for "regular" policy rules.
+// Requires 'prototype' to be a policy rule that applies to regular resource
+// quota.
+func newStolosPolicyRule(prototype *apisrbac.PolicyRule) *apisrbac.PolicyRule {
+	result := prototype.DeepCopy()
+	result.APIGroups = []string{policyhierarchy.GroupName}
+	result.Resources = []string{policyhierarchy.StolosResourceQuotaResource}
+	return result
+}
+
+// expandResourceQuotaPermissions grants to objects of the type
+// "k8us.k8s.io"/stolosresourcequota" the same permissions that are granted for
+// ""/resourcequota.
+//
+// This is done to ensure that the same set of policy rules apply to all
+// resource quota objects, regardless of whether they are native Kubernetes
+// resource quotas, or are hierarchical quotas added by Stolos.  This ensures
+// that any user that is permitted to access Kubernetes resource quota can
+// also access the hierarchical resource quota.
+//
+// If, however, one wants to add additional permission rules on the
+// hierarchical resource quota, such rules can be added just as for any other
+// custom resource.
+func expandResourceQuotaPermissions(rb *apisrbac.Role) {
+	glog.V(6).Infof("Role at entry: %+v", *rb)
+	for i, rule := range rb.Rules {
+		if len(rule.ResourceNames) != 0 {
+			// If the resources are explicitly named, don't modify the role to
+			// include stolos resource quotas.
+			glog.V(8).Infof("Skipping rule: i=%v, rule=%#v", i, rule)
+			continue
+		}
+		resources := stringset.NewFromSlice(rule.Resources)
+		glog.V(7).Infof("resources=%v", resources)
+		if !matchesCoreResourceQuota(rule.APIGroups, rule.Resources) {
+			// If we already inserted the stolos resource quotas, or if no
+			// resource quotas are mentioned at all, skip this rule.
+			continue
+		}
+		rb.Rules = append(rb.Rules, *newStolosPolicyRule(&rule))
+	}
+	glog.V(6).Infof("Resulting role: %+v", *rb)
 }
 
 var _ validation.RoleBindingLister = (*rbacInformerAdapter)(nil)
@@ -141,7 +208,7 @@ func (r *rbacInformerAdapter) ListRoleBindings(namespace string) ([]*apisrbac.Ro
 			result = append(result, &newRoleBinding)
 		}
 	}
-	glog.V(4).Infof("ListRoleBindings found role bindings:\n\t%v",
+	glog.V(6).Infof("ListRoleBindings found role bindings:\n\t%v",
 		spew.Sdump(result))
 	return result, nil
 }
@@ -232,14 +299,15 @@ func NewAttributes(request *authz.SubjectAccessReviewSpec) *Attributes {
 
 // GetUser implements authorizer.Attributes.
 func (a *Attributes) GetUser() user.Info {
-	glog.V(3).Infof("GetUser()")
 	req := a.request
-	return &user.DefaultInfo{
+	result := &user.DefaultInfo{
 		Name:   req.User,
 		UID:    req.UID,
 		Groups: req.Groups,
 		Extra:  convertFromSarExtra(req.Extra),
 	}
+	glog.V(9).Infof("GetUser() -> %+v", result)
+	return result
 }
 
 func (a *Attributes) GetVerb() string {

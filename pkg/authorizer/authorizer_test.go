@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/testing/fakeinformers"
 	authz "k8s.io/api/authorization/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
@@ -358,6 +359,47 @@ func TestAuthorizeHierarchical(t *testing.T) {
 				request("bob@google.com", "", "frontend", "rolebindings", "create"),
 			},
 		},
+		testAuthorizeTestCase{
+			// A permission for an operation on resourcequotas in the core API
+			// group implies that same permission on
+			// k8us.k8s.io/stolosresourcequotas
+			storage: []runtime.Object{
+				policyNode("kitties", "",
+					[]rbac.Role{
+						role("reader",
+							[]rbac.PolicyRule{
+								policyRule(
+									[]string{""},
+									[]string{"list"},
+									[]string{"resourcequotas"}),
+							}),
+					},
+					[]rbac.RoleBinding{
+						roleBinding("reader", "User:jane"),
+					}),
+			},
+			shouldPass: requests{
+				// This is what the policy in "reader" says verbatim.
+				request("jane", "", "kitties", "resourcequotas", "list"),
+				// This permission is derived from the permission to list
+				// "regular" resource quotas.
+				requestWithGroup(
+					"jane", "", "kitties",
+					resourceGroup(policyhierarchy.GroupName),
+					policyhierarchy.StolosResourceQuotaResource, "list"),
+			},
+			shouldFail: requests{
+				// Forbidden because the reader role doesn't have create
+				// permissions.
+				request("jane", "", "kitties", "resourcequotas", "create"),
+				// And there is nothing to grant a similar permission for Stolos
+				// resource quotas either.
+				requestWithGroup(
+					"jane", "", "kitties",
+					resourceGroup(policyhierarchy.GroupName),
+					policyhierarchy.StolosResourceQuotaResource, "create"),
+			},
+		},
 	}
 	for i, tt := range tests {
 		a := New(fakeinformers.NewPolicyNodeInformer(tt.storage...).Informer())
@@ -377,6 +419,61 @@ func TestAuthorizeHierarchical(t *testing.T) {
 					i, j, e, actual)
 			}
 		}
+	}
+}
+
+func TestMatchesCoreResourceQuota(t *testing.T) {
+	tests := []struct {
+		name      string
+		apiGroups []string
+		resources []string
+		matches   bool
+	}{
+		{
+			name:      "Matches explicit core api group",
+			apiGroups: []string{""},
+			resources: []string{"resourcequotas"},
+			matches:   true,
+		},
+		{
+			name:      "Matches a wildcard",
+			apiGroups: []string{"*"},
+			resources: []string{"resourcequotas"},
+			matches:   true,
+		},
+		{
+			name:      "Does not match an empty API group",
+			apiGroups: []string{},
+			resources: []string{"resourcequotas"},
+			matches:   false,
+		},
+		{
+			name:      "Does not match empty resources",
+			apiGroups: []string{""},
+			resources: []string{},
+			matches:   false,
+		},
+		{
+			name:      "Does not match empty resources",
+			apiGroups: []string{""},
+			resources: []string{},
+			matches:   false,
+		},
+		{
+			name:      "Does not match mismatching resources",
+			apiGroups: []string{"group1", "group2"},
+			resources: []string{"resource1", "resource2"},
+			matches:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			matches := matchesCoreResourceQuota(tt.apiGroups, tt.resources)
+			if matches != tt.matches {
+				t.Errorf("Expected: %v, got: %v, for: %#v",
+					tt.matches, matches, tt)
+			}
+		})
 	}
 }
 
@@ -477,19 +574,29 @@ func policyRule(apiGroups, verbs, resources []string) rbac.PolicyRule {
 	}
 }
 
+// Used to disambiguate arguments.
+type resourceGroup string
+
 // Example:
 // request("jane", "meowie", "kitties", "pods", "get").
 func request(user, resourceName, namespace, resourceType, verb string,
 ) authz.SubjectAccessReviewSpec {
+	return requestWithGroup(user, resourceName, namespace, resourceGroup(""), resourceType, verb)
+}
+
+func requestWithGroup(user, resourceName, namespace string,
+	group resourceGroup, resourceType, verb string) authz.SubjectAccessReviewSpec {
 	return authz.SubjectAccessReviewSpec{
 		ResourceAttributes: &authz.ResourceAttributes{
 			Name:      resourceName,
 			Namespace: namespace,
 			Resource:  resourceType,
 			Verb:      verb,
+			Group:     string(group),
 		},
 		User: user,
 	}
+
 }
 
 // Example:

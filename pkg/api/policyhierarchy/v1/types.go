@@ -127,6 +127,10 @@ type StolosRoleBindingSpec struct {
 
 ///////////////// Stolos Resource Quota //////////////////
 
+// StolosResourceQuotaResouce contains the name of the lone StolosResourceQuota
+// resource.
+const StolosResourceQuotaResource = "stolosresourcequotas"
+
 // Genclient directive for StolosResourceQuota
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
