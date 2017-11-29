@@ -63,13 +63,15 @@ build-all: .output
 	      go install -v -installsuffix="static" $(REPO)/cmd/...
 
 # Cleans all artifacts.
-.PHONY: clean-all
+.PHONY: clean clean-all
+clean: clean-all
 clean-all:
 	go clean -v $(REPO)
 	rm -rf $(OUTPUT_DIR)
 
 # Runs all tests.
-.PHONY: test-all
+.PHONY: test test-all
+test: test-all
 test-all:
 	go test -v $(REPO)/...
 
