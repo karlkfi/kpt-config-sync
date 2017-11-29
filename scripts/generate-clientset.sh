@@ -34,6 +34,11 @@ CLIENTSET_NAME=policyhierarchy
 
 BOILERPLATE="$(dirname ${0})/boilerplate.go.txt"
 
+LOGGING_FLAGS=${LOGGING_FLAGS:- --logtostderr -v 5}
+if ${SILENT:-false}; then
+  LOGGING_FLAGS=""
+fi
+
 tools=()
 for tool in client deepcopy informer lister; do
   tools+=("k8s.io/code-generator/cmd/${tool}-gen")
@@ -66,24 +71,21 @@ ${GOBASE}/bin/client-gen \
 for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
   # Creates types.generated.go
   ${GOBASE}/bin/deepcopy-gen \
-    --logtostderr \
-    -v 5 \
+    ${LOGGING_FLAGS} \
     --input-dirs="${INPUT_BASE}/${api}" \
     --output-file-base="types.generated" \
     --go-header-file="${BOILERPLATE}" \
     --output-base="${OUTPUT_BASE}"
 
   ${GOBASE}/bin/lister-gen \
-    --logtostderr \
-    -v 5 \
+    ${LOGGING_FLAGS} \
     --input-dirs="${INPUT_BASE}/${api}" \
     --output-base="$GOWORK/src" \
     --go-header-file="${BOILERPLATE}" \
     --output-package="${OUTPUT_CLIENT}/listers"
 
   ${GOBASE}/bin/informer-gen \
-    --logtostderr \
-    -v 5 \
+    ${LOGGING_FLAGS} \
     --input-dirs="${INPUT_BASE}/${api}" \
     --versioned-clientset-package="${OUTPUT_CLIENT}/${CLIENTSET_NAME}" \
     --listers-package="${OUTPUT_CLIENT}/listers" \

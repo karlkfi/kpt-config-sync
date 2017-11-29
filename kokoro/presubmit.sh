@@ -9,13 +9,21 @@ STOLOS_DIR=$GOPATH/src/github.com/google/stolos
 mkdir -p $STOLOS_DIR
 
 # Copy our code over to github.com/stolos because that's the import path
-cp -r git/stolos/* $STOLOS_DIR/
+git clone git/stolos $STOLOS_DIR
 
 cd $STOLOS_DIR
 
 # Go get dependencies: Don't install, include test
 echo "Go get ..."
 go get -d -t ../...
+
+echo "================== CHECKING CODEGEN ================"
+codegen=$STOLOS_DIR/scripts/generate-clientset.sh
+SILENT=true ${codegen}
+if ! git -C ${STOLOS_DIR} diff --no-ext-diff --quiet --exit-code; then
+  echo "Detected change from codegen! Rerun ${codegen}"
+  exit 1
+fi
 
 echo "======================== BUILD ====================="
 make build-all
