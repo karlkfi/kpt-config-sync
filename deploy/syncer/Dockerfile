@@ -1,5 +1,3 @@
-#!/bin/bash
-#
 # Copyright 2017 Kubernetes Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,19 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# Depoy script for minikube.  Hopefully this will get unified with deploy-gke
-# sooner than later.
-#
 
-source $(dirname ${0:-})/common.sh
-
-restore_context_on_exit
-
-echo "Setting docker env to minikube"
-eval $(minikube docker-env)
-build_image
-
-kubectl config use-context minikube
-
-create_pod minikube syncer:test
+FROM busybox
+ADD syncer syncer
+ENTRYPOINT ["/syncer", "--logtostderr"]

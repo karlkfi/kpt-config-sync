@@ -1,5 +1,3 @@
-#!/bin/bash
-#
 # Copyright 2017 Kubernetes Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,9 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Creates the service account "syncer-service"
-#
 
-set -euo pipefail
+# This likely requires the binary to be statically linked.
+FROM busybox
 
-exec $(dirname $0)/../../tools/create-service-account.sh syncer-service
+WORKDIR /
+COPY authorizer .
+ADD server.key .
+ADD server.crt .
+EXPOSE 8443
+ENTRYPOINT ["/authorizer", \
+            "--listen_hostport", ":8443", \
+            "--handler_url_path", "/authorize", \
+            "--motd", "TLS Logging (golang); GCE-compatible"]

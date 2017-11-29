@@ -18,8 +18,8 @@ echo "Go get ..."
 go get -d -t ../...
 
 echo "======================== BUILD ====================="
-make build
+make build-all
 
 echo "======================== TEST ======================"
-make test
+make test-all
 
