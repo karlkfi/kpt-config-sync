@@ -1,8 +1,0 @@
-server.pem
-server.crt
-server.csr
-server.key
-authorizer
-*.tmp
-*.crt
-
