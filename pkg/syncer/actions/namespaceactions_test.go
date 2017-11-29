@@ -19,7 +19,8 @@ import (
 	"testing"
 	"time"
 
-	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/davecgh/go-spew/spew"
+	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,9 +33,8 @@ import (
 
 const parentLabelValue = "parent-team"
 
-func upsertNamespaceTestAction(
-	ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) Interface {
-	return NewNamespaceUpsertAction(ns, parentLabelValue, client, nsLister)
+func upsertNamespaceTestAction(ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) Interface {
+	return NewNamespaceUpsertAction(ns, map[string]string{policyhierarchy_v1.ParentLabelKey: parentLabelValue}, client, nsLister)
 }
 
 func deleteNamespaceTestAction(
@@ -121,8 +121,8 @@ func TestNamespaceActions(t *testing.T) {
 				}
 				t.Errorf("Unexpected error during testcase")
 			}
-			if ns.Labels[policyhierarchy.ParentLabelKey] != parentLabelValue {
-				t.Errorf("Failed to update the parent label")
+			if ns.Labels[policyhierarchy_v1.ParentLabelKey] != parentLabelValue {
+				t.Errorf("Failed to update the parent label\ntestcase: %s\n %s", spew.Sdump(testcase), spew.Sdump(ns))
 			}
 		} else {
 			if err != nil {

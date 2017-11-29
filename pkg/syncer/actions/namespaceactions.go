@@ -16,9 +16,11 @@ package actions
 
 import (
 	"fmt"
+	"reflect"
+
+	"github.com/google/stolos/pkg/syncer/labeling"
 
 	"github.com/golang/glog"
-	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,8 +32,8 @@ import (
 type namespaceActionBase struct {
 	namespace string
 
-	// Name of the parent namespace.
-	parent string
+	// Labels on the namespace.
+	labels map[string]string
 
 	// Name of the operation being performed, mostly here for logging purposes.
 	operation string
@@ -106,13 +108,13 @@ var _ Interface = &NamespaceUpsertAction{}
 // NewNamespaceUpsertAction creates a new NamespaceUpsertAction for the given namespace
 func NewNamespaceUpsertAction(
 	namespace string,
-	parent string,
+	labels map[string]string,
 	kubernetesInterface kubernetes.Interface,
 	namespaceLister listers_core_v1.NamespaceLister) *NamespaceUpsertAction {
 	return &NamespaceUpsertAction{
 		namespaceActionBase: namespaceActionBase{
 			namespace:           namespace,
-			parent:              parent,
+			labels:              labeling.AddOriginLabelToMap(labels),
 			operation:           "upsert",
 			kubernetesInterface: kubernetesInterface,
 			namespaceLister:     namespaceLister,
@@ -139,7 +141,7 @@ func (n *NamespaceUpsertAction) create() error {
 	createdNamespace, err := n.kubernetesInterface.CoreV1().Namespaces().Create(&core_v1.Namespace{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:   n.namespace,
-			Labels: map[string]string{policyhierarchy.ParentLabelKey: n.parent},
+			Labels: n.labels,
 		},
 	})
 
@@ -156,9 +158,7 @@ func (n *NamespaceUpsertAction) create() error {
 }
 
 func (n *NamespaceUpsertAction) update(currentNamespace *core_v1.Namespace) error {
-	currentParent, ok := currentNamespace.Labels[policyhierarchy.ParentLabelKey]
-	// We only need to update the namespace if the label has changed
-	if ok && currentParent == n.parent {
+	if reflect.DeepEqual(n.labels, currentNamespace.Labels) {
 		glog.Infof("Existing namespace %q does not need to be updated", n.namespace)
 		return nil
 	}
@@ -167,7 +167,7 @@ func (n *NamespaceUpsertAction) update(currentNamespace *core_v1.Namespace) erro
 	updatedNamespace, err := n.kubernetesInterface.CoreV1().Namespaces().Update(&core_v1.Namespace{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:            n.namespace,
-			Labels:          map[string]string{policyhierarchy.ParentLabelKey: n.parent},
+			Labels:          n.labels,
 			ResourceVersion: currentNamespace.ResourceVersion,
 		},
 	})

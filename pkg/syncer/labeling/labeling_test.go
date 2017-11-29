@@ -16,6 +16,7 @@ limitations under the License.
 package labeling
 
 import (
+	"reflect"
 	"testing"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,5 +39,14 @@ func TestLabeling(t *testing.T) {
 	selector := NewOriginSelector()
 	if !selector.Matches(labels.Set(m.Labels)) {
 		t.Errorf("Selector should match label")
+	}
+
+	labelMap := map[string]string{}
+	ret := AddOriginLabelToMap(labelMap)
+	if !reflect.DeepEqual(OriginLabel, labelMap) {
+		t.Errorf("Did not add label to map")
+	}
+	if !reflect.DeepEqual(OriginLabel, ret) {
+		t.Errorf("Did not return proper value")
 	}
 }

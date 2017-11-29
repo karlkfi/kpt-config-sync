@@ -60,7 +60,11 @@ func (s *NamespaceSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *poli
 }
 
 func (s *NamespaceSyncer) onUpsert(node *policyhierarchy_v1.PolicyNode) error {
-	s.queue.Add(actions.NewNamespaceUpsertAction(node.Name, node.Spec.Parent, s.client.Kubernetes(), s.namespaceLister))
+	s.queue.Add(actions.NewNamespaceUpsertAction(
+		node.Name,
+		map[string]string{policyhierarchy_v1.ParentLabelKey: node.Spec.Parent},
+		s.client.Kubernetes(),
+		s.namespaceLister))
 	return nil
 }
 
