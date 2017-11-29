@@ -94,20 +94,20 @@ gen-all-yaml-files: .output
 ######################################################################
 .PHONY: push-resource-quota
 push-resource-quota: build-all
-	cp -r $(TOP_DIR)/deploy/admission-controller/resource-quota $(STAGING_DIR)
+	cp -r $(TOP_DIR)/build/admission-controller/resource-quota $(STAGING_DIR)
 	cp $(BIN_DIR)/resource-quota $(STAGING_DIR)/resource-quota
 	cd $(STAGING_DIR)/resource-quota; ./gencert.sh
 	$(call build-and-push-image,resource-quota)
 
 .PHONY: push-syncer
 push-syncer: build-all
-	cp -r $(TOP_DIR)/deploy/syncer $(STAGING_DIR)
+	cp -r $(TOP_DIR)/build/syncer $(STAGING_DIR)
 	cp $(BIN_DIR)/syncer $(STAGING_DIR)/syncer
 	$(call build-and-push-image,syncer)
 
 .PHONY: push-authorizer
 push-authorizer: build-all
-	cp -r $(TOP_DIR)/deploy/authorizer $(STAGING_DIR)
+	cp -r $(TOP_DIR)/build/authorizer $(STAGING_DIR)
 	cp $(BIN_DIR)/authorizer $(STAGING_DIR)/authorizer
 	cd $(STAGING_DIR)/authorizer; ./gencert.sh
 	$(call build-and-push-image,authorizer)
@@ -115,6 +115,10 @@ push-authorizer: build-all
 ######################################################################
 # Targets for deploying components to K8S.
 ######################################################################
+.PHONY: deploy-common-objects
+deploy-common-objects:
+	$(TOP_DIR)/scripts/deploy-common-objects.sh
+
 .PHONY: deploy-resource-quota
 deploy-resource-quota: push-resource-quota gen-all-yaml-files
 	kubectl replace -f $(GEN_YAML_DIR)/resource-quota.yaml --force
@@ -123,7 +127,7 @@ deploy-resource-quota: push-resource-quota gen-all-yaml-files
 deploy-syncer: push-syncer gen-all-yaml-files
 	kubectl replace -f $(GEN_YAML_DIR)/syncer.yaml --force
 
-.PHONY: deploy-syncer
+.PHONY: deploy-authorizer
 deploy-authorizer: push-authorizer gen-all-yaml-files
 	kubectl replace -f $(GEN_YAML_DIR)/authorizer.yaml --force
 
