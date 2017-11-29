@@ -1,5 +1,0 @@
-
-# Build artifacts
-/build
-/Dockerfile
-/syncer-pod-*.yaml
