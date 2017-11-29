@@ -81,6 +81,11 @@ lint:
 	gofmt -w $(STOLOS_CODE_DIRS)
 	go tool vet $(STOLOS_CODE_DIRS)
 
+# Installs Stolos kubectl plugin
+.PHONY: install-kubectl-plugin
+install-kubectl-plugin:
+	cd $(TOP_DIR)/cmd/kubectl-stolos; ./install.sh
+
 # Generates all yaml files.
 # Note on m4: m4 does not expand anything after '#' in source file.
 .PHONY: gen-all-yaml-files
