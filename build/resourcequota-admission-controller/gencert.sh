@@ -5,7 +5,7 @@
 # to be called by the api server.
 
 # The name of the service (and the namespace it runs in).
-CN_BASE="admit-resource-quota.stolos-system.svc"
+CN_BASE="resourcequota-admission-controller.stolos-system.svc"
 
 # Create a certificate authority
 openssl genrsa -out ca.key 2048

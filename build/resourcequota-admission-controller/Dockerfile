@@ -13,10 +13,10 @@
 # limitations under the License.
 
 FROM busybox
-ADD resource-quota resource-quota
+ADD resourcequota-admission-controller resourcequota-admission-controller
 ADD server.key server.key
 ADD server.crt server.crt
 ADD ca.crt ca.crt
 EXPOSE 8000
-ENTRYPOINT ["/resource-quota"]
+ENTRYPOINT ["/resourcequota-admission-controller"]
 

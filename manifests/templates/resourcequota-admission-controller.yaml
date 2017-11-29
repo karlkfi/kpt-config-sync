@@ -2,7 +2,7 @@ changecom(`<unused>')
 apiVersion: v1
 kind: Service
 metadata:
-    name: admit-resource-quota
+    name: resourcequota-admission-controller
     namespace: stolos-system
 spec:
     selector:
@@ -14,7 +14,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-    name: admit-resource-quota
+    name: resourcequota-admission-controller
     namespace: stolos-system
     labels:
         webhook: resource-quota
@@ -22,7 +22,7 @@ spec:
     automountServiceAccountToken: true
     serviceAccountName: stolos-service
     containers:
-    - name: admit-resource-quota
+    - name: resourcequota-admission-controller
       image: IMAGE_NAME
       ports:
             - containerPort: 8000

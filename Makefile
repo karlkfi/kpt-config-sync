@@ -90,19 +90,19 @@ install-kubectl-plugin:
 # Note on m4: m4 does not expand anything after '#' in source file.
 .PHONY: gen-all-yaml-files
 gen-all-yaml-files: .output
-	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/resource-quota:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/resource-quota.yaml > $(GEN_YAML_DIR)/resource-quota.yaml
+	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/resourcequota-admission-controller:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/resourcequota-admission-controller.yaml > $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/syncer:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/syncer.yaml > $(GEN_YAML_DIR)/syncer.yaml
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/authorizer:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/authorizer.yaml > $(GEN_YAML_DIR)/authorizer.yaml
 
 ######################################################################
 # Targets for building and pushing docker images.
 ######################################################################
-.PHONY: push-resource-quota
-push-resource-quota: build-all
-	cp -r $(TOP_DIR)/build/admission-controller/resource-quota $(STAGING_DIR)
-	cp $(BIN_DIR)/resource-quota $(STAGING_DIR)/resource-quota
-	cd $(STAGING_DIR)/resource-quota; ./gencert.sh
-	$(call build-and-push-image,resource-quota)
+.PHONY: push-resourcequota-admission-controller
+push-resourcequota-admission-controller: build-all
+	cp -r $(TOP_DIR)/build/resourcequota-admission-controller $(STAGING_DIR)
+	cp $(BIN_DIR)/resourcequota-admission-controller $(STAGING_DIR)/resourcequota-admission-controller
+	cd $(STAGING_DIR)/resourcequota-admission-controller; ./gencert.sh
+	$(call build-and-push-image,resourcequota-admission-controller)
 
 .PHONY: push-syncer
 push-syncer: build-all
@@ -124,9 +124,9 @@ push-authorizer: build-all
 deploy-common-objects:
 	$(TOP_DIR)/scripts/deploy-common-objects.sh
 
-.PHONY: deploy-resource-quota
-deploy-resource-quota: push-resource-quota gen-all-yaml-files
-	kubectl replace -f $(GEN_YAML_DIR)/resource-quota.yaml --force
+.PHONY: deploy-resourcequota-admission-controller
+deploy-resourcequota-admission-controller: push-resourcequota-admission-controller gen-all-yaml-files
+	kubectl replace -f $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml --force
 
 .PHONY: deploy-syncer
 deploy-syncer: push-syncer gen-all-yaml-files
