@@ -1,5 +1,6 @@
 #!/bin/bash
-export NUM_NODES=1
-export KUBE_GCE_INSTANCE_PREFIX=${KUBE_GCE_INSTANCE_PREFIX:-${USER}}
+
+source $(dirname $0)/gce-common.sh
+
 gcloud config get-value project
-./_kubernetes/kubernetes/cluster/kube-up.sh
+${STOLOS_TMP}/kubernetes/cluster/kube-up.sh

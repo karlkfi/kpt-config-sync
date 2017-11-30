@@ -1,16 +1,11 @@
 #!/bin/bash
 
-rm -rf _kubernetes
+source $(dirname $0)/gce-common.sh
+
 KUBERNETES_RELEASE="v1.9.2"
 KUBERNETES_SKIP_CONFIRM=1
 KUBERNETES_SKIP_CREATE_CLUSTER=1
 
-mkdir _kubernetes
-cd _kubernetes
-
-INSTALL_SCRIPT="install_script.sh"
-curl -sS https://get.k8s.io > ${INSTALL_SCRIPT}
-chmod +x ${INSTALL_SCRIPT}
-
+cd ${STOLOS_TMP}
 export KUBERNETES_RELEASE KUBERNETES_SKIP_CONFIRM KUBERNETES_SKIP_CREATE_CLUSTER
-source ${INSTALL_SCRIPT}
+curl -sS https://get.k8s.io | bash
