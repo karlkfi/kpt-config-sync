@@ -34,10 +34,6 @@ func (c *FakeK8usV1) StolosResourceQuotas(namespace string) v1.StolosResourceQuo
 	return &FakeStolosResourceQuotas{c, namespace}
 }
 
-func (c *FakeK8usV1) StolosRoleBindings(namespace string) v1.StolosRoleBindingInterface {
-	return &FakeStolosRoleBindings{c, namespace}
-}
-
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeK8usV1) RESTClient() rest.Interface {

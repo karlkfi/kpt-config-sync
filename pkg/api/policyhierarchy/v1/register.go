@@ -42,8 +42,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&PolicyNode{},
 		&PolicyNodeList{},
-		&StolosRoleBinding{},
-		&StolosRoleBindingList{},
 		&StolosResourceQuota{},
 		&StolosResourceQuotaList{},
 	)

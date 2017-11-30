@@ -85,46 +85,6 @@ type PolicyNodeList struct {
 	Items []PolicyNode `json:"items"`
 }
 
-///////////////// Stolos Role Binding //////////////////
-
-// StolosRoleBindingResource contains the name of the lone StolosRoleBinding resource.
-const StolosRoleBindingResource = "rolebindings"
-
-// Genclient directive for StolosRoleBinding
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// StolosRoleBinding represents an unpacked role binding from stolos. This corresponds to the CRD
-// object format.
-type StolosRoleBinding struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard object's metadata. The Name field of the policy node must match the namespace name.
-	// +optional
-	metav1.ObjectMeta `json:"metadata"`
-
-	// The actual object definition, per K8S object definition style.
-	Spec StolosRoleBindingSpec `json:"spec"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// StolosRoleBindingList holds a list of stolos RBAC policies.
-type StolosRoleBindingList struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard object's metadata.
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
-
-	// Items is a list of stolos role bindings.
-	Items []StolosRoleBinding `json:"items"`
-}
-
-// StolosRoleBindingSpec is equivalent to the payload of the rbac_v1.RoleBinding
-type StolosRoleBindingSpec struct {
-	// List of role bindings that are set in the current namespace.
-	RoleBindings []rbac_v1.RoleBinding `json:"roleBindings"`
-}
-
 ///////////////// Stolos Resource Quota //////////////////
 
 // StolosResourceQuotaResouce contains the name of the lone StolosResourceQuota

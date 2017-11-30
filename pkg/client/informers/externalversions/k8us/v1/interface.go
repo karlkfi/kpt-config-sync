@@ -28,8 +28,6 @@ type Interface interface {
 	PolicyNodes() PolicyNodeInformer
 	// StolosResourceQuotas returns a StolosResourceQuotaInformer.
 	StolosResourceQuotas() StolosResourceQuotaInformer
-	// StolosRoleBindings returns a StolosRoleBindingInformer.
-	StolosRoleBindings() StolosRoleBindingInformer
 }
 
 type version struct {
@@ -49,9 +47,4 @@ func (v *version) PolicyNodes() PolicyNodeInformer {
 // StolosResourceQuotas returns a StolosResourceQuotaInformer.
 func (v *version) StolosResourceQuotas() StolosResourceQuotaInformer {
 	return &stolosResourceQuotaInformer{factory: v.SharedInformerFactory}
-}
-
-// StolosRoleBindings returns a StolosRoleBindingInformer.
-func (v *version) StolosRoleBindings() StolosRoleBindingInformer {
-	return &stolosRoleBindingInformer{factory: v.SharedInformerFactory}
 }

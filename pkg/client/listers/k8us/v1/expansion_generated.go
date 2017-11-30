@@ -29,11 +29,3 @@ type StolosResourceQuotaListerExpansion interface{}
 // StolosResourceQuotaNamespaceListerExpansion allows custom methods to be added to
 // StolosResourceQuotaNamespaceLister.
 type StolosResourceQuotaNamespaceListerExpansion interface{}
-
-// StolosRoleBindingListerExpansion allows custom methods to be added to
-// StolosRoleBindingLister.
-type StolosRoleBindingListerExpansion interface{}
-
-// StolosRoleBindingNamespaceListerExpansion allows custom methods to be added to
-// StolosRoleBindingNamespaceLister.
-type StolosRoleBindingNamespaceListerExpansion interface{}

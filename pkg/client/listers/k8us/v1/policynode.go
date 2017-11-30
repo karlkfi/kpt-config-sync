@@ -21,6 +21,7 @@ package v1
 import (
 	v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 )
@@ -54,7 +55,8 @@ func (s *policyNodeLister) List(selector labels.Selector) (ret []*v1.PolicyNode,
 
 // Get retrieves the PolicyNode from the index for a given name.
 func (s *policyNodeLister) Get(name string) (*v1.PolicyNode, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+	key := &v1.PolicyNode{ObjectMeta: meta_v1.ObjectMeta{Name: name}}
+	obj, exists, err := s.indexer.Get(key)
 	if err != nil {
 		return nil, err
 	}
