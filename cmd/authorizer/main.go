@@ -128,6 +128,8 @@ func maybeNotifySystemd() {
 
 func main() {
 	flag.Parse()
+	flag.Set("logtostderr", "true")
+
 	glog.Infof("Motd: %v", *motd)
 	config := must(rest.InClusterConfig()).(*rest.Config)
 	client := must(meta.NewForConfig(config)).(*meta.Client)

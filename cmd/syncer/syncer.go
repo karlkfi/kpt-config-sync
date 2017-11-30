@@ -30,6 +30,7 @@ import (
 
 func main() {
 	flag.Parse()
+	flag.Set("logtostderr", "true")
 
 	config, err := restconfig.NewRestConfig()
 	if err != nil {

@@ -184,6 +184,8 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 
 func main() {
 	flag.Parse()
+	flag.Set("logtostderr", "true")
+
 	glog.Infof("Hierarchical Resource Quota Admission Controller starting up")
 
 	config, err := rest.InClusterConfig()

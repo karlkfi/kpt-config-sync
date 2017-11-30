@@ -29,7 +29,6 @@ spec:
                 - containerPort: 8443
                   name: https-auth-port
           args: [
-                  "--logtostderr",
                   "--vmodule=main=2"
                 ]
         restartPolicy: Always

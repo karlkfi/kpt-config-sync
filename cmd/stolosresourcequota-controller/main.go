@@ -31,6 +31,8 @@ import (
 
 func main() {
 	flag.Parse()
+	flag.Set("logtostderr", "true")
+
 	glog.Infof("Starting Stolos Resource Quota Controller...")
 
 	config, err := restconfig.NewRestConfig()
