@@ -5,7 +5,7 @@ metadata:
   name: syncer
   namespace: stolos-system
 spec:
-  serviceAccountName: stolos-service
+  serviceAccountName: syncer
   containers:
   - name: syncer
     image: IMAGE_NAME
