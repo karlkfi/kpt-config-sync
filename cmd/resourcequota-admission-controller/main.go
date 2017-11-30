@@ -168,7 +168,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 				ClientConfig: v1alpha1.AdmissionHookClientConfig{
 					Service: v1alpha1.ServiceReference{
 						Namespace: "stolos-system",
-						Name:      "admit-resource-quota",
+						Name:      "resourcequota-admission-controller",
 					},
 					CABundle: caCert,
 				},
