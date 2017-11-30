@@ -13,5 +13,5 @@
 # limitations under the License.
 
 FROM busybox
-ADD syncer syncer
-ENTRYPOINT ["/syncer"]
+ADD stolosresourcequota-controller stolosresourcequota-controller
+ENTRYPOINT ["/stolosresourcequota-controller"]

@@ -90,9 +90,12 @@ install-kubectl-plugin:
 # Note on m4: m4 does not expand anything after '#' in source file.
 .PHONY: gen-all-yaml-files
 gen-all-yaml-files: .output
-	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/resourcequota-admission-controller:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/resourcequota-admission-controller.yaml > $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml
+	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/resourcequota-admission-controller:$(IMAGE_TAG) < \
+	        $(TOP_DIR)/manifests/templates/resourcequota-admission-controller.yaml > $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/syncer:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/syncer.yaml > $(GEN_YAML_DIR)/syncer.yaml
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/authorizer:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/authorizer.yaml > $(GEN_YAML_DIR)/authorizer.yaml
+	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/stolosresourcequota-controller:$(IMAGE_TAG) < \
+	        $(TOP_DIR)/manifests/templates/stolosresourcequota-controller.yaml > $(GEN_YAML_DIR)/stolosresourcequota-controller.yaml
 
 ######################################################################
 # Targets for building and pushing docker images.
@@ -117,6 +120,12 @@ push-authorizer: build-all
 	cd $(STAGING_DIR)/authorizer; ./gencert.sh
 	$(call build-and-push-image,authorizer)
 
+.PHONY: push-stolosresourcequota-controller
+push-stolosresourcequota-controller: build-all
+	cp -r $(TOP_DIR)/build/stolosresourcequota-controller $(STAGING_DIR)
+	cp $(BIN_DIR)/stolosresourcequota-controller $(STAGING_DIR)/stolosresourcequota-controller
+	$(call build-and-push-image,stolosresourcequota-controller)
+
 ######################################################################
 # Targets for deploying components to K8S.
 ######################################################################
@@ -136,7 +145,11 @@ deploy-syncer: push-syncer gen-all-yaml-files
 deploy-authorizer: push-authorizer gen-all-yaml-files
 	kubectl replace -f $(GEN_YAML_DIR)/authorizer.yaml --force
 
+.PHONY: deploy-stolosresourcequota-controller
+deploy-stolosresourcequota-controller: push-stolosresourcequota-controller gen-all-yaml-files
+	kubectl replace -f $(GEN_YAML_DIR)/stolosresourcequota-controller.yaml --force
+
 # TODO: Add deploy to local target for authorizer here.
 
 .PHONY: deploy-all
-deploy-all: deploy-resource-quota deploy-syncer deploy-authorizer
+deploy-all: deploy-resourcequota-admission-controller deploy-syncer deploy-authorizer deploy-stolosresourcequota-controller

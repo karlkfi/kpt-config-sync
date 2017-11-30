@@ -21,7 +21,6 @@ metadata:
         labels:
                 app: authz
 spec:
-        serviceAccountName: stolos-service
         containers:
         - name: authorizer
           image: IMAGE_NAME

@@ -19,7 +19,6 @@ metadata:
     labels:
         webhook: resource-quota
 spec:
-    automountServiceAccountToken: true
     serviceAccountName: stolos-service
     containers:
     - name: resourcequota-admission-controller

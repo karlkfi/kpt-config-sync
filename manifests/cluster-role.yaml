@@ -25,3 +25,9 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - k8us.k8s.io
+  resources:
+  - stolosresourcequotas
+  verbs:
+  - "*"
