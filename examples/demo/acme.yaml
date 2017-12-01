@@ -15,12 +15,15 @@ spec:
         namespace: acme
         name: admin
       rules:
-      - resources: ["pods"]
+      - apiGroups: [""]
+        resources: ["pods"]
         verbs: ["*"]
-        apiGroups: [""]
-      - resources: ["namespaces", "roles", "rolebindings"]
+      - apiGroups: [""]
+        resources: ["namespaces"]
         verbs: ["get"]
-        apiGroups: [""]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        resources: ["roles", "rolebindings"]
+        verbs: ["get", "list"]
 ---
 apiVersion: "k8us.k8s.io/v1"
 kind: PolicyNode
