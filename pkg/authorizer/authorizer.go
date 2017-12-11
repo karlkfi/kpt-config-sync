@@ -35,7 +35,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	clientpolicyhierarchy "github.com/google/stolos/pkg/client/policyhierarchy"
+	rules "github.com/google/stolos/pkg/client/rules"
 	"github.com/google/stolos/pkg/util/set/stringset"
 	"github.com/pkg/errors"
 	authz "k8s.io/api/authorization/v1beta1"
@@ -218,7 +218,7 @@ func (r *rbacInformerAdapter) ListRoleBindings(namespace string) ([]*apisrbac.Ro
 // namespace.  The last is for the root namespace.
 func (r *rbacInformerAdapter) policyRulesFor(
 	namespace string) (*[]policyhierarchy.PolicyNodeSpec, error) {
-	return clientpolicyhierarchy.GetPolicyRules(r.informer, namespace)
+	return rules.GetPolicyRules(r.informer, namespace)
 }
 
 // Authorizer deals with the authorization mechanics.  Instantiate

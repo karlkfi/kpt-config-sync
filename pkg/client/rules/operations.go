@@ -1,4 +1,4 @@
-package policyhierarchy
+package rules
 
 import (
 	"github.com/davecgh/go-spew/spew"
