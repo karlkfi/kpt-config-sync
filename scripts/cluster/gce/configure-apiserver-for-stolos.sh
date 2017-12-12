@@ -2,7 +2,8 @@
 
 set -euv
 
-INSTANCE_ID=${INSTANCE_ID:-${USER}-master}
+KUBE_GCE_INSTANCE_PREFIX=${KUBE_GCE_INSTANCE_PREFIX:-${USER}}
+INSTANCE_ID=${INSTANCE_ID:-${KUBE_GCE_INSTANCE_PREFIX}-master}
 API_SERVER_POD_NAME=kube-apiserver-${INSTANCE_ID}
 
 # Generate the api-server manifest
