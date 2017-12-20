@@ -96,6 +96,8 @@ gen-all-yaml-files: .output
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/authorizer:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/authorizer.yaml > $(GEN_YAML_DIR)/authorizer.yaml
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/stolosresourcequota-controller:$(IMAGE_TAG) < \
 	        $(TOP_DIR)/manifests/templates/stolosresourcequota-controller.yaml > $(GEN_YAML_DIR)/stolosresourcequota-controller.yaml
+	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/policy-node-controller:$(IMAGE_TAG) < \
+	        $(TOP_DIR)/manifests/templates/policy-node-controller.yaml > $(GEN_YAML_DIR)/policy-node-controller.yaml
 
 ######################################################################
 # Targets for building and pushing docker images.
@@ -126,6 +128,12 @@ push-stolosresourcequota-controller: build-all
 	cp $(BIN_DIR)/stolosresourcequota-controller $(STAGING_DIR)/stolosresourcequota-controller
 	$(call build-and-push-image,stolosresourcequota-controller)
 
+.PHONY: push-policy-node-controller
+push-policy-node-controller: build-all
+	cp -r $(TOP_DIR)/build/policy-node-controller $(STAGING_DIR)
+	cp $(BIN_DIR)/policy-node-controller $(STAGING_DIR)/policy-node-controller
+	$(call build-and-push-image,policy-node-controller)
+
 ######################################################################
 # Targets for deploying components to K8S.
 ######################################################################
@@ -148,6 +156,10 @@ deploy-authorizer: push-authorizer gen-all-yaml-files
 .PHONY: deploy-stolosresourcequota-controller
 deploy-stolosresourcequota-controller: push-stolosresourcequota-controller gen-all-yaml-files
 	kubectl replace -f $(GEN_YAML_DIR)/stolosresourcequota-controller.yaml --force
+
+.PHONY: deploy-policy-node-controller
+deploy-policy-node-controller: push-policy-node-controller gen-all-yaml-files
+	kubectl replace -f $(GEN_YAML_DIR)/policy-node-controller.yaml --force
 
 # TODO: Add deploy to local target for authorizer here.
 
