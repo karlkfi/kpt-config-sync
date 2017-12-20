@@ -20,6 +20,18 @@ m4 \
   < kube-apiserver.manifest.patched.m4 \
   > kube-apiserver.manifest.patched
 
+# Generate a CA and key for the API server.
+if [[ -z "${STOLOS}" ]]
+then
+  echo "Please define $STOLOS directory before continuing."
+  exit 1
+fi
+mkdir -p ${STOLOS}/certs
+
+CN="stolosCA"
+openssl genrsa -out ${STOLOS}/certs/ca.key 2048
+openssl req -x509 -new -nodes -key ${STOLOS}/certs/ca.key -days 100000 -out ${STOLOS}/certs/ca.crt -subj "/CN=${CN}"
+
 # Copies the custom configuration over to GCE.
 gcloud compute scp \
   authz_kubeconfig.yaml \
@@ -28,7 +40,7 @@ gcloud compute scp \
   kube-apiserver.manifest.orig \
   ${USER}@${INSTANCE_ID}:~/
 gcloud compute scp \
-  $HOME/.minikube/ca.crt \
+  ${STOLOS}/certs/ca.crt \
   ${USER}@${INSTANCE_ID}:~/ca-webhook.crt
 
 # Calling the 'install.sh' script

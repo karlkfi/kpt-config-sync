@@ -4,6 +4,7 @@ set -euo pipefail
 
 go install github.com/google/stolos/cmd/kubectl-stolos
 
+GOPATH=${GOPATH:-${HOME}/go}
 PLUGIN_DIR=$HOME/.kube/plugins/stolos
 mkdir -p ${PLUGIN_DIR}
 cp $(echo ${GOPATH} | sed -e 's/.*://')/bin/kubectl-stolos ${PLUGIN_DIR}
