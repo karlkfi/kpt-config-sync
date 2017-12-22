@@ -80,6 +80,15 @@ func (t *Time) Before(u *Time) bool {
 
 // Equal reports whether the time instant t is equal to u.
 func (t *Time) Equal(u *Time) bool {
+	// This is fixed in 1.10:
+	// https://github.com/kubernetes/apimachinery/commit/44878ce55b93db86c07d1150129b626bf2ed0bd4#diff-221c91463b9db024401e40d997ec741cL83
+	if t == nil {
+		if u == nil {
+			return true
+		} else {
+			return false
+		}
+	}
 	return t.Time.Equal(u.Time)
 }
 
