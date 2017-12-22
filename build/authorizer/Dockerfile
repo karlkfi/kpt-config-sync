@@ -18,10 +18,10 @@ FROM busybox
 
 WORKDIR /
 COPY authorizer .
-ADD server.key .
-ADD server.crt .
 EXPOSE 8443
 ENTRYPOINT ["/authorizer", \
             "--listen_hostport", ":8443", \
             "--handler_url_path", "/authorize", \
+            "--server_key", "/etc/stolos/secrets/authorizer/server.key", \
+            "--server_cert", "/etc/stolos/secrets/authorizer/server.crt", \
             "--motd", "TLS Logging (golang); GCE-compatible"]

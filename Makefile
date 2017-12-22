@@ -120,6 +120,10 @@ push-authorizer: build-all
 	cp -r $(TOP_DIR)/build/authorizer $(STAGING_DIR)
 	cp $(BIN_DIR)/authorizer $(STAGING_DIR)/authorizer
 	cd $(STAGING_DIR)/authorizer; ./gencert.sh
+	kubectl delete secret authorizer-secret --namespace=stolos-system || true
+	kubectl create secret tls authorizer-secret --namespace=stolos-system \
+	    --cert=$(STAGING_DIR)/authorizer/server.crt \
+		--key=$(STAGING_DIR)/authorizer/server.key
 	$(call build-and-push-image,authorizer)
 
 .PHONY: push-stolosresourcequota-controller

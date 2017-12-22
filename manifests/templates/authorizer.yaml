@@ -22,6 +22,16 @@ metadata:
                 app: authz
 spec:
         serviceAccountName: stolos-service
+        restartPolicy: Always
+        volumes:
+        - name: stolos-secrets
+          secret:
+            secretName: authorizer-secret
+            items:
+            - key: tls.key
+              path: authorizer/server.key
+            - key: tls.crt
+              path: authorizer/server.crt
         containers:
         - name: authorizer
           image: IMAGE_NAME
@@ -32,5 +42,8 @@ spec:
           args: [
                   "--vmodule=main=2"
                 ]
-        restartPolicy: Always
+          volumeMounts:
+          - name: stolos-secrets
+            mountPath: "/etc/stolos/secrets"
+            readOnly: true
 
