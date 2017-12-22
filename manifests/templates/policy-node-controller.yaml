@@ -12,3 +12,17 @@ spec:
     ports:
     - containerPort: 80
     imagePullPolicy: Always
+    env:
+      - name: REMOTE_KUBERNETES_API_SERVER_URL
+        valueFrom:
+          configMapKeyRef:
+            name: policy-node-controller
+            key: master.endpoint
+    volumeMounts:
+      - name: secret-volume
+        readOnly: true
+        mountPath: "/etc/stolos/secrets/master"
+  volumes:
+  - name: secret-volume
+    secret:
+      secretName: policy-node-controller-master-secret

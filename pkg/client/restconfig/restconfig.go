@@ -45,7 +45,7 @@ type configSource struct {
 var configSources = []configSource{
 	{
 		name:   "podServiceAccount",
-		create: NewPodServiceAccountConfig,
+		create: NewLocalClusterConfig,
 	},
 	{
 		name:   "kubectl",

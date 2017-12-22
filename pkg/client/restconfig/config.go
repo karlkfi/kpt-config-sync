@@ -19,12 +19,19 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"fmt"
+	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"io/ioutil"
+	"k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	certutil "k8s.io/client-go/util/cert"
+	"os"
 )
 
 const kubectlConfigPath = ".kube/config"
+const masterSecretsDir = "/etc/stolos/secrets/master/"
 
 // NewKubectlConfig creates a config for whichever context is active in kubectl.
 func NewKubectlConfig() (*rest.Config, error) {
@@ -59,4 +66,35 @@ func NewKubectlContextConfig(contextName string) (*rest.Config, error) {
 			CurrentContext: contextName,
 		})
 	return clientConfig.ClientConfig()
+}
+
+// NewLocalClusterConfig creates a config for connecting to the local cluster API server.
+func NewLocalClusterConfig() (*rest.Config, error) {
+	return rest.InClusterConfig()
+}
+
+// NewRemoteClusterConfig creates a config for connecting to a remote cluster API server.
+func NewRemoteClusterConfig() (*rest.Config, error) {
+	host := os.Getenv("REMOTE_KUBERNETES_API_SERVER_URL")
+	if len(host) == 0 {
+		return nil, fmt.Errorf("unable to load remote-cluster configuration, REMOTE_KUBERNETES_API_SERVER_URL must be defined")
+	}
+
+	token, err := ioutil.ReadFile(masterSecretsDir + v1.ServiceAccountTokenKey)
+	if err != nil {
+		return nil, err
+	}
+	tlsClientConfig := rest.TLSClientConfig{}
+	rootCAFile := masterSecretsDir + v1.ServiceAccountRootCAKey
+	if _, err := certutil.NewPool(rootCAFile); err != nil {
+		glog.Errorf("Expected to load root CA config from %s, but got err: %v", rootCAFile, err)
+	} else {
+		tlsClientConfig.CAFile = rootCAFile
+	}
+
+	return &rest.Config{
+		Host:            host,
+		BearerToken:     string(token),
+		TLSClientConfig: tlsClientConfig,
+	}, nil
 }

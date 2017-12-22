@@ -39,9 +39,19 @@ func main() {
 		panic(errors.Wrapf(err, "Failed to create rest config"))
 	}
 
+	masterConfig, err := restconfig.NewRemoteClusterConfig()
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to create master rest config"))
+	}
+
 	client, err := meta.NewForConfig(config)
 	if err != nil {
 		panic(errors.Wrapf(err, "Failed to create client"))
+	}
+
+	_, err = meta.NewForConfig(masterConfig)
+	if err != nil {
+		panic(errors.Wrapf(err, "Failed to create master client"))
 	}
 
 	stopChannel := make(chan struct{})
