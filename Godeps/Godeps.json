@@ -150,6 +150,26 @@
 			"Rev": "316fb6d3f031ae8f4d457c6c5186b9e3ded70435"
 		},
 		{
+			"ImportPath": "github.com/google/go-cmp/cmp",
+			"Comment": "v0.1.0-17-gab3beb0",
+			"Rev": "ab3beb0f1673c5cab43e36db4ea73c2613100e69"
+		},
+		{
+			"ImportPath": "github.com/google/go-cmp/cmp/internal/diff",
+			"Comment": "v0.1.0-17-gab3beb0",
+			"Rev": "ab3beb0f1673c5cab43e36db4ea73c2613100e69"
+		},
+		{
+			"ImportPath": "github.com/google/go-cmp/cmp/internal/function",
+			"Comment": "v0.1.0-17-gab3beb0",
+			"Rev": "ab3beb0f1673c5cab43e36db4ea73c2613100e69"
+		},
+		{
+			"ImportPath": "github.com/google/go-cmp/cmp/internal/value",
+			"Comment": "v0.1.0-17-gab3beb0",
+			"Rev": "ab3beb0f1673c5cab43e36db4ea73c2613100e69"
+		},
+		{
 			"ImportPath": "github.com/google/gofuzz",
 			"Rev": "24818f796faf91cd76ec7bddd72458fbced7a6c1"
 		},
