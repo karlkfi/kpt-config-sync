@@ -39,9 +39,9 @@ func main() {
 		panic(errors.Wrapf(err, "Failed to create rest config"))
 	}
 
-	masterConfig, err := restconfig.NewRemoteClusterConfig()
+	remoteConfig, err := restconfig.NewRemoteClusterConfig()
 	if err != nil {
-		panic(errors.Wrapf(err, "Failed to create master rest config"))
+		panic(errors.Wrapf(err, "Failed to create remote rest config"))
 	}
 
 	client, err := meta.NewForConfig(config)
@@ -49,14 +49,14 @@ func main() {
 		panic(errors.Wrapf(err, "Failed to create client"))
 	}
 
-	_, err = meta.NewForConfig(masterConfig)
+	remoteClient, err := meta.NewForConfig(remoteConfig)
 	if err != nil {
-		panic(errors.Wrapf(err, "Failed to create master client"))
+		panic(errors.Wrapf(err, "Failed to create remote client"))
 	}
 
 	stopChannel := make(chan struct{})
 
-	pnc := policy_node_controller.NewController(client, stopChannel)
+	pnc := policy_node_controller.NewController(client, remoteClient, stopChannel)
 	pnc.Run()
 	service.WaitForShutdownWithChannel(stopChannel)
 	pnc.Stop()

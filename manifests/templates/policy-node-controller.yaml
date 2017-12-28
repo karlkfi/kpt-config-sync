@@ -5,7 +5,7 @@ metadata:
   name: policy-node-controller
   namespace: stolos-system
 spec:
-  serviceAccountName: stolos-service
+  serviceAccountName: policy-node-controller
   containers:
   - name: policy-node-controller
     image: IMAGE_NAME
