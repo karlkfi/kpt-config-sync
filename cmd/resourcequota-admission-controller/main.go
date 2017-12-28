@@ -148,7 +148,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 			return fmt.Errorf("Failed to delete ExternalAdmissionHookConfiguration: %v", err2)
 		}
 	}
-	failurePolicy := v1alpha1.Ignore
+	failurePolicy := v1alpha1.Fail
 	webhookConfig := &v1alpha1.ExternalAdmissionHookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: externalAdmissionHookConfigName,
@@ -214,8 +214,6 @@ func main() {
 	if !cache.WaitForCacheSync(nil, policyNodeInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
 		glog.Fatal("Failure while waiting for informers to sync")
 	}
-	// In the time window when webhook is registered but the server is not yet up, GenericAdmissionWebhook will admit
-	// requests since we use the Ignore FailurePolicy.
 	if err := selfRegister(clientset, *caBundleFile); err != nil {
 		glog.Fatal("Failed to register webhook: ", err)
 	}
