@@ -82,7 +82,6 @@ func NewNamespaceDeleteAction(
 
 // Execute implements NamespaceAction
 func (n *NamespaceDeleteAction) Execute() error {
-	glog.Infof("Deleting namespace %s", n.namespace)
 	_, err := n.namespaceLister.Get(n.namespace)
 	if err != nil {
 		if api_errors.IsNotFound(err) {
@@ -95,6 +94,7 @@ func (n *NamespaceDeleteAction) Execute() error {
 	if err != nil && !api_errors.IsNotFound(err) {
 		return errors.Wrapf(err, "Failed to delete namespace %q", n.namespace)
 	}
+	glog.Infof("Deleted namespace %s", n.namespace)
 	return nil
 }
 
@@ -137,7 +137,6 @@ func (n *NamespaceUpsertAction) Execute() error {
 
 func (n *NamespaceUpsertAction) create() error {
 	// Attempt to create namespace if it does not exist
-	glog.Infof("Creating namespace %s", n.namespace)
 	createdNamespace, err := n.kubernetesInterface.CoreV1().Namespaces().Create(&core_v1.Namespace{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:   n.namespace,
@@ -150,7 +149,6 @@ func (n *NamespaceUpsertAction) create() error {
 			glog.Infof("Namespace %q already exists", n.namespace)
 			return nil
 		}
-		glog.Infof("Failed to create namespace %q: %v", n.namespace, err)
 		return err
 	}
 	glog.Infof("Created namespace %q, resourceVersion %s", n.namespace, createdNamespace.ResourceVersion)
@@ -172,7 +170,7 @@ func (n *NamespaceUpsertAction) update(currentNamespace *core_v1.Namespace) erro
 		},
 	})
 	if err != nil {
-		return errors.Errorf("Failed to update namespace %q: %v", n.namespace, err)
+		return errors.Wrapf(err, "Failed to update namespace %q", n.namespace)
 	}
 	glog.Infof("Updated namespace %q, resourceVersion %s", n.namespace, updatedNamespace.ResourceVersion)
 	return nil

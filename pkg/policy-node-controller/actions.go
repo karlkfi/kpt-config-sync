@@ -90,15 +90,13 @@ func (p *PolicyNodeUpsertAction) Execute() error {
 		if api_errors.IsNotFound(err) {
 			return p.create()
 		}
-		return errors.Wrapf(err, "Failed to get local policynode %q during upsert")
+		return errors.Wrapf(err, "Failed to get local policynode %q during upsert", p.name)
 	}
 
 	return p.update(localNode)
 }
 
 func (p *PolicyNodeUpsertAction) create() error {
-	glog.Infof("Creating policynode %s", p.name)
-
 	createdPolicyNode, err := p.localNodeInterface.Create(canonicalCopy(p.remoteNode))
 
 	if err != nil {
@@ -106,8 +104,7 @@ func (p *PolicyNodeUpsertAction) create() error {
 			glog.Infof("policynode %q already exists", p.name)
 			return nil
 		}
-		glog.Infof("Failed to create policynode %q: %v", p.name, err)
-		return err
+		return errors.Wrapf(err, "Failed to create policynode %q during upsert", p.name)
 	}
 	glog.Infof("Created policynode %q, resourceVersion %s", p.name, createdPolicyNode.ResourceVersion)
 	return nil
@@ -119,12 +116,11 @@ func (p *PolicyNodeUpsertAction) update(localNode *policyhierarchy_v1.PolicyNode
 		return nil
 	}
 
-	glog.Infof("Updating policynode %q", p.name)
 	u := canonicalCopy(p.remoteNode)
 	u.ResourceVersion = localNode.ResourceVersion
 	u, err := p.localNodeInterface.Update(u)
 	if err != nil {
-		return errors.Errorf("Failed to update policynode %q: %v", p.name, err)
+		return errors.Wrapf(err, "Failed to update policynode %q", p.name)
 	}
 
 	glog.Infof("Updated policynode %q, resourceVersion %s", p.name, u.ResourceVersion)
@@ -156,7 +152,6 @@ func NewPolicyNodeDeleteAction(
 
 // Execute implements PolicyNodeAction
 func (p *PolicyNodeDeleteAction) Execute() error {
-	glog.Infof("Deleting policynode %q", p.name)
 	_, err := p.localNodeLister.Get(p.name)
 	if err != nil {
 		if api_errors.IsNotFound(err) {
@@ -169,6 +164,7 @@ func (p *PolicyNodeDeleteAction) Execute() error {
 	if err != nil && !api_errors.IsNotFound(err) {
 		return errors.Wrapf(err, "Failed to delete policynode %q", p.name)
 	}
+	glog.Infof("Deleted policynode %q", p.name)
 	return nil
 }
 
