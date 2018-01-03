@@ -73,7 +73,7 @@ clean-all:
 .PHONY: test test-all
 test: test-all
 test-all:
-	go test -v $(REPO)/...
+	go test $(REPO)/...
 
 # Run all static analyzers.
 .PHONY: lint
