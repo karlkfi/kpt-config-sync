@@ -16,9 +16,9 @@ limitations under the License.
 package syncer
 
 import (
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/syncer/actions"
 	actions_testing "github.com/google/stolos/pkg/syncer/actions/testing"
@@ -72,8 +72,9 @@ func CheckQueueActions(t *testing.T, items []interface{}, expected []string) {
 		got = append(got, items[i].(actions.Interface).String())
 	}
 
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("Items and expected not equal %#v != %#v", got, expected)
+	if !cmp.Equal(got, expected) {
+		t.Errorf("Items and expected not equal: %v\ngot: %v\nexpected: %v",
+			cmp.Diff(got, expected), got, expected)
 	}
 }
 

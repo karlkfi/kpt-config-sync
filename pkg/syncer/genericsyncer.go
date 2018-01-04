@@ -26,7 +26,7 @@ type UnpackerInterface interface {
 	// UpdateRemovals returns a list of pointers to resource to delete.
 	// The first arg is the previous value for the policy node, and the second is the new value.
 	// Note that the informer framework will periodically re-list and pass all existing nodes as
-	// an "update" where old and new bot have identical resource versions values.
+	// an "update" where old and new both have identical resource versions values.
 	UpdateRemovals(old *policyhierarchy_v1.PolicyNode, new *policyhierarchy_v1.PolicyNode) []interface{}
 
 	// Upserts takes a node, and transforms it into a list of pointers to resources that are declared
