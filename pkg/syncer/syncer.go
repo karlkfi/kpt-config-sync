@@ -36,11 +36,15 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-var flagResyncPeriod = flag.Duration(
-	"resync_period", time.Minute, "The resync period for the syncer system")
+var (
+	flagResyncPeriod = flag.Duration(
+		"resync_period", time.Minute, "The resync period for the syncer system")
 
-var dryRun = flag.Bool(
-	"dry_run", false, "Don't perform actions, just log what would have happened")
+	dryRun = flag.Bool(
+		"dry_run", false, "Don't perform actions, just log what would have happened")
+
+	flattenRbac = flag.Bool("flatten_rbac", false, "If set, flattens the policy hierarchy for roles and role bindings.")
+)
 
 // WorkerNumRetries is the number of times an action will be retried in the work queue.
 const WorkerNumRetries = 3
@@ -127,16 +131,31 @@ func New(client meta.Interface) *Syncer {
 	policyHierarchyV1 := policyHierarchyInformerFactory.Stolos().V1()
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
-	return &Syncer{
-		client:   client,
-		stopChan: make(chan struct{}),
-		syncers: []PolicyNodeSyncerInterface{
-			// Namespace syncer must be first since quota depends on it
-			NewNamespaceSyncer(client, kubernetesCoreV1.Namespaces().Lister(), queue),
-			NewQuotaSyncer(client, kubernetesCoreV1.ResourceQuotas(), policyHierarchyV1.PolicyNodes(), queue),
+	syncers := []PolicyNodeSyncerInterface{
+		// Namespace syncer must be first since quota depends on it
+		NewNamespaceSyncer(client, kubernetesCoreV1.Namespaces().Lister(), queue),
+		NewQuotaSyncer(client, kubernetesCoreV1.ResourceQuotas(), policyHierarchyV1.PolicyNodes(), queue),
+	}
+	if *flattenRbac {
+		syncers = append(syncers,
+			NewFlatteningSyncer(
+				queue, actions.NewRoleBindingResource(
+					client.Kubernetes(), rbacV1.RoleBindings().Lister()),
+				actions.NewRoleResource(
+					client.Kubernetes(), rbacV1.Roles().Lister()),
+			),
+		)
+	} else {
+		syncers = append(syncers,
 			NewRoleBindingSyncer(client, rbacV1.RoleBindings().Lister(), queue),
 			NewRoleSyncer(client, rbacV1.Roles().Lister(), queue),
-		},
+		)
+	}
+
+	return &Syncer{
+		client:                         client,
+		stopChan:                       make(chan struct{}),
+		syncers:                        syncers,
 		kubernetesInformerFactory:      kubernetesInformerFactory,
 		policyHierarchyInformerFactory: policyHierarchyInformerFactory,
 		queue: queue,
