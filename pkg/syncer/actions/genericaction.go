@@ -152,13 +152,15 @@ var _ Interface = &GenericUpsertAction{}
 func NewGenericUpsertAction(
 	resource interface{},
 	resourceInterface ResourceInterface) *GenericUpsertAction {
-	return &GenericUpsertAction{
+	action := &GenericUpsertAction{
 		genericActionBase: genericActionBase{
 			operation:         "upsert",
 			resource:          resource,
 			resourceInterface: resourceInterface,
 		},
 	}
+	glog.V(10).Infof("New upsert action: %v", action)
+	return action
 }
 
 func (s *GenericUpsertAction) create() error {
