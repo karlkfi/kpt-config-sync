@@ -1,6 +1,7 @@
 package rbactesting
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
@@ -41,6 +42,9 @@ func NamespaceRoleBinding(name, namespace, roleName string, subjects ...string) 
 	for _, subject := range subjects {
 		// "User:joe" -> ["User", "joe"]
 		s := strings.Split(subject, ":")
+		if len(s) != 2 {
+			panic(fmt.Sprintf("Expected subject: User:name, was: %v", subject))
+		}
 		r := rbac.Subject{
 			Kind:     s[0],
 			Name:     s[1],
