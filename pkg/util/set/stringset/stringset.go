@@ -17,6 +17,10 @@ limitations under the License.
 // and I wanted to avoid existing libraries that rely on interface{}
 package stringset
 
+import (
+	"sort"
+)
+
 // StringSet implements a set of strings.
 type StringSet struct {
 	set map[string]bool
@@ -34,6 +38,13 @@ func NewFromSlice(values []string) *StringSet {
 	ret := New()
 	ret.AddSlice(values)
 	return ret
+}
+
+// NewFromValues creates a new set from a static set of supplied values.
+//
+//     set := NewFromValues("foo", "bar", "baz")
+func NewFromValues(values ...string) *StringSet {
+	return NewFromSlice(values)
 }
 
 // Add adds an item to the set
@@ -85,6 +96,16 @@ func (s *StringSet) ForEach(cb func(string)) {
 	}
 }
 
+// StableForEach is the same as ForEach, except the iteration always happens
+// in the same order across calls for an unchanged set.
+func (s *StringSet) StableForEach(cb func(string)) {
+	elems := s.ToSlice()
+	sort.Strings(elems)
+	for _, value := range elems {
+		cb(value)
+	}
+}
+
 // ToSlice returns the set as a slice of strings.
 func (s *StringSet) ToSlice() []string {
 	idx := 0
@@ -116,4 +137,15 @@ func (s *StringSet) Intersection(other *StringSet) *StringSet {
 		}
 	}
 	return intersection
+}
+
+// Union computes a set union of the two sets provided as arguments.
+func Union(first, second *StringSet) *StringSet {
+	union := New()
+	for _, set := range []StringSet{*first, *second} {
+		for element := range set.set {
+			union.Add(element)
+		}
+	}
+	return union
 }

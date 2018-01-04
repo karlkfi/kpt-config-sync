@@ -15,7 +15,12 @@ limitations under the License.
 
 package stringset
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+)
 
 func TestBasicOps(t *testing.T) {
 	set := New()
@@ -67,11 +72,42 @@ func TestBasicOps(t *testing.T) {
 	}
 }
 
+func TestStableForEach(t *testing.T) {
+	tests := []struct {
+		input  []string
+		output []string
+	}{
+		{
+			input:  []string{"eenie", "meenie", "minie", "moe"},
+			output: []string{"eenie", "meenie", "minie", "moe"},
+		},
+		{
+			input:  []string{"z", "y", "x", "c", "b", "a"},
+			output: []string{"a", "b", "c", "x", "y", "z"},
+		},
+	}
+	for i, tt := range tests {
+		for j := 0; i < 1000; i++ {
+			t.Run(fmt.Sprintf("%v/%v", i, j), func(t *testing.T) {
+				result := []string{}
+				NewFromSlice(tt.input).StableForEach(func(s string) {
+					result = append(result, s)
+				})
+				if !cmp.Equal(result, tt.output) {
+					t.Errorf("Mismatch: %v", cmp.Diff(result, tt.output))
+				}
+			})
+
+		}
+	}
+}
+
 type SetOperationTestcase struct {
 	LeftHandSide       []string
 	RightHandSide      []string
 	DifferenceResult   []string
 	IntersectionResult []string
+	UnionResult        []string
 }
 
 func TestSetOperations(t *testing.T) {
@@ -81,42 +117,49 @@ func TestSetOperations(t *testing.T) {
 			RightHandSide:      []string{},
 			DifferenceResult:   []string{},
 			IntersectionResult: []string{},
+			UnionResult:        []string{},
 		},
 		{
 			LeftHandSide:       []string{},
 			RightHandSide:      []string{"foo", "bar"},
 			DifferenceResult:   []string{},
 			IntersectionResult: []string{},
+			UnionResult:        []string{"foo", "bar"},
 		},
 		{
 			LeftHandSide:       []string{"foo", "bar"},
 			RightHandSide:      []string{},
 			DifferenceResult:   []string{"foo", "bar"},
 			IntersectionResult: []string{},
+			UnionResult:        []string{"foo", "bar"},
 		},
 		{
 			LeftHandSide:       []string{"foo", "bar"},
 			RightHandSide:      []string{"bar"},
 			DifferenceResult:   []string{"foo"},
 			IntersectionResult: []string{"bar"},
+			UnionResult:        []string{"foo", "bar"},
 		},
 		{
 			LeftHandSide:       []string{"foo", "bar"},
 			RightHandSide:      []string{"foo", "bar"},
 			DifferenceResult:   []string{},
 			IntersectionResult: []string{"foo", "bar"},
+			UnionResult:        []string{"foo", "bar"},
 		},
 		{
 			LeftHandSide:       []string{"foo", "bar"},
 			RightHandSide:      []string{"baz", "foobar"},
 			DifferenceResult:   []string{"foo", "bar"},
 			IntersectionResult: []string{},
+			UnionResult:        []string{"foo", "bar", "foobar", "baz"},
 		},
 		{
 			LeftHandSide:       []string{"foo", "bar"},
 			RightHandSide:      []string{"foo", "bar"},
 			DifferenceResult:   []string{},
 			IntersectionResult: []string{"foo", "bar"},
+			UnionResult:        []string{"foo", "bar"},
 		},
 	} {
 		lhs := NewFromSlice(testcase.LeftHandSide)
@@ -132,6 +175,11 @@ func TestSetOperations(t *testing.T) {
 		intersectionResult := lhs.Intersection(rhs)
 		if !intersectionResult.Equals(expectedIntersectionResult) {
 			t.Errorf("Unexpected intersection result %#v in testcase %d %#v", intersectionResult, idx, testcase)
+		}
+		expectedUnionResult := NewFromSlice(testcase.UnionResult)
+		union := Union(lhs, rhs)
+		if !union.Equals(expectedUnionResult) {
+			t.Errorf("Unexpected unio result %#v in testcase %d %#v", union, idx, testcase)
 		}
 	}
 }
