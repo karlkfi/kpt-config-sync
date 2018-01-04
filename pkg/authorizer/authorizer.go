@@ -262,15 +262,15 @@ func (a *Authorizer) Authorize(
 
 // toSubjectAccessReviewStatus converts the delegated authorizer results back to
 // something that can be communicated back to the apiserver.
-func toSubjectAccessReviewStatus(verdict bool, reason string, err error) *authz.SubjectAccessReviewStatus {
+func toSubjectAccessReviewStatus(verdict authorizer.Decision, reason string, err error) *authz.SubjectAccessReviewStatus {
 	var evaluationError string
 	if err != nil {
-		verdict = false
+		verdict = authorizer.DecisionDeny
 		reason = "evaluation error"
 		evaluationError = fmt.Sprintf("webhook authz error: %v", err)
 	}
 	result := authz.SubjectAccessReviewStatus{
-		Allowed:         verdict,
+		Allowed:         verdict == authorizer.DecisionAllow,
 		Reason:          reason,
 		EvaluationError: evaluationError,
 	}

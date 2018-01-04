@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2018 The Stolos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package policyhierarchy
 
 import (
 	glog "github.com/golang/glog"
-	k8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/k8us/v1"
+	k8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

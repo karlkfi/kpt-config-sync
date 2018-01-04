@@ -18,10 +18,10 @@ limitations under the License.
 package admission_controller
 
 import (
-	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
+	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 
 	"github.com/google/stolos/pkg/resource-quota"
@@ -29,9 +29,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/kubernetes/pkg/api"
+
 	"k8s.io/kubernetes/pkg/quota"
 	quotainstall "k8s.io/kubernetes/pkg/quota/install"
+	"k8s.io/kubernetes/pkg/quota/generic"
 )
 
 type ResourceQuotaAdmitter struct {
@@ -45,13 +46,12 @@ var _ Admitter = (*ResourceQuotaAdmitter)(nil)
 
 func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) Admitter {
-	// Nil, because we don't need to do any watches, we will only be doing evaluation checks.
-	quotaRegistry := quotainstall.NewRegistry(nil, nil)
+	quotaConfiguration := quotainstall.NewQuotaConfigurationForAdmission()
+	quotaRegistry := generic.NewRegistry(quotaConfiguration.Evaluators())
 
-	// Decoder. Right now, only v1 and internal types are needed as they are the only ones being monitored
+	// Decoder. Right now, only v1 types are needed as they are the only ones being monitored
 	scheme := runtime.NewScheme()
 	core_v1.AddToScheme(scheme)
-	api.AddToScheme(scheme)
 	decoder := serializer.NewCodecFactory(scheme).UniversalDecoder()
 
 	return &ResourceQuotaAdmitter{
@@ -63,15 +63,20 @@ func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNod
 }
 
 // Decides whether to admit a request
-func (r *ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) *admissionv1alpha1.AdmissionReviewStatus {
+func (r *ResourceQuotaAdmitter) Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
 	cache, err := resource_quota.NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
 	if err != nil {
 		return internalErrorDeny(err)
 	}
-	unpackedSpec := unpackRawSpec(r.decoder, review.Spec)
+	if review.Request == nil {
+		return &admissionv1beta1.AdmissionResponse{
+			Allowed: true,
+		}
+	}
+	unpackedSpec := unpackRawSpec(r.decoder, *review.Request)
 	reviewSpec := AdmissionReviewSpec(unpackedSpec)
 	attributes := admission.Attributes(&reviewSpec)
-	evaluator := r.quotaRegistry.Evaluators()[attributes.GetKind().GroupKind()]
+	evaluator := r.quotaRegistry.Get(attributes.GetResource().GroupResource())
 	if evaluator != nil && evaluator.Handles(attributes) {
 		newUsage, err := evaluator.Usage(attributes.GetObject())
 		if err != nil {
@@ -83,10 +88,10 @@ func (r *ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) 
 			v1NewUsage[core_v1.ResourceName(key)] = val
 		}
 
-		admitError := cache.Admit(review.Spec.Namespace, v1NewUsage)
+		admitError := cache.Admit(review.Request.Namespace, v1NewUsage)
 
 		if admitError != nil {
-			return &admissionv1alpha1.AdmissionReviewStatus{
+			return &admissionv1beta1.AdmissionResponse{
 				Allowed: false,
 				Result: &metav1.Status{
 					Message: admitError.Error(),
@@ -95,13 +100,13 @@ func (r *ResourceQuotaAdmitter) Admit(review admissionv1alpha1.AdmissionReview) 
 			}
 		}
 	}
-	return &admissionv1alpha1.AdmissionReviewStatus{
+	return &admissionv1beta1.AdmissionResponse{
 		Allowed: true,
 	}
 }
 
-func internalErrorDeny(err error) *admissionv1alpha1.AdmissionReviewStatus {
-	return &admissionv1alpha1.AdmissionReviewStatus{
+func internalErrorDeny(err error) *admissionv1beta1.AdmissionResponse {
+	return &admissionv1beta1.AdmissionResponse{
 		Allowed: false,
 		Result: &metav1.Status{
 			Message: err.Error(),
@@ -109,3 +114,4 @@ func internalErrorDeny(err error) *admissionv1alpha1.AdmissionReviewStatus {
 		},
 	}
 }
+

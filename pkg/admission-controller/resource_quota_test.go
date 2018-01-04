@@ -5,7 +5,7 @@ import (
 
 	pn_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/testing/fakeinformers"
-	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,17 +49,17 @@ func TestAuthorize(t *testing.T) {
 	}
 
 	tt := []struct {
-		request         admissionv1alpha1.AdmissionReview
+		request         admissionv1beta1.AdmissionReview
 		expectedAllowed bool
 		expectedReason  metav1.StatusReason
 	}{
 		{
-			request:         admissionv1alpha1.AdmissionReview{},
+			request:         admissionv1beta1.AdmissionReview{},
 			expectedAllowed: true,
 		},
 		{
-			request: admissionv1alpha1.AdmissionReview{
-				Spec: admissionv1alpha1.AdmissionReviewSpec{
+			request: admissionv1beta1.AdmissionReview{
+				Request: &admissionv1beta1.AdmissionRequest{
 					Resource: metav1.GroupVersionResource{
 						Group:    "",
 						Resource: "pods",
@@ -73,15 +73,15 @@ func TestAuthorize(t *testing.T) {
 					Object: runtime.RawExtension{
 						Object: runtime.Object(&pod),
 					},
-					Operation: admissionv1alpha1.Create,
+					Operation: admissionv1beta1.Create,
 					Namespace: "kitties",
 				},
 			},
 			expectedAllowed: true,
 		},
 		{
-			request: admissionv1alpha1.AdmissionReview{
-				Spec: admissionv1alpha1.AdmissionReviewSpec{
+			request: admissionv1beta1.AdmissionReview{
+				Request: &admissionv1beta1.AdmissionRequest{
 					Resource: metav1.GroupVersionResource{
 						Group:    "",
 						Resource: "secrets",
@@ -95,7 +95,7 @@ func TestAuthorize(t *testing.T) {
 					Object: runtime.RawExtension{
 						Object: runtime.Object(&secret),
 					},
-					Operation: admissionv1alpha1.Create,
+					Operation: admissionv1beta1.Create,
 					Namespace: "kitties",
 				},
 			},

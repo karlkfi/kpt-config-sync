@@ -19,14 +19,14 @@ package admission_controller
 
 import (
 	"github.com/golang/glog"
-	"k8s.io/api/admission/v1alpha1"
+	"k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
-type AdmissionReviewSpec v1alpha1.AdmissionReviewSpec
+type AdmissionReviewSpec v1beta1.AdmissionRequest
 
 var _ admission.Attributes = (*AdmissionReviewSpec)(nil)
 
@@ -83,20 +83,20 @@ func (spec *AdmissionReviewSpec) GetUserInfo() user.Info {
 //
 // This unpack may currently not work in many cases due to a bug in Kubernetes that passes in the wrong version of
 // the object (internal) in the raw extension.
-func unpackRawSpec(decoder runtime.Decoder, spec v1alpha1.AdmissionReviewSpec) v1alpha1.AdmissionReviewSpec {
-	if spec.Object.Object != nil {
+func unpackRawSpec(decoder runtime.Decoder, request v1beta1.AdmissionRequest) v1beta1.AdmissionRequest {
+	if request.Object.Object != nil {
 		// Already unpacked
-		return spec
+		return request
 	}
-	if len(spec.Object.Raw) > 0 {
-		spec.Object.Object = unpackRawBytes(decoder, schema.GroupVersionKind(spec.Kind), spec.Object.Raw)
-	}
-
-	if len(spec.OldObject.Raw) > 0 {
-		spec.OldObject.Object = unpackRawBytes(decoder, schema.GroupVersionKind(spec.Kind), spec.OldObject.Raw)
+	if len(request.Object.Raw) > 0 {
+		request.Object.Object = unpackRawBytes(decoder, schema.GroupVersionKind(request.Kind), request.Object.Raw)
 	}
 
-	return spec
+	if len(request.OldObject.Raw) > 0 {
+		request.OldObject.Object = unpackRawBytes(decoder, schema.GroupVersionKind(request.Kind), request.OldObject.Raw)
+	}
+
+	return request
 }
 
 // Helper method for unpackRawSpec

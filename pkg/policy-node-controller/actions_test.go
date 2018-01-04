@@ -21,9 +21,9 @@ import (
 
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/informers/externalversions"
-	listers_v1 "github.com/google/stolos/pkg/client/listers/k8us/v1"
+	listers_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta/fake"
-	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/k8us/v1"
+	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"

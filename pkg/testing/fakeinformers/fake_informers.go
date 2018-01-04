@@ -5,7 +5,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/client/informers/externalversions"
-	pn_v1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
+	pn_v1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	pn_fake "github.com/google/stolos/pkg/client/policyhierarchy/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"

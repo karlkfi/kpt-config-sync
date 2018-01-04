@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2018 The Stolos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=K8us, Version=V1
+	// Group=k8us.k8s.io, Version=v1
 	case v1.SchemeGroupVersion.WithResource("policynodes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.K8us().V1().PolicyNodes().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("stolosresourcequotas"):

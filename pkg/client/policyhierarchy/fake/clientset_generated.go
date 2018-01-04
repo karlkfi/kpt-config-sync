@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2018 The Stolos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ package fake
 
 import (
 	clientset "github.com/google/stolos/pkg/client/policyhierarchy"
-	k8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/k8us/v1"
-	fakek8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/k8us/v1/fake"
+	k8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	fakek8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

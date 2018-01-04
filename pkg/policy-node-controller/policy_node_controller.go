@@ -25,7 +25,7 @@ import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/informers/externalversions"
-	policynodelister_v1 "github.com/google/stolos/pkg/client/listers/k8us/v1"
+	policynodelister_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/syncer"
 	"github.com/google/stolos/pkg/syncer/actions"

@@ -147,7 +147,7 @@ deploy-common-objects:
 
 .PHONY: deploy-resourcequota-admission-controller
 deploy-resourcequota-admission-controller: push-resourcequota-admission-controller gen-all-yaml-files
-	kubectl delete ExternalAdmissionHookConfiguration stolos-resource-quota
+	kubectl delete ValidatingWebhookConfiguration stolos-resource-quota --ignore-not-found
 	kubectl replace -f $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml --force
 
 .PHONY: deploy-syncer

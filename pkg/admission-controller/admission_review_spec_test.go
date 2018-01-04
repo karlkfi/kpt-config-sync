@@ -3,21 +3,21 @@ package admission_controller
 import (
 	"testing"
 
-	"k8s.io/api/admission/v1alpha1"
+	admission_v1beta1 "k8s.io/api/admission/v1beta1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apiserver/pkg/admission"
 )
 
 func TestConversion(t *testing.T) {
-	x := v1alpha1.AdmissionReviewSpec{
-		Name:      "ice cream",
-		Operation: "DELETE",
-		UserInfo: authenticationv1.UserInfo{
-			Username: "taco",
-			Extra: map[string]authenticationv1.ExtraValue{
-				"choco": {"dark", "white"},
+	x := admission_v1beta1.AdmissionRequest{
+			Name:      "ice cream",
+			Operation: "DELETE",
+			UserInfo: authenticationv1.UserInfo{
+				Username: "taco",
+				Extra: map[string]authenticationv1.ExtraValue{
+					"choco": {"dark", "white"},
+				},
 			},
-		},
 	}
 
 	spec := AdmissionReviewSpec(x)

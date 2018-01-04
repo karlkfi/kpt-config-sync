@@ -20,7 +20,7 @@ import (
 	"github.com/google/stolos/pkg/admission-controller"
 	"github.com/google/stolos/pkg/testing/fakeinformers"
 	"io/ioutil"
-	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/util/json"
 	"net/http"
 	"net/http/httptest"
@@ -32,7 +32,9 @@ func TestRequest(t *testing.T) {
 		fakeinformers.NewPolicyNodeInformer(), fakeinformers.NewResourceQuotaInformer()))))
 	defer ts.Close()
 
-	request := admissionv1alpha1.AdmissionReview{}
+	request := admissionv1beta1.AdmissionReview{
+		Request:&admissionv1beta1.AdmissionRequest{},
+	}
 	requestBytes, err := json.Marshal(request)
 	if err != nil {
 		t.Errorf("json.Marshal: %+v, +%v", request, err)
@@ -52,13 +54,13 @@ func TestRequest(t *testing.T) {
 		t.Errorf("ioutil.ReadAll: %+v: %+v", ts.URL, err)
 	}
 
-	var respStruct admissionv1alpha1.AdmissionReview
+	var respStruct admissionv1beta1.AdmissionReview
 	err = json.Unmarshal(respBytes, &respStruct)
 	if err != nil {
 		t.Errorf("json.Unmarshal: %+v: %+v", ts.URL, err)
 	}
 
-	if !respStruct.Status.Allowed {
+	if !respStruct.Response.Allowed {
 		t.Errorf("Unexpected response status %v", respStruct)
 	}
 }

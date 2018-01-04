@@ -17,11 +17,11 @@ limitations under the License.
 package admission_controller
 
 import (
-	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 )
 
 // The interface for admission controller implementations
 type Admitter interface {
 	// Returns an admission review status based on the admission review request containing the resource being modified.
-	Admit(review admissionv1alpha1.AdmissionReview) *admissionv1alpha1.AdmissionReviewStatus
+	Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse
 }

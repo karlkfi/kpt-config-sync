@@ -18,8 +18,8 @@ package policy_node_controller
 import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	listers_v1 "github.com/google/stolos/pkg/client/listers/k8us/v1"
-	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/k8us/v1"
+	listers_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
+	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/syncer"
 	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/google/stolos/pkg/util/set/stringset"

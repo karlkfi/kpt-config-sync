@@ -45,6 +45,7 @@ ${GOBASE}/bin/client-gen \
   --input="${INPUT_APIS}" \
   --clientset-name="${CLIENTSET_NAME}" \
   --output-base="${OUTPUT_BASE}" \
+  --go-header-file="boilerplate.go.txt" \
   --clientset-path "${OUTPUT_CLIENT}"
 
 
@@ -55,6 +56,7 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
     -v 5 \
     --input-dirs="${INPUT_BASE}/${api}" \
     --output-file-base="types.generated" \
+    --go-header-file="boilerplate.go.txt" \
     --output-base="${OUTPUT_BASE}"
 
   ${GOBASE}/bin/lister-gen \
@@ -62,6 +64,7 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
     -v 5 \
     --input-dirs="${INPUT_BASE}/${api}" \
     --output-base="$GOWORK/src" \
+    --go-header-file="boilerplate.go.txt" \
     --output-package="${OUTPUT_CLIENT}/listers"
 
   ${GOBASE}/bin/informer-gen \
@@ -71,5 +74,6 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
     --versioned-clientset-package="${OUTPUT_CLIENT}/${CLIENTSET_NAME}" \
     --listers-package="${OUTPUT_CLIENT}/listers" \
     --output-base="$GOWORK/src" \
+    --go-header-file="boilerplate.go.txt" \
     --output-package="${OUTPUT_CLIENT}/informers"
 done

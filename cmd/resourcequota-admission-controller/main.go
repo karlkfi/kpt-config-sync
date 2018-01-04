@@ -27,11 +27,11 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/admission-controller"
 	policynodeversions "github.com/google/stolos/pkg/client/informers/externalversions"
-	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
+	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	policynodemeta "github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/service"
-	admissionv1alpha1 "k8s.io/api/admission/v1alpha1"
-	"k8s.io/api/admissionregistration/v1alpha1"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
@@ -61,7 +61,7 @@ func serve(controller admission_controller.Admitter) service.HandlerFunc {
 			return
 		}
 
-		review := admissionv1alpha1.AdmissionReview{}
+		review := admissionv1beta1.AdmissionReview{}
 		if err := json.Unmarshal(body, &review); err != nil {
 			glog.Error(err)
 			return
@@ -69,9 +69,9 @@ func serve(controller admission_controller.Admitter) service.HandlerFunc {
 
 		reviewStatus := controller.Admit(review)
 		glog.Infof("Admission decision for namespace %s, object %s.%s: %v",
-			review.Spec.Namespace, review.Spec.Kind.Kind, review.Spec.Name, reviewStatus)
-		ar := admissionv1alpha1.AdmissionReview{
-			Status: *reviewStatus,
+			review.Request.Namespace, review.Request.Kind.Kind, review.Request.Name, reviewStatus)
+		ar := admissionv1beta1.AdmissionReview{
+			Response: reviewStatus,
 		}
 
 		resp, err := json.Marshal(ar)
@@ -140,33 +140,36 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	if err != nil {
 		return fmt.Errorf("Failed to read ca bundle file: %v", err)
 	}
-	client := clientset.AdmissionregistrationV1alpha1().ExternalAdmissionHookConfigurations()
+	client := clientset.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations()
 	_, err = client.Get(externalAdmissionHookConfigName, metav1.GetOptions{})
 	if err == nil {
-		glog.Infof("Deleting the existing ExternalAdmissionHookConfiguration")
+		glog.Infof("Deleting the existing ValidatingWebhookConfiguration")
 		if err2 := client.Delete(externalAdmissionHookConfigName, nil); err2 != nil {
-			return fmt.Errorf("Failed to delete ExternalAdmissionHookConfiguration: %v", err2)
+			return fmt.Errorf("Failed to delete ValidatingWebhookConfiguration: %v", err2)
 		}
 	}
-	failurePolicy := v1alpha1.Fail
-	webhookConfig := &v1alpha1.ExternalAdmissionHookConfiguration{
+	failurePolicy := admissionregistrationv1beta1.Fail
+	webhookConfig := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: externalAdmissionHookConfigName,
 		},
-		ExternalAdmissionHooks: []v1alpha1.ExternalAdmissionHook{
+		Webhooks: []admissionregistrationv1beta1.Webhook{
 			{
 				Name: "resourcequota.k8us.k8s.io",
-				Rules: []v1alpha1.RuleWithOperations{{
-					Operations: []v1alpha1.OperationType{v1alpha1.Create, v1alpha1.Update},
-					Rule: v1alpha1.Rule{
+				Rules: []admissionregistrationv1beta1.RuleWithOperations{{
+					Operations: []admissionregistrationv1beta1.OperationType{
+						admissionregistrationv1beta1.Create,
+						admissionregistrationv1beta1.Update,
+					},
+					Rule: admissionregistrationv1beta1.Rule{
 						APIGroups:   []string{"*"},
 						APIVersions: []string{"*"},
 						Resources:   []string{"*"},
 					},
 				}},
 				FailurePolicy: &failurePolicy,
-				ClientConfig: v1alpha1.AdmissionHookClientConfig{
-					Service: v1alpha1.ServiceReference{
+				ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
+					Service: &admissionregistrationv1beta1.ServiceReference{
 						Namespace: "stolos-system",
 						Name:      "resourcequota-admission-controller",
 					},
@@ -175,9 +178,9 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 			},
 		},
 	}
-	glog.Infof("Creating ExternalAdmissionHookConfiguration")
+	glog.Infof("Creating ValidatingWebhookConfiguration")
 	if _, err := client.Create(webhookConfig); err != nil {
-		return fmt.Errorf("Failed to create ExternalAdmissionHookConfiguration: %v", err)
+		return fmt.Errorf("Failed to create ValidatingWebhookConfiguration: %v", err)
 	}
 	return nil
 }

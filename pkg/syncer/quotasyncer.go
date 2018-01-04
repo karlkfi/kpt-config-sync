@@ -18,7 +18,7 @@ package syncer
 import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	informers_policynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/k8us/v1"
+	informers_policynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/resource-quota"
 	"github.com/google/stolos/pkg/syncer/actions"
