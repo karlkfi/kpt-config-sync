@@ -41,6 +41,10 @@
 			"Rev": "de5bf2ad457846296e2031421a34e2568e304e35"
 		},
 		{
+			"ImportPath": "github.com/beorn7/perks/quantile",
+			"Rev": "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
+		},
+		{
 			"ImportPath": "github.com/coreos/go-systemd/daemon",
 			"Comment": "v15",
 			"Rev": "d2196463941895ee908e13531a23a39feb9e1243"
@@ -252,6 +256,11 @@
 			"Rev": "2a92e673c9a6302dd05c3a691ae1f24aef46457d"
 		},
 		{
+			"ImportPath": "github.com/matttproud/golang_protobuf_extensions/pbutil",
+			"Comment": "v1.0.0-2-gc12348c",
+			"Rev": "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+		},
+		{
 			"ImportPath": "github.com/opencontainers/go-digest",
 			"Comment": "v1.0.0-rc1",
 			"Rev": "279bed98673dd5bef374d3b6e4b09e2af76183bf"
@@ -265,6 +274,41 @@
 			"ImportPath": "github.com/pkg/errors",
 			"Comment": "v0.8.0-6-g2b3a18b",
 			"Rev": "2b3a18b5f0fb6b4f9190549597d3f962c02bc5eb"
+		},
+		{
+			"ImportPath": "github.com/prometheus/client_golang/prometheus",
+			"Comment": "v0.9.0-pre1-21-g180b8fd",
+			"Rev": "180b8fdc22b4ea7750bcb43c925277654a1ea2f3"
+		},
+		{
+			"ImportPath": "github.com/prometheus/client_golang/prometheus/promhttp",
+			"Comment": "v0.9.0-pre1-21-g180b8fd",
+			"Rev": "180b8fdc22b4ea7750bcb43c925277654a1ea2f3"
+		},
+		{
+			"ImportPath": "github.com/prometheus/client_model/go",
+			"Comment": "model-0.0.2-16-g99fa1f4",
+			"Rev": "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
+		},
+		{
+			"ImportPath": "github.com/prometheus/common/expfmt",
+			"Rev": "2e54d0b93cba2fd133edc32211dcc32c06ef72ca"
+		},
+		{
+			"ImportPath": "github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg",
+			"Rev": "2e54d0b93cba2fd133edc32211dcc32c06ef72ca"
+		},
+		{
+			"ImportPath": "github.com/prometheus/common/model",
+			"Rev": "2e54d0b93cba2fd133edc32211dcc32c06ef72ca"
+		},
+		{
+			"ImportPath": "github.com/prometheus/procfs",
+			"Rev": "b15cd069a83443be3154b719d0cc9fe8117f09fb"
+		},
+		{
+			"ImportPath": "github.com/prometheus/procfs/xfs",
+			"Rev": "b15cd069a83443be3154b719d0cc9fe8117f09fb"
 		},
 		{
 			"ImportPath": "github.com/spf13/pflag",
