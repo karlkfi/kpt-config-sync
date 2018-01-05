@@ -31,6 +31,8 @@ package authorizer
 import (
 	"fmt"
 	"reflect"
+	"strconv"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
@@ -38,6 +40,7 @@ import (
 	rules "github.com/google/stolos/pkg/client/rules"
 	"github.com/google/stolos/pkg/util/set/stringset"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	authz "k8s.io/api/authorization/v1beta1"
 	apicore "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,6 +52,24 @@ import (
 	"k8s.io/kubernetes/pkg/registry/rbac/validation"
 	"k8s.io/kubernetes/plugin/pkg/auth/authorizer/rbac"
 )
+
+// Prometheus metrics
+var (
+	authzDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Help:      "Authorization duration distributions",
+			Namespace: "stolos",
+			Subsystem: "authorizer",
+			Name:      "duration_seconds",
+			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
+		},
+		[]string{"username", "allowed"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(authzDuration)
+}
 
 var (
 	// TypeMeta is the SubjectAccessReview type meta.
@@ -113,7 +134,7 @@ func (r *rbacInformerAdapter) GetRole(namespace, name string) (*apisrbac.Role, e
 	if role == nil {
 		// Not found.  Should we return nil?  Or a default?  Unknown.
 		return nil,
-			fmt.Errorf("role not found: namespace=%v, name=%v", namespace, name)
+				fmt.Errorf("role not found: namespace=%v, name=%v", namespace, name)
 	}
 	glog.V(4).Infof("GetRole found role: %v", spew.Sdump(*role))
 	return role, nil
@@ -133,7 +154,7 @@ func matchesCoreResourceQuota(apiGroups []string, resources []string) bool {
 	}
 	resourceSet := stringset.NewFromSlice(resources)
 	result := resourceSet.Contains(string(apicore.ResourceQuotas)) &&
-		!resourceSet.Contains(string(policyhierarchy.StolosResourceQuotaResource))
+			!resourceSet.Contains(string(policyhierarchy.StolosResourceQuotaResource))
 	glog.V(1).Infof("result: %v", result)
 	return result
 }
@@ -216,8 +237,7 @@ func (r *rbacInformerAdapter) ListRoleBindings(namespace string) ([]*apisrbac.Ro
 // policyRulesFor lists all policy rules that apply for the given 'namespace'.
 // The returned PolicyNodeSpec index 0 is the policy node spec for the leaf
 // namespace.  The last is for the root namespace.
-func (r *rbacInformerAdapter) policyRulesFor(
-	namespace string) (*[]policyhierarchy.PolicyNodeSpec, error) {
+func (r *rbacInformerAdapter) policyRulesFor(namespace string) (*[]policyhierarchy.PolicyNodeSpec, error) {
 	return rules.GetPolicyRules(r.informer, namespace)
 }
 
@@ -244,8 +264,7 @@ func New(informer cache.SharedIndexInformer) *Authorizer {
 // Authorize verifies whether 'request' is allowed based on the current security
 // context and the spec to be reviewed.  Returns SubjectAccessReviewStatus with
 // the verdict.
-func (a *Authorizer) Authorize(
-	request *authz.SubjectAccessReviewSpec) *authz.SubjectAccessReviewStatus {
+func (a *Authorizer) Authorize(request *authz.SubjectAccessReviewSpec) *authz.SubjectAccessReviewStatus {
 	if request == nil {
 		panic("request is nil")
 	}
@@ -253,10 +272,14 @@ func (a *Authorizer) Authorize(
 	// is the inverse conversion to that already performed by the webhook
 	// authorizer.
 	attributes := NewAttributes(request)
+	start := time.Now()
 	verdict, reason, err := a.delegateAuthz.Authorize(attributes)
+	elapsed := time.Since(start).Seconds()
 	status := toSubjectAccessReviewStatus(verdict, reason, err)
+	// Log and record results
 	glog.V(4).Infof("Authorize: request=%+v, status=%+v",
 		spew.Sdump(request), spew.Sdump(status))
+	authzDuration.WithLabelValues(request.User, strconv.FormatBool(status.Allowed)).Observe(elapsed)
 	return status
 }
 
@@ -333,9 +356,9 @@ func (a *Attributes) IsResourceRequest() bool {
 	// below, but it's implied in the webhook code.
 	return !reflect.DeepEqual(
 		a.request.ResourceAttributes, emptyResourceRequest) &&
-		(reflect.DeepEqual(
-			a.request.NonResourceAttributes, emptyNonResourceAttributes) ||
-			a.nonresource() == nil)
+			(reflect.DeepEqual(
+				a.request.NonResourceAttributes, emptyNonResourceAttributes) ||
+					a.nonresource() == nil)
 }
 
 func (a *Attributes) IsReadOnly() bool {

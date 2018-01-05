@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: stolos
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      monitored: "true"
+  namespaceSelector:
+    matchNames:
+    - stolos-system
+  endpoints:
+  - port: metrics
+    interval: 10s

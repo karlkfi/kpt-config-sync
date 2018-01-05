@@ -57,6 +57,9 @@ service_account=${REPO}/manifests/service-account.yaml
 role=${REPO}/manifests/cluster-role.yaml
 rolebinding=${REPO}/manifests/cluster-rolebinding.yaml
 
+# ServiceMonitor for monitoring stolos components
+service_monitor=${REPO}/manifests/monitoring.yaml
+
 ACTION=${ACTION:-create}
 action_resource=${ACTION}_resource
 
@@ -70,6 +73,14 @@ case $ACTION in
     ;;
 esac
 
+# Install helm server (tiller)
+helm init --tiller-namespace=monitoring
+
+# Use helm to install prometheus
+helm install coreos/prometheus-operator --name prometheus-operator --namespace monitoring
+helm install coreos/kube-prometheus --name kube-prometheus --set rbacEnable=true --namespace monitoring
+
+# Create stolos resources
 ${action_resource} ${namespace}
 sleep 2
 ${action_resource} ${policy_node_crd}
@@ -77,6 +88,7 @@ ${action_resource} ${stolos_resource_quota_crd}
 ${action_resource} ${service_account}
 ${action_resource} ${syncer_service_account}
 ${action_resource} ${policy_importer_service_account}
+${action_resource} ${service_monitor}
 
 if kubectl config current-context | grep "^gke_" &> /dev/null; then
   echo "On GKE, skipping setup for syncer ClusterRole/ClusteRoleBinding"

@@ -19,6 +19,8 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/coreos/go-systemd/daemon"
@@ -27,10 +29,10 @@ import (
 	"github.com/google/stolos/pkg/client/informers/externalversions"
 	meta "github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/service"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/ioutil"
 	authz "k8s.io/api/authorization/v1beta1"
 	"k8s.io/client-go/rest"
-	"net/http"
 )
 
 var (
@@ -41,6 +43,7 @@ var (
 	motd           = flag.String("motd", "", "This message is printed first.")
 	clientCertFile = flag.String(
 		"client_cert", "", "The client certificate file.")
+	metricsPort = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
 )
 
 // Responder writes a basic message out.
@@ -147,9 +150,18 @@ func main() {
 			factory.K8us().V1().PolicyNodes().Informer())), clientCert)
 	factory.Start(nil)
 
+	// Expose prometheus metrics via HTTP.
+	http.Handle("/metrics", promhttp.Handler())
+	go func() {
+		err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil)
+		if err != nil {
+			glog.Fatalf("HTTP ListenAndServe: %+v", err)
+		}
+	}()
+
 	maybeNotifySystemd()
 	err := srv.ListenAndServeTLS("", "")
 	if err != nil {
-		glog.Fatalf("ListenAndServe: %+v", err)
+		glog.Fatalf("TLS ListenAndServe: %+v", err)
 	}
 }
