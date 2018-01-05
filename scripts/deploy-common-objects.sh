@@ -52,6 +52,7 @@ stolos_resource_quota_crd=${REPO}/manifests/stolos-resourcequota-crd.yaml
 
 # Syncer service account, role, rolebinding
 syncer_service_account=${REPO}/manifests/syncer-service-account.yaml
+policy_importer_service_account=${REPO}/manifests/policy-importer-service-account.yaml
 service_account=${REPO}/manifests/service-account.yaml
 role=${REPO}/manifests/cluster-role.yaml
 rolebinding=${REPO}/manifests/cluster-rolebinding.yaml
@@ -75,6 +76,7 @@ ${action_resource} ${policy_node_crd}
 ${action_resource} ${stolos_resource_quota_crd}
 ${action_resource} ${service_account}
 ${action_resource} ${syncer_service_account}
+${action_resource} ${policy_importer_service_account}
 
 if kubectl config current-context | grep "^gke_" &> /dev/null; then
   echo "On GKE, skipping setup for syncer ClusterRole/ClusteRoleBinding"

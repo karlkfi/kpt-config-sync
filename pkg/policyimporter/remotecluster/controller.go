@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package policy_node_controller
+package remotecluster
 
 import (
 	"flag"
@@ -38,7 +38,7 @@ import (
 )
 
 var flagResyncPeriod = flag.Duration(
-	"pnc_resync_period", 15*time.Minute, "Resync period for PolicyNodeController ")
+	"pnc_resync_period", 15*time.Minute, "Resync period for policy node controller ")
 
 var dryRun = flag.Bool(
 	"pnc_dry_run", false, "Don't perform actions, just log what would have happened")
@@ -46,7 +46,7 @@ var dryRun = flag.Bool(
 // workerNumRetries is the number of times an action will be retried in the work queue.
 const workerNumRetries = 3
 
-// Controller implements the PolicyNodeController.  This will watch the PolicyNodes(s) on remote cluster
+// Controller implements the policy node controller.  This will watch the PolicyNodes(s) on remote cluster
 // and sync changes to corresponding resources on local cluster.
 type Controller struct {
 	remoteClient meta.Interface                   // Client for remote Kubernetes cluster API server

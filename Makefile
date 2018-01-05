@@ -96,8 +96,8 @@ gen-all-yaml-files: .output
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/authorizer:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/authorizer.yaml > $(GEN_YAML_DIR)/authorizer.yaml
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/stolosresourcequota-controller:$(IMAGE_TAG) < \
 	        $(TOP_DIR)/manifests/templates/stolosresourcequota-controller.yaml > $(GEN_YAML_DIR)/stolosresourcequota-controller.yaml
-	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/policy-node-controller:$(IMAGE_TAG) < \
-	        $(TOP_DIR)/manifests/templates/policy-node-controller.yaml > $(GEN_YAML_DIR)/policy-node-controller.yaml
+	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/remote-cluster-policy-importer:$(IMAGE_TAG) < \
+	        $(TOP_DIR)/manifests/templates/remote-cluster-policy-importer.yaml > $(GEN_YAML_DIR)/remote-cluster-policy-importer.yaml
 
 ######################################################################
 # Targets for building and pushing docker images.
@@ -132,11 +132,11 @@ push-stolosresourcequota-controller: build-all
 	cp $(BIN_DIR)/stolosresourcequota-controller $(STAGING_DIR)/stolosresourcequota-controller
 	$(call build-and-push-image,stolosresourcequota-controller)
 
-.PHONY: push-policy-node-controller
-push-policy-node-controller: build-all
-	cp -r $(TOP_DIR)/build/policy-node-controller $(STAGING_DIR)
-	cp $(BIN_DIR)/policy-node-controller $(STAGING_DIR)/policy-node-controller
-	$(call build-and-push-image,policy-node-controller)
+.PHONY: push-remote-cluster-policy-importer
+push-remote-cluster-policy-importer: build-all
+	cp -r $(TOP_DIR)/build/remote-cluster-policy-importer $(STAGING_DIR)
+	cp $(BIN_DIR)/remote-cluster-policy-importer $(STAGING_DIR)/remote-cluster-policy-importer
+	$(call build-and-push-image,remote-cluster-policy-importer)
 
 ######################################################################
 # Targets for deploying components to K8S.
@@ -162,9 +162,9 @@ deploy-authorizer: push-authorizer gen-all-yaml-files
 deploy-stolosresourcequota-controller: push-stolosresourcequota-controller gen-all-yaml-files
 	kubectl replace -f $(GEN_YAML_DIR)/stolosresourcequota-controller.yaml --force
 
-.PHONY: deploy-policy-node-controller
-deploy-policy-node-controller: push-policy-node-controller gen-all-yaml-files
-	kubectl replace -f $(GEN_YAML_DIR)/policy-node-controller.yaml --force
+.PHONY: deploy-remote-cluster-policy-importer
+deploy-remote-cluster-policy-importer: push-remote-cluster-policy-importer gen-all-yaml-files
+	kubectl replace -f $(GEN_YAML_DIR)/remote-cluster-policy-importer.yaml --force
 
 # TODO: Add deploy to local target for authorizer here.
 

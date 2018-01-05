@@ -23,7 +23,7 @@ import (
 	"github.com/google/stolos/pkg/client/restconfig"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/policy-node-controller"
+	"github.com/google/stolos/pkg/policyimporter/remotecluster"
 	"github.com/google/stolos/pkg/service"
 	"github.com/pkg/errors"
 )
@@ -32,7 +32,7 @@ func main() {
 	flag.Parse()
 	flag.Set("logtostderr", "true")
 
-	glog.Infof("Starting PolicyNodeController...")
+	glog.Infof("Starting RemoteClusterPolicyImporter...")
 
 	config, err := restconfig.NewRestConfig()
 	if err != nil {
@@ -56,7 +56,7 @@ func main() {
 
 	stopChannel := make(chan struct{})
 
-	pnc := policy_node_controller.NewController(client, remoteClient, stopChannel)
+	pnc := remotecluster.NewController(client, remoteClient, stopChannel)
 	pnc.Run()
 	service.WaitForShutdownWithChannel(stopChannel)
 	pnc.Stop()

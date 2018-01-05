@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package policy_node_controller
+package remotecluster
 
 import (
 	"fmt"

@@ -2,12 +2,12 @@ changecom(`<unused>')
 apiVersion: v1
 kind: Pod
 metadata:
-  name: policy-node-controller
+  name: remote-cluster-policy-importer
   namespace: stolos-system
 spec:
-  serviceAccountName: policy-node-controller
+  serviceAccountName: policy-importer
   containers:
-  - name: policy-node-controller
+  - name: remote-cluster-policy-importer
     image: IMAGE_NAME
     ports:
     - containerPort: 80
@@ -16,7 +16,7 @@ spec:
       - name: REMOTE_KUBERNETES_API_SERVER_URL
         valueFrom:
           configMapKeyRef:
-            name: policy-node-controller
+            name: remote-cluster-policy-importer
             key: master.endpoint
     volumeMounts:
       - name: secret-volume
@@ -25,4 +25,4 @@ spec:
   volumes:
   - name: secret-volume
     secret:
-      secretName: policy-node-controller-master-secret
+      secretName: remote-cluster-policy-importer-master-secret

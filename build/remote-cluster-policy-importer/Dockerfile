@@ -13,5 +13,5 @@
 # limitations under the License.
 
 FROM busybox
-ADD policy-node-controller policy-node-controller
-ENTRYPOINT ["/policy-node-controller"]
+ADD remote-cluster-policy-importer remote-cluster-policy-importer
+ENTRYPOINT ["/remote-cluster-policy-importer"]
