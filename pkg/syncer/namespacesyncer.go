@@ -20,6 +20,7 @@ import (
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/syncer/actions"
+	"github.com/google/stolos/pkg/syncer/labeling"
 	"github.com/google/stolos/pkg/util/namespaceutil"
 	"github.com/google/stolos/pkg/util/set/stringset"
 	core_v1 "k8s.io/api/core/v1"
@@ -30,9 +31,10 @@ import (
 
 // NamespaceSyncer handles syncing namespaces from policy nodes.
 type NamespaceSyncer struct {
-	client          meta.Interface
-	namespaceLister listers_core_v1.NamespaceLister
-	queue           workqueue.RateLimitingInterface
+	client            meta.Interface
+	namespaceLister   listers_core_v1.NamespaceLister
+	namespaceSelector labels.Selector
+	queue             workqueue.RateLimitingInterface
 }
 
 var _ PolicyNodeSyncerInterface = &NamespaceSyncer{}
@@ -43,9 +45,10 @@ func NewNamespaceSyncer(
 	namespaceLister listers_core_v1.NamespaceLister,
 	queue workqueue.RateLimitingInterface) *NamespaceSyncer {
 	return &NamespaceSyncer{
-		client:          client,
-		namespaceLister: namespaceLister,
-		queue:           queue,
+		client:            client,
+		namespaceLister:   namespaceLister,
+		namespaceSelector: labeling.NewOriginSelector(),
+		queue:             queue,
 	}
 }
 
@@ -76,7 +79,7 @@ func (s *NamespaceSyncer) OnDelete(node *policyhierarchy_v1.PolicyNode) error {
 
 // PeriodicResync implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) PeriodicResync(nodes []*policyhierarchy_v1.PolicyNode) error {
-	existingNamespaces, err := s.namespaceLister.List(labels.Everything())
+	existingNamespaces, err := s.namespaceLister.List(s.namespaceSelector)
 	if err != nil {
 		return err
 	}
