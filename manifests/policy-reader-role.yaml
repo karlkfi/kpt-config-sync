@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: stolos-policy-reader
+rules:
+- apiGroups:
+  - k8us.k8s.io
+  resources:
+  - policynodes
+  verbs:
+  - get
+  - list
+  - watch
