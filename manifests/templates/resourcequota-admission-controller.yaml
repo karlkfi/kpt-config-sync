@@ -19,7 +19,7 @@ metadata:
     labels:
         webhook: resource-quota
 spec:
-    serviceAccountName: stolos-service
+    serviceAccountName: resourcequota-admission-controller
     containers:
     - name: resourcequota-admission-controller
       image: IMAGE_NAME

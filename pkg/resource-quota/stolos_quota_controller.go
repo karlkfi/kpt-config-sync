@@ -163,7 +163,8 @@ func (c *Controller) onQuotaUpdate(oldObj, newObj interface{}) {
 	stolosQuotaNamespacesToUpdate, err := c.quotaCache.UpdateLeaf(*newQuota)
 	if err != nil {
 		// This can happen when the cache is malformed, defer to full sync.
-		glog.Infof("Failed on quota update event for namespace %q due to %s. Ignoring update.")
+		glog.Infof("Failed on quota update event for namespace %q due to %s. Ignoring update.",
+			newQuota.Namespace, err)
 	}
 
 	stolosQuotaLister := c.policyHierarchyInformerFactory.K8us().V1().StolosResourceQuotas().Lister()
