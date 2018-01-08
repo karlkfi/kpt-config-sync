@@ -102,7 +102,6 @@ func unpackRawSpec(decoder runtime.Decoder, request v1beta1.AdmissionRequest) v1
 // Helper method for unpackRawSpec
 func unpackRawBytes(decoder runtime.Decoder, gvk schema.GroupVersionKind, raw []byte) runtime.Object {
 	obj, _, err := decoder.Decode(raw, &gvk, nil)
-
 	if err != nil {
 		glog.V(7).Infof("Error un-marshalling review object, continuing: %s", err)
 		return nil
