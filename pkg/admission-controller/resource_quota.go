@@ -33,6 +33,7 @@ import (
 	"k8s.io/kubernetes/pkg/quota"
 	quotainstall "k8s.io/kubernetes/pkg/quota/install"
 	"k8s.io/kubernetes/pkg/quota/generic"
+	"k8s.io/kubernetes/pkg/apis/core"
 )
 
 type ResourceQuotaAdmitter struct {
@@ -49,9 +50,11 @@ func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNod
 	quotaConfiguration := quotainstall.NewQuotaConfigurationForAdmission()
 	quotaRegistry := generic.NewRegistry(quotaConfiguration.Evaluators())
 
-	// Decoder. Right now, only v1 types are needed as they are the only ones being monitored
+	// Decoder. Right now, only v1 and core types are needed as they are the only ones being monitored
 	scheme := runtime.NewScheme()
 	core_v1.AddToScheme(scheme)
+	core.AddToScheme(scheme)
+
 	decoder := serializer.NewCodecFactory(scheme).UniversalDecoder()
 
 	return &ResourceQuotaAdmitter{
