@@ -21,21 +21,36 @@ set -euo pipefail
 # the first and last values from GOPATH.
 GOBASE=$(echo $GOPATH | sed 's/:.*//')
 GOWORK=$(echo $GOPATH | sed 's/.*://')
+REPO="github.com/google/stolos"
 
 # Comma separted list of APIs to generate for clientset.
-INPUT_BASE="github.com/google/stolos/pkg/api"
+INPUT_BASE="${REPO}/pkg/api"
 INPUT_APIS="policyhierarchy/v1"
 
 # Where to put the generated client set
 OUTPUT_BASE="${GOWORK}/src"
-OUTPUT_CLIENT="github.com/google/stolos/pkg/client"
+OUTPUT_CLIENT="${REPO}/pkg/client"
 CLIENTSET_NAME=policyhierarchy
 
+BOILERPLATE="$(dirname ${0})/boilerplate.go.txt"
+
+tools=()
+for tool in client deepcopy informer lister; do
+  tools+=("k8s.io/code-generator/cmd/${tool}-gen")
+done
+
+branch=release-1.9
+echo "Checking out codegen branch ${branch}"
+checkout="git -C ${GOBASE}/src/k8s.io/code-generator \
+    checkout -B ${branch} origin/${branch}"
+if ! ${checkout} &> /dev/null; then
+  echo "Fetching gen tools and checking out appropriate branch..."
+  go get -d -u "${tools[@]}"
+  ${checkout}
+fi
+
 echo "Building gen tools..."
-go install k8s.io/code-generator/cmd/client-gen
-go install k8s.io/code-generator/cmd/deepcopy-gen
-go install k8s.io/code-generator/cmd/informer-gen
-go install k8s.io/code-generator/cmd/lister-gen
+go install "${tools[@]}"
 
 echo "Using GOPATH base ${GOBASE}"
 echo "Using GOPATH work ${GOWORK}"
@@ -45,9 +60,8 @@ ${GOBASE}/bin/client-gen \
   --input="${INPUT_APIS}" \
   --clientset-name="${CLIENTSET_NAME}" \
   --output-base="${OUTPUT_BASE}" \
-  --go-header-file="boilerplate.go.txt" \
+  --go-header-file="${BOILERPLATE}" \
   --clientset-path "${OUTPUT_CLIENT}"
-
 
 for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
   # Creates types.generated.go
@@ -56,7 +70,7 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
     -v 5 \
     --input-dirs="${INPUT_BASE}/${api}" \
     --output-file-base="types.generated" \
-    --go-header-file="boilerplate.go.txt" \
+    --go-header-file="${BOILERPLATE}" \
     --output-base="${OUTPUT_BASE}"
 
   ${GOBASE}/bin/lister-gen \
@@ -64,7 +78,7 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
     -v 5 \
     --input-dirs="${INPUT_BASE}/${api}" \
     --output-base="$GOWORK/src" \
-    --go-header-file="boilerplate.go.txt" \
+    --go-header-file="${BOILERPLATE}" \
     --output-package="${OUTPUT_CLIENT}/listers"
 
   ${GOBASE}/bin/informer-gen \
@@ -74,6 +88,6 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
     --versioned-clientset-package="${OUTPUT_CLIENT}/${CLIENTSET_NAME}" \
     --listers-package="${OUTPUT_CLIENT}/listers" \
     --output-base="$GOWORK/src" \
-    --go-header-file="boilerplate.go.txt" \
+    --go-header-file="${BOILERPLATE}" \
     --output-package="${OUTPUT_CLIENT}/informers"
 done
