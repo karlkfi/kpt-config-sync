@@ -35,6 +35,9 @@ STAGING_DIR := $(OUTPUT_DIR)/staging
 # Directory containing gen-alld yaml files from manifest templates.
 GEN_YAML_DIR := $(OUTPUT_DIR)/yaml
 
+# Directory containing templates yaml files.
+TEMPLATES_DIR := $(TOP_DIR)/manifests/enrolled/templates
+
 # Docker image tage.
 IMAGE_TAG ?= $(USER)
 
@@ -91,13 +94,13 @@ install-kubectl-plugin:
 .PHONY: gen-all-yaml-files
 gen-all-yaml-files: .output
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/resourcequota-admission-controller:$(IMAGE_TAG) < \
-	        $(TOP_DIR)/manifests/templates/resourcequota-admission-controller.yaml > $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml
-	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/syncer:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/syncer.yaml > $(GEN_YAML_DIR)/syncer.yaml
-	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/authorizer:$(IMAGE_TAG) < $(TOP_DIR)/manifests/templates/authorizer.yaml > $(GEN_YAML_DIR)/authorizer.yaml
+	        $(TEMPLATES_DIR)/resourcequota-admission-controller.yaml > $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml
+	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/syncer:$(IMAGE_TAG) < $(TEMPLATES_DIR)/syncer.yaml > $(GEN_YAML_DIR)/syncer.yaml
+	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/authorizer:$(IMAGE_TAG) < $(TEMPLATES_DIR)/authorizer.yaml > $(GEN_YAML_DIR)/authorizer.yaml
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/stolosresourcequota-controller:$(IMAGE_TAG) < \
-	        $(TOP_DIR)/manifests/templates/stolosresourcequota-controller.yaml > $(GEN_YAML_DIR)/stolosresourcequota-controller.yaml
+	        $(TEMPLATES_DIR)/stolosresourcequota-controller.yaml > $(GEN_YAML_DIR)/stolosresourcequota-controller.yaml
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/remote-cluster-policy-importer:$(IMAGE_TAG) < \
-	        $(TOP_DIR)/manifests/templates/remote-cluster-policy-importer.yaml > $(GEN_YAML_DIR)/remote-cluster-policy-importer.yaml
+	        $(TEMPLATES_DIR)/remote-cluster-policy-importer.yaml > $(GEN_YAML_DIR)/remote-cluster-policy-importer.yaml
 
 ######################################################################
 # Targets for building and pushing docker images.

@@ -21,18 +21,43 @@
 
 set -euo pipefail
 
-REPO=$(dirname ${0:-})/..
+MANIFESTS=$(dirname ${0:-})/../manifests
 ACTION=${ACTION:-create}
+MODE=${MODE:-enrolled}
+ENROLLED_DIRS=(${MANIFESTS}/common ${MANIFESTS}/enrolled)
+MASTER_DIRS=(${MANIFESTS}/common ${MANIFESTS}/master)
+
+case $MODE in
+  enrolled)
+    dirs=( "${ENROLLED_DIRS[@]}" )
+    ;;
+  master)
+    dirs=( "${MASTER_DIRS[@]}" )
+    ;;
+  *)
+    echo "Invalid mode ${MODE}"
+    exit 1
+    ;;
+esac
 
 case $ACTION in
   create)
-    kubectl apply -f ${REPO}/manifests
+    cmd="apply"
     ;;
   delete)
-    kubectl delete -f ${REPO}/manifests
+    cmd="delete"
     ;;
   *)
     echo "Invalid action ${ACTION}"
     exit 1
     ;;
 esac
+
+
+echo "${dirs[@]}"
+for d in "${dirs[@]}"
+do
+  echo "kubectl $cmd -f $d"
+  kubectl $cmd -f $d
+done
+
