@@ -26,6 +26,10 @@ type FakeK8usV1 struct {
 	*testing.Fake
 }
 
+func (c *FakeK8usV1) ClusterPolicies() v1.ClusterPolicyInterface {
+	return &FakeClusterPolicies{c}
+}
+
 func (c *FakeK8usV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
 }

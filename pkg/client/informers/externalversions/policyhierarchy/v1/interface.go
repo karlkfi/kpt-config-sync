@@ -24,6 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// ClusterPolicies returns a ClusterPolicyInformer.
+	ClusterPolicies() ClusterPolicyInformer
 	// PolicyNodes returns a PolicyNodeInformer.
 	PolicyNodes() PolicyNodeInformer
 	// StolosResourceQuotas returns a StolosResourceQuotaInformer.
@@ -39,6 +41,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// ClusterPolicies returns a ClusterPolicyInformer.
+func (v *version) ClusterPolicies() ClusterPolicyInformer {
+	return &clusterPolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // PolicyNodes returns a PolicyNodeInformer.

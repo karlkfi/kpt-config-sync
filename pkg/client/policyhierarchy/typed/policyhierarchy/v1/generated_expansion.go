@@ -16,6 +16,8 @@ limitations under the License.
 
 package v1
 
+type ClusterPolicyExpansion interface{}
+
 type PolicyNodeExpansion interface{}
 
 type StolosResourceQuotaExpansion interface{}

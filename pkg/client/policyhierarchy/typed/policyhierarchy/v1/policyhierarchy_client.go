@@ -25,6 +25,7 @@ import (
 
 type K8usV1Interface interface {
 	RESTClient() rest.Interface
+	ClusterPoliciesGetter
 	PolicyNodesGetter
 	StolosResourceQuotasGetter
 }
@@ -32,6 +33,10 @@ type K8usV1Interface interface {
 // K8usV1Client is used to interact with features provided by the k8us.k8s.io group.
 type K8usV1Client struct {
 	restClient rest.Interface
+}
+
+func (c *K8usV1Client) ClusterPolicies() ClusterPolicyInterface {
+	return newClusterPolicies(c)
 }
 
 func (c *K8usV1Client) PolicyNodes() PolicyNodeInterface {

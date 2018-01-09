@@ -18,9 +18,77 @@ package v1
 
 import (
 	core_v1 "k8s.io/api/core/v1"
+	extensions_v1beta1 "k8s.io/api/extensions/v1beta1"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// These comments must remain outside the package docstring.
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ClusterPolicy is the top-level object for the policy node data definition.
+//
+// It holds a policy defined for a single org unit (namespace).
+type ClusterPolicy struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// +optional
+	metav1.ObjectMeta `json:"metadata"`
+
+	// The actual object definition, per K8S object definition style.
+	Spec ClusterPolicySpec `json:"spec"`
+}
+
+// ClusterPolicySpec defines the policies that will exist at the cluster level.
+type ClusterPolicySpec struct {
+	// Sources describes the resource / name / resourceVersion of definitions that were merged to
+	// create this object, for example ["clusterpolicy.prod.275564"]. Note that there is no ambiguity
+	// in this as the resource name and resource version are not allowed to contain the '.' character.
+	// This field will not be set in the MasterPolicyNode and will only be set at enrolled clusters.
+	Sources []string `json:"sources"`
+
+	// The policies specified for cluster level resources.
+	Policies ClusterPolicies `json:"policies"`
+}
+
+const (
+	// ClusterPolicyClusterRoles is the name of the ClusterPolicy resource that will store cluster roles
+	ClusterPolicyClusterRoles = "clusterrole"
+	// ClusterPolicyClusterRoleBindings is the name of the ClusterPolicy resource that will store cluster role bindings
+	ClusterPolicyClusterRoleBindings = "clusterrolebinding"
+	// ClusterPolicyPodSecurityPolicies is the name of the ClusterPolicy resource that will store pod security policies
+	ClusterPolicyPodSecurityPolicies = "podsecuritypolicy"
+)
+
+// ClusterPolicies specifies the polies stolos synchronizes to a cluster. This is factored out
+// due to the fact that it is specified in MasterClusterPolicyNodeSpec and ClusterPolicyNodeSpec.
+type ClusterPolicies struct {
+	// Type defines the type of resources that this holds. It will hold one of the cluster scoped
+	// resources and should have a resource name that matches the resource type it holds.
+	Type string `json:"type"`
+
+	// Cluster scope resources.
+	ClusterRoles        []rbac_v1.ClusterRole                  `json:"clusterRoles"`
+	ClusterRoleBindings []rbac_v1.ClusterRoleBinding           `json:"clusterRoleBindings"`
+	PodSecurtiyPolicies []extensions_v1beta1.PodSecurityPolicy `json:"podSecurityPolicy"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ClusterPolicyList holds a list of cluster level policies, returned as response to a List
+// call on the cluster policy hierarchy.
+type ClusterPolicyList struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
+
+	// Items is a list of policy nodes that apply.
+	Items []ClusterPolicy `json:"items"`
+}
 
 // These comments must remain outside the package docstring.
 // +genclient
