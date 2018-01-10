@@ -144,6 +144,11 @@ func (n *resourceQuotaActionBase) ResourceQuotaSpec() core_v1.ResourceQuotaSpec 
 	return n.resourceQuotaSpec
 }
 
+// Resource implements Interface
+func (s *resourceQuotaActionBase) Resource() string {
+	return "resourcequota"
+}
+
 func (n *resourceQuotaActionBase) Namespace() string {
 	return n.namespace
 }
@@ -154,7 +159,7 @@ func (n *resourceQuotaActionBase) Operation() string {
 
 // Resource implements Action
 func (n *resourceQuotaActionBase) String() string {
-	return fmt.Sprintf("resourcequota.%s.%s", n.Namespace(), n.Operation())
+	return fmt.Sprintf("%s.%s.%s", n.Resource(), n.Namespace(), n.Operation())
 }
 
 // ------- Delete -------

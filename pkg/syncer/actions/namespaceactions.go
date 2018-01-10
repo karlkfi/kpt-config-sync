@@ -48,6 +48,11 @@ type NamespaceDeleteAction struct {
 	namespaceActionBase
 }
 
+// Resource implements Interface
+func (s *namespaceActionBase) Resource() string {
+	return "namespace"
+}
+
 // Name implements Action
 func (n *namespaceActionBase) Namespace() string {
 	return n.namespace
@@ -60,7 +65,7 @@ func (n *namespaceActionBase) Operation() string {
 
 // String implements Action
 func (n *namespaceActionBase) String() string {
-	return fmt.Sprintf("namespace.%s.%s", n.Namespace(), n.Operation())
+	return fmt.Sprintf("%s.%s.%s", n.Resource(), n.Namespace(), n.Operation())
 }
 
 var _ Interface = &NamespaceDeleteAction{}

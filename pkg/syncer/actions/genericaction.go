@@ -65,6 +65,11 @@ func MetaEquals(lhs meta_v1.ObjectMeta, rhs meta_v1.ObjectMeta) bool {
 		reflect.DeepEqual(lhs.Annotations, rhs.Annotations)
 }
 
+// Resource implements Interface
+func (s *genericActionBase) Resource() string {
+	return s.resourceInterface.Type()
+}
+
 // Namespace implements Interface
 func (s *genericActionBase) Namespace() string {
 	return s.resourceInterface.Namespace(s.resource)
@@ -86,14 +91,14 @@ func (s *genericActionBase) String() string {
 	if namespace != "" {
 		return fmt.Sprintf(
 			"%s.%s.%s.%s",
-			s.resourceInterface.Type(),
+			s.Resource(),
 			namespace,
 			s.Name(),
 			s.Operation())
 	}
 	return fmt.Sprintf(
 		"%s.%s.%s",
-		s.resourceInterface.Type(),
+		s.Resource(),
 		s.Name(),
 		s.Operation())
 }

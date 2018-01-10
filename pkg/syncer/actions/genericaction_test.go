@@ -36,6 +36,9 @@ func TestGenericActionBase(t *testing.T) {
 	if g.Name() != "testresourcename" {
 		t.Errorf("Should have returned testresourcename for name")
 	}
+	if g.Resource() != "testresource" {
+		t.Errorf("Should have returned testresource for resource")
+	}
 	if g.Namespace() != "default" {
 		t.Errorf("Should have returned default for namespace")
 	}

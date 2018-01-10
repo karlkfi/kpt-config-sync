@@ -29,6 +29,7 @@ import (
 	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/google/stolos/pkg/util/policynode"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -43,6 +44,52 @@ var dryRun = flag.Bool(
 
 // WorkerNumRetries is the number of times an action will be retried in the work queue.
 const WorkerNumRetries = 3
+
+// Prometheus metrics
+var (
+	errTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Help:      "Total errors that occurred when executing syncer actions",
+			Namespace: "stolos",
+			Subsystem: "syncer",
+			Name:      "error_total",
+		},
+		[]string{"namespace", "resource", "operation"},
+	)
+	eventTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Help:      "Total events that occurred ",
+			Namespace: "stolos",
+			Subsystem: "syncer",
+			Name:      "event_total",
+		},
+		[]string{"type"},
+	)
+	queueSize = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Help:      "Current size of syncer action queue",
+			Namespace: "stolos",
+			Subsystem: "syncer",
+			Name:      "queue_size",
+		})
+	syncDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Help:      "Syncer action duration distributions",
+			Namespace: "stolos",
+			Subsystem: "syncer",
+			Name:      "action_duration_seconds",
+			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
+		},
+		[]string{"namespace", "resource", "operation"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(errTotal)
+	prometheus.MustRegister(eventTotal)
+	prometheus.MustRegister(queueSize)
+	prometheus.MustRegister(syncDuration)
+}
 
 // ErrorCallback is a callback which is called if Syncer encounters an error during execution
 type ErrorCallback func(error)
@@ -183,6 +230,8 @@ func (s *Syncer) resync(lister policynodelister_v1.PolicyNodeLister) error {
 		return errors.Wrapf(err, "Failed to list policy nodes")
 	}
 	glog.V(1).Infof("Periodic Resync")
+	eventTotal.WithLabelValues("resync").Inc()
+
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.PeriodicResync(policyNodes)
 		if err != nil {
@@ -198,6 +247,7 @@ func (s *Syncer) onAdd(obj interface{}) {
 	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
 	resourceVersion := policynode.GetResourceVersionOrDie(policyNode)
 	glog.V(1).Infof("onAdd %s (%d)", policyNode.Name, resourceVersion)
+	eventTotal.WithLabelValues("add").Inc()
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnCreate(policyNode)
@@ -206,6 +256,7 @@ func (s *Syncer) onAdd(obj interface{}) {
 			return
 		}
 	}
+	queueSize.Set(float64(s.queue.Len()))
 }
 
 // onDelete handles delete events from the informer.
@@ -213,6 +264,7 @@ func (s *Syncer) onDelete(obj interface{}) {
 	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
 	resourceVersion := policynode.GetResourceVersionOrDie(policyNode)
 	glog.V(1).Infof("onDelete %s (%d)", policyNode.Name, resourceVersion)
+	eventTotal.WithLabelValues("delete").Inc()
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnDelete(policyNode)
@@ -221,6 +273,7 @@ func (s *Syncer) onDelete(obj interface{}) {
 			return
 		}
 	}
+	queueSize.Set(float64(s.queue.Len()))
 }
 
 // onUpdate handles update events from the informer
@@ -229,6 +282,7 @@ func (s *Syncer) onUpdate(oldObj, newObj interface{}) {
 	newPolicyNode := newObj.(*policyhierarchy_v1.PolicyNode)
 	glog.V(1).Infof(
 		"onUpdate %s (%s->%s)", newPolicyNode.Name, oldPolicyNode.ResourceVersion, newPolicyNode.ResourceVersion)
+	eventTotal.WithLabelValues("update").Inc()
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnUpdate(oldPolicyNode, newPolicyNode)
@@ -237,6 +291,7 @@ func (s *Syncer) onUpdate(oldObj, newObj interface{}) {
 			return
 		}
 	}
+	queueSize.Set(float64(s.queue.Len()))
 }
 
 func (s *Syncer) onError(err error) {
@@ -258,6 +313,7 @@ func (s *Syncer) processAction() bool {
 		glog.Infof("Shutting down Syncer queue processing worker")
 		return false
 	}
+	defer queueSize.Set(float64(s.queue.Len()))
 	defer s.queue.Done(actionItem)
 
 	action := actionItem.(actions.Interface)
@@ -266,13 +322,17 @@ func (s *Syncer) processAction() bool {
 		glog.Infof("Would have executed action %s", action.String())
 		return true
 	}
+	start := time.Now()
 	err := action.Execute()
+	elapsed := time.Since(start).Seconds()
+	syncDuration.WithLabelValues(action.Namespace(), action.Resource(), action.Operation()).Observe(elapsed)
 
 	// All good!
 	if err == nil {
 		s.queue.Forget(actionItem)
 		return true
 	}
+	errTotal.WithLabelValues(action.Namespace(), action.Resource(), action.Operation()).Inc()
 
 	// Drop forever
 	if s.queue.NumRequeues(actionItem) > WorkerNumRetries {

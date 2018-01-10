@@ -20,6 +20,8 @@ type Interface interface {
 	Operation() string
 	// Execute will execute the operation then return an error on failure
 	Execute() error
+	// Resource returns the type of resource being operated on
+	Resource() string
 	// Namespace returns the namespace of the resource being operated on
 	Namespace() string
 	// String representation of this action

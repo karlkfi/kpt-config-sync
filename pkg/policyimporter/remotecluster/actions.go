@@ -44,6 +44,11 @@ type policyNodeAction struct {
 	localNodeInterface typed_v1.PolicyNodeInterface
 }
 
+// Resource implements the action interface.
+func (p *policyNodeAction) Resource() string {
+	return "policynode"
+}
+
 // Operation implements the action interface.
 func (p *policyNodeAction) Operation() string {
 	return p.operation
@@ -51,7 +56,7 @@ func (p *policyNodeAction) Operation() string {
 
 // String implements the action interface.
 func (p *policyNodeAction) String() string {
-	return fmt.Sprintf("policynode.%s.%s", p.remoteNode.Name, p.Operation())
+	return fmt.Sprintf("%s.%s.%s", p.Resource(), p.remoteNode.Name, p.Operation())
 }
 
 // Namespace implements the action interface.
