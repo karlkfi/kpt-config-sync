@@ -28,13 +28,13 @@ import (
 
 // FakeStolosResourceQuotas implements StolosResourceQuotaInterface
 type FakeStolosResourceQuotas struct {
-	Fake *FakeK8usV1
+	Fake *FakeStolosV1
 	ns   string
 }
 
-var stolosresourcequotasResource = schema.GroupVersionResource{Group: "k8us.k8s.io", Version: "v1", Resource: "stolosresourcequotas"}
+var stolosresourcequotasResource = schema.GroupVersionResource{Group: "stolos.dev", Version: "v1", Resource: "stolosresourcequotas"}
 
-var stolosresourcequotasKind = schema.GroupVersionKind{Group: "k8us.k8s.io", Version: "v1", Kind: "StolosResourceQuota"}
+var stolosresourcequotasKind = schema.GroupVersionKind{Group: "stolos.dev", Version: "v1", Kind: "StolosResourceQuota"}
 
 // Get takes name of the stolosResourceQuota, and returns the corresponding stolosResourceQuota object, and an error if there is any.
 func (c *FakeStolosResourceQuotas) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.StolosResourceQuota, err error) {

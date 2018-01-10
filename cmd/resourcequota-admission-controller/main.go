@@ -97,7 +97,7 @@ func setupPolicyNodeInformer(config *rest.Config) (informerspolicynodev1.PolicyN
 	policyNodeFactory := policynodeversions.NewSharedInformerFactory(
 		policyNodeClient.PolicyHierarchy(), time.Minute,
 	)
-	policyNodeInformer := policyNodeFactory.K8us().V1().PolicyNodes()
+	policyNodeInformer := policyNodeFactory.Stolos().V1().PolicyNodes()
 	policyNodeInformer.Informer()
 	policyNodeFactory.Start(nil)
 
@@ -155,7 +155,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 		},
 		Webhooks: []admissionregistrationv1beta1.Webhook{
 			{
-				Name: "resourcequota.k8us.k8s.io",
+				Name: "resourcequota.stolos.dev",
 				Rules: []admissionregistrationv1beta1.RuleWithOperations{{
 					Operations: []admissionregistrationv1beta1.OperationType{
 						admissionregistrationv1beta1.Create,

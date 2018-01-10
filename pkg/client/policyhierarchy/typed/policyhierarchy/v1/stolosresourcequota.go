@@ -51,7 +51,7 @@ type stolosResourceQuotas struct {
 }
 
 // newStolosResourceQuotas returns a StolosResourceQuotas
-func newStolosResourceQuotas(c *K8usV1Client, namespace string) *stolosResourceQuotas {
+func newStolosResourceQuotas(c *StolosV1Client, namespace string) *stolosResourceQuotas {
 	return &stolosResourceQuotas{
 		client: c.RESTClient(),
 		ns:     namespace,

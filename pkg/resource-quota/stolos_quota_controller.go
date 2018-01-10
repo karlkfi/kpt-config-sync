@@ -69,8 +69,8 @@ func (c *Controller) Stop() {
 // Initializes informers and starts them to listen to changes.
 func (c *Controller) runInformer() {
 	// Get the informers to register them to start.
-	c.policyHierarchyInformerFactory.K8us().V1().PolicyNodes().Informer()
-	c.policyHierarchyInformerFactory.K8us().V1().StolosResourceQuotas().Informer()
+	c.policyHierarchyInformerFactory.Stolos().V1().PolicyNodes().Informer()
+	c.policyHierarchyInformerFactory.Stolos().V1().StolosResourceQuotas().Informer()
 	c.kubernetesInformerFactory.Core().V1().ResourceQuotas().Informer()
 
 	// Start informer factories
@@ -126,12 +126,12 @@ func (c *Controller) fullSync() error {
 	glog.Infof("Full sync")
 
 	hierarchicalCache, err := NewHierarchicalQuotaCache(
-		c.policyHierarchyInformerFactory.K8us().V1().PolicyNodes(),
+		c.policyHierarchyInformerFactory.Stolos().V1().PolicyNodes(),
 		c.kubernetesInformerFactory.Core().V1().ResourceQuotas())
 	if err != nil {
 		return errors.Wrap(err, "Failed initializing cache during full sync")
 	}
-	stolosQuotaLister := c.policyHierarchyInformerFactory.K8us().V1().StolosResourceQuotas().Lister()
+	stolosQuotaLister := c.policyHierarchyInformerFactory.Stolos().V1().StolosResourceQuotas().Lister()
 	for namespace, quotaNode := range hierarchicalCache.quotas {
 		if quotaNode.policyspace {
 			c.queue.Add(&UpsertStolosQuota{
@@ -167,7 +167,7 @@ func (c *Controller) onQuotaUpdate(oldObj, newObj interface{}) {
 			newQuota.Namespace, err)
 	}
 
-	stolosQuotaLister := c.policyHierarchyInformerFactory.K8us().V1().StolosResourceQuotas().Lister()
+	stolosQuotaLister := c.policyHierarchyInformerFactory.Stolos().V1().StolosResourceQuotas().Lister()
 	for _, namespace := range stolosQuotaNamespacesToUpdate {
 		c.queue.Add(&UpsertStolosQuota{
 			namespace: namespace,

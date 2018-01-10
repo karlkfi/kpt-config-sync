@@ -50,7 +50,7 @@ type policyNodes struct {
 }
 
 // newPolicyNodes returns a PolicyNodes
-func newPolicyNodes(c *K8usV1Client) *policyNodes {
+func newPolicyNodes(c *StolosV1Client) *policyNodes {
 	return &policyNodes{
 		client: c.RESTClient(),
 	}

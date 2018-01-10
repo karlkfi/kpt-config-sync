@@ -59,13 +59,13 @@ func NewFilteredClusterPolicyInformer(client policyhierarchy.Interface, resyncPe
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.K8usV1().ClusterPolicies().List(options)
+				return client.StolosV1().ClusterPolicies().List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.K8usV1().ClusterPolicies().Watch(options)
+				return client.StolosV1().ClusterPolicies().Watch(options)
 			},
 		},
 		&policyhierarchy_v1.ClusterPolicy{},

@@ -122,9 +122,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	K8us() externalversions_policyhierarchy.Interface
+	Stolos() externalversions_policyhierarchy.Interface
 }
 
-func (f *sharedInformerFactory) K8us() externalversions_policyhierarchy.Interface {
+func (f *sharedInformerFactory) Stolos() externalversions_policyhierarchy.Interface {
 	return externalversions_policyhierarchy.New(f, f.namespace, f.tweakListOptions)
 }

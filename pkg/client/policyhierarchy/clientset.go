@@ -18,7 +18,7 @@ package policyhierarchy
 
 import (
 	glog "github.com/golang/glog"
-	k8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	stolosv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -26,27 +26,27 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	K8usV1() k8usv1.K8usV1Interface
+	StolosV1() stolosv1.StolosV1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	K8us() k8usv1.K8usV1Interface
+	Stolos() stolosv1.StolosV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	k8usV1 *k8usv1.K8usV1Client
+	stolosV1 *stolosv1.StolosV1Client
 }
 
-// K8usV1 retrieves the K8usV1Client
-func (c *Clientset) K8usV1() k8usv1.K8usV1Interface {
-	return c.k8usV1
+// StolosV1 retrieves the StolosV1Client
+func (c *Clientset) StolosV1() stolosv1.StolosV1Interface {
+	return c.stolosV1
 }
 
-// Deprecated: K8us retrieves the default version of K8usClient.
+// Deprecated: Stolos retrieves the default version of StolosClient.
 // Please explicitly pick a version.
-func (c *Clientset) K8us() k8usv1.K8usV1Interface {
-	return c.k8usV1
+func (c *Clientset) Stolos() stolosv1.StolosV1Interface {
+	return c.stolosV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -65,7 +65,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.k8usV1, err = k8usv1.NewForConfig(&configShallowCopy)
+	cs.stolosV1, err = stolosv1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.k8usV1 = k8usv1.NewForConfigOrDie(c)
+	cs.stolosV1 = stolosv1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -91,7 +91,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.k8usV1 = k8usv1.New(c)
+	cs.stolosV1 = stolosv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

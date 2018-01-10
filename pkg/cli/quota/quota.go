@@ -36,7 +36,7 @@ func GetHierarchical(ctx *cli.CommandContext, args []string) error {
 	if err != nil {
 		return err
 	}
-	clientSet := ctx.Client.PolicyHierarchy().K8usV1()
+	clientSet := ctx.Client.PolicyHierarchy().StolosV1()
 	for _, ns := range namespaces {
 		nsName := ns.ObjectMeta.Name
 		client := clientSet.StolosResourceQuotas(ns.ObjectMeta.Name)

@@ -50,7 +50,7 @@ type clusterPolicies struct {
 }
 
 // newClusterPolicies returns a ClusterPolicies
-func newClusterPolicies(c *K8usV1Client) *clusterPolicies {
+func newClusterPolicies(c *StolosV1Client) *clusterPolicies {
 	return &clusterPolicies{
 		client: c.RESTClient(),
 	}

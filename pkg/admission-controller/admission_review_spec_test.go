@@ -10,14 +10,14 @@ import (
 
 func TestConversion(t *testing.T) {
 	x := admission_v1beta1.AdmissionRequest{
-			Name:      "ice cream",
-			Operation: "DELETE",
-			UserInfo: authenticationv1.UserInfo{
-				Username: "taco",
-				Extra: map[string]authenticationv1.ExtraValue{
-					"choco": {"dark", "white"},
-				},
+		Name:      "ice cream",
+		Operation: "DELETE",
+		UserInfo: authenticationv1.UserInfo{
+			Username: "taco",
+			Extra: map[string]authenticationv1.ExtraValue{
+				"choco": {"dark", "white"},
 			},
+		},
 	}
 
 	spec := AdmissionReviewSpec(x)

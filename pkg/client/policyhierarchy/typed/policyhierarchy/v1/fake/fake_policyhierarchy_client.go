@@ -22,25 +22,25 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeK8usV1 struct {
+type FakeStolosV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeK8usV1) ClusterPolicies() v1.ClusterPolicyInterface {
+func (c *FakeStolosV1) ClusterPolicies() v1.ClusterPolicyInterface {
 	return &FakeClusterPolicies{c}
 }
 
-func (c *FakeK8usV1) PolicyNodes() v1.PolicyNodeInterface {
+func (c *FakeStolosV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
 }
 
-func (c *FakeK8usV1) StolosResourceQuotas(namespace string) v1.StolosResourceQuotaInterface {
+func (c *FakeStolosV1) StolosResourceQuotas(namespace string) v1.StolosResourceQuotaInterface {
 	return &FakeStolosResourceQuotas{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeK8usV1) RESTClient() rest.Interface {
+func (c *FakeStolosV1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

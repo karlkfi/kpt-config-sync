@@ -33,7 +33,7 @@ func TestRequest(t *testing.T) {
 	defer ts.Close()
 
 	request := admissionv1beta1.AdmissionReview{
-		Request:&admissionv1beta1.AdmissionRequest{},
+		Request: &admissionv1beta1.AdmissionRequest{},
 	}
 	requestBytes, err := json.Marshal(request)
 	if err != nil {

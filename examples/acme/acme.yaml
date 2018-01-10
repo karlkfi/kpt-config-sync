@@ -1,4 +1,4 @@
-apiVersion: "k8us.k8s.io/v1"
+apiVersion: "stolos.dev/v1"
 kind: PolicyNode
 metadata:
   name: acme
@@ -25,7 +25,7 @@ spec:
         resources: ["roles", "rolebindings"]
         verbs: ["get", "list"]
 ---
-apiVersion: "k8us.k8s.io/v1"
+apiVersion: "stolos.dev/v1"
 kind: PolicyNode
 metadata:
   name: eng
@@ -52,7 +52,7 @@ spec:
         name: admin
         apiGroup: rbac.authorization.k8s.io
 ---
-apiVersion: "k8us.k8s.io/v1"
+apiVersion: "stolos.dev/v1"
 kind: PolicyNode
 metadata:
   name: rnd
@@ -64,7 +64,7 @@ spec:
       hard:
         configmaps: "1"
 ---
-apiVersion: "k8us.k8s.io/v1"
+apiVersion: "stolos.dev/v1"
 kind: PolicyNode
 metadata:
   name: backend
@@ -90,7 +90,7 @@ spec:
         name: admin
         apiGroup: rbac.authorization.k8s.io
 ---
-apiVersion: "k8us.k8s.io/v1"
+apiVersion: "stolos.dev/v1"
 kind: PolicyNode
 metadata:
   name: frontend
@@ -102,7 +102,7 @@ spec:
       hard:
         pods: "1"
 ---
-apiVersion: "k8us.k8s.io/v1"
+apiVersion: "stolos.dev/v1"
 kind: PolicyNode
 metadata:
   name: new-prj

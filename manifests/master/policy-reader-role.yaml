@@ -4,7 +4,7 @@ metadata:
   name: stolos-policy-reader
 rules:
 - apiGroups:
-  - k8us.k8s.io
+  - stolos.dev
   resources:
   - policynodes
   verbs:

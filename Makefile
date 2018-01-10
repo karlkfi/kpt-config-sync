@@ -58,12 +58,18 @@ endef
 	mkdir -p $(STAGING_DIR)
 	mkdir -p $(GEN_YAML_DIR)
 
-# Builds all go packages statically.  These are good for deploying into very
+# Builds all go binaries statically.  These are good for deploying into very
 # small containers, e.g. built off of "scratch" or "busybox" or some such.
 .PHONY: build-all
 build-all: .output
 	CGO_ENABLED=0 GOBIN=$(BIN_DIR) \
 	      go install -v -installsuffix="static" $(REPO)/cmd/...
+
+# Builds all go packages.
+.PHONY: build-alldeps
+build-alldeps: .output
+	CGO_ENABLED=0 GOBIN=$(BIN_DIR) \
+	      go build -v $(REPO)/pkg/...
 
 # Cleans all artifacts.
 .PHONY: clean clean-all

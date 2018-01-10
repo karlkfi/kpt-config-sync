@@ -60,13 +60,13 @@ func NewFilteredStolosResourceQuotaInformer(client policyhierarchy.Interface, na
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.K8usV1().StolosResourceQuotas(namespace).List(options)
+				return client.StolosV1().StolosResourceQuotas(namespace).List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.K8usV1().StolosResourceQuotas(namespace).Watch(options)
+				return client.StolosV1().StolosResourceQuotas(namespace).Watch(options)
 			},
 		},
 		&policyhierarchy_v1.StolosResourceQuota{},

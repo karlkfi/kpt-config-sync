@@ -39,7 +39,7 @@ var existingLocalNodes = []*policyhierarchy_v1.PolicyNode{
 
 func setUpLocalPolicyNodes(t *testing.T) (listers_v1.PolicyNodeLister, typed_v1.PolicyNodeInterface) {
 	client := fake.NewClient()
-	policyNodeInterface := client.PolicyHierarchy().K8usV1().PolicyNodes()
+	policyNodeInterface := client.PolicyHierarchy().StolosV1().PolicyNodes()
 
 	for _, n := range existingLocalNodes {
 		_, err := policyNodeInterface.Create(n)
@@ -50,7 +50,7 @@ func setUpLocalPolicyNodes(t *testing.T) (listers_v1.PolicyNodeLister, typed_v1.
 
 	informerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), time.Minute)
-	policyNodeLister := informerFactory.K8us().V1().PolicyNodes().Lister()
+	policyNodeLister := informerFactory.Stolos().V1().PolicyNodes().Lister()
 	informerFactory.Start(nil)
 	informerFactory.WaitForCacheSync(nil)
 

@@ -147,7 +147,7 @@ func main() {
 	}
 	srv := service.Server(
 		ServeFunc(authorizer.New(
-			factory.K8us().V1().PolicyNodes().Informer())), clientCert)
+			factory.Stolos().V1().PolicyNodes().Informer())), clientCert)
 	factory.Start(nil)
 
 	// Expose prometheus metrics via HTTP.

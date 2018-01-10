@@ -31,8 +31,8 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"k8s.io/kubernetes/pkg/quota"
-	quotainstall "k8s.io/kubernetes/pkg/quota/install"
 	"k8s.io/kubernetes/pkg/quota/generic"
+	quotainstall "k8s.io/kubernetes/pkg/quota/install"
 )
 
 type ResourceQuotaAdmitter struct {
@@ -115,4 +115,3 @@ func internalErrorDeny(err error) *admissionv1beta1.AdmissionResponse {
 		},
 	}
 }
-

@@ -25,5 +25,5 @@ limitations under the License.
 // DO NOT MOVE THESE OUT OF THE PACKAGE DOCSTRING, GENERATING CODE PROPERLY DEPENDS ON THEM BEING HERE.
 // +k8s:deepcopy-gen=package,register
 // +k8s:openapi-gen=true
-// +groupName=k8us.k8s.io
+// +groupName=stolos.dev
 package v1

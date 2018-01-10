@@ -105,7 +105,7 @@ func TestFullSync(t *testing.T) {
 
 	// Now ensure the state of the world is as expected
 	for namespace, expectedQuotaStatus := range expectedQuotas {
-		actualQuota, err := fakeClient.PolicyHierarchy().K8usV1().StolosResourceQuotas(namespace).Get(ResourceQuotaObjectName, meta_v1.GetOptions{})
+		actualQuota, err := fakeClient.PolicyHierarchy().StolosV1().StolosResourceQuotas(namespace).Get(ResourceQuotaObjectName, meta_v1.GetOptions{})
 		if err != nil {
 			t.Errorf("Unexpected error %s", err)
 		}

@@ -134,7 +134,7 @@ func (r *rbacInformerAdapter) GetRole(namespace, name string) (*apisrbac.Role, e
 	if role == nil {
 		// Not found.  Should we return nil?  Or a default?  Unknown.
 		return nil,
-				fmt.Errorf("role not found: namespace=%v, name=%v", namespace, name)
+			fmt.Errorf("role not found: namespace=%v, name=%v", namespace, name)
 	}
 	glog.V(4).Infof("GetRole found role: %v", spew.Sdump(*role))
 	return role, nil
@@ -154,7 +154,7 @@ func matchesCoreResourceQuota(apiGroups []string, resources []string) bool {
 	}
 	resourceSet := stringset.NewFromSlice(resources)
 	result := resourceSet.Contains(string(apicore.ResourceQuotas)) &&
-			!resourceSet.Contains(string(policyhierarchy.StolosResourceQuotaResource))
+		!resourceSet.Contains(string(policyhierarchy.StolosResourceQuotaResource))
 	glog.V(1).Infof("result: %v", result)
 	return result
 }
@@ -171,7 +171,7 @@ func newStolosPolicyRule(prototype *apisrbac.PolicyRule) *apisrbac.PolicyRule {
 }
 
 // expandResourceQuotaPermissions grants to objects of the type
-// "k8us.k8s.io"/stolosresourcequota" the same permissions that are granted for
+// "stolos.dev"/stolosresourcequota" the same permissions that are granted for
 // ""/resourcequota.
 //
 // This is done to ensure that the same set of policy rules apply to all
@@ -356,9 +356,9 @@ func (a *Attributes) IsResourceRequest() bool {
 	// below, but it's implied in the webhook code.
 	return !reflect.DeepEqual(
 		a.request.ResourceAttributes, emptyResourceRequest) &&
-			(reflect.DeepEqual(
-				a.request.NonResourceAttributes, emptyNonResourceAttributes) ||
-					a.nonresource() == nil)
+		(reflect.DeepEqual(
+			a.request.NonResourceAttributes, emptyNonResourceAttributes) ||
+			a.nonresource() == nil)
 }
 
 func (a *Attributes) IsReadOnly() bool {

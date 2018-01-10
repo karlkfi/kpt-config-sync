@@ -98,10 +98,10 @@ func (p *Controller) Stop() {
 }
 
 func (p *Controller) runInformer() {
-	remoteInformer := p.remoteInformerFactory.K8us().V1().PolicyNodes()
-	localInformer := p.localInformerFactory.K8us().V1().PolicyNodes()
+	remoteInformer := p.remoteInformerFactory.Stolos().V1().PolicyNodes()
+	localInformer := p.localInformerFactory.Stolos().V1().PolicyNodes()
 
-	p.copier = NewPolicyNodeCopier(localInformer.Lister(), p.localClient.PolicyHierarchy().K8usV1().PolicyNodes(), p.queue)
+	p.copier = NewPolicyNodeCopier(localInformer.Lister(), p.localClient.PolicyHierarchy().StolosV1().PolicyNodes(), p.queue)
 
 	// Subscribe to informer prior to starting the factories.
 	handler := cache.ResourceEventHandlerFuncs{

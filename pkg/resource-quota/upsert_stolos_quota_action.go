@@ -27,7 +27,7 @@ func (a *UpsertStolosQuota) Execute() error {
 	if err != nil {
 		if api_errors.IsNotFound(err) {
 			glog.Infof("Creating stolos quota ns: %s, spec: %v", a.namespace, a.quotaSpec)
-			_, err := a.policyHierarchiInterface.K8usV1().StolosResourceQuotas(a.namespace).Create(&v1.StolosResourceQuota{
+			_, err := a.policyHierarchiInterface.StolosV1().StolosResourceQuotas(a.namespace).Create(&v1.StolosResourceQuota{
 				ObjectMeta: meta_v1.ObjectMeta{
 					Name:   ResourceQuotaObjectName,
 					Labels: PolicySpaceQuotaLabels,
@@ -42,7 +42,7 @@ func (a *UpsertStolosQuota) Execute() error {
 	if !specEqual(existing.Spec, a.quotaSpec) {
 		glog.Infof("Updating stolos quota ns: %s, \nold spec: %v \nnew spec: %v",
 			a.namespace, existing.Spec, a.quotaSpec)
-		_, err := a.policyHierarchiInterface.K8usV1().StolosResourceQuotas(a.namespace).Update(&v1.StolosResourceQuota{
+		_, err := a.policyHierarchiInterface.StolosV1().StolosResourceQuotas(a.namespace).Update(&v1.StolosResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
 				Name:            ResourceQuotaObjectName,
 				Labels:          PolicySpaceQuotaLabels,

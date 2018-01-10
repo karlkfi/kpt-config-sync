@@ -144,7 +144,7 @@ func (w *PolicyNodeWatcher) runInternal() {
 
 func (w *PolicyNodeWatcher) watch() (int64, error) {
 	nextResourceVersion := w.ResourceVersion()
-	watchIface, err := w.policyHierarchyInterface.K8usV1().PolicyNodes().Watch(
+	watchIface, err := w.policyHierarchyInterface.StolosV1().PolicyNodes().Watch(
 		meta_v1.ListOptions{ResourceVersion: fmt.Sprintf("%d", nextResourceVersion)})
 
 	if err != nil {

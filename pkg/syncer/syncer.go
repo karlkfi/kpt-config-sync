@@ -77,7 +77,7 @@ func New(client meta.Interface) *Syncer {
 		client.PolicyHierarchy(), *flagResyncPeriod)
 	kubernetesCoreV1 := kubernetesInformerFactory.Core().V1()
 	rbacV1 := kubernetesInformerFactory.Rbac().V1()
-	policyHierarchyV1 := policyHierarchyInformerFactory.K8us().V1()
+	policyHierarchyV1 := policyHierarchyInformerFactory.Stolos().V1()
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	return &Syncer{
@@ -121,7 +121,7 @@ func (s *Syncer) Wait() {
 }
 
 func (s *Syncer) runInformer() {
-	policyNodesInformer := s.policyHierarchyInformerFactory.K8us().V1().PolicyNodes()
+	policyNodesInformer := s.policyHierarchyInformerFactory.Stolos().V1().PolicyNodes()
 	informer := policyNodesInformer.Informer()
 	lister := policyNodesInformer.Lister()
 

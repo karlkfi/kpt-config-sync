@@ -18,8 +18,8 @@ package fake
 
 import (
 	clientset "github.com/google/stolos/pkg/client/policyhierarchy"
-	k8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
-	fakek8usv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1/fake"
+	stolosv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	fakestolosv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -60,12 +60,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// K8usV1 retrieves the K8usV1Client
-func (c *Clientset) K8usV1() k8usv1.K8usV1Interface {
-	return &fakek8usv1.FakeK8usV1{Fake: &c.Fake}
+// StolosV1 retrieves the StolosV1Client
+func (c *Clientset) StolosV1() stolosv1.StolosV1Interface {
+	return &fakestolosv1.FakeStolosV1{Fake: &c.Fake}
 }
 
-// K8us retrieves the K8usV1Client
-func (c *Clientset) K8us() k8usv1.K8usV1Interface {
-	return &fakek8usv1.FakeK8usV1{Fake: &c.Fake}
+// Stolos retrieves the StolosV1Client
+func (c *Clientset) Stolos() stolosv1.StolosV1Interface {
+	return &fakestolosv1.FakeStolosV1{Fake: &c.Fake}
 }

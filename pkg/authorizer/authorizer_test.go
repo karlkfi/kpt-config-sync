@@ -360,7 +360,7 @@ func TestAuthorizeHierarchical(t *testing.T) {
 		testAuthorizeTestCase{
 			// A permission for an operation on resourcequotas in the core API
 			// group implies that same permission on
-			// k8us.k8s.io/stolosresourcequotas
+			// stolos.dev/stolosresourcequotas
 			storage: []runtime.Object{
 				rbactesting.PolicyNode("kitties", "",
 					[]rbac.Role{
