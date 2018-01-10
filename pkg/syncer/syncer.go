@@ -28,7 +28,6 @@ import (
 	policynodelister_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/syncer/actions"
-	"github.com/google/stolos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/labels"
@@ -107,16 +106,19 @@ type Interface interface {
 // Syncer implements the policy node syncer.  This will watch the policynodes then sync changes to
 // namespaces and resource quotas.
 type Syncer struct {
-	client        meta.Interface                  // Kubernetes/CRD client
-	errorCallback ErrorCallback                   // Callback invoked on error
-	stopped       bool                            // Tracks internal state for stopping
-	stopChan      chan struct{}                   // Channel will be closed when Stop() is called
-	stopMutex     sync.Mutex                      // Concurrency control for calling Stop()
-	syncers       []PolicyNodeSyncerInterface     // Syncers that this will call into on change events
-	queue         workqueue.RateLimitingInterface // A work queue for items to be processed
+	client               meta.Interface                  // Kubernetes/CRD client
+	errorCallback        ErrorCallback                   // Callback invoked on error
+	stopped              bool                            // Tracks internal state for stopping
+	stopChan             chan struct{}                   // Channel will be closed when Stop() is called
+	stopMutex            sync.Mutex                      // Concurrency control for calling Stop()
+	syncers              []PolicyNodeSyncerInterface     // Syncers that this will call into on change events
+	queue                workqueue.RateLimitingInterface // A work queue for items to be processed
+	clusterPolicySyncers []ClusterPolicySyncerInterface  // ClusterPolicy syncers
 
 	kubernetesInformerFactory      informers.SharedInformerFactory
 	policyHierarchyInformerFactory externalversions.SharedInformerFactory
+
+	policyNodeLister policynodelister_v1.PolicyNodeLister
 }
 
 // New creates a new syncer that will use the given client interface
@@ -142,13 +144,18 @@ func New(client meta.Interface) *Syncer {
 		),
 	}
 
+	clusterPolicySyncers := []ClusterPolicySyncerInterface{
+		NewClusterRoleSyncer(client, rbacV1.ClusterRoles().Lister(), queue),
+	}
+
 	return &Syncer{
 		client:                         client,
 		stopChan:                       make(chan struct{}),
 		syncers:                        syncers,
 		kubernetesInformerFactory:      kubernetesInformerFactory,
 		policyHierarchyInformerFactory: policyHierarchyInformerFactory,
-		queue: queue,
+		queue:                queue,
+		clusterPolicySyncers: clusterPolicySyncers,
 	}
 }
 
@@ -177,17 +184,22 @@ func (s *Syncer) Wait() {
 }
 
 func (s *Syncer) runInformer() {
-	policyNodesInformer := s.policyHierarchyInformerFactory.Stolos().V1().PolicyNodes()
-	informer := policyNodesInformer.Informer()
-	lister := policyNodesInformer.Lister()
+	policyNodes := s.policyHierarchyInformerFactory.Stolos().V1().PolicyNodes()
+	s.policyNodeLister = policyNodes.Lister()
 
 	// Subscribe to informer prior to starting the factories.
-	handler := cache.ResourceEventHandlerFuncs{
-		AddFunc:    s.onAdd,
-		UpdateFunc: s.onUpdate,
-		DeleteFunc: s.onDelete,
-	}
-	informer.AddEventHandler(handler)
+	policyNodes.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    s.addPolicyNode,
+		UpdateFunc: s.updatePolicyNode,
+		DeleteFunc: s.deletePolicyNode,
+	})
+
+	clusterPolicies := s.policyHierarchyInformerFactory.Stolos().V1().ClusterPolicies()
+	clusterPolicies.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    s.addClusterPolicy,
+		UpdateFunc: s.updateClusterPolicy,
+		DeleteFunc: s.deleteClusterPolicy,
+	})
 
 	// Start informer factories
 	s.kubernetesInformerFactory.Start(s.stopChan)
@@ -208,12 +220,12 @@ func (s *Syncer) runInformer() {
 	}
 	glog.Infof("Caches synced.")
 
-	go s.runResync(lister)
+	go s.runResync(s.policyNodeResync)
 }
 
-func (s *Syncer) runResync(lister policynodelister_v1.PolicyNodeLister) {
+func (s *Syncer) runResync(resync func() error) {
 	ticker := time.NewTicker(*flagResyncPeriod)
-	err := s.resync(lister)
+	err := resync()
 	if err != nil {
 		s.onError(err)
 		return
@@ -221,7 +233,7 @@ func (s *Syncer) runResync(lister policynodelister_v1.PolicyNodeLister) {
 	for {
 		select {
 		case <-ticker.C:
-			err := s.resync(lister)
+			err := resync()
 			if err != nil {
 				s.onError(err)
 				return
@@ -233,12 +245,12 @@ func (s *Syncer) runResync(lister policynodelister_v1.PolicyNodeLister) {
 	}
 }
 
-func (s *Syncer) resync(lister policynodelister_v1.PolicyNodeLister) error {
-	policyNodes, err := lister.List(labels.Everything())
+func (s *Syncer) policyNodeResync() error {
+	policyNodes, err := s.policyNodeLister.List(labels.Everything())
 	if err != nil {
 		return errors.Wrapf(err, "Failed to list policy nodes")
 	}
-	glog.V(1).Infof("Periodic Resync")
+	glog.V(1).Infof("PolicyNode Periodic Resync")
 	eventTimes.WithLabelValues("resync").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
@@ -250,12 +262,11 @@ func (s *Syncer) resync(lister policynodelister_v1.PolicyNodeLister) error {
 	return nil
 }
 
-// onAdd handles add events from the informer and de-duplicates the initial creates after the first
+// addPolicyNode handles add events from the informer and de-duplicates the initial creates after the first
 // list event.
-func (s *Syncer) onAdd(obj interface{}) {
+func (s *Syncer) addPolicyNode(obj interface{}) {
 	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
-	resourceVersion := policynode.GetResourceVersionOrDie(policyNode)
-	glog.V(1).Infof("onAdd %s (%d)", policyNode.Name, resourceVersion)
+	glog.V(1).Infof("addPolicyNode %s (%s)", policyNode.Name, policyNode.ResourceVersion)
 	eventTimes.WithLabelValues("add").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
@@ -268,11 +279,10 @@ func (s *Syncer) onAdd(obj interface{}) {
 	queueSize.Set(float64(s.queue.Len()))
 }
 
-// onDelete handles delete events from the informer.
-func (s *Syncer) onDelete(obj interface{}) {
+// deletePolicyNode handles delete events from the informer.
+func (s *Syncer) deletePolicyNode(obj interface{}) {
 	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
-	resourceVersion := policynode.GetResourceVersionOrDie(policyNode)
-	glog.V(1).Infof("onDelete %s (%d)", policyNode.Name, resourceVersion)
+	glog.V(1).Infof("deletePolicyNode %s (%d)", policyNode.Name, policyNode.ResourceVersion)
 	eventTimes.WithLabelValues("delete").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
@@ -285,12 +295,12 @@ func (s *Syncer) onDelete(obj interface{}) {
 	queueSize.Set(float64(s.queue.Len()))
 }
 
-// onUpdate handles update events from the informer
-func (s *Syncer) onUpdate(oldObj, newObj interface{}) {
+// updatePolicyNode handles update events from the informer
+func (s *Syncer) updatePolicyNode(oldObj, newObj interface{}) {
 	oldPolicyNode := oldObj.(*policyhierarchy_v1.PolicyNode)
 	newPolicyNode := newObj.(*policyhierarchy_v1.PolicyNode)
 	glog.V(1).Infof(
-		"onUpdate %s (%s->%s)", newPolicyNode.Name, oldPolicyNode.ResourceVersion, newPolicyNode.ResourceVersion)
+		"updatePolicyNode %s (%s->%s)", newPolicyNode.Name, oldPolicyNode.ResourceVersion, newPolicyNode.ResourceVersion)
 	eventTimes.WithLabelValues("update").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
@@ -301,6 +311,50 @@ func (s *Syncer) onUpdate(oldObj, newObj interface{}) {
 		}
 	}
 	queueSize.Set(float64(s.queue.Len()))
+}
+
+func (s *Syncer) addClusterPolicy(obj interface{}) {
+	clusterPolicy := obj.(*policyhierarchy_v1.ClusterPolicy)
+	glog.V(1).Infof(
+		"addClusterPolicy %s (%s)", clusterPolicy.Name, clusterPolicy.ResourceVersion)
+
+	for _, handler := range s.clusterPolicySyncers {
+		err := handler.OnCreate(clusterPolicy)
+		if err != nil {
+			s.onError(err)
+			return
+		}
+	}
+}
+
+func (s *Syncer) updateClusterPolicy(oldObj, newObj interface{}) {
+	oldClusterPolicy := oldObj.(*policyhierarchy_v1.ClusterPolicy)
+	clusterPolicy := newObj.(*policyhierarchy_v1.ClusterPolicy)
+	glog.V(1).Infof(
+		"updateClusterPolicy %s (%s->%s)",
+		clusterPolicy.Name, oldClusterPolicy.ResourceVersion, clusterPolicy.ResourceVersion)
+
+	for _, handler := range s.clusterPolicySyncers {
+		err := handler.OnUpdate(oldClusterPolicy, clusterPolicy)
+		if err != nil {
+			s.onError(err)
+			return
+		}
+	}
+}
+
+func (s *Syncer) deleteClusterPolicy(obj interface{}) {
+	clusterPolicy := obj.(*policyhierarchy_v1.ClusterPolicy)
+	glog.V(1).Infof(
+		"deleteClusterPolicy %s (%s)", clusterPolicy.Name, clusterPolicy.ResourceVersion)
+
+	for _, handler := range s.clusterPolicySyncers {
+		err := handler.OnDelete(clusterPolicy)
+		if err != nil {
+			s.onError(err)
+			return
+		}
+	}
 }
 
 func (s *Syncer) onError(err error) {
