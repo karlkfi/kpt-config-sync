@@ -38,6 +38,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"github.com/google/stolos/pkg/util/log"
 )
 
 const externalAdmissionHookConfigName = "stolos-resource-quota"
@@ -187,7 +188,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 
 func main() {
 	flag.Parse()
-	flag.Set("logtostderr", "true")
+	log.Setup()
 
 	glog.Infof("Hierarchical Resource Quota Admission Controller starting up")
 

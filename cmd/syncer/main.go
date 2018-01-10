@@ -29,6 +29,7 @@ import (
 	"github.com/google/stolos/pkg/syncer"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/google/stolos/pkg/util/log"
 )
 
 var (
@@ -37,7 +38,7 @@ var (
 
 func main() {
 	flag.Parse()
-	flag.Set("logtostderr", "true")
+	log.Setup()
 
 	config, err := restconfig.NewRestConfig()
 	if err != nil {

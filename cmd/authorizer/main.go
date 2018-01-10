@@ -33,6 +33,7 @@ import (
 	"io/ioutil"
 	authz "k8s.io/api/authorization/v1beta1"
 	"k8s.io/client-go/rest"
+	"github.com/google/stolos/pkg/util/log"
 )
 
 var (
@@ -131,7 +132,7 @@ func maybeNotifySystemd() {
 
 func main() {
 	flag.Parse()
-	flag.Set("logtostderr", "true")
+	log.Setup()
 
 	glog.Infof("Motd: %v", *motd)
 	config := must(rest.InClusterConfig()).(*rest.Config)

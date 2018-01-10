@@ -26,11 +26,12 @@ import (
 	"github.com/google/stolos/pkg/policyimporter/remotecluster"
 	"github.com/google/stolos/pkg/service"
 	"github.com/pkg/errors"
+	"github.com/google/stolos/pkg/util/log"
 )
 
 func main() {
 	flag.Parse()
-	flag.Set("logtostderr", "true")
+	log.Setup()
 
 	glog.Infof("Starting RemoteClusterPolicyImporter...")
 
