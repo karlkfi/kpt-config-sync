@@ -32,7 +32,7 @@ kubectl create clusterrolebinding stolos-policy-reader-${SA_NAME} \
 
 # Create a secret on the local cluster using the token and cert from the
 # service account secret on the remote cluster.
-secret_name=$(kubectl get sa cluster1 -n stolos-system --context ${REMOTE_CONTEXT} \
+secret_name=$(kubectl get sa ${SA_NAME} -n stolos-system --context ${REMOTE_CONTEXT} \
   -o jsonpath='{.secrets[].name}')
 token=$(kubectl get secret ${secret_name} -n stolos-system --context ${REMOTE_CONTEXT} \
   -o jsonpath='{.data.token}' | base64 -d)
