@@ -55,14 +55,6 @@ func NewClientWithStorage(kubernetesStorage, policyHierarchyStorage []runtime.Ob
 	}
 }
 
-// NewClient creates a FakeClient with some pre-made data to put into the clients
-func NewClientWithData(kubeObjects, stolosObjects []runtime.Object) *Client {
-	return &Client{
-		KubernetesClientset:      fakekubernetes.NewSimpleClientset(kubeObjects...),
-		PolicyhierarchyClientset: fakepolicyhierarchy.NewSimpleClientset(stolosObjects...),
-	}
-}
-
 // Kubernetes implements meta.Interface
 func (c *Client) Kubernetes() kubernetes.Interface {
 	return c.KubernetesClientset

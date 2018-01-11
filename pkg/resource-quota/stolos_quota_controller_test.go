@@ -94,7 +94,7 @@ func TestFullSync(t *testing.T) {
 		},
 	}
 
-	fakeClient := fake.NewClientWithData(quotas, append(policyNodes, stolosQuotas...))
+	fakeClient := fake.NewClientWithStorage(quotas, append(policyNodes, stolosQuotas...))
 
 	// Run the controller!
 	controller := NewController(fakeClient, nil)
