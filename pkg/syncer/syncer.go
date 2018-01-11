@@ -56,12 +56,12 @@ var (
 		},
 		[]string{"namespace", "resource", "operation"},
 	)
-	eventTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Help:      "Total events that occurred ",
+	eventTimes = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Help:      "Timestamps when syncer events occurred",
 			Namespace: "stolos",
 			Subsystem: "syncer",
-			Name:      "event_total",
+			Name:      "event_timestamps",
 		},
 		[]string{"type"},
 	)
@@ -86,7 +86,7 @@ var (
 
 func init() {
 	prometheus.MustRegister(errTotal)
-	prometheus.MustRegister(eventTotal)
+	prometheus.MustRegister(eventTimes)
 	prometheus.MustRegister(queueSize)
 	prometheus.MustRegister(syncDuration)
 }
@@ -230,7 +230,7 @@ func (s *Syncer) resync(lister policynodelister_v1.PolicyNodeLister) error {
 		return errors.Wrapf(err, "Failed to list policy nodes")
 	}
 	glog.V(1).Infof("Periodic Resync")
-	eventTotal.WithLabelValues("resync").Inc()
+	eventTimes.WithLabelValues("resync").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.PeriodicResync(policyNodes)
@@ -247,7 +247,7 @@ func (s *Syncer) onAdd(obj interface{}) {
 	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
 	resourceVersion := policynode.GetResourceVersionOrDie(policyNode)
 	glog.V(1).Infof("onAdd %s (%d)", policyNode.Name, resourceVersion)
-	eventTotal.WithLabelValues("add").Inc()
+	eventTimes.WithLabelValues("add").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnCreate(policyNode)
@@ -264,7 +264,7 @@ func (s *Syncer) onDelete(obj interface{}) {
 	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
 	resourceVersion := policynode.GetResourceVersionOrDie(policyNode)
 	glog.V(1).Infof("onDelete %s (%d)", policyNode.Name, resourceVersion)
-	eventTotal.WithLabelValues("delete").Inc()
+	eventTimes.WithLabelValues("delete").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnDelete(policyNode)
@@ -282,7 +282,7 @@ func (s *Syncer) onUpdate(oldObj, newObj interface{}) {
 	newPolicyNode := newObj.(*policyhierarchy_v1.PolicyNode)
 	glog.V(1).Infof(
 		"onUpdate %s (%s->%s)", newPolicyNode.Name, oldPolicyNode.ResourceVersion, newPolicyNode.ResourceVersion)
-	eventTotal.WithLabelValues("update").Inc()
+	eventTimes.WithLabelValues("update").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnUpdate(oldPolicyNode, newPolicyNode)
