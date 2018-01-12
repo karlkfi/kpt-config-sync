@@ -31,7 +31,6 @@ import (
 	policynodemeta "github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/service"
 	"github.com/google/stolos/pkg/util/log"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +45,6 @@ const externalAdmissionHookConfigName = "stolos-resource-quota"
 
 var (
 	caBundleFile = flag.String("ca-cert", "ca.crt", "Webhook server bundle cert used by api-server to authenticate the webhook server.")
-	metricsPort  = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
 )
 
 func serve(controller admission_controller.Admitter) service.HandlerFunc {
@@ -225,14 +223,7 @@ func main() {
 		glog.Fatal("Failed to register webhook: ", err)
 	}
 
-	// Expose prometheus metrics via HTTP.
-	http.Handle("/metrics", promhttp.Handler())
-	go func() {
-		err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil)
-		if err != nil {
-			glog.Fatalf("HTTP ListenAndServe for metrics: %+v", err)
-		}
-	}()
+	go service.ServeMetrics()
 
 	server := service.Server(
 		ServeFunc(

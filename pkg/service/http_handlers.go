@@ -8,12 +8,16 @@ import (
 	"flag"
 	"net/http"
 
+	"fmt"
+
 	"github.com/golang/glog"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
 	listenAddr = flag.String(
 		"listen_hostport", ":8000", "The hostport to listen to.")
+	metricsPort = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
 	serverCertFile = flag.String(
 		"server_cert", "server.crt", "The server certificate file.")
 	serverKeyFile = flag.String(
@@ -91,6 +95,16 @@ func configTLS(clientCert []byte) *tls.Config {
 	}
 
 	return &config
+}
+
+// ServeMetrics spins up a standalone metrics HTTP endpoint.
+func ServeMetrics() {
+	// Expose prometheus metrics via HTTP.
+	http.Handle("/metrics", promhttp.Handler())
+	err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil)
+	if err != nil {
+		glog.Fatalf("HTTP ListenAndServe for metrics: %+v", err)
+	}
 }
 
 // Server configures and a https server from passed-in flags using

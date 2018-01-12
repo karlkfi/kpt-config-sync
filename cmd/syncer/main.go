@@ -18,22 +18,14 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"net/http"
-
-	"github.com/google/stolos/pkg/client/meta"
-	"github.com/google/stolos/pkg/client/restconfig"
 
 	"github.com/golang/glog"
+	"github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/client/restconfig"
 	"github.com/google/stolos/pkg/service"
 	"github.com/google/stolos/pkg/syncer"
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/google/stolos/pkg/util/log"
-)
-
-var (
-	metricsPort = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
+	"github.com/pkg/errors"
 )
 
 func main() {
@@ -50,14 +42,7 @@ func main() {
 		panic(errors.Wrapf(err, "Failed to create client"))
 	}
 
-	// Expose prometheus metrics via HTTP.
-	http.Handle("/metrics", promhttp.Handler())
-	go func() {
-		err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil)
-		if err != nil {
-			glog.Fatalf("HTTP ListenAndServe: %+v", err)
-		}
-	}()
+	go service.ServeMetrics()
 
 	stopChannel := make(chan struct{})
 	errorCallback := func(err error) {
