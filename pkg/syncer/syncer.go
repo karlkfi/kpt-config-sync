@@ -322,10 +322,9 @@ func (s *Syncer) processAction() bool {
 		glog.Infof("Would have executed action %s", action.String())
 		return true
 	}
-	start := time.Now()
+	exTimer := prometheus.NewTimer(syncDuration.WithLabelValues(action.Namespace(), action.Resource(), action.Operation()))
 	err := action.Execute()
-	elapsed := time.Since(start).Seconds()
-	syncDuration.WithLabelValues(action.Namespace(), action.Resource(), action.Operation()).Observe(elapsed)
+	exTimer.ObserveDuration()
 
 	// All good!
 	if err == nil {

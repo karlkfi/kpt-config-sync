@@ -55,6 +55,10 @@ func (a *UpsertStolosQuota) Execute() error {
 	return nil
 }
 
+func (a *UpsertStolosQuota) Namespace() string {
+	return a.namespace
+}
+
 func (a *UpsertStolosQuota) String() string {
 	return fmt.Sprintf("stolos-quota-upsert.%s", a.namespace)
 }

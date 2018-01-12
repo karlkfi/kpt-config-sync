@@ -10,6 +10,7 @@ import (
 	"github.com/google/stolos/pkg/client/informers/externalversions"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -37,6 +38,52 @@ const WorkerNumRetries = 3
 // How often to do a full non-leaf quota re-calculation.
 var flagResyncPeriod = flag.Duration(
 	"quota_resync_period", 30*time.Second, "The resync period for the quota controller")
+
+// Prometheus metrics
+var (
+	errTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Help:      "Total errors that occurred when executing quota actions",
+			Namespace: "stolos",
+			Subsystem: "quota",
+			Name:      "error_total",
+		},
+		[]string{"namespace"},
+	)
+	eventTimes = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Help:      "Timestamps when quota events occurred",
+			Namespace: "stolos",
+			Subsystem: "quota",
+			Name:      "event_timestamps",
+		},
+		[]string{"type"},
+	)
+	queueSize = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Help:      "Current size of quota action queue",
+			Namespace: "stolos",
+			Subsystem: "quota",
+			Name:      "queue_size",
+		})
+	syncDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Help:      "Quota action duration distributions",
+			Namespace: "stolos",
+			Subsystem: "quota",
+			Name:      "action_duration_seconds",
+			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
+		},
+		[]string{"namespace"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(errTotal)
+	prometheus.MustRegister(eventTimes)
+	prometheus.MustRegister(queueSize)
+	prometheus.MustRegister(syncDuration)
+}
 
 func NewController(client meta.Interface, stopChan chan struct{}) *Controller {
 	return &Controller{
@@ -124,6 +171,7 @@ func (c *Controller) runWorker() {
 // Executes a full sync loading the full hierarchy of quotes and updates stolos quotes that may need updating.
 func (c *Controller) fullSync() error {
 	glog.Infof("Full sync")
+	eventTimes.WithLabelValues("resync").Set(float64(time.Now().Unix()))
 
 	hierarchicalCache, err := NewHierarchicalQuotaCache(
 		c.policyHierarchyInformerFactory.Stolos().V1().PolicyNodes(),
@@ -144,9 +192,9 @@ func (c *Controller) fullSync() error {
 			})
 		}
 	}
+	queueSize.Set(float64(c.queue.Len()))
 
 	c.quotaCache = hierarchicalCache
-
 	return nil
 }
 
@@ -166,6 +214,7 @@ func (c *Controller) onQuotaUpdate(oldObj, newObj interface{}) {
 		glog.Infof("Failed on quota update event for namespace %q due to %s. Ignoring update.",
 			newQuota.Namespace, err)
 	}
+	eventTimes.WithLabelValues("update").Set(float64(time.Now().Unix()))
 
 	stolosQuotaLister := c.policyHierarchyInformerFactory.Stolos().V1().StolosResourceQuotas().Lister()
 	for _, namespace := range stolosQuotaNamespacesToUpdate {
@@ -178,6 +227,7 @@ func (c *Controller) onQuotaUpdate(oldObj, newObj interface{}) {
 			policyHierarchiInterface: c.client.PolicyHierarchy(),
 		})
 	}
+	queueSize.Set(float64(c.queue.Len()))
 }
 
 // processAction takes one item from the work queue and processes it.
@@ -190,16 +240,20 @@ func (c *Controller) processAction() bool {
 		glog.Infof("Shutting down Syncer queue processing worker")
 		return false
 	}
+	defer queueSize.Set(float64(c.queue.Len()))
 	defer c.queue.Done(actionItem)
 
 	action := actionItem.(*UpsertStolosQuota)
+	exTimer := prometheus.NewTimer(syncDuration.WithLabelValues(action.Namespace()))
 	err := action.Execute()
+	exTimer.ObserveDuration()
 
 	// All good!
 	if err == nil {
 		c.queue.Forget(actionItem)
 		return true
 	}
+	errTotal.WithLabelValues(action.Namespace()).Inc()
 
 	// Drop forever
 	if c.queue.NumRequeues(actionItem) > WorkerNumRetries {

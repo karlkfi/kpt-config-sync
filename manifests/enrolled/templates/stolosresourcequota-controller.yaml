@@ -1,14 +1,37 @@
 changecom(`<unused>')
 apiVersion: v1
+kind: Service
+metadata:
+  name: stolosresourcequota
+  namespace: stolos-system
+  labels:
+    monitored: "true"
+spec:
+  selector:
+    app: stolosresourcequota
+  ports:
+    - name: web
+      port: 80
+      targetPort: web-port
+    - name: metrics
+      port: 8675
+      targetPort: metrics-port
+---
+apiVersion: v1
 kind: Pod
 metadata:
   name: stolosresourcequota-controller
   namespace: stolos-system
+  labels:
+    app: stolosresourcequota
 spec:
   serviceAccountName: stolosresourcequota-controller
   containers:
-  - name: stolosresourcequota-controller
-    image: IMAGE_NAME
-    ports:
-    - containerPort: 80
-    imagePullPolicy: Always
+    - name: stolosresourcequota-controller
+      image: IMAGE_NAME
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 80
+          name: web-port
+        - containerPort: 8675
+          name: metrics-port
