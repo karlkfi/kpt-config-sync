@@ -2,29 +2,38 @@ changecom(`<unused>')
 apiVersion: v1
 kind: Service
 metadata:
-    name: resourcequota-admission-controller
-    namespace: stolos-system
+  name: resourcequota-admission-controller
+  namespace: stolos-system
+  labels:
+    monitored: "true"
 spec:
-    selector:
-        webhook: resource-quota
-    ports:
-    - port: 443
-      targetPort: 8000
+  selector:
+    webhook: resource-quota
+  ports:
+    - name: https
+      port: 443
+      targetPort: https-port
+    - name: metrics
+      port: 8675
+      targetPort: metrics-port
 ---
 apiVersion: v1
 kind: Pod
 metadata:
-    name: resourcequota-admission-controller
-    namespace: stolos-system
-    labels:
-        webhook: resource-quota
+  name: resourcequota-admission-controller
+  namespace: stolos-system
+  labels:
+    webhook: resource-quota
 spec:
-    serviceAccountName: resourcequota-admission-controller
-    containers:
+  serviceAccountName: resourcequota-admission-controller
+  restartPolicy: Always
+  containers:
     - name: resourcequota-admission-controller
       image: IMAGE_NAME
-      ports:
-            - containerPort: 8000
-      args: ["--logtostderr"]
       imagePullPolicy: Always
-    restartPolicy: Always
+      ports:
+        - containerPort: 8000
+          name: https-port
+        - containerPort: 8675
+          name: metrics-port
+      args: ["--logtostderr"]

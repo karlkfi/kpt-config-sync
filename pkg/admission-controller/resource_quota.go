@@ -18,22 +18,50 @@ limitations under the License.
 package admission_controller
 
 import (
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strconv"
+	"time"
 
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
-	informerscorev1 "k8s.io/client-go/informers/core/v1"
-
 	"github.com/google/stolos/pkg/resource-quota"
+	"github.com/prometheus/client_golang/prometheus"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	core_v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apiserver/pkg/admission"
-
+	informerscorev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/kubernetes/pkg/quota"
 	"k8s.io/kubernetes/pkg/quota/generic"
 	quotainstall "k8s.io/kubernetes/pkg/quota/install"
 )
+
+// Prometheus metrics
+var (
+	admitDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Help:      "Quota admission duration distributions",
+			Namespace: "stolos",
+			Subsystem: "quota_admission",
+			Name:      "duration_seconds",
+			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
+		},
+		[]string{"namespace", "allowed"},
+	)
+	errTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Help:      "Total internal errors that occurred when reviewing quota requests",
+			Namespace: "stolos",
+			Subsystem: "quota_admission",
+			Name:      "error_total",
+		},
+		[]string{"namespace"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(admitDuration)
+	prometheus.MustRegister(errTotal)
+}
 
 type ResourceQuotaAdmitter struct {
 	policyNodeInformer    informerspolicynodev1.PolicyNodeInformer
@@ -63,42 +91,37 @@ func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNod
 	}
 }
 
-// Decides whether to admit a request
+// Decides whether to admit a request.
 func (r *ResourceQuotaAdmitter) Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
-	cache, err := resource_quota.NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
-	if err != nil {
-		return internalErrorDeny(err)
-	}
 	if review.Request == nil {
 		return &admissionv1beta1.AdmissionResponse{
 			Allowed: true,
 		}
 	}
-	unpackedSpec := unpackRawSpec(r.decoder, *review.Request)
-	reviewSpec := AdmissionReviewSpec(unpackedSpec)
-	attributes := admission.Attributes(&reviewSpec)
-	evaluator := r.quotaRegistry.Get(attributes.GetResource().GroupResource())
-	if evaluator != nil && evaluator.Handles(attributes) {
-		newUsage, err := evaluator.Usage(attributes.GetObject())
-		if err != nil {
-			return internalErrorDeny(err)
-		}
+	start := time.Now()
+	resp := r.internalAdmit(review)
+	elapsed := time.Since(start).Seconds()
+	admitDuration.WithLabelValues(review.Request.Namespace, strconv.FormatBool(resp.Allowed)).Observe(elapsed)
+	return resp
+}
 
-		v1NewUsage := core_v1.ResourceList{}
-		for key, val := range newUsage {
-			v1NewUsage[core_v1.ResourceName(key)] = val
-		}
-
-		admitError := cache.Admit(review.Request.Namespace, v1NewUsage)
-
-		if admitError != nil {
-			return &admissionv1beta1.AdmissionResponse{
-				Allowed: false,
-				Result: &metav1.Status{
-					Message: admitError.Error(),
-					Reason:  metav1.StatusReason(metav1.StatusReasonForbidden),
-				},
-			}
+func (r *ResourceQuotaAdmitter) internalAdmit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
+	cache, err := resource_quota.NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
+	if err != nil {
+		return internalErrorDeny(err, review.Request.Namespace)
+	}
+	newUsage, err := r.getNewUsage(*review.Request)
+	if err != nil {
+		return internalErrorDeny(err, review.Request.Namespace)
+	}
+	admitError := cache.Admit(review.Request.Namespace, newUsage)
+	if admitError != nil {
+		return &admissionv1beta1.AdmissionResponse{
+			Allowed: false,
+			Result: &metav1.Status{
+				Message: admitError.Error(),
+				Reason:  metav1.StatusReason(metav1.StatusReasonForbidden),
+			},
 		}
 	}
 	return &admissionv1beta1.AdmissionResponse{
@@ -106,7 +129,26 @@ func (r *ResourceQuotaAdmitter) Admit(review admissionv1beta1.AdmissionReview) *
 	}
 }
 
-func internalErrorDeny(err error) *admissionv1beta1.AdmissionResponse {
+// getNewUsage returns the resource usage that would result from the given request.
+func (r *ResourceQuotaAdmitter) getNewUsage(request admissionv1beta1.AdmissionRequest) (core_v1.ResourceList, error) {
+	v1NewUsage := core_v1.ResourceList{}
+	attributes := getAttributes(r.decoder, request)
+	evaluator := r.quotaRegistry.Get(attributes.GetResource().GroupResource())
+
+	if evaluator != nil && evaluator.Handles(attributes) {
+		newUsage, err := evaluator.Usage(attributes.GetObject())
+		if err != nil {
+			return nil, err
+		}
+		for key, val := range newUsage {
+			v1NewUsage[core_v1.ResourceName(key)] = val
+		}
+	}
+	return v1NewUsage, nil
+}
+
+func internalErrorDeny(err error, namespace string) *admissionv1beta1.AdmissionResponse {
+	errTotal.WithLabelValues(namespace).Inc()
 	return &admissionv1beta1.AdmissionResponse{
 		Allowed: false,
 		Result: &metav1.Status{

@@ -77,6 +77,13 @@ func (spec *AdmissionReviewSpec) GetUserInfo() user.Info {
 	}
 }
 
+// getAttributes returns admissions attributes initialized from the given request and decoder.
+func getAttributes(decoder runtime.Decoder, request v1beta1.AdmissionRequest) admission.Attributes {
+	unpackedSpec := unpackRawSpec(decoder, request)
+	reviewSpec := AdmissionReviewSpec(unpackedSpec)
+	return admission.Attributes(&reviewSpec)
+}
+
 // For convenience, unpack the object and oldObject raw bytes into a runtimeobject (so that this doesn't
 // need to happen every time we call GetObject() above.) This is a utility method that should be performed
 // before casting the spec to AdmissionReviewSpec.

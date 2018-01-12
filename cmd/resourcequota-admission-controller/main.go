@@ -30,6 +30,8 @@ import (
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	policynodemeta "github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/service"
+	"github.com/google/stolos/pkg/util/log"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,13 +40,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"github.com/google/stolos/pkg/util/log"
 )
 
 const externalAdmissionHookConfigName = "stolos-resource-quota"
 
-var caBundleFile = flag.String(
-	"ca_cert", "ca.crt", "Webhook server bundle cert used by api-server to authenticate the webhook server.")
+var (
+	caBundleFile = flag.String("ca-cert", "ca.crt", "Webhook server bundle cert used by api-server to authenticate the webhook server.")
+	metricsPort  = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
+)
 
 func serve(controller admission_controller.Admitter) service.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -221,6 +224,15 @@ func main() {
 	if err := selfRegister(clientset, *caBundleFile); err != nil {
 		glog.Fatal("Failed to register webhook: ", err)
 	}
+
+	// Expose prometheus metrics via HTTP.
+	http.Handle("/metrics", promhttp.Handler())
+	go func() {
+		err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil)
+		if err != nil {
+			glog.Fatalf("HTTP ListenAndServe for metrics: %+v", err)
+		}
+	}()
 
 	server := service.Server(
 		ServeFunc(
