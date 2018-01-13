@@ -1,0 +1,25 @@
+apiVersion: "stolos.dev/v1"
+kind: PolicyNode
+metadata:
+  name: backend
+spec:
+  policyspace: false
+  parent: eng
+  policies:
+    resourceQuota:
+      hard:
+        pods: "1"
+    rolebindings:
+    - kind: RoleBinding
+      apiVersion: rbac.authorization.k8s.io/v1
+      metadata:
+        namespace: acme
+        name: robert-rolebinding
+      subjects:
+      - kind: User
+        name: robert@google.com
+        apiGroup: rbac.authorization.k8s.io
+      roleRef:
+        kind: Role
+        name: admin
+        apiGroup: rbac.authorization.k8s.io

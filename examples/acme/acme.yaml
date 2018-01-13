@@ -62,7 +62,7 @@ spec:
   policies:
     resourceQuota:
       hard:
-        configmaps: "1"
+        configmaps: "2"
 ---
 apiVersion: "stolos.dev/v1"
 kind: PolicyNode
@@ -106,6 +106,14 @@ apiVersion: "stolos.dev/v1"
 kind: PolicyNode
 metadata:
   name: new-prj
+spec:
+  policyspace: false
+  parent: rnd
+---
+apiVersion: "stolos.dev/v1"
+kind: PolicyNode
+metadata:
+  name: newer-prj
 spec:
   policyspace: false
   parent: rnd
