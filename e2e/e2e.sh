@@ -10,6 +10,12 @@
 # - Docker
 # - gcloud with access to a project that has GCR
 
+# To execute the test without one time setup
+# > OMIT_ONETIME_SETUP=1 e2e/e2e.sh
+
+# To execute a subset of tests without setup, run as folows:
+# > OMIT_ONETIME_SETUP=1 TEST_FUNCTIONS=testStolosResourceQuota e2e/e2e.sh
+
 set -u
 
 # Should be $STOLOS/e2e
@@ -151,12 +157,7 @@ function testStolosResourceQuota() {
   assertContains "kubectl get srq -n rnd  -o yaml" 'configmaps: "1"' # new used
 }
 
-# To execute the test without one time setup
-# > OMIT_ONETIME_SETUP=1 e2e/e2e.sh
 OMIT_ONETIME_SETUP=${OMIT_ONETIME_SETUP:-0}
-
-# To execute a subset of tests without setup, run as folows:
-# > OMIT_ONETIME_SETUP=1 TEST_FUNCTIONS=testStolosResourceQuota e2e/e2e.sh
 TEST_FUNCTIONS=${TEST_FUNCTIONS:-$(declare -F)}
 
 ######################## MAIN #########################
