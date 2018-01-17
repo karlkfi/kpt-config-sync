@@ -84,6 +84,11 @@ test: test-all
 test-all:
 	go test $(REPO)/...
 
+# Runs end to end tests.
+.PHONY: test-e2e
+test-e2e: test
+	e2e/e2e.sh
+
 # Run all static analyzers.
 .PHONY: lint
 lint:
@@ -158,6 +163,7 @@ deploy-common-objects:
 deploy-resourcequota-admission-controller: push-resourcequota-admission-controller gen-all-yaml-files
 	kubectl delete ValidatingWebhookConfiguration stolos-resource-quota --ignore-not-found
 	kubectl replace -f $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml --force
+	sleep 10 # Waiting for admission controller to come up. TODO do it right.
 
 .PHONY: deploy-syncer
 deploy-syncer: push-syncer gen-all-yaml-files
