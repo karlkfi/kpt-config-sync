@@ -19,9 +19,9 @@
 set -u
 
 # Should be $STOLOS/e2e
-TESTDIR=$(dirname ${0:-})
+TESTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
 # Should be $STOLOS/
-MAKEDIR=$(dirname ${0:-})/..
+MAKEDIR=$TESTDIR/..
 # Path to demo acme yaml
 ACME=$MAKEDIR/examples/acme/acme.yaml
 
