@@ -1,4 +1,4 @@
-package resource_quota
+package resourcequota
 
 import (
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"

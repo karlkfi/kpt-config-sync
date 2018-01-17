@@ -22,7 +22,7 @@ import (
 
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta/fake"
-	"github.com/google/stolos/pkg/resource-quota"
+	"github.com/google/stolos/pkg/resourcequota"
 	"github.com/google/stolos/pkg/testing/fakeinformers"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -50,7 +50,7 @@ func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 	namespaceName := "ns-name"
 	informer := fakeinformers.NewResourceQuotaInformer(&core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: resource_quota.ResourceQuotaObjectName, Labels: resource_quota.StolosQuotaLabels, Namespace: namespaceName,
+			Name: resourcequota.ResourceQuotaObjectName, Labels: resourcequota.StolosQuotaLabels, Namespace: namespaceName,
 		},
 		Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("42")}},
 	})
@@ -136,13 +136,13 @@ func TestFillResourceQuotaLeafGaps(t *testing.T) {
 	quotas := []runtime.Object{
 		&core_v1.ResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name: resource_quota.ResourceQuotaObjectName, Labels: resource_quota.StolosQuotaLabels, Namespace: "child1",
+				Name: resourcequota.ResourceQuotaObjectName, Labels: resourcequota.StolosQuotaLabels, Namespace: "child1",
 			},
 			Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"cpu": resource.MustParse("2")}},
 		},
 		&core_v1.ResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name: resource_quota.ResourceQuotaObjectName, Labels: resource_quota.StolosQuotaLabels, Namespace: "child2",
+				Name: resourcequota.ResourceQuotaObjectName, Labels: resourcequota.StolosQuotaLabels, Namespace: "child2",
 			},
 			Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"configmaps": resource.MustParse("3")}},
 		}}

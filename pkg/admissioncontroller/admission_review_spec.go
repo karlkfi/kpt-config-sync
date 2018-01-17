@@ -15,7 +15,7 @@ limitations under the License.
 
 // Admission review spec is an implementation of the admission.attributes interface
 // for the admission review spec struct.
-package admission_controller
+package admissioncontroller
 
 import (
 	"github.com/golang/glog"

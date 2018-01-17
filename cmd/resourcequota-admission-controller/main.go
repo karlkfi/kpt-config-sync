@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/admission-controller"
+	"github.com/google/stolos/pkg/admissioncontroller"
 	policynodeversions "github.com/google/stolos/pkg/client/informers/externalversions"
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	policynodemeta "github.com/google/stolos/pkg/client/meta"
@@ -47,7 +47,7 @@ var (
 	caBundleFile = flag.String("ca-cert", "ca.crt", "Webhook server bundle cert used by api-server to authenticate the webhook server.")
 )
 
-func serve(controller admission_controller.Admitter) service.HandlerFunc {
+func serve(controller admissioncontroller.Admitter) service.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body []byte
 		if r.Body != nil {
@@ -87,7 +87,7 @@ func serve(controller admission_controller.Admitter) service.HandlerFunc {
 }
 
 // ServeFunc returns the serving function for this server.  Use for testing.
-func ServeFunc(controller admission_controller.Admitter) service.HandlerFunc {
+func ServeFunc(controller admissioncontroller.Admitter) service.HandlerFunc {
 	return service.WithStrictTransport(service.NoCache(serve(controller)))
 }
 
@@ -227,7 +227,7 @@ func main() {
 
 	server := service.Server(
 		ServeFunc(
-			admission_controller.NewResourceQuotaAdmitter(
+			admissioncontroller.NewResourceQuotaAdmitter(
 				policyNodeInformer, resourceQuotaInformer)), clientCert)
 
 	err = server.ListenAndServeTLS("", "")

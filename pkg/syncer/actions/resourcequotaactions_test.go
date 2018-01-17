@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/google/stolos/pkg/client/meta/fake"
-	"github.com/google/stolos/pkg/resource-quota"
+	"github.com/google/stolos/pkg/resourcequota"
 
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -70,7 +70,7 @@ func (r *ResourceQuotaTestCase) NewResourceQuota(idx int) *core_v1.ResourceQuota
 
 	return &core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name:      resource_quota.ResourceQuotaObjectName,
+			Name:      resourcequota.ResourceQuotaObjectName,
 			Namespace: r.Namespace(idx),
 			Labels:    r.InitialLabels,
 		},
@@ -112,31 +112,31 @@ var resourceQuotaTestCases = []*ResourceQuotaTestCase{
 	&ResourceQuotaTestCase{
 		Name:            "Create during upsert",
 		InitialNotFound: true,
-		SpecifiedLabels: resource_quota.StolosQuotaLabels,
+		SpecifiedLabels: resourcequota.StolosQuotaLabels,
 		SpecifiedState:  onePod,
 		ActionCtor:      upsertQuotaTestAction,
 	},
 	&ResourceQuotaTestCase{
 		Name:            "Update spec during upsert",
-		InitialLabels:   resource_quota.StolosQuotaLabels,
+		InitialLabels:   resourcequota.StolosQuotaLabels,
 		InitialState:    onePod,
-		SpecifiedLabels: resource_quota.StolosQuotaLabels,
+		SpecifiedLabels: resourcequota.StolosQuotaLabels,
 		SpecifiedState:  twoPods,
 		ActionCtor:      upsertQuotaTestAction,
 	},
 	&ResourceQuotaTestCase{
 		Name:            "Update labels during upsert",
-		InitialLabels:   resource_quota.PolicySpaceQuotaLabels,
+		InitialLabels:   resourcequota.PolicySpaceQuotaLabels,
 		InitialState:    zeroPods,
-		SpecifiedLabels: resource_quota.StolosQuotaLabels,
+		SpecifiedLabels: resourcequota.StolosQuotaLabels,
 		SpecifiedState:  zeroPods,
 		ActionCtor:      upsertQuotaTestAction,
 	},
 	&ResourceQuotaTestCase{
 		Name:            "No update during upsert",
-		InitialLabels:   resource_quota.PolicySpaceQuotaLabels,
+		InitialLabels:   resourcequota.PolicySpaceQuotaLabels,
 		InitialState:    zeroPods,
-		SpecifiedLabels: resource_quota.PolicySpaceQuotaLabels,
+		SpecifiedLabels: resourcequota.PolicySpaceQuotaLabels,
 		SpecifiedState:  zeroPods,
 		ActionCtor:      upsertQuotaTestAction,
 	},
@@ -148,7 +148,7 @@ var resourceQuotaTestCases = []*ResourceQuotaTestCase{
 	},
 	&ResourceQuotaTestCase{
 		Name:           "Delete existing item",
-		InitialLabels:  resource_quota.StolosQuotaLabels,
+		InitialLabels:  resourcequota.StolosQuotaLabels,
 		InitialState:   twoPods,
 		ExpectNotFound: true,
 		ActionCtor:     deleteQuotaTestAction,
@@ -190,7 +190,7 @@ func TestResourceQuotaActions(t *testing.T) {
 		}
 
 		// check postcondition
-		actualQuota, err := resourceQuota.Get(resource_quota.ResourceQuotaObjectName, meta_v1.GetOptions{})
+		actualQuota, err := resourceQuota.Get(resourcequota.ResourceQuotaObjectName, meta_v1.GetOptions{})
 		if testcase.ExpectNotFound {
 			if err != nil {
 				if !api_errors.IsNotFound(err) {

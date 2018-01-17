@@ -15,14 +15,14 @@ limitations under the License.
 
 // This is the Resource Quota admission controller which will do a hierarchical evaluation of quota objects
 // to ensure quota is not being violated whenever resources get created/modified along the hierarchy of namespaces.
-package admission_controller
+package admissioncontroller
 
 import (
 	"strconv"
 	"time"
 
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/resource-quota"
+	"github.com/google/stolos/pkg/resourcequota"
 	"github.com/prometheus/client_golang/prometheus"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	core_v1 "k8s.io/api/core/v1"
@@ -42,7 +42,7 @@ var (
 			Help:      "Quota admission duration distributions",
 			Namespace: "stolos",
 			Subsystem: "quota_admission",
-			Name:      "duration_seconds",
+			Name:      "action_duration_seconds",
 			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
 		},
 		[]string{"namespace", "allowed"},
@@ -106,7 +106,7 @@ func (r *ResourceQuotaAdmitter) Admit(review admissionv1beta1.AdmissionReview) *
 }
 
 func (r *ResourceQuotaAdmitter) internalAdmit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
-	cache, err := resource_quota.NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
+	cache, err := resourcequota.NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
 	if err != nil {
 		return internalErrorDeny(err, review.Request.Namespace)
 	}

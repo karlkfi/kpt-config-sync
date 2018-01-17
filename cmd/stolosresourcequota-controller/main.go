@@ -23,7 +23,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/client/restconfig"
-	"github.com/google/stolos/pkg/resource-quota"
+	"github.com/google/stolos/pkg/resourcequota"
 	"github.com/google/stolos/pkg/service"
 	"github.com/google/stolos/pkg/util/log"
 	"github.com/pkg/errors"
@@ -49,7 +49,7 @@ func main() {
 
 	stopChannel := make(chan struct{})
 
-	quotaController := resource_quota.NewController(client, stopChannel)
+	quotaController := resourcequota.NewController(client, stopChannel)
 	quotaController.Run()
 	service.WaitForShutdownWithChannel(stopChannel)
 

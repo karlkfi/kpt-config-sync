@@ -21,7 +21,7 @@ import (
 	"reflect"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/resource-quota"
+	"github.com/google/stolos/pkg/resourcequota"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -57,7 +57,7 @@ type resourceQuotaActionBase struct {
 
 // delete checks if the resource quota exists then deletes the object if it is not found in the cache.
 func (n *resourceQuotaActionBase) delete() error {
-	_, err := n.resourceQuotaLister.ResourceQuotas(n.namespace).Get(resource_quota.ResourceQuotaObjectName)
+	_, err := n.resourceQuotaLister.ResourceQuotas(n.namespace).Get(resourcequota.ResourceQuotaObjectName)
 	if err != nil {
 		if api_errors.IsNotFound(err) {
 			return nil
@@ -71,7 +71,7 @@ func (n *resourceQuotaActionBase) delete() error {
 // that's the desired state of the store.
 func (n *resourceQuotaActionBase) reallyDelete() error {
 	err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Delete(
-		resource_quota.ResourceQuotaObjectName, &meta_v1.DeleteOptions{})
+		resourcequota.ResourceQuotaObjectName, &meta_v1.DeleteOptions{})
 	if err != nil {
 		if api_errors.IsNotFound(err) {
 			return nil
@@ -84,7 +84,7 @@ func (n *resourceQuotaActionBase) reallyDelete() error {
 
 // upsert will check if the resource exists then conditionally create or udpate it to the desired state.
 func (n *resourceQuotaActionBase) upsert() error {
-	resourceQuota, err := n.resourceQuotaLister.ResourceQuotas(n.namespace).Get(resource_quota.ResourceQuotaObjectName)
+	resourceQuota, err := n.resourceQuotaLister.ResourceQuotas(n.namespace).Get(resourcequota.ResourceQuotaObjectName)
 	if err != nil {
 		if api_errors.IsNotFound(err) {
 			return n.reallyCreate()
@@ -105,7 +105,7 @@ func (n *resourceQuotaActionBase) reallyUpdate(current *core_v1.ResourceQuota) e
 	createdResourceQuota, err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Update(
 		&core_v1.ResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name:            resource_quota.ResourceQuotaObjectName,
+				Name:            resourcequota.ResourceQuotaObjectName,
 				Labels:          n.labels,
 				ResourceVersion: current.ResourceVersion,
 			},
@@ -125,7 +125,7 @@ func (n *resourceQuotaActionBase) reallyCreate() error {
 	createdResourceQuota, err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Create(
 		&core_v1.ResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name:   resource_quota.ResourceQuotaObjectName,
+				Name:   resourcequota.ResourceQuotaObjectName,
 				Labels: n.labels,
 			},
 			Spec: n.resourceQuotaSpec,

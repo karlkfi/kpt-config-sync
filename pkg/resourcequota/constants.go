@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resource_quota
+package resourcequota
 
 // NamespaceTypeLabel is the label key used for stolos quotas.
 const NamespaceTypeLabel = "stolos-namespace-type"

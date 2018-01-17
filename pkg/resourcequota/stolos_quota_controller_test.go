@@ -1,4 +1,4 @@
-package resource_quota
+package resourcequota
 
 import (
 	"testing"

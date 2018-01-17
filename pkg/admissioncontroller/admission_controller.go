@@ -14,7 +14,7 @@ limitations under the License.
 */
 
 // Interface for a dynamic admission controller
-package admission_controller
+package admissioncontroller
 
 import (
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"

@@ -20,7 +20,7 @@ import (
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	informers_policynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta"
-	"github.com/google/stolos/pkg/resource-quota"
+	"github.com/google/stolos/pkg/resourcequota"
 	"github.com/google/stolos/pkg/syncer/actions"
 	core_v1 "k8s.io/api/core/v1"
 	informers_corev1 "k8s.io/client-go/informers/core/v1"
@@ -85,7 +85,7 @@ func (s *QuotaSyncer) fillResourceQuotaLeafGaps(nodes []*policyhierarchy_v1.Poli
 		// Get the limits that are set above this leaf quota in the policyspace hierarchy
 		parentQuotaLimits := s.getHierarchicalQuotaLimits(*node)
 
-		quota, err := s.resourceQuotaInformer.Lister().ResourceQuotas(node.Name).Get(resource_quota.ResourceQuotaObjectName)
+		quota, err := s.resourceQuotaInformer.Lister().ResourceQuotas(node.Name).Get(resourcequota.ResourceQuotaObjectName)
 		if err != nil {
 			glog.Infof(
 				"Error getting quota object for leaf namespace %s during resync, continuing. Error :%v",
@@ -108,7 +108,7 @@ func (s *QuotaSyncer) fillResourceQuotaLeafGaps(nodes []*policyhierarchy_v1.Poli
 		if needsUpdate {
 			glog.Infof("Need to update quota for leaf %s to fill in limits from parent policyspaces", quota.Namespace)
 			resultActions = append(resultActions, actions.NewResourceQuotaUpsertAction(
-				quota.Namespace, resource_quota.StolosQuotaLabels, quota.Spec, s.client, s.resourceQuotaLister))
+				quota.Namespace, resourcequota.StolosQuotaLabels, quota.Spec, s.client, s.resourceQuotaLister))
 		}
 	}
 	return resultActions, nil
@@ -124,7 +124,7 @@ func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode)
 	if policyNode.Spec.Policyspace {
 		return actions.NewResourceQuotaUpsertAction(
 			policyNode.Name,
-			resource_quota.PolicySpaceQuotaLabels,
+			resourcequota.PolicySpaceQuotaLabels,
 			policyNode.Spec.Policies.ResourceQuota,
 			s.client,
 			s.resourceQuotaLister)
@@ -135,7 +135,7 @@ func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode)
 	if len(hierarchicalLimits) > 0 {
 		return actions.NewResourceQuotaUpsertAction(
 			policyNode.Name,
-			resource_quota.StolosQuotaLabels,
+			resourcequota.StolosQuotaLabels,
 			core_v1.ResourceQuotaSpec{Hard: hierarchicalLimits},
 			s.client,
 			s.resourceQuotaLister)
