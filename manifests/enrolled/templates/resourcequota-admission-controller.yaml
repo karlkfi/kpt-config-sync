@@ -27,6 +27,13 @@ metadata:
 spec:
   serviceAccountName: resourcequota-admission-controller
   restartPolicy: Always
+  volumes:
+  - name: v1
+    secret:
+      secretName: resourcequota-admission-controller-secret
+  - name: v2
+    secret:
+      secretName: resourcequota-admission-controller-secret-ca
   containers:
     - name: resourcequota-admission-controller
       image: IMAGE_NAME
@@ -37,3 +44,11 @@ spec:
         - containerPort: 8675
           name: metrics-port
       args: ["--logtostderr"]
+      volumeMounts:
+      - name: v1
+        mountPath: "/etc/stolos/secrets/resourcequota-admission-controller/server"
+        readOnly: true
+      - name: v2
+        mountPath: "/etc/stolos/secrets/resourcequota-admission-controller/ca"
+        readOnly: true
+

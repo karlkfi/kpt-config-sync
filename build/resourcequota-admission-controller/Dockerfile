@@ -14,9 +14,9 @@
 
 FROM busybox
 ADD resourcequota-admission-controller resourcequota-admission-controller
-ADD server.key server.key
-ADD server.crt server.crt
-ADD ca.crt ca.crt
 EXPOSE 8000
-ENTRYPOINT ["/resourcequota-admission-controller"]
+ENTRYPOINT ["/resourcequota-admission-controller", \
+		    "--server_key", "/etc/stolos/secrets/resourcequota-admission-controller/server/tls.key", \
+			"--server_cert", "/etc/stolos/secrets/resourcequota-admission-controller/server/tls.crt", \
+			"--ca-cert", "/etc/stolos/secrets/resourcequota-admission-controller/ca/tls.crt"]
 

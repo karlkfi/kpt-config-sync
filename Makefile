@@ -121,6 +121,18 @@ push-resourcequota-admission-controller: build-all
 	cp -r $(TOP_DIR)/build/resourcequota-admission-controller $(STAGING_DIR)
 	cp $(BIN_DIR)/resourcequota-admission-controller $(STAGING_DIR)/resourcequota-admission-controller
 	cd $(STAGING_DIR)/resourcequota-admission-controller; ./gencert.sh
+	kubectl delete secret resourcequota-admission-controller-secret \
+		--namespace=stolos-system || true
+	kubectl create secret tls resourcequota-admission-controller-secret \
+		--namespace=stolos-system \
+	    --cert=$(STAGING_DIR)/resourcequota-admission-controller/server.crt \
+		--key=$(STAGING_DIR)/resourcequota-admission-controller/server.key
+	kubectl delete secret resourcequota-admission-controller-secret-ca \
+		--namespace=stolos-system || true
+	kubectl create secret tls resourcequota-admission-controller-secret-ca \
+		--namespace=stolos-system \
+	    --cert=$(STAGING_DIR)/resourcequota-admission-controller/ca.crt \
+		--key=$(STAGING_DIR)/resourcequota-admission-controller/ca.key
 	$(call build-and-push-image,resourcequota-admission-controller)
 
 .PHONY: push-syncer
