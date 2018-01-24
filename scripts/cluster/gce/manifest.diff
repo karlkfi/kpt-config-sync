@@ -1,11 +1,4 @@
 
 ======================================================================
-
-    {+"imagePullPolicy": "Never",+}
-======================================================================
  [---admission-control=Initializers,NamespaceLifecycle,LimitRanger,ServiceAccount,PersistentVolumeLabel,DefaultStorageClass,DefaultTolerationSeconds,NodeRestriction,Priority,ResourceQuota-] {+--admission-control=Initializers,NamespaceLifecycle,LimitRanger,ServiceAccount,PersistentVolumeLabel,DefaultStorageClass,DefaultTolerationSeconds,NodeRestriction,Priority,ValidatingAdmissionWebhook,ResourceQuota+}
-======================================================================
- [---authorization-mode=Node,RBAC-] {+--authorization-mode=Webhook,Node,RBAC+}
-======================================================================
- {+--authorization-webhook-config-file=/etc/srv/kubernetes/authz_kubeconfig.yaml --authorization-webhook-use-service-resolution=true+}
 ======================================================================

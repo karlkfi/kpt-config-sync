@@ -43,7 +43,7 @@ var (
 	dryRun = flag.Bool(
 		"dry_run", false, "Don't perform actions, just log what would have happened")
 
-	flattenRbac = flag.Bool("flatten_rbac", false, "If set, flattens the policy hierarchy for roles and role bindings.")
+	flattenRbac = flag.Bool("flatten_rbac", true, "If set, flattens the policy hierarchy for roles and role bindings.")
 )
 
 // WorkerNumRetries is the number of times an action will be retried in the work queue.

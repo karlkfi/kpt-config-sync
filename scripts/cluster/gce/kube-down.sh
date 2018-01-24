@@ -2,4 +2,4 @@
 export NUM_NODES=1
 export KUBE_GCE_INSTANCE_PREFIX=${KUBE_GCE_INSTANCE_PREFIX:-${USER}}
 gcloud config get-value project
-./_kubernetes/cluster/kube-down.sh
+./_kubernetes/kubernetes/cluster/kube-down.sh
