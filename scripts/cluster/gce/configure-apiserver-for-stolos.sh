@@ -34,7 +34,6 @@ openssl req -x509 -new -nodes -key ${STOLOS}/certs/ca.key -days 100000 -out ${ST
 
 # Copies the custom configuration over to GCE.
 gcloud compute scp \
-  authz_kubeconfig.yaml \
   install.sh \
   kube-apiserver.manifest.patched \
   kube-apiserver.manifest.orig \
