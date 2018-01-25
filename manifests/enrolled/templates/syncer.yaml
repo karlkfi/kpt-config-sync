@@ -17,21 +17,32 @@ spec:
       port: 8675
       targetPort: metrics-port
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: syncer
   namespace: stolos-system
   labels:
     app: syncer
 spec:
-  serviceAccountName: syncer
-  containers:
-    - name: syncer
-      image: IMAGE_NAME
-      imagePullPolicy: Always
-      ports:
-        - containerPort: 80
-          name: web-port
-        - containerPort: 8675
-          name: metrics-port
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: syncer
+  template:
+    metadata:
+      labels:
+        app: syncer
+    spec:
+      serviceAccountName: syncer
+      containers:
+        - name: syncer
+          image: IMAGE_NAME
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: web-port
+            - containerPort: 8675
+              name: metrics-port

@@ -17,21 +17,32 @@ spec:
       port: 8675
       targetPort: metrics-port
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: stolosresourcequota-controller
   namespace: stolos-system
   labels:
     app: stolosresourcequota
 spec:
-  serviceAccountName: stolosresourcequota-controller
-  containers:
-    - name: stolosresourcequota-controller
-      image: IMAGE_NAME
-      imagePullPolicy: Always
-      ports:
-        - containerPort: 80
-          name: web-port
-        - containerPort: 8675
-          name: metrics-port
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: stolosresourcequota
+  template:
+    metadata:
+      labels:
+        app: stolosresourcequota
+    spec:
+      serviceAccountName: stolosresourcequota-controller
+      containers:
+        - name: stolosresourcequota-controller
+          image: IMAGE_NAME
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: web-port
+            - containerPort: 8675
+              name: metrics-port

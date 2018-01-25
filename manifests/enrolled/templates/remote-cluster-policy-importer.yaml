@@ -1,28 +1,42 @@
 changecom(`<unused>')
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: remote-cluster-policy-importer
   namespace: stolos-system
+  labels:
+    apps: remote-cluster-policy-importer
 spec:
-  serviceAccountName: policy-importer
-  containers:
-  - name: remote-cluster-policy-importer
-    image: IMAGE_NAME
-    ports:
-    - containerPort: 80
-    imagePullPolicy: Always
-    env:
-      - name: REMOTE_KUBERNETES_API_SERVER_URL
-        valueFrom:
-          configMapKeyRef:
-            name: remote-cluster-policy-importer
-            key: master.endpoint
-    volumeMounts:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      apps: remote-cluster-policy-importer
+  template:
+    metadata:
+      labels:
+        apps: remote-cluster-policy-importer
+    spec:
+      serviceAccountName: policy-importer
+      containers:
+      - name: remote-cluster-policy-importer
+        image: IMAGE_NAME
+        ports:
+        - containerPort: 80
+        imagePullPolicy: Always
+        env:
+          - name: REMOTE_KUBERNETES_API_SERVER_URL
+            valueFrom:
+              configMapKeyRef:
+                name: remote-cluster-policy-importer
+                namespace: stolos-system
+                key: master.endpoint
+        volumeMounts:
+          - name: secret-volume
+            readOnly: true
+            mountPath: "/etc/stolos/secrets/master"
+      volumes:
       - name: secret-volume
-        readOnly: true
-        mountPath: "/etc/stolos/secrets/master"
-  volumes:
-  - name: secret-volume
-    secret:
-      secretName: remote-cluster-policy-importer-master-secret
+        secret:
+          secretName: remote-cluster-policy-importer-master-secret
