@@ -11,10 +11,13 @@
 # - gcloud with access to a project that has GCR
 
 # To execute the test without one time setup
-# > OMIT_ONETIME_SETUP=1 e2e/e2e.sh
+# > SKIP_INITIAL_SETUP=1 e2e/e2e.sh
 
 # To execute a subset of tests without setup, run as folows:
-# > OMIT_ONETIME_SETUP=1 TEST_FUNCTIONS=testStolosResourceQuota e2e/e2e.sh
+# > SKIP_INITIAL_SETUP=1 TEST_FUNCTIONS=testStolosResourceQuota e2e/e2e.sh
+
+# To execute the tests with final clean up
+# > SKIP_FINAL_CLEANUP=0 e2e/e2e.sh
 
 set -u
 
@@ -25,7 +28,7 @@ MAKEDIR=$TESTDIR/..
 # Path to demo acme yaml
 ACME=$MAKEDIR/examples/acme/acme.yaml
 
-function cleanup() {
+function cleanUp() {
   echo "****************** Cleaning up environment ******************"
   kubectl delete policynodes --all
   kubectl delete ValidatingWebhookConfiguration stolos-resource-quota --ignore-not-found
@@ -41,8 +44,8 @@ function cleanup() {
 }
 
 # Run once
-function oneTimeSetUp() {
-  cleanup
+function initialSetUp() {
+  cleanUp
   echo "****************** Setting up environment ******************"
   cd ${MAKEDIR}
 
@@ -157,7 +160,8 @@ function testStolosResourceQuota() {
   assertContains "kubectl get srq -n rnd  -o yaml" 'configmaps: "1"' # new used
 }
 
-OMIT_ONETIME_SETUP=${OMIT_ONETIME_SETUP:-0}
+SKIP_INITIAL_SETUP=${SKIP_INITIAL_SETUP:-0}
+SKIP_FINAL_CLEANUP=${SKIP_FINAL_CLEANUP:-1}
 TEST_FUNCTIONS=${TEST_FUNCTIONS:-$(declare -F)}
 
 ######################## MAIN #########################
@@ -167,8 +171,8 @@ function main() {
     exit 1
   fi
 
-  if [[ "$OMIT_ONETIME_SETUP" != 1 ]]; then
-    oneTimeSetUp
+  if [[ "$SKIP_INITIAL_SETUP" != 1 ]]; then
+    initialSetUp
   fi
 
   echo "****************** Starting tests ******************"
@@ -185,6 +189,10 @@ function main() {
       echo "PASS (${duration}s)"
     fi
   done
+
+  if [[ "$SKIP_FINAL_CLEANUP" != 1 ]]; then
+    cleanUp
+  fi
 }
 
 main
