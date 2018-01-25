@@ -38,16 +38,29 @@ GEN_YAML_DIR := $(OUTPUT_DIR)/yaml
 # Directory containing templates yaml files.
 TEMPLATES_DIR := $(TOP_DIR)/manifests/enrolled/templates
 
-# Docker image tage.
-IMAGE_TAG ?= $(USER)
+# Use git tags to set version string.
+VERSION := $(shell git describe --tags --always --dirty)
 
+# Whether this is an official release or dev workflow.
+RELEASE ?= 0
+
+# GCP project that owns container registry.
 GCP_PROJECT ?= stolos-dev
+
+# Docker image tag.
+ifeq ($(RELEASE), 1)
+	IMAGE_TAG := $(VERSION)
+else
+	IMAGE_TAG := $(VERSION)-$(shell date +'%s')
+endif
 
 # Helper functions for building and pushing a docker image to gcr.io.
 # Args:
 #   $(1) Docker image name as well as directory name in staging (e.g. "resource-quota")
 define build-and-push-image
+	@echo "Tagging docker image"
 	docker build -t gcr.io/$(GCP_PROJECT)/$(1):$(IMAGE_TAG) $(STAGING_DIR)/$(1)
+	@echo "Pushing docker image to gcr.io"
 	gcloud docker -- push gcr.io/$(GCP_PROJECT)/$(1):$(IMAGE_TAG)
 endef
 
