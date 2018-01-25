@@ -110,8 +110,6 @@ func ServeMetrics() {
 // Server configures and a https server from passed-in flags using
 // the supplied handler. If clientCert is not nil,
 func Server(handler HandlerFunc, clientCert []byte) *http.Server {
-	glog.Infof("Server listening at: %v", *listenAddr)
-
 	mux := http.NewServeMux()
 	mux.HandleFunc(*handlerUrlPath, handler)
 

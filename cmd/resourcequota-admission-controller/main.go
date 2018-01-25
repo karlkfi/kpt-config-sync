@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"time"
 
@@ -31,8 +32,10 @@ import (
 	policynodemeta "github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/service"
 	"github.com/google/stolos/pkg/util/log"
+	"github.com/pkg/errors"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
@@ -42,6 +45,8 @@ import (
 )
 
 const externalAdmissionHookConfigName = "stolos-resource-quota"
+// 5 seconds should be enough for endpoint to come up in the Kubernetes server.
+const endpointRegistrationTimeout = time.Second * 5
 
 var (
 	caBundleFile = flag.String("ca-cert", "ca.crt", "Webhook server bundle cert used by api-server to authenticate the webhook server.")
@@ -187,6 +192,43 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	return nil
 }
 
+// We have to wait for the endpoint to come up before self registering the webhook, otherwise the
+// endpoint will never come up since the admission controller will appear down and block
+// all requests, including the endpoint initialization
+func waitForEndpoint(clientset *kubernetes.Clientset) error {
+	for t := time.Now(); time.Since(t) < endpointRegistrationTimeout; time.Sleep(time.Second) {
+		endpoint, err := clientset.CoreV1().Endpoints("stolos-system").Get(
+			"resourcequota-admission-controller", metav1.GetOptions{})
+
+		if api_errors.IsNotFound(err) {
+			glog.Info("Endpoint not ready yet...")
+			continue
+		}
+
+		if err != nil {
+			return errors.Wrap(err, "Failed while checking endpoint readiness")
+		}
+
+		if len(endpoint.Subsets) == 0 || len(endpoint.Subsets[0].Addresses) == 0 {
+			glog.Info("Endpoint address not ready yet...")
+			continue
+		} else {
+			glog.V(3).Infof("Endpoint ready, %v", endpoint)
+			return nil
+		}
+	}
+	return fmt.Errorf("timed out waiting for endpoint")
+}
+
+func serveTLS(server *http.Server, listener net.Listener, stopChannel chan struct{}) {
+	err := server.ServeTLS(listener.(*net.TCPListener), "", "")
+
+	if err != nil {
+		glog.Fatal("Failed during serveTLS: ", err)
+	}
+	close(stopChannel)
+}
+
 func main() {
 	flag.Parse()
 	log.Setup()
@@ -219,9 +261,6 @@ func main() {
 	if !cache.WaitForCacheSync(nil, policyNodeInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
 		glog.Fatal("Failure while waiting for informers to sync")
 	}
-	if err := selfRegister(clientset, *caBundleFile); err != nil {
-		glog.Fatal("Failed to register webhook: ", err)
-	}
 
 	go service.ServeMetrics()
 
@@ -230,8 +269,26 @@ func main() {
 			admissioncontroller.NewResourceQuotaAdmitter(
 				policyNodeInformer, resourceQuotaInformer)), clientCert)
 
-	err = server.ListenAndServeTLS("", "")
+	stopChannel := make(chan struct{})
+	listener, err := net.Listen("tcp", server.Addr)
 	if err != nil {
-		glog.Fatal("ListenAndServe error: ", err)
+		glog.Fatal("Failed to start https listener: ", err)
 	}
+	defer listener.Close()
+
+	glog.Infof("Server listening at: %v", server.Addr)
+
+	go serveTLS(server, listener, stopChannel)
+
+	// Wait for endpoint to come up before self-registering
+	err = waitForEndpoint(clientset)
+	if err != nil {
+		glog.Fatal("Failed waiting for endpoint", err)
+	}
+	// Finally register the webhook to block admission according to quota policy
+	if err := selfRegister(clientset, *caBundleFile); err != nil {
+		glog.Fatal("Failed to register webhook: ", err)
+	}
+
+	<-stopChannel
 }

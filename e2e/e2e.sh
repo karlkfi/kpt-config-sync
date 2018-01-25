@@ -99,8 +99,8 @@ function testSyncerRoles() {
   assertContains "kubectl get roles -n acme" "admin"
 
   # Flattening
-  # assertContains "kubectl get roles -n backend" "admin"
-  # assertContains "kubectl get roles -n frontend" "admin"
+  assertContains "kubectl get roles -n backend" "admin"
+  assertContains "kubectl get roles -n frontend" "admin"
 }
 
 function testSyncerRoleBindings() {
@@ -110,8 +110,8 @@ function testSyncerRoleBindings() {
   assertContains "kubectl get rolebindings -n eng -o yaml" "alice"
 
   # Flattening
-  # assertContains "kubectl get rolebindings -n backend -o yaml" "alice"
-  # assertContains "kubectl get rolebindings -n frontend -o yaml" "alice"
+  assertContains "kubectl get rolebindings -n backend -o yaml" "alice"
+  assertContains "kubectl get rolebindings -n frontend -o yaml" "alice"
 }
 
 function testSyncerRoleBindingsChange() {
