@@ -31,6 +31,7 @@ import (
 	informerspolicynodev1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	policynodemeta "github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/service"
+	"github.com/google/stolos/pkg/syncer/labeling"
 	"github.com/google/stolos/pkg/util/log"
 	"github.com/pkg/errors"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -182,6 +183,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 					},
 					CABundle: caCert,
 				},
+				NamespaceSelector: metav1.SetAsLabelSelector(labeling.OriginLabel),
 			},
 		},
 	}
@@ -192,9 +194,9 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	return nil
 }
 
-// We have to wait for the endpoint to come up before self registering the webhook, otherwise the
-// endpoint will never come up since the admission controller will appear down and block
-// all requests, including the endpoint initialization
+// We have to wait for the endpoint to come up before self registering the webhook,
+// otherwise the endpoint will never come up since the admission controller will appear down and
+// block all requests, including the endpoint initialization
 func waitForEndpoint(clientset *kubernetes.Clientset) error {
 	for t := time.Now(); time.Since(t) < endpointRegistrationTimeout; time.Sleep(time.Second) {
 		endpoint, err := clientset.CoreV1().Endpoints("stolos-system").Get(
@@ -213,7 +215,7 @@ func waitForEndpoint(clientset *kubernetes.Clientset) error {
 			glog.Info("Endpoint address not ready yet...")
 			continue
 		} else {
-			glog.V(3).Infof("Endpoint ready, %v", endpoint)
+			glog.V(3).Info("Endpoint ready: ", endpoint)
 			return nil
 		}
 	}
@@ -233,7 +235,7 @@ func main() {
 	flag.Parse()
 	log.Setup()
 
-	glog.Infof("Hierarchical Resource Quota Admission Controller starting up")
+	glog.Info("Hierarchical Resource Quota Admission Controller starting up")
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -257,7 +259,7 @@ func main() {
 	if err != nil {
 		glog.Fatal("Failed setting up resourceQuota informer: ", err)
 	}
-	glog.Infof("Waiting for informers to sync...")
+	glog.Info("Waiting for informers to sync...")
 	if !cache.WaitForCacheSync(nil, policyNodeInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
 		glog.Fatal("Failure while waiting for informers to sync")
 	}
@@ -276,15 +278,16 @@ func main() {
 	}
 	defer listener.Close()
 
-	glog.Infof("Server listening at: %v", server.Addr)
+	glog.Info("Server listening at: ", server.Addr)
 
 	go serveTLS(server, listener, stopChannel)
 
 	// Wait for endpoint to come up before self-registering
 	err = waitForEndpoint(clientset)
 	if err != nil {
-		glog.Fatal("Failed waiting for endpoint", err)
+		glog.Fatal("Failed waiting for endpoint: ", err)
 	}
+
 	// Finally register the webhook to block admission according to quota policy
 	if err := selfRegister(clientset, *caBundleFile); err != nil {
 		glog.Fatal("Failed to register webhook: ", err)
