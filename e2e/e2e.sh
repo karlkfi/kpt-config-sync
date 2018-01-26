@@ -26,7 +26,7 @@ TESTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
 # Should be $STOLOS/
 MAKEDIR=$TESTDIR/..
 # Path to demo acme yaml
-ACME=$MAKEDIR/examples/acme/acme.yaml
+ACME=$MAKEDIR/examples/acme/policynodes/acme.yaml
 
 function cleanUp() {
   echo "****************** Cleaning up environment ******************"
@@ -99,15 +99,15 @@ function testSyncerNamespaceDelete() {
 
 function testSyncerRoles() {
   # Not Flattening
-  assertContains "kubectl get roles -n acme" "admin"
+  assertContains "kubectl get roles -n acme" "acme-admin"
 
   # Flattening
-  assertContains "kubectl get roles -n backend" "admin"
-  assertContains "kubectl get roles -n frontend" "admin"
+  assertContains "kubectl get roles -n backend" "acme-admin"
+  assertContains "kubectl get roles -n frontend" "acme-admin"
 }
 
 function testSyncerRoleBindings() {
-  assertContains "kubectl get rolebindings -n backend bob-rolebinding -o yaml" "admin"
+  assertContains "kubectl get rolebindings -n backend bob-rolebinding -o yaml" "acme-admin"
 
   # Not Flattening
   assertContains "kubectl get rolebindings -n eng -o yaml" "alice"
@@ -121,7 +121,7 @@ function testSyncerRoleBindingsChange() {
   kubectl apply -f ${TESTDIR}/test-syncer-change-rolebinding-backend.yaml > /dev/null
   sleep 1
   assertContains "kubectl get rolebindings -n backend bob-rolebinding" "NotFound"
-  assertContains "kubectl get rolebindings -n backend robert-rolebinding -o yaml" "admin"
+  assertContains "kubectl get rolebindings -n backend robert-rolebinding -o yaml" "acme-admin"
 }
 
 function testSyncerQuota() {

@@ -13,13 +13,13 @@ spec:
     - kind: RoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
-        namespace: acme
+        namespace: backend
         name: robert-rolebinding
       subjects:
       - kind: User
-        name: robert@google.com
+        name: robert@acme.com
         apiGroup: rbac.authorization.k8s.io
       roleRef:
         kind: Role
-        name: admin
+        name: acme-admin
         apiGroup: rbac.authorization.k8s.io

@@ -92,14 +92,17 @@ clean-all:
 	rm -rf $(OUTPUT_DIR)
 
 # Runs all tests.
-.PHONY: test test-all
-test: test-all
-test-all:
+.PHONY: test-all
+test-all: test-unit test-e2e
+
+# Runs unit tests.
+.PHONY: test-unit
+test-unit:
 	go test $(REPO)/...
 
-# Runs end to end tests.
+# Runs end-to-end tests.
 .PHONY: test-e2e
-test-e2e: test
+test-e2e:
 	e2e/e2e.sh
 
 # Run all static analyzers.
