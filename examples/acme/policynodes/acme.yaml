@@ -13,7 +13,7 @@ spec:
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
         namespace: acme
-        name: admin
+        name: acme-admin
       rules:
       - apiGroups: [""]
         resources: ["pods"]
@@ -49,7 +49,7 @@ spec:
         apiGroup: rbac.authorization.k8s.io
       roleRef:
         kind: Role
-        name: admin
+        name: acme-admin
         apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: "stolos.dev/v1"
@@ -87,7 +87,7 @@ spec:
         apiGroup: rbac.authorization.k8s.io
       roleRef:
         kind: Role
-        name: admin
+        name: acme-admin
         apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: "stolos.dev/v1"
