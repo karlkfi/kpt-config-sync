@@ -69,7 +69,7 @@ func newPolicyNode(name string, parent string, cpuLimit string, policyspace bool
 			Policyspace: policyspace,
 			Parent:      parent,
 			Policies: policyhierarchy_v1.Policies{
-				ResourceQuota: core_v1.ResourceQuotaSpec{
+				ResourceQuotaV1: core_v1.ResourceQuotaSpec{
 					Hard: core_v1.ResourceList{"cpu": resource.MustParse(cpuLimit)},
 				},
 			},

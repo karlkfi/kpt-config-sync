@@ -71,9 +71,9 @@ type ClusterPolicies struct {
 	Type string `json:"type"`
 
 	// Cluster scope resources.
-	ClusterRoles        []rbac_v1.ClusterRole                  `json:"clusterRoles"`
-	ClusterRoleBindings []rbac_v1.ClusterRoleBinding           `json:"clusterRoleBindings"`
-	PodSecurtiyPolicies []extensions_v1beta1.PodSecurityPolicy `json:"podSecurityPolicy"`
+	ClusterRolesV1             []rbac_v1.ClusterRole                  `json:"clusterRolesV1"`
+	ClusterRoleBindingsV1      []rbac_v1.ClusterRoleBinding           `json:"clusterRoleBindingsV1"`
+	PodSecurtiyPoliciesV1Beta1 []extensions_v1beta1.PodSecurityPolicy `json:"podSecurityPolicyV1Beta1"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -134,9 +134,9 @@ type PolicyNodeSpec struct {
 // Policies contains all the defined policies that are linked to a particular
 // PolicyNode.
 type Policies struct {
-	Roles         []rbac_v1.Role            `json:"roles"`
-	RoleBindings  []rbac_v1.RoleBinding     `json:"roleBindings"`
-	ResourceQuota core_v1.ResourceQuotaSpec `json:"resourceQuota"`
+	RolesV1         []rbac_v1.Role            `json:"rolesV1"`
+	RoleBindingsV1  []rbac_v1.RoleBinding     `json:"roleBindingsV1"`
+	ResourceQuotaV1 core_v1.ResourceQuotaSpec `json:"resourceQuotaV1"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -162,7 +162,7 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 				nodeSpec := &v1.PolicyNodeSpec{
 					Policyspace: false,
 					Policies: v1.Policies{
-						Roles: []rbac_v1.Role{
+						RolesV1: []rbac_v1.Role{
 							rbac_v1.Role{
 								ObjectMeta: metav1.ObjectMeta{
 									Name: "pod-reader",
@@ -175,8 +175,8 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 								},
 							},
 						},
-						RoleBindings:  []rbac_v1.RoleBinding{},
-						ResourceQuota: core_v1.ResourceQuotaSpec{},
+						RoleBindingsV1:  []rbac_v1.RoleBinding{},
+						ResourceQuotaV1: core_v1.ResourceQuotaSpec{},
 					},
 				}
 				policyNode := policynode.WrapPolicyNodeSpec(name, nodeSpec)

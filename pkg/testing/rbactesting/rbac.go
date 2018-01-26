@@ -24,8 +24,8 @@ func PolicyNode(
 		Spec: v1.PolicyNodeSpec{
 			Parent: parent,
 			Policies: v1.Policies{
-				Roles:        roles,
-				RoleBindings: roleBindings,
+				RolesV1:        roles,
+				RoleBindingsV1: roleBindings,
 			},
 		},
 	}

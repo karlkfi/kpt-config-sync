@@ -6,10 +6,10 @@ spec:
   policyspace: false
   parent: eng
   policies:
-    resourceQuota:
+    resourceQuotaV1:
       hard:
         pods: "1"
-    rolebindings:
+    rolebindingsV1:
     - kind: RoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:

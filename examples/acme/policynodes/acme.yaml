@@ -5,10 +5,10 @@ metadata:
 spec:
   policyspace: true
   policies:
-    resourceQuota:
+    resourceQuotaV1:
       hard:
         secrets: "10"
-    roles:
+    rolesV1:
     - kind: Role
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
@@ -33,11 +33,11 @@ spec:
   policyspace: true
   parent: acme
   policies:
-    resourceQuota:
+    resourceQuotaV1:
       hard:
         pods: "1"
         secrets: "5"
-    rolebindings:
+    rolebindingsV1:
     - kind: RoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
@@ -60,7 +60,7 @@ spec:
   policyspace: true
   parent: acme
   policies:
-    resourceQuota:
+    resourceQuotaV1:
       hard:
         configmaps: "2"
 ---
@@ -72,10 +72,10 @@ spec:
   policyspace: false
   parent: eng
   policies:
-    resourceQuota:
+    resourceQuotaV1:
       hard:
         pods: "1"
-    rolebindings:
+    rolebindingsV1:
     - kind: RoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
@@ -98,7 +98,7 @@ spec:
   policyspace: false
   parent: eng
   policies:
-    resourceQuota:
+    resourceQuotaV1:
       hard:
         pods: "1"
 ---
@@ -126,7 +126,7 @@ metadata:
 spec:
   policies:
     type: clusterrole
-    clusterRoles:
+    clusterRolesV1:
     - kind: ClusterRole
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
@@ -152,7 +152,7 @@ metadata:
 spec:
   policies:
     type: clusterrolebinding
-    clusterRoleBindings:
+    clusterRoleBindingsV1:
     - kind: ClusterRoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
@@ -189,7 +189,7 @@ metadata:
 spec:
   policies:
     type: podsecuritypolicy
-    podSecurityPolicy:
+    podSecurityPolicyV1Beta1:
     - kind: PodSecurityPolicy
       apiVersion: extensions/v1beta1
       metadata:

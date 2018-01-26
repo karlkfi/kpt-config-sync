@@ -146,8 +146,8 @@ func toPolicy(node *ph.PolicyNode) (name, parent string, policy *flattening.Poli
 	name = node.ObjectMeta.Name
 	parent = node.Spec.Parent
 	policy = flattening.NewPolicy().
-		SetRoleBindings(node.Spec.Policies.RoleBindings...).
-		SetRoles(node.Spec.Policies.Roles...)
+		SetRoleBindings(node.Spec.Policies.RoleBindingsV1...).
+		SetRoles(node.Spec.Policies.RolesV1...)
 	return // named
 }
 
