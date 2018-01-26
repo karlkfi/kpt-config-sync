@@ -1,0 +1,13 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: backend
+  name: bob-rolebinding
+subjects:
+- kind: User
+  name: bob@acme.com
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: acme-admin
+  apiGroup: rbac.authorization.k8s.io

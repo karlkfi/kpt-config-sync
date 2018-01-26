@@ -45,7 +45,7 @@ spec:
         name: alice-rolebinding
       subjects:
       - kind: User
-        name: alice@google.com
+        name: alice@acme.com
         apiGroup: rbac.authorization.k8s.io
       roleRef:
         kind: Role
@@ -79,11 +79,11 @@ spec:
     - kind: RoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:
-        namespace: acme
+        namespace: backend
         name: bob-rolebinding
       subjects:
       - kind: User
-        name: bob@google.com
+        name: bob@acme.com
         apiGroup: rbac.authorization.k8s.io
       roleRef:
         kind: Role
@@ -159,10 +159,10 @@ spec:
         name: namespace-viewers
       subjects:
       - kind: User
-        name: cheryl@google.com
+        name: cheryl@acme.com
         apiGroup: rbac.authorization.k8s.io
       - kind: User
-        name: cyril@google.com
+        name: cyril@acme.com
         apiGroup: rbac.authorization.k8s.io
       roleRef:
         kind: ClusterRole
@@ -174,7 +174,7 @@ spec:
         name: rbac-viewers
       subjects:
       - kind: User
-        name: cheryl@google.com
+        name: cheryl@acme.com
         apiGroup: rbac.authorization.k8s.io
       roleRef:
         kind: ClusterRole
