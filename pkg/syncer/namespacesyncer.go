@@ -16,14 +16,10 @@ limitations under the License.
 package syncer
 
 import (
-	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/google/stolos/pkg/syncer/labeling"
-	"github.com/google/stolos/pkg/util/namespaceutil"
-	"github.com/google/stolos/pkg/util/set/stringset"
-	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/util/workqueue"
@@ -65,6 +61,7 @@ func (s *NamespaceSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *poli
 func (s *NamespaceSyncer) onUpsert(node *policyhierarchy_v1.PolicyNode) error {
 	s.queue.Add(actions.NewNamespaceUpsertAction(
 		node.Name,
+		node.UID,
 		map[string]string{policyhierarchy_v1.ParentLabelKey: node.Spec.Parent},
 		s.client.Kubernetes(),
 		s.namespaceLister))
@@ -73,57 +70,12 @@ func (s *NamespaceSyncer) onUpsert(node *policyhierarchy_v1.PolicyNode) error {
 
 // OnDelete implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) OnDelete(node *policyhierarchy_v1.PolicyNode) error {
-	s.queue.Add(actions.NewNamespaceDeleteAction(node.Name, s.client.Kubernetes(), s.namespaceLister))
+	// Can be ignored, garbage collector will handle this case.
 	return nil
 }
 
 // PeriodicResync implements PolicyNodeSyncerInterface
 func (s *NamespaceSyncer) PeriodicResync(nodes []*policyhierarchy_v1.PolicyNode) error {
-	existingNamespaces, err := s.namespaceLister.List(s.namespaceSelector)
-	if err != nil {
-		return err
-	}
-
-	namespaceActions := s.computeActions(existingNamespaces, nodes)
-	for _, action := range namespaceActions {
-		s.queue.Add(action)
-	}
+	// TODO: delete this.
 	return nil
-}
-
-// computeActions determines which namespaces to delete during the resync. Creates will be handled
-// by OnUpdate since every resource is "updated" during the resync. Deletes are handled by OnDelete
-// but if we miss a delete due to being off, crashed, etc, this will garbage collect ones that
-// we missed.
-func (s *NamespaceSyncer) computeActions(
-	existingNamespaceList []*core_v1.Namespace,
-	nodes []*policyhierarchy_v1.PolicyNode) []actions.Interface {
-	existingNamespaces := stringset.New()
-	for _, namespace := range existingNamespaceList {
-		if namespaceutil.IsReserved(*namespace) {
-			continue
-		}
-		switch namespace.Status.Phase {
-		case core_v1.NamespaceActive:
-			existingNamespaces.Add(namespace.Name)
-		case core_v1.NamespaceTerminating:
-			// noop since this will go away shortly
-		}
-	}
-
-	declaredNamespaces := stringset.New()
-	for _, policyNode := range nodes {
-		declaredNamespaces.Add(policyNode.ObjectMeta.Name)
-	}
-
-	needsDelete := existingNamespaces.Difference(declaredNamespaces)
-
-	namespaceActions := []actions.Interface{}
-	needsDelete.ForEach(func(ns string) {
-		glog.Infof("Adding delete operation for %s", ns)
-		namespaceActions = append(namespaceActions, actions.NewNamespaceDeleteAction(
-			ns, s.client.Kubernetes(), s.namespaceLister))
-	})
-
-	return namespaceActions
 }

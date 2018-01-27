@@ -19,14 +19,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/stolos/pkg/syncer/actions"
+
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta/fake"
-	"github.com/google/stolos/pkg/util/set/stringset"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/util/workqueue"
 )
+
+const testUID = types.UID("0844e3b3-1059-11e8-9233-42010a800005")
 
 type ComputeNamespaceActionsTestCase struct {
 	policyNodeNamespaces  []string // namespaces defined in the poicy node objects
@@ -51,70 +55,47 @@ func NewTestNamespaceSyncer() *NamespaceSyncer {
 		workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()))
 }
 
-func TestSyncerComputeNamespaceActions(t *testing.T) {
+func TestSyncerCreate(t *testing.T) {
 	syncer := NewTestNamespaceSyncer()
-
-	for _, testcase := range []ComputeNamespaceActionsTestCase{
-		{ // Create terminating ns
-			policyNodeNamespaces:  []string{"foo"},
-			existingNamespaces:    []string{"bar"},
-			terminatingNamespaces: []string{"foo"},
-			needsDelete:           []string{"bar"},
+	syncer.OnCreate(&policyhierarchy_v1.PolicyNode{
+		TypeMeta: meta_v1.TypeMeta{},
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: "test-ns-create",
+			UID:  testUID,
 		},
-		{ // need create, need delete
-			policyNodeNamespaces:  []string{"foo", "foo2"},
-			existingNamespaces:    []string{"bar", "bar2"},
-			terminatingNamespaces: []string{"baz"},
-			needsDelete:           []string{"bar", "bar2"},
-		},
-		{ // need create
-			policyNodeNamespaces:  []string{"foo", "bar"},
-			existingNamespaces:    []string{"bar"},
-			terminatingNamespaces: []string{},
-			needsDelete:           []string{},
-		},
-		{ // need delete
-			policyNodeNamespaces:  []string{"foo"},
-			existingNamespaces:    []string{"bar", "foo"},
-			terminatingNamespaces: []string{"baz"},
-			needsDelete:           []string{"bar"},
-		},
-		{ // No diff
-			policyNodeNamespaces:  []string{"foo"},
-			existingNamespaces:    []string{"foo"},
-			terminatingNamespaces: []string{"baz"},
-			needsDelete:           []string{},
-		},
-	} {
-		policyNodes := []*policyhierarchy_v1.PolicyNode{}
-		for _, value := range testcase.policyNodeNamespaces {
-			policyNodes = append(
-				policyNodes, &policyhierarchy_v1.PolicyNode{ObjectMeta: meta_v1.ObjectMeta{Name: value}})
-		}
+	})
+	syncer.queue.ShutDown()
 
-		namespaces := []*core_v1.Namespace{}
-		for _, value := range testcase.existingNamespaces {
-			namespaces = append(namespaces, createNamespace(value, core_v1.NamespaceActive))
-		}
-		for _, value := range testcase.terminatingNamespaces {
-			namespaces = append(namespaces, createNamespace(value, core_v1.NamespaceTerminating))
-		}
+	item, _ := syncer.queue.Get()
+	action := item.(actions.Interface)
+	if action.String() != "namespace.test-ns-create.upsert" {
+		t.Errorf("Got unexpected action %s", action.String())
+	}
+}
 
-		actions := syncer.computeActions(namespaces, policyNodes)
+func TestSyncerUpdate(t *testing.T) {
+	syncer := NewTestNamespaceSyncer()
+	syncer.OnUpdate(
+		&policyhierarchy_v1.PolicyNode{
+			ObjectMeta: meta_v1.ObjectMeta{
+				Name:            "test-ns-update",
+				UID:             testUID,
+				ResourceVersion: "107",
+			},
+		},
+		&policyhierarchy_v1.PolicyNode{
+			ObjectMeta: meta_v1.ObjectMeta{
+				Name:            "test-ns-update",
+				UID:             testUID,
+				ResourceVersion: "139",
+			},
+		},
+	)
+	syncer.queue.ShutDown()
 
-		nsDelete := stringset.New()
-		for _, action := range actions {
-			switch action.Operation() {
-			case "delete":
-				nsDelete.Add(action.Namespace())
-			default:
-				t.Errorf("Got invalid action operation %s", action.Operation())
-			}
-		}
-		expectedDelete := stringset.NewFromSlice(testcase.needsDelete)
-
-		if !nsDelete.Equals(expectedDelete) {
-			t.Errorf("Expected deletions to be %v but got %v", expectedDelete, nsDelete)
-		}
+	item, _ := syncer.queue.Get()
+	action := item.(actions.Interface)
+	if action.String() != "namespace.test-ns-update.upsert" {
+		t.Errorf("Got unexpected action %s", action.String())
 	}
 }

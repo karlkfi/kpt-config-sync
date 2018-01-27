@@ -16,6 +16,7 @@ package actions
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/google/stolos/pkg/client/meta/fake"
 	"k8s.io/client-go/informers"
@@ -32,9 +34,15 @@ import (
 )
 
 const parentLabelValue = "parent-team"
+const testUID = types.UID("0844e3b3-1059-11e8-9233-42010a800005")
 
 func upsertNamespaceTestAction(ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) Interface {
-	return NewNamespaceUpsertAction(ns, map[string]string{policyhierarchy_v1.ParentLabelKey: parentLabelValue}, client, nsLister)
+	return NewNamespaceUpsertAction(
+		ns,
+		testUID,
+		map[string]string{policyhierarchy_v1.ParentLabelKey: parentLabelValue},
+		client,
+		nsLister)
 }
 
 func deleteNamespaceTestAction(
@@ -123,6 +131,20 @@ func TestNamespaceActions(t *testing.T) {
 			}
 			if ns.Labels[policyhierarchy_v1.ParentLabelKey] != parentLabelValue {
 				t.Errorf("Failed to update the parent label\ntestcase: %s\n %s", spew.Sdump(testcase), spew.Sdump(ns))
+			}
+			blockOwnerDeletion := true
+			expectOwnerReferences := []meta_v1.OwnerReference{
+				meta_v1.OwnerReference{
+					APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
+					Kind:               "PolicyNode",
+					Name:               namespace,
+					UID:                testUID,
+					BlockOwnerDeletion: &blockOwnerDeletion,
+				},
+			}
+			if !reflect.DeepEqual(expectOwnerReferences, ns.OwnerReferences) {
+				t.Errorf("Failed to set owner reference on namespace %s != %s",
+					spew.Sdump(expectOwnerReferences), spew.Sdump(ns.OwnerReferences))
 			}
 		} else {
 			if err != nil {

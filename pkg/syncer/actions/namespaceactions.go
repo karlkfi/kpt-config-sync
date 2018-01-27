@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"reflect"
 
+	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/syncer/labeling"
 
 	"github.com/golang/glog"
@@ -25,15 +26,13 @@ import (
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 )
 
 type namespaceActionBase struct {
 	namespace string
-
-	// Labels on the namespace.
-	labels map[string]string
 
 	// Name of the operation being performed, mostly here for logging purposes.
 	operation string
@@ -106,6 +105,11 @@ func (n *NamespaceDeleteAction) Execute() error {
 // NamespaceUpsertAction will create or update a namespace when executed
 type NamespaceUpsertAction struct {
 	namespaceActionBase
+
+	// Labels on the namespace.
+	labels map[string]string
+	// Owner reference for policy node
+	ownerReferences []meta_v1.OwnerReference
 }
 
 var _ Interface = &NamespaceUpsertAction{}
@@ -113,16 +117,27 @@ var _ Interface = &NamespaceUpsertAction{}
 // NewNamespaceUpsertAction creates a new NamespaceUpsertAction for the given namespace
 func NewNamespaceUpsertAction(
 	namespace string,
+	uid types.UID,
 	labels map[string]string,
 	kubernetesInterface kubernetes.Interface,
 	namespaceLister listers_core_v1.NamespaceLister) *NamespaceUpsertAction {
+	blockOwnerDeletion := true
 	return &NamespaceUpsertAction{
 		namespaceActionBase: namespaceActionBase{
 			namespace:           namespace,
-			labels:              labeling.AddOriginLabelToMap(labels),
 			operation:           "upsert",
 			kubernetesInterface: kubernetesInterface,
 			namespaceLister:     namespaceLister,
+		},
+		labels: labeling.AddOriginLabelToMap(labels),
+		ownerReferences: []meta_v1.OwnerReference{
+			meta_v1.OwnerReference{
+				APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
+				Kind:               "PolicyNode",
+				Name:               namespace,
+				UID:                uid,
+				BlockOwnerDeletion: &blockOwnerDeletion,
+			},
 		},
 	}
 }
@@ -144,8 +159,9 @@ func (n *NamespaceUpsertAction) create() error {
 	// Attempt to create namespace if it does not exist
 	createdNamespace, err := n.kubernetesInterface.CoreV1().Namespaces().Create(&core_v1.Namespace{
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name:   n.namespace,
-			Labels: n.labels,
+			Name:            n.namespace,
+			Labels:          n.labels,
+			OwnerReferences: n.ownerReferences,
 		},
 	})
 
@@ -161,7 +177,8 @@ func (n *NamespaceUpsertAction) create() error {
 }
 
 func (n *NamespaceUpsertAction) update(currentNamespace *core_v1.Namespace) error {
-	if reflect.DeepEqual(n.labels, currentNamespace.Labels) {
+	if reflect.DeepEqual(n.labels, currentNamespace.Labels) &&
+		reflect.DeepEqual(n.ownerReferences, currentNamespace.OwnerReferences) {
 		glog.Infof("Existing namespace %q does not need to be updated", n.namespace)
 		return nil
 	}
@@ -172,6 +189,7 @@ func (n *NamespaceUpsertAction) update(currentNamespace *core_v1.Namespace) erro
 			Name:            n.namespace,
 			Labels:          n.labels,
 			ResourceVersion: currentNamespace.ResourceVersion,
+			OwnerReferences: n.ownerReferences,
 		},
 	})
 	if err != nil {

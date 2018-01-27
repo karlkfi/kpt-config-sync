@@ -78,7 +78,7 @@ function assertContains() {
   result=$(eval $1 2>&1)
   if [[ $result != *"$2"* ]]; then
     echo "FAIL: [$result] does not contain [$2]"
-    exit
+    exit 1
   fi
 }
 
@@ -155,8 +155,59 @@ function testQuotaAdmission() {
   cleanTestConfigMaps
 }
 
-SKIP_INITIAL_SETUP=${SKIP_INITIAL_SETUP:-0}
-SKIP_FINAL_CLEANUP=${SKIP_FINAL_CLEANUP:-1}
+function waitForSuccess() {
+  local command="${1:-}"
+  local timeout=${2:-10}
+  local or_die=${3:-true}
+  waitFor "${command}" "${timeout}" "${or_die}" true
+}
+
+function waitForFailure() {
+  local command="${1:-}"
+  local timeout=${2:-10}
+  local or_die=${3:-true}
+  waitFor "${command}" "${timeout}" "${or_die}" false
+}
+
+function waitFor() {
+  local command="${1:-}"
+  local timeout=${2:-10}
+  local or_die=${3:-true}
+  local expect=${4:-true}
+
+  echo -n "Waiting for ${command} to exit ${expect}"
+  for i in $(seq 1 ${timeout}); do
+    if ${command} &> /dev/null; then
+      if ${expect}; then
+        echo
+        return 0
+      fi
+    else
+      if ! ${expect}; then
+        echo
+        return 0
+      fi
+    fi
+    echo -n "."
+    sleep 0.5
+  done
+  echo
+  echo "Command '${command}' failed after ${timeout} seconds"
+  if ${or_die}; then
+    exit 1
+  fi
+}
+
+function testSyncerNamespaces() {
+  kubectl apply -f ${TESTDIR}/test-syncer-namespaces.yaml > /dev/null
+  waitForSuccess "kubectl get ns new-ns"
+  assertContains "kubectl get ns new-ns" "new-ns"
+  kubectl delete -f ${TESTDIR}/test-syncer-namespaces.yaml > /dev/null
+  waitForFailure "kubectl get policynodes new-ns"
+}
+
+SKIP_INITIAL_SETUP=${SKIP_INITIAL_SETUP:-false}
+SKIP_FINAL_CLEANUP=${SKIP_FINAL_CLEANUP:-false}
 TEST_FUNCTIONS=${TEST_FUNCTIONS:-$(declare -F)}
 
 ######################## MAIN #########################
@@ -166,7 +217,7 @@ function main() {
     exit 1
   fi
 
-  if [[ "$SKIP_INITIAL_SETUP" != 1 ]]; then
+  if ! ${SKIP_INITIAL_SETUP}; then
     initialSetUp
   fi
 
@@ -185,7 +236,7 @@ function main() {
     fi
   done
 
-  if [[ "$SKIP_FINAL_CLEANUP" != 1 ]]; then
+  if ! ${SKIP_FINAL_CLEANUP}; then
     cleanUp
   fi
 }
