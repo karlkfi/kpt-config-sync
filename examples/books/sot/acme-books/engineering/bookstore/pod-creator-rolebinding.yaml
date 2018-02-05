@@ -1,0 +1,13 @@
+# bookstore-eng team can create pods in all namespaces in 'bookstore'.
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pod-creators
+subjects:
+- kind: Group
+  name: bookstore-eng@acme.com
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: pod-creator
+  apiGroup: rbac.authorization.k8s.io
