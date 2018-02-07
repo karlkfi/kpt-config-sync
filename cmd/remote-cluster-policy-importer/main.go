@@ -19,14 +19,13 @@ package main
 import (
 	"flag"
 
+	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/client/restconfig"
-
-	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/policyimporter/remotecluster"
 	"github.com/google/stolos/pkg/service"
-	"github.com/pkg/errors"
 	"github.com/google/stolos/pkg/util/log"
+	"github.com/pkg/errors"
 )
 
 func main() {

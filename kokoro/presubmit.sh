@@ -26,8 +26,8 @@ if ! git -C ${STOLOS_DIR} diff --no-ext-diff --quiet --exit-code; then
 fi
 
 echo "======================== BUILD ====================="
-make build-all
+make all-build
 
 echo "======================== TEST ======================"
-make test-all
+make all-test
 

@@ -89,7 +89,7 @@ func (s *QuotaSyncer) fillResourceQuotaLeafGaps(nodes []*policyhierarchy_v1.Poli
 		if err != nil {
 			glog.Infof(
 				"Error getting quota object for leaf namespace %s during resync, continuing. Error :%v",
-					node.Name, err)
+				node.Name, err)
 			continue
 		}
 

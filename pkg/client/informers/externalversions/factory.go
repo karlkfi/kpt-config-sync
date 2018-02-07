@@ -19,6 +19,10 @@ limitations under the License.
 package externalversions
 
 import (
+	reflect "reflect"
+	sync "sync"
+	time "time"
+
 	internalinterfaces "github.com/google/stolos/pkg/client/informers/externalversions/internalinterfaces"
 	externalversions_policyhierarchy "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy"
 	policyhierarchy "github.com/google/stolos/pkg/client/policyhierarchy"
@@ -26,9 +30,6 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
-	reflect "reflect"
-	sync "sync"
-	time "time"
 )
 
 type sharedInformerFactory struct {

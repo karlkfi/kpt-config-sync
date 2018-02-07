@@ -56,7 +56,7 @@ function initialSetUp() {
     exit 1
   fi
 
-  make deploy-all
+  make all-deploy
   kubectl apply -f ${ACME}
   sleep 3
 }

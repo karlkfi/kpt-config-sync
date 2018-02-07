@@ -20,6 +20,7 @@ package externalversions
 
 import (
 	"fmt"
+
 	v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"

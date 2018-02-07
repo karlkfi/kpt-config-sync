@@ -19,6 +19,8 @@ limitations under the License.
 package v1
 
 import (
+	time "time"
+
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	internalinterfaces "github.com/google/stolos/pkg/client/informers/externalversions/internalinterfaces"
 	v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
@@ -27,7 +29,6 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	time "time"
 )
 
 // StolosResourceQuotaInformer provides access to a shared informer and lister for

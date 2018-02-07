@@ -17,14 +17,15 @@ package main
 
 import (
 	"bytes"
-	"github.com/google/stolos/pkg/admissioncontroller"
-	"github.com/google/stolos/pkg/testing/fakeinformers"
 	"io/ioutil"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	"k8s.io/apimachinery/pkg/util/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/google/stolos/pkg/admissioncontroller"
+	"github.com/google/stolos/pkg/testing/fakeinformers"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	"k8s.io/apimachinery/pkg/util/json"
 )
 
 func TestRequest(t *testing.T) {

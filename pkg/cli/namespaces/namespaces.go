@@ -19,9 +19,10 @@ package namespaces
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/google/stolos/pkg/cli"
 	"github.com/google/stolos/pkg/client/namespace"
-	"strings"
 )
 
 func GetHierarchicalNamespaces(ctx *cli.CommandContext, args []string) error {

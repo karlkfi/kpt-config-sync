@@ -22,9 +22,6 @@ spec:
       containers:
       - name: remote-cluster-policy-importer
         image: IMAGE_NAME
-        ports:
-        - containerPort: 80
-        imagePullPolicy: Always
         env:
           - name: REMOTE_KUBERNETES_API_SERVER_URL
             valueFrom:

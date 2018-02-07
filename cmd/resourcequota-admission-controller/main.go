@@ -46,6 +46,7 @@ import (
 )
 
 const externalAdmissionHookConfigName = "stolos-resource-quota"
+
 // 5 seconds should be enough for endpoint to come up in the Kubernetes server.
 const endpointRegistrationTimeout = time.Second * 5
 

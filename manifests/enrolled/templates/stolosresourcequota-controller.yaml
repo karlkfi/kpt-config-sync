@@ -40,7 +40,6 @@ spec:
       containers:
         - name: stolosresourcequota-controller
           image: IMAGE_NAME
-          imagePullPolicy: Always
           ports:
             - containerPort: 80
               name: web-port

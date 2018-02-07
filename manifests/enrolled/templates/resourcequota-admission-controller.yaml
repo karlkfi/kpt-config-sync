@@ -48,7 +48,6 @@ spec:
       containers:
         - name: resourcequota-admission-controller
           image: IMAGE_NAME
-          imagePullPolicy: Always
           ports:
             - containerPort: 8000
               name: https-port

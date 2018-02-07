@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -uv
+set -euv
 
 # Creates secret and configmap required by RemoteClusterPolicyImporter.
 #
@@ -17,11 +17,11 @@ SA_NAME=$1
 REMOTE_CONTEXT=$2
 
 # Remove existing resources on local and remote clusters
-kubectl delete sa ${SA_NAME} -n stolos-system --context ${REMOTE_CONTEXT}
+kubectl delete sa ${SA_NAME} -n stolos-system --context ${REMOTE_CONTEXT} || true
 kubectl delete clusterrolebinding stolos-policy-reader-${SA_NAME} \
-  -n stolos-system --context ${REMOTE_CONTEXT}
-kubectl delete secret remote-cluster-policy-importer-master-secret -n stolos-system
-kubectl delete configmap remote-cluster-policy-importer -n stolos-system
+  -n stolos-system --context ${REMOTE_CONTEXT} || true
+kubectl delete secret remote-cluster-policy-importer-master-secret -n stolos-system || true
+kubectl delete configmap remote-cluster-policy-importer -n stolos-system || true
 
 # Create a service account on the remote cluster and give it policy-reader
 # permissions.

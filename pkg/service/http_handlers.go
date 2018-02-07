@@ -17,7 +17,7 @@ import (
 var (
 	listenAddr = flag.String(
 		"listen_hostport", ":8000", "The hostport to listen to.")
-	metricsPort = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
+	metricsPort    = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
 	serverCertFile = flag.String(
 		"server_cert", "server.crt", "The server certificate file.")
 	serverKeyFile = flag.String(

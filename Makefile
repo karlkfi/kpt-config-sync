@@ -47,6 +47,13 @@ RELEASE ?= 0
 # GCP project that owns container registry.
 GCP_PROJECT ?= stolos-dev
 
+# All Stolos components
+ALL_COMPONENTS := syncer \
+	git-policy-importer \
+	remote-cluster-policy-importer \
+	resourcequota-admission-controller \
+	stolosresourcequota-controller
+
 # Docker image tag.
 ifeq ($(RELEASE), 1)
 	IMAGE_TAG := $(VERSION)
@@ -54,87 +61,75 @@ else
 	IMAGE_TAG := $(VERSION)-$(shell date +'%s')
 endif
 
-# Helper functions for building and pushing a docker image to gcr.io.
-# Args:
-#   $(1) Docker image name as well as directory name in staging (e.g. "resource-quota")
-define build-and-push-image
-	@echo "Tagging docker image"
-	docker build -t gcr.io/$(GCP_PROJECT)/$(1):$(IMAGE_TAG) $(STAGING_DIR)/$(1)
-	@echo "Pushing docker image to gcr.io"
-	gcloud docker -- push gcr.io/$(GCP_PROJECT)/$(1):$(IMAGE_TAG)
-endef
-
 # Creates the local golang build output directory.
 .output:
-	mkdir -p $(OUTPUT_DIR)
-	mkdir -p $(BIN_DIR)
-	mkdir -p $(STAGING_DIR)
-	mkdir -p $(GEN_YAML_DIR)
+	mkdir -p \
+		$(OUTPUT_DIR) \
+		$(BIN_DIR) \
+		$(STAGING_DIR) \
+		$(GEN_YAML_DIR)
 
 # Builds all go binaries statically.  These are good for deploying into very
 # small containers, e.g. built off of "scratch" or "busybox" or some such.
-.PHONY: build-all
-build-all: .output
+all-build: .output
 	CGO_ENABLED=0 GOBIN=$(BIN_DIR) \
 	      go install -v -installsuffix="static" $(REPO)/cmd/...
 
 # Builds all go packages.
-.PHONY: build-alldeps
-build-alldeps: .output
+all-build-deps: .output
 	CGO_ENABLED=0 GOBIN=$(BIN_DIR) \
 	      go build -v $(REPO)/pkg/...
 
 # Cleans all artifacts.
-.PHONY: clean clean-all
-clean: clean-all
-clean-all:
+clean: all-clean
+all-clean:
 	go clean -v $(REPO)
 	rm -rf $(OUTPUT_DIR)
 
 # Runs all tests.
-.PHONY: test-all
-test-all: test-unit test-e2e
+# TODO(b/73018918): Add test-e2e when it's not flaky.
+all-test: test-unit
 
 # Runs unit tests.
-.PHONY: test-unit
 test-unit:
 	go test $(REPO)/...
 
 # Runs end-to-end tests.
-.PHONY: test-e2e
 test-e2e:
 	e2e/e2e.sh
 
-# Run all static analyzers.
-.PHONY: lint
+# Runs all static analyzers and autocorrects.
 lint:
-	gofmt -w $(STOLOS_CODE_DIRS)
-	go tool vet $(STOLOS_CODE_DIRS)
+	goimports -w $(STOLOS_CODE_DIRS)
 
-# Installs Stolos kubectl plugin
-.PHONY: install-kubectl-plugin
+# Installs Stolos kubectl plugin.
 install-kubectl-plugin:
 	cd $(TOP_DIR)/cmd/kubectl-stolos; ./install.sh
 
-# Generates all yaml files.
-# Note on m4: m4 does not expand anything after '#' in source file.
-.PHONY: gen-all-yaml-files
-gen-all-yaml-files: .output
-	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/resourcequota-admission-controller:$(IMAGE_TAG) < \
-	        $(TEMPLATES_DIR)/resourcequota-admission-controller.yaml > $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml
-	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/syncer:$(IMAGE_TAG) < $(TEMPLATES_DIR)/syncer.yaml > $(GEN_YAML_DIR)/syncer.yaml
-	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/stolosresourcequota-controller:$(IMAGE_TAG) < \
-	        $(TEMPLATES_DIR)/stolosresourcequota-controller.yaml > $(GEN_YAML_DIR)/stolosresourcequota-controller.yaml
-	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/remote-cluster-policy-importer:$(IMAGE_TAG) < \
-	        $(TEMPLATES_DIR)/remote-cluster-policy-importer.yaml > $(GEN_YAML_DIR)/remote-cluster-policy-importer.yaml
+# Generates yaml from template.
+gen-yaml-%:
+	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
+	        $(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
-######################################################################
-# Targets for building and pushing docker images.
-######################################################################
-.PHONY: push-resourcequota-admission-controller
-push-resourcequota-admission-controller: build-all
-	cp -r $(TOP_DIR)/build/resourcequota-admission-controller $(STAGING_DIR)
-	cp $(BIN_DIR)/resourcequota-admission-controller $(STAGING_DIR)/resourcequota-admission-controller
+# Builds and pushes a docker image.
+push-%: all-build
+	@echo
+	@echo "******* Pushing $* *******"
+	@echo
+	cp -r $(TOP_DIR)/build/$* $(STAGING_DIR)
+	cp $(BIN_DIR)/$* $(STAGING_DIR)/$*
+	docker build -t gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) $(STAGING_DIR)/$*
+	gcloud docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
+
+# Generates the yaml deployment from template and applies it to cluster.
+deploy-%:	push-% gen-yaml-%
+	kubectl apply -f $(GEN_YAML_DIR)/$*.yaml
+
+deploy-common-objects:
+	$(TOP_DIR)/scripts/deploy-common-objects.sh
+
+# TODO(b/73013835): Remove deployment logic from Makefile.
+deploy-resourcequota-admission-controller:	push-resourcequota-admission-controller gen-yaml-resourcequota-admission-controller
 	cd $(STAGING_DIR)/resourcequota-admission-controller; ./gencert.sh
 	kubectl delete secret resourcequota-admission-controller-secret \
 		--namespace=stolos-system || true
@@ -148,49 +143,8 @@ push-resourcequota-admission-controller: build-all
 		--namespace=stolos-system \
 	    --cert=$(STAGING_DIR)/resourcequota-admission-controller/ca.crt \
 		--key=$(STAGING_DIR)/resourcequota-admission-controller/ca.key
-	$(call build-and-push-image,resourcequota-admission-controller)
-
-.PHONY: push-syncer
-push-syncer: build-all
-	cp -r $(TOP_DIR)/build/syncer $(STAGING_DIR)
-	cp $(BIN_DIR)/syncer $(STAGING_DIR)/syncer
-	$(call build-and-push-image,syncer)
-
-.PHONY: push-stolosresourcequota-controller
-push-stolosresourcequota-controller: build-all
-	cp -r $(TOP_DIR)/build/stolosresourcequota-controller $(STAGING_DIR)
-	cp $(BIN_DIR)/stolosresourcequota-controller $(STAGING_DIR)/stolosresourcequota-controller
-	$(call build-and-push-image,stolosresourcequota-controller)
-
-.PHONY: push-remote-cluster-policy-importer
-push-remote-cluster-policy-importer: build-all
-	cp -r $(TOP_DIR)/build/remote-cluster-policy-importer $(STAGING_DIR)
-	cp $(BIN_DIR)/remote-cluster-policy-importer $(STAGING_DIR)/remote-cluster-policy-importer
-	$(call build-and-push-image,remote-cluster-policy-importer)
-
-######################################################################
-# Targets for deploying components to K8S.
-######################################################################
-.PHONY: deploy-common-objects
-deploy-common-objects:
-	$(TOP_DIR)/scripts/deploy-common-objects.sh
-
-.PHONY: deploy-resourcequota-admission-controller
-deploy-resourcequota-admission-controller: push-resourcequota-admission-controller gen-all-yaml-files
 	kubectl delete ValidatingWebhookConfiguration stolos-resource-quota --ignore-not-found
-	kubectl replace -f $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml --force
+	kubectl apply -f $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml
 
-.PHONY: deploy-syncer
-deploy-syncer: push-syncer gen-all-yaml-files
-	kubectl replace -f $(GEN_YAML_DIR)/syncer.yaml --force
+all-deploy: $(addprefix deploy-, $(ALL_COMPONENTS))
 
-.PHONY: deploy-stolosresourcequota-controller
-deploy-stolosresourcequota-controller: push-stolosresourcequota-controller gen-all-yaml-files
-	kubectl replace -f $(GEN_YAML_DIR)/stolosresourcequota-controller.yaml --force
-
-.PHONY: deploy-remote-cluster-policy-importer
-deploy-remote-cluster-policy-importer: push-remote-cluster-policy-importer gen-all-yaml-files
-	kubectl replace -f $(GEN_YAML_DIR)/remote-cluster-policy-importer.yaml --force
-
-.PHONY: deploy-all
-deploy-all: deploy-resourcequota-admission-controller deploy-syncer deploy-stolosresourcequota-controller

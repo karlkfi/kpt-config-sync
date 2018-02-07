@@ -1,0 +1,49 @@
+changecom(`<unused>')
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: git-policy-importer
+  namespace: stolos-system
+  labels:
+    apps: git-policy-importer
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      apps: git-policy-importer
+  template:
+    metadata:
+      labels:
+        apps: git-policy-importer
+    spec:
+      serviceAccountName: policy-importer
+      containers:
+      - name: policy-importer
+        image: IMAGE_NAME
+        volumeMounts:
+          - name: repo
+            mountPath: /repo
+            readOnly: true
+      - name: git-sync
+        image: "gcr.io/google_containers/git-sync:v2.0.6"
+        args: ["--root=/repo", "--dest=rev"]
+        volumeMounts:
+        - name: repo
+          mountPath: /repo
+        - name: git-creds
+          mountPath: /etc/git-secret
+          readOnly: true
+        securityContext:
+          runAsUser: 0
+        envFrom:
+          - configMapRef:
+              name: git-policy-importer
+      volumes:
+      - name: repo
+      - name: git-creds
+        secret:
+          secretName: git-creds
+          defaultMode: 256
+

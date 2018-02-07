@@ -20,14 +20,15 @@ import (
 	"path/filepath"
 
 	"fmt"
+	"io/ioutil"
+	"os"
+
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
-	"io/ioutil"
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	certutil "k8s.io/client-go/util/cert"
-	"os"
 )
 
 const kubectlConfigPath = ".kube/config"
