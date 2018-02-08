@@ -14,4 +14,4 @@ kubectl delete configmap git-policy-importer -n stolos-system || true
 kubectl create secret generic git-creds -n stolos-system \
   --from-file=ssh=${HOME}/.ssh/foo_corp_rsa  \
   --from-file=known_hosts=${HOME}/.ssh/known_hosts
-kubectl create configmap git-policy-importer -n stolos-system --from-env-file=git-importer.env
+kubectl create configmap git-policy-importer -n stolos-system --from-env-file=$(dirname $0)/git-importer.env

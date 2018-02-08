@@ -8,7 +8,7 @@ metadata:
     monitored: "true"
 spec:
   selector:
-    webhook: resource-quota
+    app: resource-quota
   ports:
     - name: https
       port: 443
@@ -23,18 +23,18 @@ metadata:
   name: resourcequota-admission-controller
   namespace: stolos-system
   labels:
-    webhook: resource-quota
+    app: resource-quota
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      webhook: resource-quota
+      app: resource-quota
   template:
     metadata:
       labels:
-        webhook: resource-quota
+        app: resource-quota
     spec:
       serviceAccountName: resourcequota-admission-controller
       restartPolicy: Always

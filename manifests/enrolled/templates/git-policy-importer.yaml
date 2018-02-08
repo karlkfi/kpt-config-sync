@@ -12,11 +12,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      apps: git-policy-importer
+      app: git-policy-importer
   template:
     metadata:
       labels:
-        apps: git-policy-importer
+        app: git-policy-importer
     spec:
       serviceAccountName: policy-importer
       containers:
@@ -26,6 +26,9 @@ spec:
           - name: repo
             mountPath: /repo
             readOnly: true
+        envFrom:
+          - configMapRef:
+              name: git-policy-importer
       - name: git-sync
         image: "gcr.io/google_containers/git-sync:v2.0.6"
         args: ["--root=/repo", "--dest=rev"]

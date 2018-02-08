@@ -5,18 +5,18 @@ metadata:
   name: remote-cluster-policy-importer
   namespace: stolos-system
   labels:
-    apps: remote-cluster-policy-importer
+    app: remote-cluster-policy-importer
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      apps: remote-cluster-policy-importer
+      app: remote-cluster-policy-importer
   template:
     metadata:
       labels:
-        apps: remote-cluster-policy-importer
+        app: remote-cluster-policy-importer
     spec:
       serviceAccountName: policy-importer
       containers:

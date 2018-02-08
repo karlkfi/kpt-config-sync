@@ -19,8 +19,10 @@ package main
 
 import (
 	"flag"
-
 	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/golang/glog"
@@ -28,9 +30,22 @@ import (
 )
 
 const (
-	pollPeriod = time.Second * 30
+	// Poll period for checking if symlink was updated by git-sync.
+	// Worst case it takes (pollPeriod + GIT_SYNC_WAIT) to detect changes.
+	pollPeriod = time.Second * 5
+	// Symlink to the git repo created by git-sync.
 	gitDir     = "/repo/rev"
 )
+
+var policyDirRelative = flag.String("policy-dir", envString("POLICY_DIR", ""),
+	"Relative path of root policy directory in the repo")
+
+func envString(key, def string) string {
+	if env := os.Getenv(key); env != "" {
+		return env
+	}
+	return def
+}
 
 func main() {
 	flag.Parse()
@@ -38,10 +53,26 @@ func main() {
 
 	glog.Infof("Starting GitPolicyImporter...")
 
-	// TODO(frankf): Detect symlink target change to figure out if there's new commits.
+	policyDir := path.Join(gitDir, *policyDirRelative)
+	glog.Infof("Root policyspace dir: %s", policyDir)
+
 	ticker := time.NewTicker(pollPeriod)
+	currentDir := ""
 	for range ticker.C {
-		files, err := ioutil.ReadDir(gitDir)
+		newDir, err := filepath.EvalSymlinks(gitDir)
+		if err != nil {
+			glog.Fatal(err)
+		}
+
+		if currentDir == newDir {
+			// No new commits, nothing to do.
+			continue
+		}
+
+		glog.Infof("New rev dir: %s", newDir)
+		currentDir = newDir
+
+		files, err := ioutil.ReadDir(policyDir)
 		if err != nil {
 			glog.Fatal(err)
 		}
@@ -52,5 +83,4 @@ func main() {
 
 		// TODO(frankf): Do useful work.
 	}
-
 }
