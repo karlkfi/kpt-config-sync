@@ -56,7 +56,11 @@ function initialSetUp() {
     exit 1
   fi
 
-  make all-deploy
+  if ! make all-deploy ; then
+    echo "Failed to deploy Stolos components, aborting test"
+    exit 1
+  fi
+
   kubectl apply -f ${ACME}
   sleep 3
 }
