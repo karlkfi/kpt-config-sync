@@ -34,10 +34,6 @@ func (c *FakeStolosV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
 }
 
-func (c *FakeStolosV1) StolosResourceQuotas(namespace string) v1.StolosResourceQuotaInterface {
-	return &FakeStolosResourceQuotas{c, namespace}
-}
-
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeStolosV1) RESTClient() rest.Interface {

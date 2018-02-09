@@ -1,17 +1,8 @@
 package resourcequota
 
 import (
-	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	core_v1 "k8s.io/api/core/v1"
 )
-
-// specEquals returns true if the two stolos quota specs are equal. Reflection.deepEqual is not appropriate as
-// the order of the items in the two maps may be different, and the same quantity can be expressed
-// in multiple ways (i.e. 1.0 and 1 as strings)
-func specEqual(left, right v1.StolosResourceQuotaSpec) bool {
-	return resourceListEqual(left.Status.Hard, right.Status.Hard) &&
-		resourceListEqual(left.Status.Used, right.Status.Used)
-}
 
 func resourceListEqual(left, right core_v1.ResourceList) bool {
 	if len(left) != len(right) {

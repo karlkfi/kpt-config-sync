@@ -25,11 +25,3 @@ type ClusterPolicyListerExpansion interface{}
 // PolicyNodeListerExpansion allows custom methods to be added to
 // PolicyNodeLister.
 type PolicyNodeListerExpansion interface{}
-
-// StolosResourceQuotaListerExpansion allows custom methods to be added to
-// StolosResourceQuotaLister.
-type StolosResourceQuotaListerExpansion interface{}
-
-// StolosResourceQuotaNamespaceListerExpansion allows custom methods to be added to
-// StolosResourceQuotaNamespaceLister.
-type StolosResourceQuotaNamespaceListerExpansion interface{}

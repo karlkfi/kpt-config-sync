@@ -51,8 +51,7 @@ GCP_PROJECT ?= stolos-dev
 ALL_COMPONENTS := syncer \
 	git-policy-importer \
 	remote-cluster-policy-importer \
-	resourcequota-admission-controller \
-	stolosresourcequota-controller
+	resourcequota-admission-controller
 
 # Docker image tag.
 ifeq ($(RELEASE), 1)

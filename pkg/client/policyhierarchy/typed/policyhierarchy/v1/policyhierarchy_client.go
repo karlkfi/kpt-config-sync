@@ -27,7 +27,6 @@ type StolosV1Interface interface {
 	RESTClient() rest.Interface
 	ClusterPoliciesGetter
 	PolicyNodesGetter
-	StolosResourceQuotasGetter
 }
 
 // StolosV1Client is used to interact with features provided by the stolos.dev group.
@@ -41,10 +40,6 @@ func (c *StolosV1Client) ClusterPolicies() ClusterPolicyInterface {
 
 func (c *StolosV1Client) PolicyNodes() PolicyNodeInterface {
 	return newPolicyNodes(c)
-}
-
-func (c *StolosV1Client) StolosResourceQuotas(namespace string) StolosResourceQuotaInterface {
-	return newStolosResourceQuotas(c, namespace)
 }
 
 // NewForConfig creates a new StolosV1Client for the given config.

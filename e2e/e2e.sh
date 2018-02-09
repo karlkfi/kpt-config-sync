@@ -151,15 +151,6 @@ function testQuotaAdmission() {
   cleanTestConfigMaps
 }
 
-function testStolosResourceQuota() {
-  cleanTestConfigMaps
-  assertContains "kubectl get srq -n rnd -o yaml" 'configmaps: "2"' # limit
-  assertContains "kubectl get srq -n rnd -o yaml" 'configmaps: "0"' # used
-  assertContains "kubectl create configmap map1 -n new-prj" "created"
-  sleep 1
-  assertContains "kubectl get srq -n rnd  -o yaml" 'configmaps: "1"' # new used
-}
-
 SKIP_INITIAL_SETUP=${SKIP_INITIAL_SETUP:-0}
 SKIP_FINAL_CLEANUP=${SKIP_FINAL_CLEANUP:-1}
 TEST_FUNCTIONS=${TEST_FUNCTIONS:-$(declare -F)}

@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/api/core/v1"
 )
 
 func TestPrintForNamespace(t *testing.T) {
@@ -17,7 +17,7 @@ func TestPrintForNamespace(t *testing.T) {
 	}{
 		{
 			namespace: "default",
-			object: &policyhierarchy.StolosResourceQuota{
+			object: &v1.ResourceQuota{
 				TypeMeta: meta.TypeMeta{
 					Kind: "Namespace",
 				},
@@ -33,8 +33,8 @@ metadata:
   creationTimestamp: null
   name: bunny
   namespace: foofoo
-spec:
-  status: {}
+spec: {}
+status: {}
 `,
 		},
 	}

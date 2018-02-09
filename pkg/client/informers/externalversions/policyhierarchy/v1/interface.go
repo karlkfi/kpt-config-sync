@@ -28,8 +28,6 @@ type Interface interface {
 	ClusterPolicies() ClusterPolicyInformer
 	// PolicyNodes returns a PolicyNodeInformer.
 	PolicyNodes() PolicyNodeInformer
-	// StolosResourceQuotas returns a StolosResourceQuotaInformer.
-	StolosResourceQuotas() StolosResourceQuotaInformer
 }
 
 type version struct {
@@ -51,9 +49,4 @@ func (v *version) ClusterPolicies() ClusterPolicyInformer {
 // PolicyNodes returns a PolicyNodeInformer.
 func (v *version) PolicyNodes() PolicyNodeInformer {
 	return &policyNodeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// StolosResourceQuotas returns a StolosResourceQuotaInformer.
-func (v *version) StolosResourceQuotas() StolosResourceQuotaInformer {
-	return &stolosResourceQuotaInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

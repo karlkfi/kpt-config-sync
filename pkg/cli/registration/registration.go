@@ -19,14 +19,12 @@ package registration
 import (
 	"github.com/google/stolos/pkg/cli"
 	"github.com/google/stolos/pkg/cli/namespaces"
-	"github.com/google/stolos/pkg/cli/quota"
 	"github.com/google/stolos/pkg/cli/rolebindings"
 )
 
 func init() {
 	// Register CLI commands here, try to keep these alphabetized.
 	cli.RegisterKubectlPluginFunction([]string{"get", "namespaces"}, namespaces.GetHierarchicalNamespaces)
-	cli.RegisterKubectlPluginFunction([]string{"get", "quota"}, quota.GetHierarchical)
 	cli.RegisterKubectlPluginFunction([]string{"get", "rolebindings"}, rolebindings.GetHierarchicalRoleBindings)
 	cli.RegisterKubectlPluginFunction([]string{"get", "roles"}, rolebindings.GetHierarchicalRoles)
 }

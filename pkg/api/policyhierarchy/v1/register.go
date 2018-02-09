@@ -42,8 +42,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&PolicyNode{},
 		&PolicyNodeList{},
-		&StolosResourceQuota{},
-		&StolosResourceQuotaList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
