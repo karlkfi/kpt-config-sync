@@ -21,6 +21,22 @@ func TestAuthorize(t *testing.T) {
 				Name: "kitties",
 			},
 			Spec: pn_v1.PolicyNodeSpec{
+				Parent: "bigkitties",
+				Policies: pn_v1.Policies{
+					ResourceQuota: core_v1.ResourceQuotaSpec{
+						Hard: core_v1.ResourceList{
+							"pods":    resource.MustParse("1"),
+							"secrets": resource.MustParse("0"),
+						},
+					},
+				},
+			},
+		},
+		&pn_v1.PolicyNode{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bigkitties",
+			},
+			Spec: pn_v1.PolicyNodeSpec{
 				Parent: "",
 				Policies: pn_v1.Policies{
 					ResourceQuota: core_v1.ResourceQuotaSpec{
@@ -106,7 +122,8 @@ func TestAuthorize(t *testing.T) {
 
 	for idx, ttt := range tt {
 		actual := admitter.Admit(ttt.request)
-		if actual.Allowed != ttt.expectedAllowed && actual.Result.Reason != ttt.expectedReason {
+		if actual.Allowed != ttt.expectedAllowed ||
+			(actual.Result != nil && actual.Result.Reason != ttt.expectedReason) {
 			t.Errorf("[T%d] Expected:\n%+v\n---\nActual:\n%+v", idx, ttt, actual)
 		}
 	}

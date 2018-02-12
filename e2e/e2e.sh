@@ -151,7 +151,7 @@ function testQuotaAdmission() {
   cleanTestConfigMaps
   assertContains "kubectl create configmap map1 -n new-prj" "created"
   assertContains "kubectl create configmap map2 -n newer-prj" "created"
-  assertContains "kubectl create configmap map3 -n new-prj" "exceeded quota in namespace rnd"
+  assertContains "kubectl create configmap map3 -n new-prj" "exceeded quota in policyspace rnd"
   cleanTestConfigMaps
 }
 
