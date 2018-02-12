@@ -40,10 +40,10 @@ type GetResourceQuotaEventActionTestCase struct {
 }
 
 var policyNodes = []runtime.Object{
-	makePolicyspaceNode("top", "", core_v1.ResourceList{"configmaps": resource.MustParse("10")}, true),
-	makePolicyspaceNode("mid", "top", core_v1.ResourceList{"memory": resource.MustParse("5")}, true),
-	makePolicyspaceNode("child1", "mid", core_v1.ResourceList{}, false),
-	makePolicyspaceNode("child2", "mid", core_v1.ResourceList{}, false),
+	makePolicyNode("top", "", core_v1.ResourceList{"configmaps": resource.MustParse("10")}, true),
+	makePolicyNode("mid", "top", core_v1.ResourceList{"memory": resource.MustParse("5")}, true),
+	makePolicyNode("child1", "mid", core_v1.ResourceList{}, false),
+	makePolicyNode("child2", "mid", core_v1.ResourceList{}, false),
 }
 
 func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
@@ -99,6 +99,19 @@ func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 				ResourceQuota: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"memory": resource.MustParse("2")}}},
 		},
 	}
+
+	policyNodeForPolicypace := policyhierarchy_v1.PolicyNode{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: "mid",
+		},
+		Spec: policyhierarchy_v1.PolicyNodeSpec{
+			Policyspace: true,
+			Parent:      "top",
+			Policies: policyhierarchy_v1.Policies{
+				ResourceQuota: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"memory": resource.MustParse("2")}}},
+		},
+	}
+
 	expectedGapQuotaLimits := core_v1.ResourceList{
 		"memory":     resource.MustParse("2"),
 		"configmaps": resource.MustParse("10")}
@@ -108,6 +121,7 @@ func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 		{expectedOperation: "upsert", policyNode: policyNodeWithDifferentRq},
 		{expectedOperation: "upsert", policyNode: policyNodeWithSameRq},
 		{expectedOperation: "upsert", expectedQuota: expectedGapQuotaLimits, policyNode: policyNodeWithGap},
+		{noOperation: true, policyNode: policyNodeForPolicypace},
 	} {
 		action := syncer.getUpdateAction(&testcase.policyNode)
 		if testcase.noOperation {
@@ -178,7 +192,7 @@ func TestFillResourceQuotaLeafGaps(t *testing.T) {
 	}
 }
 
-func makePolicyspaceNode(name string, parent string, limits core_v1.ResourceList, policyspace bool) *policyhierarchy_v1.PolicyNode {
+func makePolicyNode(name string, parent string, limits core_v1.ResourceList, policyspace bool) *policyhierarchy_v1.PolicyNode {
 	return &policyhierarchy_v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: name,

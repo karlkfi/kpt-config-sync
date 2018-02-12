@@ -119,15 +119,10 @@ func (s *QuotaSyncer) OnCreate(policyNode *policyhierarchy_v1.PolicyNode) error 
 	return s.onUpdate(policyNode)
 }
 
-// getUpdateAction returns the appropraite action when handling an update event.
+// getUpdateAction returns the appropriate action when handling an update event.
 func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode) actions.ResourceQuotaAction {
 	if policyNode.Spec.Policyspace {
-		return actions.NewResourceQuotaUpsertAction(
-			policyNode.Name,
-			resourcequota.PolicySpaceQuotaLabels,
-			policyNode.Spec.Policies.ResourceQuota,
-			s.client,
-			s.resourceQuotaLister)
+		return nil
 	}
 
 	hierarchicalLimits := s.getHierarchicalQuotaLimits(*policyNode)
@@ -172,7 +167,10 @@ func (s *QuotaSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *policyhi
 
 // onUpdate handles both create and update for quota from a policy node.
 func (s *QuotaSyncer) onUpdate(policyNode *policyhierarchy_v1.PolicyNode) error {
-	s.queue.Add(s.getUpdateAction(policyNode))
+	action := s.getUpdateAction(policyNode)
+	if action != nil {
+		s.queue.Add(action)
+	}
 	return nil
 }
 
