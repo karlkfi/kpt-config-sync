@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 source $(dirname $0)/gce-common.sh
 
 KUBERNETES_RELEASE="v1.9.2"
@@ -8,4 +10,8 @@ KUBERNETES_SKIP_CREATE_CLUSTER=1
 
 cd ${STOLOS_TMP}
 export KUBERNETES_RELEASE KUBERNETES_SKIP_CONFIRM KUBERNETES_SKIP_CREATE_CLUSTER
+if [[ -f ./kubernetes/version && "${KUBERNETES_RELEASE}" == "$(cat ./kubernetes/version)" ]]; then
+  echo "Already have up to date kubernetes, skipping download"
+  exit
+fi
 curl -sS https://get.k8s.io | bash

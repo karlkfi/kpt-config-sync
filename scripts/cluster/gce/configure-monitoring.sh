@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 # Install helm server (tiller)
 kubectl create sa tiller -n kube-system
 helm init --service-account=tiller

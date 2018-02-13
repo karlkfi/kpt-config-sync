@@ -2,6 +2,8 @@
 
 set -euv
 
+STOLOS=${STOLOS:-$(git -C $(dirname $0) rev-parse --show-toplevel)}
+
 KUBE_GCE_INSTANCE_PREFIX=${KUBE_GCE_INSTANCE_PREFIX:-${USER}}
 INSTANCE_ID=${INSTANCE_ID:-${KUBE_GCE_INSTANCE_PREFIX}-master}
 API_SERVER_POD_NAME=kube-apiserver-${INSTANCE_ID}
@@ -21,11 +23,6 @@ m4 \
   > kube-apiserver.manifest.patched
 
 # Generate a CA and key for the API server.
-if [[ -z "${STOLOS}" ]]
-then
-  echo "Please define $STOLOS directory before continuing."
-  exit 1
-fi
 mkdir -p ${STOLOS}/certs
 
 CN="stolosCA"
