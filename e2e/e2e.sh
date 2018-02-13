@@ -16,8 +16,8 @@
 # To execute a subset of tests without setup, run as folows:
 # > SKIP_INITIAL_SETUP=1 TEST_FUNCTIONS=testStolosResourceQuota e2e/e2e.sh
 
-# To execute the tests with final clean up
-# > SKIP_FINAL_CLEANUP=0 e2e/e2e.sh
+# To execute the tests without final clean up
+# > SKIP_FINAL_CLEANUP=1 e2e/e2e.sh
 
 set -euo pipefail
 

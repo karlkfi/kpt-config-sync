@@ -41,14 +41,12 @@ function assertContains() {
 
 ######################## TESTS ########################
 function testSyncerNamespaces() {
-  assertContains "kubectl get ns eng" "Active"
-  assertContains "kubectl get ns acme" "Active"
+  assertContains "kubectl get ns eng" "NotFound"
   assertContains "kubectl get ns backend" "Active"
   assertContains "kubectl get ns frontend" "Active"
 
   assertContains "kubectl get ns frontend -o yaml" 'stolos-managed: "true"'
   assertContains "kubectl get ns frontend -o yaml" "stolos-parent-ns: eng"
-  assertContains "kubectl get ns acme -o yaml" 'stolos-parent-ns: ""'
 }
 
 function testSyncerRoles() {

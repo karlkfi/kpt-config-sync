@@ -73,6 +73,26 @@ func TestSyncerCreate(t *testing.T) {
 	}
 }
 
+func TestSyncerCreatePolicyspace(t *testing.T) {
+	syncer := NewTestNamespaceSyncer()
+	syncer.OnCreate(&policyhierarchy_v1.PolicyNode{
+		TypeMeta: meta_v1.TypeMeta{},
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: "test-no-ns-create",
+			UID:  testUID,
+		},
+		Spec: policyhierarchy_v1.PolicyNodeSpec{
+			Policyspace: true,
+		},
+	})
+	syncer.queue.ShutDown()
+
+	item, _ := syncer.queue.Get()
+	if item != nil {
+		t.Errorf("Got unexpected action %s", item)
+	}
+}
+
 func TestSyncerUpdate(t *testing.T) {
 	syncer := NewTestNamespaceSyncer()
 	syncer.OnUpdate(
