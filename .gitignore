@@ -1,5 +1,9 @@
-.idea
-.output
 *.iml
-certs
 
+# Build artifacts
+/certs
+/.output
+
+# IDE
+/.idea
+/.vscode
