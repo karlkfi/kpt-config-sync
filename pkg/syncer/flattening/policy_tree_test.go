@@ -27,7 +27,7 @@ import (
 
 func TestPolicyNode(t *testing.T) {
 	tree := NewPolicyTree()
-	tree.Upsert("Node", "", Policy{})
+	tree.Upsert("Node", "", false, Policy{})
 	if _, err := tree.Lookup("Node"); err != nil {
 		t.Errorf("Node not found, but should be: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestRoots(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%d", i), func(t *testing.T) {
 			tree := NewPolicyTree()
 			for _, upsert := range tt.upserts {
-				tree.Upsert(upsert.node, upsert.parent, *NewPolicy())
+				tree.Upsert(upsert.node, upsert.parent, false, *NewPolicy())
 			}
 			expectedRoots := stringset.NewFromSlice(tt.expectedRoots)
 			actualRoots := stringset.NewFromSlice(tree.Roots())
@@ -111,7 +111,7 @@ func TestParentOf(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%v", i), func(t *testing.T) {
 			tree := NewPolicyTree()
 			for _, upsert := range tt.upserts {
-				tree.Upsert(upsert.child, upsert.parent, Policy{})
+				tree.Upsert(upsert.child, upsert.parent, false, Policy{})
 			}
 			for _, upsert := range tt.upserts {
 				parent, err := tree.ParentOf(upsert.child)
@@ -230,7 +230,7 @@ func TestDelete(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			tree := NewPolicyTree()
 			for _, upsert := range tt.upserts {
-				tree.Upsert(upsert.name, upsert.parent, upsert.policy)
+				tree.Upsert(upsert.name, upsert.parent, false, upsert.policy)
 			}
 			tree.Delete(tt.node)
 
@@ -388,7 +388,7 @@ func TestFlattenRoleBindings(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			tree := NewPolicyTree()
 			for _, upsert := range tt.upserts {
-				tree.Upsert(upsert.name, upsert.parent, upsert.policy)
+				tree.Upsert(upsert.name, upsert.parent, false, upsert.policy)
 			}
 			result, err := tree.Eval(tt.node)
 			if err != nil {

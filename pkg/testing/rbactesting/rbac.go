@@ -14,7 +14,7 @@ import (
 // preconfigured role and role bindings.  Set parent to "" for a policy node
 // without a defined parent.
 func PolicyNode(
-	name, parent string,
+	name, parent string, policyspace bool,
 	roles []rbac.Role,
 	roleBindings []rbac.RoleBinding) *v1.PolicyNode {
 	ret := v1.PolicyNode{
@@ -23,6 +23,7 @@ func PolicyNode(
 		},
 		Spec: v1.PolicyNodeSpec{
 			Parent: parent,
+			Policyspace: policyspace,
 			Policies: v1.Policies{
 				RolesV1:        roles,
 				RoleBindingsV1: roleBindings,

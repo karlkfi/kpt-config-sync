@@ -158,7 +158,7 @@ func TestPolicyEvaluatorRoleBindings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tree := flattening.NewPolicyTree()
 			for _, upsert := range tt.nodes {
-				tree.Upsert(upsert.name, upsert.parent, upsert.policy)
+				tree.Upsert(upsert.name, upsert.parent, false, upsert.policy)
 			}
 			e := newPolicyEvaluator(tree)
 			for _, upsert := range tt.nodes {
@@ -260,7 +260,7 @@ func TestPolicyEvaluatorRoles(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tree := flattening.NewPolicyTree()
 			for _, upsert := range tt.nodes {
-				tree.Upsert(upsert.name, upsert.parent, upsert.policy)
+				tree.Upsert(upsert.name, upsert.parent, false, upsert.policy)
 			}
 			e := newPolicyEvaluator(tree)
 			for _, node := range tt.nodes {
@@ -283,19 +283,29 @@ func TestPolicyEvaluatorRoles(t *testing.T) {
 	}
 }
 
-func phPolicyNodeWithPolicyContent(name, parent string, roles []rbac.Role,
+func phPolicyNodeWithPolicyContent(name, parent string, policyspace bool, roles []rbac.Role,
 	roleBindings []rbac.RoleBinding) *ph.PolicyNode {
-	return rbactesting.PolicyNode(name, parent, roles, roleBindings)
-
+	return rbactesting.PolicyNode(name, parent, policyspace, roles, roleBindings)
 }
 
 func phPolicyNode(name, parent string) *ph.PolicyNode {
-	return phPolicyNodeWithPolicyContent(name, parent, []rbac.Role{},
+	return phPolicyNodeWithPolicyContent(name, parent, false, []rbac.Role{},
+		[]rbac.RoleBinding{roleBinding(name)})
+}
+
+func phPolicyNodePolicyspace(name, parent string) *ph.PolicyNode {
+	return phPolicyNodeWithPolicyContent(name, parent, true, []rbac.Role{},
 		[]rbac.RoleBinding{roleBinding(name)})
 }
 
 func phPolicyNodeWithRole(name, parent string) *ph.PolicyNode {
-	return phPolicyNodeWithPolicyContent(name, parent,
+	return phPolicyNodeWithPolicyContent(name, parent, false,
+		[]rbac.Role{role(name)},
+		[]rbac.RoleBinding{})
+}
+
+func phPolicyNodeWithRolePolicyspace(name, parent string) *ph.PolicyNode {
+	return phPolicyNodeWithPolicyContent(name, parent, true,
 		[]rbac.Role{role(name)},
 		[]rbac.RoleBinding{})
 }
@@ -332,12 +342,11 @@ func TestFlatteningSyncerRoleBindings(t *testing.T) {
 			storage: []runtime.Object{},
 			actions: []syncerFunc{
 				func(f *FlatteningSyncer) {
-					f.OnCreate(phPolicyNode("acme", ""))
+					f.OnCreate(phPolicyNodePolicyspace("acme", ""))
 					f.OnCreate(phPolicyNode("eng", "acme"))
 				},
 			},
 			expectedActions: []string{
-				"rolebinding.acme.from-acme.upsert",
 				"rolebinding.eng.from-acme.upsert",
 				"rolebinding.eng.from-eng.upsert",
 			},
@@ -347,7 +356,7 @@ func TestFlatteningSyncerRoleBindings(t *testing.T) {
 			storage: []runtime.Object{},
 			actions: []syncerFunc{
 				func(f *FlatteningSyncer) {
-					f.OnCreate(phPolicyNode("acme", ""))
+					f.OnCreate(phPolicyNodePolicyspace("acme", ""))
 					f.OnCreate(phPolicyNode("eng", "acme"))
 					f.OnCreate(phPolicyNode("prod", "acme"))
 					f.OnCreate(phPolicyNode("frontend", "eng"))
@@ -355,7 +364,6 @@ func TestFlatteningSyncerRoleBindings(t *testing.T) {
 				},
 			},
 			expectedActions: []string{
-				"rolebinding.acme.from-acme.upsert",
 				"rolebinding.eng.from-acme.upsert",
 				"rolebinding.eng.from-eng.upsert",
 				"rolebinding.prod.from-acme.upsert",
@@ -373,11 +381,11 @@ func TestFlatteningSyncerRoleBindings(t *testing.T) {
 			storage: []runtime.Object{},
 			actions: []syncerFunc{
 				func(f *FlatteningSyncer) {
-					f.OnCreate(phPolicyNode("acme", ""))
+					f.OnCreate(phPolicyNodePolicyspace("acme", ""))
 					f.OnCreate(phPolicyNode("eng", "acme"))
 					f.OnCreate(phPolicyNode("frontend", "eng"))
 					f.OnCreate(phPolicyNode("backend", "eng"))
-					f.OnCreate(phPolicyNode("prod", "acme"))
+					f.OnCreate(phPolicyNodePolicyspace("prod", "acme"))
 					f.OnCreate(phPolicyNode("prj", "prod"))
 				},
 				func(f *FlatteningSyncer) {
@@ -388,7 +396,6 @@ func TestFlatteningSyncerRoleBindings(t *testing.T) {
 				},
 			},
 			expectedActions: []string{
-				"rolebinding.acme.from-acme.upsert",
 				"rolebinding.eng.from-acme.upsert",
 				"rolebinding.eng.from-eng.upsert",
 				"rolebinding.frontend.from-acme.upsert",
@@ -397,8 +404,6 @@ func TestFlatteningSyncerRoleBindings(t *testing.T) {
 				"rolebinding.backend.from-acme.upsert",
 				"rolebinding.backend.from-eng.upsert",
 				"rolebinding.backend.from-backend.upsert",
-				"rolebinding.prod.from-acme.upsert",
-				"rolebinding.prod.from-prod.upsert",
 				"rolebinding.prj.from-acme.upsert",
 				"rolebinding.prj.from-prod.upsert",
 				"rolebinding.prj.from-prj.upsert",
@@ -589,12 +594,11 @@ func TestFlatteningSyncerRoles(t *testing.T) {
 			storage: []runtime.Object{},
 			actions: []syncerFunc{
 				func(f *FlatteningSyncer) {
-					f.OnCreate(phPolicyNodeWithRole("acme", ""))
+					f.OnCreate(phPolicyNodeWithRolePolicyspace("acme", ""))
 					f.OnCreate(phPolicyNodeWithRole("eng", "acme"))
 				},
 			},
 			expectedActions: []string{
-				"role.acme.from-acme.upsert",
 				"role.eng.from-acme.upsert",
 				"role.eng.from-eng.upsert",
 			},
@@ -604,19 +608,16 @@ func TestFlatteningSyncerRoles(t *testing.T) {
 			storage: []runtime.Object{},
 			actions: []syncerFunc{
 				func(f *FlatteningSyncer) {
-					f.OnCreate(phPolicyNodeWithRole("acme", ""))
+					f.OnCreate(phPolicyNodeWithRolePolicyspace("acme", ""))
 					f.OnCreate(phPolicyNodeWithRole("eng", "acme"))
-					f.OnCreate(phPolicyNodeWithRole("prod", "acme"))
+					f.OnCreate(phPolicyNodeWithRolePolicyspace("prod", "acme"))
 					f.OnCreate(phPolicyNodeWithRole("frontend", "eng"))
 					f.OnCreate(phPolicyNodeWithRole("backend", "eng"))
 				},
 			},
 			expectedActions: []string{
-				"role.acme.from-acme.upsert",
 				"role.eng.from-acme.upsert",
 				"role.eng.from-eng.upsert",
-				"role.prod.from-acme.upsert",
-				"role.prod.from-prod.upsert",
 				"role.frontend.from-acme.upsert",
 				"role.frontend.from-eng.upsert",
 				"role.frontend.from-frontend.upsert",
@@ -672,7 +673,7 @@ func TestFlatteningSyncerRoles(t *testing.T) {
 			storage: []runtime.Object{},
 			actions: []syncerFunc{
 				func(f *FlatteningSyncer) {
-					f.OnCreate(phPolicyNodeWithRole("acme", ""))
+					f.OnCreate(phPolicyNodeWithRolePolicyspace("acme", ""))
 					f.OnCreate(phPolicyNodeWithRole("eng", "acme"))
 					f.OnCreate(phPolicyNodeWithRole("frontend", "eng"))
 				},
@@ -683,7 +684,6 @@ func TestFlatteningSyncerRoles(t *testing.T) {
 				},
 			},
 			expectedActions: []string{
-				"role.acme.from-acme.upsert", // 0
 				"role.eng.from-acme.upsert",
 				"role.eng.from-eng.upsert",
 				"role.frontend.from-acme.upsert",

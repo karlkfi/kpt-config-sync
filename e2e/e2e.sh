@@ -102,10 +102,6 @@ function testSyncerNamespaceDelete() {
 }
 
 function testSyncerRoles() {
-  # Not Flattening
-  assertContains "kubectl get roles -n acme" "acme-admin"
-
-  # Flattening
   assertContains "kubectl get roles -n backend" "acme-admin"
   assertContains "kubectl get roles -n frontend" "acme-admin"
 }
@@ -113,10 +109,6 @@ function testSyncerRoles() {
 function testSyncerRoleBindings() {
   assertContains "kubectl get rolebindings -n backend bob-rolebinding -o yaml" "acme-admin"
 
-  # Not Flattening
-  assertContains "kubectl get rolebindings -n eng -o yaml" "alice"
-
-  # Flattening
   assertContains "kubectl get rolebindings -n backend -o yaml" "alice"
   assertContains "kubectl get rolebindings -n frontend -o yaml" "alice"
 }

@@ -16,10 +16,16 @@ const (
 // Helper types for some additional type safety in the adjacency list below.
 type nodeName string
 type parentName string
+type isPolicyspaceType bool
+
+// TODO: Move the 4 maps below into one map.
 type childrenSet map[nodeName]bool
 
 // Mapping from node to parent name type.
 type nodeToParentMap map[nodeName]parentName
+
+// Mapping from node to whether it's a policyspace or not
+type nodeToPolicyspaceMap map[nodeName]isPolicyspaceType
 
 // Mapping from parent to a set of its children.
 type parentToChildrenMap map[parentName]childrenSet
@@ -58,6 +64,8 @@ type PolicyTree struct {
 	// nodesByName contains a mapping from a node name to the corresponding
 	// policy node.
 	nodesByName map[nodeName]Policy
+	// isPolicyspaceMap contains a mapping from a node name to whether that node is a policyspace
+	isPolicyspaceMap nodeToPolicyspaceMap
 	// parentsMap is a mapping from a node name to its parent.  If a node has no
 	// key in this map, then it has no parent.
 	parentsMap nodeToParentMap
@@ -68,7 +76,8 @@ type PolicyTree struct {
 
 // NewPolicyTree creates an empty policy tree.
 func NewPolicyTree() *PolicyTree {
-	return &PolicyTree{map[nodeName]Policy{}, nodeToParentMap{}, parentToChildrenMap{}}
+	return &PolicyTree{map[nodeName]Policy{}, nodeToPolicyspaceMap{},
+	nodeToParentMap{}, parentToChildrenMap{}}
 }
 
 // Lookup finds a policy node by name in the given policy tree.  Returns the
@@ -91,23 +100,33 @@ func (t *PolicyTree) ParentOf(name string) (string, error) {
 	return string(parent), nil
 }
 
+// ParentOf returns the name of the parent of the named node.  If no parent
+// exists (such as the case of a root node), returns a "not found" error.
+func (t *PolicyTree) IsPolicyspace(name string) (bool, error) {
+	isPolicyspace, ok := t.isPolicyspaceMap[nodeName(name)]
+	if !ok {
+		return false, fmt.Errorf("Policspace status not found: %q", name)
+	}
+	return bool(isPolicyspace), nil
+}
+
 // unparent removes the named node from its current parent.
 func (t *PolicyTree) unparent(name nodeName) {
 	if oldParent, ok := t.parentsMap[name]; ok {
 		// There is an old parent.  Remove the child from that parent.
 		t.childrenMap.removeChild(name, oldParent)
 	}
-
 }
 
 // Upsert inserts or updates a policy by a given 'name' and hangs it off of the
 // specified parent.  The parent policy may not have been defined yet at the
 // time Upsert is called.
-func (t *PolicyTree) Upsert(name string, parent string, policy Policy) {
+func (t *PolicyTree) Upsert(name string, parent string, isPolicyspace bool, policy Policy) {
 	n := nodeName(name)
 	p := parentName(parent)
 
 	t.nodesByName[n] = policy
+	t.isPolicyspaceMap[n] = isPolicyspaceType(isPolicyspace)
 	t.unparent(n)
 	t.childrenMap.addChild(n, p)
 	if p != none {
