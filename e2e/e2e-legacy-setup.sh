@@ -19,16 +19,36 @@
 # To execute the tests with final clean up
 # > SKIP_FINAL_CLEANUP=0 e2e/e2e.sh
 
-set -euo pipefail
+set -u
 
-REPO=$(dirname $(readlink -f $0))/..
-BIN=stolos-end-to-end
+# Should be $STOLOS/e2e
+TESTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
+# Should be $STOLOS/
+MAKEDIR=$TESTDIR/..
+# Path to demo acme yaml
+ACME=$MAKEDIR/examples/acme/policynodes/acme.yaml
 
-# Find the binary in gopath
-IFS=':'
-EXEC=$(find ${GOPATH} -type f -name $BIN | head -n1)
-IFS=''
+# Run once
+function initialSetUp() {
+  $(dirname $0)/e2e-legacy-cleanup.sh
+  echo "****************** Setting up environment ******************"
+  cd ${MAKEDIR}
 
-cd ${REPO}
-go install ./cmd/${BIN}
-${EXEC} -test_dir ${REPO}/e2e "$@"
+  make deploy-common-objects
+
+  if ! kubectl get ns stolos-system > /dev/null; then
+    echo "Failed setting up Stolos on cluster"
+    exit 1
+  fi
+
+  if ! make all-deploy ; then
+    echo "Failed to deploy Stolos components, aborting test"
+    exit 1
+  fi
+
+  kubectl apply -f ${ACME}
+  sleep 3
+}
+
+initialSetUp
+
