@@ -17,52 +17,97 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"os"
-	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
-	"github.com/pkg/errors"
+	"github.com/google/stolos/pkg/testing/e2e/testregistry"
+
+	_ "github.com/google/stolos/pkg/testing/e2e/syncertests" // Register syncer tests
+	"github.com/google/stolos/pkg/testing/e2e/testcontext"
 )
 
-// TestContext contains options for executing the test cases.
-type TestContext struct {
-	TestDir             string
+// TestOptions contains options for executing the test cases.
+type TestOptions struct {
+	RepoDir             string
 	TestFunctionPattern string
 	LegacyTestFunctions string
 	SkipSetup           bool
 	SkipCleanup         bool
 }
 
-// RunTests will run all testcases.
-func RunTests(testContext TestContext) {
+// RunTests will run all testcases. This should be invoked by main after flag parsing.
+func RunTests(testOptions TestOptions) {
 	ctx := context.Background()
 	execContext, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		select {
+		case <-c:
+			cancelFunc()
+			signal.Reset(os.Interrupt, syscall.SIGTERM)
+		case <-execContext.Done():
+		}
+	}()
 
-	if !testContext.SkipSetup {
-		runBash(execContext, filepath.Join(testContext.TestDir, "e2e-legacy-setup.sh"))
+	testContext := testcontext.New(execContext, testOptions.RepoDir)
+
+	if !testOptions.SkipSetup {
+		legacyCleanup(testContext)
+		legacySetup(testContext)
+	}
+
+	var runTests, runLegacyTests bool
+	switch {
+	case testOptions.TestFunctionPattern == "" && testOptions.LegacyTestFunctions == "":
+		runTests = true
+		runLegacyTests = true
+	case testOptions.TestFunctionPattern == "" && testOptions.LegacyTestFunctions != "":
+		runTests = false
+		runLegacyTests = true
+	case testOptions.TestFunctionPattern != "" && testOptions.LegacyTestFunctions == "":
+		runTests = true
+		runLegacyTests = false
+	case testOptions.TestFunctionPattern != "" && testOptions.LegacyTestFunctions != "":
+		runTests = true
+		runLegacyTests = true
+	}
+
+	if runTests {
+		fmt.Printf("RUNNING TESTCASES\n")
+		allTests := testregistry.TestCases(testOptions.TestFunctionPattern)
+		for _, testCase := range allTests {
+			testCase.Test(testContext)
+		}
+		fmt.Printf("DONE RUNNING TESTCASES\n")
 	}
 
 	// TODO: Insert additional test cases here.
-	runBash(execContext, filepath.Join(testContext.TestDir, "e2e-legacy.sh"))
+	if runLegacyTests {
+		fmt.Printf("RUNNING LEGACY TESTCASES\n")
+		os.Setenv("TEST_FUNCTIONS", testOptions.LegacyTestFunctions)
+		testContext.RunBashOrDie(filepath.Join(testOptions.RepoDir, "e2e/e2e-legacy.sh"))
+		fmt.Printf("DONE RUNNING LEGACY TESTCASES\n")
+	}
 
-	if !testContext.SkipCleanup {
-		runBash(execContext, filepath.Join(testContext.TestDir, "e2e-legacy-cleanup.sh"))
+	if !testOptions.SkipCleanup {
+		legacyCleanup(testContext)
 	}
 }
 
-func runBash(execContext context.Context, scriptPath string) {
-	var err error
-	cmd := exec.CommandContext(execContext, "/bin/bash", "-c", scriptPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Start()
-	if err != nil {
-		panic(errors.Wrapf(err, "%s failed to start", scriptPath))
-	}
+func legacyCleanup(testContext *testcontext.TestContext) {
+	testContext.RunBashOrDie(testContext.Repo("e2e/e2e-legacy-cleanup.sh"))
+}
 
-	err = cmd.Wait()
-	if err != nil {
-		panic(errors.Wrapf(err, "%s failed to finish", scriptPath))
-	}
+func legacySetup(testContext *testcontext.TestContext) {
+	testContext.RunBashOrDie(testContext.Repo("e2e/e2e-legacy-setup.sh"))
+
+	// TODO: make "deployment" a first class thing here.
+	testContext.WaitForDeployments(
+		time.Second*90, "stolos-system:syncer", "stolos-system:resourcequota-admission-controller")
 }

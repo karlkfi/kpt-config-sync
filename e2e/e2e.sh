@@ -34,4 +34,4 @@ EXEC=$(find ${GOPATH} -type f -name $BIN | head -n1)
 IFS=''
 
 # Execute e2e binary
-${EXEC} -test_dir ${REPO}/e2e "$@"
+${EXEC} -repo_dir ${REPO} "$@"

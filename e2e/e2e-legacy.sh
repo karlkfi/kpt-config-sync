@@ -138,14 +138,6 @@ function waitFor() {
   fi
 }
 
-function testSyncerNamespaceGc() {
-  kubectl apply -f ${TESTDIR}/test-syncer-namespaces.yaml > /dev/null
-  waitForSuccess "kubectl get ns new-ns"
-  assertContains "kubectl get ns new-ns" "new-ns"
-  kubectl delete -f ${TESTDIR}/test-syncer-namespaces.yaml > /dev/null
-  waitForFailure "kubectl get policynodes new-ns"
-}
-
 TEST_FUNCTIONS=${TEST_FUNCTIONS:-$(declare -F)}
 
 ######################## MAIN #########################

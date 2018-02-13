@@ -1,7 +1,0 @@
-apiVersion: "stolos.dev/v1"
-kind: PolicyNode
-metadata:
-  name: new-ns
-spec:
-  policyspace: false
-  parent: eng

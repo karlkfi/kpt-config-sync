@@ -30,7 +30,6 @@ ACME=$MAKEDIR/examples/acme/policynodes/acme.yaml
 
 # Run once
 function initialSetUp() {
-  $(dirname $0)/e2e-legacy-cleanup.sh
   echo "****************** Setting up environment ******************"
   cd ${MAKEDIR}
 

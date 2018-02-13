@@ -22,8 +22,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-var shellTestDir = flag.String(
-	"test_dir", "", "Path to shell script test directory with legacy e2e tests")
+var repoDir = flag.String(
+	"repo_dir", "", "Path to git repo")
 var skipSetup = flag.Bool("skip_setup", false, "Skip test setup")
 var skipCleanup = flag.Bool("skip_cleanup", false, "Skip test cleanup")
 var legacyTestFunctions = flag.String(
@@ -33,12 +33,12 @@ var testFunctionPattern = flag.String(
 
 func main() {
 	flag.Parse()
-	if *shellTestDir == "" {
-		panic(errors.Errorf("-test_dir flag not set"))
+	if *repoDir == "" {
+		panic(errors.Errorf("-repo_dir flag not set"))
 	}
 
-	e2e.RunTests(e2e.TestContext{
-		TestDir:             *shellTestDir,
+	e2e.RunTests(e2e.TestOptions{
+		RepoDir:             *repoDir,
 		SkipSetup:           *skipSetup,
 		SkipCleanup:         *skipCleanup,
 		LegacyTestFunctions: *legacyTestFunctions,
