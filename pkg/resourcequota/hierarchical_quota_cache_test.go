@@ -76,7 +76,7 @@ func TestCanAdmit(t *testing.T) {
 			newUsageList: core_v1.ResourceList{
 				"hay": resource.MustParse("6"),
 			},
-			canAdmitExpected:       true,
+			canAdmitExpected: true,
 		},
 		{ // violate at top (no limit at leaf)
 			namespace: "kitties",

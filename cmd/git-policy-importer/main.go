@@ -13,32 +13,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Controller responsible for importing policies from a Git repo and materializing PolicyNodes
+// Controller responsible for importing policies from a Git repo and materializing CRDs
 // on the local cluster.
 package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/stolos/pkg/policyimporter/filesystem"
 	"github.com/google/stolos/pkg/util/log"
 )
 
-const (
-	// Poll period for checking if symlink was updated by git-sync.
-	// Worst case it takes (pollPeriod + GIT_SYNC_WAIT) to detect changes.
-	pollPeriod = time.Second * 5
-	// Symlink to the git repo created by git-sync.
-	gitDir     = "/repo/rev"
-)
-
+var inCluster = flag.Bool("in-cluster", true,
+	"Whether running in a Kubernetes clsuter")
+var gitDir = flag.String("git-dir", "/repo/rev",
+	"Absolute path to the git repo")
 var policyDirRelative = flag.String("policy-dir", envString("POLICY_DIR", ""),
 	"Relative path of root policy directory in the repo")
+var pollPeriod = flag.Duration("poll-period", time.Second*5,
+	"Poll period for checking if --git-dir target directly has changed")
 
 func envString(key, def string) string {
 	if env := os.Getenv(key); env != "" {
@@ -53,13 +51,14 @@ func main() {
 
 	glog.Infof("Starting GitPolicyImporter...")
 
-	policyDir := path.Join(gitDir, *policyDirRelative)
-	glog.Infof("Root policyspace dir: %s", policyDir)
+	policyDir := path.Join(*gitDir, *policyDirRelative)
+	glog.Infof("Policy dir: %s", policyDir)
 
-	ticker := time.NewTicker(pollPeriod)
+	parser := filesystem.NewParser(*inCluster)
+	ticker := time.NewTicker(*pollPeriod)
 	currentDir := ""
 	for range ticker.C {
-		newDir, err := filepath.EvalSymlinks(gitDir)
+		newDir, err := filepath.EvalSymlinks(policyDir)
 		if err != nil {
 			glog.Fatal(err)
 		}
@@ -69,18 +68,9 @@ func main() {
 			continue
 		}
 
-		glog.Infof("New rev dir: %s", newDir)
+		glog.Infof("Resolved policy dir: %s", newDir)
 		currentDir = newDir
 
-		files, err := ioutil.ReadDir(policyDir)
-		if err != nil {
-			glog.Fatal(err)
-		}
-
-		for _, file := range files {
-			glog.Info(file.Name())
-		}
-
-		// TODO(frankf): Do useful work.
+		parser.Parse(newDir)
 	}
 }

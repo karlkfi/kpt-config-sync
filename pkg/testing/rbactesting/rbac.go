@@ -22,7 +22,7 @@ func PolicyNode(
 			Name: name,
 		},
 		Spec: v1.PolicyNodeSpec{
-			Parent: parent,
+			Parent:      parent,
 			Policyspace: policyspace,
 			Policies: v1.Policies{
 				RolesV1:        roles,

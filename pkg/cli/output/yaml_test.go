@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	"k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/api/core/v1"
 )
 
 func TestPrintForNamespace(t *testing.T) {

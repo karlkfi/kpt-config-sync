@@ -77,7 +77,7 @@ type PolicyTree struct {
 // NewPolicyTree creates an empty policy tree.
 func NewPolicyTree() *PolicyTree {
 	return &PolicyTree{map[nodeName]Policy{}, nodeToPolicyspaceMap{},
-	nodeToParentMap{}, parentToChildrenMap{}}
+		nodeToParentMap{}, parentToChildrenMap{}}
 }
 
 // Lookup finds a policy node by name in the given policy tree.  Returns the

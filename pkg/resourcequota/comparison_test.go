@@ -55,7 +55,7 @@ func TestEquals(t *testing.T) {
 		actualEquals := resourceListEqual(tt.left, tt.right)
 
 		if actualEquals != tt.equals {
-			t.Errorf("[%d]Expected equal=%s but wasn't [%s] vs [%s]", i, tt.equals, tt.left, tt.right)
+			t.Errorf("[%d]Expected equal=%t but wasn't [%s] vs [%s]", i, tt.equals, tt.left, tt.right)
 		}
 	}
 }

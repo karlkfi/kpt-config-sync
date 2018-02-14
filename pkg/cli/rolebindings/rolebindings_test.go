@@ -3,9 +3,10 @@ package rolebindings
 import (
 	"fmt"
 	"log"
+	"testing"
 
 	"github.com/google/stolos/pkg/cli"
-	"github.com/google/stolos/pkg/cli/testing"
+	clitesting "github.com/google/stolos/pkg/cli/testing"
 	fakemeta "github.com/google/stolos/pkg/client/meta/fake"
 	apirbac "k8s.io/api/rbac/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +37,7 @@ func RunExample(
 		{
 			// Basic test.
 			storage: []runtime.Object{
-				testing.NewNamespace("default", ""),
+				clitesting.NewNamespace("default", ""),
 				toRuntimeObject("quota1", "default"),
 			},
 			namespace: "default",
@@ -44,9 +45,9 @@ func RunExample(
 		{
 			// Only slightly more complicated.
 			storage: []runtime.Object{
-				testing.NewNamespace("root", ""),
-				testing.NewNamespace("ns1", "root"),
-				testing.NewNamespace("ns2", "root"),
+				clitesting.NewNamespace("root", ""),
+				clitesting.NewNamespace("ns1", "root"),
+				clitesting.NewNamespace("ns2", "root"),
 				toRuntimeObject("quota1", "root"),
 				toRuntimeObject("quota2", "root"),
 				toRuntimeObject("quota3", "ns1"),
@@ -83,7 +84,7 @@ func roleBinding(name, namespace string) runtime.Object {
 	}
 }
 
-func ExampleRoleBindings() {
+func TestExamplesRoleBindings(_ *testing.T) {
 	RunExample(roleBinding, func(ctx *cli.CommandContext) error {
 		err := GetHierarchicalRoleBindings(ctx, []string{""})
 		return err
@@ -158,7 +159,7 @@ func role(name, namespace string) runtime.Object {
 	}
 }
 
-func ExampleRoles() {
+func TestExamplesRoles(_ *testing.T) {
 	RunExample(role, func(ctx *cli.CommandContext) error {
 		err := GetHierarchicalRoles(ctx, []string{""})
 		return err

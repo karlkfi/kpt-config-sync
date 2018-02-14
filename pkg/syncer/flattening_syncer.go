@@ -260,7 +260,7 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 					return
 				}
 				if !isPolicyspace {
-					f.queue.Add(actions.NewGenericUpsertAction(item,	f.roleBindingAction))
+					f.queue.Add(actions.NewGenericUpsertAction(item, f.roleBindingAction))
 				}
 			}
 		},
