@@ -26,8 +26,11 @@ STOLOS_CODE_DIRS := pkg cmd
 # Directory containing all build artifacts.
 OUTPUT_DIR := $(TOP_DIR)/.output
 
+# Self-contained GOPATH dir.
+GO_DIR := $(OUTPUT_DIR)/go
+
 # Directory containing installed go binaries.
-BIN_DIR := $(OUTPUT_DIR)/bin
+BIN_DIR := $(GO_DIR)/bin
 
 # Directory used for staging Docker contexts.
 STAGING_DIR := $(OUTPUT_DIR)/staging
@@ -43,6 +46,12 @@ VERSION := $(shell git describe --tags --always --dirty)
 
 # Whether this is an official release or dev workflow.
 RELEASE ?= 0
+
+# Which architecture to build.
+ARCH ?= amd64
+
+# Docker image used for build and test.
+BUILD_IMAGE ?= golang:1.9-alpine
 
 # GCP project that owns container registry.
 GCP_PROJECT ?= stolos-dev
@@ -63,35 +72,54 @@ endif
 # Creates the local golang build output directory.
 .output:
 	mkdir -p \
-		$(OUTPUT_DIR) \
-		$(BIN_DIR) \
+		$(GO_DIR)/src/$(REPO) \
+		$(GO_DIR)/pkg \
+		$(GO_DIR)/std/$(ARCH) \
+		$(BIN_DIR)/$(ARCH) \
 		$(STAGING_DIR) \
 		$(GEN_YAML_DIR)
 
-# Builds all go binaries statically.  These are good for deploying into very
-# small containers, e.g. built off of "scratch" or "busybox" or some such.
+# Build packages hermetically in a docker container.
+build: all-build
 all-build: .output
-	CGO_ENABLED=0 GOBIN=$(BIN_DIR) \
-	      go install -v -installsuffix="static" $(REPO)/cmd/...
-
-# Builds all go packages.
-all-build-deps: .output
-	CGO_ENABLED=0 GOBIN=$(BIN_DIR) \
-	      go build -v $(REPO)/pkg/...
+	@docker run                                                            \
+		-u $$(id -u):$$(id -g)                                             \
+		-v $(GO_DIR):/go                                                   \
+		-v $$(pwd):/go/src/$(REPO)                                         \
+		-v $(BIN_DIR)/$(ARCH):/go/bin                                      \
+		-v $(GO_DIR)/std/$(ARCH):/usr/local/go/pkg/linux_$(ARCH)_static    \
+		-w /go/src/$(REPO)                                                 \
+		--rm                                                               \
+		$(BUILD_IMAGE)                                                     \
+		/bin/sh -c "                                                       \
+			ARCH=$(ARCH)                                                   \
+			VERSION=$(VERSION)                                             \
+			PKG=$(REPO)                                                    \
+			./scripts/build/build.sh                                       \
+		"
 
 # Cleans all artifacts.
 clean: all-clean
 all-clean:
-	go clean -v $(REPO)
 	rm -rf $(OUTPUT_DIR)
 
-# Runs all tests.
-# TODO(b/73018918): Add test-e2e when it's not flaky.
-all-test: test-unit
-
-# Runs unit tests.
-test-unit:
-	go test $(REPO)/...
+# Runs unit tests in a docker container.
+test: all-test
+all-test: .output
+	@docker run                                                            \
+		-v $(GO_DIR):/go                                                   \
+		-v $$(pwd):/go/src/$(REPO)                                         \
+		-v $(BIN_DIR)/$(ARCH):/go/bin                                      \
+		-v $(GO_DIR)/std/$(ARCH):/usr/local/go/pkg/linux_$(ARCH)_static    \
+		-w /go/src/$(REPO)                                                 \
+		--rm                                                               \
+		$(BUILD_IMAGE)                                                     \
+		/bin/sh -c "                                                       \
+			ARCH=$(ARCH)                                                   \
+			VERSION=$(VERSION)                                             \
+			PKG=$(REPO)                                                    \
+			./scripts/build/test.sh $(STOLOS_CODE_DIRS)                    \
+		"
 
 # Runs end-to-end tests.
 test-e2e:
@@ -111,15 +139,15 @@ install-kubectl-plugin:
 # Generates yaml from template.
 gen-yaml-%:
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
-	        $(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
+			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
 # Builds and pushes a docker image.
-push-%: all-build
+push-%: build
 	@echo
 	@echo "******* Pushing $* *******"
 	@echo
 	cp -r $(TOP_DIR)/build/$* $(STAGING_DIR)
-	cp $(BIN_DIR)/$* $(STAGING_DIR)/$*
+	cp $(BIN_DIR)/$(ARCH)/$* $(STAGING_DIR)/$*
 	docker build -t gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) $(STAGING_DIR)/$*
 	gcloud docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
 

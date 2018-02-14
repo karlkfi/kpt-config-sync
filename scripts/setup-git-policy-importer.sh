@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euv
+set -euo pipefail
 
 # Creates secret and configmap required by GitPolicyImporter.
 #
