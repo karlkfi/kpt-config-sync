@@ -24,11 +24,14 @@ set -euo pipefail
 REPO=$(dirname $(readlink -f $0))/..
 BIN=stolos-end-to-end
 
+# Build e2e binary
+cd ${REPO}
+go install ./cmd/${BIN}
+
 # Find the binary in gopath
 IFS=':'
 EXEC=$(find ${GOPATH} -type f -name $BIN | head -n1)
 IFS=''
 
-cd ${REPO}
-go install ./cmd/${BIN}
+# Execute e2e binary
 ${EXEC} -test_dir ${REPO}/e2e "$@"
