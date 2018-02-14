@@ -127,23 +127,9 @@ deploy-%:	push-% gen-yaml-%
 deploy-common-objects:
 	$(TOP_DIR)/scripts/deploy-common-objects.sh
 
-# TODO(b/73013835): Remove deployment logic from Makefile.
 deploy-resourcequota-admission-controller:	push-resourcequota-admission-controller gen-yaml-resourcequota-admission-controller
-	cd $(STAGING_DIR)/resourcequota-admission-controller; ./gencert.sh
-	kubectl delete secret resourcequota-admission-controller-secret \
-		--namespace=stolos-system || true
-	kubectl create secret tls resourcequota-admission-controller-secret \
-		--namespace=stolos-system \
-	    --cert=$(STAGING_DIR)/resourcequota-admission-controller/server.crt \
-		--key=$(STAGING_DIR)/resourcequota-admission-controller/server.key
-	kubectl delete secret resourcequota-admission-controller-secret-ca \
-		--namespace=stolos-system || true
-	kubectl create secret tls resourcequota-admission-controller-secret-ca \
-		--namespace=stolos-system \
-	    --cert=$(STAGING_DIR)/resourcequota-admission-controller/ca.crt \
-		--key=$(STAGING_DIR)/resourcequota-admission-controller/ca.key
-	kubectl delete ValidatingWebhookConfiguration stolos-resource-quota --ignore-not-found
-	kubectl apply -f $(GEN_YAML_DIR)/resourcequota-admission-controller.yaml
+	$(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh \
+		$(STAGING_DIR) $(GEN_YAML_DIR)
 
 all-deploy: $(addprefix deploy-, $(ALL_COMPONENTS))
 
