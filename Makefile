@@ -97,6 +97,9 @@ test-unit:
 test-e2e:
 	e2e/e2e.sh
 
+test-e2e-no-cleanup:
+	e2e/e2e.sh -skip_cleanup
+
 # Runs all static analyzers and autocorrects.
 lint:
 	goimports -w $(STOLOS_CODE_DIRS)

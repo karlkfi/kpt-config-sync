@@ -6,7 +6,7 @@ set -euo pipefail
 
 function cleanUp() {
   echo "****************** Cleaning up environment ******************"
-  kubectl delete policynodes --all
+  kubectl delete policynodes --all || true
   kubectl delete ValidatingWebhookConfiguration stolos-resource-quota --ignore-not-found
   kubectl delete --ignore-not-found ns stolos-system
 
