@@ -52,6 +52,7 @@ const endpointRegistrationTimeout = time.Second * 5
 
 var (
 	caBundleFile = flag.String("ca-cert", "ca.crt", "Webhook server bundle cert used by api-server to authenticate the webhook server.")
+	enablemTLS   = flag.Bool("enable-mutual-tls", false, "If set, enables mTLS verification of the client connecting to the admission controller.")
 )
 
 func serve(controller admissioncontroller.Admitter) service.HandlerFunc {
@@ -246,12 +247,13 @@ func main() {
 	if err != nil {
 		glog.Fatal("Failed to create client set: ", err)
 	}
-	clientCert, err := getAPIServerCert(clientset)
-	if err != nil {
-		glog.Fatal("Failed to get client cert: ", err)
+	var clientCert []byte
+	if *enablemTLS {
+		clientCert, err = getAPIServerCert(clientset)
+		if err != nil {
+			glog.Fatal("Failed to get client cert: ", err)
+		}
 	}
-	// TODO(b/69692030): Enable client cert verification.
-	clientCert = nil
 	policyNodeInformer, err := setupPolicyNodeInformer(config)
 	if err != nil {
 		glog.Fatal("Failed setting up policyNode informer: ", err)

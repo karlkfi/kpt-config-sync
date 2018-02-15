@@ -64,6 +64,9 @@ func WithStrictTransport(handler HandlerFunc) HandlerFunc {
 func configTLS(clientCert []byte) *tls.Config {
 	glog.Infof("Using server certificate file: %v", *serverCertFile)
 	glog.Infof("Using server private key file: %v", *serverKeyFile)
+	if clientCert != nil {
+		glog.V(5).Infof("Using client CA: %v", string(clientCert))
+	}
 	sCert, err := tls.LoadX509KeyPair(*serverCertFile, *serverKeyFile)
 	if err != nil {
 		glog.Fatal(err)

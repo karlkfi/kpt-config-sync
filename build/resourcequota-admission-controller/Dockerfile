@@ -16,6 +16,7 @@ FROM busybox
 ADD resourcequota-admission-controller resourcequota-admission-controller
 EXPOSE 8000
 ENTRYPOINT ["/resourcequota-admission-controller", \
+		    "--enable-mutual-tls=false", \
 		    "--server_key", "/etc/stolos/secrets/resourcequota-admission-controller/server/tls.key", \
 			"--server_cert", "/etc/stolos/secrets/resourcequota-admission-controller/server/tls.crt", \
 			"--ca-cert", "/etc/stolos/secrets/resourcequota-admission-controller/ca/tls.crt"]

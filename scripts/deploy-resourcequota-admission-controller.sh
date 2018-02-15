@@ -31,6 +31,9 @@ set -euo pipefail
 STAGING_DIR=$1
 GEN_YAML_DIR=$2
 
+echo STAGING_DIR=${STAGING_DIR}
+echo GEN_YAML_DIR=${GEN_YAML_DIR}
+
 cd ${STAGING_DIR}/resourcequota-admission-controller; ./gencert.sh
 kubectl delete secret resourcequota-admission-controller-secret \
     --namespace=stolos-system || true
