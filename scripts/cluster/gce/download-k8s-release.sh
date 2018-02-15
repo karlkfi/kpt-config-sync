@@ -4,7 +4,10 @@ set -euo pipefail
 
 source $(dirname $0)/gce-common.sh
 
-KUBERNETES_RELEASE="v1.9.2"
+# When upgrading the Kubernetes release, please
+# verify that the end-to-end tests work after the upgrade.
+KUBERNETES_RELEASE="v1.9.1"
+
 KUBERNETES_SKIP_CONFIRM=1
 KUBERNETES_SKIP_CREATE_CLUSTER=1
 
