@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package remotecluster
+package actions
 
 import (
 	"fmt"
@@ -33,15 +33,15 @@ type policyNodeAction struct {
 	// PolicyNode name
 	name string
 
-	// Remote PolicyNode being synced
-	remoteNode *policyhierarchy_v1.PolicyNode
+	// PolicyNode being created, updated or deleted
+	policyNode *policyhierarchy_v1.PolicyNode
 
 	// Name of the operation being performed, mostly here for logging purposes.
 	operation string
 
 	// Local cluster API access related objects
-	localNodeLister    listers_v1.PolicyNodeLister
-	localNodeInterface typed_v1.PolicyNodeInterface
+	policyNodeLister    listers_v1.PolicyNodeLister
+	policyNodeInterface typed_v1.PolicyNodeInterface
 }
 
 // Resource implements the action interface.
@@ -56,7 +56,7 @@ func (p *policyNodeAction) Operation() string {
 
 // String implements the action interface.
 func (p *policyNodeAction) String() string {
-	return fmt.Sprintf("%s.%s.%s", p.Resource(), p.remoteNode.Name, p.Operation())
+	return fmt.Sprintf("%s.%s.%s", p.Resource(), p.policyNode.Name, p.Operation())
 }
 
 // Namespace implements the action interface.
@@ -75,22 +75,22 @@ var _ actions.Interface = &PolicyNodeUpsertAction{}
 // NewPolicyNodeUpsertAction creates a new PolicyNodeUpsertAction
 func NewPolicyNodeUpsertAction(
 	policyNode *policyhierarchy_v1.PolicyNode,
-	localPolicyNodeLister listers_v1.PolicyNodeLister,
-	localPolicyNodeInterface typed_v1.PolicyNodeInterface) *PolicyNodeUpsertAction {
+	policyPolicyNodeLister listers_v1.PolicyNodeLister,
+	policyNodeInterface typed_v1.PolicyNodeInterface) *PolicyNodeUpsertAction {
 	return &PolicyNodeUpsertAction{
 		policyNodeAction: policyNodeAction{
-			name:               policyNode.Name,
-			remoteNode:         policyNode,
-			localNodeLister:    localPolicyNodeLister,
-			localNodeInterface: localPolicyNodeInterface,
-			operation:          "upsert",
+			name:                policyNode.Name,
+			policyNode:          policyNode,
+			policyNodeLister:    policyPolicyNodeLister,
+			policyNodeInterface: policyNodeInterface,
+			operation:           "upsert",
 		},
 	}
 }
 
 // Execute implements the action interface.
 func (p *PolicyNodeUpsertAction) Execute() error {
-	localNode, err := p.localNodeLister.Get(p.name)
+	localNode, err := p.policyNodeLister.Get(p.name)
 	if err != nil {
 		if api_errors.IsNotFound(err) {
 			return p.create()
@@ -102,7 +102,7 @@ func (p *PolicyNodeUpsertAction) Execute() error {
 }
 
 func (p *PolicyNodeUpsertAction) create() error {
-	createdPolicyNode, err := p.localNodeInterface.Create(canonicalCopy(p.remoteNode))
+	createdPolicyNode, err := p.policyNodeInterface.Create(canonicalCopy(p.policyNode))
 
 	if err != nil {
 		if api_errors.IsAlreadyExists(err) {
@@ -116,14 +116,14 @@ func (p *PolicyNodeUpsertAction) create() error {
 }
 
 func (p *PolicyNodeUpsertAction) update(localNode *policyhierarchy_v1.PolicyNode) error {
-	if Equal(localNode, p.remoteNode) {
+	if equal(localNode, p.policyNode) {
 		glog.Infof("Existing policynode %q does not need to be updated", p.name)
 		return nil
 	}
 
-	u := canonicalCopy(p.remoteNode)
+	u := canonicalCopy(p.policyNode)
 	u.ResourceVersion = localNode.ResourceVersion
-	u, err := p.localNodeInterface.Update(u)
+	u, err := p.policyNodeInterface.Update(u)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to update policynode %q", p.name)
 	}
@@ -142,22 +142,22 @@ var _ actions.Interface = &PolicyNodeDeleteAction{}
 // NewPolicyNodeDeleteAction creates a new PolicyNodeDeleteAction
 func NewPolicyNodeDeleteAction(
 	policyNode *policyhierarchy_v1.PolicyNode,
-	localPolicyNodeLister listers_v1.PolicyNodeLister,
-	localPolicyNodeInterface typed_v1.PolicyNodeInterface) *PolicyNodeDeleteAction {
+	policyNodeLister listers_v1.PolicyNodeLister,
+	policyNodeInterface typed_v1.PolicyNodeInterface) *PolicyNodeDeleteAction {
 	return &PolicyNodeDeleteAction{
 		policyNodeAction: policyNodeAction{
-			name:               policyNode.Name,
-			remoteNode:         policyNode,
-			localNodeLister:    localPolicyNodeLister,
-			localNodeInterface: localPolicyNodeInterface,
-			operation:          "delete",
+			name:                policyNode.Name,
+			policyNode:          policyNode,
+			policyNodeLister:    policyNodeLister,
+			policyNodeInterface: policyNodeInterface,
+			operation:           "delete",
 		},
 	}
 }
 
 // Execute implements PolicyNodeAction
 func (p *PolicyNodeDeleteAction) Execute() error {
-	_, err := p.localNodeLister.Get(p.name)
+	_, err := p.policyNodeLister.Get(p.name)
 	if err != nil {
 		if api_errors.IsNotFound(err) {
 			return nil
@@ -165,7 +165,7 @@ func (p *PolicyNodeDeleteAction) Execute() error {
 		return errors.Wrapf(err, "Failed to get policynode %q from cache", p.name)
 	}
 
-	err = p.localNodeInterface.Delete(p.name, &meta_v1.DeleteOptions{})
+	err = p.policyNodeInterface.Delete(p.name, &meta_v1.DeleteOptions{})
 	if err != nil && !api_errors.IsNotFound(err) {
 		return errors.Wrapf(err, "Failed to delete policynode %q", p.name)
 	}
@@ -186,6 +186,6 @@ func canonicalCopy(remoteNode *policyhierarchy_v1.PolicyNode) *policyhierarchy_v
 	}
 }
 
-func Equal(left *policyhierarchy_v1.PolicyNode, right *policyhierarchy_v1.PolicyNode) bool {
+func equal(left *policyhierarchy_v1.PolicyNode, right *policyhierarchy_v1.PolicyNode) bool {
 	return reflect.DeepEqual(canonicalCopy(left), canonicalCopy(right))
 }

@@ -20,6 +20,7 @@ import (
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	listers_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
 	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	importer_actions "github.com/google/stolos/pkg/policyimporter/actions"
 	"github.com/google/stolos/pkg/syncer"
 	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/google/stolos/pkg/util/set/stringset"
@@ -61,13 +62,13 @@ func (p *PolicyNodeCopier) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *pol
 
 // OnCreate implements PolicyNodeSyncerInterface
 func (p *PolicyNodeCopier) onUpsert(node *policyhierarchy_v1.PolicyNode) error {
-	p.queue.Add(NewPolicyNodeUpsertAction(node, p.localNodeLister, p.localNodeInterface))
+	p.queue.Add(importer_actions.NewPolicyNodeUpsertAction(node, p.localNodeLister, p.localNodeInterface))
 	return nil
 }
 
 // OnDelete implements PolicyNodeSyncerInterface
 func (p *PolicyNodeCopier) OnDelete(node *policyhierarchy_v1.PolicyNode) error {
-	p.queue.Add(NewPolicyNodeDeleteAction(node, p.localNodeLister, p.localNodeInterface))
+	p.queue.Add(importer_actions.NewPolicyNodeDeleteAction(node, p.localNodeLister, p.localNodeInterface))
 	return nil
 }
 
@@ -110,7 +111,8 @@ func (p *PolicyNodeCopier) computeActions(
 	actions := []actions.Interface{}
 	needsDelete.ForEach(func(n string) {
 		glog.Infof("Adding delete operation for %q", n)
-		actions = append(actions, NewPolicyNodeDeleteAction(localNamesToNodes[n], p.localNodeLister, p.localNodeInterface))
+		actions = append(actions, importer_actions.NewPolicyNodeDeleteAction(
+			localNamesToNodes[n], p.localNodeLister, p.localNodeInterface))
 	})
 
 	return actions

@@ -19,7 +19,6 @@ import (
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	listers_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
 	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/policyimporter/remotecluster"
 	"github.com/google/stolos/pkg/syncer/actions"
 	"sort"
 )
@@ -88,15 +87,14 @@ func (g *Generator) GenerateActions() []actions.Interface {
 	})
 
 	var actions []actions.Interface
-	// TODO(mdruskin): Move PolicyNode actions out of remotecluster package
 	for _, name := range append(creates, updates...) {
 		node := g.newNodes[name]
-		actions = append(actions, remotecluster.NewPolicyNodeUpsertAction(
+		actions = append(actions, NewPolicyNodeUpsertAction(
 			&node, g.policyNodeLister, g.policyNodeInterface))
 	}
 	for _, name := range deletes {
 		node := g.oldNodes[name]
-		actions = append(actions, remotecluster.NewPolicyNodeDeleteAction(
+		actions = append(actions, NewPolicyNodeDeleteAction(
 			&node, g.policyNodeLister, g.policyNodeInterface))
 	}
 
@@ -119,7 +117,7 @@ func (g *Generator) updates() []string {
 
 	for key, newnode := range g.newNodes {
 		if oldnode, exists := g.oldNodes[key]; exists {
-			if !remotecluster.Equal(&newnode, &oldnode) {
+			if !equal(&newnode, &oldnode) {
 				updates = append(updates, key)
 			}
 		}
