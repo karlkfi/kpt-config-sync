@@ -107,6 +107,7 @@ all-clean:
 test: all-test
 all-test: .output
 	@docker run                                                            \
+		-u $$(id -u):$$(id -g)                                             \
 		-v $(GO_DIR):/go                                                   \
 		-v $$(pwd):/go/src/$(REPO)                                         \
 		-v $(BIN_DIR)/$(ARCH):/go/bin                                      \
