@@ -13,11 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# Setup script for installing pre-requisites before running other scripts in
-# deploy.  Things in this file should generally follow the lifecycle of the
-# kubernetes cluster and only be created once.
-#
 
 # Common settings used by all the gce scripts.
 

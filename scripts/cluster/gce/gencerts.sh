@@ -13,24 +13,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# Setup script for installing pre-requisites before running other scripts in
+# deploy.  Things in this file should generally follow the lifecycle of the
+# kubernetes cluster and only be created once.
+#
 
-# One-time setup for a GCE cluster that needs to run Stolos.
+# Generates the certificate used for webhooks.
 
-set -euo pipefail
+set -euv
 
-echo "Setting project to stolos-dev"
-gcloud config set project stolos-dev
-echo "Setting compute zone to us-central1-b"
-gcloud config set compute/zone us-central1-b
+STOLOS=${STOLOS:-$(git -C $(dirname $0) rev-parse --show-toplevel)}
 
-echo "Generating certificates"
-./gencerts.sh
+# Generate a CA and key for the API server.
+mkdir -p ${STOLOS}/certs
 
-echo "Downloading kubernetes release"
-./download-k8s-release.sh
+CN="stolosCA"
+openssl genrsa -out ${STOLOS}/certs/ca.key 2048
+openssl req -x509 -new -nodes -key ${STOLOS}/certs/ca.key -days 100000 -out ${STOLOS}/certs/ca.crt -subj "/CN=${CN}"
 
-echo "Setting up base kubernetes cluster"
-./kube-up.sh
 
-echo "Configuring monitoring"
-./configure-monitoring.sh

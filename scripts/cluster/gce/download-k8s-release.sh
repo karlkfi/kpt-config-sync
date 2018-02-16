@@ -17,4 +17,11 @@ if [[ -f ./kubernetes/version && "${KUBERNETES_RELEASE}" == "$(cat ./kubernetes/
   echo "Already have up to date kubernetes, skipping download"
   exit
 fi
-curl -sS https://get.k8s.io | bash
+(curl -sS https://get.k8s.io | bash)
+
+cd -
+echo "Injecting admission controllers hook"
+PATCHFILE="$(dirname $0)/admission-control.patch-${KUBERNETES_RELEASE}"
+patch -p0 -N \
+  ${STOLOS_TMP}/kubernetes/cluster/gce/config-default.sh \
+  < ${PATCHFILE}
