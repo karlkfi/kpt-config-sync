@@ -4,7 +4,7 @@ set -euo pipefail
 
 source $(dirname $0)/gce-common.sh
 
-if kubectl config set-context stolos-dev_${KUBE_GCE_INSTANCE_PREFIX} &> /dev/null; then
+if kubectl config use-context stolos-dev_${KUBE_GCE_INSTANCE_PREFIX} &> /dev/null; then
   if kubectl get ns &> /dev/null; then
     echo "Cluster already created"
     exit
