@@ -116,7 +116,7 @@ func (p *PolicyNodeUpsertAction) create() error {
 }
 
 func (p *PolicyNodeUpsertAction) update(localNode *policyhierarchy_v1.PolicyNode) error {
-	if equal(localNode, p.remoteNode) {
+	if Equal(localNode, p.remoteNode) {
 		glog.Infof("Existing policynode %q does not need to be updated", p.name)
 		return nil
 	}
@@ -186,6 +186,6 @@ func canonicalCopy(remoteNode *policyhierarchy_v1.PolicyNode) *policyhierarchy_v
 	}
 }
 
-func equal(left *policyhierarchy_v1.PolicyNode, right *policyhierarchy_v1.PolicyNode) bool {
+func Equal(left *policyhierarchy_v1.PolicyNode, right *policyhierarchy_v1.PolicyNode) bool {
 	return reflect.DeepEqual(canonicalCopy(left), canonicalCopy(right))
 }
