@@ -26,8 +26,8 @@ if ! git -C ${STOLOS_DIR} diff --no-ext-diff --quiet --exit-code; then
 fi
 
 echo "======================== BUILD ====================="
-make all-build
+make DOCKER_INTERACTIVE="" all-build
 
 echo "======================== TEST ======================"
-make all-test
+make DOCKER_INTERACTIVE="" all-test
 

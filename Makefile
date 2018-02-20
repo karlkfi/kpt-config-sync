@@ -62,6 +62,11 @@ ALL_COMPONENTS := syncer \
 	remote-cluster-policy-importer \
 	resourcequota-admission-controller
 
+# Allows an interactive docker build or test session to be interrupted
+# by Ctrl-C.  This must be turned off in case of non-interactive runs,
+# like in CI/CD.
+DOCKER_INTERACTIVE ?= --interactive --tty
+
 # Docker image tag.
 ifeq ($(RELEASE), 1)
 	IMAGE_TAG := $(VERSION)
@@ -82,7 +87,7 @@ endif
 # Build packages hermetically in a docker container.
 build: all-build
 all-build: .output
-	@docker run                                                            \
+	@docker run $(DOCKER_INTERACTIVE)                                      \
 		-u $$(id -u):$$(id -g)                                             \
 		-v $(GO_DIR):/go                                                   \
 		-v $$(pwd):/go/src/$(REPO)                                         \
@@ -106,7 +111,7 @@ all-clean:
 # Runs unit tests in a docker container.
 test: all-test
 all-test: .output
-	@docker run                                                            \
+	@docker run $(DOCKER_INTERACTIVE)                                      \
 		-u $$(id -u):$$(id -g)                                             \
 		-v $(GO_DIR):/go                                                   \
 		-v $$(pwd):/go/src/$(REPO)                                         \
