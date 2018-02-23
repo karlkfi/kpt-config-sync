@@ -26,16 +26,29 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// WrapPolicyNodeSpec will take a PolicyNodeSpec, wrap it in a PolicyNode and populate the appropriate
-// fields.
-func WrapPolicyNodeSpec(namespace string, spec *policyhierarchy_v1.PolicyNodeSpec) *policyhierarchy_v1.PolicyNode {
+// NewPolicyNode creates a PolicyNode from the given spec and name.
+func NewPolicyNode(name string, spec *policyhierarchy_v1.PolicyNodeSpec) *policyhierarchy_v1.PolicyNode {
 	return &policyhierarchy_v1.PolicyNode{
 		TypeMeta: meta_v1.TypeMeta{
 			APIVersion: policyhierarchy_v1.GroupName,
 			Kind:       "PolicyNode",
 		},
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: namespaceutil.SanitizeNamespace(namespace),
+			Name: namespaceutil.SanitizeNamespace(name),
+		},
+		Spec: *spec,
+	}
+}
+
+// NewClusterPolicy creates a PolicyNode from the given spec and name.
+func NewClusterPolicy(name string, spec *policyhierarchy_v1.ClusterPolicySpec) *policyhierarchy_v1.ClusterPolicy {
+	return &policyhierarchy_v1.ClusterPolicy{
+		TypeMeta: meta_v1.TypeMeta{
+			APIVersion: policyhierarchy_v1.GroupName,
+			Kind:       "ClusterPolicy",
+		},
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: namespaceutil.SanitizeNamespace(name),
 		},
 		Spec: *spec,
 	}

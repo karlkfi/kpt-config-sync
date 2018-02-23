@@ -23,14 +23,16 @@ import (
 )
 
 var (
-	// Should match all allowed Kubernetes namespace names.
+	// TODO(b/73786828): This doesn't match DNS label definition.
+	// We should probably use a K8S package instead of rolling our own.
 	namespaceRegexPattern = "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
 	// Pattern from output returned by kubectl
 	// Matches: "namespace", "namespace-42", "42-namespace----43".
 	// Does not match: "-namespace", "namespace-", "намеспаце".
 	namespaceRe = regexp.MustCompile(namespaceRegexPattern)
 
-	// Namespaces that exist on the kubernetes cluster by default.
+	// Namespaces that either exist on the kubernetes cluster by default or are reserved by Stolos.
+	// TODO(b/73788007): We probably want to reserve any "kube-" prefix.
 	reservedNamespaces = map[string]bool{
 		"default":       true,
 		"kube-public":   true,
@@ -39,16 +41,27 @@ var (
 	}
 )
 
-// IsReserved returns true if the namespace name is one of the default ones created by kubernetes.
+// IsReserved returns true if the namespace name is reserved by the system.
 func IsReserved(namespace core_v1.Namespace) bool {
 	return reservedNamespaces[namespace.Name]
+}
+
+// IsReserved returns true if the namespace name is reserved by the system.
+func IsReservedOrInvalidNamespace(name string) error {
+	if reservedNamespaces[name] {
+		return errors.Errorf("namespace %q is reserved by the system", name)
+	}
+	if !namespaceRe.MatchString(name) {
+		return errors.Errorf("namespace %q is not a valid Kubernetes name", name)
+	}
+	return nil
 }
 
 // SanitizeNamespace will convert the namespace name to lowercase and assert it matches the
 // formatting rules for namespaces.
 func SanitizeNamespace(ns string) string {
 	if !namespaceRe.MatchString(ns) {
-		panic(errors.Errorf("Namespace \"%s\" does not satisfy valid namespace pattern %s", ns, namespaceRegexPattern))
+		panic(errors.Errorf("namespace %q does not satisfy valid namespace pattern %s", ns, namespaceRegexPattern))
 	}
 	return ns
 }

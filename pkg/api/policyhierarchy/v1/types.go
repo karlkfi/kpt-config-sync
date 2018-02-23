@@ -34,7 +34,7 @@ import (
 type ClusterPolicy struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// Standard object's metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
@@ -63,7 +63,7 @@ const (
 	ClusterPolicyPodSecurityPolicies = "podsecuritypolicy"
 )
 
-// ClusterPolicies specifies the polies stolos synchronizes to a cluster. This is factored out
+// ClusterPolicies specifies the policies stolos synchronizes to a cluster. This is factored out
 // due to the fact that it is specified in MasterClusterPolicyNodeSpec and ClusterPolicyNodeSpec.
 type ClusterPolicies struct {
 	// Type defines the type of resources that this holds. It will hold one of the cluster scoped
@@ -151,4 +151,11 @@ type PolicyNodeList struct {
 
 	// Items is a list of policy nodes that apply.
 	Items []PolicyNode `json:"items"`
+}
+
+// AllPolicies holds all PolicyNodes and the ClusterPolicy.
+type AllPolicies struct {
+	// Map of names to PolicyNodes.
+	PolicyNodes   map[string]PolicyNode
+	ClusterPolicy *ClusterPolicy
 }

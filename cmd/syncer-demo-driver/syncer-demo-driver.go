@@ -179,7 +179,7 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 						ResourceQuotaV1: core_v1.ResourceQuotaSpec{},
 					},
 				}
-				policyNode := policynode.WrapPolicyNodeSpec(name, nodeSpec)
+				policyNode := policynode.NewPolicyNode(name, nodeSpec)
 
 				policyNodeBytes, err := json.MarshalIndent(policyNode, "", "  ")
 				if err != nil {

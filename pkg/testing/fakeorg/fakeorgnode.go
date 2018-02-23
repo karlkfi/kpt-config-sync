@@ -39,7 +39,7 @@ type Node struct {
 // NewNode creates a new fake org node.
 func NewNode(name string) *Node {
 	return &Node{
-		policyNode: policynode.WrapPolicyNodeSpec(
+		policyNode: policynode.NewPolicyNode(
 			name,
 			&policyhierarchy_v1.PolicyNodeSpec{}),
 		children: map[string]*Node{},

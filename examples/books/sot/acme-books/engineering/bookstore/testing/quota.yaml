@@ -3,6 +3,7 @@ kind: ResourceQuota
 apiVersion: v1
 metadata:
   name: pod-quota
+  namespace: testing
 spec:
   hard:
     pods: "1"

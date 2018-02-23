@@ -54,7 +54,11 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	parser := filesystem.NewParser(*inCluster)
+	parser, err := filesystem.NewParser(*inCluster)
+	if err != nil {
+		glog.Fatalf("Failed to create parser: %v", err)
+	}
+
 	ticker := time.NewTicker(*pollPeriod)
 	currentDir := ""
 	for range ticker.C {
@@ -71,6 +75,12 @@ func main() {
 		glog.Infof("Resolved policy dir: %s", newDir)
 		currentDir = newDir
 
-		parser.Parse(newDir)
+		policies, err := parser.Parse(newDir)
+		if err != nil {
+			glog.Warningf("Failed to parse: %v", err)
+			continue
+		}
+
+		glog.Infof("%#v", policies)
 	}
 }
