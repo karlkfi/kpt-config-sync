@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	// TODO(b/73786828): This doesn't match DNS label definition.
+	// TODO(briantkennedy): This doesn't match DNS label definition.
 	// We should probably use a K8S package instead of rolling our own.
 	namespaceRegexPattern = "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
 	// Pattern from output returned by kubectl
@@ -32,7 +32,7 @@ var (
 	namespaceRe = regexp.MustCompile(namespaceRegexPattern)
 
 	// Namespaces that either exist on the kubernetes cluster by default or are reserved by Stolos.
-	// TODO(b/73788007): We probably want to reserve any "kube-" prefix.
+	// TODO(briantkennedy): We probably want to reserve any "kube-" prefix.
 	reservedNamespaces = map[string]bool{
 		"default":       true,
 		"kube-public":   true,

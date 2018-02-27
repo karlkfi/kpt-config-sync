@@ -175,7 +175,7 @@ func (p *PolicyNodeDeleteAction) Execute() error {
 
 // Creates a canonical copy of remote cluster node by discarding fields that don't make sense in the
 // local cluster.
-// TODO(frankf): We might want to also copy certain annotations and labels in the future.
+// TODO(frankfarzan): We might want to also copy certain annotations and labels in the future.
 func canonicalCopy(remoteNode *policyhierarchy_v1.PolicyNode) *policyhierarchy_v1.PolicyNode {
 	return &policyhierarchy_v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{

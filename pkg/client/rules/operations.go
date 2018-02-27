@@ -28,7 +28,7 @@ func GetPolicyRules(i cache.SharedIndexInformer, namespace string) (
 	nextNamespace := namespace
 	for nextNamespace != apipolicyhierarchy.NoParentNamespace {
 		glog.V(6).Infof("policyRulesFor: resolving namespace: %v", nextNamespace)
-		// TODO(fmil): Use a typed informer instead.
+		// TODO(filmil): Use a typed informer instead.
 		rawPolicyNode, exists, loopErr := i.GetStore().
 			GetByKey(nextNamespace)
 		if loopErr != nil {

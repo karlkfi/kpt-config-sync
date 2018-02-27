@@ -60,7 +60,7 @@ func newPolicyEvaluator(t policyLookupInterface) *policyEvaluator {
 
 // Visit implements flattening.Visitor.
 func (p *policyEvaluator) Visit(name string, policy *flattening.Policy) {
-	// TODO(fmil): PERFORMANCE It should be possible to short-circuit some of
+	// TODO(filmil): PERFORMANCE It should be possible to short-circuit some of
 	// the work here by caching.
 	partial, err := p.t.Eval(name)
 	if err != nil {
@@ -184,7 +184,7 @@ func (f *FlatteningSyncer) OnCreate(node *ph.PolicyNode) error {
 			}
 		}
 	})
-	// TODO(fmil) DUPLICATION
+	// TODO(filmil) DUPLICATION
 	result.RoleNamespaces().ForEach(func(namespace string) {
 		policies := result.Roles(namespace)
 		for i, _ := range policies {
@@ -215,7 +215,7 @@ func roleBindingNames(policy []rbac.RoleBinding) *stringset.StringSet {
 // roleBindingNames extracts the roleBindingNames of the nodes in the specified
 // rbac policy.
 func roleNames(policy []rbac.Role) *stringset.StringSet {
-	// TODO(fmil): DUPLICATION See if this can be unified with the above code.
+	// TODO(filmil): DUPLICATION See if this can be unified with the above code.
 	result := stringset.New()
 	for _, item := range policy {
 		result.Add(item.Name)
@@ -265,7 +265,7 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 			}
 		},
 	)
-	// TODO(fmil): DUPLICATION Remove if possible.
+	// TODO(filmil): DUPLICATION Remove if possible.
 	stringset.Union(
 		olderResult.RoleNamespaces(),
 		newerResult.RoleNamespaces()).ForEach(
@@ -314,7 +314,7 @@ func (f *FlatteningSyncer) OnDelete(node *ph.PolicyNode) error {
 				actions.NewGenericDeleteAction(&policies[i], f.roleBindingAction))
 		}
 	})
-	// TODO(fmil): DUPLICATION Remove if possible.
+	// TODO(filmil): DUPLICATION Remove if possible.
 	result.RoleNamespaces().StableForEach(func(namespace string) {
 		policies := result.Roles(namespace)
 		for i, _ := range policies {
@@ -388,7 +388,7 @@ func (f *FlatteningSyncer) PeriodicResync(nodes []*ph.PolicyNode) error {
 				}
 			}
 		})
-		// TODO(fmil): DUPLICATION Remove if possible.
+		// TODO(filmil): DUPLICATION Remove if possible.
 		result.RoleNamespaces().StableForEach(func(namespace string) {
 			glog.V(10).Infof("Processing namespace: %q", namespace)
 			presentResources, err := f.roleAction.Values(namespace)

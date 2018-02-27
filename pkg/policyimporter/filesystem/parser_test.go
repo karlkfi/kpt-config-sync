@@ -626,7 +626,7 @@ func TestParser(t *testing.T) {
 				for k, v := range actualPolicies.PolicyNodes {
 					p := v.Spec.Policies
 					n[k] = len(p.RolesV1) + len(p.RoleBindingsV1)
-					// TODO(b/73784286): Remove this hack
+					// TODO(frankfarzan): Remove this hack
 					if len(p.ResourceQuotaV1.Hard) != 0 {
 						n[k] += 1
 					}

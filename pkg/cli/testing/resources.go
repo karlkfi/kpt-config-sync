@@ -14,7 +14,7 @@ var (
 
 // namespace creates a Namespace object named 'name', with
 // Stolos-style parent 'parent'.
-// TODO(fmil): Find places that could use this function and plug it in.
+// TODO(filmil): Find places that could use this function and plug it in.
 func NewNamespace(name, parent string) *apicore.Namespace {
 	return &apicore.Namespace{
 		TypeMeta: NamespaceTypeMeta,

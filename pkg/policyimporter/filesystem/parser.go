@@ -50,7 +50,7 @@ func NewParser(inCluster bool) (*parser, error) {
 	}
 
 	// If running in cluster, validate objects using OpenAPI schema downloaded from the API server.
-	// TODO(b/73787419): Bake in the swagger spec when running outside the cluster?
+	// TODO(frankfarzan): Bake in the swagger spec when running outside the cluster?
 	if inCluster {
 		schema, err := p.factory.Validator(true)
 		if err != nil {
@@ -85,9 +85,9 @@ func (p parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
 		Do()
 	infos, err := result.Infos()
 	if err != nil {
-		// TODO(b/73786372): error message does not contain the source of the error for some reason which is bad UX.
+		// TODO(frankfarzan): error message does not contain the source of the error for some reason which is bad UX.
 		// kubectl apply -R -f" has the same issue.
-		// TODO(b/73786372): error message contains flags specific to kubectl cmd.
+		// TODO(frankfarzan): error message contains flags specific to kubectl cmd.
 		return nil, errors.Wrapf(err, "failed to read resources from %s", root)
 	}
 
@@ -304,7 +304,7 @@ func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta)
-			// TODO(b/73500571): policies.ResourceQuotaV1 = *o
+			// TODO(frankfarzan): policies.ResourceQuotaV1 = *o
 			policies.ResourceQuotaV1 = o.Spec
 		case *rbac_v1.Role:
 			v.HasNamespace(i, namespace)
