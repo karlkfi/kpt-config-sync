@@ -143,6 +143,27 @@ func (t *TestContext) Kubernetes() kubernetes.Interface {
 	return t.client.Kubernetes()
 }
 
+// Predicate is used to wait for conditions, and can be named to ease diagnostics.
+type Predicate interface {
+	Name() string
+	// Eval checks the error returned by the API call and returns true or false.
+	// In case of an unexpected error, Eval should wrap the error using errors.Wrap
+	// and panic.
+	Eval(error) bool
+}
+
+type predicateFunction struct {
+	name string
+	f    func(error) bool
+}
+
+func (p predicateFunction) Name() string        { return p.name }
+func (p predicateFunction) Eval(err error) bool { return p.f(err) }
+
+func NewPredicate(name string, f func(error) bool) *predicateFunction {
+	return &predicateFunction{name, f}
+}
+
 // PolicyHierarchy returns the policyhierarchy client interface
 func (t *TestContext) PolicyHierarchy() policyhierarchy.Interface {
 	return t.client.PolicyHierarchy()
@@ -150,7 +171,7 @@ func (t *TestContext) PolicyHierarchy() policyhierarchy.Interface {
 
 // WaitForExists will wait until the returned error is nil while ignoring IsNotFound errors.
 func (t *TestContext) WaitForExists(timeout time.Duration, functions ...func() error) {
-	predicate := func(err error) bool {
+	predicate := NewPredicate("WaitForExists", func(err error) bool {
 		if err == nil {
 			return true
 		}
@@ -158,13 +179,13 @@ func (t *TestContext) WaitForExists(timeout time.Duration, functions ...func() e
 			return false
 		}
 		panic(errors.Wrapf(err, "WaitForExists encountered error other than not found"))
-	}
+	})
 	t.waitForCondition(timeout, predicate, functions)
 }
 
 // WaitForNotFound will wait until the resource returns IsNotFound error.
 func (t *TestContext) WaitForNotFound(timeout time.Duration, functions ...func() error) {
-	predicate := func(err error) bool {
+	predicate := NewPredicate("WaitForNotFound", func(err error) bool {
 		if err == nil {
 			return false
 		}
@@ -172,22 +193,22 @@ func (t *TestContext) WaitForNotFound(timeout time.Duration, functions ...func()
 			return true
 		}
 		panic(errors.Wrapf(err, "WaitForNotFound encountered error other than not found"))
-	}
+	})
 
 	t.waitForCondition(timeout, predicate, functions)
 }
 
 // waitForCondition will wait until all functions have satisfied the predicate or panic.
 func (t *TestContext) waitForCondition(
-	timeout time.Duration, predicate func(error) bool, functions []func() error) {
+	timeout time.Duration, predicate Predicate, functions []func() error) {
 	deadline := time.Now().Add(timeout)
 	for _, function := range functions {
 		for time.Now().Before(deadline) {
-			if predicate(function()) {
+			if predicate.Eval(function()) {
 				return
 			}
 			time.Sleep(250 * time.Millisecond)
 		}
 	}
-	panic(errors.Errorf("Predicate did not return true before deadline."))
+	panic(errors.Errorf("Predicate %q did not return true before deadline.", predicate.Name()))
 }
