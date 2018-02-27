@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -27,6 +26,7 @@ import (
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/client/policyhierarchy"
 	"github.com/google/stolos/pkg/client/restconfig"
+	"github.com/google/stolos/pkg/toolkit/exec"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -58,12 +58,7 @@ func New(execContext context.Context, testDir string) *TestContext {
 
 // RunBashOrDie will execute a bash script and panic if the script fails.
 func (t *TestContext) RunBashOrDie(scriptPath string) {
-	var err error
-	cmd := exec.CommandContext(t.execContext, "/bin/bash", "-c", scriptPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if err != nil {
+	if err := exec.New().Run(t.execContext, "/bin/bash", "-c", scriptPath); err != nil {
 		panic(errors.Wrapf(err, "Script %s exited non-zero", scriptPath))
 	}
 }
@@ -88,24 +83,9 @@ func (t *TestContext) Repo(relativePath string) string {
 }
 
 func (t *TestContext) run(args []string) (bool, string, string) {
-	if len(args) == 0 {
-		panic(errors.Errorf("Cannot run command with 0 parameters"))
-	}
-
-	glog.V(1).Infof("Running command: %s", strings.Join(args, " "))
-
-	cmd := exec.CommandContext(t.execContext, args[0], args[1:]...)
 	stdout := bytes.NewBuffer(nil)
 	stderr := bytes.NewBuffer(nil)
-	cmd.Stderr = stdout
-	cmd.Stdout = stderr
-	err := cmd.Run()
-	if err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
-			return false, stdout.String(), stderr.String()
-		}
-		panic(errors.Wrapf(err, "Failed to properly execute command %s", strings.Join(args, " ")))
-	}
+	exec.NewRedirected(os.Stdin, stdout, stderr).Run(t.execContext, args...)
 	return true, stdout.String(), stderr.String()
 }
 
