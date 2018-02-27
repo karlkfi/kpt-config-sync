@@ -74,10 +74,10 @@ function testSyncerQuota() {
 
 # Borked for now
 function NOTtestAuhorizer() {
-  assertContains "kubectl get pods -n backend --as bob@google.com" "No resources"
-  assertContains "kubectl get pods -n backend --as alice@google.com" "No resources"
+  assertContains "kubectl get pods -n backend --as bob@acme.com" "No resources"
+  assertContains "kubectl get pods -n backend --as alice@acme.com" "No resources"
 
-  assertContains "kubectl get pods -n frontend --as bob@google.com" "pods is forbidden"
+  assertContains "kubectl get pods -n frontend --as bob@acme.com" "pods is forbidden"
 }
 
 # Helper for quota tests

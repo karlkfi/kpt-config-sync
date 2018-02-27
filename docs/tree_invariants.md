@@ -1,7 +1,7 @@
 
 # Stolos Update Preserving Tree Invariants
 
-Author: briankennedy@google.com
+Author: briantkennedy
 
 Date: 2018-01-23
 

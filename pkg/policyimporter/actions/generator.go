@@ -16,11 +16,12 @@ limitations under the License.
 package actions
 
 import (
+	"sort"
+
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	listers_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
 	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/syncer/actions"
-	"sort"
 )
 
 type Generator struct {
