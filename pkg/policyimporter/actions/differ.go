@@ -24,100 +24,93 @@ import (
 	"github.com/google/stolos/pkg/syncer/actions"
 )
 
-type Generator struct {
-	// Map of existing policy nodes by their names
-	oldNodes map[string]v1.PolicyNode
-	// Map of the newNodes state of policy nodes by their names
-	newNodes map[string]v1.PolicyNode
-
+type Differ struct {
 	// Lister and interface needed to generate PolicyNode actions
 	policyNodeLister    listers_v1.PolicyNodeLister
 	policyNodeInterface typed_v1.PolicyNodeInterface
+	// Lister and interface needed to generate ClusterPolicy actions
+	clusterPolicyLister    listers_v1.ClusterPolicyLister
+	clusterPolicyInterface typed_v1.ClusterPolicyInterface
+	current, desired       v1.AllPolicies
 }
 
-// Generator will generate an ordered list of actions needed to update
-// policy nodes from an old/existing state to a new provided state,
-// while always maintaining the invariant that the policy node tree is valid
-// - no cycles, parents pointing to existing nodes.
-// This assumes the oldNodes and newNodes state are valid trees themselves.
+// Differ will generate an ordered list of actions needed to transition policy from the current to
+// desired state.
+//
+// Maintains the invariant that the policy node tree is valid (i.e. no cycles, parents pointing to existing nodes),
+// assuming the current and desired state are valid themselves.
 //
 // More details about the algorithm can be found at docs/update-preserving-invariants.md
-func NewGenerator(oldNodes, newNodes []v1.PolicyNode,
+func NewDiffer(
 	policyNodeLister listers_v1.PolicyNodeLister,
-	policyNodeInterface typed_v1.PolicyNodeInterface) *Generator {
-
-	oldMap := map[string]v1.PolicyNode{}
-	newMap := map[string]v1.PolicyNode{}
-
-	for _, node := range newNodes {
-		newMap[node.Name] = node
-	}
-	for _, node := range oldNodes {
-		oldMap[node.Name] = node
-	}
-
-	return &Generator{
-		oldNodes:            oldMap,
-		newNodes:            newMap,
-		policyNodeLister:    policyNodeLister,
-		policyNodeInterface: policyNodeInterface,
+	policyNodeInterface typed_v1.PolicyNodeInterface,
+	clusterPolicyLister listers_v1.ClusterPolicyLister,
+	clusterPolicyInterface typed_v1.ClusterPolicyInterface) *Differ {
+	return &Differ{
+		policyNodeLister:       policyNodeLister,
+		policyNodeInterface:    policyNodeInterface,
+		clusterPolicyLister:    clusterPolicyLister,
+		clusterPolicyInterface: clusterPolicyInterface,
 	}
 }
 
-// This is the main method that will generate the actions as described above.
-// Note that the invariants are only maintained if the actions are processed
-// by a single thread in order.
-func (g *Generator) GenerateActions() []actions.Interface {
-	creates := g.creates()
-	updates := g.updates()
-	deletes := g.deletes()
+// Diff returns a list of actions that when applied, transitions the current state to desired state.
+// Note that the invariants are only maintained if the actions are processed by a single thread in order.
+// TODO(frankfarzan): Support ClusterPolicy.
+func (d *Differ) Diff(current, desired v1.AllPolicies) []actions.Interface {
+	d.current = current
+	d.desired = desired
 
-	newNodesByDepth := nodesByDepth(g.newNodes)
-	oldNodesByDepth := nodesByDepth(g.oldNodes)
+	creates := d.creates()
+	updates := d.updates()
+	deletes := d.deletes()
+
+	desiredByDepth := nodesByDepth(d.desired.PolicyNodes)
+	currentByDepth := nodesByDepth(d.current.PolicyNodes)
 
 	// Sort creates and updates by depth
 	sort.Slice(creates, func(i, j int) bool {
-		return newNodesByDepth[creates[i]] < newNodesByDepth[creates[j]]
+		return desiredByDepth[creates[i]] < desiredByDepth[creates[j]]
 	})
 	sort.Slice(updates, func(i, j int) bool {
-		return newNodesByDepth[updates[i]] < newNodesByDepth[updates[j]]
+		return desiredByDepth[updates[i]] < desiredByDepth[updates[j]]
 	})
-	// Sort deletes by reverse depth in oldNodes tree
+	// Sort deletes by reverse depth in current tree
 	sort.Slice(deletes, func(i, j int) bool {
-		return oldNodesByDepth[deletes[i]] > oldNodesByDepth[deletes[j]]
+		return currentByDepth[deletes[i]] > currentByDepth[deletes[j]]
 	})
 
 	var actions []actions.Interface
 	for _, name := range append(creates, updates...) {
-		node := g.newNodes[name]
+		node := d.desired.PolicyNodes[name]
 		actions = append(actions, NewPolicyNodeUpsertAction(
-			&node, g.policyNodeLister, g.policyNodeInterface))
+			&node, d.policyNodeLister, d.policyNodeInterface))
 	}
 	for _, name := range deletes {
-		node := g.oldNodes[name]
+		node := d.current.PolicyNodes[name]
 		actions = append(actions, NewPolicyNodeDeleteAction(
-			&node, g.policyNodeLister, g.policyNodeInterface))
+			&node, d.policyNodeLister, d.policyNodeInterface))
 	}
 
 	return actions
 }
 
-func (g *Generator) creates() []string {
+func (d *Differ) creates() []string {
 	var creates []string
 
-	for key, _ := range g.newNodes {
-		if _, exists := g.oldNodes[key]; !exists {
+	for key, _ := range d.desired.PolicyNodes {
+		if _, exists := d.current.PolicyNodes[key]; !exists {
 			creates = append(creates, key)
 		}
 	}
 	return creates
 }
 
-func (g *Generator) updates() []string {
+func (d *Differ) updates() []string {
 	var updates []string
 
-	for key, newnode := range g.newNodes {
-		if oldnode, exists := g.oldNodes[key]; exists {
+	for key, newnode := range d.desired.PolicyNodes {
+		if oldnode, exists := d.current.PolicyNodes[key]; exists {
 			if !equal(&newnode, &oldnode) {
 				updates = append(updates, key)
 			}
@@ -126,11 +119,11 @@ func (g *Generator) updates() []string {
 	return updates
 }
 
-func (g *Generator) deletes() []string {
+func (d *Differ) deletes() []string {
 	var deletes []string
 
-	for key, _ := range g.oldNodes {
-		if _, exists := g.newNodes[key]; !exists {
+	for key, _ := range d.current.PolicyNodes {
+		if _, exists := d.desired.PolicyNodes[key]; !exists {
 			deletes = append(deletes, key)
 		}
 	}

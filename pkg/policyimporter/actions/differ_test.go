@@ -16,12 +16,13 @@ limitations under the License.
 package actions
 
 import (
+	"testing"
+
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
-type generatorTestCase struct {
+type testCase struct {
 	testName string
 	oldNodes []v1.PolicyNode
 	newNodes []v1.PolicyNode
@@ -29,8 +30,8 @@ type generatorTestCase struct {
 	expected []string
 }
 
-func TestGenerator(t *testing.T) {
-	for _, test := range []generatorTestCase{
+func TestDiffer(t *testing.T) {
+	for _, test := range []testCase{
 		{
 			testName: "All Empty",
 			oldNodes: []v1.PolicyNode{},
@@ -140,9 +141,9 @@ func TestGenerator(t *testing.T) {
 		},
 	} {
 		t.Run(test.testName, func(t *testing.T) {
-			g := NewGenerator(test.oldNodes, test.newNodes, nil, nil)
+			g := NewDiffer(nil, nil, nil, nil)
 
-			actual := g.GenerateActions()
+			actual := g.Diff(allPolicies(test.oldNodes), allPolicies(test.newNodes))
 
 			if len(actual) != len(test.expected) {
 				t.Fatalf("Unexpected number of actions was %d but expected %d",
@@ -170,4 +171,14 @@ func policyNode(name, parent string) v1.PolicyNode {
 			Parent: parent,
 		},
 	}
+}
+
+func allPolicies(nodes []v1.PolicyNode) v1.AllPolicies {
+	p := v1.AllPolicies{
+		PolicyNodes: make(map[string]v1.PolicyNode),
+	}
+	for _, n := range nodes {
+		p.PolicyNodes[n.Name] = n
+	}
+	return p
 }
