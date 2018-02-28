@@ -20,19 +20,15 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/client/policyhierarchy"
-	"github.com/google/stolos/pkg/client/restconfig"
 	"github.com/google/stolos/pkg/toolkit/bash"
 	"github.com/google/stolos/pkg/toolkit/exec"
+	"github.com/google/stolos/pkg/toolkit/kubectl"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
 
@@ -40,20 +36,14 @@ import (
 type TestContext struct {
 	execContext context.Context
 	repoPath    string
-	client      *meta.Client
+	kubeClient  *kubectl.Context
 }
 
 // New returns a new test context
 func New(execContext context.Context, testDir string) *TestContext {
-	restConfig, err := restconfig.NewKubectlConfig()
-	if err != nil {
-		panic(errors.Wrapf(err, "Failed to get restconfig"))
-	}
-
-	client := meta.NewForConfigOrDie(restConfig)
 	return &TestContext{
 		execContext: execContext,
-		client:      client,
+		kubeClient:  kubectl.New(execContext),
 	}
 }
 
@@ -62,23 +52,14 @@ func (t *TestContext) RunBashOrDie(scriptPath string) {
 	bash.RunOrDie(t.execContext, scriptPath)
 }
 
-// Kubectl will execute a kubectl command and panic if the script fails.
-func (t *TestContext) Kubectl(args ...string) {
-	actualArgs := append([]string{"kubectl"}, args...)
-	success, stdout, stderr := t.run(actualArgs)
-	if !success {
-		panic(errors.Errorf("Command %s failed, stdout: %s stderr: %s", strings.Join(args, " "), stdout, stderr))
-	}
+// Repo returns the path to a relative path in the repo.
+func (t *TestContext) Repo(relativePath string) string {
+	return filepath.Join(t.repoPath, relativePath)
 }
 
 // KubectlApply runs kubectl apply -f on a relative path in the repo.
 func (t *TestContext) KubectlApply(path string) {
-	t.Kubectl("apply", "-f", t.Repo(path))
-}
-
-// Repo returns the path to a relative path in the repo.
-func (t *TestContext) Repo(relativePath string) string {
-	return filepath.Join(t.repoPath, relativePath)
+	t.kubeClient.Apply(t.Repo(path))
 }
 
 func (t *TestContext) run(args []string) (bool, string, string) {
@@ -88,38 +69,14 @@ func (t *TestContext) run(args []string) (bool, string, string) {
 	return true, stdout.String(), stderr.String()
 }
 
-func (t *TestContext) waitForDeployment(deadline time.Time, namespace string, name string) {
-	for time.Now().Before(deadline) {
-		deployement, err := t.client.Kubernetes().ExtensionsV1beta1().Deployments(
-			namespace).Get(name, meta_v1.GetOptions{})
-		if err != nil {
-			panic(errors.Wrapf(err, "Error getting deployment %s", name))
-		}
-		glog.V(2).Infof(
-			"Deployment %s replicas %d, availalbe %d", name, deployement.Status.Replicas, deployement.Status.AvailableReplicas)
-		if deployement.Status.AvailableReplicas == deployement.Status.Replicas {
-			glog.V(1).Infof("Deployment %s available", name)
-			return
-		}
-		time.Sleep(time.Millisecond * 250)
-	}
-	panic(errors.Errorf("Deployment %s failed to become available before deadline", name))
-}
-
 // WaitForDeployments waits for deployments to be available
 func (t *TestContext) WaitForDeployments(timeout time.Duration, deployments ...string) {
-	deadline := time.Now().Add(timeout)
-	for _, deployment := range deployments {
-		parts := strings.Split(deployment, ":")
-		namespace := parts[0]
-		name := parts[1]
-		t.waitForDeployment(deadline, namespace, name)
-	}
+	t.kubeClient.WaitForDeployments(timeout, deployments...)
 }
 
 // Kubernetes returns the kubernets client inteface
 func (t *TestContext) Kubernetes() kubernetes.Interface {
-	return t.client.Kubernetes()
+	return t.kubeClient.Kubernetes()
 }
 
 // Predicate is used to wait for conditions, and can be named to ease diagnostics.
@@ -145,7 +102,7 @@ func NewPredicate(name string, f func(error) bool) *predicateFunction {
 
 // PolicyHierarchy returns the policyhierarchy client interface
 func (t *TestContext) PolicyHierarchy() policyhierarchy.Interface {
-	return t.client.PolicyHierarchy()
+	return t.kubeClient.PolicyHierarchy()
 }
 
 // WaitForExists will wait until the returned error is nil while ignoring IsNotFound errors.
