@@ -44,9 +44,6 @@ TEMPLATES_DIR := $(TOP_DIR)/manifests/enrolled/templates
 # Use git tags to set version string.
 VERSION := $(shell git describe --tags --always --dirty)
 
-# Whether this is an official release or dev workflow.
-RELEASE ?= 0
-
 # Which architecture to build.
 ARCH ?= amd64
 
@@ -55,6 +52,16 @@ BUILD_IMAGE ?= golang:1.9-alpine
 
 # GCP project that owns container registry.
 GCP_PROJECT ?= stolos-dev
+
+# Whether this is an official release or dev workflow.
+RELEASE ?= 0
+
+# Is the current release considered "stable".  Set to 0 for e.g. release
+# candidates.
+STABLE ?= 0
+
+# The GCS bucket to release into for 'make release'
+RELEASE_BUCKET := gs://$(GCP_PROJECT)/release
 
 # All Stolos components
 ALL_COMPONENTS := syncer \
@@ -169,4 +176,14 @@ deploy-resourcequota-admission-controller:	push-resourcequota-admission-controll
 		$(STAGING_DIR) $(GEN_YAML_DIR)
 
 all-deploy: $(addprefix deploy-, $(ALL_COMPONENTS))
+
+# To release:
+# - make a stable release off of latest repository tag:
+#     make RELEASE=1 STABLE=1 release
+release: all-deploy
+	STAGING_DIR=$(OUTPUT_DIR) \
+	VERSION=$(VERSION) \
+	STABLE=$(STABLE) \
+	RELEASE_BUCKET=$(RELEASE_BUCKET) \
+	    ./scripts/release.sh
 
