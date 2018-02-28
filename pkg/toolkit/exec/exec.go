@@ -27,6 +27,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+// RequireProgram find the program with the given name in the system path,
+// or panics if it fails.
+func RequireProgram(program string) string {
+	path, err := exec.LookPath(program)
+	if err != nil {
+		glog.Fatalf("unexpected error: %v", err)
+	}
+	return path
+}
+
 // Context represents the execution context used for executing commands.
 type Context struct {
 	stdin  io.Reader
