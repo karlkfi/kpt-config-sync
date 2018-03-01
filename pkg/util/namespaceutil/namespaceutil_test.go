@@ -17,66 +17,31 @@ package namespaceutil
 
 import (
 	"testing"
-
-	"github.com/golang/glog"
-	core_v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type isReservedTestcase struct {
-	Name   string
-	Result bool
+type ReservedOrInvalidNamespaceTestcase struct {
+	Name  string
+	Error bool
 }
 
-func TestIsReserved(t *testing.T) {
-	for _, testcase := range []isReservedTestcase{
-		{"default", true},
-		{"kube-public", true},
-		{"kube-system", true},
-		{"other", false},
-		{"name", false},
+func TestIsReservedOrInvalidNamespace(t *testing.T) {
+	for _, testcase := range []ReservedOrInvalidNamespaceTestcase{
+		{"foo-bar", false},
+		{"Foo-Bar", true},
+		{"Foo_Bar", true},
+		{"-Foo_Bar", true},
+		{"Foo_Bar-", true},
+		{"ALL-CAPS", true},
+		{"-foo-bar", true},
+		{"foo-bar-", true},
 	} {
-		if IsReserved(core_v1.Namespace{ObjectMeta: meta_v1.ObjectMeta{Name: testcase.Name}}) != testcase.Result {
-			t.Errorf("Expected %s to have reserved=%t", testcase.Name, testcase.Result)
+		error := IsReservedOrInvalidNamespace(testcase.Name)
+		if error == nil && testcase.Error {
+			t.Errorf("Expected error but didn't get one, testing %q", testcase.Name)
 		}
-	}
-}
 
-type sanitizeNamespaceTestcase struct {
-	Name   string
-	Result string
-	Panic  bool
-}
-
-func panicWrapper(f func() string) (functionPanic bool, result string) {
-	defer func() {
-		err := recover()
-		if err != nil {
-			glog.Info("Recovering from err %s", err)
-			functionPanic = true
-		}
-	}()
-	result = f()
-	return false, result
-}
-
-func TestSanitizeNamespace(t *testing.T) {
-	for _, testcase := range []sanitizeNamespaceTestcase{
-		{"Foo-Bar", "", true},
-		{"Foo_Bar", "", true},
-		{"-Foo_Bar", "", true},
-		{"Foo_Bar-", "", true},
-		{"ALL-CAPS", "", true},
-		{"foo-bar", "foo-bar", false},
-		{"-foo-bar", "", true},
-		{"foo-bar-", "", true},
-	} {
-		panics, sanitized := panicWrapper(func() string { return SanitizeNamespace(testcase.Name) })
-		if panics != testcase.Panic {
-			t.Errorf("Testcase %#v had unexpected panic=%t", testcase, panics)
-		}
-		if sanitized != testcase.Result {
-			t.Errorf("Testcase %#v had unexpected result %s", testcase, sanitized)
+		if error != nil && !testcase.Error {
+			t.Errorf("Unexpected testing %q", testcase.Name)
 		}
 	}
 }

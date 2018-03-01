@@ -19,7 +19,6 @@ package policynode
 import (
 	"strconv"
 
-	"github.com/google/stolos/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
 
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
@@ -34,7 +33,7 @@ func NewPolicyNode(name string, spec *policyhierarchy_v1.PolicyNodeSpec) *policy
 			Kind:       "PolicyNode",
 		},
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: namespaceutil.SanitizeNamespace(name),
+			Name: name,
 		},
 		Spec: *spec,
 	}
@@ -48,7 +47,7 @@ func NewClusterPolicy(name string, spec *policyhierarchy_v1.ClusterPolicySpec) *
 			Kind:       "ClusterPolicy",
 		},
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: namespaceutil.SanitizeNamespace(name),
+			Name: name,
 		},
 		Spec: *spec,
 	}

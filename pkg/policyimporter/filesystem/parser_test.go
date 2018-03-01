@@ -299,6 +299,14 @@ var parserTestCases = []parserTestCase{
 		expectedError: true,
 	},
 	{
+		testName: "Namespace dir with invalid name",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"baR/ns.yaml": templateData{Name: "baR"}.apply(aNamespace),
+		},
+		expectedError: true,
+	},
+	{
 		testName: "Namespace dir with single ResourceQuota",
 		root:     "foo",
 		testFiles: fileContentMap{
