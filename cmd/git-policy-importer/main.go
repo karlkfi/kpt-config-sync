@@ -21,16 +21,16 @@ import (
 	"flag"
 	"os"
 	"path"
-	"path/filepath"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/stolos/pkg/client/meta"
+	"github.com/google/stolos/pkg/client/restconfig"
 	"github.com/google/stolos/pkg/policyimporter/filesystem"
+	"github.com/google/stolos/pkg/service"
 	"github.com/google/stolos/pkg/util/log"
 )
 
-var inCluster = flag.Bool("in-cluster", true,
-	"Whether running in a Kubernetes clsuter")
 var gitDir = flag.String("git-dir", "/repo/rev",
 	"Absolute path to the git repo")
 var policyDirRelative = flag.String("policy-dir", envString("POLICY_DIR", ""),
@@ -49,38 +49,29 @@ func main() {
 	flag.Parse()
 	log.Setup()
 
-	glog.Infof("Starting GitPolicyImporter...")
+	config, err := restconfig.NewRestConfig()
+	if err != nil {
+		glog.Fatalf("Failed to create rest config: %v", err)
+	}
+
+	client, err := meta.NewForConfig(config)
+	if err != nil {
+		glog.Fatalf("Failed to create client: %v", err)
+	}
 
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	parser, err := filesystem.NewParser(*inCluster)
+	parser, err := filesystem.NewParser(true)
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %v", err)
 	}
 
-	ticker := time.NewTicker(*pollPeriod)
-	currentDir := ""
-	for range ticker.C {
-		newDir, err := filepath.EvalSymlinks(policyDir)
-		if err != nil {
-			glog.Fatal(err)
-		}
-
-		if currentDir == newDir {
-			// No new commits, nothing to do.
-			continue
-		}
-
-		glog.Infof("Resolved policy dir: %s", newDir)
-		currentDir = newDir
-
-		policies, err := parser.Parse(newDir)
-		if err != nil {
-			glog.Warningf("Failed to parse: %v", err)
-			continue
-		}
-
-		glog.Infof("%#v", policies)
+	stopChan := make(chan struct{})
+	c := filesystem.NewController(policyDir, *pollPeriod, parser, client, stopChan)
+	go service.WaitForShutdownSignalCb(stopChan)
+	if err := c.Run(); err != nil {
+		glog.Fatalf("Failure running controller: %v", err)
 	}
+	glog.Info("Exiting")
 }

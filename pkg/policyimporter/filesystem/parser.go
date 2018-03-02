@@ -35,7 +35,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/validation"
 )
 
-type parser struct {
+type Parser struct {
 	factory   cmdutil.Factory
 	schema    validation.Schema
 	inCluster bool
@@ -43,8 +43,8 @@ type parser struct {
 
 // NewParser creates a new parser that reads files on disk and builds Stolos CRDs.
 // inCluster boolean determines if this is running in a cluster and can talk to api server.
-func NewParser(inCluster bool) (*parser, error) {
-	p := parser{
+func NewParser(inCluster bool) (*Parser, error) {
+	p := Parser{
 		factory:   cmdutil.NewFactory(nil),
 		inCluster: inCluster,
 	}
@@ -64,7 +64,7 @@ func NewParser(inCluster bool) (*parser, error) {
 
 // Parse recursively parses file tree rooted at root and builds policy CRDs from
 // supported Kubernetes policy resources.
-func (p parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
+func (p Parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
 	allDirs, err := allDirs(root)
 	if err != nil {
 		return nil, err

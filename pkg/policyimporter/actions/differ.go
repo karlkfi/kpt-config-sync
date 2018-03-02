@@ -18,6 +18,7 @@ package actions
 import (
 	"sort"
 
+	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	listers_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
 	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
@@ -64,6 +65,7 @@ func (d *Differ) Diff(current, desired v1.AllPolicies) []actions.Interface {
 	creates := d.creates()
 	updates := d.updates()
 	deletes := d.deletes()
+	glog.Infof("PolicyNode operations: create %d, update %d, delete %d", len(creates), len(updates), len(deletes))
 
 	desiredByDepth := nodesByDepth(d.desired.PolicyNodes)
 	currentByDepth := nodesByDepth(d.current.PolicyNodes)

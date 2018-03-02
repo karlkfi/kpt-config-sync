@@ -56,8 +56,9 @@ func WaitForShutdownSignal(stoppable Stoppable) {
 // WaitForShutdownSignalCb will block until the process receives a SIGINT or SIGTERM.  This is
 // convenient for daemon like processes that want to shut down cleanly.
 // Invokes callback after shutting down
-func WaitForShutdownSignalCb(onComplete func()) {
-	WaitForShutdownSignal(NewStopper(onComplete))
+func WaitForShutdownSignalCb(stopChannel chan<- struct{}) {
+	WaitForShutdownSignal(
+		NewStopper(func() { close(stopChannel) }))
 }
 
 // WaitForShutdownWithChannel will wait until SIGINT or SIGTERM signal arrives or stopChannel is

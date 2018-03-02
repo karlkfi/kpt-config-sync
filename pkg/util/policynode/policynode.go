@@ -29,8 +29,8 @@ import (
 func NewPolicyNode(name string, spec *policyhierarchy_v1.PolicyNodeSpec) *policyhierarchy_v1.PolicyNode {
 	return &policyhierarchy_v1.PolicyNode{
 		TypeMeta: meta_v1.TypeMeta{
-			APIVersion: policyhierarchy_v1.GroupName,
 			Kind:       "PolicyNode",
+			APIVersion: policyhierarchy_v1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: name,
@@ -43,8 +43,8 @@ func NewPolicyNode(name string, spec *policyhierarchy_v1.PolicyNodeSpec) *policy
 func NewClusterPolicy(name string, spec *policyhierarchy_v1.ClusterPolicySpec) *policyhierarchy_v1.ClusterPolicy {
 	return &policyhierarchy_v1.ClusterPolicy{
 		TypeMeta: meta_v1.TypeMeta{
-			APIVersion: policyhierarchy_v1.GroupName,
 			Kind:       "ClusterPolicy",
+			APIVersion: policyhierarchy_v1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: name,
