@@ -19,10 +19,12 @@ package kubectl
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/client/policyhierarchy"
@@ -31,10 +33,16 @@ import (
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var (
 	kubectlCmd = exec.RequireProgram("kubectl")
+
+	// useMetaClient can be set to false by tests that don't need the meta
+	// client.  Such tests  would fail in environments that need CGO, since meta
+	// client is not CGO-clean.
+	useMetaClient = true
 )
 
 // Context contains the runtime context for interacting with the Kubernetes client
@@ -46,25 +54,110 @@ type Context struct {
 
 // New creates a new kubernetes context.
 func New(ctx context.Context) *Context {
-	restConfig, err := restconfig.NewKubectlConfig()
-	if err != nil {
-		panic(errors.Wrapf(err, "failed to get restconfig"))
+	var client *meta.Client
+	if useMetaClient {
+		// Use of the metaclient can be disabled in tests.  In that case, client
+		// will be nil, but in the "regular" case, go initialize it.
+		restConfig, err := restconfig.NewKubectlConfig()
+		if err != nil {
+			panic(errors.Wrapf(err, "failed to get restconfig"))
+		}
+		client = meta.NewForConfigOrDie(restConfig)
 	}
-	return &Context{ctx, meta.NewForConfigOrDie(restConfig)}
+	return &Context{ctx, client}
 }
 
 // Kubectl will execute a kubectl command and panic if the script fails.
-func (t *Context) Kubectl(args ...string) {
+func (t *Context) Kubectl(args ...string) (stdout, stderr string) {
 	actualArgs := append([]string{kubectlCmd}, args...)
 	success, stdout, stderr := run(t.ctx, actualArgs)
 	if !success {
 		panic(errors.Errorf("Command %s failed, stdout: %s stderr: %s", strings.Join(args, " "), stdout, stderr))
 	}
+	return
 }
 
 // Apply runs kubectl apply -f on a given path.
 func (t *Context) Apply(path string) {
 	t.Kubectl("apply", "-f", path)
+}
+
+// versionInfo is a partial parsed output of the "kubectl version" command.
+type versionInfo struct {
+	GitVersion string `json:"gitVersion"`
+}
+type versionOutput struct {
+	ClientVersion versionInfo `json:"clientVersion"`
+	ServerVersion versionInfo `json:"serverVersion"`
+}
+
+// GetClusterVersion obtains the semantic version information from the cluster in the
+// current context.
+func (t *Context) GetClusterVersion() (semver.Version, error) {
+	stdout, stderr := t.Kubectl("version", "-o", "json")
+	if glog.V(8) {
+		glog.Infof("stdout: %v\nstderr:%v", stdout, stderr)
+	}
+	if stderr != "" {
+		glog.Warningf("GetClusterVersion(): nonempty stderr: %v", stderr)
+	}
+	var vs versionOutput
+	json.Unmarshal([]byte(stdout), &vs)
+	glog.Warningf("vs: %+v", vs)
+	// GitVersion is of the form "v1.9.2-something"
+	version := vs.ServerVersion.GitVersion[1:]
+	v, err := semver.Parse(version)
+	if err != nil {
+		return semver.Version{}, errors.Wrapf(err, "while getting version")
+	}
+	return v, nil
+}
+
+type ClusterList struct {
+	// Clusters is the list of clusters available to the user, keyed by the
+	// name of the context
+	Clusters map[string]string
+
+	// Current the name of the context marked as "current" in the Clusters.
+	Current string
+}
+
+// SetContext sets the cluster context to the context with the given name.  The
+// named context must exist.
+func (t *Context) SetContext(name string) error {
+	_, stderr := t.Kubectl("config", "use-context", name)
+	if stderr != "" {
+		return errors.Errorf("nonempty stderr: %v", stderr)
+	}
+	return nil
+}
+
+// LocalClusters gets the list of available clusters from the local client
+// configuration.
+func LocalClusters() (ClusterList, error) {
+	clientConfig, err := restconfig.NewClientConfig()
+	if err != nil {
+		return ClusterList{}, errors.Wrapf(err, "Clusters()")
+	}
+	rawConfig, err := clientConfig.RawConfig()
+	if err != nil {
+		return ClusterList{}, errors.Wrapf(err, "RawConfig()")
+	}
+	return Clusters(rawConfig), nil
+}
+
+// Clusters gets the list of available clusters from the supplied client
+// configuration.
+func Clusters(c clientcmdapi.Config) ClusterList {
+	cl := ClusterList{
+		Current:  c.CurrentContext,
+		Clusters: map[string]string{},
+	}
+	cl.Current = c.CurrentContext
+	for name, context := range c.Contexts {
+		cl.Clusters[name] = context.Cluster
+	}
+	return cl
 }
 
 func run(ctx context.Context, args []string) (bool, string, string) {
@@ -76,14 +169,14 @@ func run(ctx context.Context, args []string) (bool, string, string) {
 
 func (t *Context) waitForDeployment(deadline time.Time, namespace string, name string) {
 	for time.Now().Before(deadline) {
-		deployement, err := t.client.Kubernetes().ExtensionsV1beta1().Deployments(
+		deployment, err := t.Kubernetes().ExtensionsV1beta1().Deployments(
 			namespace).Get(name, meta_v1.GetOptions{})
 		if err != nil {
 			panic(errors.Wrapf(err, "Error getting deployment %s", name))
 		}
 		glog.V(2).Infof(
-			"Deployment %s replicas %d, available %d", name, deployement.Status.Replicas, deployement.Status.AvailableReplicas)
-		if deployement.Status.AvailableReplicas == deployement.Status.Replicas {
+			"Deployment %s replicas %d, available %d", name, deployment.Status.Replicas, deployment.Status.AvailableReplicas)
+		if deployment.Status.AvailableReplicas == deployment.Status.Replicas {
 			glog.V(1).Infof("Deployment %s available", name)
 			return
 		}
