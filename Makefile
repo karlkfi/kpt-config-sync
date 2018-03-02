@@ -47,7 +47,7 @@ VERSION := $(shell git describe --tags --always --dirty)
 # Which architecture to build.
 ARCH ?= amd64
 
-# Docker image used for build and test.
+# Docker image used for build and test.  This image does not support CGO.
 BUILD_IMAGE ?= golang:1.9-alpine
 
 # GCP project that owns container registry.
