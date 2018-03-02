@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package namespacewalker
+package namespaces
 
 import (
 	"github.com/golang/glog"

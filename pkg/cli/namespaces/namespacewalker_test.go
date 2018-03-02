@@ -1,4 +1,4 @@
-package namespacewalker
+package namespaces
 
 import (
 	"reflect"

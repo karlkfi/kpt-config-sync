@@ -23,8 +23,8 @@ import (
 	"os"
 
 	"github.com/google/stolos/pkg/cli"
+	"github.com/google/stolos/pkg/cli/namespaces"
 	"github.com/google/stolos/pkg/cli/output"
-	ns "github.com/google/stolos/pkg/client/namespace"
 	"github.com/pkg/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,7 +35,7 @@ const maxItemsPerPage = 100
 // GetHierarchicalRoleBindings gets the hierarchical role bindings from the
 // cluster.
 func GetHierarchicalRoleBindings(ctx *cli.CommandContext, args []string) error {
-	namespaces, _, err := ns.GetAncestryFromContext(ctx)
+	namespaces, _, err := namespaces.GetAncestryFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func GetHierarchicalRoleBindings(ctx *cli.CommandContext, args []string) error {
 
 // GetHierarchicalRoles gets the hierarchical roles from the cluster.
 func GetHierarchicalRoles(ctx *cli.CommandContext, args []string) error {
-	namespaces, _, err := ns.GetAncestryFromContext(ctx)
+	namespaces, _, err := namespaces.GetAncestryFromContext(ctx)
 	if err != nil {
 		return err
 	}

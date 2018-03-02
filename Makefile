@@ -145,6 +145,10 @@ test-e2e-no-cleanup:
 lint:
 	goimports -w $(STOLOS_CODE_DIRS)
 
+# Generate K8S client-set.
+gen-client-set:
+	$(TOP_DIR)/scripts/generate-clientset.sh
+
 # Installs Stolos kubectl plugin.
 install-kubectl-plugin:
 	cd $(TOP_DIR)/cmd/kubectl-stolos; ./install.sh

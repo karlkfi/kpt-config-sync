@@ -22,11 +22,11 @@ import (
 	"strings"
 
 	"github.com/google/stolos/pkg/cli"
-	"github.com/google/stolos/pkg/client/namespace"
 )
 
 func GetHierarchicalNamespaces(ctx *cli.CommandContext, args []string) error {
-	namespaces, includesRoot, err := namespacewalker.GetAncestry(ctx.Client.Kubernetes().CoreV1().Namespaces(), ctx.Namespace)
+	namespaces, includesRoot, err := GetAncestry(
+		ctx.Client.Kubernetes().CoreV1().Namespaces(), ctx.Namespace)
 	if err != nil {
 		return err
 	}

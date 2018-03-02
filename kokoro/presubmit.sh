@@ -18,8 +18,7 @@ echo "Go get ..."
 go get -d -t ../...
 
 echo "================== CHECKING CODEGEN ================"
-codegen=$STOLOS_DIR/scripts/generate-clientset.sh
-SILENT=true ${codegen}
+SILENT=true make gen-client-set
 if ! git -C ${STOLOS_DIR} diff --no-ext-diff --quiet --exit-code; then
   echo "Detected change from codegen! Rerun ${codegen}"
   exit 1
