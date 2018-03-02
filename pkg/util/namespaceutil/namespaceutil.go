@@ -18,23 +18,23 @@ package namespaceutil
 import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"strings"
 )
 
 var (
 	// Namespaces that either exist on the kubernetes cluster by default or are reserved by Stolos.
-	// TODO(briantkennedy): We probably want to reserve any "kube-" prefix.
 	reservedNamespaces = map[string]bool{
 		"default":       true,
-		"kube-public":   true,
-		"kube-system":   true,
 		"stolos-system": true,
 	}
+
+	reservedPrefix = "kube-"
 )
 
 // IsReservedOrInvalidNamespace returns an error if the namespace name is reserved by the system
 // or is not a valid RFC 1123 dns label.
 func IsReservedOrInvalidNamespace(name string) error {
-	if reservedNamespaces[name] {
+	if isReserved(name) {
 		return errors.Errorf("namespace %q is reserved by the system", name)
 	}
 
@@ -42,4 +42,16 @@ func IsReservedOrInvalidNamespace(name string) error {
 		return errors.New(ve[0])
 	}
 	return nil
+}
+
+func isReserved(name string) bool {
+	if reservedNamespaces[name] {
+		return true
+	}
+
+	if strings.HasPrefix(name, reservedPrefix) {
+		return true
+	}
+
+	return false
 }

@@ -34,6 +34,9 @@ func TestIsReservedOrInvalidNamespace(t *testing.T) {
 		{"ALL-CAPS", true},
 		{"-foo-bar", true},
 		{"foo-bar-", true},
+		{"kube-foo", true},
+		{"default", true},
+		{"stolos-system", true},
 	} {
 		error := IsReservedOrInvalidNamespace(testcase.Name)
 		if error == nil && testcase.Error {
