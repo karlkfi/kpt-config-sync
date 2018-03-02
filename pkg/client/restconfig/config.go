@@ -34,13 +34,44 @@ import (
 const kubectlConfigPath = ".kube/config"
 const masterSecretsDir = "/etc/stolos/secrets/master/"
 
+var (
+	// The function to use to get default current user.  Can be changed for tests
+	// using SetCurrentUserForTest.
+	userCurrentTestHook = defaultGetCurrentUser
+
+	currentUser        = &user.User{}
+	currentError error = nil
+)
+
+func defaultGetCurrentUser() (*user.User, error) {
+	return user.Current()
+}
+
+func customGetCurrentUser() (*user.User, error) {
+	return currentUser, nil
+}
+
+// SetCurrentUserForTest sets the current user that will be returned, and/or
+// the error to be reported.  This makes the tests independent of CGO for
+// user.Current() that depend on CGO. Set the user to nil to revert to the
+// default way of getting the current user.
+func SetCurrentUserForTest(u *user.User, err error) {
+	if u == nil {
+		userCurrentTestHook = defaultGetCurrentUser
+		return
+	}
+	userCurrentTestHook = customGetCurrentUser
+	currentUser = u
+	currentError = err
+}
+
 // NewKubectlConfig creates a config for whichever context is active in kubectl.
 func NewKubectlConfig() (*rest.Config, error) {
 	if *flagKubectlContext != "" {
 		return NewKubectlContextConfig(*flagKubectlContext)
 	}
 
-	curentUser, err := user.Current()
+	curentUser, err := userCurrentTestHook()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Faild to get current user")
 	}
@@ -55,18 +86,31 @@ func NewKubectlConfig() (*rest.Config, error) {
 // NewKubectlContextConfig creates a new configuration for connnecting to kubernetes from the kubectl
 // config file on localhost.
 func NewKubectlContextConfig(contextName string) (*rest.Config, error) {
-	curentUser, err := user.Current()
-	if err != nil {
-		return nil, errors.Wrapf(err, "Faild to get current user")
-	}
-
-	configPath := filepath.Join(curentUser.HomeDir, kubectlConfigPath)
-	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath},
+	clientConfig, err := NewClientConfigWithOverrides(
 		&clientcmd.ConfigOverrides{
 			CurrentContext: contextName,
 		})
+	if err != nil {
+		return nil, errors.Wrapf(err, "NewKubectlContextConfig")
+	}
 	return clientConfig.ClientConfig()
+}
+
+// NewClientConfig returns the current (local) Kubernetes client configuration.
+func NewClientConfig() (clientcmd.ClientConfig, error) {
+	return NewClientConfigWithOverrides(&clientcmd.ConfigOverrides{})
+}
+
+// NewClientConfigWithOverrides returns a client configuration with supplied
+// overrides.
+func NewClientConfigWithOverrides(o *clientcmd.ConfigOverrides) (clientcmd.ClientConfig, error) {
+	curentUser, err := userCurrentTestHook()
+	if err != nil {
+		return nil, errors.Wrapf(err, "Faild to get current user")
+	}
+	configPath := filepath.Join(curentUser.HomeDir, kubectlConfigPath)
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath}, o), nil
 }
 
 // NewLocalClusterConfig creates a config for connecting to the local cluster API server.
