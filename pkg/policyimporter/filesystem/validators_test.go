@@ -21,10 +21,12 @@ var testCases = []validatorsTestCase{
 	{"HasNamespace valid", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "foo"), false},
 	{"HasNamespace invalid", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "bar"), true},
 	{"Keep first error", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "bar").HasName(&resource.Info{Name: "foo"}, "foo"), true},
-	{"HaveSeen valid", newValidator().MarkSeen(namespaceType).HaveSeen(namespaceType), false},
+	{"HaveSeen valid", newValidator().MarkSeen(namespaceType, "").HaveSeen(namespaceType), false},
 	{"HaveSeen invalid", newValidator().HaveSeen(namespaceType), true},
 	{"HaveNotSeen valid", newValidator().HaveNotSeen(namespaceType), false},
-	{"HaveNotSeen invalid", newValidator().MarkSeen(namespaceType).HaveNotSeen(namespaceType), true},
+	{"HaveNotSeen invalid", newValidator().MarkSeen(namespaceType, "").HaveNotSeen(namespaceType), true},
+	{"HaveNotSeenName valid", newValidator().MarkSeen(namespaceType, "foo").HaveNotSeenName(namespaceType, "bar"), false},
+	{"HaveNotSeenName invalid", newValidator().MarkSeen(namespaceType, "foo").HaveNotSeenName(namespaceType, "foo"), true},
 	{"ObjectDisallowedInContext", newValidator().ObjectDisallowedInContext(&resource.Info{Source: "some/source"}, namespaceType), true},
 }
 
