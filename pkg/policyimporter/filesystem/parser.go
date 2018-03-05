@@ -30,6 +30,7 @@ import (
 	extensions_v1beta1 "k8s.io/api/extensions/v1beta1"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
 	"k8s.io/kubernetes/pkg/kubectl/validation"
@@ -103,6 +104,10 @@ func (p Parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
 		dirInfos[d] = append(dirInfos[d], i)
 	}
 
+	if err := validateDuplicateNames(dirInfos); err != nil {
+		return nil, err
+	}
+
 	return processDirs(root, dirInfos)
 }
 
@@ -143,6 +148,25 @@ func validateDirNames(dirs []string) error {
 		}
 		dirNames[n] = true
 
+	}
+	return nil
+}
+
+func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {
+	for _, infos := range dirInfos {
+		gvkNameMap := map[schema.GroupVersionKind]map[string]bool{}
+
+		for d, i := range infos {
+			gvk := i.Mapping.GroupVersionKind
+			if gvkNameMap[gvk] == nil {
+				gvkNameMap[gvk] = map[string]bool{i.Name: true}
+			} else if _, exists := gvkNameMap[gvk][i.Name]; !exists {
+				gvkNameMap[gvk][i.Name] = true
+			} else {
+				return errors.Errorf("detected duplicate object %q of type %#v in directory %q",
+					i.Name, gvk, d)
+			}
+		}
 	}
 	return nil
 }

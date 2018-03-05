@@ -265,6 +265,20 @@ var parserTestCases = []parserTestCase{
 		expectedClusterPolicy: createClusterPolicy("foo"),
 	},
 	{
+		testName: "Namespace dir with 2 ignored files",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"bar/ignore":  "",
+			"bar/ignore2": "blah blah blah",
+		},
+		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
+			"foo": createPolicyNode("foo", "", true, nil),
+			"bar": createPolicyNode("bar", "foo", false, nil),
+		},
+		expectedClusterPolicy: createClusterPolicy("foo"),
+	},
+	{
 		testName: "Namespace dir without Namespace",
 		root:     "foo",
 		testFiles: fileContentMap{
@@ -371,6 +385,26 @@ var parserTestCases = []parserTestCase{
 			"bar/r2.yaml": templateData{ID: "2", Namespace: "bar"}.apply(aRoleBinding),
 		},
 		expectedNumPolicies: map[string]int{"foo": 0, "bar": 2},
+	},
+	{
+		testName: "Namespace dir with multiple Roles of the same name",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
+			"bar/role1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRole),
+			"bar/role2.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRole),
+		},
+		expectedError: true,
+	},
+	{
+		testName: "Namespace dir with multiple Rolebindings of the same name",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"bar/r1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"bar/r2.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+		},
+		expectedError: true,
 	},
 	{
 		testName: "Namespace dir with ClusterRole",
