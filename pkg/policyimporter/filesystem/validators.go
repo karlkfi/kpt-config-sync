@@ -22,8 +22,7 @@ import (
 )
 
 type validator struct {
-	// A map of seen types to the names of the objects of that type
-	seen map[meta_v1.TypeMeta]map[string]bool
+	seen map[meta_v1.TypeMeta]bool
 	err  error
 }
 
@@ -31,7 +30,7 @@ type validator struct {
 // err holds the first encountered error. Subsequent errors are short-circuited.
 // Error messages here must be as specific and actionable as possible.
 func newValidator() *validator {
-	return &validator{seen: make(map[meta_v1.TypeMeta]map[string]bool)}
+	return &validator{seen: make(map[meta_v1.TypeMeta]bool)}
 }
 
 // HasNamespace validates that the object in info has the given namespace.
@@ -57,12 +56,8 @@ func (v *validator) HasName(info *resource.Info, name string) *validator {
 }
 
 // MarkSeen marks the given type as seen.
-func (v *validator) MarkSeen(t meta_v1.TypeMeta, name string) *validator {
-	if v.seen[t] == nil {
-		v.seen[t] = map[string]bool{name: true}
-	} else {
-		v.seen[t][name] = true
-	}
+func (v *validator) MarkSeen(t meta_v1.TypeMeta) *validator {
+	v.seen[t] = true
 	return v
 }
 
@@ -71,20 +66,8 @@ func (v *validator) HaveNotSeen(t meta_v1.TypeMeta) *validator {
 	if v.err != nil {
 		return v
 	}
-	if v.seen[t] != nil {
+	if v.seen[t] {
 		v.err = errors.Errorf("cannot have multiple objects with type %#v", t)
-	}
-	return v
-}
-
-// HaveNotSeenName validates that the MarkSeen method was not called with the same name and type.
-func (v *validator) HaveNotSeenName(t meta_v1.TypeMeta, name string) *validator {
-	if v.err != nil {
-		return v
-	}
-
-	if v.seen[t] != nil && v.seen[t][name] {
-		v.err = errors.Errorf("cannot have multiple objects with name %q and type %#v", name, t)
 	}
 	return v
 }
@@ -94,7 +77,7 @@ func (v *validator) HaveSeen(t meta_v1.TypeMeta) *validator {
 	if v.err != nil {
 		return v
 	}
-	if v.seen[t] == nil {
+	if !v.seen[t] {
 		v.err = errors.Errorf("must have a object with type %#v", t)
 	}
 	return v

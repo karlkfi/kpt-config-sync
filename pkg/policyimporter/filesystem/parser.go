@@ -207,12 +207,12 @@ func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.Pol
 		case *extensions_v1beta1.PodSecurityPolicy:
 			clusterPolicies.PodSecurtiyPoliciesV1Beta1 = append(clusterPolicies.PodSecurtiyPoliciesV1Beta1, *o)
 		case *core_v1.ResourceQuota:
-			v.HasNamespace(i, "").HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta, o.Name)
+			v.HasNamespace(i, "")
 			policies.ResourceQuotaV1 = o.Spec
 		case *rbac_v1.Role:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *rbac_v1.RoleBinding:
-			v.HasNamespace(i, "").HaveNotSeenName(o.TypeMeta, o.Name).MarkSeen(o.TypeMeta, o.Name)
+			v.HasNamespace(i, "")
 			policies.RoleBindingsV1 = append(policies.RoleBindingsV1, *o)
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
@@ -258,12 +258,12 @@ func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy
 		case *extensions_v1beta1.PodSecurityPolicy:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:
-			v.HasNamespace(i, "").HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta, o.Name)
+			v.HasNamespace(i, "")
 			policies.ResourceQuotaV1 = o.Spec
 		case *rbac_v1.Role:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *rbac_v1.RoleBinding:
-			v.HasNamespace(i, "").HaveNotSeenName(o.TypeMeta, o.Name).MarkSeen(o.TypeMeta, o.Name)
+			v.HasNamespace(i, "")
 			policies.RoleBindingsV1 = append(policies.RoleBindingsV1, *o)
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
@@ -299,18 +299,18 @@ func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v
 		case *rbac_v1.ClusterRoleBinding:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.Namespace:
-			v.HasName(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta, o.Name)
+			v.HasName(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta)
 		case *extensions_v1beta1.PodSecurityPolicy:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:
-			v.HasNamespace(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta, o.Name)
+			v.HasNamespace(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta)
 			// TODO(frankfarzan): policies.ResourceQuotaV1 = *o
 			policies.ResourceQuotaV1 = o.Spec
 		case *rbac_v1.Role:
-			v.HasNamespace(i, namespace).HaveNotSeenName(o.TypeMeta, o.Name).MarkSeen(o.TypeMeta, o.Name)
+			v.HasNamespace(i, namespace)
 			policies.RolesV1 = append(policies.RolesV1, *o)
 		case *rbac_v1.RoleBinding:
-			v.HasNamespace(i, namespace).HaveNotSeenName(o.TypeMeta, o.Name).MarkSeen(o.TypeMeta, o.Name)
+			v.HasNamespace(i, namespace)
 			policies.RoleBindingsV1 = append(policies.RoleBindingsV1, *o)
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
