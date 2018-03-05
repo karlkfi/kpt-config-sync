@@ -141,7 +141,7 @@ func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 			t.Errorf("Got unexpected operation %s for testcase %d, data %#v", action.Operation(), idx, testcase)
 		}
 		if testcase.expectedQuota != nil && !reflect.DeepEqual(action.ResourceQuotaSpec().Hard, testcase.expectedQuota) {
-			t.Errorf("Got unexpected resource quota %s for testcase %d, expected %v", action.ResourceQuotaSpec().Hard, idx, testcase.expectedQuota)
+			t.Errorf("Got unexpected resource quota %#v for testcase %d, expected %#v", action.ResourceQuotaSpec().Hard, idx, testcase.expectedQuota)
 		}
 	}
 }

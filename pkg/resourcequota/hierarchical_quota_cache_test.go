@@ -178,7 +178,7 @@ func TestUpdateLeaf(t *testing.T) {
 	}
 
 	if !resourceListEqual(cache.quotas["kittiesandponies"].quota.Status.Used, expectedNewUsage) {
-		t.Errorf("Unexpected new usage %s", cache.quotas["kittiesandponies"].quota.Status.Used)
+		t.Errorf("Unexpected new usage %#v", cache.quotas["kittiesandponies"].quota.Status.Used)
 	}
 }
 

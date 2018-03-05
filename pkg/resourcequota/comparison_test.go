@@ -55,7 +55,7 @@ func TestEquals(t *testing.T) {
 		actualEquals := resourceListEqual(tt.left, tt.right)
 
 		if actualEquals != tt.equals {
-			t.Errorf("[%d]Expected equal=%t but wasn't [%s] vs [%s]", i, tt.equals, tt.left, tt.right)
+			t.Errorf("[%d]Expected equal=%t but wasn't [%#v] vs [%#v]", i, tt.equals, tt.left, tt.right)
 		}
 	}
 }
@@ -108,7 +108,7 @@ func TestDiff(t *testing.T) {
 		actual := diffResourceLists(tt.left, tt.right)
 
 		if !resourceListEqual(actual, tt.diff) {
-			t.Errorf("[%d]Expected diff to be [%s] but got [%s]", i, actual, tt.diff)
+			t.Errorf("[%d]Expected diff to be [%#v] but got [%#v]", i, actual, tt.diff)
 		}
 	}
 }
