@@ -20,33 +20,45 @@
 #
 
 # Creates the required secrets for the resourcequota admission
-# controller.  Intended to be invoked from the top-level directory.
+# controller.
 #
-# Invoke as:
-#   deploy-resourcequota-admission-controller.sh \
-#     staging_dir gen_yaml_dir
+# Parameters:
+#    YAML_DIR: Define this environment variable to point to the YAML files for
+#        starting the resourcequota admission controller.
+#    CERTS_INPUT_DIR: Define this environment variable to point to the directory
+#        that contains server.crt, server.key, ca.crt, ca.key.  Otherwise,
+#        define the following:
+#
+#        - SERVER_CERT_FILE: the path to server.crt
+#        - SERVER_KEY_FILE: the path to server.key
+#        - CA_CERT_FILE: the path to ca.crt
+#        - CA_KEY_FILE: the path to ca.key
 
 set -euo pipefail
 
-STAGING_DIR=$1
-GEN_YAML_DIR=$2
+echo CERTS_INPUT_DIR=${CERTS_INPUT_DIR}
+echo YAML_DIR=${YAML_DIR}
 
-echo STAGING_DIR=${STAGING_DIR}
-echo GEN_YAML_DIR=${GEN_YAML_DIR}
+readonly server_cert_file="${SERVER_CERT_FILE:-${CERTS_INPUT_DIR}/server.crt}"
+readonly server_key_file="${SERVER_KEY_FILE:-${CERTS_INPUT_DIR}/server.key}"
+readonly ca_key_file="${CA_KEY_FILE:-${CERTS_INPUT_DIR}/ca.key}"
+readonly ca_cert_file="${CA_CERT_FILE:-${CERTS_INPUT_DIR}/ca.crt}"
 
-cd ${STAGING_DIR}/resourcequota-admission-controller; ./gencert.sh
 kubectl delete secret resourcequota-admission-controller-secret \
     --namespace=stolos-system || true
 kubectl create secret tls resourcequota-admission-controller-secret \
     --namespace=stolos-system \
-    --cert=${STAGING_DIR}/resourcequota-admission-controller/server.crt \
-    --key=${STAGING_DIR}/resourcequota-admission-controller/server.key
+    --cert="${server_cert_file}" \
+    --key="${server_key_file}"
+
 kubectl delete secret resourcequota-admission-controller-secret-ca \
     --namespace=stolos-system || true
 kubectl create secret tls resourcequota-admission-controller-secret-ca \
     --namespace=stolos-system \
-    --cert=${STAGING_DIR}/resourcequota-admission-controller/ca.crt \
-    --key=${STAGING_DIR}/resourcequota-admission-controller/ca.key
-kubectl delete ValidatingWebhookConfiguration stolos-resource-quota --ignore-not-found
-kubectl apply -f ${GEN_YAML_DIR}/resourcequota-admission-controller.yaml
+    --cert=${ca_cert_file} \
+    --key=${ca_key_file}
+kubectl delete ValidatingWebhookConfiguration stolos-resource-quota \
+    --ignore-not-found
+
+kubectl apply -f ${YAML_DIR}/resourcequota-admission-controller.yaml
 

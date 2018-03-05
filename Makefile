@@ -176,9 +176,17 @@ deploy-%:	push-% gen-yaml-%
 deploy-common-objects:
 	$(TOP_DIR)/scripts/deploy-common-objects.sh
 
-deploy-resourcequota-admission-controller:	push-resourcequota-admission-controller gen-yaml-resourcequota-admission-controller
-	$(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh \
-		$(STAGING_DIR) $(GEN_YAML_DIR)
+gen-certs-resourcequota-admission-controller:
+	OUTPUT_DIR=$(STAGING_DIR)/resourcequota-admission-controller \
+	    $(TOP_DIR)/scripts/generate-resourcequota-admission-controller-certs.sh
+
+deploy-resourcequota-admission-controller: \
+	push-resourcequota-admission-controller \
+	gen-yaml-resourcequota-admission-controller \
+	gen-certs-resourcequota-admission-controller
+	CERTS_INPUT_DIR=$(STAGING_DIR)/resourcequota-admission-controller \
+	YAML_DIR=$(GEN_YAML_DIR) \
+	    $(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh
 
 all-deploy: $(addprefix deploy-, $(ALL_COMPONENTS))
 

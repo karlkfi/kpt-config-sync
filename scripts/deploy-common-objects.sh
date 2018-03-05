@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2017 Kubernetes Authors
+# Copyright 2017 Stolos Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,10 +54,13 @@ case $ACTION in
 esac
 
 
-echo "${dirs[@]}"
+echo "Directories: ${dirs[@]}"
 for d in "${dirs[@]}"
 do
   echo "kubectl $cmd -f $d"
   kubectl $cmd -f $d
+  if [[ -x setup.sh ]]; then
+    ./setup.sh
+  fi
 done
 
