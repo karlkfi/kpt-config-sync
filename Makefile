@@ -168,6 +168,8 @@ push-%: build
 	docker build -t gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) $(STAGING_DIR)/$*
 	gcloud docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
 
+all-push: $(addprefix push-, $(ALL_COMPONENTS))
+
 # Generates the yaml deployment from template and applies it to cluster.
 deploy-%:	push-% gen-yaml-%
 	kubectl apply -f $(GEN_YAML_DIR)/$*.yaml
