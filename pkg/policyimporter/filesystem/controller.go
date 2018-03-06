@@ -137,7 +137,7 @@ func (c *Controller) getCurentPolicies() (*v1.AllPolicies, error) {
 	}
 
 	if len(cp) > 1 {
-		return nil, errors.Errorf("found more than one ClusterPolicy object: %v", cp)
+		return nil, errors.New("found more than one ClusterPolicy object")
 	}
 	if len(cp) == 1 {
 		policies.ClusterPolicy = cp[0].DeepCopy()
