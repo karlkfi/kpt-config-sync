@@ -66,7 +66,6 @@ RELEASE_BUCKET := gs://$(GCP_PROJECT)/release
 # All Stolos components
 ALL_COMPONENTS := syncer \
 	git-policy-importer \
-	remote-cluster-policy-importer \
 	resourcequota-admission-controller
 
 # Allows an interactive docker build or test session to be interrupted
