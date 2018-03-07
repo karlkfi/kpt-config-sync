@@ -15,6 +15,10 @@ limitations under the License.
 package actions
 
 // Interface represents a CUD action on a kubernetes resource
+// TODO(briantkennedy): have Operation() method return OperationType
+// TODO(briantkennedy): add Kind(), Version() method and specify that String() should return
+// information that uniquely identifies the resource being modified, (group, version, kind/resource,
+// namespace, name).
 type Interface interface {
 	// Operation returns the operation name
 	Operation() string
