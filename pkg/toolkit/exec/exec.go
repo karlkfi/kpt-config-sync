@@ -31,9 +31,9 @@ import (
 
 var (
 	// Used only in package private tests to inject a substitute binary.
-	testBinary string = ""
-	testArgs          = []string{}
-	testEnv           = []string{}
+	testBinary string   = ""
+	testArgs            = []string{}
+	testEnv    []string = nil
 
 	// Outputs to be copied out if this module is used in a test fixture.
 	testOutput      io.Reader = nil
