@@ -34,9 +34,11 @@ spec:
   parent: acme
   policies:
     resourceQuotaV1:
-      hard:
-        pods: "1"
-        secrets: "5"
+      kind: ResourceQuota
+      spec:
+        hard:
+          pods: "1"
+          secrets: "5"
     rolebindingsV1:
     - kind: RoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
@@ -61,8 +63,10 @@ spec:
   parent: acme
   policies:
     resourceQuotaV1:
-      hard:
-        configmaps: "2"
+      kind: ResourceQuota
+      spec:
+        hard:
+          configmaps: "2"
 ---
 apiVersion: "stolos.dev/v1"
 kind: PolicyNode
@@ -73,8 +77,10 @@ spec:
   parent: eng
   policies:
     resourceQuotaV1:
-      hard:
-        pods: "1"
+      kind: ResourceQuota
+      spec:
+        hard:
+          pods: "1"
     rolebindingsV1:
     - kind: RoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
@@ -99,8 +105,10 @@ spec:
   parent: eng
   policies:
     resourceQuotaV1:
-      hard:
-        pods: "1"
+      kind: ResourceQuota
+      spec:
+        hard:
+          pods: "1"
 ---
 apiVersion: "stolos.dev/v1"
 kind: PolicyNode

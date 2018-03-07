@@ -150,9 +150,11 @@ func (q *QuotaSyncer) getHierarchicalQuotaLimits(policyNode policyhierarchy_v1.P
 	hierarchicalLimits := core_v1.ResourceList{}
 
 	for parentNode := &policyNode; err == nil; parentNode, err = q.policyNodeInformer.Lister().Get(parentNamespace) {
-		for resource, limit := range parentNode.Spec.Policies.ResourceQuotaV1.Hard {
-			if _, exists := hierarchicalLimits[resource]; !exists {
-				hierarchicalLimits[resource] = limit
+		if parentNode.Spec.Policies.ResourceQuotaV1 != nil {
+			for resource, limit := range parentNode.Spec.Policies.ResourceQuotaV1.Spec.Hard {
+				if _, exists := hierarchicalLimits[resource]; !exists {
+					hierarchicalLimits[resource] = limit
+				}
 			}
 		}
 		parentNamespace = parentNode.Spec.Parent

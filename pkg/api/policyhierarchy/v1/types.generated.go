@@ -21,6 +21,7 @@ limitations under the License.
 package v1
 
 import (
+	core_v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -198,7 +199,15 @@ func (in *Policies) DeepCopyInto(out *Policies) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	in.ResourceQuotaV1.DeepCopyInto(&out.ResourceQuotaV1)
+	if in.ResourceQuotaV1 != nil {
+		in, out := &in.ResourceQuotaV1, &out.ResourceQuotaV1
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(core_v1.ResourceQuota)
+			(*in).DeepCopyInto(*out)
+		}
+	}
 	return
 }
 

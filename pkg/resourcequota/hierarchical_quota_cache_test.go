@@ -191,8 +191,10 @@ func makePolicyNode(name string, parent string, limits core_v1.ResourceList, pol
 			Parent:      parent,
 			Policyspace: policyspace,
 			Policies: pn_v1.Policies{
-				ResourceQuotaV1: core_v1.ResourceQuotaSpec{
-					Hard: limits,
+				ResourceQuotaV1: &core_v1.ResourceQuota{
+					Spec: core_v1.ResourceQuotaSpec{
+						Hard: limits,
+					},
 				},
 			},
 		},

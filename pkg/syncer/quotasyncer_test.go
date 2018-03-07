@@ -65,7 +65,8 @@ func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 		Spec: policyhierarchy_v1.PolicyNodeSpec{
 			Policyspace: false,
 			Policies: policyhierarchy_v1.Policies{
-				ResourceQuotaV1: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("42")}}},
+				ResourceQuotaV1: &core_v1.ResourceQuota{
+					Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("42")}}}},
 		},
 	}
 
@@ -76,7 +77,8 @@ func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 		Spec: policyhierarchy_v1.PolicyNodeSpec{
 			Policyspace: false,
 			Policies: policyhierarchy_v1.Policies{
-				ResourceQuotaV1: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("43")}}},
+				ResourceQuotaV1: &core_v1.ResourceQuota{
+					Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("43")}}}},
 		},
 	}
 	policyNodeWithoutRq := policyhierarchy_v1.PolicyNode{
@@ -96,7 +98,8 @@ func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 			Policyspace: false,
 			Parent:      "mid",
 			Policies: policyhierarchy_v1.Policies{
-				ResourceQuotaV1: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"memory": resource.MustParse("2")}}},
+				ResourceQuotaV1: &core_v1.ResourceQuota{
+					Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"memory": resource.MustParse("2")}}}},
 		},
 	}
 
@@ -108,7 +111,8 @@ func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 			Policyspace: true,
 			Parent:      "top",
 			Policies: policyhierarchy_v1.Policies{
-				ResourceQuotaV1: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"memory": resource.MustParse("2")}}},
+				ResourceQuotaV1: &core_v1.ResourceQuota{
+					Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"memory": resource.MustParse("2")}}}},
 		},
 	}
 
@@ -201,10 +205,10 @@ func makePolicyNode(name string, parent string, limits core_v1.ResourceList, pol
 			Policyspace: policyspace,
 			Parent:      parent,
 			Policies: policyhierarchy_v1.Policies{
-				ResourceQuotaV1: core_v1.ResourceQuotaSpec{
+				ResourceQuotaV1: &core_v1.ResourceQuota{Spec: core_v1.ResourceQuotaSpec{
 					Hard: limits,
 				},
-			},
+				}},
 		},
 	}
 }

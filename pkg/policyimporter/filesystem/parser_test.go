@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -135,12 +136,9 @@ spec:
 )
 
 var (
-	aNamespace     = template.Must(template.New("aNamespace").Parse(aNamespaceTemplate))
-	aNamespaceJSON = template.Must(template.New("aNamespaceJSON").Parse(aNamespaceJSONTemplate))
-	aQuota         = template.Must(template.New("aQuota").Parse(aQuotaTemplate))
-	aQuotaStruct   = core_v1.ResourceQuotaSpec{
-		Hard: core_v1.ResourceList{"pods": resource.MustParse("10")},
-	}
+	aNamespace          = template.Must(template.New("aNamespace").Parse(aNamespaceTemplate))
+	aNamespaceJSON      = template.Must(template.New("aNamespaceJSON").Parse(aNamespaceJSONTemplate))
+	aQuota              = template.Must(template.New("aQuota").Parse(aQuotaTemplate))
 	aRole               = template.Must(template.New("aRole").Parse(aRoleTemplate))
 	aRoleBinding        = template.Must(template.New("aRoleBinding").Parse(aRoleBindingTemplate))
 	aClusterRole        = template.Must(template.New("aClusterRole").Parse(aClusterRoleTemplate))
@@ -211,6 +209,22 @@ func createClusterPolicy(name string) *policyhierarchy_v1.ClusterPolicy {
 		&policyhierarchy_v1.ClusterPolicySpec{
 			Policies: policyhierarchy_v1.ClusterPolicies{},
 		})
+}
+
+func createResourceQuota(name string, namespace string) *core_v1.ResourceQuota {
+	return &core_v1.ResourceQuota{
+		TypeMeta: v1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ResourceQuota",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: core_v1.ResourceQuotaSpec{
+			Hard: core_v1.ResourceList{"pods": resource.MustParse("10")},
+		},
+	}
 }
 
 type fileContentMap map[string]string
@@ -330,7 +344,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", false,
-				&policyhierarchy_v1.Policies{ResourceQuotaV1: aQuotaStruct}),
+				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "bar")}),
 		},
 		expectedClusterPolicy: createClusterPolicy("foo"),
 	},
@@ -343,7 +357,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", false,
-				&policyhierarchy_v1.Policies{ResourceQuotaV1: aQuotaStruct}),
+				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "bar")}),
 		},
 		expectedClusterPolicy: createClusterPolicy("foo"),
 	},
@@ -440,7 +454,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", true,
-				&policyhierarchy_v1.Policies{ResourceQuotaV1: aQuotaStruct}),
+				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
 			"baz": createPolicyNode("baz", "bar", false, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy("foo"),
@@ -530,7 +544,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true,
-				&policyhierarchy_v1.Policies{ResourceQuotaV1: aQuotaStruct}),
+				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
 		},
 		expectedClusterPolicy: createClusterPolicy("foo"),
 	},
@@ -543,7 +557,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true,
-				&policyhierarchy_v1.Policies{ResourceQuotaV1: aQuotaStruct}),
+				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
 			"bar": createPolicyNode("bar", "foo", false, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy("foo"),
@@ -668,8 +682,7 @@ func TestParser(t *testing.T) {
 				for k, v := range actualPolicies.PolicyNodes {
 					p := v.Spec.Policies
 					n[k] = len(p.RolesV1) + len(p.RoleBindingsV1)
-					// TODO(frankfarzan): Remove this hack
-					if len(p.ResourceQuotaV1.Hard) != 0 {
+					if p.ResourceQuotaV1 != nil {
 						n[k] += 1
 					}
 				}

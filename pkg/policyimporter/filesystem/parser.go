@@ -232,7 +232,7 @@ func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.Pol
 			clusterPolicies.PodSecurtiyPoliciesV1Beta1 = append(clusterPolicies.PodSecurtiyPoliciesV1Beta1, *o)
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, "")
-			policies.ResourceQuotaV1 = o.Spec
+			policies.ResourceQuotaV1 = o
 		case *rbac_v1.Role:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *rbac_v1.RoleBinding:
@@ -283,7 +283,7 @@ func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, "")
-			policies.ResourceQuotaV1 = o.Spec
+			policies.ResourceQuotaV1 = o
 		case *rbac_v1.Role:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *rbac_v1.RoleBinding:
@@ -328,8 +328,7 @@ func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta)
-			// TODO(frankfarzan): policies.ResourceQuotaV1 = *o
-			policies.ResourceQuotaV1 = o.Spec
+			policies.ResourceQuotaV1 = o
 		case *rbac_v1.Role:
 			v.HasNamespace(i, namespace)
 			policies.RolesV1 = append(policies.RolesV1, *o)

@@ -71,14 +71,22 @@ func (c *HierarchicalQuotaCache) initCache() error {
 	c.quotas = map[string]*QuotaNode{}
 
 	for _, policyNode := range policyNodes {
-		c.quotas[policyNode.Name] = &QuotaNode{
-			quota: &core_v1.ResourceQuota{
-				Spec: *policyNode.Spec.Policies.ResourceQuotaV1.DeepCopy(),
+		quota := &core_v1.ResourceQuota{
+			Status: core_v1.ResourceQuotaStatus{
+				Used: core_v1.ResourceList{},
+			},
+		}
+		if policyNode.Spec.Policies.ResourceQuotaV1 != nil {
+			quota = &core_v1.ResourceQuota{
+				Spec: *policyNode.Spec.Policies.ResourceQuotaV1.Spec.DeepCopy(),
 				Status: core_v1.ResourceQuotaStatus{
-					Hard: policyNode.Spec.Policies.ResourceQuotaV1.Hard,
+					Hard: policyNode.Spec.Policies.ResourceQuotaV1.Spec.Hard,
 					Used: core_v1.ResourceList{},
 				},
-			},
+			}
+		}
+		c.quotas[policyNode.Name] = &QuotaNode{
+			quota:       quota,
 			parent:      policyNode.Spec.Parent,
 			policyspace: policyNode.Spec.Policyspace,
 		}
