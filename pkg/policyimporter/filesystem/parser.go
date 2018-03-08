@@ -141,7 +141,7 @@ func validateDirNames(dirs []string) error {
 	for _, d := range dirs {
 		n := filepath.Base(d)
 		if _, ok := dirNames[n]; ok {
-			return errors.Errorf("directory name %s is not unique in root %s", n, dirs[0])
+			return errors.Errorf("directory name %q is not unique: %s", n, d)
 		}
 		if err := namespaceutil.IsReservedOrInvalidNamespace(n); err != nil {
 			return errors.Wrapf(err, "invalid directory: %s", d)
