@@ -24,7 +24,7 @@
 #
 # Parameters:
 #    YAML_DIR: Define this environment variable to point to the YAML files for
-#        starting the resourcequota admission controller.
+#        starting the resourcequota admission controller. Required.
 #    CERTS_INPUT_DIR: Define this environment variable to point to the directory
 #        that contains server.crt, server.key, ca.crt, ca.key.  Otherwise,
 #        define the following:
@@ -36,8 +36,8 @@
 
 set -euo pipefail
 
-echo CERTS_INPUT_DIR=${CERTS_INPUT_DIR}
-echo YAML_DIR=${YAML_DIR}
+echo CERTS_INPUT_DIR=${CERTS_INPUT_DIR:-""}
+echo YAML_DIR=$YAML_DIR
 
 readonly server_cert_file="${SERVER_CERT_FILE:-${CERTS_INPUT_DIR}/server.crt}"
 readonly server_key_file="${SERVER_KEY_FILE:-${CERTS_INPUT_DIR}/server.key}"

@@ -72,3 +72,5 @@ openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key \
   -CAcreateserial -out server.crt -days 100000 \
   -extensions v3_req -extfile "${tempfile}"
 
+rm "${tempfile}"
+
