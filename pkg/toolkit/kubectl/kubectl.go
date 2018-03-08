@@ -20,7 +20,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -71,6 +73,10 @@ func New(ctx context.Context) *Context {
 func (t *Context) Kubectl(args ...string) (stdout, stderr string) {
 	actualArgs := append([]string{kubectlCmd}, args...)
 	success, stdout, stderr := run(t.ctx, actualArgs)
+	if glog.V(9) {
+		glog.V(9).Infof("stdout: %v", stdout)
+		glog.V(9).Infof("stderr: %v", stderr)
+	}
 	if !success {
 		panic(errors.Errorf("Command %s failed, stdout: %s stderr: %s", strings.Join(args, " "), stdout, stderr))
 	}
@@ -80,6 +86,46 @@ func (t *Context) Kubectl(args ...string) (stdout, stderr string) {
 // Apply runs kubectl apply -f on a given path.
 func (t *Context) Apply(path string) {
 	t.Kubectl("apply", "-f", path)
+}
+
+// DeleteSecret deletes a secret from Kubernetes.
+func (t *Context) DeleteSecret(name, namespace string) error {
+	t.Kubectl("delete", "secret", fmt.Sprintf("-n=%v", namespace), name)
+	// TODO(filmil): Needs to pipe an error out.
+	return nil
+}
+
+// DeleteConfigmap deletes a configmap from Kubernetes.
+func (t *Context) DeleteConfigmap(name, namespace string) error {
+	t.Kubectl("delete", "configmap", fmt.Sprintf("-n=%v", namespace), name)
+	return nil
+}
+
+func (t *Context) CreateSecretGenericFromFile(name, namespace string, filenames ...string) error {
+	args := []string{
+		"create", "secret", "generic", fmt.Sprintf("-n=%v", namespace), name,
+	}
+	for _, fn := range filenames {
+		args = append(args, fmt.Sprintf("--from-file=%q", filepath.Clean(fn)))
+	}
+	t.Kubectl(args...)
+	return nil
+}
+
+// CreateConfigmapFromLiterals creates a Kubernetes configmap from key-value
+// pairs represented as strings like: "KEY1=VALUE1", "KEY2=VALUE2", etc.
+//
+// Equivalent to:
+//   kubectl create configmap name -n=space --from-literal=KEY1=VALUE1 ...
+func (t *Context) CreateConfigmapFromLiterals(name, namespace string, literals ...string) error {
+	args := []string{
+		"create", "configmap", name, fmt.Sprintf("-n=%v", namespace),
+	}
+	for _, l := range literals {
+		args = append(args, fmt.Sprintf("--from-literal=%v", l))
+	}
+	t.Kubectl(args...)
+	return nil
 }
 
 // versionInfo is a partial parsed output of the "kubectl version" command.
