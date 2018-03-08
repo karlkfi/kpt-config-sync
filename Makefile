@@ -1,6 +1,6 @@
 #!/usr/bin/make
 #
-# Copyright 2017 Kubernetes Authors
+# Copyright 2018 Stolos Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ VERSION := $(shell git describe --tags --always --dirty)
 ARCH ?= amd64
 
 # Docker image used for build and test.  This image does not support CGO.
-BUILD_IMAGE ?= golang:1.9-alpine
+BUILD_IMAGE ?= buildenv
 
 # GCP project that owns container registry.
 GCP_PROJECT ?= stolos-dev
@@ -90,9 +90,16 @@ endif
 		$(STAGING_DIR) \
 		$(GEN_YAML_DIR)
 
+# Uses a custom build environment.  See toolkit/buildenv/Dockerfile for the
+# details on the build environment.
+.PHONY: buildenv
+buildenv:
+	@docker build toolkit/buildenv --tag=$(BUILD_IMAGE)
+
 # Build packages hermetically in a docker container.
+.PHONY: build all-build
 build: all-build
-all-build: .output
+all-build: buildenv .output
 	@docker run $(DOCKER_INTERACTIVE)                                      \
 		-u $$(id -u):$$(id -g)                                             \
 		-v $(GO_DIR):/go                                                   \
@@ -116,7 +123,7 @@ all-clean:
 
 # Runs unit tests in a docker container.
 test: all-test
-all-test: .output
+all-test: buildenv .output
 	@docker run $(DOCKER_INTERACTIVE)                                      \
 		-u $$(id -u):$$(id -g)                                             \
 		-v $(GO_DIR):/go                                                   \
