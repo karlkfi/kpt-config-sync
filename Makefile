@@ -201,6 +201,7 @@ all-deploy: $(addprefix deploy-, $(ALL_COMPONENTS))
 # - make a stable release off of latest repository tag:
 #     make RELEASE=1 STABLE=1 release
 release: all-deploy
+	TOP_DIR=$(TOP_DIR) \
 	STAGING_DIR=$(OUTPUT_DIR) \
 	VERSION=$(VERSION) \
 	STABLE=$(STABLE) \

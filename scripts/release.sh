@@ -44,10 +44,10 @@ STABLE=${STABLE:-}
 # Copies the set of artifacts with the glob pattern in $1 to destination
 # directory $2.
 function release::stage_artifacts() {
-  echo "+++ Staging artifacts"
-
   local srcs="$1"
   local dest="$2"
+
+  echo "+++ Staging artifacts: ${srcs} to ${dest}"
 
   mkdir -p "${dest}"
   cp -R ${srcs} "${dest}"
@@ -69,6 +69,8 @@ function release::upload_artifacts() {
   echo "+++ Uploading artifacts"
   local artifacts=$(find ${OUTPUT_DIR}/*)
   gsutil -m cp ${artifacts} ${RELEASE_BUCKET}/${VERSION} 2>&1 | sed 's/^/---\t/'
+  echo "+++    Setting AllUsers:R for all artifacts"
+  gsutil acl ch -r -u AllUsers:R "${RELEASE_BUCKET}/${VERSION}" 2>&1 | sed 's/^/---\t/'
 }
 
 # Reads the version information from the remote GCS file corresponding to
@@ -127,6 +129,7 @@ function release::upload_version_data() {
       local target="${RELEASE_BUCKET}/${file}"
       echo -e "+++\t\tUploading ${VERSION} to: ${target}"
       gsutil cp "${tempfile}" "${target}" 2>&1 | sed 's/^/--- /' -
+      gsutil acl ch -u AllUsers:R "${target}" | sed 's/^/--- /' -
       rm "${tempfile}"
     else
       echo -e "+++\t\tSkipping version update: ${file}"
@@ -139,7 +142,7 @@ function release::checksum_artifacts() {
   echo "+++ Checksumming artifacts"
   cd "${OUTPUT_DIR}"
   echo $PWD
-  for file in "$(ls --ignore=*.md5 --ignore=*.sha1)"; do
+  for file in $(ls --ignore=*.md5 --ignore=*.sha1); do
     echo -e "+++ \tFile:\t${file}"
     md5sum -b "${file}" > "${file}.md5"
     sha1sum -b "${file}" > "${file}.sha1"
@@ -170,6 +173,40 @@ function release::check_parameters() {
   fi
 }
 
+# Stages artifacts for all architectures supported.  Uses contents of the
+# go/bin directory as a proxy for supported architectures (which is accurate
+# as of this writing).
+function release::stage_multiarch() {
+  # These artifacts are multiarch.
+  readonly archs="$(basename -a $(ls -d ${STAGING_DIR}/go/bin/*))"
+  for arch in ${archs}; do
+    release::stage_artifacts \
+      "${STAGING_DIR}/go/bin/${arch}/installer" \
+      "${INPUT_DIR}/install-linux-${arch}"
+    release::stage_artifacts \
+      "${STAGING_DIR}/yaml/*" \
+      "${INPUT_DIR}/install-linux-${arch}/yaml"
+    release::stage_artifacts \
+      "${TOP_DIR}/scripts/generate-resourcequota-admission-controller-certs.sh" \
+      "${INPUT_DIR}/install-linux-${arch}/scripts"
+    release::stage_artifacts \
+      "${TOP_DIR}/scripts/deploy-resourcequota-admission-controller.sh" \
+      "${INPUT_DIR}/install-linux-${arch}/scripts"
+    release::stage_artifacts \
+      "${TOP_DIR}/manifests/common/*" \
+      "${INPUT_DIR}/install-linux-${arch}/manifests/common"
+    release::stage_artifacts \
+      "${TOP_DIR}/manifests/enrolled/*" \
+      "${INPUT_DIR}/install-linux-${arch}/manifests/enrolled"
+    release::stage_artifacts \
+      "${TOP_DIR}/toolkit/installer/configs/*" \
+      "${INPUT_DIR}/install-linux-${arch}/configs"
+    release::stage_artifacts \
+      "${TOP_DIR}/toolkit/installer/README.md" \
+      "${INPUT_DIR}/install-linux-${arch}"
+  done
+}
+
 function main() {
   release::check_parameters
 
@@ -177,10 +214,12 @@ function main() {
   echo "+++ Releasing version: ${VERSION}"
   OUTPUT_DIR="${STAGING_DIR}/out"
   mkdir -p "${OUTPUT_DIR}"
+  rm "${OUTPUT_DIR}/*" &>/dev/null || echo "+++ Clean directory: ${OUTPUT_DIR}"
   INPUT_DIR="${STAGING_DIR}/in"
   mkdir -p "${INPUT_DIR}"
+  rm "${INPUT_DIR}/*" &>/dev/null || echo "+++ Clean directory: ${INPUT_DIR}"
 
-  release::stage_artifacts "${STAGING_DIR}/yaml/*" "${INPUT_DIR}/install/yaml"
+  release::stage_multiarch
 
   release::archive_artifacts "${INPUT_DIR}"
   release::checksum_artifacts
