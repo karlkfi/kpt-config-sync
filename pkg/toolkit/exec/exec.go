@@ -100,6 +100,10 @@ type Context interface {
 	// Success returns true if the command completed with success, or false in
 	// case of failure.
 	Success() bool
+
+	// WithEnv sets the environment for the subprocesses, one "KEY=value" pair
+	// at a time.
+	SetEnv(env []string)
 }
 
 // New creates a new execution context.  The program's inputs and outputs are
@@ -131,6 +135,8 @@ type cmdContext struct {
 	stdout io.Writer
 	stderr io.Writer
 
+	env []string
+
 	cmd *exec.Cmd
 	err error
 }
@@ -144,6 +150,16 @@ func getAllArgs(args ...string) []string {
 		allArgs = args
 	}
 	return allArgs
+}
+
+// allEnv constructs the subprocess environment correctly: starts from the
+// current process environment, adding the requested environment and overrides
+// with any test environment supplied.
+func (c *cmdContext) allEnv(testEnv ...string) []string {
+	allEnv := os.Environ()
+	allEnv = append(allEnv, c.env...)
+	allEnv = append(allEnv, testEnv...)
+	return allEnv
 }
 
 // Start implements Context.Start
@@ -162,9 +178,9 @@ func (c *cmdContext) Start(ctx context.Context, args ...string) {
 	c.cmd.Stdin = c.stdin
 	c.cmd.Stdout = c.stdout
 	c.cmd.Stderr = c.stderr
-	c.cmd.Env = testEnv
+	c.cmd.Env = c.allEnv(testEnv...)
 	c.err = c.cmd.Start()
-	glog.V(5).Infof("exec.Run(%+v) => %v", args, c.err)
+	glog.V(5).Infof("done: exec.Run(%+v) => err=%v", args, c.err)
 }
 
 // Wait implements Context.Wait.
@@ -196,6 +212,10 @@ func (c *cmdContext) Success() bool {
 		panic(errors.Errorf("called Success while process still running"))
 	}
 	return c.cmd.ProcessState.Success()
+}
+
+func (c *cmdContext) SetEnv(env []string) {
+	c.env = env
 }
 
 var _ Context = (*fakeContext)(nil)
@@ -254,4 +274,9 @@ func (f *fakeContext) Run(ctx context.Context, args ...string) error {
 // Success implements Context.Success
 func (f *fakeContext) Success() bool {
 	return f.err == nil
+}
+
+// SetEnv implements Context.Env
+func (f *fakeContext) SetEnv(env []string) {
+	// ignored.
 }

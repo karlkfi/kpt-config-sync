@@ -36,8 +36,8 @@
 
 set -euo pipefail
 
-echo CERTS_INPUT_DIR=${CERTS_INPUT_DIR:-""}
-echo YAML_DIR=$YAML_DIR
+CERTS_INPUT_DIR=${CERTS_INPUT_DIR:-""}
+YAML_DIR=$YAML_DIR
 
 readonly server_cert_file="${SERVER_CERT_FILE:-${CERTS_INPUT_DIR}/server.crt}"
 readonly server_key_file="${SERVER_KEY_FILE:-${CERTS_INPUT_DIR}/server.key}"
