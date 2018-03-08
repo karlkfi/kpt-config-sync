@@ -27,9 +27,27 @@ var (
 	bashCmd = exec.RequireProgram("bash")
 )
 
+// runWithEnv executes a bash script with the given environment.  Returns
+// the environment acknowledged by exec, and error if any.
+func runWithEnv(ctx context.Context, scriptPath string, env ...string) ([]string, error) {
+	c := exec.New()
+	c.SetEnv(env)
+	if err := c.Run(ctx, bashCmd, "-c", scriptPath); err != nil {
+		errors.Wrapf(err, "Script %s exited non-zero", scriptPath)
+	}
+	return c.Env(), nil
+}
+
+// RunWithEnv will execute a bash script with the given environment as
+// "KEY=VALUE" strings, returning an error, if any.
+func RunWithEnv(ctx context.Context, scriptPath string, env ...string) error {
+	_, err := runWithEnv(ctx, scriptPath, env...)
+	return err
+}
+
 // RunOrDie will execute a bash script and panic if the script fails.
-func RunOrDie(ctx context.Context, scriptPath string) {
-	if err := exec.New().Run(ctx, bashCmd, "-c", scriptPath); err != nil {
-		panic(errors.Wrapf(err, "Script %s exited non-zero", scriptPath))
+func RunOrDie(ctx context.Context, scriptPath string, env ...string) {
+	if err := RunWithEnv(ctx, scriptPath, env...); err != nil {
+		panic(err)
 	}
 }

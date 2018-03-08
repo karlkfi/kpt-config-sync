@@ -104,6 +104,9 @@ type Context interface {
 	// WithEnv sets the environment for the subprocesses, one "KEY=value" pair
 	// at a time.
 	SetEnv(env []string)
+
+	// Env returns the environment passed over to the process.
+	Env() []string
 }
 
 // New creates a new execution context.  The program's inputs and outputs are
@@ -214,8 +217,14 @@ func (c *cmdContext) Success() bool {
 	return c.cmd.ProcessState.Success()
 }
 
+// SetEnv implements Context.
 func (c *cmdContext) SetEnv(env []string) {
 	c.env = env
+}
+
+// Env implements Context.
+func (c *cmdContext) Env() []string {
+	return c.cmd.Env
 }
 
 var _ Context = (*fakeContext)(nil)
@@ -236,6 +245,9 @@ type fakeContext struct {
 
 	// Returned as result of Run() or Wait().
 	err error
+
+	// The environment passed in through SetEnv().
+	env []string
 }
 
 func (f *fakeContext) copyAll(t string, w io.Writer, r io.Reader) {
@@ -276,7 +288,12 @@ func (f *fakeContext) Success() bool {
 	return f.err == nil
 }
 
-// SetEnv implements Context.Env
+// SetEnv implements Context.
 func (f *fakeContext) SetEnv(env []string) {
-	// ignored.
+	f.env = env
+}
+
+// Env implements Context.
+func (f *fakeContext) Env() []string {
+	return f.env
 }

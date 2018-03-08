@@ -95,3 +95,51 @@ func TestHelperProcess(t *testing.T) {
 	os.Stderr.Sync()
 	os.Exit(c)
 }
+
+func TestRunWithEnv(t *testing.T) {
+	tests := []struct {
+		name string
+		env  string
+	}{
+		{
+			name: "Basic",
+			env:  "SOME_KEY=SOME_VALUE",
+		},
+		{
+			name: "Another test",
+			env:  "SOME_KEY_2=SOME_VALUE_2",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setTestBinary(
+				[]string{
+					"GO_WANT_HELPER_PROCESS=1",
+				},
+				os.Args[0],
+				[]string{
+					"-test.run=TestRunWithEnvHelper",
+					"--",
+				},
+			)
+			out := bytes.NewBuffer(nil)
+			err := bytes.NewBuffer(nil)
+			c := NewRedirected(strings.NewReader(""), out, err)
+			c.SetEnv([]string{tt.env})
+			c.Run(context.Background(), "dummy_command")
+			if strings.Index(out.String(), tt.env) < 0 {
+				t.Errorf("Unexpected: %v, want: %v", out.String(), tt.env)
+			}
+		})
+	}
+}
+
+func TestRunWithEnvHelper(t *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	for _, env := range os.Environ() {
+		fmt.Printf("%v\n", env)
+	}
+	os.Stdout.Sync()
+}
