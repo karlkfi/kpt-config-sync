@@ -4,6 +4,7 @@ package config
 import (
 	"encoding/json"
 	"io"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -93,6 +94,8 @@ func Load(r io.Reader) (Config, error) {
 	if err := d.Decode(&c); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")
 	}
+	c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "$HOME", "/home/user", 1)
+	c.Ssh.PrivateKeyFilename = strings.Replace(c.Ssh.PrivateKeyFilename, "$HOME", "/home/user", 1)
 	return c, nil
 }
 
@@ -100,6 +103,8 @@ func Load(r io.Reader) (Config, error) {
 func (c Config) WriteInto(w io.Writer) error {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "    ")
+	c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "/home/user", "$HOME", 1)
+	c.Ssh.PrivateKeyFilename = strings.Replace(c.Ssh.PrivateKeyFilename, "/home/user", "$HOME", 1)
 	err := e.Encode(c)
 	if err != nil {
 		return errors.Wrapf(err, "while writing config")

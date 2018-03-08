@@ -61,6 +61,37 @@ func TestRead(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "$HOME substitution",
+			input: `{
+		"clusters": [
+				"your_cluster"
+		],
+		"git": {
+				"syncRepo": "git@github.com:repo/example.git",
+				"syncBranch": "test",
+				"syncWaitSeconds": 1,
+				"rootPolicyDir": "foo-corp"
+		},
+		"ssh": {
+				"privateKeyFilename": "$HOME/privateKey",
+				"knownHostsFilename": "$HOME/knownHosts"
+		}
+			}`,
+			expected: Config{
+				Clusters: []string{"your_cluster"},
+				Git: GitConfig{
+					SyncWaitSeconds: 1,
+					SyncBranch:      "test",
+					RootPolicyDir:   "foo-corp",
+					SyncRepo:        "git@github.com:repo/example.git",
+				},
+				Ssh: SshConfig{
+					PrivateKeyFilename: "/home/user/privateKey",
+					KnownHostsFilename: "/home/user/knownHosts",
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -88,6 +119,19 @@ func TestWrite(t *testing.T) {
 				Clusters: []string{"foo", "bar"},
 				Git: GitConfig{
 					SyncWaitSeconds: 1,
+				},
+			},
+		},
+		{
+			name: "Basic",
+			input: Config{
+				Clusters: []string{"foo", "bar"},
+				Git: GitConfig{
+					SyncWaitSeconds: 1,
+				},
+				Ssh: SshConfig{
+					KnownHostsFilename: "/home/user/known_hosts",
+					PrivateKeyFilename: "/home/user/private_key",
 				},
 			},
 		},

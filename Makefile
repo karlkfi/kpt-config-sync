@@ -164,6 +164,18 @@ gen-yaml-%:
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
+push-installer: all-deploy
+	ARCH=$(ARCH) \
+	BIN_DIR=$(BIN_DIR) \
+	GCP_PROJECT=$(GCP_PROJECT) \
+	IMAGE_TAG=$(IMAGE_TAG) \
+	OUTPUT_DIR=$(OUTPUT_DIR) \
+	RELEASE_BUCKET=$(RELEASE_BUCKET) \
+	STAGING_DIR=$(STAGING_DIR) \
+	TOP_DIR=$(TOP_DIR) \
+	VERSION=$(VERSION) \
+	    $(TOP_DIR)/scripts/push-installer.sh
+
 # Builds and pushes a docker image.
 push-%: build
 	@echo
@@ -196,15 +208,4 @@ deploy-resourcequota-admission-controller: \
 	    $(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh
 
 all-deploy: $(addprefix deploy-, $(ALL_COMPONENTS))
-
-# To release:
-# - make a stable release off of latest repository tag:
-#     make RELEASE=1 STABLE=1 release
-release: all-deploy
-	TOP_DIR=$(TOP_DIR) \
-	STAGING_DIR=$(OUTPUT_DIR) \
-	VERSION=$(VERSION) \
-	STABLE=$(STABLE) \
-	RELEASE_BUCKET=$(RELEASE_BUCKET) \
-	    ./scripts/release.sh
 
