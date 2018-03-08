@@ -23,6 +23,7 @@ import (
 	"github.com/google/stolos/pkg/resourcequota"
 	"github.com/google/stolos/pkg/syncer/actions"
 	core_v1 "k8s.io/api/core/v1"
+	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	informers_corev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
@@ -87,10 +88,18 @@ func (s *QuotaSyncer) fillResourceQuotaLeafGaps(nodes []*policyhierarchy_v1.Poli
 
 		quota, err := s.resourceQuotaInformer.Lister().ResourceQuotas(node.Name).Get(resourcequota.ResourceQuotaObjectName)
 		if err != nil {
-			glog.Infof(
-				"Error getting quota object for leaf namespace %s during resync, continuing. Error :%v",
-				node.Name, err)
-			continue
+			if api_errors.IsNotFound(err) {
+				quota = &core_v1.ResourceQuota{
+					Spec: core_v1.ResourceQuotaSpec{
+						Hard: core_v1.ResourceList{},
+					},
+				}
+			} else {
+				glog.Warningf(
+					"Failed to get quota object for leaf namespace %s during resync, continuing: %v",
+					node.Name, err)
+				continue
+			}
 		}
 
 		// If the limits above are not all contained in this quota, we need to update the quota object
@@ -106,9 +115,9 @@ func (s *QuotaSyncer) fillResourceQuotaLeafGaps(nodes []*policyhierarchy_v1.Poli
 		}
 
 		if needsUpdate {
-			glog.Infof("Need to update quota for leaf %s to fill in limits from parent policyspaces", quota.Namespace)
+			glog.Infof("Need to update quota for leaf %s to fill in limits from parent policyspaces", node.Name)
 			resultActions = append(resultActions, actions.NewResourceQuotaUpsertAction(
-				quota.Namespace, resourcequota.StolosQuotaLabels, quota.Spec, s.client, s.resourceQuotaLister))
+				node.Name, resourcequota.StolosQuotaLabels, quota.Spec, s.client, s.resourceQuotaLister))
 		}
 	}
 	return resultActions, nil

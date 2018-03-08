@@ -44,6 +44,7 @@ var policyNodes = []runtime.Object{
 	makePolicyNode("mid", "top", core_v1.ResourceList{"memory": resource.MustParse("5")}, true),
 	makePolicyNode("child1", "mid", core_v1.ResourceList{}, false),
 	makePolicyNode("child2", "mid", core_v1.ResourceList{}, false),
+	makePolicyNode("child3", "mid", core_v1.ResourceList{}, false),
 }
 
 func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
@@ -172,13 +173,14 @@ func TestFillResourceQuotaLeafGaps(t *testing.T) {
 	policyNodeItems, _ := policyNodeInformer.Lister().List(labels.Everything())
 	actions, _ := syncer.fillResourceQuotaLeafGaps(policyNodeItems)
 
-	if len(actions) != 2 {
-		t.Errorf("Expected 2 actions, one for each child, but got %d", len(actions))
+	if len(actions) != 3 {
+		t.Errorf("Expected 3 actions, one for each child, but got %d", len(actions))
 	}
 
 	child1ExpectedSpec := core_v1.ResourceList{"cpu": resource.MustParse("2"), "configmaps": resource.MustParse("10"), "memory": resource.MustParse("5")}
 	child2ExpectedSpec := core_v1.ResourceList{"configmaps": resource.MustParse("3"), "memory": resource.MustParse("5")}
-	var child1Actual, child2Actual core_v1.ResourceList
+	child3ExpectedSpec := core_v1.ResourceList{"configmaps": resource.MustParse("10"), "memory": resource.MustParse("5")}
+	var child1Actual, child2Actual, child3Actual core_v1.ResourceList
 	for _, actual := range actions {
 		if actual.Namespace() == "child1" {
 			child1Actual = actual.ResourceQuotaSpec().Hard
@@ -186,13 +188,20 @@ func TestFillResourceQuotaLeafGaps(t *testing.T) {
 		if actual.Namespace() == "child2" {
 			child2Actual = actual.ResourceQuotaSpec().Hard
 		}
+		if actual.Namespace() == "child3" {
+			child3Actual = actual.ResourceQuotaSpec().Hard
+		}
 	}
 	if !reflect.DeepEqual(child1Actual, child1ExpectedSpec) {
 		t.Errorf("Expected child1 actions %v, but got %v", child1ExpectedSpec, child1Actual)
 	}
 
 	if !reflect.DeepEqual(child2Actual, child2ExpectedSpec) {
-		t.Errorf("Expected child1 actions %v, but got %v", child2ExpectedSpec, child2Actual)
+		t.Errorf("Expected child2 actions %v, but got %v", child2ExpectedSpec, child2Actual)
+	}
+
+	if !reflect.DeepEqual(child3Actual, child3ExpectedSpec) {
+		t.Errorf("Expected child3 actions %v, but got %v", child3ExpectedSpec, child3Actual)
 	}
 }
 
