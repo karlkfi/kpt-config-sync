@@ -16,9 +16,10 @@ limitations under the License.
 package namespaceutil
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"strings"
 )
 
 var (

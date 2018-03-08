@@ -31,9 +31,26 @@ func printErrAndDie(err error) {
 	os.Exit(1)
 }
 
+const usage = `Stolosvet is a tool for validating a policy directory tree.
+
+Usage:
+
+	stolosvet DIRECTORY
+
+DIRECTORY is the root policy directory. This is typically a subdirectory in a Git repo.
+
+Example:
+
+	stolosvet my-repo/policy-dir
+	stolosvet /path/to/my-repo/policy-dir
+
+Options:
+
+`
+
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s DIRECTORY\nOptions:\n", os.Args[0])
+		fmt.Fprint(os.Stderr, usage)
 		flag.PrintDefaults()
 	}
 
