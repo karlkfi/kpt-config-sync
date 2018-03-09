@@ -1,11 +1,10 @@
-package actions
+package action
 
 import (
 	"fmt"
 	"reflect"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/syncer/actions"
 	"github.com/pkg/errors"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,14 +64,25 @@ type ReflectiveActionSpec struct {
 	// The plural of a kind, eg, Roles, RoleBindings, Policies as used for getting the client from
 	// the generated code.
 	KindPlural string
-	// Equal is the per-Kind equal operation
-	Equal func(lhs runtime.Object, rhs runtime.Object) bool
+	// EqualSpec is the per-Kind equal operation that check for equality for the spec of an object.
+	// Meta fields (ObjectMeta and TypeMeta) equality is done automatically and need not be done
+	// by this function.
+	EqualSpec func(lhs runtime.Object, rhs runtime.Object) bool
 	// Client is the client-gen generated stub for the given API group, for example:
 	// kubernetesClient.RbacV1() or kubernetesClient.CoreV1()
 	Client interface{}
 	// Lister is the lister from the generated informer for the given, example:
 	// kubernetesInformerFactory.Rbac().V1().ClusterRoles().Lister()
 	Lister interface{}
+}
+
+// Equal returns true if the two objects have equivalent per-kind spec equality and the
+// labels and annotations are a superset of the declared labels and annotations.
+func (s ReflectiveActionSpec) Equal(declared runtime.Object, actual runtime.Object) bool {
+	if !s.EqualSpec(actual, declared) {
+		return false
+	}
+	return ObjectMetaSubset(actual, declared)
 }
 
 // ReflectiveActionBase is the base implementation for performing actions using reflection. This
@@ -200,15 +210,6 @@ func (s *ReflectiveActionBase) delete() error {
 	return deleteReturns[0].Interface().(error)
 }
 
-// compareForUpdate returns true if the two objects have equivalent per-kind definitions and the
-// labels and annotations are a superset of the declared labels and annotations.
-func (s *ReflectiveActionBase) compareForUpdate(declared runtime.Object, actual runtime.Object) bool {
-	if !s.spec.Equal(actual, declared) {
-		return false
-	}
-	return ObjectMetaSubset(actual, declared)
-}
-
 // create creates the resource using the client
 // Example of what this is effectively doing:
 // client := kubernetesClient.RbacV1().ClusterRoles() // first line
@@ -263,7 +264,7 @@ type ReflectiveUpsertAction struct {
 	ReflectiveActionBase
 }
 
-var _ actions.Interface = &ReflectiveUpsertAction{}
+var _ Interface = &ReflectiveUpsertAction{}
 
 // NewReflectiveUpsertAction creates a new upsert action given a namespace, name and spec. Note that
 // for cluster level resources namespace MUST be the empty string.
@@ -306,7 +307,7 @@ func (s *ReflectiveActionBase) doUpsert() error {
 		return errors.Wrapf(err, "failed to get resource for %s", s)
 	}
 
-	if s.compareForUpdate(s.resource, resouce) {
+	if s.spec.Equal(s.resource, resouce) {
 		return nil
 	}
 
@@ -322,7 +323,7 @@ type ReflectiveDeleteAction struct {
 	ReflectiveActionBase
 }
 
-var _ actions.Interface = &ReflectiveDeleteAction{}
+var _ Interface = &ReflectiveDeleteAction{}
 
 // NewReflectiveDeleteAction creates a new delete action given a namespace, name and spec. Note that
 // for cluster level resources namespace MUST be the empty string.

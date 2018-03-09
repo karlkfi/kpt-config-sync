@@ -6,11 +6,11 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/client/action"
 	"github.com/google/stolos/pkg/client/informers/externalversions"
 	listers_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta"
 	"github.com/google/stolos/pkg/policyimporter/actions"
-	sync_actions "github.com/google/stolos/pkg/syncer/actions"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -33,10 +33,10 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 	informerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), resync)
 	differ := actions.NewDiffer(
-		informerFactory.Stolos().V1().PolicyNodes().Lister(),
-		client.PolicyHierarchy().StolosV1().PolicyNodes(),
-		informerFactory.Stolos().V1().ClusterPolicies().Lister(),
-		client.PolicyHierarchy().StolosV1().ClusterPolicies())
+		actions.NewPolicyNodeActionSpec(
+			client.PolicyHierarchy().StolosV1(),
+			informerFactory.Stolos().V1().PolicyNodes().Lister()),
+		nil)
 
 	return &Controller{
 		policyDir:           policyDir,
@@ -146,7 +146,7 @@ func (c *Controller) getCurentPolicies() (*v1.AllPolicies, error) {
 	return &policies, nil
 }
 
-func applyActions(actions []sync_actions.Interface) error {
+func applyActions(actions []action.Interface) error {
 	for _, a := range actions {
 		if err := a.Execute(); err != nil {
 			return err

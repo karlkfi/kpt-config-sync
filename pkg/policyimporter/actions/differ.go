@@ -20,19 +20,12 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	listers_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
-	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/syncer/actions"
+	"github.com/google/stolos/pkg/client/action"
 )
 
 type Differ struct {
-	// Lister and interface needed to generate PolicyNode actions
-	policyNodeLister    listers_v1.PolicyNodeLister
-	policyNodeInterface typed_v1.PolicyNodeInterface
-	// Lister and interface needed to generate ClusterPolicy actions
-	clusterPolicyLister    listers_v1.ClusterPolicyLister
-	clusterPolicyInterface typed_v1.ClusterPolicyInterface
-	current, desired       v1.AllPolicies
+	current, desired                              v1.AllPolicies
+	policyNodeActionSpec, clusterPolicyActionSpec *action.ReflectiveActionSpec
 }
 
 // Differ will generate an ordered list of actions needed to transition policy from the current to
@@ -43,22 +36,18 @@ type Differ struct {
 //
 // More details about the algorithm can be found at docs/update-preserving-invariants.md
 func NewDiffer(
-	policyNodeLister listers_v1.PolicyNodeLister,
-	policyNodeInterface typed_v1.PolicyNodeInterface,
-	clusterPolicyLister listers_v1.ClusterPolicyLister,
-	clusterPolicyInterface typed_v1.ClusterPolicyInterface) *Differ {
+	policyNodeActionSpec, clusterPolicyActionSpec *action.ReflectiveActionSpec,
+) *Differ {
 	return &Differ{
-		policyNodeLister:       policyNodeLister,
-		policyNodeInterface:    policyNodeInterface,
-		clusterPolicyLister:    clusterPolicyLister,
-		clusterPolicyInterface: clusterPolicyInterface,
+		policyNodeActionSpec:    policyNodeActionSpec,
+		clusterPolicyActionSpec: clusterPolicyActionSpec,
 	}
 }
 
 // Diff returns a list of actions that when applied, transitions the current state to desired state.
 // Note that the invariants are only maintained if the actions are processed by a single thread in order.
 // TODO(frankfarzan): Support ClusterPolicy.
-func (d *Differ) Diff(current, desired v1.AllPolicies) []actions.Interface {
+func (d *Differ) Diff(current, desired v1.AllPolicies) []action.Interface {
 	d.current = current
 	d.desired = desired
 
@@ -82,16 +71,16 @@ func (d *Differ) Diff(current, desired v1.AllPolicies) []actions.Interface {
 		return currentByDepth[deletes[i]] > currentByDepth[deletes[j]]
 	})
 
-	var actions []actions.Interface
+	var actions []action.Interface
 	for _, name := range append(creates, updates...) {
 		node := d.desired.PolicyNodes[name]
 		actions = append(actions, NewPolicyNodeUpsertAction(
-			&node, d.policyNodeLister, d.policyNodeInterface))
+			&node, d.policyNodeActionSpec))
 	}
 	for _, name := range deletes {
 		node := d.current.PolicyNodes[name]
 		actions = append(actions, NewPolicyNodeDeleteAction(
-			&node, d.policyNodeLister, d.policyNodeInterface))
+			&node, d.policyNodeActionSpec))
 	}
 
 	return actions
@@ -113,7 +102,7 @@ func (d *Differ) updates() []string {
 
 	for key, newnode := range d.desired.PolicyNodes {
 		if oldnode, exists := d.current.PolicyNodes[key]; exists {
-			if !equal(&newnode, &oldnode) {
+			if !d.policyNodeActionSpec.Equal(&newnode, &oldnode) {
 				updates = append(updates, key)
 			}
 		}

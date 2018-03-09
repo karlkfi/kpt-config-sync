@@ -44,7 +44,7 @@ func TestDiffer(t *testing.T) {
 			newNodes: []v1.PolicyNode{
 				policyNode("r", ""),
 			},
-			expected: []string{"policynode.r.upsert"},
+			expected: []string{"PolicyNodes.r.upsert"},
 		},
 		{
 			testName: "One delete",
@@ -52,7 +52,7 @@ func TestDiffer(t *testing.T) {
 				policyNode("r", ""),
 			},
 			newNodes: []v1.PolicyNode{},
-			expected: []string{"policynode.r.delete"},
+			expected: []string{"PolicyNodes.r.delete"},
 		},
 		{
 			testName: "Rename root",
@@ -63,8 +63,8 @@ func TestDiffer(t *testing.T) {
 				policyNode("r2", ""),
 			},
 			expected: []string{
-				"policynode.r2.upsert",
-				"policynode.r.delete",
+				"PolicyNodes.r2.upsert",
+				"PolicyNodes.r.delete",
 			},
 		},
 		{
@@ -78,8 +78,8 @@ func TestDiffer(t *testing.T) {
 				policyNode("c1", "r"),
 			},
 			expected: []string{
-				"policynode.c1.upsert",
-				"policynode.c2.upsert",
+				"PolicyNodes.c1.upsert",
+				"PolicyNodes.c2.upsert",
 			},
 		},
 		{
@@ -95,10 +95,10 @@ func TestDiffer(t *testing.T) {
 				policyNode("c1", "r"),
 			},
 			expected: []string{
-				"policynode.c1.upsert",
-				"policynode.c2.upsert",
-				"policynode.co2.delete",
-				"policynode.co1.delete",
+				"PolicyNodes.c1.upsert",
+				"PolicyNodes.c2.upsert",
+				"PolicyNodes.co2.delete",
+				"PolicyNodes.co1.delete",
 			},
 		},
 		{
@@ -114,9 +114,9 @@ func TestDiffer(t *testing.T) {
 				policyNode("c3", "co2"),
 			},
 			expected: []string{
-				"policynode.c3.upsert",
-				"policynode.co2.upsert",
-				"policynode.co1.delete",
+				"PolicyNodes.c3.upsert",
+				"PolicyNodes.co2.upsert",
+				"PolicyNodes.co1.delete",
 			},
 		},
 		{
@@ -133,15 +133,15 @@ func TestDiffer(t *testing.T) {
 				policyNode("c3.1", "c3"),
 			},
 			expected: []string{
-				"policynode.c3.upsert",
-				"policynode.c3.1.upsert",
-				"policynode.c2.upsert",
-				"policynode.c1.delete",
+				"PolicyNodes.c3.upsert",
+				"PolicyNodes.c3.1.upsert",
+				"PolicyNodes.c2.upsert",
+				"PolicyNodes.c1.delete",
 			},
 		},
 	} {
 		t.Run(test.testName, func(t *testing.T) {
-			g := NewDiffer(nil, nil, nil, nil)
+			g := NewDiffer(NewPolicyNodeActionSpec(nil, nil), nil)
 
 			actual := g.Diff(allPolicies(test.oldNodes), allPolicies(test.newNodes))
 

@@ -1,4 +1,4 @@
-package actions
+package action
 
 import (
 	"fmt"
@@ -13,7 +13,6 @@ import (
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/informers/externalversions"
 	"github.com/google/stolos/pkg/client/meta/fake"
-	"github.com/google/stolos/pkg/syncer/actions"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,7 +99,7 @@ func (t *ReflectiveActionTestCase) Validate() string {
 		if obj == nil {
 			panic("object is nil")
 		}
-		if !t.spec.Equal(obj, resource) {
+		if !t.spec.EqualSpec(obj, resource) {
 			return fmt.Sprintf("Objects %v and %v differ", spew.Sdump(obj), spew.Sdump(resource))
 		}
 		if !ObjectMetaSubset(obj, resource) {
@@ -123,7 +122,7 @@ func (t *ReflectiveActionTestCase) Validate() string {
 	}
 }
 
-func (t *ReflectiveActionTestCase) CreateOperation() actions.Interface {
+func (t *ReflectiveActionTestCase) CreateOperation() Interface {
 	switch t.Operation {
 	case "upsert":
 		return NewReflectiveUpsertAction(
@@ -301,7 +300,7 @@ func TestReflectiveActionNamespaced(t *testing.T) {
 
 	spec := &ReflectiveActionSpec{
 		KindPlural: "Roles",
-		Equal:      RolesEqual,
+		EqualSpec:  RolesEqual,
 		Client:     test.client.Kubernetes().RbacV1(),
 		Lister:     factory.Rbac().V1().Roles().Lister(),
 	}
@@ -418,7 +417,7 @@ func TestRefelctiveActionCluster(t *testing.T) {
 
 	spec := &ReflectiveActionSpec{
 		KindPlural: "ClusterRoles",
-		Equal:      ClusterRolesEqual,
+		EqualSpec:  ClusterRolesEqual,
 		Client:     test.client.Kubernetes().RbacV1(),
 		Lister:     factory.Rbac().V1().ClusterRoles().Lister(),
 	}
@@ -528,7 +527,7 @@ func TestRefelctiveActionPolicyNode(t *testing.T) {
 
 	spec := &ReflectiveActionSpec{
 		KindPlural: "PolicyNodes",
-		Equal:      PolicyNodesEqual,
+		EqualSpec:  PolicyNodesEqual,
 		Client:     test.client.PolicyHierarchy().StolosV1(),
 		Lister:     factory.Stolos().V1().PolicyNodes().Lister(),
 	}
