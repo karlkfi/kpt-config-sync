@@ -27,6 +27,7 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/google/stolos/pkg/client/action"
 	"github.com/google/stolos/pkg/client/meta/fake"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -36,7 +37,7 @@ import (
 const parentLabelValue = "parent-team"
 const testUID = types.UID("0844e3b3-1059-11e8-9233-42010a800005")
 
-func upsertNamespaceTestAction(ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) Interface {
+func upsertNamespaceTestAction(ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) action.Interface {
 	return NewNamespaceUpsertAction(
 		ns,
 		testUID,
@@ -46,11 +47,11 @@ func upsertNamespaceTestAction(ns string, client kubernetes.Interface, nsLister 
 }
 
 func deleteNamespaceTestAction(
-	ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) Interface {
+	ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) action.Interface {
 	return NewNamespaceDeleteAction(ns, client, nsLister)
 }
 
-type NamespaceActionCtor func(ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) Interface
+type NamespaceActionCtor func(ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) action.Interface
 type NamespaceTestCase struct {
 	Name         string
 	Exists       bool

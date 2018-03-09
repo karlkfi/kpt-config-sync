@@ -19,9 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/stolos/pkg/syncer/actions"
-
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/client/action"
 	"github.com/google/stolos/pkg/client/meta/fake"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,7 +66,7 @@ func TestSyncerCreate(t *testing.T) {
 	syncer.queue.ShutDown()
 
 	item, _ := syncer.queue.Get()
-	action := item.(actions.Interface)
+	action := item.(action.Interface)
 	if action.String() != "namespace.test-ns-create.upsert" {
 		t.Errorf("Got unexpected action %s", action.String())
 	}
@@ -114,7 +113,7 @@ func TestSyncerUpdate(t *testing.T) {
 	syncer.queue.ShutDown()
 
 	item, _ := syncer.queue.Get()
-	action := item.(actions.Interface)
+	action := item.(action.Interface)
 	if action.String() != "namespace.test-ns-update.upsert" {
 		t.Errorf("Got unexpected action %s", action.String())
 	}

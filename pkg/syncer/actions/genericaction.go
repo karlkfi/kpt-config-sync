@@ -20,6 +20,7 @@ import (
 	"reflect"
 
 	"github.com/golang/glog"
+	"github.com/google/stolos/pkg/client/action"
 	"github.com/pkg/errors"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -108,7 +109,7 @@ type GenericDeleteAction struct {
 	genericActionBase
 }
 
-var _ Interface = &GenericDeleteAction{}
+var _ action.Interface = &GenericDeleteAction{}
 
 // NewGenericDeleteAction creates a delete action from a resource and resource interface.
 func NewGenericDeleteAction(
@@ -150,7 +151,7 @@ type GenericUpsertAction struct {
 	genericActionBase
 }
 
-var _ Interface = &GenericUpsertAction{}
+var _ action.Interface = &GenericUpsertAction{}
 
 // NewGenericUpsertAction creates an upsert action from a resource (a kubernetes API type) and
 // a resource interface.

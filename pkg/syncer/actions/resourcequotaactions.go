@@ -21,6 +21,7 @@ import (
 	"reflect"
 
 	"github.com/golang/glog"
+	"github.com/google/stolos/pkg/client/action"
 	"github.com/google/stolos/pkg/resourcequota"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
@@ -32,7 +33,7 @@ import (
 
 // ResourceQuotaAction represents a CRUD action on a resource quota spec
 type ResourceQuotaAction interface {
-	Interface
+	action.Interface
 	// The resource quota spec
 	ResourceQuotaSpec() core_v1.ResourceQuotaSpec
 }

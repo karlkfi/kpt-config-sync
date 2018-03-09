@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package actions
+package action
 
 // Interface represents a CUD action on a kubernetes resource
 // TODO(briantkennedy): have Operation() method return OperationType

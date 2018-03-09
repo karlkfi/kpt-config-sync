@@ -22,6 +22,7 @@ import (
 	"github.com/google/stolos/pkg/syncer/labeling"
 
 	"github.com/golang/glog"
+	"github.com/google/stolos/pkg/client/action"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -67,7 +68,7 @@ func (n *namespaceActionBase) String() string {
 	return fmt.Sprintf("%s.%s.%s", n.Resource(), n.Namespace(), n.Operation())
 }
 
-var _ Interface = &NamespaceDeleteAction{}
+var _ action.Interface = &NamespaceDeleteAction{}
 
 // NewNamespaceDeleteAction creates a new NamespaceDeleteAction for the given namespace
 func NewNamespaceDeleteAction(
@@ -112,7 +113,7 @@ type NamespaceUpsertAction struct {
 	ownerReferences []meta_v1.OwnerReference
 }
 
-var _ Interface = &NamespaceUpsertAction{}
+var _ action.Interface = &NamespaceUpsertAction{}
 
 // NewNamespaceUpsertAction creates a new NamespaceUpsertAction for the given namespace
 func NewNamespaceUpsertAction(

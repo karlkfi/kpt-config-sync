@@ -23,6 +23,7 @@ import (
 
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/stolos/pkg/client/action"
 	"github.com/google/stolos/pkg/client/informers/externalversions"
 	policynodelister_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
 	"github.com/google/stolos/pkg/client/meta"
@@ -324,7 +325,7 @@ func (s *Syncer) processAction() bool {
 	defer queueSize.Set(float64(s.queue.Len()))
 	defer s.queue.Done(actionItem)
 
-	action := actionItem.(actions.Interface)
+	action := actionItem.(action.Interface)
 	if *dryRun {
 		s.queue.Forget(actionItem)
 		glog.Infof("Would have executed action %s", action.String())

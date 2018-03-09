@@ -20,7 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/syncer/actions"
+	"github.com/google/stolos/pkg/client/action"
 	actions_testing "github.com/google/stolos/pkg/syncer/actions/testing"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -69,7 +69,7 @@ func (s *testUnpackerInterfaceImpl) Names(node *policyhierarchy_v1.PolicyNode) m
 func CheckQueueActions(t *testing.T, items []interface{}, expected []string) {
 	got := []string{}
 	for i := 0; i < len(items); i++ {
-		got = append(got, items[i].(actions.Interface).String())
+		got = append(got, items[i].(action.Interface).String())
 	}
 
 	if !cmp.Equal(got, expected) {
