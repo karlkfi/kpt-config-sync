@@ -130,7 +130,7 @@ spec:
 apiVersion: "stolos.dev/v1"
 kind: ClusterPolicy
 metadata:
-  name: clusterrole
+  name: clusterpolicy
 spec:
   policies:
     type: clusterrole
@@ -151,15 +151,7 @@ spec:
       - apiGroups: ["rbac.authorization.k8s.io"]
         resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
         verbs: ["get", "list"]
----
-# Example for clusterrolebindings
-apiVersion: "stolos.dev/v1"
-kind: ClusterPolicy
-metadata:
-  name: clusterrolebinding
-spec:
-  policies:
-    type: clusterrolebinding
+    # Example for clusterrolebindings
     clusterRoleBindingsV1:
     - kind: ClusterRoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
@@ -188,15 +180,7 @@ spec:
         kind: ClusterRole
         name: rbac-viewer
         apiGroup: rbac.authorization.k8s.io
----
-# Example for podsecuirtypolicy
-apiVersion: "stolos.dev/v1"
-kind: ClusterPolicy
-metadata:
-  name: podsecuritypolicy
-spec:
-  policies:
-    type: podsecuritypolicy
+    # Example for podsecuirtypolicy
     podSecurityPolicyV1Beta1:
     - kind: PodSecurityPolicy
       apiVersion: extensions/v1beta1
