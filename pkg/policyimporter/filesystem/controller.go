@@ -36,7 +36,9 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		actions.NewPolicyNodeActionSpec(
 			client.PolicyHierarchy().StolosV1(),
 			informerFactory.Stolos().V1().PolicyNodes().Lister()),
-		nil)
+		actions.NewClusterPolicyActionSpec(
+			client.PolicyHierarchy().StolosV1(),
+			informerFactory.Stolos().V1().ClusterPolicies().Lister()))
 
 	return &Controller{
 		policyDir:           policyDir,

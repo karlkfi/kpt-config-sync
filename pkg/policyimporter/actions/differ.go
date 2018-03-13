@@ -46,27 +46,33 @@ func NewDiffer(
 
 // Diff returns a list of actions that when applied, transitions the current state to desired state.
 // Note that the invariants are only maintained if the actions are processed by a single thread in order.
-// TODO(frankfarzan): Support ClusterPolicy.
 func (d *Differ) Diff(current, desired v1.AllPolicies) []action.Interface {
 	d.current = current
 	d.desired = desired
 
-	creates := d.creates()
-	updates := d.updates()
-	deletes := d.deletes()
+	var actions []action.Interface
+	actions = append(actions, d.policyNodeActions()...)
+	actions = append(actions, d.clusterPolicyActions()...)
+	return actions
+}
+
+func (d *Differ) policyNodeActions() []action.Interface {
+	creates := d.nodeCreates()
+	updates := d.nodeUpdates()
+	deletes := d.nodeDeletes()
 	glog.Infof("PolicyNode operations: create %d, update %d, delete %d", len(creates), len(updates), len(deletes))
 
 	desiredByDepth := nodesByDepth(d.desired.PolicyNodes)
 	currentByDepth := nodesByDepth(d.current.PolicyNodes)
 
-	// Sort creates and updates by depth
+	// Sort nodeCreates and nodeUpdates by depth
 	sort.Slice(creates, func(i, j int) bool {
 		return desiredByDepth[creates[i]] < desiredByDepth[creates[j]]
 	})
 	sort.Slice(updates, func(i, j int) bool {
 		return desiredByDepth[updates[i]] < desiredByDepth[updates[j]]
 	})
-	// Sort deletes by reverse depth in current tree
+	// Sort nodeDeletes by reverse depth in current tree
 	sort.Slice(deletes, func(i, j int) bool {
 		return currentByDepth[deletes[i]] > currentByDepth[deletes[j]]
 	})
@@ -82,14 +88,27 @@ func (d *Differ) Diff(current, desired v1.AllPolicies) []action.Interface {
 		actions = append(actions, NewPolicyNodeDeleteAction(
 			&node, d.policyNodeActionSpec))
 	}
-
 	return actions
 }
 
-func (d *Differ) creates() []string {
+func (d *Differ) clusterPolicyActions() []action.Interface {
+	var actions []action.Interface
+	if d.current.ClusterPolicy == nil && d.desired.ClusterPolicy == nil {
+		return actions
+	} else if d.current.ClusterPolicy == nil {
+		actions = append(actions, NewClusterPolicyUpsertAction(d.desired.ClusterPolicy, d.clusterPolicyActionSpec))
+	} else if d.desired.ClusterPolicy == nil {
+		actions = append(actions, NewClusterPolicyDeleteAction(d.current.ClusterPolicy, d.clusterPolicyActionSpec))
+	} else if !d.clusterPolicyActionSpec.Equal(d.desired.ClusterPolicy, d.current.ClusterPolicy) {
+		actions = append(actions, NewClusterPolicyUpsertAction(d.desired.ClusterPolicy, d.clusterPolicyActionSpec))
+	}
+	return actions
+}
+
+func (d *Differ) nodeCreates() []string {
 	var creates []string
 
-	for key, _ := range d.desired.PolicyNodes {
+	for key := range d.desired.PolicyNodes {
 		if _, exists := d.current.PolicyNodes[key]; !exists {
 			creates = append(creates, key)
 		}
@@ -97,7 +116,7 @@ func (d *Differ) creates() []string {
 	return creates
 }
 
-func (d *Differ) updates() []string {
+func (d *Differ) nodeUpdates() []string {
 	var updates []string
 
 	for key, newnode := range d.desired.PolicyNodes {
@@ -110,10 +129,10 @@ func (d *Differ) updates() []string {
 	return updates
 }
 
-func (d *Differ) deletes() []string {
+func (d *Differ) nodeDeletes() []string {
 	var deletes []string
 
-	for key, _ := range d.current.PolicyNodes {
+	for key := range d.current.PolicyNodes {
 		if _, exists := d.desired.PolicyNodes[key]; !exists {
 			deletes = append(deletes, key)
 		}

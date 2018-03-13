@@ -19,13 +19,14 @@ import (
 	"testing"
 
 	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"k8s.io/api/extensions/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type testCase struct {
-	testName string
-	oldNodes []v1.PolicyNode
-	newNodes []v1.PolicyNode
+	testName                           string
+	oldNodes, newNodes                 []v1.PolicyNode
+	oldClusterPolicy, newClusterPolicy *v1.ClusterPolicy
 	// String representation of expected actions
 	expected []string
 }
@@ -39,7 +40,7 @@ func TestDiffer(t *testing.T) {
 			expected: []string{},
 		},
 		{
-			testName: "One Create",
+			testName: "One node Create",
 			oldNodes: []v1.PolicyNode{},
 			newNodes: []v1.PolicyNode{
 				policyNode("r", ""),
@@ -47,7 +48,7 @@ func TestDiffer(t *testing.T) {
 			expected: []string{"PolicyNodes.r.upsert"},
 		},
 		{
-			testName: "One delete",
+			testName: "One node delete",
 			oldNodes: []v1.PolicyNode{
 				policyNode("r", ""),
 			},
@@ -55,7 +56,7 @@ func TestDiffer(t *testing.T) {
 			expected: []string{"PolicyNodes.r.delete"},
 		},
 		{
-			testName: "Rename root",
+			testName: "Rename root node",
 			oldNodes: []v1.PolicyNode{
 				policyNode("r", ""),
 			},
@@ -139,20 +140,65 @@ func TestDiffer(t *testing.T) {
 				"PolicyNodes.c1.delete",
 			},
 		},
+		{
+			testName:         "ClusterPolicy create",
+			newClusterPolicy: clusterPolicy("foo", true),
+			expected: []string{
+				"ClusterPolicies.foo.upsert",
+			},
+		},
+		{
+			testName:         "ClusterPolicy update",
+			oldClusterPolicy: clusterPolicy("foo", true),
+			newClusterPolicy: clusterPolicy("foo", false),
+			expected: []string{
+				"ClusterPolicies.foo.upsert",
+			},
+		},
+		{
+			testName:         "ClusterPolicy update no change",
+			oldClusterPolicy: clusterPolicy("foo", true),
+			newClusterPolicy: clusterPolicy("foo", true),
+			expected:         []string{},
+		},
+		{
+			testName:         "ClusterPolicy delete",
+			oldClusterPolicy: clusterPolicy("foo", true),
+			expected: []string{
+				"ClusterPolicies.foo.delete",
+			},
+		},
+		{
+			testName: "Create 2 nodes and a ClusterPolicy",
+			oldNodes: []v1.PolicyNode{
+				policyNode("r", ""),
+			},
+			newNodes: []v1.PolicyNode{
+				policyNode("r", ""),
+				policyNode("c2", "c1"),
+				policyNode("c1", "r"),
+			},
+			newClusterPolicy: clusterPolicy("foo", true),
+			expected: []string{
+				"PolicyNodes.c1.upsert",
+				"PolicyNodes.c2.upsert",
+				"ClusterPolicies.foo.upsert",
+			},
+		},
 	} {
 		t.Run(test.testName, func(t *testing.T) {
-			g := NewDiffer(NewPolicyNodeActionSpec(nil, nil), nil)
+			g := NewDiffer(NewPolicyNodeActionSpec(nil, nil), NewClusterPolicyActionSpec(nil, nil))
 
-			actual := g.Diff(allPolicies(test.oldNodes), allPolicies(test.newNodes))
+			actual := g.Diff(allPolicies(test.oldNodes, test.oldClusterPolicy), allPolicies(test.newNodes, test.newClusterPolicy))
 
 			if len(actual) != len(test.expected) {
-				t.Fatalf("Unexpected number of actions was %d but expected %d",
+				t.Fatalf("Actual number of actions was %d but expected %d",
 					len(actual), len(test.expected))
 			}
 
 			for aIdx, action := range actual {
 				if action.String() != test.expected[aIdx] {
-					t.Fatalf("Unexpected action at index %d was %q but expected %q",
+					t.Fatalf("Actual action at index %d was %q but expected %q",
 						aIdx, action.String(), test.expected[aIdx])
 				}
 			}
@@ -173,9 +219,24 @@ func policyNode(name, parent string) v1.PolicyNode {
 	}
 }
 
-func allPolicies(nodes []v1.PolicyNode) v1.AllPolicies {
+func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
+	return &v1.ClusterPolicy{
+		ObjectMeta: meta.ObjectMeta{
+			Name: name,
+		},
+		Spec: v1.ClusterPolicySpec{
+			Policies: v1.ClusterPolicies{
+				PodSecurtiyPoliciesV1Beta1: []v1beta1.PodSecurityPolicy{
+					{Spec: v1beta1.PodSecurityPolicySpec{Privileged: priviledged}}},
+			},
+		},
+	}
+}
+
+func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy) v1.AllPolicies {
 	p := v1.AllPolicies{
-		PolicyNodes: make(map[string]v1.PolicyNode),
+		PolicyNodes:   make(map[string]v1.PolicyNode),
+		ClusterPolicy: clusterPolicy,
 	}
 	for _, n := range nodes {
 		p.PolicyNodes[n.Name] = n
