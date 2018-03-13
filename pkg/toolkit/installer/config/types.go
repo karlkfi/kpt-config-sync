@@ -26,13 +26,13 @@ var defaultConfig = Config{
 type CertConfig struct {
 	// CaCertFilename is the name of the file containing the PEM-encoded
 	// CA certificate
-	CaCertFilename string `json:"caCertFilename"`
+	CaCertFilename string `json:"caCertFilename,omitempty"`
 
 	// CaKeyFilename is the name of the file containing the PEM-encoded
 	// private key of the certificate authority.  This will be used to
 	// sign the generated certificate but otherwise won't be stored.  Please
 	// make sure that this file has correct permissions.
-	CaKeyFilename string `json:"caKeyFilename"`
+	CaKeyFilename string `json:"caKeyFilename,omitempty"`
 }
 
 // SshConfig contains the private key filename and the known hosts filename
@@ -41,7 +41,7 @@ type SshConfig struct {
 	// PrivateKeyFilename is the filename containing the private key used
 	// for SSH authentication.  This entry is communicated through a file
 	// to avoid exposing the contents of the secret in the process table.
-	PrivateKeyFilename string `json:"privateKeyFilename"`
+	PrivateKeyFilename string `json:"privateKeyFilename,omitempty"`
 
 	// KnownHostsFilename is the filename containing the known hosts SSH
 	// file that Kubernetes will use.  Not copied if not defined.

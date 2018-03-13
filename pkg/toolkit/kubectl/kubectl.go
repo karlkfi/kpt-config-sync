@@ -188,7 +188,7 @@ func (t *Context) GetClusterVersion() (semver.Version, error) {
 
 type ClusterList struct {
 	// Clusters is the list of clusters available to the user, keyed by the
-	// name of the context
+	// name of the context.
 	Clusters map[string]string
 
 	// Current the name of the context marked as "current" in the Clusters.
