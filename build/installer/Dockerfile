@@ -13,10 +13,10 @@
 # limitations under the License.
 
 FROM ubuntu:16.04
-ARG version=0.0.0
 
 RUN apt-get update && apt-get install -y \
     curl \
+	dialog \
 	python
 
 # Installs the gcloud utility.
@@ -44,6 +44,7 @@ COPY yaml yaml
 # container.
 COPY entrypoint.sh entrypoint.sh
 COPY installer installer
+COPY configgen configgen
 
 RUN chmod a+rx -R *
 RUN ls -l *
@@ -51,6 +52,10 @@ RUN ls -l *
 ENV KUBECONFIG=/opt/installer/kubeconfig/config
 ENV HOME=/home/user
 ENV USER=user
+ENV PATH=$PATH:/opt/installer
 
-CMD ["bash", "-c", "./entrypoint.sh", "-v=10", "--config=configs/example.json"]
+ARG INSTALLER_VERSION="unset"
+ENV INSTALLER_VERSION=$INSTALLER_VERSION
+
+ENTRYPOINT ./entrypoint.sh
 

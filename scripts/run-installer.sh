@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/bin/bash
 #
 # Copyright 2018 The Stolos Authors.
 #
@@ -14,10 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Debugging.  Turn off for release.
+# For debugging.  Remove before release.
 set -x
 
-VERSION=${VERSION:-latest}
+# If interactive is set to a nonempty string, the installer will use a
+# menu-driven interactive installer.
+INTERACTIVE=${INTERACTIVE:-""}
+
+# The semantic verison number of the release to install.
+VERSION=${VERSION:-"latest"}
+
+# The default configuration to load.
 CONFIG=${CONFIG:-configs/example.json}
 
 readonly config_dir="$(dirname ${CONFIG})"
@@ -34,6 +41,9 @@ docker run -it \
   -v "${tempdir}/generated_certs":/opt/installer/generated_certs \
   -v "${tempdir}/kubeconfig":/opt/installer/kubeconfig \
   -v "${config_dir}":/opt/installer/configs \
-  gcr.io/stolos-dev/installer:${VERSION} \
-  bash -c "/opt/installer/entrypoint.sh --config=configs/${config_filename} $@"
+  -e "INTERACTIVE=${INTERACTIVE}" \
+  -e "VERSION=${VERSION}" \
+  -e "CONFIG=configs/${config_filename}" \
+  -e "CONFIG_OUT=generated_configs/generated_config.json" \
+  gcr.io/stolos-dev/installer:${VERSION}
 echo "+++ Generated certs are in ${tempdir}"

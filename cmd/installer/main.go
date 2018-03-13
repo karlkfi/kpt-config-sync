@@ -14,8 +14,7 @@ import (
 
 var (
 	configFile = flag.String("config", "", "The file name containing the installer configuration.")
-
-	workDir = flag.String("work_dir", "", "The working directory for the installer.  If not set, defaults to the directory where the installer is run.")
+	workDir    = flag.String("work_dir", "", "The working directory for the installer.  If not set, defaults to the directory where the installer is run.")
 )
 
 func main() {

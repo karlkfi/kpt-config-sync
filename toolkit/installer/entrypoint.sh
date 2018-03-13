@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/bin/bash
 #
 # Copyright 2018 The Stolos Authors.
 #
@@ -14,11 +14,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The entry point for the installer container.  This script is intended to be
-# ran only from within the installer container, which has a known path layout.
+# This script is the entry point for the installer container.  This script is
+# intended to be ran only from within the installer container, which has a known
+# path layout.
+
+# Environment variables used in the entrypoint:
+# - INTERACTIVE: If set to a nonempty string, runs the menu-driven installer.
+#   Otherwise, the batch installer is ran.
+# - CONFIG: The name of the config file to use as default configuration.
+# - CONFIG_OUT: The name of the config file to use as output.
+
+echo "### Examining environment:"
+env
+
+echo "+++ Installer version: ${INSTALLER_VERSION}"
 
 # We need to fix up the kubeconfig paths because these may not match between
 # the container and the host.
-cat /home/user/.kube/config | sed -e "s+cmd-path: [^ ]*gcloud+cmd-path: /usr/local/gcloud/google-cloud-sdk/bin/gcloud+g" > /opt/installer/kubeconfig/config
+# /somepath/gcloud becomes /use/local/gcloud/google-cloud/sdk/bin/gcloud.
+cat /home/user/.kube/config | \
+  sed -e "s+cmd-path: [^ ]*gcloud+cmd-path: /usr/local/gcloud/google-cloud-sdk/bin/gcloud+g" \
+  > /opt/installer/kubeconfig/config
 
-./installer "$@"
+if [ "x${INTERACTIVE}" != "x" ]; then
+  echo "+++ Running configgen"
+  ./configgen \
+    --version="${INSTALLER_VERSION}" \
+    --config_in=${CONFIG} \
+    --config_out=${CONFIG_OUT} \
+    "$@"
+else
+  echo "+++ Running installer"
+  ./installer \
+    --config="${CONFIG}" "$@"
+fi
+
