@@ -1,3 +1,19 @@
+// Reviewed by sunilarora
+/*
+Copyright 2017 The Stolos Authors.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package filesystem
 
 import (
@@ -29,6 +45,7 @@ type Controller struct {
 	stopChan            chan struct{}
 }
 
+// NewController returns a new controller for managing Nomos CRDs by importing policies from a filesystem tree.
 func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, client meta.Interface, stopChan chan struct{}) *Controller {
 	informerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), resync)
@@ -53,7 +70,7 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 	}
 }
 
-// Run runs the controller blocking until an error occurs or stopChan is closed.
+// Run runs the controller and blocks until an error occurs or stopChan is closed.
 func (c *Controller) Run() error {
 	// Start informers
 	c.informerFactory.Start(c.stopChan)
@@ -74,7 +91,7 @@ func (c *Controller) pollDir() error {
 	glog.Infof("Polling policy dir: %s", c.policyDir)
 
 	// Get the current list of policy objects from API server.
-	currentPolicies, err := c.getCurentPolicies()
+	currentPolicies, err := c.getCurrentPolicies()
 	if err != nil {
 		return err
 	}
@@ -120,7 +137,7 @@ func (c *Controller) pollDir() error {
 	}
 }
 
-func (c *Controller) getCurentPolicies() (*v1.AllPolicies, error) {
+func (c *Controller) getCurrentPolicies() (*v1.AllPolicies, error) {
 	policies := v1.AllPolicies{
 		PolicyNodes: make(map[string]v1.PolicyNode),
 	}
