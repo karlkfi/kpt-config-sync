@@ -68,6 +68,10 @@ type GitConfig struct {
 // Config contains the configuration for the installer.  The install process
 // is made based on this configuration.
 type Config struct {
+	// The user account that will drive the installation.  Required to insert
+	// cluster administration role bindings into GKE clusters.
+	User string `json:"user,omitempty"`
+
 	// Clusters contains the names of the cluster contexts to attempt to install
 	// into.
 	Clusters []string `json:"clusters,omitempty"`

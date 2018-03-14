@@ -17,12 +17,14 @@ func TestRead(t *testing.T) {
 		{
 			name: "Basic",
 			input: `{
+				"user": "someuser@example.com",
 				"clusters": [
 				  "foo",
 				  "bar"
 				]
 			}`,
 			expected: Config{
+				User:     "someuser@example.com",
 				Clusters: []string{"foo", "bar"},
 				Git: GitConfig{
 					SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,

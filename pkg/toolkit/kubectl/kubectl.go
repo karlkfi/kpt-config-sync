@@ -128,6 +128,33 @@ func (t *Context) CreateConfigmapFromLiterals(name, namespace string, literals .
 	return nil
 }
 
+// AddClusterAdmin adds user as a cluster admin.  This is only useful on clusters
+// that require such a change.  For example GKE.
+func (t *Context) AddClusterAdmin(user string) error {
+	// TODO(filmil): 'user' here comes from user-supplied configuration.  Should
+	// it be sanitized, or is placement in 'args' enough?
+	args := []string{
+		"create", "clusterrolebinding",
+		fmt.Sprintf("%v-cluster-admin-binding", user),
+		"--clusterrole=cluster-admin",
+		fmt.Sprintf("--user=%v", user),
+	}
+	t.Kubectl(args...)
+	return nil
+}
+
+// RemoveClusterAdmin removes the user from the cluster admin role.  This is only
+// useful on GKE, and does nothing on other platforms.
+func (t *Context) RemoveClusterAdmin(user string) error {
+	args := []string{
+		"delete", "clusterrolebinding",
+		fmt.Sprintf("%v-cluster-admin-binding", user),
+		"--ignore-not-found",
+	}
+	t.Kubectl(args...)
+	return nil
+}
+
 // versionInfo is a partial parsed output of the "kubectl version" command.
 type versionInfo struct {
 	GitVersion string `json:"gitVersion"`

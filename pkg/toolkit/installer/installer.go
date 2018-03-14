@@ -161,12 +161,38 @@ func (i *Installer) deploySecrets() error {
 	return nil
 }
 
+func (i *Installer) addClusterAdmin(user string) error {
+	glog.V(5).Infof("Adding %q as cluster admin", user)
+	c := kubectl.New(context.Background())
+	return c.AddClusterAdmin(user)
+}
+
+func (i *Installer) removeClusterAdmin(user string) error {
+	glog.V(5).Infof("Removing %q as cluster admin", user)
+	c := kubectl.New(context.Background())
+	return c.RemoveClusterAdmin(user)
+}
+
 // processCluster installs the necessary files on the currently active cluster.
 func (i *Installer) processCluster() error {
+	var err error
 	glog.V(5).Info("processCluster: enter")
+
+	if i.c.User != "" {
+		if err = i.addClusterAdmin(i.c.User); err != nil {
+			return errors.Wrapf(err, "could not make %v the cluster admin.", i.c.User)
+		}
+		defer func() {
+			// Ensure that this is ran at end of cluster process, irrespective
+			// of whether the install was successful.
+			if err := i.removeClusterAdmin(i.c.User); err != nil {
+				glog.Warningf("could not remove cluster admin role for user: %v: %v", i.c.User, err)
+			}
+		}()
+	}
 	// The common manifests need to be applied first, as they create the
 	// namespace.
-	err := i.applyAll(filepath.Join(i.workDir, "manifests/common"))
+	err = i.applyAll(filepath.Join(i.workDir, "manifests/common"))
 	if err != nil {
 		return errors.Wrapf(err, "while applying manifests/common")
 	}
@@ -186,7 +212,7 @@ func (i *Installer) processCluster() error {
 	if err != nil {
 		return errors.Wrapf(err, "while applying yaml")
 	}
-	return nil
+	return err
 }
 
 // restoreContext sets the context to a (previously current) context.
