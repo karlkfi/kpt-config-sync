@@ -67,7 +67,9 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 	}
 	g.actions = []Action{
 		NewClusters(g.opts, g.defaultCfg.Clusters, &g.currentCfg.Clusters),
-		&staticAction{name: "Git", text: "Configure the Git Policy Importer module"},
+		// The default here is equal to current, because we also display the
+		// edits.
+		NewGitForm(g.opts, g.currentCfg.Git, &g.currentCfg.Git),
 		&staticAction{
 			name: "SSH",
 			text: "Configure SSH access for the Git Policy Importer module [UNSET]"},
