@@ -68,7 +68,7 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 	s := NewSave(g.out, &g.currentCfg)
 	g.actions = []Action{
 		NewUserForm(g.opts, &g.currentCfg.User),
-		NewClusters(g.opts, g.defaultCfg.Clusters, &g.currentCfg.Clusters),
+		NewClusters(g.opts, g.defaultCfg.Contexts, &g.currentCfg.Contexts),
 		// The default here is equal to current, because we also display the
 		// edits.
 		NewGitForm(g.opts, g.currentCfg.Git, &g.currentCfg.Git),

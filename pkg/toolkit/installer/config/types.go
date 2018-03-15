@@ -14,7 +14,8 @@ const (
 	defaultSyncBranch             = "master"
 )
 
-var defaultConfig = Config{
+// DefaultConfig contains the empty default values for a Config.
+var DefaultConfig = Config{
 	Git: GitConfig{
 		SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
 		SyncBranch:      defaultSyncBranch,
@@ -51,18 +52,18 @@ type SshConfig struct {
 // GitConfig contains the settings for the git importer repository.
 type GitConfig struct {
 	// SyncRepo is the git repository name to sync from.
-	SyncRepo string `json:"syncRepo"`
+	SyncRepo string `json:"GIT_SYNC_REPO"`
 
 	// SyncBranch is the branch to sync from.  Default: "master".
-	SyncBranch string `json:"syncBranch"`
+	SyncBranch string `json:"GIT_SYNC_BRANCH"`
 
 	// RootPolicyDir is the absolute path of the directory that contains
 	// the local policy.  Default: the root directory of the repo.
-	RootPolicyDir string `json:"rootPolicyDir"`
+	RootPolicyDir string `json:"ROOT_POLICY_DIR"`
 
 	// SyncWaitSeconds is the time duration in seconds between consecutive
 	// syncs.  Default: 15 seconds.
-	SyncWaitSeconds int64 `json:"syncWaitSeconds"`
+	SyncWaitSeconds int64 `json:"GIT_SYNC_WAIT"`
 }
 
 // Config contains the configuration for the installer.  The install process
@@ -72,9 +73,9 @@ type Config struct {
 	// cluster administration role bindings into GKE clusters.
 	User string `json:"user,omitempty"`
 
-	// Clusters contains the names of the cluster contexts to attempt to install
+	// Contexts contains the names of the cluster contexts to attempt to install
 	// into.
-	Clusters []string `json:"clusters,omitempty"`
+	Contexts []string `json:"contexts,omitempty"`
 
 	// Git contains the git-specific configuration.
 	Git GitConfig `json:"git,omitempty"`
@@ -93,7 +94,7 @@ type Config struct {
 // in case of failure.
 func Load(r io.Reader) (Config, error) {
 	var c Config
-	c = defaultConfig
+	c = DefaultConfig
 	d := json.NewDecoder(r)
 	if err := d.Decode(&c); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")

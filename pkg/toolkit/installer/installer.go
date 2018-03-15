@@ -241,7 +241,7 @@ func restoreContext(c string) error {
 
 // Run starts the installer process, and reports error at the process end, if any.
 func (i *Installer) Run() error {
-	if len(i.c.Clusters) == 0 {
+	if len(i.c.Contexts) == 0 {
 		return errors.Errorf("no clusters requested")
 	}
 
@@ -256,7 +256,7 @@ func (i *Installer) Run() error {
 	}
 	i.createCertificates()
 	kc := kubectl.New(context.Background())
-	for _, cluster := range i.c.Clusters {
+	for _, cluster := range i.c.Contexts {
 		glog.Infof("processing cluster: %q", cluster)
 		err := kc.SetContext(cluster)
 		if err != nil {

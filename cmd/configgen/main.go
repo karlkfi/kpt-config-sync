@@ -55,7 +55,7 @@ func versionOrDie(vstr string) semver.Version {
 func main() {
 	flag.Parse()
 
-	var c config.Config
+	c := config.DefaultConfig
 	if *configIn != "" {
 		file, err := os.Open(*configIn)
 		if err != nil {

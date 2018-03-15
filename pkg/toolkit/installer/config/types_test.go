@@ -18,14 +18,14 @@ func TestRead(t *testing.T) {
 			name: "Basic",
 			input: `{
 				"user": "someuser@example.com",
-				"clusters": [
+				"contexts": [
 				  "foo",
 				  "bar"
 				]
 			}`,
 			expected: Config{
 				User:     "someuser@example.com",
-				Clusters: []string{"foo", "bar"},
+				Contexts: []string{"foo", "bar"},
 				Git: GitConfig{
 					SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
 					SyncBranch:      "master",
@@ -35,14 +35,14 @@ func TestRead(t *testing.T) {
 		{
 			name: "Example config",
 			input: `{
-		"clusters": [
+		"contexts": [
 				"your_cluster"
 		],
 		"git": {
-				"syncRepo": "git@github.com:repo/example.git",
-				"syncBranch": "test",
-				"syncWaitSeconds": 1,
-				"rootPolicyDir": "foo-corp"
+				"GIT_SYNC_REPO": "git@github.com:repo/example.git",
+				"GIT_SYNC_BRANCH": "test",
+				"GIT_SYNC_WAIT": 1,
+				"ROOT_POLICY_DIR": "foo-corp"
 		},
 		"ssh": {
 				"privateKeyFilename": "privateKey",
@@ -50,7 +50,7 @@ func TestRead(t *testing.T) {
 		}
 			}`,
 			expected: Config{
-				Clusters: []string{"your_cluster"},
+				Contexts: []string{"your_cluster"},
 				Git: GitConfig{
 					SyncWaitSeconds: 1,
 					SyncBranch:      "test",
@@ -66,14 +66,14 @@ func TestRead(t *testing.T) {
 		{
 			name: "$HOME substitution",
 			input: `{
-		"clusters": [
+		"contexts": [
 				"your_cluster"
 		],
 		"git": {
-				"syncRepo": "git@github.com:repo/example.git",
-				"syncBranch": "test",
-				"syncWaitSeconds": 1,
-				"rootPolicyDir": "foo-corp"
+				"GIT_SYNC_REPO": "git@github.com:repo/example.git",
+				"GIT_SYNC_BRANCH": "test",
+				"GIT_SYNC_WAIT": 1,
+				"ROOT_POLICY_DIR": "foo-corp"
 		},
 		"ssh": {
 				"privateKeyFilename": "$HOME/privateKey",
@@ -81,7 +81,7 @@ func TestRead(t *testing.T) {
 		}
 			}`,
 			expected: Config{
-				Clusters: []string{"your_cluster"},
+				Contexts: []string{"your_cluster"},
 				Git: GitConfig{
 					SyncWaitSeconds: 1,
 					SyncBranch:      "test",
@@ -118,7 +118,7 @@ func TestWrite(t *testing.T) {
 		{
 			name: "Basic",
 			input: Config{
-				Clusters: []string{"foo", "bar"},
+				Contexts: []string{"foo", "bar"},
 				Git: GitConfig{
 					SyncWaitSeconds: 1,
 				},
@@ -127,7 +127,7 @@ func TestWrite(t *testing.T) {
 		{
 			name: "Basic",
 			input: Config{
-				Clusters: []string{"foo", "bar"},
+				Contexts: []string{"foo", "bar"},
 				Git: GitConfig{
 					SyncWaitSeconds: 1,
 				},
