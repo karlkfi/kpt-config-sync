@@ -183,15 +183,18 @@ func (c *cmdContext) Start(ctx context.Context, args ...string) {
 	c.cmd.Stderr = c.stderr
 	c.cmd.Env = c.allEnv(testEnv...)
 	c.err = c.cmd.Start()
-	glog.V(5).Infof("done: exec.Run(%+v) => err=%v", args, c.err)
+	glog.V(5).Infof("started: exec.Run(%+v) => err=%v, process: %v", args, c.err, c.cmd.ProcessState.String())
 }
 
 // Wait implements Context.Wait.
 func (c *cmdContext) Wait() error {
 	if c.err != nil {
+		glog.V(10).Infof("wait: early return %v: ", c.err)
 		return c.err
 	}
-	return c.cmd.Wait()
+	c.err = c.cmd.Wait()
+	glog.V(5).Infof("done: err=%v, process: %v", c.err, c.cmd.ProcessState.String())
+	return c.err
 }
 
 // Run implements Context.Run.

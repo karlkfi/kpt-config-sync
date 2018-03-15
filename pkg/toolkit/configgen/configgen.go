@@ -65,6 +65,7 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 		version:    version,
 		opts:       opts,
 	}
+	s := NewSave(g.out, &g.currentCfg)
 	g.actions = []Action{
 		NewUserForm(g.opts, &g.currentCfg.User),
 		NewClusters(g.opts, g.defaultCfg.Clusters, &g.currentCfg.Clusters),
@@ -72,8 +73,8 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 		// edits.
 		NewGitForm(g.opts, g.currentCfg.Git, &g.currentCfg.Git),
 		NewSSHForm(g.opts, &g.currentCfg.Ssh),
-		&staticAction{name: "Run", text: "Run the installer with current configuration"},
-		NewSave(g.out, &g.currentCfg),
+		NewInstallAction(s, &g.currentCfg, g.dir),
+		s,
 		&staticAction{name: "Quit", text: "Quit the configuration generator.", quit: true, implemented: true},
 	}
 	return g
