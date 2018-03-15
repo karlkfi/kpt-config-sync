@@ -2,10 +2,11 @@
 package config
 
 import (
-	"encoding/json"
 	"io"
+	"io/ioutil"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 )
 
@@ -90,13 +91,15 @@ type Config struct {
 	Ssh SshConfig `json:"ssh,omitempty"`
 }
 
-// Load loads configuration from a reader in JSON format, or returns an error
-// in case of failure.
+// Load loads configuration from a reader in either YAML or JSON format.
 func Load(r io.Reader) (Config, error) {
 	var c Config
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return Config{}, errors.Wrapf(err, "while reading config")
+	}
 	c = DefaultConfig
-	d := json.NewDecoder(r)
-	if err := d.Decode(&c); err != nil {
+	if err := yaml.Unmarshal(b, &c); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")
 	}
 	c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "$HOME", "/home/user", 1)
@@ -106,13 +109,15 @@ func Load(r io.Reader) (Config, error) {
 
 // WriteInto writes the configuration into supplied writer in JSON format.
 func (c Config) WriteInto(w io.Writer) error {
-	e := json.NewEncoder(w)
-	e.SetIndent("", "    ")
 	c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "/home/user", "$HOME", 1)
 	c.Ssh.PrivateKeyFilename = strings.Replace(c.Ssh.PrivateKeyFilename, "/home/user", "$HOME", 1)
-	err := e.Encode(c)
+	b, err := yaml.Marshal(c)
 	if err != nil {
-		return errors.Wrapf(err, "while writing config")
+		return errors.Wrapf(err, "while marshalling config")
 	}
-	return nil
+	i, err := w.Write(b)
+	if i != len(b) {
+		return errors.Errorf("short write")
+	}
+	return err
 }

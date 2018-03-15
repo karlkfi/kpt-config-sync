@@ -33,6 +33,22 @@ func TestRead(t *testing.T) {
 			},
 		},
 		{
+			name: "Basic YAML",
+			input: `user: someuser@example.com
+contexts:
+- foo
+- bar
+`,
+			expected: Config{
+				User:     "someuser@example.com",
+				Contexts: []string{"foo", "bar"},
+				Git: GitConfig{
+					SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
+					SyncBranch:      "master",
+				},
+			},
+		},
+		{
 			name: "Example config",
 			input: `{
 		"contexts": [

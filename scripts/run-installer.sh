@@ -61,6 +61,6 @@ docker run -it \
   -e "INTERACTIVE=${INTERACTIVE}" \
   -e "VERSION=${VERSION}" \
   -e "CONFIG=${config_container_dir}${config_filename}" \
-  -e "CONFIG_OUT=generated_configs/generated_config.json" \
+  -e "CONFIG_OUT=generated_configs/generated_config.yaml" \
   gcr.io/stolos-dev/installer:${VERSION} "$@"
 echo "+++ Generated files are available in ${tempdir}"
