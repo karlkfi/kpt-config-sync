@@ -66,6 +66,7 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 		opts:       opts,
 	}
 	g.actions = []Action{
+		NewUserForm(g.opts, &g.currentCfg.User),
 		NewClusters(g.opts, g.defaultCfg.Clusters, &g.currentCfg.Clusters),
 		// The default here is equal to current, because we also display the
 		// edits.
