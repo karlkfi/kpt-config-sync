@@ -27,23 +27,40 @@ VERSION=${VERSION:-"latest"}
 # The default configuration to load.
 CONFIG=${CONFIG:-configs/example.json}
 
-readonly config_dir="$(dirname ${CONFIG})"
-readonly config_filename="$(basename ${CONFIG})"
+# Change this to absolute path, so it can be mounted.
+CONFIG="$(realpath $CONFIG)"
 
 # The directory that is going to be used as output.
 readonly tempdir=$(mktemp -d)
 
-echo "+++ Using directory: ${tempdir}"
+config_dir="$(dirname ${CONFIG})"
+config_container_dir="configs/"
+if [[ "x${config_dir}" == "x" ]]; then
+  # Avoid trying to mount a "" directory as a config directory: it's not going
+  # to work.
+  config_dir="${tempdir}"
+  config_container_dir=""
+fi
+
+readonly config_filename="$(basename ${CONFIG})"
+
+# Temporarily, pull the latest image to the local docker daemon cache.
+# TODO(filmil): Remove this gimmick once we have a public cluster registry
+# to pull from.
+gcloud docker -- pull "gcr.io/stolos-dev/installer:${VERSION}"
+
+echo "+++ Using output directory: ${tempdir}"
 mkdir -p ${tempdir}/{kubeconfig,generated_certs,generated_configs}
 docker run -it \
   -u "$(id -u):$(id -g)" \
   -v "${HOME}":/home/user \
   -v "${tempdir}/generated_certs":/opt/installer/generated_certs \
+  -v "${tempdir}/generated_configs":/opt/installer/generated_configs \
   -v "${tempdir}/kubeconfig":/opt/installer/kubeconfig \
   -v "${config_dir}":/opt/installer/configs \
   -e "INTERACTIVE=${INTERACTIVE}" \
   -e "VERSION=${VERSION}" \
-  -e "CONFIG=configs/${config_filename}" \
+  -e "CONFIG=${config_container_dir}${config_filename}" \
   -e "CONFIG_OUT=generated_configs/generated_config.json" \
-  gcr.io/stolos-dev/installer:${VERSION}
-echo "+++ Generated certs are in ${tempdir}"
+  gcr.io/stolos-dev/installer:${VERSION} "$@"
+echo "+++ Generated files are available in ${tempdir}"
