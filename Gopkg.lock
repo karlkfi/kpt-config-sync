@@ -850,6 +850,15 @@
 
 [[projects]]
   branch = "master"
+  name = "k8s.io/gengo"
+  packages = [
+    "namer",
+    "types"
+  ]
+  revision = "01a732e01d00cb9a81bb0ca050d3e6d2b947927b"
+
+[[projects]]
+  branch = "master"
   name = "k8s.io/kube-openapi"
   packages = [
     "pkg/common",
@@ -1046,6 +1055,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bf006387b194acbaab246749328c2e6d44cfa39bb463762a7693e2ba7078b154"
+  inputs-digest = "dfef9b105721a925b325bd212f366a48e8e0723d89b4c9f98a777cab7fd0ba19"
   solver-name = "gps-cdcl"
   solver-version = 1
