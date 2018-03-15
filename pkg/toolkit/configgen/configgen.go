@@ -70,10 +70,7 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 		// The default here is equal to current, because we also display the
 		// edits.
 		NewGitForm(g.opts, g.currentCfg.Git, &g.currentCfg.Git),
-		&staticAction{
-			name: "SSH",
-			text: "Configure SSH access for the Git Policy Importer module [UNSET]"},
-		&staticAction{name: "Certs", text: "Configure CA certificates [DEFAULT]"},
+		NewSSHForm(g.opts, &g.currentCfg.Ssh),
 		&staticAction{name: "Run", text: "Run the installer with current configuration"},
 		NewSave(g.out, &g.currentCfg),
 		&staticAction{name: "Quit", text: "Quit the configuration generator.", quit: true, implemented: true},
