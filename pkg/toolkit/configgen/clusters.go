@@ -95,7 +95,7 @@ func (c *Clusters) Run() (bool, error) {
 	ch.Display()
 	sel, err := ch.Close()
 	if err != nil {
-		return true, errors.Wrapf(err, "while selecting clusters to install")
+		return false, errors.Wrapf(err, "while selecting clusters to install")
 	}
 
 	// Apply the setting to the current configuration.
