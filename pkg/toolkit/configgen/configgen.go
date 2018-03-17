@@ -28,8 +28,7 @@ import (
 const (
 	menuTitle = "Configuration generator options"
 	// This is the title message shown in the first menu.
-	menuMessage = `Select one of the options below to change the installation options.
-		`
+	menuMessage = `Select one of the options below to change the installation options.`
 )
 
 type Generator struct {
@@ -56,6 +55,7 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 		dialog.Title(menuTitle),
 		dialog.Width(100),
 		dialog.Height(20),
+		dialog.Message("hello!"),
 	)
 	g := &Generator{
 		defaultCfg: cfg,
@@ -81,12 +81,12 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 // buildMenu creates a menu based on the current content of the actions. Uses
 // the global options specified in opts.
 func buildMenu(actions []Action, opts dialog.Options, err error) *dialog.Menu {
-	var o []interface{}
+	o := []interface{}{opts}
 	o = append(o, dialog.Message(fmt.Sprintf("%v [%v]", menuMessage, err)))
 	for _, action := range actions {
 		o = append(o, dialog.MenuItem(action.Name(), action.Text()))
 	}
-	o = append(o, dialog.MenuHeight(len(actions)), opts)
+	o = append(o, dialog.MenuHeight(len(actions)))
 	return dialog.NewMenu(o...)
 }
 
