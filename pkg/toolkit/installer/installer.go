@@ -44,7 +44,7 @@ const (
 
 	// certsDirectory is the directory relative to the working directory that
 	// contains the generated certificates.
-	certsDirectory = "generated_certs"
+	certsDirectory = "certs"
 
 	// certScript is a script for certificate generation.  Should be replaced
 	// by go-native generation script.

@@ -31,11 +31,11 @@ import (
 )
 
 var (
-	configIn  = flag.String("config_in", "", "The default configuration file to load.")
-	configOut = flag.String("config_out", "generated_config.json", "The name of the output configuration file to write.")
-	workDir   = flag.String("work_dir", "", "The working directory for the configgen.  If not set, defaults to the directory where the configgen is run.")
-
-	version = flag.String("version", "0.0.0", "The installer version.")
+	configIn      = flag.String("config_in", "", "The default configuration file to load.")
+	configOut     = flag.String("config_out", "generated_config.json", "The name of the output configuration file to write.")
+	workDir       = flag.String("work_dir", "", "The working directory for the configgen.  If not set, defaults to the directory where the configgen is run.")
+	version       = flag.String("version", "0.0.0", "The installer version.")
+	suggestedUser = flag.String("suggested_user", "", "The user to run the installation as.")
 )
 
 // version parses vstr, which could be of the form "prefix1.2.3-blah+blah".
@@ -66,6 +66,9 @@ func main() {
 		c, err = config.Load(file)
 		if err != nil {
 			glog.Fatal(errors.Wrapf(err, "while loading: %q", *configIn))
+		}
+		if *suggestedUser != "" {
+			c.User = *suggestedUser
 		}
 	}
 

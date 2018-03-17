@@ -37,13 +37,13 @@ function main() {
   mkdir -p ${STAGING_DIR}/installer/manifests/common
   cp -R ${TOP_DIR}/manifests/common/* ${STAGING_DIR}/installer/manifests/common
 
-  mkdir -p ${STAGING_DIR}/installer/configs
-  cp -R ${TOP_DIR}/toolkit/installer/configs/* ${STAGING_DIR}/installer/configs
+  mkdir -p ${STAGING_DIR}/installer/examples
+  cp -R ${TOP_DIR}/toolkit/installer/examples/* ${STAGING_DIR}/installer/examples
   cp ${TOP_DIR}/toolkit/installer/entrypoint.sh ${STAGING_DIR}/installer
 
   mkdir -p ${STAGING_DIR}/installer/scripts
   cp ${TOP_DIR}/scripts/deploy-resourcequota-admission-controller.sh \
-     ${STAGING_DIR}/installer/scripts
+     ${STAGING_DIR}/installer/examples
   cp ${TOP_DIR}/scripts/generate-resourcequota-admission-controller-certs.sh \
      ${STAGING_DIR}/installer/scripts
 

@@ -34,8 +34,6 @@ env
 echo "### Examining args"
 echo "### $@"
 
-echo "+++ Installer version: ${INSTALLER_VERSION}"
-
 # We need to fix up the kubeconfig paths because these may not match between
 # the container and the host.
 # /somepath/gcloud becomes /use/local/gcloud/google-cloud/sdk/bin/gcloud.
@@ -48,6 +46,7 @@ if [ "x${INTERACTIVE}" != "x" ]; then
   ./configgen \
     --v=10 \
     --log_dir=/tmp \
+    --suggested_user="${SUGGESTED_USER}" \
     --version="${INSTALLER_VERSION}" \
     --config_in=${CONFIG} \
     --config_out=${CONFIG_OUT} \

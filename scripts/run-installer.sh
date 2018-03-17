@@ -20,6 +20,9 @@ set -x
 # The installer container.  The named registry should be publicly accessible.
 readonly INSTALLER_CONTAINER="gcr.io/nomos-release/installer"
 
+# The directory that is going to be used as output.
+readonly output_dir=$(pwd)
+
 # If interactive is set to a nonempty string, the installer will use a
 # menu-driven interactive installer.
 INTERACTIVE=${INTERACTIVE:-""}
@@ -27,44 +30,53 @@ INTERACTIVE=${INTERACTIVE:-""}
 # The semantic verison number of the release to install.
 VERSION=${VERSION:-"latest"}
 
-# The default configuration to load.
-CONFIG=${CONFIG:-configs/example.json}
-
-# Change this to absolute path, so it can be mounted.
-CONFIG="$(realpath $CONFIG)"
-
-# The directory that is going to be used as output.
-readonly output_dir=$(pwd)
-
-config_dir="$(dirname ${CONFIG})"
-config_container_dir="configs/"
-if [[ "x${config_dir}" == "x" ]]; then
-  # Avoid trying to mount a "" directory as a config directory: it's not going
-  # to work.
-  config_dir="${output_dir}"
-  config_container_dir=""
+readonly gcloud_prg="$(which gcloud)"
+if [[ -z "${gcloud_prg}" ]]; then
+  echo "gcloud is required."
+  exit 1
 fi
 
-readonly config_filename="$(basename ${CONFIG})"
+CONFIG_DIR="examples"
+CONFIG_BASENAME="quickstart.yaml"
+if [[ -z "${CONFIG}" ]]; then
+  CONTAINER_CONFIG_FILE="examples/quickstart.yaml"
+else
+  # $CONFIG specified, ensure that it's an existing file, and map it into the
+  # container.
+  CONFIG="$(realpath $CONFIG)"
+  if ! [[ -f "${CONFIG}" ]]; then
+    echo "file not found: ${CONFIG}"
+    exit 1
+  fi
+  CONFIG_DIR="$(dirname $CONFIG)"
+  CONFIG_BASENAME="$(basename $CONFIG)"
+  CONTAINER_CONFIG_FILE="configs/${CONFIG_BASENAME}"
+fi
+
+# Only suggest the user where there is a gcloud utility available.
+readonly suggested_user="$(gcloud config get-value account)"
 
 # Temporarily, pull the latest image to the local docker daemon cache.
 # TODO(filmil): Remove this gimmick once we have a public cluster registry
 # to pull from.
 gcloud docker -- pull "${INSTALLER_CONTAINER}:${VERSION}"
 
+# TODO(filmil): Move the environment variables to flags.
 echo "+++ Using output directory: ${output_dir}"
-mkdir -p ${output_dir}/{kubeconfig,certs,configs,logs}
+mkdir -p ${output_dir}/{kubeconfig,certs,gen_configs,logs}
 docker run -it \
   -u "$(id -u):$(id -g)" \
   -v "${HOME}":/home/user \
   -v "${output_dir}/certs":/opt/installer/certs \
-  -v "${output_dir}/configs":/opt/installer/configs \
+  -v "${output_dir}/gen_configs":/opt/installer/gen_configs \
   -v "${output_dir}/kubeconfig":/opt/installer/kubeconfig \
   -v "${output_dir}/logs":/tmp \
-  -v "${config_dir}":/opt/installer/configs \
+  -v "${CONFIG_DIR}":/opt/installer/configs \
   -e "INTERACTIVE=${INTERACTIVE}" \
   -e "VERSION=${VERSION}" \
-  -e "CONFIG=${config_container_dir}${config_filename}" \
-  -e "CONFIG_OUT=configs/generated.yaml" \
+  -e "CONFIG=${CONTAINER_CONFIG_FILE}" \
+  -e "CONFIG_OUT=gen_configs/generated.yaml" \
+  -e "SUGGESTED_USER=${suggested_user}" \
   "${INSTALLER_CONTAINER}:${VERSION}" "$@"
 echo "+++ Generated files are available in ${output_dir}"
+
