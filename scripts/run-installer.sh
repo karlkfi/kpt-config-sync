@@ -17,6 +17,9 @@
 # For debugging.  Remove before release.
 set -x
 
+# The installer container.  The named registry should be publicly accessible.
+readonly INSTALLER_CONTAINER="gcr.io/nomos-release/installer"
+
 # If interactive is set to a nonempty string, the installer will use a
 # menu-driven interactive installer.
 INTERACTIVE=${INTERACTIVE:-""}
@@ -31,14 +34,14 @@ CONFIG=${CONFIG:-configs/example.json}
 CONFIG="$(realpath $CONFIG)"
 
 # The directory that is going to be used as output.
-readonly tempdir=$(mktemp -d)
+readonly output_dir=$(pwd)
 
 config_dir="$(dirname ${CONFIG})"
 config_container_dir="configs/"
 if [[ "x${config_dir}" == "x" ]]; then
   # Avoid trying to mount a "" directory as a config directory: it's not going
   # to work.
-  config_dir="${tempdir}"
+  config_dir="${output_dir}"
   config_container_dir=""
 fi
 
@@ -47,20 +50,21 @@ readonly config_filename="$(basename ${CONFIG})"
 # Temporarily, pull the latest image to the local docker daemon cache.
 # TODO(filmil): Remove this gimmick once we have a public cluster registry
 # to pull from.
-gcloud docker -- pull "gcr.io/stolos-dev/installer:${VERSION}"
+gcloud docker -- pull "${INSTALLER_CONTAINER}:${VERSION}"
 
-echo "+++ Using output directory: ${tempdir}"
-mkdir -p ${tempdir}/{kubeconfig,generated_certs,generated_configs}
+echo "+++ Using output directory: ${output_dir}"
+mkdir -p ${output_dir}/{kubeconfig,generated_certs,generated_configs,logs}
 docker run -it \
   -u "$(id -u):$(id -g)" \
   -v "${HOME}":/home/user \
-  -v "${tempdir}/generated_certs":/opt/installer/generated_certs \
-  -v "${tempdir}/generated_configs":/opt/installer/generated_configs \
-  -v "${tempdir}/kubeconfig":/opt/installer/kubeconfig \
+  -v "${output_dir}/generated_certs":/opt/installer/generated_certs \
+  -v "${output_dir}/generated_configs":/opt/installer/generated_configs \
+  -v "${output_dir}/kubeconfig":/opt/installer/kubeconfig \
+  -v "${output_dir}/logs":/tmp \
   -v "${config_dir}":/opt/installer/configs \
   -e "INTERACTIVE=${INTERACTIVE}" \
   -e "VERSION=${VERSION}" \
   -e "CONFIG=${config_container_dir}${config_filename}" \
   -e "CONFIG_OUT=generated_configs/generated_config.yaml" \
-  gcr.io/stolos-dev/installer:${VERSION} "$@"
-echo "+++ Generated files are available in ${tempdir}"
+  "${INSTALLER_CONTAINER}:${VERSION}" "$@"
+echo "+++ Generated files are available in ${output_dir}"

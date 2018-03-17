@@ -57,5 +57,5 @@ ENV PATH=$PATH:/opt/installer
 ARG INSTALLER_VERSION="unset"
 ENV INSTALLER_VERSION=$INSTALLER_VERSION
 
-ENTRYPOINT ./entrypoint.sh
+ENTRYPOINT ["./entrypoint.sh", "--alsologtostderr"]
 

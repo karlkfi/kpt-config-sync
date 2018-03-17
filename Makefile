@@ -51,7 +51,7 @@ ARCH ?= amd64
 BUILD_IMAGE ?= buildenv
 
 # GCP project that owns container registry.
-GCP_PROJECT ?= stolos-dev
+GCP_PROJECT ?= nomos-release
 
 # Whether this is an official release or dev workflow.
 RELEASE ?= 0
@@ -61,7 +61,7 @@ RELEASE ?= 0
 STABLE ?= 0
 
 # The GCS bucket to release into for 'make release'
-RELEASE_BUCKET := gs://$(GCP_PROJECT)/release
+RELEASE_BUCKET := gs://$(GCP_PROJECT)
 
 # All Stolos components
 ALL_COMPONENTS := syncer \

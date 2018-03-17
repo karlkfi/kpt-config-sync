@@ -24,8 +24,15 @@
 # - CONFIG: The name of the config file to use as default configuration.
 # - CONFIG_OUT: The name of the config file to use as output.
 
+echo "##################################################"
+echo "+++ Installer script version: ${INSTALLER_VERSION}"
+echo "##################################################"
+
 echo "### Examining environment:"
 env
+
+echo "### Examining args"
+echo "### $@"
 
 echo "+++ Installer version: ${INSTALLER_VERSION}"
 
@@ -39,6 +46,8 @@ cat /home/user/.kube/config | \
 if [ "x${INTERACTIVE}" != "x" ]; then
   echo "+++ Running configgen"
   ./configgen \
+    --v=10 \
+    --log_dir=/tmp \
     --version="${INSTALLER_VERSION}" \
     --config_in=${CONFIG} \
     --config_out=${CONFIG_OUT} \
@@ -46,6 +55,8 @@ if [ "x${INTERACTIVE}" != "x" ]; then
 else
   echo "+++ Running installer"
   ./installer \
+    --v=10 \
+    --log_dir=/tmp \
     --config="${CONFIG}" "$@"
 fi
 

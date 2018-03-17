@@ -3,6 +3,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path"
 
@@ -18,7 +19,7 @@ var (
 )
 
 func main() {
-	flag.Set("logtostderr", "true")
+	fmt.Printf("args: %+v\n", os.Args)
 	flag.Parse()
 
 	if *configFile == "" {
@@ -46,4 +47,5 @@ func main() {
 	if err != nil {
 		glog.Fatal(errors.Wrap(err, "installer reported an error"))
 	}
+	glog.Infof("installer completed.")
 }

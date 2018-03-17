@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path"
 	"regexp"
@@ -53,6 +54,7 @@ func versionOrDie(vstr string) semver.Version {
 }
 
 func main() {
+	fmt.Printf("args: %+v\n", os.Args)
 	flag.Parse()
 
 	c := config.DefaultConfig

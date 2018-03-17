@@ -127,7 +127,7 @@ func (i *Installer) deployGitConfig() error {
 		return nil
 	}
 	c := kubectl.New(context.Background())
-	if err := c.DeleteSecret(configmap, defaultNamespace); err != nil {
+	if err := c.DeleteConfigmap(configmap, defaultNamespace); err != nil {
 		return errors.Wrapf(err, "while deleting configmap git-policy-importer")
 	}
 
