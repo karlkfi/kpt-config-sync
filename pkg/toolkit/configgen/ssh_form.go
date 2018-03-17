@@ -38,10 +38,8 @@ var _ Action = (*SSHForm)(nil)
 type SSHForm struct {
 	// The configuration view.
 	form *dialog.Form
-
 	// The default settings.
 	defaultCfg config.SshConfig
-
 	// The model to modify when editing a new form.
 	currentConfig *config.SshConfig
 }
@@ -59,32 +57,32 @@ func NewSSHForm(o dialog.Options, cfg *config.SshConfig) *SSHForm {
 		dialog.MenuHeight(8),
 		dialog.Message(sshSettingsMessage),
 		dialog.FormItem(
-			dialog.FormLabel{
+			dialog.Label{
 				Text: privateKeyFilenameText,
 				Y:    privateKeyFilenameRow,
 				X:    sshFormTextColumn,
 			},
-			dialog.FormLabel{
-				Text: sf.defaultCfg.PrivateKeyFilename,
-				Y:    privateKeyFilenameRow,
-				X:    sshFormInputColumn,
+			dialog.Field{
+				Input:   &sf.currentConfig.PrivateKeyFilename,
+				Y:       privateKeyFilenameRow,
+				X:       sshFormInputColumn,
+				ViewLen: sshInputFieldVisibleLength,
+				MaxLen:  sshInputFieldMaxLength,
 			},
-			sshInputFieldVisibleLength, sshInputFieldMaxLength,
-			&sf.currentConfig.PrivateKeyFilename,
 		),
 		dialog.FormItem(
-			dialog.FormLabel{
+			dialog.Label{
 				Text: knownHostsFilenameText,
 				Y:    knownHostsFilenameRow,
 				X:    sshFormTextColumn,
 			},
-			dialog.FormLabel{
-				Text: sf.defaultCfg.KnownHostsFilename,
-				Y:    knownHostsFilenameRow,
-				X:    sshFormInputColumn,
+			dialog.Field{
+				Input:   &sf.currentConfig.KnownHostsFilename,
+				Y:       knownHostsFilenameRow,
+				X:       sshFormInputColumn,
+				ViewLen: sshInputFieldVisibleLength,
+				MaxLen:  sshInputFieldMaxLength,
 			},
-			sshInputFieldVisibleLength, sshInputFieldMaxLength,
-			&sf.currentConfig.KnownHostsFilename,
 		),
 	}
 	sf.form = dialog.NewForm(opts...)

@@ -23,13 +23,21 @@ func main() {
 		dialog.MenuHeight(3),
 		dialog.Message("Please enter your first and last name."),
 		dialog.FormItem(
-			dialog.FormLabel{Text: "First name:", X: 1, Y: 1},
-			dialog.FormLabel{Text: f1, X: 15, Y: 1},
-			30, 40, &f1),
+			dialog.Label{Text: "First name:", X: 1, Y: 1},
+			dialog.Field{
+				Input: &f1,
+				X:     15, Y: 1,
+				ViewLen: 30,
+				MaxLen:  40},
+		),
 		dialog.FormItem(
-			dialog.FormLabel{Text: "Last  name:", X: 1, Y: 3},
-			dialog.FormLabel{Text: f2, X: 15, Y: 3},
-			30, 40, &f2),
+			dialog.Label{Text: "Last  name:", X: 1, Y: 3},
+			dialog.Field{
+				Input: &f2,
+				X:     15, Y: 3,
+				ViewLen: 30,
+				MaxLen:  40},
+		),
 	)
 	f.Display()
 	glog.Infof("The menu dialog is non-blocking.")

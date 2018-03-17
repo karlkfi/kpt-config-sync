@@ -52,10 +52,12 @@ type Clusters struct {
 	currentCfg *[]string
 }
 
-// NewClusters creates a new Clusters action.
-func NewClusters(
-	opts dialog.Options, defaultConfig []string, config *[]string) *Clusters {
-	return &Clusters{opts, defaultConfig, config}
+// NewClusters creates a new Clusters action with the given options and the
+// input selection in config.
+func NewClusters(opts dialog.Options, config *[]string) *Clusters {
+	def := make([]string, len(*config))
+	copy(def, *config)
+	return &Clusters{opts, def, config}
 }
 
 // Name implements Action.

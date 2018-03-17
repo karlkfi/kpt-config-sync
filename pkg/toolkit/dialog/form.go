@@ -8,6 +8,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+// varPos remembers the view variable and its index in the form fields.
+type varPos struct {
+	v     *string
+	index int
+}
+
 // Form is a dialog type that offers the user the option to supply several
 // textual inputs.
 type Form struct {
@@ -15,11 +21,11 @@ type Form struct {
 	m *Menu
 
 	// The list of variables that will accept the values of the filled form items.
-	vars []*string
+	vars []varPos
 }
 
-// FormLabel is a single label for the form.
-type FormLabel struct {
+// Label is a single label for the form.
+type Label struct {
 	// The text content of the label.  The label may be either editable (in
 	// which case it is a static text on the screen), or can be editable (in
 	// which case it is an input field).
@@ -30,6 +36,23 @@ type FormLabel struct {
 	X, Y int
 }
 
+// Field describes a single field entry.
+type Field struct {
+	// The model variable that is changed on successful input.
+	Input *string
+
+	// X and Y coordinates, relative to the top-left corner of the form, where
+	// the label should appear.
+	X, Y int
+
+	// ViewLen is the length of the input field.
+	ViewLen int
+
+	// MaxLen is the maximum allowable length of the input.  It may be larger
+	// than ViewLen, in which case the field will scroll to show longer input.
+	MaxLen int
+}
+
 // FormOptionFunc is a function type for options setters.
 type FormOptionFunc func(f *Form)
 
@@ -38,22 +61,25 @@ type FormOptionFunc func(f *Form)
 // and tagX and tagY are its coordinates.  formLen is the length of the display
 // field, and maxLen is the maximum length of the string input.  dest is the
 // variable to place the form result into.
-func FormItem(tag, item FormLabel, formLen, maxLen int, dest *string) FormOptionFunc {
+func FormItem(tag Label, item Field) FormOptionFunc {
 	return func(f *Form) {
 		if tag.Text == "" {
 			tag.Text = fmt.Sprintf("<tag:%v>", len(f.m.items)/8)
 		}
 		f.m.items = append(f.m.items,
 			tag.Text, strconv.Itoa(tag.Y), strconv.Itoa(tag.X),
-			item.Text, strconv.Itoa(item.Y), strconv.Itoa(item.X),
-			strconv.Itoa(formLen), strconv.Itoa(maxLen))
-		f.vars = append(f.vars, dest)
+			*item.Input)
+		// Remember the index of the view variable.
+		f.vars = append(f.vars, varPos{item.Input, len(f.m.items) - 1})
+
+		f.m.items = append(f.m.items, strconv.Itoa(item.Y), strconv.Itoa(item.X),
+			strconv.Itoa(item.ViewLen), strconv.Itoa(item.MaxLen))
 	}
 }
 
 // NewForm creates a new input form with the given options.
 func NewForm(opts ...interface{}) *Form {
-	c := Form{m: NewMenu(), vars: []*string{}}
+	c := Form{m: NewMenu(), vars: []varPos{}}
 	const formOpt = "--form"
 	c.m.subcommand = formOpt
 	c.apply(opts...)
@@ -76,6 +102,10 @@ func (f *Form) apply(opts ...interface{}) {
 // Display displays the form dialog in a non-blocking way.  Call Close()
 // to collect the output.
 func (f *Form) Display() {
+	// Reevaluate the arguments to display.
+	for _, vp := range f.vars {
+		f.m.items[vp.index] = *vp.v
+	}
 	f.m.Display()
 }
 
@@ -88,13 +118,15 @@ func (f *Form) Close() error {
 		return errors.Wrapf(err, "Form::Close(): while closing form")
 	}
 	sel := strings.Split(sels, "\n")
+	// Pair up the selection outputs and the variables that should receive
+	// these outputs.
 	j := 0
-	for _, s := range sel {
-		if s == "" {
-			continue
+	for i, s := range sel {
+		if i >= len(f.vars) {
+			break
 		}
 		// Pair up the selection with the variables.
-		*f.vars[j] = s
+		*f.vars[j].v = s
 		j++
 	}
 	return nil

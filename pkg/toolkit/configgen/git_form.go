@@ -45,13 +45,12 @@ type GitForm struct {
 	defaultCfg config.GitConfig
 	// The model to modify when editing a new form.
 	currentConfig *config.GitConfig
-
 	// The sync wait period in seconds, represented as string.
 	syncWaitAsString string
 }
 
 // NewGitForm returns a new form for querying git options.
-func NewGitForm(o dialog.Options, defaultCfg config.GitConfig, cfg *config.GitConfig) *GitForm {
+func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 	gf := &GitForm{defaultCfg: *cfg, currentConfig: cfg}
 
 	const (
@@ -61,42 +60,39 @@ func NewGitForm(o dialog.Options, defaultCfg config.GitConfig, cfg *config.GitCo
 		syncWaitText      = "Sync wait (in seconds) (GIT_SYNC_WAIT):"
 	)
 
+	gf.syncWaitAsString = fmt.Sprintf("%v", cfg.SyncWaitSeconds)
 	opts := []interface{}{
 		o,
 		dialog.MenuHeight(10),
 		dialog.Message(gitSettingsMessage),
 		dialog.FormItem(
-			dialog.FormLabel{
+			dialog.Label{
 				Text: gitSyncRepoText, Y: gitRepoRow, X: gitFormTextColumn},
-			dialog.FormLabel{
-				Text: gf.defaultCfg.SyncRepo, Y: gitRepoRow, X: gitFormInputColumn},
-			inputFieldVisibleLength, inputFieldVisibleLength,
-			&gf.currentConfig.SyncRepo,
+			dialog.Field{
+				Input: &gf.currentConfig.SyncRepo, Y: gitRepoRow, X: gitFormInputColumn,
+				ViewLen: inputFieldVisibleLength, MaxLen: inputFieldVisibleLength},
 		),
 		dialog.FormItem(
-			dialog.FormLabel{
+			dialog.Label{
 				Text: branchToSyncText, Y: branchToSyncRow, X: gitFormTextColumn},
-			dialog.FormLabel{
-				Text: gf.defaultCfg.SyncBranch, Y: branchToSyncRow, X: gitFormInputColumn},
-			inputFieldVisibleLength, inputFieldVisibleLength,
-			&gf.currentConfig.SyncBranch,
+			dialog.Field{
+				Input: &gf.currentConfig.SyncBranch, Y: branchToSyncRow, X: gitFormInputColumn,
+				ViewLen: inputFieldVisibleLength, MaxLen: inputFieldVisibleLength},
 		),
 		dialog.FormItem(
-			dialog.FormLabel{
+			dialog.Label{
 				Text: rootPolicyDirText, Y: rootPolicyDirRow, X: gitFormTextColumn},
-			dialog.FormLabel{
-				Text: gf.defaultCfg.RootPolicyDir, Y: rootPolicyDirRow, X: gitFormInputColumn},
-			inputFieldVisibleLength, inputFieldVisibleLength,
-			&gf.currentConfig.RootPolicyDir,
+			dialog.Field{
+				Input: &gf.currentConfig.RootPolicyDir, Y: rootPolicyDirRow, X: gitFormInputColumn,
+				ViewLen: inputFieldVisibleLength, MaxLen: inputFieldVisibleLength},
 		),
 		dialog.FormItem(
-			dialog.FormLabel{
+			dialog.Label{
 				Text: syncWaitText, Y: syncWaitRow, X: gitFormTextColumn},
-			dialog.FormLabel{
-				Text: fmt.Sprintf("%v", gf.defaultCfg.SyncWaitSeconds),
-				Y:    syncWaitRow, X: gitFormInputColumn},
-			8, 8,
-			&gf.syncWaitAsString,
+			dialog.Field{
+				Input: &gf.syncWaitAsString,
+				Y:     syncWaitRow, X: gitFormInputColumn,
+				ViewLen: 8, MaxLen: 8},
 		),
 	}
 	gf.form = dialog.NewForm(opts...)

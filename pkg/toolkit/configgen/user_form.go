@@ -33,12 +33,13 @@ func NewUserForm(o dialog.Options, currentCfg *string) *UserForm {
 		dialog.MenuHeight(4),
 		dialog.Message(usernameMessage),
 		dialog.FormItem(
-			dialog.FormLabel{
+			dialog.Label{
 				Text: "Username:", Y: 1, X: 1},
-			dialog.FormLabel{
-				Text: *f.currentCfg, Y: 1, X: 11},
-			inputFieldVisibleLength, inputFieldVisibleLength,
-			f.currentCfg,
+			dialog.Field{
+				Input: f.currentCfg, Y: 1, X: 11,
+				ViewLen: inputFieldVisibleLength,
+				MaxLen:  inputFieldVisibleLength,
+			},
 		),
 	}
 	f.form = dialog.NewForm(opts...)
