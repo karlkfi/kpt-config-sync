@@ -53,18 +53,18 @@ readonly config_filename="$(basename ${CONFIG})"
 gcloud docker -- pull "${INSTALLER_CONTAINER}:${VERSION}"
 
 echo "+++ Using output directory: ${output_dir}"
-mkdir -p ${output_dir}/{kubeconfig,generated_certs,generated_configs,logs}
+mkdir -p ${output_dir}/{kubeconfig,certs,configs,logs}
 docker run -it \
   -u "$(id -u):$(id -g)" \
   -v "${HOME}":/home/user \
-  -v "${output_dir}/generated_certs":/opt/installer/generated_certs \
-  -v "${output_dir}/generated_configs":/opt/installer/generated_configs \
+  -v "${output_dir}/certs":/opt/installer/certs \
+  -v "${output_dir}/configs":/opt/installer/configs \
   -v "${output_dir}/kubeconfig":/opt/installer/kubeconfig \
   -v "${output_dir}/logs":/tmp \
   -v "${config_dir}":/opt/installer/configs \
   -e "INTERACTIVE=${INTERACTIVE}" \
   -e "VERSION=${VERSION}" \
   -e "CONFIG=${config_container_dir}${config_filename}" \
-  -e "CONFIG_OUT=generated_configs/generated_config.yaml" \
+  -e "CONFIG_OUT=configs/generated.yaml" \
   "${INSTALLER_CONTAINER}:${VERSION}" "$@"
 echo "+++ Generated files are available in ${output_dir}"
