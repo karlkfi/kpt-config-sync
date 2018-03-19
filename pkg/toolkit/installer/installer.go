@@ -70,9 +70,18 @@ var (
 	// deploymentComponents are the components that are expected to be running
 	// after installer completes.
 	deploymentComponents = []string{
-		"nomos-system:git-policy-importer",
-		"nomos-system:resourcequota-admission-controller",
-		"nomos-system:syncer",
+		fmt.Sprintf("%v:git-policy-importer", defaultNamespace),
+		fmt.Sprintf("%v:resourcequota-admission-controller", defaultNamespace),
+		fmt.Sprintf("%v:syncer", defaultNamespace),
+	}
+
+	// deploymentClusterRolesAndBindings are the cluster roles and
+	// clusterrolebindings names created for the nomos system.
+	deploymentClusterRolesAndBindings = []string{
+		"nomos-nomosresourcequota-controller",
+		"nomos-policy-importer",
+		"nomos-resourcequota-admission-controller",
+		"nomos-syncer",
 	}
 
 	// mv is the minimum supported cluster version.  It is not possible to install
@@ -269,7 +278,7 @@ func (i *Installer) processCluster(cluster string) error {
 		return errors.Wrapf(err, "while applying yaml")
 	}
 	if err = c.WaitForDeployments(deploymentTimeout, deploymentComponents...); err != nil {
-		return errors.Wrapf(err, "while waiting for nomos components")
+		return errors.Wrapf(err, "while waiting for system components")
 	}
 	return err
 }
@@ -288,6 +297,7 @@ func (i *Installer) Run() error {
 	if len(i.c.Contexts) == 0 {
 		return errors.Errorf("no clusters requested for installation")
 	}
+
 	cl, err := kubectl.LocalClusters()
 	defer func() {
 		if err := restoreContext(cl.Current); err != nil {
@@ -307,6 +317,65 @@ func (i *Installer) Run() error {
 		}
 		// The processed cluster is set through the context use.
 		err = i.processCluster(cluster)
+		if err != nil {
+			return errors.Wrapf(err, "while processing cluster: %q", cluster)
+		}
+	}
+	return nil
+}
+
+// uninstallCluster is supposed to do all the legwork in order to start from
+// a functioning nomos cluster, and end with a cluster with all nomos-related
+// additions removed.
+func (i *Installer) uninstallCluster() error {
+	kc := kubectl.New(context.Background())
+	// Remove namespace
+	if err := kc.DeleteNamespace(defaultNamespace); err != nil {
+		return errors.Wrapf(err, "while removing namespace %q", defaultNamespace)
+	}
+	if err := kc.WaitForNamespaceDeleted(defaultNamespace); err != nil {
+		return errors.Wrapf(err, "while waiting for namespace %q to disappear", defaultNamespace)
+	}
+	// Remove all managed cluster role bindings.  The code below assumes that
+	// roles and role bindings are named the same, which is currently true.
+	for _, name := range deploymentClusterRolesAndBindings {
+		if err := kc.DeleteClusterrolebinding(name); err != nil {
+			return errors.Wrapf(err, "while uninstalling cluster")
+		}
+		if err := kc.DeleteClusterrole(name); err != nil {
+			return errors.Wrapf(err, "while uninstalling cluster")
+		}
+	}
+	// TODO(filmil): Remove any other cluster-level nomos resources.
+	return nil
+}
+
+// Uninstall uninstalls the system from the cluster.  Uninstall is asynchronous,
+// so the uninstalled system will remain for a while after this completes.
+func (i *Installer) Uninstall(yesIAmSure bool) error {
+	if !yesIAmSure {
+		return errors.Errorf("Please supply the flag --yes to proceed.")
+	}
+	if len(i.c.Contexts) == 0 {
+		return errors.Errorf("no clusters requested")
+	}
+	cl, err := kubectl.LocalClusters()
+	defer func() {
+		if err := restoreContext(cl.Current); err != nil {
+			glog.Errorf("while restoring context: %q: %v", cl.Current, err)
+		}
+	}()
+	if err != nil {
+		return errors.Wrapf(err, "while getting local list of clusters")
+	}
+	kc := kubectl.New(context.Background())
+	for _, cluster := range i.c.Contexts {
+		glog.Infof("processing cluster: %q", cluster)
+		err := kc.SetContext(cluster)
+		if err != nil {
+			return errors.Wrapf(err, "while setting context: %q", cluster)
+		}
+		err = i.uninstallCluster()
 		if err != nil {
 			return errors.Wrapf(err, "while processing cluster: %q", cluster)
 		}

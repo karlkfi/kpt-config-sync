@@ -34,6 +34,7 @@ import (
 	"github.com/google/nomos/pkg/toolkit/exec"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -305,6 +306,51 @@ func (t *Context) WaitForDeployments(timeout time.Duration, deployments ...strin
 func (t *Context) DeleteDeployment(name, namespace string) error {
 	if _, _, err := t.Kubectl("delete", "deployment", "--ignore-not-found", fmt.Sprintf("-n=%v", namespace), name); err != nil {
 		return errors.Wrapf(err, "while deleting deployment: %v:%v", namespace, name)
+	}
+	return nil
+}
+
+// DeleteNamespace deletes the supplied namespace.
+func (t *Context) DeleteNamespace(namespace string) error {
+	if _, _, err := t.Kubectl("delete", "namespace", namespace); err != nil {
+		return errors.Wrapf(err, "while deleting namespace: %q", namespace)
+	}
+	return nil
+}
+
+// WaitForNamespaceDeleted waits until the named namespace is no longer there,
+// or a timeout occurs.
+func (t *Context) WaitForNamespaceDeleted(namespace string) error {
+	return wait.PollUntil(3*time.Minute, func() (done bool, e error) {
+		ns, err := t.Kubernetes().CoreV1().Namespaces().List(meta_v1.ListOptions{})
+		if err != nil {
+			return false, errors.Wrapf(err, "while listing namespace: %q", namespace)
+		}
+		for _, n := range ns.Items {
+			if n.ObjectMeta.Name == namespace {
+				glog.V(5).Infof("namespace %q still present, continuing poll", namespace)
+				return false, nil
+			}
+		}
+		glog.V(9).Infof("namespace %q is now gone, ending poll", namespace)
+		return true, nil
+	}, t.ctx.Done())
+}
+
+// DeleteClusterrolebinding deletes a cluster role binding by the given name.
+func (t *Context) DeleteClusterrolebinding(name string) error {
+	if err := t.Kubernetes().RbacV1().ClusterRoleBindings().Delete(
+		name, &meta_v1.DeleteOptions{}); err != nil {
+		return errors.Wrapf(err, "while deleting clusterrolebinding %q", name)
+	}
+	return nil
+}
+
+// DeleteClusterrole deletes a cluster role by the given name.
+func (t *Context) DeleteClusterrole(name string) error {
+	if err := t.Kubernetes().RbacV1().ClusterRoles().Delete(
+		name, &meta_v1.DeleteOptions{}); err != nil {
+		return errors.Wrapf(err, "while deleting clusterrole %q", name)
 	}
 	return nil
 }
