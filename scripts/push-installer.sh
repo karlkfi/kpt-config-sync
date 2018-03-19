@@ -52,12 +52,13 @@ function main() {
     ${STAGING_DIR}/installer
   gcloud docker -- push gcr.io/${GCP_PROJECT}/installer:${IMAGE_TAG}
 
-  # Move the :latest tag to the image we just built.
-  # TODO(filmil): Move the :latest tag only if the image is indeed the latest
-  # version.
-  gcloud container images add-tag --quiet \
-    gcr.io/${GCP_PROJECT}/installer:${IMAGE_TAG} \
-    gcr.io/${GCP_PROJECT}/installer:latest
+  # Move the :latest tag to the image we just built if the release is STABLE.
+  if [[ "${STABLE}" == "1" ]]; then
+    echo "+++ Moving 'latest' label to reflect a STABLE version release."
+    gcloud container images add-tag --quiet \
+      gcr.io/${GCP_PROJECT}/installer:${IMAGE_TAG} \
+      gcr.io/${GCP_PROJECT}/installer:latest
+  fi
 
   gsutil cp ${TOP_DIR}/scripts/run-installer.sh ${RELEASE_BUCKET}
   gsutil acl ch -r -u AllUsers:R ${RELEASE_BUCKET}/run-installer.sh

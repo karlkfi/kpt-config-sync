@@ -176,6 +176,7 @@ push-installer: all-push
 	STAGING_DIR=$(STAGING_DIR) \
 	TOP_DIR=$(TOP_DIR) \
 	VERSION=$(VERSION) \
+	STABLE=$(STABLE) \
 	    $(TOP_DIR)/scripts/push-installer.sh
 
 # Builds and pushes a docker image.
