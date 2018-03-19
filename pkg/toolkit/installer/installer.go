@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/toolkit/bash"
@@ -56,8 +57,25 @@ const (
 
 	// defaultNamespace is the namespace to place resources into.
 	defaultNamespace = "stolos-system"
+
+	// deploymentTimeout is the default timeout to wait for each Stolos
+	// component to become functional.  Components initialize in parallel, so
+	// we expect that it's unlikely a wait would be
+	// deploymentTimeout*len(deploymentComponents).
+	deploymentTimeout = 3 * time.Minute
 )
 
+var (
+	// deploymentComponents are the components that are expected to be running
+	// after installer completes.
+	deploymentComponents = []string{
+		"stolos-system:git-policy-importer",
+		"stolos-system:resourcequota-admission-controller",
+		"stolos-system:syncer",
+	}
+)
+
+// Installer is the process that runs the system installation.
 type Installer struct {
 	// The configuration that the installer works out of.
 	c config.Config
@@ -227,6 +245,10 @@ func (i *Installer) processCluster() error {
 	if err != nil {
 		return errors.Wrapf(err, "while applying yaml")
 	}
+	c := kubectl.New(context.Background())
+	if err = c.WaitForDeployments(deploymentTimeout, deploymentComponents...); err != nil {
+		return errors.Wrapf(err, "while waiting for stolos components")
+	}
 	return err
 }
 
@@ -242,9 +264,8 @@ func restoreContext(c string) error {
 // Run starts the installer process, and reports error at the process end, if any.
 func (i *Installer) Run() error {
 	if len(i.c.Contexts) == 0 {
-		return errors.Errorf("no clusters requested")
+		return errors.Errorf("no clusters requested for installation")
 	}
-
 	cl, err := kubectl.LocalClusters()
 	defer func() {
 		if err := restoreContext(cl.Current); err != nil {

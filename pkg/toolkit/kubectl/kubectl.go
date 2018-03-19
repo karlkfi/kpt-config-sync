@@ -240,33 +240,38 @@ func run(ctx context.Context, args []string) (bool, string, string) {
 	return true, stdout.String(), stderr.String()
 }
 
-func (t *Context) waitForDeployment(deadline time.Time, namespace string, name string) {
+func (t *Context) waitForDeployment(deadline time.Time, namespace string, name string) error {
 	for time.Now().Before(deadline) {
 		deployment, err := t.Kubernetes().ExtensionsV1beta1().Deployments(
 			namespace).Get(name, meta_v1.GetOptions{})
 		if err != nil {
-			panic(errors.Wrapf(err, "Error getting deployment %s", name))
+			return errors.Wrapf(err, "Error getting deployment %s:%s", namespace, name)
 		}
 		glog.V(2).Infof(
 			"Deployment %s replicas %d, available %d", name, deployment.Status.Replicas, deployment.Status.AvailableReplicas)
 		if deployment.Status.AvailableReplicas == deployment.Status.Replicas {
 			glog.V(1).Infof("Deployment %s available", name)
-			return
+			return nil
 		}
 		time.Sleep(time.Millisecond * 250)
 	}
-	panic(errors.Errorf("Deployment %s failed to become available before deadline", name))
+	return errors.Errorf("Deployment %s:%s failed to become available before deadline", namespace, name)
 }
 
-// WaitForDeployments waits for deployments to be available
-func (t *Context) WaitForDeployments(timeout time.Duration, deployments ...string) {
+// WaitForDeployments waits for deployments to be available, or returns error in
+// case of failure.
+func (t *Context) WaitForDeployments(timeout time.Duration, deployments ...string) error {
 	deadline := time.Now().Add(timeout)
 	for _, deployment := range deployments {
 		parts := strings.Split(deployment, ":")
 		namespace := parts[0]
 		name := parts[1]
-		t.waitForDeployment(deadline, namespace, name)
+		err := t.waitForDeployment(deadline, namespace, name)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // Kubernetes returns the underlying Kubernetes client.

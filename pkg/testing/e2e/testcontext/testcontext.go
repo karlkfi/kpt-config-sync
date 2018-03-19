@@ -71,7 +71,10 @@ func (t *TestContext) run(args []string) (bool, string, string) {
 
 // WaitForDeployments waits for deployments to be available
 func (t *TestContext) WaitForDeployments(timeout time.Duration, deployments ...string) {
-	t.kubeClient.WaitForDeployments(timeout, deployments...)
+	if err := t.kubeClient.WaitForDeployments(timeout, deployments...); err != nil {
+		// It is OK to panic in an end-to-end test harness.
+		panic(errors.Wrapf(err, "while waiting for: %v", deployments))
+	}
 }
 
 // Kubernetes returns the kubernets client inteface
