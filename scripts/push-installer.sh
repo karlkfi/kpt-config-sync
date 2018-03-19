@@ -43,7 +43,7 @@ function main() {
 
   mkdir -p ${STAGING_DIR}/installer/scripts
   cp ${TOP_DIR}/scripts/deploy-resourcequota-admission-controller.sh \
-     ${STAGING_DIR}/installer/examples
+     ${STAGING_DIR}/installer/scripts
   cp ${TOP_DIR}/scripts/generate-resourcequota-admission-controller-certs.sh \
      ${STAGING_DIR}/installer/scripts
 
