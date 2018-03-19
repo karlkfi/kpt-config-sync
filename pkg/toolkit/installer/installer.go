@@ -116,8 +116,7 @@ func (i *Installer) applyAll(applyDir string) error {
 	if !fi.IsDir() {
 		return errors.Errorf("applyAll: not a directory: %v", applyDir)
 	}
-	kc.Apply(applyDir)
-	return nil
+	return kc.Apply(applyDir)
 }
 
 func (i *Installer) deploySshSecrets() error {

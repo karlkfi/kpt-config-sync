@@ -69,8 +69,8 @@ func New(ctx context.Context) *Context {
 	return &Context{ctx, client}
 }
 
-// Kubectl will execute a kubectl command and panic if the script fails.
-func (t *Context) Kubectl(args ...string) (stdout, stderr string) {
+// Kubectl will execute a kubectl command.
+func (t *Context) Kubectl(args ...string) (stdout, stderr string, err error) {
 	actualArgs := append([]string{kubectlCmd}, args...)
 	success, stdout, stderr := run(t.ctx, actualArgs)
 	if glog.V(9) {
@@ -78,26 +78,41 @@ func (t *Context) Kubectl(args ...string) (stdout, stderr string) {
 		glog.V(9).Infof("stderr: %v", stderr)
 	}
 	if !success {
+		return stdout, stderr, errors.Errorf("Command %s failed, stdout: %s stderr: %s", strings.Join(args, " "), stdout, stderr)
+	}
+	return // naked
+}
+
+// Kubectl will execute a kubectl command and panic if the script fails.
+func (t *Context) KubectlOrDie(args ...string) (stdout, stderr string) {
+	stdout, stderr, err := t.Kubectl(args...)
+	if err != nil {
 		panic(errors.Errorf("Command %s failed, stdout: %s stderr: %s", strings.Join(args, " "), stdout, stderr))
 	}
-	return
+	return stdout, stderr
 }
 
 // Apply runs kubectl apply -f on a given path.
-func (t *Context) Apply(path string) {
-	t.Kubectl("apply", "-f", path)
+func (t *Context) Apply(path string) error {
+	if _, _, err := t.Kubectl("apply", "-f", path); err != nil {
+		errors.Wrapf(err, "while applying to path: %q", path)
+	}
+	return nil
 }
 
 // DeleteSecret deletes a secret from Kubernetes.
 func (t *Context) DeleteSecret(name, namespace string) error {
-	t.Kubectl("delete", "secret", fmt.Sprintf("-n=%v", namespace), name)
-	// TODO(filmil): Needs to pipe an error out.
+	if _, _, err := t.Kubectl("delete", "secret", fmt.Sprintf("-n=%v", namespace), name); err != nil {
+		return errors.Wrapf(err, "delete secret name=%q, namespace=%q", name, namespace)
+	}
 	return nil
 }
 
 // DeleteConfigmap deletes a configmap from Kubernetes.
 func (t *Context) DeleteConfigmap(name, namespace string) error {
-	t.Kubectl("delete", "configmap", fmt.Sprintf("-n=%v", namespace), name)
+	if _, _, err := t.Kubectl("delete", "configmap", fmt.Sprintf("-n=%v", namespace), name); err != nil {
+		return errors.Wrapf(err, "delete configmap name=%q, namespace=%q", name, namespace)
+	}
 	return nil
 }
 
@@ -108,7 +123,9 @@ func (t *Context) CreateSecretGenericFromFile(name, namespace string, filenames 
 	for _, fn := range filenames {
 		args = append(args, fmt.Sprintf("--from-file=%q", filepath.Clean(fn)))
 	}
-	t.Kubectl(args...)
+	if _, _, err := t.Kubectl(args...); err != nil {
+		return errors.Wrapf(err, "create secret generic name=%q, namespace=%q", name, namespace)
+	}
 	return nil
 }
 
@@ -124,7 +141,9 @@ func (t *Context) CreateConfigmapFromLiterals(name, namespace string, literals .
 	for _, l := range literals {
 		args = append(args, fmt.Sprintf("--from-literal=%v", l))
 	}
-	t.Kubectl(args...)
+	if _, _, err := t.Kubectl(args...); err != nil {
+		return errors.Wrapf(err, "create configmap name=%q, namespace=%q", name, namespace)
+	}
 	return nil
 }
 
@@ -139,7 +158,9 @@ func (t *Context) AddClusterAdmin(user string) error {
 		"--clusterrole=cluster-admin",
 		fmt.Sprintf("--user=%v", user),
 	}
-	t.Kubectl(args...)
+	if _, _, err := t.Kubectl(args...); err != nil {
+		return errors.Wrapf(err, "making admin: %q", user)
+	}
 	return nil
 }
 
@@ -151,7 +172,9 @@ func (t *Context) RemoveClusterAdmin(user string) error {
 		fmt.Sprintf("%v-cluster-admin-binding", user),
 		"--ignore-not-found",
 	}
-	t.Kubectl(args...)
+	if _, _, err := t.Kubectl(args...); err != nil {
+		return errors.Wrapf(err, "unmaking admin: %q", user)
+	}
 	return nil
 }
 
@@ -167,12 +190,15 @@ type versionOutput struct {
 // GetClusterVersion obtains the semantic version information from the cluster in the
 // current context.
 func (t *Context) GetClusterVersion() (semver.Version, error) {
-	stdout, stderr := t.Kubectl("version", "-o", "json")
+	stdout, stderr, err := t.Kubectl("version", "-o", "json")
 	if glog.V(8) {
 		glog.Infof("stdout: %v\nstderr:%v", stdout, stderr)
 	}
 	if stderr != "" {
 		glog.Warningf("GetClusterVersion(): nonempty stderr: %v", stderr)
+	}
+	if err != nil {
+		return semver.Version{}, errors.Wrapf(err, "while getting cluster version")
 	}
 	var vs versionOutput
 	json.Unmarshal([]byte(stdout), &vs)
@@ -181,7 +207,7 @@ func (t *Context) GetClusterVersion() (semver.Version, error) {
 	version := vs.ServerVersion.GitVersion[1:]
 	v, err := semver.Parse(version)
 	if err != nil {
-		return semver.Version{}, errors.Wrapf(err, "while getting version")
+		return semver.Version{}, errors.Wrapf(err, "while parsing version")
 	}
 	return v, nil
 }
@@ -198,9 +224,9 @@ type ClusterList struct {
 // SetContext sets the cluster context to the context with the given name.  The
 // named context must exist.
 func (t *Context) SetContext(name string) error {
-	_, stderr := t.Kubectl("config", "use-context", name)
-	if stderr != "" {
-		return errors.Errorf("nonempty stderr: %v", stderr)
+	_, _, err := t.Kubectl("config", "use-context", name)
+	if err != nil {
+		return errors.Wrapf(err, "while setting context to: %q", name)
 	}
 	return nil
 }
