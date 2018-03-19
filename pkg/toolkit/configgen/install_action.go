@@ -5,6 +5,7 @@ import (
 	"github.com/google/stolos/pkg/toolkit/exec"
 	"github.com/google/stolos/pkg/toolkit/installer"
 	"github.com/google/stolos/pkg/toolkit/installer/config"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -54,12 +55,15 @@ func (a *InstallAction) Name() string {
 func (a *InstallAction) Run() (bool, error) {
 	done, err := a.r.Run()
 	if err != nil {
-		return done, err
+		return done, errors.Wrapf(err, "while saving configuration")
 	}
 	i := installer.New(*a.cfg, a.dir)
 	err = i.Run()
-	if err != nil && glog.V(5) {
-		glog.Warningf("installer returned error: %v", err)
+	if err != nil {
+		if glog.V(5) {
+			glog.Warningf("installer returned error: %v", err)
+		}
+		return false, errors.Wrapf(err, "while executing installer")
 	}
-	return false, err
+	return false, nil
 }

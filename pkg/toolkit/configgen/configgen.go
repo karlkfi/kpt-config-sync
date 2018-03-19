@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/blang/semver"
+	"github.com/golang/glog"
 	"github.com/google/stolos/pkg/toolkit/dialog"
 	"github.com/google/stolos/pkg/toolkit/installer/config"
 	"github.com/pkg/errors"
@@ -93,16 +94,25 @@ func buildMenu(actions []Action, opts dialog.Options, err error) *dialog.Menu {
 // Run starts the configuration generator.  This call blocks, returning an
 // error in the configuration generation process, if any.
 func (g *Generator) Run() error {
-	var err error
+	var (
+		// The "current" error status in the loop.
+		err error
+		// The "current" menu selection in the loop.
+		sel string
+	)
 	done := false
 	for !done {
 		m := buildMenu(g.actions, g.opts, err)
 		m.Display()
-		sel, err := m.Close()
+		sel, err = m.Close()
 		if err != nil {
 			return errors.Wrapf(err, "configgen.Run(): while selecting options")
 		}
 		done, err = g.runSelection(sel)
+		if err != nil {
+			// A non-nil error here will get surfaced in the UI.  Log it anyways.
+			glog.Warning(errors.Wrapf(err, "after runSelection"))
+		}
 	}
 	return err
 }
@@ -157,6 +167,7 @@ func (a *staticAction) Name() string {
 	return a.name
 }
 
+// Run implements Action.
 func (a *staticAction) Run() (bool, error) {
 	return a.quit, nil
 }
