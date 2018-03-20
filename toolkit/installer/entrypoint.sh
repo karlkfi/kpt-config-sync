@@ -34,12 +34,15 @@ env
 echo "### Examining args"
 echo "### $@"
 
+readonly kubeconfig_output="/opt/installer/kubeconfig/config"
 # We need to fix up the kubeconfig paths because these may not match between
 # the container and the host.
 # /somepath/gcloud becomes /use/local/gcloud/google-cloud/sdk/bin/gcloud.
+# Then, make it read-writable to the owner only.
 cat /home/user/.kube/config | \
   sed -e "s+cmd-path: [^ ]*gcloud+cmd-path: /usr/local/gcloud/google-cloud-sdk/bin/gcloud+g" \
-  > /opt/installer/kubeconfig/config
+  > "${kubeconfig_output}"
+chmod 600 ${kubeconfig_output}
 
 if [ "x${INTERACTIVE}" != "x" ]; then
   echo "+++ Running configgen"
