@@ -51,7 +51,7 @@ ARCH ?= amd64
 BUILD_IMAGE ?= buildenv
 
 # GCP project that owns container registry.
-GCP_PROJECT ?= nomos-release
+GCP_PROJECT ?= stolos-dev
 
 # Whether this is an official release or dev workflow.
 RELEASE ?= 0
@@ -164,7 +164,9 @@ gen-yaml-%:
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
-push-installer: all-deploy
+# Pushes the stolos installer (effectively releasing a new version!)
+push-installer: GCP_PROJECT=nomos-release
+push-installer: all-push
 	ARCH=$(ARCH) \
 	BIN_DIR=$(BIN_DIR) \
 	GCP_PROJECT=$(GCP_PROJECT) \
