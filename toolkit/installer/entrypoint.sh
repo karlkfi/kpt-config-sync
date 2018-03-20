@@ -44,10 +44,13 @@ cat /home/user/.kube/config | \
   > "${kubeconfig_output}"
 chmod 600 ${kubeconfig_output}
 
+# Set logging levels to high for specific modules only.
+readonly logging_options="--vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10,menu=10"
+
 if [ "x${INTERACTIVE}" != "x" ]; then
   echo "+++ Running configgen"
   ./configgen \
-    --v=10 \
+    ${logging_options} \
     --log_dir=/tmp \
     --suggested_user="${SUGGESTED_USER}" \
     --version="${INSTALLER_VERSION}" \
@@ -57,7 +60,7 @@ if [ "x${INTERACTIVE}" != "x" ]; then
 else
   echo "+++ Running installer"
   ./installer \
-    --v=10 \
+    ${logging_options} \
     --log_dir=/tmp \
     --config="${CONFIG}" "$@"
 fi
