@@ -300,6 +300,17 @@ func (t *Context) WaitForDeployments(timeout time.Duration, deployments ...strin
 	return nil
 }
 
+// DeleteDeployment deletes a deployment in the given namespace.  No effect if
+// the deployment isn't already running.
+func (t *Context) DeleteDeployment(name, namespace string) error {
+	_, stderr := t.Kubectl("delete", "deployment", "--ignore-not-found", fmt.Sprintf("-n=%v", namespace), name)
+	// TODO(filmil): Wire the error back through to the caller.
+	if stderr != "" {
+		return errors.Errorf("nonempty stderr: %v", stderr)
+	}
+	return nil
+}
+
 // Kubernetes returns the underlying Kubernetes client.
 func (c *Context) Kubernetes() kubernetes.Interface {
 	return c.client.Kubernetes()

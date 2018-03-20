@@ -222,29 +222,29 @@ func (i *Installer) processCluster() error {
 			}
 		}()
 	}
+	c := kubectl.New(context.Background())
+	// Delete the git policy importer deployment.  This is important because a
+	// change in the git creds should also be reflected in the importer.
+	if err = c.DeleteDeployment("git-policy-importer", defaultNamespace); err != nil {
+		return errors.Wrapf(err, "while deleting git-policy-importer deployment")
+	}
 	// The common manifests need to be applied first, as they create the
 	// namespace.
-	err = i.applyAll(filepath.Join(i.workDir, "manifests/common"))
-	if err != nil {
+	if err = i.applyAll(filepath.Join(i.workDir, "manifests/common")); err != nil {
 		return errors.Wrapf(err, "while applying manifests/common")
 	}
-	err = i.deployGitConfig()
-	if err != nil {
+	if err = i.deployGitConfig(); err != nil {
 		return errors.Wrapf(err, "processCluster")
 	}
-	err = i.deploySecrets()
-	if err != nil {
+	if err = i.deploySecrets(); err != nil {
 		return errors.Wrapf(err, "processCluster")
 	}
-	err = i.applyAll(filepath.Join(i.workDir, "manifests/enrolled"))
-	if err != nil {
+	if err = i.applyAll(filepath.Join(i.workDir, "manifests/enrolled")); err != nil {
 		return errors.Wrapf(err, "while applying manifests/enrolled")
 	}
-	err = i.applyAll(filepath.Join(i.workDir, "yaml"))
-	if err != nil {
+	if err = i.applyAll(filepath.Join(i.workDir, "yaml")); err != nil {
 		return errors.Wrapf(err, "while applying yaml")
 	}
-	c := kubectl.New(context.Background())
 	if err = c.WaitForDeployments(deploymentTimeout, deploymentComponents...); err != nil {
 		return errors.Wrapf(err, "while waiting for stolos components")
 	}
