@@ -303,10 +303,8 @@ func (t *Context) WaitForDeployments(timeout time.Duration, deployments ...strin
 // DeleteDeployment deletes a deployment in the given namespace.  No effect if
 // the deployment isn't already running.
 func (t *Context) DeleteDeployment(name, namespace string) error {
-	_, stderr := t.Kubectl("delete", "deployment", "--ignore-not-found", fmt.Sprintf("-n=%v", namespace), name)
-	// TODO(filmil): Wire the error back through to the caller.
-	if stderr != "" {
-		return errors.Errorf("nonempty stderr: %v", stderr)
+	if _, _, err := t.Kubectl("delete", "deployment", "--ignore-not-found", fmt.Sprintf("-n=%v", namespace), name); err != nil {
+		return errors.Wrapf(err, "while deleting deployment: %v:%v", namespace, name)
 	}
 	return nil
 }
