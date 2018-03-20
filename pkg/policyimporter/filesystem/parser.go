@@ -22,9 +22,9 @@ import (
 	"path/filepath"
 
 	"github.com/golang/glog"
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/util/namespaceutil"
-	"github.com/google/stolos/pkg/util/policynode"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/util/namespaceutil"
+	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	extensions_v1beta1 "k8s.io/api/extensions/v1beta1"

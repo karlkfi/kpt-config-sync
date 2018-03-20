@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/stolos/pkg/toolkit/dialog"
-	"github.com/google/stolos/pkg/toolkit/kubectl"
+	"github.com/google/nomos/pkg/toolkit/dialog"
+	"github.com/google/nomos/pkg/toolkit/kubectl"
 	"github.com/pkg/errors"
 )
 

@@ -16,7 +16,7 @@ limitations under the License.
 package syncer
 
 import (
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 )
 
 // ClusterPolicySyncerInterface defines the interface for a syncer that consumes ClusterPolicy

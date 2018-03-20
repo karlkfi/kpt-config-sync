@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/toolkit/exec"
 	"github.com/pkg/errors"
 )
 

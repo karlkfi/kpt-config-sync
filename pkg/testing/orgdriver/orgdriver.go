@@ -26,7 +26,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
-	"github.com/google/stolos/pkg/testing/fakeorg"
+	"github.com/google/nomos/pkg/testing/fakeorg"
 )
 
 // Operation is the type of operation that modified the fake node.

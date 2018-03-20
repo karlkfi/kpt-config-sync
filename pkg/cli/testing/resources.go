@@ -1,7 +1,7 @@
 package testing
 
 import (
-	policyhierarchy "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	policyhierarchy "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	apicore "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

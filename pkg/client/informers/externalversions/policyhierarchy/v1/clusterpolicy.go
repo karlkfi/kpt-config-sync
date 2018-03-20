@@ -19,10 +19,10 @@ limitations under the License.
 package v1
 
 import (
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	internalinterfaces "github.com/google/stolos/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
-	policyhierarchy "github.com/google/stolos/pkg/client/policyhierarchy"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	internalinterfaces "github.com/google/nomos/pkg/client/informers/externalversions/internalinterfaces"
+	v1 "github.com/google/nomos/pkg/client/listers/policyhierarchy/v1"
+	policyhierarchy "github.com/google/nomos/pkg/client/policyhierarchy"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

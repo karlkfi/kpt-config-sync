@@ -18,7 +18,7 @@
 
 TOP_DIR := $(shell pwd)
 
-REPO := github.com/google/stolos
+REPO := github.com/google/nomos
 
 # List of dirs containing go code owned by Stolos
 STOLOS_CODE_DIRS := pkg cmd

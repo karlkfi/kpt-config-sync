@@ -18,10 +18,10 @@ package actions
 import (
 	"reflect"
 
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/client/action"
-	listers_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
-	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/client/action"
+	listers_v1 "github.com/google/nomos/pkg/client/listers/policyhierarchy/v1"
+	typed_v1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 

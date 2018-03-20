@@ -24,11 +24,11 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/client/meta"
-	"github.com/google/stolos/pkg/client/restconfig"
-	"github.com/google/stolos/pkg/policyimporter/filesystem"
-	"github.com/google/stolos/pkg/service"
-	"github.com/google/stolos/pkg/util/log"
+	"github.com/google/nomos/pkg/client/meta"
+	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/policyimporter/filesystem"
+	"github.com/google/nomos/pkg/service"
+	"github.com/google/nomos/pkg/util/log"
 )
 
 var gitDir = flag.String("git-dir", "/repo/rev",

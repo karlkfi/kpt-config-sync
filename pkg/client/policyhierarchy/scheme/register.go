@@ -17,7 +17,7 @@ limitations under the License.
 package scheme
 
 import (
-	stolosv1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	stolosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

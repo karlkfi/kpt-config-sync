@@ -19,8 +19,8 @@ import (
 	"sort"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/client/action"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/client/action"
 )
 
 type Differ struct {

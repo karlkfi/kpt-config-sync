@@ -4,7 +4,7 @@ import (
 	"flag"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/toolkit/dialog"
+	"github.com/google/nomos/pkg/toolkit/dialog"
 )
 
 func main() {

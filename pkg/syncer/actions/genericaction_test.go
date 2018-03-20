@@ -18,7 +18,7 @@ package actions
 import (
 	"testing"
 
-	actions_testing "github.com/google/stolos/pkg/syncer/actions/testing"
+	actions_testing "github.com/google/nomos/pkg/syncer/actions/testing"
 	"github.com/pkg/errors"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"

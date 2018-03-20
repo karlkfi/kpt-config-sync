@@ -18,11 +18,11 @@ package syncer
 import (
 	"testing"
 
-	"github.com/google/stolos/pkg/syncer/labeling"
+	"github.com/google/nomos/pkg/syncer/labeling"
 
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/client/action"
-	"github.com/google/stolos/pkg/client/action/test"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/client/action/test"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

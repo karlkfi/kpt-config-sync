@@ -3,7 +3,7 @@ package configgen
 import (
 	"fmt"
 
-	"github.com/google/stolos/pkg/toolkit/dialog"
+	"github.com/google/nomos/pkg/toolkit/dialog"
 	"github.com/pkg/errors"
 )
 

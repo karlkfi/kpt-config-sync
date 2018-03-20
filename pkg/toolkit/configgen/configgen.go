@@ -21,8 +21,8 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/toolkit/dialog"
-	"github.com/google/stolos/pkg/toolkit/installer/config"
+	"github.com/google/nomos/pkg/toolkit/dialog"
+	"github.com/google/nomos/pkg/toolkit/installer/config"
 	"github.com/pkg/errors"
 )
 

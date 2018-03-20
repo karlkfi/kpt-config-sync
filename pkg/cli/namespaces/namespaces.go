@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/stolos/pkg/cli"
+	"github.com/google/nomos/pkg/cli"
 )
 
 func GetHierarchicalNamespaces(ctx *cli.CommandContext, args []string) error {

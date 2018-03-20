@@ -17,9 +17,9 @@ limitations under the License.
 package registration
 
 import (
-	"github.com/google/stolos/pkg/cli"
-	"github.com/google/stolos/pkg/cli/namespaces"
-	"github.com/google/stolos/pkg/cli/rolebindings"
+	"github.com/google/nomos/pkg/cli"
+	"github.com/google/nomos/pkg/cli/namespaces"
+	"github.com/google/nomos/pkg/cli/rolebindings"
 )
 
 func init() {

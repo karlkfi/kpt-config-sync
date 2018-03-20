@@ -16,8 +16,8 @@ limitations under the License.
 package syncer
 
 import (
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/syncer/actions"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/syncer/actions"
 )
 
 // UnpackerInterface defines the interface for transforming policy nodes into resources as well as

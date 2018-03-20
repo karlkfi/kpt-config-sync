@@ -18,7 +18,7 @@ package test
 import (
 	"fmt"
 
-	"github.com/google/stolos/pkg/client/action"
+	"github.com/google/nomos/pkg/client/action"
 )
 
 // TestAction implements action.Interface for testing

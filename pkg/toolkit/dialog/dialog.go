@@ -19,7 +19,7 @@ limitations under the License.
 package dialog
 
 import (
-	"github.com/google/stolos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/toolkit/exec"
 )
 
 var (

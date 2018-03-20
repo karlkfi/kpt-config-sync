@@ -18,7 +18,7 @@ package actions
 import (
 	"testing"
 
-	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"k8s.io/api/extensions/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

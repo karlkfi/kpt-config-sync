@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/stolos/pkg/toolkit/dialog"
-	"github.com/google/stolos/pkg/toolkit/installer/config"
+	"github.com/google/nomos/pkg/toolkit/dialog"
+	"github.com/google/nomos/pkg/toolkit/installer/config"
 	"github.com/pkg/errors"
 )
 

@@ -18,9 +18,9 @@ package syncertests
 import (
 	"time"
 
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/testing/e2e/testcontext"
-	"github.com/google/stolos/pkg/testing/e2e/testregistry"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/testing/e2e/testcontext"
+	"github.com/google/nomos/pkg/testing/e2e/testregistry"
 	"github.com/pkg/errors"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

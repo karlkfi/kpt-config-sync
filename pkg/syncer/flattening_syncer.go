@@ -20,10 +20,10 @@ package syncer
 import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	ph "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/syncer/actions"
-	"github.com/google/stolos/pkg/syncer/flattening"
-	"github.com/google/stolos/pkg/util/set/stringset"
+	ph "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/syncer/actions"
+	"github.com/google/nomos/pkg/syncer/flattening"
+	"github.com/google/nomos/pkg/util/set/stringset"
 	"github.com/pkg/errors"
 	rbac "k8s.io/api/rbac/v1"
 )

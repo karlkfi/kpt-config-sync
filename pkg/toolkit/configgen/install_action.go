@@ -2,9 +2,9 @@ package configgen
 
 import (
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/toolkit/exec"
-	"github.com/google/stolos/pkg/toolkit/installer"
-	"github.com/google/stolos/pkg/toolkit/installer/config"
+	"github.com/google/nomos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/toolkit/installer"
+	"github.com/google/nomos/pkg/toolkit/installer/config"
 	"github.com/pkg/errors"
 )
 

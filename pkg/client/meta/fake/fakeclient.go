@@ -18,9 +18,9 @@ limitations under the License.
 package fake
 
 import (
-	"github.com/google/stolos/pkg/client/meta"
-	"github.com/google/stolos/pkg/client/policyhierarchy"
-	fakepolicyhierarchy "github.com/google/stolos/pkg/client/policyhierarchy/fake"
+	"github.com/google/nomos/pkg/client/meta"
+	"github.com/google/nomos/pkg/client/policyhierarchy"
+	fakepolicyhierarchy "github.com/google/nomos/pkg/client/policyhierarchy/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"

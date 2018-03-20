@@ -17,7 +17,7 @@ limitations under the License.
 package fake
 
 import (
-	v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

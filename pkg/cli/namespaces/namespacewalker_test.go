@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/cli"
-	"github.com/google/stolos/pkg/client/meta/fake"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/cli"
+	"github.com/google/nomos/pkg/client/meta/fake"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	client_v1 "k8s.io/client-go/kubernetes/typed/core/v1"

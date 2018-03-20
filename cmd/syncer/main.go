@@ -20,11 +20,11 @@ import (
 	"flag"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/client/meta"
-	"github.com/google/stolos/pkg/client/restconfig"
-	"github.com/google/stolos/pkg/service"
-	"github.com/google/stolos/pkg/syncer"
-	"github.com/google/stolos/pkg/util/log"
+	"github.com/google/nomos/pkg/client/meta"
+	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/service"
+	"github.com/google/nomos/pkg/syncer"
+	"github.com/google/nomos/pkg/util/log"
 	"github.com/pkg/errors"
 )
 

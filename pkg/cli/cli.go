@@ -25,10 +25,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/stolos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/client/restconfig"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/client/meta"
+	"github.com/google/nomos/pkg/client/meta"
 	"github.com/pkg/errors"
 )
 

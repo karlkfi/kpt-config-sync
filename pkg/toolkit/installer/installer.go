@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/toolkit/bash"
-	"github.com/google/stolos/pkg/toolkit/installer/config"
-	"github.com/google/stolos/pkg/toolkit/kubectl"
+	"github.com/google/nomos/pkg/toolkit/bash"
+	"github.com/google/nomos/pkg/toolkit/installer/config"
+	"github.com/google/nomos/pkg/toolkit/kubectl"
 	"github.com/pkg/errors"
 )
 
