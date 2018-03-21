@@ -26,10 +26,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Remove existing resources.
-kubectl delete secret git-creds -n stolos-system || true
-kubectl delete configmap git-policy-importer -n stolos-system || true
+kubectl delete secret git-creds -n nomos-system || true
+kubectl delete configmap git-policy-importer -n nomos-system || true
 
-kubectl create secret generic git-creds -n stolos-system \
+kubectl create secret generic git-creds -n nomos-system \
   --from-file=ssh=${KEY}  \
   --from-file=known_hosts=${KNOWN_HOSTS}
-kubectl create configmap git-policy-importer -n stolos-system --from-env-file=$(dirname $0)/git-importer.env
+kubectl create configmap git-policy-importer -n nomos-system --from-env-file=$(dirname $0)/git-importer.env

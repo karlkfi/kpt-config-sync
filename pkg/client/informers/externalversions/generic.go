@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,11 +51,11 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=stolos.dev, Version=v1
+	// Group=nomos.dev, Version=v1
 	case v1.SchemeGroupVersion.WithResource("clusterpolicies"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Stolos().V1().ClusterPolicies().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().ClusterPolicies().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("policynodes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Stolos().V1().PolicyNodes().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().PolicyNodes().Informer()}, nil
 
 	}
 

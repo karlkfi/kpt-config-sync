@@ -1,6 +1,6 @@
 #!/usr/bin/make
 #
-# Copyright 2018 Stolos Authors
+# Copyright 2018 Nomos Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ TOP_DIR := $(shell pwd)
 
 REPO := github.com/google/nomos
 
-# List of dirs containing go code owned by Stolos
+# List of dirs containing go code owned by Nomos
 STOLOS_CODE_DIRS := pkg cmd
 
 # Directory containing all build artifacts.
@@ -63,7 +63,7 @@ STABLE ?= 0
 # The GCS bucket to release into for 'make release'
 RELEASE_BUCKET := gs://$(GCP_PROJECT)
 
-# All Stolos components
+# All Nomos components
 ALL_COMPONENTS := syncer \
 	git-policy-importer \
 	resourcequota-admission-controller
@@ -155,16 +155,16 @@ lint:
 gen-client-set:
 	$(TOP_DIR)/scripts/generate-clientset.sh
 
-# Installs Stolos kubectl plugin.
+# Installs Nomos kubectl plugin.
 install-kubectl-plugin:
-	cd $(TOP_DIR)/cmd/kubectl-stolos; ./install.sh
+	cd $(TOP_DIR)/cmd/kubectl-nomos; ./install.sh
 
 # Generates yaml from template.
 gen-yaml-%:
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
-# Pushes the stolos installer (effectively releasing a new version!)
+# Pushes the nomos installer (effectively releasing a new version!)
 push-installer: GCP_PROJECT=nomos-release
 push-installer: all-push
 	ARCH=$(ARCH) \

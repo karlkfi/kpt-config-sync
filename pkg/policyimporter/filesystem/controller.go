@@ -34,11 +34,11 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		client.PolicyHierarchy(), resync)
 	differ := actions.NewDiffer(
 		actions.NewPolicyNodeActionSpec(
-			client.PolicyHierarchy().StolosV1(),
-			informerFactory.Stolos().V1().PolicyNodes().Lister()),
+			client.PolicyHierarchy().NomosV1(),
+			informerFactory.Nomos().V1().PolicyNodes().Lister()),
 		actions.NewClusterPolicyActionSpec(
-			client.PolicyHierarchy().StolosV1(),
-			informerFactory.Stolos().V1().ClusterPolicies().Lister()))
+			client.PolicyHierarchy().NomosV1(),
+			informerFactory.Nomos().V1().ClusterPolicies().Lister()))
 
 	return &Controller{
 		policyDir:           policyDir,
@@ -47,8 +47,8 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		differ:              differ,
 		client:              client,
 		informerFactory:     informerFactory,
-		policyNodeLister:    informerFactory.Stolos().V1().PolicyNodes().Lister(),
-		clusterPolicyLister: informerFactory.Stolos().V1().ClusterPolicies().Lister(),
+		policyNodeLister:    informerFactory.Nomos().V1().PolicyNodes().Lister(),
+		clusterPolicyLister: informerFactory.Nomos().V1().ClusterPolicies().Lister(),
 		stopChan:            stopChan,
 	}
 }

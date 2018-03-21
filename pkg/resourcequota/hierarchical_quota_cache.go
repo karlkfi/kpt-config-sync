@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -60,7 +60,7 @@ func NewHierarchicalQuotaCache(policyNodeInformer informerspolicynodev1.PolicyNo
 //                 cache each time we want to do an admission decision. This might add unnecessary complexity for
 //                 not that much performance gain.
 func (c *HierarchicalQuotaCache) initCache() error {
-	resourceQuotas, err := c.resourceQuotaInformer.Lister().List(labels.SelectorFromSet(StolosQuotaLabels))
+	resourceQuotas, err := c.resourceQuotaInformer.Lister().List(labels.SelectorFromSet(NomosQuotaLabels))
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (c *HierarchicalQuotaCache) initCache() error {
 	// Set the usage based on the quota informer
 	for _, resourceQuota := range resourceQuotas {
 		if resourceQuota.Name != ResourceQuotaObjectName {
-			continue // Only care about stolos resource quota objects
+			continue // Only care about nomos resource quota objects
 		}
 
 		quotaNode, exists := c.quotas[resourceQuota.Namespace]
@@ -135,7 +135,7 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList core_v1.Re
 	// Start with the parent of the given namespace
 	namespaceQuota, exists := c.quotas[namespace]
 	if !exists {
-		// No namespace defined in policy nodes so this is not a namespace controlled by stolos.
+		// No namespace defined in policy nodes so this is not a namespace controlled by nomos.
 		return nil
 	}
 	namespace = namespaceQuota.parent
@@ -144,7 +144,7 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList core_v1.Re
 	for namespace != pn_v1.NoParentNamespace {
 		namespaceQuota, exists := c.quotas[namespace]
 		if !exists {
-			// No namespace defined in policy nodes so this is not a namespace controlled by stolos.
+			// No namespace defined in policy nodes so this is not a namespace controlled by nomos.
 			return nil
 		}
 		for resourceName, newUsage := range newUsageList {

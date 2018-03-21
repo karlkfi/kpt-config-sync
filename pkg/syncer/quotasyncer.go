@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -71,7 +71,7 @@ func (s *QuotaSyncer) PeriodicResync(nodes []*policyhierarchy_v1.PolicyNode) err
 }
 
 // PeriodicResync is used here to "fill in the gaps" for ResourceQuota in leaf nodes.
-// Stolos ResourceQuota relies on the native Kubernetes resource quota controllers to monitor usage,
+// Nomos ResourceQuota relies on the native Kubernetes resource quota controllers to monitor usage,
 // But the native controllers don't monitor usage unless a limit is set.
 // This means that if a parent policyspace has a limit set, we need to make sure that the leaf namespace
 // also has that resource type limited, so that we get usage stats from it to allow enforcement of that limit.
@@ -117,7 +117,7 @@ func (s *QuotaSyncer) fillResourceQuotaLeafGaps(nodes []*policyhierarchy_v1.Poli
 		if needsUpdate {
 			glog.Infof("Need to update quota for leaf %s to fill in limits from parent policyspaces", node.Name)
 			resultActions = append(resultActions, actions.NewResourceQuotaUpsertAction(
-				node.Name, resourcequota.StolosQuotaLabels, quota.Spec, s.client, s.resourceQuotaLister))
+				node.Name, resourcequota.NomosQuotaLabels, quota.Spec, s.client, s.resourceQuotaLister))
 		}
 	}
 	return resultActions, nil
@@ -139,7 +139,7 @@ func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode)
 	if len(hierarchicalLimits) > 0 {
 		return actions.NewResourceQuotaUpsertAction(
 			policyNode.Name,
-			resourcequota.StolosQuotaLabels,
+			resourcequota.NomosQuotaLabels,
 			core_v1.ResourceQuotaSpec{Hard: hierarchicalLimits},
 			s.client,
 			s.resourceQuotaLister)

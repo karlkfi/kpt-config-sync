@@ -46,7 +46,7 @@ func PolicyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 }
 
 func NewPolicyNodeActionSpec(
-	client typed_v1.StolosV1Interface,
+	client typed_v1.NomosV1Interface,
 	lister listers_v1.PolicyNodeLister) *action.ReflectiveActionSpec {
 	return &action.ReflectiveActionSpec{
 		KindPlural: "PolicyNodes",
@@ -77,7 +77,7 @@ func ClusterPoliciesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 }
 
 func NewClusterPolicyActionSpec(
-	client typed_v1.StolosV1Interface,
+	client typed_v1.NomosV1Interface,
 	lister listers_v1.ClusterPolicyLister) *action.ReflectiveActionSpec {
 	return &action.ReflectiveActionSpec{
 		KindPlural: "ClusterPolicies",

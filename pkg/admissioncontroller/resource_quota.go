@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -40,7 +40,7 @@ var (
 	admitDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Help:      "Quota admission duration distributions",
-			Namespace: "stolos",
+			Namespace: "nomos",
 			Subsystem: "quota_admission",
 			Name:      "action_duration_seconds",
 			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
@@ -50,7 +50,7 @@ var (
 	errTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total internal errors that occurred when reviewing quota requests",
-			Namespace: "stolos",
+			Namespace: "nomos",
 			Subsystem: "quota_admission",
 			Name:      "error_total",
 		},

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package policyhierarchy
 
 import (
 	glog "github.com/golang/glog"
-	stolosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	nomosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -26,27 +26,27 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	StolosV1() stolosv1.StolosV1Interface
+	NomosV1() nomosv1.NomosV1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Stolos() stolosv1.StolosV1Interface
+	Nomos() nomosv1.NomosV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	stolosV1 *stolosv1.StolosV1Client
+	nomosV1 *nomosv1.NomosV1Client
 }
 
-// StolosV1 retrieves the StolosV1Client
-func (c *Clientset) StolosV1() stolosv1.StolosV1Interface {
-	return c.stolosV1
+// NomosV1 retrieves the NomosV1Client
+func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
+	return c.nomosV1
 }
 
-// Deprecated: Stolos retrieves the default version of StolosClient.
+// Deprecated: Nomos retrieves the default version of NomosClient.
 // Please explicitly pick a version.
-func (c *Clientset) Stolos() stolosv1.StolosV1Interface {
-	return c.stolosV1
+func (c *Clientset) Nomos() nomosv1.NomosV1Interface {
+	return c.nomosV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -65,7 +65,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.stolosV1, err = stolosv1.NewForConfig(&configShallowCopy)
+	cs.nomosV1, err = nomosv1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.stolosV1 = stolosv1.NewForConfigOrDie(c)
+	cs.nomosV1 = nomosv1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -91,7 +91,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.stolosV1 = stolosv1.New(c)
+	cs.nomosV1 = nomosv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

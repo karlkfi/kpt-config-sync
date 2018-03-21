@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -59,13 +59,13 @@ func NewFilteredPolicyNodeInformer(client policyhierarchy.Interface, resyncPerio
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.StolosV1().PolicyNodes().List(options)
+				return client.NomosV1().PolicyNodes().List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.StolosV1().PolicyNodes().Watch(options)
+				return client.NomosV1().PolicyNodes().Watch(options)
 			},
 		},
 		&policyhierarchy_v1.PolicyNode{},

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2018 Stolos Authors
+# Copyright 2018 Nomos Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,19 +45,19 @@ readonly ca_key_file="${CA_KEY_FILE:-${CERTS_INPUT_DIR}/ca.key}"
 readonly ca_cert_file="${CA_CERT_FILE:-${CERTS_INPUT_DIR}/ca.crt}"
 
 kubectl delete secret resourcequota-admission-controller-secret \
-    --namespace=stolos-system || true
+    --namespace=nomos-system || true
 kubectl create secret tls resourcequota-admission-controller-secret \
-    --namespace=stolos-system \
+    --namespace=nomos-system \
     --cert="${server_cert_file}" \
     --key="${server_key_file}"
 
 kubectl delete secret resourcequota-admission-controller-secret-ca \
-    --namespace=stolos-system || true
+    --namespace=nomos-system || true
 kubectl create secret tls resourcequota-admission-controller-secret-ca \
-    --namespace=stolos-system \
+    --namespace=nomos-system \
     --cert=${ca_cert_file} \
     --key=${ca_key_file}
-kubectl delete ValidatingWebhookConfiguration stolos-resource-quota \
+kubectl delete ValidatingWebhookConfiguration nomos-resource-quota \
     --ignore-not-found
 
 kubectl apply -f ${YAML_DIR}/resourcequota-admission-controller.yaml

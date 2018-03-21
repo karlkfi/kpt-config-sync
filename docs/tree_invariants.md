@@ -1,5 +1,5 @@
 
-# Stolos Update Preserving Tree Invariants
+# Nomos Update Preserving Tree Invariants
 
 Author: briantkennedy
 
@@ -8,7 +8,7 @@ Date: 2018-01-23
 
 # Background
 
-We plan on using git as an option for the source of truth for open source stolos. This means that it's possible for the user to mutate the tree from one valid state to another valid state in an arbitrary manner such that from the set of all possible sequences of mutation operations that will take the tree from state A to state B, there exists a subset of those sequences that would take the tree through an invalid state before reaching state B.
+We plan on using git as an option for the source of truth for open source nomos. This means that it's possible for the user to mutate the tree from one valid state to another valid state in an arbitrary manner such that from the set of all possible sequences of mutation operations that will take the tree from state A to state B, there exists a subset of those sequences that would take the tree through an invalid state before reaching state B.
 
 
 # Summary

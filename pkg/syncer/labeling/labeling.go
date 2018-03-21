@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -20,11 +20,11 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// Labels that indicate the resource was created by Stolos
+// Labels that indicate the resource was created by Nomos
 const (
 	// OriginLabelKey is the key for a label that we use to indicate that the resoruce is being
-	// managed by the stolos system.
-	OriginLabelKey = "stolos-managed"
+	// managed by the nomos system.
+	OriginLabelKey = "nomos-managed"
 	// OriginLabelValue is the value we set for OriginLabelKey
 	OriginLabelValue = "true"
 )
@@ -43,12 +43,12 @@ func AddOriginLabelToMap(labelMap map[string]string) map[string]string {
 	return labelMap
 }
 
-// AddOriginLabel adds the provenance (managed by stolos) label to an object's metadata.
+// AddOriginLabel adds the provenance (managed by nomos) label to an object's metadata.
 func AddOriginLabel(objectMeta *meta_v1.ObjectMeta) {
 	objectMeta.Labels = AddOriginLabelToMap(objectMeta.Labels)
 }
 
-// NewOriginSelector returns a selector that will select items managed by stolos.
+// NewOriginSelector returns a selector that will select items managed by nomos.
 func NewOriginSelector() labels.Selector {
 	return labels.Set(OriginLabel).AsSelector()
 }

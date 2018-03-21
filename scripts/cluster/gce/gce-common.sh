@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2018 Stolos Authors
+# Copyright 2018 Nomos Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 # Common settings used by all the gce scripts.
 
-# Directory for keeping the persistent Stolos state.  Ensure it exists and is
+# Directory for keeping the persistent Nomos state.  Ensure it exists and is
 # a directory.
 STOLOS_TMP=${STOLOS_TMP:-$HOME/stolos}
 if [ ! -e ${STOLOS_TMP} ]; then

@@ -4,9 +4,9 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: clusterpolicies.stolos.dev
+  name: clusterpolicies.nomos.dev
 spec:
-  group: stolos.dev
+  group: nomos.dev
   version: v1
   scope: Cluster
   names:

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ type policyNodes struct {
 }
 
 // newPolicyNodes returns a PolicyNodes
-func newPolicyNodes(c *StolosV1Client) *policyNodes {
+func newPolicyNodes(c *NomosV1Client) *policyNodes {
 	return &policyNodes{
 		client: c.RESTClient(),
 	}

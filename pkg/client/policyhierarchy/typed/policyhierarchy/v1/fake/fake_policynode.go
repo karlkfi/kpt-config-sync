@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,12 +28,12 @@ import (
 
 // FakePolicyNodes implements PolicyNodeInterface
 type FakePolicyNodes struct {
-	Fake *FakeStolosV1
+	Fake *FakeNomosV1
 }
 
-var policynodesResource = schema.GroupVersionResource{Group: "stolos.dev", Version: "v1", Resource: "policynodes"}
+var policynodesResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "policynodes"}
 
-var policynodesKind = schema.GroupVersionKind{Group: "stolos.dev", Version: "v1", Kind: "PolicyNode"}
+var policynodesKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "PolicyNode"}
 
 // Get takes name of the policyNode, and returns the corresponding policyNode object, and an error if there is any.
 func (c *FakePolicyNodes) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.PolicyNode, err error) {

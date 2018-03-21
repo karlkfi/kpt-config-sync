@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: resourcequota-admission-controller
-  namespace: stolos-system
+  namespace: nomos-system
   labels:
     monitored: "true"
 spec:
@@ -21,7 +21,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: resourcequota-admission-controller
-  namespace: stolos-system
+  namespace: nomos-system
   labels:
     app: resource-quota
 spec:
@@ -56,9 +56,9 @@ spec:
           args: ["--logtostderr"]
           volumeMounts:
           - name: v1
-            mountPath: "/etc/stolos/secrets/resourcequota-admission-controller/server"
+            mountPath: "/etc/nomos/secrets/resourcequota-admission-controller/server"
             readOnly: true
           - name: v2
-            mountPath: "/etc/stolos/secrets/resourcequota-admission-controller/ca"
+            mountPath: "/etc/nomos/secrets/resourcequota-admission-controller/ca"
             readOnly: true
 

@@ -1,17 +1,17 @@
 #!/bin/bash
 
-# End to end tests for Stolos.
+# End to end tests for Nomos.
 # As a prerequisite for running this test, you must have
-# - A 1.9 kubernetes cluster configured for stolos. See
+# - A 1.9 kubernetes cluster configured for nomos. See
 # -- scripts/cluster/gce/kube-up.sh
-# -- scripts/cluster/gce/configure-apserver-for-stolos.sh
+# -- scripts/cluster/gce/configure-apserver-for-nomos.sh
 # -- scripts/cluster/gce/configure-monitoring.sh
 # - kubectl configured with context pointing to that cluster
 # - Docker
 # - gcloud with access to a project that has GCR
 
 # To execute a subset of tests without setup, run as folows:
-# > SKIP_INITIAL_SETUP=1 TEST_FUNCTIONS=testStolosResourceQuota e2e/e2e.sh
+# > SKIP_INITIAL_SETUP=1 TEST_FUNCTIONS=testNomosResourceQuota e2e/e2e.sh
 
 set -u
 
@@ -45,8 +45,8 @@ function testSyncerNamespaces() {
   assertContains "kubectl get ns backend" "Active"
   assertContains "kubectl get ns frontend" "Active"
 
-  assertContains "kubectl get ns frontend -o yaml" 'stolos-managed: "true"'
-  assertContains "kubectl get ns frontend -o yaml" "stolos-parent-ns: eng"
+  assertContains "kubectl get ns frontend -o yaml" 'nomos-managed: "true"'
+  assertContains "kubectl get ns frontend -o yaml" "nomos-parent-ns: eng"
 }
 
 function testSyncerRoles() {

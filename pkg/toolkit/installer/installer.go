@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -56,9 +56,9 @@ const (
 	admissionControllerScript = "deploy-resourcequota-admission-controller.sh"
 
 	// defaultNamespace is the namespace to place resources into.
-	defaultNamespace = "stolos-system"
+	defaultNamespace = "nomos-system"
 
-	// deploymentTimeout is the default timeout to wait for each Stolos
+	// deploymentTimeout is the default timeout to wait for each Nomos
 	// component to become functional.  Components initialize in parallel, so
 	// we expect that it's unlikely a wait would be
 	// deploymentTimeout*len(deploymentComponents).
@@ -69,9 +69,9 @@ var (
 	// deploymentComponents are the components that are expected to be running
 	// after installer completes.
 	deploymentComponents = []string{
-		"stolos-system:git-policy-importer",
-		"stolos-system:resourcequota-admission-controller",
-		"stolos-system:syncer",
+		"nomos-system:git-policy-importer",
+		"nomos-system:resourcequota-admission-controller",
+		"nomos-system:syncer",
 	}
 )
 
@@ -246,7 +246,7 @@ func (i *Installer) processCluster() error {
 		return errors.Wrapf(err, "while applying yaml")
 	}
 	if err = c.WaitForDeployments(deploymentTimeout, deploymentComponents...); err != nil {
-		return errors.Wrapf(err, "while waiting for stolos components")
+		return errors.Wrapf(err, "while waiting for nomos components")
 	}
 	return err
 }

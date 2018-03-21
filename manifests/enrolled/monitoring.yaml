@@ -1,7 +1,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: stolos
+  name: nomos
   namespace: monitoring
   labels:
     prometheus: kube-prometheus
@@ -11,7 +11,7 @@ spec:
       monitored: "true"
   namespaceSelector:
     matchNames:
-    - stolos-system
+    - nomos-system
   endpoints:
   - port: metrics
     interval: 10s

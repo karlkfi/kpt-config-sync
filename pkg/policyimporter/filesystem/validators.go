@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -26,7 +26,7 @@ type validator struct {
 	err  error
 }
 
-// newValidator creates a validator for Stolos-specific constraints on Kubernetes objects.
+// newValidator creates a validator for Nomos-specific constraints on Kubernetes objects.
 // err holds the first encountered error. Subsequent errors are short-circuited.
 // Error messages here must be as specific and actionable as possible.
 func newValidator() *validator {

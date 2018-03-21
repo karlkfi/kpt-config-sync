@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -15,8 +15,8 @@ limitations under the License.
 
 package resourcequota
 
-// NamespaceTypeLabel is the label key used for stolos quotas.
-const NamespaceTypeLabel = "stolos-namespace-type"
+// NamespaceTypeLabel is the label key used for nomos quotas.
+const NamespaceTypeLabel = "nomos-namespace-type"
 const (
 	// NamespaceTypePolicy is the value used for policy namespaces
 	NamespaceTypePolicy = "policyspace"
@@ -24,12 +24,12 @@ const (
 	NamespaceTypeWorkload = "workload"
 )
 
-// ResourceQuotaObjectName is the resource name for quotas set by stolos.  We only allow one resource
+// ResourceQuotaObjectName is the resource name for quotas set by nomos.  We only allow one resource
 // quota per namespace, so we hardcode the resource name.
-const ResourceQuotaObjectName = "stolos-resource-quota"
+const ResourceQuotaObjectName = "nomos-resource-quota"
 
-// StolosQuotaLabels are the labels applied to a workload namespace's quota object
-var StolosQuotaLabels = map[string]string{NamespaceTypeLabel: NamespaceTypeWorkload}
+// NomosQuotaLabels are the labels applied to a workload namespace's quota object
+var NomosQuotaLabels = map[string]string{NamespaceTypeLabel: NamespaceTypeWorkload}
 
 // PolicySpaceQuotaLabels are the labels applied to a policyspace's quota object
 var PolicySpaceQuotaLabels = map[string]string{NamespaceTypeLabel: NamespaceTypePolicy}

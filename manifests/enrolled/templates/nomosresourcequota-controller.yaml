@@ -2,13 +2,13 @@ changecom(`<unused>')
 apiVersion: v1
 kind: Service
 metadata:
-  name: stolosresourcequota
-  namespace: stolos-system
+  name: nomosresourcequota
+  namespace: nomos-system
   labels:
     monitored: "true"
 spec:
   selector:
-    app: stolosresourcequota
+    app: nomosresourcequota
   ports:
     - name: web
       port: 80
@@ -20,25 +20,25 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: stolosresourcequota-controller
-  namespace: stolos-system
+  name: nomosresourcequota-controller
+  namespace: nomos-system
   labels:
-    app: stolosresourcequota
+    app: nomosresourcequota
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: stolosresourcequota
+      app: nomosresourcequota
   template:
     metadata:
       labels:
-        app: stolosresourcequota
+        app: nomosresourcequota
     spec:
-      serviceAccountName: stolosresourcequota-controller
+      serviceAccountName: nomosresourcequota-controller
       containers:
-        - name: stolosresourcequota-controller
+        - name: nomosresourcequota-controller
           image: IMAGE_NAME
           ports:
             - containerPort: 80

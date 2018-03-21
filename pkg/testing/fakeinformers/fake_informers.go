@@ -21,7 +21,7 @@ func NewPolicyNodeInformer(content ...runtime.Object) pn_v1.PolicyNodeInformer {
 	fakeClientSet := pn_fake.NewSimpleClientset(content...)
 	factory := externalversions.NewSharedInformerFactory(
 		fakeClientSet, 1*time.Minute)
-	informer := factory.Stolos().V1().PolicyNodes()
+	informer := factory.Nomos().V1().PolicyNodes()
 	informer.Informer()
 	factory.Start(nil)
 	glog.Infof("cache sync...")

@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -14,7 +14,7 @@ limitations under the License.
 */
 
 // Package filesystem provides functionality to read Kubernetes objects from a filesystem tree
-// and converting them to Stolos Custom Resource Definition objects.
+// and converting them to Nomos Custom Resource Definition objects.
 package filesystem
 
 import (
@@ -42,7 +42,7 @@ type Parser struct {
 	inCluster bool
 }
 
-// NewParser creates a new parser that reads files on disk and builds Stolos CRDs.
+// NewParser creates a new parser that reads files on disk and builds Nomos CRDs.
 // inCluster boolean determines if this is running in a cluster and can talk to api server.
 func NewParser(inCluster bool) (*Parser, error) {
 	p := Parser{

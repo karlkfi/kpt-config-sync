@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,5 +25,5 @@ limitations under the License.
 // DO NOT MOVE THESE OUT OF THE PACKAGE DOCSTRING, GENERATING CODE PROPERLY DEPENDS ON THEM BEING HERE.
 // +k8s:deepcopy-gen=package,register
 // +k8s:openapi-gen=true
-// +groupName=stolos.dev
+// +groupName=nomos.dev
 package v1

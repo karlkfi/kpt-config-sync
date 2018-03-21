@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,11 +26,11 @@ import (
 )
 
 func TestEnvProcessing(t *testing.T) {
-	os.Setenv("KUBECTL_PLUGINS_DESCRIPTOR_NAME", "stolos")
+	os.Setenv("KUBECTL_PLUGINS_DESCRIPTOR_NAME", "nomos")
 	os.Setenv("KUBECTL_PLUGINS_DESCRIPTOR_SHORT_DESC", "short-desc")
 	os.Setenv("KUBECTL_PLUGINS_DESCRIPTOR_LONG_DESC", "long-desc")
 	os.Setenv("KUBECTL_PLUGINS_DESCRIPTOR_EXAMPLE", "example")
-	os.Setenv("KUBECTL_PLUGINS_DESCRIPTOR_COMMAND", "./kubectl-stolos")
+	os.Setenv("KUBECTL_PLUGINS_DESCRIPTOR_COMMAND", "./kubectl-nomos")
 	os.Setenv("KUBECTL_PLUGINS_GLOBAL_FLAG_ALSOLOGTOSTDERR", "false")
 	os.Setenv("KUBECTL_PLUGINS_GLOBAL_FLAG_AS", "foo")
 	os.Setenv("KUBECTL_PLUGINS_GLOBAL_FLAG_AS_GROUP", "[]")
@@ -98,11 +98,11 @@ func TestEnvProcessing(t *testing.T) {
 			"help": "false",
 			"yep":  "nope",
 		},
-		Name:      "stolos",
+		Name:      "nomos",
 		ShortDesc: "short-desc",
 		LongDesc:  "long-desc",
 		Example:   "example",
-		Command:   "./kubectl-stolos",
+		Command:   "./kubectl-nomos",
 		Namespace: "default",
 		asUser:    "foo",
 		Client:    nil,

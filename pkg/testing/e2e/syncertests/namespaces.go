@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -66,12 +66,12 @@ func setupFunc(t *testcontext.TestContext) {
 }
 
 func cleanupFunc(t *testcontext.TestContext) {
-	t.PolicyHierarchy().StolosV1().PolicyNodes().Delete(testSyncerNamespaces, &meta_v1.DeleteOptions{})
+	t.PolicyHierarchy().NomosV1().PolicyNodes().Delete(testSyncerNamespaces, &meta_v1.DeleteOptions{})
 	t.Kubernetes().CoreV1().Namespaces().Delete(testSyncerNamespaces, &meta_v1.DeleteOptions{})
 }
 
 func testNamespaceGarbageCollection(t *testcontext.TestContext) {
-	_, err := t.PolicyHierarchy().StolosV1().PolicyNodes().Create(
+	_, err := t.PolicyHierarchy().NomosV1().PolicyNodes().Create(
 		testSyncerNamespacesPolicyNode.DeepCopy())
 	if err != nil && !api_errors.IsAlreadyExists(err) {
 		panic(errors.Wrapf(err, "Failed to create policy node"))
@@ -83,12 +83,12 @@ func testNamespaceGarbageCollection(t *testcontext.TestContext) {
 	})
 
 	propagationPolicy := meta_v1.DeletePropagationForeground
-	t.PolicyHierarchy().StolosV1().PolicyNodes().Delete(testSyncerNamespaces, &meta_v1.DeleteOptions{
+	t.PolicyHierarchy().NomosV1().PolicyNodes().Delete(testSyncerNamespaces, &meta_v1.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
 
 	t.WaitForNotFound(time.Second*10, func() error {
-		_, err := t.PolicyHierarchy().StolosV1().PolicyNodes().Get(
+		_, err := t.PolicyHierarchy().NomosV1().PolicyNodes().Get(
 			testSyncerNamespaces, meta_v1.GetOptions{})
 		return err
 	})

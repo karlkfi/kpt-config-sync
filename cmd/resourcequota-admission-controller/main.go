@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -45,7 +45,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-const externalAdmissionHookConfigName = "stolos-resource-quota"
+const externalAdmissionHookConfigName = "nomos-resource-quota"
 
 // 5 seconds should be enough for endpoint to come up in the Kubernetes server.
 const endpointRegistrationTimeout = time.Second * 5
@@ -107,7 +107,7 @@ func setupPolicyNodeInformer(config *rest.Config) (informerspolicynodev1.PolicyN
 	policyNodeFactory := policynodeversions.NewSharedInformerFactory(
 		policyNodeClient.PolicyHierarchy(), time.Minute,
 	)
-	policyNodeInformer := policyNodeFactory.Stolos().V1().PolicyNodes()
+	policyNodeInformer := policyNodeFactory.Nomos().V1().PolicyNodes()
 	policyNodeInformer.Informer()
 	policyNodeFactory.Start(nil)
 
@@ -165,7 +165,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 		},
 		Webhooks: []admissionregistrationv1beta1.Webhook{
 			{
-				Name: "resourcequota.stolos.dev",
+				Name: "resourcequota.nomos.dev",
 				Rules: []admissionregistrationv1beta1.RuleWithOperations{{
 					Operations: []admissionregistrationv1beta1.OperationType{
 						admissionregistrationv1beta1.Create,
@@ -180,7 +180,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 				FailurePolicy: &failurePolicy,
 				ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
 					Service: &admissionregistrationv1beta1.ServiceReference{
-						Namespace: "stolos-system",
+						Namespace: "nomos-system",
 						Name:      "resourcequota-admission-controller",
 					},
 					CABundle: caCert,
@@ -201,7 +201,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 // block all requests, including the endpoint initialization
 func waitForEndpoint(clientset *kubernetes.Clientset) error {
 	for t := time.Now(); time.Since(t) < endpointRegistrationTimeout; time.Sleep(time.Second) {
-		endpoint, err := clientset.CoreV1().Endpoints("stolos-system").Get(
+		endpoint, err := clientset.CoreV1().Endpoints("nomos-system").Get(
 			"resourcequota-admission-controller", metav1.GetOptions{})
 
 		if api_errors.IsNotFound(err) {

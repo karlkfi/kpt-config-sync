@@ -13,5 +13,5 @@
 # limitations under the License.
 
 FROM busybox
-ADD stolosresourcequota-controller stolosresourcequota-controller
-ENTRYPOINT ["/stolosresourcequota-controller"]
+ADD nomosresourcequota-controller nomosresourcequota-controller
+ENTRYPOINT ["/nomosresourcequota-controller"]

@@ -1,4 +1,4 @@
-// Package installer contains the binary that installs Stolos to target clusters.
+// Package installer contains the binary that installs Nomos to target clusters.
 package main
 
 import (

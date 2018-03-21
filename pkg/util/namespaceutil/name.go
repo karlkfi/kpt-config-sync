@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -23,10 +23,10 @@ import (
 )
 
 var (
-	// Namespaces that either exist on the kubernetes cluster by default or are reserved by Stolos.
+	// Namespaces that either exist on the kubernetes cluster by default or are reserved by Nomos.
 	reservedNamespaces = map[string]bool{
-		"default":       true,
-		"stolos-system": true,
+		"default":      true,
+		"nomos-system": true,
 	}
 
 	reservedPrefix = "kube-"

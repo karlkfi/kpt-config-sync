@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,21 +22,21 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeStolosV1 struct {
+type FakeNomosV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeStolosV1) ClusterPolicies() v1.ClusterPolicyInterface {
+func (c *FakeNomosV1) ClusterPolicies() v1.ClusterPolicyInterface {
 	return &FakeClusterPolicies{c}
 }
 
-func (c *FakeStolosV1) PolicyNodes() v1.PolicyNodeInterface {
+func (c *FakeNomosV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeStolosV1) RESTClient() rest.Interface {
+func (c *FakeNomosV1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

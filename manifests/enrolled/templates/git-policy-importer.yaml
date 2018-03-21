@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: git-policy-importer
-  namespace: stolos-system
+  namespace: nomos-system
   labels:
     apps: git-policy-importer
 spec:

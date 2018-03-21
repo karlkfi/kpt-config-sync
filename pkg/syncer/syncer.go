@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -52,7 +52,7 @@ var (
 	errTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total errors that occurred when executing syncer actions",
-			Namespace: "stolos",
+			Namespace: "nomos",
 			Subsystem: "syncer",
 			Name:      "error_total",
 		},
@@ -61,7 +61,7 @@ var (
 	eventTimes = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Help:      "Timestamps when syncer events occurred",
-			Namespace: "stolos",
+			Namespace: "nomos",
 			Subsystem: "syncer",
 			Name:      "event_timestamps",
 		},
@@ -70,14 +70,14 @@ var (
 	queueSize = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Help:      "Current size of syncer action queue",
-			Namespace: "stolos",
+			Namespace: "nomos",
 			Subsystem: "syncer",
 			Name:      "queue_size",
 		})
 	syncDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Help:      "Syncer action duration distributions",
-			Namespace: "stolos",
+			Namespace: "nomos",
 			Subsystem: "syncer",
 			Name:      "action_duration_seconds",
 			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
@@ -129,7 +129,7 @@ func New(client meta.Interface) *Syncer {
 		client.PolicyHierarchy(), *flagResyncPeriod)
 	kubernetesCoreV1 := kubernetesInformerFactory.Core().V1()
 	rbacV1 := kubernetesInformerFactory.Rbac().V1()
-	policyHierarchyV1 := policyHierarchyInformerFactory.Stolos().V1()
+	policyHierarchyV1 := policyHierarchyInformerFactory.Nomos().V1()
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	syncers := []PolicyNodeSyncerInterface{
@@ -184,7 +184,7 @@ func (s *Syncer) Wait() {
 }
 
 func (s *Syncer) runInformer() {
-	policyNodes := s.policyHierarchyInformerFactory.Stolos().V1().PolicyNodes()
+	policyNodes := s.policyHierarchyInformerFactory.Nomos().V1().PolicyNodes()
 	s.policyNodeLister = policyNodes.Lister()
 
 	// Subscribe to informer prior to starting the factories.
@@ -194,7 +194,7 @@ func (s *Syncer) runInformer() {
 		DeleteFunc: s.deletePolicyNode,
 	})
 
-	clusterPolicies := s.policyHierarchyInformerFactory.Stolos().V1().ClusterPolicies()
+	clusterPolicies := s.policyHierarchyInformerFactory.Nomos().V1().ClusterPolicies()
 	clusterPolicies.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    s.addClusterPolicy,
 		UpdateFunc: s.updateClusterPolicy,

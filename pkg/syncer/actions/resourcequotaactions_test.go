@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -112,15 +112,15 @@ var resourceQuotaTestCases = []*ResourceQuotaTestCase{
 	&ResourceQuotaTestCase{
 		Name:            "Create during upsert",
 		InitialNotFound: true,
-		SpecifiedLabels: resourcequota.StolosQuotaLabels,
+		SpecifiedLabels: resourcequota.NomosQuotaLabels,
 		SpecifiedState:  onePod,
 		ActionCtor:      upsertQuotaTestAction,
 	},
 	&ResourceQuotaTestCase{
 		Name:            "Update spec during upsert",
-		InitialLabels:   resourcequota.StolosQuotaLabels,
+		InitialLabels:   resourcequota.NomosQuotaLabels,
 		InitialState:    onePod,
-		SpecifiedLabels: resourcequota.StolosQuotaLabels,
+		SpecifiedLabels: resourcequota.NomosQuotaLabels,
 		SpecifiedState:  twoPods,
 		ActionCtor:      upsertQuotaTestAction,
 	},
@@ -128,7 +128,7 @@ var resourceQuotaTestCases = []*ResourceQuotaTestCase{
 		Name:            "Update labels during upsert",
 		InitialLabels:   resourcequota.PolicySpaceQuotaLabels,
 		InitialState:    zeroPods,
-		SpecifiedLabels: resourcequota.StolosQuotaLabels,
+		SpecifiedLabels: resourcequota.NomosQuotaLabels,
 		SpecifiedState:  zeroPods,
 		ActionCtor:      upsertQuotaTestAction,
 	},
@@ -148,7 +148,7 @@ var resourceQuotaTestCases = []*ResourceQuotaTestCase{
 	},
 	&ResourceQuotaTestCase{
 		Name:           "Delete existing item",
-		InitialLabels:  resourcequota.StolosQuotaLabels,
+		InitialLabels:  resourcequota.NomosQuotaLabels,
 		InitialState:   twoPods,
 		ExpectNotFound: true,
 		ActionCtor:     deleteQuotaTestAction,

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,12 +28,12 @@ import (
 
 // FakeClusterPolicies implements ClusterPolicyInterface
 type FakeClusterPolicies struct {
-	Fake *FakeStolosV1
+	Fake *FakeNomosV1
 }
 
-var clusterpoliciesResource = schema.GroupVersionResource{Group: "stolos.dev", Version: "v1", Resource: "clusterpolicies"}
+var clusterpoliciesResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "clusterpolicies"}
 
-var clusterpoliciesKind = schema.GroupVersionKind{Group: "stolos.dev", Version: "v1", Kind: "ClusterPolicy"}
+var clusterpoliciesKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "ClusterPolicy"}
 
 // Get takes name of the clusterPolicy, and returns the corresponding clusterPolicy object, and an error if there is any.
 func (c *FakeClusterPolicies) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.ClusterPolicy, err error) {

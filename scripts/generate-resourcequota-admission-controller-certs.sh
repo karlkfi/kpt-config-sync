@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2018 Stolos Authors
+# Copyright 2018 Nomos Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ STAGING_DIR="${STAGING_DIR:-$(dirname ${0:-''})/../.output}/staging"
 readonly controller_staging_dir="${OUTPUT_DIR:-${STAGING_DIR}/resourcequota-admission-controller}"
 
 # The name of the service (and the namespace it runs in).
-readonly cn_base="resourcequota-admission-controller.stolos-system.svc"
+readonly cn_base="resourcequota-admission-controller.nomos-system.svc"
 
 mkdir -p "${controller_staging_dir}"
 cd "${controller_staging_dir}"

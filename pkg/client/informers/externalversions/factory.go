@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -122,9 +122,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Stolos() externalversions_policyhierarchy.Interface
+	Nomos() externalversions_policyhierarchy.Interface
 }
 
-func (f *sharedInformerFactory) Stolos() externalversions_policyhierarchy.Interface {
+func (f *sharedInformerFactory) Nomos() externalversions_policyhierarchy.Interface {
 	return externalversions_policyhierarchy.New(f, f.namespace, f.tweakListOptions)
 }

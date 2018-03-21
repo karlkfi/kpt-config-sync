@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ package fake
 
 import (
 	clientset "github.com/google/nomos/pkg/client/policyhierarchy"
-	stolosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
-	fakestolosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1/fake"
+	nomosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	fakenomosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -60,12 +60,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// StolosV1 retrieves the StolosV1Client
-func (c *Clientset) StolosV1() stolosv1.StolosV1Interface {
-	return &fakestolosv1.FakeStolosV1{Fake: &c.Fake}
+// NomosV1 retrieves the NomosV1Client
+func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
+	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
 }
 
-// Stolos retrieves the StolosV1Client
-func (c *Clientset) Stolos() stolosv1.StolosV1Interface {
-	return &fakestolosv1.FakeStolosV1{Fake: &c.Fake}
+// Nomos retrieves the NomosV1Client
+func (c *Clientset) Nomos() nomosv1.NomosV1Interface {
+	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
 }

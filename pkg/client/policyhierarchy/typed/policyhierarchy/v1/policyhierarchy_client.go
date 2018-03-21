@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,27 +23,27 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type StolosV1Interface interface {
+type NomosV1Interface interface {
 	RESTClient() rest.Interface
 	ClusterPoliciesGetter
 	PolicyNodesGetter
 }
 
-// StolosV1Client is used to interact with features provided by the stolos.dev group.
-type StolosV1Client struct {
+// NomosV1Client is used to interact with features provided by the nomos.dev group.
+type NomosV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *StolosV1Client) ClusterPolicies() ClusterPolicyInterface {
+func (c *NomosV1Client) ClusterPolicies() ClusterPolicyInterface {
 	return newClusterPolicies(c)
 }
 
-func (c *StolosV1Client) PolicyNodes() PolicyNodeInterface {
+func (c *NomosV1Client) PolicyNodes() PolicyNodeInterface {
 	return newPolicyNodes(c)
 }
 
-// NewForConfig creates a new StolosV1Client for the given config.
-func NewForConfig(c *rest.Config) (*StolosV1Client, error) {
+// NewForConfig creates a new NomosV1Client for the given config.
+func NewForConfig(c *rest.Config) (*NomosV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -52,12 +52,12 @@ func NewForConfig(c *rest.Config) (*StolosV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &StolosV1Client{client}, nil
+	return &NomosV1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new StolosV1Client for the given config and
+// NewForConfigOrDie creates a new NomosV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *StolosV1Client {
+func NewForConfigOrDie(c *rest.Config) *NomosV1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -65,9 +65,9 @@ func NewForConfigOrDie(c *rest.Config) *StolosV1Client {
 	return client
 }
 
-// New creates a new StolosV1Client for the given RESTClient.
-func New(c rest.Interface) *StolosV1Client {
-	return &StolosV1Client{c}
+// New creates a new NomosV1Client for the given RESTClient.
+func New(c rest.Interface) *NomosV1Client {
+	return &NomosV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -85,7 +85,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *StolosV1Client) RESTClient() rest.Interface {
+func (c *NomosV1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

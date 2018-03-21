@@ -2,26 +2,26 @@
 
 ## Overview
 
-In environments with many users spread across many teams, having multiple tenants within a cluster, allocated into namespaces, maximizes resource utilization while providing isolation. However, as the number of namespaces grows, it becomes increasingly hard for cluster operators to manage per-namespace policies like authorization (RBAC Roles/Rolebinding) and quota (ResourceQuota), etc. In addition, real world deployments often require multiple clusters in order to tolerate region failures, reduce network latencies for end users, or simply to scale beyond the current size limits of a Kubernetes cluster. Stolos makes it easier to manage large multi-tenant and multi-cluster deployments, by reducing the load on cluster operators and reducing the surface area to secure.
+In environments with many users spread across many teams, having multiple tenants within a cluster, allocated into namespaces, maximizes resource utilization while providing isolation. However, as the number of namespaces grows, it becomes increasingly hard for cluster operators to manage per-namespace policies like authorization (RBAC Roles/Rolebinding) and quota (ResourceQuota), etc. In addition, real world deployments often require multiple clusters in order to tolerate region failures, reduce network latencies for end users, or simply to scale beyond the current size limits of a Kubernetes cluster. Nomos makes it easier to manage large multi-tenant and multi-cluster deployments, by reducing the load on cluster operators and reducing the surface area to secure.
 
-At a high level, Stolos serves two separate functions:
-
-
-*   **Policy distribution**: Distribute policy definitions from a centralized source of truth to all workload clusters. The extensible policy distribution mechanism allows Stolos to support a wide range of technologies implementing the source of truth for policies (e.g. YAML files in Git, Google Cloud IAM & admin, Active Directory, etc.)
-*   **Hierarchical policy enforcement**: Group together namespaces and associated policies into a hierarchy modelled after how departments and teams are organized. Stolos provides a set of controllers running on the workload clusters that consume hierarchical policies definitions and are responsible for enforcing them.
-
-In this release, there are four main areas that Stolos helps manage:
+At a high level, Nomos serves two separate functions:
 
 
-1.  **Namespaces**:  With Stolos you have one set of namespaces that apply to all clusters.   Stolos also introduces hierarchical namespace support giving you the ability to group namespaces together for common policies and to facilitate delegation.  In Stolos, only leaf namespaces can contain non-policy resources, while the intermediate and root nodes provide policy attach points for policies such as RBAC, ResourceQuota, and more.
-1.  **Hierarchical RBAC policies**:  Stolos provides central management of RBAC policies and enables inheritance of namespace-level RBAC resources. For example a Rolebinding from an ancestor is inherited by all descendent namespaces, removing duplication.
-1.  **Hierarchical ResourceQuota policies**:  With Stolos one can manage quota centrally and set quota hierarchically.
-1.  **Cluster-level policies:** In addition to namespace-level policies, Stolos allows you to centrally manage cluster-level policies such as ClusterRole/Rolebinding and PodSecurityPolicy.
+*   **Policy distribution**: Distribute policy definitions from a centralized source of truth to all workload clusters. The extensible policy distribution mechanism allows Nomos to support a wide range of technologies implementing the source of truth for policies (e.g. YAML files in Git, Google Cloud IAM & admin, Active Directory, etc.)
+*   **Hierarchical policy enforcement**: Group together namespaces and associated policies into a hierarchy modelled after how departments and teams are organized. Nomos provides a set of controllers running on the workload clusters that consume hierarchical policies definitions and are responsible for enforcing them.
+
+In this release, there are four main areas that Nomos helps manage:
+
+
+1.  **Namespaces**:  With Nomos you have one set of namespaces that apply to all clusters.   Nomos also introduces hierarchical namespace support giving you the ability to group namespaces together for common policies and to facilitate delegation.  In Nomos, only leaf namespaces can contain non-policy resources, while the intermediate and root nodes provide policy attach points for policies such as RBAC, ResourceQuota, and more.
+1.  **Hierarchical RBAC policies**:  Nomos provides central management of RBAC policies and enables inheritance of namespace-level RBAC resources. For example a Rolebinding from an ancestor is inherited by all descendent namespaces, removing duplication.
+1.  **Hierarchical ResourceQuota policies**:  With Nomos one can manage quota centrally and set quota hierarchically.
+1.  **Cluster-level policies:** In addition to namespace-level policies, Nomos allows you to centrally manage cluster-level policies such as ClusterRole/Rolebinding and PodSecurityPolicy.
 
 This guide will take you through managing each of these resources.
 
 
-### Stolos Concepts
+### Nomos Concepts
 
 
 #### Namespaces
@@ -30,12 +30,12 @@ In Kubernetes, namespaces are the isolation construct for implementing multi-ten
 
 Generally anytime you want to have a workload managed by a distinct person or set of people (e.g. on-call person only for prod workloads, whole development team for dev workloads), it makes sense to create a new namespace.  If you want to have a common person or set of people be able to perform the same set of operations within a set of namespaces, create a policyspace.
 
-Stolos with its hierarchical control allows many namespaces to be managed by the same set of people so it's possible to create more granular namespaces for a team of people without incurring additional policy administration overhead.
+Nomos with its hierarchical control allows many namespaces to be managed by the same set of people so it's possible to create more granular namespaces for a team of people without incurring additional policy administration overhead.
 
 
 #### Policyspaces
 
-With Stolos, we give admins the ability to group namespaces together and to form groups of groups through a hierarchy.  We call a non-leaf node in this tree, whose leaves are namespaces, a  policyspace. We can think of policyspaces as Organization Units (or Policy Information Point in [XACML](https://en.wikipedia.org/wiki/XACML#Terminology) parlance).  They exist to delegate policy control to sub organization leaders. This approach has been long established by LDAP and Active Directory.
+With Nomos, we give admins the ability to group namespaces together and to form groups of groups through a hierarchy.  We call a non-leaf node in this tree, whose leaves are namespaces, a  policyspace. We can think of policyspaces as Organization Units (or Policy Information Point in [XACML](https://en.wikipedia.org/wiki/XACML#Terminology) parlance).  They exist to delegate policy control to sub organization leaders. This approach has been long established by LDAP and Active Directory.
 
 Policyspaces can be parents of policyspaces and namespaces. Policyspace and namespaces must both be globally unique.
 
@@ -59,14 +59,14 @@ This gives the ability for the Shipping App Backend team to manage three differe
 ### System Overview
 
 
-![drawing](img/stolos_arch.svg) 
+![drawing](img/nomos_arch.svg) 
 
-The above diagram is a simplified view of Stolos components running on a workload cluster. Each component is described below.
+The above diagram is a simplified view of Nomos components running on a workload cluster. Each component is described below.
 
 
 #### PolicyImporter
 
-PolicyImporter is an abstraction for a controller that consumes policy definitions from an external source of truth and builds a canonical representation of the hierarchy using cluster-level CRD(s) defined by Stolos. Stolos can be extended to support different sources of truth (e.g. Git, GCP, Active Directory) using different implementations of this abstraction. Note that we treat this canonical representation as internal implementation which should not be directly consumed by users.
+PolicyImporter is an abstraction for a controller that consumes policy definitions from an external source of truth and builds a canonical representation of the hierarchy using cluster-level CRD(s) defined by Nomos. Nomos can be extended to support different sources of truth (e.g. Git, GCP, Active Directory) using different implementations of this abstraction. Note that we treat this canonical representation as internal implementation which should not be directly consumed by users.
 
 
 #### Syncer
@@ -81,12 +81,12 @@ A ValidatingAdmissionWebhook that enforces hierarchical quota policies which pro
 
 ## Set Up
 
-There's a one-time set up required to set up Stolos components described in this section. The user running these commands should have a cluster-admin rolebinding.
+There's a one-time set up required to set up Nomos components described in this section. The user running these commands should have a cluster-admin rolebinding.
 
 
 ### Cluster Requirements
 
-In order to run Stolos components, the cluster has to meet these requirements:
+In order to run Nomos components, the cluster has to meet these requirements:
 
 
 <table>
@@ -121,28 +121,28 @@ Minimum required Kubernetes Server Version: **1.9**
 
 Note that GKE running K8S 1.9 satisfies all these requirements.
 
-**Warning: **In the current release of Stolos, we require that all namespaces be managed by Stolos. It is recommended to create a new cluster for use with Stolos.
+**Warning: **In the current release of Nomos, we require that all namespaces be managed by Nomos. It is recommended to create a new cluster for use with Nomos.
 
 
-### Installing Stolos
+### Installing Nomos
 
-The Stolos components need to be installed on each workload cluster and given the appropriate K8S Cluster RBAC authorizations to manage namespaces, quota resources, and other policy objects.
+The Nomos components need to be installed on each workload cluster and given the appropriate K8S Cluster RBAC authorizations to manage namespaces, quota resources, and other policy objects.
 
 Download and extract a release archive:
 
 
 ```
 $ wget \
-https://github.com/GoogleCloudPlatform/stolos/releases/download/v0.0.1/stolos.tar.gz
+https://github.com/GoogleCloudPlatform/nomos/releases/download/v0.0.1/nomos.tar.gz
 ```
 
 
-Install Stolos components on each workload cluster:
+Install Nomos components on each workload cluster:
 
 
 ```
 $ kubectl config use-context ${CLUSTER_CONTEXT}
-$ ./stolos/install-workload-cluster.sh
+$ ./nomos/install-workload-cluster.sh
 ```
 
 
@@ -154,7 +154,7 @@ GitPolicyImporter uses a configmap created as such:
 
 
 ```
-$ kubectl create configmap git-policy-importer -n stolos-system \
+$ kubectl create configmap git-policy-importer -n nomos-system \
     --from-env-file=path/to/git-importer.env
 ```
 
@@ -220,7 +220,7 @@ You can use username/password or SSH for authentication. To use username/passwor
 
 
 ```
-$ kubectl create secret generic git-creds -n stolos-system \
+$ kubectl create secret generic git-creds -n nomos-system \
     --from-literal=user_name=myusername \
     --from-literal=password=mypassword
 ```
@@ -230,7 +230,7 @@ To use SSH, create the secret as such:
 
 
 ```
-$ kubectl create secret generic git-policy-importer -n stolos-system \
+$ kubectl create secret generic git-policy-importer -n nomos-system \
     --from-file=ssh=path/to/ssh_deploy_key \
     --from-file=known_hosts=/tmp/known_hosts
 ```
@@ -239,25 +239,25 @@ $ kubectl create secret generic git-policy-importer -n stolos-system \
 When using Github, [SSH deploy key](https://developer.github.com/v3/guides/managing-deploy-keys/#deploy-keys) should be used instead of a personal user's key.
 
 
-### Uninstalling Stolos
+### Uninstalling Nomos
 
-Default behavior for uninstalling Stolos is to delete Stolos controllers and custom resources. Any other resource managed by Stolos such as namespaces, RBAC resources, ResourceQuota, etc. will not be deleted. After uninstallation, RBAC policies should not be affected but ResourceQuota will become more permissive: 
-
-
-```
-$ stolos/uninstall-workload-cluster.sh
-```
-
-
-If you want to also delete all Stolos-managed resources including namespaces and any workload:
+Default behavior for uninstalling Nomos is to delete Nomos controllers and custom resources. Any other resource managed by Nomos such as namespaces, RBAC resources, ResourceQuota, etc. will not be deleted. After uninstallation, RBAC policies should not be affected but ResourceQuota will become more permissive: 
 
 
 ```
-$ stolos/uninstall-workload-cluster.sh --deletedeletedelete
+$ nomos/uninstall-workload-cluster.sh
 ```
 
 
-## Using Stolos 
+If you want to also delete all Nomos-managed resources including namespaces and any workload:
+
+
+```
+$ nomos/uninstall-workload-cluster.sh --deletedeletedelete
+```
+
+
+## Using Nomos 
 
 
 ### Policy Hierarchy Operations
@@ -309,20 +309,20 @@ foo-corp
 1.  A policyspace directory must not contain a Namespace resource.
 1.  A policyspace directory can contain any number of Rolebinding resources and a single ResourceQuota resource. These resources must not specify a namespace.
 1.  The root policyspace directory can also contain any number of ClusterRole, ClusterRolebinding, and PodSecurityPolicy resources.
-1.  Both policyspace and namespace directory names must be valid Kubernetes namespace names (i.e. [DNS Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md)) and must be unique in the hierarchy. In addition a name cannot be "default", "stolos-system", or have "kube-" prefix.
-1.  Any other file not explicitly mentioned above is ignored by Stolos in this release (e.g. OWNERS files).
+1.  Both policyspace and namespace directory names must be valid Kubernetes namespace names (i.e. [DNS Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md)) and must be unique in the hierarchy. In addition a name cannot be "default", "nomos-system", or have "kube-" prefix.
+1.  Any other file not explicitly mentioned above is ignored by Nomos in this release (e.g. OWNERS files).
 
 There are no requirements on file names or how many resources are packed in a file.
 
-Stolos provides a validation tool which should be used as presubmit check (e.g. Using Git's [pre-submit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) or Github's [required status check](https://help.github.com/articles/about-required-status-checks/)) before committing any policy changes:
+Nomos provides a validation tool which should be used as presubmit check (e.g. Using Git's [pre-submit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) or Github's [required status check](https://help.github.com/articles/about-required-status-checks/)) before committing any policy changes:
 
 
 ```
-$ stolosvet /path/to/foo-corp
+$ nomosvet /path/to/foo-corp
 ```
 
 
-When a valid tree is committed to Git and synced, Stolos controllers automatically create namespaces and corresponding policy resources to enforce hierarchical policy. In this example, Stolos automatically creates "shipping-dev", "shipping-staging", and "shipping-prod" namespaces. We discuss specific policy types and their enforcement in later sections.
+When a valid tree is committed to Git and synced, Nomos controllers automatically create namespaces and corresponding policy resources to enforce hierarchical policy. In this example, Nomos automatically creates "shipping-dev", "shipping-staging", and "shipping-prod" namespaces. We discuss specific policy types and their enforcement in later sections.
 
 Note that when using Git as source of truth, it is up to the repo owners to set proper access control mechanism (e.g. using OWNERS or CODEOWNER files) to ensure right people can approve/review/commit policy changes. It is recommended to use a hierarchical access control mechanism such as OWNERS file in order to delegate policy changes instead of requiring a central authority to approve all changes.
 
@@ -352,7 +352,7 @@ Moving a policyspace or namespace directory can lead to policy changes in namesp
 
 ##### Role/Rolebinding
 
-Stolos enables RBAC policies to be applied hierarchically following these properties:
+Nomos enables RBAC policies to be applied hierarchically following these properties:
 
 
 
@@ -394,12 +394,12 @@ pod-creators
 
 Inheritance is implemented by flattening resources in namespaces. In "shipping-dev" namespace, "pod-creators" is inherited and "job-creators" is created directly in the namespace.
 
-Note that policies are themselves resources which means a user may be able to edit policies outside of Stolos (e.g. using kubectl) or create rolebindings subject to [privilege escalation prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping) in Kubernetes.
+Note that policies are themselves resources which means a user may be able to edit policies outside of Nomos (e.g. using kubectl) or create rolebindings subject to [privilege escalation prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping) in Kubernetes.
 
 
 ##### ResourceQuota
 
-A quota set on a namespace behaves just like it does in native kubernetes, restricting the specified resources. In Stolos you can also set resource quota on policyspaces. This will set the quota limit on all the namespaces that are children of the provided policyspace within a single cluster. The policyspace limit ensures that the sum of all the resources of a specified type in all the children of the policyspace do not exceed the specified quota. Quota is evaluated in a hierarchical fashion starting from the namespace, up the policyspace hierarchy - this means that a quota violation at any level will result in a Forbidden exception.
+A quota set on a namespace behaves just like it does in native kubernetes, restricting the specified resources. In Nomos you can also set resource quota on policyspaces. This will set the quota limit on all the namespaces that are children of the provided policyspace within a single cluster. The policyspace limit ensures that the sum of all the resources of a specified type in all the children of the policyspace do not exceed the specified quota. Quota is evaluated in a hierarchical fashion starting from the namespace, up the policyspace hierarchy - this means that a quota violation at any level will result in a Forbidden exception.
 
 A quota is allowed to be set to immediately be in violation. For example, when a workload namespace has 11 pods, we can still set quota to "pods: 10" in a parent policyspace, creating an overage. If a workload namespace is in violation, the ResourceQuotaAdmissionController will prevent new objects of that type from being created until the total object count falls below the quota limit, but existing objects will still be valid and operational.
 
@@ -428,7 +428,7 @@ Error from server (Forbidden): exceeded quota in policyspace "shipping-app-backe
 
 #### Cluster-level Policies
 
-Cluster-level policies will function in the same manner as in a vanilla kubernetes cluster with the only addition being that Stolos will distribute and manage them on the workload clusters.
+Cluster-level policies will function in the same manner as in a vanilla kubernetes cluster with the only addition being that Nomos will distribute and manage them on the workload clusters.
 
 Cluster-level policies must be placed immediately within the root policyspace directory. Since cluster-level policies have far-reaching effect, they should only be editable by cluster admins.
 
@@ -504,13 +504,13 @@ spec:
 
 #### Logging
 
-Stolos follows [K8S logging convention](https://github.com/kubernetes/community/blob/master/contributors/devel/logging.md). By default, all binaries log at V(2).
+Nomos follows [K8S logging convention](https://github.com/kubernetes/community/blob/master/contributors/devel/logging.md). By default, all binaries log at V(2).
 
-List all stolos-system pods:
+List all nomos-system pods:
 
 
 ```
-$ kubectl get po -n stolos-system
+$ kubectl get po -n nomos-system
 NAME                                   READY     STATUS              RESTARTS   AGE
 git-policy-importer                    1/1       Running             0          7d
 syncer                                 1/1       Running             0          7d
@@ -522,14 +522,14 @@ To see logs for pod:
 
 
 ```
-$ kubectl logs syncer -n stolos-system
+$ kubectl logs syncer -n nomos-system
 ```
 
 
 
 #### Monitoring
 
-Following table lists the most important Prometheus metrics for tracking Stolos system's health:
+Following table lists the most important Prometheus metrics for tracking Nomos system's health:
 
 
 <table>
@@ -627,10 +627,10 @@ Following table lists the most important Prometheus metrics for tracking Stolos 
 
 #### Cluster Targeting
 
-Currently, Stolos distributes identical policies to every cluster. We want to enable specifying cluster-specific policies. For example, a namespace should be able to have a different quota in clusters A and B. We can also not sync a namespace to a cluster at all.
+Currently, Nomos distributes identical policies to every cluster. We want to enable specifying cluster-specific policies. For example, a namespace should be able to have a different quota in clusters A and B. We can also not sync a namespace to a cluster at all.
 
 
 #### Enforcement Mode
 
-Currently, it's possible to have un-managed resources that are not declared in the source of truth. For example, a cluster-admin can create a namespace outside of Stolos. In the future, we want to create various modes for reporting or disallowing such resources.
+Currently, it's possible to have un-managed resources that are not declared in the source of truth. For example, a cluster-admin can create a namespace outside of Nomos. In the future, we want to create various modes for reporting or disallowing such resources.
 

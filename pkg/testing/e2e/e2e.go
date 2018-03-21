@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -109,5 +109,5 @@ func legacySetup(testContext *testcontext.TestContext) {
 
 	// TODO: make "deployment" a first class thing here.
 	testContext.WaitForDeployments(
-		time.Second*90, "stolos-system:syncer", "stolos-system:resourcequota-admission-controller")
+		time.Second*90, "nomos-system:syncer", "nomos-system:resourcequota-admission-controller")
 }

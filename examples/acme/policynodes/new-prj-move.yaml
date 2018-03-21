@@ -1,4 +1,4 @@
-apiVersion: "stolos.dev/v1"
+apiVersion: "nomos.dev/v1"
 kind: PolicyNode
 metadata:
   name: new-prj

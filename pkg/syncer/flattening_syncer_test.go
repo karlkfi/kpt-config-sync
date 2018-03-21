@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -497,7 +497,7 @@ func TestFlatteningSyncerRoleBindings(t *testing.T) {
 			name: "Periodic Resync from partial content",
 			storage: []runtime.Object{
 				// unknownRbac is a policy in a namespace that is not managed
-				// by stolos.   We don't touch such a policy.  But, there is a
+				// by nomos.   We don't touch such a policy.  But, there is a
 				// policy unownedEngRbac that isn't mentioned in the refresh,
 				// and that one we delete.
 				&acmeRbac, &unknownRbac, &unownedEngRbac,
@@ -778,7 +778,7 @@ func TestFlatteningSyncerRoles(t *testing.T) {
 			name: "Periodic Resync from partial content",
 			storage: []runtime.Object{
 				// unknownRbac is a policy in a namespace that is not managed
-				// by stolos.   We don't touch such a policy.  But, there is a
+				// by nomos.   We don't touch such a policy.  But, there is a
 				// policy unownedEngRbac that isn't mentioned in the refresh,
 				// and that one we delete.
 				&acmeRbac, &unknownRbac, &unownedEngRbac,

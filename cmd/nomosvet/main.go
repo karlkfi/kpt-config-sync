@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -31,18 +31,18 @@ func printErrAndDie(err error) {
 	os.Exit(1)
 }
 
-const usage = `Stolosvet is a tool for validating a policy directory tree.
+const usage = `Nomosvet is a tool for validating a policy directory tree.
 
 Usage:
 
-	stolosvet DIRECTORY
+	nomosvet DIRECTORY
 
 DIRECTORY is the root policy directory. This is typically a subdirectory in a Git repo.
 
 Example:
 
-	stolosvet my-repo/policy-dir
-	stolosvet /path/to/my-repo/policy-dir
+	nomosvet my-repo/policy-dir
+	nomosvet /path/to/my-repo/policy-dir
 
 Options:
 

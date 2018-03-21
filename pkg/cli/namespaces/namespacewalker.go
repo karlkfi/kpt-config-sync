@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -27,7 +27,7 @@ import (
 )
 
 // GetAncestry returns the ancestors of the given namespace by following the
-// hierarchy using stolos parent label set on a namespace.  The first element
+// hierarchy using nomos parent label set on a namespace.  The first element
 // of the returned slice represents the given namespace itself, second element
 // is the parent, and so on. The last element represents the closest namespace
 // to the root that the caller is authorized to get.  includesRoot indicates

@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 	namespaceName := "ns-name"
 	informer := fakeinformers.NewResourceQuotaInformer(&core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
-			Name: resourcequota.ResourceQuotaObjectName, Labels: resourcequota.StolosQuotaLabels, Namespace: namespaceName,
+			Name: resourcequota.ResourceQuotaObjectName, Labels: resourcequota.NomosQuotaLabels, Namespace: namespaceName,
 		},
 		Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("42")}},
 	})
@@ -155,13 +155,13 @@ func TestFillResourceQuotaLeafGaps(t *testing.T) {
 	quotas := []runtime.Object{
 		&core_v1.ResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name: resourcequota.ResourceQuotaObjectName, Labels: resourcequota.StolosQuotaLabels, Namespace: "child1",
+				Name: resourcequota.ResourceQuotaObjectName, Labels: resourcequota.NomosQuotaLabels, Namespace: "child1",
 			},
 			Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"cpu": resource.MustParse("2")}},
 		},
 		&core_v1.ResourceQuota{
 			ObjectMeta: meta_v1.ObjectMeta{
-				Name: resourcequota.ResourceQuotaObjectName, Labels: resourcequota.StolosQuotaLabels, Namespace: "child2",
+				Name: resourcequota.ResourceQuotaObjectName, Labels: resourcequota.NomosQuotaLabels, Namespace: "child2",
 			},
 			Spec: core_v1.ResourceQuotaSpec{Hard: core_v1.ResourceList{"configmaps": resource.MustParse("3")}},
 		}}

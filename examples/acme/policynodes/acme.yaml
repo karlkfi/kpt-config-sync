@@ -1,4 +1,4 @@
-apiVersion: "stolos.dev/v1"
+apiVersion: "nomos.dev/v1"
 kind: PolicyNode
 metadata:
   name: acme
@@ -25,7 +25,7 @@ spec:
         resources: ["roles", "rolebindings"]
         verbs: ["get", "list"]
 ---
-apiVersion: "stolos.dev/v1"
+apiVersion: "nomos.dev/v1"
 kind: PolicyNode
 metadata:
   name: eng
@@ -54,7 +54,7 @@ spec:
         name: acme-admin
         apiGroup: rbac.authorization.k8s.io
 ---
-apiVersion: "stolos.dev/v1"
+apiVersion: "nomos.dev/v1"
 kind: PolicyNode
 metadata:
   name: rnd
@@ -68,7 +68,7 @@ spec:
         hard:
           configmaps: "2"
 ---
-apiVersion: "stolos.dev/v1"
+apiVersion: "nomos.dev/v1"
 kind: PolicyNode
 metadata:
   name: backend
@@ -96,7 +96,7 @@ spec:
         name: acme-admin
         apiGroup: rbac.authorization.k8s.io
 ---
-apiVersion: "stolos.dev/v1"
+apiVersion: "nomos.dev/v1"
 kind: PolicyNode
 metadata:
   name: frontend
@@ -110,7 +110,7 @@ spec:
         hard:
           pods: "1"
 ---
-apiVersion: "stolos.dev/v1"
+apiVersion: "nomos.dev/v1"
 kind: PolicyNode
 metadata:
   name: new-prj
@@ -118,7 +118,7 @@ spec:
   policyspace: false
   parent: rnd
 ---
-apiVersion: "stolos.dev/v1"
+apiVersion: "nomos.dev/v1"
 kind: PolicyNode
 metadata:
   name: newer-prj
@@ -127,7 +127,7 @@ spec:
   parent: rnd
 ---
 # Example for clusterroles
-apiVersion: "stolos.dev/v1"
+apiVersion: "nomos.dev/v1"
 kind: ClusterPolicy
 metadata:
   name: clusterpolicy

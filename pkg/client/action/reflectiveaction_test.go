@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Stolos Authors.
+Copyright 2018 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -509,7 +509,7 @@ func PolicyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 }
 
 func ClusterPolicyNodeGetter(client *fake.Client, namespace, name string) (runtime.Object, error) {
-	return client.PolicyHierarchy().StolosV1().PolicyNodes().Get(name, meta_v1.GetOptions{})
+	return client.PolicyHierarchy().NomosV1().PolicyNodes().Get(name, meta_v1.GetOptions{})
 }
 
 var clusterPolicyNodeBaseTestObject = &policyhierarchy_v1.PolicyNode{
@@ -543,8 +543,8 @@ func TestRefelctiveActionPolicyNode(t *testing.T) {
 	spec := &ReflectiveActionSpec{
 		KindPlural: "PolicyNodes",
 		EqualSpec:  PolicyNodesEqual,
-		Client:     test.client.PolicyHierarchy().StolosV1(),
-		Lister:     factory.Stolos().V1().PolicyNodes().Lister(),
+		Client:     test.client.PolicyHierarchy().NomosV1(),
+		Lister:     factory.Nomos().V1().PolicyNodes().Lister(),
 	}
 
 	factory.Start(nil)

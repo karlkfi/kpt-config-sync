@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Stolos Authors.
+Copyright 2017 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ const (
 	ClusterPolicyPodSecurityPolicies = "podsecuritypolicy"
 )
 
-// ClusterPolicies specifies the policies stolos synchronizes to a cluster. This is factored out
+// ClusterPolicies specifies the policies nomos synchronizes to a cluster. This is factored out
 // due to the fact that it is specified in MasterClusterPolicyNodeSpec and ClusterPolicyNodeSpec.
 type ClusterPolicies struct {
 	// Type defines the type of resources that this holds. It will hold one of the cluster scoped
@@ -115,7 +115,7 @@ type PolicyNode struct {
 const NoParentNamespace string = ""
 
 // Key of a label set on a namespace with value set to the parent namespace's name.
-const ParentLabelKey = "stolos-parent-ns"
+const ParentLabelKey = "nomos-parent-ns"
 
 // PolicyNodeSpec contains all the information about a policy linkage.
 type PolicyNodeSpec struct {
