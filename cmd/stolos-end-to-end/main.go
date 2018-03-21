@@ -18,7 +18,7 @@ package main
 import (
 	"flag"
 
-	"github.com/google/stolos/pkg/testing/e2e"
+	"github.com/google/nomos/pkg/testing/e2e"
 	"github.com/pkg/errors"
 )
 

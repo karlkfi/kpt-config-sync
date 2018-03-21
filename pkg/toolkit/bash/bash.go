@@ -19,7 +19,7 @@ package bash
 import (
 	"context"
 
-	"github.com/google/stolos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/toolkit/exec"
 	"github.com/pkg/errors"
 )
 

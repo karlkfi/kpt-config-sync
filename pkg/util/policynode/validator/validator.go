@@ -22,7 +22,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/looplab/tarjan"
 	"github.com/pkg/errors"
 )

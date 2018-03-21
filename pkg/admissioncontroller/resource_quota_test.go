@@ -3,8 +3,8 @@ package admissioncontroller
 import (
 	"testing"
 
-	pn_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/testing/fakeinformers"
+	pn_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/testing/fakeinformers"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

@@ -3,23 +3,23 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/toolkit/installer"
-	"github.com/google/stolos/pkg/toolkit/installer/config"
+	"github.com/google/nomos/pkg/toolkit/installer"
+	"github.com/google/nomos/pkg/toolkit/installer/config"
 	"github.com/pkg/errors"
 )
 
 var (
 	configFile = flag.String("config", "", "The file name containing the installer configuration.")
-
-	workDir = flag.String("work_dir", "", "The working directory for the installer.  If not set, defaults to the directory where the installer is run.")
+	workDir    = flag.String("work_dir", "", "The working directory for the installer.  If not set, defaults to the directory where the installer is run.")
 )
 
 func main() {
-	flag.Set("logtostderr", "true")
+	fmt.Printf("args: %+v\n", os.Args)
 	flag.Parse()
 
 	if *configFile == "" {
@@ -47,4 +47,5 @@ func main() {
 	if err != nil {
 		glog.Fatal(errors.Wrap(err, "installer reported an error"))
 	}
+	glog.Infof("installer completed.")
 }

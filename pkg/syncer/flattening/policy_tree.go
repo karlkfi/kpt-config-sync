@@ -5,7 +5,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	api "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	api "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/pkg/errors"
 )
 

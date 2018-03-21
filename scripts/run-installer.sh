@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/bin/bash
 #
 # Copyright 2018 The Stolos Authors.
 #
@@ -14,26 +14,69 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Debugging.  Turn off for release.
+# For debugging.  Remove before release.
 set -x
 
-VERSION=${VERSION:-latest}
-CONFIG=${CONFIG:-configs/example.json}
-
-readonly config_dir="$(dirname ${CONFIG})"
-readonly config_filename="$(basename ${CONFIG})"
+# The installer container.  The named registry should be publicly accessible.
+readonly INSTALLER_CONTAINER="gcr.io/nomos-release/installer"
 
 # The directory that is going to be used as output.
-readonly tempdir=$(mktemp -d)
+readonly output_dir=$(pwd)
 
-echo "+++ Using directory: ${tempdir}"
-mkdir -p ${tempdir}/{kubeconfig,generated_certs,generated_configs}
+# If interactive is set to a nonempty string, the installer will use a
+# menu-driven interactive installer.
+INTERACTIVE=${INTERACTIVE:-""}
+
+# The semantic verison number of the release to install.
+VERSION=${VERSION:-"latest"}
+
+readonly gcloud_prg="$(which gcloud)"
+if [[ -z "${gcloud_prg}" ]]; then
+  echo "gcloud is required."
+  exit 1
+fi
+
+CONFIG_DIR="examples"
+CONFIG_BASENAME="quickstart.yaml"
+if [[ -z "${CONFIG}" ]]; then
+  CONTAINER_CONFIG_FILE="examples/quickstart.yaml"
+else
+  # $CONFIG specified, ensure that it's an existing file, and map it into the
+  # container.
+  CONFIG="$(realpath $CONFIG)"
+  if ! [[ -f "${CONFIG}" ]]; then
+    echo "file not found: ${CONFIG}"
+    exit 1
+  fi
+  CONFIG_DIR="$(dirname $CONFIG)"
+  CONFIG_BASENAME="$(basename $CONFIG)"
+  CONTAINER_CONFIG_FILE="configs/${CONFIG_BASENAME}"
+fi
+
+# Only suggest the user where there is a gcloud utility available.
+readonly suggested_user="$(gcloud config get-value account)"
+
+# Temporarily, pull the latest image to the local docker daemon cache.
+# TODO(filmil): Remove this gimmick once we have a public cluster registry
+# to pull from.
+gcloud docker -- pull "${INSTALLER_CONTAINER}:${VERSION}"
+
+# TODO(filmil): Move the environment variables to flags.
+echo "+++ Using output directory: ${output_dir}"
+mkdir -p ${output_dir}/{kubeconfig,certs,gen_configs,logs}
 docker run -it \
   -u "$(id -u):$(id -g)" \
   -v "${HOME}":/home/user \
-  -v "${tempdir}/generated_certs":/opt/installer/generated_certs \
-  -v "${tempdir}/kubeconfig":/opt/installer/kubeconfig \
-  -v "${config_dir}":/opt/installer/configs \
-  gcr.io/stolos-dev/installer:${VERSION} \
-  bash -c "/opt/installer/entrypoint.sh --config=configs/${config_filename} $@"
-echo "+++ Generated certs are in ${tempdir}"
+  -v "${output_dir}/certs":/opt/installer/certs \
+  -v "${output_dir}/gen_configs":/opt/installer/gen_configs \
+  -v "${output_dir}/kubeconfig":/opt/installer/kubeconfig \
+  -v "${output_dir}/logs":/tmp \
+  -v "${CONFIG_DIR}":/opt/installer/configs \
+  -e "INTERACTIVE=${INTERACTIVE}" \
+  -e "VERSION=${VERSION}" \
+  -e "CONFIG=${CONTAINER_CONFIG_FILE}" \
+  -e "CONFIG_OUT=gen_configs/generated.yaml" \
+  -e "SUGGESTED_USER=${suggested_user}" \
+  "${INSTALLER_CONTAINER}:${VERSION}" "$@"
+echo "+++ Generated files are available in ${output_dir}"
+

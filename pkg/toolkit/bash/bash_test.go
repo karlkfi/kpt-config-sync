@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/stolos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/toolkit/exec"
 )
 
 func TestRunWithEnv(t *testing.T) {

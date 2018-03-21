@@ -19,9 +19,9 @@ import (
 	"testing"
 	"time"
 
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/client/action"
-	"github.com/google/stolos/pkg/client/meta/fake"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/client/meta/fake"
 	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

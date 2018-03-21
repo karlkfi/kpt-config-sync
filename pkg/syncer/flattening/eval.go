@@ -18,7 +18,7 @@ limitations under the License.
 package flattening
 
 import (
-	"github.com/google/stolos/pkg/util/set/stringset"
+	"github.com/google/nomos/pkg/util/set/stringset"
 )
 
 // flatten computes a non-hierarchical representation of RBAC policies, taking

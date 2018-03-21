@@ -19,8 +19,8 @@ limitations under the License.
 package stolos
 
 import (
-	internalinterfaces "github.com/google/stolos/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy/v1"
+	internalinterfaces "github.com/google/nomos/pkg/client/informers/externalversions/internalinterfaces"
+	v1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
 )
 
 // Interface provides access to each of this group's versions.

@@ -36,16 +36,16 @@ var OriginLabel = map[string]string{OriginLabelKey: OriginLabelValue}
 // AddOriginLabelToMap adds the origin label to a map containing labels for an object. The map
 // passed to the function is also returned for convenience.
 func AddOriginLabelToMap(labelMap map[string]string) map[string]string {
+	if labelMap == nil {
+		labelMap = map[string]string{}
+	}
 	labelMap[OriginLabelKey] = OriginLabelValue
 	return labelMap
 }
 
 // AddOriginLabel adds the provenance (managed by stolos) label to an object's metadata.
 func AddOriginLabel(objectMeta *meta_v1.ObjectMeta) {
-	if objectMeta.Labels == nil {
-		objectMeta.Labels = map[string]string{}
-	}
-	AddOriginLabelToMap(objectMeta.Labels)
+	objectMeta.Labels = AddOriginLabelToMap(objectMeta.Labels)
 }
 
 // NewOriginSelector returns a selector that will select items managed by stolos.

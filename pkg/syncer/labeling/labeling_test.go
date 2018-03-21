@@ -41,12 +41,23 @@ func TestLabeling(t *testing.T) {
 		t.Errorf("Selector should match label")
 	}
 
-	labelMap := map[string]string{}
-	ret := AddOriginLabelToMap(labelMap)
-	if !reflect.DeepEqual(OriginLabel, labelMap) {
-		t.Errorf("Did not add label to map")
-	}
-	if !reflect.DeepEqual(OriginLabel, ret) {
-		t.Errorf("Did not return proper value")
+}
+
+func TestAddOriginLabelToMap(t *testing.T) {
+	for _, testcase := range []struct {
+		Input map[string]string
+	}{
+		{nil},
+		{map[string]string{}},
+		{map[string]string{"foo": "value"}},
+	} {
+		labelMap := testcase.Input
+		ret := AddOriginLabelToMap(labelMap)
+		if labelMap != nil && !reflect.DeepEqual(ret, labelMap) {
+			t.Errorf("Incorrect arg / return value state")
+		}
+		if ret[OriginLabelKey] != OriginLabelValue {
+			t.Errorf("Did not add label to map")
+		}
 	}
 }

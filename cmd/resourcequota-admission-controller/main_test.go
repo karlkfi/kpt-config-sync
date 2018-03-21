@@ -22,8 +22,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/google/stolos/pkg/admissioncontroller"
-	"github.com/google/stolos/pkg/testing/fakeinformers"
+	"github.com/google/nomos/pkg/admissioncontroller"
+	"github.com/google/nomos/pkg/testing/fakeinformers"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/util/json"
 )

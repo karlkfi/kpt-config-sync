@@ -22,9 +22,9 @@ package rolebindings
 import (
 	"os"
 
-	"github.com/google/stolos/pkg/cli"
-	"github.com/google/stolos/pkg/cli/namespaces"
-	"github.com/google/stolos/pkg/cli/output"
+	"github.com/google/nomos/pkg/cli"
+	"github.com/google/nomos/pkg/cli/namespaces"
+	"github.com/google/nomos/pkg/cli/output"
 	"github.com/pkg/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

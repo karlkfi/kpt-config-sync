@@ -16,10 +16,10 @@ limitations under the License.
 package syncer
 
 import (
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/client/meta"
-	"github.com/google/stolos/pkg/syncer/actions"
-	"github.com/google/stolos/pkg/syncer/labeling"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/client/meta"
+	"github.com/google/nomos/pkg/syncer/actions"
+	"github.com/google/nomos/pkg/syncer/labeling"
 	"k8s.io/apimachinery/pkg/labels"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/util/workqueue"

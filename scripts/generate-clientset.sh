@@ -21,7 +21,7 @@ set -euo pipefail
 # the first and last values from GOPATH.
 GOBASE=$(echo $GOPATH | sed 's/:.*//')
 GOWORK=$(echo $GOPATH | sed 's/.*://')
-REPO="github.com/google/stolos"
+REPO="github.com/google/nomos"
 
 # Comma separted list of APIs to generate for clientset.
 INPUT_BASE="${REPO}/pkg/api"

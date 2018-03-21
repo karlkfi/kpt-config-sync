@@ -21,8 +21,8 @@ import (
 	"reflect"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/client/action"
-	"github.com/google/stolos/pkg/resourcequota"
+	"github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"

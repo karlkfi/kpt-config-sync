@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/stolos/pkg/client/meta/fake"
-	"github.com/google/stolos/pkg/resourcequota"
+	"github.com/google/nomos/pkg/client/meta/fake"
+	"github.com/google/nomos/pkg/resourcequota"
 
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"

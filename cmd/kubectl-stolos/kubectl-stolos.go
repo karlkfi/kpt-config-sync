@@ -22,9 +22,9 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/cli"
+	"github.com/google/nomos/pkg/cli"
 
-	_ "github.com/google/stolos/pkg/cli/registration"
+	_ "github.com/google/nomos/pkg/cli/registration"
 )
 
 func main() {

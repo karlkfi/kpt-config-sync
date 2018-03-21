@@ -22,7 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/stolos/pkg/policyimporter/filesystem"
+	"github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/pkg/errors"
 )
 

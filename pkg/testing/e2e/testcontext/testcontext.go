@@ -22,10 +22,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/stolos/pkg/client/policyhierarchy"
-	"github.com/google/stolos/pkg/toolkit/bash"
-	"github.com/google/stolos/pkg/toolkit/exec"
-	"github.com/google/stolos/pkg/toolkit/kubectl"
+	"github.com/google/nomos/pkg/client/policyhierarchy"
+	"github.com/google/nomos/pkg/toolkit/bash"
+	"github.com/google/nomos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/toolkit/kubectl"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 
@@ -71,7 +71,10 @@ func (t *TestContext) run(args []string) (bool, string, string) {
 
 // WaitForDeployments waits for deployments to be available
 func (t *TestContext) WaitForDeployments(timeout time.Duration, deployments ...string) {
-	t.kubeClient.WaitForDeployments(timeout, deployments...)
+	if err := t.kubeClient.WaitForDeployments(timeout, deployments...); err != nil {
+		// It is OK to panic in an end-to-end test harness.
+		panic(errors.Wrapf(err, "while waiting for: %v", deployments))
+	}
 }
 
 // Kubernetes returns the kubernets client inteface

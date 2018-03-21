@@ -21,14 +21,14 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	core_v1 "k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/google/stolos/pkg/client/action"
-	"github.com/google/stolos/pkg/client/meta/fake"
+	"github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/client/meta/fake"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"

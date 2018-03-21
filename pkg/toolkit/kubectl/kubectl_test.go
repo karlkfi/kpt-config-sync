@@ -12,8 +12,8 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/stolos/pkg/client/restconfig"
-	"github.com/google/stolos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/toolkit/exec"
 	"github.com/pkg/errors"
 )
 

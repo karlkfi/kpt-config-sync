@@ -19,9 +19,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/client/action"
-	actions_testing "github.com/google/stolos/pkg/syncer/actions/testing"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/client/action"
+	actions_testing "github.com/google/nomos/pkg/syncer/actions/testing"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

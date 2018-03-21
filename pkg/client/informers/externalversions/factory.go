@@ -19,9 +19,9 @@ limitations under the License.
 package externalversions
 
 import (
-	internalinterfaces "github.com/google/stolos/pkg/client/informers/externalversions/internalinterfaces"
-	externalversions_policyhierarchy "github.com/google/stolos/pkg/client/informers/externalversions/policyhierarchy"
-	policyhierarchy "github.com/google/stolos/pkg/client/policyhierarchy"
+	internalinterfaces "github.com/google/nomos/pkg/client/informers/externalversions/internalinterfaces"
+	externalversions_policyhierarchy "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy"
+	policyhierarchy "github.com/google/nomos/pkg/client/policyhierarchy"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

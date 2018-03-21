@@ -18,7 +18,7 @@
 
 TOP_DIR := $(shell pwd)
 
-REPO := github.com/google/stolos
+REPO := github.com/google/nomos
 
 # List of dirs containing go code owned by Stolos
 STOLOS_CODE_DIRS := pkg cmd
@@ -61,7 +61,7 @@ RELEASE ?= 0
 STABLE ?= 0
 
 # The GCS bucket to release into for 'make release'
-RELEASE_BUCKET := gs://$(GCP_PROJECT)/release
+RELEASE_BUCKET := gs://$(GCP_PROJECT)
 
 # All Stolos components
 ALL_COMPONENTS := syncer \
@@ -164,7 +164,9 @@ gen-yaml-%:
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
-push-installer: all-deploy
+# Pushes the stolos installer (effectively releasing a new version!)
+push-installer: GCP_PROJECT=nomos-release
+push-installer: all-push
 	ARCH=$(ARCH) \
 	BIN_DIR=$(BIN_DIR) \
 	GCP_PROJECT=$(GCP_PROJECT) \
@@ -174,6 +176,7 @@ push-installer: all-deploy
 	STAGING_DIR=$(STAGING_DIR) \
 	TOP_DIR=$(TOP_DIR) \
 	VERSION=$(VERSION) \
+	STABLE=$(STABLE) \
 	    $(TOP_DIR)/scripts/push-installer.sh
 
 # Builds and pushes a docker image.

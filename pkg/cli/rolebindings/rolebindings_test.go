@@ -5,9 +5,9 @@ import (
 	"log"
 	"testing"
 
-	"github.com/google/stolos/pkg/cli"
-	clitesting "github.com/google/stolos/pkg/cli/testing"
-	fakemeta "github.com/google/stolos/pkg/client/meta/fake"
+	"github.com/google/nomos/pkg/cli"
+	clitesting "github.com/google/nomos/pkg/cli/testing"
+	fakemeta "github.com/google/nomos/pkg/client/meta/fake"
 	apirbac "k8s.io/api/rbac/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

@@ -17,9 +17,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/google/stolos/pkg/client/policyhierarchy"
-	stolosv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
-	fakestolosv1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1/fake"
+	clientset "github.com/google/nomos/pkg/client/policyhierarchy"
+	stolosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	fakestolosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

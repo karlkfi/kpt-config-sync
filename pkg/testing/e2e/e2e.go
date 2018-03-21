@@ -24,10 +24,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/stolos/pkg/testing/e2e/testregistry"
+	"github.com/google/nomos/pkg/testing/e2e/testregistry"
 
-	_ "github.com/google/stolos/pkg/testing/e2e/syncertests" // Register syncer tests
-	"github.com/google/stolos/pkg/testing/e2e/testcontext"
+	_ "github.com/google/nomos/pkg/testing/e2e/syncertests" // Register syncer tests
+	"github.com/google/nomos/pkg/testing/e2e/testcontext"
 )
 
 // TestOptions contains options for executing the test cases.

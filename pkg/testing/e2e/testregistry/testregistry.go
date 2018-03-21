@@ -23,7 +23,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/google/stolos/pkg/testing/e2e/testcontext"
+	"github.com/google/nomos/pkg/testing/e2e/testcontext"
 )
 
 // SetupFunc is the signature for a test setup function

@@ -20,7 +20,7 @@ import (
 	"reflect"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/client/action"
+	"github.com/google/nomos/pkg/client/action"
 	"github.com/pkg/errors"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

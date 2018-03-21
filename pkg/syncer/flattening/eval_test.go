@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/stolos/pkg/testing/rbactesting"
+	"github.com/google/nomos/pkg/testing/rbactesting"
 	rbac "k8s.io/api/rbac/v1"
 )
 

@@ -1,3 +1,18 @@
+/*
+Copyright 2018 The Stolos Authors.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // Package installer contains the business logic of the installer.
 //
 // TODO(fmil): The installer should be a self-sufficient go binary and not rely
@@ -9,11 +24,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/stolos/pkg/toolkit/bash"
-	"github.com/google/stolos/pkg/toolkit/installer/config"
-	"github.com/google/stolos/pkg/toolkit/kubectl"
+	"github.com/google/nomos/pkg/toolkit/bash"
+	"github.com/google/nomos/pkg/toolkit/installer/config"
+	"github.com/google/nomos/pkg/toolkit/kubectl"
 	"github.com/pkg/errors"
 )
 
@@ -29,7 +45,7 @@ const (
 
 	// certsDirectory is the directory relative to the working directory that
 	// contains the generated certificates.
-	certsDirectory = "generated_certs"
+	certsDirectory = "certs"
 
 	// certScript is a script for certificate generation.  Should be replaced
 	// by go-native generation script.
@@ -41,8 +57,25 @@ const (
 
 	// defaultNamespace is the namespace to place resources into.
 	defaultNamespace = "stolos-system"
+
+	// deploymentTimeout is the default timeout to wait for each Stolos
+	// component to become functional.  Components initialize in parallel, so
+	// we expect that it's unlikely a wait would be
+	// deploymentTimeout*len(deploymentComponents).
+	deploymentTimeout = 3 * time.Minute
 )
 
+var (
+	// deploymentComponents are the components that are expected to be running
+	// after installer completes.
+	deploymentComponents = []string{
+		"stolos-system:git-policy-importer",
+		"stolos-system:resourcequota-admission-controller",
+		"stolos-system:syncer",
+	}
+)
+
+// Installer is the process that runs the system installation.
 type Installer struct {
 	// The configuration that the installer works out of.
 	c config.Config
@@ -83,8 +116,7 @@ func (i *Installer) applyAll(applyDir string) error {
 	if !fi.IsDir() {
 		return errors.Errorf("applyAll: not a directory: %v", applyDir)
 	}
-	kc.Apply(applyDir)
-	return nil
+	return kc.Apply(applyDir)
 }
 
 func (i *Installer) deploySshSecrets() error {
@@ -112,7 +144,7 @@ func (i *Installer) deployGitConfig() error {
 		return nil
 	}
 	c := kubectl.New(context.Background())
-	if err := c.DeleteSecret(configmap, defaultNamespace); err != nil {
+	if err := c.DeleteConfigmap(configmap, defaultNamespace); err != nil {
 		return errors.Wrapf(err, "while deleting configmap git-policy-importer")
 	}
 
@@ -161,32 +193,62 @@ func (i *Installer) deploySecrets() error {
 	return nil
 }
 
+func (i *Installer) addClusterAdmin(user string) error {
+	glog.V(5).Infof("Adding %q as cluster admin", user)
+	c := kubectl.New(context.Background())
+	return c.AddClusterAdmin(user)
+}
+
+func (i *Installer) removeClusterAdmin(user string) error {
+	glog.V(5).Infof("Removing %q as cluster admin", user)
+	c := kubectl.New(context.Background())
+	return c.RemoveClusterAdmin(user)
+}
+
 // processCluster installs the necessary files on the currently active cluster.
 func (i *Installer) processCluster() error {
+	var err error
 	glog.V(5).Info("processCluster: enter")
+
+	if i.c.User != "" {
+		if err = i.addClusterAdmin(i.c.User); err != nil {
+			return errors.Wrapf(err, "could not make %v the cluster admin.", i.c.User)
+		}
+		defer func() {
+			// Ensure that this is ran at end of cluster process, irrespective
+			// of whether the install was successful.
+			if err := i.removeClusterAdmin(i.c.User); err != nil {
+				glog.Warningf("could not remove cluster admin role for user: %v: %v", i.c.User, err)
+			}
+		}()
+	}
+	c := kubectl.New(context.Background())
+	// Delete the git policy importer deployment.  This is important because a
+	// change in the git creds should also be reflected in the importer.
+	if err = c.DeleteDeployment("git-policy-importer", defaultNamespace); err != nil {
+		return errors.Wrapf(err, "while deleting git-policy-importer deployment")
+	}
 	// The common manifests need to be applied first, as they create the
 	// namespace.
-	err := i.applyAll(filepath.Join(i.workDir, "manifests/common"))
-	if err != nil {
+	if err = i.applyAll(filepath.Join(i.workDir, "manifests/common")); err != nil {
 		return errors.Wrapf(err, "while applying manifests/common")
 	}
-	err = i.deployGitConfig()
-	if err != nil {
+	if err = i.deployGitConfig(); err != nil {
 		return errors.Wrapf(err, "processCluster")
 	}
-	err = i.deploySecrets()
-	if err != nil {
+	if err = i.deploySecrets(); err != nil {
 		return errors.Wrapf(err, "processCluster")
 	}
-	err = i.applyAll(filepath.Join(i.workDir, "manifests/enrolled"))
-	if err != nil {
+	if err = i.applyAll(filepath.Join(i.workDir, "manifests/enrolled")); err != nil {
 		return errors.Wrapf(err, "while applying manifests/enrolled")
 	}
-	err = i.applyAll(filepath.Join(i.workDir, "yaml"))
-	if err != nil {
+	if err = i.applyAll(filepath.Join(i.workDir, "yaml")); err != nil {
 		return errors.Wrapf(err, "while applying yaml")
 	}
-	return nil
+	if err = c.WaitForDeployments(deploymentTimeout, deploymentComponents...); err != nil {
+		return errors.Wrapf(err, "while waiting for stolos components")
+	}
+	return err
 }
 
 // restoreContext sets the context to a (previously current) context.
@@ -200,10 +262,9 @@ func restoreContext(c string) error {
 
 // Run starts the installer process, and reports error at the process end, if any.
 func (i *Installer) Run() error {
-	if len(i.c.Clusters) == 0 {
-		return errors.Errorf("no clusters requested")
+	if len(i.c.Contexts) == 0 {
+		return errors.Errorf("no clusters requested for installation")
 	}
-
 	cl, err := kubectl.LocalClusters()
 	defer func() {
 		if err := restoreContext(cl.Current); err != nil {
@@ -215,7 +276,7 @@ func (i *Installer) Run() error {
 	}
 	i.createCertificates()
 	kc := kubectl.New(context.Background())
-	for _, cluster := range i.c.Clusters {
+	for _, cluster := range i.c.Contexts {
 		glog.Infof("processing cluster: %q", cluster)
 		err := kc.SetContext(cluster)
 		if err != nil {

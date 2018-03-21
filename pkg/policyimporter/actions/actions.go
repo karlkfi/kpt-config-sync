@@ -18,21 +18,21 @@ package actions
 import (
 	"reflect"
 
-	policyhierarchy_v1 "github.com/google/stolos/pkg/api/policyhierarchy/v1"
-	"github.com/google/stolos/pkg/client/action"
-	listers_v1 "github.com/google/stolos/pkg/client/listers/policyhierarchy/v1"
-	typed_v1 "github.com/google/stolos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/client/action"
+	listers_v1 "github.com/google/nomos/pkg/client/listers/policyhierarchy/v1"
+	typed_v1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// NewPolicyNodeUpsertAction creates an action for upserting PolicyNodes.
+// NewPolicyNodeUpsertAction nodeCreates an action for upserting PolicyNodes.
 func NewPolicyNodeUpsertAction(
 	policyNode *policyhierarchy_v1.PolicyNode,
 	spec *action.ReflectiveActionSpec) action.Interface {
 	return action.NewReflectiveUpsertAction("", policyNode.Name, policyNode, spec)
 }
 
-// NewPolicyNodeDeleteAction creates an action for deleting PolicyNodes.
+// NewPolicyNodeDeleteAction nodeCreates an action for deleting PolicyNodes.
 func NewPolicyNodeDeleteAction(
 	policyNode *policyhierarchy_v1.PolicyNode,
 	spec *action.ReflectiveActionSpec) action.Interface {
@@ -51,6 +51,37 @@ func NewPolicyNodeActionSpec(
 	return &action.ReflectiveActionSpec{
 		KindPlural: "PolicyNodes",
 		EqualSpec:  PolicyNodesEqual,
+		Client:     client,
+		Lister:     lister,
+	}
+}
+
+// NewClusterPolicyUpsertAction nodeCreates an action for upserting ClusterPolicies.
+func NewClusterPolicyUpsertAction(
+	clusterPolicy *policyhierarchy_v1.ClusterPolicy,
+	spec *action.ReflectiveActionSpec) action.Interface {
+	return action.NewReflectiveUpsertAction("", clusterPolicy.Name, clusterPolicy, spec)
+}
+
+// NewClusterPolicyDeleteAction nodeCreates an action for deleting ClusterPolicies.
+func NewClusterPolicyDeleteAction(
+	clusterPolicy *policyhierarchy_v1.ClusterPolicy,
+	spec *action.ReflectiveActionSpec) action.Interface {
+	return action.NewReflectiveDeleteAction("", clusterPolicy.Name, spec)
+}
+
+func ClusterPoliciesEqual(lhs runtime.Object, rhs runtime.Object) bool {
+	lRole := lhs.(*policyhierarchy_v1.ClusterPolicy)
+	rRole := rhs.(*policyhierarchy_v1.ClusterPolicy)
+	return reflect.DeepEqual(lRole.Spec, rRole.Spec)
+}
+
+func NewClusterPolicyActionSpec(
+	client typed_v1.StolosV1Interface,
+	lister listers_v1.ClusterPolicyLister) *action.ReflectiveActionSpec {
+	return &action.ReflectiveActionSpec{
+		KindPlural: "ClusterPolicies",
+		EqualSpec:  ClusterPoliciesEqual,
 		Client:     client,
 		Lister:     lister,
 	}
