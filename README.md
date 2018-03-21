@@ -1,6 +1,6 @@
-# Nolos
+# Nomos
 
-Nolos enables policy distribution and hierarchical policy enforcement for
+Nomos enables policy distribution and hierarchical policy enforcement for
 multi-tenant multi-cluster Kubernetes deployments.
 
 See [user guide](docs/user_guide.md).
@@ -15,49 +15,49 @@ per-namespace policies like authorization (RBAC Roles/Rolebinding) and quota
 (ResourceQuota), etc. In addition, real world deployments often require multiple
 clusters in order to tolerate region failures, reduce network latencies for end
 users, or simply to scale beyond the current size limits of a Kubernetes
-cluster. Nolos makes it easier to manage large multi-tenant and multi-cluster
+cluster. Nomos makes it easier to manage large multi-tenant and multi-cluster
 deployments, by reducing the load on cluster operators and reducing the surface
 area to secure.
 
-At a high level, Nolos serves two separate functions:
+At a high level, Nomos serves two separate functions:
 
 *   **Policy distribution**: Distribute policy definitions from a centralized
     source of truth to all workload clusters. The extensible policy distribution
-    mechanism allows Nolos to support a wide range of technologies implementing
+    mechanism allows Nomos to support a wide range of technologies implementing
     the source of truth for policies (e.g. YAML files in Git, Google Cloud IAM &
     admin, Active Directory, etc.)
 *   **Hierarchical policy enforcement**: Group together namespaces and
     associated policies into a hierarchy modelled after how departments and
-    teams are organized. Nolos provides a set of controllers running on the
+    teams are organized. Nomos provides a set of controllers running on the
     workload clusters that consume hierarchical policies definitions and are
     responsible for enforcing them.
 
-In this release, there are four main areas that Nolos helps manage:
+In this release, there are four main areas that Nomos helps manage:
 
 1.  **Namespaces**: With Nomos you have one set of namespaces that apply to all
-    clusters. Nolos also introduces hierarchical namespace support giving you
+    clusters. Nomos also introduces hierarchical namespace support giving you
     the ability to group namespaces together for common policies and to
-    facilitate delegation. In Nolos, only leaf namespaces can contain
+    facilitate delegation. In Nomos, only leaf namespaces can contain
     non-policy resources, while the intermediate and root nodes provide policy
     attach points for policies such as RBAC, ResourceQuota, and more.
-1.  **Hierarchical RBAC policies**: Nolos provides central management of RBAC
+1.  **Hierarchical RBAC policies**: Nomos provides central management of RBAC
     policies and enables inheritance of namespace-level RBAC resources. For
     example a Rolebinding from an ancestor is inherited by all descendent
     namespaces, removing duplication.
-1.  **Hierarchical ResourceQuota policies**: With Nolos one can manage quota
+1.  **Hierarchical ResourceQuota policies**: With Nomos one can manage quota
     centrally and set quota hierarchically.
-1.  **Cluster-level policies:** In addition to namespace-level policies, Nolos
+1.  **Cluster-level policies:** In addition to namespace-level policies, Nomos
     allows you to centrally manage cluster-level policies such as
     ClusterRole/Rolebinding and PodSecurityPolicy.
 
 This guide will take you through managing each of these resources.
 
-## Nolos Concepts {#nolos-concepts}
+## Nomos Concepts {#nomos-concepts}
 
 ### Glossary {#glossary}
 
 *   **Workload cluster:** A cluster where a user runs a pod.
-*   **Enrolled cluster:** A workload cluster running Nolos components.
+*   **Enrolled cluster:** A workload cluster running Nomos components.
 
 ### Namespaces {#namespaces}
 
@@ -73,13 +73,13 @@ team for dev workloads), it makes sense to create a new namespace. If you want
 to have a common person or set of people be able to perform the same set of
 operations within a set of namespaces, create a policyspace.
 
-Nolos with its hierarchical control allows many namespaces to be managed by the
+Nomos with its hierarchical control allows many namespaces to be managed by the
 same set of people so it's possible to create more granular namespaces for a
 team of people without incurring additional policy administration overhead.
 
 ### Policyspaces {#policyspaces}
 
-With Nolos, we give admins the ability to group namespaces together and to form
+With Nomos, we give admins the ability to group namespaces together and to form
 groups of groups through a hierarchy. We call a non-leaf node in this tree,
 whose leaves are namespaces, a policyspace. We can think of policyspaces as
 Organization Units (or Policy Information Point in
@@ -129,8 +129,8 @@ Each component is described below.
 
 PolicyImporter is an abstraction for a controller that consumes policy
 definitions from an external source of truth and builds a canonical
-representation of the hierarchy using cluster-level CRD(s) defined by Nolos.
-Nolos can be extended to support different sources of truth (e.g. Git, GCP,
+representation of the hierarchy using cluster-level CRD(s) defined by Nomos.
+Nomos can be extended to support different sources of truth (e.g. Git, GCP,
 Active Directory) using different implementations of this abstraction. Note that
 we treat this canonical representation as internal implementation which should
 not be directly consumed by users.
@@ -150,7 +150,7 @@ controller.
 
 # Quickstart Set Up {#set-up}
 
-There's a one-time set up required to set up Nolos components described in this
+There's a one-time set up required to set up Nomos components described in this
 section. The user running these commands should have a cluster-admin
 rolebinding.
 
@@ -280,7 +280,7 @@ verify that all components listed have status displayed as Running.
 Check running components:
 
 ```
-$ kubectl get pods -n=nolos-system
+$ kubectl get pods -n=nomos-system
 NAME                                                  READY     STATUS    RESTARTS   AGE
 git-policy-importer-66bf6b9db4-pbsxn                  2/2       Running   0          24m
 resourcequota-admission-controller-64988d97f4-nxmsc   1/1       Running   0          24m
@@ -290,7 +290,7 @@ syncer-58545bc77d-l485n                               1/1       Running   0     
 Check created secrets:
 
 ```
-$ kubectl get secrets -n nolos-system
+$ kubectl get secrets -n nomos-system
 NAME                                             TYPE                                  DATA      AGE
 default-token-tjc2f                              kubernetes.io/service-account-token   3         2d
 git-creds                                        Opaque                                2         2d
@@ -298,7 +298,7 @@ policy-importer-token-gwwzz                      kubernetes.io/service-account-t
 resourcequota-admission-controller-secret        kubernetes.io/tls                     2         2d
 resourcequota-admission-controller-secret-ca     kubernetes.io/tls                     2         2d
 resourcequota-admission-controller-token-tqw2t   kubernetes.io/service-account-token   3         2d
-nolosresourcequota-controller-token-4xrw8       kubernetes.io/service-account-token   3         2d
+nomosresourcequota-controller-token-4xrw8       kubernetes.io/service-account-token   3         2d
 syncer-token-kfkm7                               kubernetes.io/service-account-token   3         2d
 
 ```
@@ -315,7 +315,7 @@ kube-system        Active    2m
 shipping-dev       Active    2m
 shipping-prod      Active    2m
 shipping-staging   Active    2m
-nolos-system       Active    2m
+nomos-system       Active    2m
 
 ```
 
