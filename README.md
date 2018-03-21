@@ -34,7 +34,7 @@ At a high level, Nolos serves two separate functions:
 
 In this release, there are four main areas that Nolos helps manage:
 
-1.  **Namespaces**: With Nolos you have one set of namespaces that apply to all
+1.  **Namespaces**: With Nomos you have one set of namespaces that apply to all
     clusters. Nolos also introduces hierarchical namespace support giving you
     the ability to group namespaces together for common policies and to
     facilitate delegation. In Nolos, only leaf namespaces can contain
