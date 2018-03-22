@@ -21,7 +21,7 @@ TOP_DIR := $(shell pwd)
 REPO := github.com/google/nomos
 
 # List of dirs containing go code owned by Nomos
-STOLOS_CODE_DIRS := pkg cmd
+NOMOS_CODE_DIRS := pkg cmd
 
 # Directory containing all build artifacts.
 OUTPUT_DIR := $(TOP_DIR)/.output
@@ -137,7 +137,7 @@ all-test: buildenv .output
 			ARCH=$(ARCH)                                                   \
 			VERSION=$(VERSION)                                             \
 			PKG=$(REPO)                                                    \
-			./scripts/build/test.sh $(STOLOS_CODE_DIRS)                    \
+			./scripts/build/test.sh $(NOMOS_CODE_DIRS)                    \
 		"
 
 # Runs end-to-end tests.
@@ -149,7 +149,7 @@ test-e2e-no-cleanup:
 
 # Runs all static analyzers and autocorrects.
 lint:
-	goimports -w $(STOLOS_CODE_DIRS)
+	goimports -w $(NOMOS_CODE_DIRS)
 
 # Generate K8S client-set.
 gen-client-set:

@@ -26,5 +26,5 @@ if kubectl config use-context stolos-dev_${KUBE_GCE_INSTANCE_PREFIX} &> /dev/nul
 fi
 
 gcloud config get-value project
-export STOLOS_ADMISSION_CONTROL="ValidatingAdmissionWebhook"
-${STOLOS_TMP}/kubernetes/cluster/kube-up.sh
+export NOMOS_ADMISSION_CONTROL="ValidatingAdmissionWebhook"
+${NOMOS_TMP}/kubernetes/cluster/kube-up.sh

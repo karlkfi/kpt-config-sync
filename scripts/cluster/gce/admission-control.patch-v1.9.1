@@ -4,12 +4,12 @@
  # Admission Controllers to invoke prior to persisting objects in cluster
  ADMISSION_CONTROL=Initializers,NamespaceLifecycle,LimitRanger,ServiceAccount,PersistentVolumeLabel,DefaultStorageClass,PersistentVolumeClaimResize,DefaultTolerationSeconds,NodeRestriction,Priority,PVCProtection
  
-+# Allows Stolos to inject additional admission controllers beyond ones that
++# Allows Nomos to inject additional admission controllers beyond ones that
 +# are allowed in the original script.
-+STOLOS_ADMISSION_CONTROL=${STOLOS_ADMISSION_CONTROL:-}
-+if [[ ${STOLOS_ADMISSION_CONTROL} != "" ]]; then
-+  echo "INFO: STOLOS_ADMISSION_CONTROL=${STOLOS_ADMISSION_CONTROL}"
-+  ADMISSION_CONTROL="${ADMISSION_CONTROL},${STOLOS_ADMISSION_CONTROL}"
++NOMOS_ADMISSION_CONTROL=${NOMOS_ADMISSION_CONTROL:-}
++if [[ ${NOMOS_ADMISSION_CONTROL} != "" ]]; then
++  echo "INFO: NOMOS_ADMISSION_CONTROL=${NOMOS_ADMISSION_CONTROL}"
++  ADMISSION_CONTROL="${ADMISSION_CONTROL},${NOMOS_ADMISSION_CONTROL}"
 +fi
 +
  if [[ "${ENABLE_POD_SECURITY_POLICY:-}" == "true" ]]; then

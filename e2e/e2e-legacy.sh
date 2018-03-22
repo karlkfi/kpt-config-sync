@@ -15,9 +15,9 @@
 
 set -u
 
-# Should be $STOLOS/e2e
+# Should be $NOMOS/e2e
 TESTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
-# Should be $STOLOS/
+# Should be $NOMOS/
 MAKEDIR=$TESTDIR/..
 # Path to demo acme yaml
 ACME=$MAKEDIR/examples/acme/policynodes/acme.yaml

@@ -18,13 +18,13 @@
 
 # Directory for keeping the persistent Nomos state.  Ensure it exists and is
 # a directory.
-STOLOS_TMP=${STOLOS_TMP:-$HOME/stolos}
-if [ ! -e ${STOLOS_TMP} ]; then
-  mkdir ${STOLOS_TMP}
+NOMOS_TMP=${NOMOS_TMP:-$HOME/nomos}
+if [ ! -e ${NOMOS_TMP} ]; then
+  mkdir ${NOMOS_TMP}
 fi
-if [ ! -d ${STOLOS_TMP} ]; then
-  echo "File ${STOLOS_TMP} exists, but must be a directory."
-  echo "Please either remove the file from that file path, or set $STOLOS_TMP"
+if [ ! -d ${NOMOS_TMP} ]; then
+  echo "File ${NOMOS_TMP} exists, but must be a directory."
+  echo "Please either remove the file from that file path, or set $NOMOS_TMP"
   echo "to point to a path where you want us to store persistent state."
   exit 1
 fi

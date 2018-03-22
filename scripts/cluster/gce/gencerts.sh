@@ -23,13 +23,13 @@
 
 set -euv
 
-STOLOS=${STOLOS:-$(git -C $(dirname $0) rev-parse --show-toplevel)}
+NOMOS=${NOMOS:-$(git -C $(dirname $0) rev-parse --show-toplevel)}
 
 # Generate a CA and key for the API server.
-mkdir -p ${STOLOS}/certs
+mkdir -p ${NOMOS}/certs
 
-CN="stolosCA"
-openssl genrsa -out ${STOLOS}/certs/ca.key 2048
-openssl req -x509 -new -nodes -key ${STOLOS}/certs/ca.key -days 100000 -out ${STOLOS}/certs/ca.crt -subj "/CN=${CN}"
+CN="nomosCA"
+openssl genrsa -out ${NOMOS}/certs/ca.key 2048
+openssl req -x509 -new -nodes -key ${NOMOS}/certs/ca.key -days 100000 -out ${NOMOS}/certs/ca.crt -subj "/CN=${CN}"
 
 
