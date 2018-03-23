@@ -176,6 +176,7 @@ docker run -it \
   -e "CONFIG=${CONTAINER_CONFIG_FILE}" \
   -e "CONFIG_OUT=gen_configs/generated.yaml" \
   -e "SUGGESTED_USER=${suggested_user}" \
+  -e "HOME_ON_HOST=${HOME}" \
   "${INSTALLER_CONTAINER}:${VERSION}" "$@"
 echo "+++ Generated files are available in ${OUTPUT_DIR}"
 
