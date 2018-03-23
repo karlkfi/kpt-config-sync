@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/toolkit/bash"
 	"github.com/google/nomos/pkg/toolkit/installer/config"
@@ -73,6 +74,10 @@ var (
 		"nomos-system:resourcequota-admission-controller",
 		"nomos-system:syncer",
 	}
+
+	// mv is the minimum supported cluster version.  It is not possible to install
+	// on an earlier cluster due to missing features.
+	mv = semver.MustParse("1.9.0")
 )
 
 // Installer is the process that runs the system installation.
@@ -205,8 +210,22 @@ func (i *Installer) removeClusterAdmin(user string) error {
 	return c.RemoveClusterAdmin(user)
 }
 
+// checkVersion checks whether the cluster's kubernetes version is recent enough to
+// support nomos.
+func (i *Installer) checkVersion(ctx *kubectl.Context) error {
+	v, err := ctx.GetClusterVersion()
+	if err != nil {
+		return errors.Wrapf(err, "could not check version")
+	}
+	if v.LT(mv) {
+		return errors.Errorf("detected cluster version: %v is less than minimum: %v", v, mv)
+	}
+	return nil
+}
+
 // processCluster installs the necessary files on the currently active cluster.
-func (i *Installer) processCluster() error {
+// In addition the current cluster context is passed in.
+func (i *Installer) processCluster(cluster string) error {
 	var err error
 	glog.V(5).Info("processCluster: enter")
 
@@ -223,6 +242,10 @@ func (i *Installer) processCluster() error {
 		}()
 	}
 	c := kubectl.New(context.Background())
+
+	if err := i.checkVersion(c); err != nil {
+		return errors.Wrapf(err, "while checking version for context")
+	}
 	// Delete the git policy importer deployment.  This is important because a
 	// change in the git creds should also be reflected in the importer.
 	if err = c.DeleteDeployment("git-policy-importer", defaultNamespace); err != nil {
@@ -283,7 +306,7 @@ func (i *Installer) Run() error {
 			return errors.Wrapf(err, "while setting context: %q", cluster)
 		}
 		// The processed cluster is set through the context use.
-		err = i.processCluster()
+		err = i.processCluster(cluster)
 		if err != nil {
 			return errors.Wrapf(err, "while processing cluster: %q", cluster)
 		}
