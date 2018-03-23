@@ -1,3 +1,4 @@
+// Reviewed by sunilarora
 /*
 Copyright 2017 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +46,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-const externalAdmissionHookConfigName = "nomos-resource-quota"
+const externalAdmissionHookConfigName = "resource-quota.nomos.dev"
 
 // 5 seconds should be enough for endpoint to come up in the Kubernetes server.
 const endpointRegistrationTimeout = time.Second * 5
@@ -58,22 +59,28 @@ var (
 func serve(controller admissioncontroller.Admitter) service.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body []byte
-		if r.Body != nil {
-			if data, err := ioutil.ReadAll(r.Body); err == nil {
-				body = data
-			}
+		if r.Body == nil {
+			glog.Error("empty request")
+			http.Error(w, "empty request", http.StatusBadRequest)
+			return
+		}
+
+		if data, err := ioutil.ReadAll(r.Body); err == nil {
+			body = data
 		}
 
 		// verify the content type is accurate
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "application/json" {
 			glog.Errorf("contentType=%s, expect application/json", contentType)
+			http.Error(w, fmt.Sprintf("Invalid content type %s", contentType), http.StatusBadRequest)
 			return
 		}
 
 		review := admissionv1beta1.AdmissionReview{}
 		if err := json.Unmarshal(body, &review); err != nil {
 			glog.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -87,6 +94,8 @@ func serve(controller admissioncontroller.Admitter) service.HandlerFunc {
 		resp, err := json.Marshal(ar)
 		if err != nil {
 			glog.Error(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		if _, err := w.Write(resp); err != nil {
 			glog.Error(err)
@@ -148,16 +157,19 @@ func getAPIServerCert(clientset *kubernetes.Clientset) ([]byte, error) {
 func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	caCert, err := ioutil.ReadFile(caCertFile)
 	if err != nil {
-		return fmt.Errorf("Failed to read ca bundle file: %v", err)
+		return errors.Wrap(err, "failed to read ca bundle file")
 	}
 	client := clientset.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations()
 	_, err = client.Get(externalAdmissionHookConfigName, metav1.GetOptions{})
 	if err == nil {
 		glog.Infof("Deleting the existing ValidatingWebhookConfiguration")
 		if err2 := client.Delete(externalAdmissionHookConfigName, nil); err2 != nil {
-			return fmt.Errorf("Failed to delete ValidatingWebhookConfiguration: %v", err2)
+			return errors.Wrap(err2, "failed to delete ValidatingWebhookConfiguration")
 		}
+	} else if !api_errors.IsNotFound(err) {
+		return errors.Wrap(err, "failed retrieving existing ValidatingWebhookConfiguration")
 	}
+
 	failurePolicy := admissionregistrationv1beta1.Fail
 	webhookConfig := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -191,7 +203,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	}
 	glog.Infof("Creating ValidatingWebhookConfiguration")
 	if _, err := client.Create(webhookConfig); err != nil {
-		return fmt.Errorf("Failed to create ValidatingWebhookConfiguration: %v", err)
+		return errors.Wrap(err, "failed to create ValidatingWebhookConfiguration")
 	}
 	return nil
 }
