@@ -164,9 +164,11 @@ gen-yaml-%:
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
+all-gen-yaml: $(addprefix gen-yaml-, $(ALL_COMPONENTS))
+
 # Pushes the nomos installer (effectively releasing a new version!)
 push-installer: GCP_PROJECT=nomos-release
-push-installer: all-push
+push-installer: all-gen-yaml all-push
 	ARCH=$(ARCH) \
 	BIN_DIR=$(BIN_DIR) \
 	GCP_PROJECT=$(GCP_PROJECT) \
