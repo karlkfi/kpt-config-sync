@@ -34,7 +34,6 @@ RUN mkdir -p /home/user
 
 WORKDIR /opt/installer
 
-COPY README.md README.md
 COPY examples examples
 COPY manifests manifests
 COPY scripts scripts
