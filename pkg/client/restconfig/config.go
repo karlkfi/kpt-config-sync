@@ -65,20 +65,46 @@ func SetCurrentUserForTest(u *user.User, err error) {
 	currentError = err
 }
 
+// newConfigPath returns the correct kubeconfig file path to use, depending on
+// the current user settings and the runtime environment.
+func newConfigPath() (string, error) {
+	// First try the KUBECONFIG variable.
+	envPath := os.Getenv("KUBECONFIG")
+	if envPath != "" {
+		return envPath, nil
+	}
+	// Try the current user.
+	curentUser, err := userCurrentTestHook()
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to get current user")
+	}
+	path := filepath.Join(curentUser.HomeDir, kubectlConfigPath)
+	return path, nil
+}
+
+// newConfigFromPath creates a rest.Config from a configuration file at the
+// supplied path.
+func newConfigFromPath(path string) (*rest.Config, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", path)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
 // NewKubectlConfig creates a config for whichever context is active in kubectl.
 func NewKubectlConfig() (*rest.Config, error) {
 	if *flagKubectlContext != "" {
 		return NewKubectlContextConfig(*flagKubectlContext)
 	}
 
-	curentUser, err := userCurrentTestHook()
+	path, err := newConfigPath()
 	if err != nil {
-		return nil, errors.Wrapf(err, "Faild to get current user")
+		return nil, errors.Wrapf(err, "while getting config path")
 	}
-
-	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(curentUser.HomeDir, kubectlConfigPath))
+	config, err := newConfigFromPath(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "while loading from %v", path)
 	}
 	return config, nil
 }
@@ -104,11 +130,10 @@ func NewClientConfig() (clientcmd.ClientConfig, error) {
 // NewClientConfigWithOverrides returns a client configuration with supplied
 // overrides.
 func NewClientConfigWithOverrides(o *clientcmd.ConfigOverrides) (clientcmd.ClientConfig, error) {
-	curentUser, err := userCurrentTestHook()
+	configPath, err := newConfigPath()
 	if err != nil {
-		return nil, errors.Wrapf(err, "Faild to get current user")
+		return nil, errors.Wrapf(err, "while getting config path")
 	}
-	configPath := filepath.Join(curentUser.HomeDir, kubectlConfigPath)
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath}, o), nil
 }
