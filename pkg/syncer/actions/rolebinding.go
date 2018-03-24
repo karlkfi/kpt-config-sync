@@ -75,6 +75,21 @@ func (s RoleBindingResource) Type() string {
 	return "rolebinding"
 }
 
+// Kind implements ResourceInterface
+func (s RoleBindingResource) Kind() string {
+	return "RoleBinding"
+}
+
+// Group implements ResourceInterface
+func (s RoleBindingResource) Group(obj interface{}) string {
+	return rbac_v1.SchemeGroupVersion.Group
+}
+
+// Version implements ResourceInterface
+func (s RoleBindingResource) Version(obj interface{}) string {
+	return rbac_v1.SchemeGroupVersion.Version
+}
+
 // Name implements ResourceInterface
 func (s RoleBindingResource) Name(obj interface{}) string {
 	return obj.(*rbac_v1.RoleBinding).Name

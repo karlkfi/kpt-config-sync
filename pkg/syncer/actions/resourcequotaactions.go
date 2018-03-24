@@ -48,8 +48,8 @@ type resourceQuotaActionBase struct {
 	// The namespace in which the resource quota object lives
 	namespace string
 
-	// The name of the operation being performed, mostly here for logging purposes.
-	operation string
+	// The type of the operation being performed, mostly here for logging purposes.
+	operation action.OperationType
 
 	// API Access related objects
 	kubernetesInterface kubernetes.Interface
@@ -146,21 +146,44 @@ func (n *resourceQuotaActionBase) ResourceQuotaSpec() core_v1.ResourceQuotaSpec 
 }
 
 // Resource implements Interface
-func (s *resourceQuotaActionBase) Resource() string {
+func (n *resourceQuotaActionBase) Resource() string {
 	return "resourcequota"
+}
+
+// Resource implements Interface
+func (n *resourceQuotaActionBase) Kind() string {
+	return "ResourceQuota"
 }
 
 func (n *resourceQuotaActionBase) Namespace() string {
 	return n.namespace
 }
 
-func (n *resourceQuotaActionBase) Operation() string {
+func (n *resourceQuotaActionBase) Group() string {
+	return core_v1.SchemeGroupVersion.Group
+}
+
+func (n *resourceQuotaActionBase) Version() string {
+	return core_v1.SchemeGroupVersion.Version
+}
+
+func (n *resourceQuotaActionBase) Name() string {
+	return resourcequota.ResourceQuotaObjectName
+}
+
+func (n *resourceQuotaActionBase) Operation() action.OperationType {
 	return n.operation
 }
 
 // Resource implements Action
 func (n *resourceQuotaActionBase) String() string {
-	return fmt.Sprintf("%s.%s.%s", n.Resource(), n.Namespace(), n.Operation())
+	return fmt.Sprintf(
+		"%s/%s/%s/%s/%s",
+		n.Version(),
+		n.Kind(),
+		n.Namespace(),
+		n.Name(),
+		n.Operation())
 }
 
 // ------- Delete -------
@@ -179,7 +202,7 @@ func NewResourceQuotaDeleteAction(
 			kubernetesInterface: kubernetesInterface,
 			resourceQuotaLister: resourceQuotaLister,
 			namespace:           namespace,
-			operation:           "delete",
+			operation:           action.DeleteOperation,
 		},
 	}
 }
@@ -214,7 +237,7 @@ func NewResourceQuotaUpsertAction(
 			resourceQuotaSpec:   resourceQuotaSpec,
 			labels:              labels,
 			namespace:           namespace,
-			operation:           "upsert",
+			operation:           action.UpsertOperation,
 		},
 	}
 }

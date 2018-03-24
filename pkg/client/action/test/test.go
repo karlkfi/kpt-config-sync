@@ -18,6 +18,8 @@ package test
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/google/nomos/pkg/client/action"
 )
 
@@ -26,11 +28,11 @@ type TestAction struct {
 	namespace string
 	name      string
 	resource  string
-	operation string
+	operation action.OperationType
 }
 
 // Operation implements action.Interface
-func (s *TestAction) Operation() string {
+func (s *TestAction) Operation() action.OperationType {
 	return s.operation
 }
 
@@ -41,20 +43,53 @@ func (s *TestAction) Execute() error {
 
 // Resource implements action.Interface
 func (s *TestAction) Resource() string {
-	return s.operation
+	return s.resource
+}
+
+// Resource implements action.Interface
+func (s *TestAction) Kind() string {
+	return strings.Title(s.resource)
 }
 
 // Namespace implements action.Interface
 func (s *TestAction) Namespace() string {
-	return s.operation
+	return s.namespace
+}
+
+// Group implements action.Interface
+func (s *TestAction) Group() string {
+	return "group"
+}
+
+// Version implements action.Interface
+func (s *TestAction) Version() string {
+	return "v1"
+}
+
+// Name implements action.Interface
+func (s *TestAction) Name() string {
+	return string(s.name)
 }
 
 // String implements action.Interface
 func (s *TestAction) String() string {
-	if s.namespace == "" {
-		return fmt.Sprintf("%s.%s.%s", s.resource, s.name, s.operation)
+	if ns := s.Namespace(); ns != "" {
+		return fmt.Sprintf(
+			"%s/%s/%s/%s/%s/%s",
+			s.Group(),
+			s.Version(),
+			s.Kind(),
+			ns,
+			s.Name(),
+			s.Operation())
 	}
-	return fmt.Sprintf("%s.%s.%s.%s", s.resource, s.namespace, s.name, s.operation)
+	return fmt.Sprintf(
+		"%s/%s/%s/%s/%s",
+		s.Group(),
+		s.Version(),
+		s.Kind(),
+		s.Name(),
+		s.Operation())
 }
 
 // NewDelete creates a new test delete action
@@ -63,7 +98,7 @@ func NewDelete(namespace, name, resource string) action.Interface {
 		namespace: namespace,
 		name:      name,
 		resource:  resource,
-		operation: string(action.DeleteOperation),
+		operation: action.DeleteOperation,
 	}
 }
 
@@ -73,6 +108,6 @@ func NewUpsert(namespace, name, resource string) action.Interface {
 		namespace: namespace,
 		name:      name,
 		resource:  resource,
-		operation: string(action.UpsertOperation),
+		operation: action.UpsertOperation,
 	}
 }

@@ -40,20 +40,27 @@ func RoleBinding(roleName string, subjects ...string) rbac.RoleBinding {
 
 func NamespaceRoleBinding(name, namespace, roleName string, subjects ...string) rbac.RoleBinding {
 	subjectList := []rbac.Subject{}
+	var kind string
+	group := "rbac.authorization.k8s.io"
 	for _, subject := range subjects {
 		// "User:joe" -> ["User", "joe"]
 		s := strings.Split(subject, ":")
 		if len(s) != 2 {
 			panic(fmt.Sprintf("Expected subject: User:name, was: %v", subject))
 		}
+		kind = s[0]
 		r := rbac.Subject{
 			Kind:     s[0],
 			Name:     s[1],
-			APIGroup: "rbac.authorization.k8s.io",
+			APIGroup: group,
 		}
 		subjectList = append(subjectList, r)
 	}
 	ret := rbac.RoleBinding{
+		TypeMeta: meta.TypeMeta{
+			Kind:       kind,
+			APIVersion: group + "/v1",
+		},
 		ObjectMeta: meta.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -85,6 +92,10 @@ func Role(name string, policyRules []rbac.PolicyRule) rbac.Role {
 
 func NamespaceRole(name, namespace string, policyRules []rbac.PolicyRule) rbac.Role {
 	return rbac.Role{
+		TypeMeta: meta.TypeMeta{
+			Kind:       "Role",
+			APIVersion: "rbac.authorization.k8s.io/v1",
+		},
 		ObjectMeta: meta.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

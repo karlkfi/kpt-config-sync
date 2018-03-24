@@ -18,6 +18,7 @@ package actions
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/client/action"
 	actions_testing "github.com/google/nomos/pkg/syncer/actions/testing"
 	"github.com/pkg/errors"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,7 +26,7 @@ import (
 )
 
 func TestGenericActionBase(t *testing.T) {
-	testOperation := "testoperation"
+	testOperation := action.OperationType("testoperation")
 	testResourceImpl := actions_testing.NewTestResourceInterfaceImpl(t)
 	g := genericActionBase{
 		operation:         testOperation,
@@ -45,7 +46,7 @@ func TestGenericActionBase(t *testing.T) {
 	if g.Operation() != testOperation {
 		t.Errorf("Should have returned %s for operation", testOperation)
 	}
-	expectString := "testresource.default.testresourcename.testoperation"
+	expectString := "group/v1/TestResource/default/testresourcename/testoperation"
 	if g.String() != expectString {
 		t.Errorf("Should have returned %s for string, got %s", expectString, g.String())
 	}

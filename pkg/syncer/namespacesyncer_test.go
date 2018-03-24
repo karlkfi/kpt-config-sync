@@ -67,7 +67,7 @@ func TestSyncerCreate(t *testing.T) {
 
 	item, _ := syncer.queue.Get()
 	action := item.(action.Interface)
-	if action.String() != "namespace.test-ns-create.upsert" {
+	if action.String() != "v1/Namespace/test-ns-create/upsert" {
 		t.Errorf("Got unexpected action %s", action.String())
 	}
 }
@@ -114,7 +114,7 @@ func TestSyncerUpdate(t *testing.T) {
 
 	item, _ := syncer.queue.Get()
 	action := item.(action.Interface)
-	if action.String() != "namespace.test-ns-update.upsert" {
+	if action.String() != "v1/Namespace/test-ns-update/upsert" {
 		t.Errorf("Got unexpected action %s", action.String())
 	}
 }

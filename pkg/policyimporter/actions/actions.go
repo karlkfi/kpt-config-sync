@@ -18,6 +18,7 @@ package actions
 import (
 	"reflect"
 
+	api_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	listers_v1 "github.com/google/nomos/pkg/client/listers/policyhierarchy/v1"
@@ -48,8 +49,12 @@ func PolicyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 func NewPolicyNodeActionSpec(
 	client typed_v1.NomosV1Interface,
 	lister listers_v1.PolicyNodeLister) *action.ReflectiveActionSpec {
+
 	return &action.ReflectiveActionSpec{
-		KindPlural: "PolicyNodes",
+		Resource:   action.LowerPlural(policyhierarchy_v1.PolicyNode{}),
+		KindPlural: action.Plural(policyhierarchy_v1.PolicyNode{}),
+		Group:      api_v1.GroupName,
+		Version:    api_v1.SchemeGroupVersion.Version,
 		EqualSpec:  PolicyNodesEqual,
 		Client:     client,
 		Lister:     lister,
@@ -80,7 +85,10 @@ func NewClusterPolicyActionSpec(
 	client typed_v1.NomosV1Interface,
 	lister listers_v1.ClusterPolicyLister) *action.ReflectiveActionSpec {
 	return &action.ReflectiveActionSpec{
-		KindPlural: "ClusterPolicies",
+		Resource:   action.LowerPlural(policyhierarchy_v1.ClusterPolicy{}),
+		KindPlural: action.Plural(policyhierarchy_v1.ClusterPolicy{}),
+		Group:      api_v1.GroupName,
+		Version:    api_v1.SchemeGroupVersion.Version,
 		EqualSpec:  ClusterPoliciesEqual,
 		Client:     client,
 		Lister:     lister,

@@ -3,6 +3,8 @@ package action
 import (
 	"k8s.io/gengo/namer"
 	"k8s.io/gengo/types"
+	"reflect"
+	"strings"
 )
 
 var exceptions = map[string]string{}
@@ -14,9 +16,15 @@ func AddPluralException(name, value string) {
 	pluralizer = namer.NewPublicPluralNamer(exceptions)
 }
 
-// Plural returns the plural form of the object with name in UpperCamelCase. We need this for
-// properly using reflection to get the correct member since the client stubs use the plural form
-// instead of singular.
-func Plural(name string) string {
+// Plural returns the plural form of the object's name in UpperCamelCase. We need this for properly
+// using reflection to get the correct member since the client stubs use the plural form instead of
+// singular.
+func Plural(i interface{}) string {
+	name := reflect.TypeOf(i).Name()
 	return pluralizer.Name(&types.Type{Name: types.Name{Name: name}})
+}
+
+// LowerPlural returns the lower case plural form of the object's name.
+func LowerPlural(i interface{}) string {
+	return strings.ToLower(Plural(i))
 }

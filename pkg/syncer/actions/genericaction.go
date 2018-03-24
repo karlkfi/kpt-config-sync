@@ -42,6 +42,12 @@ type ResourceInterface interface {
 	Update(oldObj interface{}, newObj interface{}) (interface{}, error)
 	// Type returns the name of the type of resource this operates on
 	Type() string
+	// Kind returns the kind of the resource this operates on
+	Kind() string
+	// Group returns the group of the resource in obj
+	Group(obj interface{}) string
+	// Version returns the version of the resource in obj
+	Version(obj interface{}) string
 	// Name returns the name of the resource in obj
 	Name(obj interface{}) string
 	// Namespace returns the namespace of the resource in obj
@@ -55,7 +61,7 @@ type ResourceInterface interface {
 }
 
 type genericActionBase struct {
-	operation         string
+	operation         action.OperationType
 	resource          interface{}
 	resourceInterface ResourceInterface
 }
@@ -71,9 +77,24 @@ func (s *genericActionBase) Resource() string {
 	return s.resourceInterface.Type()
 }
 
+// Kind implements Interface
+func (s *genericActionBase) Kind() string {
+	return s.resourceInterface.Kind()
+}
+
 // Namespace implements Interface
 func (s *genericActionBase) Namespace() string {
 	return s.resourceInterface.Namespace(s.resource)
+}
+
+// Group returns the group of the resource
+func (s *genericActionBase) Group() string {
+	return s.resourceInterface.Group(s.resource)
+}
+
+// Version returns the version of the resource
+func (s *genericActionBase) Version() string {
+	return s.resourceInterface.Version(s.resource)
 }
 
 // Name returns the name of the resource
@@ -82,24 +103,27 @@ func (s *genericActionBase) Name() string {
 }
 
 // Operation implements Interface
-func (s *genericActionBase) Operation() string {
+func (s *genericActionBase) Operation() action.OperationType {
 	return s.operation
 }
 
 // String implements Interface
 func (s *genericActionBase) String() string {
-	namespace := s.Namespace()
-	if namespace != "" {
+	if ns := s.Namespace(); ns != "" {
 		return fmt.Sprintf(
-			"%s.%s.%s.%s",
-			s.Resource(),
-			namespace,
+			"%s/%s/%s/%s/%s/%s",
+			s.Group(),
+			s.Version(),
+			s.Kind(),
+			ns,
 			s.Name(),
 			s.Operation())
 	}
 	return fmt.Sprintf(
-		"%s.%s.%s",
-		s.Resource(),
+		"%s/%s/%s/%s/%s",
+		s.Group(),
+		s.Version(),
+		s.Kind(),
 		s.Name(),
 		s.Operation())
 }
@@ -117,7 +141,7 @@ func NewGenericDeleteAction(
 	resourceInterface ResourceInterface) *GenericDeleteAction {
 	return &GenericDeleteAction{
 		genericActionBase: genericActionBase{
-			operation:         "delete",
+			operation:         action.DeleteOperation,
 			resource:          resource,
 			resourceInterface: resourceInterface,
 		},
@@ -160,7 +184,7 @@ func NewGenericUpsertAction(
 	resourceInterface ResourceInterface) *GenericUpsertAction {
 	action := &GenericUpsertAction{
 		genericActionBase: genericActionBase{
-			operation:         "upsert",
+			operation:         action.UpsertOperation,
 			resource:          resource,
 			resourceInterface: resourceInterface,
 		},

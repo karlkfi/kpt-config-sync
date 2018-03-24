@@ -98,9 +98,9 @@ func TestGCSOnCreate(t *testing.T) {
 		t.Errorf("Create should not have failed")
 	}
 	CheckQueueActions(t, queue.items, []string{
-		"ClusterRole.unaccounted.delete",
-		"ClusterRole.foo.upsert",
-		"ClusterRole.bar.upsert",
+		"group/v1/ClusterRole/unaccounted/delete",
+		"group/v1/ClusterRole/foo/upsert",
+		"group/v1/ClusterRole/bar/upsert",
 	})
 }
 
@@ -136,10 +136,10 @@ func TestGCSOnUpdate(t *testing.T) {
 		t.Errorf("Create should not have failed")
 	}
 	CheckQueueActions(t, queue.items, []string{
-		"ClusterRole.unaccounted.delete",
-		"ClusterRole.baz.delete",
-		"ClusterRole.foo.upsert",
-		"ClusterRole.bar.upsert",
+		"group/v1/ClusterRole/unaccounted/delete",
+		"group/v1/ClusterRole/baz/delete",
+		"group/v1/ClusterRole/foo/upsert",
+		"group/v1/ClusterRole/bar/upsert",
 	})
 }
 
@@ -162,7 +162,7 @@ func TestGCSOnDelete(t *testing.T) {
 		t.Errorf("Create should not have failed")
 	}
 	CheckQueueActions(t, queue.items, []string{
-		"ClusterRole.unaccounted.delete",
-		"ClusterRole.baz.delete",
+		"group/v1/ClusterRole/unaccounted/delete",
+		"group/v1/ClusterRole/baz/delete",
 	})
 }

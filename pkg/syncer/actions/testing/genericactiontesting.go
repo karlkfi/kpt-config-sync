@@ -99,6 +99,21 @@ func (s *TestResourceInterfaceImpl) Type() string {
 	return "testresource"
 }
 
+// Kind implements ResourceInterface
+func (s *TestResourceInterfaceImpl) Kind() string {
+	return "TestResource"
+}
+
+// Group implements ResourceInterface
+func (s *TestResourceInterfaceImpl) Group(obj interface{}) string {
+	return "group"
+}
+
+// Version implements ResourceInterface
+func (s *TestResourceInterfaceImpl) Version(obj interface{}) string {
+	return "v1"
+}
+
 // Name implements ResourceInterface
 func (s *TestResourceInterfaceImpl) Name(obj interface{}) string {
 	return obj.(*TestResourceType).Name

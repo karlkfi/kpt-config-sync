@@ -385,7 +385,7 @@ func (s *Syncer) processAction() bool {
 		glog.Infof("Would have executed action %s", action.String())
 		return true
 	}
-	exTimer := prometheus.NewTimer(syncDuration.WithLabelValues(action.Namespace(), action.Resource(), action.Operation()))
+	exTimer := prometheus.NewTimer(syncDuration.WithLabelValues(action.Namespace(), action.Resource(), string(action.Operation())))
 	err := action.Execute()
 	exTimer.ObserveDuration()
 
@@ -394,7 +394,7 @@ func (s *Syncer) processAction() bool {
 		s.queue.Forget(actionItem)
 		return true
 	}
-	errTotal.WithLabelValues(action.Namespace(), action.Resource(), action.Operation()).Inc()
+	errTotal.WithLabelValues(action.Namespace(), action.Resource(), string(action.Operation())).Inc()
 
 	// Drop forever
 	if s.queue.NumRequeues(actionItem) > WorkerNumRetries {

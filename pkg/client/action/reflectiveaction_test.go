@@ -213,8 +213,8 @@ func RoleGetter(client *fake.Client, namespace, name string) (runtime.Object, er
 
 var namespacedBaseTestObject = &rbac_v1.Role{
 	TypeMeta: meta_v1.TypeMeta{
-		Kind:       "",
-		APIVersion: "",
+		Kind:       "Role",
+		APIVersion: "v1",
 	},
 	ObjectMeta: meta_v1.ObjectMeta{
 		Labels:      map[string]string{"fuzzy": "true"},
@@ -401,8 +401,8 @@ func ClusterRoleGetter(client *fake.Client, namespace, name string) (runtime.Obj
 
 var clusterBaseTestObject = &rbac_v1.ClusterRole{
 	TypeMeta: meta_v1.TypeMeta{
-		Kind:       "",
-		APIVersion: "",
+		Kind:       "ClusterRole",
+		APIVersion: "v1",
 	},
 	ObjectMeta: meta_v1.ObjectMeta{
 		Labels:      map[string]string{"fuzzy": "true"},

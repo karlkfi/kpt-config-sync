@@ -76,9 +76,15 @@ func ObjectMetaSubset(set runtime.Object, subset runtime.Object) bool {
 // ReflectiveActionSpec represents information and objects needed for performing actions on a given
 // GroupVersionKind.
 type ReflectiveActionSpec struct {
+	// The resource type name.
+	Resource string
 	// The plural of a kind, eg, Roles, RoleBindings, Policies as used for getting the client from
 	// the generated code.
 	KindPlural string
+	// The group name of the GroupVersionKind being acted on.
+	Group string
+	// The version of the GroupVersionKind being acted on.
+	Version string
 	// EqualSpec is the per-Kind equal operation that check for equality for the spec of an object.
 	// Meta fields (ObjectMeta and TypeMeta) equality is done automatically and need not be done
 	// by this function.
@@ -112,6 +118,11 @@ type ReflectiveActionBase struct {
 
 // Resource implements Interface
 func (s *ReflectiveActionBase) Resource() string {
+	return s.spec.Resource
+}
+
+// Kind implements Interface
+func (s *ReflectiveActionBase) Kind() string {
 	return s.spec.KindPlural
 }
 
@@ -120,29 +131,43 @@ func (s *ReflectiveActionBase) Namespace() string {
 	return s.namespace
 }
 
-// Name returns the name of the resource
+// Group implements Interface
+func (s *ReflectiveActionBase) Group() string {
+	return s.spec.Group
+}
+
+// Version implements Interface
+func (s *ReflectiveActionBase) Version() string {
+	return s.spec.Version
+}
+
+// Name implements Interface
 func (s *ReflectiveActionBase) Name() string {
 	return s.name
 }
 
 // Operation implements Interface
-func (s *ReflectiveActionBase) Operation() string {
-	return string(s.operation)
+func (s *ReflectiveActionBase) Operation() OperationType {
+	return s.operation
 }
 
 // String implements Interface
 func (s *ReflectiveActionBase) String() string {
-	if s.Namespace() != "" {
+	if ns := s.Namespace(); ns != "" {
 		return fmt.Sprintf(
-			"%s.%s.%s.%s",
-			s.Resource(),
-			s.Namespace(),
+			"%s/%s/%s/%s/%s/%s",
+			s.Group(),
+			s.Version(),
+			s.Kind(),
+			ns,
 			s.Name(),
 			s.Operation())
 	}
 	return fmt.Sprintf(
-		"%s.%s.%s",
-		s.Resource(),
+		"%s/%s/%s/%s/%s",
+		s.Group(),
+		s.Version(),
+		s.Kind(),
 		s.Name(),
 		s.Operation())
 }

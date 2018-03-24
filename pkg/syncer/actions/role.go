@@ -74,6 +74,21 @@ func (s *RoleResource) Type() string {
 	return "role"
 }
 
+// Kind implements ResourceInterface
+func (s *RoleResource) Kind() string {
+	return "Role"
+}
+
+// Group implements ResourceInterface
+func (s *RoleResource) Group(obj interface{}) string {
+	return rbac_v1.SchemeGroupVersion.Group
+}
+
+// Version implements ResourceInterface
+func (s RoleResource) Version(obj interface{}) string {
+	return rbac_v1.SchemeGroupVersion.Version
+}
+
 // Name implements ResourceInterface
 func (s *RoleResource) Name(obj interface{}) string {
 	return obj.(*rbac_v1.Role).Name

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta/fake"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
@@ -33,7 +34,7 @@ import (
 )
 
 type GetResourceQuotaEventActionTestCase struct {
-	expectedOperation string
+	expectedOperation action.OperationType
 	expectedQuota     core_v1.ResourceList
 	noOperation       bool
 	policyNode        policyhierarchy_v1.PolicyNode

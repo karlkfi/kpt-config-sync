@@ -60,7 +60,8 @@ func NewClusterRoleUnpacker(
 	return &ClusterRoleUnpacker{
 		lister: lister,
 		spec: &action.ReflectiveActionSpec{
-			KindPlural: action.Plural(reflect.TypeOf(rbac_v1.ClusterRole{}).Name()),
+			Resource:   action.LowerPlural(rbac_v1.ClusterRole{}),
+			KindPlural: action.Plural(rbac_v1.ClusterRole{}),
 			EqualSpec:  func(runtime.Object, runtime.Object) bool { return false },
 			Client:     client.Kubernetes().RbacV1(),
 			Lister:     lister,

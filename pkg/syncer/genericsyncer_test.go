@@ -95,8 +95,8 @@ func TestOnCreate(t *testing.T) {
 		t.Errorf("Create should not have failed: %s", err)
 	}
 	CheckQueueActions(t, queue.items, []string{
-		"testresource.foo.baz.upsert",
-		"testresource.foo.bar.upsert"})
+		"group/v1/TestResource/foo/baz/upsert",
+		"group/v1/TestResource/foo/bar/upsert"})
 }
 
 func TestOnUpdate(t *testing.T) {
@@ -119,9 +119,9 @@ func TestOnUpdate(t *testing.T) {
 		t.Errorf("Create should not have failed: %s", err)
 	}
 	CheckQueueActions(t, queue.items, []string{
-		"testresource.foo.foo.delete",
-		"testresource.foo.baz.upsert",
-		"testresource.foo.bar.upsert"})
+		"group/v1/TestResource/foo/foo/delete",
+		"group/v1/TestResource/foo/baz/upsert",
+		"group/v1/TestResource/foo/bar/upsert"})
 }
 
 func TestPeriodicResync(t *testing.T) {
@@ -149,5 +149,5 @@ func TestPeriodicResync(t *testing.T) {
 	if err != nil {
 		t.Errorf("Create should not have failed: %s", err)
 	}
-	CheckQueueActions(t, queue.items, []string{"testresource.foo.res4.delete"})
+	CheckQueueActions(t, queue.items, []string{"group/v1/TestResource/foo/res4/delete"})
 }

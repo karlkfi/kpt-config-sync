@@ -36,7 +36,7 @@ type namespaceActionBase struct {
 	namespace string
 
 	// Name of the operation being performed, mostly here for logging purposes.
-	operation string
+	operation action.OperationType
 
 	// API Access related objects
 	kubernetesInterface kubernetes.Interface
@@ -49,23 +49,48 @@ type NamespaceDeleteAction struct {
 }
 
 // Resource implements Interface
-func (s *namespaceActionBase) Resource() string {
+func (n *namespaceActionBase) Resource() string {
 	return "namespace"
 }
 
-// Name implements Action
+// Kind implements Interface
+func (n *namespaceActionBase) Kind() string {
+	return "Namespace"
+}
+
+// Namespace implements Action
 func (n *namespaceActionBase) Namespace() string {
 	return n.namespace
 }
 
+// Group implements Action
+func (n *namespaceActionBase) Group() string {
+	return core_v1.SchemeGroupVersion.Group
+}
+
+// Version implements Action
+func (n *namespaceActionBase) Version() string {
+	return core_v1.SchemeGroupVersion.Version
+}
+
 // Name implements Action
-func (n *namespaceActionBase) Operation() string {
+func (n *namespaceActionBase) Name() string {
+	return n.namespace
+}
+
+// Operation implements Action
+func (n *namespaceActionBase) Operation() action.OperationType {
 	return n.operation
 }
 
 // String implements Action
 func (n *namespaceActionBase) String() string {
-	return fmt.Sprintf("%s.%s.%s", n.Resource(), n.Namespace(), n.Operation())
+	return fmt.Sprintf(
+		"%s/%s/%s/%s",
+		n.Version(),
+		n.Kind(),
+		n.Name(),
+		n.Operation())
 }
 
 var _ action.Interface = &NamespaceDeleteAction{}
@@ -78,7 +103,7 @@ func NewNamespaceDeleteAction(
 	return &NamespaceDeleteAction{
 		namespaceActionBase: namespaceActionBase{
 			namespace:           namespace,
-			operation:           "delete",
+			operation:           action.DeleteOperation,
 			kubernetesInterface: kubernetesInterface,
 			namespaceLister:     namespaceLister,
 		},
@@ -126,13 +151,13 @@ func NewNamespaceUpsertAction(
 	return &NamespaceUpsertAction{
 		namespaceActionBase: namespaceActionBase{
 			namespace:           namespace,
-			operation:           "upsert",
+			operation:           action.UpsertOperation,
 			kubernetesInterface: kubernetesInterface,
 			namespaceLister:     namespaceLister,
 		},
 		labels: labeling.AddOriginLabelToMap(labels),
 		ownerReferences: []meta_v1.OwnerReference{
-			meta_v1.OwnerReference{
+			{
 				APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
 				Kind:               "PolicyNode",
 				Name:               namespace,

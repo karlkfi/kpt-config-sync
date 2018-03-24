@@ -2,12 +2,15 @@ package action
 
 import (
 	"fmt"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	rbac_v1 "k8s.io/api/rbac/v1"
 	"testing"
 )
 
 type pluralTestCase struct {
-	input  string
-	output string
+	input       interface{}
+	output      string
+	outputLower string
 }
 
 func (s *pluralTestCase) Run(t *testing.T) {
@@ -15,16 +18,27 @@ func (s *pluralTestCase) Run(t *testing.T) {
 	if actual != s.output {
 		t.Errorf("Expected %s, got %s", actual, s.output)
 	}
+	actualLower := LowerPlural(s.input)
+	if actualLower != s.outputLower {
+		t.Errorf("Expected %s, got %s", actualLower, s.outputLower)
+	}
 }
 
 var pluralTestCases = []pluralTestCase{
 	pluralTestCase{
-		input:  "PolicyNode",
-		output: "PolicyNodes",
+		input:       policyhierarchy_v1.PolicyNode{},
+		output:      "PolicyNodes",
+		outputLower: "policynodes",
 	},
 	pluralTestCase{
-		input:  "ClusterPolicy",
-		output: "ClusterPolicies",
+		input:       policyhierarchy_v1.ClusterPolicy{},
+		output:      "ClusterPolicies",
+		outputLower: "clusterpolicies",
+	},
+	pluralTestCase{
+		input:       rbac_v1.ClusterRole{},
+		output:      "ClusterRoles",
+		outputLower: "clusterroles",
 	},
 }
 
