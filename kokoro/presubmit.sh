@@ -25,8 +25,8 @@ if ! git -C ${NOMOS_DIR} diff --no-ext-diff --quiet --exit-code; then
 fi
 
 echo "======================== BUILD ====================="
-make DOCKER_INTERACTIVE="" all-build
+make DOCKER_INTERACTIVE="" build
 
 echo "======================== TEST ======================"
-make DOCKER_INTERACTIVE="" all-test
+make DOCKER_INTERACTIVE="" test
 

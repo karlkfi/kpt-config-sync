@@ -16,6 +16,8 @@
 
 ######################################################################
 
+##### CONFIG #####
+
 TOP_DIR := $(shell pwd)
 
 REPO := github.com/google/nomos
@@ -80,6 +82,11 @@ else
 	IMAGE_TAG := $(VERSION)-$(shell date +'%s')
 endif
 
+##### SETUP #####
+
+# set build to be default
+.DEFAULT_GOAL := all-build
+
 # Creates the local golang build output directory.
 .output:
 	mkdir -p \
@@ -90,16 +97,21 @@ endif
 		$(STAGING_DIR) \
 		$(GEN_YAML_DIR)
 
+##### TARGETS #####
+
 # Uses a custom build environment.  See toolkit/buildenv/Dockerfile for the
 # details on the build environment.
 .PHONY: buildenv
 buildenv:
 	@docker build toolkit/buildenv --tag=$(BUILD_IMAGE)
 
-# Build packages hermetically in a docker container.
-.PHONY: build all-build
-build: all-build
-all-build: buildenv .output
+# Runs all static analyzers and autocorrects.
+lint:
+	goimports -w $(NOMOS_CODE_DIRS)
+
+# Compiles nomos hermetically using a docker container.
+.PHONY: build
+build: buildenv .output
 	@docker run $(DOCKER_INTERACTIVE)                                      \
 		-u $$(id -u):$$(id -g)                                             \
 		-v $(GO_DIR):/go                                                   \
@@ -115,15 +127,67 @@ all-build: buildenv .output
 			PKG=$(REPO)                                                    \
 			./scripts/build/build.sh                                       \
 		"
+# Creates a docker image for each nomos component.
+image-all: $(addprefix image-, $(ALL_COMPONENTS))
+	@echo "finished packaging all"
+
+# Creates a docker image for the specified nomos component.
+image-%: build
+	@echo
+	@echo "******* Building image for $* *******"
+	@echo
+	cp -r $(TOP_DIR)/build/$* $(STAGING_DIR)
+	cp $(BIN_DIR)/$(ARCH)/$* $(STAGING_DIR)/$*
+	docker build -t gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) $(STAGING_DIR)/$*
+
+# Pushes each component's docker image to gcr.io.
+push-to-gcr-all: $(addprefix push-to-gcr-, $(ALL_COMPONENTS))
+	@echo "finished pushing to all"
+
+# Pushes the specified component's docker image ot gcr.io.
+push-to-gcr-%: image-%
+	gcloud docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
+
+# Builds the installer using the nomos release in .output
+installer: GCP_PROJECT=stolos-dev
+installer: push-to-gcr-all gen-yaml-all
+	ARCH=$(ARCH) \
+	BIN_DIR=$(BIN_DIR) \
+	GCP_PROJECT=$(GCP_PROJECT) \
+	IMAGE_TAG=$(IMAGE_TAG) \
+	OUTPUT_DIR=$(OUTPUT_DIR) \
+	RELEASE_BUCKET=$(RELEASE_BUCKET) \
+	STAGING_DIR=$(STAGING_DIR) \
+	TOP_DIR=$(TOP_DIR) \
+	VERSION=$(VERSION) \
+	STABLE=$(STABLE) \
+		$(TOP_DIR)/scripts/push-installer.sh
+
+# Runs the installer via docker in interactive mode.
+deploy-interactive: installer
+	@./scripts/run-installer.sh \
+		--interactive \
+		--container=gcr.io/$(GCP_PROJECT)/installer \
+		--version=$(IMAGE_TAG)
+
+# Runs the installer via docker in batch mode using the installer config
+# file specied in the environment variable NOMOS_INSTALLER_CONFIG.
+deploy: installer
+	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
+		echo 'must set NOMOS_INSTALLER_CONFIG to use make deploy'; \
+		exit 1; \
+	fi; \
+	./scripts/run-installer.sh \
+		--config=$(NOMOS_INSTALLER_CONFIG) \
+		--container=gcr.io/$(GCP_PROJECT)/installer \
+		--version=$(IMAGE_TAG)
 
 # Cleans all artifacts.
-clean: all-clean
-all-clean:
+clean:
 	rm -rf $(OUTPUT_DIR)
 
 # Runs unit tests in a docker container.
-test: all-test
-all-test: buildenv .output
+test: buildenv .output
 	@docker run $(DOCKER_INTERACTIVE)                                      \
 		-u $$(id -u):$$(id -g)                                             \
 		-v $(GO_DIR):/go                                                   \
@@ -143,13 +207,9 @@ all-test: buildenv .output
 # Runs end-to-end tests.
 test-e2e:
 	e2e/e2e.sh
-
+# Runs end-to-end tests but leaves files for debugging.
 test-e2e-no-cleanup:
 	e2e/e2e.sh -skip_cleanup
-
-# Runs all static analyzers and autocorrects.
-lint:
-	goimports -w $(NOMOS_CODE_DIRS)
 
 # Generate K8S client-set.
 gen-client-set:
@@ -159,58 +219,11 @@ gen-client-set:
 install-kubectl-plugin:
 	cd $(TOP_DIR)/cmd/kubectl-nomos; ./install.sh
 
-# Generates yaml from template.
+# Generates the podspec yaml for each component.
+gen-yaml-all: $(addprefix gen-yaml-, $(ALL_COMPONENTS))
+	@echo "finished generating all yaml."
+
+# Generates the podspec yaml for the component specified.
 gen-yaml-%:
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
-
-all-gen-yaml: $(addprefix gen-yaml-, $(ALL_COMPONENTS))
-
-# Pushes the nomos installer (effectively releasing a new version!)
-push-installer: GCP_PROJECT=nomos-release
-push-installer: .output all-gen-yaml all-push
-	ARCH=$(ARCH) \
-	BIN_DIR=$(BIN_DIR) \
-	GCP_PROJECT=$(GCP_PROJECT) \
-	IMAGE_TAG=$(IMAGE_TAG) \
-	OUTPUT_DIR=$(OUTPUT_DIR) \
-	RELEASE_BUCKET=$(RELEASE_BUCKET) \
-	STAGING_DIR=$(STAGING_DIR) \
-	TOP_DIR=$(TOP_DIR) \
-	VERSION=$(VERSION) \
-	STABLE=$(STABLE) \
-	    $(TOP_DIR)/scripts/push-installer.sh
-
-# Builds and pushes a docker image.
-push-%: build
-	@echo
-	@echo "******* Pushing $* *******"
-	@echo
-	cp -r $(TOP_DIR)/build/$* $(STAGING_DIR)
-	cp $(BIN_DIR)/$(ARCH)/$* $(STAGING_DIR)/$*
-	docker build -t gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) $(STAGING_DIR)/$*
-	gcloud docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
-
-all-push: $(addprefix push-, $(ALL_COMPONENTS))
-
-# Generates the yaml deployment from template and applies it to cluster.
-deploy-%:	push-% gen-yaml-%
-	kubectl apply -f $(GEN_YAML_DIR)/$*.yaml
-
-deploy-common-objects:
-	$(TOP_DIR)/scripts/deploy-common-objects.sh
-
-gen-certs-resourcequota-admission-controller:
-	OUTPUT_DIR=$(STAGING_DIR)/resourcequota-admission-controller \
-	    $(TOP_DIR)/scripts/generate-resourcequota-admission-controller-certs.sh
-
-deploy-resourcequota-admission-controller: \
-	push-resourcequota-admission-controller \
-	gen-yaml-resourcequota-admission-controller \
-	gen-certs-resourcequota-admission-controller
-	CERTS_INPUT_DIR=$(STAGING_DIR)/resourcequota-admission-controller \
-	YAML_DIR=$(GEN_YAML_DIR) \
-	    $(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh
-
-all-deploy: $(addprefix deploy-, $(ALL_COMPONENTS))
-
