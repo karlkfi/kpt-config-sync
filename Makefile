@@ -85,7 +85,7 @@ endif
 ##### SETUP #####
 
 # set build to be default
-.DEFAULT_GOAL := all-build
+.DEFAULT_GOAL := test
 
 # Creates the local golang build output directory.
 .output:
