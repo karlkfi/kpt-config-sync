@@ -524,9 +524,23 @@ var parserTestCases = []parserTestCase{
 		expectedError: true,
 	},
 	{
-		testName:      "Root dir empty",
-		root:          "foo",
-		expectedError: true,
+		testName: "Root dir empty",
+		root:     "foo",
+		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
+			"foo": createPolicyNode("foo", "", true, &policyhierarchy_v1.Policies{}),
+		},
+		expectedClusterPolicy: createClusterPolicy("foo"),
+	},
+	{
+		testName: "Root dir with ignore file",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"ignore": "",
+		},
+		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
+			"foo": createPolicyNode("foo", "", true, &policyhierarchy_v1.Policies{}),
+		},
+		expectedClusterPolicy: createClusterPolicy("foo"),
 	},
 	{
 		testName: "Root dir with Namespace",

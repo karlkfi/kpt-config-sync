@@ -74,22 +74,29 @@ func (p Parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
 		return nil, err
 	}
 
-	builder := p.factory.NewBuilder().Internal()
-	if p.inCluster {
-		builder = builder.Schema(p.schema)
-	} else {
-		builder = builder.Local()
-	}
-	result := builder.
-		ContinueOnError().
-		FilenameParam(false, &resource.FilenameOptions{Recursive: true, Filenames: []string{root}}).
-		Do()
-	infos, err := result.Infos()
+	// Walk the filesystem looking for resources. If there aren't any, skip builder, because builder
+	// treats that as an error.
+	visitors, err := resource.ExpandPathsToFileVisitors(
+		&resource.Mapper{}, root, true, resource.FileExtensions, validation.NullSchema{})
 	if err != nil {
-		// TODO(frankfarzan): error message does not contain the source of the error for some reason which is bad UX.
-		// kubectl apply -R -f" has the same issue.
-		// TODO(frankfarzan): error message contains flags specific to kubectl cmd.
-		return nil, errors.Wrapf(err, "failed to read resources from %s", root)
+		return nil, err
+	}
+	var fileInfos []*resource.Info
+	if len(visitors) > 0 {
+		builder := p.factory.NewBuilder().Internal()
+		if p.inCluster {
+			builder = builder.Schema(p.schema)
+		} else {
+			builder = builder.Local()
+		}
+		result := builder.
+			ContinueOnError().
+			FilenameParam(false, &resource.FilenameOptions{Recursive: true, Filenames: []string{root}}).
+			Do()
+		fileInfos, err = result.Infos()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to read resources from %s", root)
+		}
 	}
 
 	dirInfos := make(map[string][]*resource.Info)
@@ -99,7 +106,7 @@ func (p Parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
 	}
 	// If a directory has resources, its value in the map
 	// will be non-nil.
-	for _, i := range infos {
+	for _, i := range fileInfos {
 		d := filepath.Dir(i.Source)
 		dirInfos[d] = append(dirInfos[d], i)
 	}
