@@ -33,6 +33,6 @@ type Interface interface {
 	// Name returns the name of the resource being operated on
 	Name() string
 	// String representation of this action. It should uniquely identify the resource being modified,
-	// (group, version, kind/resource, namespace, name).
+	// (group, version, kind, namespace, name).
 	String() string
 }

@@ -64,25 +64,25 @@ func (s *NamespaceTestCase) Namespace(idx int) string {
 }
 
 var namespaceTestCases = []NamespaceTestCase{
-	NamespaceTestCase{
+	{
 		Name:         "Create non-existing namespace",
 		Exists:       false,
 		ActionCtor:   upsertNamespaceTestAction,
 		ExpectExists: true,
 	},
-	NamespaceTestCase{
+	{
 		Name:         "Update existing namespace",
 		Exists:       true,
 		ActionCtor:   upsertNamespaceTestAction,
 		ExpectExists: true,
 	},
-	NamespaceTestCase{
+	{
 		Name:         "Delete non-existing namespace",
 		Exists:       false,
 		ActionCtor:   deleteNamespaceTestAction,
 		ExpectExists: false,
 	},
-	NamespaceTestCase{
+	{
 		Name:         "Delete existing namespace",
 		Exists:       true,
 		ActionCtor:   deleteNamespaceTestAction,
@@ -135,7 +135,7 @@ func TestNamespaceActions(t *testing.T) {
 			}
 			blockOwnerDeletion := true
 			expectOwnerReferences := []meta_v1.OwnerReference{
-				meta_v1.OwnerReference{
+				{
 					APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
 					Kind:               "PolicyNode",
 					Name:               namespace,

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"strings"
+
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,7 +38,7 @@ const (
 	DeleteOperation = OperationType("delete")
 )
 
-// isSubset returns true if subset is a subset of set.  If subset is emtpy, it is always considered
+// isSubset returns true if subset is a subset of set.  If subset is empty, it is always considered
 // a subset of set even if set is empty.  Subset is defined as follows: A is a subset of B if
 // for all (k, v) in A, key k exists in B and key k's value in b is v.
 func isSubset(set map[string]string, subset map[string]string) bool {
@@ -153,23 +155,17 @@ func (s *ReflectiveActionBase) Operation() OperationType {
 
 // String implements Interface
 func (s *ReflectiveActionBase) String() string {
-	if ns := s.Namespace(); ns != "" {
-		return fmt.Sprintf(
-			"%s/%s/%s/%s/%s/%s",
-			s.Group(),
-			s.Version(),
-			s.Kind(),
-			ns,
-			s.Name(),
-			s.Operation())
+	var fields []string
+	if g := s.Group(); g != "" {
+		fields = append(fields, g)
 	}
-	return fmt.Sprintf(
-		"%s/%s/%s/%s/%s",
-		s.Group(),
-		s.Version(),
-		s.Kind(),
-		s.Name(),
-		s.Operation())
+	fields = append(fields, s.Version(), s.Kind())
+	if ns := s.Namespace(); ns != "" {
+		fields = append(fields, ns)
+	}
+	fields = append(fields, s.Name(), string(s.Operation()))
+
+	return strings.Join(fields, "/")
 }
 
 // client returns the appropriate client taking into account cluster / namespace scoping
@@ -339,7 +335,7 @@ func (s *ReflectiveActionBase) doCreate() error {
 }
 
 func (s *ReflectiveActionBase) doUpsert() error {
-	resouce, err := s.listerGet()
+	resource, err := s.listerGet()
 	if err != nil {
 		if api_errors.IsNotFound(err) {
 			return s.doCreate()
@@ -347,11 +343,11 @@ func (s *ReflectiveActionBase) doUpsert() error {
 		return errors.Wrapf(err, "failed to get resource for %s", s)
 	}
 
-	if s.spec.Equal(s.resource, resouce) {
+	if s.spec.Equal(s.resource, resource) {
 		return nil
 	}
 
-	if _, err = s.update(resouce); err != nil {
+	if _, err = s.update(resource); err != nil {
 		return errors.Wrapf(err, "failed to update for %s", s)
 	}
 	glog.V(1).Infof("OK: %s", s)

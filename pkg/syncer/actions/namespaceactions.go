@@ -15,212 +15,74 @@ limitations under the License.
 package actions
 
 import (
-	"fmt"
 	"reflect"
 
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/syncer/labeling"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 )
 
-type namespaceActionBase struct {
-	namespace string
-
-	// Name of the operation being performed, mostly here for logging purposes.
-	operation action.OperationType
-
-	// API Access related objects
-	kubernetesInterface kubernetes.Interface
-	namespaceLister     listers_core_v1.NamespaceLister
-}
-
-// NamespaceDeleteAction will delete a namespace when executed
-type NamespaceDeleteAction struct {
-	namespaceActionBase
-}
-
-// Resource implements Interface
-func (n *namespaceActionBase) Resource() string {
-	return "namespace"
-}
-
-// Kind implements Interface
-func (n *namespaceActionBase) Kind() string {
-	return "Namespace"
-}
-
-// Namespace implements Action
-func (n *namespaceActionBase) Namespace() string {
-	return n.namespace
-}
-
-// Group implements Action
-func (n *namespaceActionBase) Group() string {
-	return core_v1.SchemeGroupVersion.Group
-}
-
-// Version implements Action
-func (n *namespaceActionBase) Version() string {
-	return core_v1.SchemeGroupVersion.Version
-}
-
-// Name implements Action
-func (n *namespaceActionBase) Name() string {
-	return n.namespace
-}
-
-// Operation implements Action
-func (n *namespaceActionBase) Operation() action.OperationType {
-	return n.operation
-}
-
-// String implements Action
-func (n *namespaceActionBase) String() string {
-	return fmt.Sprintf(
-		"%s/%s/%s/%s",
-		n.Version(),
-		n.Kind(),
-		n.Name(),
-		n.Operation())
-}
-
-var _ action.Interface = &NamespaceDeleteAction{}
-
-// NewNamespaceDeleteAction creates a new NamespaceDeleteAction for the given namespace
+// NewNamespaceDeleteAction creates a new ReflectiveDeleteAction to delete the given namespace.
 func NewNamespaceDeleteAction(
 	namespace string,
-	kubernetesInterface kubernetes.Interface,
-	namespaceLister listers_core_v1.NamespaceLister) *NamespaceDeleteAction {
-	return &NamespaceDeleteAction{
-		namespaceActionBase: namespaceActionBase{
-			namespace:           namespace,
-			operation:           action.DeleteOperation,
-			kubernetesInterface: kubernetesInterface,
-			namespaceLister:     namespaceLister,
-		},
+	client kubernetes.Interface,
+	lister listers_core_v1.NamespaceLister) *action.ReflectiveDeleteAction {
+	spec := &action.ReflectiveActionSpec{
+		Resource:   action.LowerPlural(core_v1.Namespace{}),
+		KindPlural: action.Plural(core_v1.Namespace{}),
+		Group:      core_v1.SchemeGroupVersion.Group,
+		Version:    core_v1.SchemeGroupVersion.Version,
+		EqualSpec:  NamespacesEqual,
+		Client:     client.CoreV1(),
+		Lister:     lister,
 	}
+	return action.NewReflectiveDeleteAction("", namespace, spec)
 }
 
-// Execute implements NamespaceAction
-func (n *NamespaceDeleteAction) Execute() error {
-	_, err := n.namespaceLister.Get(n.namespace)
-	if err != nil {
-		if api_errors.IsNotFound(err) {
-			return nil
-		}
-		return errors.Wrapf(err, "Failed to get namespace %q from cache", n.namespace)
-	}
-
-	err = n.kubernetesInterface.CoreV1().Namespaces().Delete(n.namespace, &meta_v1.DeleteOptions{})
-	if err != nil && !api_errors.IsNotFound(err) {
-		return errors.Wrapf(err, "Failed to delete namespace %q", n.namespace)
-	}
-	glog.Infof("Deleted namespace %s", n.namespace)
-	return nil
-}
-
-// NamespaceUpsertAction will create or update a namespace when executed
-type NamespaceUpsertAction struct {
-	namespaceActionBase
-
-	// Labels on the namespace.
-	labels map[string]string
-	// Owner reference for policy node
-	ownerReferences []meta_v1.OwnerReference
-}
-
-var _ action.Interface = &NamespaceUpsertAction{}
-
-// NewNamespaceUpsertAction creates a new NamespaceUpsertAction for the given namespace
+// NewNamespaceUpsertAction creates a new ReflectiveUpsertAction for the given namespace.
 func NewNamespaceUpsertAction(
 	namespace string,
 	uid types.UID,
 	labels map[string]string,
-	kubernetesInterface kubernetes.Interface,
-	namespaceLister listers_core_v1.NamespaceLister) *NamespaceUpsertAction {
+	client kubernetes.Interface,
+	lister listers_core_v1.NamespaceLister) *action.ReflectiveUpsertAction {
 	blockOwnerDeletion := true
-	return &NamespaceUpsertAction{
-		namespaceActionBase: namespaceActionBase{
-			namespace:           namespace,
-			operation:           action.UpsertOperation,
-			kubernetesInterface: kubernetesInterface,
-			namespaceLister:     namespaceLister,
-		},
-		labels: labeling.AddOriginLabelToMap(labels),
-		ownerReferences: []meta_v1.OwnerReference{
-			{
-				APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
-				Kind:               "PolicyNode",
-				Name:               namespace,
-				UID:                uid,
-				BlockOwnerDeletion: &blockOwnerDeletion,
+	spec := &action.ReflectiveActionSpec{
+		Resource:   action.LowerPlural(core_v1.Namespace{}),
+		KindPlural: action.Plural(core_v1.Namespace{}),
+		Group:      core_v1.SchemeGroupVersion.Group,
+		Version:    core_v1.SchemeGroupVersion.Version,
+		EqualSpec:  NamespacesEqual,
+		Client:     client.CoreV1(),
+		Lister:     lister,
+	}
+	ns := &core_v1.Namespace{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name:   namespace,
+			Labels: labels,
+			OwnerReferences: []meta_v1.OwnerReference{
+				{
+					APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
+					Kind:               "PolicyNode",
+					Name:               namespace,
+					UID:                uid,
+					BlockOwnerDeletion: &blockOwnerDeletion,
+				},
 			},
 		},
 	}
+	return action.NewReflectiveUpsertAction("", namespace, ns, spec)
 }
 
-// Execute implements NamespaceAction
-func (n *NamespaceUpsertAction) Execute() error {
-	ns, err := n.namespaceLister.Get(n.namespace)
-	if err != nil {
-		if api_errors.IsNotFound(err) {
-			return n.create()
-		}
-		return errors.Wrapf(err, "Failed to get namespace %q during upsert", n.namespace)
-	}
-
-	return n.update(ns)
-}
-
-func (n *NamespaceUpsertAction) create() error {
-	// Attempt to create namespace if it does not exist
-	createdNamespace, err := n.kubernetesInterface.CoreV1().Namespaces().Create(&core_v1.Namespace{
-		ObjectMeta: meta_v1.ObjectMeta{
-			Name:            n.namespace,
-			Labels:          n.labels,
-			OwnerReferences: n.ownerReferences,
-		},
-	})
-
-	if err != nil {
-		if api_errors.IsAlreadyExists(err) {
-			glog.Infof("Namespace %q already exists", n.namespace)
-			return nil
-		}
-		return err
-	}
-	glog.Infof("Created namespace %q, resourceVersion %s", n.namespace, createdNamespace.ResourceVersion)
-	return nil
-}
-
-func (n *NamespaceUpsertAction) update(currentNamespace *core_v1.Namespace) error {
-	if reflect.DeepEqual(n.labels, currentNamespace.Labels) &&
-		reflect.DeepEqual(n.ownerReferences, currentNamespace.OwnerReferences) {
-		glog.Infof("Existing namespace %q does not need to be updated", n.namespace)
-		return nil
-	}
-
-	glog.Infof("Updating namespace %q", n.namespace)
-	updatedNamespace, err := n.kubernetesInterface.CoreV1().Namespaces().Update(&core_v1.Namespace{
-		ObjectMeta: meta_v1.ObjectMeta{
-			Name:            n.namespace,
-			Labels:          n.labels,
-			ResourceVersion: currentNamespace.ResourceVersion,
-			OwnerReferences: n.ownerReferences,
-		},
-	})
-	if err != nil {
-		return errors.Wrapf(err, "Failed to update namespace %q", n.namespace)
-	}
-	glog.Infof("Updated namespace %q, resourceVersion %s", n.namespace, updatedNamespace.ResourceVersion)
-	return nil
+// NamespacesEqual returns true if the two Namespaces have the same owner references.
+func NamespacesEqual(lhs runtime.Object, rhs runtime.Object) bool {
+	lNamespace := lhs.(*core_v1.Namespace)
+	rNamespace := rhs.(*core_v1.Namespace)
+	return reflect.DeepEqual(lNamespace.OwnerReferences, rNamespace.OwnerReferences)
 }
