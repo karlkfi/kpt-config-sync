@@ -193,7 +193,7 @@ func (s *ReflectiveActionBase) client() reflect.Value {
 	return getKindClientReturns[0]
 }
 
-// lister returns the appropraite lister taking into account cluster / namespace scoping
+// lister returns the appropriate lister taking into account cluster / namespace scoping
 // Example of what this is effectively doing:
 // -- For cluster scoped resources --
 // s.spec.Lister := kubernetesInformerFactory.Rbac().V1().ClusterRoles().Lister()
@@ -317,6 +317,11 @@ func NewReflectiveUpsertAction(
 	}
 }
 
+// UpsertedResource returns the resource that will be upserted.
+func (s *ReflectiveUpsertAction) UpsertedResouce() runtime.Object {
+	return s.resource
+}
+
 // Execute implements Interface
 func (s *ReflectiveUpsertAction) Execute() error {
 	glog.V(1).Infof("Executing %s", s)
@@ -354,7 +359,7 @@ func (s *ReflectiveActionBase) doUpsert() error {
 	return nil
 }
 
-// ReflectiveDeleteAction implements an upsert action for all generated client stubs.
+// ReflectiveDeleteAction implements a delete action for all generated client stubs.
 type ReflectiveDeleteAction struct {
 	ReflectiveActionBase
 }

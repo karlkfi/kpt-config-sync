@@ -18,6 +18,7 @@ package syncer
 import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/client/action"
 	informers_policynodev1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/resourcequota"
@@ -75,8 +76,8 @@ func (s *QuotaSyncer) PeriodicResync(nodes []*policyhierarchy_v1.PolicyNode) err
 // But the native controllers don't monitor usage unless a limit is set.
 // This means that if a parent policyspace has a limit set, we need to make sure that the leaf namespace
 // also has that resource type limited, so that we get usage stats from it to allow enforcement of that limit.
-func (s *QuotaSyncer) fillResourceQuotaLeafGaps(nodes []*policyhierarchy_v1.PolicyNode) ([]actions.ResourceQuotaAction, error) {
-	resultActions := []actions.ResourceQuotaAction{}
+func (s *QuotaSyncer) fillResourceQuotaLeafGaps(nodes []*policyhierarchy_v1.PolicyNode) ([]*action.ReflectiveUpsertAction, error) {
+	var resultActions []*action.ReflectiveUpsertAction
 
 	for _, node := range nodes {
 		if node.Spec.Policyspace {
@@ -128,16 +129,16 @@ func (s *QuotaSyncer) OnCreate(policyNode *policyhierarchy_v1.PolicyNode) error 
 	return s.onUpdate(policyNode)
 }
 
-// getUpdateAction returns the appropriate action when handling an update event.
-func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode) actions.ResourceQuotaAction {
+// getUpdateAction returns the appropriate actions when handling an update event.
+func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode) (*action.ReflectiveDeleteAction, *action.ReflectiveUpsertAction) {
 	if policyNode.Spec.Policyspace {
-		return nil
+		return nil, nil
 	}
 
 	hierarchicalLimits := s.getHierarchicalQuotaLimits(*policyNode)
 
 	if len(hierarchicalLimits) > 0 {
-		return actions.NewResourceQuotaUpsertAction(
+		return nil, actions.NewResourceQuotaUpsertAction(
 			policyNode.Name,
 			resourcequota.NomosQuotaLabels,
 			core_v1.ResourceQuotaSpec{Hard: hierarchicalLimits},
@@ -147,18 +148,18 @@ func (s *QuotaSyncer) getUpdateAction(policyNode *policyhierarchy_v1.PolicyNode)
 	return actions.NewResourceQuotaDeleteAction(
 		policyNode.Name,
 		s.client,
-		s.resourceQuotaLister)
+		s.resourceQuotaLister), nil
 }
 
 // getHierarchicalQuotaLimits takes in the limits of a policyNode and adds in the limits of the node's ancestors if
 // the limits are not already present. This is needed to ensure that the native quota controllers monitor usage of
 // resources for quotas only defined in the parent nodes.
-func (q *QuotaSyncer) getHierarchicalQuotaLimits(policyNode policyhierarchy_v1.PolicyNode) core_v1.ResourceList {
+func (s *QuotaSyncer) getHierarchicalQuotaLimits(policyNode policyhierarchy_v1.PolicyNode) core_v1.ResourceList {
 	var parentNamespace string
 	var err error
 	hierarchicalLimits := core_v1.ResourceList{}
 
-	for parentNode := &policyNode; err == nil; parentNode, err = q.policyNodeInformer.Lister().Get(parentNamespace) {
+	for parentNode := &policyNode; err == nil; parentNode, err = s.policyNodeInformer.Lister().Get(parentNamespace) {
 		if parentNode.Spec.Policies.ResourceQuotaV1 != nil {
 			for resource, limit := range parentNode.Spec.Policies.ResourceQuotaV1.Spec.Hard {
 				if _, exists := hierarchicalLimits[resource]; !exists {
@@ -178,9 +179,12 @@ func (s *QuotaSyncer) OnUpdate(old *policyhierarchy_v1.PolicyNode, new *policyhi
 
 // onUpdate handles both create and update for quota from a policy node.
 func (s *QuotaSyncer) onUpdate(policyNode *policyhierarchy_v1.PolicyNode) error {
-	action := s.getUpdateAction(policyNode)
-	if action != nil {
-		s.queue.Add(action)
+	deleteAction, upsertAction := s.getUpdateAction(policyNode)
+	if deleteAction != nil {
+		s.queue.Add(deleteAction)
+	}
+	if upsertAction != nil {
+		s.queue.Add(upsertAction)
 	}
 	return nil
 }

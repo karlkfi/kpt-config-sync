@@ -129,25 +129,35 @@ func TestSyncerGetEventResourceQuotaAction(t *testing.T) {
 		{expectedOperation: "upsert", expectedQuota: expectedGapQuotaLimits, policyNode: policyNodeWithGap},
 		{noOperation: true, policyNode: policyNodeForPolicypace},
 	} {
-		action := syncer.getUpdateAction(&testcase.policyNode)
+		deleteAction, upsertAction := syncer.getUpdateAction(&testcase.policyNode)
+		var baseAction *action.ReflectiveActionBase
+		if deleteAction != nil {
+			baseAction = &deleteAction.ReflectiveActionBase
+		}
+		if upsertAction != nil {
+			baseAction = &upsertAction.ReflectiveActionBase
+		}
 		if testcase.noOperation {
-			if action != nil {
-				t.Errorf("Got unexpected non-nil action %#v for testcase %d, data %#v", action, idx, testcase)
+			if baseAction != nil {
+				t.Errorf("Got unexpected non-nil action %#v for testcase %d, data %#v", baseAction, idx, testcase)
 			}
 			continue
 		}
-		if action == nil {
+		if baseAction == nil {
 			t.Errorf("Got unexpected nil action for testcase %d, data %#v", idx, testcase)
 			continue
 		}
-		if action.Namespace() != namespaceName {
-			t.Errorf("Added event should have name %s, got %s", namespaceName, action.Namespace())
+		if baseAction.Namespace() != namespaceName {
+			t.Errorf("Added event should have name %s, got %s", namespaceName, baseAction.Namespace())
 		}
-		if action.Operation() != testcase.expectedOperation {
-			t.Errorf("Got unexpected operation %s for testcase %d, data %#v", action.Operation(), idx, testcase)
+		if baseAction.Operation() != testcase.expectedOperation {
+			t.Errorf("Got unexpected operation %s for testcase %d, data %#v", baseAction.Operation(), idx, testcase)
 		}
-		if testcase.expectedQuota != nil && !reflect.DeepEqual(action.ResourceQuotaSpec().Hard, testcase.expectedQuota) {
-			t.Errorf("Got unexpected resource quota %#v for testcase %d, expected %#v", action.ResourceQuotaSpec().Hard, idx, testcase.expectedQuota)
+		if upsertAction != nil {
+			actualResource := upsertAction.UpsertedResouce().(*core_v1.ResourceQuota).Spec.Hard
+			if testcase.expectedQuota != nil && !reflect.DeepEqual(actualResource, testcase.expectedQuota) {
+				t.Errorf("Got unexpected resource quota %#v for testcase %d, expected %#v", actualResource, idx, testcase.expectedQuota)
+			}
 		}
 	}
 }
@@ -183,14 +193,15 @@ func TestFillResourceQuotaLeafGaps(t *testing.T) {
 	child3ExpectedSpec := core_v1.ResourceList{"configmaps": resource.MustParse("10"), "memory": resource.MustParse("5")}
 	var child1Actual, child2Actual, child3Actual core_v1.ResourceList
 	for _, actual := range actions {
+		actualResource := actual.UpsertedResouce().(*core_v1.ResourceQuota).Spec.Hard
 		if actual.Namespace() == "child1" {
-			child1Actual = actual.ResourceQuotaSpec().Hard
+			child1Actual = actualResource
 		}
 		if actual.Namespace() == "child2" {
-			child2Actual = actual.ResourceQuotaSpec().Hard
+			child2Actual = actualResource
 		}
 		if actual.Namespace() == "child3" {
-			child3Actual = actual.ResourceQuotaSpec().Hard
+			child3Actual = actualResource
 		}
 	}
 	if !reflect.DeepEqual(child1Actual, child1ExpectedSpec) {

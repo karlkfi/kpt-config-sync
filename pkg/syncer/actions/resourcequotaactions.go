@@ -17,232 +17,63 @@ limitations under the License.
 package actions
 
 import (
-	"fmt"
 	"reflect"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/resourcequota"
-	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 )
 
-// ResourceQuotaAction represents a CRUD action on a resource quota spec
-type ResourceQuotaAction interface {
-	action.Interface
-	// The resource quota spec
-	ResourceQuotaSpec() core_v1.ResourceQuotaSpec
-}
-
-type resourceQuotaActionBase struct {
-	// The resource quota spec to be created/updated by the action (upsert only)
-	resourceQuotaSpec core_v1.ResourceQuotaSpec
-
-	// The labels we are going to apply to the resource (upsert only)
-	labels map[string]string
-
-	// The namespace in which the resource quota object lives
-	namespace string
-
-	// The type of the operation being performed, mostly here for logging purposes.
-	operation action.OperationType
-
-	// API Access related objects
-	kubernetesInterface kubernetes.Interface
-	resourceQuotaLister listers_core_v1.ResourceQuotaLister
-}
-
-// delete checks if the resource quota exists then deletes the object if it is not found in the cache.
-func (n *resourceQuotaActionBase) delete() error {
-	_, err := n.resourceQuotaLister.ResourceQuotas(n.namespace).Get(resourcequota.ResourceQuotaObjectName)
-	if err != nil {
-		if api_errors.IsNotFound(err) {
-			return nil
-		}
-		return errors.Wrapf(err, "Failed to get resource quota from %s for delete", n.namespace)
-	}
-	return n.reallyDelete()
-}
-
-// reallyDelete performs the delete object on the store. This will ignore IsNotFound errors since
-// that's the desired state of the store.
-func (n *resourceQuotaActionBase) reallyDelete() error {
-	err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Delete(
-		resourcequota.ResourceQuotaObjectName, &meta_v1.DeleteOptions{})
-	if err != nil {
-		if api_errors.IsNotFound(err) {
-			return nil
-		}
-		return errors.Wrapf(err, "Failed to delete resource quota for %s", n.namespace)
-	}
-	glog.Infof("Deleted resource quota for namespace %s", n.namespace)
-	return nil
-}
-
-// upsert will check if the resource exists then conditionally create or udpate it to the desired state.
-func (n *resourceQuotaActionBase) upsert() error {
-	resourceQuota, err := n.resourceQuotaLister.ResourceQuotas(n.namespace).Get(resourcequota.ResourceQuotaObjectName)
-	if err != nil {
-		if api_errors.IsNotFound(err) {
-			return n.reallyCreate()
-		}
-		return errors.Wrapf(err, "Failed to list resource quota object in %s for update", n.namespace)
-	}
-
-	return n.reallyUpdate(resourceQuota)
-}
-
-// updateResource will update an object's spec to match the spec set in the action.
-func (n *resourceQuotaActionBase) reallyUpdate(current *core_v1.ResourceQuota) error {
-	if reflect.DeepEqual(n.ResourceQuotaSpec, current.Spec) &&
-		reflect.DeepEqual(current.Labels, n.labels) {
-		return nil
-	}
-
-	createdResourceQuota, err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Update(
-		&core_v1.ResourceQuota{
-			ObjectMeta: meta_v1.ObjectMeta{
-				Name:            resourcequota.ResourceQuotaObjectName,
-				Labels:          n.labels,
-				ResourceVersion: current.ResourceVersion,
-			},
-			Spec:   n.resourceQuotaSpec,
-			Status: current.Status,
-		})
-	if err != nil {
-		return errors.Wrapf(err, "Failed to update quota for namespace %s", n.namespace)
-	}
-	glog.Infof("Updated resource quota for namespace %s, resourceVersion %s", n.namespace, createdResourceQuota.ResourceVersion)
-	return nil
-}
-
-// reallyCreate performs the create operation on the store. If an exists error is returned, this
-// will fall back to attempting an update.
-func (n *resourceQuotaActionBase) reallyCreate() error {
-	createdResourceQuota, err := n.kubernetesInterface.CoreV1().ResourceQuotas(n.namespace).Create(
-		&core_v1.ResourceQuota{
-			ObjectMeta: meta_v1.ObjectMeta{
-				Name:   resourcequota.ResourceQuotaObjectName,
-				Labels: n.labels,
-			},
-			Spec: n.resourceQuotaSpec,
-		})
-	if err != nil {
-		if api_errors.IsAlreadyExists(err) {
-			return n.upsert()
-		}
-		return errors.Wrapf(err, "Failed to create resource quota for %s", n.namespace)
-	}
-	glog.Infof("Created resource quota for namespace %s, resourceVersion %s", n.namespace, createdResourceQuota.ResourceVersion)
-	return nil
-}
-
-func (n *resourceQuotaActionBase) ResourceQuotaSpec() core_v1.ResourceQuotaSpec {
-	return n.resourceQuotaSpec
-}
-
-// Resource implements Interface
-func (n *resourceQuotaActionBase) Resource() string {
-	return "resourcequota"
-}
-
-// Resource implements Interface
-func (n *resourceQuotaActionBase) Kind() string {
-	return "ResourceQuota"
-}
-
-func (n *resourceQuotaActionBase) Namespace() string {
-	return n.namespace
-}
-
-func (n *resourceQuotaActionBase) Group() string {
-	return core_v1.SchemeGroupVersion.Group
-}
-
-func (n *resourceQuotaActionBase) Version() string {
-	return core_v1.SchemeGroupVersion.Version
-}
-
-func (n *resourceQuotaActionBase) Name() string {
-	return resourcequota.ResourceQuotaObjectName
-}
-
-func (n *resourceQuotaActionBase) Operation() action.OperationType {
-	return n.operation
-}
-
-// Resource implements Action
-func (n *resourceQuotaActionBase) String() string {
-	return fmt.Sprintf(
-		"%s/%s/%s/%s/%s",
-		n.Version(),
-		n.Kind(),
-		n.Namespace(),
-		n.Name(),
-		n.Operation())
-}
-
-// ------- Delete -------
-type ResourceQuotaDeleteAction struct {
-	resourceQuotaActionBase
-}
-
-var _ ResourceQuotaAction = &ResourceQuotaDeleteAction{}
-
+// NewResourceQuotaUpsertAction creates an delete action that will quota remove limits.
 func NewResourceQuotaDeleteAction(
 	namespace string,
 	kubernetesInterface kubernetes.Interface,
-	resourceQuotaLister listers_core_v1.ResourceQuotaLister) *ResourceQuotaDeleteAction {
-	return &ResourceQuotaDeleteAction{
-		resourceQuotaActionBase: resourceQuotaActionBase{
-			kubernetesInterface: kubernetesInterface,
-			resourceQuotaLister: resourceQuotaLister,
-			namespace:           namespace,
-			operation:           action.DeleteOperation,
-		},
+	resourceQuotaLister listers_core_v1.ResourceQuotaLister) *action.ReflectiveDeleteAction {
+	spec := &action.ReflectiveActionSpec{
+		Resource:   action.LowerPlural(core_v1.ResourceQuota{}),
+		KindPlural: action.Plural(core_v1.ResourceQuota{}),
+		Group:      core_v1.SchemeGroupVersion.Group,
+		Version:    core_v1.SchemeGroupVersion.Version,
+		EqualSpec:  ResourceQuotasEqual,
+		Client:     kubernetesInterface.CoreV1(),
+		Lister:     resourceQuotaLister,
 	}
+	return action.NewReflectiveDeleteAction(namespace, resourcequota.ResourceQuotaObjectName, spec)
 }
 
-// Execute implements Interface
-func (n *ResourceQuotaDeleteAction) Execute() error {
-	return n.delete()
-}
-
-// ------- Upsert -------
-
-// ResourceQuotaUpsertAction implements upserting to the backend.
-type ResourceQuotaUpsertAction struct {
-	resourceQuotaActionBase
-}
-
-// ResourceQuotaUpsertAction is a ResourceQuotaAction
-var _ ResourceQuotaAction = &ResourceQuotaUpsertAction{}
-
-// NewResourceQuotaUpsertAction creates an upsert action that will set
+// NewResourceQuotaUpsertAction creates an upsert action that will create/update quota limits.
 func NewResourceQuotaUpsertAction(
 	namespace string,
 	labels map[string]string,
 	resourceQuotaSpec core_v1.ResourceQuotaSpec,
 	kubernetesInterface kubernetes.Interface,
 	resourceQuotaLister listers_core_v1.ResourceQuotaLister,
-) *ResourceQuotaUpsertAction {
-	return &ResourceQuotaUpsertAction{
-		resourceQuotaActionBase: resourceQuotaActionBase{
-			kubernetesInterface: kubernetesInterface,
-			resourceQuotaLister: resourceQuotaLister,
-			resourceQuotaSpec:   resourceQuotaSpec,
-			labels:              labels,
-			namespace:           namespace,
-			operation:           action.UpsertOperation,
-		},
+) *action.ReflectiveUpsertAction {
+	spec := &action.ReflectiveActionSpec{
+		Resource:   action.LowerPlural(core_v1.ResourceQuota{}),
+		KindPlural: action.Plural(core_v1.ResourceQuota{}),
+		Group:      core_v1.SchemeGroupVersion.Group,
+		Version:    core_v1.SchemeGroupVersion.Version,
+		EqualSpec:  ResourceQuotasEqual,
+		Client:     kubernetesInterface.CoreV1(),
+		Lister:     resourceQuotaLister,
 	}
+	quota := &core_v1.ResourceQuota{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name:   resourcequota.ResourceQuotaObjectName,
+			Labels: labels,
+		},
+		Spec: resourceQuotaSpec,
+	}
+	return action.NewReflectiveUpsertAction(namespace, resourcequota.ResourceQuotaObjectName, quota, spec)
 }
 
-// Execute implements Interface
-func (s *ResourceQuotaUpsertAction) Execute() error {
-	return s.upsert()
+func ResourceQuotasEqual(lhs runtime.Object, rhs runtime.Object) bool {
+	lQuota := lhs.(*core_v1.ResourceQuota)
+	rQuota := rhs.(*core_v1.ResourceQuota)
+	return reflect.DeepEqual(lQuota.Spec, rQuota.Spec) && lQuota.Name == rQuota.Name
 }
