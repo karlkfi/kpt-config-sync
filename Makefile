@@ -49,21 +49,24 @@ VERSION := $(shell git describe --tags --always --dirty)
 # Which architecture to build.
 ARCH ?= amd64
 
-# Docker image used for build and test.  This image does not support CGO.
+# Docker image used for build and test. This image does not support CGO.
 BUILD_IMAGE ?= buildenv
 
-# GCP project that owns container registry.
-GCP_PROJECT ?= stolos-dev
-
-# Whether this is an official release or dev workflow.
+# Set to 1 to indicate this is official release instead of a local dev build.
 RELEASE ?= 0
 
-# Is the current release considered "stable".  Set to 0 for e.g. release
-# candidates.
+# Set to 1 to indicate this is a stable release.
+# For a stable release, the installer image will be tagged as latest and pulled by default.
 STABLE ?= 0
 
-# The GCS bucket to release into for 'make release'
-RELEASE_BUCKET := gs://$(GCP_PROJECT)
+# GCP project that owns container registry for local dev build.
+DEV_PROJECT ?= stolos-dev
+
+# GCP project that owns container registry for official releases.
+RELEASE_PROJECT := nomos-release
+
+# The GCS bucket containing official releases.
+RELEASE_BUCKET := gs://nomos-release
 
 # All Nomos components
 ALL_COMPONENTS := syncer \
@@ -77,8 +80,10 @@ DOCKER_INTERACTIVE ?= --interactive --tty
 
 # Docker image tag.
 ifeq ($(RELEASE), 1)
+	GCP_PROJECT := $(RELEASE_PROJECT)
 	IMAGE_TAG := $(VERSION)
 else
+	GCP_PROJECT := $(DEV_PROJECT)
 	IMAGE_TAG := $(VERSION)-$(shell date +'%s')
 endif
 
@@ -147,23 +152,52 @@ push-to-gcr-all: $(addprefix push-to-gcr-, $(ALL_COMPONENTS))
 push-to-gcr-%: image-%
 	gcloud docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
 
-# Builds the installer using the nomos release in .output
-installer: GCP_PROJECT=stolos-dev
-installer: push-to-gcr-all gen-yaml-all
-	ARCH=$(ARCH) \
-	BIN_DIR=$(BIN_DIR) \
-	GCP_PROJECT=$(GCP_PROJECT) \
-	IMAGE_TAG=$(IMAGE_TAG) \
-	OUTPUT_DIR=$(OUTPUT_DIR) \
-	RELEASE_BUCKET=$(RELEASE_BUCKET) \
-	STAGING_DIR=$(STAGING_DIR) \
-	TOP_DIR=$(TOP_DIR) \
-	VERSION=$(VERSION) \
-	STABLE=$(STABLE) \
-		$(TOP_DIR)/scripts/push-installer.sh
+# Creates staging directory for building installer docker image.
+installer-staging: push-to-gcr-all gen-yaml-all
+	cp -R $(TOP_DIR)/build/installer $(STAGING_DIR)
+	cp $(BIN_DIR)/$(ARCH)/installer $(STAGING_DIR)/installer
+	cp $(BIN_DIR)/$(ARCH)/configgen $(STAGING_DIR)/installer
+	mkdir -p $(STAGING_DIR)/installer/yaml
+	cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/installer/yaml
+	mkdir -p $(STAGING_DIR)/installer/manifests/enrolled
+	cp -R $(TOP_DIR)/manifests/enrolled/* $(STAGING_DIR)/installer/manifests/enrolled
+	mkdir -p $(STAGING_DIR)/installer/manifests/common
+	cp -R $(TOP_DIR)/manifests/common/* $(STAGING_DIR)/installer/manifests/common
+	mkdir -p $(STAGING_DIR)/installer/examples
+	cp -R $(TOP_DIR)/toolkit/installer/examples/* $(STAGING_DIR)/installer/examples
+	cp $(TOP_DIR)/toolkit/installer/entrypoint.sh $(STAGING_DIR)/installer
+	mkdir -p $(STAGING_DIR)/installer/scripts
+	cp $(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh \
+		$(STAGING_DIR)/installer/scripts
+	cp $(TOP_DIR)/scripts/generate-resourcequota-admission-controller-certs.sh \
+		$(STAGING_DIR)/installer/scripts
+
+# Builds the installer docker image using the nomos release in .output
+installer-image: installer-staging
+	docker build -t gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
+		--build-arg "INSTALLER_VERSION=$(IMAGE_TAG)" \
+		$(STAGING_DIR)/installer
+	gcloud docker -- push gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG)
+
+# Move the :latest tag to the image we just built if the release is STABLE.
+	@if [ "$(STABLE)" == "1" ]; then \
+		echo "Moving 'latest' label to reflect a STABLE version release."; \
+		gcloud container images add-tag --quiet \
+		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
+		gcr.io/$(GCP_PROJECT)/installer:latest; \
+	fi
+
+# Releases the run-installer script to GCS bucket.
+release-installer: installer-image
+	@if [ "$(RELEASE)" == "0" ]; then \
+		echo "Cannot release installer script in dev flow"; \
+		exit 1; \
+	fi
+	gsutil cp $(TOP_DIR)/scripts/run-installer.sh $(RELEASE_BUCKET)
+	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/run-installer.sh
 
 # Runs the installer via docker in interactive mode.
-deploy-interactive: installer
+deploy-interactive: installer-image
 	@./scripts/run-installer.sh \
 		--interactive \
 		--container=gcr.io/$(GCP_PROJECT)/installer \
@@ -171,7 +205,7 @@ deploy-interactive: installer
 
 # Runs the installer via docker in batch mode using the installer config
 # file specied in the environment variable NOMOS_INSTALLER_CONFIG.
-deploy: installer
+deploy: installer-image
 	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
 		echo 'must set NOMOS_INSTALLER_CONFIG to use make deploy'; \
 		exit 1; \
