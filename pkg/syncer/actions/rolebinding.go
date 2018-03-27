@@ -18,9 +18,10 @@ package actions
 import (
 	"reflect"
 
+	"github.com/google/nomos/pkg/client/action"
 	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	listers_rbac_v1 "k8s.io/client-go/listers/rbac/v1"
 )
@@ -44,74 +45,6 @@ func NewRoleBindingResource(
 // RoleResource implements ResourceInterface
 var _ ResourceInterface = &RoleBindingResource{}
 
-// Create implements ResourceInterface
-func (s RoleBindingResource) Create(obj interface{}) (interface{}, error) {
-	roleBinding := obj.(*rbac_v1.RoleBinding)
-	return s.client.RbacV1().RoleBindings(roleBinding.Namespace).Create(roleBinding)
-}
-
-// Delete implements ResourceInterface
-func (s RoleBindingResource) Delete(obj interface{}) error {
-	roleBinding := obj.(*rbac_v1.RoleBinding)
-	return s.client.RbacV1().RoleBindings(roleBinding.Namespace).Delete(
-		roleBinding.Name, &meta_v1.DeleteOptions{})
-}
-
-// Get implements ResourceInterface
-func (s RoleBindingResource) Get(obj interface{}) (interface{}, error) {
-	roleBinding := obj.(*rbac_v1.RoleBinding)
-	return s.lister.RoleBindings(roleBinding.Namespace).Get(roleBinding.Name)
-}
-
-// Update implements ResourceInterface
-func (s RoleBindingResource) Update(oldObj interface{}, newObj interface{}) (interface{}, error) {
-	newRoleBinding := newObj.(*rbac_v1.RoleBinding)
-	newRoleBinding.ResourceVersion = oldObj.(*rbac_v1.RoleBinding).ResourceVersion
-	return s.client.RbacV1().RoleBindings(newRoleBinding.Namespace).Update(newRoleBinding)
-}
-
-// Type implements ResourceInterface
-func (s RoleBindingResource) Type() string {
-	return "rolebinding"
-}
-
-// Kind implements ResourceInterface
-func (s RoleBindingResource) Kind() string {
-	return "RoleBinding"
-}
-
-// Group implements ResourceInterface
-func (s RoleBindingResource) Group(obj interface{}) string {
-	return rbac_v1.SchemeGroupVersion.Group
-}
-
-// Version implements ResourceInterface
-func (s RoleBindingResource) Version(obj interface{}) string {
-	return rbac_v1.SchemeGroupVersion.Version
-}
-
-// Name implements ResourceInterface
-func (s RoleBindingResource) Name(obj interface{}) string {
-	return obj.(*rbac_v1.RoleBinding).Name
-}
-
-// Namespace implements ResourceInterface
-func (s RoleBindingResource) Namespace(obj interface{}) string {
-	return obj.(*rbac_v1.RoleBinding).Namespace
-}
-
-// Equal implements ResourceInterface
-func (s RoleBindingResource) Equal(lhsObj interface{}, rhsObj interface{}) bool {
-	lhs := lhsObj.(*rbac_v1.RoleBinding)
-	rhs := rhsObj.(*rbac_v1.RoleBinding)
-	if MetaEquals(lhs.ObjectMeta, rhs.ObjectMeta) &&
-		reflect.DeepEqual(lhs.Subjects, rhs.Subjects) &&
-		reflect.DeepEqual(lhs.RoleRef, rhs.RoleRef) {
-		return true
-	}
-	return false
-}
-
 // Values implements ResourceInterface
 func (s *RoleBindingResource) Values(namespace string) (map[string]interface{}, error) {
 	ret := map[string]interface{}{}
@@ -125,14 +58,39 @@ func (s *RoleBindingResource) Values(namespace string) (map[string]interface{}, 
 	return ret, nil
 }
 
-// NewRoleBindingDeleteAction creates a generic delete action for the rolebinding.
+// NewRoleBindingDeleteAction returns a reflective delete action for the rolebinding.
 func NewRoleBindingDeleteAction(
-	roleBinding *rbac_v1.RoleBinding, roleBindingResource *RoleBindingResource) *GenericDeleteAction {
-	return NewGenericDeleteAction(roleBinding, roleBindingResource)
+	roleBinding *rbac_v1.RoleBinding, roleBindingResource *RoleBindingResource) *action.ReflectiveDeleteAction {
+	spec := &action.ReflectiveActionSpec{
+		Resource:   action.LowerPlural(rbac_v1.RoleBinding{}),
+		KindPlural: action.Plural(rbac_v1.RoleBinding{}),
+		Group:      rbac_v1.SchemeGroupVersion.Group,
+		Version:    rbac_v1.SchemeGroupVersion.Version,
+		EqualSpec:  RoleBindingsEqual,
+		Client:     roleBindingResource.client.RbacV1(),
+		Lister:     roleBindingResource.lister,
+	}
+	return action.NewReflectiveDeleteAction(roleBinding.Namespace, roleBinding.Name, spec)
 }
 
-// NewRoleBindingUpsertAction creates a new upsert action for role bindings.
+// NewRoleBindingUpsertAction returns a new reflective upsert action for role bindings.
 func NewRoleBindingUpsertAction(
-	roleBinding *rbac_v1.RoleBinding, roleBindingResource *RoleBindingResource) *GenericUpsertAction {
-	return NewGenericUpsertAction(roleBinding, roleBindingResource)
+	roleBinding *rbac_v1.RoleBinding, roleBindingResource *RoleBindingResource) *action.ReflectiveUpsertAction {
+	spec := &action.ReflectiveActionSpec{
+		Resource:   action.LowerPlural(rbac_v1.RoleBinding{}),
+		KindPlural: action.Plural(rbac_v1.RoleBinding{}),
+		Group:      rbac_v1.SchemeGroupVersion.Group,
+		Version:    rbac_v1.SchemeGroupVersion.Version,
+		EqualSpec:  RoleBindingsEqual,
+		Client:     roleBindingResource.client.RbacV1(),
+		Lister:     roleBindingResource.lister,
+	}
+	return action.NewReflectiveUpsertAction(roleBinding.Namespace, roleBinding.Name, roleBinding, spec)
+}
+
+func RoleBindingsEqual(lhs runtime.Object, rhs runtime.Object) bool {
+	lRoleBinding := lhs.(*rbac_v1.RoleBinding)
+	rRoleBinding := rhs.(*rbac_v1.RoleBinding)
+	return reflect.DeepEqual(lRoleBinding.Subjects, rRoleBinding.Subjects) &&
+		reflect.DeepEqual(lRoleBinding.RoleRef, rRoleBinding.RoleRef)
 }

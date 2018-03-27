@@ -18,9 +18,10 @@ package actions
 import (
 	"reflect"
 
+	"github.com/google/nomos/pkg/client/action"
 	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	listers_rbac_v1 "k8s.io/client-go/listers/rbac/v1"
 )
@@ -44,72 +45,6 @@ func NewRoleResource(
 	}
 }
 
-// Create implements ResourceInterface
-func (s *RoleResource) Create(obj interface{}) (interface{}, error) {
-	role := obj.(*rbac_v1.Role)
-	return s.client.RbacV1().Roles(role.Namespace).Create(role)
-}
-
-// Delete implements ResourceInterface
-func (s *RoleResource) Delete(obj interface{}) error {
-	role := obj.(*rbac_v1.Role)
-	return s.client.RbacV1().Roles(role.Namespace).Delete(role.Name, &meta_v1.DeleteOptions{})
-}
-
-// Get implements ResourceInterface
-func (s *RoleResource) Get(obj interface{}) (interface{}, error) {
-	role := obj.(*rbac_v1.Role)
-	return s.client.RbacV1().Roles(role.Namespace).Get(role.Name, meta_v1.GetOptions{})
-}
-
-// Update implements ResourceInterface
-func (s *RoleResource) Update(oldObj interface{}, newObj interface{}) (interface{}, error) {
-	nrb := newObj.(*rbac_v1.Role)
-	nrb.ResourceVersion = oldObj.(*rbac_v1.Role).ResourceVersion
-	return s.client.RbacV1().Roles(nrb.Namespace).Update(nrb)
-}
-
-// Type implements ResourceInterface
-func (s *RoleResource) Type() string {
-	return "role"
-}
-
-// Kind implements ResourceInterface
-func (s *RoleResource) Kind() string {
-	return "Role"
-}
-
-// Group implements ResourceInterface
-func (s *RoleResource) Group(obj interface{}) string {
-	return rbac_v1.SchemeGroupVersion.Group
-}
-
-// Version implements ResourceInterface
-func (s RoleResource) Version(obj interface{}) string {
-	return rbac_v1.SchemeGroupVersion.Version
-}
-
-// Name implements ResourceInterface
-func (s *RoleResource) Name(obj interface{}) string {
-	return obj.(*rbac_v1.Role).Name
-}
-
-// Namespace implements ResourceInterface
-func (s *RoleResource) Namespace(obj interface{}) string {
-	return obj.(*rbac_v1.Role).Namespace
-}
-
-// Equal implements ResourceInterface
-func (s *RoleResource) Equal(lhsObj interface{}, rhsObj interface{}) bool {
-	lhs := lhsObj.(*rbac_v1.Role)
-	rhs := rhsObj.(*rbac_v1.Role)
-	if MetaEquals(lhs.ObjectMeta, rhs.ObjectMeta) &&
-		reflect.DeepEqual(lhs.Rules, rhs.Rules) {
-		return true
-	}
-	return false
-}
-
 // Values implements ResourceInterface
 func (s *RoleResource) Values(namespace string) (map[string]interface{}, error) {
 	ret := map[string]interface{}{}
@@ -123,14 +58,38 @@ func (s *RoleResource) Values(namespace string) (map[string]interface{}, error) 
 	return ret, nil
 }
 
-// NewRoleDeleteAction creates a generic delete action for the rolebinding.
+// NewRoleDeleteAction returns a new delete action for the rolebinding.
 func NewRoleDeleteAction(
-	role *rbac_v1.Role, roleResource *RoleResource) *GenericDeleteAction {
-	return NewGenericDeleteAction(role, roleResource)
+	namespace, name string, roleResource *RoleResource) *action.ReflectiveDeleteAction {
+	spec := &action.ReflectiveActionSpec{
+		Resource:   action.LowerPlural(rbac_v1.Role{}),
+		KindPlural: action.Plural(rbac_v1.Role{}),
+		Group:      rbac_v1.SchemeGroupVersion.Group,
+		Version:    rbac_v1.SchemeGroupVersion.Version,
+		EqualSpec:  RolesEqual,
+		Client:     roleResource.client.RbacV1(),
+		Lister:     roleResource.lister,
+	}
+	return action.NewReflectiveDeleteAction(namespace, name, spec)
 }
 
-// NewRoleUpsertAction creates a new upsert action for role bindings.
+// NewRoleUpsertAction returns a new upsert action for role bindings.
 func NewRoleUpsertAction(
-	role *rbac_v1.Role, roleResource *RoleResource) *GenericUpsertAction {
-	return NewGenericUpsertAction(role, roleResource)
+	role *rbac_v1.Role, roleResource *RoleResource) *action.ReflectiveUpsertAction {
+	spec := &action.ReflectiveActionSpec{
+		Resource:   action.LowerPlural(rbac_v1.Role{}),
+		KindPlural: action.Plural(rbac_v1.Role{}),
+		Group:      rbac_v1.SchemeGroupVersion.Group,
+		Version:    rbac_v1.SchemeGroupVersion.Version,
+		EqualSpec:  RolesEqual,
+		Client:     roleResource.client.RbacV1(),
+		Lister:     roleResource.lister,
+	}
+	return action.NewReflectiveUpsertAction(role.Namespace, role.Name, role, spec)
+}
+
+func RolesEqual(lhs runtime.Object, rhs runtime.Object) bool {
+	lRole := lhs.(*rbac_v1.Role)
+	rRole := rhs.(*rbac_v1.Role)
+	return reflect.DeepEqual(lRole.Rules, rRole.Rules)
 }

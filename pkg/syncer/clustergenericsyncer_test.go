@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/nomos/pkg/syncer/labeling"
 
+	"github.com/google/go-cmp/cmp"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/action/test"
@@ -56,6 +57,14 @@ func (s *testClusterPolicyUnpacker) NewDeleteAction(name string) action.Interfac
 }
 func (s *testClusterPolicyUnpacker) NewUpsertAction(name string, obj runtime.Object) action.Interface {
 	return test.NewUpsert("", name, "ClusterRole")
+}
+
+type testQueue struct {
+	items []interface{}
+}
+
+func (s *testQueue) Add(item interface{}) {
+	s.items = append(s.items, item)
 }
 
 func testListRet() []runtime.Object {
@@ -165,4 +174,16 @@ func TestGCSOnDelete(t *testing.T) {
 		"group/v1/ClusterRole/unaccounted/delete",
 		"group/v1/ClusterRole/baz/delete",
 	})
+}
+
+func CheckQueueActions(t *testing.T, items []interface{}, expected []string) {
+	got := []string{}
+	for i := 0; i < len(items); i++ {
+		got = append(got, items[i].(action.Interface).String())
+	}
+
+	if !cmp.Equal(got, expected) {
+		t.Errorf("Items and expected not equal: %v\ngot: %v\nexpected: %v",
+			cmp.Diff(got, expected), got, expected)
+	}
 }

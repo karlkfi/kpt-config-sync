@@ -180,7 +180,7 @@ func (f *FlatteningSyncer) OnCreate(node *ph.PolicyNode) error {
 			}
 			if !isPolicyspace {
 				glog.V(10).Infof("Upsert item: %v.%v", item.Namespace, item.Name)
-				f.queue.Add(actions.NewGenericUpsertAction(item, f.roleBindingAction))
+				f.queue.Add(actions.NewRoleBindingUpsertAction(item, f.roleBindingAction))
 			}
 		}
 	})
@@ -195,7 +195,7 @@ func (f *FlatteningSyncer) OnCreate(node *ph.PolicyNode) error {
 			}
 			if !isPolicyspace {
 				glog.V(10).Infof("Upsert item: %v.%v", item.Namespace, item.Name)
-				f.queue.Add(actions.NewGenericUpsertAction(item, f.roleAction))
+				f.queue.Add(actions.NewRoleUpsertAction(item, f.roleAction))
 			}
 		}
 	})
@@ -250,7 +250,7 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 				if newNames.Contains(oldItem.Name) {
 					continue
 				}
-				f.queue.Add(actions.NewGenericDeleteAction(
+				f.queue.Add(actions.NewRoleBindingDeleteAction(
 					oldItem, f.roleBindingAction))
 			}
 			for i, _ := range newPolicies {
@@ -260,7 +260,7 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 					return
 				}
 				if !isPolicyspace {
-					f.queue.Add(actions.NewGenericUpsertAction(item, f.roleBindingAction))
+					f.queue.Add(actions.NewRoleBindingUpsertAction(item, f.roleBindingAction))
 				}
 			}
 		},
@@ -279,8 +279,8 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 				if newNames.Contains(oldItem.Name) {
 					continue
 				}
-				f.queue.Add(actions.NewGenericDeleteAction(
-					oldItem, f.roleAction))
+				f.queue.Add(actions.NewRoleDeleteAction(
+					oldItem.Namespace, oldItem.Name, f.roleAction))
 			}
 			for i, _ := range newPolicies {
 				item := &newPolicies[i]
@@ -289,7 +289,7 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 					return
 				}
 				if !isPolicyspace {
-					f.queue.Add(actions.NewGenericUpsertAction(item, f.roleAction))
+					f.queue.Add(actions.NewRoleUpsertAction(item, f.roleAction))
 				}
 			}
 		},
@@ -309,17 +309,18 @@ func (f *FlatteningSyncer) OnDelete(node *ph.PolicyNode) error {
 	f.policyTree.Delete(name)
 	result.RoleBindingNamespaces().StableForEach(func(namespace string) {
 		policies := result.RoleBindings(namespace)
-		for i, _ := range policies {
+		for i := range policies {
 			f.queue.Add(
-				actions.NewGenericDeleteAction(&policies[i], f.roleBindingAction))
+				actions.NewRoleBindingDeleteAction(&policies[i], f.roleBindingAction))
 		}
 	})
 	// TODO(filmil): DUPLICATION Remove if possible.
 	result.RoleNamespaces().StableForEach(func(namespace string) {
 		policies := result.Roles(namespace)
-		for i, _ := range policies {
+		for i := range policies {
+			role := &policies[i]
 			f.queue.Add(
-				actions.NewGenericDeleteAction(&policies[i], f.roleAction))
+				actions.NewRoleDeleteAction(role.Namespace, role.Name, f.roleAction))
 		}
 	})
 	return nil
@@ -374,9 +375,9 @@ func (f *FlatteningSyncer) PeriodicResync(nodes []*ph.PolicyNode) error {
 					continue
 				}
 				f.queue.Add(
-					actions.NewGenericDeleteAction(item, f.roleBindingAction))
+					actions.NewRoleBindingDeleteAction(item.(*rbac.RoleBinding), f.roleBindingAction))
 			}
-			for i, _ := range policies {
+			for i := range policies {
 				item := &policies[i]
 				isPolicyspace, err := policyTree.IsPolicyspace(item.Namespace)
 				if err != nil {
@@ -384,7 +385,7 @@ func (f *FlatteningSyncer) PeriodicResync(nodes []*ph.PolicyNode) error {
 				}
 				if !isPolicyspace {
 					f.queue.Add(
-						actions.NewGenericUpsertAction(item, f.roleBindingAction))
+						actions.NewRoleBindingUpsertAction(item, f.roleBindingAction))
 				}
 			}
 		})
@@ -407,10 +408,11 @@ func (f *FlatteningSyncer) PeriodicResync(nodes []*ph.PolicyNode) error {
 				if specified.Contains(name) {
 					continue
 				}
+				role := item.(*rbac.Role)
 				f.queue.Add(
-					actions.NewGenericDeleteAction(item, f.roleAction))
+					actions.NewRoleDeleteAction(role.Namespace, role.Name, f.roleAction))
 			}
-			for i, _ := range policies {
+			for i := range policies {
 				item := &policies[i]
 				isPolicyspace, err := policyTree.IsPolicyspace(item.Namespace)
 				if err != nil {
@@ -418,7 +420,7 @@ func (f *FlatteningSyncer) PeriodicResync(nodes []*ph.PolicyNode) error {
 				}
 				if !isPolicyspace {
 					f.queue.Add(
-						actions.NewGenericUpsertAction(item, f.roleAction))
+						actions.NewRoleUpsertAction(item, f.roleAction))
 				}
 			}
 		})

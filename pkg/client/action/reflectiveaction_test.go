@@ -533,7 +533,7 @@ func clusterPolicyNodeX(namespace, name string) runtime.Object {
 	return testObject
 }
 
-func TestRefelctiveActionPolicyNode(t *testing.T) {
+func TestReflectiveActionPolicyNode(t *testing.T) {
 	test := NewReflectiveActionTest(t, clusterPolicyNodeTestCases)
 
 	test.PrePopulate()

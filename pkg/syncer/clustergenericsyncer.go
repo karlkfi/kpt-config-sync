@@ -51,6 +51,11 @@ type ClusterPolicyUnpackerInterface interface {
 	NewUpsertAction(name string, obj runtime.Object) action.Interface
 }
 
+// Enqueuer implements the "Add" method of workqueue.RateLimitingInterface
+type Enqueuer interface {
+	Add(item interface{})
+}
+
 // ClusterGenericSyncer will sync cluster scoped resources that are defined in ClusterPolicy
 type ClusterGenericSyncer struct {
 	queue            Enqueuer                       // Queue for created operations
