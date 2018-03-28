@@ -46,14 +46,22 @@ usage()
 {
     cat << E0
       Usage: $0 [options]
-        --help
-        --version=<version>
-        --output_dir=<output_dir>
-        --interactive=<interactive>
-        --container=<container>
         --config=<config>
+        --container=<container>
+        --help
+        --interactive=true|false
+        --output_dir=<output_dir>
+        --use_current_context=true|false
+        --version=<version>
+        --yes=true|false
 E0
 }
+
+# If set to "true", the user has doubly confirmed a destructive operation.
+YES=false
+
+# If set to true, the user requested to uninstall.
+UNINSTALL=
 
 # If set to "true", the installer will use the current context to install into.
 USE_CURRENT_CONTEXT=""
@@ -78,7 +86,7 @@ if [[ $? -ne 4 ]]; then
 fi
 
 OPTIONS=hvoitc
-LONGOPTIONS=help::,version::,output_dir::,interactive::,container::,config::,use_current_context::
+LONGOPTIONS=help::,version::,output_dir::,interactive::,container::,config::,uninstall::,yes::,use_current_context::
 
 # -temporarily store output to be able to check for errors
 # -e.g. use “--options” parameter by name to activate quoting/enhanced mode
@@ -124,6 +132,14 @@ while true; do
             USE_CURRENT_CONTEXT="true"
             shift 2
             ;;
+        --uninstall)
+            UNINSTALL=true
+            shift 2
+            ;;
+        --yes)
+            YES=true
+            shift 2
+            ;;
         --)
             shift
             break
@@ -136,6 +152,12 @@ while true; do
 done
 
 ## Main ##
+
+readonly gcloud_prg="$(which gcloud)"
+if [[ -z "${gcloud_prg}" ]]; then
+  echo "gcloud is required."
+  exit 1
+fi
 
 CONFIG_DIR="examples"
 CONFIG_BASENAME="quickstart.yaml"
@@ -178,6 +200,8 @@ docker run -it \
   -e "CONFIG=${CONTAINER_CONFIG_FILE}" \
   -e "CONFIG_OUT=gen_configs/generated.yaml" \
   -e "SUGGESTED_USER=${suggested_user}" \
+  -e "UNINSTALL=${UNINSTALL}" \
+  -e "YES=${YES}" \
   -e "HOME_ON_HOST=${HOME}" \
   -e "USE_CURRENT_CONTEXT=${USE_CURRENT_CONTEXT}" \
   "${INSTALLER_CONTAINER}:${VERSION}" "$@" \
