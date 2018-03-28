@@ -52,21 +52,8 @@ ARCH ?= amd64
 # Docker image used for build and test. This image does not support CGO.
 BUILD_IMAGE ?= buildenv
 
-# Set to 1 to indicate this is official release instead of a local dev build.
-RELEASE ?= 0
-
-# Set to 1 to indicate this is a stable release.
-# For a stable release, the installer image will be tagged as latest and pulled by default.
-STABLE ?= 0
-
 # GCP project that owns container registry for local dev build.
-DEV_PROJECT ?= stolos-dev
-
-# GCP project that owns container registry for official releases.
-RELEASE_PROJECT := nomos-release
-
-# The GCS bucket containing official releases.
-RELEASE_BUCKET := gs://nomos-release
+GCP_PROJECT ?= stolos-dev
 
 # All Nomos components
 ALL_COMPONENTS := syncer \
@@ -78,14 +65,9 @@ ALL_COMPONENTS := syncer \
 # like in CI/CD.
 DOCKER_INTERACTIVE ?= --interactive --tty
 
-# Docker image tag.
-ifeq ($(RELEASE), 1)
-	GCP_PROJECT := $(RELEASE_PROJECT)
-	IMAGE_TAG := $(VERSION)
-else
-	GCP_PROJECT := $(DEV_PROJECT)
-	IMAGE_TAG := $(VERSION)-$(shell date +'%s')
-endif
+# Developer focused docker image tag.
+DATE := $(shell date +'%s')
+IMAGE_TAG ?= $(VERSION)-$(USER)-$(DATE)
 
 ##### SETUP #####
 
@@ -178,23 +160,6 @@ installer-image: installer-staging
 		--build-arg "INSTALLER_VERSION=$(IMAGE_TAG)" \
 		$(STAGING_DIR)/installer
 	gcloud docker -- push gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG)
-
-# Move the :latest tag to the image we just built if the release is STABLE.
-	@if [ "$(STABLE)" == "1" ]; then \
-		echo "Moving 'latest' label to reflect a STABLE version release."; \
-		gcloud container images add-tag --quiet \
-		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
-		gcr.io/$(GCP_PROJECT)/installer:latest; \
-	fi
-
-# Releases the run-installer script to GCS bucket.
-release-installer: installer-image
-	@if [ "$(RELEASE)" == "0" ]; then \
-		echo "Cannot release installer script in dev flow"; \
-		exit 1; \
-	fi
-	gsutil cp $(TOP_DIR)/scripts/run-installer.sh $(RELEASE_BUCKET)
-	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/run-installer.sh
 
 # Runs the installer via docker in interactive mode.
 deploy-interactive: installer-image

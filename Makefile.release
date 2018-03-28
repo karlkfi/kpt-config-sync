@@ -1,0 +1,67 @@
+#!/usr/bin/make
+#
+# Copyright 2018 Nomos Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+######################################################################
+
+# Makefile that configures for release.
+#
+# This file contains all the specific workflow and configuration to create
+# a nomos release.
+#
+# make release - will clean, build, package and push the entire code set to our
+# 				 release location.  This must be run from clean git client.
+#
+
+##### CONFIG #####
+
+# GCP project that owns container registry for official releases.
+GCP_PROJECT ?= nomos-release
+
+# The GCS bucket containing official releases.
+RELEASE_BUCKET ?= gs://nomos-release
+
+# Use git tags to set version string.
+VERSION := $(shell git describe --tags --always --dirty)
+
+# Set the IMAGE_TAG to only include the version info and no other build info.
+IMAGE_TAG := $(VERSION)
+
+##### SETUP ######
+
+include Makefile
+
+##### TARGETS #####
+
+# Checks the version tag to see if its dirty.  We should never release from
+# a dirty git client.
+check-dirty:
+	@if [ $(VERSION) != *"dirty"* ]; then \
+		echo "Cannot release from a dirty client"; \
+		exit 1; \
+    fi
+
+# Releases the run-installer script to GCS bucket.
+release: clean check-dirty installer-image
+	@gsutil cp $(TOP_DIR)/scripts/run-installer.sh $(RELEASE_BUCKET)
+	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/run-installer.sh
+
+# For releases we attach the :latest tag to the image we just built.
+bless-release:
+	echo "Moving 'latest' label to reflect a STABLE version release."; \
+	gcloud container images add-tag --quiet \
+	gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
+	gcr.io/$(GCP_PROJECT)/installer:latest; \
+
