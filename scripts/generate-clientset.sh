@@ -68,7 +68,11 @@ ${GOBASE}/bin/client-gen \
   --go-header-file="${BOILERPLATE}" \
   --clientset-path "${OUTPUT_CLIENT}"
 
+echo "Generating APIs"
+
 for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
+  echo "Generating API: ${api}"
+  echo "deepcopy"
   # Creates types.generated.go
   ${GOBASE}/bin/deepcopy-gen \
     ${LOGGING_FLAGS} \
@@ -77,6 +81,7 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
     --go-header-file="${BOILERPLATE}" \
     --output-base="${OUTPUT_BASE}"
 
+  echo "lister"
   ${GOBASE}/bin/lister-gen \
     ${LOGGING_FLAGS} \
     --input-dirs="${INPUT_BASE}/${api}" \
@@ -84,6 +89,7 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
     --go-header-file="${BOILERPLATE}" \
     --output-package="${OUTPUT_CLIENT}/listers"
 
+  echo "informer"
   ${GOBASE}/bin/informer-gen \
     ${LOGGING_FLAGS} \
     --input-dirs="${INPUT_BASE}/${api}" \

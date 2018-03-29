@@ -16,8 +16,11 @@
 #
 
 # The build environment docker file.
-FROM golang:1.9-alpine
+FROM golang:1.10-alpine
 
 # Adds support for building dynamically linked libraries.
 RUN apk add --no-cache gcc musl-dev
 
+# Starting from go 1.10, build and test results are cached, which speeds up
+# following runs.
+ENV GOCACHE=/go/cache

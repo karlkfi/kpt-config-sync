@@ -38,12 +38,11 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 			panic(err)
 		}
 	}
-
-	fakePtr := testing.Fake{}
-	fakePtr.AddReactor("*", "*", testing.ObjectReaction(o))
-	fakePtr.AddWatchReactor("*", testing.DefaultWatchReactor(watch.NewFake(), nil))
-
-	return &Clientset{fakePtr, &fakediscovery.FakeDiscovery{Fake: &fakePtr}}
+	c := &Clientset{discovery: &fakediscovery.FakeDiscovery{}}
+	c.Fake.AddReactor("*", "*", testing.ObjectReaction(o))
+	c.Fake.AddWatchReactor("*", testing.DefaultWatchReactor(watch.NewFake(), nil))
+	c.discovery.Fake = &c.Fake
+	return c
 }
 
 // Clientset implements clientset.Interface. Meant to be embedded into a
