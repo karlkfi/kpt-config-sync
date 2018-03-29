@@ -37,6 +37,9 @@ BIN_DIR := $(GO_DIR)/bin
 # Directory used for staging Docker contexts.
 STAGING_DIR := $(OUTPUT_DIR)/staging
 
+# Directory used for staging docs.
+DOCS_STAGING_DIR := $(STAGING_DIR)/docs
+
 # Directory containing gen-alld yaml files from manifest templates.
 GEN_YAML_DIR := $(OUTPUT_DIR)/yaml
 
@@ -140,17 +143,17 @@ push-to-gcr-%: image-%
 
 # Creates staging directory for building installer docker image.
 installer-staging: push-to-gcr-all gen-yaml-all
-	cp -R $(TOP_DIR)/build/installer $(STAGING_DIR)
+	cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
 	cp $(BIN_DIR)/$(ARCH)/installer $(STAGING_DIR)/installer
 	cp $(BIN_DIR)/$(ARCH)/configgen $(STAGING_DIR)/installer
 	mkdir -p $(STAGING_DIR)/installer/yaml
 	cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/installer/yaml
 	mkdir -p $(STAGING_DIR)/installer/manifests/enrolled
-	cp -R $(TOP_DIR)/manifests/enrolled/* $(STAGING_DIR)/installer/manifests/enrolled
+	cp -r $(TOP_DIR)/manifests/enrolled/* $(STAGING_DIR)/installer/manifests/enrolled
 	mkdir -p $(STAGING_DIR)/installer/manifests/common
-	cp -R $(TOP_DIR)/manifests/common/* $(STAGING_DIR)/installer/manifests/common
+	cp -r $(TOP_DIR)/manifests/common/* $(STAGING_DIR)/installer/manifests/common
 	mkdir -p $(STAGING_DIR)/installer/examples
-	cp -R $(TOP_DIR)/toolkit/installer/examples/* $(STAGING_DIR)/installer/examples
+	cp -r $(TOP_DIR)/toolkit/installer/examples/* $(STAGING_DIR)/installer/examples
 	cp $(TOP_DIR)/toolkit/installer/entrypoint.sh $(STAGING_DIR)/installer
 	mkdir -p $(STAGING_DIR)/installer/scripts
 	cp $(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh \
@@ -229,3 +232,34 @@ gen-yaml-all: $(addprefix gen-yaml-, $(ALL_COMPONENTS))
 gen-yaml-%:
 	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
+
+# Creates staging directory for generating docs.
+docs-staging: .output
+	rm -rf $(DOCS_STAGING_DIR)
+	cp -r $(TOP_DIR)/docs $(STAGING_DIR)
+	cp $(TOP_DIR)/README.md $(DOCS_STAGING_DIR)
+
+# Checks that grip binary is installed.
+check-for-grip:
+	@command -v grip || (echo "Need to install grip: pip install grip" && exit 1)
+
+# Converts Markdown docs into HTML.
+docs-generate: check-for-grip docs-staging
+	echo "CACHE_DIRECTORY = '$(DOCS_STAGING_DIR)/asset'" >> ~/.grip/settings.py
+# Convert markdown to HTML.
+	find $(DOCS_STAGING_DIR) -name "*.md" \
+		-exec grip --export {} --no-inline \; \
+		-exec rm {} \;
+# Post-process HTML.
+# 1. Convert links to our docs to be relative.
+# 2. Convert links to reflect flattened directory.
+# 2. Convert links to our docs to use html suffix.
+	find $(DOCS_STAGING_DIR) -name "*.html" \
+		-exec sed -i -r "s:$(TOP_DIR)/docs/::g" {} \;  \
+		-exec sed -i -r "s:docs/(.*\.md):\1:g" {} \; \
+		-exec sed -i -r "/http/b; s:\.md:\.html:g" {} \;
+	@echo "Open in your browser: file://$(DOCS_STAGING_DIR)/README.html"
+
+# Packages HTML docs into a zip package.
+docs-package: docs-generate
+	cd $(STAGING_DIR); rm -f nomos-docs.zip; zip -r nomos-docs.zip docs
