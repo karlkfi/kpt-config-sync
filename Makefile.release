@@ -24,6 +24,8 @@
 # make release - will clean, build, package and push the entire code set to our
 # 				 release location.  This must be run from clean git client.
 #
+# make bless-release - will move the 'latest' image tag to the release just
+#                      built with `make release`.
 
 ##### CONFIG #####
 
