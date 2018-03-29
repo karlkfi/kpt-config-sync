@@ -45,16 +45,8 @@ include Makefile
 
 ##### TARGETS #####
 
-# Checks the version tag to see if its dirty.  We should never release from
-# a dirty git client.
-check-dirty:
-	@if [ $(VERSION) != *"dirty"* ]; then \
-		echo "Cannot release from a dirty client"; \
-		exit 1; \
-    fi
-
 # Releases the run-installer script to GCS bucket.
-release: clean check-dirty installer-image
+release: clean installer-image
 	@gsutil cp $(TOP_DIR)/scripts/run-installer.sh $(RELEASE_BUCKET)
 	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/run-installer.sh
 
