@@ -17,13 +17,6 @@ cd $NOMOS_DIR
 echo "Go get ..."
 go get -d -t ../...
 
-echo "================== CHECKING CODEGEN ================"
-SILENT=true make gen-client-set
-if ! git -C ${NOMOS_DIR} diff --no-ext-diff --quiet --exit-code; then
-  echo "Detected change from codegen! Rerun ${codegen}"
-  exit 1
-fi
-
 echo "======================== BUILD ====================="
 make DOCKER_INTERACTIVE="" build
 
