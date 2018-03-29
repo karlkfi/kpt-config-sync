@@ -63,7 +63,11 @@ ALL_COMPONENTS := syncer \
 # Allows an interactive docker build or test session to be interrupted
 # by Ctrl-C.  This must be turned off in case of non-interactive runs,
 # like in CI/CD.
-DOCKER_INTERACTIVE ?= --interactive --tty
+DOCKER_INTERACTIVE := --interactive
+HAVE_TTY := $(shell [ -t 0 ] && echo 1 || echo 0)
+ifeq ($(HAVE_TTY), 1)
+	DOCKER_INTERACTIVE += --tty
+endif
 
 # Developer focused docker image tag.
 DATE := $(shell date +'%s')
