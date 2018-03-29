@@ -143,10 +143,12 @@ func (i *Installer) deploySshSecrets() error {
 	c := kubectl.New(context.Background())
 	c.DeleteSecret(secret, defaultNamespace)
 	// TODO(filmil): Should there be more validation of these file paths?
-	c.CreateSecretGenericFromFile(
+	if err := c.CreateSecretGenericFromFile(
 		secret, defaultNamespace,
 		fmt.Sprintf("ssh=%v", i.c.Ssh.PrivateKeyFilename),
-		fmt.Sprintf("known_hosts=%v", i.c.Ssh.KnownHostsFilename))
+		fmt.Sprintf("known_hosts=%v", i.c.Ssh.KnownHostsFilename)); err != nil {
+		return errors.Wrapf(err, "while creating ssh secrets")
+	}
 	return nil
 }
 
