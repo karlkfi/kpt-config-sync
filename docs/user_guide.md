@@ -37,12 +37,13 @@ foo-corp
 
 ##### Definitions
 
-1.  A leaf directory represents a namespace.
-1.  A non-leaf directory represents a policyspace.
+1.  A namespace directory is one that contains a Namespace resource.
+1.  Any other directory is a policyspace.
 
 ##### Constraints
 
-1.  A namespace directory must contain a Namespace resource.
+1.  A namespace directory must be a leaf directory (i.e., it must not have any
+    children).
 1.  A namespace directory can contain any number of Role and Rolebinding
     resources, and a single ResourceQuota resource.
 1.  A namespace directory name must match the namespace name in all resources in

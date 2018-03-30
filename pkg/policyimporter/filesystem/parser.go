@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"fmt"
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/util/namespaceutil"
@@ -67,11 +68,11 @@ func NewParser(inCluster bool) (*Parser, error) {
 // Parse recursively parses file tree rooted at root and builds policy CRDs from
 // supported Kubernetes policy resources.
 func (p Parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
-	allDirs, err := allDirs(root)
+	allDirsOrdered, err := allDirs(root)
 	if err != nil {
 		return nil, err
 	}
-	if err := validateDirNames(allDirs); err != nil {
+	if err := validateDirNames(allDirsOrdered); err != nil {
 		return nil, err
 	}
 
@@ -102,7 +103,7 @@ func (p Parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
 
 	dirInfos := make(map[string][]*resource.Info)
 	// Value of all dirs is initially set to nil.
-	for _, d := range allDirs {
+	for _, d := range allDirsOrdered {
 		dirInfos[d] = nil
 	}
 	// If a directory has resources, its value in the map
@@ -116,11 +117,10 @@ func (p Parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
 		return nil, err
 	}
 
-	return processDirs(root, dirInfos)
+	return processDirs(dirInfos, allDirsOrdered)
 }
 
-// allDirs returns absolute paths of all directories in root.
-// First element is root itself.
+// allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
 func allDirs(root string) ([]string, error) {
 	var paths []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
@@ -184,37 +184,28 @@ func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {
 // 1. Root directory: Top-level directory given by root.
 // 2. Policyspace directory: Non-leaf directories at any depth within root directory.
 // 3. Namespace directory: Leaf directories at any depth within root directory.
-func processDirs(root string, dirInfos map[string][]*resource.Info) (*policyhierarchy_v1.AllPolicies, error) {
-	policyspaceDirs := make(map[string]bool)
-	// Determine if dir is a policyspace by checking if it's a parent of any other dir.
-	for d := range dirInfos {
-		policyspaceDirs[filepath.Dir(d)] = true
-	}
+func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) (*policyhierarchy_v1.AllPolicies, error) {
+	namespaceDirs := make(map[string]bool)
 
 	var policies policyhierarchy_v1.AllPolicies
 	policies.PolicyNodes = make(map[string]policyhierarchy_v1.PolicyNode)
 
-	for d, infos := range dirInfos {
-		if d == root {
-			p, c, err := processRootDir(d, infos)
-			if err != nil {
-				return nil, errors.Wrapf(err, "root directory is invalid: %s", d)
-			}
-			policies.PolicyNodes[p.Name] = *p
-			policies.ClusterPolicy = c
-		} else if policyspaceDirs[d] {
-			p, err := processPolicyspaceDir(d, infos)
-			if err != nil {
-				return nil, errors.Wrapf(err, "policyspace directory is invalid: %s", d)
-			}
-			policies.PolicyNodes[p.Name] = *p
-		} else {
-			p, err := processNamespaceDir(d, infos)
-			if err != nil {
-				return nil, errors.Wrapf(err, "namespace directory is invalid: %s", d)
-			}
-			policies.PolicyNodes[p.Name] = *p
+	root := allDirsOrdered[0]
+	rootInfos := dirInfos[root]
+	p, c, err := processRootDir(root, rootInfos)
+	if err != nil {
+		return nil, errors.Wrapf(err, "root directory is invalid: %s", root)
+	}
+	policies.PolicyNodes[p.Name] = *p
+	policies.ClusterPolicy = c
+
+	for _, d := range allDirsOrdered[1:] {
+		infos := dirInfos[d]
+		p, err := processNonRootDir(d, infos, namespaceDirs)
+		if err != nil {
+			return nil, errors.Wrapf(err, "directory is invalid: %s", d)
 		}
+		policies.PolicyNodes[p.Name] = *p
 	}
 
 	return &policies, nil
@@ -272,6 +263,25 @@ func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.Pol
 	return pn, cp, nil
 }
 
+func processNonRootDir(dir string, infos []*resource.Info, namespaceDirs map[string]bool) (*policyhierarchy_v1.PolicyNode, error) {
+	parent := filepath.Dir(dir)
+	// Since directories are processed in DFS order, it's guaranteed that parent was already processed.
+	if namespaceDirs[parent] {
+		return nil, errors.Errorf("Namespace dir %s must not have children", parent)
+	}
+	for _, i := range infos {
+		o := i.AsVersioned()
+
+		switch o.(type) {
+		case *core_v1.Namespace:
+			namespaceDirs[dir] = true
+			return processNamespaceDir(dir, infos)
+		}
+	}
+	// No namespace resource was found.
+	return processPolicyspaceDir(dir, infos)
+}
+
 func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.PolicyNode, error) {
 	var policies policyhierarchy_v1.Policies
 	v := newValidator()
@@ -286,7 +296,8 @@ func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy
 		case *rbac_v1.ClusterRoleBinding:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.Namespace:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			// Should not be reachable.
+			panic(fmt.Sprintf("%s processed as policyspace but contains a namespace resource", dir))
 		case *extensions_v1beta1.PodSecurityPolicy:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:

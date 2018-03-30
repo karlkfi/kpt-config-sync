@@ -294,14 +294,6 @@ var parserTestCases = []parserTestCase{
 		expectedClusterPolicy: createClusterPolicy("foo"),
 	},
 	{
-		testName: "Namespace dir without Namespace",
-		root:     "foo",
-		testFiles: fileContentMap{
-			"bar/ignore": "",
-		},
-		expectedError: true,
-	},
-	{
 		testName: "Namespace dir with multiple Namespaces",
 		root:     "foo",
 		testFiles: fileContentMap{
@@ -446,17 +438,36 @@ var parserTestCases = []parserTestCase{
 		expectedError: true,
 	},
 	{
+		testName: "Namespace dir with policyspace child",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ns.yaml":    templateData{Name: "baz"}.apply(aNamespace),
+			"bar/baz/ignore": "",
+		},
+		expectedError: true,
+	},
+	{
+		testName: "Policyspace dir with ignored file",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ignore": "",
+		},
+		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
+			"foo": createPolicyNode("foo", "", true, nil),
+			"bar": createPolicyNode("bar", "foo", true, nil),
+		},
+		expectedClusterPolicy: createClusterPolicy("foo"),
+	},
+	{
 		testName: "Policyspace dir with ResourceQuota",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"bar/rq.yaml":     templateData{}.apply(aQuota),
-			"bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
+			"bar/rq.yaml": templateData{}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", true,
 				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
-			"baz": createPolicyNode("baz", "bar", false, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy("foo"),
 	},
@@ -464,8 +475,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ResourceQuota namespace set",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"bar/rq.yaml":     templateData{Namespace: "qux"}.apply(aQuota),
-			"bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
+			"bar/rq.yaml": templateData{Namespace: "qux"}.apply(aQuota),
 		},
 		expectedError: true,
 	},
@@ -482,8 +492,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with Roles",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
-			"bar/role.yaml":   templateData{}.apply(aRole),
+			"bar/role.yaml": templateData{}.apply(aRole),
 		},
 		expectedError: true,
 	},
@@ -491,18 +500,16 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with multiple Rolebindings",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
-			"bar/rb1.yaml":    templateData{ID: "1"}.apply(aRoleBinding),
-			"bar/rb2.yaml":    templateData{ID: "2"}.apply(aRoleBinding),
+			"bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+			"bar/rb2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{"foo": 0, "bar": 2, "baz": 0},
+		expectedNumPolicies: map[string]int{"foo": 0, "bar": 2},
 	},
 	{
 		testName: "Policyspace dir with ClusterRole",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
-			"bar/cr.yaml":     templateData{}.apply(aClusterRole),
+			"bar/cr.yaml": templateData{}.apply(aClusterRole),
 		},
 		expectedError: true,
 	},
@@ -510,8 +517,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ClusterRoleBinding",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
-			"bar/crb.yaml":    templateData{}.apply(aClusterRoleBinding),
+			"bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
 		},
 		expectedError: true,
 	},
@@ -519,8 +525,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with PodSecurityPolicy",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
-			"bar/psp.yaml":    templateData{}.apply(aPodSecurityPolicy),
+			"bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
 		expectedError: true,
 	},
