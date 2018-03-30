@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package validator is used for validating that the heirarchy specified using policy nodes forms
+// Package validator is used for validating that the hierarchy specified using policy nodes forms
 // a tree structure.
 package validator
 
@@ -30,6 +30,8 @@ import (
 type Validator struct {
 	policyNodes map[string]*policyhierarchy_v1.PolicyNode // name -> node
 	parents     map[string]string                         // child -> parent
+	// AllowMultipleRoots disables checks for multiple root nodes in the policy node hierarchy, when true.
+	AllowMultipleRoots bool
 }
 
 func New() *Validator {
@@ -37,6 +39,14 @@ func New() *Validator {
 		policyNodes: map[string]*policyhierarchy_v1.PolicyNode{},
 		parents:     map[string]string{},
 	}
+}
+
+func From(policyNodes ...*policyhierarchy_v1.PolicyNode) *Validator {
+	validator := New()
+	for _, policyNode := range policyNodes {
+		validator.Add(policyNode)
+	}
+	return validator
 }
 
 // Add adds a node in the hierarchy to the validator.
@@ -87,12 +97,12 @@ func (s *Validator) Remove(policyNode *policyhierarchy_v1.PolicyNode) error {
 }
 
 // Validate will validate that the tree structure satisfies the following:
-// there is only one root
+// there is only one root (or at least one, depending on config)
 // there are no cycles present
 // Each leaf (non org node leaf) is a designated as a working namespace.
 func (s *Validator) Validate() error {
 	for _, checkFunction := range []func() error{
-		s.checkMultipleRoots, s.checkCycles, s.checkWorkingNamespace} {
+		s.checkRoots, s.checkCycles, s.checkWorkingNamespace} {
 		if err := checkFunction(); err != nil {
 			return err
 		}
@@ -100,18 +110,25 @@ func (s *Validator) Validate() error {
 	return nil
 }
 
-// checkMultipleRoots validates that there is only one root by checking that children of empty string
-// (no parent) is of size 1
-func (s *Validator) checkMultipleRoots() error {
-	noParent := []string{}
+// checkRoots validates that there is only one (or at least one, if configured) root by checking
+// that children of empty string (no parent) is the appropriate size.
+func (s *Validator) checkRoots() error {
+	var noParent []string
 	for child, parent := range s.parents {
 		if parent == "" {
 			noParent = append(noParent, child)
 		}
 	}
-	if len(noParent) != 1 {
-		return errors.Errorf(
-			"Exactly one root (organization) node is required, found: %s", strings.Join(noParent, ", "))
+
+	if s.AllowMultipleRoots {
+		if len(noParent) == 0 {
+			return errors.New("At least one root (organization) node is required, none exist")
+		}
+	} else {
+		if len(noParent) != 1 {
+			return errors.Errorf(
+				"Exactly one root (organization) node is required, found: %s", strings.Join(noParent, ", "))
+		}
 	}
 	return nil
 }
@@ -149,7 +166,7 @@ func (s *Validator) checkCycles() error {
 		graph[child] = []interface{}{parent}
 	}
 
-	cycles := [][]interface{}{}
+	var cycles [][]interface{}
 	output := tarjan.Connections(graph)
 	for _, item := range output {
 		if 2 <= len(item) {

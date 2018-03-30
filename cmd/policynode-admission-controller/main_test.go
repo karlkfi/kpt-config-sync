@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2018 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -23,15 +23,15 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/admissioncontroller"
-	"github.com/google/nomos/pkg/admissioncontroller/resourcequota"
+	"github.com/google/nomos/pkg/admissioncontroller/policynode"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
 func TestRequest(t *testing.T) {
-	ts := httptest.NewTLSServer(http.HandlerFunc(admissioncontroller.ServeFunc(resourcequota.NewAdmitter(
-		fakeinformers.NewPolicyNodeInformer(), fakeinformers.NewResourceQuotaInformer()))))
+	ts := httptest.NewTLSServer(http.HandlerFunc(admissioncontroller.ServeFunc(policynode.NewAdmitter(
+		fakeinformers.NewPolicyNodeInformer()))))
 	defer ts.Close()
 
 	request := admissionv1beta1.AdmissionReview{

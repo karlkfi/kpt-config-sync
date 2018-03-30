@@ -16,12 +16,13 @@ limitations under the License.
 
 // This is the Resource Quota admission controller which will do a hierarchical evaluation of quota objects
 // to ensure quota is not being violated whenever resources get created/modified along the hierarchy of namespaces.
-package admissioncontroller
+package resourcequota
 
 import (
 	"strconv"
 	"time"
 
+	"github.com/google/nomos/pkg/admissioncontroller"
 	informerspolicynodev1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/prometheus/client_golang/prometheus"
@@ -36,45 +37,19 @@ import (
 	quotainstall "k8s.io/kubernetes/pkg/quota/install"
 )
 
-// Prometheus metrics
-var (
-	admitDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Help:      "Quota admission duration distributions",
-			Namespace: "nomos",
-			Subsystem: "quota_admission",
-			Name:      "action_duration_seconds",
-			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
-		},
-		[]string{"namespace", "allowed"},
-	)
-	errTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Help:      "Total internal errors that occurred when reviewing quota requests",
-			Namespace: "nomos",
-			Subsystem: "quota_admission",
-			Name:      "error_total",
-		},
-		[]string{"namespace"},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(admitDuration)
-	prometheus.MustRegister(errTotal)
-}
-
-type ResourceQuotaAdmitter struct {
+type Admitter struct {
 	policyNodeInformer    informerspolicynodev1.PolicyNodeInformer
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer
 	quotaRegistry         quota.Registry
 	decoder               runtime.Decoder
+	admitDuration         *prometheus.HistogramVec
+	errTotal              *prometheus.CounterVec
 }
 
-var _ Admitter = (*ResourceQuotaAdmitter)(nil)
+var _ admissioncontroller.Admitter = (*Admitter)(nil)
 
-func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
-	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) Admitter {
+func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
+	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) admissioncontroller.Admitter {
 	quotaConfiguration := quotainstall.NewQuotaConfigurationForAdmission()
 	quotaRegistry := generic.NewRegistry(quotaConfiguration.Evaluators())
 
@@ -84,16 +59,41 @@ func NewResourceQuotaAdmitter(policyNodeInformer informerspolicynodev1.PolicyNod
 
 	decoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
 
-	return &ResourceQuotaAdmitter{
+	// Prometheus metrics
+	admitDuration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Help:      "Quota admission duration distributions",
+			Namespace: "nomos",
+			Subsystem: "quota_admission",
+			Name:      "action_duration_seconds",
+			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
+		},
+		[]string{"namespace", "allowed"},
+	)
+	errTotal := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Help:      "Total internal errors that occurred when reviewing quota requests",
+			Namespace: "nomos",
+			Subsystem: "quota_admission",
+			Name:      "error_total",
+		},
+		[]string{"namespace"},
+	)
+	prometheus.MustRegister(admitDuration)
+	prometheus.MustRegister(errTotal)
+
+	return &Admitter{
 		policyNodeInformer:    policyNodeInformer,
 		resourceQuotaInformer: resourceQuotaInformer,
 		quotaRegistry:         quotaRegistry,
 		decoder:               decoder,
+		admitDuration:         admitDuration,
+		errTotal:              errTotal,
 	}
 }
 
 // Decides whether to admit a request.
-func (r *ResourceQuotaAdmitter) Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
+func (r *Admitter) Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
 	if review.Request == nil {
 		return &admissionv1beta1.AdmissionResponse{
 			Allowed: true,
@@ -102,18 +102,18 @@ func (r *ResourceQuotaAdmitter) Admit(review admissionv1beta1.AdmissionReview) *
 	start := time.Now()
 	resp := r.internalAdmit(review)
 	elapsed := time.Since(start).Seconds()
-	admitDuration.WithLabelValues(review.Request.Namespace, strconv.FormatBool(resp.Allowed)).Observe(elapsed)
+	r.admitDuration.WithLabelValues(review.Request.Namespace, strconv.FormatBool(resp.Allowed)).Observe(elapsed)
 	return resp
 }
 
-func (r *ResourceQuotaAdmitter) internalAdmit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
+func (r *Admitter) internalAdmit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
 	cache, err := resourcequota.NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
 	if err != nil {
-		return internalErrorDeny(err, review.Request.Namespace)
+		return admissioncontroller.InternalErrorDeny(r.errTotal, err, review.Request.Namespace)
 	}
 	newUsage, err := r.getNewUsage(*review.Request)
 	if err != nil {
-		return internalErrorDeny(err, review.Request.Namespace)
+		return admissioncontroller.InternalErrorDeny(r.errTotal, err, review.Request.Namespace)
 	}
 	admitError := cache.Admit(review.Request.Namespace, newUsage)
 	if admitError != nil {
@@ -131,9 +131,9 @@ func (r *ResourceQuotaAdmitter) internalAdmit(review admissionv1beta1.AdmissionR
 }
 
 // getNewUsage returns the resource usage that would result from the given request.
-func (r *ResourceQuotaAdmitter) getNewUsage(request admissionv1beta1.AdmissionRequest) (core_v1.ResourceList, error) {
+func (r *Admitter) getNewUsage(request admissionv1beta1.AdmissionRequest) (core_v1.ResourceList, error) {
 	v1NewUsage := core_v1.ResourceList{}
-	attributes := getAttributes(r.decoder, request)
+	attributes := admissioncontroller.GetAttributes(r.decoder, request)
 	evaluator := r.quotaRegistry.Get(attributes.GetResource().GroupResource())
 
 	if evaluator != nil && evaluator.Handles(attributes) {
@@ -146,15 +146,4 @@ func (r *ResourceQuotaAdmitter) getNewUsage(request admissionv1beta1.AdmissionRe
 		}
 	}
 	return v1NewUsage, nil
-}
-
-func internalErrorDeny(err error, namespace string) *admissionv1beta1.AdmissionResponse {
-	errTotal.WithLabelValues(namespace).Inc()
-	return &admissionv1beta1.AdmissionResponse{
-		Allowed: false,
-		Result: &metav1.Status{
-			Message: err.Error(),
-			Reason:  metav1.StatusReason(metav1.StatusReasonInternalError),
-		},
-	}
 }

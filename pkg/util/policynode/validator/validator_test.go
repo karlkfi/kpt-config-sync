@@ -107,7 +107,7 @@ func TestMultipleRoots(t *testing.T) {
 	v.Add(newNode("child1", "root", true))
 	v.Add(newNode("child2", "child1", false))
 
-	if err := v.checkMultipleRoots(); err != nil {
+	if err := v.checkRoots(); err != nil {
 		t.Errorf("Multiple roots state should be OK %s %s", err, spew.Sdump(v))
 	}
 	if err := v.Validate(); err != nil {
@@ -116,11 +116,46 @@ func TestMultipleRoots(t *testing.T) {
 
 	v.Add(newNode("root2", "", true))
 	v.Add(newNode("child2-1", "root2", false))
-	if err := v.checkMultipleRoots(); err == nil {
+	if err := v.checkRoots(); err == nil {
 		t.Errorf("Should have detected multiple roots error")
 	}
 	if err := v.Validate(); err == nil {
 		t.Errorf("Should have detected multiple roots error")
+	}
+}
+
+func TestAllowMultipleRoots(t *testing.T) {
+	v := New()
+	v.AllowMultipleRoots = true
+
+	v.Add(newNode("root", "", true))
+	v.Add(newNode("child1", "root", true))
+	v.Add(newNode("child2", "child1", false))
+	v.Add(newNode("root2", "", true))
+	v.Add(newNode("child2-1", "root2", false))
+
+	if err := v.checkRoots(); err != nil {
+		t.Errorf("Should not have detected multiple roots error: %v", err)
+	}
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should not have detected multiple roots error: %v", err)
+	}
+}
+
+func TestNoRoot(t *testing.T) {
+	v := New()
+	v.AllowMultipleRoots = true
+
+	v.Add(newNode("root", "", true))
+	v.Add(newNode("child1", "root", true))
+	v.Add(newNode("child2", "child1", false))
+	v.Remove(newNode("root", "", true))
+
+	if err := v.checkRoots(); err == nil {
+		t.Errorf("Should have detected no roots error")
+	}
+	if err := v.Validate(); err == nil {
+		t.Errorf("Should have detected no roots error")
 	}
 }
 

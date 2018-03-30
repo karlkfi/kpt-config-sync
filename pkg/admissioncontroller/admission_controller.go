@@ -18,11 +18,29 @@ limitations under the License.
 package admissioncontroller
 
 import (
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// 5 seconds should be enough for endpoint to come up in the Kubernetes server.
+const EndpointRegistrationTimeout = time.Second * 5
 
 // The interface for admission controller implementations
 type Admitter interface {
 	// Returns an admission review status based on the admission review request containing the resource being modified.
 	Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse
+}
+
+func InternalErrorDeny(counter *prometheus.CounterVec, err error, namespace string) *admissionv1beta1.AdmissionResponse {
+	counter.WithLabelValues(namespace).Inc()
+	return &admissionv1beta1.AdmissionResponse{
+		Allowed: false,
+		Result: &metav1.Status{
+			Message: err.Error(),
+			Reason:  metav1.StatusReason(metav1.StatusReasonInternalError),
+		},
+	}
 }

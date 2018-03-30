@@ -1,5 +1,4 @@
-// Reviewed by sunilarora
-package admissioncontroller
+package resourcequota
 
 import (
 	"testing"
@@ -13,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func TestAuthorize(t *testing.T) {
+func TestQuotaAuthorize(t *testing.T) {
 	// Initial setup of quotas
 	// Limits and structure
 	policyNodes := []runtime.Object{
@@ -54,7 +53,7 @@ func TestAuthorize(t *testing.T) {
 	policyNodeInformer := fakeinformers.NewPolicyNodeInformer(policyNodes...)
 	resourceQuotaInformer := fakeinformers.NewResourceQuotaInformer()
 
-	admitter := NewResourceQuotaAdmitter(policyNodeInformer, resourceQuotaInformer)
+	admitter := NewAdmitter(policyNodeInformer, resourceQuotaInformer)
 
 	pod := core_v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: "mypod", Namespace: "kitties"},

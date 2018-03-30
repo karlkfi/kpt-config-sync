@@ -1,6 +1,5 @@
-// Reviewed by sunilarora
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2018 The Nomos Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -14,53 +13,38 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This package runs the hierarchical resource quota admission controller
+// This package runs the policy node validation admission controller
 package main
 
 import (
 	"flag"
 	"net"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/admissioncontroller"
-	"github.com/google/nomos/pkg/admissioncontroller/resourcequota"
+	"github.com/google/nomos/pkg/admissioncontroller/policynode"
+
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/util/log"
 	"github.com/pkg/errors"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/informers"
-	informerscorev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
 const (
-	externalAdmissionHookConfigName = "resource-quota.nomos.dev"
+	externalAdmissionHookConfigName = "policy-nodes.nomos.dev"
 	controllerNamespace             = "nomos-system"
-	controllerName                  = "resourcequota-admission-controller"
+	controllerName                  = "policynode-admission-controller"
 )
 
 var (
 	caBundleFile = flag.String("ca-cert", "ca.crt", "Webhook server bundle cert used by api-server to authenticate the webhook server.")
 	enablemTLS   = flag.Bool("enable-mutual-tls", false, "If set, enables mTLS verification of the client connecting to the admission controller.")
 )
-
-func setupResourceQuotaInformer(config *rest.Config) (informerscorev1.ResourceQuotaInformer, error) {
-	k8sClient, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	k8sFactory := informers.NewSharedInformerFactory(k8sClient, time.Minute)
-	resourceQuotaInformer := k8sFactory.Core().V1().ResourceQuotas()
-	resourceQuotaInformer.Informer()
-	k8sFactory.Start(nil)
-
-	return resourceQuotaInformer, nil
-}
 
 // register the webhook admission controller with the kube-apiserver.
 func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
@@ -76,16 +60,17 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 		},
 		Webhooks: []admissionregistrationv1beta1.Webhook{
 			{
-				Name: "resourcequota.nomos.dev",
+				Name: "policynodes.nomos.dev",
 				Rules: []admissionregistrationv1beta1.RuleWithOperations{{
 					Operations: []admissionregistrationv1beta1.OperationType{
 						admissionregistrationv1beta1.Create,
 						admissionregistrationv1beta1.Update,
+						admissionregistrationv1beta1.Delete,
 					},
 					Rule: admissionregistrationv1beta1.Rule{
-						APIGroups:   []string{"*"},
-						APIVersions: []string{"*"},
-						Resources:   []string{"*"},
+						APIGroups:   []string{"nomos.dev"},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"policynodes"},
 					},
 				}},
 				FailurePolicy: &failurePolicy,
@@ -102,7 +87,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	}
 	glog.Info("Creating ValidatingWebhookConfiguration")
 	if _, err := client.Create(webhookConfig); err != nil {
-		return errors.Wrap(err, "failed to create ValidatingWebhookConfiguration")
+		return errors.Wrap(err, "failed to create ValidatingWebhookConfiguration: %v")
 	}
 	return nil
 }
@@ -111,7 +96,7 @@ func main() {
 	flag.Parse()
 	log.Setup()
 
-	glog.Info("Hierarchical Resource Quota Admission Controller starting up")
+	glog.Info("Policy Node Quota Admission Controller starting up")
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -132,12 +117,8 @@ func main() {
 	if err != nil {
 		glog.Fatal("Failed setting up policyNode informer: ", err)
 	}
-	resourceQuotaInformer, err := setupResourceQuotaInformer(config)
-	if err != nil {
-		glog.Fatal("Failed setting up resourceQuota informer: ", err)
-	}
 	glog.Info("Waiting for informers to sync...")
-	if !cache.WaitForCacheSync(nil, policyNodeInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
+	if !cache.WaitForCacheSync(nil, policyNodeInformer.Informer().HasSynced) {
 		glog.Fatal("Failure while waiting for informers to sync")
 	}
 
@@ -145,7 +126,7 @@ func main() {
 
 	server := service.Server(
 		admissioncontroller.ServeFunc(
-			resourcequota.NewAdmitter(policyNodeInformer, resourceQuotaInformer)),
+			policynode.NewAdmitter(policyNodeInformer)),
 		clientCert)
 
 	stopChannel := make(chan struct{})

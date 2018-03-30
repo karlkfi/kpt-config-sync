@@ -78,8 +78,8 @@ func (spec *AdmissionReviewSpec) GetUserInfo() user.Info {
 	}
 }
 
-// getAttributes returns admissions attributes initialized from the given request and decoder.
-func getAttributes(decoder runtime.Decoder, request v1beta1.AdmissionRequest) admission.Attributes {
+// GetAttributes returns admissions attributes initialized from the given request and decoder.
+func GetAttributes(decoder runtime.Decoder, request v1beta1.AdmissionRequest) admission.Attributes {
 	unpackedSpec := unpackRawSpec(decoder, request)
 	reviewSpec := AdmissionReviewSpec(unpackedSpec)
 	return admission.Attributes(&reviewSpec)
