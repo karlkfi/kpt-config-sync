@@ -57,6 +57,31 @@
   name = "github.com/russross/blackfriday"
   version = "v1.4-2-g300106c"
 
+# Required for vendoring github.com/kubernetes-sigs/kubebuilder
+[[override]]
+  name = "github.com/kubernetes-sigs/kubebuilder"
+  branch = "master"
+
+# Required for vendoring github.com/kubernetes-sigs/kubebuilder
+[[override]]
+  name = "github.com/golang/glog"
+  branch = "master"
+
+# Required for vendoring github.com/kubernetes-sigs/kubebuilder
+[[override]]
+  name = "k8s.io/api"
+  version = "kubernetes-1.9.1-beta.0"
+
+# Required for vendoring github.com/kubernetes-sigs/kubebuilder
+[[override]]
+  name = "k8s.io/apimachinery"
+  version = "kubernetes-1.9.1-beta.0"
+
+# Required for vendoring github.com/kubernetes-sigs/kubebuilder
+[[override]]
+  name = "k8s.io/client-go"
+  version = "6.0.0"
+
 [prune]
   go-tests = true
   unused-packages = true

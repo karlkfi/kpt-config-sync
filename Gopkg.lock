@@ -351,6 +351,23 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/kubernetes-sigs/kubebuilder"
+  packages = [
+    "pkg/config",
+    "pkg/controller",
+    "pkg/controller/eventhandlers",
+    "pkg/controller/informers",
+    "pkg/controller/metrics",
+    "pkg/controller/predicates",
+    "pkg/controller/types",
+    "pkg/inject/args",
+    "pkg/inject/run",
+    "pkg/signals"
+  ]
+  revision = "999ae5ad9392a0e7af656978e7379bcad9496eb0"
+
+[[projects]]
+  branch = "master"
   name = "github.com/looplab/tarjan"
   packages = ["."]
   revision = "9cc6d6cebfb53dbdb1376b597384e92465f6fcd4"
@@ -599,10 +616,14 @@
   version = "kubernetes-1.9.1-beta.0"
 
 [[projects]]
+  branch = "release-1.9"
   name = "k8s.io/apiextensions-apiserver"
-  packages = ["pkg/features"]
-  revision = "98ecf7bbd60f9f11a72000e4f05203f542136219"
-  version = "kubernetes-1.9.1-beta.0"
+  packages = [
+    "pkg/apis/apiextensions",
+    "pkg/apis/apiextensions/v1beta1",
+    "pkg/features"
+  ]
+  revision = "ed51e547bbfe4b39e84eef9f98d946ac913449eb"
 
 [[projects]]
   name = "k8s.io/apimachinery"
@@ -1055,6 +1076,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dfef9b105721a925b325bd212f366a48e8e0723d89b4c9f98a777cab7fd0ba19"
+  inputs-digest = "6cf0848d657f4693b0fae097d2cd9088963f540621ab180ff6d161af9ef69176"
   solver-name = "gps-cdcl"
   solver-version = 1
