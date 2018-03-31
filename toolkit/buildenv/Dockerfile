@@ -19,7 +19,13 @@
 FROM golang:1.10-alpine
 
 # Adds support for building dynamically linked libraries.
-RUN apk add --no-cache gcc musl-dev
+RUN apk add --no-cache \
+  bash \
+  gcc \
+  musl-dev \
+  py-pip
+
+RUN pip install grip
 
 # Starting from go 1.10, build and test results are cached, which speeds up
 # following runs.

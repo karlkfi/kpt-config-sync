@@ -244,20 +244,20 @@ check-for-grip:
 	@command -v grip || (echo "Need to install grip: pip install grip" && exit 1)
 
 # Converts Markdown docs into HTML.
-docs-generate: check-for-grip docs-staging
-	echo "CACHE_DIRECTORY = '$(DOCS_STAGING_DIR)/asset'" >> ~/.grip/settings.py
-# Convert markdown to HTML.
-	GRIPURL=$(DOCS_STAGING_DIR) find $(DOCS_STAGING_DIR) -name "*.md" \
-		-exec grip --export {} --no-inline \; \
-		-exec rm {} \;
-# Post-process HTML.
-# 1. Convert links to our docs to be relative.
-# 2. Convert links to reflect flattened directory.
-# 2. Convert links to our docs to use html suffix.
-	find $(DOCS_STAGING_DIR) -name "*.html" \
-		-exec sed -i -r "s:$(DOCS_STAGING_DIR)/::g" {} \;  \
-		-exec sed -i -r "s:docs/(.*\.md):\1:g" {} \; \
-		-exec sed -i -r "/http/b; s:\.md:\.html:g" {} \;
+docs-generate: buildenv docs-staging
+	@docker run $(DOCKER_INTERACTIVE) \
+		-u $$(id -u):$$(id -g)                                             \
+		-v $$(pwd):/go/src/$(REPO)                                         \
+		-w /go/src/$(REPO)                                                 \
+		-e HOME=/go/src/$(REPO)/.output/config                             \
+		-e REPO=$(REPO)                                                    \
+		-e DOCS_STAGING_DIR=/go/src/$(REPO)/.output/staging/docs           \
+		-e TOP_DIR=/go/src/$(REPO)                                         \
+		--rm                                                               \
+		$(BUILD_IMAGE)                                                     \
+		/bin/bash -c " \
+		    ./scripts/docs-generate.sh \
+	    "
 	@echo "Open in your browser: file://$(DOCS_STAGING_DIR)/README.html"
 
 # Packages HTML docs into a zip package.
