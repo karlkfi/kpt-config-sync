@@ -1,6 +1,6 @@
 # System Overview
 
-![drawing](img/nomos_arch.svg)
+![drawing](img/nomos_arch.png)
 
 The above diagram is a simplified view of Nomos components running on a workload
 cluster. Each component is described below.

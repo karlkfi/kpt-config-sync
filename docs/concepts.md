@@ -45,7 +45,7 @@ commit permissions to a subtree to someone else.
 One can imagine a brick and mortar retailer having a hierarchy of policyspaces
 and namespaces that looks like this
 
-![drawing](img/foo_corp_hierarchy.svg)
+![drawing](img/foo_corp_hierarchy.png)
 
 In Foo corp, a small team (8-10 people) runs a few microservice workloads that
 together provide a bigger component. Everyone on the team has the same set of
