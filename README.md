@@ -27,6 +27,10 @@ See [Quickstart](docs/quickstart.md).
 *   [User Guide](docs/user_guide.md)
 *   [Monitoring and Debugging](docs/monitoring_and_debugging.md)
 
+## Contributing to Nomos
+
+[Developer Guide](docs/dev_guide.md)
+
 ## Send feedback
 
 Questions or feedback? Get in touch with us at
