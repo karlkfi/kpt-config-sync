@@ -33,14 +33,7 @@ function initialSetUp() {
   echo "****************** Setting up environment ******************"
   cd ${MAKEDIR}
 
-  make deploy-common-objects
-
-  if ! kubectl get ns nomos-system > /dev/null; then
-    echo "Failed setting up Nomos on cluster"
-    exit 1
-  fi
-
-  if ! make all-deploy ; then
+  if ! make deploy ; then
     echo "Failed to deploy Nomos components, aborting test"
     exit 1
   fi
