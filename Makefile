@@ -247,7 +247,7 @@ check-for-grip:
 docs-generate: check-for-grip docs-staging
 	echo "CACHE_DIRECTORY = '$(DOCS_STAGING_DIR)/asset'" >> ~/.grip/settings.py
 # Convert markdown to HTML.
-	find $(DOCS_STAGING_DIR) -name "*.md" \
+	GRIPURL=$(DOCS_STAGING_DIR) find $(DOCS_STAGING_DIR) -name "*.md" \
 		-exec grip --export {} --no-inline \; \
 		-exec rm {} \;
 # Post-process HTML.
@@ -255,7 +255,7 @@ docs-generate: check-for-grip docs-staging
 # 2. Convert links to reflect flattened directory.
 # 2. Convert links to our docs to use html suffix.
 	find $(DOCS_STAGING_DIR) -name "*.html" \
-		-exec sed -i -r "s:$(TOP_DIR)/docs/::g" {} \;  \
+		-exec sed -i -r "s:$(DOCS_STAGING_DIR)/::g" {} \;  \
 		-exec sed -i -r "s:docs/(.*\.md):\1:g" {} \; \
 		-exec sed -i -r "/http/b; s:\.md:\.html:g" {} \;
 	@echo "Open in your browser: file://$(DOCS_STAGING_DIR)/README.html"
