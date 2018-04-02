@@ -57,7 +57,7 @@ kubectl create secret tls resourcequota-admission-controller-secret-ca \
     --namespace=nomos-system \
     --cert=${ca_cert_file} \
     --key=${ca_key_file}
-kubectl delete ValidatingWebhookConfiguration nomos-resource-quota \
+kubectl delete ValidatingWebhookConfiguration resource-quota.nomos.dev \
     --ignore-not-found
 
 kubectl apply -f ${YAML_DIR}/resourcequota-admission-controller.yaml
