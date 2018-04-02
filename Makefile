@@ -92,11 +92,11 @@ IMAGE_TAG ?= $(VERSION)-$(USER)-$(DATE)
 
 ##### TARGETS #####
 
-# Uses a custom build environment.  See toolkit/buildenv/Dockerfile for the
+# Uses a custom build environment.  See build/buildenv/Dockerfile for the
 # details on the build environment.
 .PHONY: buildenv
 buildenv:
-	@docker build toolkit/buildenv --tag=$(BUILD_IMAGE)
+	@docker build build/buildenv --tag=$(BUILD_IMAGE)
 
 # Runs all static analyzers and autocorrects.
 lint:
