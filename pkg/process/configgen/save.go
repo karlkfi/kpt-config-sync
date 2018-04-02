@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/nomos/pkg/toolkit/installer/config"
+	"github.com/google/nomos/pkg/installer/config"
 	"github.com/pkg/errors"
 )
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/toolkit/dialog"
+	"github.com/google/nomos/pkg/process/dialog"
 )
 
 func main() {

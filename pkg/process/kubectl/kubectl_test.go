@@ -13,7 +13,7 @@ import (
 	"github.com/blang/semver"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
 )
 

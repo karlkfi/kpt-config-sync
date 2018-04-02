@@ -31,7 +31,7 @@ import (
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/client/policyhierarchy"
 	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"

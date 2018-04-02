@@ -28,9 +28,9 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/toolkit/bash"
-	"github.com/google/nomos/pkg/toolkit/installer/config"
-	"github.com/google/nomos/pkg/toolkit/kubectl"
+	"github.com/google/nomos/pkg/installer/config"
+	"github.com/google/nomos/pkg/process/bash"
+	"github.com/google/nomos/pkg/process/kubectl"
 	"github.com/pkg/errors"
 )
 

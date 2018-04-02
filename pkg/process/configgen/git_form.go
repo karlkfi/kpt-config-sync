@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/toolkit/dialog"
-	"github.com/google/nomos/pkg/toolkit/installer/config"
+	"github.com/google/nomos/pkg/installer/config"
+	"github.com/google/nomos/pkg/process/dialog"
 	"github.com/pkg/errors"
 )
 

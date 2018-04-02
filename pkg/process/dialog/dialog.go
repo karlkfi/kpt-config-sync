@@ -19,7 +19,7 @@ limitations under the License.
 package dialog
 
 import (
-	"github.com/google/nomos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/process/exec"
 )
 
 var (

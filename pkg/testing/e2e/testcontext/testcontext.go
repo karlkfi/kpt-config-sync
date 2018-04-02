@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/client/policyhierarchy"
-	"github.com/google/nomos/pkg/toolkit/bash"
-	"github.com/google/nomos/pkg/toolkit/exec"
-	"github.com/google/nomos/pkg/toolkit/kubectl"
+	"github.com/google/nomos/pkg/process/bash"
+	"github.com/google/nomos/pkg/process/exec"
+	"github.com/google/nomos/pkg/process/kubectl"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 

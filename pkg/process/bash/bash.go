@@ -19,7 +19,7 @@ package bash
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/toolkit/exec"
+	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
 )
 

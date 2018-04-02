@@ -25,8 +25,8 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/toolkit/configgen"
-	"github.com/google/nomos/pkg/toolkit/installer/config"
+	"github.com/google/nomos/pkg/installer/config"
+	"github.com/google/nomos/pkg/process/configgen"
 	"github.com/pkg/errors"
 )
 
