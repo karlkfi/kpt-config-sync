@@ -20,6 +20,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	rbac_v1 "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -74,7 +75,7 @@ func TestMove(t *testing.T) {
 	if err := v.Update(child1_1); err != nil {
 		t.Errorf("Should be ok %s %s", err, spew.Sdump(v))
 	}
-	if v.parents["child1-1"] != "child2" {
+	if v.policyNodes["child1-1"].Spec.Parent != "child2" {
 		t.Errorf("Wrong parent for child")
 	}
 	if err := v.Validate(); err != nil {
@@ -146,10 +147,8 @@ func TestNoRoot(t *testing.T) {
 	v := New()
 	v.AllowMultipleRoots = true
 
-	v.Add(newNode("root", "", true))
 	v.Add(newNode("child1", "root", true))
 	v.Add(newNode("child2", "child1", false))
-	v.Remove(newNode("root", "", true))
 
 	if err := v.checkRoots(); err == nil {
 		t.Errorf("Should have detected no roots error")
@@ -224,5 +223,77 @@ func TestCycle(t *testing.T) {
 	}
 	if err := v.Validate(); err == nil {
 		t.Errorf("Should have detected cycle")
+	}
+}
+
+func TestPolicySpaceWithRoles(t *testing.T) {
+	v := New()
+
+	v.Add(newNode("root", "", true))
+
+	policySpaceWithRole := newNode("policyspacewithrole", "root", true)
+	policySpaceWithRole.Spec.Policies.RolesV1 = []rbac_v1.Role{{}}
+	v.Add(policySpaceWithRole)
+
+	v.Add(newNode("child2", "policyspacewithrole", false))
+
+	if err := v.checkPolicySpaceRoles(); err == nil {
+		t.Errorf("Should have detected policy space roles error")
+	}
+	if err := v.Validate(); err == nil {
+		t.Errorf("Should have detected policy space roles multiple roots error")
+	}
+}
+
+func TestAddOrphan(t *testing.T) {
+	v := New()
+	v.Add(newNode("root", "", true))
+	v.Add(newNode("child1", "root", true))
+	v.Add(newNode("child2", "child1", false))
+
+	if err := v.checkParents(); err != nil {
+		t.Errorf("Should not have detected missing parent error: %v", err)
+	}
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should not have detected missing parent error: %v", err)
+	}
+
+	v.Add(newNode("orphan", "nonexistantparent", false))
+
+	if err := v.checkParents(); err == nil {
+		t.Errorf("Should have detected missing parent error")
+	}
+	if err := v.Validate(); err == nil {
+		t.Errorf("Should have detected missing parent error")
+	}
+
+	v.AllowOrphanAdds = true
+	if err := v.checkParents(); err != nil {
+		t.Errorf("Should have bypassed missing parent error: %v", err)
+	}
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should have bypassed missing parent error: %v", err)
+	}
+}
+
+func TestRemovePolicySpace(t *testing.T) {
+	v := New()
+	v.Add(newNode("root", "", true))
+
+	policySpace := newNode("child1", "root", true)
+	v.Add(policySpace)
+
+	v.Add(newNode("child2", "child1", false))
+	v.Add(newNode("child3", "child1", false))
+
+	if err := v.checkParents(); err != nil {
+		t.Errorf("Should not have detected missing parent error: %v", err)
+	}
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should not have detected missing parent error: %v", err)
+	}
+
+	if err := v.Remove(policySpace); err == nil {
+		t.Errorf("Should have detected parent delete error")
 	}
 }

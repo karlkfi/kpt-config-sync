@@ -27,17 +27,20 @@ import (
 	"github.com/pkg/errors"
 )
 
+// rootParent is the name of the parent of a root node.
+const rootParent = ""
+
 type Validator struct {
 	policyNodes map[string]*policyhierarchy_v1.PolicyNode // name -> node
-	parents     map[string]string                         // child -> parent
 	// AllowMultipleRoots disables checks for multiple root nodes in the policy node hierarchy, when true.
 	AllowMultipleRoots bool
+	// AllowOrphanAdds disables checks for adding policy nodes with non-existent parents.
+	AllowOrphanAdds bool
 }
 
 func New() *Validator {
 	return &Validator{
 		policyNodes: map[string]*policyhierarchy_v1.PolicyNode{},
-		parents:     map[string]string{},
 	}
 }
 
@@ -60,8 +63,6 @@ func (s *Validator) Add(policyNode *policyhierarchy_v1.PolicyNode) error {
 	}
 
 	s.policyNodes[nodeName] = policyNode
-	parentName := policyNode.Spec.Parent
-	s.parents[nodeName] = parentName
 	return nil
 }
 
@@ -73,14 +74,6 @@ func (s *Validator) Update(policyNode *policyhierarchy_v1.PolicyNode) error {
 	}
 
 	s.policyNodes[nodeName] = policyNode
-
-	newParent := policyNode.Spec.Parent
-	oldParent := s.parents[nodeName]
-	if oldParent == newParent {
-		return nil
-	}
-
-	s.parents[nodeName] = newParent
 	return nil
 }
 
@@ -91,7 +84,13 @@ func (s *Validator) Remove(policyNode *policyhierarchy_v1.PolicyNode) error {
 		return errors.Errorf("Policy node %s does not exist for remove", nodeName)
 	}
 
-	delete(s.parents, nodeName)
+	for _, policyNode := range s.policyNodes {
+		parent := policyNode.Spec.Parent
+		if parent == nodeName {
+			return errors.Errorf("Policy node %s is a parent and cannot be removed", nodeName)
+		}
+	}
+
 	delete(s.policyNodes, nodeName)
 	return nil
 }
@@ -102,7 +101,7 @@ func (s *Validator) Remove(policyNode *policyhierarchy_v1.PolicyNode) error {
 // Each leaf (non org node leaf) is a designated as a working namespace.
 func (s *Validator) Validate() error {
 	for _, checkFunction := range []func() error{
-		s.checkRoots, s.checkCycles, s.checkWorkingNamespace} {
+		s.checkRoots, s.checkCycles, s.checkWorkingNamespace, s.checkPolicySpaceRoles, s.checkParents} {
 		if err := checkFunction(); err != nil {
 			return err
 		}
@@ -114,9 +113,9 @@ func (s *Validator) Validate() error {
 // that children of empty string (no parent) is the appropriate size.
 func (s *Validator) checkRoots() error {
 	var noParent []string
-	for child, parent := range s.parents {
-		if parent == "" {
-			noParent = append(noParent, child)
+	for nodeName, node := range s.policyNodes {
+		if node.Spec.Parent == rootParent {
+			noParent = append(noParent, nodeName)
 		}
 	}
 
@@ -137,12 +136,12 @@ func (s *Validator) checkRoots() error {
 // are not working namespaces
 func (s *Validator) checkWorkingNamespace() error {
 	isParent := map[string]bool{}
-	for _, parent := range s.parents {
-		isParent[parent] = true
+	for _, node := range s.policyNodes {
+		isParent[node.Spec.Parent] = true
 	}
 
 	for nodeName, node := range s.policyNodes {
-		if node.Spec.Parent == "" {
+		if node.Spec.Parent == rootParent {
 			// Root node should not be a working namespace
 			if !node.Spec.Policyspace {
 				return errors.Errorf("Root node %s should not be a working namespace", nodeName)
@@ -162,8 +161,8 @@ func (s *Validator) checkWorkingNamespace() error {
 func (s *Validator) checkCycles() error {
 	graph := map[interface{}][]interface{}{}
 
-	for child, parent := range s.parents {
-		graph[child] = []interface{}{parent}
+	for nodeName, node := range s.policyNodes {
+		graph[nodeName] = []interface{}{node.Spec.Parent}
 	}
 
 	var cycles [][]interface{}
@@ -175,6 +174,33 @@ func (s *Validator) checkCycles() error {
 	}
 	if len(cycles) != 0 {
 		return errors.Errorf("Found cycles %s, graph %s", cycles, spew.Sdump(graph))
+	}
+	return nil
+}
+
+// checkPolicySpaceRoles checks that there are no PolicySpaces that have Roles.
+func (s *Validator) checkPolicySpaceRoles() error {
+	for nodeName, node := range s.policyNodes {
+		if node.Spec.Policyspace && len(node.Spec.Policies.RolesV1) > 0 {
+			return errors.Errorf(
+				"Node %s designated as a policy space, but has roles", nodeName)
+		}
+	}
+	return nil
+}
+
+// checkParents checks that all the PolicyNodes have a parent (besides the root node).
+func (s *Validator) checkParents() error {
+	if s.AllowOrphanAdds {
+		return nil
+	}
+
+	for nodeName, node := range s.policyNodes {
+		parent := node.Spec.Parent
+		parentNode := s.policyNodes[parent]
+		if parent != rootParent && parentNode == nil {
+			return errors.Errorf("Node %s has no parent and is not a root node", nodeName)
+		}
 	}
 	return nil
 }

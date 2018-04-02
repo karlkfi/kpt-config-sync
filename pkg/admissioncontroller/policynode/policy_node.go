@@ -105,9 +105,10 @@ func (p *Admitter) internalAdmit(
 		return admissioncontroller.InternalErrorDeny(p.errTotal, err, review.Request.Namespace)
 	}
 
-	// TODO(sbochins): A way for the user to toggle multiple roots check.
+	// TODO(sbochins): A way for the user to toggle multiple roots, orphan adds checks.
 	validator := validator.From(policyNodes...)
 	validator.AllowMultipleRoots = true
+	validator.AllowOrphanAdds = true
 	if err := p.validateAdmit(validator, *review.Request); err != nil {
 		return &admissionv1beta1.AdmissionResponse{
 			Allowed: false,
