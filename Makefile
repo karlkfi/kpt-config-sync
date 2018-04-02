@@ -153,8 +153,8 @@ installer-staging: push-to-gcr-all gen-yaml-all
 	mkdir -p $(STAGING_DIR)/installer/manifests/common
 	cp -r $(TOP_DIR)/manifests/common/* $(STAGING_DIR)/installer/manifests/common
 	mkdir -p $(STAGING_DIR)/installer/examples
-	cp -r $(TOP_DIR)/toolkit/installer/examples/* $(STAGING_DIR)/installer/examples
-	cp $(TOP_DIR)/toolkit/installer/entrypoint.sh $(STAGING_DIR)/installer
+	cp -r $(TOP_DIR)/build/installer/examples/* $(STAGING_DIR)/installer/examples
+	cp $(TOP_DIR)/build/installer/entrypoint.sh $(STAGING_DIR)/installer
 	mkdir -p $(STAGING_DIR)/installer/scripts
 	cp $(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh \
 		$(STAGING_DIR)/installer/scripts
