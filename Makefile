@@ -216,6 +216,9 @@ test-e2e:
 test-e2e-no-cleanup:
 	e2e/e2e.sh -skip_cleanup
 
+# Runs all tests.
+test-all: test test-e2e
+
 # Generate K8S client-set.
 gen-client-set:
 	$(TOP_DIR)/scripts/generate-clientset.sh
