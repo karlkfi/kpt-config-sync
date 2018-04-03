@@ -118,6 +118,11 @@ type ReflectiveActionBase struct {
 	spec      *ReflectiveActionSpec // Definitions for type specific behavior and functionality
 }
 
+// Item returns the resource which is being modified for the case of an upsert action.
+func (s *ReflectiveActionBase) Item() runtime.Object {
+	return s.resource
+}
+
 // Resource implements Interface
 func (s *ReflectiveActionBase) Resource() string {
 	return s.spec.Resource

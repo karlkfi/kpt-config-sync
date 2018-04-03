@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/pkg/syncer/labeling"
+
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta/fake"
@@ -66,9 +68,13 @@ func TestSyncerCreate(t *testing.T) {
 	syncer.queue.ShutDown()
 
 	item, _ := syncer.queue.Get()
-	action := item.(action.Interface)
+	action := item.(*action.ReflectiveUpsertAction)
 	if action.String() != "v1/Namespaces/test-ns-create/upsert" {
 		t.Errorf("Got unexpected action %s", action.String())
+	}
+
+	if !labeling.HasOriginLabel(action.Item().(*core_v1.Namespace).ObjectMeta) {
+		t.Errorf("Namespace should have origin label")
 	}
 }
 
@@ -113,8 +119,12 @@ func TestSyncerUpdate(t *testing.T) {
 	syncer.queue.ShutDown()
 
 	item, _ := syncer.queue.Get()
-	action := item.(action.Interface)
+	action := item.(*action.ReflectiveUpsertAction)
 	if action.String() != "v1/Namespaces/test-ns-update/upsert" {
 		t.Errorf("Got unexpected action %s", action.String())
+	}
+
+	if !labeling.HasOriginLabel(action.Item().(*core_v1.Namespace).ObjectMeta) {
+		t.Errorf("Namespace should have origin label")
 	}
 }
