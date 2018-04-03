@@ -356,8 +356,8 @@ func (t *Context) DeleteClusterrole(name string) error {
 }
 
 // Kubernetes returns the underlying Kubernetes client.
-func (c *Context) Kubernetes() kubernetes.Interface {
-	return c.client.Kubernetes()
+func (t *Context) Kubernetes() kubernetes.Interface {
+	return t.client.Kubernetes()
 }
 
 // PolicyHierarchy returns the policyhierarchy client interface

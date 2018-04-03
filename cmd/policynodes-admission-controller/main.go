@@ -59,7 +59,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 		},
 		Webhooks: []admissionregistrationv1beta1.Webhook{
 			{
-				Name: "policynodes.nomos.dev",
+				Name: externalAdmissionHookConfigName,
 				Rules: []admissionregistrationv1beta1.RuleWithOperations{{
 					Operations: []admissionregistrationv1beta1.OperationType{
 						admissionregistrationv1beta1.Create,

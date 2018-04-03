@@ -50,8 +50,7 @@ function testSyncerNamespaces() {
 }
 
 function testSyncerRoles() {
-  assertContains "kubectl get roles -n backend" "acme-admin"
-  assertContains "kubectl get roles -n frontend" "acme-admin"
+  assertContains "kubectl get roles -n new-prj" "acme-admin"
 }
 
 function testSyncerRoleBindings() {
