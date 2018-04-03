@@ -1,4 +1,4 @@
-# Copyright 2017 Nomos Authors
+# Copyright 2018 Nomos Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,5 +13,11 @@
 # limitations under the License.
 
 FROM busybox
-ADD nomosresourcequota-controller nomosresourcequota-controller
-ENTRYPOINT ["/nomosresourcequota-controller"]
+ADD policynodes-admission-controller policynodes-admission-controller
+EXPOSE 8000
+ENTRYPOINT ["/policynodes-admission-controller", \
+        "--enable-mutual-tls=false", \
+        "--server_key", "/etc/nomos/secrets/policynodes-admission-controller/server/tls.key", \
+        "--server_cert", "/etc/nomos/secrets/policynodes-admission-controller/server/tls.crt", \
+        "--ca-cert", "/etc/nomos/secrets/policynodes-admission-controller/ca/tls.crt"]
+

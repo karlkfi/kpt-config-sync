@@ -29,33 +29,11 @@ import (
 	"github.com/blang/semver"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/installer/config"
-	"github.com/google/nomos/pkg/process/bash"
 	"github.com/google/nomos/pkg/process/kubectl"
 	"github.com/pkg/errors"
 )
 
 const (
-	// yamlDirectory is the directory relative to workDir that contains the
-	// YAML files to apply on a cluster.
-	yamlDirectory = "yaml"
-
-	// scriptsDirectory is the directory relative to the working directory
-	// that contains the utility shell scripts.  All scripts are expected to
-	// be found in that directory.
-	scriptsDirectory = "scripts"
-
-	// certsDirectory is the directory relative to the working directory that
-	// contains the generated certificates.
-	certsDirectory = "certs"
-
-	// certScript is a script for certificate generation.  Should be replaced
-	// by go-native generation script.
-	certScript = "generate-resourcequota-admission-controller-certs.sh"
-
-	// admissionControllerScript is a admissionControllerScript used to deploy
-	// admission controller specific secrets.
-	admissionControllerScript = "deploy-resourcequota-admission-controller.sh"
-
 	// defaultNamespace is the namespace to place resources into.
 	defaultNamespace = "nomos-system"
 
@@ -72,6 +50,7 @@ var (
 	deploymentComponents = []string{
 		fmt.Sprintf("%v:git-policy-importer", defaultNamespace),
 		fmt.Sprintf("%v:resourcequota-admission-controller", defaultNamespace),
+		fmt.Sprintf("%v:policynodes-admission-controller", defaultNamespace),
 		fmt.Sprintf("%v:syncer", defaultNamespace),
 	}
 
@@ -81,6 +60,7 @@ var (
 		"nomos-nomosresourcequota-controller",
 		"nomos-policy-importer",
 		"nomos-resourcequota-admission-controller",
+		"nomos-policynodes-admission-controller",
 		"nomos-syncer",
 	}
 
@@ -96,26 +76,44 @@ type Installer struct {
 
 	// The working directory of the installer.
 	workDir string
+
+	// The installers for creating certificates and secrets for admission
+	// controllers.
+	certInstallers []*certInstaller
 }
 
 // New returns a new Installer instance.
 func New(c config.Config, workDir string) *Installer {
-	return &Installer{c: c, workDir: workDir}
+	resourceQuotaCertsInstaller := &certInstaller{
+		generateScript: "generate-resourcequota-admission-controller-certs.sh",
+		deployScript:   "deploy-resourcequota-admission-controller.sh",
+		subDir:         "resourcequota",
+	}
+	policyNodesCertsInstaller := &certInstaller{
+		generateScript: "generate-policynodes-admission-controller-certs.sh",
+		deployScript:   "deploy-policynodes-admission-controller.sh",
+		subDir:         "policynodes",
+	}
+	return &Installer{
+		c:       c,
+		workDir: workDir,
+		certInstallers: []*certInstaller{
+			resourceQuotaCertsInstaller,
+			policyNodesCertsInstaller,
+		},
+	}
 }
 
 // createCertificates creates the certificates needed to bootstrap the syncing
 // process.
 func (i *Installer) createCertificates() error {
-	glog.V(5).Info("createCertificates: creating certificates")
-	certsPath := filepath.Join(i.workDir, certsDirectory)
-	err := os.MkdirAll(certsPath, os.ModeDir|0700)
-	if err != nil {
-		return errors.Wrapf(err, "while creating certs directory: %q", certsPath)
+	for _, certInstaller := range i.certInstallers {
+		glog.V(5).Info("createCertificates: creating %s certificates", certInstaller.name())
+		if err := certInstaller.createCertificates(i.workDir); err != nil {
+			return err
+		}
 	}
-	certgenScript := filepath.Join(i.workDir, scriptsDirectory, certScript)
-	if err := bash.RunWithEnv(context.Background(), certgenScript, fmt.Sprintf("OUTPUT_DIR=%v", certsPath)); err != nil {
-		return errors.Wrapf(err, "while generating certificates")
-	}
+
 	return nil
 }
 
@@ -177,35 +175,18 @@ func (i *Installer) deployGitConfig() error {
 	return nil
 }
 
-func (i *Installer) deployResourceQuotaSecrets() error {
-	glog.V(5).Info("deployResourceQuotaSecrets: enter")
-
-	certsPath := filepath.Join(i.workDir, certsDirectory)
-	scriptPath := filepath.Join(i.workDir, scriptsDirectory, admissionControllerScript)
-	yamlPath := filepath.Join(i.workDir, yamlDirectory)
-	env := []string{
-		fmt.Sprintf("SERVER_CERT_FILE=%v/server.crt", certsPath),
-		fmt.Sprintf("SERVER_KEY_FILE=%v/server.key", certsPath),
-		fmt.Sprintf("CA_CERT_FILE=%v/ca.crt", certsPath),
-		fmt.Sprintf("CA_KEY_FILE=%v/ca.key", certsPath),
-		fmt.Sprintf("YAML_DIR=%v", yamlPath),
-	}
-	if err := bash.RunWithEnv(context.Background(), scriptPath, env...); err != nil {
-		return errors.Wrapf(err, "while creating admission controller secrets")
-	}
-	return nil
-}
-
 func (i *Installer) deploySecrets() error {
 	glog.V(5).Info("deploySecrets: enter")
 	err := i.deploySshSecrets()
 	if err != nil {
 		return errors.Wrapf(err, "while deploying ssh secrets")
 	}
-	err = i.deployResourceQuotaSecrets()
-	if err != nil {
-		return errors.Wrapf(err, "while deploying resource quota secrets")
+	for _, certInstaller := range i.certInstallers {
+		if err := certInstaller.deploySecrets(i.workDir); err != nil {
+			return errors.Wrapf(err, "while deploying %s secrets", certInstaller.name())
+		}
 	}
+
 	return nil
 }
 

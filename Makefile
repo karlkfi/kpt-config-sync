@@ -61,7 +61,8 @@ GCP_PROJECT ?= stolos-dev
 # All Nomos components
 ALL_COMPONENTS := syncer \
 	git-policy-importer \
-	resourcequota-admission-controller
+	resourcequota-admission-controller \
+	policynodes-admission-controller
 
 # Allows an interactive docker build or test session to be interrupted
 # by Ctrl-C.  This must be turned off in case of non-interactive runs,
@@ -160,6 +161,11 @@ installer-staging: push-to-gcr-all gen-yaml-all
 		$(STAGING_DIR)/installer/scripts
 	cp $(TOP_DIR)/scripts/generate-resourcequota-admission-controller-certs.sh \
 		$(STAGING_DIR)/installer/scripts
+	cp $(TOP_DIR)/scripts/deploy-policynodes-admission-controller.sh \
+		$(STAGING_DIR)/installer/scripts
+	cp $(TOP_DIR)/scripts/generate-policynodes-admission-controller-certs.sh \
+		$(STAGING_DIR)/installer/scripts
+
 
 # Builds the installer docker image using the nomos release in .output
 installer-image: installer-staging

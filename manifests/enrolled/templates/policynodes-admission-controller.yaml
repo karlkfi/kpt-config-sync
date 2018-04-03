@@ -1,0 +1,64 @@
+changecom(`<unused>')
+apiVersion: v1
+kind: Service
+metadata:
+  name: policynodes-admission-controller
+  namespace: nomos-system
+  labels:
+    monitored: "true"
+spec:
+  selector:
+    app: policy-nodes
+  ports:
+    - name: https
+      port: 443
+      targetPort: https-port
+    - name: metrics
+      port: 8675
+      targetPort: metrics-port
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policynodes-admission-controller
+  namespace: nomos-system
+  labels:
+    app: policy-nodes
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: policy-nodes
+  template:
+    metadata:
+      labels:
+        app: policy-nodes
+    spec:
+      serviceAccountName: policynodes-admission-controller
+      restartPolicy: Always
+      volumes:
+      - name: v1
+        secret:
+          secretName: policynodes-admission-controller-secret
+      - name: v2
+        secret:
+          secretName: policynodes-admission-controller-secret-ca
+      containers:
+        - name: policynodes-admission-controller
+          image: IMAGE_NAME
+          ports:
+            - containerPort: 8000
+              name: https-port
+            - containerPort: 8675
+              name: metrics-port
+          args: ["--logtostderr"]
+          volumeMounts:
+          - name: v1
+            mountPath: "/etc/nomos/secrets/policynodes-admission-controller/server"
+            readOnly: true
+          - name: v2
+            mountPath: "/etc/nomos/secrets/policynodes-admission-controller/ca"
+            readOnly: true
+

@@ -25,7 +25,6 @@ import (
 	"github.com/google/nomos/pkg/admissioncontroller/policynode"
 
 	"github.com/google/nomos/pkg/service"
-	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/util/log"
 	"github.com/pkg/errors"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -38,7 +37,7 @@ import (
 const (
 	externalAdmissionHookConfigName = "policy-nodes.nomos.dev"
 	controllerNamespace             = "nomos-system"
-	controllerName                  = "policynode-admission-controller"
+	controllerName                  = "policynodes-admission-controller"
 )
 
 var (
@@ -81,7 +80,6 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 					},
 					CABundle: caCert,
 				},
-				NamespaceSelector: metav1.SetAsLabelSelector(labeling.OriginLabel),
 			},
 		},
 	}

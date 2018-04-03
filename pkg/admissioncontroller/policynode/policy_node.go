@@ -127,6 +127,7 @@ func (p *Admitter) validateAdmit(
 	validator *validator.Validator, request admissionv1beta1.AdmissionRequest) error {
 	attributes := admissioncontroller.GetAttributes(p.decoder, request)
 	policyNode, ok := attributes.GetObject().(*policyhierarchy_v1.PolicyNode)
+	// TODO(sbochins): Some operations (delete) don't pass in an object, they pass in a name. We need to handle these cases.
 	if !ok {
 		// This should never happen. We're only checking for PolicyNodes in this controller.
 		// Just accept anything that isn't a PolicyNode.
