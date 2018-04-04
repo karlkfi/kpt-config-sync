@@ -202,17 +202,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 						Version: "v1",
 						Kind:    "PolicyNodes",
 					},
-					Object: runtime.RawExtension{
-						Object: runtime.Object(&pn_v1.PolicyNode{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "kitties",
-							},
-							Spec: pn_v1.PolicyNodeSpec{
-								Parent:      "bigkitties",
-								Policyspace: true,
-							},
-						}),
-					},
+					Name:      "kitties",
 					Operation: admissionv1beta1.Delete,
 					Namespace: "kitties",
 				},
@@ -233,16 +223,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 						Version: "v1",
 						Kind:    "PolicyNodes",
 					},
-					Object: runtime.RawExtension{
-						Object: runtime.Object(&pn_v1.PolicyNode{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "bigkitties",
-							},
-							Spec: pn_v1.PolicyNodeSpec{
-								Parent: "",
-							},
-						}),
-					},
+					Name:      "bigkitties",
 					Operation: admissionv1beta1.Delete,
 					Namespace: "bigkitties",
 				},

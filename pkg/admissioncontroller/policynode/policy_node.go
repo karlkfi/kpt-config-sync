@@ -126,13 +126,28 @@ func (p *Admitter) internalAdmit(
 func (p *Admitter) validateAdmit(
 	validator *validator.Validator, request admissionv1beta1.AdmissionRequest) error {
 	attributes := admissioncontroller.GetAttributes(p.decoder, request)
-	policyNode, ok := attributes.GetObject().(*policyhierarchy_v1.PolicyNode)
-	// TODO(sbochins): Some operations (delete) don't pass in an object, they pass in a name. We need to handle these cases.
-	if !ok {
-		// This should never happen. We're only checking for PolicyNodes in this controller.
-		// Just accept anything that isn't a PolicyNode.
-		glog.Errorf("Request operating on non policy node used in policy node admission controller: %v", request)
-		return nil
+
+	var policyNode *policyhierarchy_v1.PolicyNode
+	if obj := attributes.GetObject(); obj == nil {
+		if request.Name == "" {
+			// This should never happen. The request does not have an object and does not have the name of an object.
+			glog.Warningf("Request with no object or name used in policy node admission controller: %v", request)
+			return nil
+		}
+		policyNode = &policyhierarchy_v1.PolicyNode{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: request.Name,
+			},
+		}
+	} else {
+		var ok bool
+		policyNode, ok = obj.(*policyhierarchy_v1.PolicyNode)
+		if !ok {
+			// This should never happen. We're only checking for PolicyNodes in this controller.
+			// Just accept anything that isn't a PolicyNode.
+			glog.Warningf("Request operating on non policy node used in policy node admission controller: %v", request)
+			return nil
+		}
 	}
 
 	operation := attributes.GetOperation()
@@ -147,7 +162,7 @@ func (p *Admitter) validateAdmit(
 	default:
 		// This should never happen. We're only checking CUD operations in this controller.
 		// Just accept operations we aren't concerned with.
-		glog.Errorf("Request with operation, %s, used in policy node admission controller: %v", operation, request)
+		glog.Warningf("Request with operation, %s, used in policy node admission controller: %v", operation, request)
 	}
 
 	if err != nil {
