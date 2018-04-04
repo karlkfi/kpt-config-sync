@@ -48,3 +48,22 @@ func TestIsReservedOrInvalidNamespace(t *testing.T) {
 		}
 	}
 }
+
+func TestIsReserved(t *testing.T) {
+	for _, testcase := range []struct {
+		name     string
+		reserved bool
+	}{
+		{"foo-bar", false},
+		{"kube-system", true},
+		{"kube-public", true},
+		{"kube-foo", true},
+		{"default", true},
+		{"nomos-system", true},
+	} {
+		reserved := IsReserved(testcase.name)
+		if reserved != testcase.reserved {
+			t.Errorf("Expected %v got %v testing %v", testcase.reserved, reserved, testcase)
+		}
+	}
+}

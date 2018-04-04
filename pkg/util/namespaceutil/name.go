@@ -35,7 +35,7 @@ var (
 // IsReservedOrInvalidNamespace returns an error if the namespace name is reserved by the system
 // or is not a valid RFC 1123 dns label.
 func IsReservedOrInvalidNamespace(name string) error {
-	if isReserved(name) {
+	if IsReserved(name) {
 		return errors.Errorf("namespace %q is reserved by the system", name)
 	}
 
@@ -45,7 +45,8 @@ func IsReservedOrInvalidNamespace(name string) error {
 	return nil
 }
 
-func isReserved(name string) bool {
+// IsReserved returns true if the namespace is reserved.
+func IsReserved(name string) bool {
 	if reservedNamespaces[name] {
 		return true
 	}
