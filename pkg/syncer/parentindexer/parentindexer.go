@@ -19,35 +19,11 @@ package parentindexer
 
 import (
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
-	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/cache"
 )
 
 // Name is the name of the indexer
 const parentIndex = "PolicyNode-Parent"
-
-var indexer = cache.Indexers{
-	parentIndex: policyNodeIndexParent,
-}
-
-// ParentIndexer indexes a policy node by parent.
-type ParentIndexer struct {
-	informerProvider informers.InformerProvider
-}
-
-var _ informers.InformerProvider = &ParentIndexer{}
-
-// Informer implements informers.InformerProvider
-func (s *ParentIndexer) Informer() cache.SharedIndexInformer {
-	informer := s.informerProvider.Informer()
-	if err := informer.AddIndexers(indexer); err != nil {
-		// This will only fail if the informer is already running, or if someone has used the same
-		// indexer key as us.
-		panic(errors.Errorf("Failed to add policy node parent indexer"))
-	}
-	return informer
-}
 
 // policyNodeIndexParent returns the index key (parnent) for the given policy node.
 func policyNodeIndexParent(obj interface{}) ([]string, error) {
@@ -55,10 +31,11 @@ func policyNodeIndexParent(obj interface{}) ([]string, error) {
 	return []string{policyNode.Spec.Parent}, nil
 }
 
-// Wrap will create a new informer provider that adds another indexer to the previous provider's
-// informer.
-func Wrap(informerProvider informers.InformerProvider) *ParentIndexer {
-	return &ParentIndexer{informerProvider: informerProvider}
+// Indexer returns the indexer to index by parent node.
+func Indexer() cache.Indexers {
+	return cache.Indexers{
+		parentIndex: policyNodeIndexParent,
+	}
 }
 
 // GetChildNodes will return the policy nodes that are children of parent.

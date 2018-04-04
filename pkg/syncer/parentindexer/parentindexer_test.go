@@ -105,8 +105,8 @@ func TestIndexer(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset(objs...)
 	informerFactory := externalversions.NewSharedInformerFactory(client, 2*time.Minute)
-	informerProvider := Wrap(informerFactory.Nomos().V1().PolicyNodes())
-	informer := informerProvider.Informer()
+	informer := informerFactory.Nomos().V1().PolicyNodes().Informer()
+	informer.AddIndexers(Indexer())
 
 	informerFactory.Start(nil)
 	for k, v := range informerFactory.WaitForCacheSync(nil) {
