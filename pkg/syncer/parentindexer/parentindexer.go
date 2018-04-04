@@ -13,9 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package policynodeindexer adds an indexer for policy nodes that provides parent to child
+// Package parentindexer adds an indexer for policy nodes that provides parent to child
 // mapping for indexed lookup.
-package policynodeindexer
+package parentindexer
 
 import (
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
