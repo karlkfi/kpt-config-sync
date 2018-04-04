@@ -238,7 +238,7 @@ gen-yaml-%:
 
 # Creates staging directory for generating docs.
 docs-staging: .output
-	rm -rf $(DOCS_STAGING_DIR)
+	rm -rf $(DOCS_STAGING_DIR)/*.html $(DOCS_STAGING_DIR)/img
 	cp -r $(TOP_DIR)/docs $(STAGING_DIR)
 	cp $(TOP_DIR)/README.md $(DOCS_STAGING_DIR)
 

@@ -71,8 +71,8 @@ to grant access to a single GitHub repo instead of your personal account.
 
 In a terminal session of your Linux machine issue the following command:
 
-```
-ssh-keygen -t rsa -b 4096 -C "your_email@example.com" -N '' -f $HOME/.ssh/id_rsa.nomos
+```console
+$ ssh-keygen -t rsa -b 4096 -C "your_email@example.com" -N '' -f $HOME/.ssh/id_rsa.nomos
 ```
 
 This command will create a pair of keys, `$HOME/.ssh.id_rsa.nomos`, and
@@ -92,7 +92,7 @@ file.
 Now, [test](https://help.github.com/articles/testing-your-ssh-connection/) your
 SSH connection to github using the key you just generated.
 
-```
+```console
 $ ssh -o IdentityAgent=/dev/null -F /dev/null -i $HOME/.ssh/id_rsa.nomos -T git@github.com
 Hi <your_username>! You've successfully authenticated, but GitHub does not provide shell access.
 ```
@@ -104,14 +104,14 @@ hosting provider if you want to make changes.
 
 You can now clone the sample repository locally as follows:
 
-```
+```console
 $ ssh-add $HOME/.ssh/id_rsa.nomos
 $ git clone git@github.com:frankfarzan/foo-corp-example.git foo
 ```
 
 or your own copy as:
 
-```
+```console
 $ git clone git@github.com:your_github_username/foo-corp-example.git
 ```
 
@@ -119,12 +119,12 @@ $ git clone git@github.com:your_github_username/foo-corp-example.git
 
 Download the Nomos installer script to a directory on your machine.
 
-```
-cd
-mkdir -p tmp/nomos
-cd tmp/nomos
-curl https://storage.googleapis.com/nomos-release/run-installer.sh -o run-installer.sh
-chmod +x run-installer.sh
+```console
+$ cd
+$ mkdir -p tmp/nomos
+$ cd tmp/nomos
+$ curl https://storage.googleapis.com/nomos-release/run-installer.sh -o run-installer.sh
+$ chmod +x run-installer.sh
 ```
 
 The installer can run in two modes: batch (the default) and interactive
@@ -149,7 +149,7 @@ Note:
 *   Update GIT_SYNC_REPO to point to your repo if you're not using the sample
     repo provided
 
-```
+```yaml
 contexts:
   - kubeconfig_context_of_your_cluster
 git:
@@ -166,8 +166,8 @@ user: youruser@foo-corp.com
 Once you have finished with editing the file, you can run the batch installer as
 follows:
 
-```
-./run-installer.sh --config=/path/to/your/config.yaml
+```console
+$ ./run-installer.sh --config=/path/to/your/config.yaml
 ```
 
 ### Interactive installation
@@ -179,15 +179,15 @@ through a user-friendly menu as shown in the figure below:
 
 You can start from a sample configuration:
 
-```
-./run-installer.sh --interactive
+```console
+$ ./run-installer.sh --interactive
 ```
 
 or you can start from an existing configuration, similar to the one in the
 [Batch Installation](#batch-installation) section.
 
-```
-./run-installer.sh --interactive --config=/path/to/your/config.yaml
+```console
+$ ./run-installer.sh --interactive --config=/path/to/your/config.yaml
 ```
 
 "Save" will store the current settings that you can then reuse later in a batch
@@ -201,7 +201,7 @@ command and verify that all components listed have status displayed as
 
 Check running components:
 
-```
+```console
 $ kubectl get pods -n=nomos-system
 NAME                                                  READY     STATUS    RESTARTS   AGE
 git-policy-importer-66bf6b9db4-pbsxn                  2/2       Running   0          24m
@@ -211,7 +211,7 @@ syncer-58545bc77d-l485n                               1/1       Running   0     
 
 Check present namespaces:
 
-```
+```console
 $ kubectl get ns
 NAME               STATUS    AGE
 audit              Active    2m
@@ -230,8 +230,8 @@ nomos-system       Active    2m
 Uninstall will shut down Nomos components, but will leave the cluster state
 otherwise intact.
 
-```
-./run-installer.sh --config=/path/to/your/config.yaml --uninstall=true
+```console
+$ ./run-installer.sh --config=/path/to/your/config.yaml --uninstall=true
 ```
 
 You will also need to supply a boolean flag `--yes` to confirm uninstallation.

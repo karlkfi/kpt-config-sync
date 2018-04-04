@@ -13,8 +13,8 @@ Kuberentes clusters.
 Once Nomos components are deployed and running in a cluster, namespaces will be
 automatically created:
 
-```
-kubectl get namespaces -l nomos-managed
+```console
+$ kubectl get namespaces -l nomos-managed
 ```
 
 This should return 4 namespaces: `shipping-dev`,
@@ -22,8 +22,8 @@ This should return 4 namespaces: `shipping-dev`,
 
 Rolebindings are inherited from parent directories:
 
-```
-kubectl get rolebinding -n shipping-dev
+```console
+$ kubectl get rolebinding -n shipping-dev
 ```
 
 This should return 3 rolebindings: `job-creators`, `pod-creators`, and
@@ -32,22 +32,24 @@ This should return 3 rolebindings: `job-creators`, `pod-creators`, and
 You can test effective RBAC policies by impersonating users. For example, this
 should be forbidden:
 
-```
-kubectl get secrets -n shipping-dev --as bob@foo-corp.com
+```console
+$ kubectl get secrets -n shipping-dev --as bob@foo-corp.com
 ```
 
 whereas, this should succeed since `bob@foo-corp.com` has the `pod-creator`
 role:
 
-```
-kubectl get pods -n shipping-dev --as bob@foo-corp.com
+```console
+$ kubectl get pods -n shipping-dev --as bob@foo-corp.com
 ```
 
 To see inherited ResourceQuota in action, we can create a pod and request
 resources that exceed the limits set in the parent directory:
 
+```console
+$ cat <<EOF | kubectl create --as bob@foo-corp.com -f -
 ```
-cat <<EOF | kubectl create --as bob@foo-corp.com -f -
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:

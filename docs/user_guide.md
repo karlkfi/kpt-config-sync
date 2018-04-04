@@ -72,7 +72,7 @@ hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) or Github's
 check](https://help.github.com/articles/about-required-status-checks/)) before
 committing any policy changes:
 
-```
+```console
 $ nomosvet /path/to/foo-corp
 ```
 
@@ -128,8 +128,10 @@ such that anyone belonging to "shipping-app-backend-team" group is able to
 create pods in all namespace descendants (i.e. "shipping-dev",
 "shipping-staging", "shipping-prod"):
 
-```
+```console
 $ cat foo-corp/online/shipping-app-backend/pod-creator-rolebinding.yaml
+```
+```yaml
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -146,7 +148,7 @@ roleRef:
 
 This is done by automatically creating inherited RoleBindings in a namespace:
 
-```
+```console
 $ kubectl get rolebinding --namespace shipping-dev -o name
 job-creators
 pod-creators
@@ -184,8 +186,10 @@ existing objects will still be valid and operational.
 Here we add hard quota limit on number of pods across all namespaces having
 "shipping-app-backend" as an ancestor:
 
-```
+```console
 $ cat foo-corp/online/shipping-app-backend/quota.yaml
+```
+```yaml
 kind: ResourceQuota
 apiVersion: v1
 metadata:
@@ -199,7 +203,7 @@ In this case, total number of pods allowed in "shipping-prod", "shipping-dev",
 and "shipping-staging" is 3. When creating the fourth pod (e.g. in
 "shipping-prod"), you will see the following error:
 
-```
+```console
 Error from server (Forbidden): exceeded quota in policyspace "shipping-app-backend", requested: pods=4, limit: pods=3
 ```
 
@@ -217,8 +221,10 @@ only be editable by cluster admins.
 
 For example, we can create namespace-reader ClusterRole:
 
-```
+```console
 $ cat foo-corp/namespace-viewer-role.yaml
+```
+```yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -231,8 +237,10 @@ rules:
 
 And a ClusterRoleBinding referencing this Role:
 
-```
+```console
 $ cat foo-corp/namespace-viewer-rolebinding.yaml
+```
+```yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -252,8 +260,10 @@ roleRef:
 PodSecurityPolicies are created in the same manner as other cluster level
 resources:
 
+```console
+$ cat foo-corp/pod-security-policy.yaml
 ```
-cat foo-corp/pod-security-policy.yaml
+```yaml
 apiVersion: extensions/v1beta1
 kind: PodSecurityPolicy
 metadata:

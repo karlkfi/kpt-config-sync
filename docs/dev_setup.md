@@ -23,54 +23,54 @@
 
 Configure gcloud authn credentials if you have not already done so:
 
-```shell
-gcloud auth login
+```console
+$ gcloud auth login
 ```
 
 Configure gcloud to use our shared dev project where we bring up k8s clusters:
 
-```shell
-gcloud config set project stolos-dev
-gcloud config set compute/zone us-central1-b
+```console
+$ gcloud config set project stolos-dev
+$ gcloud config set compute/zone us-central1-b
 ```
 
 Make sure you are in the correct directory:
 
-```shell
-cd $NOMOS/scripts/cluster/gce
+```console
+$ cd $NOMOS/scripts/cluster/gce
 ```
 
 Download kubernetes (1 min).
 
-```shell
-./download-k8s-release.sh
+```console
+$ ./download-k8s-release.sh
 ```
 
 Start up your cluster (10 min):
 
-```shell
-./kube-up.sh
+```console
+$ ./kube-up.sh
 ```
 
 Set up prometheus for monitoring:
 
-```shell
-./configure-monitoring.sh
+```console
+$ ./configure-monitoring.sh
 ```
 
 Ensure you are properly connected to the cluster:
 
-```shell
-kubectl get ns # lists the 3 default namespaces plus monitoring namespace
+```console
+$ kubectl get ns # lists the 3 default namespaces plus monitoring namespace
 ```
 
 ## Initial setup of your cluster in GKE (one time)
 
 Create cluster using gcloud
 
-```shell
-export CLUSTER_NAME=<yourclustername>
-gcloud container clusters create ${CLUSTER_NAME} \
+```console
+$ export CLUSTER_NAME=<yourclustername>
+$ gcloud container clusters create ${CLUSTER_NAME} \
 --enable-autoupgrade \
 --machine-type=f1-micro \
 --zone=us-central1-a \
@@ -83,15 +83,15 @@ OR Optionally Create a GKE Cluster with version 1.9.4 or above and connect to it
 
 Set up prometheus for monitoring:
 
-```shell
-$NOMOS/scripts/cluster/gce/configure-monitoring.sh
+```console
+$ $NOMOS/scripts/cluster/gce/configure-monitoring.sh
 ```
 
 Add yourself as a cluster admin in RBAC. See
 https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control
 for details of why this is needed.
 
-```shell
-kubectl create clusterrolebinding {{USERNAME}}-cluster-admin-binding \
+```console
+$ kubectl create clusterrolebinding {{USERNAME}}-cluster-admin-binding \
     --clusterrole=cluster-admin --user={{USERNAME}}@google.com
 ```
