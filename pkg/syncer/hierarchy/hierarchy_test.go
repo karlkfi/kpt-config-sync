@@ -90,7 +90,7 @@ func (s *TestAggregatedNode) Aggregated(childNode *policyhierarchy_v1.PolicyNode
 }
 
 func (s *TestAggregatedNode) Generate() Instances {
-	return Instances{"test": &TestAggregatedOutput{Ancestry: s.Ancestry}}
+	return Instances{&TestAggregatedOutput{Ancestry: s.Ancestry}}
 }
 
 func NewTestAggregatedNode() AggregatedNode {

@@ -18,6 +18,8 @@ limitations under the License.
 package hierarchy
 
 import (
+	"fmt"
+
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	policyhierarchyinformer_v1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
@@ -26,8 +28,41 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+// NotFoundError is returned if a requested node is not found.
+type NotFoundError struct {
+	name string
+}
+
+// Error implements error
+func (s *NotFoundError) Error() string {
+	return fmt.Sprintf("policy node %s not found", s.name)
+}
+
+// IsNotFoundError returns true if the error is a NotFoundError
+func IsNotFoundError(err error) bool {
+	_, ok := err.(*NotFoundError)
+	return ok
+}
+
+// IncompleteHierarchyError is returned when ancestry is not able to retrieve all ancestors to the
+// root node.
+type IncompleteHierarchyError struct {
+	name string
+}
+
+// Error implements error
+func (s *IncompleteHierarchyError) Error() string {
+	return fmt.Sprintf("ancestor policy node %s missing from hierarchy", s.name)
+}
+
+// IsIncompleteHierarchyError returns true if the error is a NotFoundError
+func IsIncompleteHierarchyError(err error) bool {
+	_, ok := err.(*IncompleteHierarchyError)
+	return ok
+}
+
 // Instances represents all nodes in a
-type Instances map[string]meta_v1.Object
+type Instances []meta_v1.Object
 
 // AggregatedNode is the interface that specific policy types implement for merge operations.
 type AggregatedNode interface {
@@ -42,8 +77,8 @@ type AggregatedNode interface {
 // AggregatedNodeFactory is a function that returns a new AggregatedNode
 type AggregatedNodeFactory func() AggregatedNode
 
-// Ancestry represents the ancestry of a given policy node where the 0'th element is the root of the
-// hierarchy and the last element is policy node itself.
+// Ancestry represents the ancestry of a given policy node where the 0'th element is the requested
+// node and last node is the root of the hierarchy.
 type Ancestry []*policyhierarchy_v1.PolicyNode
 
 // Aggregate takes an AggregatedNodeFactory and produces instances based on a hierarchical
@@ -53,11 +88,25 @@ func (s Ancestry) Aggregate(factory AggregatedNodeFactory) Instances {
 	return nil
 }
 
+// Node returns the node that was requested during the ancestry lookup.
+func (s Ancestry) Node() *policyhierarchy_v1.PolicyNode {
+	return s[0]
+}
+
+// Interface is the interface that the Hierarchy object fulfills.
+type Interface interface {
+	Ancestry(name string) (Ancestry, error)
+	Subtree(name string) ([]string, error)
+}
+
 // Hierarchy performs common operations involved in hierarchical evaluation.
 type Hierarchy struct {
 	lister   policyhierarchylister_v1.PolicyNodeLister
 	informer cache.SharedIndexInformer
 }
+
+// Hierarchy implements HierarchyInterface
+var _ Interface = &Hierarchy{}
 
 // New returns new Hierarchy object.
 func New(informer policyhierarchyinformer_v1.PolicyNodeInformer) *Hierarchy {
@@ -67,14 +116,18 @@ func New(informer policyhierarchyinformer_v1.PolicyNodeInformer) *Hierarchy {
 	}
 }
 
-// Ancestry returns the ancestry of the named policy node.
-func (s *Hierarchy) Ancestry(name string) Ancestry {
+// Ancestry returns the ancestry of the named policy node. Returns a NotFoundError if the resource
+// was not found. For the event of an incomplete hierarchy, an IncompleteHierarchyError will be
+// returned.
+func (s *Hierarchy) Ancestry(name string) (Ancestry, error) {
 	glog.Fatal("not implemented.")
-	return nil
+	return nil, nil
 }
 
-// Subtree returns the name of all nodes in the subtree rooted at the named policy node.
-func (s *Hierarchy) Subtree(name string) []string {
+// Subtree returns the name of all nodes in the subtree rooted at the named policy node. Returns a
+// NotFoundError if the node with the given name was not found. Since there are only parent pointers
+// it's not possible to detect an incomplete hierarchy.
+func (s *Hierarchy) Subtree(name string) ([]string, error) {
 	glog.Fatal("not implemented.")
-	return nil
+	return nil, nil
 }
