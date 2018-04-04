@@ -133,6 +133,7 @@ func TestNamespaceActions(t *testing.T) {
 			if ns.Labels[policyhierarchy_v1.ParentLabelKey] != parentLabelValue {
 				t.Errorf("Failed to update the parent label\ntestcase: %s\n %s", spew.Sdump(testcase), spew.Sdump(ns))
 			}
+			controller := true
 			blockOwnerDeletion := true
 			expectOwnerReferences := []meta_v1.OwnerReference{
 				{
@@ -141,6 +142,7 @@ func TestNamespaceActions(t *testing.T) {
 					Name:               namespace,
 					UID:                testUID,
 					BlockOwnerDeletion: &blockOwnerDeletion,
+					Controller:         &controller,
 				},
 			}
 			if !reflect.DeepEqual(expectOwnerReferences, ns.OwnerReferences) {

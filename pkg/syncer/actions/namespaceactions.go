@@ -53,6 +53,7 @@ func NewNamespaceUpsertAction(
 	client kubernetes.Interface,
 	lister listers_core_v1.NamespaceLister) *action.ReflectiveUpsertAction {
 	blockOwnerDeletion := true
+	controller := true
 	spec := &action.ReflectiveActionSpec{
 		Resource:   action.LowerPlural(core_v1.Namespace{}),
 		KindPlural: action.Plural(core_v1.Namespace{}),
@@ -73,6 +74,7 @@ func NewNamespaceUpsertAction(
 					Name:               namespace,
 					UID:                uid,
 					BlockOwnerDeletion: &blockOwnerDeletion,
+					Controller:         &controller,
 				},
 			},
 		},
