@@ -73,13 +73,10 @@ func New(ctx context.Context) *Context {
 // Kubectl will execute a kubectl command.
 func (t *Context) Kubectl(args ...string) (stdout, stderr string, err error) {
 	actualArgs := append([]string{kubectlCmd}, args...)
-	success, stdout, stderr := run(t.ctx, actualArgs)
+	stdout, stderr, err = run(t.ctx, actualArgs)
 	if glog.V(9) {
 		glog.V(9).Infof("stdout: %v", stdout)
 		glog.V(9).Infof("stderr: %v", stderr)
-	}
-	if !success {
-		return stdout, stderr, errors.Errorf("Command %s failed, stdout: %s stderr: %s", strings.Join(args, " "), stdout, stderr)
 	}
 	return // naked
 }
@@ -260,11 +257,13 @@ func Clusters(c clientcmdapi.Config) ClusterList {
 	return cl
 }
 
-func run(ctx context.Context, args []string) (bool, string, string) {
-	stdout := bytes.NewBuffer(nil)
-	stderr := bytes.NewBuffer(nil)
-	exec.NewRedirected(os.Stdin, stdout, stderr).Run(ctx, args...)
-	return true, stdout.String(), stderr.String()
+// run runs the command with the given context and arguments.  Returns the contents of
+// stdout and stderr, and error if any.
+func run(ctx context.Context, args []string) (stdout, stderr string, err error) {
+	outbuf := bytes.NewBuffer(nil)
+	errbuf := bytes.NewBuffer(nil)
+	e := exec.NewRedirected(os.Stdin, outbuf, errbuf).Run(ctx, args...)
+	return outbuf.String(), errbuf.String(), e
 }
 
 func (t *Context) waitForDeployment(deadline time.Time, namespace string, name string) error {
