@@ -92,6 +92,7 @@ https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control
 for details of why this is needed.
 
 ```console
-$ kubectl create clusterrolebinding {{USERNAME}}-cluster-admin-binding \
-    --clusterrole=cluster-admin --user={{USERNAME}}@google.com
+$ USERNAME=username@domain.com
+$ kubectl create clusterrolebinding $(echo ${USERNAME} | sed -e 's/@.*//')-cluster-admin-binding \
+    --clusterrole=cluster-admin --user=${USERNAME}
 ```
