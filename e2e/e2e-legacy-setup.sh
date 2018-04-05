@@ -27,13 +27,14 @@ TESTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
 MAKEDIR=$TESTDIR/..
 # Path to demo acme yaml
 ACME=$MAKEDIR/examples/acme/policynodes/acme.yaml
+INSTALLER_CONFIG=$TESTDIR/install-config.yaml
 
 # Run once
 function initialSetUp() {
   echo "****************** Setting up environment ******************"
   cd ${MAKEDIR}
 
-  if ! make deploy ; then
+  if ! NOMOS_INSTALLER_CONFIG=$INSTALLER_CONFIG make deploy ; then
     echo "Failed to deploy Nomos components, aborting test"
     exit 1
   fi

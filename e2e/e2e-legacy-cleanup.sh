@@ -6,8 +6,10 @@ set -euo pipefail
 
 function cleanUp() {
   echo "****************** Cleaning up environment ******************"
-  kubectl delete policynodes --all || true
+  kubectl delete ValidatingWebhookConfiguration policy-nodes.nomos.dev --ignore-not-found
   kubectl delete ValidatingWebhookConfiguration resource-quota.nomos.dev --ignore-not-found
+  kubectl delete policynodes --all || true
+  kubectl delete clusterpolicy --all || true
   kubectl delete --ignore-not-found ns nomos-system
 
   echo "Deleting namespace nomos-system, this may take a minute"
