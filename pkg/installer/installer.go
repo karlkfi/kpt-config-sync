@@ -108,7 +108,7 @@ func New(c config.Config, workDir string) *Installer {
 // process.
 func (i *Installer) createCertificates() error {
 	for _, certInstaller := range i.certInstallers {
-		glog.V(5).Info("createCertificates: creating %s certificates", certInstaller.name())
+		glog.V(5).Infof("createCertificates: creating %s certificates", certInstaller.name())
 		if err := certInstaller.createCertificates(i.workDir); err != nil {
 			return err
 		}
