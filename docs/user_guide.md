@@ -65,17 +65,6 @@ foo-corp
 There are no requirements on file names or how many resources are packed in a
 file.
 
-Nomos provides a validation tool which should be used as presubmit check (e.g.
-Using Git's [pre-submit
-hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) or Github's
-[required status
-check](https://help.github.com/articles/about-required-status-checks/)) before
-committing any policy changes:
-
-```console
-$ nomosvet /path/to/foo-corp
-```
-
 When a valid tree is committed to Git and synced, Nomos controllers
 automatically create namespaces and corresponding policy resources to enforce
 hierarchical policy. In this example, Nomos automatically creates
@@ -131,6 +120,7 @@ create pods in all namespace descendants (i.e. "shipping-dev",
 ```console
 $ cat foo-corp/online/shipping-app-backend/pod-creator-rolebinding.yaml
 ```
+
 ```yaml
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -189,6 +179,7 @@ Here we add hard quota limit on number of pods across all namespaces having
 ```console
 $ cat foo-corp/online/shipping-app-backend/quota.yaml
 ```
+
 ```yaml
 kind: ResourceQuota
 apiVersion: v1
@@ -224,6 +215,7 @@ For example, we can create namespace-reader ClusterRole:
 ```console
 $ cat foo-corp/namespace-viewer-role.yaml
 ```
+
 ```yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -240,6 +232,7 @@ And a ClusterRoleBinding referencing this Role:
 ```console
 $ cat foo-corp/namespace-viewer-rolebinding.yaml
 ```
+
 ```yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -263,6 +256,7 @@ resources:
 ```console
 $ cat foo-corp/pod-security-policy.yaml
 ```
+
 ```yaml
 apiVersion: extensions/v1beta1
 kind: PodSecurityPolicy
@@ -281,3 +275,50 @@ spec:
   volumes:
   - '*'
 ```
+
+## Validation
+
+Before committing policy configuration in Git and pushing changes to Kubernetes
+clusters, it is important to validate them first.
+
+### Kubectl
+
+Since Nomos uses a filesystem tree of Kubernetes resources, `kubectl` can be
+used to validate resource schemas. The following command recursively validates
+all the resources in `foo-corp` directory without applying changes:
+
+```console
+$ kubectl apply -f foo-corp --recursive --dry-run
+```
+
+### Nomosvet
+
+`nomosvet` is tool that validates a root policyspace directory against the
+[constraints](#constraints) listed above.
+
+To install nomosvet:
+
+```console
+$ curl https://storage.googleapis.com/nomos-release/nomosvet.sh -o nomosvet.sh
+$ chmod +x nomosvet.sh
+```
+
+You can manually run nomosvet:
+
+```console
+$ nomosvet.sh foo-corp
+```
+
+This requires nomosvet.sh is in your PATH.
+
+You can also automatically run nomosvet as a git [pre-commit
+hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks). In the root of
+the repo, run:
+
+```console
+$ echo "nomosvet.sh foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
+```
+
+You can also integrate this into your CI/CD setup, e.g. when using
+GitHub [required status
+check](https://help.github.com/articles/about-required-status-checks/).

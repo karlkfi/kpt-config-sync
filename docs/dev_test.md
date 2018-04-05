@@ -2,8 +2,8 @@
 
 ## e2e
 
-end-to-end tests deploy Nomos components on Kubernetes cluster
-and verify functionality.
+end-to-end tests deploy Nomos components on Kubernetes cluster and verify
+functionality.
 
 ```console
 $ cd $GOROOT/src

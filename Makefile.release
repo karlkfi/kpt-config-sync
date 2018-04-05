@@ -57,18 +57,23 @@ check-dirty:
     fi
 
 # Releases the run-installer script and docs o GCS bucket.
-release: clean check-dirty test-all installer-image docs-package
+release: installer-image docs-package
 	gsutil cp $(TOP_DIR)/scripts/run-installer.sh $(RELEASE_BUCKET)
-	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/run-installer.sh
+	gsutil cp $(TOP_DIR)/scripts/nomosvet.sh $(RELEASE_BUCKET)
 	gsutil cp $(STAGING_DIR)/nomos-docs.zip $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip
-	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip
+	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip \
+		$(RELEASE_BUCKET)/run-installer.sh \
+		$(RELEASE_BUCKET)/nomosvet.sh
 
 # For releases we attach the :latest tag to the image we just built and update the latest docs package.
 bless-release:
 	@echo "Moving 'latest' label to reflect a STABLE version release."
-	gcloud container images add-tag --quiet
-	gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG)
-	gcr.io/$(GCP_PROJECT)/installer:latest
+	gcloud container images add-tag --quiet \
+		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
+		gcr.io/$(GCP_PROJECT)/installer:latest
+	gcloud container images add-tag --quiet \
+		gcr.io/$(GCP_PROJECT)/nomosvet:$(IMAGE_TAG) \
+		gcr.io/$(GCP_PROJECT)/nomosvet:latest
 	@echo "Updating latest docs package"
 	gsutil cp -p $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip $(RELEASE_BUCKET)/nomos-docs.zip
 

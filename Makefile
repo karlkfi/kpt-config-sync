@@ -61,11 +61,15 @@ BUILD_IMAGE ?= buildenv
 # GCP project that owns container registry for local dev build.
 GCP_PROJECT ?= stolos-dev
 
-# All Nomos components
-ALL_COMPONENTS := syncer \
+# All Nomos apps which run on K8S.
+ALL_K8S_APPS := syncer \
 	git-policy-importer \
 	resourcequota-admission-controller \
 	policynodes-admission-controller
+
+# ALl Nomos apps
+ALL_APPS := $(ALL_K8S_APPS) \
+	nomosvet
 
 # Allows an interactive docker build or test session to be interrupted
 # by Ctrl-C.  This must be turned off in case of non-interactive runs,
@@ -126,7 +130,7 @@ build: buildenv .output
 			./scripts/build/build.sh                                       \
 		"
 # Creates a docker image for each nomos component.
-image-all: $(addprefix image-, $(ALL_COMPONENTS))
+image-all: $(addprefix image-, $(ALL_APPS))
 	@echo "finished packaging all"
 
 # Creates a docker image for the specified nomos component.
@@ -139,7 +143,7 @@ image-%: build
 	docker build -t gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) $(STAGING_DIR)/$*
 
 # Pushes each component's docker image to gcr.io.
-push-to-gcr-all: $(addprefix push-to-gcr-, $(ALL_COMPONENTS))
+push-to-gcr-all: $(addprefix push-to-gcr-, $(ALL_APPS))
 	@echo "finished pushing to all"
 
 # Pushes the specified component's docker image ot gcr.io.
@@ -240,7 +244,7 @@ install-kubectl-plugin:
 	cd $(TOP_DIR)/cmd/kubectl-nomos; ./install.sh
 
 # Generates the podspec yaml for each component.
-gen-yaml-all: $(addprefix gen-yaml-, $(ALL_COMPONENTS))
+gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_APPS))
 	@echo "finished generating all yaml."
 
 # Generates the podspec yaml for the component specified.

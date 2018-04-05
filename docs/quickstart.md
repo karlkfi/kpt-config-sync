@@ -49,6 +49,7 @@ resources that exceed the limits set in the parent directory:
 ```console
 $ cat <<EOF | kubectl create --as bob@foo-corp.com -f -
 ```
+
 ```yaml
 apiVersion: v1
 kind: Pod

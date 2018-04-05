@@ -32,12 +32,14 @@ The syncer will have the following high level componets:
 
 ### PolicyHierarchyController Overview
 
-The PolicyHierarchyController will listen on events for PolicyNodes. Since a PolicyNode represents a
-node in a hierarchy, the entire subtree will need to be updated. The controller will take incoming
-PolicyNode events and translate those to the affected namespace names and trigger events in the
-kubebuilder framework to reconcile the namespace. Controlled policies and namespaces themselves will
-only trigger based on the namespace name. When reconciling each namespace, the namespace's policies
-be recomputed from the ancestry and applied to the controlled policies.
+The PolicyHierarchyController will listen on events for PolicyNodes. Since a
+PolicyNode represents a node in a hierarchy, the entire subtree will need to be
+updated. The controller will take incoming PolicyNode events and translate those
+to the affected namespace names and trigger events in the kubebuilder framework
+to reconcile the namespace. Controlled policies and namespaces themselves will
+only trigger based on the namespace name. When reconciling each namespace, the
+namespace's policies be recomputed from the ancestry and applied to the
+controlled policies.
 
 1.  ParentIndexer - An extension to the cache.SharedIndexInformer that provides
     parent to child lookup by adding additional indexes
@@ -52,8 +54,9 @@ be recomputed from the ancestry and applied to the controlled policies.
 
 ### ClusterPolicyController
 
-The cluster policy controller will listen to the ClusterPolicy resource and unpack the declared
-resources. The Reconclier from the PolicyHierarchyController will be re-used for handling
-synchronization of declared resources to actual resources. Since there is no hierarchy involved, this
-will be much simpler, however, each resource will need to have an owner reference in order to
-properly remove resources.
+The cluster policy controller will listen to the ClusterPolicy resource and
+unpack the declared resources. The Reconclier from the PolicyHierarchyController
+will be re-used for handling synchronization of declared resources to actual
+resources. Since there is no hierarchy involved, this will be much simpler,
+however, each resource will need to have an owner reference in order to properly
+remove resources.
