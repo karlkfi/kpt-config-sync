@@ -40,6 +40,9 @@ STAGING_DIR := $(OUTPUT_DIR)/staging
 # Directory used for staging docs.
 DOCS_STAGING_DIR := $(STAGING_DIR)/docs
 
+# Directory used for installer output.
+INSTALLER_OUTPUT_DIR := $(STAGING_DIR)/installer_output
+
 # Directory containing gen-alld yaml files from manifest templates.
 GEN_YAML_DIR := $(OUTPUT_DIR)/yaml
 
@@ -84,12 +87,13 @@ IMAGE_TAG ?= $(VERSION)-$(USER)-$(DATE)
 # Creates the local golang build output directory.
 .output:
 	mkdir -p \
-		$(GO_DIR)/src/$(REPO) \
-		$(GO_DIR)/pkg \
-		$(GO_DIR)/std/$(ARCH) \
 		$(BIN_DIR)/$(ARCH) \
-		$(STAGING_DIR) \
-		$(GEN_YAML_DIR)
+		$(GEN_YAML_DIR) \
+		$(GO_DIR)/pkg \
+		$(GO_DIR)/src/$(REPO) \
+		$(GO_DIR)/std/$(ARCH) \
+		$(INSTALLER_OUTPUT_DIR) \
+		$(STAGING_DIR)
 
 ##### TARGETS #####
 
@@ -179,6 +183,7 @@ deploy-interactive: installer-image
 	@./scripts/run-installer.sh \
 		--interactive \
 		--container=gcr.io/$(GCP_PROJECT)/installer \
+		--output_dir=$(INSTALLER_OUTPUT_DIR) \
 		--version=$(IMAGE_TAG)
 
 # Runs the installer via docker in batch mode using the installer config
@@ -191,6 +196,7 @@ deploy: installer-image
 	./scripts/run-installer.sh \
 		--config=$(NOMOS_INSTALLER_CONFIG) \
 		--container=gcr.io/$(GCP_PROJECT)/installer \
+		--output_dir=$(INSTALLER_OUTPUT_DIR) \
 		--version=$(IMAGE_TAG)
 
 # Cleans all artifacts.
