@@ -18,20 +18,23 @@ limitations under the License.
 package eventprocessor
 
 import (
-	"github.com/golang/glog"
-	policyhierarchy_informer_v1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
+	policyhierarchyinformer_v1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 )
 
 // Factory returns a types.HandleFnProvider that will create a PolicyNodeEventProcessor with the
 // passed informer.
-func Factory(informer policyhierarchy_informer_v1.PolicyNodeInformer) types.HandleFnProvider {
+func Factory(informer policyhierarchyinformer_v1.PolicyNodeInformer) types.HandleFnProvider {
 	return func(queue workqueue.RateLimitingInterface) cache.ResourceEventHandlerFuncs {
 		processor := &PolicyNodeEventProcessor{
-			queue:    queue,
-			informer: informer.Informer(),
+			queue:     queue,
+			hierarchy: hierarchy.New(informer),
 		}
 		return processor.HandlerFuncs()
 	}
@@ -40,8 +43,8 @@ func Factory(informer policyhierarchy_informer_v1.PolicyNodeInformer) types.Hand
 // PolicyNodeEventProcessor handles translating events for policy nodes into events for all spaces
 // associated with the node in the hierarchy.
 type PolicyNodeEventProcessor struct {
-	queue    workqueue.RateLimitingInterface
-	informer cache.SharedIndexInformer
+	queue     workqueue.Interface
+	hierarchy hierarchy.Interface
 }
 
 // HandlerFuncs adapts PolicyNodeEventProcessor to a cache.ResourceEventHandlerFuncs
@@ -55,15 +58,33 @@ func (p *PolicyNodeEventProcessor) HandlerFuncs() cache.ResourceEventHandlerFunc
 
 // OnAdd implements cache.ResourceEventHandler.
 func (p *PolicyNodeEventProcessor) OnAdd(obj interface{}) {
-	glog.Fatal("Not implemented")
+	p.subtreeEvents(obj.(*policyhierarchy_v1.PolicyNode))
 }
 
 // OnUpdate implements cache.ResourceEventHandler.
 func (p *PolicyNodeEventProcessor) OnUpdate(oldObj, newObj interface{}) {
-	glog.Fatal("Not implemented")
+	p.subtreeEvents(newObj.(*policyhierarchy_v1.PolicyNode))
+}
+
+// subtreeEvents handles generating all events for a subtree.
+func (p *PolicyNodeEventProcessor) subtreeEvents(policyNode *policyhierarchy_v1.PolicyNode) {
+	names, err := p.hierarchy.Subtree(policyNode.Name)
+	if err != nil {
+		if hierarchy.IsNotFoundError(err) {
+			// This is possible if the resource is added/updated then deleted before we process this event.
+			return
+		}
+		// The informer is only expected to error out if something is not set up correctly (not found
+		// is the only error we should expect at this point).
+		panic(errors.Wrapf(err, "encountered programmer error"))
+	}
+	for _, name := range names {
+		p.queue.Add(name)
+	}
 }
 
 // OnDelete implements cache.ResourceEventHandler.
 func (p *PolicyNodeEventProcessor) OnDelete(obj interface{}) {
-	glog.Fatal("Not implemented")
+	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
+	p.queue.Add(policyNode.Name)
 }
