@@ -129,12 +129,6 @@ done
 
 ## Main ##
 
-readonly gcloud_prg="$(which gcloud)"
-if [[ -z "${gcloud_prg}" ]]; then
-  echo "gcloud is required."
-  exit 1
-fi
-
 CONFIG_DIR="examples"
 CONFIG_BASENAME="quickstart.yaml"
 if [[ -z "${CONFIG}" ]]; then
@@ -153,12 +147,12 @@ else
 fi
 
 # Only suggest the user where there is a gcloud utility available.
-readonly suggested_user="$(gcloud config get-value account)"
+suggested_user=""
+if command -v gcloud ; then
+   suggested_user="$(gcloud config get-value account)"
+fi
 
-# Temporarily, pull the latest image to the local docker daemon cache.
-# TODO(filmil): Remove this gimmick once we have a public cluster registry
-# to pull from.
-gcloud docker -- pull "${INSTALLER_CONTAINER}:${VERSION}"
+docker pull "${INSTALLER_CONTAINER}:${VERSION}"
 
 # TODO(filmil): Move the environment variables to flags.
 echo "+++ Using output directory: ${OUTPUT_DIR}"
