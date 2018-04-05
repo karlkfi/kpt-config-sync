@@ -1,4 +1,9 @@
 package configgen
+f 4
+Prev
+Up
+
+
 
 import (
 	"fmt"
@@ -14,7 +19,8 @@ const (
 
 SSH settings are used to access git repositories through the SSH protocol, e.g.
 in case of public git repositories.  SSH offers a fairly robust way to access
-such repositories.`
+such repositories. Leaving these fields blank will attempt to connect to the
+repository without authentication and requires https protocol for the repo`
 
 	// The column at which the form text input starts.
 	sshFormTextColumn = 2

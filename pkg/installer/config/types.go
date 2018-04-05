@@ -43,6 +43,7 @@ type SshConfig struct {
 	// PrivateKeyFilename is the filename containing the private key used
 	// for SSH authentication.  This entry is communicated through a file
 	// to avoid exposing the contents of the secret in the process table.
+	// If this entry is empty, SSH will be set to false.
 	PrivateKeyFilename string `json:"privateKeyFilename,omitempty"`
 
 	// KnownHostsFilename is the filename containing the known hosts SSH

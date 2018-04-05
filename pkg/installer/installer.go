@@ -134,17 +134,19 @@ func (i *Installer) applyAll(applyDir string) error {
 func (i *Installer) deploySshSecrets() error {
 	const secret = "git-creds"
 	glog.V(5).Info("deploySshSecrets: enter")
-	if i.c.Ssh.PrivateKeyFilename == "" {
-		glog.V(5).Infof("Not deploying SSH secrets, config has none.")
-		return nil
+	var filenames []string
+	if i.c.Ssh.PrivateKeyFilename != "" {
+		// TODO(filmil): Should there be more validation of these file paths?
+		filenames = append(filenames,
+			fmt.Sprintf("ssh=%v", i.c.Ssh.PrivateKeyFilename),
+			fmt.Sprintf("known_hosts=%v", i.c.Ssh.KnownHostsFilename))
+	} else {
+		glog.V(5).Info("no PrivateKeyFilename, deploying empty secret")
 	}
 	c := kubectl.New(context.Background())
 	c.DeleteSecret(secret, defaultNamespace)
-	// TODO(filmil): Should there be more validation of these file paths?
 	if err := c.CreateSecretGenericFromFile(
-		secret, defaultNamespace,
-		fmt.Sprintf("ssh=%v", i.c.Ssh.PrivateKeyFilename),
-		fmt.Sprintf("known_hosts=%v", i.c.Ssh.KnownHostsFilename)); err != nil {
+		secret, defaultNamespace, filenames...); err != nil {
 		return errors.Wrapf(err, "while creating ssh secrets")
 	}
 	return nil
@@ -164,7 +166,7 @@ func (i *Installer) deployGitConfig() error {
 
 	if err := c.CreateConfigmapFromLiterals(
 		configmap, defaultNamespace,
-		"GIT_SYNC_SSH=true",
+		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Ssh.PrivateKeyFilename != ""),
 		fmt.Sprintf("GIT_SYNC_REPO=%v", i.c.Git.SyncRepo),
 		fmt.Sprintf("GIT_SYNC_BRANCH=%v", i.c.Git.SyncBranch),
 		fmt.Sprintf("GIT_SYNC_WAIT=%v", i.c.Git.SyncWaitSeconds),
