@@ -1,9 +1,4 @@
 package configgen
-f 4
-Prev
-Up
-
-
 
 import (
 	"fmt"
