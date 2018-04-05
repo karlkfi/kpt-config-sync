@@ -2,6 +2,13 @@
 
 To build and deploy all Nomos binaries:
 
+First time to create the deployment configuration
+```console
+$ cd $NOMOS
+$ make deploy-interactive
+```
+
+Subsequent deployments:
 ```console
 $ cd $NOMOS
 $ make NOMOS_INSTALLER_CONFIG=path/to/config deploy
