@@ -33,7 +33,7 @@ func runWithEnv(ctx context.Context, scriptPath string, env ...string) ([]string
 	c := exec.New()
 	c.SetEnv(env)
 	if err := c.Run(ctx, bashCmd, "-c", scriptPath); err != nil {
-		errors.Wrapf(err, "Script %s exited non-zero", scriptPath)
+		return nil, errors.Wrapf(err, "Script %s exited non-zero", scriptPath)
 	}
 	return c.Env(), nil
 }

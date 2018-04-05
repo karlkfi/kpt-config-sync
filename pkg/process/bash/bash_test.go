@@ -31,3 +31,25 @@ func TestRunWithEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestRunWithEnvError(t *testing.T) {
+	tests := []struct {
+		name string
+		env  string
+	}{
+		{
+			name: "Basic",
+			env:  "KEY=VALUE",
+		},
+	}
+	// Ensure that a real bash command is used for this test.
+	exec.SetFakeOutputsForTest(nil, nil, nil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := runWithEnv(context.Background(), "SOME_NONEXISTENT_SCRIPT", tt.env)
+			if err == nil {
+				t.Errorf("expected error")
+			}
+		})
+	}
+}

@@ -77,6 +77,7 @@ func (t *Context) Kubectl(args ...string) (stdout, stderr string, err error) {
 	if glog.V(9) {
 		glog.V(9).Infof("stdout: %v", stdout)
 		glog.V(9).Infof("stderr: %v", stderr)
+		glog.V(9).Infof("err: %v", err)
 	}
 	return // naked
 }

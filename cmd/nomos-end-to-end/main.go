@@ -18,6 +18,7 @@ package main
 import (
 	"flag"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/testing/e2e"
 	"github.com/pkg/errors"
 )
@@ -33,6 +34,7 @@ var testFunctionPattern = flag.String(
 
 func main() {
 	flag.Parse()
+	glog.Infof("Running e2e test.")
 	if *repoDir == "" {
 		panic(errors.Errorf("-repo_dir flag not set"))
 	}

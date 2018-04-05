@@ -171,6 +171,7 @@ docker run -it \
   -e "CONFIG_OUT=gen_configs/generated.yaml" \
   -e "SUGGESTED_USER=${suggested_user}" \
   -e "HOME_ON_HOST=${HOME}" \
-  "${INSTALLER_CONTAINER}:${VERSION}" "$@"
-echo "+++ Generated files are available in ${OUTPUT_DIR}"
+  "${INSTALLER_CONTAINER}:${VERSION}" "$@" \
+	&& echo "+++ Generated files are available in ${OUTPUT_DIR}" \
+	|| (echo "### Installer failed.  Logs are available in ${OUTPUT_DIR}/logs"; exit 1)
 

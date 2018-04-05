@@ -227,10 +227,10 @@ test: buildenv .output
 
 # Runs end-to-end tests.
 test-e2e:
-	e2e/e2e.sh
+	e2e/e2e.sh --logtostderr --vmodule=bash=10,exec=10,kubectl=10
 # Runs end-to-end tests but leaves files for debugging.
 test-e2e-no-cleanup:
-	e2e/e2e.sh -skip_cleanup
+	e2e/e2e.sh -skip_cleanup --logtostderr --vmodule=bash=10,exec=10,kubectl=10
 
 # Runs all tests.
 test-all: test test-e2e

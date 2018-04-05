@@ -20,6 +20,7 @@
 # > SKIP_FINAL_CLEANUP=1 e2e/e2e.sh
 
 set -euo pipefail
+set -x
 
 REPO=$(dirname $(readlink -f $0))/..
 BIN=nomos-end-to-end
