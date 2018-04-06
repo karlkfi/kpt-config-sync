@@ -26,7 +26,6 @@ import (
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	informerspolicynodev1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/util/policynode/validator"
-	"github.com/prometheus/client_golang/prometheus"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -40,8 +39,6 @@ import (
 type Admitter struct {
 	policyNodeInformer informerspolicynodev1.PolicyNodeInformer
 	decoder            runtime.Decoder
-	admitDuration      *prometheus.HistogramVec
-	errTotal           *prometheus.CounterVec
 }
 
 var _ admissioncontroller.Admitter = (*Admitter)(nil)
@@ -53,34 +50,9 @@ func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer) ad
 
 	decoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
 
-	// Prometheus metrics
-	admitDuration := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Help:      "Policy Node admission duration distributions",
-			Namespace: "nomos",
-			Subsystem: "policy_node_admission",
-			Name:      "action_duration_seconds",
-			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
-		},
-		[]string{"namespace", "allowed"},
-	)
-	errTotal := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Help:      "Total internal errors that occurred when reviewing policy node requests",
-			Namespace: "nomos",
-			Subsystem: "policy_node_admission",
-			Name:      "error_total",
-		},
-		[]string{"namespace"},
-	)
-	prometheus.MustRegister(admitDuration)
-	prometheus.MustRegister(errTotal)
-
 	return &Admitter{
 		policyNodeInformer: policyNodeInformer,
 		decoder:            decoder,
-		admitDuration:      admitDuration,
-		errTotal:           errTotal,
 	}
 }
 
@@ -94,7 +66,7 @@ func (p *Admitter) Admit(review admissionv1beta1.AdmissionReview) *admissionv1be
 	start := time.Now()
 	resp := p.internalAdmit(review)
 	elapsed := time.Since(start).Seconds()
-	p.admitDuration.WithLabelValues(review.Request.Namespace, strconv.FormatBool(resp.Allowed)).Observe(elapsed)
+	admissioncontroller.Metrics.AdmitDuration.WithLabelValues("policy_node", review.Request.Namespace, strconv.FormatBool(resp.Allowed)).Observe(elapsed)
 	return resp
 }
 
@@ -102,7 +74,8 @@ func (p *Admitter) internalAdmit(
 	review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
 	policyNodes, err := p.policyNodeInformer.Lister().List(labels.Everything())
 	if err != nil {
-		return admissioncontroller.InternalErrorDeny(p.errTotal, err, review.Request.Namespace)
+		admissioncontroller.Metrics.ErrorTotal.WithLabelValues("policy_node", review.Request.Namespace).Inc()
+		return admissioncontroller.InternalErrorDeny(err, review.Request.Namespace)
 	}
 
 	// TODO(sbochins): A way for the user to toggle multiple roots, orphan adds checks.

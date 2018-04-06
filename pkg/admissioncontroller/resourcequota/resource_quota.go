@@ -25,7 +25,6 @@ import (
 	"github.com/google/nomos/pkg/admissioncontroller"
 	informerspolicynodev1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/resourcequota"
-	"github.com/prometheus/client_golang/prometheus"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	core_v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,8 +41,6 @@ type Admitter struct {
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer
 	quotaRegistry         quota.Registry
 	decoder               runtime.Decoder
-	admitDuration         *prometheus.HistogramVec
-	errTotal              *prometheus.CounterVec
 }
 
 var _ admissioncontroller.Admitter = (*Admitter)(nil)
@@ -59,36 +56,11 @@ func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 
 	decoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
 
-	// Prometheus metrics
-	admitDuration := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Help:      "Quota admission duration distributions",
-			Namespace: "nomos",
-			Subsystem: "quota_admission",
-			Name:      "action_duration_seconds",
-			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
-		},
-		[]string{"namespace", "allowed"},
-	)
-	errTotal := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Help:      "Total internal errors that occurred when reviewing quota requests",
-			Namespace: "nomos",
-			Subsystem: "quota_admission",
-			Name:      "error_total",
-		},
-		[]string{"namespace"},
-	)
-	prometheus.MustRegister(admitDuration)
-	prometheus.MustRegister(errTotal)
-
 	return &Admitter{
 		policyNodeInformer:    policyNodeInformer,
 		resourceQuotaInformer: resourceQuotaInformer,
 		quotaRegistry:         quotaRegistry,
 		decoder:               decoder,
-		admitDuration:         admitDuration,
-		errTotal:              errTotal,
 	}
 }
 
@@ -102,18 +74,21 @@ func (r *Admitter) Admit(review admissionv1beta1.AdmissionReview) *admissionv1be
 	start := time.Now()
 	resp := r.internalAdmit(review)
 	elapsed := time.Since(start).Seconds()
-	r.admitDuration.WithLabelValues(review.Request.Namespace, strconv.FormatBool(resp.Allowed)).Observe(elapsed)
+	admissioncontroller.Metrics.AdmitDuration.WithLabelValues("resource_quota", review.Request.Namespace, strconv.FormatBool(resp.Allowed)).Observe(elapsed)
 	return resp
 }
 
 func (r *Admitter) internalAdmit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
 	cache, err := resourcequota.NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
+	counter := admissioncontroller.Metrics.ErrorTotal.WithLabelValues("resource_quota", review.Request.Namespace)
 	if err != nil {
-		return admissioncontroller.InternalErrorDeny(r.errTotal, err, review.Request.Namespace)
+		counter.Inc()
+		return admissioncontroller.InternalErrorDeny(err, review.Request.Namespace)
 	}
 	newUsage, err := r.getNewUsage(*review.Request)
 	if err != nil {
-		return admissioncontroller.InternalErrorDeny(r.errTotal, err, review.Request.Namespace)
+		counter.Inc()
+		return admissioncontroller.InternalErrorDeny(err, review.Request.Namespace)
 	}
 	admitError := cache.Admit(review.Request.Namespace, newUsage)
 	if admitError != nil {

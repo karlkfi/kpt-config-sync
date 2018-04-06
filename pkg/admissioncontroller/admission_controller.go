@@ -20,7 +20,6 @@ package admissioncontroller
 import (
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -34,8 +33,7 @@ type Admitter interface {
 	Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse
 }
 
-func InternalErrorDeny(counter *prometheus.CounterVec, err error, namespace string) *admissionv1beta1.AdmissionResponse {
-	counter.WithLabelValues(namespace).Inc()
+func InternalErrorDeny(err error, namespace string) *admissionv1beta1.AdmissionResponse {
 	return &admissionv1beta1.AdmissionResponse{
 		Allowed: false,
 		Result: &metav1.Status{
