@@ -57,7 +57,7 @@ check-dirty:
     fi
 
 # Releases the run-installer script and docs o GCS bucket.
-release: installer-image docs-package
+release: clean check-dirty test-all installer-image docs-package
 	gsutil cp $(TOP_DIR)/scripts/run-installer.sh $(RELEASE_BUCKET)
 	gsutil cp $(TOP_DIR)/scripts/nomosvet.sh $(RELEASE_BUCKET)
 	gsutil cp $(STAGING_DIR)/nomos-docs.zip $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip
