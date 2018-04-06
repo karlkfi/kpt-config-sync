@@ -149,6 +149,10 @@ func (t *Context) CreateConfigmapFromLiterals(name, namespace string, literals .
 // AddClusterAdmin adds user as a cluster admin.  This is only useful on clusters
 // that require such a change.  For example GKE.
 func (t *Context) AddClusterAdmin(user string) error {
+	// Ensure that at the beginning there is no permission for the current user.
+	if err := t.RemoveClusterAdmin(user); err != nil {
+		return errors.Wrapf(err, "while trying to clean up cluster admin for user")
+	}
 	// TODO(filmil): 'user' here comes from user-supplied configuration.  Should
 	// it be sanitized, or is placement in 'args' enough?
 	args := []string{
