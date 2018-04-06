@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/clientgen/informers/externalversions"
 	pn_v1 "github.com/google/nomos/clientgen/informers/externalversions/policyhierarchy/v1"
 	pn_fake "github.com/google/nomos/clientgen/policyhierarchy/fake"
+	"github.com/google/nomos/pkg/syncer/parentindexer"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	core_v1 "k8s.io/client-go/informers/core/v1"
@@ -22,7 +23,7 @@ func NewPolicyNodeInformer(content ...runtime.Object) pn_v1.PolicyNodeInformer {
 	factory := externalversions.NewSharedInformerFactory(
 		fakeClientSet, 1*time.Minute)
 	informer := factory.Nomos().V1().PolicyNodes()
-	informer.Informer()
+	informer.Informer().AddIndexers(parentindexer.Indexer())
 	factory.Start(nil)
 	glog.Infof("cache sync...")
 	if !cache.WaitForCacheSync(nil, informer.Informer().HasSynced) {

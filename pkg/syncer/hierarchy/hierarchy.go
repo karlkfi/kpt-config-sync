@@ -20,10 +20,13 @@ package hierarchy
 import (
 	"fmt"
 
-	"github.com/golang/glog"
+	"strings"
+
 	policyhierarchyinformer_v1 "github.com/google/nomos/clientgen/informers/externalversions/policyhierarchy/v1"
 	policyhierarchylister_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/syncer/parentindexer"
+	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -61,7 +64,7 @@ func IsIncompleteHierarchyError(err error) bool {
 	return ok
 }
 
-// Instances represents all nodes in a
+// Instances represents all nodes in an AggregatedNode.
 type Instances []meta_v1.Object
 
 // AggregatedNode is the interface that specific policy types implement for merge operations.
@@ -84,13 +87,25 @@ type Ancestry []*policyhierarchy_v1.PolicyNode
 // Aggregate takes an AggregatedNodeFactory and produces instances based on a hierarchical
 // evaluation.
 func (s Ancestry) Aggregate(factory AggregatedNodeFactory) Instances {
-	glog.Fatal("not implemented")
-	return nil
+	aggregate := factory()
+	for i := len(s) - 1; i >= 0; i-- {
+		aggregate = aggregate.Aggregated(s[i])
+	}
+	return aggregate.Generate()
 }
 
 // Node returns the node that was requested during the ancestry lookup.
 func (s Ancestry) Node() *policyhierarchy_v1.PolicyNode {
 	return s[0]
+}
+
+// String implements Stringer
+func (s Ancestry) String() string {
+	var names []string
+	for _, policyNode := range s {
+		names = append(names, policyNode.Name)
+	}
+	return strings.Join(names, " -> ")
 }
 
 // Interface is the interface that the Hierarchy object fulfills.
@@ -120,14 +135,53 @@ func New(informer policyhierarchyinformer_v1.PolicyNodeInformer) *Hierarchy {
 // was not found. For the event of an incomplete hierarchy, an IncompleteHierarchyError will be
 // returned.
 func (s *Hierarchy) Ancestry(name string) (Ancestry, error) {
-	glog.Fatal("not implemented.")
-	return nil, nil
+	node, err := s.lister.Get(name)
+	if err != nil {
+		if api_errors.IsNotFound(err) {
+			return nil, &NotFoundError{name}
+		}
+		panic("Lister returned error other than not found, this should not happen")
+	}
+
+	ancestry := Ancestry{node}
+	current := node.Spec.Parent
+	for current != "" {
+		node, err = s.lister.Get(current)
+		if err != nil {
+			if api_errors.IsNotFound(err) {
+				return nil, &IncompleteHierarchyError{current}
+			}
+			panic("Lister returned error other than not found, this should not happen")
+		}
+
+		ancestry = append(ancestry, node)
+		current = node.Spec.Parent
+	}
+
+	return ancestry, nil
 }
 
 // Subtree returns the name of all nodes in the subtree rooted at the named policy node. Returns a
 // NotFoundError if the node with the given name was not found. Since there are only parent pointers
 // it's not possible to detect an incomplete hierarchy.
 func (s *Hierarchy) Subtree(name string) ([]string, error) {
-	glog.Fatal("not implemented.")
-	return nil, nil
+	if _, err := s.lister.Get(name); err != nil {
+		if api_errors.IsNotFound(err) {
+			return nil, &NotFoundError{name}
+		}
+		panic("Lister returned error other than not found, this should not happen")
+	}
+	return s.subtree(name), nil
+}
+
+func (s *Hierarchy) subtree(name string) []string {
+	subtree := []string{name}
+	children, err := parentindexer.GetChildren(s.informer, name)
+	if err != nil {
+		return subtree
+	}
+	for _, child := range children {
+		subtree = append(subtree, s.subtree(child)...)
+	}
+	return subtree
 }
