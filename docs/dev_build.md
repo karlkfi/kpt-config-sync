@@ -2,13 +2,15 @@
 
 To build and deploy all Nomos binaries:
 
-First time to create the deployment configuration
+First time to create the deployment configuration:
+
 ```console
-$ cd $NOMOS
-$ make deploy-interactive
+ $ cd $NOMOS
+ $ make deploy-interactive
 ```
 
 Subsequent deployments:
+
 ```console
 $ cd $NOMOS
 $ make NOMOS_INSTALLER_CONFIG=path/to/config deploy
@@ -86,9 +88,9 @@ To see logs for git-sync side-car container:
 $ kubectl logs -l app=git-policy-importer -c git-sync -n nomos-system
 ```
 
-The GitPolicyImporter is configured using a ConfigMap git-policy-importer.
-You can modify that configuration and scale down the deployment and back up
-again to try configuration changes.
+The GitPolicyImporter is configured using a ConfigMap git-policy-importer. You
+can modify that configuration and scale down the deployment and back up again to
+try configuration changes.
 
 ```console
 $ kubectl edit configmap git-policy-importer -n nomos-system
@@ -134,3 +136,4 @@ This command gets all role bindings across namespaces.
 ```console
 $ kubectl plugin nomos get rolebindings --namespace=frontend
 ```
+````

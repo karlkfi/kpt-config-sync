@@ -7,11 +7,11 @@
 When using Git as source of truth, we represent the hierarchy of policyspaces
 and namespaces using the filesystem hierarchy.
 
-Following the [foo-corp example](concepts.md#example) above, we can have such a
+Following the [foo-corp example](concepts.md#example), we can have such a
 directory structure ([Available on this GitHub
 repo](https://github.com/frankfarzan/foo-corp-example)):
 
-```
+```console
 foo-corp
 |-- audit
 |   `-- namespace.yaml
@@ -48,7 +48,6 @@ foo-corp
     resources, and a single ResourceQuota resource.
 1.  A namespace directory name must match the namespace name in all resources in
     that directory.
-1.  A policyspace directory must not contain a Namespace resource.
 1.  A policyspace directory can contain any number of Rolebinding resources and
     a single ResourceQuota resource but must not contain Roles. These resources
     must not specify a namespace.
@@ -57,18 +56,17 @@ foo-corp
 1.  Both policyspace and namespace directory names must be valid Kubernetes
     namespace names (i.e. [DNS
     Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md))
-    and must be unique in the hierarchy. In addition a name cannot be "default",
-    "nomos-system", or have "kube-" prefix.
-1.  Any other file not explicitly mentioned above is ignored by Nomos in this
-    release (e.g. OWNERS files).
+    and must be unique in the hierarchy. In addition a name cannot be `default`,
+    `nomos-system`, or have `kube-` prefix.
 
 There are no requirements on file names or how many resources are packed in a
-file.
+file. Any other file not explicitly mentioned above is ignored by Nomos in this
+release (e.g. OWNERS files).
 
 When a valid tree is committed to Git and synced, Nomos controllers
 automatically create namespaces and corresponding policy resources to enforce
 hierarchical policy. In this example, Nomos automatically creates
-"shipping-dev", "shipping-staging", and "shipping-prod" namespaces. We discuss
+`shipping-dev`, `shipping-staging`, and `shipping-prod` namespaces. We discuss
 specific policy types and their enforcement in later sections.
 
 Note that when using Git as source of truth, it is up to the repo owners to set
@@ -112,10 +110,10 @@ properties:
 1.  A RoleBinding can be specified in a namespace (Existing K8S behavior)
 1.  A Role can be specified in a namespace (Existing K8S behavior).
 
-For example, we can create a RoleBinding in "shipping-app-backend" policyspace
-such that anyone belonging to "shipping-app-backend-team" group is able to
-create pods in all namespace descendants (i.e. "shipping-dev",
-"shipping-staging", "shipping-prod"):
+For example, we can create a RoleBinding in `shipping-app-backend` policyspace
+such that anyone belonging to `shipping-app-backend-team` group is able to
+create pods in all namespace descendants (i.e. `shipping-dev`,
+`shipping-staging`, `shipping-prod`):
 
 ```console
 $ cat foo-corp/online/shipping-app-backend/pod-creator-rolebinding.yaml
@@ -145,7 +143,7 @@ pod-creators
 ```
 
 Inheritance is implemented by flattening resources in namespaces. In
-"shipping-dev" namespace, "pod-creators" is inherited and "job-creators" is
+`shipping-dev` namespace, `pod-creators` is inherited and `job-creators` is
 created directly in the namespace.
 
 Note that policies are themselves resources which means a user may be able to
@@ -167,14 +165,14 @@ policyspace hierarchy - this means that a quota violation at any level will
 result in a Forbidden exception.
 
 A quota is allowed to be set to immediately be in violation. For example, when a
-workload namespace has 11 pods, we can still set quota to "pods: 10" in a parent
+workload namespace has 11 pods, we can still set quota to `pods: 10` in a parent
 policyspace, creating an overage. If a workload namespace is in violation, the
 ResourceQuotaAdmissionController will prevent new objects of that type from
 being created until the total object count falls below the quota limit, but
 existing objects will still be valid and operational.
 
 Here we add hard quota limit on number of pods across all namespaces having
-"shipping-app-backend" as an ancestor:
+`shipping-app-backend` as an ancestor:
 
 ```console
 $ cat foo-corp/online/shipping-app-backend/quota.yaml
@@ -190,9 +188,9 @@ spec:
     pods: "3"
 ```
 
-In this case, total number of pods allowed in "shipping-prod", "shipping-dev",
-and "shipping-staging" is 3. When creating the fourth pod (e.g. in
-"shipping-prod"), you will see the following error:
+In this case, total number of pods allowed in `shipping-prod`, `shipping-dev`,
+and `shipping-staging` is 3. When creating the fourth pod (e.g. in
+`shipping-prod`), you will see the following error:
 
 ```console
 Error from server (Forbidden): exceeded quota in policyspace "shipping-app-backend", requested: pods=4, limit: pods=3
@@ -319,6 +317,6 @@ the repo, run:
 $ echo "nomosvet.sh foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
 ```
 
-You can also integrate this into your CI/CD setup, e.g. when using
-GitHub [required status
+You can also integrate this into your CI/CD setup, e.g. when using GitHub
+[required status
 check](https://help.github.com/articles/about-required-status-checks/).
