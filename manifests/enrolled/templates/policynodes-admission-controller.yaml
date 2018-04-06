@@ -8,7 +8,7 @@ metadata:
     monitored: "true"
 spec:
   selector:
-    app: policy-nodes
+    app: policynodes-admission-controller
   ports:
     - name: https
       port: 443
@@ -23,18 +23,18 @@ metadata:
   name: policynodes-admission-controller
   namespace: nomos-system
   labels:
-    app: policy-nodes
+    app: policynodes-admission-controller
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: policy-nodes
+      app: policynodes-admission-controller
   template:
     metadata:
       labels:
-        app: policy-nodes
+        app: policynodes-admission-controller
     spec:
       serviceAccountName: policynodes-admission-controller
       restartPolicy: Always

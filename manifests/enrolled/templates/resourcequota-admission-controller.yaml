@@ -8,7 +8,7 @@ metadata:
     monitored: "true"
 spec:
   selector:
-    app: resource-quota
+    app: resourcequota-admission-controller
   ports:
     - name: https
       port: 443
@@ -23,18 +23,18 @@ metadata:
   name: resourcequota-admission-controller
   namespace: nomos-system
   labels:
-    app: resource-quota
+    app: resourcequota-admission-controller
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: resource-quota
+      app: resourcequota-admission-controller
   template:
     metadata:
       labels:
-        app: resource-quota
+        app: resourcequota-admission-controller
     spec:
       serviceAccountName: resourcequota-admission-controller
       restartPolicy: Always
