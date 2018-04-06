@@ -45,6 +45,7 @@ func main() {
 	if err != nil {
 		glog.Fatal(errors.Wrapf(err, "while loading: %q", *configFile))
 	}
+	glog.V(5).Infof("Using config: %#v", config)
 	if config.User == "" && *suggestedUser != "" {
 		// If the configuration has no user specified, but the user is suggested
 		// instead, use that user then.

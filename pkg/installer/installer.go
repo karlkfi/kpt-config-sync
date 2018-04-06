@@ -31,6 +31,7 @@ import (
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/kubectl"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 const (
@@ -141,6 +142,9 @@ func (i *Installer) deploySshSecrets() error {
 			fmt.Sprintf("ssh=%v", i.c.Ssh.PrivateKeyFilename),
 			fmt.Sprintf("known_hosts=%v", i.c.Ssh.KnownHostsFilename))
 	} else {
+		if strings.HasPrefix(i.c.Git.SyncRepo, "git@") {
+			return errors.Errorf("Must specify SSH private key when using SSH with Git")
+		}
 		glog.V(5).Info("no PrivateKeyFilename, deploying empty secret")
 	}
 	c := kubectl.New(context.Background())
