@@ -28,18 +28,23 @@ var (
 
 	dryRun = flag.Bool(
 		"dry_run", false, "Don't perform actions, just log what would have happened")
+
+	workerNumRetries = flag.Int(
+		"worker_num_retries", 3, "Number of retries for an action before giving up.")
 )
 
 // Options are the flag value options for the syncer
 type Options struct {
-	ResyncPeriod time.Duration // flag resync_period
-	DryRun       bool          // flag dry_run
+	ResyncPeriod     time.Duration // flag resync_period
+	DryRun           bool          // flag dry_run
+	WorkerNumRetries int           // flag worker_num_retries
 }
 
 // FromFlags returns a copy of the options from flag values
 func FromFlags() Options {
 	return Options{
-		ResyncPeriod: *resyncPeriod,
-		DryRun:       *dryRun,
+		ResyncPeriod:     *resyncPeriod,
+		DryRun:           *dryRun,
+		WorkerNumRetries: *workerNumRetries,
 	}
 }

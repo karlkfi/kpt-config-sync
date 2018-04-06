@@ -24,25 +24,42 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/syncer"
+	"github.com/google/nomos/pkg/syncer/args"
+	"github.com/google/nomos/pkg/syncer/syncercontroller"
 	"github.com/google/nomos/pkg/util/log"
+	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/run"
+	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/rest"
+)
+
+var (
+	useNewSyncer = flag.Bool("useNewSyncer", false, "use the new syncer")
 )
 
 func main() {
 	flag.Parse()
 	log.Setup()
 
-	config, err := restconfig.NewRestConfig()
+	restConfig, err := restconfig.NewRestConfig()
 	if err != nil {
 		panic(errors.Wrapf(err, "Failed to create rest config"))
 	}
 
-	client, err := meta.NewForConfig(config)
+	go service.ServeMetrics()
+
+	if *useNewSyncer {
+		newSyncerMain(restConfig)
+	} else {
+		syncerMain(restConfig)
+	}
+}
+
+func syncerMain(restConfig *rest.Config) {
+	client, err := meta.NewForConfig(restConfig)
 	if err != nil {
 		panic(errors.Wrapf(err, "Failed to create client"))
 	}
-
-	go service.ServeMetrics()
 
 	stopChannel := make(chan struct{})
 	errorCallback := func(err error) {
@@ -57,4 +74,14 @@ func main() {
 
 	clusterSyncer.Stop()
 	clusterSyncer.Wait()
+}
+
+func newSyncerMain(restConfig *rest.Config) {
+	injectArgs := args.CreateInjectArgs(restConfig)
+	syncerController := syncercontroller.New(injectArgs)
+
+	runArgs := run.RunArguments{Stop: signals.SetupSignalHandler()}
+	syncerController.Start(runArgs)
+
+	<-runArgs.Stop
 }
