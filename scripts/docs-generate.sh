@@ -27,6 +27,11 @@ find ${DOCS_STAGING_DIR} -name "*.md" \
   -exec grip --export {} --no-inline \; \
   -exec rm {} \;
 
+if grep "GitHub rate limit reached" -r ${DOCS_STAGING_DIR}; then
+  echo "Github rate limit reached"
+  exit 1
+fi
+
 # Post-process HTML.
 # 1. Convert links to our docs to be relative.
 # 2. Convert links to reflect flattened directory.
