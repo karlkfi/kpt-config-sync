@@ -54,6 +54,16 @@ var (
 		},
 		[]string{"namespace", "resource", "operation"},
 	)
+	HierarchicalReconcileDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Help:      "Syncer hierarchical reconcile duration distributions",
+			Namespace: "nomos",
+			Subsystem: "syncer",
+			Name:      "hierarchical_reconcile_duration_seconds",
+			Buckets:   []float64{.001, .01, .1, 1, 10, 100},
+		},
+		[]string{"namespace"},
+	)
 )
 
 func init() {
@@ -62,5 +72,6 @@ func init() {
 		EventTimes,
 		QueueSize,
 		SyncDuration,
+		HierarchicalReconcileDuration,
 	)
 }

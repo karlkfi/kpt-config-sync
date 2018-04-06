@@ -19,6 +19,7 @@ package hierarchy
 
 import (
 	"fmt"
+	"sort"
 
 	"strings"
 
@@ -66,6 +67,19 @@ func IsIncompleteHierarchyError(err error) bool {
 
 // Instances represents all nodes in an AggregatedNode.
 type Instances []meta_v1.Object
+
+func (m Instances) Len() int {
+	return len(m)
+}
+func (m Instances) Less(i, j int) bool {
+	return strings.Compare(m[i].GetName(), m[j].GetName()) < 0
+}
+func (m Instances) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+func (m Instances) Sort() {
+	sort.Sort(m)
+}
 
 // AggregatedNode is the interface that specific policy types implement for merge operations.
 type AggregatedNode interface {

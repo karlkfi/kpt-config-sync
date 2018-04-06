@@ -17,6 +17,7 @@ package syncercontroller
 
 import (
 	"github.com/google/nomos/pkg/syncer/args"
+	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/run"
 )
 
@@ -34,5 +35,8 @@ func New(injectArgs args.InjectArgs) *SyncerController {
 
 // Start creates the appropriate sub modules and then starts the controller
 func (s *SyncerController) Start(runArgs run.RunArguments) {
+	hierarchyModules := []policyhierarchycontroller.Module{}
+	s.injectArgs.ControllerManager.AddController(
+		policyhierarchycontroller.NewController(s.injectArgs, hierarchyModules))
 	s.injectArgs.ControllerManager.RunInformersAndControllers(runArgs)
 }
