@@ -18,8 +18,6 @@ package resourcequota
 // NamespaceTypeLabel is the label key used for nomos quotas.
 const NamespaceTypeLabel = "nomos-namespace-type"
 const (
-	// NamespaceTypePolicy is the value used for policy namespaces
-	NamespaceTypePolicy = "policyspace"
 	// NamespaceTypeWorkload is the value used for workload namespaces
 	NamespaceTypeWorkload = "workload"
 )
@@ -29,7 +27,9 @@ const (
 const ResourceQuotaObjectName = "nomos-resource-quota"
 
 // NomosQuotaLabels are the labels applied to a workload namespace's quota object
-var NomosQuotaLabels = map[string]string{NamespaceTypeLabel: NamespaceTypeWorkload}
+var NomosQuotaLabels = NewNomosQuotaLabels()
 
-// PolicySpaceQuotaLabels are the labels applied to a policyspace's quota object
-var PolicySpaceQuotaLabels = map[string]string{NamespaceTypeLabel: NamespaceTypePolicy}
+// NewNomosQuotaLabels returns a new map of nomos quota labels since NomosQuotaLabels is mutable.
+func NewNomosQuotaLabels() map[string]string {
+	return map[string]string{NamespaceTypeLabel: NamespaceTypeWorkload}
+}
