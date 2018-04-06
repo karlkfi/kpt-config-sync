@@ -26,3 +26,8 @@ func diffResourceLists(sub, minuend core_v1.ResourceList) core_v1.ResourceList {
 	}
 	return diff
 }
+
+// ResourceListsEqual return true if the resource lists are equal.
+func ResourceListsEqual(lhs, rhs core_v1.ResourceList) bool {
+	return len(diffResourceLists(lhs, rhs)) == 0
+}
