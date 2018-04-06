@@ -63,7 +63,10 @@ func (s *NamespaceSyncer) onUpsert(node *policyhierarchy_v1.PolicyNode) error {
 		s.queue.Add(actions.NewNamespaceUpsertAction(
 			node.Name,
 			node.UID,
-			labeling.AddOriginLabelToMap(map[string]string{policyhierarchy_v1.ParentLabelKey: node.Spec.Parent}),
+			map[string]string{
+				policyhierarchy_v1.ParentLabelKey: node.Spec.Parent,
+				labeling.OriginLabelKey:           labeling.OriginLabelValue,
+			},
 			s.client.Kubernetes(),
 			s.namespaceLister))
 	}

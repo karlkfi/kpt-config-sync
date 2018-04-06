@@ -101,7 +101,7 @@ func (s *ClusterRoleUnpacker) Upserts(node *policyhierarchy_v1.ClusterPolicy) []
 				BlockOwnerDeletion: &blockOwnerDeletion,
 			},
 		}
-		labeling.AddOriginLabel(&newClusterRole.ObjectMeta)
+		newClusterRole.Labels = labeling.WithOriginLabel(newClusterRole.Labels)
 		ret = append(ret, newClusterRole)
 	}
 	return ret

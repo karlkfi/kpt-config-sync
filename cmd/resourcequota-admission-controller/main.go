@@ -96,7 +96,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 					},
 					CABundle: caCert,
 				},
-				NamespaceSelector: metav1.SetAsLabelSelector(labeling.OriginLabel),
+				NamespaceSelector: metav1.SetAsLabelSelector(labeling.NewOriginLabel()),
 			},
 		},
 	}

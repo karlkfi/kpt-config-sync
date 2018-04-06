@@ -29,28 +29,28 @@ const (
 	OriginLabelValue = "true"
 )
 
-// OriginLabel is defined to make it easy to set the label if none is given
-// on the object.
-var OriginLabel = map[string]string{OriginLabelKey: OriginLabelValue}
-
-// AddOriginLabelToMap adds the origin label to a map containing labels for an object. The map
-// passed to the function is also returned for convenience.
-func AddOriginLabelToMap(labelMap map[string]string) map[string]string {
-	if labelMap == nil {
-		labelMap = map[string]string{}
+// NewOriginLabel creates a new map with the label.
+func NewOriginLabel() map[string]string {
+	return map[string]string{
+		OriginLabelKey: OriginLabelValue,
 	}
-	labelMap[OriginLabelKey] = OriginLabelValue
-	return labelMap
 }
 
-// AddOriginLabel adds the provenance (managed by nomos) label to an object's metadata.
-func AddOriginLabel(objectMeta *meta_v1.ObjectMeta) {
-	objectMeta.Labels = AddOriginLabelToMap(objectMeta.Labels)
+// WithOriginLabel creates a copy of the map with the new label. This is useful if we are adding
+// to a value that we do not want to mutate.
+func WithOriginLabel(m map[string]string) map[string]string {
+	ret := NewOriginLabel()
+	if m != nil {
+		for k, v := range m {
+			ret[k] = v
+		}
+	}
+	return ret
 }
 
 // NewOriginSelector returns a selector that will select items managed by nomos.
 func NewOriginSelector() labels.Selector {
-	return labels.Set(OriginLabel).AsSelector()
+	return labels.Set(NewOriginLabel()).AsSelector()
 }
 
 // HasOriginLabel will return true if the given object metadata has been labeled by this package

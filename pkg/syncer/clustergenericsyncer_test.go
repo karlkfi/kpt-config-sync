@@ -77,7 +77,7 @@ func testListRet() []runtime.Object {
 		&rbac_v1.ClusterRole{
 			ObjectMeta: meta_v1.ObjectMeta{
 				Name:   "unaccounted",
-				Labels: labeling.AddOriginLabelToMap(nil),
+				Labels: labeling.NewOriginLabel(),
 			},
 		},
 	}
