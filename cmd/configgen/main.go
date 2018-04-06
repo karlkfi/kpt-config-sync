@@ -77,6 +77,7 @@ func main() {
 		dir = *workDir
 	}
 	v := versionOrDie(*version)
+	glog.Infof("Using version: %v", v)
 	g := configgen.New(v, dir, c, *configOut)
 
 	if err := g.Run(); err != nil {
