@@ -58,7 +58,7 @@ func (a *InstallAction) Run() (bool, error) {
 		return done, errors.Wrapf(err, "while saving configuration")
 	}
 	i := installer.New(*a.cfg, a.dir)
-	err = i.Run()
+	err = i.Run(false /*useCurrent*/)
 	if err != nil {
 		if glog.V(5) {
 			glog.Warningf("installer returned error: %v", err)

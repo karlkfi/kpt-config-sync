@@ -190,6 +190,9 @@ deploy-interactive: installer-image
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
 		--version=$(IMAGE_TAG)
 
+deploy-with-current: USE_CURRENT_CONTEXT=true
+deploy-with-current: deploy
+
 # Runs the installer via docker in batch mode using the installer config
 # file specied in the environment variable NOMOS_INSTALLER_CONFIG.
 deploy: installer-image
@@ -201,6 +204,7 @@ deploy: installer-image
 		--config=$(NOMOS_INSTALLER_CONFIG) \
 		--container=gcr.io/$(GCP_PROJECT)/installer \
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
+		--use_current_context=$(USE_CURRENT_CONTEXT) \
 		--version=$(IMAGE_TAG)
 
 # Cleans all artifacts.

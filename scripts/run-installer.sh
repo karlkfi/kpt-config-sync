@@ -38,6 +38,7 @@ set -x
 # --output_dir   The directory to pickup the generated configuration including
 #                certs, kubeconfigs, yamls, etc.
 #                default: $PWD
+# --use_current_context  (bool) If set, will use default context to install to.
 
 ##### CLI Arguments #####
 
@@ -53,6 +54,9 @@ usage()
         --config=<config>
 E0
 }
+
+# If set to "true", the installer will use the current context to install into.
+USE_CURRENT_CONTEXT=""
 
 # Reset in case getopts has been used previously in the shell.
 OPTIND=1
@@ -74,7 +78,7 @@ if [[ $? -ne 4 ]]; then
 fi
 
 OPTIONS=hvoitc
-LONGOPTIONS=help::,version::,output_dir::,interactive::,container::,config::
+LONGOPTIONS=help::,version::,output_dir::,interactive::,container::,config::,use_current_context::
 
 # -temporarily store output to be able to check for errors
 # -e.g. use “--options” parameter by name to activate quoting/enhanced mode
@@ -82,7 +86,7 @@ LONGOPTIONS=help::,version::,output_dir::,interactive::,container::,config::
 PARSED=$(getopt -s bash --options=$OPTIONS --longoptions=$LONGOPTIONS --name "$0" -- "$@")
 if [[ $? -ne 0 ]]; then
     # e.g. $? == 1
-    #  then getopt has complained about wrong arguments to stdout
+    echo "### getopt has complained about wrong arguments to stdout"
     exit 2
 fi
 # read getopt’s output this way to handle the quoting right:
@@ -114,6 +118,10 @@ while true; do
             ;;
         -i|--interactive)
             INTERACTIVE=1
+            shift 2
+            ;;
+        --use_current_context)
+            USE_CURRENT_CONTEXT="true"
             shift 2
             ;;
         --)
@@ -171,6 +179,7 @@ docker run -it \
   -e "CONFIG_OUT=gen_configs/generated.yaml" \
   -e "SUGGESTED_USER=${suggested_user}" \
   -e "HOME_ON_HOST=${HOME}" \
+  -e "USE_CURRENT_CONTEXT=${USE_CURRENT_CONTEXT}" \
   "${INSTALLER_CONTAINER}:${VERSION}" "$@" \
 	&& echo "+++ Generated files are available in ${OUTPUT_DIR}" \
 	|| (echo "### Installer failed.  Logs are available in ${OUTPUT_DIR}/logs"; exit 1)

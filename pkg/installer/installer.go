@@ -160,9 +160,8 @@ func (i *Installer) deployGitConfig() error {
 		return nil
 	}
 	c := kubectl.New(context.Background())
-	if err := c.DeleteConfigmap(configmap, defaultNamespace); err != nil {
-		return errors.Wrapf(err, "while deleting configmap git-policy-importer")
-	}
+	// Ignore because this will fail anyways when there isn't a configmap.
+	c.DeleteConfigmap(configmap, defaultNamespace)
 
 	if err := c.CreateConfigmapFromLiterals(
 		configmap, defaultNamespace,
@@ -278,17 +277,23 @@ func restoreContext(c string) error {
 }
 
 // Run starts the installer process, and reports error at the process end, if any.
-func (i *Installer) Run() error {
-	if len(i.c.Contexts) == 0 {
-		return errors.Errorf("no clusters requested for installation")
-	}
-
+// if useCurrent is set, and the list of clusters to install is empty, it will
+// use the current context to install.
+func (i *Installer) Run(useCurrent bool) error {
 	cl, err := kubectl.LocalClusters()
 	defer func() {
 		if err := restoreContext(cl.Current); err != nil {
 			glog.Errorf("while restoring context: %q: %v", cl.Current, err)
 		}
 	}()
+	if len(i.c.Contexts) == 0 {
+		if useCurrent && cl.Current != "" {
+			i.c.Contexts = []string{cl.Current}
+		} else {
+			return errors.Errorf("no clusters requested for installation")
+		}
+	}
+
 	if err != nil {
 		return errors.Wrapf(err, "while getting local list of clusters")
 	}

@@ -18,6 +18,7 @@ var (
 	workDir    = flag.String("work_dir", "", "The working directory for the installer.  If not set, defaults to the directory where the installer is run.")
 	uninstall  = flag.String("uninstall", "", "If set, the supplied clusters will be uninstalled.")
 	yes        = flag.Bool("yes", false, "If yes, means that the user wants to do a destructive operation.")
+	useCurrent = flag.Bool("use_current_context", false, "If set, and if the lust of clusters in the install config is empty, use current context to install into.")
 )
 
 func main() {
@@ -48,7 +49,7 @@ func main() {
 	if *uninstall != "" {
 		err = i.Uninstall(*yes)
 	} else {
-		err = i.Run()
+		err = i.Run(*useCurrent)
 	}
 	if err != nil {
 		glog.Fatal(errors.Wrap(err, "installer reported an error"))

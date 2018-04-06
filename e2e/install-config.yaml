@@ -1,6 +1,4 @@
 certConfig: {}
-contexts:
--
 git:
   GIT_SYNC_BRANCH: e2e
   GIT_SYNC_REPO: https://github.com/frankfarzan/foo-corp-example.git
