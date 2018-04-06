@@ -73,6 +73,7 @@ else
   echo "+++ Running installer"
   ./installer \
     ${logging_options} \
+    --suggested_user="${SUGGESTED_USER}" \
     --use_current_context=${USE_CURRENT_CONTEXT} \
     --log_dir=/tmp \
     --config="${CONFIG}" "$@"
