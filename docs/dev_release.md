@@ -33,5 +33,5 @@ $ make -f Makefile.release bless-release
 To generate a changelog:
 
 ```
-$ git log --oneline --decorate=false v0.2.8..v0.2.9
+$ git log --pretty="format:%C(yellow)%h  %C(cyan)%>(15,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" v0.2.8..v0.2.9
 ```
