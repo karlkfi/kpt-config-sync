@@ -158,9 +158,13 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList core_v1.Re
 				newTotalUsage := current.Copy()
 				newTotalUsage.Add(newUsage)
 				if newTotalUsage.Cmp(limit) > 0 {
+					Metrics.Violations.WithLabelValues("resource_quota", namespace, resourceName.String()).Inc()
 					return errors.Errorf("exceeded quota in policyspace %s, requested: %s=%d, limit: %s=%d",
 						namespace, resourceName, newTotalUsage.Value(), resourceName, limit.Value())
 				}
+
+				Metrics.Usage.WithLabelValues("resource_quota", namespace, resourceName.String()).
+					Set(float64(newTotalUsage.Value()))
 			}
 		}
 		namespace = namespaceQuota.parent
