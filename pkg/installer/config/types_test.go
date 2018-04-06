@@ -125,6 +125,45 @@ contexts:
 	}
 }
 
+func TestUnprintable(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "With explicit unprintable characters",
+			input: "ssh:\n \xc2knownHostsFilename: /somefile",
+		},
+		{
+			// Don't be deceived: the text below contains unprintable characters,
+			// for example before the key knownHostsFilename.
+			name: "With unprintable characters",
+			input: `user: someuser@example.com
+contexts:
+- cluster-2
+git:
+  GIT_SYNC_BRANCH: master
+  GIT_SYNC_REPO: git@github.com:frankfarzan/foo-corp-example.git
+  GIT_SYNC_WAIT: 60
+  ROOT_POLICY_DIR: foo-corp
+ssh:
+  knownHostsFilename: $HOME/.ssh/known_hosts
+  privateKeyFilename: $HOME/.ssh/id_rsa.nomos
+user: someuser@google.com
+`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := strings.NewReader(tt.input)
+			_, err := Load(r)
+			if err == nil {
+				t.Errorf("expected YAML decoding error")
+			}
+		})
+	}
+}
+
 func TestWrite(t *testing.T) {
 	tests := []struct {
 		name     string
