@@ -86,6 +86,16 @@ To see logs for git-sync side-car container:
 $ kubectl logs -l app=git-policy-importer -c git-sync -n nomos-system
 ```
 
+The GitPolicyImporter is configured using a ConfigMap git-policy-importer.
+You can modify that configuration and scale down the deployment and back up
+again to try configuration changes.
+
+```console
+$ kubectl edit configmap git-policy-importer -n nomos-system
+$ kubectl scale deployment git-policy-importer -n nomos-system --replicas=0
+$ kubectl scale deployment git-policy-importer -n nomos-system --replicas=1
+```
+
 ## Nomos kubectl plugin
 
 This installs Nomos-specific commands as a `kubectl` plugin.
