@@ -100,7 +100,7 @@ func Load(r io.Reader) (Config, error) {
 		return Config{}, errors.Wrapf(err, "while reading config")
 	}
 	c = DefaultConfig
-	if err := yaml.Unmarshal(b, &c); err != nil {
+	if err := yaml.Unmarshal(b, &c, yaml.DisallowUnknownFields); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")
 	}
 	c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "$HOME", "/home/user", 1)

@@ -26,15 +26,26 @@ func Marshal(o interface{}) ([]byte, error) {
 	return y, nil
 }
 
-// Converts YAML to JSON then uses JSON to unmarshal into an object.
-func Unmarshal(y []byte, o interface{}) error {
+// JsonOpt is a decoding option for decoding from JSON format.
+type JsonOpt func(*json.Decoder) *json.Decoder
+
+// DisallowUnknownFields configures the JSON decoder to error out if unknown
+// fields come along, instead of dropping them by default.
+func DisallowUnknownFields(d *json.Decoder) *json.Decoder {
+	d.DisallowUnknownFields()
+	return d
+}
+
+// Converts YAML to JSON then uses JSON to unmarshal into an object, optionally
+// configuring the behavior of the unmarshal.
+func Unmarshal(y []byte, o interface{}, opts ...JsonOpt) error {
 	vo := reflect.ValueOf(o)
 	j, err := yamlToJSON(y, &vo)
 	if err != nil {
 		return fmt.Errorf("error converting YAML to JSON: %v", err)
 	}
 
-	err = json.Unmarshal(j, o)
+	err = jsonUnmarshal(j, o, opts...)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling JSON: %v", err)
 	}
@@ -93,6 +104,17 @@ func yamlToJSON(y []byte, jsonTarget *reflect.Value) ([]byte, error) {
 
 	// Convert this object to JSON and return the data.
 	return json.Marshal(jsonObj)
+}
+
+func jsonUnmarshal(b []byte, o interface{}, opts ...JsonOpt) error {
+	d := json.NewDecoder(bytes.NewReader(b))
+	for _, o := range opts {
+		d = o(d)
+	}
+	if err := d.Decode(&o); err != nil {
+		return fmt.Errorf("while decoding JSON: %v", err)
+	}
+	return nil
 }
 
 func convertToJSONableObject(yamlObj interface{}, jsonTarget *reflect.Value) (interface{}, error) {
