@@ -131,7 +131,7 @@ build: buildenv .output
 		"
 # Creates a docker image for each nomos component.
 image-all: $(addprefix image-, $(ALL_APPS))
-	@echo "finished packaging all"
+	@echo "Finished packaging all"
 
 # Creates a docker image for the specified nomos component.
 image-%: build
@@ -149,6 +149,15 @@ push-to-gcr-all: $(addprefix push-to-gcr-, $(ALL_APPS))
 # Pushes the specified component's docker image ot gcr.io.
 push-to-gcr-%: image-%
 	gcloud docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
+
+# Generates the podspec yaml for each component.
+gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_APPS))
+	@echo "Finished generating all yaml."
+
+# Generates the podspec yaml for the component specified.
+gen-yaml-%:
+	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
+			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
 # Creates staging directory for building installer docker image.
 installer-staging: push-to-gcr-all gen-yaml-all
@@ -174,7 +183,6 @@ installer-staging: push-to-gcr-all gen-yaml-all
 	cp $(TOP_DIR)/scripts/generate-policynodes-admission-controller-certs.sh \
 		$(STAGING_DIR)/installer/scripts
 
-
 # Builds the installer docker image using the nomos release in .output
 installer-image: installer-staging
 	docker build -t gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
@@ -197,7 +205,7 @@ deploy-with-current: deploy
 # file specied in the environment variable NOMOS_INSTALLER_CONFIG.
 deploy: installer-image
 	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
-		echo 'must set NOMOS_INSTALLER_CONFIG to use make deploy'; \
+		echo 'Must set NOMOS_INSTALLER_CONFIG to use make deploy'; \
 		exit 1; \
 	fi; \
 	./scripts/run-installer.sh \
@@ -206,6 +214,14 @@ deploy: installer-image
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
 		--use_current_context=$(USE_CURRENT_CONTEXT) \
 		--version=$(IMAGE_TAG)
+
+# Redeploys all components to cluster without rerunning the installer.
+redeploy-all: $(addprefix redeploy-, $(ALL_K8S_APPS))
+	@echo "Finished redeploying all components"
+
+# Redeploy a component without rerunning the installer.
+redeploy-%: push-to-gcr-% gen-yaml-%
+	kubectl apply -f $(GEN_YAML_DIR)/$*.yaml
 
 # Cleans all artifacts.
 clean:
@@ -246,15 +262,6 @@ gen-client-set:
 # Installs Nomos kubectl plugin.
 install-kubectl-plugin:
 	cd $(TOP_DIR)/cmd/kubectl-nomos; ./install.sh
-
-# Generates the podspec yaml for each component.
-gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_APPS))
-	@echo "finished generating all yaml."
-
-# Generates the podspec yaml for the component specified.
-gen-yaml-%:
-	m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
-			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
 # Creates staging directory for generating docs.
 docs-staging: .output
