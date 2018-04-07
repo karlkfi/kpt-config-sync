@@ -10,9 +10,6 @@ spec:
   selector:
     app: syncer
   ports:
-    - name: web
-      port: 80
-      targetPort: web-port
     - name: metrics
       port: 8675
       targetPort: metrics-port
@@ -41,7 +38,5 @@ spec:
         - name: syncer
           image: IMAGE_NAME
           ports:
-            - containerPort: 80
-              name: web-port
             - containerPort: 8675
               name: metrics-port

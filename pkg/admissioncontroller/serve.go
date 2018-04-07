@@ -156,6 +156,7 @@ func Serve(controller Admitter) service.HandlerFunc {
 }
 
 func ServeTLS(server *http.Server, listener net.Listener, stopChannel chan struct{}) {
+	glog.Info("Server listening on ", server.Addr)
 	err := server.ServeTLS(listener.(*net.TCPListener), "", "")
 
 	if err != nil {

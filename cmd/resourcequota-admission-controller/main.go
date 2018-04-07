@@ -155,8 +155,6 @@ func main() {
 	}
 	defer listener.Close()
 
-	glog.Info("Server listening at: ", server.Addr)
-
 	go admissioncontroller.ServeTLS(server, listener, stopChannel)
 
 	// Wait for endpoint to come up before self-registering

@@ -104,6 +104,7 @@ func configTLS(clientCert []byte) *tls.Config {
 func ServeMetrics() {
 	// Expose prometheus metrics via HTTP.
 	http.Handle("/metrics", promhttp.Handler())
+	glog.Infof("Serving metrics on :%d/metrics", *metricsPort)
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil)
 	if err != nil {
 		glog.Fatalf("HTTP ListenAndServe for metrics: %+v", err)

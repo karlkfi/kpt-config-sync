@@ -22,6 +22,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/policyimporter"
 )
 
 type Differ struct {
@@ -62,6 +63,9 @@ func (d *Differ) policyNodeActions() []action.Interface {
 	updates := d.nodeUpdates()
 	deletes := d.nodeDeletes()
 	glog.Infof("PolicyNode operations: create %d, update %d, delete %d", len(creates), len(updates), len(deletes))
+	policyimporter.Metrics.Operations.WithLabelValues("create").Add(float64(len(creates)))
+	policyimporter.Metrics.Operations.WithLabelValues("update").Add(float64(len(updates)))
+	policyimporter.Metrics.Operations.WithLabelValues("delete").Add(float64(len(deletes)))
 
 	desiredByDepth := nodesByDepth(d.desired.PolicyNodes)
 	currentByDepth := nodesByDepth(d.current.PolicyNodes)

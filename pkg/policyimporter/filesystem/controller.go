@@ -26,6 +26,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
+	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -117,6 +118,7 @@ func (c *Controller) pollDir() error {
 			desiredPolicies, err := c.parser.Parse(newDir)
 			if err != nil {
 				glog.Warningf("Failed to parse: %v", err)
+				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
 				continue
 			}
 
@@ -124,11 +126,14 @@ func (c *Controller) pollDir() error {
 			actions := c.differ.Diff(*currentPolicies, *desiredPolicies)
 			if err := applyActions(actions); err != nil {
 				glog.Warningf("Failed to apply actions: %v", err)
+				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
 				continue
 			}
 
 			currentDir = newDir
 			currentPolicies = desiredPolicies
+			policyimporter.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
+			policyimporter.Metrics.Nodes.Set(float64(len(desiredPolicies.PolicyNodes)))
 
 		case <-c.stopChan:
 			glog.Info("Stop polling")

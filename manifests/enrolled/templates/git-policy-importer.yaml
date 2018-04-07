@@ -1,12 +1,27 @@
 changecom(`<unused>')
 # Reviewed by sunilarora
+apiVersion: v1
+kind: Service
+metadata:
+  name: git-policy-importer
+  namespace: nomos-system
+  labels:
+    monitored: "true"
+spec:
+  selector:
+    app: git-policy-importer
+  ports:
+    - name: metrics
+      port: 8675
+      targetPort: metrics-port
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: git-policy-importer
   namespace: nomos-system
   labels:
-    apps: git-policy-importer
+    app: git-policy-importer
 spec:
   replicas: 1
   strategy:
@@ -23,6 +38,9 @@ spec:
       containers:
       - name: policy-importer
         image: IMAGE_NAME
+        ports:
+          - containerPort: 8675
+            name: metrics-port
         volumeMounts:
           - name: repo
             mountPath: /repo

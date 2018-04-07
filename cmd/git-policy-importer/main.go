@@ -68,6 +68,8 @@ func main() {
 		glog.Fatalf("Failed to create parser: %v", err)
 	}
 
+	go service.ServeMetrics()
+
 	stopChan := make(chan struct{})
 	c := filesystem.NewController(policyDir, *pollPeriod, parser, client, stopChan)
 	go service.WaitForShutdownSignalCb(stopChan)
