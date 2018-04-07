@@ -20,8 +20,14 @@ func AddPluralException(name, value string) {
 // Plural returns the plural form of the object's name in UpperCamelCase. We need this for properly
 // using reflection to get the correct member since the client stubs use the plural form instead of
 // singular.
+// TODO(briantkennedy): convert these to taking runtime.Object type since that's what the API is
+// using.
 func Plural(i interface{}) string {
-	name := reflect.TypeOf(i).Name()
+	t := reflect.TypeOf(i)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	name := t.Name()
 	return pluralizer.Name(&types.Type{Name: types.Name{Name: name}})
 }
 

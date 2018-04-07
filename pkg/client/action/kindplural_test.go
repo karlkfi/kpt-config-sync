@@ -41,6 +41,11 @@ var pluralTestCases = []pluralTestCase{
 		output:      "ClusterRoles",
 		outputLower: "clusterroles",
 	},
+	pluralTestCase{
+		input:       &rbac_v1.ClusterRole{},
+		output:      "ClusterRoles",
+		outputLower: "clusterroles",
+	},
 }
 
 func TestPlural(t *testing.T) {

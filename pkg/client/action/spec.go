@@ -16,8 +16,10 @@ limitations under the License.
 package action
 
 import (
+	"fmt"
 	"reflect"
 
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -55,8 +57,8 @@ func NewSpec(
 	client interface{},
 	lister interface{}) *ReflectiveActionSpec {
 	return &ReflectiveActionSpec{
-		Resource:   LowerPlural(reflect.TypeOf(instance)),
-		KindPlural: Plural(reflect.TypeOf(instance)),
+		Resource:   LowerPlural(instance),
+		KindPlural: Plural(instance),
 		Group:      groupVersion.Group,
 		Version:    groupVersion.Version,
 		EqualSpec:  equals,
@@ -67,9 +69,60 @@ func NewSpec(
 
 // Equal returns true if the two objects have equivalent per-kind spec equality and the
 // labels and annotations are a superset of the declared labels and annotations.
-func (s ReflectiveActionSpec) Equal(declared runtime.Object, actual runtime.Object) bool {
+func (s *ReflectiveActionSpec) Equal(declared runtime.Object, actual runtime.Object) bool {
 	if !s.EqualSpec(actual, declared) {
 		return false
 	}
 	return ObjectMetaSubset(actual, declared)
+}
+
+// List will list the given namespace. Cluster level resources should pass empty string as the
+// namespace.
+// Example of what this is roughly doing:
+// -- For cluster scoped resources --
+// return kubernetesInformerFactory.Rbac().V1().ClusterRoles().Lister().List(selector)
+// -- For namesapce scoped resources --
+// return kubernetesInformerFactory.Rbac().V1().Roles().Lister().Roles(namespace).List(selector)
+func (s *ReflectiveActionSpec) List(namespace string, selector labels.Selector) ([]runtime.Object, error) {
+	lister := s.listerValue(namespace)
+	listMethod := lister.MethodByName("List")
+	listArgs := []reflect.Value{reflect.ValueOf(selector)}
+	returnValues := listMethod.Call(listArgs)
+	if len(returnValues) != 2 {
+		panic(fmt.Sprintf("list call returned invalid number of args %v", returnValues))
+	}
+
+	if !returnValues[1].IsNil() {
+		return nil, returnValues[1].Interface().(error)
+	}
+
+	objValues := returnValues[0]
+	objs := make([]runtime.Object, objValues.Len())
+	for i := 0; i < objValues.Len(); i++ {
+		objs[i] = objValues.Index(i).Interface().(runtime.Object)
+	}
+	return objs, nil
+}
+
+// listerValue returns the appropriate lister taking into account cluster / namespace scoping
+// Example of what this is effectively doing:
+// -- For cluster scoped resources --
+// s.Lister := kubernetesInformerFactory.Rbac().V1().ClusterRoles().Lister()
+// return s.spec.Lister
+// -- For namesapce scoped resources --
+// s.Lister := kubernetesInformerFactory.Rbac().V1().Roles().Lister()
+// return s.spec.Lister.Roles(s.namespace)
+func (s *ReflectiveActionSpec) listerValue(namespace string) reflect.Value {
+	listerValue := reflect.ValueOf(s.Lister)
+	if namespace == "" {
+		return listerValue
+	}
+
+	methodValue := listerValue.MethodByName(s.KindPlural)
+	fmt.Printf("KindPlural: %s %v\n", s.KindPlural, methodValue)
+	listerReturnValues := methodValue.Call([]reflect.Value{reflect.ValueOf(namespace)})
+	if len(listerReturnValues) != 1 {
+		panic(fmt.Sprintf("Getting lister returned invalid number of values"))
+	}
+	return listerReturnValues[0]
 }

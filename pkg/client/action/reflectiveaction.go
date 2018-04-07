@@ -128,34 +128,12 @@ func (s *ReflectiveActionBase) client() reflect.Value {
 	return getKindClientReturns[0]
 }
 
-// lister returns the appropriate lister taking into account cluster / namespace scoping
-// Example of what this is effectively doing:
-// -- For cluster scoped resources --
-// s.spec.Lister := kubernetesInformerFactory.Rbac().V1().ClusterRoles().Lister()
-// return s.spec.Lister
-// -- For namesapce scoped resources --
-// s.spec.Lister := kubernetesInformerFactory.Rbac().V1().Roles().Lister()
-// return s.spec.Lister.Roles(s.namespace)
-func (s *ReflectiveActionBase) lister() reflect.Value {
-	listerValue := reflect.ValueOf(s.spec.Lister)
-	if s.namespace == "" {
-		return listerValue
-	}
-
-	methodValue := listerValue.MethodByName(s.spec.KindPlural)
-	listerReturnValues := methodValue.Call([]reflect.Value{reflect.ValueOf(s.namespace)})
-	if len(listerReturnValues) != 1 {
-		panic(fmt.Sprintf("Getting lister returned invalid number of values"))
-	}
-	return listerReturnValues[0]
-}
-
 // listerGet gets the resource via the lister.
 // Example of what this is effectively doing:
 // lister := kubernetesInformerFactory.Rbac().V1().ClusterRoles().Lister() // first line
 // return lister.Get(s.name)
 func (s *ReflectiveActionBase) listerGet() (runtime.Object, error) {
-	lister := s.lister()
+	lister := s.spec.listerValue(s.namespace)
 	getMethod := lister.MethodByName("Get")
 	return s.toObjectError(getMethod.Call([]reflect.Value{reflect.ValueOf(s.name)}))
 }
