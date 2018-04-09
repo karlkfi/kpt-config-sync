@@ -136,4 +136,6 @@ This command gets all role bindings across namespaces.
 ```console
 $ kubectl plugin nomos get rolebindings --namespace=frontend
 ```
-````
+
+```
+```
