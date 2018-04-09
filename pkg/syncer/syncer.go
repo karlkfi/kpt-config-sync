@@ -16,7 +16,6 @@ limitations under the License.
 package syncer
 
 import (
-	"flag"
 	"reflect"
 	"sync"
 	"time"
@@ -28,20 +27,13 @@ import (
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/syncer/actions"
+	"github.com/google/nomos/pkg/syncer/options"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-)
-
-var (
-	flagResyncPeriod = flag.Duration(
-		"resync_period", time.Minute, "The resync period for the syncer system")
-
-	dryRun = flag.Bool(
-		"dry_run", false, "Don't perform actions, just log what would have happened")
 )
 
 // WorkerNumRetries is the number of times an action will be retried in the work queue.
@@ -106,6 +98,7 @@ type Interface interface {
 // Syncer implements the policy node syncer.  This will watch the policynodes then sync changes to
 // namespaces and resource quotas.
 type Syncer struct {
+	options              options.Options                 // Flag options
 	client               meta.Interface                  // Kubernetes/CRD client
 	errorCallback        ErrorCallback                   // Callback invoked on error
 	stopped              bool                            // Tracks internal state for stopping
@@ -123,10 +116,11 @@ type Syncer struct {
 
 // New creates a new syncer that will use the given client interface
 func New(client meta.Interface) *Syncer {
+	opts := options.FromFlags()
 	kubernetesInformerFactory := informers.NewSharedInformerFactory(
-		client.Kubernetes(), *flagResyncPeriod)
+		client.Kubernetes(), opts.ResyncPeriod)
 	policyHierarchyInformerFactory := externalversions.NewSharedInformerFactory(
-		client.PolicyHierarchy(), *flagResyncPeriod)
+		client.PolicyHierarchy(), opts.ResyncPeriod)
 	kubernetesCoreV1 := kubernetesInformerFactory.Core().V1()
 	rbacV1 := kubernetesInformerFactory.Rbac().V1()
 	policyHierarchyV1 := policyHierarchyInformerFactory.Nomos().V1()
@@ -149,6 +143,7 @@ func New(client meta.Interface) *Syncer {
 	}
 
 	return &Syncer{
+		options:                        opts,
 		client:                         client,
 		stopChan:                       make(chan struct{}),
 		syncers:                        syncers,
@@ -224,7 +219,7 @@ func (s *Syncer) runInformer() {
 }
 
 func (s *Syncer) runResync(resync func() error) {
-	ticker := time.NewTicker(*flagResyncPeriod)
+	ticker := time.NewTicker(s.options.ResyncPeriod)
 	err := resync()
 	if err != nil {
 		s.onError(err)
@@ -380,7 +375,7 @@ func (s *Syncer) processAction() bool {
 	defer s.queue.Done(actionItem)
 
 	action := actionItem.(action.Interface)
-	if *dryRun {
+	if s.options.DryRun {
 		s.queue.Forget(actionItem)
 		glog.Infof("Would have executed action %s", action.String())
 		return true
