@@ -1,10 +1,11 @@
 package action
 
 import (
-	"k8s.io/gengo/namer"
-	"k8s.io/gengo/types"
 	"reflect"
 	"strings"
+
+	"k8s.io/gengo/namer"
+	"k8s.io/gengo/types"
 )
 
 var exceptions = map[string]string{}

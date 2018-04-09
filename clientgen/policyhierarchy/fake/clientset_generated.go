@@ -17,9 +17,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/google/nomos/pkg/client/policyhierarchy"
-	nomosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
-	fakenomosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1/fake"
+	clientset "github.com/google/nomos/clientgen/policyhierarchy"
+	nomosv1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
+	fakenomosv1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -38,11 +38,12 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 			panic(err)
 		}
 	}
-	c := &Clientset{discovery: &fakediscovery.FakeDiscovery{}}
-	c.Fake.AddReactor("*", "*", testing.ObjectReaction(o))
-	c.Fake.AddWatchReactor("*", testing.DefaultWatchReactor(watch.NewFake(), nil))
-	c.discovery.Fake = &c.Fake
-	return c
+
+	fakePtr := testing.Fake{}
+	fakePtr.AddReactor("*", "*", testing.ObjectReaction(o))
+	fakePtr.AddWatchReactor("*", testing.DefaultWatchReactor(watch.NewFake(), nil))
+
+	return &Clientset{fakePtr, &fakediscovery.FakeDiscovery{Fake: &fakePtr}}
 }
 
 // Clientset implements clientset.Interface. Meant to be embedded into a

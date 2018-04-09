@@ -21,9 +21,9 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	policyhierarchyinformer_v1 "github.com/google/nomos/clientgen/informers/externalversions/policyhierarchy/v1"
+	policyhierarchylister_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	policyhierarchyinformer_v1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
-	policyhierarchylister_v1 "github.com/google/nomos/pkg/client/listers/policyhierarchy/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 )

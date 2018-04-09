@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"fmt"
+
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/util/namespaceutil"

@@ -19,10 +19,10 @@ limitations under the License.
 package v1
 
 import (
+	internalinterfaces "github.com/google/nomos/clientgen/informers/externalversions/internalinterfaces"
+	v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchy "github.com/google/nomos/clientgen/policyhierarchy"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	internalinterfaces "github.com/google/nomos/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "github.com/google/nomos/pkg/client/listers/policyhierarchy/v1"
-	policyhierarchy "github.com/google/nomos/pkg/client/policyhierarchy"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -30,58 +30,58 @@ import (
 	time "time"
 )
 
-// ClusterPolicyInformer provides access to a shared informer and lister for
-// ClusterPolicies.
-type ClusterPolicyInformer interface {
+// PolicyNodeInformer provides access to a shared informer and lister for
+// PolicyNodes.
+type PolicyNodeInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.ClusterPolicyLister
+	Lister() v1.PolicyNodeLister
 }
 
-type clusterPolicyInformer struct {
+type policyNodeInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 }
 
-// NewClusterPolicyInformer constructs a new informer for ClusterPolicy type.
+// NewPolicyNodeInformer constructs a new informer for PolicyNode type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewClusterPolicyInformer(client policyhierarchy.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredClusterPolicyInformer(client, resyncPeriod, indexers, nil)
+func NewPolicyNodeInformer(client policyhierarchy.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredPolicyNodeInformer(client, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredClusterPolicyInformer constructs a new informer for ClusterPolicy type.
+// NewFilteredPolicyNodeInformer constructs a new informer for PolicyNode type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredClusterPolicyInformer(client policyhierarchy.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredPolicyNodeInformer(client policyhierarchy.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().ClusterPolicies().List(options)
+				return client.NomosV1().PolicyNodes().List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().ClusterPolicies().Watch(options)
+				return client.NomosV1().PolicyNodes().Watch(options)
 			},
 		},
-		&policyhierarchy_v1.ClusterPolicy{},
+		&policyhierarchy_v1.PolicyNode{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *clusterPolicyInformer) defaultInformer(client policyhierarchy.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredClusterPolicyInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *policyNodeInformer) defaultInformer(client policyhierarchy.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredPolicyNodeInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *clusterPolicyInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&policyhierarchy_v1.ClusterPolicy{}, f.defaultInformer)
+func (f *policyNodeInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&policyhierarchy_v1.PolicyNode{}, f.defaultInformer)
 }
 
-func (f *clusterPolicyInformer) Lister() v1.ClusterPolicyLister {
-	return v1.NewClusterPolicyLister(f.Informer().GetIndexer())
+func (f *policyNodeInformer) Lister() v1.PolicyNodeLister {
+	return v1.NewPolicyNodeLister(f.Informer().GetIndexer())
 }

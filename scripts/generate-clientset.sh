@@ -29,7 +29,7 @@ INPUT_APIS="policyhierarchy/v1"
 
 # Where to put the generated client set
 OUTPUT_BASE="${GOWORK}/src"
-OUTPUT_CLIENT="${REPO}/pkg/client"
+OUTPUT_CLIENT="${REPO}/clientgen"
 CLIENTSET_NAME=policyhierarchy
 
 BOILERPLATE="$(dirname ${0})/boilerplate.go.txt"

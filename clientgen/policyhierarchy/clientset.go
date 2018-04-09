@@ -18,7 +18,7 @@ package policyhierarchy
 
 import (
 	glog "github.com/golang/glog"
-	nomosv1 "github.com/google/nomos/pkg/client/policyhierarchy/typed/policyhierarchy/v1"
+	nomosv1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/nomos/pkg/client/policyhierarchy"
+	"github.com/google/nomos/clientgen/policyhierarchy"
 	"github.com/google/nomos/pkg/process/bash"
 	"github.com/google/nomos/pkg/process/exec"
 	"github.com/google/nomos/pkg/process/kubectl"

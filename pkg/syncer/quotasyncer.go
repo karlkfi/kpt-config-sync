@@ -17,9 +17,9 @@ package syncer
 
 import (
 	"github.com/golang/glog"
+	informers_policynodev1 "github.com/google/nomos/clientgen/informers/externalversions/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
-	informers_policynodev1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/syncer/actions"

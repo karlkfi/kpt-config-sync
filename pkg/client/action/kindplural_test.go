@@ -2,9 +2,10 @@ package action
 
 import (
 	"fmt"
+	"testing"
+
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	rbac_v1 "k8s.io/api/rbac/v1"
-	"testing"
 )
 
 type pluralTestCase struct {

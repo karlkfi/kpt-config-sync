@@ -18,7 +18,7 @@ limitations under the License.
 package meta
 
 import (
-	"github.com/google/nomos/pkg/client/policyhierarchy"
+	"github.com/google/nomos/clientgen/policyhierarchy"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"

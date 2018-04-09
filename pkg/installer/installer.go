@@ -26,12 +26,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"strings"
+
 	"github.com/blang/semver"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/kubectl"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 const (

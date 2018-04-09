@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/clientgen/informers/externalversions"
+	"github.com/google/nomos/clientgen/policyhierarchy/fake"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/client/informers/externalversions"
-	"github.com/google/nomos/pkg/client/policyhierarchy/fake"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"

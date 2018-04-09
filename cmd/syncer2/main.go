@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/client/informers/externalversions"
-	"github.com/google/nomos/pkg/client/policyhierarchy"
+	"github.com/google/nomos/clientgen/informers/externalversions"
+	"github.com/google/nomos/clientgen/policyhierarchy"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 

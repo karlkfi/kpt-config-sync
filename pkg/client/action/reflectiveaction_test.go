@@ -25,8 +25,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
+	"github.com/google/nomos/clientgen/informers/externalversions"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/client/informers/externalversions"
 	"github.com/google/nomos/pkg/client/meta/fake"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"

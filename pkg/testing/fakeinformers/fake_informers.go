@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/client/informers/externalversions"
-	pn_v1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
-	pn_fake "github.com/google/nomos/pkg/client/policyhierarchy/fake"
+	"github.com/google/nomos/clientgen/informers/externalversions"
+	pn_v1 "github.com/google/nomos/clientgen/informers/externalversions/policyhierarchy/v1"
+	pn_fake "github.com/google/nomos/clientgen/policyhierarchy/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	core_v1 "k8s.io/client-go/informers/core/v1"

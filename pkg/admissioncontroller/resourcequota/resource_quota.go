@@ -22,8 +22,8 @@ import (
 	"strconv"
 	"time"
 
+	informerspolicynodev1 "github.com/google/nomos/clientgen/informers/externalversions/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/admissioncontroller"
-	informerspolicynodev1 "github.com/google/nomos/pkg/client/informers/externalversions/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/resourcequota"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	core_v1 "k8s.io/api/core/v1"

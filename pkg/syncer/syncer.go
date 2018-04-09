@@ -22,10 +22,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/clientgen/informers/externalversions"
+	policynodelister_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/client/informers/externalversions"
-	policynodelister_v1 "github.com/google/nomos/pkg/client/listers/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/syncer/actions"
 	"github.com/pkg/errors"

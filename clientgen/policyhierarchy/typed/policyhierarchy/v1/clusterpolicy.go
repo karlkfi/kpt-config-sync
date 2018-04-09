@@ -17,8 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	scheme "github.com/google/nomos/clientgen/policyhierarchy/scheme"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	scheme "github.com/google/nomos/pkg/client/policyhierarchy/scheme"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

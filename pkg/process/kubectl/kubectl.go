@@ -28,8 +28,8 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
+	"github.com/google/nomos/clientgen/policyhierarchy"
 	"github.com/google/nomos/pkg/client/meta"
-	"github.com/google/nomos/pkg/client/policyhierarchy"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
