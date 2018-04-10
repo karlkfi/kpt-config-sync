@@ -4,12 +4,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/installer"
 	"github.com/google/nomos/pkg/installer/config"
-	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
-)
-
-var (
-	installerCmd = exec.RequireProgram("installer")
 )
 
 var _ Action = (*InstallAction)(nil)

@@ -27,6 +27,12 @@ echo "PASS"
 echo
 
 echo "Checking linters: "
-gometalinter.v2 --disable-all --enable=vet --enable=goimports ${TARGETS}
+gometalinter.v2 \
+    --disable-all \
+    --enable=vet \
+    --enable=goimports \
+    --enable=deadcode \
+    --exclude=.*generated.* \
+    ${TARGETS}
 echo "PASS"
 echo

@@ -7,6 +7,19 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+func resourceListEqual(left, right v1.ResourceList) bool {
+	if len(left) != len(right) {
+		return false
+	}
+
+	for resource, quantity := range left {
+		if quantity.Cmp(right[resource]) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 type EqualsTestCase struct {
 	left   v1.ResourceList
 	right  v1.ResourceList

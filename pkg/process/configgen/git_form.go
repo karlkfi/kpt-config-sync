@@ -19,9 +19,6 @@ acting as the source of truth for the policies.`
 	// The default visible length of each input field.
 	inputFieldVisibleLength = 60
 
-	// The default maximum input for each field in this form.
-	inputFieldMaxLength = 200
-
 	// The column at which the form text input starts.
 	gitFormTextColumn = 2
 
