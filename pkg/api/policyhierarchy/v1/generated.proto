@@ -36,10 +36,6 @@ option go_package = "v1";
 // due to the fact that it is specified in MasterClusterPolicyNodeSpec and ClusterPolicyNodeSpec.
 // +protobuf=true
 message ClusterPolicies {
-  // Type defines the type of resources that this holds. It will hold one of the cluster scoped
-  // resources and should have a resource name that matches the resource type it holds.
-  optional string type = 1;
-
   // Cluster scope resources.
   repeated k8s.io.api.rbac.v1.ClusterRole clusterRolesV1 = 2;
 
@@ -76,12 +72,6 @@ message ClusterPolicyList {
 // ClusterPolicySpec defines the policies that will exist at the cluster level.
 // +protobuf=true
 message ClusterPolicySpec {
-  // Sources describes the resource / name / resourceVersion of definitions that were merged to
-  // create this object, for example ["clusterpolicy.prod.275564"]. Note that there is no ambiguity
-  // in this as the resource name and resource version are not allowed to contain the '.' character.
-  // This field will not be set in the MasterPolicyNode and will only be set at enrolled clusters.
-  repeated string sources = 1;
-
   // The policies specified for cluster level resources.
   optional ClusterPolicies policies = 2;
 }

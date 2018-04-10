@@ -46,33 +46,14 @@ type ClusterPolicy struct {
 // ClusterPolicySpec defines the policies that will exist at the cluster level.
 // +protobuf=true
 type ClusterPolicySpec struct {
-	// Sources describes the resource / name / resourceVersion of definitions that were merged to
-	// create this object, for example ["clusterpolicy.prod.275564"]. Note that there is no ambiguity
-	// in this as the resource name and resource version are not allowed to contain the '.' character.
-	// This field will not be set in the MasterPolicyNode and will only be set at enrolled clusters.
-	Sources []string `json:"sources" protobuf:"bytes,1,rep,name=sources"`
-
 	// The policies specified for cluster level resources.
 	Policies ClusterPolicies `json:"policies" protobuf:"bytes,2,opt,name=policies"`
 }
-
-const (
-	// ClusterPolicyClusterRoles is the name of the ClusterPolicy resource that will store cluster roles
-	ClusterPolicyClusterRoles = "clusterrole"
-	// ClusterPolicyClusterRoleBindings is the name of the ClusterPolicy resource that will store cluster role bindings
-	ClusterPolicyClusterRoleBindings = "clusterrolebinding"
-	// ClusterPolicyPodSecurityPolicies is the name of the ClusterPolicy resource that will store pod security policies
-	ClusterPolicyPodSecurityPolicies = "podsecuritypolicy"
-)
 
 // ClusterPolicies specifies the policies nomos synchronizes to a cluster. This is factored out
 // due to the fact that it is specified in MasterClusterPolicyNodeSpec and ClusterPolicyNodeSpec.
 // +protobuf=true
 type ClusterPolicies struct {
-	// Type defines the type of resources that this holds. It will hold one of the cluster scoped
-	// resources and should have a resource name that matches the resource type it holds.
-	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
-
 	// Cluster scope resources.
 	ClusterRolesV1             []rbac_v1.ClusterRole                  `json:"clusterRolesV1" protobuf:"bytes,2,rep,name=clusterRolesV1"`
 	ClusterRoleBindingsV1      []rbac_v1.ClusterRoleBinding           `json:"clusterRoleBindingsV1" protobuf:"bytes,3,rep,name=clusterRoleBindingsV1"`
@@ -113,14 +94,6 @@ type PolicyNode struct {
 	// The actual object definition, per K8S object definition style.
 	Spec PolicyNodeSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 }
-
-// NoParentNamespace is the constant we use (empty string) for indicating that no parent exists
-// for the policy node spec.  Only one policy node should have a parent with this value.
-// This is also used as the value for the label set on a namespace.
-const NoParentNamespace string = ""
-
-// Key of a label set on a namespace with value set to the parent namespace's name.
-const ParentLabelKey = "nomos-parent-ns"
 
 // PolicyNodeSpec contains all the information about a policy linkage.
 // +protobuf=true
