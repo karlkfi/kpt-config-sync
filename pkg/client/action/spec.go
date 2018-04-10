@@ -119,7 +119,6 @@ func (s *ReflectiveActionSpec) listerValue(namespace string) reflect.Value {
 	}
 
 	methodValue := listerValue.MethodByName(s.KindPlural)
-	fmt.Printf("KindPlural: %s %v\n", s.KindPlural, methodValue)
 	listerReturnValues := methodValue.Call([]reflect.Value{reflect.ValueOf(namespace)})
 	if len(listerReturnValues) != 1 {
 		panic(fmt.Sprintf("Getting lister returned invalid number of values"))
