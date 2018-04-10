@@ -276,9 +276,10 @@ func TestAddOrphan(t *testing.T) {
 	}
 }
 
-func TestRemovePolicySpace(t *testing.T) {
+func TestRemoveParents(t *testing.T) {
 	v := New()
-	v.Add(newNode("root", "", true))
+	root := newNode("root", "", true)
+	v.Add(root)
 
 	policySpace := newNode("child1", "root", true)
 	v.Add(policySpace)
@@ -294,6 +295,38 @@ func TestRemovePolicySpace(t *testing.T) {
 	}
 
 	if err := v.Remove(policySpace); err == nil {
-		t.Errorf("Should have detected parent delete error")
+		t.Errorf("Should have detected policyspace delete error")
+	}
+	if err := v.Remove(root); err == nil {
+		t.Errorf("Should have detected root delete error")
+	}
+}
+
+func TestRemoveRemainingRoot(t *testing.T) {
+	nodes := []*policyhierarchy_v1.PolicyNode{
+		newNode("root", "", true),
+		newNode("child1", "root", true),
+		newNode("child2", "child1", false),
+		newNode("child3", "child1", false),
+	}
+
+	v := New()
+	for _, node := range nodes {
+		if err := v.Add(node); err != nil {
+			t.Errorf("Should not have errored when adding node %s: %v", node.Name, err)
+		}
+	}
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should not have detected validation error after adding nodes: %v", err)
+	}
+
+	for i := len(nodes) - 1; i >= 0; i-- {
+		node := nodes[i]
+		if err := v.Remove(node); err != nil {
+			t.Errorf("Should not have errored when removing node %s: %v", node.Name, err)
+		}
+	}
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should not have detected validation error after deleting nodes: %v", err)
 	}
 }

@@ -112,6 +112,10 @@ func (s *Validator) Validate() error {
 // checkRoots validates that there is only one (or at least one, if configured) root by checking
 // that children of empty string (no parent) is the appropriate size.
 func (s *Validator) checkRoots() error {
+	if len(s.policyNodes) == 0 {
+		// There are no policy nodes, so no reason to check for root issues.
+		return nil
+	}
 	var noParent []string
 	for nodeName, node := range s.policyNodes {
 		if node.Spec.Parent == rootParent {
