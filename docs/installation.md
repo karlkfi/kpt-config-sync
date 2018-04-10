@@ -227,11 +227,5 @@ nomos-system       Active    2m
 
 ## Uninstalling
 
-Uninstall will shut down Nomos components, but will leave the cluster state
-otherwise intact.
-
-```console
-$ ./run-installer.sh --config=/path/to/your/config.yaml --uninstall=true
-```
-
-You will also need to supply a boolean flag `--yes` to confirm uninstallation.
+Uninstallation is still being worked on. This section will have details once
+they are available.
