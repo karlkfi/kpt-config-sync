@@ -329,14 +329,14 @@ func (s *Syncer) processAction() bool {
 	defer metrics.QueueSize.Set(float64(s.queue.Len()))
 	defer s.queue.Done(actionItem)
 
-	action := actionItem.(action.Interface)
+	a := actionItem.(action.Interface)
 	if s.options.DryRun {
 		s.queue.Forget(actionItem)
-		glog.Infof("Would have executed action %s", action.String())
+		glog.Infof("Would have executed action %s", a.String())
 		return true
 	}
-	exTimer := prometheus.NewTimer(metrics.SyncDuration.WithLabelValues(action.Namespace(), action.Resource(), string(action.Operation())))
-	err := action.Execute()
+	exTimer := prometheus.NewTimer(metrics.SyncDuration.WithLabelValues(a.Namespace(), a.Resource(), string(a.Operation())))
+	err := a.Execute()
 	exTimer.ObserveDuration()
 
 	// All good!
@@ -344,17 +344,17 @@ func (s *Syncer) processAction() bool {
 		s.queue.Forget(actionItem)
 		return true
 	}
-	metrics.ErrTotal.WithLabelValues(action.Namespace(), action.Resource(), string(action.Operation())).Inc()
+	metrics.ErrTotal.WithLabelValues(a.Namespace(), a.Resource(), string(a.Operation())).Inc()
 
 	// Drop forever
 	if s.queue.NumRequeues(actionItem) > WorkerNumRetries {
-		glog.Errorf("Discarding action %s due to %s", action.String(), err)
+		glog.Errorf("Discarding action %s due to %s", a.String(), err)
 		s.queue.Forget(actionItem)
 		return true
 	}
 
 	// Retry
-	glog.Errorf("Error processing action %s due to %s, retrying", action.String(), err)
+	glog.Errorf("Error processing action %s due to %s, retrying", a.String(), err)
 	s.queue.AddRateLimited(actionItem)
 	return true
 }

@@ -68,12 +68,12 @@ func TestSyncerCreate(t *testing.T) {
 	syncer.queue.ShutDown()
 
 	item, _ := syncer.queue.Get()
-	action := item.(*action.ReflectiveUpsertAction)
-	if action.String() != "v1/Namespaces/test-ns-create/upsert" {
-		t.Errorf("Got unexpected action %s", action.String())
+	a := item.(*action.ReflectiveUpsertAction)
+	if a.String() != "v1/Namespaces/test-ns-create/upsert" {
+		t.Errorf("Got unexpected action %s", a.String())
 	}
 
-	if !labeling.HasOriginLabel(action.Item().(*core_v1.Namespace).ObjectMeta) {
+	if !labeling.HasOriginLabel(a.Item().(*core_v1.Namespace).ObjectMeta) {
 		t.Errorf("Namespace should have origin label")
 	}
 }
@@ -119,12 +119,12 @@ func TestSyncerUpdate(t *testing.T) {
 	syncer.queue.ShutDown()
 
 	item, _ := syncer.queue.Get()
-	action := item.(*action.ReflectiveUpsertAction)
-	if action.String() != "v1/Namespaces/test-ns-update/upsert" {
-		t.Errorf("Got unexpected action %s", action.String())
+	a := item.(*action.ReflectiveUpsertAction)
+	if a.String() != "v1/Namespaces/test-ns-update/upsert" {
+		t.Errorf("Got unexpected action %s", a.String())
 	}
 
-	if !labeling.HasOriginLabel(action.Item().(*core_v1.Namespace).ObjectMeta) {
+	if !labeling.HasOriginLabel(a.Item().(*core_v1.Namespace).ObjectMeta) {
 		t.Errorf("Namespace should have origin label")
 	}
 }

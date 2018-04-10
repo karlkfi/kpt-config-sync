@@ -234,14 +234,14 @@ func (i *Installer) processCluster(cluster string) error {
 		defer func() {
 			// Ensure that this is ran at end of cluster process, irrespective
 			// of whether the install was successful.
-			if err := i.removeClusterAdmin(i.c.User); err != nil {
+			if err = i.removeClusterAdmin(i.c.User); err != nil {
 				glog.Warningf("could not remove cluster admin role for user: %v: %v", i.c.User, err)
 			}
 		}()
 	}
 	c := kubectl.New(context.Background())
 
-	if err := i.checkVersion(c); err != nil {
+	if err = i.checkVersion(c); err != nil {
 		return errors.Wrapf(err, "while checking version for context")
 	}
 	// Delete the git policy importer deployment.  This is important because a

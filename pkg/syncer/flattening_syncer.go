@@ -351,9 +351,9 @@ func (f *FlatteningSyncer) PeriodicResync(nodes []*ph.PolicyNode) error {
 	// code below.
 	var err error
 	for _, root := range roots {
-		result, err := EvalSubtree(policyTree, root)
-		if err != nil {
-			return errors.Wrapf(err, "while evaluating root: %q", root)
+		result, err2 := EvalSubtree(policyTree, root)
+		if err2 != nil {
+			return errors.Wrapf(err2, "while evaluating root: %q", root)
 		}
 
 		result.RoleBindingNamespaces().StableForEach(func(namespace string) {

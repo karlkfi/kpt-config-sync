@@ -33,6 +33,7 @@ gometalinter.v2 \
     --enable=goimports \
     --enable=deadcode \
     --enable=ineffassign \
+    --enable=vetshadow \
     --exclude=.*generated.* \
     ${TARGETS}
 echo "PASS"

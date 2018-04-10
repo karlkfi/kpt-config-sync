@@ -71,12 +71,12 @@ func GetHierarchicalRoleBindings(ctx *cli.CommandContext, args []string) error {
 
 // GetHierarchicalRoles gets the hierarchical roles from the cluster.
 func GetHierarchicalRoles(ctx *cli.CommandContext, args []string) error {
-	namespaces, _, err := namespaces.GetAncestryFromContext(ctx)
+	ancestors, _, err := namespaces.GetAncestryFromContext(ctx)
 	if err != nil {
 		return err
 	}
 	clientSet := ctx.Client.Kubernetes().RbacV1()
-	for _, ns := range namespaces {
+	for _, ns := range ancestors {
 		nsName := ns.ObjectMeta.Name
 		client := clientSet.Roles(ns.ObjectMeta.Name)
 		continueToken := ""

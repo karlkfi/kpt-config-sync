@@ -73,7 +73,7 @@ func (p Parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := validateDirNames(allDirsOrdered); err != nil {
+	if err = validateDirNames(allDirsOrdered); err != nil {
 		return nil, err
 	}
 
