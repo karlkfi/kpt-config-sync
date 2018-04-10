@@ -91,7 +91,7 @@ func (p *Admitter) internalAdmit(
 			Allowed: false,
 			Result: &metav1.Status{
 				Message: err.Error(),
-				Reason:  metav1.StatusReason(metav1.StatusReasonForbidden),
+				Reason:  metav1.StatusReasonForbidden,
 			},
 		}
 	}

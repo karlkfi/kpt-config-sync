@@ -38,7 +38,7 @@ func InternalErrorDeny(err error) *admissionv1beta1.AdmissionResponse {
 		Allowed: false,
 		Result: &metav1.Status{
 			Message: err.Error(),
-			Reason:  metav1.StatusReason(metav1.StatusReasonInternalError),
+			Reason:  metav1.StatusReasonInternalError,
 		},
 	}
 }

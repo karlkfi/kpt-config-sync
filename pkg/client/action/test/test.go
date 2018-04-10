@@ -68,7 +68,7 @@ func (s *TestAction) Version() string {
 
 // Name implements action.Interface
 func (s *TestAction) Name() string {
-	return string(s.name)
+	return s.name
 }
 
 // String implements action.Interface

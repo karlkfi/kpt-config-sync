@@ -96,7 +96,7 @@ func (r *Admitter) internalAdmit(review admissionv1beta1.AdmissionReview) *admis
 			Allowed: false,
 			Result: &metav1.Status{
 				Message: admitError.Error(),
-				Reason:  metav1.StatusReason(metav1.StatusReasonForbidden),
+				Reason:  metav1.StatusReasonForbidden,
 			},
 		}
 	}
