@@ -9,7 +9,7 @@ If you would like to inspect the current metric values manually, you can use
 port forwarding to easily view them. For example let's say you want to view
 metrics for the Syncer:
 
-```bash
+```console
 $ kubectl port-forward -n nomos-system $(kubectl get pods -n nomos-system -l app=syncer -o jsonpath='{.items[0].metadata.name}') 8675
 ```
 
@@ -17,7 +17,7 @@ Now you can view the metric values by visiting http://localhost:8675. If you
 have the Prometheus server process running then you can forward the port from it
 (default is 9090) to enable local querying:
 
-```bash
+```console
 $ kubectl port-forward -n monitoring $(kubectl get pods -n monitoring -l app=prometheus -o jsonpath='{.items[0].metadata.name}') 9090
 ```
 

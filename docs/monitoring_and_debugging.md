@@ -8,7 +8,7 @@ By default, all binaries log at V(2).
 
 List all nomos-system pods:
 
-```bash
+```console
 $ kubectl get deployment -n nomos-system
 NAME                                 DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
 git-policy-importer                  1         1         1            1           13d
@@ -18,7 +18,7 @@ syncer                               1         1         1            1         
 
 To see logs for pod:
 
-```bash
+```console
 $ kubectl logs -l app=syncer --namespace nomos-system
 ```
 
@@ -26,13 +26,13 @@ git-policy-importer pod has two containers.
 
 To see logs for policy-importer container:
 
-```bash
+```console
 $ kubectl logs -l app=git-policy-importer -c policy-importer -n nomos-system
 ```
 
 To see logs for git-sync side-car container:
 
-```bash
+```console
 $ kubectl logs -l app=git-policy-importer -c git-sync -n nomos-system
 ```
 
@@ -103,7 +103,7 @@ Number of pending syncer events in queue. If this grows to a large size it could
 indicate an error where the cluster is not being synced from the source of
 truth.
 
-```bash
+```console
 nomos_syncer_queue_size
 ```
 
@@ -111,7 +111,7 @@ Count of errors from syncer upserts. Any metric that is named "error_total"
 should not increase over time. In this example the query is using the operation
 label to specifically look at upserts.
 
-```bash
+```console
 nomos_syncer_error_total{operation="upsert"}
 ```
 
@@ -119,6 +119,6 @@ Syncer action latency, 90th percentile over last 10 minutes. If there is a
 sustained increase in latency it could indicate a performance issue or be used
 to diagnose other symptoms (such as an increase in the syncer queue size).
 
-```bash
+```console
 histogram_quantile(0.9, rate(nomos_syncer_action_duration_seconds_bucket[10m]))
 ```
