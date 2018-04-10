@@ -27,6 +27,7 @@ import (
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/syncer/actions"
+	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/options"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -38,52 +39,6 @@ import (
 
 // WorkerNumRetries is the number of times an action will be retried in the work queue.
 const WorkerNumRetries = 3
-
-// Prometheus metrics
-var (
-	errTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Help:      "Total errors that occurred when executing syncer actions",
-			Namespace: "nomos",
-			Subsystem: "syncer",
-			Name:      "error_total",
-		},
-		[]string{"namespace", "resource", "operation"},
-	)
-	eventTimes = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Help:      "Timestamps when syncer events occurred",
-			Namespace: "nomos",
-			Subsystem: "syncer",
-			Name:      "event_timestamps",
-		},
-		[]string{"type"},
-	)
-	queueSize = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Help:      "Current size of syncer action queue",
-			Namespace: "nomos",
-			Subsystem: "syncer",
-			Name:      "queue_size",
-		})
-	syncDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Help:      "Syncer action duration distributions",
-			Namespace: "nomos",
-			Subsystem: "syncer",
-			Name:      "action_duration_seconds",
-			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
-		},
-		[]string{"namespace", "resource", "operation"},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(errTotal)
-	prometheus.MustRegister(eventTimes)
-	prometheus.MustRegister(queueSize)
-	prometheus.MustRegister(syncDuration)
-}
 
 // ErrorCallback is a callback which is called if Syncer encounters an error during execution
 type ErrorCallback func(error)
@@ -246,7 +201,7 @@ func (s *Syncer) policyNodeResync() error {
 		return errors.Wrapf(err, "Failed to list policy nodes")
 	}
 	glog.V(1).Infof("PolicyNode Periodic Resync")
-	eventTimes.WithLabelValues("resync").Set(float64(time.Now().Unix()))
+	metrics.EventTimes.WithLabelValues("resync").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.PeriodicResync(policyNodes)
@@ -262,7 +217,7 @@ func (s *Syncer) policyNodeResync() error {
 func (s *Syncer) addPolicyNode(obj interface{}) {
 	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
 	glog.V(1).Infof("addPolicyNode %s (%s)", policyNode.Name, policyNode.ResourceVersion)
-	eventTimes.WithLabelValues("add").Set(float64(time.Now().Unix()))
+	metrics.EventTimes.WithLabelValues("add").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnCreate(policyNode)
@@ -271,14 +226,14 @@ func (s *Syncer) addPolicyNode(obj interface{}) {
 			return
 		}
 	}
-	queueSize.Set(float64(s.queue.Len()))
+	metrics.QueueSize.Set(float64(s.queue.Len()))
 }
 
 // deletePolicyNode handles delete events from the informer.
 func (s *Syncer) deletePolicyNode(obj interface{}) {
 	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
 	glog.V(1).Infof("deletePolicyNode %s (%d)", policyNode.Name, policyNode.ResourceVersion)
-	eventTimes.WithLabelValues("delete").Set(float64(time.Now().Unix()))
+	metrics.EventTimes.WithLabelValues("delete").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnDelete(policyNode)
@@ -287,7 +242,7 @@ func (s *Syncer) deletePolicyNode(obj interface{}) {
 			return
 		}
 	}
-	queueSize.Set(float64(s.queue.Len()))
+	metrics.QueueSize.Set(float64(s.queue.Len()))
 }
 
 // updatePolicyNode handles update events from the informer
@@ -296,7 +251,7 @@ func (s *Syncer) updatePolicyNode(oldObj, newObj interface{}) {
 	newPolicyNode := newObj.(*policyhierarchy_v1.PolicyNode)
 	glog.V(1).Infof(
 		"updatePolicyNode %s (%s->%s)", newPolicyNode.Name, oldPolicyNode.ResourceVersion, newPolicyNode.ResourceVersion)
-	eventTimes.WithLabelValues("update").Set(float64(time.Now().Unix()))
+	metrics.EventTimes.WithLabelValues("update").Set(float64(time.Now().Unix()))
 
 	for _, syncerInstance := range s.syncers {
 		err := syncerInstance.OnUpdate(oldPolicyNode, newPolicyNode)
@@ -305,7 +260,7 @@ func (s *Syncer) updatePolicyNode(oldObj, newObj interface{}) {
 			return
 		}
 	}
-	queueSize.Set(float64(s.queue.Len()))
+	metrics.QueueSize.Set(float64(s.queue.Len()))
 }
 
 func (s *Syncer) addClusterPolicy(obj interface{}) {
@@ -371,7 +326,7 @@ func (s *Syncer) processAction() bool {
 		glog.Infof("Shutting down Syncer queue processing worker")
 		return false
 	}
-	defer queueSize.Set(float64(s.queue.Len()))
+	defer metrics.QueueSize.Set(float64(s.queue.Len()))
 	defer s.queue.Done(actionItem)
 
 	action := actionItem.(action.Interface)
@@ -380,7 +335,7 @@ func (s *Syncer) processAction() bool {
 		glog.Infof("Would have executed action %s", action.String())
 		return true
 	}
-	exTimer := prometheus.NewTimer(syncDuration.WithLabelValues(action.Namespace(), action.Resource(), string(action.Operation())))
+	exTimer := prometheus.NewTimer(metrics.SyncDuration.WithLabelValues(action.Namespace(), action.Resource(), string(action.Operation())))
 	err := action.Execute()
 	exTimer.ObserveDuration()
 
@@ -389,7 +344,7 @@ func (s *Syncer) processAction() bool {
 		s.queue.Forget(actionItem)
 		return true
 	}
-	errTotal.WithLabelValues(action.Namespace(), action.Resource(), string(action.Operation())).Inc()
+	metrics.ErrTotal.WithLabelValues(action.Namespace(), action.Resource(), string(action.Operation())).Inc()
 
 	// Drop forever
 	if s.queue.NumRequeues(actionItem) > WorkerNumRetries {

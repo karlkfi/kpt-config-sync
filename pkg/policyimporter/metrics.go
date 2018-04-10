@@ -53,7 +53,9 @@ var Metrics = struct {
 }
 
 func init() {
-	prometheus.MustRegister(Metrics.Operations)
-	prometheus.MustRegister(Metrics.Nodes)
-	prometheus.MustRegister(Metrics.PolicyStates)
+	prometheus.MustRegister(
+		Metrics.Operations,
+		Metrics.Nodes,
+		Metrics.PolicyStates,
+	)
 }

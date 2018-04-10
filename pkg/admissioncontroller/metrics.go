@@ -43,6 +43,8 @@ var Metrics = struct {
 }
 
 func init() {
-	prometheus.MustRegister(Metrics.AdmitDuration)
-	prometheus.MustRegister(Metrics.ErrorTotal)
+	prometheus.MustRegister(
+		Metrics.AdmitDuration,
+		Metrics.ErrorTotal,
+	)
 }
