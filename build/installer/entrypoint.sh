@@ -51,7 +51,7 @@ cat /home/user/.kube/config | \
 chmod 600 ${kubeconfig_output}
 
 # Set logging levels to high for specific modules only.
-readonly logging_options="--vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10,menu=10"
+readonly logging_options="--vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10"
 
 # Make /home/user available also at a path that is the same as the user's home
 # directory on the host.
