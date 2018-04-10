@@ -23,28 +23,10 @@ TARGETS=$(for d in "$@"; do echo ./$d/...; done)
 echo "Running tests:"
 go test -i -installsuffix "static" ${TARGETS}
 go test -installsuffix "static" ${TARGETS}
-echo
-
-echo -n "Checking goimports: "
-ERRS=$(find "$@" -type f -name \*.go | xargs goimports -l 2>&1 || true)
-if [ -n "${ERRS}" ]; then
-    echo "FAIL - Need to run \"make lint\". Found issues in:"
-    for e in ${ERRS}; do
-        echo "    $e"
-    done
-    echo
-    exit 1
-fi
 echo "PASS"
 echo
 
-echo -n "Checking go vet: "
-ERRS=$(go vet ${TARGETS} 2>&1 || true)
-if [ -n "${ERRS}" ]; then
-    echo "FAIL"
-    echo "${ERRS}"
-    echo
-    exit 1
-fi
+echo "Checking linters: "
+gometalinter.v2 --disable-all --enable=vet --enable=goimports ${TARGETS}
 echo "PASS"
 echo
