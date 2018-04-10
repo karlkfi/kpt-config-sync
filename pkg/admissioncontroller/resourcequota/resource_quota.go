@@ -83,12 +83,12 @@ func (r *Admitter) internalAdmit(review admissionv1beta1.AdmissionReview) *admis
 	counter := admissioncontroller.Metrics.ErrorTotal.WithLabelValues("resource_quota", review.Request.Namespace)
 	if err != nil {
 		counter.Inc()
-		return admissioncontroller.InternalErrorDeny(err, review.Request.Namespace)
+		return admissioncontroller.InternalErrorDeny(err)
 	}
 	newUsage, err := r.getNewUsage(*review.Request)
 	if err != nil {
 		counter.Inc()
-		return admissioncontroller.InternalErrorDeny(err, review.Request.Namespace)
+		return admissioncontroller.InternalErrorDeny(err)
 	}
 	admitError := cache.Admit(review.Request.Namespace, newUsage)
 	if admitError != nil {
