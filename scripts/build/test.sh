@@ -25,10 +25,10 @@ go test -i -installsuffix "static" ${TARGETS}
 go test -installsuffix "static" ${TARGETS}
 echo
 
-echo -n "Checking gofmt: "
-ERRS=$(find "$@" -type f -name \*.go | xargs gofmt -l 2>&1 || true)
+echo -n "Checking goimports: "
+ERRS=$(find "$@" -type f -name \*.go | xargs goimports -l 2>&1 || true)
 if [ -n "${ERRS}" ]; then
-    echo "FAIL - the following files need to be gofmt'ed:"
+    echo "FAIL - Need to run \"make lint\". Found issues in:"
     for e in ${ERRS}; do
         echo "    $e"
     done

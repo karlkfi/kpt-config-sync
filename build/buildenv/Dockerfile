@@ -23,9 +23,12 @@ RUN apk add --no-cache \
   bash \
   gcc \
   musl-dev \
-  py-pip
+  py-pip \
+  git
 
 RUN pip install grip
+
+RUN go get golang.org/x/tools/cmd/goimports && mv /go/bin/goimports /bin
 
 # Starting from go 1.10, build and test results are cached, which speeds up
 # following runs.
