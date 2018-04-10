@@ -15,6 +15,17 @@ Active Directory) using different implementations of this abstraction. Note that
 we treat this canonical representation as internal implementation which should
 not be directly consumed by users.
 
+## CustomResourceDefinitions
+
+Nomos defines two custom resources:
+
+* PolicyNode: A resource that stores hierarchical policy information. This
+  includes Roles, RoleBindings and ResourceQuota. PolicyNodes form a tree, where
+  leaf nodes represent Namespaces.
+* ClusterPolicy: A resource that stores cluster-level resources such as
+  ClusterRoles and PodSecurityPolicies. There is only one ClusterPolicy per
+  cluster.
+
 ## Syncer
 
 A set of controllers (currently packaged as a single binary) that consume the
@@ -25,5 +36,10 @@ ResourceQuota, etc.
 ## ResourceQuotaAdmissionController
 
 A ValidatingAdmissionWebhook that enforces hierarchical quota policies which
-providers hierarchical quota on top of existing ResourceQuota admission
+provides hierarchical quota on top of the existing ResourceQuota admission
 controller.
+
+## PolicyNodesAdmissionController
+
+A ValidatingAdmissionWebhook that ensures PolicyNode objects represent a valid
+[tree](https://en.wikipedia.org/wiki/Tree_(data_structure)#Definition)
