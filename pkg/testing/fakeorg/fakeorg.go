@@ -62,7 +62,7 @@ func (s *FakeOrg) Validate() {
 			}
 
 			parentChild, found := parentNode.children[node.Name()]
-			if parentChild == nil {
+			if !found {
 				panic(errors.Errorf("child node is not in parent"))
 			}
 			if parentChild != node {

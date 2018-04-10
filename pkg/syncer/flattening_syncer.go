@@ -358,9 +358,9 @@ func (f *FlatteningSyncer) PeriodicResync(nodes []*ph.PolicyNode) error {
 
 		result.RoleBindingNamespaces().StableForEach(func(namespace string) {
 			glog.V(10).Infof("Processing namespace: %q", namespace)
-			presentResources, err := f.roleBindingAction.Values(namespace)
-			if err != nil {
-				err = errors.Wrapf(err, "while listing namespace: %q", namespace)
+			presentResources, err2 := f.roleBindingAction.Values(namespace)
+			if err2 != nil {
+				err = errors.Wrapf(err2, "while listing namespace: %q", namespace)
 				return
 			}
 			// The list of policies from the resync.
@@ -392,9 +392,9 @@ func (f *FlatteningSyncer) PeriodicResync(nodes []*ph.PolicyNode) error {
 		// TODO(filmil): DUPLICATION Remove if possible.
 		result.RoleNamespaces().StableForEach(func(namespace string) {
 			glog.V(10).Infof("Processing namespace: %q", namespace)
-			presentResources, err := f.roleAction.Values(namespace)
-			if err != nil {
-				err = errors.Wrapf(err, "while listing namespace: %q", namespace)
+			presentResources, err2 := f.roleAction.Values(namespace)
+			if err2 != nil {
+				err = errors.Wrapf(err2, "while listing namespace: %q", namespace)
 				return
 			}
 			// The list of policies policies from the resync.
