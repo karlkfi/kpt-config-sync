@@ -78,7 +78,9 @@ func NewClusterGenericSyncer(
 
 // OnCreate implements ClusterPolicySyncerInterface
 func (s *ClusterGenericSyncer) OnCreate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) error {
-	s.handleNotFound(clusterPolicy)
+	if err := s.handleNotFound(clusterPolicy); err != nil {
+		return err
+	}
 	s.onSet(clusterPolicy)
 	return nil
 }
@@ -86,7 +88,9 @@ func (s *ClusterGenericSyncer) OnCreate(clusterPolicy *policyhierarchy_v1.Cluste
 // OnUpdate implements ClusterPolicySyncerInterface
 func (s *ClusterGenericSyncer) OnUpdate(
 	oldClusterPolicy *policyhierarchy_v1.ClusterPolicy, clusterPolicy *policyhierarchy_v1.ClusterPolicy) error {
-	s.handleNotFound(clusterPolicy)
+	if err := s.handleNotFound(clusterPolicy); err != nil {
+		return err
+	}
 	s.handleRemovals(oldClusterPolicy, clusterPolicy)
 	s.onSet(clusterPolicy)
 	return nil
@@ -125,7 +129,9 @@ func (s *ClusterGenericSyncer) handleNotFound(declared *policyhierarchy_v1.Clust
 
 // OnDelete implements ClusterPolicySyncerInterface
 func (s *ClusterGenericSyncer) OnDelete(clusterPolicy *policyhierarchy_v1.ClusterPolicy) error {
-	s.handleNotFound(clusterPolicy)
+	if err := s.handleNotFound(clusterPolicy); err != nil {
+		return err
+	}
 	s.handleRemovals(clusterPolicy, &policyhierarchy_v1.ClusterPolicy{})
 	return nil
 }

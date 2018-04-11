@@ -23,7 +23,9 @@ func NewPolicyNodeInformer(content ...runtime.Object) pn_v1.PolicyNodeInformer {
 	factory := externalversions.NewSharedInformerFactory(
 		fakeClientSet, 1*time.Minute)
 	informer := factory.Nomos().V1().PolicyNodes()
-	informer.Informer().AddIndexers(parentindexer.Indexer())
+	if err := informer.Informer().AddIndexers(parentindexer.Indexer()); err != nil {
+		panic(err)
+	}
 	factory.Start(nil)
 	glog.Infof("cache sync...")
 	if !cache.WaitForCacheSync(nil, informer.Informer().HasSynced) {

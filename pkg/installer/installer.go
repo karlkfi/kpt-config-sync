@@ -149,7 +149,10 @@ func (i *Installer) deploySshSecrets() error {
 		glog.V(5).Info("no PrivateKeyFilename, deploying empty secret")
 	}
 	c := kubectl.New(context.Background())
-	c.DeleteSecret(secret, defaultNamespace)
+	if err := c.DeleteSecret(secret, defaultNamespace); err != nil {
+		glog.V(5).Infof("failed to delete secret: %v", err)
+	}
+
 	if err := c.CreateSecretGenericFromFile(
 		secret, defaultNamespace, filenames...); err != nil {
 		return errors.Wrapf(err, "while creating ssh secrets")
@@ -165,8 +168,9 @@ func (i *Installer) deployGitConfig() error {
 		return nil
 	}
 	c := kubectl.New(context.Background())
-	// Ignore because this will fail anyways when there isn't a configmap.
-	c.DeleteConfigmap(configmap, defaultNamespace)
+	if err := c.DeleteConfigmap(configmap, defaultNamespace); err != nil {
+		glog.V(5).Infof("Failed to delete configmap: %v", err)
+	}
 
 	if err := c.CreateConfigmapFromLiterals(
 		configmap, defaultNamespace,
@@ -302,7 +306,9 @@ func (i *Installer) Run(useCurrent bool) error {
 	if err != nil {
 		return errors.Wrapf(err, "while getting local list of clusters")
 	}
-	i.createCertificates()
+	if err := i.createCertificates(); err != nil {
+		glog.V(5).Infof("Failed to create certificates: %v", err)
+	}
 	kc := kubectl.New(context.Background())
 	for _, cluster := range i.c.Contexts {
 		glog.Infof("processing cluster: %q", cluster)

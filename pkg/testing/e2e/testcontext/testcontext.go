@@ -59,13 +59,17 @@ func (t *TestContext) Repo(relativePath string) string {
 
 // KubectlApply runs kubectl apply -f on a relative path in the repo.
 func (t *TestContext) KubectlApply(path string) {
-	t.kubeClient.Apply(t.Repo(path))
+	if err := t.kubeClient.Apply(t.Repo(path)); err != nil {
+		panic(err)
+	}
 }
 
 func (t *TestContext) run(args []string) (bool, string, string) {
 	stdout := bytes.NewBuffer(nil)
 	stderr := bytes.NewBuffer(nil)
-	exec.NewRedirected(os.Stdin, stdout, stderr).Run(t.execContext, args...)
+	if err := exec.NewRedirected(os.Stdin, stdout, stderr).Run(t.execContext, args...); err != nil {
+		panic(err)
+	}
 	return true, stdout.String(), stderr.String()
 }
 

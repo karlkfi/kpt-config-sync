@@ -61,11 +61,11 @@ func (s *save) Run() (bool, error) {
 		return false, errors.Wrapf(err, "while creating file: %q", s.out)
 	}
 	defer func() {
-		if err == nil {
-			err = f.Close()
-		}
+		err = f.Close()
 	}()
-	s.cfg.WriteInto(f)
-	s.written = true
+	err = s.cfg.WriteInto(f)
+	if err != nil {
+		return false, errors.Wrapf(err, "while creating config: %q", s.out)
+	}
 	return false, err
 }

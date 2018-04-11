@@ -66,7 +66,7 @@ func setupFunc(t *testcontext.TestContext) {
 }
 
 // TODO(briantkennedy)
-// nolint: deadcode
+// nolint: deadcode, errcheck
 func cleanupFunc(t *testcontext.TestContext) {
 	t.PolicyHierarchy().NomosV1().PolicyNodes().Delete(testSyncerNamespaces, &meta_v1.DeleteOptions{})
 	t.Kubernetes().CoreV1().Namespaces().Delete(testSyncerNamespaces, &meta_v1.DeleteOptions{})
@@ -85,6 +85,8 @@ func testNamespaceGarbageCollection(t *testcontext.TestContext) {
 	})
 
 	propagationPolicy := meta_v1.DeletePropagationForeground
+	// TODO(briantkennedy): Handle errors?
+	// nolint: errcheck
 	t.PolicyHierarchy().NomosV1().PolicyNodes().Delete(testSyncerNamespaces, &meta_v1.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})

@@ -91,7 +91,9 @@ func RunTests(testOptions TestOptions) {
 	// TODO: Insert additional test cases here.
 	if runLegacyTests {
 		fmt.Printf("RUNNING LEGACY TESTCASES\n")
-		os.Setenv("TEST_FUNCTIONS", testOptions.LegacyTestFunctions)
+		if err := os.Setenv("TEST_FUNCTIONS", testOptions.LegacyTestFunctions); err != nil {
+			panic(err)
+		}
 		testContext.RunBashOrDie(filepath.Join(testOptions.RepoDir, "e2e/e2e-legacy.sh"))
 		fmt.Printf("DONE RUNNING LEGACY TESTCASES\n")
 	}

@@ -94,7 +94,7 @@ func (t *Context) KubectlOrDie(args ...string) (stdout, stderr string) {
 // Apply runs kubectl apply -f on a given path.
 func (t *Context) Apply(path string) error {
 	if _, _, err := t.Kubectl("apply", "-f", path); err != nil {
-		errors.Wrapf(err, "while applying to path: %q", path)
+		return errors.Wrapf(err, "while applying to path: %q", path)
 	}
 	return nil
 }
@@ -204,7 +204,10 @@ func (t *Context) GetClusterVersion() (semver.Version, error) {
 		return semver.Version{}, errors.Wrapf(err, "while getting cluster version")
 	}
 	var vs versionOutput
-	json.Unmarshal([]byte(stdout), &vs)
+	err = json.Unmarshal([]byte(stdout), &vs)
+	if err != nil {
+		return semver.Version{}, errors.Wrapf(err, "while unmarshalling")
+	}
 	glog.Warningf("vs: %+v", vs)
 	// GitVersion is of the form "v1.9.2-something"
 	version := vs.ServerVersion.GitVersion[1:]

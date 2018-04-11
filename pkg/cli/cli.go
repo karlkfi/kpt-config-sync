@@ -118,7 +118,9 @@ func (c *CommandContext) initEnvironment() {
 	for _, flagName := range []string{"v", "logtostderr"} {
 		envName := fmt.Sprintf("%s%s", globalFlagPrefix, strings.ToUpper(flagName))
 		if val, ok := os.LookupEnv(envName); ok {
-			flag.Lookup(flagName).Value.Set(val)
+			if err := flag.Lookup(flagName).Value.Set(val); err != nil {
+				panic(err)
+			}
 		}
 	}
 

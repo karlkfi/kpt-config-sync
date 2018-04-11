@@ -153,6 +153,7 @@ func main() {
 	if err != nil {
 		glog.Fatal("Failed to start https listener: ", err)
 	}
+	// nolint: errcheck
 	defer listener.Close()
 
 	go admissioncontroller.ServeTLS(server, listener, stopChannel)

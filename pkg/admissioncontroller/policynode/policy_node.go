@@ -46,7 +46,9 @@ var _ admissioncontroller.Admitter = (*Admitter)(nil)
 func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer) admissioncontroller.Admitter {
 	// Decoder. Right now, only v1 types are needed as they are the only ones being monitored
 	scheme := runtime.NewScheme()
-	policyhierarchy_v1.AddToScheme(scheme)
+	if err := policyhierarchy_v1.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
 
 	decoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
 

@@ -52,8 +52,9 @@ func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 
 	// Decoder. Right now, only v1 types are needed as they are the only ones being monitored
 	scheme := runtime.NewScheme()
-	core_v1.AddToScheme(scheme)
-
+	if err := core_v1.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
 	decoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
 
 	return &Admitter{
