@@ -35,7 +35,7 @@ gometalinter.v2 \
     --enable=ineffassign \
     --enable=vetshadow \
     --enable=unconvert \
-    --exclude=.*generated.* \
+    --exclude=generated\.pb\.go \
     ${TARGETS}
 echo "PASS"
 echo

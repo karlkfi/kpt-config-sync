@@ -127,7 +127,7 @@ build: buildenv .output
 			ARCH=$(ARCH)                                                   \
 			VERSION=$(VERSION)                                             \
 			PKG=$(REPO)                                                    \
-			./scripts/build/build.sh                                       \
+			./scripts/build.sh                                             \
 		"
 # Creates a docker image for each nomos component.
 image-all: $(addprefix image-, $(ALL_APPS))
@@ -242,7 +242,7 @@ test: buildenv .output
 			ARCH=$(ARCH)                                                   \
 			VERSION=$(VERSION)                                             \
 			PKG=$(REPO)                                                    \
-			./scripts/build/test.sh $(NOMOS_CODE_DIRS)                    \
+			./scripts/test.sh $(NOMOS_CODE_DIRS)                           \
 		"
 
 # Runs end-to-end tests.
