@@ -16,11 +16,13 @@ func main() {
 		dialog.Title("Menu Title"),
 		dialog.Backtitle("Menu backtitle"),
 		dialog.Width(40),
-		dialog.Height(20))
+		dialog.Height(20),
+		dialog.Colors(),
+	)
 	m := dialog.NewMenu(
 		commonOpts,
 		dialog.MenuHeight(5),
-		dialog.Message("And now, please select between..."),
+		dialog.Message("And now, \\Zb\\Z1please\\Zn select between...\nEven though you don't really need to"),
 		dialog.MenuItem("one", "Foobar"),
 		dialog.MenuItem("two", "Barbara"),
 		dialog.MenuItem("", "Untitled option"),

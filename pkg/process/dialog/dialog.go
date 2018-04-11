@@ -98,6 +98,15 @@ func Backtitle(backtitle string) OptionsFunc {
 	}
 }
 
+// Colors enables interpreting embedded "\Z" sequences, to color and format the
+// output.
+func Colors() OptionsFunc {
+	const colorsOpt = "--colors"
+	return func(o *Options) {
+		o.rest = append(o.rest, colorsOpt)
+	}
+}
+
 // Message sets the message to be displayed in the dialog.
 func Message(text string) OptionsFunc {
 	return func(o *Options) {

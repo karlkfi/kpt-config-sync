@@ -19,6 +19,8 @@ package configgen
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/blang/semver"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/installer/config"
@@ -57,6 +59,7 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 		dialog.Width(100),
 		dialog.Height(20),
 		dialog.Message("hello!"),
+		dialog.Colors(),
 	)
 	g := &Generator{
 		defaultCfg: cfg,
@@ -83,7 +86,11 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 // the global options specified in opts.
 func buildMenu(actions []Action, opts dialog.Options, err error) *dialog.Menu {
 	o := []interface{}{opts}
-	o = append(o, dialog.Message(fmt.Sprintf("%v [%v]", menuMessage, err)))
+	messages := []string{menuMessage}
+	if err != nil {
+		messages = append(messages, fmt.Sprintf("\\Z1\\Zb%v\\Zn", err))
+	}
+	o = append(o, dialog.Message(strings.Join(messages, "\n")))
 	for _, action := range actions {
 		o = append(o, dialog.MenuItem(action.Name(), action.Text()))
 	}
