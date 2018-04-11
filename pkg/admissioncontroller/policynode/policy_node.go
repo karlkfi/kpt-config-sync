@@ -79,11 +79,7 @@ func (p *Admitter) internalAdmit(
 	}
 
 	// TODO(sbochins): A way for the user to toggle multiple roots, orphan adds checks.
-	validator, err := validator.From(policyNodes...)
-	if err != nil {
-		admissioncontroller.Metrics.ErrorTotal.WithLabelValues("policy_node", review.Request.Namespace).Inc()
-		return admissioncontroller.InternalErrorDeny(err)
-	}
+	validator := validator.From(policyNodes...)
 	validator.AllowMultipleRoots = true
 	validator.AllowOrphanAdds = true
 	if err := p.validateAdmit(validator, *review.Request); err != nil {

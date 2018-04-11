@@ -44,14 +44,12 @@ func New() *Validator {
 	}
 }
 
-func From(policyNodes ...*policyhierarchy_v1.PolicyNode) (*Validator, error) {
+func From(policyNodes ...*policyhierarchy_v1.PolicyNode) *Validator {
 	validator := New()
 	for _, policyNode := range policyNodes {
-		if err := validator.Add(policyNode); err != nil {
-			return nil, err
-		}
+		validator.policyNodes[policyNode.Name] = policyNode
 	}
-	return validator, nil
+	return validator
 }
 
 // Add adds a node in the hierarchy to the validator.
