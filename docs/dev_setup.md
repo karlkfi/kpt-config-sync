@@ -52,47 +52,31 @@ Start up your cluster (10 min):
 $ ./kube-up.sh
 ```
 
-Set up prometheus for monitoring:
-
-```console
-$ ./configure-monitoring.sh
-```
-
 Ensure you are properly connected to the cluster:
 
 ```console
-$ kubectl get ns # lists the 3 default namespaces plus monitoring namespace
+$ kubectl get ns # lists the 3 default namespaces
 ```
 
 ## Initial setup of your cluster in GKE (one time)
 
-Create cluster using gcloud
+Create a cluster using the [web UI](https://console.cloud.google.com) or the
+[gcloud CLI](https://cloud.google.com/sdk/gcloud/reference/container/clusters/create). Make sure the
+cluster version is 1.9+ (we suggest using the latest version). You should also select a machine type
+that has at least 2GB of RAM (eg n1-standard-1).
 
-```console
-$ export CLUSTER_NAME=<yourclustername>
-$ gcloud container clusters create ${CLUSTER_NAME} \
---enable-autoupgrade \
---machine-type=f1-micro \
---zone=us-central1-a \
---num-nodes=3 \
---cluster-version=1.9.4-gke.0
-```
+## Configure monitoring (optional)
 
-OR Optionally Create a GKE Cluster with version 1.9.4 or above and connect to it
-(Pantheon).
-
-Set up prometheus for monitoring:
+You can now configure the server side processes for monitoring Nomos. This step is optional but we
+strongly recommend it since the monitoring can be useful for debugging as well as measuring
+performance.
 
 ```console
 $ $NOMOS/scripts/cluster/gce/configure-monitoring.sh
 ```
 
-Add yourself as a cluster admin in RBAC. See
-https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control
-for details of why this is needed.
+You can verify that there are now several pods running in the new monitoring namespace:
 
 ```console
-$ USERNAME=username@domain.com
-$ kubectl create clusterrolebinding $(echo ${USERNAME} | sed -e 's/@.*//')-cluster-admin-binding \
-    --clusterrole=cluster-admin --user=${USERNAME}
+$ kubectl get pods -n monitoring
 ```
