@@ -1,7 +1,7 @@
 # Monitoring
 
-Please refer to the [monitoring section](monitoring_and_debugging.md) of the user guide for more
-details about the metrics that are available in Nomos.
+Please refer to the [monitoring section](monitoring_and_debugging.md) of the
+user guide for more details about the metrics that are available in Nomos.
 
 ### Manually Inspecting Metrics
 

@@ -102,7 +102,6 @@ When you try and delete the root node, it should fail.
 $ kubectl -n nomos-system delete pn acme
 ```
 
-
 ## GitPolicyImporter
 
 To see logs for policy-importer container:

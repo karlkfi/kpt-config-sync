@@ -19,12 +19,12 @@ not be directly consumed by users.
 
 Nomos defines two custom resources:
 
-* PolicyNode: A resource that stores hierarchical policy information. This
-  includes Roles, RoleBindings and ResourceQuota. PolicyNodes form a tree, where
-  leaf nodes represent Namespaces.
-* ClusterPolicy: A resource that stores cluster-level resources such as
-  ClusterRoles and PodSecurityPolicies. There is only one ClusterPolicy per
-  cluster.
+*   PolicyNode: A resource that stores hierarchical policy information. This
+    includes Roles, RoleBindings and ResourceQuota. PolicyNodes form a tree,
+    where leaf nodes represent Namespaces.
+*   ClusterPolicy: A resource that stores cluster-level resources such as
+    ClusterRoles and PodSecurityPolicies. There is only one ClusterPolicy per
+    cluster.
 
 ## Syncer
 
@@ -42,4 +42,4 @@ controller.
 ## PolicyNodesAdmissionController
 
 A ValidatingAdmissionWebhook that ensures PolicyNode objects represent a valid
-[tree](https://en.wikipedia.org/wiki/Tree_(data_structure)#Definition)
+[tree](https://en.wikipedia.org/wiki/Tree_\(data_structure\)#Definition).
