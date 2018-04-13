@@ -73,8 +73,8 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 	g.actions = []Action{
 		NewUserForm(g.opts, &g.currentCfg.User),
 		NewClusters(g.opts, &g.currentCfg.Contexts),
-		NewGitForm(g.opts, &g.currentCfg.Git),
-		NewSSHForm(g.opts, &g.currentCfg.Ssh),
+		NewGitForm(g.opts, g.currentCfg.Git),
+		NewSSHForm(g.opts, g.currentCfg.Ssh),
 		NewInstallAction(s, &g.currentCfg, g.dir),
 		s,
 		&staticAction{name: "Quit", text: "Quit the configuration generator.", quit: true, implemented: true},

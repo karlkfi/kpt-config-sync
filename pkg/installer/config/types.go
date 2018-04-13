@@ -4,6 +4,7 @@ package config
 import (
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	// TODO(filmil): Revisit once https://github.com/ghodss/yaml/pull/27
@@ -19,7 +20,7 @@ const (
 
 // DefaultConfig contains the empty default values for a Config.
 var DefaultConfig = Config{
-	Git: GitConfig{
+	Git: &GitConfig{
 		SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
 		SyncBranch:      defaultSyncBranch,
 	},
@@ -82,16 +83,11 @@ type Config struct {
 	Contexts []string `json:"contexts,omitempty"`
 
 	// Git contains the git-specific configuration.
-	Git GitConfig `json:"git,omitempty"`
-
-	// CertConfig contains the CA information for the CA to be used to generate
-	// cluster configuration.  If left undefined, the install process will
-	// generate a self-signed CA certificate to use.
-	CertConfig CertConfig `json:"certConfig,omitempty"`
+	Git *GitConfig `json:"git,omitempty"`
 
 	// Ssh contains the SSH configuration to use.  If omitted, assumes that
 	// SSH is not used.
-	Ssh SshConfig `json:"ssh,omitempty"`
+	Ssh *SshConfig `json:"ssh,omitempty"`
 }
 
 // Load loads configuration from a reader in either YAML or JSON format.
@@ -105,15 +101,19 @@ func Load(r io.Reader) (Config, error) {
 	if err := yaml.Unmarshal(b, &c, yaml.DisallowUnknownFields); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")
 	}
-	c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "$HOME", "/home/user", 1)
-	c.Ssh.PrivateKeyFilename = strings.Replace(c.Ssh.PrivateKeyFilename, "$HOME", "/home/user", 1)
+	if c.Ssh != nil {
+		c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "$HOME", "/home/user", 1)
+		c.Ssh.PrivateKeyFilename = strings.Replace(c.Ssh.PrivateKeyFilename, "$HOME", "/home/user", 1)
+	}
 	return c, nil
 }
 
 // WriteInto writes the configuration into supplied writer in JSON format.
 func (c Config) WriteInto(w io.Writer) error {
-	c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "/home/user", "$HOME", 1)
-	c.Ssh.PrivateKeyFilename = strings.Replace(c.Ssh.PrivateKeyFilename, "/home/user", "$HOME", 1)
+	if c.Ssh != nil {
+		c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "/home/user", "$HOME", 1)
+		c.Ssh.PrivateKeyFilename = strings.Replace(c.Ssh.PrivateKeyFilename, "/home/user", "$HOME", 1)
+	}
 	b, err := yaml.Marshal(c)
 	if err != nil {
 		return errors.Wrapf(err, "while marshalling config")
@@ -123,4 +123,55 @@ func (c Config) WriteInto(w io.Writer) error {
 		return errors.Errorf("short write")
 	}
 	return err
+}
+
+// Validate runs validations on the fields in Config.
+func (c Config) Validate(exists FileExists) error {
+	if c.Ssh != nil {
+		if c.Ssh.PrivateKeyFilename == "" {
+			return errors.Errorf("ssh private key file name not specified")
+		}
+	}
+	if c.Git != nil {
+		if c.Git.SyncRepo == "" {
+			return errors.Errorf("git repo not specified")
+		}
+		if c.repoIsSshUrl() {
+			if c.Ssh == nil {
+				return errors.Errorf("ssh path specified for git repo, but private key not specified")
+			}
+			privateKeyFilename := strings.Replace(c.Ssh.PrivateKeyFilename, "/home/user", "$HOME", 1)
+			if !exists.Check(privateKeyFilename) {
+				return errors.Errorf("ssh path specified for git repo, but private key doesn't exist: %v", privateKeyFilename)
+			}
+		}
+	}
+	return nil
+}
+
+func (c Config) repoIsSshUrl() bool {
+	for _, prefix := range []string{"ssh://", "git@"} {
+		if strings.HasPrefix(c.Git.SyncRepo, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// FileExists is an interface used to stub out file existance checks in unit
+// tests.
+type FileExists interface {
+	// Check returns true if a file exists.
+	Check(filename string) bool
+}
+
+// OsFileExists checks if files exists.
+type OsFileExists struct{}
+
+// Check implements FileExists.
+func (OsFileExists) Check(filename string) bool {
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return false
+	}
+	return true
 }

@@ -26,8 +26,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"strings"
-
 	"github.com/blang/semver"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/installer/config"
@@ -137,15 +135,11 @@ func (i *Installer) deploySshSecrets() error {
 	const secret = "git-creds"
 	glog.V(5).Info("deploySshSecrets: enter")
 	var filenames []string
-	if i.c.Ssh.PrivateKeyFilename != "" {
-		// TODO(filmil): Should there be more validation of these file paths?
+	if i.c.Ssh != nil {
 		filenames = append(filenames,
 			fmt.Sprintf("ssh=%v", i.c.Ssh.PrivateKeyFilename),
 			fmt.Sprintf("known_hosts=%v", i.c.Ssh.KnownHostsFilename))
 	} else {
-		if strings.HasPrefix(i.c.Git.SyncRepo, "git@") {
-			return errors.Errorf("Must specify SSH private key when using SSH with Git")
-		}
 		glog.V(5).Info("no PrivateKeyFilename, deploying empty secret")
 	}
 	c := kubectl.New(context.Background())
@@ -163,7 +157,7 @@ func (i *Installer) deploySshSecrets() error {
 func (i *Installer) deployGitConfig() error {
 	const configmap = "git-policy-importer"
 	glog.V(5).Info("deployGitConfig: enter")
-	if i.c.Git.SyncRepo == "" {
+	if i.c.Git == nil {
 		glog.V(5).Info("Not deploying git configuration, no config specified.")
 		return nil
 	}
@@ -174,7 +168,7 @@ func (i *Installer) deployGitConfig() error {
 
 	if err := c.CreateConfigmapFromLiterals(
 		configmap, defaultNamespace,
-		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Ssh.PrivateKeyFilename != ""),
+		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Ssh == nil),
 		fmt.Sprintf("GIT_SYNC_REPO=%v", i.c.Git.SyncRepo),
 		fmt.Sprintf("GIT_SYNC_BRANCH=%v", i.c.Git.SyncBranch),
 		fmt.Sprintf("GIT_SYNC_WAIT=%v", i.c.Git.SyncWaitSeconds),
@@ -247,6 +241,9 @@ func (i *Installer) processCluster(cluster string) error {
 
 	if err = i.checkVersion(c); err != nil {
 		return errors.Wrapf(err, "while checking version for context")
+	}
+	if err = i.c.Validate(config.OsFileExists{}); err != nil {
+		return errors.Wrapf(err, "while validating the configuration")
 	}
 	// Delete the git policy importer deployment.  This is important because a
 	// change in the git creds should also be reflected in the importer.

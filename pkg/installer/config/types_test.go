@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/pkg/errors"
 )
 
 func TestRead(t *testing.T) {
@@ -26,7 +27,7 @@ func TestRead(t *testing.T) {
 			expected: Config{
 				User:     "someuser@example.com",
 				Contexts: []string{"foo", "bar"},
-				Git: GitConfig{
+				Git: &GitConfig{
 					SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
 					SyncBranch:      "master",
 				},
@@ -42,7 +43,7 @@ contexts:
 			expected: Config{
 				User:     "someuser@example.com",
 				Contexts: []string{"foo", "bar"},
-				Git: GitConfig{
+				Git: &GitConfig{
 					SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
 					SyncBranch:      "master",
 				},
@@ -67,13 +68,13 @@ contexts:
 			}`,
 			expected: Config{
 				Contexts: []string{"your_cluster"},
-				Git: GitConfig{
+				Git: &GitConfig{
 					SyncWaitSeconds: 1,
 					SyncBranch:      "test",
 					RootPolicyDir:   "foo-corp",
 					SyncRepo:        "git@github.com:repo/example.git",
 				},
-				Ssh: SshConfig{
+				Ssh: &SshConfig{
 					PrivateKeyFilename: "privateKey",
 					KnownHostsFilename: "knownHosts",
 				},
@@ -98,13 +99,13 @@ contexts:
 			}`,
 			expected: Config{
 				Contexts: []string{"your_cluster"},
-				Git: GitConfig{
+				Git: &GitConfig{
 					SyncWaitSeconds: 1,
 					SyncBranch:      "test",
 					RootPolicyDir:   "foo-corp",
 					SyncRepo:        "git@github.com:repo/example.git",
 				},
-				Ssh: SshConfig{
+				Ssh: &SshConfig{
 					PrivateKeyFilename: "/home/user/privateKey",
 					KnownHostsFilename: "/home/user/knownHosts",
 				},
@@ -174,23 +175,44 @@ func TestWrite(t *testing.T) {
 			name: "Basic",
 			input: Config{
 				Contexts: []string{"foo", "bar"},
-				Git: GitConfig{
+				Git: &GitConfig{
 					SyncWaitSeconds: 1,
 				},
 			},
+			expected: `contexts:
+- foo
+- bar
+git:
+  GIT_SYNC_BRANCH: ""
+  GIT_SYNC_REPO: ""
+  GIT_SYNC_WAIT: 1
+  ROOT_POLICY_DIR: ""
+`,
 		},
 		{
 			name: "Basic",
 			input: Config{
 				Contexts: []string{"foo", "bar"},
-				Git: GitConfig{
+				Git: &GitConfig{
 					SyncWaitSeconds: 1,
 				},
-				Ssh: SshConfig{
+				Ssh: &SshConfig{
 					KnownHostsFilename: "/home/user/known_hosts",
 					PrivateKeyFilename: "/home/user/private_key",
 				},
 			},
+			expected: `contexts:
+- foo
+- bar
+git:
+  GIT_SYNC_BRANCH: ""
+  GIT_SYNC_REPO: ""
+  GIT_SYNC_WAIT: 1
+  ROOT_POLICY_DIR: ""
+ssh:
+  knownHostsFilename: $HOME/known_hosts
+  privateKeyFilename: $HOME/private_key
+`,
 		},
 	}
 	for _, tt := range tests {
@@ -200,12 +222,91 @@ func TestWrite(t *testing.T) {
 			if err != nil {
 				t.Fatalf("WriteInto(): unexpected error: %v", err)
 			}
-			c, err := Load(w)
-			if err != nil {
-				t.Fatalf("Load(): unexpected error: %v", err)
+			if got := w.String(); !cmp.Equal(got, tt.expected) {
+				t.Errorf("WriteInto():\n%v\nwant: %v\ndiff: %v", got, tt.expected, cmp.Diff(got, tt.expected))
 			}
-			if !cmp.Equal(c, tt.input) {
-				t.Errorf("Load():\n%v\nwant: %v\ndiff: %v", c, tt.input, cmp.Diff(tt.input, c))
+		})
+	}
+}
+
+type testExists struct {
+	exists bool
+}
+
+// Check implements FileExists.
+func (s testExists) Check(_ string) bool {
+	return s.exists
+}
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name       string
+		fileExists FileExists
+		config     Config
+		wantErr    error
+	}{
+		{
+			name: "no private key specified",
+			config: Config{
+				Ssh: &SshConfig{},
+			},
+			wantErr: errors.Errorf("ssh private key file name not specified"),
+		},
+		{
+			name: "no git repo specified",
+			config: Config{
+				Git: &GitConfig{},
+			},
+			wantErr: errors.Errorf("git not repo specified"),
+		},
+		{
+			name: "https uri w/ no keys specified",
+			config: Config{
+				Git: &GitConfig{
+					SyncRepo: "https://foobar.com/foo-corp-example.git",
+				},
+			},
+		},
+		{
+			name: "ssh uri w/ no keys specified",
+			config: Config{
+				Git: &GitConfig{
+					SyncRepo: "git@foobar.com/foo-corp-example.git",
+				},
+			},
+			wantErr: errors.Errorf("ssh path specified for git repo, but private key not specified"),
+		},
+		{
+			name: "ssh uri w/ keys that don't exist specified",
+			config: Config{
+				Git: &GitConfig{
+					SyncRepo: "git@foobar.com/foo-corp-example.git",
+				},
+				Ssh: &SshConfig{
+					PrivateKeyFilename: "/some/fake/path/id_rsa",
+				},
+			},
+			fileExists: testExists{false},
+			wantErr:    errors.Errorf("ssh path specified for git repo, but private key doesn't exist: /some/fake/path/id_rsa"),
+		},
+		{
+			name: "ssh uri w/ keys that exist specified",
+			config: Config{
+				Git: &GitConfig{
+					SyncRepo: "git@foobar.com/foo-corp-example.git",
+				},
+				Ssh: &SshConfig{
+					PrivateKeyFilename: "/some/valid/path/id_rsa",
+				},
+			},
+			fileExists: testExists{true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.Validate(tt.fileExists)
+			if (err != nil && tt.wantErr == nil) || (err == nil && tt.wantErr != nil) {
+				t.Fatalf("Unexpected error when validating:\n%v\nwant: %v", err, tt.wantErr)
 			}
 		})
 	}
