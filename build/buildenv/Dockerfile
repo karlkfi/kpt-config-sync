@@ -16,7 +16,7 @@
 #
 
 # The build environment docker file.
-FROM golang:1.10-alpine
+FROM golang:1.10.1-alpine
 
 # Adds support for building dynamically linked libraries.
 RUN apk add --no-cache \
