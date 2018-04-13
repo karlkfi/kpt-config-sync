@@ -53,12 +53,12 @@ currently export:
 Name                                                 | Type      | Labels                         | Description
 ---------------------------------------------------- | --------- | ------------------------------ | -----------
 nomos_admission_controller_usage                     | Gauge     | app, policyspace, resource     | Policyspace quota usage per resource type
-nomos_admission_duration_seconds                     | Histogram | app, namespace, allowed        | Admission duration distributions for apps such as resource quota
-nomos_admission_error_total                          | Counter   | app, namespace                 | Total internal errors that occurred when reviewing admission requests
+nomos_admission_controller_duration_seconds          | Histogram | app, namespace, allowed        | Admission duration distributions for apps such as resource quota
+nomos_admission_controller_error_total               | Counter   | app, namespace                 | Total internal errors that occurred when reviewing admission requests
+nomos_admission_controller_violations_total          | Counter   | app, policyspace, resource     | Policyspace quota violations per resource type
 nomos_policy_importer_policy_node_operations_total   | Counter   | operation                      | Total operations that have been performed to keep policy node hierarchy up-to-date with source of truth
 nomos_policy_importer_policy_nodes                   | Gauge     |                                | Number of policy nodes in current state
 nomos_policy_importer_policy_state_transitions_total | Counter   | status                         | Total number of policy state transitions (A state transition can include changes to multiple resources)
-nomos_resource_quota_violations_total                | Counter   | app, policyspace, resource     | Policyspace quota violations per resource type
 nomos_syncer_error_total                             | Counter   | namespace, resource, operation | Total errors that occurred when executing syncer actions
 nomos_syncer_event_timestamps                        | Gauge     | type                           | Timestamps when syncer events occurred
 nomos_syncer_queue_size                              | Counter   |                                | Current size of syncer action queue

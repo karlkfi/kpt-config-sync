@@ -37,7 +37,7 @@ var Metrics = struct {
 		prometheus.CounterOpts{
 			Help:      "Policyspace quota violations per resource type",
 			Namespace: "nomos",
-			Subsystem: "resource_quota",
+			Subsystem: "admission_controller",
 			Name:      "violations_total",
 		},
 		[]string{"app", "policyspace", "resource"},
