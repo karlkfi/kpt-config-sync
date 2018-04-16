@@ -185,6 +185,12 @@
   revision = "44e46d280b43ec1531bb25252440e34f1b800b65"
 
 [[projects]]
+  name = "github.com/filmil/yaml"
+  packages = ["."]
+  revision = "8aa042675dd6a7951644be0acb134430ed0dd58b"
+  version = "v1.0.1"
+
+[[projects]]
   name = "github.com/ghodss/yaml"
   packages = ["."]
   revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
@@ -1078,6 +1084,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d2d3086c301aeba3dcd1cad7108521a51f7f5690a5084f301d3f2852da50a1cd"
+  inputs-digest = "ac20b8f3bed09f42c6decb7904b2aeb20cdb8ad82b7a54bcca13c8fc5dc29bc7"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/ghodss/yaml"
+	// TODO(filmil): Revisit once https://github.com/ghodss/yaml/pull/27
+	// is resolved.
+	"github.com/filmil/yaml"
 	"github.com/pkg/errors"
 )
 
