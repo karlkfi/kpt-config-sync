@@ -46,20 +46,20 @@ type Diff struct {
 	Actual   meta_v1.Object
 }
 
-// Comparitor handles comparing declared to actual on arbitrary resources given a type-specific
+// Comparator handles comparing declared to actual on arbitrary resources given a type-specific
 // equlivalence function.
-type Comparitor struct {
+type Comparator struct {
 	equals Equals
 }
 
 // New returns a new reconciler which will use the given equals function
-func New(equals Equals) *Comparitor {
-	return &Comparitor{equals: equals}
+func New(equals Equals) *Comparator {
+	return &Comparator{equals: equals}
 }
 
 // Compare returns the diffs between declared and actual state. The diffs will be returned in an
 // arbitrary order.
-func (s *Comparitor) Compare(declared []meta_v1.Object, actual []meta_v1.Object) []*Diff {
+func (s *Comparator) Compare(declared []meta_v1.Object, actual []meta_v1.Object) []*Diff {
 	return Compare(s.equals, declared, actual)
 }
 

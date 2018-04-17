@@ -17,6 +17,8 @@ package syncercontroller
 
 import (
 	"github.com/google/nomos/pkg/syncer/args"
+	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
+	clustermodules "github.com/google/nomos/pkg/syncer/clusterpolicycontroller/modules"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/run"
 )
@@ -38,5 +40,13 @@ func (s *SyncerController) Start(runArgs run.RunArguments) {
 	hierarchyModules := []policyhierarchycontroller.Module{}
 	s.injectArgs.ControllerManager.AddController(
 		policyhierarchycontroller.NewController(s.injectArgs, hierarchyModules))
+
+	clusterModules := []clusterpolicycontroller.Module{
+		clustermodules.NewClusterRolesModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
+		clustermodules.NewClusterRoleBindingsModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
+	}
+	s.injectArgs.ControllerManager.AddController(
+		clusterpolicycontroller.NewController(s.injectArgs, clusterModules))
+
 	s.injectArgs.ControllerManager.RunInformersAndControllers(runArgs)
 }

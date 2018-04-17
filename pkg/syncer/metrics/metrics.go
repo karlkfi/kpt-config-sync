@@ -44,6 +44,16 @@ var (
 			Subsystem: "syncer",
 			Name:      "queue_size",
 		})
+	ClusterReconcileDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Help:      "Syncer cluster reconciliation duration distributions",
+			Namespace: "nomos",
+			Subsystem: "syncer",
+			Name:      "syncer_clusterpolicy_reconcile_seconds",
+			Buckets:   []float64{.001, .01, .1, 1, 10, 100},
+		},
+		nil,
+	)
 	HierarchicalReconcileDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Help:      "Syncer hierarchical reconcile duration distributions",
