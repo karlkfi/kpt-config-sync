@@ -34,7 +34,7 @@ function initialSetUp() {
   echo "****************** Setting up environment ******************"
   cd ${MAKEDIR}
 
-  if ! NOMOS_INSTALLER_CONFIG=$INSTALLER_CONFIG make deploy-with-current ; then
+  if ! NOMOS_INSTALLER_CONFIG=$INSTALLER_CONFIG make deploy-test-e2e; then
     echo "Failed to deploy Nomos components, aborting test"
     exit 1
   fi

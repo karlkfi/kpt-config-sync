@@ -11,9 +11,16 @@ function cleanUp() {
   kubectl delete policynodes --all || true
   kubectl delete clusterpolicy --all || true
   kubectl delete --ignore-not-found ns nomos-system
+  kubectl delete --ignore-not-found ns nomos-system-test
+  ! pkill -f "kubectl -n=nomos-system-test port-forward.*2222:22"
 
-  echo "Deleting namespace nomos-system, this may take a minute"
+  echo "Deleting namespaces nomos-system and nomos-system-test, this may take a minute"
   while kubectl get ns nomos-system > /dev/null 2>&1
+  do
+    sleep 3
+    echo -n "."
+  done
+  while kubectl get ns nomos-system-test > /dev/null 2>&1
   do
     sleep 3
     echo -n "."

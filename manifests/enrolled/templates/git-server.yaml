@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nomos-system-test
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-git-server
+  namespace: nomos-system-test
+spec:
+  selector:
+    app: test-git-server
+  ports:
+    - name: ssh
+      port: 22
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-git-server
+  namespace: nomos-system-test
+  labels:
+    app: test-git-server
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: test-git-server
+  template:
+    metadata:
+      labels:
+        app: test-git-server
+    spec:
+      volumes:
+        - name: keys
+          secret:
+            secretName: ssh-key-secret
+        - name: repos
+          emptyDir: {}
+      containers:
+        - name: test-git-server
+          image: IMAGE_NAME
+          ports:
+            - containerPort: 22
+          volumeMounts:
+            - name: keys
+              mountPath: "/git-server/keys"
+            - name: repos
+              mountPath: "/git-server/repos/sot.git"
+
+

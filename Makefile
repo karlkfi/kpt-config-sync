@@ -72,6 +72,8 @@ ALL_K8S_APPS := syncer \
 ALL_APPS := $(ALL_K8S_APPS) \
 	nomosvet
 
+GIT_SERVER_SRC := https://github.com/jkarlosb/git-server-docker.git
+
 # Allows an interactive docker build or test session to be interrupted
 # by Ctrl-C.  This must be turned off in case of non-interactive runs,
 # like in CI/CD.
@@ -150,6 +152,10 @@ image-%: build
 	cp $(BIN_DIR)/$(ARCH)/$* $(STAGING_DIR)/$*
 	docker build -t gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) $(STAGING_DIR)/$*
 
+# Creates docker image for the test git-server from github source
+image-git-server:
+	docker build -t gcr.io/$(GCP_PROJECT)/git-server:$(IMAGE_TAG) $(GIT_SERVER_SRC)
+
 # Pushes each component's docker image to gcr.io.
 push-to-gcr-all: $(addprefix push-to-gcr-, $(ALL_APPS))
 	@echo "finished pushing to all"
@@ -200,14 +206,18 @@ installer-image: installer-staging
 
 # Runs the installer via docker in interactive mode.
 deploy-interactive: installer-image
-	@./scripts/run-installer.sh \
+	$(TOP_DIR)/scripts/run-installer.sh \
 		--interactive \
 		--container=gcr.io/$(GCP_PROJECT)/installer \
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
 		--version=$(IMAGE_TAG)
 
-deploy-with-current: USE_CURRENT_CONTEXT=true
-deploy-with-current: deploy
+deploy-test-git-server: image-git-server push-to-gcr-git-server \
+	gen-yaml-git-server redeploy-git-server
+	$(TOP_DIR)/scripts/init-git-server.sh
+
+deploy-test-e2e: USE_CURRENT_CONTEXT=true
+deploy-test-e2e: deploy-test-git-server deploy
 
 # Runs the installer via docker in batch mode using the installer config
 # file specied in the environment variable NOMOS_INSTALLER_CONFIG.
