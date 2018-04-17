@@ -61,7 +61,7 @@ to select version 1.9+ when creating the cluster.
 ### GitHub Repo
 
 You will need to create SSH credentials to access the GitHub sample git
-repository, and ensure that those credentials are usable for GithHub access. You
+repository, and ensure that those credentials are usable for GitHub access. You
 can choose to use any other Git provider instead and set up credentials
 accordingly, in which case you can skip this section.
 

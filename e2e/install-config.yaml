@@ -1,8 +1,9 @@
-certConfig: {}
 git:
   GIT_SYNC_BRANCH: e2e
   GIT_SYNC_REPO: https://github.com/frankfarzan/foo-corp-example.git
   GIT_SYNC_WAIT: 1
   ROOT_POLICY_DIR: foo-corp
-ssh: {}
+ssh:
+  privateKeyFilename: $HOME/.ssh/id_rsa.nomos
+  knownHostsFilename: examples/known_hosts
 user:
