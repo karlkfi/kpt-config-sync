@@ -44,6 +44,7 @@ func (s *SyncerController) Start(runArgs run.RunArguments) {
 	clusterModules := []clusterpolicycontroller.Module{
 		clustermodules.NewClusterRolesModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
 		clustermodules.NewClusterRoleBindingsModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
+		clustermodules.NewPodSecurityPoliciesModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
 	}
 	s.injectArgs.ControllerManager.AddController(
 		clusterpolicycontroller.NewController(s.injectArgs, clusterModules))

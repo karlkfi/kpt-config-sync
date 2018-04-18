@@ -62,13 +62,11 @@ func (s *ClusterRoleBindingsModule) subjectsEqual(lhs *rbac_v1.ClusterRoleBindin
 func (s *ClusterRoleBindingsModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
 	lhs := lhsObj.(*rbac_v1.ClusterRoleBinding)
 	rhs := rhsObj.(*rbac_v1.ClusterRoleBinding)
-	if lhs == nil && rhs == nil {
-		return true
-	}
+
 	if lhs == nil || rhs == nil {
-		// Both can be nil, but not one or the other.
-		return false
+		return lhs == rhs
 	}
+
 	return reflect.DeepEqual(lhs.RoleRef, rhs.RoleRef) && s.subjectsEqual(lhs, rhs)
 }
 

@@ -20,83 +20,79 @@ import (
 	"github.com/google/nomos/pkg/client/object"
 	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
 	controller_informers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
-	core_v1 "k8s.io/api/core/v1"
-	rbac_v1 "k8s.io/api/rbac/v1"
+	v1beta "k8s.io/api/extensions/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 )
 
-// ClusterRolesModule implements a module for comparing clusterroles and
-// generating actions to update them.
-type ClusterRolesModule struct {
+// PodSecurityPoliciesModule implements a module for comparing
+// podsecuritypolicies and generating actions to update them.
+type PodSecurityPoliciesModule struct {
 	client    kubernetes.Interface
 	informers informers.SharedInformerFactory
 }
 
-var _ clusterpolicycontroller.Module = &ClusterRolesModule{}
+var _ clusterpolicycontroller.Module = &PodSecurityPoliciesModule{}
 
-// NewClusterRolesModule creates the module.
-func NewClusterRolesModule(
-	client kubernetes.Interface, informers informers.SharedInformerFactory) *ClusterRolesModule {
-	return &ClusterRolesModule{
+// NewPodSecurityPoliciesModule creates the module.
+func NewPodSecurityPoliciesModule(
+	client kubernetes.Interface, informers informers.SharedInformerFactory) *PodSecurityPoliciesModule {
+	return &PodSecurityPoliciesModule{
 		client:    client,
 		informers: informers,
 	}
 }
 
 // Name implements clusterpolicycontroller.Module.
-func (s *ClusterRolesModule) Name() string {
-	return "ClusterRoles"
+func (s *PodSecurityPoliciesModule) Name() string {
+	return "PodSecurityPolicies"
 }
 
 // Equal implements clusterpolicycontroller.Module.
-func (s *ClusterRolesModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
-	lhs := lhsObj.(*rbac_v1.ClusterRole)
-	rhs := rhsObj.(*rbac_v1.ClusterRole)
+func (s *PodSecurityPoliciesModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
+	lhs := lhsObj.(*v1beta.PodSecurityPolicy)
+	rhs := rhsObj.(*v1beta.PodSecurityPolicy)
 
 	if lhs == nil || rhs == nil {
 		return lhs == rhs
 	}
 
-	if lhs.AggregationRule != nil || rhs.AggregationRule != nil {
-		return reflect.DeepEqual(lhs.AggregationRule, rhs.AggregationRule)
-	}
-	return reflect.DeepEqual(lhs.Rules, rhs.Rules)
+	return reflect.DeepEqual(lhs.Spec, rhs.Spec)
 }
 
 // equalSpec performs equals on runtime.Objects
-func (s *ClusterRolesModule) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
+func (s *PodSecurityPoliciesModule) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
 	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
 }
 
 // InformerProvider implements clusterpolicycontroller.Module
-func (s *ClusterRolesModule) InformerProvider() controller_informers.InformerProvider {
-	return s.informers.Rbac().V1().ClusterRoles()
+func (s *PodSecurityPoliciesModule) InformerProvider() controller_informers.InformerProvider {
+	return s.informers.Extensions().V1beta1().PodSecurityPolicies()
 }
 
 // Instance implements clusterpolicycontroller.Module
-func (s *ClusterRolesModule) Instance() meta_v1.Object {
-	return &rbac_v1.ClusterRole{}
+func (s *PodSecurityPoliciesModule) Instance() meta_v1.Object {
+	return &v1beta.PodSecurityPolicy{}
 }
 
 // Extract implements clusterpolicycontroller.Module
-func (s *ClusterRolesModule) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
-	var roles []runtime.Object
-	for _, r := range clusterPolicy.Spec.Policies.ClusterRolesV1 {
-		roles = append(roles, &r)
+func (s *PodSecurityPoliciesModule) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
+	var policies []runtime.Object
+	for _, p := range clusterPolicy.Spec.Policies.PodSecurityPoliciesV1Beta1 {
+		policies = append(policies, &p)
 	}
-	return object.RuntimeToMeta(roles)
+	return object.RuntimeToMeta(policies)
 }
 
 // ActionSpec implements clusterpolicycontroller.Module
-func (s *ClusterRolesModule) ActionSpec() *action.ReflectiveActionSpec {
+func (s *PodSecurityPoliciesModule) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
-		&rbac_v1.ClusterRole{},
-		core_v1.SchemeGroupVersion,
+		&v1beta.PodSecurityPolicy{},
+		v1beta.SchemeGroupVersion,
 		s.equalSpec,
-		s.client.RbacV1(),
-		s.informers.Rbac().V1().ClusterRoles().Lister(),
+		s.client.ExtensionsV1beta1(),
+		s.informers.Extensions().V1beta1().PodSecurityPolicies().Lister(),
 	)
 }
