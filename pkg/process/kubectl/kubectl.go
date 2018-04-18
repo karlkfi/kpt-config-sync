@@ -271,6 +271,11 @@ func run(ctx context.Context, args []string) (stdout, stderr string, err error) 
 	outbuf := bytes.NewBuffer(nil)
 	errbuf := bytes.NewBuffer(nil)
 	e := exec.NewRedirected(os.Stdin, outbuf, errbuf).Run(ctx, args...)
+	if e != nil {
+		// Embed stderr into the error report in case of failure, that's
+		// where the error message is most of the time.
+		e = errors.Wrapf(e, "stderr: %v", errbuf.String())
+	}
 	return outbuf.String(), errbuf.String(), e
 }
 
