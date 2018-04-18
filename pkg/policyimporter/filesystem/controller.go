@@ -23,13 +23,12 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/informers/externalversions"
 	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
+	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 const resync = time.Minute * 15
@@ -39,7 +38,6 @@ type Controller struct {
 	pollPeriod          time.Duration
 	parser              *Parser
 	differ              *actions.Differ
-	client              meta.Interface
 	informerFactory     externalversions.SharedInformerFactory
 	policyNodeLister    listers_v1.PolicyNodeLister
 	clusterPolicyLister listers_v1.ClusterPolicyLister
@@ -51,11 +49,9 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 	informerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), resync)
 	differ := actions.NewDiffer(
-		actions.NewPolicyNodeActionSpec(
+		actions.NewFactories(
 			client.PolicyHierarchy().NomosV1(),
-			informerFactory.Nomos().V1().PolicyNodes().Lister()),
-		actions.NewClusterPolicyActionSpec(
-			client.PolicyHierarchy().NomosV1(),
+			informerFactory.Nomos().V1().PolicyNodes().Lister(),
 			informerFactory.Nomos().V1().ClusterPolicies().Lister()))
 
 	return &Controller{
@@ -63,7 +59,6 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		pollPeriod:          pollPeriod,
 		parser:              parser,
 		differ:              differ,
-		client:              client,
 		informerFactory:     informerFactory,
 		policyNodeLister:    informerFactory.Nomos().V1().PolicyNodes().Lister(),
 		clusterPolicyLister: informerFactory.Nomos().V1().ClusterPolicies().Lister(),
@@ -91,10 +86,9 @@ func (c *Controller) Run() error {
 func (c *Controller) pollDir() error {
 	glog.Infof("Polling policy dir: %s", c.policyDir)
 
-	// Get the current list of policy objects from API server.
-	currentPolicies, err := c.getCurrentPolicies()
+	currentPolicies, err := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to list current policies")
 	}
 
 	currentDir := ""
@@ -140,34 +134,6 @@ func (c *Controller) pollDir() error {
 			return nil
 		}
 	}
-}
-
-func (c *Controller) getCurrentPolicies() (*v1.AllPolicies, error) {
-	policies := v1.AllPolicies{
-		PolicyNodes: make(map[string]v1.PolicyNode),
-	}
-
-	pn, err := c.policyNodeLister.List(labels.Everything())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list PolicyNodes")
-	}
-	for _, n := range pn {
-		policies.PolicyNodes[n.Name] = *n.DeepCopy()
-	}
-
-	cp, err := c.clusterPolicyLister.List(labels.Everything())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list ClusterPolicies")
-	}
-
-	if len(cp) > 1 {
-		return nil, errors.New("found more than one ClusterPolicy object")
-	}
-	if len(cp) == 1 {
-		policies.ClusterPolicy = cp[0].DeepCopy()
-	}
-
-	return &policies, nil
 }
 
 func applyActions(actions []action.Interface) error {

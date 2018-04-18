@@ -188,7 +188,7 @@ func TestDiffer(t *testing.T) {
 		},
 	} {
 		t.Run(test.testName, func(t *testing.T) {
-			g := NewDiffer(NewPolicyNodeActionSpec(nil, nil), NewClusterPolicyActionSpec(nil, nil))
+			g := NewDiffer(NewFactories(nil, nil, nil))
 
 			actual := g.Diff(allPolicies(test.oldNodes, test.oldClusterPolicy), allPolicies(test.newNodes, test.newClusterPolicy))
 

@@ -27,71 +27,87 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// NewPolicyNodeUpsertAction nodeCreates an action for upserting PolicyNodes.
-func NewPolicyNodeUpsertAction(
-	policyNode *policyhierarchy_v1.PolicyNode,
-	spec *action.ReflectiveActionSpec) action.Interface {
-	return action.NewReflectiveUpsertAction("", policyNode.Name, policyNode, spec)
+//  Factories contains factories for creating actions on Nomos custom resources.
+type Factories struct {
+	PolicyNodeAction    policyNodeActionFactory
+	ClusterPolicyAction clusterPolicyActionFactory
 }
 
-// NewPolicyNodeDeleteAction nodeCreates an action for deleting PolicyNodes.
-func NewPolicyNodeDeleteAction(
-	policyNode *policyhierarchy_v1.PolicyNode,
-	spec *action.ReflectiveActionSpec) action.Interface {
-	return action.NewReflectiveDeleteAction("", policyNode.Name, spec)
+// NewFactories creates a new Factories.
+func NewFactories(
+	client typed_v1.NomosV1Interface, pnLister listers_v1.PolicyNodeLister, cpLister listers_v1.ClusterPolicyLister) Factories {
+	return Factories{NewPolicyNodeActionFactory(client, pnLister), NewClusterPolicyActionFactory(client, cpLister)}
 }
 
-func PolicyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
+type policyNodeActionFactory struct {
+	*action.ReflectiveActionSpec
+}
+
+// NewPolicyNodeActionFactory creates a new factory for creating actions performed on PolicyNodes.
+func NewPolicyNodeActionFactory(client typed_v1.NomosV1Interface, lister listers_v1.PolicyNodeLister) policyNodeActionFactory {
+	return policyNodeActionFactory{
+		&action.ReflectiveActionSpec{
+			Resource:   action.LowerPlural(policyhierarchy_v1.PolicyNode{}),
+			KindPlural: action.Plural(policyhierarchy_v1.PolicyNode{}),
+			Group:      api_v1.GroupName,
+			Version:    api_v1.SchemeGroupVersion.Version,
+			EqualSpec:  policyNodesEqual,
+			Client:     client,
+			Lister:     lister,
+		},
+	}
+}
+
+// NewUpsert nodeCreates an action for upserting PolicyNodes.
+func (f policyNodeActionFactory) NewUpsert(policyNode *policyhierarchy_v1.PolicyNode) action.Interface {
+	return action.NewReflectiveUpsertAction("", policyNode.Name, policyNode, f.ReflectiveActionSpec)
+}
+
+// NewDelete nodeCreates an action for deleting PolicyNodes.
+func (f policyNodeActionFactory) NewDelete(policyNode *policyhierarchy_v1.PolicyNode) action.Interface {
+	return action.NewReflectiveDeleteAction("", policyNode.Name, f.ReflectiveActionSpec)
+}
+
+func policyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	lRole := lhs.(*policyhierarchy_v1.PolicyNode)
 	rRole := rhs.(*policyhierarchy_v1.PolicyNode)
 	return reflect.DeepEqual(lRole.Spec, rRole.Spec)
 }
 
-func NewPolicyNodeActionSpec(
+type clusterPolicyActionFactory struct {
+	*action.ReflectiveActionSpec
+}
+
+// NewClusterPolicyActionFactory creates a new factory for creating actions performed on ClusterPolicies.
+func NewClusterPolicyActionFactory(
 	client typed_v1.NomosV1Interface,
-	lister listers_v1.PolicyNodeLister) *action.ReflectiveActionSpec {
-
-	return &action.ReflectiveActionSpec{
-		Resource:   action.LowerPlural(policyhierarchy_v1.PolicyNode{}),
-		KindPlural: action.Plural(policyhierarchy_v1.PolicyNode{}),
-		Group:      api_v1.GroupName,
-		Version:    api_v1.SchemeGroupVersion.Version,
-		EqualSpec:  PolicyNodesEqual,
-		Client:     client,
-		Lister:     lister,
-	}
-}
-
-// NewClusterPolicyUpsertAction nodeCreates an action for upserting ClusterPolicies.
-func NewClusterPolicyUpsertAction(
-	clusterPolicy *policyhierarchy_v1.ClusterPolicy,
-	spec *action.ReflectiveActionSpec) action.Interface {
-	return action.NewReflectiveUpsertAction("", clusterPolicy.Name, clusterPolicy, spec)
-}
-
-// NewClusterPolicyDeleteAction nodeCreates an action for deleting ClusterPolicies.
-func NewClusterPolicyDeleteAction(
-	clusterPolicy *policyhierarchy_v1.ClusterPolicy,
-	spec *action.ReflectiveActionSpec) action.Interface {
-	return action.NewReflectiveDeleteAction("", clusterPolicy.Name, spec)
-}
-
-func ClusterPoliciesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lRole := lhs.(*policyhierarchy_v1.ClusterPolicy)
-	rRole := rhs.(*policyhierarchy_v1.ClusterPolicy)
-	return reflect.DeepEqual(lRole.Spec, rRole.Spec)
-}
-
-func NewClusterPolicyActionSpec(
-	client typed_v1.NomosV1Interface,
-	lister listers_v1.ClusterPolicyLister) *action.ReflectiveActionSpec {
-	return &action.ReflectiveActionSpec{
+	lister listers_v1.ClusterPolicyLister) clusterPolicyActionFactory {
+	return clusterPolicyActionFactory{&action.ReflectiveActionSpec{
 		Resource:   action.LowerPlural(policyhierarchy_v1.ClusterPolicy{}),
 		KindPlural: action.Plural(policyhierarchy_v1.ClusterPolicy{}),
 		Group:      api_v1.GroupName,
 		Version:    api_v1.SchemeGroupVersion.Version,
-		EqualSpec:  ClusterPoliciesEqual,
+		EqualSpec:  clusterPoliciesEqual,
 		Client:     client,
 		Lister:     lister,
+	},
 	}
+}
+
+// NewUpsert creates an action for upserting ClusterPolicies.
+func (f clusterPolicyActionFactory) NewUpsert(
+	clusterPolicy *policyhierarchy_v1.ClusterPolicy) action.Interface {
+	return action.NewReflectiveUpsertAction("", clusterPolicy.Name, clusterPolicy, f.ReflectiveActionSpec)
+}
+
+// NewDelete creates an action for upserting ClusterPolicies.
+func (f clusterPolicyActionFactory) NewDelete(
+	clusterPolicy *policyhierarchy_v1.ClusterPolicy) action.Interface {
+	return action.NewReflectiveDeleteAction("", clusterPolicy.Name, f.ReflectiveActionSpec)
+}
+
+func clusterPoliciesEqual(lhs runtime.Object, rhs runtime.Object) bool {
+	lRole := lhs.(*policyhierarchy_v1.ClusterPolicy)
+	rRole := rhs.(*policyhierarchy_v1.ClusterPolicy)
+	return reflect.DeepEqual(lRole.Spec, rRole.Spec)
 }

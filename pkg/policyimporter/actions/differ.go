@@ -26,8 +26,8 @@ import (
 )
 
 type Differ struct {
-	current, desired                              v1.AllPolicies
-	policyNodeActionSpec, clusterPolicyActionSpec *action.ReflectiveActionSpec
+	current, desired v1.AllPolicies
+	factories        Factories
 }
 
 // Differ will generate an ordered list of actions needed to transition policy from the current to
@@ -37,13 +37,8 @@ type Differ struct {
 // assuming the current and desired state are valid themselves.
 //
 // More details about the algorithm can be found at docs/update-preserving-invariants.md
-func NewDiffer(
-	policyNodeActionSpec, clusterPolicyActionSpec *action.ReflectiveActionSpec,
-) *Differ {
-	return &Differ{
-		policyNodeActionSpec:    policyNodeActionSpec,
-		clusterPolicyActionSpec: clusterPolicyActionSpec,
-	}
+func NewDiffer(factories Factories) *Differ {
+	return &Differ{factories: factories}
 }
 
 // Diff returns a list of actions that when applied, transitions the current state to desired state.
@@ -85,13 +80,11 @@ func (d *Differ) policyNodeActions() []action.Interface {
 	var actions []action.Interface
 	for _, name := range append(creates, updates...) {
 		node := d.desired.PolicyNodes[name]
-		actions = append(actions, NewPolicyNodeUpsertAction(
-			&node, d.policyNodeActionSpec))
+		actions = append(actions, d.factories.PolicyNodeAction.NewUpsert(&node))
 	}
 	for _, name := range deletes {
 		node := d.current.PolicyNodes[name]
-		actions = append(actions, NewPolicyNodeDeleteAction(
-			&node, d.policyNodeActionSpec))
+		actions = append(actions, d.factories.PolicyNodeAction.NewDelete(&node))
 	}
 	return actions
 }
@@ -101,11 +94,11 @@ func (d *Differ) clusterPolicyActions() []action.Interface {
 	if d.current.ClusterPolicy == nil && d.desired.ClusterPolicy == nil {
 		return actions
 	} else if d.current.ClusterPolicy == nil {
-		actions = append(actions, NewClusterPolicyUpsertAction(d.desired.ClusterPolicy, d.clusterPolicyActionSpec))
+		actions = append(actions, d.factories.ClusterPolicyAction.NewUpsert(d.desired.ClusterPolicy))
 	} else if d.desired.ClusterPolicy == nil {
-		actions = append(actions, NewClusterPolicyDeleteAction(d.current.ClusterPolicy, d.clusterPolicyActionSpec))
-	} else if !d.clusterPolicyActionSpec.Equal(d.desired.ClusterPolicy, d.current.ClusterPolicy) {
-		actions = append(actions, NewClusterPolicyUpsertAction(d.desired.ClusterPolicy, d.clusterPolicyActionSpec))
+		actions = append(actions, d.factories.ClusterPolicyAction.NewDelete(d.current.ClusterPolicy))
+	} else if !d.factories.ClusterPolicyAction.Equal(d.desired.ClusterPolicy, d.current.ClusterPolicy) {
+		actions = append(actions, d.factories.ClusterPolicyAction.NewUpsert(d.desired.ClusterPolicy))
 	}
 	return actions
 }
@@ -126,7 +119,7 @@ func (d *Differ) nodeUpdates() []string {
 
 	for key, newnode := range d.desired.PolicyNodes {
 		if oldnode, exists := d.current.PolicyNodes[key]; exists {
-			if !d.policyNodeActionSpec.Equal(&newnode, &oldnode) {
+			if !d.factories.PolicyNodeAction.Equal(&newnode, &oldnode) {
 				updates = append(updates, key)
 			}
 		}

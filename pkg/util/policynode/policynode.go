@@ -21,8 +21,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // NewPolicyNode creates a PolicyNode from the given spec and name.
@@ -75,4 +77,37 @@ func GetResourceVersionOrDie(node *policyhierarchy_v1.PolicyNode) int64 {
 		panic(err)
 	}
 	return resourceVersion
+}
+
+// ListPolicies returns all policies from API server.
+func ListPolicies(policyNodeLister listers_v1.PolicyNodeLister, clusterPolicyLister listers_v1.ClusterPolicyLister) (*policyhierarchy_v1.AllPolicies, error) {
+	policies := policyhierarchy_v1.AllPolicies{
+		PolicyNodes: make(map[string]policyhierarchy_v1.PolicyNode),
+	}
+
+	pn, err := policyNodeLister.List(labels.Everything())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list PolicyNodes")
+	}
+	for _, n := range pn {
+		policies.PolicyNodes[n.Name] = *n.DeepCopy()
+	}
+
+	cp, err := clusterPolicyLister.List(labels.Everything())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list ClusterPolicies")
+	}
+
+	if len(cp) > 1 {
+		var names []string
+		for _, c := range cp {
+			names = append(names, c.Name)
+		}
+		return nil, errors.Errorf("found more than one ClusterPolicy object. The cluster may be in an inconsistent state: %v", names)
+	}
+	if len(cp) == 1 {
+		policies.ClusterPolicy = cp[0].DeepCopy()
+	}
+
+	return &policies, nil
 }
