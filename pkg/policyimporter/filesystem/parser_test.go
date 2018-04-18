@@ -713,7 +713,7 @@ func TestParser(t *testing.T) {
 
 			if tc.expectedNumClusterPolicies != nil {
 				p := actualPolicies.ClusterPolicy.Spec.Policies
-				n := len(p.ClusterRolesV1) + len(p.ClusterRoleBindingsV1) + len(p.PodSecurtiyPoliciesV1Beta1)
+				n := len(p.ClusterRolesV1) + len(p.ClusterRoleBindingsV1) + len(p.PodSecurityPoliciesV1Beta1)
 				if diff := deep.Equal(n, *tc.expectedNumClusterPolicies); diff != nil {
 					t.Fatalf("Actual and expected number of cluster policies didn't match: %v", diff)
 				}

@@ -57,7 +57,7 @@ type ClusterPolicies struct {
 	// Cluster scope resources.
 	ClusterRolesV1             []rbac_v1.ClusterRole                  `json:"clusterRolesV1" protobuf:"bytes,2,rep,name=clusterRolesV1"`
 	ClusterRoleBindingsV1      []rbac_v1.ClusterRoleBinding           `json:"clusterRoleBindingsV1" protobuf:"bytes,3,rep,name=clusterRoleBindingsV1"`
-	PodSecurtiyPoliciesV1Beta1 []extensions_v1beta1.PodSecurityPolicy `json:"podSecurityPolicyV1Beta1" protobuf:"bytes,4,rep,name=podSecurityPolicyV1Beta1"`
+	PodSecurityPoliciesV1Beta1 []extensions_v1beta1.PodSecurityPolicy `json:"podSecurityPolicyV1Beta1" protobuf:"bytes,4,rep,name=podSecurityPolicyV1Beta1"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

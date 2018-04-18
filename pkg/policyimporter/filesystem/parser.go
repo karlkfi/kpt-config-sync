@@ -229,7 +229,7 @@ func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.Pol
 		case *core_v1.Namespace:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *extensions_v1beta1.PodSecurityPolicy:
-			clusterPolicies.PodSecurtiyPoliciesV1Beta1 = append(clusterPolicies.PodSecurtiyPoliciesV1Beta1, *o)
+			clusterPolicies.PodSecurityPoliciesV1Beta1 = append(clusterPolicies.PodSecurityPoliciesV1Beta1, *o)
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, "")
 			policies.ResourceQuotaV1 = o

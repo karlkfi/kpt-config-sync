@@ -78,8 +78,8 @@ func (in *ClusterPolicies) DeepCopyInto(out *ClusterPolicies) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.PodSecurtiyPoliciesV1Beta1 != nil {
-		in, out := &in.PodSecurtiyPoliciesV1Beta1, &out.PodSecurtiyPoliciesV1Beta1
+	if in.PodSecurityPoliciesV1Beta1 != nil {
+		in, out := &in.PodSecurityPoliciesV1Beta1, &out.PodSecurityPoliciesV1Beta1
 		*out = make([]v1beta1.PodSecurityPolicy, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

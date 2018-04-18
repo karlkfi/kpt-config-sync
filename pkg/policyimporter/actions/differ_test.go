@@ -227,7 +227,7 @@ func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
 		},
 		Spec: v1.ClusterPolicySpec{
 			Policies: v1.ClusterPolicies{
-				PodSecurtiyPoliciesV1Beta1: []v1beta1.PodSecurityPolicy{
+				PodSecurityPoliciesV1Beta1: []v1beta1.PodSecurityPolicy{
 					{Spec: v1beta1.PodSecurityPolicySpec{Privileged: priviledged}}},
 			},
 		},

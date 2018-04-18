@@ -141,8 +141,8 @@ func (m *ClusterPolicies) MarshalTo(dAtA []byte) (int, error) {
 			i += n
 		}
 	}
-	if len(m.PodSecurtiyPoliciesV1Beta1) > 0 {
-		for _, msg := range m.PodSecurtiyPoliciesV1Beta1 {
+	if len(m.PodSecurityPoliciesV1Beta1) > 0 {
+		for _, msg := range m.PodSecurityPoliciesV1Beta1 {
 			dAtA[i] = 0x22
 			i++
 			i = encodeVarintGenerated(dAtA, i, uint64(msg.Size()))
@@ -458,8 +458,8 @@ func (m *ClusterPolicies) Size() (n int) {
 			n += 1 + l + sovGenerated(uint64(l))
 		}
 	}
-	if len(m.PodSecurtiyPoliciesV1Beta1) > 0 {
-		for _, e := range m.PodSecurtiyPoliciesV1Beta1 {
+	if len(m.PodSecurityPoliciesV1Beta1) > 0 {
+		for _, e := range m.PodSecurityPoliciesV1Beta1 {
 			l = e.Size()
 			n += 1 + l + sovGenerated(uint64(l))
 		}
@@ -576,7 +576,7 @@ func (this *ClusterPolicies) String() string {
 	s := strings.Join([]string{`&ClusterPolicies{`,
 		`ClusterRolesV1:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.ClusterRolesV1), "ClusterRole", "k8s_io_api_rbac_v1.ClusterRole", 1), `&`, ``, 1) + `,`,
 		`ClusterRoleBindingsV1:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.ClusterRoleBindingsV1), "ClusterRoleBinding", "k8s_io_api_rbac_v1.ClusterRoleBinding", 1), `&`, ``, 1) + `,`,
-		`PodSecurtiyPoliciesV1Beta1:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.PodSecurtiyPoliciesV1Beta1), "PodSecurityPolicy", "k8s_io_api_extensions_v1beta1.PodSecurityPolicy", 1), `&`, ``, 1) + `,`,
+		`PodSecurityPoliciesV1Beta1:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.PodSecurityPoliciesV1Beta1), "PodSecurityPolicy", "k8s_io_api_extensions_v1beta1.PodSecurityPolicy", 1), `&`, ``, 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -760,7 +760,7 @@ func (m *ClusterPolicies) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PodSecurtiyPoliciesV1Beta1", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field PodSecurityPoliciesV1Beta1", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -784,8 +784,8 @@ func (m *ClusterPolicies) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.PodSecurtiyPoliciesV1Beta1 = append(m.PodSecurtiyPoliciesV1Beta1, k8s_io_api_extensions_v1beta1.PodSecurityPolicy{})
-			if err := m.PodSecurtiyPoliciesV1Beta1[len(m.PodSecurtiyPoliciesV1Beta1)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			m.PodSecurityPoliciesV1Beta1 = append(m.PodSecurityPoliciesV1Beta1, k8s_io_api_extensions_v1beta1.PodSecurityPolicy{})
+			if err := m.PodSecurityPoliciesV1Beta1[len(m.PodSecurityPoliciesV1Beta1)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
