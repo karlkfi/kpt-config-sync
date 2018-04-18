@@ -18,6 +18,8 @@ set -euo pipefail
 
 export CGO_ENABLED=0
 
-dir=$(dirname $0)
-${dir}/test-unit.sh "$@"
-${dir}/lint.sh "$@"
+echo "Running tests:"
+go test -i -installsuffix "static" "$@"
+go test -installsuffix "static" "$@"
+echo "PASS"
+echo

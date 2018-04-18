@@ -18,6 +18,17 @@ set -euo pipefail
 
 export CGO_ENABLED=0
 
-dir=$(dirname $0)
-${dir}/test-unit.sh "$@"
-${dir}/lint.sh "$@"
+echo "Checking linters: "
+gometalinter.v2 \
+    --disable-all \
+    --enable=vet \
+    --enable=goimports \
+    --enable=deadcode \
+    --enable=ineffassign \
+    --enable=vetshadow \
+    --enable=unconvert \
+    --enable=errcheck \
+    --exclude=generated\.pb\.go \
+    "$@"
+echo "PASS"
+echo

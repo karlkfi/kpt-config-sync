@@ -24,6 +24,7 @@ REPO := github.com/google/nomos
 
 # List of dirs containing go code owned by Nomos
 NOMOS_CODE_DIRS := pkg cmd
+NOMOS_GO_PKG := $(foreach dir,$(NOMOS_CODE_DIRS),./$(dir)/...)
 
 # Directory containing all build artifacts.
 OUTPUT_DIR := $(TOP_DIR)/.output
@@ -84,12 +85,26 @@ endif
 DATE := $(shell date +'%s')
 IMAGE_TAG ?= $(VERSION)-$(USER)-$(DATE)
 
+DOCKER_RUN_ARGS := \
+	$(DOCKER_INTERACTIVE)                                              \
+	-e ARCH=$(ARCH)                                                    \
+	-e VERSION=$(VERSION)                                              \
+	-e PKG=$(REPO)                                                     \
+	-u $$(id -u):$$(id -g)                                             \
+	-v $(GO_DIR):/go                                                   \
+	-v $$(pwd):/go/src/$(REPO)                                         \
+	-v $(BIN_DIR)/$(ARCH):/go/bin                                      \
+	-v $(GO_DIR)/std/$(ARCH):/usr/local/go/pkg/linux_$(ARCH)_static    \
+	-w /go/src/$(REPO)                                                 \
+	--rm                                                               \
+	$(BUILD_IMAGE)                                                     \
+
 ##### SETUP #####
 
 .DEFAULT_GOAL := test
 
 # Creates the local golang build output directory.
-.output:
+$(OUTPUT_DIR):
 	mkdir -p \
 		$(BIN_DIR)/$(ARCH) \
 		$(GEN_YAML_DIR) \
@@ -103,32 +118,25 @@ IMAGE_TAG ?= $(VERSION)-$(USER)-$(DATE)
 
 # Uses a custom build environment.  See build/buildenv/Dockerfile for the
 # details on the build environment.
-.PHONY: buildenv
-buildenv:
-	@docker build build/buildenv --tag=$(BUILD_IMAGE)
+$(OUTPUT_DIR)/buildenv: build/buildenv/Dockerfile $(OUTPUT_DIR)
+	@docker build $(dir $<) --tag=$(BUILD_IMAGE)
+	@echo "This file exists to track that buildenv is up to date" > $@
 
-# Runs all static analyzers and autocorrects.
-lint:
+buildenv: $(OUTPUT_DIR)/buildenv
+
+# Runs formatter.
+goimports:
 	goimports -w $(NOMOS_CODE_DIRS)
+
+# Runs linter
+lint: buildenv
+	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
 
 # Compiles nomos hermetically using a docker container.
 .PHONY: build
-build: buildenv .output
-	@docker run $(DOCKER_INTERACTIVE)                                      \
-		-u $$(id -u):$$(id -g)                                             \
-		-v $(GO_DIR):/go                                                   \
-		-v $$(pwd):/go/src/$(REPO)                                         \
-		-v $(BIN_DIR)/$(ARCH):/go/bin                                      \
-		-v $(GO_DIR)/std/$(ARCH):/usr/local/go/pkg/linux_$(ARCH)_static    \
-		-w /go/src/$(REPO)                                                 \
-		--rm                                                               \
-		$(BUILD_IMAGE)                                                     \
-		/bin/sh -c "                                                       \
-			ARCH=$(ARCH)                                                   \
-			VERSION=$(VERSION)                                             \
-			PKG=$(REPO)                                                    \
-			./scripts/build.sh                                             \
-		"
+build: buildenv
+	@docker run $(DOCKER_RUN_ARGS) ./scripts/build.sh
+
 # Creates a docker image for each nomos component.
 image-all: $(addprefix image-, $(ALL_APPS))
 	@echo "Finished packaging all"
@@ -183,7 +191,7 @@ installer-staging: push-to-gcr-all gen-yaml-all
 	cp $(TOP_DIR)/scripts/generate-policynodes-admission-controller-certs.sh \
 		$(STAGING_DIR)/installer/scripts
 
-# Builds the installer docker image using the nomos release in .output
+# Builds the installer docker image using the nomos release in $(OUTPUT_DIR)
 installer-image: installer-staging
 	docker build -t gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
 		--build-arg "INSTALLER_VERSION=$(IMAGE_TAG)" \
@@ -228,22 +236,8 @@ clean:
 	rm -rf $(OUTPUT_DIR)
 
 # Runs unit tests in a docker container.
-test: buildenv .output
-	@docker run $(DOCKER_INTERACTIVE)                                      \
-		-u $$(id -u):$$(id -g)                                             \
-		-v $(GO_DIR):/go                                                   \
-		-v $$(pwd):/go/src/$(REPO)                                         \
-		-v $(BIN_DIR)/$(ARCH):/go/bin                                      \
-		-v $(GO_DIR)/std/$(ARCH):/usr/local/go/pkg/linux_$(ARCH)_static    \
-		-w /go/src/$(REPO)                                                 \
-		--rm                                                               \
-		$(BUILD_IMAGE)                                                     \
-		/bin/sh -c "                                                       \
-			ARCH=$(ARCH)                                                   \
-			VERSION=$(VERSION)                                             \
-			PKG=$(REPO)                                                    \
-			./scripts/test.sh $(NOMOS_CODE_DIRS)                           \
-		"
+test: buildenv $(OUTPUT_DIR)
+	@docker run $(DOCKER_RUN_ARGS) ./scripts/test.sh $(NOMOS_GO_PKG)
 
 # Runs end-to-end tests.
 test-e2e:
@@ -264,7 +258,7 @@ install-kubectl-plugin:
 	cd $(TOP_DIR)/cmd/kubectl-nomos; ./install.sh
 
 # Creates staging directory for generating docs.
-docs-staging: .output
+docs-staging: $(OUTPUT_DIR)
 	rm -rf $(DOCS_STAGING_DIR)/*.html $(DOCS_STAGING_DIR)/img
 	cp -r $(TOP_DIR)/docs $(STAGING_DIR)
 	cp $(TOP_DIR)/README.md $(DOCS_STAGING_DIR)
