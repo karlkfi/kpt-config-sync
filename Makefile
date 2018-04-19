@@ -239,12 +239,40 @@ clean:
 test: buildenv $(OUTPUT_DIR)
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/test.sh $(NOMOS_GO_PKG)
 
+# Creates staging directory for building e2e docker image.
+e2e-staging: installer-image
+	cp -r $(TOP_DIR)/build/e2e-tests $(STAGING_DIR)
+	cp $(BIN_DIR)/$(ARCH)/e2e-tests $(STAGING_DIR)/e2e-tests
+	cp $(BIN_DIR)/$(ARCH)/installer $(STAGING_DIR)/e2e-tests
+	mkdir -p $(STAGING_DIR)/e2e-tests/yaml
+	cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/e2e-tests/yaml
+	mkdir -p $(STAGING_DIR)/e2e-tests/manifests/enrolled
+	cp -r $(TOP_DIR)/manifests/enrolled/* $(STAGING_DIR)/e2e-tests/manifests/enrolled
+	mkdir -p $(STAGING_DIR)/e2e-tests/manifests/common
+	cp -r $(TOP_DIR)/manifests/common/* $(STAGING_DIR)/e2e-tests/manifests/common
+	mkdir -p $(STAGING_DIR)/e2e-tests/examples
+	cp -r $(TOP_DIR)/build/installer/examples/* $(STAGING_DIR)/e2e-tests/examples
+	cp -r $(TOP_DIR)/examples/* $(STAGING_DIR)/e2e-tests/examples
+	mkdir -p $(STAGING_DIR)/e2e-tests/scripts
+	cp $(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh \
+		$(STAGING_DIR)/e2e-tests/scripts
+	cp $(TOP_DIR)/scripts/generate-resourcequota-admission-controller-certs.sh \
+		$(STAGING_DIR)/e2e-tests/scripts
+	cp $(TOP_DIR)/scripts/deploy-policynodes-admission-controller.sh \
+		$(STAGING_DIR)/e2e-tests/scripts
+	cp $(TOP_DIR)/scripts/generate-policynodes-admission-controller-certs.sh \
+		$(STAGING_DIR)/e2e-tests/scripts
+
+# Builds the e2e docker image
+e2e-image: e2e-staging
+	docker build -t gcr.io/$(GCP_PROJECT)/e2e-tests:$(IMAGE_TAG) \
+		--build-arg "INSTALLER_VERSION=$(IMAGE_TAG)" \
+		$(STAGING_DIR)/e2e-tests
+	gcloud docker -- push gcr.io/$(GCP_PROJECT)/e2e-tests:$(IMAGE_TAG)
+
 # Runs end-to-end tests.
-test-e2e:
-	e2e/e2e.sh --logtostderr --vmodule=bash=10,exec=10,kubectl=10
-# Runs end-to-end tests but leaves files for debugging.
-test-e2e-no-cleanup:
-	e2e/e2e.sh -skip_cleanup --logtostderr --vmodule=bash=10,exec=10,kubectl=10
+test-e2e: e2e-image
+	VERSION=$(IMAGE_TAG) scripts/e2e.sh --alsologtostderr
 
 # Runs all tests.
 test-all: test test-e2e
