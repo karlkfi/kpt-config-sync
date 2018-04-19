@@ -253,6 +253,12 @@
   revision = "66deaeb636dff1ac7d938ce666d090556056a4b0"
 
 [[projects]]
+  name = "github.com/golang/mock"
+  packages = ["gomock"]
+  revision = "c34cdb4725f4c3844d095133c6e40e448b86589b"
+  version = "v1.1.1"
+
+[[projects]]
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -363,7 +369,6 @@
   branch = "master"
   name = "github.com/kubernetes-sigs/kubebuilder"
   packages = [
-    "pkg/config",
     "pkg/controller",
     "pkg/controller/eventhandlers",
     "pkg/controller/informers",
@@ -1128,6 +1133,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c3cf9dd23be6350649bf8ecba6951eb90739661cf65e13b295ad34f3c39b5c4d"
+  inputs-digest = "5572d6d34a35263da72d0eb151250b7a576f987fb82339fb8d5cdc5642b25c9b"
   solver-name = "gps-cdcl"
   solver-version = 1
