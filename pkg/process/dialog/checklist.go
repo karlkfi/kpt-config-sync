@@ -52,6 +52,5 @@ func (c *Checklist) Close() ([]string, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "Checklist:Close(): while closing the underlying menu")
 	}
-	sel := strings.Split(sels, " ")
-	return sel, nil
+	return strings.Fields(sels), nil
 }
