@@ -23,6 +23,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -237,6 +238,8 @@ func (s *ReflectiveUpsertAction) UpsertedResouce() runtime.Object {
 
 // Execute implements Interface
 func (s *ReflectiveUpsertAction) Execute() error {
+	timer := prometheus.NewTimer(Duration.WithLabelValues(s.Namespace(), s.Resource(), string(s.Operation())))
+	defer timer.ObserveDuration()
 	glog.V(1).Infof("Executing %s", s)
 	return s.doUpsert()
 }
@@ -295,6 +298,8 @@ func NewReflectiveDeleteAction(
 
 // Execute implements Interface
 func (s *ReflectiveDeleteAction) Execute() error {
+	timer := prometheus.NewTimer(Duration.WithLabelValues(s.Namespace(), s.Resource(), string(s.Operation())))
+	defer timer.ObserveDuration()
 	glog.V(1).Infof("Executing %s", s)
 
 	_, err := s.listerGet()

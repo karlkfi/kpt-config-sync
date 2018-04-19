@@ -30,7 +30,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/options"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -335,9 +334,7 @@ func (s *Syncer) processAction() bool {
 		glog.Infof("Would have executed action %s", a.String())
 		return true
 	}
-	exTimer := prometheus.NewTimer(metrics.SyncDuration.WithLabelValues(a.Namespace(), a.Resource(), string(a.Operation())))
 	err := a.Execute()
-	exTimer.ObserveDuration()
 
 	// All good!
 	if err == nil {
