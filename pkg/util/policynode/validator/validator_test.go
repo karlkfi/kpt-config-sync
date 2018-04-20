@@ -175,6 +175,10 @@ func TestWorkingNamespace(t *testing.T) {
 	}
 
 	child1.Spec.Policyspace = false
+	v = New()
+	v.Add(root)
+	v.Add(child1)
+	v.Add(child2)
 	if err := v.checkWorkingNamespace(); err == nil {
 		t.Errorf("Should have detected intermediate node working namespace error")
 	}
@@ -194,7 +198,9 @@ func TestRootWorkingNamespace(t *testing.T) {
 		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
 	}
 
+	v = New()
 	root.Spec.Policyspace = false
+	v.Add(root)
 	if err := v.checkWorkingNamespace(); err == nil {
 		t.Errorf("Should have detected leaf node working namespace error")
 	}
