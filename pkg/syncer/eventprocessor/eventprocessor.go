@@ -31,12 +31,12 @@ import (
 // Factory returns a types.HandleFnProvider that will create a PolicyNodeEventProcessor with the
 // passed informer.
 func Factory(informer policyhierarchyinformer_v1.PolicyNodeInformer) types.HandleFnProvider {
-	return func(queue workqueue.RateLimitingInterface) cache.ResourceEventHandlerFuncs {
+	return func(queue workqueue.RateLimitingInterface) cache.ResourceEventHandler {
 		processor := &PolicyNodeEventProcessor{
 			queue:     queue,
 			hierarchy: hierarchy.New(informer),
 		}
-		return processor.HandlerFuncs()
+		return processor
 	}
 }
 
@@ -45,15 +45,6 @@ func Factory(informer policyhierarchyinformer_v1.PolicyNodeInformer) types.Handl
 type PolicyNodeEventProcessor struct {
 	queue     workqueue.Interface
 	hierarchy hierarchy.Interface
-}
-
-// HandlerFuncs adapts PolicyNodeEventProcessor to a cache.ResourceEventHandlerFuncs
-func (p *PolicyNodeEventProcessor) HandlerFuncs() cache.ResourceEventHandlerFuncs {
-	return cache.ResourceEventHandlerFuncs{
-		AddFunc:    p.OnAdd,
-		UpdateFunc: p.OnUpdate,
-		DeleteFunc: p.OnDelete,
-	}
 }
 
 // OnAdd implements cache.ResourceEventHandler.

@@ -379,7 +379,7 @@
     "pkg/inject/run",
     "pkg/signals"
   ]
-  revision = "999ae5ad9392a0e7af656978e7379bcad9496eb0"
+  revision = "c8635daa3f8359f77dea25b6d991c80ab06e39e5"
 
 [[projects]]
   branch = "master"
@@ -1133,6 +1133,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5453da4e262b4f9424609654100156d8f9f5269c9d94ddcce39afbfd9719e884"
+  inputs-digest = "5b8aabb27a1dc436f789e357bbb5bc9a6c5d4258d8c33d177a44452cd561ee13"
   solver-name = "gps-cdcl"
   solver-version = 1
