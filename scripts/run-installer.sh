@@ -64,7 +64,7 @@ YES=false
 UNINSTALL=
 
 # If set to "true", the installer will use the current context to install into.
-USE_CURRENT_CONTEXT=""
+USE_CURRENT_CONTEXT="false"
 
 # Reset in case getopts has been used previously in the shell.
 OPTIND=1
