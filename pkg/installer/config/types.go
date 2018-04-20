@@ -140,9 +140,8 @@ func (c Config) Validate(exists FileExists) error {
 			if c.Ssh == nil {
 				return errors.Errorf("ssh path specified for git repo, but private key not specified")
 			}
-			privateKeyFilename := strings.Replace(c.Ssh.PrivateKeyFilename, "/home/user", "$HOME", 1)
-			if !exists.Check(privateKeyFilename) {
-				return errors.Errorf("ssh path specified for git repo, but private key doesn't exist: %v", privateKeyFilename)
+			if !exists.Check(c.Ssh.PrivateKeyFilename) {
+				return errors.Errorf("ssh path specified for git repo, but private key doesn't exist: %v", c.Ssh.PrivateKeyFilename)
 			}
 		}
 	}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -234,7 +235,10 @@ type testExists struct {
 }
 
 // Check implements FileExists.
-func (s testExists) Check(_ string) bool {
+func (s testExists) Check(name string) bool {
+	if strings.Contains(name, "$") {
+		panic(fmt.Sprintf("Check: file has unexpected characters: %q", name))
+	}
 	return s.exists
 }
 
@@ -284,6 +288,19 @@ func TestValidate(t *testing.T) {
 				},
 				Ssh: &SshConfig{
 					PrivateKeyFilename: "/some/fake/path/id_rsa",
+				},
+			},
+			fileExists: testExists{false},
+			wantErr:    errors.Errorf("ssh path specified for git repo, but private key doesn't exist: /some/fake/path/id_rsa"),
+		},
+		{
+			name: "allow no funny characters in the file path beginning with /home/user",
+			config: Config{
+				Git: &GitConfig{
+					SyncRepo: "git@foobar.com/foo-corp-example.git",
+				},
+				Ssh: &SshConfig{
+					PrivateKeyFilename: "/home/user/path/id_rsa",
 				},
 			},
 			fileExists: testExists{false},
