@@ -58,13 +58,13 @@ var _ hierarchy.AggregatedNode = &AggregatedRole{}
 
 // RoleModule implements a module for flattening roles.
 type RoleModule struct {
-	client    *kubernetes.Clientset
+	client    kubernetes.Interface
 	informers informers.SharedInformerFactory
 }
 
 // NewRoleModule creates the module.
 func NewRoleModule(
-	client *kubernetes.Clientset, informers informers.SharedInformerFactory) *RoleModule {
+	client kubernetes.Interface, informers informers.SharedInformerFactory) *RoleModule {
 	return &RoleModule{
 		client:    client,
 		informers: informers,

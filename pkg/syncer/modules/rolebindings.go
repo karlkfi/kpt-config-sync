@@ -57,7 +57,7 @@ var _ hierarchy.AggregatedNode = &AggregatedRoleBinding{}
 
 // RoleBindingModule implements a module for flattening roles.
 type RoleBindingModule struct {
-	client    *kubernetes.Clientset
+	client    kubernetes.Interface
 	informers informers.SharedInformerFactory
 }
 
@@ -65,7 +65,7 @@ var _ policyhierarchycontroller.Module = &RoleBindingModule{}
 
 // NewRoleBindingModule creates the module.
 func NewRoleBindingModule(
-	client *kubernetes.Clientset, informers informers.SharedInformerFactory) *RoleBindingModule {
+	client kubernetes.Interface, informers informers.SharedInformerFactory) *RoleBindingModule {
 	return &RoleBindingModule{
 		client:    client,
 		informers: informers,
