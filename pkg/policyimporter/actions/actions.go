@@ -64,8 +64,8 @@ func (f policyNodeActionFactory) NewUpsert(policyNode *policyhierarchy_v1.Policy
 }
 
 // NewDelete nodeCreates an action for deleting PolicyNodes.
-func (f policyNodeActionFactory) NewDelete(policyNode *policyhierarchy_v1.PolicyNode) action.Interface {
-	return action.NewReflectiveDeleteAction("", policyNode.Name, f.ReflectiveActionSpec)
+func (f policyNodeActionFactory) NewDelete(nodeName string) action.Interface {
+	return action.NewReflectiveDeleteAction("", nodeName, f.ReflectiveActionSpec)
 }
 
 func policyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
@@ -102,8 +102,9 @@ func (f clusterPolicyActionFactory) NewUpsert(
 
 // NewDelete creates an action for upserting ClusterPolicies.
 func (f clusterPolicyActionFactory) NewDelete(
-	clusterPolicy *policyhierarchy_v1.ClusterPolicy) action.Interface {
-	return action.NewReflectiveDeleteAction("", clusterPolicy.Name, f.ReflectiveActionSpec)
+	clusterPolicyName string) action.Interface {
+	return action.NewReflectiveDeleteAction("", clusterPolicyName, f.ReflectiveActionSpec)
+
 }
 
 func clusterPoliciesEqual(lhs runtime.Object, rhs runtime.Object) bool {
