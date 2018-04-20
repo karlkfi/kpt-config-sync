@@ -35,6 +35,10 @@ type testCase struct {
 func TestDiffer(t *testing.T) {
 	for _, test := range []testCase{
 		{
+			testName: "Nil",
+			expected: []string{},
+		},
+		{
 			testName: "All Empty",
 			oldNodes: []v1.PolicyNode{},
 			newNodes: []v1.PolicyNode{},
@@ -235,12 +239,16 @@ func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
 }
 
 func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy) v1.AllPolicies {
-	p := v1.AllPolicies{
-		PolicyNodes:   make(map[string]v1.PolicyNode),
+	policies := v1.AllPolicies{
 		ClusterPolicy: clusterPolicy,
 	}
-	for _, n := range nodes {
-		p.PolicyNodes[n.Name] = n
+
+	for i, n := range nodes {
+		if i == 0 {
+			policies.PolicyNodes = make(map[string]v1.PolicyNode)
+		}
+		policies.PolicyNodes[n.Name] = n
 	}
-	return p
+
+	return policies
 }
