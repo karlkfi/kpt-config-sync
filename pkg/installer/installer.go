@@ -337,11 +337,12 @@ func (i *Installer) uninstallCluster() error {
 	// Remove all managed cluster role bindings.  The code below assumes that
 	// roles and role bindings are named the same, which is currently true.
 	for _, name := range deploymentClusterRolesAndBindings {
+		// Ignore errors while deleting, but log them.
 		if err := kc.DeleteClusterrolebinding(name); err != nil {
-			return errors.Wrapf(err, "while uninstalling cluster")
+			glog.Errorf("%v", errors.Wrapf(err, "while uninstalling cluster"))
 		}
 		if err := kc.DeleteClusterrole(name); err != nil {
-			return errors.Wrapf(err, "while uninstalling cluster")
+			glog.Errorf("%v", errors.Wrapf(err, "while uninstalling cluster"))
 		}
 	}
 	// TODO(filmil): Remove any other cluster-level nomos resources.
