@@ -28,10 +28,10 @@ RUN apk add --no-cache \
 
 RUN pip install grip
 
-RUN go get gopkg.in/alecthomas/gometalinter.v2 && gometalinter.v2 --install
-
-RUN mv /go/bin/* /bin
-
 # Starting from go 1.10, build and test results are cached, which speeds up
 # following runs.
 ENV GOCACHE=/go/cache
+
+RUN go get gopkg.in/alecthomas/gometalinter.v2 && gometalinter.v2 --install
+
+RUN mv /go/bin/* /bin
