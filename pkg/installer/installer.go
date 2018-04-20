@@ -64,6 +64,13 @@ var (
 		"nomos-syncer",
 	}
 
+	// validatingWebhookConfigurations is a list of cluster-level validating
+	// webhook configurations created by our admission controllers.
+	validatingWebhookConfigurations = []string{
+		"resource-quota.nomos.dev",
+		"policy-nodes.nomos.dev",
+	}
+
 	// mv is the minimum supported cluster version.  It is not possible to install
 	// on an earlier cluster due to missing features.
 	mv = semver.MustParse("1.9.0")
@@ -327,6 +334,12 @@ func (i *Installer) Run(useCurrent bool) error {
 // additions removed.
 func (i *Installer) uninstallCluster() error {
 	kc := kubectl.New(context.Background())
+	// Remove admission webhooks.
+	for _, w := range validatingWebhookConfigurations {
+		if err := kc.DeleteValidatingWebhookConfiguration(w); err != nil {
+			return errors.Wrapf(err, "while deleting webhook configurations")
+		}
+	}
 	// Remove namespace
 	if err := kc.DeleteNamespace(defaultNamespace); err != nil {
 		return errors.Wrapf(err, "while removing namespace %q", defaultNamespace)

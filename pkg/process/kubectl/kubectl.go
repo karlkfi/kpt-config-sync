@@ -115,6 +115,13 @@ func (t *Context) DeleteConfigmap(name, namespace string) error {
 	return nil
 }
 
+func (t *Context) DeleteValidatingWebhookConfiguration(name string) error {
+	if _, _, err := t.Kubectl("delete", "validatingwebhookconfiguration", name, "--ignore-not-found"); err != nil {
+		return errors.Wrapf(err, "delete validatingwebhookconfiguration name=%q")
+	}
+	return nil
+}
+
 func (t *Context) CreateSecretGenericFromFile(name, namespace string, filenames ...string) error {
 	args := []string{
 		"create", "secret", "generic", fmt.Sprintf("-n=%v", namespace), name,
