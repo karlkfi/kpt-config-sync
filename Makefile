@@ -242,7 +242,6 @@ test: buildenv $(OUTPUT_DIR)
 # Creates staging directory for building e2e docker image.
 e2e-staging: installer-image
 	cp -r $(TOP_DIR)/build/e2e-tests $(STAGING_DIR)
-	cp $(BIN_DIR)/$(ARCH)/e2e-tests $(STAGING_DIR)/e2e-tests
 	cp $(BIN_DIR)/$(ARCH)/installer $(STAGING_DIR)/e2e-tests
 	mkdir -p $(STAGING_DIR)/e2e-tests/yaml
 	cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/e2e-tests/yaml
