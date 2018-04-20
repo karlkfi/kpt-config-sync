@@ -262,12 +262,12 @@ e2e-staging: installer-image
 	cp $(TOP_DIR)/scripts/generate-policynodes-admission-controller-certs.sh \
 		$(STAGING_DIR)/e2e-tests/scripts
 
-# Builds the e2e docker image
+# Builds the e2e docker image. Note that the GCP project is hardcoded since we currently don't want
+# or need a nomos-release version of the e2e-tests image.
 e2e-image: e2e-staging
-	docker build -t gcr.io/$(GCP_PROJECT)/e2e-tests:$(IMAGE_TAG) \
-		--build-arg "INSTALLER_VERSION=$(IMAGE_TAG)" \
+	docker build -t gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG) \
 		$(STAGING_DIR)/e2e-tests
-	gcloud docker -- push gcr.io/$(GCP_PROJECT)/e2e-tests:$(IMAGE_TAG)
+	gcloud docker -- push gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG)
 
 # Runs end-to-end tests.
 test-e2e: e2e-image
