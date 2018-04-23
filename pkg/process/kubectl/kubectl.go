@@ -340,7 +340,7 @@ func (t *Context) DeleteNamespace(namespace string) error {
 // WaitForNamespaceDeleted waits until the named namespace is no longer there,
 // or a timeout occurs.
 func (t *Context) WaitForNamespaceDeleted(namespace string) error {
-	return wait.PollUntil(3*time.Minute, func() (done bool, e error) {
+	return wait.Poll(10*time.Second, 3*time.Minute, func() (done bool, e error) {
 		ns, err := t.Kubernetes().CoreV1().Namespaces().List(meta_v1.ListOptions{})
 		if err != nil {
 			return false, errors.Wrapf(err, "while listing namespace: %q", namespace)
@@ -353,7 +353,7 @@ func (t *Context) WaitForNamespaceDeleted(namespace string) error {
 		}
 		glog.V(9).Infof("namespace %q is now gone, ending poll", namespace)
 		return true, nil
-	}, t.ctx.Done())
+	})
 }
 
 // DeleteClusterrolebinding deletes a cluster role binding by the given name.
