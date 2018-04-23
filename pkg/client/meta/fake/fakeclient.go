@@ -18,18 +18,29 @@ limitations under the License.
 package fake
 
 import (
+	"reflect"
+	"time"
+
+	"github.com/google/nomos/clientgen/informers/externalversions"
 	"github.com/google/nomos/clientgen/policyhierarchy"
 	fakepolicyhierarchy "github.com/google/nomos/clientgen/policyhierarchy/fake"
 	"github.com/google/nomos/pkg/client/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
+
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 )
 
 // Client implements meta.Interface with fake clientsets.
 type Client struct {
 	KubernetesClientset      *fakekubernetes.Clientset
 	PolicyhierarchyClientset *fakepolicyhierarchy.Clientset
+
+	PolicyHierarchyInformers externalversions.SharedInformerFactory
+	KubernetesInformers      informers.SharedInformerFactory
+	ResyncPeriod             time.Duration
 }
 
 var _ meta.Interface = &Client{}
@@ -37,21 +48,42 @@ var _ meta.Interface = &Client{}
 // NewClient creates a FakeClient with default simple clientsets and empty
 // storage.
 func NewClient() *Client {
-	empty := []runtime.Object{}
-	return NewClientWithStorage(empty, empty)
+	return NewClientWithStorage([]runtime.Object{})
 }
 
 // NewClientWithStorage creates a fake meta-client and injects objects from
 // kubernetesStorage as kubernetes objects, and policyHierarchyStorage as
 // objects from policy hierarchy.
-//
-// Note, with some additional registration it may be possible to unify the two
-// parameters into just one, but it's probably less hassle for the tests to
-// punt on that and simply keep the two fake stores separate.
-func NewClientWithStorage(kubernetesStorage, policyHierarchyStorage []runtime.Object) *Client {
+func NewClientWithStorage(storage []runtime.Object) *Client {
+	scheme := runtime.NewScheme()
+	if err := policyhierarchy_v1.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
+
+	phTypes := map[reflect.Type]bool{}
+	for gvk, t := range scheme.AllKnownTypes() {
+		if gvk.Group != policyhierarchy_v1.GroupName {
+			continue
+		}
+		phTypes[t] = true
+	}
+
+	var kubernetesStorage, policyHierarchyStorage []runtime.Object
+	for _, obj := range storage {
+		if phTypes[reflect.TypeOf(obj).Elem()] {
+			policyHierarchyStorage = append(policyHierarchyStorage, obj)
+		} else {
+			kubernetesStorage = append(kubernetesStorage, obj)
+		}
+	}
+
+	kubernetesClientset := fakekubernetes.NewSimpleClientset(kubernetesStorage...)
+	policyhierarchyClientset := fakepolicyhierarchy.NewSimpleClientset(policyHierarchyStorage...)
 	return &Client{
-		KubernetesClientset:      fakekubernetes.NewSimpleClientset(kubernetesStorage...),
-		PolicyhierarchyClientset: fakepolicyhierarchy.NewSimpleClientset(policyHierarchyStorage...),
+		KubernetesClientset:      kubernetesClientset,
+		PolicyhierarchyClientset: policyhierarchyClientset,
+		KubernetesInformers:      informers.NewSharedInformerFactory(kubernetesClientset, time.Second*2),
+		PolicyHierarchyInformers: externalversions.NewSharedInformerFactory(policyhierarchyClientset, time.Second*2),
 	}
 }
 

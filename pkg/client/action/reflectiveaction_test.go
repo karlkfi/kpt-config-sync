@@ -168,21 +168,15 @@ func NewReflectiveActionTest(
 }
 
 func (t *ReflectiveActionTest) PrePopulate() {
-	var kubernetesStorage, policyHierarchyStorage []runtime.Object
+	var storage []runtime.Object
 	for _, testcase := range t.testcases {
 		resource := testcase.GetPrePopulated()
 		if resource == nil {
 			continue
 		}
-
-		if resource.GetObjectKind().GroupVersionKind().Group ==
-			policyhierarchy_v1.SchemeGroupVersion.Group {
-			policyHierarchyStorage = append(policyHierarchyStorage, resource.DeepCopyObject())
-		} else {
-			kubernetesStorage = append(kubernetesStorage, resource.DeepCopyObject())
-		}
+		storage = append(storage, resource.DeepCopyObject())
 	}
-	t.client = fake.NewClientWithStorage(kubernetesStorage, policyHierarchyStorage)
+	t.client = fake.NewClientWithStorage(storage)
 
 	for idx := range t.testcases {
 		t.testcases[idx].client = t.client

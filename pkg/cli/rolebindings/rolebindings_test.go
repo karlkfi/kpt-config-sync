@@ -59,8 +59,7 @@ func RunExample(
 
 	for i, test := range tests {
 		ctx := &cli.CommandContext{
-			Client: fakemeta.NewClientWithStorage(
-				test.storage, []runtime.Object{}),
+			Client:    fakemeta.NewClientWithStorage(test.storage),
 			Namespace: test.namespace,
 		}
 		fmt.Printf("---\nTest case: %v\n", i)

@@ -305,6 +305,7 @@ func (s *ReflectiveDeleteAction) Execute() error {
 	_, err := s.listerGet()
 	if err != nil {
 		if api_errors.IsNotFound(err) {
+			glog.V(5).Infof("not found during lister get %s", s)
 			return nil
 		}
 		return errors.Wrapf(err, "get failed for %s", s)
@@ -313,6 +314,7 @@ func (s *ReflectiveDeleteAction) Execute() error {
 	err = s.delete()
 	if err != nil {
 		if api_errors.IsNotFound(err) {
+			glog.V(5).Infof("not found during delete %s", s)
 			return nil
 		}
 		return errors.Wrapf(err, "delete failed for %s", s)
