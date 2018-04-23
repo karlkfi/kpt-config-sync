@@ -331,7 +331,7 @@ func (t *Context) DeleteDeployment(name, namespace string) error {
 
 // DeleteNamespace deletes the supplied namespace.
 func (t *Context) DeleteNamespace(namespace string) error {
-	if _, _, err := t.Kubectl("delete", "namespace", namespace); err != nil {
+	if _, _, err := t.Kubectl("delete", "namespace", namespace, "--ignore-not-found"); err != nil {
 		return errors.Wrapf(err, "while deleting namespace: %q", namespace)
 	}
 	return nil
