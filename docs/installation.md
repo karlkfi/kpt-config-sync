@@ -191,7 +191,9 @@ $ ./run-installer.sh --interactive --config=/path/to/your/config.yaml
 ```
 
 "Save" will store the current settings that you can then reuse later in a batch
-installation. "Install" will run the installer on the chosen clusters.
+installation. "Install" will run the installer on the chosen clusters.  By
+default, the configuration is saved as `gen_configs/generated.yaml`, i.e. a
+subdirectory of the current working directory.
 
 ## Verify installation
 
@@ -228,5 +230,25 @@ nomos-system       Active    2m
 
 ## Uninstalling
 
-Uninstallation is still being worked on. This section will have details once
-they are available.
+To uninstall Nomos from a set of clusters, you need the `config.yaml` file used
+for the original installation, and the `run-installer.sh` script.
+
+Executing the following command will uninstall Nomos components.
+
+```console
+./run-installer.sh --config=/path/to/your/config.yaml --uninstall=deletedeletedelete --yes
+
+```
+
+The affected components are:
+
+* The namespace `nomos-system` along any workloads running inside of it.
+* Any cluster level roles and role bindings installed by Nomos.
+* Any admission controller configurations installed by Nomos.
+
+In addition, removing Nomos from the cluster may affect user workloads that
+interact with the Kubernetes API server.
+
+
+
+
