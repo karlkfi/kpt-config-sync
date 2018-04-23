@@ -15,8 +15,12 @@
 
 set -u
 
+# Should be $NOMOS/e2e
+TESTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
+# Should be $NOMOS/
+MAKEDIR=$TESTDIR/..
 # Path to demo acme yaml
-ACME=examples/acme/policynodes/acme.yaml
+ACME=$MAKEDIR/examples/acme/policynodes/acme.yaml
 
 # Run for every test
 function setUp() {
@@ -57,7 +61,7 @@ function testSyncerRoleBindings() {
 }
 
 function testSyncerRoleBindingsChange() {
-  kubectl apply -f test-syncer-change-rolebinding-backend.yaml > /dev/null
+  kubectl apply -f ${TESTDIR}/test-syncer-change-rolebinding-backend.yaml > /dev/null
   sleep 1
   assertContains "kubectl get rolebindings -n backend bob-rolebinding" "NotFound"
   assertContains "kubectl get rolebindings -n backend robert-rolebinding -o yaml" "acme-admin"
@@ -136,27 +140,6 @@ function waitFor() {
 TEST_FUNCTIONS=${TEST_FUNCTIONS:-$(declare -F)}
 
 ######################## MAIN #########################
-# TODO(ekitson): Remove setUpEnv once the mount volume is no longer needed
-function setUpEnv() {
-  echo "****************** Setting up environment ******************"
-  readonly kubeconfig_output="/opt/installer/kubeconfig/config"
-  # We need to fix up the kubeconfig paths because these may not match between
-  # the container and the host.
-  # /somepath/gcloud becomes /use/local/gcloud/google-cloud/sdk/bin/gcloud.
-  # Then, make it read-writable to the owner only.
-  cat /home/user/.kube/config | \
-    sed -e "s+cmd-path: [^ ]*gcloud+cmd-path: /usr/local/gcloud/google-cloud-sdk/bin/gcloud+g" \
-    > "${kubeconfig_output}"
-  chmod 600 ${kubeconfig_output}
-
-  ./installer \
-    --config="install-config.yaml" \
-    --log_dir=/tmp \
-    --use_current_context=true \
-    --vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10
-  echo "****************** Environment is ready ******************"
-}
-
 function main() {
   if [[ ! "kubectl get ns > /dev/null" ]]; then
     echo "Kubectl/Cluster misconfigured"
@@ -178,24 +161,4 @@ function main() {
   done
 }
 
-function cleanUp() {
-  echo "****************** Cleaning up environment ******************"
-  kubectl delete ValidatingWebhookConfiguration policy-nodes.nomos.dev --ignore-not-found
-  kubectl delete ValidatingWebhookConfiguration resource-quota.nomos.dev --ignore-not-found
-  kubectl delete policynodes --all || true
-  kubectl delete clusterpolicy --all || true
-  kubectl delete --ignore-not-found ns nomos-system
-
-  echo "Deleting namespace nomos-system, this may take a minute"
-  while kubectl get ns nomos-system > /dev/null 2>&1
-  do
-    sleep 3
-    echo -n "."
-  done
-  echo
-}
-
-cleanUp
-setUpEnv
 main
-cleanUp
