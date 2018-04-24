@@ -164,22 +164,21 @@ func (s *ClusterPolicyController) ownerLookup(k types.ReconcileKey) (interface{}
 
 // execute will execute an action based on the Diff.
 func execute(diff *comparator.Diff, spec *action.ReflectiveActionSpec) error {
+	var act action.Interface
 	switch diff.Type {
 	case comparator.Add:
 		fallthrough
 	case comparator.Update:
 		// generate upsert action
-		a := action.NewReflectiveUpsertAction(
+		act = action.NewReflectiveUpsertAction(
 			"", diff.Declared.GetName(), diff.Declared.(runtime.Object), spec)
-		if err := a.Execute(); err != nil {
-			return errors.Wrapf(err, "failed to execute delete action: %s", a)
-		}
 	case comparator.Delete:
 		// generate delete action
-		a := action.NewReflectiveDeleteAction("", diff.Actual.GetName(), spec)
-		if err := a.Execute(); err != nil {
-			return errors.Wrapf(err, "failed to execute delete action: %s", a)
-		}
+		act = action.NewReflectiveDeleteAction("", diff.Actual.GetName(), spec)
+
+	}
+	if err := act.Execute(); err != nil {
+		return errors.Wrapf(err, "failed to execute action: %s", act)
 	}
 	return nil
 }
