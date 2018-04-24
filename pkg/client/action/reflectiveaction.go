@@ -302,13 +302,22 @@ func (s *ReflectiveDeleteAction) Execute() error {
 	defer timer.ObserveDuration()
 	glog.V(1).Infof("Executing %s", s)
 
-	_, err := s.listerGet()
+	o, err := s.listerGet()
 	if err != nil {
 		if api_errors.IsNotFound(err) {
 			glog.V(5).Infof("not found during lister get %s", s)
 			return nil
 		}
 		return errors.Wrapf(err, "get failed for %s", s)
+	}
+
+	m, ok := o.(meta_v1.Object)
+	if !ok {
+		panic(fmt.Sprintf("programmer error, attempting to delete object with no metadata field: %v", m))
+	}
+	if IsFinalizing(m) {
+		glog.V(1).Infof("attempting to delete an object that is finalizing: %s", s)
+		return nil
 	}
 
 	err = s.delete()

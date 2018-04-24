@@ -51,3 +51,8 @@ func MetaSubset(set meta_v1.Object, subset meta_v1.Object) bool {
 func ObjectMetaSubset(set runtime.Object, subset runtime.Object) bool {
 	return MetaSubset(set.(meta_v1.Object), subset.(meta_v1.Object))
 }
+
+// IsFinalizing returns true if the object is finalizing.
+func IsFinalizing(m meta_v1.Object) bool {
+	return m.GetDeletionTimestamp() != nil
+}

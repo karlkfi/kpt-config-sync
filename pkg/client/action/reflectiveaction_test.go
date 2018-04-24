@@ -52,6 +52,9 @@ type ReflectiveActionTestCase struct {
 	// Calls get for the resource under test and returns it as an object.
 	Getter TypeGetter
 
+	// expectSkipDelete is true when delete actions are expected to not complete.
+	expectSkipDelete bool
+
 	// Provided by test harness
 	idx    int
 	spec   *ReflectiveActionSpec
@@ -126,6 +129,10 @@ func (t *ReflectiveActionTestCase) Validate() string {
 		// check resource does not exist
 		_, err := t.Getter(t.client, t.Namespace(), t.Name())
 		if err == nil {
+			if t.expectSkipDelete {
+				// We don't expect the delete to go through for this test case.
+				return ""
+			}
 			return "Resource should have been deleted"
 		}
 		if err != nil && api_errors.IsNotFound(err) {
@@ -215,7 +222,7 @@ var namespacedBaseTestObject = &rbac_v1.Role{
 		Annotations: map[string]string{"api.foo.future/deny": "*"},
 	},
 	Rules: []rbac_v1.PolicyRule{
-		rbac_v1.PolicyRule{
+		{
 			Verbs:     []string{"get"},
 			APIGroups: []string{"some.group.k8s.io"},
 			Resources: []string{"*"},
@@ -231,14 +238,14 @@ func namespacedRoleX(namespace, name string) runtime.Object {
 }
 
 var namespacedTestCases = []ReflectiveActionTestCase{
-	ReflectiveActionTestCase{
+	{
 		TestName:    "upsert for create",
 		Operation:   "upsert",
 		Namespaced:  true,
 		Resource:    namespacedRoleX,
 		PrePopulate: func(runtime.Object) runtime.Object { return nil },
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:   "upsert to different labels",
 		Operation:  "upsert",
 		Namespaced: true,
@@ -249,7 +256,7 @@ var namespacedTestCases = []ReflectiveActionTestCase{
 			return role
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:   "upsert to different annotations",
 		Operation:  "upsert",
 		Namespaced: true,
@@ -260,7 +267,7 @@ var namespacedTestCases = []ReflectiveActionTestCase{
 			return role
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:   "upsert to different content",
 		Operation:  "upsert",
 		Namespaced: true,
@@ -275,7 +282,7 @@ var namespacedTestCases = []ReflectiveActionTestCase{
 			return role
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:   "upsert to identical",
 		Operation:  "upsert",
 		Namespaced: true,
@@ -284,7 +291,7 @@ var namespacedTestCases = []ReflectiveActionTestCase{
 			return obj.DeepCopyObject()
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:   "delete existing",
 		Operation:  "delete",
 		Namespaced: true,
@@ -293,7 +300,7 @@ var namespacedTestCases = []ReflectiveActionTestCase{
 			return obj.DeepCopyObject()
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:   "delete does not exist",
 		Operation:  "delete",
 		Namespaced: true,
@@ -321,13 +328,13 @@ func TestReflectiveActionNamespaced(t *testing.T) {
 }
 
 var clusterTestCases = []ReflectiveActionTestCase{
-	ReflectiveActionTestCase{
+	{
 		TestName:    "upsert for create",
 		Operation:   "upsert",
 		Resource:    clusterRoleX,
 		PrePopulate: func(runtime.Object) runtime.Object { return nil },
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "upsert to different labels",
 		Operation: "upsert",
 		Resource:  clusterRoleX,
@@ -337,7 +344,7 @@ var clusterTestCases = []ReflectiveActionTestCase{
 			return role
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "upsert to different annotations",
 		Operation: "upsert",
 		Resource:  clusterRoleX,
@@ -347,7 +354,7 @@ var clusterTestCases = []ReflectiveActionTestCase{
 			return role
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "upsert to different content",
 		Operation: "upsert",
 		Resource:  clusterRoleX,
@@ -361,7 +368,7 @@ var clusterTestCases = []ReflectiveActionTestCase{
 			return role
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "upsert to identical",
 		Operation: "upsert",
 		Resource:  clusterRoleX,
@@ -369,7 +376,7 @@ var clusterTestCases = []ReflectiveActionTestCase{
 			return obj.DeepCopyObject()
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "delete existing",
 		Operation: "delete",
 		Resource:  clusterRoleX,
@@ -377,7 +384,20 @@ var clusterTestCases = []ReflectiveActionTestCase{
 			return obj.DeepCopyObject()
 		},
 	},
-	ReflectiveActionTestCase{
+	{
+		TestName:  "delete finalizing",
+		Operation: "delete",
+		Resource:  clusterRoleX,
+		PrePopulate: func(obj runtime.Object) runtime.Object {
+			o := obj.DeepCopyObject()
+			m := o.(meta_v1.Object)
+			ts := meta_v1.Now()
+			m.SetDeletionTimestamp(&ts)
+			return m.(runtime.Object)
+		},
+		expectSkipDelete: true,
+	},
+	{
 		TestName:  "delete does not exist",
 		Operation: "delete",
 	},
@@ -389,7 +409,7 @@ func ClusterRolesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	return reflect.DeepEqual(lRole.Rules, rRole.Rules)
 }
 
-func ClusterRoleGetter(client *fake.Client, namespace, name string) (runtime.Object, error) {
+func ClusterRoleGetter(client *fake.Client, _, name string) (runtime.Object, error) {
 	return client.Kubernetes().RbacV1().ClusterRoles().Get(name, meta_v1.GetOptions{})
 }
 
@@ -403,7 +423,7 @@ var clusterBaseTestObject = &rbac_v1.ClusterRole{
 		Annotations: map[string]string{"api.foo.future/deny": "*"},
 	},
 	Rules: []rbac_v1.PolicyRule{
-		rbac_v1.PolicyRule{
+		{
 			Verbs:     []string{"get"},
 			APIGroups: []string{"some.group.k8s.io"},
 			Resources: []string{"*"},
@@ -411,13 +431,13 @@ var clusterBaseTestObject = &rbac_v1.ClusterRole{
 	},
 }
 
-func clusterRoleX(namespace, name string) runtime.Object {
+func clusterRoleX(_, name string) runtime.Object {
 	testRole := clusterBaseTestObject.DeepCopy()
 	testRole.Name = name
 	return testRole
 }
 
-func TestRefelctiveActionCluster(t *testing.T) {
+func TestReflectiveActionCluster(t *testing.T) {
 	test := NewReflectiveActionTest(t, clusterTestCases)
 
 	test.PrePopulate()
@@ -438,13 +458,13 @@ func TestRefelctiveActionCluster(t *testing.T) {
 }
 
 var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
-	ReflectiveActionTestCase{
+	{
 		TestName:    "upsert for create",
 		Operation:   "upsert",
 		Resource:    clusterPolicyNodeX,
 		PrePopulate: func(runtime.Object) runtime.Object { return nil },
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "upsert to different labels",
 		Operation: "upsert",
 		Resource:  clusterPolicyNodeX,
@@ -454,7 +474,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 			return policyNode
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "upsert to different annotations",
 		Operation: "upsert",
 		Resource:  clusterPolicyNodeX,
@@ -464,7 +484,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 			return policyNode
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "upsert to different content",
 		Operation: "upsert",
 		Resource:  clusterPolicyNodeX,
@@ -474,7 +494,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 			return policyNode
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "upsert to identical",
 		Operation: "upsert",
 		Resource:  clusterPolicyNodeX,
@@ -482,7 +502,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 			return obj.DeepCopyObject()
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "delete existing",
 		Operation: "delete",
 		Resource:  clusterPolicyNodeX,
@@ -490,7 +510,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 			return obj.DeepCopyObject()
 		},
 	},
-	ReflectiveActionTestCase{
+	{
 		TestName:  "delete does not exist",
 		Operation: "delete",
 	},
@@ -502,7 +522,7 @@ func PolicyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	return reflect.DeepEqual(lPn.Spec, rPn.Spec)
 }
 
-func ClusterPolicyNodeGetter(client *fake.Client, namespace, name string) (runtime.Object, error) {
+func ClusterPolicyNodeGetter(client *fake.Client, _, name string) (runtime.Object, error) {
 	return client.PolicyHierarchy().NomosV1().PolicyNodes().Get(name, meta_v1.GetOptions{})
 }
 
