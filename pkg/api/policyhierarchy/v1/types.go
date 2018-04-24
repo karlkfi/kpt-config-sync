@@ -47,7 +47,12 @@ type ClusterPolicy struct {
 // +protobuf=true
 type ClusterPolicySpec struct {
 	// The policies specified for cluster level resources.
-	Policies ClusterPolicies `json:"policies" protobuf:"bytes,2,opt,name=policies"`
+	Policies ClusterPolicies `json:"policies" protobuf:"bytes,1,opt,name=policies"`
+
+	// UnmanagedNamespacesV1 is a configmap that contains unmanaged namespace configuration for the syncer.
+	// Keys for the data field correspond to namespace names. The only value accepted at the moment is "unmanaged"
+	// which indicates that the namespace is unmanaged.
+	UnmanagedNamespacesV1 *core_v1.ConfigMap `json:"unmanagedNamespaces,omitempty" protobuf:"bytes,2,opt,name=unmanagedNamespaces"`
 }
 
 // ClusterPolicies specifies the policies nomos synchronizes to a cluster. This is factored out

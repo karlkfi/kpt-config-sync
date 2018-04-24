@@ -73,6 +73,7 @@ echo "Building gen tools..."
 go install "${tools[@]}"
 
 if [[ -z "$(which protoc)" || "$(protoc --version)" != "libprotoc 3."* ]]; then
+  echo "ERROR:"
   echo "Generating protobuf requires protoc 3.0.0-beta1 or newer. Please download and"
   echo "install the platform appropriate Protobuf package for your OS: "
   echo
@@ -149,3 +150,4 @@ done
 find ${NOMOS_ROOT}/vendor \( -name "generated.proto" -o -name "generated.pb.go" \) \
     -exec git checkout {} \;
 
+echo "Generation Completed!"

@@ -164,6 +164,15 @@ func (in *ClusterPolicyList) DeepCopyObject() runtime.Object {
 func (in *ClusterPolicySpec) DeepCopyInto(out *ClusterPolicySpec) {
 	*out = *in
 	in.Policies.DeepCopyInto(&out.Policies)
+	if in.UnmanagedNamespacesV1 != nil {
+		in, out := &in.UnmanagedNamespacesV1, &out.UnmanagedNamespacesV1
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(core_v1.ConfigMap)
+			(*in).DeepCopyInto(*out)
+		}
+	}
 	return
 }
 

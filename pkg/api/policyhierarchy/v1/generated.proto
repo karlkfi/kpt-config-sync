@@ -73,7 +73,12 @@ message ClusterPolicyList {
 // +protobuf=true
 message ClusterPolicySpec {
   // The policies specified for cluster level resources.
-  optional ClusterPolicies policies = 2;
+  optional ClusterPolicies policies = 1;
+
+  // UnmanagedNamespacesV1 is a configmap that contains unmanaged namespace configuration for the syncer.
+  // Keys for the data field correspond to namespace names. The only value accepted at the moment is "unmanaged"
+  // which indicates that the namespace is unmanaged.
+  optional k8s.io.api.core.v1.ConfigMap unmanagedNamespaces = 2;
 }
 
 // Policies contains all the defined policies that are linked to a particular
