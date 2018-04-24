@@ -175,7 +175,7 @@ func (i *Installer) deployGitConfig() error {
 
 	if err := c.CreateConfigmapFromLiterals(
 		configmap, defaultNamespace,
-		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Ssh == nil),
+		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Ssh != nil),
 		fmt.Sprintf("GIT_SYNC_REPO=%v", i.c.Git.SyncRepo),
 		fmt.Sprintf("GIT_SYNC_BRANCH=%v", i.c.Git.SyncBranch),
 		fmt.Sprintf("GIT_SYNC_WAIT=%v", i.c.Git.SyncWaitSeconds),
