@@ -1,0 +1,93 @@
+/*
+Copyright 2018 The Nomos Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package reserved
+
+import (
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/pkg/errors"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
+)
+
+// Namespaces represents a list of namespaces that will not be managed by Nomos.
+// This means that they are outside the policy hierarchy and will not be
+// modified or removed by any Nomos controllers.
+//
+// The ConfigMap must only consist of keys that represent the names of the
+// namespaces that Nomos should not manage. The values must always be reserved.
+//
+// e.g.
+//
+// apiVersion: v1
+// data:
+//   search=reserved
+//   backend=reserved
+//   frontend=reserved
+// kind: ConfigMap
+type Namespaces struct {
+	configMap *v1.ConfigMap
+}
+
+// validate validates that reserved namespaces are well formed.
+func (n *Namespaces) validate() error {
+	for name, attribute := range n.configMap.Data {
+		if errorStrings := validation.IsQualifiedName(name); len(errorStrings) > 0 {
+			return errors.Errorf("reserved namespace %q is invalid: %v", name, errorStrings)
+		}
+		if policyhierarchyv1.NamespaceAttribute(attribute) != policyhierarchyv1.ReservedAttribute {
+			return errors.Errorf("reserved namespace %q attribute %q is invalid", name, attribute)
+		}
+	}
+	return nil
+}
+
+// IsReserved returns false when the namespace is not part of the reserved
+// namespaces.
+func (n *Namespaces) IsReserved(ns *v1.Namespace) bool {
+	attribute, ok := n.configMap.Data[ns.Name]
+	return ok && policyhierarchyv1.NamespaceAttribute(attribute) == policyhierarchyv1.ReservedAttribute
+}
+
+// List returns the names of namespaces with the specified attribute.
+func (n *Namespaces) List(wantAttribute policyhierarchyv1.NamespaceAttribute) []string {
+	var namespaces []string
+	for namespace, attribute := range n.configMap.Data {
+		if policyhierarchyv1.NamespaceAttribute(attribute) == wantAttribute {
+			namespaces = append(namespaces, namespace)
+		}
+	}
+	return namespaces
+}
+
+// From gets Namespaces from the ConfigMap stored at the root of the policy
+// hierarchy source of truth.
+func From(reserved *v1.ConfigMap) (*Namespaces, error) {
+	if reserved == nil {
+		return &Namespaces{
+			configMap: &v1.ConfigMap{
+				Data: make(map[string]string),
+			},
+		}, nil
+	}
+
+	ns := &Namespaces{reserved}
+	if err := ns.validate(); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}

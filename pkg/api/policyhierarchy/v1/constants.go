@@ -28,6 +28,14 @@ const ParentLabelKey = "nomos-parent-ns"
 // ClusterPolicyName is the name of the singleton ClusterPolicy resource.
 const ClusterPolicyName = "nomos-cluster-policy"
 
+// NamespaceAttribute is an attribute defining how Nomos reacts to reserved namespaces.
+type NamespaceAttribute string
+
+const (
+	// ReservedAttribute means that these namespaces will not be managed by Nomos.
+	ReservedAttribute NamespaceAttribute = "reserved"
+)
+
 // PolicyNodeType represents the types of policynodes that can exist.
 type PolicyNodeType string
 
