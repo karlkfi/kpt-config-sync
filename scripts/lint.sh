@@ -64,28 +64,28 @@ function exclude() {
   local value="${1:-}"
   for i in "${GOLINT_EXCLUDE_PACKAGES[@]}"; do
     if [[ "${i}" == "${value}" ]]; then
-      return 1
+      return 0
     fi
   done
-  return 0
+  return 1
 }
-LINT=()
-# Busybox strips out a lot of flags so this becomes awkward.
-for file in find cmd pkg -name '*.go'; do
-  dirname ${file}
-done \
-  | sort \
-  | uniq \
-  | while read line; do
-  if ! exclude ${line}; then
-    LINT+=("${line}")
+LINT_PKGS=()
+for pkg in $(find cmd pkg -name '*.go' \
+    | sed -e 's|/[^/]*$||' \
+    | sort \
+    | uniq); do
+  if ! exclude ${pkg}; then
+    LINT_PKGS+=(${pkg})
   fi
 done
+
+
+
 echo "Checking golint: "
 gometalinter.v2 \
     --disable-all \
     --enable=golint \
-    "${LINT[@]}"
+    "${LINT_PKGS[@]}"
 
 echo "Checking linters: "
 gometalinter.v2 \
