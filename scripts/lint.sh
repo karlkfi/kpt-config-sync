@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright 2016 The Kubernetes Authors.
 #
@@ -17,6 +17,75 @@
 set -euo pipefail
 
 export CGO_ENABLED=0
+
+####### GOLINT FIXIT #############
+#
+# When you fix one of the packages here, remove it from the list.
+#
+GOLINT_EXCLUDE_PACKAGES=(
+  cmd/syncer-demo-driver
+  pkg/admissioncontroller
+  pkg/admissioncontroller/policynode
+  pkg/admissioncontroller/resourcequota
+  pkg/api/policyhierarchy/v1
+  pkg/client/action
+  pkg/client/action/test
+  pkg/client/restconfig
+  pkg/cli/namespaces
+  pkg/cli/testing
+  pkg/installer
+  pkg/installer/config
+  pkg/policyimporter
+  pkg/policyimporter/actions
+  pkg/policyimporter/filesystem
+  pkg/process/configgen
+  pkg/process/dialog
+  pkg/process/exec
+  pkg/process/kubectl
+  pkg/resourcequota
+  pkg/service
+  pkg/syncer
+  pkg/syncer/actions
+  pkg/syncer/clusterpolicycontroller
+  pkg/syncer/clusterpolicycontroller/modules
+  pkg/syncer/flattening
+  pkg/syncer/hierarchy
+  pkg/syncer/labeling
+  pkg/syncer/policyhierarchycontroller/testing
+  pkg/testing/e2e/testcontext
+  pkg/testing/fakeinformers
+  pkg/testing/orgdriver
+  pkg/testing/rbactesting
+  pkg/util/log
+  pkg/util/policynode/validator
+  pkg/version
+)
+function exclude() {
+  local value="${1:-}"
+  for i in "${GOLINT_EXCLUDE_PACKAGES[@]}"; do
+    if [[ "${i}" == "${value}" ]]; then
+      return 1
+    fi
+  done
+  return 0
+}
+LINT=()
+# Busybox strips out a lot of flags so this becomes awkward.
+for file in find cmd pkg -name '*.go'; do
+  dirname ${file}
+done \
+  | sort \
+  | uniq \
+  | while read line; do
+  if ! exclude ${line}; then
+    LINT+=("${line}")
+  fi
+done
+echo "Checking golint: "
+gometalinter.v2 \
+    --disable-all \
+    --enable=golint \
+    "${LINT[@]}"
 
 echo "Checking linters: "
 gometalinter.v2 \
