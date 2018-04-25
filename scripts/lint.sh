@@ -45,7 +45,6 @@ GOLINT_EXCLUDE_PACKAGES=(
   pkg/resourcequota
   pkg/service
   pkg/syncer
-  pkg/syncer/actions
   pkg/syncer/clusterpolicycontroller
   pkg/syncer/clusterpolicycontroller/modules
   pkg/syncer/flattening
@@ -86,6 +85,7 @@ gometalinter.v2 \
     --disable-all \
     --enable=golint \
     "${LINT_PKGS[@]}"
+echo "PASS"
 
 echo "Checking linters: "
 gometalinter.v2 \

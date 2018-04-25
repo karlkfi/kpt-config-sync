@@ -88,6 +88,7 @@ func NewRoleUpsertAction(
 	return action.NewReflectiveUpsertAction(role.Namespace, role.Name, role, spec)
 }
 
+// RolesEqual returns true if the rules in two Role objects are equal.
 func RolesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	lRole := lhs.(*rbac_v1.Role)
 	rRole := rhs.(*rbac_v1.Role)

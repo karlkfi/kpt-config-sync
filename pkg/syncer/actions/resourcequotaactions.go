@@ -13,7 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// The actions needed by the syncer to perform operations on leaf (K8s native) Resource Quota objects
 package actions
 
 import (
@@ -28,7 +27,7 @@ import (
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 )
 
-// NewResourceQuotaUpsertAction creates an delete action that will quota remove limits.
+// NewResourceQuotaDeleteAction creates an delete action that will quota remove limits.
 func NewResourceQuotaDeleteAction(
 	namespace string,
 	kubernetesInterface kubernetes.Interface,
@@ -72,6 +71,7 @@ func NewResourceQuotaUpsertAction(
 	return action.NewReflectiveUpsertAction(namespace, resourcequota.ResourceQuotaObjectName, quota, spec)
 }
 
+// ResourceQuotasEqual returns true if both resource quotas have functionally equivalent limits.
 func ResourceQuotasEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	lQuota := lhs.(*core_v1.ResourceQuota)
 	rQuota := rhs.(*core_v1.ResourceQuota)

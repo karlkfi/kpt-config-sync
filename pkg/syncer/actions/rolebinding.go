@@ -88,6 +88,7 @@ func NewRoleBindingUpsertAction(
 	return action.NewReflectiveUpsertAction(roleBinding.Namespace, roleBinding.Name, roleBinding, spec)
 }
 
+// RoleBindingsEqual returns true if two RoleBindings have equivalent Subjects and RoleRef.
 func RoleBindingsEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	lRoleBinding := lhs.(*rbac_v1.RoleBinding)
 	rRoleBinding := rhs.(*rbac_v1.RoleBinding)
