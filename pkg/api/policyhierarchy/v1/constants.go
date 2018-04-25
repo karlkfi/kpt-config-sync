@@ -19,10 +19,11 @@ package v1
 // NoParentNamespace is the constant we use (empty string) for indicating that no parent exists
 // for the policy node spec.  Only one policy node should have a parent with this value.
 // This is also used as the value for the label set on a namespace.
-const NoParentNamespace string = ""
+const NoParentNamespace = ""
 
-// Key of a label set on a namespace with value set to the parent namespace's name.
+// ParentLabelKey is the Key of a label set on a namespace with value set to the parent namespace's
+// name.
 const ParentLabelKey = "nomos-parent-ns"
 
-// Name of the singleton ClusterPolicy resource.
+// ClusterPolicyName is the name of the singleton ClusterPolicy resource.
 const ClusterPolicyName = "nomos-cluster-policy"
