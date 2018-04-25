@@ -73,6 +73,7 @@ type GitConfig struct {
 
 // Config contains the configuration for the installer.  The install process
 // is made based on this configuration.
+// +k8s:deepcopy-gen=true
 type Config struct {
 	// The user account that will drive the installation.  Required to insert
 	// cluster administration role bindings into GKE clusters.
@@ -110,11 +111,14 @@ func Load(r io.Reader) (Config, error) {
 
 // WriteInto writes the configuration into supplied writer in JSON format.
 func (c Config) WriteInto(w io.Writer) error {
-	if c.Ssh != nil {
-		c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "/home/user", "$HOME", 1)
-		c.Ssh.PrivateKeyFilename = strings.Replace(c.Ssh.PrivateKeyFilename, "/home/user", "$HOME", 1)
+	// Without a deep copy, subsequent mutation may modify the shared content
+	// of Ssh, Git, etc.
+	cfg := c.DeepCopy()
+	if cfg.Ssh != nil {
+		cfg.Ssh.KnownHostsFilename = strings.Replace(cfg.Ssh.KnownHostsFilename, "/home/user", "$HOME", 1)
+		cfg.Ssh.PrivateKeyFilename = strings.Replace(cfg.Ssh.PrivateKeyFilename, "/home/user", "$HOME", 1)
 	}
-	b, err := yaml.Marshal(c)
+	b, err := yaml.Marshal(cfg)
 	if err != nil {
 		return errors.Wrapf(err, "while marshalling config")
 	}

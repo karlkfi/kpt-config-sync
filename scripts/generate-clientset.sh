@@ -93,6 +93,15 @@ ${GOBASE}/bin/client-gen \
   --go-header-file="${BOILERPLATE}" \
   --clientset-path "${OUTPUT_CLIENT}"
 
+echo "Generating installer deepcopy"
+
+${GOBASE}/bin/deepcopy-gen \
+  ${LOGGING_FLAGS} \
+  --input-dirs="${REPO}/pkg/installer/config" \
+  --output-file-base="types.generated" \
+  --go-header-file="${BOILERPLATE}" \
+  --output-base="${OUTPUT_BASE}"
+
 echo "Generating APIs"
 
 for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do

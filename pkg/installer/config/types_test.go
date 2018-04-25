@@ -230,6 +230,56 @@ ssh:
 	}
 }
 
+func TestImmutable(t *testing.T) {
+	tests := []struct {
+		name          string
+		cfg, expected Config
+	}{
+		{
+			name: "SshConfig",
+			cfg: Config{
+				Ssh: &SshConfig{"/home/user/file1", "/home/user/file2"},
+			},
+			expected: Config{
+				Ssh: &SshConfig{"/home/user/file1", "/home/user/file2"},
+			},
+		},
+		{
+			name: "GitConfig",
+			cfg: Config{
+				Git: &GitConfig{
+					SyncRepo:        "some_repo",
+					SyncBranch:      "some_branch",
+					RootPolicyDir:   "some_root_policy_dir",
+					SyncWaitSeconds: 100,
+				},
+			},
+			expected: Config{
+				Git: &GitConfig{
+					SyncRepo:        "some_repo",
+					SyncBranch:      "some_branch",
+					RootPolicyDir:   "some_root_policy_dir",
+					SyncWaitSeconds: 100,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cfg.WriteInto(bytes.NewBuffer(nil))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if !cmp.Equal(tt.cfg, tt.expected) {
+				t.Errorf("WriteInto() changed source; got %v, want: %v, diff: %v", tt.cfg, tt.expected, cmp.Diff(tt.cfg, tt.expected))
+			}
+
+		})
+
+	}
+}
+
 type testExists struct {
 	exists bool
 }
