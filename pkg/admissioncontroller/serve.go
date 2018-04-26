@@ -13,7 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// functions for initializing and serving from the admission controller.
 package admissioncontroller
 
 import (
@@ -40,6 +39,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// WaitForEndpoint waits for endpoint to come up.
 // We have to wait for the endpoint to come up before self registering the webhook,
 // otherwise the endpoint will never come up since the admission controller will appear down and
 // block all requests, including the endpoint initialization
@@ -155,6 +155,7 @@ func Serve(controller Admitter) service.HandlerFunc {
 	}
 }
 
+// ServeTLS calls server.serveTLS
 func ServeTLS(server *http.Server, listener net.Listener, stopChannel chan struct{}) {
 	glog.Info("Server listening on ", server.Addr)
 	err := server.ServeTLS(listener.(*net.TCPListener), "", "")

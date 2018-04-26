@@ -19,6 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Metrics contains the prometheus metric vectors to which the package should record metrics
 var Metrics = struct {
 	Usage      *prometheus.GaugeVec
 	Violations *prometheus.CounterVec

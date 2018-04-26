@@ -27,8 +27,8 @@ import (
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 )
 
-// A cache of package quotas that keeps usage and limits in memory for the whole namespace tree.
-// The limits and structure are fed from the policyNode informer
+// HierarchicalQuotaCache is A cache of package quotas that keeps usage and limits in memory for
+// the whole namespace tree. The limits and structure are fed from the policyNode informer
 // The usage is based on the ResourceQuota informer which has the usage on the leaf nodes
 type HierarchicalQuotaCache struct {
 	policyNodeInformer    informerspolicynodev1.PolicyNodeInformer
@@ -38,13 +38,14 @@ type HierarchicalQuotaCache struct {
 	quotas map[string]*QuotaNode
 }
 
-// Contains information about a quota, mainly the resource quota itself, but also its place in the hierarchy.
+// QuotaNode contains information about a quota, mainly the resource quota itself, but also its place in the hierarchy.
 type QuotaNode struct {
 	quota       *core_v1.ResourceQuota // The quota itself, both hard and used.
 	parent      string                 // The parent of the namespace for this quota based on the policyNode
 	policyspace bool                   // Whether this is a leaf namespace or a non-leaf policynode
 }
 
+// NewHierarchicalQuotaCache returns the hierarchical quota cache
 func NewHierarchicalQuotaCache(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) (*HierarchicalQuotaCache, error) {
 	cache := &HierarchicalQuotaCache{

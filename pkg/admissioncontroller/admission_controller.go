@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Interface for a dynamic admission controller
+// Package admissioncontroller contains the interface for Nomos validating admission controllers
 package admissioncontroller
 
 import (
@@ -24,15 +24,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// 5 seconds should be enough for endpoint to come up in the Kubernetes server.
+// EndpointRegistrationTimeout is the time to wait for the endpoint to come up before registering
 const EndpointRegistrationTimeout = time.Second * 5
 
-// The interface for admission controller implementations
+// Admitter is the interface for admission controller implementations
 type Admitter interface {
-	// Returns an admission review status based on the admission review request containing the resource being modified.
+	// Returns an admission review status based on the admission review request
+	// containing the resource being modified.
 	Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse
 }
 
+// InternalErrorDeny generates a deny admission response based on an error
 func InternalErrorDeny(err error) *admissionv1beta1.AdmissionResponse {
 	return &admissionv1beta1.AdmissionResponse{
 		Allowed: false,

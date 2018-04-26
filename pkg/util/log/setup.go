@@ -2,7 +2,7 @@ package log
 
 import "flag"
 
-// Sets up default logging parameters for nomos controllers
+// Setup sets up default logging parameters for nomos controllers
 func Setup() {
 	if err := flag.Set("logtostderr", "true"); err != nil {
 		panic(err)

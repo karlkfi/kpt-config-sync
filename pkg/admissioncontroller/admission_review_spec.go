@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Admission review spec is an implementation of the admission.attributes interface
-// for the admission review spec struct.
 package admissioncontroller
 
 import (
@@ -27,42 +25,53 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
+// AdmissionReviewSpec is an implementation of the admission.attributes interface
+// for the admission review spec struct.
 type AdmissionReviewSpec v1beta1.AdmissionRequest
 
 var _ admission.Attributes = (*AdmissionReviewSpec)(nil)
 
+// GetName implements admission.attributes
 func (spec *AdmissionReviewSpec) GetName() string {
 	return spec.Name
 }
 
+// GetNamespace implements admission.attributes
 func (spec *AdmissionReviewSpec) GetNamespace() string {
 	return spec.Namespace
 }
 
+// GetResource implements admission.attributes
 func (spec *AdmissionReviewSpec) GetResource() schema.GroupVersionResource {
 	return schema.GroupVersionResource(spec.Resource)
 }
 
+// GetSubresource implements admission.attributes
 func (spec *AdmissionReviewSpec) GetSubresource() string {
 	return spec.SubResource
 }
 
+// GetOperation implements admission.attributes
 func (spec *AdmissionReviewSpec) GetOperation() admission.Operation {
 	return admission.Operation(spec.Operation)
 }
 
+// GetObject implements admission.attributes
 func (spec *AdmissionReviewSpec) GetObject() runtime.Object {
 	return spec.Object.Object
 }
 
+// GetOldObject implements admission.attributes
 func (spec *AdmissionReviewSpec) GetOldObject() runtime.Object {
 	return spec.OldObject.Object
 }
 
+// GetKind implements admission.attributes
 func (spec *AdmissionReviewSpec) GetKind() schema.GroupVersionKind {
 	return schema.GroupVersionKind(spec.Kind)
 }
 
+// GetUserInfo implements admission.attributes
 func (spec *AdmissionReviewSpec) GetUserInfo() user.Info {
 
 	extra := map[string][]string{}

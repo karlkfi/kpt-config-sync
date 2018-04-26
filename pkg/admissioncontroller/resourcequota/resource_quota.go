@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This is the Resource Quota admission controller which will do a hierarchical evaluation of quota objects
-// to ensure quota is not being violated whenever resources get created/modified along the hierarchy of namespaces.
+// Package resourcequota is the Resource Quota admission controller which will do a hierarchical
+// evaluation of quota objects to ensure quota is not being violated whenever resources get
+// created/modified along the hierarchy of namespaces.
 package resourcequota
 
 import (
@@ -36,6 +37,7 @@ import (
 	quotainstall "k8s.io/kubernetes/pkg/quota/install"
 )
 
+// Admitter is the struct for the resource quota admitter
 type Admitter struct {
 	policyNodeInformer    informerspolicynodev1.PolicyNodeInformer
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer
@@ -45,6 +47,7 @@ type Admitter struct {
 
 var _ admissioncontroller.Admitter = (*Admitter)(nil)
 
+// NewAdmitter returns the resource quota admitter
 func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) admissioncontroller.Admitter {
 	quotaConfiguration := quotainstall.NewQuotaConfigurationForAdmission()
@@ -65,7 +68,7 @@ func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 	}
 }
 
-// Decides whether to admit a request.
+// Admit decides whether to admit a request.
 func (r *Admitter) Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
 	if review.Request == nil {
 		return &admissionv1beta1.AdmissionResponse{

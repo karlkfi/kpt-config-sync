@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This is the Policy Node admission controller. It ensures that CUD operations on PolicyNodes
-// keep the structure of PolicyNodes in a consistent tree-like state.
+// Package policynode contains the Policy Node admission controller. It ensures that CUD operations
+// on PolicyNodes keep the structure of PolicyNodes in a consistent tree-like state.
 package policynode
 
 import (
@@ -34,7 +34,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 )
 
-// This is the Policy Node Admission Controller which verifies that CUD operations on PolicyNodes
+// Admitter is the Policy Node Admission Controller which verifies that CUD operations on PolicyNodes
 // are valid.
 type Admitter struct {
 	policyNodeInformer informerspolicynodev1.PolicyNodeInformer
@@ -43,6 +43,7 @@ type Admitter struct {
 
 var _ admissioncontroller.Admitter = (*Admitter)(nil)
 
+// NewAdmitter returns the policynode admitter
 func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer) admissioncontroller.Admitter {
 	// Decoder. Right now, only v1 types are needed as they are the only ones being monitored
 	scheme := runtime.NewScheme()
@@ -58,7 +59,7 @@ func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer) ad
 	}
 }
 
-// Decides whether or not to admit a request.
+// Admit decides whether or not to admit a request.
 func (p *Admitter) Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
 	if review.Request == nil {
 		return &admissionv1beta1.AdmissionResponse{

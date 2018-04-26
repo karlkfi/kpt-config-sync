@@ -24,9 +24,6 @@ export CGO_ENABLED=0
 #
 GOLINT_EXCLUDE_PACKAGES=(
   cmd/syncer-demo-driver
-  pkg/admissioncontroller
-  pkg/admissioncontroller/policynode
-  pkg/admissioncontroller/resourcequota
   pkg/api/policyhierarchy/v1
   pkg/client/action
   pkg/client/action/test
@@ -42,7 +39,6 @@ GOLINT_EXCLUDE_PACKAGES=(
   pkg/process/dialog
   pkg/process/exec
   pkg/process/kubectl
-  pkg/resourcequota
   pkg/service
   pkg/syncer
   pkg/syncer/clusterpolicycontroller
@@ -55,7 +51,6 @@ GOLINT_EXCLUDE_PACKAGES=(
   pkg/testing/fakeinformers
   pkg/testing/orgdriver
   pkg/testing/rbactesting
-  pkg/util/log
   pkg/util/policynode/validator
   pkg/version
 )
