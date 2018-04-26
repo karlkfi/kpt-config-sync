@@ -153,12 +153,6 @@ done
 
 ## Main ##
 
-readonly gcloud_prg="$(which gcloud)"
-if [[ -z "${gcloud_prg}" ]]; then
-  echo "gcloud is required."
-  exit 1
-fi
-
 CONFIG_DIR="examples"
 CONFIG_BASENAME="quickstart.yaml"
 if [[ -z "${CONFIG}" ]]; then
@@ -174,12 +168,6 @@ else
   CONFIG_DIR="$(dirname $CONFIG)"
   CONFIG_BASENAME="$(basename $CONFIG)"
   CONTAINER_CONFIG_FILE="configs/${CONFIG_BASENAME}"
-fi
-
-# Only suggest the user where there is a gcloud utility available.
-suggested_user=""
-if command -v gcloud ; then
-   suggested_user="$(gcloud config get-value account)"
 fi
 
 docker pull "${INSTALLER_CONTAINER}:${VERSION}"
@@ -199,7 +187,6 @@ docker run -it \
   -e "VERSION=${VERSION}" \
   -e "CONFIG=${CONTAINER_CONFIG_FILE}" \
   -e "CONFIG_OUT=gen_configs/generated.yaml" \
-  -e "SUGGESTED_USER=${suggested_user}" \
   -e "UNINSTALL=${UNINSTALL}" \
   -e "YES=${YES}" \
   -e "HOME_ON_HOST=${HOME}" \

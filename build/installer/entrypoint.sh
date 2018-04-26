@@ -24,8 +24,6 @@
 # - CONFIG: The name of the config file to use as default configuration.
 # - CONFIG_OUT: The name of the config file to use as output.
 # - VERSION: The nomos version to install.
-# - SUGGESTED_USER: the user account driving the installation, or unset if
-#   no such suggestion could be made.
 # - HOME_ON_HOST: the string representing the absolute path of $HOME for the
 #   user that is running the installer.  In the container, we will soft-link
 #   this directory to /home/user.
@@ -50,6 +48,15 @@ cat /home/user/.kube/config | \
   > "${kubeconfig_output}"
 chmod 600 ${kubeconfig_output}
 
+# Only suggest the user where there is a gcloud utility available.
+suggested_user=""
+if command -v gcloud ; then
+   suggested_user="$(gcloud config get-value account)"
+else
+   echo "gcloud is required."
+   exit 1
+fi
+
 # Set logging levels to high for specific modules only.
 readonly logging_options="--vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10"
 
@@ -64,7 +71,7 @@ if [ "x${INTERACTIVE}" != "x" ]; then
   ./configgen \
     ${logging_options} \
     --log_dir=/tmp \
-    --suggested_user="${SUGGESTED_USER}" \
+    --suggested_user="${suggested_user}" \
     --version="${INSTALLER_VERSION}" \
     --config_in=${CONFIG} \
     --config_out=${CONFIG_OUT} \
@@ -75,7 +82,7 @@ else
     ${logging_options} \
     --config="${CONFIG}" \
     --log_dir=/tmp \
-    --suggested_user="${SUGGESTED_USER}" \
+    --suggested_user="${suggested_user}" \
     --use_current_context=${USE_CURRENT_CONTEXT} \
     --uninstall="${UNINSTALL}" \
     --yes="${YES}" "$@"
