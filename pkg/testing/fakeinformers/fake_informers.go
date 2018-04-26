@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// NewTestInformer creates a fake SharedIndexInformer, injecting 'content'
+// NewPolicyNodeInformer creates a fake SharedIndexInformer, injecting 'content'
 // into the backing store.  Later calls on the client will pretend as if those
 // objects were already inserted.
 func NewPolicyNodeInformer(content ...runtime.Object) pn_v1.PolicyNodeInformer {
@@ -34,7 +34,7 @@ func NewPolicyNodeInformer(content ...runtime.Object) pn_v1.PolicyNodeInformer {
 	return informer
 }
 
-// NewTestInformer creates a fake SharedIndexInformer, injecting 'content'
+// NewResourceQuotaInformer creates a fake SharedIndexInformer, injecting 'content'
 // into the backing store.  Later calls on the client will pretend as if those
 // objects were already inserted.
 func NewResourceQuotaInformer(content ...runtime.Object) core_v1.ResourceQuotaInformer {

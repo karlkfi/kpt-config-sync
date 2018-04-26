@@ -7,12 +7,13 @@ import (
 )
 
 var (
+	// NamespaceTypeMeta is the type meta for a namespace
 	NamespaceTypeMeta = meta.TypeMeta{
 		Kind: "Namespace",
 	}
 )
 
-// namespace creates a Namespace object named 'name', with
+// NewNamespace creates a Namespace object named 'name', with
 // Nomos-style parent 'parent'.
 // TODO(filmil): Find places that could use this function and plug it in.
 func NewNamespace(name, parent string) *apicore.Namespace {

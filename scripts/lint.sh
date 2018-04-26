@@ -23,10 +23,7 @@ export CGO_ENABLED=0
 # When you fix one of the packages here, remove it from the list.
 #
 GOLINT_EXCLUDE_PACKAGES=(
-  pkg/api/policyhierarchy/v1
-  pkg/client/action/test
   pkg/cli/namespaces
-  pkg/cli/testing
   pkg/installer
   pkg/installer/config
   pkg/policyimporter
@@ -36,11 +33,7 @@ GOLINT_EXCLUDE_PACKAGES=(
   pkg/process/dialog
   pkg/process/exec
   pkg/process/kubectl
-  pkg/service
   pkg/syncer
-  pkg/syncer/clusterpolicycontroller
-  pkg/syncer/clusterpolicycontroller/modules
-  pkg/testing/fakeinformers
   pkg/testing/rbactesting
   pkg/version
 )
@@ -69,6 +62,8 @@ echo "Checking golint: "
 gometalinter.v2 \
     --disable-all \
     --enable=golint \
+    --exclude=generated\.pb\.go \
+    --exclude=generated\.go \
     "${LINT_PKGS[@]}"
 echo "PASS"
 

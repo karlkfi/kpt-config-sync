@@ -22,11 +22,11 @@ var (
 		"server_cert", "server.crt", "The server certificate file.")
 	serverKeyFile = flag.String(
 		"server_key", "server.key", "The server private key file.")
-	handlerUrlPath = flag.String(
+	handlerURLPath = flag.String(
 		"handler_url_path", "/", "The default handler URL path.")
 )
 
-// HandleFunc is a shorthand for a HTTP handler function.
+// HandlerFunc is a shorthand for a HTTP handler function.
 type HandlerFunc func(http.ResponseWriter, *http.Request)
 
 // NoCache positively turns off page caching.
@@ -115,7 +115,7 @@ func ServeMetrics() {
 // the supplied handler. If clientCert is not nil,
 func Server(handler HandlerFunc, clientCert []byte) *http.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc(*handlerUrlPath, handler)
+	mux.HandleFunc(*handlerURLPath, handler)
 
 	// TODO(filmil): Check how to install a handler that returns 404 for
 	// everything else.

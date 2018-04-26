@@ -23,7 +23,9 @@ import (
 	"github.com/golang/glog"
 )
 
+// Stoppable defines an interface for types that can be stopped.
 type Stoppable interface {
+	// Stop stops the objects running threads of execution.
 	Stop()
 }
 

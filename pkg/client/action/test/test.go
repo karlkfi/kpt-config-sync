@@ -23,8 +23,8 @@ import (
 	"github.com/google/nomos/pkg/client/action"
 )
 
-// TestAction implements action.Interface for testing
-type TestAction struct {
+// Action implements action.Interface for testing
+type Action struct {
 	namespace string
 	name      string
 	resource  string
@@ -32,47 +32,47 @@ type TestAction struct {
 }
 
 // Operation implements action.Interface
-func (s *TestAction) Operation() action.OperationType {
+func (s *Action) Operation() action.OperationType {
 	return s.operation
 }
 
 // Execute implements action.Interface
-func (s *TestAction) Execute() error {
+func (s *Action) Execute() error {
 	return nil
 }
 
 // Resource implements action.Interface
-func (s *TestAction) Resource() string {
+func (s *Action) Resource() string {
 	return s.resource
 }
 
-// Resource implements action.Interface
-func (s *TestAction) Kind() string {
+// Kind implements action.Interface
+func (s *Action) Kind() string {
 	return strings.Title(s.resource)
 }
 
 // Namespace implements action.Interface
-func (s *TestAction) Namespace() string {
+func (s *Action) Namespace() string {
 	return s.namespace
 }
 
 // Group implements action.Interface
-func (s *TestAction) Group() string {
+func (s *Action) Group() string {
 	return "group"
 }
 
 // Version implements action.Interface
-func (s *TestAction) Version() string {
+func (s *Action) Version() string {
 	return "v1"
 }
 
 // Name implements action.Interface
-func (s *TestAction) Name() string {
+func (s *Action) Name() string {
 	return s.name
 }
 
 // String implements action.Interface
-func (s *TestAction) String() string {
+func (s *Action) String() string {
 	if ns := s.Namespace(); ns != "" {
 		return fmt.Sprintf(
 			"%s/%s/%s/%s/%s/%s",
@@ -94,7 +94,7 @@ func (s *TestAction) String() string {
 
 // NewDelete creates a new test delete action
 func NewDelete(namespace, name, resource string) action.Interface {
-	return &TestAction{
+	return &Action{
 		namespace: namespace,
 		name:      name,
 		resource:  resource,
@@ -104,7 +104,7 @@ func NewDelete(namespace, name, resource string) action.Interface {
 
 // NewUpsert creates a new test upsert action
 func NewUpsert(namespace, name, resource string) action.Interface {
-	return &TestAction{
+	return &Action{
 		namespace: namespace,
 		name:      name,
 		resource:  resource,
