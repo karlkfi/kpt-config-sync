@@ -24,8 +24,6 @@ export CGO_ENABLED=0
 #
 GOLINT_EXCLUDE_PACKAGES=(
   pkg/cli/namespaces
-  pkg/installer
-  pkg/installer/config
   pkg/policyimporter
   pkg/policyimporter/actions
   pkg/policyimporter/filesystem

@@ -40,9 +40,9 @@ type CertConfig struct {
 	CaKeyFilename string `json:"caKeyFilename,omitempty"`
 }
 
-// SshConfig contains the private key filename and the known hosts filename
+// SSHConfig contains the private key filename and the known hosts filename
 // to add to the cluster.  Omitted if unused.
-type SshConfig struct {
+type SSHConfig struct {
 	// PrivateKeyFilename is the filename containing the private key used
 	// for SSH authentication.  This entry is communicated through a file
 	// to avoid exposing the contents of the secret in the process table.
@@ -86,9 +86,9 @@ type Config struct {
 	// Git contains the git-specific configuration.
 	Git *GitConfig `json:"git,omitempty"`
 
-	// Ssh contains the SSH configuration to use.  If omitted, assumes that
+	// SSH contains the SSH configuration to use.  If omitted, assumes that
 	// SSH is not used.
-	Ssh *SshConfig `json:"ssh,omitempty"`
+	SSH *SSHConfig `json:"ssh,omitempty"`
 }
 
 // Load loads configuration from a reader in either YAML or JSON format.
@@ -102,9 +102,9 @@ func Load(r io.Reader) (Config, error) {
 	if err := yaml.Unmarshal(b, &c, yaml.DisallowUnknownFields); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")
 	}
-	if c.Ssh != nil {
-		c.Ssh.KnownHostsFilename = strings.Replace(c.Ssh.KnownHostsFilename, "$HOME", "/home/user", 1)
-		c.Ssh.PrivateKeyFilename = strings.Replace(c.Ssh.PrivateKeyFilename, "$HOME", "/home/user", 1)
+	if c.SSH != nil {
+		c.SSH.KnownHostsFilename = strings.Replace(c.SSH.KnownHostsFilename, "$HOME", "/home/user", 1)
+		c.SSH.PrivateKeyFilename = strings.Replace(c.SSH.PrivateKeyFilename, "$HOME", "/home/user", 1)
 	}
 	return c, nil
 }
@@ -114,9 +114,9 @@ func (c Config) WriteInto(w io.Writer) error {
 	// Without a deep copy, subsequent mutation may modify the shared content
 	// of Ssh, Git, etc.
 	cfg := c.DeepCopy()
-	if cfg.Ssh != nil {
-		cfg.Ssh.KnownHostsFilename = strings.Replace(cfg.Ssh.KnownHostsFilename, "/home/user", "$HOME", 1)
-		cfg.Ssh.PrivateKeyFilename = strings.Replace(cfg.Ssh.PrivateKeyFilename, "/home/user", "$HOME", 1)
+	if cfg.SSH != nil {
+		cfg.SSH.KnownHostsFilename = strings.Replace(cfg.SSH.KnownHostsFilename, "/home/user", "$HOME", 1)
+		cfg.SSH.PrivateKeyFilename = strings.Replace(cfg.SSH.PrivateKeyFilename, "/home/user", "$HOME", 1)
 	}
 	b, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -131,8 +131,8 @@ func (c Config) WriteInto(w io.Writer) error {
 
 // Validate runs validations on the fields in Config.
 func (c Config) Validate(exists FileExists) error {
-	if c.Ssh != nil {
-		if c.Ssh.PrivateKeyFilename == "" {
+	if c.SSH != nil {
+		if c.SSH.PrivateKeyFilename == "" {
 			return errors.Errorf("ssh private key file name not specified")
 		}
 	}
@@ -140,19 +140,19 @@ func (c Config) Validate(exists FileExists) error {
 		if c.Git.SyncRepo == "" {
 			return errors.Errorf("git repo not specified")
 		}
-		if c.repoIsSshUrl() {
-			if c.Ssh == nil {
+		if c.repoIsSSHURL() {
+			if c.SSH == nil {
 				return errors.Errorf("ssh path specified for git repo, but private key not specified")
 			}
-			if !exists.Check(c.Ssh.PrivateKeyFilename) {
-				return errors.Errorf("ssh path specified for git repo, but private key doesn't exist: %v", c.Ssh.PrivateKeyFilename)
+			if !exists.Check(c.SSH.PrivateKeyFilename) {
+				return errors.Errorf("ssh path specified for git repo, but private key doesn't exist: %v", c.SSH.PrivateKeyFilename)
 			}
 		}
 	}
 	return nil
 }
 
-func (c Config) repoIsSshUrl() bool {
+func (c Config) repoIsSSHURL() bool {
 	for _, prefix := range []string{"ssh://", "git@"} {
 		if strings.HasPrefix(c.Git.SyncRepo, prefix) {
 			return true

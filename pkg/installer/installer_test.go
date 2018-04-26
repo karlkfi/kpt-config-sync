@@ -22,7 +22,7 @@ func TestGitConfigMap(t *testing.T) {
 					RootPolicyDir:   "foo-corp",
 					SyncWaitSeconds: 60,
 				},
-				Ssh: &config.SshConfig{
+				SSH: &config.SSHConfig{
 					PrivateKeyFilename: "/some/path/id_rsa",
 					KnownHostsFilename: "/some/path/known_hosts",
 				},
@@ -44,7 +44,7 @@ func TestGitConfigMap(t *testing.T) {
 					RootPolicyDir:   "foo-corp",
 					SyncWaitSeconds: 60,
 				},
-				Ssh: &config.SshConfig{
+				SSH: &config.SSHConfig{
 					PrivateKeyFilename: "/some/path/id_rsa",
 				},
 			},

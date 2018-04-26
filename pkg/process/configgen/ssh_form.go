@@ -40,13 +40,13 @@ type SSHForm struct {
 	// The configuration view.
 	form *dialog.Form
 	// The default settings.
-	defaultCfg config.SshConfig
+	defaultCfg config.SSHConfig
 	// The model to modify when editing a new form.
-	currentConfig *config.SshConfig
+	currentConfig *config.SSHConfig
 }
 
 // NewSSHForm returns a new form for querying SSH options.
-func NewSSHForm(o dialog.Options, cfg *config.SshConfig) *SSHForm {
+func NewSSHForm(o dialog.Options, cfg *config.SSHConfig) *SSHForm {
 	sf := &SSHForm{defaultCfg: *cfg, currentConfig: cfg}
 
 	const (

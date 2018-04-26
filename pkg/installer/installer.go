@@ -138,14 +138,14 @@ func (i *Installer) applyAll(applyDir string) error {
 	return kc.Apply(applyDir)
 }
 
-func (i *Installer) deploySshSecrets() error {
+func (i *Installer) deploySSHSecrets() error {
 	const secret = "git-creds"
-	glog.V(5).Info("deploySshSecrets: enter")
+	glog.V(5).Info("deploySSHSecrets: enter")
 	var filenames []string
-	if i.c.Ssh != nil {
+	if i.c.SSH != nil {
 		filenames = append(filenames,
-			fmt.Sprintf("ssh=%v", i.c.Ssh.PrivateKeyFilename),
-			fmt.Sprintf("known_hosts=%v", i.c.Ssh.KnownHostsFilename))
+			fmt.Sprintf("ssh=%v", i.c.SSH.PrivateKeyFilename),
+			fmt.Sprintf("known_hosts=%v", i.c.SSH.KnownHostsFilename))
 	} else {
 		glog.V(5).Info("no PrivateKeyFilename, deploying empty secret")
 	}
@@ -183,7 +183,7 @@ func (i *Installer) deployGitConfig() error {
 
 func (i *Installer) getGitConfigMapData() []string {
 	return []string{
-		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Ssh != nil),
+		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.SSH != nil),
 		fmt.Sprintf("GIT_SYNC_REPO=%v", i.c.Git.SyncRepo),
 		fmt.Sprintf("GIT_SYNC_BRANCH=%v", i.c.Git.SyncBranch),
 		fmt.Sprintf("GIT_SYNC_WAIT=%v", i.c.Git.SyncWaitSeconds),
@@ -193,7 +193,7 @@ func (i *Installer) getGitConfigMapData() []string {
 
 func (i *Installer) deploySecrets() error {
 	glog.V(5).Info("deploySecrets: enter")
-	err := i.deploySshSecrets()
+	err := i.deploySSHSecrets()
 	if err != nil {
 		return errors.Wrapf(err, "while deploying ssh secrets")
 	}

@@ -75,7 +75,7 @@ contexts:
 					RootPolicyDir:   "foo-corp",
 					SyncRepo:        "git@github.com:repo/example.git",
 				},
-				Ssh: &SshConfig{
+				SSH: &SSHConfig{
 					PrivateKeyFilename: "privateKey",
 					KnownHostsFilename: "knownHosts",
 				},
@@ -106,7 +106,7 @@ contexts:
 					RootPolicyDir:   "foo-corp",
 					SyncRepo:        "git@github.com:repo/example.git",
 				},
-				Ssh: &SshConfig{
+				SSH: &SSHConfig{
 					PrivateKeyFilename: "/home/user/privateKey",
 					KnownHostsFilename: "/home/user/knownHosts",
 				},
@@ -197,7 +197,7 @@ git:
 				Git: &GitConfig{
 					SyncWaitSeconds: 1,
 				},
-				Ssh: &SshConfig{
+				SSH: &SSHConfig{
 					KnownHostsFilename: "/home/user/known_hosts",
 					PrivateKeyFilename: "/home/user/private_key",
 				},
@@ -236,12 +236,12 @@ func TestImmutable(t *testing.T) {
 		cfg, expected Config
 	}{
 		{
-			name: "SshConfig",
+			name: "SSHConfig",
 			cfg: Config{
-				Ssh: &SshConfig{"/home/user/file1", "/home/user/file2"},
+				SSH: &SSHConfig{"/home/user/file1", "/home/user/file2"},
 			},
 			expected: Config{
-				Ssh: &SshConfig{"/home/user/file1", "/home/user/file2"},
+				SSH: &SSHConfig{"/home/user/file1", "/home/user/file2"},
 			},
 		},
 		{
@@ -302,7 +302,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "no private key specified",
 			config: Config{
-				Ssh: &SshConfig{},
+				SSH: &SSHConfig{},
 			},
 			wantErr: errors.Errorf("ssh private key file name not specified"),
 		},
@@ -336,7 +336,7 @@ func TestValidate(t *testing.T) {
 				Git: &GitConfig{
 					SyncRepo: "git@foobar.com/foo-corp-example.git",
 				},
-				Ssh: &SshConfig{
+				SSH: &SSHConfig{
 					PrivateKeyFilename: "/some/fake/path/id_rsa",
 				},
 			},
@@ -349,7 +349,7 @@ func TestValidate(t *testing.T) {
 				Git: &GitConfig{
 					SyncRepo: "git@foobar.com/foo-corp-example.git",
 				},
-				Ssh: &SshConfig{
+				SSH: &SSHConfig{
 					PrivateKeyFilename: "/home/user/path/id_rsa",
 				},
 			},
@@ -362,7 +362,7 @@ func TestValidate(t *testing.T) {
 				Git: &GitConfig{
 					SyncRepo: "git@foobar.com/foo-corp-example.git",
 				},
-				Ssh: &SshConfig{
+				SSH: &SSHConfig{
 					PrivateKeyFilename: "/some/valid/path/id_rsa",
 				},
 			},

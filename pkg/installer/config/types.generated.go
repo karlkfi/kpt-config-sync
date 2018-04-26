@@ -37,12 +37,12 @@ func (in *Config) DeepCopyInto(out *Config) {
 			**out = **in
 		}
 	}
-	if in.Ssh != nil {
-		in, out := &in.Ssh, &out.Ssh
+	if in.SSH != nil {
+		in, out := &in.SSH, &out.SSH
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(SshConfig)
+			*out = new(SSHConfig)
 			**out = **in
 		}
 	}
