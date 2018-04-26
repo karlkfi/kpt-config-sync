@@ -18,17 +18,6 @@ const (
 	defaultSyncBranch             = "master"
 )
 
-// DefaultConfig contains the empty default values for a Config.
-var DefaultConfig = Config{
-	Git: GitConfig{
-		SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
-		SyncBranch:      defaultSyncBranch,
-		// Default to expecting an ssh url since we also do some checking to see
-		// if it's an ssh url during validation.
-		UseSSH: true,
-	},
-}
-
 // CertConfig contains the configuration that pertains to the certificate
 // authority to be used for the cluster.  If defined,
 type CertConfig struct {
@@ -115,14 +104,27 @@ type Config struct {
 	SSH SSHConfig `json:"ssh,omitempty"`
 }
 
+// NewDefaultConfig creates a new Config struct with default values set
+func NewDefaultConfig() Config {
+	c := Config{
+		Git: GitConfig{
+			SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
+			SyncBranch:      defaultSyncBranch,
+			// Default to expecting an ssh url since we also do some checking to see
+			// if it's an ssh url during validation.
+			UseSSH: true,
+		},
+	}
+	return c
+}
+
 // Load loads configuration from a reader in either YAML or JSON format.
 func Load(r io.Reader) (Config, error) {
-	var c Config
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return Config{}, errors.Wrapf(err, "while reading config")
 	}
-	c = DefaultConfig
+	c := NewDefaultConfig()
 	if err := yaml.Unmarshal(b, &c, yaml.DisallowUnknownFields); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")
 	}

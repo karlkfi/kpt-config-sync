@@ -57,7 +57,7 @@ func main() {
 	fmt.Printf("args: %+v\n", os.Args)
 	flag.Parse()
 
-	c := config.DefaultConfig
+	c := config.NewDefaultConfig()
 	if *configIn != "" {
 		file, err := os.Open(*configIn)
 		if err != nil {
