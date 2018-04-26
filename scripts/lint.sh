@@ -30,7 +30,6 @@ GOLINT_EXCLUDE_PACKAGES=(
   pkg/process/dialog
   pkg/process/exec
   pkg/process/kubectl
-  pkg/syncer
   pkg/version
 )
 function exclude() {

@@ -130,10 +130,12 @@ func (s *ClusterRoleUnpacker) List() ([]runtime.Object, error) {
 	return ret, nil
 }
 
+// NewUpsertAction implements UnpackerInterface
 func (s *ClusterRoleUnpacker) NewUpsertAction(name string, obj runtime.Object) action.Interface {
 	return action.NewReflectiveUpsertAction("", name, obj, s.spec)
 }
 
+// NewDeleteAction implements UnpackerInterface
 func (s *ClusterRoleUnpacker) NewDeleteAction(name string) action.Interface {
 	return action.NewReflectiveDeleteAction("", name, s.spec)
 }

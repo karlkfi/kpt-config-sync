@@ -114,7 +114,7 @@ func (p *policyEvaluator) RoleNamespaces() *stringset.StringSet {
 
 var _ PolicyNodeSyncerInterface = (*FlatteningSyncer)(nil)
 
-// Flattening syncer is a controller that watches PolicyNode objects and
+// FlatteningSyncer is a controller that watches PolicyNode objects and
 // produces unpacked flattened policy objects.
 type FlatteningSyncer struct {
 	// The in-memory view of the policy tree.
@@ -152,10 +152,10 @@ func toPolicy(node *ph.PolicyNode) (name, parent string, isPolicyspace bool, pol
 	return // named
 }
 
-// EvalSubtree computes all the policies in a subtree of t starting from the
+// evalSubtree computes all the policies in a subtree of t starting from the
 // node with the given name.  Returns all the aggregated policies, or error
 // if the node with given name could not be found.
-func EvalSubtree(t *flattening.PolicyTree, name string) (*policyEvaluator, error) {
+func evalSubtree(t *flattening.PolicyTree, name string) (*policyEvaluator, error) {
 	e := newPolicyEvaluator(t)
 	t.VisitSubtree(name, e)
 	return e, nil
@@ -165,14 +165,14 @@ func EvalSubtree(t *flattening.PolicyTree, name string) (*policyEvaluator, error
 func (f *FlatteningSyncer) OnCreate(node *ph.PolicyNode) error {
 	name, parent, isPolicyspace, policy := toPolicy(node)
 	f.policyTree.Upsert(name, parent, isPolicyspace, *policy)
-	result, err := EvalSubtree(f.policyTree, name)
+	result, err := evalSubtree(f.policyTree, name)
 	if err != nil {
 		return errors.Wrapf(
 			err, "OnCreate: while computing policies to add: node=%q", name)
 	}
 	result.RoleBindingNamespaces().ForEach(func(namespace string) {
 		policies := result.RoleBindings(namespace)
-		for i, _ := range policies {
+		for i := range policies {
 			item := &policies[i]
 			isPolicyspace, err := f.policyTree.IsPolicyspace(item.Namespace)
 			if err != nil {
@@ -187,7 +187,7 @@ func (f *FlatteningSyncer) OnCreate(node *ph.PolicyNode) error {
 	// TODO(filmil) DUPLICATION
 	result.RoleNamespaces().ForEach(func(namespace string) {
 		policies := result.Roles(namespace)
-		for i, _ := range policies {
+		for i := range policies {
 			item := &policies[i]
 			isPolicyspace, err := f.policyTree.IsPolicyspace(item.Namespace)
 			if err != nil {
@@ -228,12 +228,12 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 	name, newParent, isPolicyspace, newPolicy := toPolicy(newer)
 	oldName, _, _, _ := toPolicy(older)
 
-	olderResult, err := EvalSubtree(f.policyTree, oldName)
+	olderResult, err := evalSubtree(f.policyTree, oldName)
 	if err != nil {
 		return errors.Wrapf(err, "while finding older policies: %v")
 	}
 	f.policyTree.Upsert(name, newParent, isPolicyspace, *newPolicy)
-	newerResult, err := EvalSubtree(f.policyTree, name)
+	newerResult, err := evalSubtree(f.policyTree, name)
 	if err != nil {
 		return errors.Wrapf(err, "while finding newer policies: %v")
 	}
@@ -245,7 +245,7 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 			newPolicies := newerResult.RoleBindings(namespace)
 
 			newNames := roleBindingNames(newPolicies)
-			for i, _ := range oldPolicies {
+			for i := range oldPolicies {
 				oldItem := &oldPolicies[i]
 				if newNames.Contains(oldItem.Name) {
 					continue
@@ -253,7 +253,7 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 				f.queue.Add(actions.NewRoleBindingDeleteAction(
 					oldItem, f.roleBindingAction))
 			}
-			for i, _ := range newPolicies {
+			for i := range newPolicies {
 				item := &newPolicies[i]
 				isPolicyspace, err := f.policyTree.IsPolicyspace(item.Namespace)
 				if err != nil {
@@ -274,7 +274,7 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 			newPolicies := newerResult.Roles(namespace)
 
 			newNames := roleNames(newPolicies)
-			for i, _ := range oldPolicies {
+			for i := range oldPolicies {
 				oldItem := &oldPolicies[i]
 				if newNames.Contains(oldItem.Name) {
 					continue
@@ -282,7 +282,7 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 				f.queue.Add(actions.NewRoleDeleteAction(
 					oldItem.Namespace, oldItem.Name, f.roleAction))
 			}
-			for i, _ := range newPolicies {
+			for i := range newPolicies {
 				item := &newPolicies[i]
 				isPolicyspace, err := f.policyTree.IsPolicyspace(item.Namespace)
 				if err != nil {
@@ -301,7 +301,7 @@ func (f *FlatteningSyncer) OnUpdate(older *ph.PolicyNode, newer *ph.PolicyNode) 
 func (f *FlatteningSyncer) OnDelete(node *ph.PolicyNode) error {
 	var err error
 	name, _, _, _ := toPolicy(node)
-	result, err := EvalSubtree(f.policyTree, name)
+	result, err := evalSubtree(f.policyTree, name)
 	if err != nil {
 		// Can't find a node that we're trying to delete.
 		return errors.Wrapf(err, "OnDelete: while computing policies")
@@ -351,7 +351,7 @@ func (f *FlatteningSyncer) PeriodicResync(nodes []*ph.PolicyNode) error {
 	// code below.
 	var err error
 	for _, root := range roots {
-		result, err2 := EvalSubtree(policyTree, root)
+		result, err2 := evalSubtree(policyTree, root)
 		if err2 != nil {
 			return errors.Wrapf(err2, "while evaluating root: %q", root)
 		}
