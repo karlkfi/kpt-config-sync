@@ -20,9 +20,12 @@ const (
 
 // DefaultConfig contains the empty default values for a Config.
 var DefaultConfig = Config{
-	Git: &GitConfig{
+	Git: GitConfig{
 		SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
 		SyncBranch:      defaultSyncBranch,
+		// Default to expecting an ssh url since we also do some checking to see
+		// if it's an ssh url during validation.
+		UseSSH: true,
 	},
 }
 
@@ -40,6 +43,12 @@ type CertConfig struct {
 	CaKeyFilename string `json:"caKeyFilename,omitempty"`
 }
 
+// Empty returns true if the config does not have necessary fields set and
+// should be treated as empty.
+func (c *CertConfig) Empty() bool {
+	return c.CaCertFilename == "" && c.CaKeyFilename == ""
+}
+
 // SSHConfig contains the private key filename and the known hosts filename
 // to add to the cluster.  Omitted if unused.
 type SSHConfig struct {
@@ -54,21 +63,36 @@ type SSHConfig struct {
 	KnownHostsFilename string `json:"knownHostsFilename,omitempty"`
 }
 
+// Empty returns true if the config does not have necessary fields set and
+// should be treated as empty.
+func (s *SSHConfig) Empty() bool {
+	return s.PrivateKeyFilename == ""
+}
+
 // GitConfig contains the settings for the git importer repository.
 type GitConfig struct {
 	// SyncRepo is the git repository name to sync from.
 	SyncRepo string `json:"GIT_SYNC_REPO"`
+
+	// UseSsh is true if we are syncing the repo using ssh.
+	UseSSH bool `json:"GIT_SYNC_SSH"`
 
 	// SyncBranch is the branch to sync from.  Default: "master".
 	SyncBranch string `json:"GIT_SYNC_BRANCH"`
 
 	// RootPolicyDir is the absolute path of the directory that contains
 	// the local policy.  Default: the root directory of the repo.
-	RootPolicyDir string `json:"ROOT_POLICY_DIR"`
+	RootPolicyDir string `json:"POLICY_DIR"`
 
 	// SyncWaitSeconds is the time duration in seconds between consecutive
 	// syncs.  Default: 15 seconds.
 	SyncWaitSeconds int64 `json:"GIT_SYNC_WAIT"`
+}
+
+// Empty returns true if the config does not have necessary fields set and
+// should be treated as empty.
+func (g *GitConfig) Empty() bool {
+	return g.SyncRepo == "" && g.SyncBranch == "" && g.RootPolicyDir == ""
 }
 
 // Config contains the configuration for the installer.  The install process
@@ -84,11 +108,11 @@ type Config struct {
 	Contexts []string `json:"contexts,omitempty"`
 
 	// Git contains the git-specific configuration.
-	Git *GitConfig `json:"git,omitempty"`
+	Git GitConfig `json:"git,omitempty"`
 
 	// SSH contains the SSH configuration to use.  If omitted, assumes that
 	// SSH is not used.
-	SSH *SSHConfig `json:"ssh,omitempty"`
+	SSH SSHConfig `json:"ssh,omitempty"`
 }
 
 // Load loads configuration from a reader in either YAML or JSON format.
@@ -102,23 +126,16 @@ func Load(r io.Reader) (Config, error) {
 	if err := yaml.Unmarshal(b, &c, yaml.DisallowUnknownFields); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")
 	}
-	if c.SSH != nil {
-		c.SSH.KnownHostsFilename = strings.Replace(c.SSH.KnownHostsFilename, "$HOME", "/home/user", 1)
-		c.SSH.PrivateKeyFilename = strings.Replace(c.SSH.PrivateKeyFilename, "$HOME", "/home/user", 1)
-	}
+	c.SSH.KnownHostsFilename = strings.Replace(c.SSH.KnownHostsFilename, "$HOME", "/home/user", 1)
+	c.SSH.PrivateKeyFilename = strings.Replace(c.SSH.PrivateKeyFilename, "$HOME", "/home/user", 1)
 	return c, nil
 }
 
 // WriteInto writes the configuration into supplied writer in JSON format.
 func (c Config) WriteInto(w io.Writer) error {
-	// Without a deep copy, subsequent mutation may modify the shared content
-	// of Ssh, Git, etc.
-	cfg := c.DeepCopy()
-	if cfg.SSH != nil {
-		cfg.SSH.KnownHostsFilename = strings.Replace(cfg.SSH.KnownHostsFilename, "/home/user", "$HOME", 1)
-		cfg.SSH.PrivateKeyFilename = strings.Replace(cfg.SSH.PrivateKeyFilename, "/home/user", "$HOME", 1)
-	}
-	b, err := yaml.Marshal(cfg)
+	c.SSH.KnownHostsFilename = strings.Replace(c.SSH.KnownHostsFilename, "/home/user", "$HOME", 1)
+	c.SSH.PrivateKeyFilename = strings.Replace(c.SSH.PrivateKeyFilename, "/home/user", "$HOME", 1)
+	b, err := yaml.Marshal(c)
 	if err != nil {
 		return errors.Wrapf(err, "while marshalling config")
 	}
@@ -131,21 +148,28 @@ func (c Config) WriteInto(w io.Writer) error {
 
 // Validate runs validations on the fields in Config.
 func (c Config) Validate(exists FileExists) error {
-	if c.SSH != nil {
+	if !c.SSH.Empty() {
 		if c.SSH.PrivateKeyFilename == "" {
 			return errors.Errorf("ssh private key file name not specified")
 		}
 	}
-	if c.Git != nil {
+	if !c.Git.Empty() {
 		if c.Git.SyncRepo == "" {
 			return errors.Errorf("git repo not specified")
 		}
-		if c.repoIsSSHURL() {
-			if c.SSH == nil {
-				return errors.Errorf("ssh path specified for git repo, but private key not specified")
+		if c.Git.UseSSH {
+			if !c.repoIsSSHURL() {
+				return errors.Errorf("ssh specified for non-ssh git repo url")
+			}
+			if c.SSH.Empty() {
+				return errors.Errorf("ssh specified for git repo, but private key not specified")
 			}
 			if !exists.Check(c.SSH.PrivateKeyFilename) {
-				return errors.Errorf("ssh path specified for git repo, but private key doesn't exist: %v", c.SSH.PrivateKeyFilename)
+				return errors.Errorf("ssh specified for git repo, but private key doesn't exist: %v", c.SSH.PrivateKeyFilename)
+			}
+		} else {
+			if c.repoIsSSHURL() {
+				return errors.Errorf("ssh disabled for ssh git repo url")
 			}
 		}
 	}

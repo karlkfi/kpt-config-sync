@@ -16,13 +16,14 @@ func TestGitConfigMap(t *testing.T) {
 		{
 			name: "git ssh",
 			config: config.Config{
-				Git: &config.GitConfig{
+				Git: config.GitConfig{
 					SyncRepo:        "git@github.com:user/foo-corp.git",
+					UseSSH:          true,
 					SyncBranch:      "master",
 					RootPolicyDir:   "foo-corp",
 					SyncWaitSeconds: 60,
 				},
-				SSH: &config.SSHConfig{
+				SSH: config.SSHConfig{
 					PrivateKeyFilename: "/some/path/id_rsa",
 					KnownHostsFilename: "/some/path/known_hosts",
 				},
@@ -38,13 +39,14 @@ func TestGitConfigMap(t *testing.T) {
 		{
 			name: "git ssh, no known hosts",
 			config: config.Config{
-				Git: &config.GitConfig{
+				Git: config.GitConfig{
 					SyncRepo:        "git@github.com:user/foo-corp.git",
+					UseSSH:          true,
 					SyncBranch:      "master",
 					RootPolicyDir:   "foo-corp",
 					SyncWaitSeconds: 60,
 				},
-				SSH: &config.SSHConfig{
+				SSH: config.SSHConfig{
 					PrivateKeyFilename: "/some/path/id_rsa",
 				},
 			},
@@ -59,8 +61,9 @@ func TestGitConfigMap(t *testing.T) {
 		{
 			name: "git https",
 			config: config.Config{
-				Git: &config.GitConfig{
+				Git: config.GitConfig{
 					SyncRepo:        "https://github.com/sbochins-k8s/foo-corp-example.git",
+					UseSSH:          false,
 					SyncBranch:      "master",
 					RootPolicyDir:   "foo-corp",
 					SyncWaitSeconds: 60,

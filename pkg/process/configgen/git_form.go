@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"strings"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/dialog"
@@ -27,9 +29,10 @@ acting as the source of truth for the policies.`
 
 	// Rows to display various input fields in.
 	gitRepoRow       = 2
-	branchToSyncRow  = 4
-	rootPolicyDirRow = 6
-	syncWaitRow      = 8
+	useSshRow        = 4
+	branchToSyncRow  = 6
+	rootPolicyDirRow = 8
+	syncWaitRow      = 10
 )
 
 var _ Action = (*GitForm)(nil)
@@ -41,23 +44,30 @@ type GitForm struct {
 	// The default settings.
 	defaultCfg config.GitConfig
 	// The model to modify when editing a new form.
-	currentConfig *config.GitConfig
+	currentConfig config.GitConfig
+	// Toggling ssh sync, represented as string (Y/n).
+	useSshAsString string
 	// The sync wait period in seconds, represented as string.
 	syncWaitAsString string
 }
 
 // NewGitForm returns a new form for querying git options.
-func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
-	gf := &GitForm{defaultCfg: *cfg, currentConfig: cfg}
+func NewGitForm(o dialog.Options, cfg config.GitConfig) *GitForm {
+	gf := &GitForm{defaultCfg: cfg, currentConfig: cfg}
 
 	const (
 		gitSyncRepoText   = "Git repository (GIT_SYNC_REPO):"
+		useSshText        = "Sync repo using ssh (Y/n) (GIT_SYNC_SSH):"
 		branchToSyncText  = "Branch to sync (GIT_SYNC_BRANCH):"
-		rootPolicyDirText = "Root policy directory (ROOT_POLICY_DIR):"
+		rootPolicyDirText = "Root policy directory (POLICY_DIR):"
 		syncWaitText      = "Sync wait (in seconds) (GIT_SYNC_WAIT):"
 	)
 
 	gf.syncWaitAsString = fmt.Sprintf("%v", cfg.SyncWaitSeconds)
+	gf.useSshAsString = "n"
+	if cfg.UseSSH {
+		gf.useSshAsString = "Y"
+	}
 	opts := []interface{}{
 		o,
 		dialog.MenuHeight(10),
@@ -68,6 +78,14 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 			dialog.Field{
 				Input: &gf.currentConfig.SyncRepo, Y: gitRepoRow, X: gitFormInputColumn,
 				ViewLen: inputFieldVisibleLength, MaxLen: inputFieldVisibleLength},
+		),
+		dialog.FormItem(
+			dialog.Label{
+				Text: useSshText, Y: useSshRow, X: gitFormTextColumn},
+			dialog.Field{
+				Input: &gf.useSshAsString,
+				Y:     useSshRow, X: gitFormInputColumn,
+				ViewLen: 8, MaxLen: 8},
 		),
 		dialog.FormItem(
 			dialog.Label{
@@ -104,7 +122,7 @@ func (g *GitForm) Name() string {
 // Text implements Actions.
 func (g *GitForm) Text() string {
 	text := "Configure the Git Policy Importer module"
-	if cmp.Equal(g.defaultCfg, *g.currentConfig) {
+	if cmp.Equal(g.defaultCfg, g.currentConfig) {
 		text = fmt.Sprintf("%v [DEFAULT]", text)
 	}
 	if g.currentConfig.SyncRepo == "" {
@@ -118,6 +136,15 @@ func (g *GitForm) Run() (bool, error) {
 	g.form.Display()
 	if err := g.form.Close(); err != nil {
 		return false, errors.Wrapf(err, "while filling in git config form")
+	}
+	useSsh := strings.ToLower(g.useSshAsString)
+	switch useSsh {
+	case "y":
+		g.currentConfig.UseSSH = true
+	case "n":
+		g.currentConfig.UseSSH = false
+	default:
+		return false, errors.Errorf("while filling in git config form must specify Y or n for GIT_SYNC_SSH field")
 	}
 	c, err := strconv.Atoi(g.syncWaitAsString)
 	if err != nil {

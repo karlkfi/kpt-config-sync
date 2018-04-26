@@ -142,7 +142,7 @@ func (i *Installer) deploySSHSecrets() error {
 	const secret = "git-creds"
 	glog.V(5).Info("deploySSHSecrets: enter")
 	var filenames []string
-	if i.c.SSH != nil {
+	if !i.c.SSH.Empty() {
 		filenames = append(filenames,
 			fmt.Sprintf("ssh=%v", i.c.SSH.PrivateKeyFilename),
 			fmt.Sprintf("known_hosts=%v", i.c.SSH.KnownHostsFilename))
@@ -164,7 +164,7 @@ func (i *Installer) deploySSHSecrets() error {
 func (i *Installer) deployGitConfig() error {
 	const configmap = "git-policy-importer"
 	glog.V(5).Info("deployGitConfig: enter")
-	if i.c.Git == nil {
+	if i.c.Git.Empty() {
 		glog.V(5).Info("Not deploying git configuration, no config specified.")
 		return nil
 	}
@@ -183,7 +183,7 @@ func (i *Installer) deployGitConfig() error {
 
 func (i *Installer) getGitConfigMapData() []string {
 	return []string{
-		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.SSH != nil),
+		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Git.UseSSH),
 		fmt.Sprintf("GIT_SYNC_REPO=%v", i.c.Git.SyncRepo),
 		fmt.Sprintf("GIT_SYNC_BRANCH=%v", i.c.Git.SyncBranch),
 		fmt.Sprintf("GIT_SYNC_WAIT=%v", i.c.Git.SyncWaitSeconds),

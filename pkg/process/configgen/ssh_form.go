@@ -42,12 +42,12 @@ type SSHForm struct {
 	// The default settings.
 	defaultCfg config.SSHConfig
 	// The model to modify when editing a new form.
-	currentConfig *config.SSHConfig
+	currentConfig config.SSHConfig
 }
 
 // NewSSHForm returns a new form for querying SSH options.
-func NewSSHForm(o dialog.Options, cfg *config.SSHConfig) *SSHForm {
-	sf := &SSHForm{defaultCfg: *cfg, currentConfig: cfg}
+func NewSSHForm(o dialog.Options, cfg config.SSHConfig) *SSHForm {
+	sf := &SSHForm{defaultCfg: cfg, currentConfig: cfg}
 
 	const (
 		privateKeyFilenameText = "Private key filename:"
@@ -98,7 +98,7 @@ func (s *SSHForm) Name() string {
 // Text implements Action.
 func (s *SSHForm) Text() string {
 	text := "Configure SSH access for the Git Policy Importer"
-	if cmp.Equal(s.defaultCfg, *s.currentConfig) {
+	if cmp.Equal(s.defaultCfg, s.currentConfig) {
 		text = fmt.Sprintf("%v [DEFAULT]", text)
 	}
 	if s.currentConfig.PrivateKeyFilename == "" {
