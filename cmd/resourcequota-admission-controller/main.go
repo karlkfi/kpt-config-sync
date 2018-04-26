@@ -85,7 +85,10 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 					Rule: admissionregistrationv1beta1.Rule{
 						APIGroups:   []string{"*"},
 						APIVersions: []string{"*"},
-						Resources:   []string{"*"},
+						// This list comes from the list of resource types Kubernetes ResourceQuota controller
+						// handles. It can be derived from kubernetes/pkg/quota/evaluator/core/registry.go
+						Resources: []string{"persistentvolumeclaims", "pods", "configmaps", "resourcequotas",
+							"replicationcontrollers", "secrets", "services"},
 					},
 				}},
 				FailurePolicy: &failurePolicy,
