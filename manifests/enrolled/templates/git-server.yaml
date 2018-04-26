@@ -36,7 +36,7 @@ spec:
       volumes:
         - name: keys
           secret:
-            secretName: ssh-key-secret
+            secretName: ssh-pub
         - name: repos
           emptyDir: {}
       containers:

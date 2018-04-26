@@ -20,14 +20,16 @@
 # to the git server to enable later changing of the contents of the hosted
 # repo, and initializes the git repo to use.
 #
-# IMPORTANT NOTE: this script makes use of ~/.ssh/id_rsa.pub, so this must
+# IMPORTANT NOTE: this script makes use of ~/.ssh/id_rsa.nomos.pub, so this must
 # be created for the script to work properly
 
 TEST_LOG_REPO=/tmp/nomos-test
 
 FWD_SSH_PORT=2222
 
-kubectl -n=nomos-system-test create secret generic ssh-key-secret --from-file=${HOME}/.ssh/id_rsa.pub
+rm -rf ${TEST_LOG_REPO}
+
+kubectl -n=nomos-system-test create secret generic ssh-pub --from-file=${HOME}/.ssh/id_rsa.nomos.pub
 until kubectl get pods -n=nomos-system-test -lapp=test-git-server | grep -qe Running; do
    sleep 1;
    echo "Waiting for test-git-server pod to be ready..."
@@ -40,3 +42,14 @@ POD_ID=$(kubectl get pods -n=nomos-system-test -l app=test-git-server -o jsonpat
 mkdir -p ${TEST_LOG_REPO}
 kubectl -n=nomos-system-test port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
 kubectl exec -n=nomos-system-test -it ${POD_ID} -- git init --bare --shared /git-server/repos/sot.git
+
+# git-sync wants the designated sync branch to exist, so we create a dummy
+# commit so that the sync branch exists
+GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa.nomos"; export GIT_SSH_COMMAND
+git clone ssh://git@localhost:2222/git-server/repos/sot.git ${TEST_LOG_REPO}/repo
+cd ${TEST_LOG_REPO}/repo
+mkdir acme
+touch acme/README.md
+git add acme/README.md
+git commit -a -m "initial commit"
+git push -u origin master
