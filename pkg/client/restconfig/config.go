@@ -38,9 +38,8 @@ var (
 	// The function to use to get default current user.  Can be changed for tests
 	// using SetCurrentUserForTest.
 	userCurrentTestHook = defaultGetCurrentUser
-
-	currentUser        = &user.User{}
-	currentError error = nil
+	currentUser         = &user.User{}
+	currentError        error
 )
 
 func defaultGetCurrentUser() (*user.User, error) {

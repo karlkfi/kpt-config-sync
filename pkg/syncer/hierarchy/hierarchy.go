@@ -68,15 +68,22 @@ func IsIncompleteHierarchyError(err error) bool {
 // Instances represents all nodes in an AggregatedNode.
 type Instances []meta_v1.Object
 
+// Len implements sort.Interface
 func (m Instances) Len() int {
 	return len(m)
 }
+
+// Less implements sort.Interface
 func (m Instances) Less(i, j int) bool {
 	return strings.Compare(m[i].GetName(), m[j].GetName()) < 0
 }
+
+// Swap implements sort.Interface
 func (m Instances) Swap(i, j int) {
 	m[i], m[j] = m[j], m[i]
 }
+
+// Sort sorts the list of objects by name in ascending order.
 func (m Instances) Sort() {
 	sort.Sort(m)
 }

@@ -235,7 +235,7 @@ func TestDelete(t *testing.T) {
 			tree.Delete(tt.node)
 
 			names := stringset.New()
-			for node, _ := range tree.nodesByName {
+			for node := range tree.nodesByName {
 				names.Add(string(node))
 			}
 			if !names.Equals(tt.expectedRemaining) {

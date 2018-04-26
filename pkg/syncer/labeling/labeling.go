@@ -61,7 +61,7 @@ func HasOriginLabel(objectMeta meta_v1.ObjectMeta) bool {
 	return objectMeta.Labels[OriginLabelKey] == OriginLabelValue
 }
 
-// HasOriginLabel will return true if the given object metadata has been labeled by this package
+// ObjectHasOriginLabel will return true if the given object has been labeled by this package
 func ObjectHasOriginLabel(object meta_v1.Object) bool {
 	if object.GetLabels() == nil {
 		return false

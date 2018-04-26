@@ -100,8 +100,8 @@ func (t *PolicyTree) ParentOf(name string) (string, error) {
 	return string(parent), nil
 }
 
-// ParentOf returns the name of the parent of the named node.  If no parent
-// exists (such as the case of a root node), returns a "not found" error.
+// IsPolicyspace true if the named namespace is a policyspace. This will return an error if a
+// PolicyNode with the given name is not found.
 func (t *PolicyTree) IsPolicyspace(name string) (bool, error) {
 	isPolicyspace, ok := t.isPolicyspaceMap[nodeName(name)]
 	if !ok {

@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package testing defines a common data-driven module testing framework.
 package testing
 
 import (
@@ -27,7 +28,7 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ModuleEqualTestcase is a testcase for module equals.
+// ModuleEqualTestcase is a testcase for Module.Equal
 type ModuleEqualTestcase struct {
 	Name        string
 	LHS         meta_v1.Object
@@ -45,14 +46,18 @@ func (tc ModuleEqualTestcase) Run(module policyhierarchycontroller.Module) func(
 	}
 }
 
+// ModuleEqualTestcases is a list of testcases for testing a Module's Equal function.
 type ModuleEqualTestcases []ModuleEqualTestcase
 
+// RunAll runs all testcases in the list of ModuleEqualTestcases
 func (tcs ModuleEqualTestcases) RunAll(module policyhierarchycontroller.Module, t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(fmt.Sprintf("ModuleEqualTestcase %s", tc.Name), tc.Run(module))
 	}
 }
 
+// ModuleAggregationTestcase is a testcase for testing out the module's AggregatedNode.Aggregate
+// method.
 type ModuleAggregationTestcase struct {
 	Name       string
 	Aggregated hierarchy.AggregatedNode
@@ -60,7 +65,7 @@ type ModuleAggregationTestcase struct {
 	Expect     hierarchy.Instances
 }
 
-// Run runs the testcase.
+// Run runs the ModuleAggregationTestcase
 func (tc ModuleAggregationTestcase) Run(module policyhierarchycontroller.Module) func(t *testing.T) {
 	return func(t *testing.T) {
 		actual := tc.Aggregated.Aggregated(tc.PolicyNode).Generate()
@@ -84,20 +89,24 @@ func (tc ModuleAggregationTestcase) Run(module policyhierarchycontroller.Module)
 	}
 }
 
+// ModuleAggregationTestcases is a list of ModuleAggregationTestcase
 type ModuleAggregationTestcases []ModuleAggregationTestcase
 
+// RunAll runs all ModuleAggregationTestcases in the slice
 func (tcs ModuleAggregationTestcases) RunAll(module policyhierarchycontroller.Module, t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(fmt.Sprintf("ModuleAggregationTestcase %s", tc.Name), tc.Run(module))
 	}
 }
 
+// ModuleTest is a data-driven test for Modules that tests the non-boilerplate aspects of a module.
 type ModuleTest struct {
 	Module      policyhierarchycontroller.Module
 	Equals      ModuleEqualTestcases
 	Aggregation ModuleAggregationTestcases
 }
 
+// RunAll runs all tests in the ModuleTest.
 func (tc *ModuleTest) RunAll(t *testing.T) {
 	tc.Equals.RunAll(tc.Module, t)
 	tc.Aggregation.RunAll(tc.Module, t)

@@ -23,11 +23,8 @@ export CGO_ENABLED=0
 # When you fix one of the packages here, remove it from the list.
 #
 GOLINT_EXCLUDE_PACKAGES=(
-  cmd/syncer-demo-driver
   pkg/api/policyhierarchy/v1
-  pkg/client/action
   pkg/client/action/test
-  pkg/client/restconfig
   pkg/cli/namespaces
   pkg/cli/testing
   pkg/installer
@@ -43,15 +40,8 @@ GOLINT_EXCLUDE_PACKAGES=(
   pkg/syncer
   pkg/syncer/clusterpolicycontroller
   pkg/syncer/clusterpolicycontroller/modules
-  pkg/syncer/flattening
-  pkg/syncer/hierarchy
-  pkg/syncer/labeling
-  pkg/syncer/policyhierarchycontroller/testing
-  pkg/testing/e2e/testcontext
   pkg/testing/fakeinformers
-  pkg/testing/orgdriver
   pkg/testing/rbactesting
-  pkg/util/policynode/validator
   pkg/version
 )
 function exclude() {

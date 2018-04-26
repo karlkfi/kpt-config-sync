@@ -231,7 +231,7 @@ func NewReflectiveUpsertAction(
 	}
 }
 
-// UpsertedResource returns the resource that will be upserted.
+// UpsertedResouce returns the resource that will be upserted.
 func (s *ReflectiveUpsertAction) UpsertedResouce() runtime.Object {
 	return s.resource
 }

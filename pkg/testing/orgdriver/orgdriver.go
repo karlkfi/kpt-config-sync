@@ -45,6 +45,8 @@ type Options struct {
 	MaxNodes int        // Max number of nodes to create
 }
 
+// NewOptions creates a new options object from the args.
+// TODO(briantkennedy): we probably don't need this function.
 func NewOptions(rng *rand.Rand, maxNodes int) *Options {
 	return &Options{
 		RNG:      rng,

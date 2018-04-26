@@ -21,7 +21,7 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Convenience for generating hierarchy.
+// TestNodeSpec is a convenience struct for generating a hierarchy of PolicyNode objects.
 type TestNodeSpec struct {
 	Name   string
 	Parent string
@@ -42,9 +42,10 @@ func (s TestNodeSpec) node() *policyhierarchy_v1.PolicyNode {
 	return createTestNode(s.Name, s.Parent)
 }
 
+// TestNodeSpecs is a tiny type for a list of TestNodeSpec which represents a full hierarchy.
 type TestNodeSpecs []TestNodeSpec
 
-// Alternate implementation strategy for ancestry.
+// Ancestry is an alternate implementation of ancestry for testing.
 func (s TestNodeSpecs) Ancestry(name string) []string {
 	if name == "" {
 		return []string{}
@@ -59,7 +60,7 @@ func (s TestNodeSpecs) Ancestry(name string) []string {
 	panic(errors.Errorf("Could not find node %s", name))
 }
 
-// Alternate implementation testing strategy fro subtree.
+// Subtree is an alternate implementation of subtree for testing.
 func (s TestNodeSpecs) Subtree(name string) []string {
 	nodes := []string{name}
 	for _, spec := range s {
@@ -70,7 +71,7 @@ func (s TestNodeSpecs) Subtree(name string) []string {
 	return nodes
 }
 
-// Fake output type for ease of use
+// TestAggregatedOutput is a fake output type for our TestAggregatedNode.
 type TestAggregatedOutput struct {
 	meta_v1.TypeMeta
 	meta_v1.ObjectMeta
@@ -78,10 +79,12 @@ type TestAggregatedOutput struct {
 	Ancestry []string
 }
 
+// TestAggregatedNode is a simple implementor of AggregatedNode for test purposes.
 type TestAggregatedNode struct {
 	Ancestry []string
 }
 
+// Aggregated implements AggregatedNode
 func (s *TestAggregatedNode) Aggregated(childNode *policyhierarchy_v1.PolicyNode) AggregatedNode {
 	ancestry := make([]string, len(s.Ancestry))
 	copy(ancestry, s.Ancestry)
@@ -89,10 +92,12 @@ func (s *TestAggregatedNode) Aggregated(childNode *policyhierarchy_v1.PolicyNode
 	return &TestAggregatedNode{Ancestry: ancestry}
 }
 
+// Generate implements AggregatedNode
 func (s *TestAggregatedNode) Generate() Instances {
 	return Instances{&TestAggregatedOutput{Ancestry: s.Ancestry}}
 }
 
+// NewTestAggregatedNode creates a new TestAggregatedNode for testing.
 func NewTestAggregatedNode() AggregatedNode {
 	return &TestAggregatedNode{}
 }

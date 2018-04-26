@@ -95,6 +95,7 @@ type Predicate interface {
 	Eval(error) bool
 }
 
+// predicateFunction implementes
 type predicateFunction struct {
 	name string
 	f    func(error) bool
@@ -103,7 +104,8 @@ type predicateFunction struct {
 func (p predicateFunction) Name() string        { return p.name }
 func (p predicateFunction) Eval(err error) bool { return p.f(err) }
 
-func NewPredicate(name string, f func(error) bool) *predicateFunction {
+// NewPredicate returns a Predicate created from the provided args.
+func NewPredicate(name string, f func(error) bool) Predicate {
 	return &predicateFunction{name, f}
 }
 

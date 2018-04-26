@@ -97,6 +97,7 @@ func createOptions(seed int64, numNamespaces int) *orgdriver.Options {
 	return orgdriver.NewOptions(rand.New(rand.NewSource(seed)), numNamespaces)
 }
 
+// GenFakeOrg generates a fake organization and writes it to the policy nodes.
 func GenFakeOrg(syncDir string, numNamespaces int) {
 	setupDir(syncDir)
 
@@ -107,6 +108,7 @@ func GenFakeOrg(syncDir string, numNamespaces int) {
 	orgDriver.WritePolicyNodes(syncDir)
 }
 
+// RunFakeOrg runs the driver using a fake organization.
 func RunFakeOrg(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 	setupDir(syncDir)
 

@@ -28,6 +28,7 @@ import (
 // rootParent is the name of the parent of a root node.
 const rootParent = ""
 
+// Validator checks that a set of PolicyNode objects conform to certain constraints on the hierarchy.
 type Validator struct {
 	policyNodes map[string]policyhierarchy_v1.PolicyNode // name -> node
 	// AllowMultipleRoots disables checks for multiple root nodes in the policy node hierarchy, when true.
@@ -36,12 +37,14 @@ type Validator struct {
 	AllowOrphanAdds bool
 }
 
+// New creates a new Validator.
 func New() *Validator {
 	return &Validator{
 		policyNodes: map[string]policyhierarchy_v1.PolicyNode{},
 	}
 }
 
+// FromMap creates a new validator populating the policy nodes from a map.
 func FromMap(policyNodes map[string]policyhierarchy_v1.PolicyNode) *Validator {
 	validator := New()
 	for name, node := range policyNodes {
@@ -50,6 +53,7 @@ func FromMap(policyNodes map[string]policyhierarchy_v1.PolicyNode) *Validator {
 	return validator
 }
 
+// From creates a new Validator populating the nodes from a list of args.
 func From(policyNodes ...*policyhierarchy_v1.PolicyNode) *Validator {
 	validator := New()
 	for _, policyNode := range policyNodes {
