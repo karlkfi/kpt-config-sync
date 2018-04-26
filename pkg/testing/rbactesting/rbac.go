@@ -33,11 +33,13 @@ func PolicyNode(
 	return &ret
 }
 
-// Example: RoleBinding("pod-reader", "User:jane")
+// RoleBinding is a conveneince function for creating a RoleBinding, example:
+// RoleBinding("pod-reader", "User:jane")
 func RoleBinding(roleName string, subjects ...string) rbac.RoleBinding {
 	return NamespaceRoleBinding("", "", roleName, subjects...)
 }
 
+// NamespaceRoleBinding is a convenience function for creating a RoleBinding with namespace set.
 func NamespaceRoleBinding(name, namespace, roleName string, subjects ...string) rbac.RoleBinding {
 	subjectList := []rbac.Subject{}
 	var kind string
@@ -71,7 +73,7 @@ func NamespaceRoleBinding(name, namespace, roleName string, subjects ...string) 
 	return ret
 }
 
-// Example: RoleRef("pod-reader")
+// RoleRef constructs a role ref to a name Example: RoleRef("pod-reader")
 func RoleRef(name string) rbac.RoleRef {
 	return rbac.RoleRef{
 		APIGroup: "rbac.authorization.k8s.io",
@@ -81,6 +83,7 @@ func RoleRef(name string) rbac.RoleRef {
 	}
 }
 
+// Role creates a Role.
 // Example:
 // Role("pod-reader",
 //   []rbac.PolicyRule{
@@ -90,6 +93,7 @@ func Role(name string, policyRules []rbac.PolicyRule) rbac.Role {
 	return NamespaceRole(name, "", policyRules)
 }
 
+// NamespaceRole creates a role with namespace set.
 func NamespaceRole(name, namespace string, policyRules []rbac.PolicyRule) rbac.Role {
 	return rbac.Role{
 		TypeMeta: meta.TypeMeta{
@@ -122,9 +126,10 @@ func PolicyRule(apiGroups, verbs, resources []string) rbac.PolicyRule {
 	}
 }
 
-// Used to disambiguate arguments.
+// ResourceGroup is a tinytype used to disambiguate arguments.
 type ResourceGroup string
 
+// Request creates a new SubjectAccessReviewSpec
 // Example:
 // Request("jane", "meowie", "kitties", "pods", "get").
 func Request(user, resourceName, namespace, resourceType, verb string,
@@ -132,6 +137,7 @@ func Request(user, resourceName, namespace, resourceType, verb string,
 	return RequestWithGroup(user, resourceName, namespace, ResourceGroup(""), resourceType, verb)
 }
 
+// RequestWithGroup creates a new SubjectAccessReviewSpec with group set.
 func RequestWithGroup(user, resourceName, namespace string,
 	group ResourceGroup, resourceType, verb string) authz.SubjectAccessReviewSpec {
 	return authz.SubjectAccessReviewSpec{
@@ -147,6 +153,7 @@ func RequestWithGroup(user, resourceName, namespace string,
 
 }
 
+// NonResourceRequest creates a SubjectAccessReviewSpec for a non-resource type.
 // Example:
 //   NonResourceRequest("jane", "/some/path", "get).
 func NonResourceRequest(user, path, verb string) authz.SubjectAccessReviewSpec {

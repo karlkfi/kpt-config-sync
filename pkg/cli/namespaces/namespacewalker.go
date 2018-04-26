@@ -45,9 +45,8 @@ func GetAncestry(client client_v1.NamespaceInterface, namespace string) (
 			if api_errors.IsForbidden(err) {
 				if len(nsAncestry) == 0 {
 					return nil, false, err
-				} else {
-					return nsAncestry, false, nil
 				}
+				return nsAncestry, false, nil
 			}
 			return nil, false, errors.Wrapf(err, "Failed to get namespace %q", namespace)
 		}

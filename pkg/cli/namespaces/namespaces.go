@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/cli"
 )
 
+// GetHierarchicalNamespaces implements a CLI comamnd which returns the ancesty for a namespace.
 func GetHierarchicalNamespaces(ctx *cli.CommandContext, args []string) error {
 	namespaces, includesRoot, err := GetAncestry(
 		ctx.Client.Kubernetes().CoreV1().Namespaces(), ctx.Namespace)

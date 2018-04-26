@@ -23,7 +23,6 @@ export CGO_ENABLED=0
 # When you fix one of the packages here, remove it from the list.
 #
 GOLINT_EXCLUDE_PACKAGES=(
-  pkg/cli/namespaces
   pkg/policyimporter
   pkg/policyimporter/actions
   pkg/policyimporter/filesystem
@@ -32,7 +31,6 @@ GOLINT_EXCLUDE_PACKAGES=(
   pkg/process/exec
   pkg/process/kubectl
   pkg/syncer
-  pkg/testing/rbactesting
   pkg/version
 )
 function exclude() {
