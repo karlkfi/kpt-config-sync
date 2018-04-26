@@ -28,7 +28,7 @@ TEST_LOG_REPO=/tmp/nomos-test
 FWD_SSH_PORT=2222
 
 kubectl -n=nomos-system-test create secret generic ssh-key-secret --from-file=${HOME}/.ssh/id_rsa.pub
-until kubectl get pods -n=nomos-system-test --field-selector=status.phase=Running -lapp=test-git-server | grep -qe Running; do
+until kubectl get pods -n=nomos-system-test -lapp=test-git-server | grep -qe Running; do
    sleep 1;
    echo "Waiting for test-git-server pod to be ready..."
 done
