@@ -66,8 +66,7 @@ contexts:
 				"POLICY_DIR": "foo-corp"
 		},
 		"ssh": {
-				"privateKeyFilename": "privateKey",
-				"knownHostsFilename": "knownHosts"
+				"privateKeyFilename": "privateKey"
 		}
 			}`,
 			expected: Config{
@@ -81,7 +80,6 @@ contexts:
 				},
 				SSH: SSHConfig{
 					PrivateKeyFilename: "privateKey",
-					KnownHostsFilename: "knownHosts",
 				},
 			},
 		},

@@ -144,8 +144,11 @@ func (i *Installer) deploySSHSecrets() error {
 	var filenames []string
 	if !i.c.SSH.Empty() {
 		filenames = append(filenames,
-			fmt.Sprintf("ssh=%v", i.c.SSH.PrivateKeyFilename),
-			fmt.Sprintf("known_hosts=%v", i.c.SSH.KnownHostsFilename))
+			fmt.Sprintf("ssh=%v", i.c.SSH.PrivateKeyFilename))
+		if i.c.SSH.KnownHostsFilename != "" {
+			filenames = append(filenames,
+				fmt.Sprintf("known_hosts=%v", i.c.SSH.KnownHostsFilename))
+		}
 	} else {
 		glog.V(5).Info("no PrivateKeyFilename, deploying empty secret")
 	}
@@ -187,6 +190,7 @@ func (i *Installer) getGitConfigMapData() []string {
 		fmt.Sprintf("GIT_SYNC_REPO=%v", i.c.Git.SyncRepo),
 		fmt.Sprintf("GIT_SYNC_BRANCH=%v", i.c.Git.SyncBranch),
 		fmt.Sprintf("GIT_SYNC_WAIT=%v", i.c.Git.SyncWaitSeconds),
+		fmt.Sprintf("GIT_KNOWN_HOSTS=%v", i.c.SSH.KnownHostsFilename != ""),
 		fmt.Sprintf("POLICY_DIR=%v", i.c.Git.RootPolicyDir),
 	}
 }
