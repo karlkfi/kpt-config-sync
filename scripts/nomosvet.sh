@@ -20,7 +20,7 @@ set -eo pipefail
 IMAGE=${NOMOSVET_IMAGE:-"gcr.io/nomos-release/nomosvet"}
 
 # Nomosvet version (Docker image tag).
-VERSION=${NOMOSVET_VERSION:-"latest"}
+VERSION=${NOMOSVET_VERSION:-"stable"}
 
 docker pull "${IMAGE}:${VERSION}" > /dev/null
 
