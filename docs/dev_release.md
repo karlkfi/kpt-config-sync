@@ -22,18 +22,11 @@ $ git tag -a ${RELEASE_VERSION} -m "Meaningful message"
 $ git push origin ${RELEASE_VERSION}
 ```
 
-Finally, produce the release, which will move the `latest` label
-to the one just built and update the latest Nomos docs.
+Finally, produce the release. Blessing the release will move the `latest` label
+to the one just built.
 
 ```console
 $ make -f Makefile.release release
-```
-
-To mark a release as stable, bless the release. This will move
-the `stable` tag to the version just built and update stable
-Nomos docs.
-
-```console
 $ make -f Makefile.release bless-release
 ```
 

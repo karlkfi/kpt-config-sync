@@ -31,7 +31,7 @@ set -x
 #                default: ""
 # --version      Specify the gcr.io tag to use for each nomos component's
 #                docker container
-#                default: '${VERSION:-"stable"}'
+#                default: '${VERSION:-"latest"}'
 # --container    Specify the gcr.io container repo to use to source each
 #                nomos component's docker container.
 #                default: gcr.io/projects/stolos-dev
@@ -77,7 +77,7 @@ CONFIG=""
 INTERACTIVE=""
 OUTPUT_DIR=$(pwd)
 # The semantic verison number of the release to install.
-VERSION=${VERSION:-"stable"}
+VERSION=${VERSION:-"latest"}
 
 getopt --test > /dev/null
 if [[ $? -ne 4 ]]; then
