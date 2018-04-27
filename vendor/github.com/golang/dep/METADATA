@@ -1,0 +1,12 @@
+name: "dep"
+description: "dep is a prototype dependency management tool for Go. It requires Go 1.9 or newer to compile. dep is safe for production use."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/golang/dep"
+  }
+  version: "v0.4.1"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

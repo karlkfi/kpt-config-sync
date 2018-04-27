@@ -53,16 +53,14 @@ done
 
 
 
-echo "Checking golint: "
+echo "Running gometalinter: "
 gometalinter.v2 \
     --disable-all \
     --enable=golint \
     --exclude=generated\.pb\.go \
     --exclude=generated\.go \
     "${LINT_PKGS[@]}"
-echo "PASS"
 
-echo "Checking linters: "
 gometalinter.v2 \
     --disable-all \
     --enable=vet \
@@ -74,5 +72,10 @@ gometalinter.v2 \
     --enable=errcheck \
     --exclude=generated\.pb\.go \
     "$@"
+echo "PASS"
+
+
+echo "Running licenselinter: "
+licenselinter -dir $(pwd)
 echo "PASS"
 echo

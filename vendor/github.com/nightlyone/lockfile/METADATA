@@ -1,0 +1,12 @@
+name: "lockfile"
+description: "Handle locking via pid files."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/nightlyone/lockfile"
+  }
+  version: "master"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

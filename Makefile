@@ -70,7 +70,8 @@ ALL_K8S_APPS := syncer \
 
 # ALl Nomos apps
 ALL_APPS := $(ALL_K8S_APPS) \
-	nomosvet
+	nomosvet \
+	licenselinter
 
 GIT_SERVER_SRC := https://github.com/jkarlosb/git-server-docker.git
 

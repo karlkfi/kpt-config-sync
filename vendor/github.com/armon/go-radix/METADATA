@@ -1,0 +1,12 @@
+name: "go-radix"
+description: "Provides the `radix` package that implements a [radix tree](http://en.wikipedia.org/wiki/Radix_tree). The package only provides a single `Tree` implementation, optimized for sparse nodes."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/armon/go-radix"
+  }
+  version: "master"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "sync"
+description: "This repository provides Go concurrency primitives in addition to the ones provided by the language and "sync" and "sync/atomic" packages."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://go.googlesource.com/sync"
+  }
+  version: "master"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

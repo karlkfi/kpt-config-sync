@@ -1,0 +1,12 @@
+name: "vcs"
+description: "Manage repos in varying version control systems with ease through a common interface."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/Masterminds/vcs"
+  }
+  version: "v1.12.0"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "nuts"
+description: "A collection of [BoltDB](https://github.com/boltdb/bolt) utilities."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/jmank88/nuts"
+  }
+  version: "v0.3.0"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

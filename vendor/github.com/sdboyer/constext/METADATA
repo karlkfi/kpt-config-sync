@@ -1,0 +1,12 @@
+name: "constext"
+description: "Paired contexts can be recombined using the standard `context.With*()` functions."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/sdboyer/constext"
+  }
+  version: "master"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

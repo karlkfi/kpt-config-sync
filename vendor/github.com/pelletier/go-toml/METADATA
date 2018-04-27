@@ -1,0 +1,12 @@
+name: "go-toml"
+description: "Go library for the [TOML](https://github.com/mojombo/toml) format."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/pelletier/go-toml"
+  }
+  version: "master"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

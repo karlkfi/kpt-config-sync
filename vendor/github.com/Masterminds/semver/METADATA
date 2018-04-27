@@ -1,0 +1,13 @@
+name: "semver"
+description: "The `semver` package provides the ability to work with [Semantic
+Versions](http://semver.org) in Go"
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/Masterminds/semver"
+  }
+  version: "parse-constraints-with-dash-in-pre"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}
