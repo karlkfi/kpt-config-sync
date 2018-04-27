@@ -32,6 +32,19 @@
   revision = "e9091a26100e9cfb2b6a8f470085bfa541931a91"
 
 [[projects]]
+  branch = "parse-constraints-with-dash-in-pre"
+  name = "github.com/Masterminds/semver"
+  packages = ["."]
+  revision = "a93e51b5a57ef416dac8bb02d11407b6f55d8929"
+  source = "https://github.com/carolynvs/semver.git"
+
+[[projects]]
+  name = "github.com/Masterminds/vcs"
+  packages = ["."]
+  revision = "6f1c6d150500e452704e9863f68c2559f58616bf"
+  version = "v1.12.0"
+
+[[projects]]
   name = "github.com/PuerkitoBio/purell"
   packages = ["."]
   revision = "fd18e053af8a4ff11039269006e8037ff374ce0e"
@@ -50,6 +63,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/armon/go-radix"
+  packages = ["."]
+  revision = "1fca145dffbcaa8fe914309b1ec0cfc67500fe61"
+
+[[projects]]
+  branch = "master"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
   revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
@@ -59,6 +78,12 @@
   packages = ["."]
   revision = "2ee87856327ba09384cabd113bc6b5d174e9ec0f"
   version = "v3.5.1"
+
+[[projects]]
+  name = "github.com/boltdb/bolt"
+  packages = ["."]
+  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
+  version = "v1.3.1"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -188,6 +213,19 @@
   revision = "117892bf1866fbaa2318c03e50e40564c8845457"
 
 [[projects]]
+  name = "github.com/golang/dep"
+  packages = [
+    ".",
+    "gps",
+    "gps/internal/pb",
+    "gps/paths",
+    "gps/pkgtree",
+    "internal/fs"
+  ]
+  revision = "37d9ea0ac16f0e0a05afc3b60e1ac8c364b6c329"
+  version = "v0.4.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/golang/glog"
   packages = ["."]
@@ -206,6 +244,7 @@
   version = "v1.1.1"
 
 [[projects]]
+  branch = "master"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -216,7 +255,7 @@
     "ptypes/empty",
     "ptypes/timestamp"
   ]
-  revision = "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9"
+  revision = "e09c5db296004fbe3f74490e84dcd62c3c5ddb1b"
 
 [[projects]]
   name = "github.com/google/btree"
@@ -296,6 +335,12 @@
   version = "v1.0"
 
 [[projects]]
+  name = "github.com/jmank88/nuts"
+  packages = ["."]
+  revision = "8b28145dffc87104e66d074f62ea8080edfad7c8"
+  version = "v0.3.0"
+
+[[projects]]
   name = "github.com/json-iterator/go"
   packages = ["."]
   revision = "6240e1e7983a85228f7fd9c3e1b6932d46ec58e2"
@@ -345,6 +390,12 @@
   revision = "ad45545899c7b13c020ea92b2072220eefad42b8"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/nightlyone/lockfile"
+  packages = ["."]
+  revision = "6a197d5ea61168f2ac821de2b7f011b250904900"
+
+[[projects]]
   name = "github.com/opencontainers/go-digest"
   packages = ["."]
   revision = "279bed98673dd5bef374d3b6e4b09e2af76183bf"
@@ -355,6 +406,12 @@
   packages = ["."]
   revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
   version = "v1.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/pelletier/go-toml"
+  packages = ["."]
+  revision = "66540cf1fcd2c3aee6f6787dfa32a6ae9a870f12"
 
 [[projects]]
   branch = "master"
@@ -371,7 +428,8 @@
 [[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
-  revision = "2b3a18b5f0fb6b4f9190549597d3f962c02bc5eb"
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
 
 [[projects]]
   name = "github.com/prometheus/client_golang"
@@ -409,6 +467,12 @@
   packages = ["."]
   revision = "4048872b16cc0fc2c5fd9eacf0ed2c2fedaa0c8c"
   version = "v1.5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/sdboyer/constext"
+  packages = ["."]
+  revision = "836a144573533ea4da4e6929c235fd348aed1c80"
 
 [[projects]]
   name = "github.com/spf13/cobra"
@@ -454,6 +518,12 @@
     "jwt"
   ]
   revision = "9a379c6b3e95a790ffc43293c2a78dee0d7b6e20"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
 
 [[projects]]
   name = "golang.org/x/sys"
@@ -1085,6 +1155,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e62b89303a1bec28f79d678ae3dc88129577f08065c9da3b71901eb318dd0e31"
+  inputs-digest = "d9abd341321cfeaa7dc50cd1406dc7a28282d2afde8c5e851e07ccf42d1001f1"
   solver-name = "gps-cdcl"
   solver-version = 1
