@@ -217,7 +217,7 @@ deploy-test-git-server: image-git-server push-to-gcr-git-server \
 	$(TOP_DIR)/scripts/init-git-server.sh
 
 deploy-test-e2e: USE_CURRENT_CONTEXT=true
-deploy-test-e2e: deploy-test-git-server deploy
+deploy-test-e2e: $(OUTPUT_DIR) deploy-test-git-server deploy
 
 # Runs the installer via docker in batch mode using the installer config
 # file specied in the environment variable NOMOS_INSTALLER_CONFIG.
@@ -250,10 +250,19 @@ test: buildenv $(OUTPUT_DIR)
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/test.sh $(NOMOS_GO_PKG)
 
 # Runs end-to-end tests.
-test-e2e:
+test-e2e: clean
 	e2e/e2e.sh --logtostderr --vmodule=bash=10,exec=10,kubectl=10
 # Runs end-to-end tests but leaves files for debugging.
-test-e2e-no-cleanup:
+test-e2e-no-cleanup: clean
+	e2e/e2e.sh -skip_cleanup --logtostderr --vmodule=bash=10,exec=10,kubectl=10
+
+# Runs end-to-end tests without cleaning before. Might reduce build time
+# but could be polluted by old test runs.
+noclean-test-e2e: clean
+	e2e/e2e.sh --logtostderr --vmodule=bash=10,exec=10,kubectl=10
+# Runs end-to-end tests and leave files for debugging, but do not clean before building.
+# Might reduce build time but could be polluted by old test runs.
+noclean-test-e2e-no-cleanup: clean
 	e2e/e2e.sh -skip_cleanup --logtostderr --vmodule=bash=10,exec=10,kubectl=10
 
 # Runs all tests.
