@@ -29,23 +29,25 @@ FWD_SSH_PORT=2222
 
 rm -rf ${TEST_LOG_REPO}
 
-kubectl -n=nomos-system-test create secret generic ssh-pub --from-file=${HOME}/.ssh/id_rsa.nomos.pub
-until kubectl get pods -n=nomos-system-test -lapp=test-git-server | grep -qe Running; do
+kubectl apply -f /opt/testing/git-server.yaml
+
+kubectl -n=nomos-system create secret generic ssh-pub --from-file=/opt/testing/id_rsa.nomos.pub
+until kubectl get pods -n=nomos-system -lapp=test-git-server | grep -qe Running; do
    sleep 1;
    echo "Waiting for test-git-server pod to be ready..."
 done
 
 echo "test-git-server ready"
 
-POD_ID=$(kubectl get pods -n=nomos-system-test -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
+POD_ID=$(kubectl get pods -n=nomos-system -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
 
 mkdir -p ${TEST_LOG_REPO}
-kubectl -n=nomos-system-test port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
-kubectl exec -n=nomos-system-test -it ${POD_ID} -- git init --bare --shared /git-server/repos/sot.git
+kubectl -n=nomos-system port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
+kubectl exec -n=nomos-system -it ${POD_ID} -- git init --bare --shared /git-server/repos/sot.git
 
 # git-sync wants the designated sync branch to exist, so we create a dummy
 # commit so that the sync branch exists
-GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa.nomos"; export GIT_SSH_COMMAND
+GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/id_rsa.nomos"; export GIT_SSH_COMMAND
 git clone ssh://git@localhost:2222/git-server/repos/sot.git ${TEST_LOG_REPO}/repo
 cd ${TEST_LOG_REPO}/repo
 mkdir acme

@@ -56,6 +56,12 @@ VERSION := $(shell git describe --tags --always --dirty)
 # Which architecture to build.
 ARCH ?= amd64
 
+# UID of current user
+UID := $(shell id -u)
+
+# GID of current user
+GID := $(shell id -g)
+
 # Docker image used for build and test. This image does not support CGO.
 BUILD_IMAGE ?= buildenv
 
@@ -154,6 +160,9 @@ image-%: build
 
 # Creates docker image for the test git-server from github source
 image-git-server:
+	@echo
+	@echo "******* Building image for test git server *******"
+	@echo
 	docker build -t gcr.io/$(GCP_PROJECT)/git-server:$(IMAGE_TAG) $(GIT_SERVER_SRC)
 
 # Pushes each component's docker image to gcr.io.
@@ -212,11 +221,9 @@ deploy-interactive: installer-image
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
 		--version=$(IMAGE_TAG)
 
-deploy-test-git-server: image-git-server push-to-gcr-git-server \
-	gen-yaml-git-server redeploy-git-server
-	$(TOP_DIR)/scripts/init-git-server.sh
+deploy-test-git-server: $(OUTPUT_DIR) image-git-server push-to-gcr-git-server \
+	gen-yaml-git-server
 
-deploy-test-e2e: USE_CURRENT_CONTEXT=true
 deploy-test-e2e: $(OUTPUT_DIR) deploy-test-git-server deploy
 
 # Runs the installer via docker in batch mode using the installer config
@@ -241,17 +248,25 @@ e2e-staging: installer-image
 	cp -r $(TOP_DIR)/build/e2e-tests/* $(STAGING_DIR)/e2e-tests
 	cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
 	cp $(TOP_DIR)/examples/acme/policynodes/acme.yaml $(OUTPUT_DIR)/e2e
+	cp -r $(TOP_DIR)/examples/acme/sot $(OUTPUT_DIR)/e2e
+	cp -n $(HOME)/.ssh/id_rsa.nomos $(OUTPUT_DIR)/e2e/id_rsa.nomos
+	cp $(HOME)/.ssh/id_rsa.nomos.pub $(OUTPUT_DIR)/e2e/id_rsa.nomos.pub
+	cp $(TOP_DIR)/scripts/init-git-server.sh $(OUTPUT_DIR)/e2e/
+	cp $(GEN_YAML_DIR)/git-server.yaml $(OUTPUT_DIR)/e2e/
 
 # Builds the e2e docker image. Note that the GCP project is hardcoded since we currently don't want
 # or need a nomos-release version of the e2e-tests image.
-e2e-image: e2e-staging
+e2e-image: deploy-test-git-server e2e-staging
 	docker build -t gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG) \
 		--build-arg "VERSION=$(IMAGE_TAG)" \
+		--build-arg "UID=$(UID)" \
+		--build-arg "GID=$(GID)" \
+		--build-arg "UNAME=$(USER)" \
 		$(STAGING_DIR)/e2e-tests
 	gcloud docker -- push gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG)
 
 # Runs end-to-end tests.
-test-e2e: e2e-image
+test-e2e: clean e2e-image
 	mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
 	@docker run -it \
 	    -u $$(id -u):$$(id -g) \

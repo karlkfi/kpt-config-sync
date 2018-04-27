@@ -11,4 +11,13 @@
 ARG VERSION=latest
 FROM gcr.io/stolos-dev/installer:$VERSION
 
+ARG UNAME=testuser
+ARG UID=1000
+ARG GID=1000
+
+RUN apt-get update && apt-get install -y git
+RUN groupadd -g $GID $UNAME
+RUN useradd -u $UID -g $UNAME $UNAME
+
+
 ENTRYPOINT ["/opt/testing/e2e-legacy.sh", "--alsologtostderr"]

@@ -18,10 +18,22 @@ set -u
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Path to demo acme yaml
 ACME=acme.yaml
+TEST_REPO_DIR=/tmp/nomos-test
 
 # Run for every test
 function setUp() {
-  kubectl apply -f ${ACME} > /dev/null
+  CWD=$(pwd)
+  mkdir -p ${TEST_REPO_DIR}
+  cd ${TEST_REPO_DIR}
+  rm -rf repo
+  git clone ssh://git@localhost:2222/git-server/repos/sot.git ${TEST_REPO_DIR}/repo
+  cd ${TEST_REPO_DIR}/repo
+  git rm -rf acme
+  cp -r /opt/testing/sot/acme ./
+  git add -A
+  git commit -m "setUp commit"
+  git push origin master
+  cd $CWD
   # Wait for syncer to update objects following the policynode updates
   sleep 1
 }
@@ -151,6 +163,8 @@ function setUpEnv() {
 
   suggested_user="$(gcloud config get-value account)"
 
+  /opt/testing/init-git-server.sh
+
   ./installer \
     --config="${TEST_DIR}/install-config.yaml" \
     --log_dir=/tmp \
@@ -165,6 +179,7 @@ function main() {
     echo "Kubectl/Cluster misconfigured"
     exit 1
   fi
+  GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/id_rsa.nomos"; export GIT_SSH_COMMAND
 
   cd ${TEST_DIR}
   echo "****************** Starting tests ******************"
@@ -189,21 +204,14 @@ function cleanUp() {
   kubectl delete policynodes --all || true
   kubectl delete clusterpolicy --all || true
   kubectl delete --ignore-not-found ns nomos-system
-  kubectl delete --ignore-not-found ns nomos-system-test
-  ! pkill -f "kubectl -n=nomos-system-test port-forward.*2222:22"
+  ! pkill -f "kubectl -n=nomos-system port-forward.*2222:22"
 
-  echo "Deleting namespaces nomos-system and nomos-system-test, this may take a minute"
+  echo "Deleting namespaces nomos-system, this may take a minute"
   while kubectl get ns nomos-system > /dev/null 2>&1
   do
     sleep 3
     echo -n "."
   done
-  while kubectl get ns nomos-system-test > /dev/null 2>&1
-  do
-    sleep 3
-    echo -n "."
-  done
-  echo
 }
 
 cleanUp

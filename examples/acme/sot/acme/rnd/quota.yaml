@@ -1,0 +1,5 @@
+kind: ResourceQuota
+apiVersion: v1
+spec:
+   hard:
+      configmaps: "2"

@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: nomos-system-test
+  name: nomos-system
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: test-git-server
-  namespace: nomos-system-test
+  namespace: nomos-system
 spec:
   selector:
     app: test-git-server
@@ -19,7 +19,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test-git-server
-  namespace: nomos-system-test
+  namespace: nomos-system
   labels:
     app: test-git-server
 spec:
