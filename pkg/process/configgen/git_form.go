@@ -44,7 +44,7 @@ type GitForm struct {
 	// The default settings.
 	defaultCfg config.GitConfig
 	// The model to modify when editing a new form.
-	currentConfig config.GitConfig
+	currentConfig *config.GitConfig
 	// Toggling ssh sync, represented as string (Y/n).
 	useSshAsString string
 	// The sync wait period in seconds, represented as string.
@@ -52,8 +52,8 @@ type GitForm struct {
 }
 
 // NewGitForm returns a new form for querying git options.
-func NewGitForm(o dialog.Options, cfg config.GitConfig) *GitForm {
-	gf := &GitForm{defaultCfg: cfg, currentConfig: cfg}
+func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
+	gf := &GitForm{defaultCfg: *cfg, currentConfig: cfg}
 
 	const (
 		gitSyncRepoText   = "Git repository (GIT_SYNC_REPO):"
