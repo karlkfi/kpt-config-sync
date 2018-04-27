@@ -15,12 +15,9 @@
 
 set -u
 
-# Should be $NOMOS/e2e
-TESTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
-# Should be $NOMOS/
-MAKEDIR=$TESTDIR/..
+TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Path to demo acme yaml
-ACME=$MAKEDIR/examples/acme/policynodes/acme.yaml
+ACME=acme.yaml
 
 # Run for every test
 function setUp() {
@@ -61,7 +58,7 @@ function testSyncerRoleBindings() {
 }
 
 function testSyncerRoleBindingsChange() {
-  kubectl apply -f ${TESTDIR}/test-syncer-change-rolebinding-backend.yaml > /dev/null
+  kubectl apply -f test-syncer-change-rolebinding-backend.yaml > /dev/null
   sleep 1
   assertContains "kubectl get rolebindings -n backend bob-rolebinding" "NotFound"
   assertContains "kubectl get rolebindings -n backend robert-rolebinding -o yaml" "acme-admin"
@@ -140,12 +137,36 @@ function waitFor() {
 TEST_FUNCTIONS=${TEST_FUNCTIONS:-$(declare -F)}
 
 ######################## MAIN #########################
+function setUpEnv() {
+  echo "****************** Setting up environment ******************"
+  readonly kubeconfig_output="/opt/installer/kubeconfig/config"
+  # We need to fix up the kubeconfig paths because these may not match between
+  # the container and the host.
+  # /somepath/gcloud becomes /use/local/gcloud/google-cloud/sdk/bin/gcloud.
+  # Then, make it read-writable to the owner only.
+  cat /home/user/.kube/config | \
+    sed -e "s+cmd-path: [^ ]*gcloud+cmd-path: /usr/local/gcloud/google-cloud-sdk/bin/gcloud+g" \
+    > "${kubeconfig_output}"
+  chmod 600 ${kubeconfig_output}
+
+  suggested_user="$(gcloud config get-value account)"
+
+  ./installer \
+    --config="${TEST_DIR}/install-config.yaml" \
+    --log_dir=/tmp \
+    --suggested_user="${suggested_user}" \
+    --use_current_context=true \
+    --vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10
+  echo "****************** Environment is ready ******************"
+}
+
 function main() {
   if [[ ! "kubectl get ns > /dev/null" ]]; then
     echo "Kubectl/Cluster misconfigured"
     exit 1
   fi
 
+  cd ${TEST_DIR}
   echo "****************** Starting tests ******************"
   # for each function starting with "test"
   for test in $TEST_FUNCTIONS; do
@@ -161,4 +182,31 @@ function main() {
   done
 }
 
+function cleanUp() {
+  echo "****************** Cleaning up environment ******************"
+  kubectl delete ValidatingWebhookConfiguration policy-nodes.nomos.dev --ignore-not-found
+  kubectl delete ValidatingWebhookConfiguration resource-quota.nomos.dev --ignore-not-found
+  kubectl delete policynodes --all || true
+  kubectl delete clusterpolicy --all || true
+  kubectl delete --ignore-not-found ns nomos-system
+  kubectl delete --ignore-not-found ns nomos-system-test
+  ! pkill -f "kubectl -n=nomos-system-test port-forward.*2222:22"
+
+  echo "Deleting namespaces nomos-system and nomos-system-test, this may take a minute"
+  while kubectl get ns nomos-system > /dev/null 2>&1
+  do
+    sleep 3
+    echo -n "."
+  done
+  while kubectl get ns nomos-system-test > /dev/null 2>&1
+  do
+    sleep 3
+    echo -n "."
+  done
+  echo
+}
+
+cleanUp
+setUpEnv
 main
+cleanUp

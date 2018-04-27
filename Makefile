@@ -233,6 +233,40 @@ deploy: installer-image
 		--use_current_context=$(USE_CURRENT_CONTEXT) \
 		--version=$(IMAGE_TAG)
 
+# Creates staging directory for building e2e docker image. Note that it is basically a copy of the
+# staging directory for the installer plus a few extras for e2e.
+e2e-staging: installer-image
+	mkdir -p $(STAGING_DIR)/e2e-tests
+	cp -r $(STAGING_DIR)/installer/* $(STAGING_DIR)/e2e-tests
+	cp -r $(TOP_DIR)/build/e2e-tests/* $(STAGING_DIR)/e2e-tests
+	cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
+	cp $(TOP_DIR)/examples/acme/policynodes/acme.yaml $(OUTPUT_DIR)/e2e
+
+# Builds the e2e docker image. Note that the GCP project is hardcoded since we currently don't want
+# or need a nomos-release version of the e2e-tests image.
+e2e-image: e2e-staging
+	docker build -t gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG) \
+		--build-arg "VERSION=$(IMAGE_TAG)" \
+		$(STAGING_DIR)/e2e-tests
+	gcloud docker -- push gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG)
+
+# Runs end-to-end tests.
+test-e2e: e2e-image
+	mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
+	@docker run -it \
+	    -u $$(id -u):$$(id -g) \
+	    -v "${HOME}":/home/user \
+	    -v "${INSTALLER_OUTPUT_DIR}/certs":/opt/installer/certs \
+	    -v "${INSTALLER_OUTPUT_DIR}/gen_configs":/opt/installer/gen_configs \
+	    -v "${INSTALLER_OUTPUT_DIR}/kubeconfig":/opt/installer/kubeconfig \
+	    -v "${INSTALLER_OUTPUT_DIR}/logs":/tmp \
+	    -v "$(TOP_DIR)/examples":/opt/installer/configs \
+	    -v "$(OUTPUT_DIR)/e2e":/opt/testing \
+	    -e "VERSION=${IMAGE_TAG}" \
+	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" "$@" \
+	    && echo "+++ E2E tests completed." \
+	    || (echo "### E2E tests failed. Logs are available in ${INSTALLER_OUTPUT_DIR}/logs"; exit 1)
+
 # Redeploys all components to cluster without rerunning the installer.
 redeploy-all: $(addprefix redeploy-, $(ALL_K8S_APPS))
 	@echo "Finished redeploying all components"
@@ -248,22 +282,6 @@ clean:
 # Runs unit tests in a docker container.
 test: buildenv $(OUTPUT_DIR)
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/test.sh $(NOMOS_GO_PKG)
-
-# Runs end-to-end tests.
-test-e2e: clean
-	e2e/e2e.sh --logtostderr --vmodule=bash=10,exec=10,kubectl=10
-# Runs end-to-end tests but leaves files for debugging.
-test-e2e-no-cleanup: clean
-	e2e/e2e.sh -skip_cleanup --logtostderr --vmodule=bash=10,exec=10,kubectl=10
-
-# Runs end-to-end tests without cleaning before. Might reduce build time
-# but could be polluted by old test runs.
-noclean-test-e2e: clean
-	e2e/e2e.sh --logtostderr --vmodule=bash=10,exec=10,kubectl=10
-# Runs end-to-end tests and leave files for debugging, but do not clean before building.
-# Might reduce build time but could be polluted by old test runs.
-noclean-test-e2e-no-cleanup: clean
-	e2e/e2e.sh -skip_cleanup --logtostderr --vmodule=bash=10,exec=10,kubectl=10
 
 # Runs all tests.
 test-all: test test-e2e

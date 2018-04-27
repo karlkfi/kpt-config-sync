@@ -11,13 +11,13 @@
 # - gcloud with access to a project that has GCR
 
 # To execute the test without one time setup
-# > SKIP_INITIAL_SETUP=1 e2e/e2e.sh
+# > SKIP_INITIAL_SETUP=1 e2e/e2e-go.sh
 
 # To execute a subset of tests without setup, run as folows:
-# > SKIP_INITIAL_SETUP=1 TEST_FUNCTIONS=testNomosResourceQuota e2e/e2e.sh
+# > SKIP_INITIAL_SETUP=1 TEST_FUNCTIONS=testNomosResourceQuota e2e/e2e-go.sh
 
 # To execute the tests without final clean up
-# > SKIP_FINAL_CLEANUP=1 e2e/e2e.sh
+# > SKIP_FINAL_CLEANUP=1 e2e/e2e-go.sh
 
 set -euo pipefail
 set -x
