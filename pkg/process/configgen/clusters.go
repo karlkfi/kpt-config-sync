@@ -85,6 +85,9 @@ func (c *Clusters) Run() (bool, error) {
 	if err != nil {
 		return false, errors.Wrapf(err, "while getting local clusters")
 	}
+	if len(cl.Clusters) == 0 {
+		return false, errors.New("no clusters available in kube config")
+	}
 
 	var o []interface{}
 	o = append(o, c.opts)
