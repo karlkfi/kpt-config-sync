@@ -1,0 +1,12 @@
+name: "go-ansiterm"
+description: "This is a cross platform Ansi Terminal Emulation library.  It reads a stream of Ansi characters and produces the appropriate function calls.  The results of the function calls are platform dependent."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/Azure/go-ansiterm"
+  }
+  version: "d6e3b3328b783f23731bc4d058875b0371ff8109"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "btree"
+description: "This package provides an in-memory B-Tree implementation for Go, useful as an ordered, mutable data structure."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/google/btree"
+  }
+  version: "316fb6d3f031ae8f4d457c6c5186b9e3ded70435"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

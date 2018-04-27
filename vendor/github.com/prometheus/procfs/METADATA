@@ -1,0 +1,12 @@
+name: "procfs"
+description: "This procfs package provides functions to retrieve system, kernel and process metrics from the pseudo-filesystem proc."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/prometheus/procfs"
+  }
+  version: "b15cd069a83443be3154b719d0cc9fe8117f09fb"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

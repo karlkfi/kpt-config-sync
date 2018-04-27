@@ -1,0 +1,12 @@
+name: "golang-lru"
+description: "This provides the `lru` package which implements a fixed-size thread safe LRU cache. It is based on the cache in Groupcache."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/hashicorp/golang-lru"
+  }
+  version: "0a025b7e63adc15a622f29b0b2c4c3848243bbf6"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: RECIPROCAL
+}

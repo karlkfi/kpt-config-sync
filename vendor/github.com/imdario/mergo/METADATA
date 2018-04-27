@@ -1,0 +1,12 @@
+name: "mergo"
+description: "A helper to merge structs and maps in Golang. Useful for configuration default values, avoiding messy if-statements."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/imdario/mergo"
+  }
+  version: "0.2.4"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "groupcache"
+description: "For API docs and examples, see http://godoc.org/github.com/golang/groupcache"
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/golang/groupcache"
+  }
+  version: "66deaeb636dff1ac7d938ce666d090556056a4b0"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

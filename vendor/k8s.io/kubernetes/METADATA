@@ -1,0 +1,12 @@
+name: "kubernetes"
+description: "Kubernetes is an open source system for managing [containerized applications] across multiple hosts; providing basic mechanisms for deployment, maintenance, and scaling of applications."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/kubernetes/kubernetes"
+  }
+  version: "v1.10.1"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

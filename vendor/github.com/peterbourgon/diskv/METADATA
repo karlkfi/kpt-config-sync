@@ -1,0 +1,12 @@
+name: "diskv"
+description: "Diskv (disk-vee) is a simple, persistent key-value store written in the Go language. It starts with an incredibly simple API for storing arbitrary data on a filesystem by key, and builds several layers of performance-enhancing abstraction on top.  The end result is a conceptually simple, but highly performant, disk-backed storage system."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/peterbourgon/diskv"
+  }
+  version: "v2.0.1"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

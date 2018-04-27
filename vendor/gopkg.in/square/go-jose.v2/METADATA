@@ -1,0 +1,12 @@
+name: "go-jose.v2"
+description: "Package jose aims to provide an implementation of the Javascript Object Signing and Encryption set of standards. This includes support for JSON Web Encryption, JSON Web Signature, and JSON Web Token standards."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/square/go-jose"
+  }
+  version: "v2.1.6"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "gengo"
+description: "A package for generating things based on go files. This mechanism was first used in Kubernetes and is split out here for ease of reuse and maintainability."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/kubernetes/gengo"
+  }
+  version: "01a732e01d00cb9a81bb0ca050d3e6d2b947927b"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

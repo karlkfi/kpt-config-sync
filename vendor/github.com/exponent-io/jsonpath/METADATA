@@ -1,0 +1,12 @@
+name: "jsonpath"
+description: "This package extends the [json.Decoder](https://golang.org/pkg/encoding/json/#Decoder) to support navigating a stream of JSON tokens. You should be able to use this extended Decoder places where a json.Decoder would have been used."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/exponent-io/jsonpath"
+  }
+  version: "d6023ce2651d8eafb5c75bb0c7167536102ec9f5"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

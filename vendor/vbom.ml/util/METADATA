@@ -1,0 +1,12 @@
+name: "util"
+description: "Go utility packages."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/fvbommel/util"
+  }
+  version: "256737ac55c46798123f754ab7d2c784e2c71783"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "perks"
+description: "Perks contains the Go package quantile that computes approximate quantiles over an unbounded data stream within low memory and CPU bounds."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/beorn7/perks"
+  }
+  version: "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "crypto"
+description: "This repository holds supplementary Go cryptography libraries."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://go.googlesource.com/crypto"
+  }
+  version: "9419663f5a44be8b34ca85f08abc5fe1be11f8a3"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "gnostic"
+description: "This repository contains a Go command line tool which converts JSON and YAML [OpenAPI](https://github.com/OAI/OpenAPI-Specification) descriptions to and from equivalent Protocol Buffer representations."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/googleapis/gnostic"
+  }
+  version: "3df79aa8f7cf7754d53f8290c4a8898646a40ca9"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

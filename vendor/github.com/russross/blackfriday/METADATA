@@ -1,0 +1,12 @@
+name: "blackfriday"
+description: "Blackfriday is a Markdown processor implemented in Go."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/russross/blackfriday"
+  }
+  version: "v1.5"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

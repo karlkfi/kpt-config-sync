@@ -1,0 +1,12 @@
+name: "genproto"
+description: "Go generated proto packages"
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/google/go-genproto"
+  }
+  version: "7fd901a49ba6a7f87732eb344f6e3c5b19d1b200"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

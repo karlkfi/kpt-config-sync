@@ -1,0 +1,12 @@
+name: "spdystream"
+description: "A multiplexed stream library using spdy"
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/docker/spdystream"
+  }
+  version: "bc6354cbbc295e925e4c611ffe90c1f287ee54db"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

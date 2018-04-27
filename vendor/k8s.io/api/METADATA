@@ -1,0 +1,12 @@
+name: "api"
+description: "This repo is still in the experimental stage. Shortly it will contain the schema of the API that are served by the Kubernetes apiserver."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/kubernetes/api"
+  }
+  version: "kubernetes-1.10.0"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "jwt-go"
+description: "A go implementation of [JSON Web Tokens](http://self-issued.info/docs/draft-ietf-oauth-json-web-token.html)"
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/dgrijalva/jwt-go"
+  }
+  version: "v3.1.0"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

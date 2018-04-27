@@ -1,0 +1,12 @@
+name: "logrus"
+description: "Logrus is a structured logger for Go (golang), completely API compatible with the standard library logger."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/Sirupsen/logrus"
+  }
+  version: "v1.0.4"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

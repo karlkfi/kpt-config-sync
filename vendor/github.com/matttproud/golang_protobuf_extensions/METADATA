@@ -1,0 +1,12 @@
+name: "golang_protobuf_extensions"
+description: "This repository provides various Protocol Buffer extensions for the Go language (golang), namely support for record length-delimited message streaming."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/matttproud/golang_protobuf_extensions"
+  }
+  version: "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

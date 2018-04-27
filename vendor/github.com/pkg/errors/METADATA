@@ -1,0 +1,12 @@
+name: "errors"
+description: "Package errors provides simple error handling primitives."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/pkg/errors"
+  }
+  version: "2b3a18b5f0fb6b4f9190549597d3f962c02bc5eb"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

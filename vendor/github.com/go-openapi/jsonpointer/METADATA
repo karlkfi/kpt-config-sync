@@ -1,0 +1,12 @@
+name: "jsonpointer"
+description: "An implementation of JSON Pointer - Go language"
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/go-openapi/jsonpointer"
+  }
+  version: "779f45308c19820f1a69e9a4cd965f496e0da10f"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

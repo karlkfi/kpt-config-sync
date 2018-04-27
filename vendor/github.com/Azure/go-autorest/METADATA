@@ -1,0 +1,12 @@
+name: "go-autorest"
+description: "Package go-autorest provides an HTTP request client for use with [Autorest](https://github.com/Azure/autorest.go)-generated API client packages."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/Azure/go-autorest"
+  }
+  version: "f81f475e6d928a1f988ccbcdd166f06f8f820c97"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

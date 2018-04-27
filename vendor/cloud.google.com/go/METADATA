@@ -1,0 +1,12 @@
+name: "gocloud"
+description: "Go packages for [Google Cloud Platform](https://cloud.google.com) services."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://code.googlesource.com/gocloud"
+  }
+  version: "44c25871af6e52037052bb92b5233d9fab4961db"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "jsonreference"
+description: "An implementation of JSON Reference - Go language"
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/go-openapi/jsonreference"
+  }
+  version: "36d33bfe519efae5632669801b180bf1a245da3b"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

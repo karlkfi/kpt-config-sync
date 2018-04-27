@@ -1,0 +1,12 @@
+name: "net"
+description: "This repository holds supplementary Go networking libraries."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://go.googlesource.com/net"
+  }
+  version: "4b14673ba32bee7f5ac0f990a48f033919fd418b"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

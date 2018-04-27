@@ -1,0 +1,12 @@
+name: "grpc"
+description: "The Go implementation of [gRPC](https://grpc.io/): A high performance, open source, general RPC framework that puts mobile and HTTP/2 first. For more information see the [gRPC Quick Start: Go](https://grpc.io/docs/quickstart/go.html) guide."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/grpc/grpc-go"
+  }
+  version: "v1.11.3"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

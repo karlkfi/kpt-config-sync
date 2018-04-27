@@ -1,0 +1,13 @@
+name: "inf.v0"
+description: "Package inf (type inf.Dec) implements "infinite-precision"
+decimal arithmetic."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/go-inf/inf"
+  }
+  version: "v0.9.0"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

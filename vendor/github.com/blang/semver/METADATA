@@ -1,0 +1,12 @@
+name: "semver"
+description: "Semantic Versioning (semver) library written in golang"
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/blang/semver"
+  }
+  version: "v3.5.1"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

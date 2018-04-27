@@ -1,0 +1,12 @@
+name: "go-wordwrap"
+description: "Install using `go get github.com/mitchellh/go-wordwrap`."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/mitchellh/go-wordwrap"
+  }
+  version: "ad45545899c7b13c020ea92b2072220eefad42b8"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "distribution"
+description: "The Docker toolset to pack, ship, store, and deliver content."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/docker/distribution"
+  }
+  version: "3800056b8832cf6075e78b282ac010131d8687bc"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

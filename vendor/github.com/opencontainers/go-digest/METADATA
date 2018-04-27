@@ -1,0 +1,12 @@
+name: "go-digest"
+description: "Common digest package used across the container ecosystem."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/opencontainers/go-digest"
+  }
+  version: "v1.0.0-rc1"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

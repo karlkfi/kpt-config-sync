@@ -1,0 +1,12 @@
+name: "yaml"
+description: "A wrapper around [go-yaml](https://github.com/go-yaml/yaml) designed to enable a better way of handling YAML when marshaling to and from structs."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/ghodss/yaml"
+  }
+  version: "v1.0.0"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

@@ -1,0 +1,12 @@
+name: "gofuzz"
+description: "Fuzz testing for go."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/google/gofuzz"
+  }
+  version: "24818f796faf91cd76ec7bddd72458fbced7a6c1"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

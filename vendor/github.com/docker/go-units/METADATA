@@ -1,0 +1,12 @@
+name: "go-units"
+description: "Parse and print size and time units in human-readable format"
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/docker/go-units"
+  }
+  version: "v0.3.2"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

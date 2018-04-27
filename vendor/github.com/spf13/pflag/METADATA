@@ -1,0 +1,12 @@
+name: "pflag"
+description: "POSIX/GNU-style --flags."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/spf13/pflag"
+  }
+  version: "1f33b80956cde38911d1f23d764deb8d77a649ce"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}
