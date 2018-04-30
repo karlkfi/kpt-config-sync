@@ -36,7 +36,7 @@ import (
 
 var dir = flag.String("dir", "", "Directory containing dep lock file")
 var printDeps = flag.Bool("print-deps", false, "Print vendored deps")
-var renameFiles = flag.Bool("rename-files", false, "Rename LICENCE files")
+var renameFiles = flag.Bool("rename-files", false, "Rename/merge LICENSE files")
 var noRestrictedLicense = flag.Bool("no-restricted-license", true, "Disallow restricted licenses")
 var generateMetaFile = flag.Bool("generate-meta-file", false, "Generate METADATA file")
 
