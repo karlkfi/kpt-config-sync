@@ -55,6 +55,11 @@ third_party {
 }
 `
 	sep = "\n\n-----------------------------------------------------------------------\n\n"
+
+	// MIT license.
+	MIT = "Permission is hereby granted, free of charge, to any person"
+	// BSD3clause matches BSD 3-clause licence.
+	BSD3clause = "Redistribution and use in source and binary forms, with or without"
 )
 
 const (
@@ -65,9 +70,10 @@ const (
 
 var (
 	licenseCategories = map[string]licenseType{
-		"MIT":    notice,
-		"Apache": notice,
-		"ISC":    notice,
+		MIT:                      notice,
+		BSD3clause:               notice,
+		"Apache License":         notice,
+		"ISC License":            notice,
 		"Mozilla Public License": reciprocal,
 		"LGPLv3":                 restricted,
 	}
