@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 
 package modules
 
@@ -64,7 +65,7 @@ func TestRoles(t *testing.T) {
 	}
 
 	testSuite := test.ModuleTest{
-		Module: NewRoleModule(nil, nil),
+		Module: NewRole(nil, nil),
 		Equals: test.ModuleEqualTestcases{
 			test.ModuleEqualTestcase{
 				Name:        "Both empty",

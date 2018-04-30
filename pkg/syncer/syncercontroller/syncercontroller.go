@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 
 package syncercontroller
 
@@ -39,17 +40,17 @@ func New(injectArgs args.InjectArgs) *SyncerController {
 // Start creates the appropriate sub modules and then starts the controller
 func (s *SyncerController) Start(runArgs run.RunArguments) {
 	hierarchyModules := []policyhierarchycontroller.Module{
-		modules.NewResourceQuotaModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
-		modules.NewRoleModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
-		modules.NewRoleBindingModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
+		modules.NewResourceQuota(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
+		modules.NewRole(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
+		modules.NewRoleBinding(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
 	}
 	s.injectArgs.ControllerManager.AddController(
 		policyhierarchycontroller.NewController(s.injectArgs, hierarchyModules))
 
 	clusterModules := []clusterpolicycontroller.Module{
-		clustermodules.NewClusterRolesModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
-		clustermodules.NewClusterRoleBindingsModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
-		clustermodules.NewPodSecurityPoliciesModule(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
+		clustermodules.NewClusterRoles(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
+		clustermodules.NewClusterRoleBindings(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
+		clustermodules.NewPodSecurityPolicies(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
 	}
 	s.injectArgs.ControllerManager.AddController(
 		clusterpolicycontroller.NewController(s.injectArgs, clusterModules))

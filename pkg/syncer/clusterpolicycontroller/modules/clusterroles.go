@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 
 package modules
 
@@ -29,31 +30,31 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// ClusterRolesModule implements a module for comparing clusterroles and
+// ClusterRoles implements a module for comparing clusterroles and
 // generating actions to update them.
-type ClusterRolesModule struct {
+type ClusterRoles struct {
 	client    kubernetes.Interface
 	informers informers.SharedInformerFactory
 }
 
-var _ clusterpolicycontroller.Module = &ClusterRolesModule{}
+var _ clusterpolicycontroller.Module = &ClusterRoles{}
 
-// NewClusterRolesModule creates the module.
-func NewClusterRolesModule(
-	client kubernetes.Interface, informers informers.SharedInformerFactory) *ClusterRolesModule {
-	return &ClusterRolesModule{
+// NewClusterRoles creates the module.
+func NewClusterRoles(
+	client kubernetes.Interface, informers informers.SharedInformerFactory) *ClusterRoles {
+	return &ClusterRoles{
 		client:    client,
 		informers: informers,
 	}
 }
 
 // Name implements clusterpolicycontroller.Module.
-func (s *ClusterRolesModule) Name() string {
+func (s *ClusterRoles) Name() string {
 	return "ClusterRoles"
 }
 
 // Equal implements clusterpolicycontroller.Module.
-func (s *ClusterRolesModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
+func (s *ClusterRoles) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
 	lhs := lhsObj.(*rbac_v1.ClusterRole)
 	rhs := rhsObj.(*rbac_v1.ClusterRole)
 
@@ -68,22 +69,22 @@ func (s *ClusterRolesModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object)
 }
 
 // equalSpec performs equals on runtime.Objects
-func (s *ClusterRolesModule) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
+func (s *ClusterRoles) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
 	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
 }
 
 // InformerProvider implements clusterpolicycontroller.Module
-func (s *ClusterRolesModule) InformerProvider() controller_informers.InformerProvider {
+func (s *ClusterRoles) InformerProvider() controller_informers.InformerProvider {
 	return s.informers.Rbac().V1().ClusterRoles()
 }
 
 // Instance implements clusterpolicycontroller.Module
-func (s *ClusterRolesModule) Instance() meta_v1.Object {
+func (s *ClusterRoles) Instance() meta_v1.Object {
 	return &rbac_v1.ClusterRole{}
 }
 
 // Extract implements clusterpolicycontroller.Module
-func (s *ClusterRolesModule) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
+func (s *ClusterRoles) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
 	var roles []runtime.Object
 	for _, r := range clusterPolicy.Spec.ClusterRolesV1 {
 		roles = append(roles, r.DeepCopy())
@@ -92,7 +93,7 @@ func (s *ClusterRolesModule) Extract(clusterPolicy *policyhierarchy_v1.ClusterPo
 }
 
 // ActionSpec implements clusterpolicycontroller.Module
-func (s *ClusterRolesModule) ActionSpec() *action.ReflectiveActionSpec {
+func (s *ClusterRoles) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
 		&rbac_v1.ClusterRole{},
 		core_v1.SchemeGroupVersion,

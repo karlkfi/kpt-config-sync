@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 
 package modules
 
@@ -29,30 +30,30 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// ClusterRoleBindingsModule implements a module for comparing
+// ClusterRoleBindings implements a module for comparing
 // clusterrolebindings and generating actions to update them.
-type ClusterRoleBindingsModule struct {
+type ClusterRoleBindings struct {
 	client    kubernetes.Interface
 	informers informers.SharedInformerFactory
 }
 
-var _ clusterpolicycontroller.Module = &ClusterRoleBindingsModule{}
+var _ clusterpolicycontroller.Module = &ClusterRoleBindings{}
 
-// NewClusterRoleBindingsModule creates the module.
-func NewClusterRoleBindingsModule(
-	client kubernetes.Interface, informers informers.SharedInformerFactory) *ClusterRoleBindingsModule {
-	return &ClusterRoleBindingsModule{
+// NewClusterRoleBindings creates the module.
+func NewClusterRoleBindings(
+	client kubernetes.Interface, informers informers.SharedInformerFactory) *ClusterRoleBindings {
+	return &ClusterRoleBindings{
 		client:    client,
 		informers: informers,
 	}
 }
 
 // Name implements clusterpolicycontroller.Module.
-func (s *ClusterRoleBindingsModule) Name() string {
+func (s *ClusterRoleBindings) Name() string {
 	return "ClusterRoleBindings"
 }
 
-func (s *ClusterRoleBindingsModule) subjectsEqual(lhs *rbac_v1.ClusterRoleBinding, rhs *rbac_v1.ClusterRoleBinding) bool {
+func (s *ClusterRoleBindings) subjectsEqual(lhs *rbac_v1.ClusterRoleBinding, rhs *rbac_v1.ClusterRoleBinding) bool {
 	if len(lhs.Subjects) == 0 && len(rhs.Subjects) == 0 {
 		return true
 	}
@@ -60,7 +61,7 @@ func (s *ClusterRoleBindingsModule) subjectsEqual(lhs *rbac_v1.ClusterRoleBindin
 }
 
 // Equal implements clusterpolicycontroller.Module.
-func (s *ClusterRoleBindingsModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
+func (s *ClusterRoleBindings) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
 	lhs := lhsObj.(*rbac_v1.ClusterRoleBinding)
 	rhs := rhsObj.(*rbac_v1.ClusterRoleBinding)
 
@@ -72,22 +73,22 @@ func (s *ClusterRoleBindingsModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.
 }
 
 // equalSpec performs equals on runtime.Objects
-func (s *ClusterRoleBindingsModule) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
+func (s *ClusterRoleBindings) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
 	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
 }
 
 // InformerProvider implements clusterpolicycontroller.Module
-func (s *ClusterRoleBindingsModule) InformerProvider() controller_informers.InformerProvider {
+func (s *ClusterRoleBindings) InformerProvider() controller_informers.InformerProvider {
 	return s.informers.Rbac().V1().ClusterRoleBindings()
 }
 
 // Instance implements clusterpolicycontroller.Module
-func (s *ClusterRoleBindingsModule) Instance() meta_v1.Object {
+func (s *ClusterRoleBindings) Instance() meta_v1.Object {
 	return &rbac_v1.ClusterRoleBinding{}
 }
 
 // Extract implements clusterpolicycontroller.Module
-func (s *ClusterRoleBindingsModule) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
+func (s *ClusterRoleBindings) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
 	var roles []runtime.Object
 	for _, r := range clusterPolicy.Spec.ClusterRoleBindingsV1 {
 		roles = append(roles, r.DeepCopy())
@@ -96,7 +97,7 @@ func (s *ClusterRoleBindingsModule) Extract(clusterPolicy *policyhierarchy_v1.Cl
 }
 
 // ActionSpec implements clusterpolicycontroller.Module
-func (s *ClusterRoleBindingsModule) ActionSpec() *action.ReflectiveActionSpec {
+func (s *ClusterRoleBindings) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
 		&rbac_v1.ClusterRoleBinding{},
 		core_v1.SchemeGroupVersion,

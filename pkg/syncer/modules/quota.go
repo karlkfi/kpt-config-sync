@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 
 package modules
 
@@ -73,57 +74,57 @@ func (s *AggregatedQuota) Generate() hierarchy.Instances {
 	return instances
 }
 
-// ResourceQuotaModule implements a module for flattening quota.
-type ResourceQuotaModule struct {
+// ResourceQuota implements a module for flattening quota.
+type ResourceQuota struct {
 	client    kubernetes.Interface
 	informers informers.SharedInformerFactory
 }
 
-var _ policyhierarchycontroller.Module = &ResourceQuotaModule{}
+var _ policyhierarchycontroller.Module = &ResourceQuota{}
 
-// NewResourceQuotaModule creates the module.
-func NewResourceQuotaModule(
-	client kubernetes.Interface, informers informers.SharedInformerFactory) *ResourceQuotaModule {
-	return &ResourceQuotaModule{
+// NewResourceQuota creates the module.
+func NewResourceQuota(
+	client kubernetes.Interface, informers informers.SharedInformerFactory) *ResourceQuota {
+	return &ResourceQuota{
 		client:    client,
 		informers: informers,
 	}
 }
 
 // Name implements policyhierarchycontroller.Module
-func (s *ResourceQuotaModule) Name() string {
+func (s *ResourceQuota) Name() string {
 	return "ResourceQuota"
 }
 
 // Equal implements policyhierarchycontroller.Module
-func (s *ResourceQuotaModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
+func (s *ResourceQuota) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
 	lhs := lhsObj.(*core_v1.ResourceQuota)
 	rhs := rhsObj.(*core_v1.ResourceQuota)
 	return resourcequota.ResourceListsEqual(lhs.Spec.Hard, rhs.Spec.Hard)
 }
 
 // equalSpec performs equals on runtime.Objects
-func (s *ResourceQuotaModule) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
+func (s *ResourceQuota) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
 	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
 }
 
 // NewAggregatedNode implements policyhierarchycontroller.Module
-func (s *ResourceQuotaModule) NewAggregatedNode() hierarchy.AggregatedNode {
+func (s *ResourceQuota) NewAggregatedNode() hierarchy.AggregatedNode {
 	return &AggregatedQuota{}
 }
 
 // Instance implements policyhierarchycontroller.Module
-func (s *ResourceQuotaModule) Instance() meta_v1.Object {
+func (s *ResourceQuota) Instance() meta_v1.Object {
 	return &core_v1.ResourceQuota{}
 }
 
 // InformerProvider implements policyhierarchycontroller.Module
-func (s *ResourceQuotaModule) InformerProvider() controller_informers.InformerProvider {
+func (s *ResourceQuota) InformerProvider() controller_informers.InformerProvider {
 	return s.informers.Core().V1().ResourceQuotas()
 }
 
 // ActionSpec implements policyhierarchycontroller.Module
-func (s *ResourceQuotaModule) ActionSpec() *action.ReflectiveActionSpec {
+func (s *ResourceQuota) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
 		&core_v1.ResourceQuota{},
 		core_v1.SchemeGroupVersion,

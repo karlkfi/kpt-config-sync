@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 
 package modules
 
@@ -55,29 +56,29 @@ func (s *AggregatedRoleBinding) Generate() hierarchy.Instances {
 
 var _ hierarchy.AggregatedNode = &AggregatedRoleBinding{}
 
-// RoleBindingModule implements a module for flattening roles.
-type RoleBindingModule struct {
+// RoleBinding implements a module for flattening roles.
+type RoleBinding struct {
 	client    kubernetes.Interface
 	informers informers.SharedInformerFactory
 }
 
-var _ policyhierarchycontroller.Module = &RoleBindingModule{}
+var _ policyhierarchycontroller.Module = &RoleBinding{}
 
-// NewRoleBindingModule creates the module.
-func NewRoleBindingModule(
-	client kubernetes.Interface, informers informers.SharedInformerFactory) *RoleBindingModule {
-	return &RoleBindingModule{
+// NewRoleBinding creates the module.
+func NewRoleBinding(
+	client kubernetes.Interface, informers informers.SharedInformerFactory) *RoleBinding {
+	return &RoleBinding{
 		client:    client,
 		informers: informers,
 	}
 }
 
 // Name implements policyhierarchycontroller.Module
-func (s *RoleBindingModule) Name() string {
+func (s *RoleBinding) Name() string {
 	return "RoleBinding"
 }
 
-func (s *RoleBindingModule) subjectsEqual(lhs *rbac_v1.RoleBinding, rhs *rbac_v1.RoleBinding) bool {
+func (s *RoleBinding) subjectsEqual(lhs *rbac_v1.RoleBinding, rhs *rbac_v1.RoleBinding) bool {
 	if len(lhs.Subjects) == 0 && len(rhs.Subjects) == 0 {
 		return true
 	}
@@ -85,34 +86,34 @@ func (s *RoleBindingModule) subjectsEqual(lhs *rbac_v1.RoleBinding, rhs *rbac_v1
 }
 
 // Equal implements policyhierarchycontroller.Module
-func (s *RoleBindingModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
+func (s *RoleBinding) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
 	lhs := lhsObj.(*rbac_v1.RoleBinding)
 	rhs := rhsObj.(*rbac_v1.RoleBinding)
 	return reflect.DeepEqual(lhs.RoleRef, rhs.RoleRef) && s.subjectsEqual(lhs, rhs)
 }
 
 // equalSpec performs equals on runtime.Objects
-func (s *RoleBindingModule) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
+func (s *RoleBinding) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
 	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
 }
 
 // NewAggregatedNode implements policyhierarchycontroller.Module
-func (s *RoleBindingModule) NewAggregatedNode() hierarchy.AggregatedNode {
+func (s *RoleBinding) NewAggregatedNode() hierarchy.AggregatedNode {
 	return &AggregatedRoleBinding{}
 }
 
 // Instance implements policyhierarchycontroller.Module
-func (s *RoleBindingModule) Instance() meta_v1.Object {
+func (s *RoleBinding) Instance() meta_v1.Object {
 	return &rbac_v1.RoleBinding{}
 }
 
 // InformerProvider implements policyhierarchycontroller.Module
-func (s *RoleBindingModule) InformerProvider() controller_informers.InformerProvider {
+func (s *RoleBinding) InformerProvider() controller_informers.InformerProvider {
 	return s.informers.Rbac().V1().RoleBindings()
 }
 
 // ActionSpec implements policyhierarchycontroller.Module
-func (s *RoleBindingModule) ActionSpec() *action.ReflectiveActionSpec {
+func (s *RoleBinding) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
 		&rbac_v1.RoleBinding{},
 		rbac_v1.SchemeGroupVersion,

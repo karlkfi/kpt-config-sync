@@ -11,6 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Reviewed by sunilarora
 package modules
 
 import (
@@ -69,7 +70,7 @@ func (u *UnpackTests) Run(t *testing.T) {
 
 func TestRoleBindingsUnpack(t *testing.T) {
 	testCases := UnpackTests{
-		module: NewClusterRoleBindingsModule(nil, nil),
+		module: NewClusterRoleBindings(nil, nil),
 		field:  "ClusterRoleBindingsV1",
 		testcases: []UnpackTest{
 			UnpackTest{
@@ -94,7 +95,7 @@ func TestRoleBindingsUnpack(t *testing.T) {
 }
 
 func TestRoleBindingsEqual(t *testing.T) {
-	clusterRolesModule := NewClusterRoleBindingsModule(nil, nil)
+	clusterRolesModule := NewClusterRoleBindings(nil, nil)
 	testCases := []struct {
 		name         string
 		roleBindingL *rbac_v1.ClusterRoleBinding

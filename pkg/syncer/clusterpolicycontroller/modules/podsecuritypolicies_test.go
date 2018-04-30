@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 package modules
 
 import (
@@ -20,7 +21,7 @@ import (
 
 func TestSecurityPoliciesUnpack(t *testing.T) {
 	testCases := UnpackTests{
-		module: NewPodSecurityPoliciesModule(nil, nil),
+		module: NewPodSecurityPolicies(nil, nil),
 		field:  "PodSecurityPoliciesV1Beta1",
 		testcases: []UnpackTest{
 			UnpackTest{
@@ -45,7 +46,7 @@ func TestSecurityPoliciesUnpack(t *testing.T) {
 }
 
 func TestSecurityPoliciesEqual(t *testing.T) {
-	podSecurityPoliciesModule := NewPodSecurityPoliciesModule(nil, nil)
+	podSecurityPoliciesModule := NewPodSecurityPolicies(nil, nil)
 	testCases := []struct {
 		name            string
 		securityPolicyL *v1beta1.PodSecurityPolicy

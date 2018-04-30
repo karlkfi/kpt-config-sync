@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 
 // Package policyhierarchycontroller defines a kubebuilder controller.GenericController that will
 // handle hierarchical policy synchonization.  The goal for this package is to create a common
@@ -50,8 +51,7 @@ import (
 
 // PolicyHieraryController controls policies based on the declarations in the PolicyNodes.
 type PolicyHieraryController struct {
-	injectArgs args.InjectArgs
-	// queue           workqueue.Interface
+	injectArgs      args.InjectArgs
 	namespaceLister listers_core_v1.NamespaceLister
 	hierarchy       hierarchy.Interface
 	modules         []Module

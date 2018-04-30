@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 
 package actions
 
@@ -27,7 +28,7 @@ import (
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 )
 
-// NewResourceQuotaDeleteAction creates an delete action that will quota remove limits.
+// NewResourceQuotaDeleteAction creates a delete action that will remove quota limits.
 func NewResourceQuotaDeleteAction(
 	namespace string,
 	kubernetesInterface kubernetes.Interface,

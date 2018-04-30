@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 
 package modules
 
@@ -56,30 +57,30 @@ func (s *AggregatedRole) Generate() hierarchy.Instances {
 
 var _ hierarchy.AggregatedNode = &AggregatedRole{}
 
-// RoleModule implements a module for flattening roles.
-type RoleModule struct {
+// Role implements a module for flattening roles.
+type Role struct {
 	client    kubernetes.Interface
 	informers informers.SharedInformerFactory
 }
 
-// NewRoleModule creates the module.
-func NewRoleModule(
-	client kubernetes.Interface, informers informers.SharedInformerFactory) *RoleModule {
-	return &RoleModule{
+// NewRole creates the module.
+func NewRole(
+	client kubernetes.Interface, informers informers.SharedInformerFactory) *Role {
+	return &Role{
 		client:    client,
 		informers: informers,
 	}
 }
 
-var _ policyhierarchycontroller.Module = &RoleModule{}
+var _ policyhierarchycontroller.Module = &Role{}
 
 // Name implements policyhierarchycontroller.Module
-func (s *RoleModule) Name() string {
+func (s *Role) Name() string {
 	return "Role"
 }
 
 // Equal implements policyhierarchycontroller.Module
-func (s *RoleModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
+func (s *Role) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
 	lhs := lhsObj.(*rbac_v1.Role)
 	rhs := rhsObj.(*rbac_v1.Role)
 	if len(lhs.Rules) == 0 && len(rhs.Rules) == 0 {
@@ -89,27 +90,27 @@ func (s *RoleModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
 }
 
 // equalSpec performs equals on runtime.Objects
-func (s *RoleModule) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
+func (s *Role) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
 	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
 }
 
 // NewAggregatedNode implements policyhierarchycontroller.Module
-func (s *RoleModule) NewAggregatedNode() hierarchy.AggregatedNode {
+func (s *Role) NewAggregatedNode() hierarchy.AggregatedNode {
 	return &AggregatedRole{}
 }
 
 // Instance implements policyhierarchycontroller.Module
-func (s *RoleModule) Instance() meta_v1.Object {
+func (s *Role) Instance() meta_v1.Object {
 	return &rbac_v1.Role{}
 }
 
 // InformerProvider implements policyhierarchycontroller.Module
-func (s *RoleModule) InformerProvider() controller_informers.InformerProvider {
+func (s *Role) InformerProvider() controller_informers.InformerProvider {
 	return s.informers.Rbac().V1().Roles()
 }
 
 // ActionSpec implements policyhierarchycontroller.Module
-func (s *RoleModule) ActionSpec() *action.ReflectiveActionSpec {
+func (s *Role) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
 		&rbac_v1.Role{},
 		rbac_v1.SchemeGroupVersion,

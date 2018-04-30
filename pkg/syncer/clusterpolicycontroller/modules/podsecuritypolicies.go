@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 
 package modules
 
@@ -28,31 +29,31 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// PodSecurityPoliciesModule implements a module for comparing
+// PodSecurityPolicies implements a module for comparing
 // podsecuritypolicies and generating actions to update them.
-type PodSecurityPoliciesModule struct {
+type PodSecurityPolicies struct {
 	client    kubernetes.Interface
 	informers informers.SharedInformerFactory
 }
 
-var _ clusterpolicycontroller.Module = &PodSecurityPoliciesModule{}
+var _ clusterpolicycontroller.Module = &PodSecurityPolicies{}
 
-// NewPodSecurityPoliciesModule creates the module.
-func NewPodSecurityPoliciesModule(
-	client kubernetes.Interface, informers informers.SharedInformerFactory) *PodSecurityPoliciesModule {
-	return &PodSecurityPoliciesModule{
+// NewPodSecurityPolicies creates the module.
+func NewPodSecurityPolicies(
+	client kubernetes.Interface, informers informers.SharedInformerFactory) *PodSecurityPolicies {
+	return &PodSecurityPolicies{
 		client:    client,
 		informers: informers,
 	}
 }
 
 // Name implements clusterpolicycontroller.Module.
-func (s *PodSecurityPoliciesModule) Name() string {
+func (s *PodSecurityPolicies) Name() string {
 	return "PodSecurityPolicies"
 }
 
 // Equal implements clusterpolicycontroller.Module.
-func (s *PodSecurityPoliciesModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
+func (s *PodSecurityPolicies) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
 	lhs := lhsObj.(*v1beta.PodSecurityPolicy)
 	rhs := rhsObj.(*v1beta.PodSecurityPolicy)
 
@@ -64,22 +65,22 @@ func (s *PodSecurityPoliciesModule) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.
 }
 
 // equalSpec performs equals on runtime.Objects
-func (s *PodSecurityPoliciesModule) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
+func (s *PodSecurityPolicies) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
 	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
 }
 
 // InformerProvider implements clusterpolicycontroller.Module
-func (s *PodSecurityPoliciesModule) InformerProvider() controller_informers.InformerProvider {
+func (s *PodSecurityPolicies) InformerProvider() controller_informers.InformerProvider {
 	return s.informers.Extensions().V1beta1().PodSecurityPolicies()
 }
 
 // Instance implements clusterpolicycontroller.Module
-func (s *PodSecurityPoliciesModule) Instance() meta_v1.Object {
+func (s *PodSecurityPolicies) Instance() meta_v1.Object {
 	return &v1beta.PodSecurityPolicy{}
 }
 
 // Extract implements clusterpolicycontroller.Module
-func (s *PodSecurityPoliciesModule) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
+func (s *PodSecurityPolicies) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
 	var policies []runtime.Object
 	for _, p := range clusterPolicy.Spec.PodSecurityPoliciesV1Beta1 {
 		policies = append(policies, p.DeepCopy())
@@ -88,7 +89,7 @@ func (s *PodSecurityPoliciesModule) Extract(clusterPolicy *policyhierarchy_v1.Cl
 }
 
 // ActionSpec implements clusterpolicycontroller.Module
-func (s *PodSecurityPoliciesModule) ActionSpec() *action.ReflectiveActionSpec {
+func (s *PodSecurityPolicies) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
 		&v1beta.PodSecurityPolicy{},
 		v1beta.SchemeGroupVersion,

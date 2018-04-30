@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// Reviewed by sunilarora
 package modules
 
 import (
@@ -21,7 +22,7 @@ import (
 
 func TestRolesUnpack(t *testing.T) {
 	testCases := UnpackTests{
-		module: NewClusterRolesModule(nil, nil),
+		module: NewClusterRoles(nil, nil),
 		field:  "ClusterRolesV1",
 		testcases: []UnpackTest{
 			UnpackTest{
@@ -46,7 +47,7 @@ func TestRolesUnpack(t *testing.T) {
 }
 
 func TestRolesEqual(t *testing.T) {
-	clusterRolesModule := NewClusterRolesModule(nil, nil)
+	clusterRolesModule := NewClusterRoles(nil, nil)
 	testCases := []struct {
 		name         string
 		clusterRoleL *rbac_v1.ClusterRole
