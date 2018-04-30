@@ -132,7 +132,7 @@ goimports:
 	goimports -w $(NOMOS_CODE_DIRS)
 
 # Runs linter
-lint: buildenv
+lint: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
 
 # Compiles nomos hermetically using a docker container.
