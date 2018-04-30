@@ -36,7 +36,6 @@ spec:
       serviceAccountName: syncer
       containers:
         - name: syncer
-          args: ["-useNewSyncer"]
           image: IMAGE_NAME
           ports:
             - containerPort: 8675
