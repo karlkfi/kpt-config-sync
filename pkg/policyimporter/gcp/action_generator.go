@@ -22,16 +22,16 @@ import (
 	"io"
 	"path"
 
+	"github.com/gogo/googleapis/google/rpc"
+	ptypes "github.com/gogo/protobuf/types"
+	"github.com/gogo/status"
 	"github.com/golang/glog"
-	"github.com/golang/protobuf/ptypes"
+	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	client_action "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
-	spb "google.golang.org/genproto/googleapis/rpc/status"
-	watcher "google.golang.org/genproto/googleapis/watcher/v1"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -295,7 +295,7 @@ func unmarshalError(change *watcher.Change) error {
 		panic("Must be in error state")
 	}
 
-	s := &spb.Status{}
+	s := &rpc.Status{}
 	err := ptypes.UnmarshalAny(change.Data, s)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal error status")

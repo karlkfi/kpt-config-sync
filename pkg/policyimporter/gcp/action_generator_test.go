@@ -23,23 +23,22 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	ptypes "github.com/gogo/protobuf/types"
+	"github.com/gogo/status"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes"
-	any_proto "github.com/golang/protobuf/ptypes/any"
+	watcher "github.com/google/nomos/clientgen/watcher/v1"
+	mock "github.com/google/nomos/clientgen/watcher/v1/testing"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/actions"
-	gcp_testing "github.com/google/nomos/pkg/policyimporter/gcp/testing"
 	"github.com/google/nomos/pkg/util/policynode"
-	"google.golang.org/genproto/googleapis/watcher/v1"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var (
 	// Example PolicyNode resources
 	orgPN, nsPN *v1.PolicyNode
 	// Example any proto marshalled policies resources.
-	emptyProto, orgPNProto, orgCPProto, folderPNProto, nsPNProto *any_proto.Any
+	emptyProto, orgPNProto, orgCPProto, folderPNProto, nsPNProto *ptypes.Any
 )
 
 var testCases []testCase
@@ -59,7 +58,7 @@ type testCase struct {
 }
 
 func init() {
-	emptyProto = &any_proto.Any{}
+	emptyProto = &ptypes.Any{}
 	anError, err := ptypes.MarshalAny(status.New(codes.DeadlineExceeded, "deadline exceeded when receiving policies").Proto())
 	if err != nil {
 		panic(err)
@@ -217,15 +216,14 @@ func init() {
 			},
 			expectedError: true,
 		},
-		// TODO(frankf): Fix incompatibily between golang/protobuf and gogo/protobuf.
-		//{
-		//	testName: "Initial state with unmarshal error",
-		//	batch1: []*watcher.Change{
-		//		{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
-		//		{Element: "ClusterPolicy", State: watcher.Change_EXISTS, Continued: false, Data: orgCPProto},
-		//	},
-		//	expectedError: false,
-		//},
+		{
+			testName: "Initial state with unmarshal error",
+			batch1: []*watcher.Change{
+				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
+				{Element: "ClusterPolicy", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
+			},
+			expectedError: true,
+		},
 		{
 			testName: "Initial state no root",
 			batch1: []*watcher.Change{
@@ -271,7 +269,7 @@ func TestGen(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			stream := gcp_testing.NewMockWatcher_WatchClient(ctrl)
+			stream := mock.NewMockWatcher_WatchClient(ctrl)
 			out := make(chan actionVal)
 			// Factories take nil arguments since we don't need to apply the actions for these tests.
 			g := newActionGenerator(
@@ -321,7 +319,7 @@ func TestDone(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	stream := gcp_testing.NewMockWatcher_WatchClient(ctrl)
+	stream := mock.NewMockWatcher_WatchClient(ctrl)
 	out := make(chan actionVal)
 	g := newActionGenerator(stream, out, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil))
 
@@ -341,7 +339,7 @@ func TestRecvErr(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	stream := gcp_testing.NewMockWatcher_WatchClient(ctrl)
+	stream := mock.NewMockWatcher_WatchClient(ctrl)
 	out := make(chan actionVal)
 	g := newActionGenerator(stream, out, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil))
 
@@ -381,7 +379,7 @@ func newClusterPolicy(name string) *v1.ClusterPolicy {
 		})
 }
 
-func toAnyProto(m interface{}) *any_proto.Any {
+func toAnyProto(m interface{}) *ptypes.Any {
 	switch v := m.(type) {
 	case *v1.PolicyNode:
 		p, err := ptypes.MarshalAny(v)

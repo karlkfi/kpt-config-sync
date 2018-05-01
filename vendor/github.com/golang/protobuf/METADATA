@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/golang/protobuf"
   }
-  version: "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

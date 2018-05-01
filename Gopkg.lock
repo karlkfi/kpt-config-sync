@@ -203,14 +203,51 @@
   version = "v1.0.1"
 
 [[projects]]
+  name = "github.com/gogo/googleapis"
+  packages = [
+    "google/api",
+    "google/rpc"
+  ]
+  revision = "b23578765ee54ff6bceff57f397d833bf4ca6869"
+
+[[projects]]
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
+    "plugin/compare",
+    "plugin/defaultcheck",
+    "plugin/description",
+    "plugin/embedcheck",
+    "plugin/enumstringer",
+    "plugin/equal",
+    "plugin/face",
+    "plugin/gostring",
+    "plugin/marshalto",
+    "plugin/oneofcheck",
+    "plugin/populate",
+    "plugin/size",
+    "plugin/stringer",
+    "plugin/testgen",
+    "plugin/union",
+    "plugin/unmarshal",
     "proto",
+    "protoc-gen-gogo",
     "protoc-gen-gogo/descriptor",
-    "sortkeys"
+    "protoc-gen-gogo/generator",
+    "protoc-gen-gogo/grpc",
+    "protoc-gen-gogo/plugin",
+    "sortkeys",
+    "types",
+    "vanity",
+    "vanity/command"
   ]
   revision = "117892bf1866fbaa2318c03e50e40564c8845457"
+
+[[projects]]
+  name = "github.com/gogo/status"
+  packages = ["."]
+  revision = "23951469965b0104342ad7b9625586150b6baf5b"
+  version = "v1.0.2"
 
 [[projects]]
   name = "github.com/golang/dep"
@@ -248,11 +285,9 @@
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
-    "protoc-gen-go/descriptor",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
-    "ptypes/empty",
     "ptypes/timestamp"
   ]
   revision = "e09c5db296004fbe3f74490e84dcd62c3c5ddb1b"
@@ -586,11 +621,7 @@
 [[projects]]
   branch = "master"
   name = "google.golang.org/genproto"
-  packages = [
-    "googleapis/api/annotations",
-    "googleapis/rpc/status",
-    "googleapis/watcher/v1"
-  ]
+  packages = ["googleapis/rpc/status"]
   revision = "7fd901a49ba6a7f87732eb344f6e3c5b19d1b200"
 
 [[projects]]
@@ -1155,6 +1186,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d9abd341321cfeaa7dc50cd1406dc7a28282d2afde8c5e851e07ccf42d1001f1"
+  inputs-digest = "b1a3289026446fafc786be3294094002bc32bd49ae3c933d452ae98d9a9a885f"
   solver-name = "gps-cdcl"
   solver-version = 1
