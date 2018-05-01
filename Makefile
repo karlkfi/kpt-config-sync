@@ -68,10 +68,9 @@ ALL_K8S_APPS := syncer \
 	resourcequota-admission-controller \
 	policynodes-admission-controller
 
-# ALl Nomos apps
+# ALl Nomos apps that are dockerized.
 ALL_APPS := $(ALL_K8S_APPS) \
-	nomosvet \
-	licenselinter
+	nomosvet
 
 GIT_SERVER_SRC := https://github.com/jkarlosb/git-server-docker.git
 
