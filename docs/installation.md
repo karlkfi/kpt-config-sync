@@ -1,5 +1,14 @@
 # Installing Nomos
 
+## Important Note
+
+**Do not install Nomos on a cluster with existing namespaces or workloads**
+
+During the install process, Nomos deletes all namespaces that have been created
+on the cluster.  We are presently working on a non destructive installation
+process, and this document will be updated accordingly when the mechanisms are
+avialable.
+
 ## Requirements
 
 Before installing Nomos, there are a few tasks that must be performed once to
