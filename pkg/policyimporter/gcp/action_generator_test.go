@@ -283,7 +283,7 @@ func TestGen(t *testing.T) {
 				stream.EXPECT().Recv().Return(nil, io.EOF)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
 
 			go g.generate(ctx)
