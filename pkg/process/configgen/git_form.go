@@ -29,7 +29,7 @@ acting as the source of truth for the policies.`
 
 	// Rows to display various input fields in.
 	gitRepoRow       = 2
-	useSshRow        = 4
+	useSSHRow        = 4
 	branchToSyncRow  = 6
 	rootPolicyDirRow = 8
 	syncWaitRow      = 10
@@ -46,7 +46,7 @@ type GitForm struct {
 	// The model to modify when editing a new form.
 	currentConfig *config.GitConfig
 	// Toggling ssh sync, represented as string (Y/n).
-	useSshAsString string
+	useSSHAsString string
 	// The sync wait period in seconds, represented as string.
 	syncWaitAsString string
 }
@@ -57,16 +57,16 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 
 	const (
 		gitSyncRepoText   = "Git repository (GIT_SYNC_REPO):"
-		useSshText        = "Sync repo using ssh (Y/n) (GIT_SYNC_SSH):"
+		useSSHText        = "Sync repo using ssh (Y/n) (GIT_SYNC_SSH):"
 		branchToSyncText  = "Branch to sync (GIT_SYNC_BRANCH):"
 		rootPolicyDirText = "Root policy directory (POLICY_DIR):"
 		syncWaitText      = "Sync wait (in seconds) (GIT_SYNC_WAIT):"
 	)
 
 	gf.syncWaitAsString = fmt.Sprintf("%v", cfg.SyncWaitSeconds)
-	gf.useSshAsString = "n"
+	gf.useSSHAsString = "n"
 	if cfg.UseSSH {
-		gf.useSshAsString = "Y"
+		gf.useSSHAsString = "Y"
 	}
 	opts := []interface{}{
 		o,
@@ -81,10 +81,10 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 		),
 		dialog.FormItem(
 			dialog.Label{
-				Text: useSshText, Y: useSshRow, X: gitFormTextColumn},
+				Text: useSSHText, Y: useSSHRow, X: gitFormTextColumn},
 			dialog.Field{
-				Input: &gf.useSshAsString,
-				Y:     useSshRow, X: gitFormInputColumn,
+				Input: &gf.useSSHAsString,
+				Y:     useSSHRow, X: gitFormInputColumn,
 				ViewLen: 8, MaxLen: 8},
 		),
 		dialog.FormItem(
@@ -137,8 +137,8 @@ func (g *GitForm) Run() (bool, error) {
 	if err := g.form.Close(); err != nil {
 		return false, errors.Wrapf(err, "while filling in git config form")
 	}
-	useSsh := strings.ToLower(g.useSshAsString)
-	switch useSsh {
+	useSSH := strings.ToLower(g.useSSHAsString)
+	switch useSSH {
 	case "y":
 		g.currentConfig.UseSSH = true
 	case "n":

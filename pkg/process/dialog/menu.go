@@ -47,6 +47,8 @@ func MenuHeight(v int) MenuOption {
 	}
 }
 
+// MenuItem creates a MenuOption from input in order to generate elements
+// of a menu
 func MenuItem(tag, text string) MenuOption {
 	return func(m *Menu) {
 		if tag == "" {

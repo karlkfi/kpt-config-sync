@@ -31,18 +31,18 @@ import (
 
 var (
 	// Used only in package private tests to inject a substitute binary.
-	testBinary string   = ""
-	testArgs            = []string{}
-	testEnv    []string = nil
+	testBinary string
+	testArgs   = []string{}
+	testEnv    []string
 
 	// Outputs to be copied out if this module is used in a test fixture.
-	testOutput      io.Reader = nil
-	testErrorOutput io.Reader = nil
-	testError       error     = nil
+	testOutput      io.Reader
+	testErrorOutput io.Reader
+	testError       error
 
 	// The set of programs that have been registered through RequireProgram and
 	// the respective result of path lookup.
-	requiredPrograms map[string]error = map[string]error{}
+	requiredPrograms = map[string]error{}
 )
 
 // SetFakeOutputsForTest sets fake sources for output data of an exec'd

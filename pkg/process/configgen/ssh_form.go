@@ -36,6 +36,7 @@ repository without authentication and requires https protocol for the repo`
 
 var _ Action = (*SSHForm)(nil)
 
+// SSHForm encaptsulates a form's view, model, and defaults
 type SSHForm struct {
 	// The configuration view.
 	form *dialog.Form

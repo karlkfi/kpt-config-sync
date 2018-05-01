@@ -34,6 +34,7 @@ const (
 	menuMessage = `Select one of the options below to change the installation options.`
 )
 
+// Generator maintains the state of the configuration generation operation
 type Generator struct {
 	// defaultCfg is the starting configuration for the load.
 	defaultCfg config.Config
@@ -69,7 +70,7 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 		version:    version,
 		opts:       opts,
 	}
-	s := NewSave(g.out, &g.currentCfg)
+	s := newSave(g.out, &g.currentCfg)
 	g.actions = []Action{
 		NewUserForm(g.opts, &g.currentCfg.User),
 		NewClusters(g.opts, &g.currentCfg.Contexts),

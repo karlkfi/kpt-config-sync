@@ -82,7 +82,7 @@ func (t *Context) Kubectl(args ...string) (stdout, stderr string, err error) {
 	return // naked
 }
 
-// Kubectl will execute a kubectl command and panic if the script fails.
+// KubectlOrDie will execute a kubectl command and panic if the script fails.
 func (t *Context) KubectlOrDie(args ...string) (stdout, stderr string) {
 	stdout, stderr, err := t.Kubectl(args...)
 	if err != nil {
@@ -115,6 +115,7 @@ func (t *Context) DeleteConfigmap(name, namespace string) error {
 	return nil
 }
 
+// DeleteValidatingWebhookConfiguration deletes a validatingwebhookconfiguration from Kubernetes.
 func (t *Context) DeleteValidatingWebhookConfiguration(name string) error {
 	if _, _, err := t.Kubectl("delete", "validatingwebhookconfiguration", name, "--ignore-not-found"); err != nil {
 		return errors.Wrapf(err, "delete validatingwebhookconfiguration name=%q")
@@ -122,6 +123,10 @@ func (t *Context) DeleteValidatingWebhookConfiguration(name string) error {
 	return nil
 }
 
+// CreateSecretGenericFromFile creates a secret generic from the provided filenames
+//
+// Equivalent to:
+// kubectl create secret generic -n=[namespace] --from-file=[filename0] --from-file=[filename1]...
 func (t *Context) CreateSecretGenericFromFile(name, namespace string, filenames ...string) error {
 	args := []string{
 		"create", "secret", "generic", fmt.Sprintf("-n=%v", namespace), name,
@@ -225,6 +230,7 @@ func (t *Context) GetClusterVersion() (semver.Version, error) {
 	return v, nil
 }
 
+// ClusterList encapsulates a list of clusters
 type ClusterList struct {
 	// Clusters is the list of clusters available to the user, keyed by the
 	// name of the context.

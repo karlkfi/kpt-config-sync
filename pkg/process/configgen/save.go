@@ -26,7 +26,7 @@ type save struct {
 
 // NewSave creates a new save Action, writing the supplied configuration to the
 // supplied out filename.
-func NewSave(out string, cfg *config.Config) *save {
+func newSave(out string, cfg *config.Config) *save {
 	return &save{out: out, cfg: cfg}
 }
 

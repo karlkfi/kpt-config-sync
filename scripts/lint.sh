@@ -26,10 +26,6 @@ GOLINT_EXCLUDE_PACKAGES=(
   pkg/policyimporter
   pkg/policyimporter/actions
   pkg/policyimporter/filesystem
-  pkg/process/configgen
-  pkg/process/dialog
-  pkg/process/exec
-  pkg/process/kubectl
   pkg/version
 )
 function exclude() {
