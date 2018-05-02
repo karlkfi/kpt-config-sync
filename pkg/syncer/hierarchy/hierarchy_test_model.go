@@ -27,21 +27,6 @@ type TestNodeSpec struct {
 	Parent string
 }
 
-func createTestNode(name, parent string) *policyhierarchy_v1.PolicyNode {
-	return &policyhierarchy_v1.PolicyNode{
-		ObjectMeta: meta_v1.ObjectMeta{
-			Name: name,
-		},
-		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			Parent: parent,
-		},
-	}
-}
-
-func (s TestNodeSpec) node() *policyhierarchy_v1.PolicyNode {
-	return createTestNode(s.Name, s.Parent)
-}
-
 // TestNodeSpecs is a tiny type for a list of TestNodeSpec which represents a full hierarchy.
 type TestNodeSpecs []TestNodeSpec
 

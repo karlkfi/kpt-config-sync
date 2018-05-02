@@ -23,7 +23,19 @@ import (
 	"github.com/google/go-cmp/cmp"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func createTestNode(name, parent string) *policyhierarchy_v1.PolicyNode {
+	return &policyhierarchy_v1.PolicyNode{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: name,
+		},
+		Spec: policyhierarchy_v1.PolicyNodeSpec{
+			Parent: parent,
+		},
+	}
+}
 
 func TestGetAncestry(t *testing.T) {
 	validHierarchy := New(fakeinformers.NewPolicyNodeInformer(

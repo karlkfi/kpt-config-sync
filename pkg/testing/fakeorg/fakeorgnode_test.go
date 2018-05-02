@@ -46,15 +46,6 @@ func (th *TH) logError(expected interface{}, value interface{}, values ...interf
 			values...))
 }
 
-func (th *TH) logErrorf(expected interface{}, value interface{}, msg string, values ...interface{}) {
-	th.logErrorf(
-		"%s: \nExpected: %sActual: %s%s",
-		source(2),
-		spew.Sdump(expected),
-		spew.Sdump(value),
-		fmt.Sprintf(msg, values...))
-}
-
 func (th *TH) ExpectTrue(value bool, values ...interface{}) {
 	if !value {
 		th.logError(true, value, values...)
@@ -74,8 +65,7 @@ func (th *TH) ExpectEQ(expected interface{}, value interface{}, values ...interf
 }
 
 func strSort(values []string) []string {
-	var sorted sort.StringSlice
-	sorted = values
+	var sorted sort.StringSlice = values
 	sort.Sort(sorted)
 	return sorted
 }

@@ -127,7 +127,7 @@ func TestRunWithEnv(t *testing.T) {
 			c := NewRedirected(strings.NewReader(""), out, err)
 			c.SetEnv([]string{tt.env})
 			c.Run(context.Background(), "dummy_command")
-			if strings.Index(out.String(), tt.env) < 0 {
+			if !strings.Contains(out.String(), tt.env) {
 				t.Errorf("Unexpected: %v, want: %v", out.String(), tt.env)
 			}
 		})

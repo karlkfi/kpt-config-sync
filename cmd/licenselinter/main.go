@@ -189,7 +189,7 @@ func (l *linter) readDepLock() error {
 	}
 	for _, lp := range p.Lock.Projects() {
 		var m metadata
-		m.Version = fmt.Sprintf("%s", lp.Version())
+		m.Version = lp.Version().String()
 		m.Root = string(lp.Ident().ProjectRoot)
 		m.Name = path.Base(m.Root)
 		m.AbsPath = path.Join(l.dir, "vendor", m.Root)
@@ -197,7 +197,7 @@ func (l *linter) readDepLock() error {
 		if err != nil {
 			return err
 		}
-		m.URL = fmt.Sprintf("%s", urls[0])
+		m.URL = urls[0].String()
 		l.metas = append(l.metas, &m)
 	}
 	return nil
@@ -284,10 +284,7 @@ func fixLicenseFiles(licenses []string) error {
 			return err
 		}
 	}
-	if err := ioutil.WriteFile(correctPath, []byte(strings.Join(content, sep)), 0644); err != nil {
-		return err
-	}
-	return nil
+	return ioutil.WriteFile(correctPath, []byte(strings.Join(content, sep)), 0644)
 }
 
 func classifyLicense(f string) (licenseType, error) {

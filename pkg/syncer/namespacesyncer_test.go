@@ -33,21 +33,6 @@ import (
 
 const testUID = types.UID("0844e3b3-1059-11e8-9233-42010a800005")
 
-type ComputeNamespaceActionsTestCase struct {
-	policyNodeNamespaces  []string // namespaces defined in the poicy node objects
-	existingNamespaces    []string // namespaces in the active state
-	terminatingNamespaces []string // namespaces in the "terminating" state
-
-	needsDelete []string // namespaces that will be deleted
-}
-
-func createNamespace(name string, phase core_v1.NamespacePhase) *core_v1.Namespace {
-	return &core_v1.Namespace{
-		ObjectMeta: meta_v1.ObjectMeta{Name: name},
-		Status:     core_v1.NamespaceStatus{Phase: phase},
-	}
-}
-
 func NewTestNamespaceSyncer() *NamespaceSyncer {
 	fakeClient := fake.NewClient()
 	kubernetesInformerFactory := informers.NewSharedInformerFactory(

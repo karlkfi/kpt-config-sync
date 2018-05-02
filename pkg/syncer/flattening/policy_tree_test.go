@@ -127,18 +127,6 @@ func TestParentOf(t *testing.T) {
 	}
 }
 
-// role is a quick role definition for tests where most of the role content
-// does not mattter.
-func role(user string, verb string, namespace string) rbac.Role {
-	return rbactesting.NamespaceRole(
-		user,
-		namespace,
-		[]rbac.PolicyRule{
-			rbactesting.PolicyRule(
-				[]string{"*"}, []string{verb}, []string{}),
-		})
-}
-
 func roleBinding(roleName, namespace string, subjects ...string) rbac.RoleBinding {
 	return rbactesting.NamespaceRoleBinding("", namespace, roleName, subjects...)
 }

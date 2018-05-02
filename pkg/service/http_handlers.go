@@ -121,10 +121,9 @@ func Server(handler HandlerFunc, clientCert []byte) *http.Server {
 	// everything else.
 
 	return &http.Server{
-		Addr:      *listenAddr,
-		Handler:   mux,
-		TLSConfig: configTLS(clientCert),
-		TLSNextProto: make(map[string]func(
-			*http.Server, *tls.Conn, http.Handler), 0),
+		Addr:         *listenAddr,
+		Handler:      mux,
+		TLSConfig:    configTLS(clientCert),
+		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler)),
 	}
 }

@@ -40,10 +40,8 @@ func NewOriginLabel() map[string]string {
 // to a value that we do not want to mutate.
 func WithOriginLabel(m map[string]string) map[string]string {
 	ret := NewOriginLabel()
-	if m != nil {
-		for k, v := range m {
-			ret[k] = v
-		}
+	for k, v := range m {
+		ret[k] = v
 	}
 	return ret
 }

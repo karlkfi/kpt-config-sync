@@ -91,9 +91,7 @@ func (m *Menu) cmdline() []string {
 	cmdline = append(cmdline, m.subcommand,
 		m.opts.message, strconv.Itoa(m.opts.height),
 		strconv.Itoa(m.opts.width), strconv.Itoa(m.menuHeight))
-	for _, item := range m.items {
-		cmdline = append(cmdline, item)
-	}
+	cmdline = append(cmdline, m.items...)
 	return cmdline
 }
 

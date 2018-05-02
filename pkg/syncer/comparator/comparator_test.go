@@ -73,18 +73,6 @@ type TestCase struct {
 	expect  []*Diff
 }
 
-func toMap(diffs []*Diff) map[string]*Diff {
-	ret := map[string]*Diff{}
-	for _, diff := range diffs {
-		if diff.Actual != nil {
-			ret[diff.Actual.GetName()] = diff
-		} else {
-			ret[diff.Declared.GetName()] = diff
-		}
-	}
-	return ret
-}
-
 func TestComparitor(t *testing.T) {
 	testcases := []TestCase{
 		TestCase{

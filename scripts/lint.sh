@@ -20,6 +20,7 @@ export CGO_ENABLED=0
 
 echo "Running gometalinter: "
 gometalinter.v2 \
+    --deadline=60s \
     --disable-all \
     --enable=vet \
     --enable=goimports \
@@ -29,6 +30,7 @@ gometalinter.v2 \
     --enable=unconvert \
     --enable=errcheck \
     --enable=golint \
+    --enable=megacheck \
     --exclude=generated\.pb\.go \
     --exclude=generated\.go \
     "$@"

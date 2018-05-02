@@ -16,15 +16,12 @@ limitations under the License.
 package testcontext
 
 import (
-	"bytes"
 	"context"
-	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/google/nomos/clientgen/policyhierarchy"
 	"github.com/google/nomos/pkg/process/bash"
-	"github.com/google/nomos/pkg/process/exec"
 	"github.com/google/nomos/pkg/process/kubectl"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
@@ -62,15 +59,6 @@ func (t *TestContext) KubectlApply(path string) {
 	if err := t.kubeClient.Apply(t.Repo(path)); err != nil {
 		panic(err)
 	}
-}
-
-func (t *TestContext) run(args []string) (bool, string, string) {
-	stdout := bytes.NewBuffer(nil)
-	stderr := bytes.NewBuffer(nil)
-	if err := exec.NewRedirected(os.Stdin, stdout, stderr).Run(t.execContext, args...); err != nil {
-		panic(err)
-	}
-	return true, stdout.String(), stderr.String()
 }
 
 // WaitForDeployments waits for deployments to be available

@@ -62,9 +62,7 @@ func NewOptions(opts ...OptionsFunc) Options {
 // yet supported by explicit methods.
 func Rest(params ...string) OptionsFunc {
 	return func(o *Options) {
-		for _, param := range params {
-			o.rest = append(o.rest, param)
-		}
+		o.rest = append(o.rest, params...)
 	}
 }
 
