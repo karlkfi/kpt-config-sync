@@ -703,7 +703,7 @@ func TestParser(t *testing.T) {
 					p := v.Spec.Policies
 					n[k] = len(p.RolesV1) + len(p.RoleBindingsV1)
 					if p.ResourceQuotaV1 != nil {
-						n[k] += 1
+						n[k]++
 					}
 				}
 				if diff := deep.Equal(n, tc.expectedNumPolicies); diff != nil {

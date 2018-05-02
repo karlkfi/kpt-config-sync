@@ -33,6 +33,7 @@ import (
 
 const resync = time.Minute * 15
 
+// Controller is controller for managing Nomos CRDs by importing policies from a filesystem tree.
 type Controller struct {
 	policyDir           string
 	pollPeriod          time.Duration
@@ -44,7 +45,7 @@ type Controller struct {
 	stopChan            chan struct{}
 }
 
-// NewController returns a new controller for managing Nomos CRDs by importing policies from a filesystem tree.
+// NewController returns a new Controller.
 func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, client meta.Interface, stopChan chan struct{}) *Controller {
 	informerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), resync)

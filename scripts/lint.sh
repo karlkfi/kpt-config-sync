@@ -18,45 +18,7 @@ set -euo pipefail
 
 export CGO_ENABLED=0
 
-####### GOLINT FIXIT #############
-#
-# When you fix one of the packages here, remove it from the list.
-#
-GOLINT_EXCLUDE_PACKAGES=(
-  pkg/policyimporter
-  pkg/policyimporter/actions
-  pkg/policyimporter/filesystem
-  pkg/version
-)
-function exclude() {
-  local value="${1:-}"
-  for i in "${GOLINT_EXCLUDE_PACKAGES[@]}"; do
-    if [[ "${i}" == "${value}" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
-LINT_PKGS=()
-for pkg in $(find cmd pkg -name '*.go' \
-    | sed -e 's|/[^/]*$||' \
-    | sort \
-    | uniq); do
-  if ! exclude ${pkg}; then
-    LINT_PKGS+=(${pkg})
-  fi
-done
-
-
-
 echo "Running gometalinter: "
-gometalinter.v2 \
-    --disable-all \
-    --enable=golint \
-    --exclude=generated\.pb\.go \
-    --exclude=generated\.go \
-    "${LINT_PKGS[@]}"
-
 gometalinter.v2 \
     --disable-all \
     --enable=vet \
@@ -66,7 +28,9 @@ gometalinter.v2 \
     --enable=vetshadow \
     --enable=unconvert \
     --enable=errcheck \
+    --enable=golint \
     --exclude=generated\.pb\.go \
+    --exclude=generated\.go \
     "$@"
 echo "PASS"
 

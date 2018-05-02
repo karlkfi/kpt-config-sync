@@ -25,11 +25,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter"
 )
 
-type Differ struct {
-	current, desired v1.AllPolicies
-	factories        Factories
-}
-
 // Differ will generate an ordered list of actions needed to transition policy from the current to
 // desired state.
 //
@@ -37,6 +32,12 @@ type Differ struct {
 // assuming the current and desired state are valid themselves.
 //
 // More details about the algorithm can be found at docs/update-preserving-invariants.md
+type Differ struct {
+	current, desired v1.AllPolicies
+	factories        Factories
+}
+
+// NewDiffer creates a Differ.
 func NewDiffer(factories Factories) *Differ {
 	return &Differ{factories: factories}
 }

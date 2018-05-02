@@ -39,13 +39,14 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/validation"
 )
 
+// Parser reads files on disk and builds Nomos CRDs.
 type Parser struct {
 	factory   cmdutil.Factory
 	schema    validation.Schema
 	inCluster bool
 }
 
-// NewParser creates a new parser that reads files on disk and builds Nomos CRDs.
+// NewParser creates a new Parser.
 // inCluster boolean determines if this is running in a cluster and can talk to api server.
 func NewParser(inCluster bool) (*Parser, error) {
 	p := Parser{

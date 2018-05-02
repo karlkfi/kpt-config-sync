@@ -17,6 +17,7 @@ package policyimporter
 
 import "github.com/prometheus/client_golang/prometheus"
 
+// Metrics contains the Prometheus metrics common to all PolicyImporters.
 var Metrics = struct {
 	Operations   *prometheus.CounterVec
 	Nodes        prometheus.Gauge

@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-//  Factories contains factories for creating actions on Nomos custom resources.
+// Factories contains factories for creating actions on Nomos custom resources.
 type Factories struct {
 	PolicyNodeAction    policyNodeActionFactory
 	ClusterPolicyAction clusterPolicyActionFactory
@@ -36,15 +36,14 @@ type Factories struct {
 // NewFactories creates a new Factories.
 func NewFactories(
 	client typed_v1.NomosV1Interface, pnLister listers_v1.PolicyNodeLister, cpLister listers_v1.ClusterPolicyLister) Factories {
-	return Factories{NewPolicyNodeActionFactory(client, pnLister), NewClusterPolicyActionFactory(client, cpLister)}
+	return Factories{newPolicyNodeActionFactory(client, pnLister), newClusterPolicyActionFactory(client, cpLister)}
 }
 
 type policyNodeActionFactory struct {
 	*action.ReflectiveActionSpec
 }
 
-// NewPolicyNodeActionFactory creates a new factory for creating actions performed on PolicyNodes.
-func NewPolicyNodeActionFactory(client typed_v1.NomosV1Interface, lister listers_v1.PolicyNodeLister) policyNodeActionFactory {
+func newPolicyNodeActionFactory(client typed_v1.NomosV1Interface, lister listers_v1.PolicyNodeLister) policyNodeActionFactory {
 	return policyNodeActionFactory{
 		&action.ReflectiveActionSpec{
 			Resource:   action.LowerPlural(policyhierarchy_v1.PolicyNode{}),
@@ -78,8 +77,7 @@ type clusterPolicyActionFactory struct {
 	*action.ReflectiveActionSpec
 }
 
-// NewClusterPolicyActionFactory creates a new factory for creating actions performed on ClusterPolicies.
-func NewClusterPolicyActionFactory(
+func newClusterPolicyActionFactory(
 	client typed_v1.NomosV1Interface,
 	lister listers_v1.ClusterPolicyLister) clusterPolicyActionFactory {
 	return clusterPolicyActionFactory{&action.ReflectiveActionSpec{
