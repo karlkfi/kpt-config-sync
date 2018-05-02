@@ -132,14 +132,6 @@ $(OUTPUT_DIR)/buildenv: build/buildenv/Dockerfile $(OUTPUT_DIR)
 
 buildenv: $(OUTPUT_DIR)/buildenv
 
-# Runs formatter.
-goimports:
-	goimports -w $(NOMOS_CODE_DIRS)
-
-# Runs linter
-lint: build
-	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
-
 # Compiles nomos hermetically using a docker container.
 .PHONY: build
 build: buildenv
@@ -295,11 +287,22 @@ clean:
 	rm -rf $(OUTPUT_DIR)
 
 # Runs unit tests in a docker container.
-test: buildenv $(OUTPUT_DIR)
-	@docker run $(DOCKER_RUN_ARGS) ./scripts/test.sh $(NOMOS_GO_PKG)
+test-unit: buildenv
+	@docker run $(DOCKER_RUN_ARGS) ./scripts/test-unit.sh $(NOMOS_GO_PKG)
+
+# Runs unit tests and linter.
+test: test-unit lint
 
 # Runs all tests.
 test-all: test test-e2e
+
+# Runs formatter.
+goimports:
+	goimports -w $(NOMOS_CODE_DIRS)
+
+# Runs linter
+lint: build
+	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
 
 # Generate K8S client-set.
 gen-client-set:
