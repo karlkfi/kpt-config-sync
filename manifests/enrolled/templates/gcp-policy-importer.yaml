@@ -1,0 +1,54 @@
+changecom(`<unused>')
+apiVersion: v1
+kind: Service
+metadata:
+  name: gcp-policy-importer
+  namespace: nomos-system
+  labels:
+    monitored: "true"
+spec:
+  selector:
+    app: gcp-policy-importer
+  ports:
+    - name: metrics
+      port: 8675
+      targetPort: metrics-port
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gcp-policy-importer
+  namespace: nomos-system
+  labels:
+    app: gcp-policy-importer
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: gcp-policy-importer
+  template:
+    metadata:
+      labels:
+        app: gcp-policy-importer
+    spec:
+      serviceAccountName: policy-importer
+      containers:
+      - name: gcp-policy-importer
+        image: IMAGE_NAME
+        ports:
+          - containerPort: 8675
+            name: metrics-port
+        volumeMounts:
+          - name: gcp-creds
+            mountPath: /etc/gcp-creds
+            readOnly: true
+        envFrom:
+          - configMapRef:
+              name: gcp-policy-importer
+      volumes:
+      - name: gcp-creds
+        secret:
+          secretName: gcp-creds
+
