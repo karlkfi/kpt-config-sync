@@ -20,4 +20,4 @@ RUN groupadd -g $GID $UNAME
 RUN useradd -u $UID -g $UNAME $UNAME
 
 
-ENTRYPOINT ["/opt/testing/e2e-legacy.sh", "--alsologtostderr"]
+ENTRYPOINT ["/opt/testing/e2e.sh", "--alsologtostderr"]

@@ -94,7 +94,7 @@ func RunTests(testOptions TestOptions) {
 		if err := os.Setenv("TEST_FUNCTIONS", testOptions.LegacyTestFunctions); err != nil {
 			panic(err)
 		}
-		testContext.RunBashOrDie(filepath.Join(testOptions.RepoDir, "e2e/e2e-legacy.sh"))
+		testContext.RunBashOrDie(filepath.Join(testOptions.RepoDir, "e2e/e2e.sh"))
 		fmt.Printf("DONE RUNNING LEGACY TESTCASES\n")
 	}
 
