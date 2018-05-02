@@ -58,7 +58,7 @@ func (c *parentToChildrenMap) removeChild(child nodeName, parent parentName) boo
 	return true
 }
 
-// PolicyTree is a tree stucture, with each node of type PolicyNode containing
+// PolicyTree is a tree structure, with each node of type PolicyNode containing
 // one generic Policy.
 type PolicyTree struct {
 	// nodesByName contains a mapping from a node name to the corresponding

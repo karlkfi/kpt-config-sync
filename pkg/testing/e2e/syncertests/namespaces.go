@@ -58,7 +58,7 @@ func getNamespace(t *testcontext.TestContext, namespace string) func() error {
 func setupFunc(t *testcontext.TestContext) {
 	t.KubectlApply("examples/acme/policynodes/acme.yaml")
 
-	// TODO: This should probably check syncer status rather than namespace existance.
+	// TODO: This should probably check syncer status rather than namespace existence.
 	fn := func(namespace string) func() error {
 		return getNamespace(t, namespace)
 	}

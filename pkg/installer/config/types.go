@@ -187,7 +187,7 @@ func (c Config) repoIsSSHURL() bool {
 	return false
 }
 
-// FileExists is an interface used to stub out file existance checks in unit
+// FileExists is an interface used to stub out file existence checks in unit
 // tests.
 type FileExists interface {
 	// Check returns true if a file exists.

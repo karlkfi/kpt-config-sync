@@ -118,7 +118,7 @@ func (tc *IsSubsetTestcase) Run(t *testing.T) {
 
 var isSubsetTestcases = []IsSubsetTestcase{
 	IsSubsetTestcase{
-		Name:         "both nil/emtpy",
+		Name:         "both nil/empty",
 		Set:          nil,
 		Subset:       nil,
 		ExpectReturn: true,

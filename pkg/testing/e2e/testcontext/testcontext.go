@@ -83,7 +83,7 @@ type Predicate interface {
 	Eval(error) bool
 }
 
-// predicateFunction implementes
+// predicateFunction implements
 type predicateFunction struct {
 	name string
 	f    func(error) bool

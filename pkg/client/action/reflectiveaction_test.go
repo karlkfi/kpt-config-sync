@@ -43,7 +43,7 @@ type ReflectiveActionTestCase struct {
 
 	Namespaced bool            // True if this resource exists at namespace level
 	Operation  string          // Opertion to perform, "upsert" or "delete"
-	Resource   ResourceFactory // resource factory function, needs to set name/namespace appropraitely
+	Resource   ResourceFactory // resource factory function, needs to set name/namespace appropriately
 
 	// PrePopulate is a function that takes the original resource and returns nil or a resource that
 	// should be pre-populated on the host.

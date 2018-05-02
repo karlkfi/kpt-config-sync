@@ -110,7 +110,7 @@ func TestEnvProcessing(t *testing.T) {
 
 	if !reflect.DeepEqual(expectedCtx, ctx) {
 		fmt.Printf("%#v\n", ctx)
-		t.Errorf("Unexpected state after enviornment processing, expected:\n%s\ngot:\n%s\n",
+		t.Errorf("Unexpected state after environment processing, expected:\n%s\ngot:\n%s\n",
 			spew.Sdump(expectedCtx), spew.Sdump(ctx))
 	}
 }

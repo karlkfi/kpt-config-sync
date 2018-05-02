@@ -33,7 +33,7 @@ func PolicyNode(
 	return &ret
 }
 
-// RoleBinding is a conveneince function for creating a RoleBinding, example:
+// RoleBinding is a convenience function for creating a RoleBinding, example:
 // RoleBinding("pod-reader", "User:jane")
 func RoleBinding(roleName string, subjects ...string) rbac.RoleBinding {
 	return NamespaceRoleBinding("", "", roleName, subjects...)

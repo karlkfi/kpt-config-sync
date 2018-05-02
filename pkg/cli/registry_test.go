@@ -29,7 +29,7 @@ func TestX(t *testing.T) {
 	r := newRegistryNode()
 	err := r.addCommand([]string{"foo", "bar"}, testCallback)
 	if err != nil {
-		t.Errorf("Should not have returnd error")
+		t.Errorf("Should not have returned error")
 	}
 	err = r.addCommand([]string{"foo", "bar"}, testCallback)
 	if err == nil {

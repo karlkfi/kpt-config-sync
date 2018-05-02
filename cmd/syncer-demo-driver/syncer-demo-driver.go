@@ -41,7 +41,7 @@ import (
 var flagSyncDir = flag.String(
 	"sync_dir", "", "The directory to deposit policy node files into.")
 var flagUpdatePeriod = flag.Duration(
-	"update_period", time.Millisecond*2500, "Frequency of updates expressed wtih time unit suffix (see time.ParseDuration)")
+	"update_period", time.Millisecond*2500, "Frequency of updates expressed with time unit suffix (see time.ParseDuration)")
 var flagMaxNamespaces = flag.Int(
 	"max_namespaces", 20, "Max namespaces to create")
 var flagUseFakeOrg = flag.Bool(

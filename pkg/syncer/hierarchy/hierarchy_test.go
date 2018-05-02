@@ -55,14 +55,14 @@ func TestGetAncestry(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		hierachy     *Hierarchy
+		hierarchy     *Hierarchy
 		nodeName     string
 		wantAncestry Ancestry
 		wantErr      error
 	}{
 		{
 			name:     "leaf node",
-			hierachy: validHierarchy,
+			hierarchy: validHierarchy,
 			nodeName: "child2-1",
 			wantAncestry: Ancestry{
 				createTestNode("child2-1", "child2"),
@@ -72,7 +72,7 @@ func TestGetAncestry(t *testing.T) {
 		},
 		{
 			name:     "non-leaf node",
-			hierachy: validHierarchy,
+			hierarchy: validHierarchy,
 			nodeName: "child1",
 			wantAncestry: Ancestry{
 				createTestNode("child1", "root"),
@@ -81,7 +81,7 @@ func TestGetAncestry(t *testing.T) {
 		},
 		{
 			name:     "root node",
-			hierachy: validHierarchy,
+			hierarchy: validHierarchy,
 			nodeName: "root",
 			wantAncestry: Ancestry{
 				createTestNode("root", ""),
@@ -89,13 +89,13 @@ func TestGetAncestry(t *testing.T) {
 		},
 		{
 			name:     "node not found",
-			hierachy: validHierarchy,
+			hierarchy: validHierarchy,
 			nodeName: "foobar",
 			wantErr:  &NotFoundError{"foobar"},
 		},
 		{
 			name:     "incomplete hierarchy",
-			hierachy: invalidHierarchy,
+			hierarchy: invalidHierarchy,
 			nodeName: "child3-1",
 			wantErr:  &IncompleteHierarchyError{"child3"},
 		},
@@ -103,7 +103,7 @@ func TestGetAncestry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotAncestry, err := tt.hierachy.Ancestry(tt.nodeName)
+			gotAncestry, err := tt.hierarchy.Ancestry(tt.nodeName)
 			if !cmp.Equal(err, tt.wantErr, cmp.AllowUnexported(NotFoundError{}, IncompleteHierarchyError{})) {
 				t.Errorf("Unexpected ancestry error, got: %v, want: %v", err, tt.wantErr)
 			}
