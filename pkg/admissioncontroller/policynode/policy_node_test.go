@@ -34,8 +34,8 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 				Name: "kitties",
 			},
 			Spec: pn_v1.PolicyNodeSpec{
-				Parent:      "bigkitties",
-				Policyspace: false,
+				Parent: "bigkitties",
+				Type:   pn_v1.Namespace,
 			},
 		},
 		&pn_v1.PolicyNode{
@@ -43,8 +43,8 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 				Name: "bigkitties",
 			},
 			Spec: pn_v1.PolicyNodeSpec{
-				Parent:      "",
-				Policyspace: true,
+				Parent: "",
+				Type:   pn_v1.Policyspace,
 			},
 		},
 	}
@@ -84,8 +84,8 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 								Name: "moarkitties",
 							},
 							Spec: pn_v1.PolicyNodeSpec{
-								Parent:      "bigkitties",
-								Policyspace: true,
+								Parent: "bigkitties",
+								Type:   pn_v1.Policyspace,
 							},
 						}),
 					},
@@ -146,8 +146,8 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 								Name: "kitties",
 							},
 							Spec: pn_v1.PolicyNodeSpec{
-								Parent:      "bigkitties",
-								Policyspace: true,
+								Parent: "bigkitties",
+								Type:   pn_v1.Policyspace,
 							},
 						}),
 					},

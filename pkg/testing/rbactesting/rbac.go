@@ -17,13 +17,19 @@ func PolicyNode(
 	name, parent string, policyspace bool,
 	roles []rbac.Role,
 	roleBindings []rbac.RoleBinding) *v1.PolicyNode {
+	var policyNodeType v1.PolicyNodeType
+	if policyspace {
+		policyNodeType = v1.Policyspace
+	} else {
+		policyNodeType = v1.Namespace
+	}
 	ret := v1.PolicyNode{
 		ObjectMeta: meta.ObjectMeta{
 			Name: name,
 		},
 		Spec: v1.PolicyNodeSpec{
-			Parent:      parent,
-			Policyspace: policyspace,
+			Type:   policyNodeType,
+			Parent: parent,
 			Policies: v1.Policies{
 				RolesV1:        roles,
 				RoleBindingsV1: roleBindings,

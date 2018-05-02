@@ -194,10 +194,14 @@ func (d testDir) createTestFile(path, contents string) {
 }
 
 func createPolicyNode(name string, parent string, policyspace bool, policies *policyhierarchy_v1.Policies) policyhierarchy_v1.PolicyNode {
+	pnt := policyhierarchy_v1.Namespace
+	if policyspace {
+		pnt = policyhierarchy_v1.Policyspace
+	}
 	pn := policynode.NewPolicyNode(name,
 		&policyhierarchy_v1.PolicyNodeSpec{
-			Policyspace: policyspace,
-			Parent:      parent,
+			Type:   pnt,
+			Parent: parent,
 		})
 	if policies != nil {
 		pn.Spec.Policies = *policies

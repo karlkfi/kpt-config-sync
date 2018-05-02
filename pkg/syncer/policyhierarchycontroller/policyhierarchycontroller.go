@@ -145,7 +145,7 @@ func (s *PolicyHieraryController) reconcile(k types.ReconcileKey) error {
 		}
 	}
 
-	if ancestry.Node().Spec.Policyspace {
+	if !ancestry.Node().Spec.Type.IsNamespace() {
 		return nil
 	}
 

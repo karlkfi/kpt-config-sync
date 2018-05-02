@@ -43,13 +43,18 @@ func getPolicyNode(t *testcontext.TestContext, policyNode string) func() error {
 }
 
 func policyNode(name, parent string, policyspace bool) *policyhierarchy_v1.PolicyNode {
+	pnt := policyhierarchy_v1.Namespace
+	if policyspace {
+		pnt = policyhierarchy_v1.Policyspace
+	}
+
 	return &policyhierarchy_v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: name,
 		},
 		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			Policyspace: policyspace,
-			Parent:      parent,
+			Type:   pnt,
+			Parent: parent,
 		},
 	}
 }

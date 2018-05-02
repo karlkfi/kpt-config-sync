@@ -536,8 +536,8 @@ var clusterPolicyNodeBaseTestObject = &policyhierarchy_v1.PolicyNode{
 		Annotations: map[string]string{"api.foo.future/deny": "*"},
 	},
 	Spec: policyhierarchy_v1.PolicyNodeSpec{
-		Policyspace: true,
-		Parent:      "does-not-exist",
+		Type:   policyhierarchy_v1.Policyspace,
+		Parent: "does-not-exist",
 	},
 }
 

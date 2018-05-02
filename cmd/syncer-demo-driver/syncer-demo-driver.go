@@ -162,7 +162,7 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 				namespaceGeneratorNum++
 
 				nodeSpec := &v1.PolicyNodeSpec{
-					Policyspace: false,
+					Type: v1.Namespace,
 					Policies: v1.Policies{
 						RolesV1: []rbac_v1.Role{
 							rbac_v1.Role{

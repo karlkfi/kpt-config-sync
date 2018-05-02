@@ -25,13 +25,17 @@ import (
 )
 
 func newNode(name string, parent string, policyspace bool) *policyhierarchy_v1.PolicyNode {
+	pnt := policyhierarchy_v1.Namespace
+	if policyspace {
+		pnt = policyhierarchy_v1.Policyspace
+	}
 	return &policyhierarchy_v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: name,
 		},
 		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			Policyspace: policyspace,
-			Parent:      parent,
+			Type:   pnt,
+			Parent: parent,
 		},
 	}
 }
@@ -174,7 +178,7 @@ func TestWorkingNamespace(t *testing.T) {
 		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
 	}
 
-	child1.Spec.Policyspace = false
+	child1.Spec.Type = policyhierarchy_v1.Namespace
 	v = New()
 	v.Add(root)
 	v.Add(child1)
@@ -199,7 +203,7 @@ func TestRootWorkingNamespace(t *testing.T) {
 	}
 
 	v = New()
-	root.Spec.Policyspace = false
+	root.Spec.Type = policyhierarchy_v1.Namespace
 	v.Add(root)
 	if err := v.checkWorkingNamespace(); err == nil {
 		t.Errorf("Should have detected leaf node working namespace error")

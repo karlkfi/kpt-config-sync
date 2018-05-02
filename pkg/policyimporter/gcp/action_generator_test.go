@@ -361,10 +361,14 @@ func TestRecvErr(t *testing.T) {
 }
 
 func newPolicyNode(name string, parent string, policyspace bool, policies *v1.Policies) *v1.PolicyNode {
+	pnt := v1.Namespace
+	if policyspace {
+		pnt = v1.Policyspace
+	}
 	pn := policynode.NewPolicyNode(name,
 		&v1.PolicyNodeSpec{
-			Policyspace: policyspace,
-			Parent:      parent,
+			Type:   pnt,
+			Parent: parent,
 		})
 	if policies != nil {
 		pn.Spec.Policies = *policies

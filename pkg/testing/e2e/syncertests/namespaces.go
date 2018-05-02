@@ -35,8 +35,8 @@ var testSyncerNamespacesPolicyNode = policyhierarchy_v1.PolicyNode{
 		Name: testSyncerNamespaces,
 	},
 	Spec: policyhierarchy_v1.PolicyNodeSpec{
-		Policyspace: false,
-		Parent:      "eng",
+		Type:   policyhierarchy_v1.Namespace,
+		Parent: "eng",
 	},
 }
 

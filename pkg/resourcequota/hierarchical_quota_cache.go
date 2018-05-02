@@ -90,7 +90,7 @@ func (c *HierarchicalQuotaCache) initCache() error {
 		c.quotas[policyNode.Name] = &QuotaNode{
 			quota:       quota,
 			parent:      policyNode.Spec.Parent,
-			policyspace: policyNode.Spec.Policyspace,
+			policyspace: policyNode.Spec.Type.IsPolicyspace(),
 		}
 	}
 

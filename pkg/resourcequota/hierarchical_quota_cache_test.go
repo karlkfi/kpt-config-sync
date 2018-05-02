@@ -184,13 +184,17 @@ func TestUpdateLeaf(t *testing.T) {
 }
 
 func makePolicyNode(name string, parent string, limits core_v1.ResourceList, policyspace bool) *pn_v1.PolicyNode {
+	pnt := pn_v1.Namespace
+	if policyspace {
+		pnt = pn_v1.Policyspace
+	}
 	return &pn_v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: name,
 		},
 		Spec: pn_v1.PolicyNodeSpec{
-			Parent:      parent,
-			Policyspace: policyspace,
+			Parent: parent,
+			Type:   pnt,
 			Policies: pn_v1.Policies{
 				ResourceQuotaV1: &core_v1.ResourceQuota{
 					Spec: core_v1.ResourceQuotaSpec{

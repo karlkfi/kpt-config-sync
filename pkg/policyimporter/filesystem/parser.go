@@ -250,9 +250,9 @@ func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.Pol
 
 	pn := policynode.NewPolicyNode(filepath.Base(dir),
 		&policyhierarchy_v1.PolicyNodeSpec{
-			Policyspace: true,
-			Parent:      policyhierarchy_v1.NoParentNamespace,
-			Policies:    policies,
+			Type:     policyhierarchy_v1.Policyspace,
+			Parent:   policyhierarchy_v1.NoParentNamespace,
+			Policies: policies,
 		})
 
 	// There's a singleton ClusterPolicy object for the hierarchy.
@@ -320,9 +320,9 @@ func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy
 
 	pn := policynode.NewPolicyNode(filepath.Base(dir),
 		&policyhierarchy_v1.PolicyNodeSpec{
-			Policyspace: true,
-			Parent:      filepath.Base(filepath.Dir(dir)),
-			Policies:    policies,
+			Type:     policyhierarchy_v1.Policyspace,
+			Parent:   filepath.Base(filepath.Dir(dir)),
+			Policies: policies,
 		})
 
 	return pn, nil
@@ -372,9 +372,9 @@ func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v
 
 	pn := policynode.NewPolicyNode(namespace,
 		&policyhierarchy_v1.PolicyNodeSpec{
-			Policyspace: false,
-			Parent:      filepath.Base(filepath.Dir(dir)),
-			Policies:    policies,
+			Type:     policyhierarchy_v1.Namespace,
+			Parent:   filepath.Base(filepath.Dir(dir)),
+			Policies: policies,
 		})
 
 	return pn, nil

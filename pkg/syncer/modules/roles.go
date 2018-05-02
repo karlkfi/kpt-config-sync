@@ -38,7 +38,7 @@ type AggregatedRole struct {
 
 // Aggregated implements hierarchy.AggregatedNode
 func (s *AggregatedRole) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarchy.AggregatedNode {
-	if node.Spec.Policyspace {
+	if !node.Spec.Type.IsNamespace() {
 		return &AggregatedRole{}
 	}
 

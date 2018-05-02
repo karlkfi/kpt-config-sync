@@ -120,10 +120,8 @@ message PolicyNodeList {
 // PolicyNodeSpec contains all the information about a policy linkage.
 // +protobuf=true
 message PolicyNodeSpec {
-  // False for leaf namespaces where pods will actually be scheduled,
-  // True for the parent org unit namespace where this policy is linked
-  // to, but no containers should run
-  optional bool policyspace = 1;
+  // The type of the PolicyNode.
+  optional int64 type = 1;
 
   // The parent org unit
   optional string parent = 2;

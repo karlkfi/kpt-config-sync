@@ -103,10 +103,8 @@ type PolicyNode struct {
 // PolicyNodeSpec contains all the information about a policy linkage.
 // +protobuf=true
 type PolicyNodeSpec struct {
-	// False for leaf namespaces where pods will actually be scheduled,
-	// True for the parent org unit namespace where this policy is linked
-	// to, but no containers should run
-	Policyspace bool `json:"policyspace" protobuf:"varint,1,opt,name=policyspace"`
+	// The type of the PolicyNode.
+	Type PolicyNodeType `json:"type" protobuf:"varint,1,opt,name=type"`
 
 	// The parent org unit
 	Parent string `json:"parent" protobuf:"bytes,2,opt,name=parent"`

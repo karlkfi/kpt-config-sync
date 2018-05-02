@@ -155,15 +155,15 @@ func (s *Validator) checkWorkingNamespace() error {
 	for nodeName, node := range s.policyNodes {
 		if node.Spec.Parent == rootParent {
 			// Root node should not be a working namespace
-			if !node.Spec.Policyspace {
-				return errors.Errorf("Root node %s should not be a working namespace", nodeName)
+			if !node.Spec.Type.IsPolicyspace() {
+				return errors.Errorf("Root node %s should not be a %s", node.Spec.Type, nodeName)
 			}
 			continue
 		}
 
-		if !node.Spec.Policyspace && isParent[nodeName] {
+		if !node.Spec.Type.IsPolicyspace() && isParent[nodeName] {
 			return errors.Errorf(
-				"Node %s designated as working namespace, but has children", nodeName)
+				"Node %s designated as %s, but has children", node.Spec.Type, nodeName)
 		}
 	}
 	return nil
@@ -193,7 +193,7 @@ func (s *Validator) checkCycles() error {
 // checkPolicySpaceRoles checks that there are no PolicySpaces that have Roles.
 func (s *Validator) checkPolicySpaceRoles() error {
 	for nodeName, node := range s.policyNodes {
-		if node.Spec.Policyspace && len(node.Spec.Policies.RolesV1) > 0 {
+		if node.Spec.Type.IsPolicyspace() && len(node.Spec.Policies.RolesV1) > 0 {
 			return errors.Errorf(
 				"Node %s designated as a policy space, but has roles", nodeName)
 		}
