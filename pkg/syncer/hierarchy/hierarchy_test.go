@@ -55,15 +55,15 @@ func TestGetAncestry(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		hierarchy     *Hierarchy
+		hierarchy    *Hierarchy
 		nodeName     string
 		wantAncestry Ancestry
 		wantErr      error
 	}{
 		{
-			name:     "leaf node",
+			name:      "leaf node",
 			hierarchy: validHierarchy,
-			nodeName: "child2-1",
+			nodeName:  "child2-1",
 			wantAncestry: Ancestry{
 				createTestNode("child2-1", "child2"),
 				createTestNode("child2", "root"),
@@ -71,33 +71,33 @@ func TestGetAncestry(t *testing.T) {
 			},
 		},
 		{
-			name:     "non-leaf node",
+			name:      "non-leaf node",
 			hierarchy: validHierarchy,
-			nodeName: "child1",
+			nodeName:  "child1",
 			wantAncestry: Ancestry{
 				createTestNode("child1", "root"),
 				createTestNode("root", ""),
 			},
 		},
 		{
-			name:     "root node",
+			name:      "root node",
 			hierarchy: validHierarchy,
-			nodeName: "root",
+			nodeName:  "root",
 			wantAncestry: Ancestry{
 				createTestNode("root", ""),
 			},
 		},
 		{
-			name:     "node not found",
+			name:      "node not found",
 			hierarchy: validHierarchy,
-			nodeName: "foobar",
-			wantErr:  &NotFoundError{"foobar"},
+			nodeName:  "foobar",
+			wantErr:   &NotFoundError{"foobar"},
 		},
 		{
-			name:     "incomplete hierarchy",
+			name:      "incomplete hierarchy",
 			hierarchy: invalidHierarchy,
-			nodeName: "child3-1",
-			wantErr:  &IncompleteHierarchyError{"child3"},
+			nodeName:  "child3-1",
+			wantErr:   &IncompleteHierarchyError{"child3"},
 		},
 	}
 
