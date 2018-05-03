@@ -25,17 +25,24 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/installer"
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/configgen"
 	"github.com/pkg/errors"
 )
 
 var (
+	interactive   = flag.Bool("interactive", false, "If set, use the interactive menu driven installer")
 	configIn      = flag.String("config_in", "", "The default configuration file to load.")
 	configOut     = flag.String("config_out", "generated_config.json", "The name of the output configuration file to write.")
 	workDir       = flag.String("work_dir", "", "The working directory for the configgen.  If not set, defaults to the directory where the configgen is run.")
 	version       = flag.String("version", "0.0.0", "The installer version.")
 	suggestedUser = flag.String("suggested_user", "", "The user to run the installation as.")
+	// TODO(filmil): Merge with configIn
+	configFile = flag.String("config", "", "The file name containing the installer configuration.")
+	uninstall  = flag.String("uninstall", "", "If set, the supplied clusters will be uninstalled.")
+	yes        = flag.Bool("yes", false, "If yes, means that the user wants to do a destructive operation.")
+	useCurrent = flag.Bool("use_current_context", false, "If set, and if the list of clusters in the install config is empty, use current context to install into.")
 )
 
 // version parses vstr, which could be of the form "prefix1.2.3-blah+blah".
@@ -53,9 +60,57 @@ func versionOrDie(vstr string) semver.Version {
 	return v
 }
 
+// noninteractiveMain is the full content of the noninteractive installer main()
+// function.  This will be pared down in a few steps to just the most necessary
+// things.
+func noninteractiveMain() {
+	if *configFile == "" {
+		flag.Usage()
+		os.Exit(1)
+	}
+	glog.Infof("starting installer.")
+
+	file, err := os.Open(*configFile)
+	if err != nil {
+		glog.Fatal(errors.Wrapf(err, "while opening: %q", *configFile))
+	}
+
+	config, err := config.Load(file)
+	if err != nil {
+		glog.Fatal(errors.Wrapf(err, "while loading: %q", *configFile))
+	}
+	glog.V(5).Infof("Using config: %#v", config)
+	if config.User == "" && *suggestedUser != "" {
+		// If the configuration has no user specified, but the user is suggested
+		// instead, use that user then.
+		config.User = *suggestedUser
+	}
+
+	dir := path.Dir(os.Args[0])
+	if *workDir != "" {
+		dir = *workDir
+	}
+	i := installer.New(config, dir)
+	if *uninstall != "" {
+		err = i.Uninstall(*yes)
+	} else {
+		err = i.Run(*useCurrent)
+	}
+	if err != nil {
+		glog.Fatal(errors.Wrap(err, "installer reported an error"))
+	}
+	glog.Infof("installer completed.")
+}
+
 func main() {
 	fmt.Printf("args: %+v\n", os.Args)
 	flag.Parse()
+
+	// A simple tee off to the full installer binary.
+	if !*interactive {
+		noninteractiveMain()
+		return
+	}
 
 	c := config.NewDefaultConfig()
 	if *configIn != "" {
