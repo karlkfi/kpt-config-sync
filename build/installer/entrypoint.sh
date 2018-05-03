@@ -68,8 +68,8 @@ readonly home_on_host_dirname="$(dirname ${HOME_ON_HOST})"
 mkdir -p "${home_on_host_dirname}"
 ln -s /home/user "${HOME_ON_HOST}"
 
-echo "+++ Running configgen"
-./configgen \
+echo "+++ Running installer"
+./installer \
   ${logging_options} \
   --config="${CONFIG}" \
   --config_in=${CONFIG} \
