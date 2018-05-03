@@ -58,7 +58,7 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 		dialog.Backtitle(fmt.Sprintf("Configuration generator v%v", version)),
 		dialog.Title(menuTitle),
 		dialog.Width(100),
-		dialog.Height(20),
+		dialog.Height(24),
 		dialog.Message("hello!"),
 		dialog.Colors(),
 	)
@@ -75,7 +75,6 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 		NewUserForm(g.opts, &g.currentCfg.User),
 		NewClusters(g.opts, &g.currentCfg.Contexts),
 		NewGitForm(g.opts, &g.currentCfg.Git),
-		NewSSHForm(g.opts, &g.currentCfg.SSH),
 		NewInstallAction(s, &g.currentCfg, g.dir),
 		s,
 		&staticAction{name: "Quit", text: "Quit the configuration generator.", quit: true, implemented: true},

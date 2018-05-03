@@ -17,15 +17,13 @@ func TestGitConfigMap(t *testing.T) {
 			name: "git ssh",
 			config: config.Config{
 				Git: config.GitConfig{
-					SyncRepo:        "git@github.com:user/foo-corp.git",
-					UseSSH:          true,
-					SyncBranch:      "master",
-					RootPolicyDir:   "foo-corp",
-					SyncWaitSeconds: 60,
-				},
-				SSH: config.SSHConfig{
+					SyncRepo:           "git@github.com:user/foo-corp.git",
+					UseSSH:             true,
 					PrivateKeyFilename: "/some/path/id_rsa",
 					KnownHostsFilename: "/some/path/known_hosts",
+					SyncBranch:         "master",
+					RootPolicyDir:      "foo-corp",
+					SyncWaitSeconds:    60,
 				},
 			},
 			want: []string{
@@ -41,14 +39,12 @@ func TestGitConfigMap(t *testing.T) {
 			name: "git ssh, no known hosts",
 			config: config.Config{
 				Git: config.GitConfig{
-					SyncRepo:        "git@github.com:user/foo-corp.git",
-					UseSSH:          true,
-					SyncBranch:      "master",
-					RootPolicyDir:   "foo-corp",
-					SyncWaitSeconds: 60,
-				},
-				SSH: config.SSHConfig{
+					SyncRepo:           "git@github.com:user/foo-corp.git",
+					UseSSH:             true,
 					PrivateKeyFilename: "/some/path/id_rsa",
+					SyncBranch:         "master",
+					RootPolicyDir:      "foo-corp",
+					SyncWaitSeconds:    60,
 				},
 			},
 			want: []string{

@@ -155,11 +155,11 @@ contexts:
 git:
   GIT_SYNC_BRANCH: master
   GIT_SYNC_REPO: git@github.com:foo-corp/nomos-policies.git
+  GIT_SYNC_SSH: true
+  KNOWN_HOSTS_FILENAME: $HOME/.ssh/known_hosts
+  PRIVATE_KEY_FILENAME: $HOME/.ssh/id_rsa.nomos
   GIT_SYNC_WAIT: 60
   POLICY_DIR: foo-corp
-ssh:
-  knownHostsFilename: $HOME/.ssh/known_hosts
-  privateKeyFilename: $HOME/.ssh/id_rsa.nomos
 user: youruser@foo-corp.com
 ```
 

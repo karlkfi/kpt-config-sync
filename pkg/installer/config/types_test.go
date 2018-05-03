@@ -61,25 +61,23 @@ contexts:
 		"git": {
 				"GIT_SYNC_REPO": "git@github.com:repo/example.git",
 				"GIT_SYNC_SSH": true,
+				"PRIVATE_KEY_FILENAME": "privateKey",
+				"KNOWN_HOSTS_FILENAME": "knownHosts",
 				"GIT_SYNC_BRANCH": "test",
 				"GIT_SYNC_WAIT": 1,
 				"POLICY_DIR": "foo-corp"
 		},
-		"ssh": {
-				"privateKeyFilename": "privateKey"
-		}
 			}`,
 			expected: Config{
 				Contexts: []string{"your_cluster"},
 				Git: GitConfig{
-					UseSSH:          true,
-					SyncWaitSeconds: 1,
-					SyncBranch:      "test",
-					RootPolicyDir:   "foo-corp",
-					SyncRepo:        "git@github.com:repo/example.git",
-				},
-				SSH: SSHConfig{
+					UseSSH:             true,
 					PrivateKeyFilename: "privateKey",
+					KnownHostsFilename: "knownHosts",
+					SyncWaitSeconds:    1,
+					SyncBranch:         "test",
+					RootPolicyDir:      "foo-corp",
+					SyncRepo:           "git@github.com:repo/example.git",
 				},
 			},
 		},
@@ -91,27 +89,23 @@ contexts:
 		],
 		"git": {
 				"GIT_SYNC_REPO": "git@github.com:repo/example.git",
+				"PRIVATE_KEY_FILENAME": "$HOME/privateKey",
+				"KNOWN_HOSTS_FILENAME": "$HOME/knownHosts",
 				"GIT_SYNC_BRANCH": "test",
 				"GIT_SYNC_WAIT": 1,
 				"POLICY_DIR": "foo-corp"
 		},
-		"ssh": {
-				"privateKeyFilename": "$HOME/privateKey",
-				"knownHostsFilename": "$HOME/knownHosts"
-		}
 			}`,
 			expected: Config{
 				Contexts: []string{"your_cluster"},
 				Git: GitConfig{
-					UseSSH:          true,
-					SyncWaitSeconds: 1,
-					SyncBranch:      "test",
-					RootPolicyDir:   "foo-corp",
-					SyncRepo:        "git@github.com:repo/example.git",
-				},
-				SSH: SSHConfig{
+					UseSSH:             true,
 					PrivateKeyFilename: "/home/user/privateKey",
 					KnownHostsFilename: "/home/user/knownHosts",
+					SyncWaitSeconds:    1,
+					SyncBranch:         "test",
+					RootPolicyDir:      "foo-corp",
+					SyncRepo:           "git@github.com:repo/example.git",
 				},
 			},
 		},
@@ -137,7 +131,7 @@ func TestUnprintable(t *testing.T) {
 	}{
 		{
 			name:  "With explicit unprintable characters",
-			input: "ssh:\n \xc2knownHostsFilename: /somefile",
+			input: "git:\n \xc2KNOWN_HOSTS_FILENAME: /somefile",
 		},
 		{
 			// Don't be deceived: the text below contains unprintable characters,
@@ -150,11 +144,11 @@ git:
   GIT_SYNC_BRANCH: master
   GIT_SYNC_REPO: git@github.com:frankfarzan/foo-corp-example.git
   GIT_SYNC_SSH: true
+  KNOWN_HOSTS_FILENAME: $HOME/.ssh/known_hosts
+  PRIVATE_KEY_FILENAME: $HOME/.ssh/id_rsa.nomos
   GIT_SYNC_WAIT: 60
   POLICY_DIR: foo-corp
-ssh:
-  knownHostsFilename: $HOME/.ssh/known_hosts
-  privateKeyFilename: $HOME/.ssh/id_rsa.nomos
+
 user: someuser@google.com
 `,
 		},
@@ -183,7 +177,6 @@ func TestWrite(t *testing.T) {
 				Git: GitConfig{
 					SyncWaitSeconds: 1,
 				},
-				SSH: SSHConfig{},
 			},
 			expected: `contexts:
 - foo
@@ -194,7 +187,6 @@ git:
   GIT_SYNC_SSH: false
   GIT_SYNC_WAIT: 1
   POLICY_DIR: ""
-ssh: {}
 `,
 		},
 		{
@@ -202,10 +194,8 @@ ssh: {}
 			input: Config{
 				Contexts: []string{"foo", "bar"},
 				Git: GitConfig{
-					SyncWaitSeconds: 1,
-					UseSSH:          true,
-				},
-				SSH: SSHConfig{
+					SyncWaitSeconds:    1,
+					UseSSH:             true,
 					KnownHostsFilename: "/home/user/known_hosts",
 					PrivateKeyFilename: "/home/user/private_key",
 				},
@@ -218,10 +208,9 @@ git:
   GIT_SYNC_REPO: ""
   GIT_SYNC_SSH: true
   GIT_SYNC_WAIT: 1
+  KNOWN_HOSTS_FILENAME: $HOME/known_hosts
   POLICY_DIR: ""
-ssh:
-  knownHostsFilename: $HOME/known_hosts
-  privateKeyFilename: $HOME/private_key
+  PRIVATE_KEY_FILENAME: $HOME/private_key
 `,
 		},
 	}
@@ -245,16 +234,22 @@ func TestImmutable(t *testing.T) {
 		cfg, expected Config
 	}{
 		{
-			name: "SSHConfig",
+			name: "GitConfig ssh settings",
 			cfg: Config{
-				SSH: SSHConfig{"/home/user/file1", "/home/user/file2"},
+				Git: GitConfig{
+					PrivateKeyFilename: "/home/user/file1",
+					KnownHostsFilename: "/home/user/file2",
+				},
 			},
 			expected: Config{
-				SSH: SSHConfig{"/home/user/file1", "/home/user/file2"},
+				Git: GitConfig{
+					PrivateKeyFilename: "/home/user/file1",
+					KnownHostsFilename: "/home/user/file2",
+				},
 			},
 		},
 		{
-			name: "GitConfig",
+			name: "GitConfig other settings",
 			cfg: Config{
 				Git: GitConfig{
 					SyncRepo:        "some_repo",
@@ -312,10 +307,11 @@ func TestValidate(t *testing.T) {
 			name: "no git repo specified",
 			config: Config{
 				Git: GitConfig{
-					SyncBranch: "master",
+					SyncBranch:    "master",
+					RootPolicyDir: "foo",
 				},
 			},
-			wantErr: errors.Errorf("git not repo specified"),
+			wantErr: errors.Errorf("git repo not specified"),
 		},
 		{
 			name: "https uri w/ no keys specified",
@@ -340,10 +336,8 @@ func TestValidate(t *testing.T) {
 			name: "ssh uri w/ keys that don't exist specified",
 			config: Config{
 				Git: GitConfig{
-					SyncRepo: "git@foobar.com/foo-corp-example.git",
-					UseSSH:   true,
-				},
-				SSH: SSHConfig{
+					SyncRepo:           "git@foobar.com/foo-corp-example.git",
+					UseSSH:             true,
 					PrivateKeyFilename: "/some/fake/path/id_rsa",
 				},
 			},
@@ -354,10 +348,8 @@ func TestValidate(t *testing.T) {
 			name: "allow no funny characters in the file path beginning with /home/user",
 			config: Config{
 				Git: GitConfig{
-					SyncRepo: "git@foobar.com/foo-corp-example.git",
-					UseSSH:   true,
-				},
-				SSH: SSHConfig{
+					SyncRepo:           "git@foobar.com/foo-corp-example.git",
+					UseSSH:             true,
 					PrivateKeyFilename: "/home/user/path/id_rsa",
 				},
 			},
@@ -368,10 +360,8 @@ func TestValidate(t *testing.T) {
 			name: "non-ssh uri with UseSSH specified",
 			config: Config{
 				Git: GitConfig{
-					SyncRepo: "https://foobar.com/foo-corp-example.git",
-					UseSSH:   true,
-				},
-				SSH: SSHConfig{
+					SyncRepo:           "https://foobar.com/foo-corp-example.git",
+					UseSSH:             true,
 					PrivateKeyFilename: "/home/user/path/id_rsa",
 				},
 			},
@@ -382,10 +372,8 @@ func TestValidate(t *testing.T) {
 			name: "ssh uri/UseSSH specified, no private key specified",
 			config: Config{
 				Git: GitConfig{
-					SyncRepo: "git@foobar.com/foo-corp-example.git",
-					UseSSH:   true,
-				},
-				SSH: SSHConfig{
+					SyncRepo:           "git@foobar.com/foo-corp-example.git",
+					UseSSH:             true,
 					KnownHostsFilename: "/home/user/path/id_rsa",
 				},
 			},
@@ -396,10 +384,8 @@ func TestValidate(t *testing.T) {
 			name: "ssh uri w/ keys that exist specified",
 			config: Config{
 				Git: GitConfig{
-					SyncRepo: "git@foobar.com/foo-corp-example.git",
-					UseSSH:   true,
-				},
-				SSH: SSHConfig{
+					SyncRepo:           "git@foobar.com/foo-corp-example.git",
+					UseSSH:             true,
 					PrivateKeyFilename: "/some/valid/path/id_rsa",
 				},
 			},

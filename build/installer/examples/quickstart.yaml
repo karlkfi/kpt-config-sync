@@ -2,10 +2,9 @@ git:
   GIT_SYNC_BRANCH: master
   GIT_SYNC_REPO: git@github.com:frankfarzan/foo-corp-example.git
   GIT_SYNC_SSH: true
+  PRIVATE_KEY_FILENAME: $HOME/.ssh/id_rsa.nomos
+  KNOWN_HOSTS_FILENAME: examples/known_hosts
   GIT_SYNC_WAIT: 60
   POLICY_DIR: foo-corp
-ssh:
-  privateKeyFilename: $HOME/.ssh/id_rsa.nomos
-  knownHostsFilename: examples/known_hosts
 user: youruser@yourdomain.com
 

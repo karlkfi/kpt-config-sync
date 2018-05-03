@@ -21,6 +21,9 @@ acting as the source of truth for the policies.`
 	// The default visible length of each input field.
 	inputFieldVisibleLength = 60
 
+	// The default maximum input for ssh fields in this form.
+	sshInputFieldMaxLength = 200
+
 	// The column at which the form text input starts.
 	gitFormTextColumn = 2
 
@@ -30,9 +33,11 @@ acting as the source of truth for the policies.`
 	// Rows to display various input fields in.
 	gitRepoRow       = 2
 	useSSHRow        = 4
-	branchToSyncRow  = 6
-	rootPolicyDirRow = 8
-	syncWaitRow      = 10
+	privateKeyRow    = 6
+	knownHostsRow    = 8
+	branchToSyncRow  = 10
+	rootPolicyDirRow = 12
+	syncWaitRow      = 14
 )
 
 var _ Action = (*GitForm)(nil)
@@ -56,11 +61,13 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 	gf := &GitForm{defaultCfg: *cfg, currentConfig: cfg}
 
 	const (
-		gitSyncRepoText   = "Git repository (GIT_SYNC_REPO):"
-		useSSHText        = "Sync repo using ssh (Y/n) (GIT_SYNC_SSH):"
-		branchToSyncText  = "Branch to sync (GIT_SYNC_BRANCH):"
-		rootPolicyDirText = "Root policy directory (POLICY_DIR):"
-		syncWaitText      = "Sync wait (in seconds) (GIT_SYNC_WAIT):"
+		gitSyncRepoText        = "Git repository (GIT_SYNC_REPO):"
+		useSSHText             = "Sync repo using ssh (Y/n) (GIT_SYNC_SSH):"
+		privateKeyFilenameText = "Private key filename:"
+		knownHostsFilenameText = "Known hosts filename (known_hosts)"
+		branchToSyncText       = "Branch to sync (GIT_SYNC_BRANCH):"
+		rootPolicyDirText      = "Root policy directory (POLICY_DIR):"
+		syncWaitText           = "Sync wait (in seconds) (GIT_SYNC_WAIT):"
 	)
 
 	gf.syncWaitAsString = fmt.Sprintf("%v", cfg.SyncWaitSeconds)
@@ -70,44 +77,105 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 	}
 	opts := []interface{}{
 		o,
-		dialog.MenuHeight(10),
+		dialog.MenuHeight(16),
 		dialog.Message(gitSettingsMessage),
 		dialog.FormItem(
 			dialog.Label{
-				Text: gitSyncRepoText, Y: gitRepoRow, X: gitFormTextColumn},
+				Text: gitSyncRepoText,
+				Y:    gitRepoRow,
+				X:    gitFormTextColumn,
+			},
 			dialog.Field{
-				Input: &gf.currentConfig.SyncRepo, Y: gitRepoRow, X: gitFormInputColumn,
-				ViewLen: inputFieldVisibleLength, MaxLen: inputFieldVisibleLength},
+				Input:   &gf.currentConfig.SyncRepo,
+				Y:       gitRepoRow,
+				X:       gitFormInputColumn,
+				ViewLen: inputFieldVisibleLength,
+				MaxLen:  inputFieldVisibleLength,
+			},
 		),
 		dialog.FormItem(
 			dialog.Label{
-				Text: useSSHText, Y: useSSHRow, X: gitFormTextColumn},
+				Text: useSSHText,
+				Y:    useSSHRow,
+				X:    gitFormTextColumn,
+			},
 			dialog.Field{
-				Input: &gf.useSSHAsString,
-				Y:     useSSHRow, X: gitFormInputColumn,
-				ViewLen: 8, MaxLen: 8},
+				Input:   &gf.useSSHAsString,
+				Y:       useSSHRow,
+				X:       gitFormInputColumn,
+				ViewLen: 8,
+				MaxLen:  8,
+			},
 		),
 		dialog.FormItem(
 			dialog.Label{
-				Text: branchToSyncText, Y: branchToSyncRow, X: gitFormTextColumn},
+				Text: privateKeyFilenameText,
+				Y:    privateKeyRow,
+				X:    gitFormTextColumn,
+			},
 			dialog.Field{
-				Input: &gf.currentConfig.SyncBranch, Y: branchToSyncRow, X: gitFormInputColumn,
-				ViewLen: inputFieldVisibleLength, MaxLen: inputFieldVisibleLength},
+				Input:   &gf.currentConfig.PrivateKeyFilename,
+				Y:       privateKeyRow,
+				X:       gitFormInputColumn,
+				ViewLen: inputFieldVisibleLength,
+				MaxLen:  sshInputFieldMaxLength,
+			},
 		),
 		dialog.FormItem(
 			dialog.Label{
-				Text: rootPolicyDirText, Y: rootPolicyDirRow, X: gitFormTextColumn},
+				Text: knownHostsFilenameText,
+				Y:    knownHostsRow,
+				X:    gitFormTextColumn,
+			},
 			dialog.Field{
-				Input: &gf.currentConfig.RootPolicyDir, Y: rootPolicyDirRow, X: gitFormInputColumn,
-				ViewLen: inputFieldVisibleLength, MaxLen: inputFieldVisibleLength},
+				Input:   &gf.currentConfig.KnownHostsFilename,
+				Y:       knownHostsRow,
+				X:       gitFormInputColumn,
+				ViewLen: inputFieldVisibleLength,
+				MaxLen:  sshInputFieldMaxLength,
+			},
 		),
 		dialog.FormItem(
 			dialog.Label{
-				Text: syncWaitText, Y: syncWaitRow, X: gitFormTextColumn},
+				Text: branchToSyncText,
+				Y:    branchToSyncRow,
+				X:    gitFormTextColumn,
+			},
 			dialog.Field{
-				Input: &gf.syncWaitAsString,
-				Y:     syncWaitRow, X: gitFormInputColumn,
-				ViewLen: 8, MaxLen: 8},
+				Input:   &gf.currentConfig.SyncBranch,
+				Y:       branchToSyncRow,
+				X:       gitFormInputColumn,
+				ViewLen: inputFieldVisibleLength,
+				MaxLen:  inputFieldVisibleLength,
+			},
+		),
+		dialog.FormItem(
+			dialog.Label{
+				Text: rootPolicyDirText,
+				Y:    rootPolicyDirRow,
+				X:    gitFormTextColumn,
+			},
+			dialog.Field{
+				Input:   &gf.currentConfig.RootPolicyDir,
+				Y:       rootPolicyDirRow,
+				X:       gitFormInputColumn,
+				ViewLen: inputFieldVisibleLength,
+				MaxLen:  inputFieldVisibleLength,
+			},
+		),
+		dialog.FormItem(
+			dialog.Label{
+				Text: syncWaitText,
+				Y:    syncWaitRow,
+				X:    gitFormTextColumn,
+			},
+			dialog.Field{
+				Input:   &gf.syncWaitAsString,
+				Y:       syncWaitRow,
+				X:       gitFormInputColumn,
+				ViewLen: 8,
+				MaxLen:  8,
+			},
 		),
 	}
 	gf.form = dialog.NewForm(opts...)

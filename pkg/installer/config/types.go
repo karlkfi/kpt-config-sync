@@ -18,44 +18,15 @@ const (
 	defaultSyncBranch             = "master"
 )
 
-// CertConfig contains the configuration that pertains to the certificate
-// authority to be used for the cluster.  If defined,
-type CertConfig struct {
-	// CaCertFilename is the name of the file containing the PEM-encoded
-	// CA certificate
-	CaCertFilename string `json:"caCertFilename,omitempty"`
-
-	// CaKeyFilename is the name of the file containing the PEM-encoded
-	// private key of the certificate authority.  This will be used to
-	// sign the generated certificate but otherwise won't be stored.  Please
-	// make sure that this file has correct permissions.
-	CaKeyFilename string `json:"caKeyFilename,omitempty"`
-}
-
-// Empty returns true if the config does not have necessary fields set and
-// should be treated as empty.
-func (c *CertConfig) Empty() bool {
-	return c.CaCertFilename == "" && c.CaKeyFilename == ""
-}
-
-// SSHConfig contains the private key filename and the known hosts filename
-// to add to the cluster.  Omitted if unused.
-type SSHConfig struct {
-	// PrivateKeyFilename is the filename containing the private key used
-	// for SSH authentication.  This entry is communicated through a file
-	// to avoid exposing the contents of the secret in the process table.
-	// If this entry is empty, SSH will be set to false.
-	PrivateKeyFilename string `json:"privateKeyFilename,omitempty"`
-
-	// KnownHostsFilename is the filename containing the known hosts SSH
-	// file that Kubernetes will use.  Not copied if not defined.
-	KnownHostsFilename string `json:"knownHostsFilename,omitempty"`
-}
-
-// Empty returns true if the config does not have necessary fields set and
-// should be treated as empty.
-func (s *SSHConfig) Empty() bool {
-	return s.PrivateKeyFilename == ""
+// DefaultConfig contains the empty default values for a Config.
+var DefaultConfig = Config{
+	Git: GitConfig{
+		SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
+		SyncBranch:      defaultSyncBranch,
+		// Default to expecting an ssh url since we also do some checking to see
+		// if it's an ssh url during validation.
+		UseSSH: true,
+	},
 }
 
 // GitConfig contains the settings for the git importer repository.
@@ -63,8 +34,18 @@ type GitConfig struct {
 	// SyncRepo is the git repository name to sync from.
 	SyncRepo string `json:"GIT_SYNC_REPO"`
 
-	// UseSsh is true if we are syncing the repo using ssh.
+	// UseSSH is true if we are syncing the repo using ssh.
 	UseSSH bool `json:"GIT_SYNC_SSH"`
+
+	// PrivateKeyFilename is the filename containing the private key used
+	// for SSH authentication.  This entry is communicated through a file
+	// to avoid exposing the contents of the secret in the process table.
+	// If this entry is empty, SSH will be set to false.
+	PrivateKeyFilename string `json:"PRIVATE_KEY_FILENAME,omitempty"`
+
+	// KnownHostsFilename is the filename containing the known hosts SSH
+	// file that Kubernetes will use.  Not copied if not defined.
+	KnownHostsFilename string `json:"KNOWN_HOSTS_FILENAME,omitempty"`
 
 	// SyncBranch is the branch to sync from.  Default: "master".
 	SyncBranch string `json:"GIT_SYNC_BRANCH"`
@@ -81,7 +62,7 @@ type GitConfig struct {
 // Empty returns true if the config does not have necessary fields set and
 // should be treated as empty.
 func (g *GitConfig) Empty() bool {
-	return g.SyncRepo == "" && g.SyncBranch == "" && g.RootPolicyDir == ""
+	return g.SyncRepo == "" && g.RootPolicyDir == ""
 }
 
 // Config contains the configuration for the installer.  The install process
@@ -98,10 +79,6 @@ type Config struct {
 
 	// Git contains the git-specific configuration.
 	Git GitConfig `json:"git,omitempty"`
-
-	// SSH contains the SSH configuration to use.  If omitted, assumes that
-	// SSH is not used.
-	SSH SSHConfig `json:"ssh,omitempty"`
 }
 
 // NewDefaultConfig creates a new Config struct with default values set
@@ -128,15 +105,15 @@ func Load(r io.Reader) (Config, error) {
 	if err := yaml.Unmarshal(b, &c, yaml.DisallowUnknownFields); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")
 	}
-	c.SSH.KnownHostsFilename = strings.Replace(c.SSH.KnownHostsFilename, "$HOME", "/home/user", 1)
-	c.SSH.PrivateKeyFilename = strings.Replace(c.SSH.PrivateKeyFilename, "$HOME", "/home/user", 1)
+	c.Git.KnownHostsFilename = strings.Replace(c.Git.KnownHostsFilename, "$HOME", "/home/user", 1)
+	c.Git.PrivateKeyFilename = strings.Replace(c.Git.PrivateKeyFilename, "$HOME", "/home/user", 1)
 	return c, nil
 }
 
 // WriteInto writes the configuration into supplied writer in JSON format.
 func (c Config) WriteInto(w io.Writer) error {
-	c.SSH.KnownHostsFilename = strings.Replace(c.SSH.KnownHostsFilename, "/home/user", "$HOME", 1)
-	c.SSH.PrivateKeyFilename = strings.Replace(c.SSH.PrivateKeyFilename, "/home/user", "$HOME", 1)
+	c.Git.KnownHostsFilename = strings.Replace(c.Git.KnownHostsFilename, "/home/user", "$HOME", 1)
+	c.Git.PrivateKeyFilename = strings.Replace(c.Git.PrivateKeyFilename, "/home/user", "$HOME", 1)
 	b, err := yaml.Marshal(c)
 	if err != nil {
 		return errors.Wrapf(err, "while marshalling config")
@@ -150,11 +127,6 @@ func (c Config) WriteInto(w io.Writer) error {
 
 // Validate runs validations on the fields in Config.
 func (c Config) Validate(exists FileExists) error {
-	if !c.SSH.Empty() {
-		if c.SSH.PrivateKeyFilename == "" {
-			return errors.Errorf("ssh private key file name not specified")
-		}
-	}
 	if !c.Git.Empty() {
 		if c.Git.SyncRepo == "" {
 			return errors.Errorf("git repo not specified")
@@ -163,15 +135,15 @@ func (c Config) Validate(exists FileExists) error {
 			if !c.repoIsSSHURL() {
 				return errors.Errorf("ssh specified for non-ssh git repo url")
 			}
-			if c.SSH.Empty() {
+			if c.Git.PrivateKeyFilename == "" {
 				return errors.Errorf("ssh specified for git repo, but private key not specified")
 			}
-			if !exists.Check(c.SSH.PrivateKeyFilename) {
-				return errors.Errorf("ssh specified for git repo, but private key doesn't exist: %v", c.SSH.PrivateKeyFilename)
+			if !exists.Check(c.Git.PrivateKeyFilename) {
+				return errors.Errorf("ssh specified for git repo, but private key doesn't exist: %v", c.Git.PrivateKeyFilename)
 			}
 		} else {
 			if c.repoIsSSHURL() {
-				return errors.Errorf("ssh disabled for ssh git repo url")
+				return errors.Errorf("ssh specified as disabled for ssh git repo url")
 			}
 		}
 	}
