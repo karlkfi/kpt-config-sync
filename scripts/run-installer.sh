@@ -72,9 +72,8 @@ OPTIND=1
 # The installer container.  The named registry should be publicly accessible.
 INSTALLER_CONTAINER="gcr.io/nomos-release/installer"
 CONFIG=""
-# If interactive is set to a nonempty string, the installer will use a
-# menu-driven interactive installer.
-INTERACTIVE=""
+# If set to "true", the interactive installer will be started.
+INTERACTIVE=false
 OUTPUT_DIR=$(pwd)
 # The semantic verison number of the release to install.
 VERSION=${VERSION:-"stable"}
@@ -125,7 +124,7 @@ while true; do
             shift 2
             ;;
         -i|--interactive)
-            INTERACTIVE=1
+            INTERACTIVE=true
             shift 2
             ;;
         --use_current_context)

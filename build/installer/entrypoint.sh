@@ -28,6 +28,8 @@
 #   user that is running the installer.  In the container, we will soft-link
 #   this directory to /home/user.
 
+INTERACTIVE="${INTERACTIVE:-0}"
+
 echo "##################################################"
 echo "+++ Installer script version: ${INSTALLER_VERSION}"
 echo "##################################################"
@@ -66,25 +68,18 @@ readonly home_on_host_dirname="$(dirname ${HOME_ON_HOST})"
 mkdir -p "${home_on_host_dirname}"
 ln -s /home/user "${HOME_ON_HOST}"
 
-if [ "x${INTERACTIVE}" != "x" ]; then
-  echo "+++ Running configgen"
-  ./configgen \
-    ${logging_options} \
-    --log_dir=/tmp \
-    --suggested_user="${suggested_user}" \
-    --version="${INSTALLER_VERSION}" \
-    --config_in=${CONFIG} \
-    --config_out=${CONFIG_OUT} \
-    "$@"
-else
-  echo "+++ Running installer"
-  ./installer \
-    ${logging_options} \
-    --config="${CONFIG}" \
-    --log_dir=/tmp \
-    --suggested_user="${suggested_user}" \
-    --use_current_context=${USE_CURRENT_CONTEXT} \
-    --uninstall="${UNINSTALL}" \
-    --yes="${YES}" "$@"
-fi
+echo "+++ Running configgen"
+./configgen \
+  ${logging_options} \
+  --config="${CONFIG}" \
+  --config_in=${CONFIG} \
+  --config_out=${CONFIG_OUT} \
+  --log_dir=/tmp \
+  --suggested_user="${suggested_user}" \
+  --uninstall="${UNINSTALL}" \
+  --use_current_context=${USE_CURRENT_CONTEXT} \
+  --version="${INSTALLER_VERSION}" \
+  --yes="${YES}" \
+  --interactive="${INTERACTIVE}" \
+  "$@"
 
