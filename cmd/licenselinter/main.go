@@ -169,8 +169,9 @@ type linter struct {
 
 func (l *linter) readDepLock() error {
 	ctx := &dep.Ctx{
-		Out: log.New(os.Stdout, "", 0),
-		Err: log.New(os.Stderr, "", 0),
+		Out:            log.New(os.Stdout, "", 0),
+		Err:            log.New(os.Stderr, "", 0),
+		DisableLocking: true,
 	}
 	gopath, ok := os.LookupEnv("GOPATH")
 	if !ok {
