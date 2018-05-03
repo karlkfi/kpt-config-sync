@@ -177,7 +177,6 @@ gen-yaml-%:
 # Creates staging directory for building installer docker image.
 installer-staging: push-to-gcr-all gen-yaml-all
 	cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
-	cp $(BIN_DIR)/$(ARCH)/installer $(STAGING_DIR)/installer
 	cp $(BIN_DIR)/$(ARCH)/configgen $(STAGING_DIR)/installer
 	mkdir -p $(STAGING_DIR)/installer/yaml
 	cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/installer/yaml

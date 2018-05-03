@@ -42,7 +42,6 @@ COPY yaml yaml
 # entrypoint.sh does some one-way adaptation of kubeconfig for use within a
 # container.
 COPY entrypoint.sh entrypoint.sh
-COPY installer installer
 COPY configgen configgen
 
 RUN chmod a+rx -R *
