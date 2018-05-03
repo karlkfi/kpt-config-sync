@@ -253,6 +253,7 @@ e2e-image: deploy-test-git-server e2e-staging
 		--build-arg "UID=$(UID)" \
 		--build-arg "GID=$(GID)" \
 		--build-arg "UNAME=$(USER)" \
+		--build-arg "GCP_PROJECT=$(GCP_PROJECT)" \
 		$(STAGING_DIR)/e2e-tests
 	gcloud docker -- push gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG)
 

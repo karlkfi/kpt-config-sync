@@ -9,7 +9,8 @@
 # limitations under the License.
 
 ARG VERSION=latest
-FROM gcr.io/stolos-dev/installer:$VERSION
+ARG GCP_PROJECT=stolos-dev
+FROM gcr.io/$GCP_PROJECT/installer:$VERSION
 
 ARG UNAME=testuser
 ARG UID=1000
