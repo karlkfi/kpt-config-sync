@@ -106,6 +106,9 @@ func ListPolicies(policyNodeLister listers_v1.PolicyNodeLister, clusterPolicyLis
 		return nil, errors.Errorf("found more than one ClusterPolicy object. The cluster may be in an inconsistent state: %v", names)
 	}
 	if len(cp) == 1 {
+		if cp[0].Name != policyhierarchy_v1.ClusterPolicyName {
+			return nil, errors.Errorf("expected ClusterPolicy with name %q instead found %q", policyhierarchy_v1.ClusterPolicyName, cp[0].Name)
+		}
 		policies.ClusterPolicy = cp[0].DeepCopy()
 	}
 

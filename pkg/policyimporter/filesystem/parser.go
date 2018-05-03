@@ -255,9 +255,8 @@ func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.Pol
 			Policies:    policies,
 		})
 
-	// There's a single ClusterPolicy object for the hierarchy.
-	// Set its name to the root dir.
-	cp := policynode.NewClusterPolicy(filepath.Base(dir),
+	// There's a singleton ClusterPolicy object for the hierarchy.
+	cp := policynode.NewClusterPolicy(policyhierarchy_v1.ClusterPolicyName,
 		&policyhierarchy_v1.ClusterPolicySpec{
 			Policies: clusterPolicies,
 		})

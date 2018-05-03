@@ -205,8 +205,8 @@ func createPolicyNode(name string, parent string, policyspace bool, policies *po
 	return *pn
 }
 
-func createClusterPolicy(name string) *policyhierarchy_v1.ClusterPolicy {
-	return policynode.NewClusterPolicy(name,
+func createClusterPolicy() *policyhierarchy_v1.ClusterPolicy {
+	return policynode.NewClusterPolicy(policyhierarchy_v1.ClusterPolicyName,
 		&policyhierarchy_v1.ClusterPolicySpec{
 			Policies: policyhierarchy_v1.ClusterPolicies{},
 		})
@@ -252,7 +252,7 @@ var parserTestCases = []parserTestCase{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", false, nil),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Namespace dir with JSON Namespace",
@@ -264,7 +264,7 @@ var parserTestCases = []parserTestCase{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", false, nil),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Namespace dir with ignored files",
@@ -277,7 +277,7 @@ var parserTestCases = []parserTestCase{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", false, nil),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Namespace dir with 2 ignored files",
@@ -291,7 +291,7 @@ var parserTestCases = []parserTestCase{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", false, nil),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces",
@@ -339,7 +339,7 @@ var parserTestCases = []parserTestCase{
 			"bar": createPolicyNode("bar", "foo", false,
 				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "bar")}),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Namespace dir with single ResourceQuota single file",
@@ -352,7 +352,7 @@ var parserTestCases = []parserTestCase{
 			"bar": createPolicyNode("bar", "foo", false,
 				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "bar")}),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Namespace dir with multiple ResourceQuota",
@@ -456,7 +456,7 @@ var parserTestCases = []parserTestCase{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", true, nil),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota",
@@ -469,7 +469,7 @@ var parserTestCases = []parserTestCase{
 			"bar": createPolicyNode("bar", "foo", true,
 				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota namespace set",
@@ -535,7 +535,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true, &policyhierarchy_v1.Policies{}),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Root dir with ignore file",
@@ -546,7 +546,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true, &policyhierarchy_v1.Policies{}),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Root dir with Namespace",
@@ -566,7 +566,7 @@ var parserTestCases = []parserTestCase{
 			"foo": createPolicyNode("foo", "", true,
 				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Root dir with ResourceQuota and namespace dir",
@@ -580,7 +580,7 @@ var parserTestCases = []parserTestCase{
 				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
 			"bar": createPolicyNode("bar", "foo", false, nil),
 		},
-		expectedClusterPolicy: createClusterPolicy("foo"),
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Root dir with Roles",
