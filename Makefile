@@ -317,10 +317,6 @@ docs-staging: $(OUTPUT_DIR)
 	cp -r $(TOP_DIR)/docs $(STAGING_DIR)
 	cp $(TOP_DIR)/README.md $(DOCS_STAGING_DIR)
 
-# Checks that grip binary is installed.
-check-for-grip:
-	@command -v grip || (echo "Need to install grip: pip install grip" && exit 1)
-
 # Converts Markdown docs into HTML.
 docs-generate: buildenv docs-staging
 	@docker run $(DOCKER_INTERACTIVE) \
