@@ -119,11 +119,9 @@ func TestQuota(t *testing.T) {
 				Aggregated: &AggregatedQuota{},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Policies: policyhierarchy_v1.Policies{
-							ResourceQuotaV1: &core_v1.ResourceQuota{
-								Spec: core_v1.ResourceQuotaSpec{
-									Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
-								},
+						ResourceQuotaV1: &core_v1.ResourceQuota{
+							Spec: core_v1.ResourceQuotaSpec{
+								Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
 							},
 						},
 					},
@@ -147,11 +145,9 @@ func TestQuota(t *testing.T) {
 				},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Policies: policyhierarchy_v1.Policies{
-							ResourceQuotaV1: &core_v1.ResourceQuota{
-								Spec: core_v1.ResourceQuotaSpec{
-									Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
-								},
+						ResourceQuotaV1: &core_v1.ResourceQuota{
+							Spec: core_v1.ResourceQuotaSpec{
+								Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
 							},
 						},
 					},
@@ -178,11 +174,9 @@ func TestQuota(t *testing.T) {
 				},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Policies: policyhierarchy_v1.Policies{
-							ResourceQuotaV1: &core_v1.ResourceQuota{
-								Spec: core_v1.ResourceQuotaSpec{
-									Hard: core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("10")},
-								},
+						ResourceQuotaV1: &core_v1.ResourceQuota{
+							Spec: core_v1.ResourceQuotaSpec{
+								Hard: core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("10")},
 							},
 						},
 					},

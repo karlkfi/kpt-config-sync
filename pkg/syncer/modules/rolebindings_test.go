@@ -134,10 +134,8 @@ func TestRoleBindings(t *testing.T) {
 				Aggregated: &AggregatedRoleBinding{},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Policies: policyhierarchy_v1.Policies{
-							RoleBindingsV1: []rbac_v1.RoleBinding{
-								admins,
-							},
+						RoleBindingsV1: []rbac_v1.RoleBinding{
+							admins,
 						},
 					},
 				},
@@ -158,10 +156,8 @@ func TestRoleBindings(t *testing.T) {
 				Aggregated: &AggregatedRoleBinding{},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Policies: policyhierarchy_v1.Policies{
-							RoleBindingsV1: []rbac_v1.RoleBinding{
-								admins,
-							},
+						RoleBindingsV1: []rbac_v1.RoleBinding{
+							admins,
 						},
 					},
 				},
@@ -176,10 +172,8 @@ func TestRoleBindings(t *testing.T) {
 				},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Policies: policyhierarchy_v1.Policies{
-							RoleBindingsV1: []rbac_v1.RoleBinding{
-								admins,
-							},
+						RoleBindingsV1: []rbac_v1.RoleBinding{
+							admins,
 						},
 					},
 				},

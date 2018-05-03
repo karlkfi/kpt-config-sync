@@ -28,12 +28,10 @@ func PolicyNode(
 			Name: name,
 		},
 		Spec: v1.PolicyNodeSpec{
-			Type:   policyNodeType,
-			Parent: parent,
-			Policies: v1.Policies{
-				RolesV1:        roles,
-				RoleBindingsV1: roleBindings,
-			},
+			Type:           policyNodeType,
+			Parent:         parent,
+			RolesV1:        roles,
+			RoleBindingsV1: roleBindings,
 		},
 	}
 	return &ret

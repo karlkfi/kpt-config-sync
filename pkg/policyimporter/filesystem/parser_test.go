@@ -29,6 +29,7 @@ import (
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
+	rbac_v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -190,10 +191,15 @@ func (d testDir) createTestFile(path, contents string) {
 	if err := ioutil.WriteFile(path, []byte(contents), 0644); err != nil {
 		d.Fatalf("error creating test file %s: %v", path, err)
 	}
-
 }
 
-func createPolicyNode(name string, parent string, policyspace bool, policies *policyhierarchy_v1.Policies) policyhierarchy_v1.PolicyNode {
+type Policies struct {
+	RolesV1         []rbac_v1.Role
+	RoleBindingsV1  []rbac_v1.RoleBinding
+	ResourceQuotaV1 *core_v1.ResourceQuota
+}
+
+func createPolicyNode(name string, parent string, policyspace bool, policies *Policies) policyhierarchy_v1.PolicyNode {
 	pnt := policyhierarchy_v1.Namespace
 	if policyspace {
 		pnt = policyhierarchy_v1.Policyspace
@@ -204,16 +210,16 @@ func createPolicyNode(name string, parent string, policyspace bool, policies *po
 			Parent: parent,
 		})
 	if policies != nil {
-		pn.Spec.Policies = *policies
+		pn.Spec.RolesV1 = policies.RolesV1
+		pn.Spec.RoleBindingsV1 = policies.RoleBindingsV1
+		pn.Spec.ResourceQuotaV1 = policies.ResourceQuotaV1
 	}
 	return *pn
 }
 
 func createClusterPolicy() *policyhierarchy_v1.ClusterPolicy {
 	return policynode.NewClusterPolicy(policyhierarchy_v1.ClusterPolicyName,
-		&policyhierarchy_v1.ClusterPolicySpec{
-			Policies: policyhierarchy_v1.ClusterPolicies{},
-		})
+		&policyhierarchy_v1.ClusterPolicySpec{})
 }
 
 func createResourceQuota(name string, namespace string) *core_v1.ResourceQuota {
@@ -341,7 +347,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", false,
-				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "bar")}),
+				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "bar")}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -354,7 +360,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", false,
-				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "bar")}),
+				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "bar")}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -471,7 +477,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true, nil),
 			"bar": createPolicyNode("bar", "foo", true,
-				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
+				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -537,7 +543,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Root dir empty",
 		root:     "foo",
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
-			"foo": createPolicyNode("foo", "", true, &policyhierarchy_v1.Policies{}),
+			"foo": createPolicyNode("foo", "", true, &Policies{}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -548,7 +554,7 @@ var parserTestCases = []parserTestCase{
 			"ignore": "",
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
-			"foo": createPolicyNode("foo", "", true, &policyhierarchy_v1.Policies{}),
+			"foo": createPolicyNode("foo", "", true, &Policies{}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -568,7 +574,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true,
-				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
+				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -581,7 +587,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", true,
-				&policyhierarchy_v1.Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
+				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
 			"bar": createPolicyNode("bar", "foo", false, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -704,7 +710,7 @@ func TestParser(t *testing.T) {
 			if len(tc.expectedNumPolicies) > 0 {
 				n := make(map[string]int)
 				for k, v := range actualPolicies.PolicyNodes {
-					p := v.Spec.Policies
+					p := v.Spec
 					n[k] = len(p.RolesV1) + len(p.RoleBindingsV1)
 					if p.ResourceQuotaV1 != nil {
 						n[k]++
@@ -716,7 +722,7 @@ func TestParser(t *testing.T) {
 			}
 
 			if tc.expectedNumClusterPolicies != nil {
-				p := actualPolicies.ClusterPolicy.Spec.Policies
+				p := actualPolicies.ClusterPolicy.Spec
 				n := len(p.ClusterRolesV1) + len(p.ClusterRoleBindingsV1) + len(p.PodSecurityPoliciesV1Beta1)
 				if diff := deep.Equal(n, *tc.expectedNumClusterPolicies); diff != nil {
 					t.Fatalf("Actual and expected number of cluster policies didn't match: %v", diff)

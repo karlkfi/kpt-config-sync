@@ -242,7 +242,7 @@ func TestPolicySpaceWithRoles(t *testing.T) {
 	v.Add(newNode("root", "", true))
 
 	policySpaceWithRole := newNode("policyspacewithrole", "root", true)
-	policySpaceWithRole.Spec.Policies.RolesV1 = []rbac_v1.Role{{}}
+	policySpaceWithRole.Spec.RolesV1 = []rbac_v1.Role{{}}
 	v.Add(policySpaceWithRole)
 
 	v.Add(newNode("child2", "policyspacewithrole", false))

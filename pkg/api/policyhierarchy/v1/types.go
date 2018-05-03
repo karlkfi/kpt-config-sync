@@ -37,32 +37,24 @@ type ClusterPolicy struct {
 
 	// Standard object's metadata.
 	// +optional
-	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// The actual object definition, per K8S object definition style.
-	Spec ClusterPolicySpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	// +optional
+	Spec ClusterPolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // ClusterPolicySpec defines the policies that will exist at the cluster level.
 // +protobuf=true
 type ClusterPolicySpec struct {
-	// The policies specified for cluster level resources.
-	Policies ClusterPolicies `json:"policies" protobuf:"bytes,1,opt,name=policies"`
+	// +optional
+	ClusterRolesV1 []rbac_v1.ClusterRole `json:"clusterRolesV1,omitempty" protobuf:"bytes,1,rep,name=clusterRolesV1"`
 
-	// UnmanagedNamespacesV1 is a configmap that contains unmanaged namespace configuration for the syncer.
-	// Keys for the data field correspond to namespace names. The only value accepted at the moment is "unmanaged"
-	// which indicates that the namespace is unmanaged.
-	UnmanagedNamespacesV1 *core_v1.ConfigMap `json:"unmanagedNamespaces,omitempty" protobuf:"bytes,2,opt,name=unmanagedNamespaces"`
-}
+	// +optional
+	ClusterRoleBindingsV1 []rbac_v1.ClusterRoleBinding `json:"clusterRoleBindingsV1,omitempty" protobuf:"bytes,2,rep,name=clusterRoleBindingsV1"`
 
-// ClusterPolicies specifies the policies nomos synchronizes to a cluster. This is factored out
-// due to the fact that it is specified in MasterClusterPolicyNodeSpec and ClusterPolicyNodeSpec.
-// +protobuf=true
-type ClusterPolicies struct {
-	// Cluster scope resources.
-	ClusterRolesV1             []rbac_v1.ClusterRole                  `json:"clusterRolesV1" protobuf:"bytes,2,rep,name=clusterRolesV1"`
-	ClusterRoleBindingsV1      []rbac_v1.ClusterRoleBinding           `json:"clusterRoleBindingsV1" protobuf:"bytes,3,rep,name=clusterRoleBindingsV1"`
-	PodSecurityPoliciesV1Beta1 []extensions_v1beta1.PodSecurityPolicy `json:"podSecurityPolicyV1Beta1" protobuf:"bytes,4,rep,name=podSecurityPolicyV1Beta1"`
+	// +optional
+	PodSecurityPoliciesV1Beta1 []extensions_v1beta1.PodSecurityPolicy `json:"podSecurityPolicyV1Beta1,omitempty" protobuf:"bytes,3,rep,name=podSecurityPolicyV1Beta1"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -97,7 +89,8 @@ type PolicyNode struct {
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
 	// The actual object definition, per K8S object definition style.
-	Spec PolicyNodeSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	// +optional
+	Spec PolicyNodeSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // PolicyNodeSpec contains all the information about a policy linkage.
@@ -107,19 +100,15 @@ type PolicyNodeSpec struct {
 	Type PolicyNodeType `json:"type,omitempty" protobuf:"varint,1,opt,name=type"`
 
 	// The parent org unit
-	Parent string `json:"parent" protobuf:"bytes,2,opt,name=parent"`
+	// +optional
+	Parent string `json:"parent,omitempty" protobuf:"bytes,2,opt,name=parent"`
 
-	// The policies attached to that node
-	Policies Policies `json:"policies" protobuf:"bytes,3,opt,name=policies"`
-}
-
-// Policies contains all the defined policies that are linked to a particular
-// PolicyNode.
-// +protobuf=true
-type Policies struct {
-	RolesV1         []rbac_v1.Role         `json:"rolesV1" protobuf:"bytes,1,rep,name=rolesV1"`
-	RoleBindingsV1  []rbac_v1.RoleBinding  `json:"roleBindingsV1" protobuf:"bytes,2,rep,name=roleBindingsV1"`
-	ResourceQuotaV1 *core_v1.ResourceQuota `json:"resourceQuotaV1" protobuf:"bytes,3,opt,name=resourceQuotaV1"`
+	// +optional
+	RolesV1 []rbac_v1.Role `json:"rolesV1,omitempty" protobuf:"bytes,3,rep,name=rolesV1"`
+	// +optional
+	RoleBindingsV1 []rbac_v1.RoleBinding `json:"roleBindingsV1,omitempty" protobuf:"bytes,4,rep,name=roleBindingsV1"`
+	// +optional
+	ResourceQuotaV1 *core_v1.ResourceQuota `json:"resourceQuotaV1,omitempty" protobuf:"bytes,5,opt,name=resourceQuotaV1"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -129,6 +118,7 @@ type Policies struct {
 // +protobuf=true
 type PolicyNodeList struct {
 	metav1.TypeMeta `json:",inline"`
+
 	// Standard object's metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -140,6 +130,8 @@ type PolicyNodeList struct {
 // AllPolicies holds all PolicyNodes and the ClusterPolicy.
 type AllPolicies struct {
 	// Map of names to PolicyNodes.
-	PolicyNodes   map[string]PolicyNode `protobuf:"bytes,1,rep,name=policyNodes"`
-	ClusterPolicy *ClusterPolicy        `protobuf:"bytes,2,opt,name=clusterPolicy"`
+	// +optional
+	PolicyNodes map[string]PolicyNode `protobuf:"bytes,1,rep,name=policyNodes"`
+	// +optional
+	ClusterPolicy *ClusterPolicy `protobuf:"bytes,2,opt,name=clusterPolicy"`
 }

@@ -41,8 +41,8 @@ var _ hierarchy.AggregatedNode = &AggregatedQuota{}
 // Aggregated implements hierarchy.AggregatedNode
 func (s *AggregatedQuota) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarchy.AggregatedNode {
 	limits := core_v1.ResourceList{}
-	if node.Spec.Policies.ResourceQuotaV1 != nil {
-		for k, v := range node.Spec.Policies.ResourceQuotaV1.Spec.Hard {
+	if node.Spec.ResourceQuotaV1 != nil {
+		for k, v := range node.Spec.ResourceQuotaV1.Spec.Hard {
 			limits[k] = v
 		}
 	}

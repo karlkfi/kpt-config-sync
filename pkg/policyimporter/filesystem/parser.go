@@ -214,9 +214,18 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 }
 
 func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.PolicyNode, *policyhierarchy_v1.ClusterPolicy, error) {
-	var policies policyhierarchy_v1.Policies
-	var clusterPolicies policyhierarchy_v1.ClusterPolicies
 	v := newValidator()
+	pn := policynode.NewPolicyNode(
+		filepath.Base(dir),
+		&policyhierarchy_v1.PolicyNodeSpec{
+			Type:   policyhierarchy_v1.Policyspace,
+			Parent: policyhierarchy_v1.NoParentNamespace,
+		},
+	)
+	cp := policynode.NewClusterPolicy(
+		policyhierarchy_v1.ClusterPolicyName,
+		&policyhierarchy_v1.ClusterPolicySpec{},
+	)
 
 	for _, i := range infos {
 		o := i.AsVersioned()
@@ -224,21 +233,21 @@ func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.Pol
 		// Types in alphabetical order.
 		switch o := o.(type) {
 		case *rbac_v1.ClusterRole:
-			clusterPolicies.ClusterRolesV1 = append(clusterPolicies.ClusterRolesV1, *o)
+			cp.Spec.ClusterRolesV1 = append(cp.Spec.ClusterRolesV1, *o)
 		case *rbac_v1.ClusterRoleBinding:
-			clusterPolicies.ClusterRoleBindingsV1 = append(clusterPolicies.ClusterRoleBindingsV1, *o)
+			cp.Spec.ClusterRoleBindingsV1 = append(cp.Spec.ClusterRoleBindingsV1, *o)
 		case *core_v1.Namespace:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *extensions_v1beta1.PodSecurityPolicy:
-			clusterPolicies.PodSecurityPoliciesV1Beta1 = append(clusterPolicies.PodSecurityPoliciesV1Beta1, *o)
+			cp.Spec.PodSecurityPoliciesV1Beta1 = append(cp.Spec.PodSecurityPoliciesV1Beta1, *o)
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, "")
-			policies.ResourceQuotaV1 = o
+			pn.Spec.ResourceQuotaV1 = o
 		case *rbac_v1.Role:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, "")
-			policies.RoleBindingsV1 = append(policies.RoleBindingsV1, *o)
+			pn.Spec.RoleBindingsV1 = append(pn.Spec.RoleBindingsV1, *o)
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
 		}
@@ -247,20 +256,7 @@ func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.Pol
 			return nil, nil, v.err
 		}
 	}
-
-	pn := policynode.NewPolicyNode(filepath.Base(dir),
-		&policyhierarchy_v1.PolicyNodeSpec{
-			Type:     policyhierarchy_v1.Policyspace,
-			Parent:   policyhierarchy_v1.NoParentNamespace,
-			Policies: policies,
-		})
-
 	// There's a singleton ClusterPolicy object for the hierarchy.
-	cp := policynode.NewClusterPolicy(policyhierarchy_v1.ClusterPolicyName,
-		&policyhierarchy_v1.ClusterPolicySpec{
-			Policies: clusterPolicies,
-		})
-
 	return pn, cp, nil
 }
 
@@ -284,8 +280,14 @@ func processNonRootDir(dir string, infos []*resource.Info, namespaceDirs map[str
 }
 
 func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.PolicyNode, error) {
-	var policies policyhierarchy_v1.Policies
 	v := newValidator()
+	pn := policynode.NewPolicyNode(
+		filepath.Base(dir),
+		&policyhierarchy_v1.PolicyNodeSpec{
+			Type:   policyhierarchy_v1.Policyspace,
+			Parent: filepath.Base(filepath.Dir(dir)),
+		},
+	)
 
 	for _, i := range infos {
 		o := i.AsVersioned()
@@ -303,12 +305,12 @@ func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, "")
-			policies.ResourceQuotaV1 = o
+			pn.Spec.ResourceQuotaV1 = o
 		case *rbac_v1.Role:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, "")
-			policies.RoleBindingsV1 = append(policies.RoleBindingsV1, *o)
+			pn.Spec.RoleBindingsV1 = append(pn.Spec.RoleBindingsV1, *o)
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
 		}
@@ -318,20 +320,19 @@ func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy
 		}
 	}
 
-	pn := policynode.NewPolicyNode(filepath.Base(dir),
-		&policyhierarchy_v1.PolicyNodeSpec{
-			Type:     policyhierarchy_v1.Policyspace,
-			Parent:   filepath.Base(filepath.Dir(dir)),
-			Policies: policies,
-		})
-
 	return pn, nil
 }
 
 func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.PolicyNode, error) {
 	namespace := filepath.Base(dir)
-	var policies policyhierarchy_v1.Policies
 	v := newValidator()
+	pn := policynode.NewPolicyNode(
+		filepath.Base(dir),
+		&policyhierarchy_v1.PolicyNodeSpec{
+			Type:   policyhierarchy_v1.Namespace,
+			Parent: filepath.Base(filepath.Dir(dir)),
+		},
+	)
 
 	for _, i := range infos {
 		o := i.AsVersioned()
@@ -348,13 +349,13 @@ func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta)
-			policies.ResourceQuotaV1 = o
+			pn.Spec.ResourceQuotaV1 = o
 		case *rbac_v1.Role:
 			v.HasNamespace(i, namespace)
-			policies.RolesV1 = append(policies.RolesV1, *o)
+			pn.Spec.RolesV1 = append(pn.Spec.RolesV1, *o)
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, namespace)
-			policies.RoleBindingsV1 = append(policies.RoleBindingsV1, *o)
+			pn.Spec.RoleBindingsV1 = append(pn.Spec.RoleBindingsV1, *o)
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
 			continue
@@ -369,13 +370,6 @@ func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v
 	if v.err != nil {
 		return nil, v.err
 	}
-
-	pn := policynode.NewPolicyNode(namespace,
-		&policyhierarchy_v1.PolicyNodeSpec{
-			Type:     policyhierarchy_v1.Namespace,
-			Parent:   filepath.Base(filepath.Dir(dir)),
-			Policies: policies,
-		})
 
 	return pn, nil
 }

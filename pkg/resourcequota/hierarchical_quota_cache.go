@@ -78,11 +78,11 @@ func (c *HierarchicalQuotaCache) initCache() error {
 				Used: core_v1.ResourceList{},
 			},
 		}
-		if policyNode.Spec.Policies.ResourceQuotaV1 != nil {
+		if policyNode.Spec.ResourceQuotaV1 != nil {
 			quota = &core_v1.ResourceQuota{
-				Spec: *policyNode.Spec.Policies.ResourceQuotaV1.Spec.DeepCopy(),
+				Spec: *policyNode.Spec.ResourceQuotaV1.Spec.DeepCopy(),
 				Status: core_v1.ResourceQuotaStatus{
-					Hard: policyNode.Spec.Policies.ResourceQuotaV1.Spec.Hard,
+					Hard: policyNode.Spec.ResourceQuotaV1.Spec.Hard,
 					Used: core_v1.ResourceList{},
 				},
 			}

@@ -101,10 +101,8 @@ func TestRoles(t *testing.T) {
 				Aggregated: &AggregatedRole{},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Type: policyhierarchy_v1.Namespace,
-						Policies: policyhierarchy_v1.Policies{
-							RolesV1: []rbac_v1.Role{admin, editor},
-						},
+						Type:    policyhierarchy_v1.Namespace,
+						RolesV1: []rbac_v1.Role{admin, editor},
 					},
 				},
 				Expect: hierarchy.Instances{
@@ -127,10 +125,8 @@ func TestRoles(t *testing.T) {
 				Aggregated: &AggregatedRole{},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Type: policyhierarchy_v1.Policyspace,
-						Policies: policyhierarchy_v1.Policies{
-							RolesV1: []rbac_v1.Role{admin, editor},
-						},
+						Type:    policyhierarchy_v1.Policyspace,
+						RolesV1: []rbac_v1.Role{admin, editor},
 					},
 				},
 				Expect: hierarchy.Instances{},

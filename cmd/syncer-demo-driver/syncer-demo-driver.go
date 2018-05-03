@@ -163,23 +163,21 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 
 				nodeSpec := &v1.PolicyNodeSpec{
 					Type: v1.Namespace,
-					Policies: v1.Policies{
-						RolesV1: []rbac_v1.Role{
-							rbac_v1.Role{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: "pod-reader",
-								},
-								Rules: []rbac_v1.PolicyRule{
-									rbac_v1.PolicyRule{
-										Resources: []string{"pods"},
-										Verbs:     []string{"get"},
-									},
+					RolesV1: []rbac_v1.Role{
+						rbac_v1.Role{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "pod-reader",
+							},
+							Rules: []rbac_v1.PolicyRule{
+								rbac_v1.PolicyRule{
+									Resources: []string{"pods"},
+									Verbs:     []string{"get"},
 								},
 							},
 						},
-						RoleBindingsV1:  []rbac_v1.RoleBinding{},
-						ResourceQuotaV1: &core_v1.ResourceQuota{},
 					},
+					RoleBindingsV1:  []rbac_v1.RoleBinding{},
+					ResourceQuotaV1: &core_v1.ResourceQuota{},
 				}
 				policyNode := policynode.NewPolicyNode(name, nodeSpec)
 

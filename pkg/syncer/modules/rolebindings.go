@@ -38,9 +38,9 @@ type AggregatedRoleBinding struct {
 
 // Aggregated implements hierarchy.AggregatedNode
 func (s *AggregatedRoleBinding) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarchy.AggregatedNode {
-	roleBindings := make([]rbac_v1.RoleBinding, len(s.roleBindings)+len(node.Spec.Policies.RoleBindingsV1))
+	roleBindings := make([]rbac_v1.RoleBinding, len(s.roleBindings)+len(node.Spec.RoleBindingsV1))
 	copy(roleBindings[0:len(s.roleBindings)], s.roleBindings)
-	copy(roleBindings[len(s.roleBindings):], node.Spec.Policies.RoleBindingsV1)
+	copy(roleBindings[len(s.roleBindings):], node.Spec.RoleBindingsV1)
 	return &AggregatedRoleBinding{roleBindings: roleBindings}
 }
 

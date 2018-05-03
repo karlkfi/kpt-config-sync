@@ -42,7 +42,7 @@ func (s *AggregatedRole) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarc
 		return &AggregatedRole{}
 	}
 
-	return &AggregatedRole{roles: node.Spec.Policies.RolesV1}
+	return &AggregatedRole{roles: node.Spec.RolesV1}
 }
 
 // Generate implements hierarchy.AggregatedNode

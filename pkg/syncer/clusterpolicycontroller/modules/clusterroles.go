@@ -85,7 +85,7 @@ func (s *ClusterRolesModule) Instance() meta_v1.Object {
 // Extract implements clusterpolicycontroller.Module
 func (s *ClusterRolesModule) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
 	var roles []runtime.Object
-	for _, r := range clusterPolicy.Spec.Policies.ClusterRolesV1 {
+	for _, r := range clusterPolicy.Spec.ClusterRolesV1 {
 		roles = append(roles, &r)
 	}
 	return object.RuntimeToMeta(roles)

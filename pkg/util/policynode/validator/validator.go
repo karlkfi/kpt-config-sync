@@ -193,7 +193,7 @@ func (s *Validator) checkCycles() error {
 // checkPolicySpaceRoles checks that there are no PolicySpaces that have Roles.
 func (s *Validator) checkPolicySpaceRoles() error {
 	for nodeName, node := range s.policyNodes {
-		if node.Spec.Type.IsPolicyspace() && len(node.Spec.Policies.RolesV1) > 0 {
+		if node.Spec.Type.IsPolicyspace() && len(node.Spec.RolesV1) > 0 {
 			return errors.Errorf(
 				"Node %s designated as a policy space, but has roles", nodeName)
 		}

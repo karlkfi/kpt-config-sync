@@ -4,10 +4,9 @@ metadata:
   name: acme
 spec:
   type: policyspace
-  policies:
-    resourceQuotaV1:
-      hard:
-        secrets: "10"
+  resourceQuotaV1:
+    hard:
+      secrets: "10"
 ---
 apiVersion: "nomos.dev/v1"
 kind: PolicyNode
@@ -16,27 +15,26 @@ metadata:
 spec:
   type: policyspace
   parent: acme
-  policies:
-    resourceQuotaV1:
-      kind: ResourceQuota
-      spec:
-        hard:
-          pods: "1"
-          secrets: "5"
-    rolebindingsV1:
-    - kind: RoleBinding
-      apiVersion: rbac.authorization.k8s.io/v1
-      metadata:
-        namespace: eng
-        name: alice-rolebinding
-      subjects:
-      - kind: User
-        name: alice@acme.com
-        apiGroup: rbac.authorization.k8s.io
-      roleRef:
-        kind: Role
-        name: acme-admin
-        apiGroup: rbac.authorization.k8s.io
+  resourceQuotaV1:
+    kind: ResourceQuota
+    spec:
+      hard:
+        pods: "1"
+        secrets: "5"
+  rolebindingsV1:
+  - kind: RoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      namespace: eng
+      name: alice-rolebinding
+    subjects:
+    - kind: User
+      name: alice@acme.com
+      apiGroup: rbac.authorization.k8s.io
+    roleRef:
+      kind: Role
+      name: acme-admin
+      apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: "nomos.dev/v1"
 kind: PolicyNode
@@ -45,12 +43,11 @@ metadata:
 spec:
   type: policyspace
   parent: acme
-  policies:
-    resourceQuotaV1:
-      kind: ResourceQuota
-      spec:
-        hard:
-          configmaps: "2"
+  resourceQuotaV1:
+    kind: ResourceQuota
+    spec:
+      hard:
+        configmaps: "2"
 ---
 apiVersion: "nomos.dev/v1"
 kind: PolicyNode
@@ -59,26 +56,25 @@ metadata:
 spec:
   type: namespace
   parent: eng
-  policies:
-    resourceQuotaV1:
-      kind: ResourceQuota
-      spec:
-        hard:
-          pods: "1"
-    rolebindingsV1:
-    - kind: RoleBinding
-      apiVersion: rbac.authorization.k8s.io/v1
-      metadata:
-        namespace: backend
-        name: bob-rolebinding
-      subjects:
-      - kind: User
-        name: bob@acme.com
-        apiGroup: rbac.authorization.k8s.io
-      roleRef:
-        kind: Role
-        name: acme-admin
-        apiGroup: rbac.authorization.k8s.io
+  resourceQuotaV1:
+    kind: ResourceQuota
+    spec:
+      hard:
+        pods: "1"
+  rolebindingsV1:
+  - kind: RoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      namespace: backend
+      name: bob-rolebinding
+    subjects:
+    - kind: User
+      name: bob@acme.com
+      apiGroup: rbac.authorization.k8s.io
+    roleRef:
+      kind: Role
+      name: acme-admin
+      apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: "nomos.dev/v1"
 kind: PolicyNode
@@ -87,12 +83,11 @@ metadata:
 spec:
   type: 1
   parent: eng
-  policies:
-    resourceQuotaV1:
-      kind: ResourceQuota
-      spec:
-        hard:
-          pods: "1"
+  resourceQuotaV1:
+    kind: ResourceQuota
+    spec:
+      hard:
+        pods: "1"
 ---
 apiVersion: "nomos.dev/v1"
 kind: PolicyNode
@@ -101,23 +96,22 @@ metadata:
 spec:
   type: namespace
   parent: rnd
-  policies:
-    rolesV1:
-    - kind: Role
-      apiVersion: rbac.authorization.k8s.io/v1
-      metadata:
-        namespace: acme
-        name: acme-admin
-      rules:
-      - apiGroups: [""]
-        resources: ["pods"]
-        verbs: ["*"]
-      - apiGroups: [""]
-        resources: ["namespaces"]
-        verbs: ["get"]
-      - apiGroups: ["rbac.authorization.k8s.io"]
-        resources: ["roles", "rolebindings"]
-        verbs: ["get", "list"]
+  rolesV1:
+  - kind: Role
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      namespace: acme
+      name: acme-admin
+    rules:
+    - apiGroups: [""]
+      resources: ["pods"]
+      verbs: ["*"]
+    - apiGroups: [""]
+      resources: ["namespaces"]
+      verbs: ["get"]
+    - apiGroups: ["rbac.authorization.k8s.io"]
+      resources: ["roles", "rolebindings"]
+      verbs: ["get", "list"]
 ---
 apiVersion: "nomos.dev/v1"
 kind: PolicyNode
@@ -133,69 +127,68 @@ kind: ClusterPolicy
 metadata:
   name: clusterpolicy
 spec:
-  policies:
-    type: clusterrole
-    clusterRolesV1:
-    - kind: ClusterRole
-      apiVersion: rbac.authorization.k8s.io/v1
-      metadata:
-        name: namespace-viewer
-      rules:
-      - apiGroups: [""]
-        resources: ["namespaces"]
-        verbs: ["get", "list"]
-    - kind: ClusterRole
-      apiVersion: rbac.authorization.k8s.io/v1
-      metadata:
-        name: rbac-viewer
-      rules:
-      - apiGroups: ["rbac.authorization.k8s.io"]
-        resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
-        verbs: ["get", "list"]
-    # Example for clusterrolebindings
-    clusterRoleBindingsV1:
-    - kind: ClusterRoleBinding
-      apiVersion: rbac.authorization.k8s.io/v1
-      metadata:
-        name: namespace-viewers
-      subjects:
-      - kind: User
-        name: cheryl@acme.com
-        apiGroup: rbac.authorization.k8s.io
-      - kind: User
-        name: cyril@acme.com
-        apiGroup: rbac.authorization.k8s.io
-      roleRef:
-        kind: ClusterRole
-        name: namespace-viewer
-        apiGroup: rbac.authorization.k8s.io
-    - kind: ClusterRoleBinding
-      apiVersion: rbac.authorization.k8s.io/v1
-      metadata:
-        name: rbac-viewers
-      subjects:
-      - kind: User
-        name: cheryl@acme.com
-        apiGroup: rbac.authorization.k8s.io
-      roleRef:
-        kind: ClusterRole
-        name: rbac-viewer
-        apiGroup: rbac.authorization.k8s.io
-    # Example for podsecuritypolicy
-    podSecurityPolicyV1Beta1:
-    - kind: PodSecurityPolicy
-      apiVersion: extensions/v1beta1
-      metadata:
-        name: example
-      spec:
-        privileged: false
-        seLinux:
-          rule: RunAsAny
-        supplementalGroups:
-          rule: RunAsAny
-        runAsUser:
-          rule: RunAsAny
-        fsGroup:
-          rule: RunAsAny
-        volumes:
-        - '*'
+  type: clusterrole
+  clusterRolesV1:
+  - kind: ClusterRole
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      name: namespace-viewer
+    rules:
+    - apiGroups: [""]
+      resources: ["namespaces"]
+      verbs: ["get", "list"]
+  - kind: ClusterRole
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      name: rbac-viewer
+    rules:
+    - apiGroups: ["rbac.authorization.k8s.io"]
+      resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+      verbs: ["get", "list"]
+  # Example for clusterrolebindings
+  clusterRoleBindingsV1:
+  - kind: ClusterRoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      name: namespace-viewers
+    subjects:
+    - kind: User
+      name: cheryl@acme.com
+      apiGroup: rbac.authorization.k8s.io
+    - kind: User
+      name: cyril@acme.com
+      apiGroup: rbac.authorization.k8s.io
+    roleRef:
+      kind: ClusterRole
+      name: namespace-viewer
+      apiGroup: rbac.authorization.k8s.io
+  - kind: ClusterRoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      name: rbac-viewers
+    subjects:
+    - kind: User
+      name: cheryl@acme.com
+      apiGroup: rbac.authorization.k8s.io
+    roleRef:
+      kind: ClusterRole
+      name: rbac-viewer
+      apiGroup: rbac.authorization.k8s.io
+  # Example for podsecuritypolicy
+  podSecurityPolicyV1Beta1:
+  - kind: PodSecurityPolicy
+    apiVersion: extensions/v1beta1
+    metadata:
+      name: example
+    spec:
+      privileged: false
+      seLinux:
+        rule: RunAsAny
+      supplementalGroups:
+        rule: RunAsAny
+      runAsUser:
+        rule: RunAsAny
+      fsGroup:
+        rule: RunAsAny
+      volumes:
+      - '*'

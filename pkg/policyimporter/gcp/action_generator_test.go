@@ -63,11 +63,11 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	orgPN = newPolicyNode("organization-123", "", true, nil)
+	orgPN = newPolicyNode("organization-123", "", true)
 	orgPNProto = toAnyProto(orgPN)
 	orgCPProto = toAnyProto(newClusterPolicy("organization-123"))
-	folderPNProto = toAnyProto(newPolicyNode("folder-456", "organization-123", true, nil))
-	nsPN = newPolicyNode("backend", "folder-456", false, nil)
+	folderPNProto = toAnyProto(newPolicyNode("folder-456", "organization-123", true))
+	nsPN = newPolicyNode("backend", "folder-456", false)
 	nsPNProto = toAnyProto(nsPN)
 
 	testCases = []testCase{
@@ -360,7 +360,7 @@ func TestRecvErr(t *testing.T) {
 	}
 }
 
-func newPolicyNode(name string, parent string, policyspace bool, policies *v1.Policies) *v1.PolicyNode {
+func newPolicyNode(name string, parent string, policyspace bool) *v1.PolicyNode {
 	pnt := v1.Namespace
 	if policyspace {
 		pnt = v1.Policyspace
@@ -370,17 +370,11 @@ func newPolicyNode(name string, parent string, policyspace bool, policies *v1.Po
 			Type:   pnt,
 			Parent: parent,
 		})
-	if policies != nil {
-		pn.Spec.Policies = *policies
-	}
 	return pn
 }
 
 func newClusterPolicy(name string) *v1.ClusterPolicy {
-	return policynode.NewClusterPolicy(name,
-		&v1.ClusterPolicySpec{
-			Policies: v1.ClusterPolicies{},
-		})
+	return policynode.NewClusterPolicy(name, &v1.ClusterPolicySpec{})
 }
 
 func toAnyProto(m interface{}) *ptypes.Any {

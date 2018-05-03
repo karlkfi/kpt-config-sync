@@ -32,18 +32,6 @@ import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "v1";
 
-// ClusterPolicies specifies the policies nomos synchronizes to a cluster. This is factored out
-// due to the fact that it is specified in MasterClusterPolicyNodeSpec and ClusterPolicyNodeSpec.
-// +protobuf=true
-message ClusterPolicies {
-  // Cluster scope resources.
-  repeated k8s.io.api.rbac.v1.ClusterRole clusterRolesV1 = 2;
-
-  repeated k8s.io.api.rbac.v1.ClusterRoleBinding clusterRoleBindingsV1 = 3;
-
-  repeated k8s.io.api.extensions.v1beta1.PodSecurityPolicy podSecurityPolicyV1Beta1 = 4;
-}
-
 // ClusterPolicy is the top-level object for the policy node data definition.
 // 
 // It holds a policy defined for a single org unit (namespace).
@@ -54,6 +42,7 @@ message ClusterPolicy {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // The actual object definition, per K8S object definition style.
+  // +optional
   optional ClusterPolicySpec spec = 2;
 }
 
@@ -72,24 +61,14 @@ message ClusterPolicyList {
 // ClusterPolicySpec defines the policies that will exist at the cluster level.
 // +protobuf=true
 message ClusterPolicySpec {
-  // The policies specified for cluster level resources.
-  optional ClusterPolicies policies = 1;
+  // +optional
+  repeated k8s.io.api.rbac.v1.ClusterRole clusterRolesV1 = 1;
 
-  // UnmanagedNamespacesV1 is a configmap that contains unmanaged namespace configuration for the syncer.
-  // Keys for the data field correspond to namespace names. The only value accepted at the moment is "unmanaged"
-  // which indicates that the namespace is unmanaged.
-  optional k8s.io.api.core.v1.ConfigMap unmanagedNamespaces = 2;
-}
+  // +optional
+  repeated k8s.io.api.rbac.v1.ClusterRoleBinding clusterRoleBindingsV1 = 2;
 
-// Policies contains all the defined policies that are linked to a particular
-// PolicyNode.
-// +protobuf=true
-message Policies {
-  repeated k8s.io.api.rbac.v1.Role rolesV1 = 1;
-
-  repeated k8s.io.api.rbac.v1.RoleBinding roleBindingsV1 = 2;
-
-  optional k8s.io.api.core.v1.ResourceQuota resourceQuotaV1 = 3;
+  // +optional
+  repeated k8s.io.api.extensions.v1beta1.PodSecurityPolicy podSecurityPolicyV1Beta1 = 3;
 }
 
 // PolicyNode is the top-level object for the policy node data definition.
@@ -102,6 +81,7 @@ message PolicyNode {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // The actual object definition, per K8S object definition style.
+  // +optional
   optional PolicyNodeSpec spec = 2;
 }
 
@@ -124,9 +104,16 @@ message PolicyNodeSpec {
   optional string type = 1;
 
   // The parent org unit
+  // +optional
   optional string parent = 2;
 
-  // The policies attached to that node
-  optional Policies policies = 3;
+  // +optional
+  repeated k8s.io.api.rbac.v1.Role rolesV1 = 3;
+
+  // +optional
+  repeated k8s.io.api.rbac.v1.RoleBinding roleBindingsV1 = 4;
+
+  // +optional
+  optional k8s.io.api.core.v1.ResourceQuota resourceQuotaV1 = 5;
 }
 

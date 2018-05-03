@@ -81,7 +81,7 @@ func (s *PodSecurityPoliciesModule) Instance() meta_v1.Object {
 // Extract implements clusterpolicycontroller.Module
 func (s *PodSecurityPoliciesModule) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
 	var policies []runtime.Object
-	for _, p := range clusterPolicy.Spec.Policies.PodSecurityPoliciesV1Beta1 {
+	for _, p := range clusterPolicy.Spec.PodSecurityPoliciesV1Beta1 {
 		policies = append(policies, &p)
 	}
 	return object.RuntimeToMeta(policies)
