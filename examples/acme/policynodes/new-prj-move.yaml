@@ -3,5 +3,5 @@ kind: PolicyNode
 metadata:
   name: new-prj
 spec:
-  policyspace: false
+  type: 1
   parent: eng

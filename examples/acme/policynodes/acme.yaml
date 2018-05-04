@@ -3,7 +3,7 @@ kind: PolicyNode
 metadata:
   name: acme
 spec:
-  policyspace: true
+  type: 1
   policies:
     resourceQuotaV1:
       hard:
@@ -14,7 +14,7 @@ kind: PolicyNode
 metadata:
   name: eng
 spec:
-  policyspace: true
+  type: 1
   parent: acme
   policies:
     resourceQuotaV1:
@@ -43,7 +43,7 @@ kind: PolicyNode
 metadata:
   name: rnd
 spec:
-  policyspace: true
+  type: 1
   parent: acme
   policies:
     resourceQuotaV1:
@@ -57,7 +57,7 @@ kind: PolicyNode
 metadata:
   name: backend
 spec:
-  policyspace: false
+  type: 1
   parent: eng
   policies:
     resourceQuotaV1:
@@ -85,7 +85,7 @@ kind: PolicyNode
 metadata:
   name: frontend
 spec:
-  policyspace: false
+  type: 1
   parent: eng
   policies:
     resourceQuotaV1:
@@ -99,7 +99,7 @@ kind: PolicyNode
 metadata:
   name: new-prj
 spec:
-  policyspace: false
+  type: 1
   parent: rnd
   policies:
     rolesV1:
@@ -124,7 +124,7 @@ kind: PolicyNode
 metadata:
   name: newer-prj
 spec:
-  policyspace: false
+  type: 1
   parent: rnd
 ---
 # Example for clusterroles
