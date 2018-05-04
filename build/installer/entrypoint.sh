@@ -30,15 +30,7 @@
 
 INTERACTIVE="${INTERACTIVE:-0}"
 
-echo "##################################################"
-echo "+++ Installer script version: ${INSTALLER_VERSION}"
-echo "##################################################"
-
-echo "### Examining environment:"
-env
-
-echo "### Examining args"
-echo "### $@"
+echo "### Running installer version: ${INSTALLER_VERSION}"
 
 readonly kubeconfig_output="/opt/installer/kubeconfig/config"
 # We need to fix up the kubeconfig paths because these may not match between
@@ -60,7 +52,7 @@ else
 fi
 
 # Set logging levels to high for specific modules only.
-readonly logging_options="--vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10"
+readonly logging_options="--vmodule=main=5,configgen=3,kubectl=3,installer=3,exec=3"
 
 # Make /home/user available also at a path that is the same as the user's home
 # directory on the host.

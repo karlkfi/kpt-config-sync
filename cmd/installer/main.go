@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"path"
 	"regexp"
@@ -51,11 +50,11 @@ func versionOrDie(vstr string) semver.Version {
 	var digitRe = regexp.MustCompile("[0-9]")
 	i := digitRe.FindStringIndex(vstr)
 	if len(i) == 0 || i[0] < 0 {
-		glog.Fatal(errors.Errorf("while parsing --version=%v", vstr))
+		glog.Exit(errors.Errorf("while parsing --version=%v", vstr))
 	}
 	v, err := semver.Parse(vstr[i[0]:])
 	if err != nil {
-		glog.Fatal(errors.Wrapf(err, "while parsing --version=%v", vstr))
+		glog.Exit(errors.Wrapf(err, "while parsing --version=%v", vstr))
 	}
 	return v
 }
@@ -68,18 +67,18 @@ func noninteractiveMain() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	glog.Infof("starting installer.")
+	glog.V(10).Infof("Starting installer.")
 
 	file, err := os.Open(*configFile)
 	if err != nil {
-		glog.Fatal(errors.Wrapf(err, "while opening: %q", *configFile))
+		glog.Exit(errors.Wrapf(err, "while opening: %q", *configFile))
 	}
 
 	config, err := config.Load(file)
 	if err != nil {
-		glog.Fatal(errors.Wrapf(err, "while loading: %q", *configFile))
+		glog.Exit(errors.Wrapf(err, "while loading: %q", *configFile))
 	}
-	glog.V(5).Infof("Using config: %#v", config)
+	glog.V(1).Infof("Using config: %#v", config)
 	if config.User == "" && *suggestedUser != "" {
 		// If the configuration has no user specified, but the user is suggested
 		// instead, use that user then.
@@ -97,13 +96,12 @@ func noninteractiveMain() {
 		err = i.Run(*useCurrent)
 	}
 	if err != nil {
-		glog.Fatal(errors.Wrap(err, "installer reported an error"))
+		glog.Exit(errors.Wrap(err, "installer reported an error"))
 	}
-	glog.Infof("installer completed.")
+	glog.Infof("Install successful!")
 }
 
 func main() {
-	fmt.Printf("args: %+v\n", os.Args)
 	flag.Parse()
 
 	// A simple tee off to the full installer binary.
@@ -116,11 +114,11 @@ func main() {
 	if *configIn != "" {
 		file, err := os.Open(*configIn)
 		if err != nil {
-			glog.Fatal(errors.Wrapf(err, "while opening: %q", *configIn))
+			glog.Exit(errors.Wrapf(err, "while opening: %q", *configIn))
 		}
 		c, err = config.Load(file)
 		if err != nil {
-			glog.Fatal(errors.Wrapf(err, "while loading: %q", *configIn))
+			glog.Exit(errors.Wrapf(err, "while loading: %q", *configIn))
 		}
 		if *suggestedUser != "" {
 			c.User = *suggestedUser
@@ -132,10 +130,10 @@ func main() {
 		dir = *workDir
 	}
 	v := versionOrDie(*version)
-	glog.Infof("Using version: %v", v)
+	glog.V(3).Infof("Using version: %v", v)
 	g := configgen.New(v, dir, c, *configOut)
 
 	if err := g.Run(); err != nil {
-		glog.Fatal(errors.Wrapf(err, "configgen reported an error"))
+		glog.Exit(errors.Wrapf(err, "configgen reported an error"))
 	}
 }

@@ -34,7 +34,6 @@
 #       directory for the policynodes-admission-controller is assumed.
 
 set -euo pipefail
-set -x
 
 STAGING_DIR="${STAGING_DIR:-$(dirname ${0:-''})/../.output}/staging"
 readonly controller_staging_dir="${OUTPUT_DIR:-${STAGING_DIR}/policynodes-admission-controller}"
@@ -63,7 +62,6 @@ basicConstraints = CA:FALSE
 keyUsage = nonRepudiation, digitalSignature, keyEncipherment
 extendedKeyUsage = clientAuth, serverAuth
 EOF
-
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr \

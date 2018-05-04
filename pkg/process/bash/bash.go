@@ -19,6 +19,10 @@ package bash
 import (
 	"context"
 
+	"bytes"
+	"os"
+
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
 )
@@ -30,11 +34,18 @@ var (
 // runWithEnv executes a bash script with the given environment.  Returns
 // the environment acknowledged by exec, and error if any.
 func runWithEnv(ctx context.Context, scriptPath string, env ...string) ([]string, error) {
-	c := exec.New()
+	outbuf := bytes.NewBuffer(nil)
+	errbuf := bytes.NewBuffer(nil)
+	c := exec.NewRedirected(os.Stdin, outbuf, errbuf)
+
 	c.SetEnv(env)
 	if err := c.Run(ctx, bashCmd, "-c", scriptPath); err != nil {
+		glog.Warningf("%s stdout:\n%s", scriptPath, outbuf.String())
+		glog.Errorf("%s stderr:\n%s", scriptPath, errbuf.String())
 		return nil, errors.Wrapf(err, "Script %s exited non-zero", scriptPath)
 	}
+	glog.V(5).Infof("%s stdout:\n%s", scriptPath, outbuf.String())
+	glog.V(5).Infof("%s stderr:\n%s", scriptPath, errbuf.String())
 	return c.Env(), nil
 }
 

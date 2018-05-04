@@ -34,7 +34,6 @@
 #       directory for the resourcequota-admission-controller is assumed.
 
 set -euo pipefail
-set -x
 
 STAGING_DIR="${STAGING_DIR:-$(dirname ${0:-''})/../.output}/staging"
 readonly controller_staging_dir="${OUTPUT_DIR:-${STAGING_DIR}/resourcequota-admission-controller}"

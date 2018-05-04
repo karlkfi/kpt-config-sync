@@ -293,13 +293,14 @@ func run(ctx context.Context, args []string) (stdout, stderr string, err error) 
 }
 
 func (t *Context) waitForDeployment(deadline time.Time, namespace string, name string) error {
+	glog.V(2).Infof("Waiting for deployment %s to become available...", name)
 	for time.Now().Before(deadline) {
 		deployment, err := t.Kubernetes().ExtensionsV1beta1().Deployments(
 			namespace).Get(name, meta_v1.GetOptions{})
 		if err != nil {
 			return errors.Wrapf(err, "Error getting deployment %s:%s", namespace, name)
 		}
-		glog.V(2).Infof(
+		glog.V(5).Infof(
 			"Deployment %s replicas %d, available %d", name, deployment.Status.Replicas, deployment.Status.AvailableReplicas)
 		if deployment.Status.AvailableReplicas == deployment.Status.Replicas {
 			glog.V(1).Infof("Deployment %s available", name)

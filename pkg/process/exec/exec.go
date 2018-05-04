@@ -176,7 +176,7 @@ func (c *cmdContext) Start(ctx context.Context, args ...string) {
 	}
 
 	allArgs := getAllArgs(args...)
-	glog.V(1).Infof("exec.Run(%+v)", allArgs)
+	glog.V(1).Infof("%+v", allArgs)
 	c.cmd = exec.CommandContext(ctx, allArgs[0], allArgs[1:]...)
 	c.cmd.Stdin = c.stdin
 	c.cmd.Stdout = c.stdout

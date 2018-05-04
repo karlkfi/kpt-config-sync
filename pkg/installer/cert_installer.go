@@ -83,7 +83,7 @@ func (c *certInstaller) createCertificates(workDir string) error {
 	glog.V(5).Info("createCertificates: creating certificates")
 
 	certsPath := filepath.Join(workDir, certsDirectory, c.subDir)
-	glog.Infof("createCertificates: creating them in path: %v", certsPath)
+	glog.Infof("Creating certificates in path: %v", certsPath)
 	err := os.MkdirAll(certsPath, os.ModeDir|0700)
 	if err != nil {
 		return errors.Wrapf(err, "while creating certs directory: %q", certsPath)

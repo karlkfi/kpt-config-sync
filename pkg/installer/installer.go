@@ -127,7 +127,7 @@ func (i *Installer) createCertificates() error {
 // applyAll runs 'kubectl apply -f applyDir'.
 func (i *Installer) applyAll(applyDir string) error {
 	kc := kubectl.New(context.Background())
-	glog.Infof("applying YAML files from directory: %v", applyDir)
+	glog.V(5).Infof("Applying YAML files from directory: %v", applyDir)
 	fi, err := os.Stat(applyDir)
 	if err != nil {
 		return errors.Wrapf(err, "applyAll: stat %v", applyDir)
@@ -163,7 +163,7 @@ func (i *Installer) deploySSHSecrets() error {
 
 func (i *Installer) deployGitConfig() error {
 	const configmap = "git-policy-importer"
-	glog.V(5).Info("deployGitConfig: enter")
+	glog.V(10).Info("deployGitConfig: enter")
 	if i.c.Git.Empty() {
 		glog.V(5).Info("Not deploying git configuration, no config specified.")
 		return nil
@@ -317,11 +317,11 @@ func (i *Installer) Run(useCurrent bool) error {
 		return errors.Wrapf(err, "while getting local list of clusters")
 	}
 	if err := i.createCertificates(); err != nil {
-		glog.V(5).Infof("Failed to create certificates: %v", err)
+		return errors.Wrapf(err,"while create certificates")
 	}
 	kc := kubectl.New(context.Background())
 	for _, cluster := range i.c.Contexts {
-		glog.Infof("processing cluster: %q", cluster)
+		glog.Infof("Setting up nomos on cluster: %q", cluster)
 		err := kc.SetContext(cluster)
 		if err != nil {
 			return errors.Wrapf(err, "while setting context: %q", cluster)

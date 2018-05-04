@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# For debugging.  Remove before release.
-set -x
-
 ##### HEADER #####
 
 # This script executes the nomos installer using a docker runtime.
