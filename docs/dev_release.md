@@ -9,7 +9,9 @@ $ git pull --rebase origin master
 $ git status  # should print an empty status
 ```
 
-Set the release version. Make sure to uphold the semantic versioning rules.
+Set the release version. Make sure to uphold the [semantic versioning
+rules](http://semver.org).
+If the release fails, increment the patch number for the next release attempt.
 
 ```console
 $ export RELEASE_VERSION="v1.2.3"
@@ -40,5 +42,7 @@ $ make -f Makefile.release bless-release
 To generate a changelog:
 
 ```
-$ git log --pretty="format:%C(yellow)%h  %C(cyan)%>(15,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" v0.2.8..v0.2.9
+$ TZ=America/Los_Angeles git log --pretty="format:%C(yellow)%h \
+    %C(cyan)%>(12,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" \
+    --date=local v0.3.4..v0.4.0
 ```
