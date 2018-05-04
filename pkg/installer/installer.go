@@ -144,8 +144,11 @@ func (i *Installer) deploySSHSecrets() error {
 	var filenames []string
 	if i.c.Git.UseSSH {
 		filenames = append(filenames,
-			fmt.Sprintf("ssh=%v", i.c.Git.PrivateKeyFilename),
-			fmt.Sprintf("known_hosts=%v", i.c.Git.KnownHostsFilename))
+			fmt.Sprintf("ssh=%v", i.c.Git.PrivateKeyFilename))
+		if i.c.Git.KnownHostsFilename != "" {
+			filenames = append(filenames,
+				fmt.Sprintf("known_hosts=%v", i.c.Git.KnownHostsFilename))
+		}
 	} else {
 		glog.V(5).Info("no PrivateKeyFilename, deploying empty secret")
 	}

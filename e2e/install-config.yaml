@@ -3,5 +3,4 @@ git:
   GIT_SYNC_SSH: true
   GIT_SYNC_WAIT: 1
   POLICY_DIR: acme
-ssh:
-  privateKeyFilename: $HOME/.ssh/id_rsa.nomos
+  PRIVATE_KEY_FILENAME: $HOME/.ssh/id_rsa.nomos
