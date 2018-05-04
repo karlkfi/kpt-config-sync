@@ -19,6 +19,7 @@ package clusterpolicycontroller
 import (
 	"time"
 
+	"github.com/golang/glog"
 	policyhierarchy_lister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
@@ -110,6 +111,13 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 	defer timer.ObserveDuration()
 
 	name := k.Name
+	if name != policyhierarchy_v1.ClusterPolicyName {
+		// TODO(briantkennedy): we may want to generate a kubernetes event for this scenario.
+		glog.Warningf("ClusterPolicy resource has invalid name %s", name)
+		// Return nil since we don't want kubebuilder to queue a retry for this object.
+		return nil
+	}
+
 	clusterPolicy, err := s.lister.Get(name)
 	if err != nil {
 		return errors.Wrapf(err, "failed to look up clusterpolicy, %s, for reconciliation", name)
