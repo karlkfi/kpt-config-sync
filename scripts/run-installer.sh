@@ -151,6 +151,11 @@ done
 
 CONFIG_DIR="examples"
 CONFIG_BASENAME="quickstart.yaml"
+if [ "${INTERACTIVE}" = "false" ] && [[ -z "${CONFIG}" ]]; then
+  echo "--config is required in batch mode"
+  exit 1
+fi
+
 if [[ -z "${CONFIG}" ]]; then
   CONTAINER_CONFIG_FILE="examples/quickstart.yaml"
 else
