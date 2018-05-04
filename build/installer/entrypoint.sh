@@ -60,6 +60,10 @@ readonly home_on_host_dirname="$(dirname ${HOME_ON_HOST})"
 mkdir -p "${home_on_host_dirname}"
 ln -s /home/user "${HOME_ON_HOST}"
 
+# Fixes painting issues with running installer under GNU screen.  It doesn't
+# seem to have ill effects on other terminals.
+export TERM=screen
+
 echo "+++ Running installer"
 ./installer \
   ${logging_options} \
