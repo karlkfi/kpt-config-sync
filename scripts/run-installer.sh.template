@@ -1,0 +1,103 @@
+#!/bin/bash
+#
+# Copyright 2018 The Nomos Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# This file is using bash argument parsing from http://argbash.io
+#
+# ARG_HELP([Nomos installer script\n \n Example:\n \n./run-installer.sh --config=some/dir/config.yaml\n./run-installer.sh --interactive\n \n])
+# ARG_OPTIONAL_SINGLE([version], [v], [The gcr.io tag to use for each Nomos component's docker container], [stable])
+# ARG_OPTIONAL_SINGLE([config], , [The configuration file to use.  To create an installer yaml file, do an interactive install (--interactive), and copy the generated yaml file from $PWD/gen_configs/generated.yaml to a preferred location], [])
+# ARG_OPTIONAL_BOOLEAN([interactive], , [Run a menu driven interactive installer], off)
+# ARG_OPTIONAL_SINGLE([uninstall], , [If set, uninstalls Nomos based on the configuration file specified in --config. Requires that --config is set], [])
+# ARG_OPTIONAL_SINGLE([container], [t], [The gcr.io container repo to use to source each Nomos component's docker container], [gcr.io/nomos-release/installer])
+# ARG_OPTIONAL_SINGLE([output_dir], [o], [The directory to get the generated configuration including certs, kubeconfigs, yamls, etc.], [])
+# ARG_LEFTOVERS([])
+# ARGBASH_GO
+
+# [ <-- needed because of Argbash
+
+CONFIG="$_arg_config"
+if [[ "${CONFIG}" != "" ]]; then
+  CONFIG_DIR="$(dirname $(realpath ${CONFIG}))"
+fi
+
+OUTPUT_DIR="${_arg_output_dir:-$(pwd)}"
+
+function installer::main() {
+  echo "+++ Using output directory: ${OUTPUT_DIR}"
+  mkdir -p ${OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
+  docker pull "${_arg_container}:${_arg_version}"
+
+  VOLUME_ARGS=(
+    "--volume=${OUTPUT_DIR}/certs:/opt/installer/certs"
+    "--volume=${OUTPUT_DIR}/gen_configs:/opt/installer/gen_configs"
+    "--volume=${OUTPUT_DIR}/kubeconfig:/opt/installer/kubeconfig"
+    "--volume=${OUTPUT_DIR}/logs:/tmp"
+    "--volume=${HOME}:/home/user"
+  )
+  readonly config_arg="$(installer::optf \
+		  --volume=%s:/opt/installer/configs ${CONFIG_DIR})"
+  if [[ "${config_arg}" != "" ]]; then
+    VOLUME_ARGS+=("${config_arg}")
+  fi
+
+  FORWARDED_ARGS=("${_arg_leftovers[@]}")
+  readonly uninstall_arg="$(installer::optf --uninstall=%s ${_arg_uninstall})"
+  if [[ "${uninstall_arg}" != "" ]]; then
+		  FORWARDED_ARGS+=("${uninstall_arg}")
+  fi
+
+  readonly interactive_arg="$(installer::optf --interactive=%s \
+		    $(installer::bool ${_arg_interactive}))"
+  if [[ "$interactive_arg" != "" ]]; then
+		  FORWARDED_ARGS+=("${interactive_arg}")
+  fi
+
+  docker run -it \
+    -u "$(id -u):$(id -g)" \
+	"${VOLUME_ARGS[@]}" \
+    -e "VERSION=${_arg_version}" \
+    -e "CONFIG=${CONFIG}" \
+    -e "HOME_ON_HOST=${HOME}" \
+    "${_arg_container}:${_arg_version}" "${FORWARDED_ARGS[@]}" \
+  	&& echo "+++ Generated files are available in ${OUTPUT_DIR}" \
+  	|| (echo "### Installer failed.  Logs are available in ${OUTPUT_DIR}/logs"; exit 1)
+}
+
+# installer::bool converts the 'on' and 'off' permissions from argbash into
+# the 'true' and 'false' respectively.
+function installer::bool() {
+	case $1 in
+	off) echo "false"
+			;;
+	on) echo "true"
+			;;
+	default)
+		echo "### Can not be parsed as on/off value: ${@}"
+		exit 200
+	esac
+}
+
+# installer::optf optionally formats $@ into $1 if $2 is nonempty.  Otherwise
+# returns nothing.
+function installer::optf() {
+	if [[ "$2" != "" ]]; then
+			printf -- "$@"
+	fi
+}
+
+installer::main
+
+# ] <-- needed because of Argbash

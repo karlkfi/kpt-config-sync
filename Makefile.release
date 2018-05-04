@@ -60,8 +60,13 @@ check-dirty:
 
 # Releases the run-installer script and docs to GCS bucket and apply
 # :latest tag to the built image, also updates the nomos-docs-latest.zip
-release: clean check-dirty test-all installer-image docs-package
-	gsutil cp $(TOP_DIR)/scripts/run-installer.sh $(RELEASE_BUCKET)
+release: clean \
+		check-dirty \
+		$(SCRIPTS_STAGING_DIR)/run-installer.sh \
+		test-all \
+		installer-image \
+		docs-package
+	gsutil cp $(SCRIPTS_STAGING_DIR)/run-installer.sh $(RELEASE_BUCKET)
 	gsutil cp $(TOP_DIR)/scripts/nomosvet.sh $(RELEASE_BUCKET)
 	gsutil cp $(STAGING_DIR)/nomos-docs.zip $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip
 	gsutil cp $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip $(RELEASE_BUCKET)/nomos-docs-latest.zip

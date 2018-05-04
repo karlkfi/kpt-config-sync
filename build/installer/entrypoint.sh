@@ -19,16 +19,15 @@
 # path layout.
 
 # Environment variables used in the entrypoint:
-# - INTERACTIVE: If set to a nonempty string, runs the menu-driven installer.
-#   Otherwise, the batch installer is ran.
-# - CONFIG: The name of the config file to use as default configuration.
-# - CONFIG_OUT: The name of the config file to use as output.
-# - VERSION: The nomos version to install.
+# - CONFIG: The name of the config file to use as default configuration,
+# relative to the working directory inside the container.
 # - HOME_ON_HOST: the string representing the absolute path of $HOME for the
-#   user that is running the installer.  In the container, we will soft-link
-#   this directory to /home/user.
-
-INTERACTIVE="${INTERACTIVE:-0}"
+# user that is running the installer.  In the container, we will soft-link this
+# directory to /home/user.
+# - INSTALLER_VERSION: the version of the installer to display in the installer
+# backtitle.  Normally, this is not changed from the default value from the
+# corresponding Dockerfile.   It does not affect what the installer runs, it's
+# only for user information.
 
 echo "### Running installer version: ${INSTALLER_VERSION}"
 
@@ -54,27 +53,25 @@ fi
 # Set logging levels to high for specific modules only.
 readonly logging_options="--vmodule=main=5,configgen=3,kubectl=3,installer=3,exec=3"
 
-# Make /home/user available also at a path that is the same as the user's home
-# directory on the host.
-readonly home_on_host_dirname="$(dirname ${HOME_ON_HOST})"
-mkdir -p "${home_on_host_dirname}"
-ln -s /home/user "${HOME_ON_HOST}"
-
 # Fixes painting issues with running installer under GNU screen.  It doesn't
 # seem to have ill effects on other terminals.
 export TERM=screen
 
 echo "+++ Running installer"
-./installer \
-  ${logging_options} \
-  --config="${CONFIG}" \
-  --config_in=${CONFIG} \
-  --config_out=${CONFIG_OUT} \
-  --log_dir=/tmp \
-  --suggested_user="${suggested_user}" \
-  --uninstall="${UNINSTALL}" \
-  --use_current_context=${USE_CURRENT_CONTEXT} \
-  --version="${INSTALLER_VERSION}" \
-  --interactive="${INTERACTIVE}" \
-  "$@"
+INSTALLER_ARGS=(
+  "${logging_options}"
+  --config_out=gen_configs/generated.yaml
+  --log_dir=/tmp
+  --suggested_user="${suggested_user}"
+  --version="${INSTALLER_VERSION}"
+)
+if [[ "${CONFIG}" != "" ]]; then
+  CONFIG_BASENAME="$(basename $CONFIG)"
+  CONTAINER_CONFIG_FILE="configs/${CONFIG_BASENAME}"
+  INSTALLER_ARGS+=(
+  	"--config=${CONTAINER_CONFIG_FILE}"
+	"--config_in=${CONTAINER_CONFIG_FILE}"
+  )
+fi
+./installer "${INSTALLER_ARGS[@]}" "$@"
 

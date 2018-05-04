@@ -114,6 +114,8 @@ func main() {
 	}
 
 	c := config.NewDefaultConfig()
+
+	// If input configuration exists, load it.
 	if *configIn != "" {
 		file, err := os.Open(*configIn)
 		if err != nil {
@@ -123,9 +125,12 @@ func main() {
 		if err != nil {
 			glog.Exit(errors.Wrapf(err, "while loading: %q", *configIn))
 		}
-		if *suggestedUser != "" {
-			c.User = *suggestedUser
-		}
+	}
+
+	if c.User == "" && *suggestedUser != "" {
+		// If the configuration has no user specified, but the user is suggested
+		// instead, use that user then.
+		c.User = *suggestedUser
 	}
 
 	dir := path.Dir(os.Args[0])
