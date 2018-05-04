@@ -95,6 +95,7 @@ function cleanTestConfigMaps() {
 
 function testQuotaAdmission() {
   cleanTestConfigMaps
+  waitForSuccess "kubectl get ns new-prj"
   assertContains "kubectl create configmap map1 -n new-prj" "created"
   assertContains "kubectl create configmap map2 -n newer-prj" "created"
   assertContains "kubectl create configmap map3 -n new-prj" "exceeded quota in policyspace rnd"
