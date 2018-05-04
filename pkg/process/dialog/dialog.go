@@ -111,3 +111,10 @@ func Message(text string) OptionsFunc {
 		o.message = text
 	}
 }
+
+// NoOkCancel removes the ok and cancel buttons, which can be useful for a main menu.
+func NoOkCancel() OptionsFunc {
+	return func(o *Options) {
+		o.rest = append(o.rest, "--no-ok", "--no-cancel")
+	}
+}

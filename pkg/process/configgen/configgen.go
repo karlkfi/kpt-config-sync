@@ -59,7 +59,6 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 		dialog.Title(menuTitle),
 		dialog.Width(100),
 		dialog.Height(24),
-		dialog.Message("hello!"),
 		dialog.Colors(),
 	)
 	g := &Generator{
@@ -72,9 +71,9 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 	}
 	s := newSave(g.out, &g.currentCfg)
 	g.actions = []Action{
-		NewUserForm(g.opts, &g.currentCfg.User),
-		NewClusters(g.opts, &g.currentCfg.Contexts),
-		NewGitForm(g.opts, &g.currentCfg.Git),
+		NewUserForm(opts, &g.currentCfg.User),
+		NewClusters(opts, &g.currentCfg.Contexts),
+		NewGitForm(opts, &g.currentCfg.Git),
 		NewInstallAction(s, &g.currentCfg, g.dir),
 		s,
 		&staticAction{name: "Quit", text: "Quit the configuration generator.", quit: true, implemented: true},
@@ -95,6 +94,7 @@ func buildMenu(actions []Action, opts dialog.Options, err error) *dialog.Menu {
 		o = append(o, dialog.MenuItem(action.Name(), action.Text()))
 	}
 	o = append(o, dialog.MenuHeight(len(actions)))
+	o = append(o, dialog.NoOkCancel())
 	return dialog.NewMenu(o...)
 }
 

@@ -103,12 +103,14 @@ func (m *Menu) Display() {
 	m.cmd.Start(context.Background(), m.cmdline()...)
 }
 
-// Close returns the tag of the selected menu option, or error if any.  An
-// error may occur if there is a configuration error for the dialog (i.e. a
-// bug), or could occur if the user selects the "cancel" button.  Returns the
-// selected menu tag, or error if any.
+// Close returns the tag of the selected menu option, empty string on cancel, or error if any.
+// An error may occur if there is a configuration error for the dialog (i.e. a bug).
 func (m *Menu) Close() (string, error) {
 	if err := m.cmd.Wait(); err != nil {
+		if err.Error() == "exit status 1" {
+			// dialog returns error 1 when user selects cancel
+			return "", nil
+		}
 		return "", errors.Wrapf(err, "while waiting for dialog menu")
 	}
 	b, err := ioutil.ReadAll(m.output)

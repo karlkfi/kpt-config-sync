@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -12,6 +13,7 @@ func TestMenu(t *testing.T) {
 	tests := []struct {
 		name     string
 		output   string
+		outerr   string
 		expected string
 	}{
 		{
@@ -34,12 +36,22 @@ func TestMenu(t *testing.T) {
 			output:   "  \tfoo\t\n\n   ",
 			expected: "  \tfoo\t\n\n   ",
 		},
+		{
+			name:     "user pressing cancel",
+			output:   "",
+			outerr:   "exit status 1",
+			expected: "",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Due to the way exec works, this can't be ran in parallel.
-			exec.SetFakeOutputsForTest(nil, strings.NewReader(tt.output), nil)
+			var fakeerr error
+			if tt.outerr != "" {
+				fakeerr = fmt.Errorf(tt.outerr)
+			}
+			exec.SetFakeOutputsForTest(nil, strings.NewReader(tt.output), fakeerr)
 			m := NewMenu()
 			m.Display()
 			sel, err := m.Close()
