@@ -317,7 +317,7 @@ func (i *Installer) Run(useCurrent bool) error {
 		return errors.Wrapf(err, "while getting local list of clusters")
 	}
 	if err := i.createCertificates(); err != nil {
-		return errors.Wrapf(err,"while create certificates")
+		return errors.Wrapf(err, "while creating certificates")
 	}
 	kc := kubectl.New(context.Background())
 	for _, cluster := range i.c.Contexts {
