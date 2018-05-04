@@ -17,15 +17,39 @@ installation.
 
 This setup takes about 30 minutes.
 
-### Linux
+### Installation environments
 
-You will need a Linux environment to drive the installation.
+The installation environments are sessions on a computer that you will run the
+installation from.  Any environments not mentioned here explicitly are untested,
+so we can not make guarantees about them.
 
-Currently the only tested environment for installation is Linux on amd64. The
-following utilities need to be installed: `docker`, `bash`, `curl`, and
-`gcloud`.
+#### Linux
+
+Currently the only tested environment for installation is Ubuntu 14.04 on
+amd64.
+
+Prerequisites:
+
+* Installed `curl`: to download the installation script.
+* Installed `docker`: to run the installation script.
+* Installed `bash`: to run the installation script.
+
+#### Google Cloud Shell
+
+*Since: v0.4.0*
+
+You can choose to install Nomos from within [Google Cloud shell](https://www.google.com/shell/docs).
+
+Prerequisites:
+
+* Verify that you can use `kubectl` within the Google Cloud shell to access the
+clusters that you plan to install Nomos on.
 
 ### Kubernetes
+
+You need to have up and running Kubernetes clusters that you intend to install
+Nomos on.  You must be able to contact these clusters using `kubectl` from the
+installation environment.
 
 In order to run Nomos components, the cluster has to meet these requirements:
 
