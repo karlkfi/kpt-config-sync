@@ -44,6 +44,9 @@ DOCS_STAGING_DIR := $(STAGING_DIR)/docs
 # Directory used for staging scripts.
 SCRIPTS_STAGING_DIR := $(STAGING_DIR)/scripts
 
+# Directory used for staging docker output.
+DOCKER_STAGING_DIR := $(STAGING_DIR)/docker
+
 # Directory used for installer output.
 INSTALLER_OUTPUT_DIR := $(STAGING_DIR)/installer_output
 
@@ -93,7 +96,13 @@ ifeq ($(HAVE_TTY), 1)
 endif
 
 # Suppresses docker output on build.
+#
+# To turn off, for example:
+#   make DOCKER_BUILD_QUIET="" deploy
 DOCKER_BUILD_QUIET := --quiet
+
+# Suppresses gcloud output.
+GCLOUD_QUIET := --quiet
 
 # Developer focused docker image tag.
 DATE := $(shell date +'%s')
@@ -118,7 +127,7 @@ DOCKER_RUN_ARGS := \
 .DEFAULT_GOAL := test
 
 $(OUTPUT_DIR):
-	@echo "+++ Creating the local golang build output directory"
+	@echo "+++ Creating the local golang build output directory: $(OUTPUT_DIR)"
 	@mkdir -p \
 		$(BIN_DIR)/$(ARCH) \
 		$(GEN_YAML_DIR) \
@@ -128,14 +137,16 @@ $(OUTPUT_DIR):
 		$(INSTALLER_OUTPUT_DIR) \
 		$(STAGING_DIR) \
 		$(DOCS_STAGING_DIR) \
-		$(SCRIPTS_STAGING_DIR)
+		$(SCRIPTS_STAGING_DIR) \
+		$(DOCKER_STAGING_DIR)
 
 ##### TARGETS #####
 
 # Uses a custom build environment.  See build/buildenv/Dockerfile for the
 # details on the build environment.
 $(OUTPUT_DIR)/buildenv: build/buildenv/Dockerfile $(OUTPUT_DIR)
-	@docker build $(dir $<) --tag=$(BUILD_IMAGE)
+	@echo "+++ Creating the buildenv docker container"
+	@docker build $(DOCKER_BUILD_QUIET) $(dir $<) --tag=$(BUILD_IMAGE)
 	@echo "This file exists to track that buildenv is up to date" > $@
 
 buildenv: $(OUTPUT_DIR)/buildenv
@@ -150,9 +161,9 @@ $(SCRIPTS_STAGING_DIR)/run-installer.sh: $(OUTPUT_DIR) $(TOP_DIR)/scripts/run-in
 		--output=/work/.output/staging/scripts/run-installer.sh
 
 
-# Compiles nomos hermetically using a docker container.
 .PHONY: build
 build: buildenv
+	@echo "+++ Compiling nomos hermetically using a docker container"
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/build.sh
 
 # Creates a docker image for each nomos component.
@@ -185,7 +196,7 @@ push-to-gcr-all: $(addprefix push-to-gcr-, $(ALL_APPS))
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-%: image-%
 	@echo "+++ Pushing $* to gcr.io."
-	@gcloud docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
+	@gcloud $(GCLOUD_QUIET) docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
 
 # Generates the podspec yaml for each component.
 gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_APPS))
@@ -228,7 +239,7 @@ installer-image: installer-staging
 			-t gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
      		--build-arg "INSTALLER_VERSION=$(IMAGE_TAG)" \
 		$(STAGING_DIR)/installer
-	@gcloud docker -- push gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG)
+	@gcloud $(GCLOUD_QUIET) docker -- push gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG)
 
 # Runs the installer via docker in interactive mode.
 install-interactive: deploy-interactive
@@ -273,8 +284,8 @@ uninstall: $(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
 		--uninstall=deletedeletedelete \
 		--version=$(IMAGE_TAG)
 
-# Creates staging directory for building e2e docker image. Note that it is basically a copy of the
-# staging directory for the installer plus a few extras for e2e.
+# Note that it is basically a copy of the staging directory for the installer
+# plus a few extras for e2e.
 e2e-staging: installer-image
 	@echo "+++ Creating staging directory for building e2e docker image"
 	@mkdir -p $(STAGING_DIR)/e2e-tests
@@ -290,6 +301,7 @@ e2e-staging: installer-image
 # Builds the e2e docker image. Note that the GCP project is hardcoded since we currently don't want
 # or need a nomos-release version of the e2e-tests image.
 e2e-image: deploy-test-git-server e2e-staging
+	@echo "+++ Building the e2e docker image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		-t gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG) \
 		--build-arg "VERSION=$(IMAGE_TAG)" \
@@ -298,16 +310,16 @@ e2e-image: deploy-test-git-server e2e-staging
 		--build-arg "UNAME=$(USER)" \
 		--build-arg "GCP_PROJECT=$(GCP_PROJECT)" \
 		$(STAGING_DIR)/e2e-tests
-	@gcloud docker -- push gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG)
+	@gcloud $(GCLOUD_QUIET) docker -- push gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG)
 
 deploy-test-git-server: $(OUTPUT_DIR) image-git-server push-to-gcr-git-server \
 	gen-yaml-git-server
 
 deploy-test-e2e: $(OUTPUT_DIR) deploy-test-git-server deploy
 
-# Runs end-to-end tests.
 test-e2e: clean e2e-image
-	mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
+	@echo "+++ Running end-to-end tests"
+	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
 	@docker run -it \
 	    -u $$(id -u):$$(id -g) \
 	    -v "${HOME}":/home/user \
@@ -328,15 +340,16 @@ redeploy-all: $(addprefix redeploy-, $(ALL_K8S_APPS))
 
 # Redeploy a component without rerunning the installer.
 redeploy-%: push-to-gcr-% gen-yaml-%
-	kubectl apply -f $(GEN_YAML_DIR)/$*.yaml
+	@echo "+++ Redeploying without rerunning the installer: $*"
+	@kubectl apply -f $(GEN_YAML_DIR)/$*.yaml
 
 # Cleans all artifacts.
 clean:
 	@echo "+++ Cleaning $(OUTPUT_DIR)"
 	@rm -rf $(OUTPUT_DIR)
 
-# Runs unit tests in a docker container.
 test-unit: buildenv
+	@echo "+++ Running unit tests in a docker container"
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/test-unit.sh $(NOMOS_GO_PKG)
 
 # Runs unit tests and linter.
@@ -345,33 +358,34 @@ test: test-unit lint
 # Runs all tests.
 test-all: test test-e2e
 
-# Runs formatter.
 goimports:
-	goimports -w $(NOMOS_CODE_DIRS)
+	@echo "+++ Running goimports"
+	@goimports -w $(NOMOS_CODE_DIRS)
 
-# Runs linter
 lint: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
 
-# Generate clientgen directory.
 .PHONY: clientgen
 clientgen:
+	@echo "+++ Generating clientgen directory"
 	rm -rf $(TOP_DIR)/clientgen
 	$(TOP_DIR)/scripts/generate-clientset.sh
 	$(TOP_DIR)/scripts/generate-watcher.sh
 
 # Installs Nomos kubectl plugin.
 install-kubectl-plugin:
-	cd $(TOP_DIR)/cmd/kubectl-nomos; ./install.sh
+	@echo "+++ Installing Nomos kubectl plugin"
+	@cd $(TOP_DIR)/cmd/kubectl-nomos; ./install.sh
 
 # Creates staging directory for generating docs.
 docs-staging: $(OUTPUT_DIR)
-	rm -rf $(DOCS_STAGING_DIR)/*.html $(DOCS_STAGING_DIR)/img
-	cp -r $(TOP_DIR)/docs $(STAGING_DIR)
-	cp $(TOP_DIR)/README.md $(DOCS_STAGING_DIR)
+	@echo "+++ Creating directory for generating docs: $(OUTPUT_DIR)"
+	@rm -rf $(DOCS_STAGING_DIR)/*.html $(DOCS_STAGING_DIR)/img
+	@cp -r $(TOP_DIR)/docs $(STAGING_DIR)
+	@cp $(TOP_DIR)/README.md $(DOCS_STAGING_DIR)
 
-# Converts Markdown docs into HTML.
 docs-generate: buildenv docs-staging
+	@echo "+++ Converting Markdown docs into HTML"
 	@docker run $(DOCKER_INTERACTIVE) \
 		-u $$(id -u):$$(id -g)                                             \
 		-v $$(pwd):/go/src/$(REPO)                                         \
@@ -387,6 +401,6 @@ docs-generate: buildenv docs-staging
 	    "
 	@echo "Open in your browser: file://$(DOCS_STAGING_DIR)/README.html"
 
-# Packages HTML docs into a zip package.
 docs-package: docs-generate
-	cd $(STAGING_DIR); rm -f nomos-docs.zip; zip -r nomos-docs.zip docs
+	@echo "+++ Packaging HTML docs into a zip package"
+	@cd $(STAGING_DIR); rm -f nomos-docs.zip; zip -r nomos-docs.zip docs
