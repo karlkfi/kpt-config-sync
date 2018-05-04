@@ -43,21 +43,18 @@ usage()
 {
     cat << E0
       Usage: $0 [options]
+        --help
         --config=<config>
         --container=<container>
-        --help
         --interactive=true|false
         --output_dir=<output_dir>
         --use_current_context=true|false
         --version=<version>
-        --yes=true|false
+        --uninstall=deletedeletedelete
 E0
 }
 
-# If set to "true", the user has doubly confirmed a destructive operation.
-YES=false
-
-# If set to true, the user requested to uninstall.
+# If set to "deletedeletedelete", the user requested to uninstall.
 UNINSTALL=
 
 # If set to "true", the installer will use the current context to install into.
@@ -82,7 +79,7 @@ if [[ $? -ne 4 ]]; then
 fi
 
 OPTIONS=hvoitc
-LONGOPTIONS=help::,version::,output_dir::,interactive::,container::,config::,uninstall::,yes::,use_current_context::
+LONGOPTIONS=help::,version::,output_dir::,interactive::,container::,config::,uninstall::,use_current_context::
 
 # -temporarily store output to be able to check for errors
 # -e.g. use “--options” parameter by name to activate quoting/enhanced mode
@@ -129,11 +126,7 @@ while true; do
             shift 2
             ;;
         --uninstall)
-            UNINSTALL=true
-            shift 2
-            ;;
-        --yes)
-            YES=true
+            UNINSTALL="$2"
             shift 2
             ;;
         --)

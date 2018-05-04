@@ -75,7 +75,6 @@ echo "+++ Running installer"
   --uninstall="${UNINSTALL}" \
   --use_current_context=${USE_CURRENT_CONTEXT} \
   --version="${INSTALLER_VERSION}" \
-  --yes="${YES}" \
   --interactive="${INTERACTIVE}" \
   "$@"
 

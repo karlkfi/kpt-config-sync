@@ -42,6 +42,9 @@ const (
 	// we expect that it's unlikely a wait would be
 	// deploymentTimeout*len(deploymentComponents).
 	deploymentTimeout = 3 * time.Minute
+
+	// "Open sesame" for uninstallation.
+	confirmUninstall = "deletedeletedelete"
 )
 
 var (
@@ -373,9 +376,9 @@ func (i *Installer) uninstallCluster() error {
 
 // Uninstall uninstalls the system from the cluster.  Uninstall is asynchronous,
 // so the uninstalled system will remain for a while after this completes.
-func (i *Installer) Uninstall(yesIAmSure bool) error {
-	if !yesIAmSure {
-		return errors.Errorf("Please supply the flag --yes to proceed.")
+func (i *Installer) Uninstall(confirm string) error {
+	if confirm != confirmUninstall {
+		return errors.Errorf("to confirm uninstall (destructive) set -uninstall=%q", confirmUninstall)
 	}
 	if len(i.c.Contexts) == 0 {
 		return errors.Errorf("no clusters requested")

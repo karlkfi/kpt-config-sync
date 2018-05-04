@@ -40,7 +40,6 @@ var (
 	// TODO(filmil): Merge with configIn
 	configFile = flag.String("config", "", "The file name containing the installer configuration.")
 	uninstall  = flag.String("uninstall", "", "If set, the supplied clusters will be uninstalled.")
-	yes        = flag.Bool("yes", false, "If yes, means that the user wants to do a destructive operation.")
 	useCurrent = flag.Bool("use_current_context", false, "If set, and if the list of clusters in the install config is empty, use current context to install into.")
 )
 
@@ -90,13 +89,16 @@ func noninteractiveMain() {
 		dir = *workDir
 	}
 	i := installer.New(config, dir)
+
 	if *uninstall != "" {
-		err = i.Uninstall(*yes)
-	} else {
-		err = i.Run(*useCurrent)
+		if err := i.Uninstall(*uninstall); err != nil {
+			glog.Exit(errors.Wrapf(err, "uninstallation failed"))
+		}
+		glog.Infof("Uninstall successful!")
+		return
 	}
-	if err != nil {
-		glog.Exit(errors.Wrap(err, "installer reported an error"))
+	if err := i.Run(*useCurrent); err != nil {
+		glog.Exit(errors.Wrapf(err, "installation failed"))
 	}
 	glog.Infof("Install successful!")
 }

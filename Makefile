@@ -205,6 +205,7 @@ installer-image: installer-staging
 	gcloud docker -- push gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG)
 
 # Runs the installer via docker in interactive mode.
+install-interactive: deploy-interactive
 deploy-interactive: installer-image
 	$(TOP_DIR)/scripts/run-installer.sh \
 		--interactive \
@@ -212,13 +213,10 @@ deploy-interactive: installer-image
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
 		--version=$(IMAGE_TAG)
 
-deploy-test-git-server: $(OUTPUT_DIR) image-git-server push-to-gcr-git-server \
-	gen-yaml-git-server
-
-deploy-test-e2e: $(OUTPUT_DIR) deploy-test-git-server deploy
 
 # Runs the installer via docker in batch mode using the installer config
 # file specied in the environment variable NOMOS_INSTALLER_CONFIG.
+install: deploy
 deploy: installer-image
 	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
 		echo 'Must set NOMOS_INSTALLER_CONFIG to use make deploy'; \
@@ -230,6 +228,20 @@ deploy: installer-image
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
 		--use_current_context=$(USE_CURRENT_CONTEXT) \
 		--version=$(IMAGE_TAG)
+
+# Runs uninstallation via docker in batch mode using the installer config.
+uninstall: installer-image
+	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
+		echo 'Must set NOMOS_INSTALLER_CONFIG to use make deploy'; \
+		exit 1; \
+	fi; \
+	./scripts/run-installer.sh \
+		--config=$(NOMOS_INSTALLER_CONFIG) \
+		--container=gcr.io/$(GCP_PROJECT)/installer \
+		--output_dir=$(INSTALLER_OUTPUT_DIR) \
+		--use_current_context=$(USE_CURRENT_CONTEXT) \
+		--version=$(IMAGE_TAG) \
+		--uninstall=deletedeletedelete
 
 # Creates staging directory for building e2e docker image. Note that it is basically a copy of the
 # staging directory for the installer plus a few extras for e2e.
@@ -255,6 +267,11 @@ e2e-image: deploy-test-git-server e2e-staging
 		--build-arg "GCP_PROJECT=$(GCP_PROJECT)" \
 		$(STAGING_DIR)/e2e-tests
 	gcloud docker -- push gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG)
+
+deploy-test-git-server: $(OUTPUT_DIR) image-git-server push-to-gcr-git-server \
+	gen-yaml-git-server
+
+deploy-test-e2e: $(OUTPUT_DIR) deploy-test-git-server deploy
 
 # Runs end-to-end tests.
 test-e2e: clean e2e-image

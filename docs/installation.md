@@ -269,7 +269,7 @@ for the original installation, and the `run-installer.sh` script.
 Executing the following command will uninstall Nomos components.
 
 ```console
-./run-installer.sh --config=/path/to/your/config.yaml --uninstall=deletedeletedelete --yes
+./run-installer.sh --config=/path/to/your/config.yaml --uninstall=deletedeletedelete
 
 ```
 
