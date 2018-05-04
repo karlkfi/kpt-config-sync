@@ -44,7 +44,7 @@ COPY yaml yaml
 COPY entrypoint.sh entrypoint.sh
 COPY installer installer
 
-RUN chmod a+rx -R *
+RUN chmod --recursive a+rx *
 RUN ls -l *
 
 ENV KUBECONFIG=/opt/installer/kubeconfig/config
