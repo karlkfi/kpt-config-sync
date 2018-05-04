@@ -121,7 +121,7 @@ message PolicyNodeList {
 // +protobuf=true
 message PolicyNodeSpec {
   // The type of the PolicyNode.
-  optional int64 type = 1;
+  optional string type = 1;
 
   // The parent org unit
   optional string parent = 2;

@@ -16,8 +16,6 @@ limitations under the License.
 
 package v1
 
-import "fmt"
-
 // NoParentNamespace is the constant we use (empty string) for indicating that no parent exists
 // for the policy node spec.  Only one policy node should have a parent with this value.
 // This is also used as the value for the label set on a namespace.
@@ -31,7 +29,7 @@ const ParentLabelKey = "nomos-parent-ns"
 const ClusterPolicyName = "nomos-cluster-policy"
 
 // PolicyNodeType represents the types of policynodes that can exist.
-type PolicyNodeType int
+type PolicyNodeType string
 
 // IsNamespace returns true if the type corresponds to a namespace type.
 func (p PolicyNodeType) IsNamespace() bool {
@@ -48,29 +46,16 @@ func (p PolicyNodeType) IsUnmanagedNamespace() bool {
 	return p == UnmanagedNamespace
 }
 
-// String implements fmt.Stringer
-func (p PolicyNodeType) String() string {
-	switch p {
-	case Policyspace:
-		return "policyspace"
-	case Namespace:
-		return "namespace"
-	case UnmanagedNamespace:
-		return "unmanagedNamespace"
-	}
-	return fmt.Sprintf("invalid value %d", p)
-}
-
 const (
 	// Policyspace indicates that the PolicyNode is for a Policyspace and should not be manifested
 	// into a namespace
-	Policyspace = PolicyNodeType(iota)
+	Policyspace = PolicyNodeType("namespace")
 
 	// Namespace indicates that the PolicyNode is represents a Namespace that should be created
 	// and managed on the cluster.
-	Namespace
+	Namespace = PolicyNodeType("policyspace")
 
 	// UnmanagedNamespace indicates that the namespace's policies will not be managed by nomos but
 	// nomos will ensure the namespace exists.
-	UnmanagedNamespace
+	UnmanagedNamespace = PolicyNodeType("unmanagedNamespace")
 )

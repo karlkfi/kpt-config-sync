@@ -104,7 +104,7 @@ type PolicyNode struct {
 // +protobuf=true
 type PolicyNodeSpec struct {
 	// The type of the PolicyNode.
-	Type PolicyNodeType `json:"type" protobuf:"varint,1,opt,name=type"`
+	Type PolicyNodeType `json:"type,omitempty" protobuf:"varint,1,opt,name=type"`
 
 	// The parent org unit
 	Parent string `json:"parent" protobuf:"bytes,2,opt,name=parent"`
