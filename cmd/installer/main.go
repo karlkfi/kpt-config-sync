@@ -63,6 +63,7 @@ func versionOrDie(vstr string) semver.Version {
 // things.
 func noninteractiveMain() {
 	if *configFile == "" {
+		glog.Exit("--config is required in batch mode")
 		flag.Usage()
 		os.Exit(1)
 	}
