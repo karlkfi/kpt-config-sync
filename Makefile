@@ -320,9 +320,12 @@ goimports:
 lint: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
 
-# Generate K8S client-set.
-gen-client-set:
+# Generate clientgen directory.
+.PHONY: clientgen
+clientgen:
+	rm -rf $(TOP_DIR)/clientgen
 	$(TOP_DIR)/scripts/generate-clientset.sh
+	$(TOP_DIR)/scripts/generate-watcher.sh
 
 # Installs Nomos kubectl plugin.
 install-kubectl-plugin:
