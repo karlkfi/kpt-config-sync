@@ -292,17 +292,26 @@ func run(ctx context.Context, args []string) (stdout, stderr string, err error) 
 	return outbuf.String(), errbuf.String(), e
 }
 
+// waitForDeployment watches for the deployment of the provided name to become available and
+// returns when it becomes so. If the provided deadline is passed or another error is encountered,
+// an error is returned and the deployment is not presumed to be available.
 func (t *Context) waitForDeployment(deadline time.Time, namespace string, name string) error {
 	glog.V(2).Infof("Waiting for deployment %s to become available...", name)
+	deployment, err := t.Kubernetes().ExtensionsV1beta1().Deployments(
+		namespace).Get(name, meta_v1.GetOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "Error getting deployment %s:%s", namespace, name)
+	}
+	time.Sleep(time.Duration(deployment.Spec.MinReadySeconds) * time.Second)
 	for time.Now().Before(deadline) {
-		deployment, err := t.Kubernetes().ExtensionsV1beta1().Deployments(
+		deployment, err = t.Kubernetes().ExtensionsV1beta1().Deployments(
 			namespace).Get(name, meta_v1.GetOptions{})
 		if err != nil {
 			return errors.Wrapf(err, "Error getting deployment %s:%s", namespace, name)
 		}
 		glog.V(5).Infof(
-			"Deployment %s replicas %d, available %d", name, deployment.Status.Replicas, deployment.Status.AvailableReplicas)
-		if deployment.Status.AvailableReplicas == deployment.Status.Replicas {
+			"Deployment %s replicas %d, available %d", name, deployment.Spec.Replicas, deployment.Status.AvailableReplicas)
+		if deployment.Status.UnavailableReplicas == 0 {
 			glog.V(1).Infof("Deployment %s available", name)
 			return nil
 		}

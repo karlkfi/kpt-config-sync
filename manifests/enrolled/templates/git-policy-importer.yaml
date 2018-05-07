@@ -23,6 +23,7 @@ metadata:
   labels:
     app: git-policy-importer
 spec:
+  minReadySeconds: 10
   replicas: 1
   strategy:
     type: Recreate

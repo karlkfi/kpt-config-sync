@@ -23,6 +23,7 @@ metadata:
   labels:
     app: test-git-server
 spec:
+  minReadySeconds: 2
   strategy:
     type: Recreate
   selector:

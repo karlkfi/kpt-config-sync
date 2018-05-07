@@ -25,6 +25,7 @@ metadata:
   labels:
     app: policynodes-admission-controller
 spec:
+  minReadySeconds: 2
   replicas: 1
   strategy:
     type: Recreate
