@@ -148,8 +148,7 @@ function waitFor() {
 TEST_FUNCTIONS=${TEST_FUNCTIONS:-$(declare -F)}
 
 ######################## MAIN #########################
-function setUpEnv() {
-  echo "****************** Setting up environment ******************"
+function kubeSetUp() {
   readonly kubeconfig_output="/opt/installer/kubeconfig/config"
   # We need to fix up the kubeconfig paths because these may not match between
   # the container and the host.
@@ -159,7 +158,10 @@ function setUpEnv() {
     sed -e "s+cmd-path: [^ ]*gcloud+cmd-path: /usr/local/gcloud/google-cloud-sdk/bin/gcloud+g" \
     > "${kubeconfig_output}"
   chmod 600 ${kubeconfig_output}
+}
 
+function setUpEnv() {
+  echo "****************** Setting up environment ******************"
   suggested_user="$(gcloud config get-value account)"
 
   /opt/testing/init-git-server.sh
@@ -213,6 +215,7 @@ function cleanUp() {
   done
 }
 
+kubeSetUp
 cleanUp
 setUpEnv
 main
