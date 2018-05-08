@@ -221,4 +221,7 @@ kubeSetUp
 cleanUp
 setUpEnv
 main
-cleanUp
+if [ "$2" != "noclean" ]
+  then
+    cleanUp
+fi
