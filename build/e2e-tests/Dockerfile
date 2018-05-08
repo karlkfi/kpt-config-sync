@@ -16,9 +16,10 @@ ARG UNAME=testuser
 ARG UID=1000
 ARG GID=1000
 
+ENV GIT_CONFIG_NOGLOBAL 1
+ENV GIT_CONFIG_NOSYSTEM 1
 RUN apt-get update && apt-get install -y git
 RUN groupadd -g $GID $UNAME
 RUN useradd -u $UID -g $UNAME $UNAME
-
 
 ENTRYPOINT ["/opt/testing/e2e.sh", "--alsologtostderr"]

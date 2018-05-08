@@ -32,9 +32,12 @@ rm -rf ${TEST_LOG_REPO}
 kubectl apply -f /opt/testing/git-server.yaml
 
 kubectl -n=nomos-system create secret generic ssh-pub --from-file=/opt/testing/id_rsa.nomos.pub
+echo -n "Waiting for test-git-server pod to be ready. This could take a minute..."
 until kubectl get pods -n=nomos-system -lapp=test-git-server | grep -qe Running; do
-   sleep 1;
-   echo "Waiting for test-git-server pod to be ready..."
+  # I've seen this take anywhere from 2 to 40 seconds, so set the polling
+  # interval for reasonable granularity within that
+  sleep 5;
+  echo -n "."
 done
 
 echo "test-git-server ready"
@@ -50,6 +53,8 @@ kubectl exec -n=nomos-system -it ${POD_ID} -- git init --bare --shared /git-serv
 GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/id_rsa.nomos"; export GIT_SSH_COMMAND
 git clone ssh://git@localhost:2222/git-server/repos/sot.git ${TEST_LOG_REPO}/repo
 cd ${TEST_LOG_REPO}/repo
+git config user.name "Testing Nome"
+git config user.email testing_nome@example.com
 mkdir acme
 touch acme/README.md
 git add acme/README.md

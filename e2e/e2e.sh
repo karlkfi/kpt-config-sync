@@ -26,6 +26,8 @@ function setUp() {
   rm -rf repo
   git clone ssh://git@localhost:2222/git-server/repos/sot.git ${TEST_REPO_DIR}/repo
   cd ${TEST_REPO_DIR}/repo
+  git config user.name "Testing Nome"
+  git config user.email testing_nome@example.com
   git rm -rf acme
   cp -r /opt/testing/sot/acme ./
   git add -A
