@@ -74,7 +74,7 @@ release: clean \
 		$(RELEASE_BUCKET)/nomos-docs-latest.zip \
 		$(RELEASE_BUCKET)/run-installer.sh \
 		$(RELEASE_BUCKET)/nomosvet.sh
-	@echo "Moving 'latest' label to reflect the latest release candidate."
+	@echo "+++ Moving 'latest' label to reflect the latest release candidate"
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/installer:latest
@@ -85,13 +85,13 @@ release: clean \
 # For releases we attach the :stable tag to the latest image
 # built and update the stable docs package.
 bless-release:
-	@echo "Moving 'stable' label to reflect a STABLE version release."
+	@echo "+++ Moving 'stable' label to reflect a STABLE version release"
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/installer:stable
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/nomosvet:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/nomosvet:stable
-	@echo "Updating latest docs package"
+	@echo "+++ Updating latest docs package"
 	gsutil cp -p $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip $(RELEASE_BUCKET)/nomos-docs-stable.zip
 

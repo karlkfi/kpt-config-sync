@@ -172,9 +172,7 @@ image-all: $(addprefix image-, $(ALL_APPS))
 
 # Creates a docker image for the specified nomos component.
 image-%: build
-	@echo
-	@echo "******* Building image for $* *******"
-	@echo
+	@echo "+++ Building image for $*"
 	@cp -r $(TOP_DIR)/build/$* $(STAGING_DIR)
 	@cp $(BIN_DIR)/$(ARCH)/$* $(STAGING_DIR)/$*
 	@docker build $(DOCKER_BUILD_QUIET) \
@@ -182,9 +180,7 @@ image-%: build
 
 # Creates docker image for the test git-server from github source
 image-git-server:
-	@echo
-	@echo "******* Building image for test git server *******"
-	@echo
+	@echo "+++ Building image for test git server"
 	@docker build $(DOCKER_BUILD_QUIET) \
 			-t gcr.io/$(GCP_PROJECT)/git-server:$(IMAGE_TAG) \
 			$(GIT_SERVER_SRC)
@@ -195,7 +191,7 @@ push-to-gcr-all: $(addprefix push-to-gcr-, $(ALL_APPS))
 
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-%: image-%
-	@echo "+++ Pushing $* to gcr.io."
+	@echo "+++ Pushing $* to gcr.io"
 	@gcloud $(GCLOUD_QUIET) docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
 
 # Generates the podspec yaml for each component.
@@ -331,7 +327,7 @@ test-e2e: clean e2e-image
 	    -v "$(OUTPUT_DIR)/e2e":/opt/testing \
 	    -e "VERSION=${IMAGE_TAG}" \
 	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" "$@" \
-	    && echo "+++ E2E tests completed." \
+	    && echo "+++ E2E tests completed" \
 	    || (echo "### E2E tests failed. Logs are available in ${INSTALLER_OUTPUT_DIR}/logs"; exit 1)
 
 # Redeploys all components to cluster without rerunning the installer.
