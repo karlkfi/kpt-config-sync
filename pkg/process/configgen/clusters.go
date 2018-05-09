@@ -92,8 +92,8 @@ func (c *Clusters) Run() (bool, error) {
 	var o []interface{}
 	o = append(o, c.opts)
 	o = append(o, dialog.Message(clustersMenuText))
-	for c, n := range cl.Clusters {
-		o = append(o, dialog.ChecklistItem(c, n, m[c]))
+	for c := range cl.Clusters {
+		o = append(o, dialog.ChecklistItem(c, "", m[c]))
 	}
 
 	ch := dialog.NewChecklist(o...)
