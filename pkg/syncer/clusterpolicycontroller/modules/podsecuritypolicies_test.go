@@ -18,6 +18,32 @@ import (
 	"k8s.io/api/extensions/v1beta1"
 )
 
+func TestSecurityPoliciesUnpack(t *testing.T) {
+	testCases := UnpackTests{
+		module: NewPodSecurityPoliciesModule(nil, nil),
+		field:  "PodSecurityPoliciesV1Beta1",
+		testcases: []UnpackTest{
+			UnpackTest{
+				name:      "none",
+				resources: []string{},
+			},
+			UnpackTest{
+				name:      "one",
+				resources: []string{"foo"},
+			},
+			UnpackTest{
+				name:      "two",
+				resources: []string{"foo", "bar"},
+			},
+			UnpackTest{
+				name:      "three",
+				resources: []string{"foo", "bar", "baz"},
+			},
+		},
+	}
+	testCases.Run(t)
+}
+
 func TestSecurityPoliciesEqual(t *testing.T) {
 	podSecurityPoliciesModule := NewPodSecurityPoliciesModule(nil, nil)
 	testCases := []struct {

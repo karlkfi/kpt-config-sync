@@ -19,6 +19,32 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func TestRolesUnpack(t *testing.T) {
+	testCases := UnpackTests{
+		module: NewClusterRolesModule(nil, nil),
+		field:  "ClusterRolesV1",
+		testcases: []UnpackTest{
+			UnpackTest{
+				name:      "none",
+				resources: []string{},
+			},
+			UnpackTest{
+				name:      "one",
+				resources: []string{"foo"},
+			},
+			UnpackTest{
+				name:      "two",
+				resources: []string{"foo", "bar"},
+			},
+			UnpackTest{
+				name:      "three",
+				resources: []string{"foo", "bar", "baz"},
+			},
+		},
+	}
+	testCases.Run(t)
+}
+
 func TestRolesEqual(t *testing.T) {
 	clusterRolesModule := NewClusterRolesModule(nil, nil)
 	testCases := []struct {

@@ -67,10 +67,11 @@ func (t TestItems) Objects() []meta_v1.Object {
 }
 
 type TestCase struct {
-	name    string
-	decls   TestItems
-	actuals TestItems
-	expect  []*Diff
+	name        string
+	decls       TestItems
+	actuals     TestItems
+	expect      []*Diff
+	expectPanic bool
 }
 
 func TestComparitor(t *testing.T) {
@@ -156,9 +157,29 @@ func TestComparitor(t *testing.T) {
 				},
 			},
 		},
+		TestCase{
+			name: "b/79438010 - error on duplicate decl names",
+			decls: TestItems{
+				TestItem{name: "pod-creator", value: "2"},
+				TestItem{name: "pod-creator", value: "2"},
+			},
+			actuals: TestItems{
+				TestItem{name: "pod-creator", value: "2"},
+			},
+			expectPanic: true,
+		},
 	}
 	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
+			defer func() {
+				if x := recover(); x != nil {
+					if _, ok := x.(invalidInput); ok && testcase.expectPanic {
+						return
+					}
+					panic(x)
+				}
+			}()
+
 			declared := testcase.decls.Objects()
 			actuals := testcase.actuals.Objects()
 

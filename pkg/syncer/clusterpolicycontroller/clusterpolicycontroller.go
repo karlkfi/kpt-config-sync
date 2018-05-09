@@ -28,6 +28,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/comparator"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/syncer/metrics"
+	"github.com/google/nomos/pkg/syncer/multierror"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/eventhandlers"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
@@ -124,14 +125,14 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 	}
 
 	// We return the first error we encounter during module processing.
-	var moduleErr error
+	errBuilder := multierror.NewBuilder()
 	for _, module := range s.modules {
 		declaredInstances := module.Extract(clusterPolicy)
-		for _, decl := range declaredInstances {
+		for idx, decl := range declaredInstances {
 			// Identify the ClusterPolicy that is managing this resource.
 			blockOwnerDeletion := true
 			controller := true
-			decl.SetOwnerReferences([]meta_v1.OwnerReference{
+			declaredInstances[idx].SetOwnerReferences([]meta_v1.OwnerReference{
 				{
 					APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
 					Kind:               "ClusterPolicy",
@@ -142,28 +143,28 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 				},
 			})
 			// Label the ClusterPolicy resources as nomos-managed.
-			decl.SetLabels(labeling.WithOriginLabel(decl.GetLabels()))
+			declaredInstances[idx].SetLabels(labeling.WithOriginLabel(decl.GetLabels()))
 		}
 
 		// Only include nomos-managed resources as current resources. Otherwise, we would end up deleting resources not managed
 		// by Nomos.
 		actualInstances, err := module.ActionSpec().List("", labeling.NewOriginSelector())
 		if err != nil {
-			moduleErr = errors.Wrapf(err, "failed to list from policy controller for %s", module.Name())
+			errBuilder.Add(errors.Wrapf(err, "failed to list from policy controller for %s", module.Name()))
 			continue
 		}
 
 		diffs := comparator.Compare(module.Equal, declaredInstances, object.RuntimeToMeta(actualInstances))
 		for _, diff := range diffs {
 			if err := execute(diff, module.ActionSpec()); err != nil {
-				if moduleErr != nil {
-					moduleErr = err
-				}
-				break
+				errBuilder.Add(err)
 			}
 		}
 	}
-	return moduleErr
+	if errBuilder.Len() != 0 {
+		glog.Warningf("reconcile encountered %d errors", errBuilder.Len())
+	}
+	return errBuilder.Build()
 }
 
 func (s *ClusterPolicyController) ownerLookup(k types.ReconcileKey) (interface{}, error) {
@@ -174,18 +175,16 @@ func (s *ClusterPolicyController) ownerLookup(k types.ReconcileKey) (interface{}
 func execute(diff *comparator.Diff, spec *action.ReflectiveActionSpec) error {
 	var act action.Interface
 	switch diff.Type {
-	case comparator.Add:
-		fallthrough
-	case comparator.Update:
+	case comparator.Add, comparator.Update:
 		// generate upsert action
 		act = action.NewReflectiveUpsertAction(
 			"", diff.Declared.GetName(), diff.Declared.(runtime.Object), spec)
 	case comparator.Delete:
 		// generate delete action
 		act = action.NewReflectiveDeleteAction("", diff.Actual.GetName(), spec)
-
 	}
 	if err := act.Execute(); err != nil {
+		glog.V(4).Infof("Operation %s failed", act)
 		return errors.Wrapf(err, "failed to execute action: %s", act)
 	}
 	return nil

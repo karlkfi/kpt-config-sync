@@ -10,13 +10,88 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package modules
 
 import (
+	"reflect"
 	"testing"
 
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
 	rbac_v1 "k8s.io/api/rbac/v1"
 )
+
+type UnpackTest struct {
+	name      string
+	resources []string
+	module    clusterpolicycontroller.Module // populated in by UnpackTests
+	field     string                         // populated in by UnpackTests
+}
+
+func (u *UnpackTest) Run(t *testing.T) {
+	cp := &policyhierarchy_v1.ClusterPolicy{}
+	cpsVal := reflect.ValueOf(&cp.Spec).Elem()
+	listVal := cpsVal.FieldByName(u.field)
+	newListVal := reflect.New(listVal.Type()).Elem()
+	for _, name := range u.resources {
+		inst := u.module.Instance()
+		inst.SetName(name)
+		newListVal = reflect.Append(newListVal, reflect.ValueOf(inst).Elem())
+	}
+	listVal.Set(newListVal)
+
+	actual := u.module.Extract(cp)
+	if len(actual) != len(u.resources) {
+		t.Errorf("Different length lists, actual: %d expected: %d", len(actual), len(u.resources))
+	}
+
+	for i := 0; i < len(u.resources); i++ {
+		if u.resources[i] != actual[i].GetName() {
+			t.Errorf("Name mismatch, actual: %s expected: %s", actual[i].GetName(), u.resources[i])
+		}
+	}
+}
+
+type UnpackTests struct {
+	module    clusterpolicycontroller.Module
+	field     string
+	testcases []UnpackTest
+}
+
+func (u *UnpackTests) Run(t *testing.T) {
+	for _, testcase := range u.testcases {
+		testcase.module = u.module
+		testcase.field = u.field
+		t.Run(testcase.name, testcase.Run)
+	}
+}
+
+func TestRoleBindingsUnpack(t *testing.T) {
+	testCases := UnpackTests{
+		module: NewClusterRoleBindingsModule(nil, nil),
+		field:  "ClusterRoleBindingsV1",
+		testcases: []UnpackTest{
+			UnpackTest{
+				name:      "none",
+				resources: []string{},
+			},
+			UnpackTest{
+				name:      "one",
+				resources: []string{"foo"},
+			},
+			UnpackTest{
+				name:      "two",
+				resources: []string{"foo", "bar"},
+			},
+			UnpackTest{
+				name:      "three",
+				resources: []string{"foo", "bar", "baz"},
+			},
+		},
+	}
+	testCases.Run(t)
+}
 
 func TestRoleBindingsEqual(t *testing.T) {
 	clusterRolesModule := NewClusterRoleBindingsModule(nil, nil)

@@ -17,6 +17,8 @@ limitations under the License.
 package comparator
 
 import (
+	"fmt"
+
 	"github.com/google/nomos/pkg/client/action"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,7 +72,11 @@ func Compare(equals Equals, declared []meta_v1.Object, existing []meta_v1.Object
 
 	decls := map[string]meta_v1.Object{}
 	for _, decl := range declared {
-		decls[decl.GetName()] = decl
+		name := decl.GetName()
+		if _, found := decls[name]; found {
+			panic(invalidInput{desc: fmt.Sprintf("Got duplicate decl for %q", name)})
+		}
+		decls[name] = decl
 	}
 
 	actuals := map[string]meta_v1.Object{}
@@ -115,4 +121,12 @@ func Compare(equals Equals, declared []meta_v1.Object, existing []meta_v1.Object
 		}
 	}
 	return diffs
+}
+
+type invalidInput struct {
+	desc string
+}
+
+func (i *invalidInput) String() string {
+	return i.desc
 }

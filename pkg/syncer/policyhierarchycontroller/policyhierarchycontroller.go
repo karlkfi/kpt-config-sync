@@ -33,6 +33,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/syncer/metrics"
+	"github.com/google/nomos/pkg/syncer/multierror"
 	"github.com/google/nomos/pkg/syncer/parentindexer"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
@@ -153,7 +154,7 @@ func (s *PolicyHieraryController) reconcile(k types.ReconcileKey) error {
 		return errors.Wrapf(err, "failed to upsert namespace %s", namespace)
 	}
 
-	var moduleErr error
+	errBuilder := multierror.NewBuilder()
 	for _, module := range s.modules {
 		declaredInstances := ancestry.Aggregate(module.NewAggregatedNode)
 
@@ -169,12 +170,12 @@ func (s *PolicyHieraryController) reconcile(k types.ReconcileKey) error {
 
 		diffs := comparator.Compare(module.Equal, declaredInstances, object.RuntimeToMeta(actualInstances))
 		for _, diff := range diffs {
-			if err := s.handleDiff(namespace, module, diff); err != nil && moduleErr == nil {
-				moduleErr = err
+			if err := s.handleDiff(namespace, module, diff); err != nil {
+				errBuilder.Add(err)
 			}
 		}
 	}
-	return moduleErr
+	return errBuilder.Build()
 }
 
 func (s PolicyHieraryController) handleDiff(namespace string, module Module, diff *comparator.Diff) error {

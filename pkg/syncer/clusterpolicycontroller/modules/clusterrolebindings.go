@@ -90,7 +90,7 @@ func (s *ClusterRoleBindingsModule) Instance() meta_v1.Object {
 func (s *ClusterRoleBindingsModule) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
 	var roles []runtime.Object
 	for _, r := range clusterPolicy.Spec.ClusterRoleBindingsV1 {
-		roles = append(roles, &r)
+		roles = append(roles, r.DeepCopy())
 	}
 	return object.RuntimeToMeta(roles)
 }
