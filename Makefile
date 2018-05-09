@@ -53,8 +53,14 @@ INSTALLER_OUTPUT_DIR := $(STAGING_DIR)/installer_output
 # Directory containing gen-alld yaml files from manifest templates.
 GEN_YAML_DIR := $(OUTPUT_DIR)/yaml
 
+# Directory containing generated test yamls
+TEST_GEN_YAML_DIR := $(OUTPUT_DIR)/test/yaml
+
 # Directory containing templates yaml files.
 TEMPLATES_DIR := $(TOP_DIR)/manifests/enrolled/templates
+
+# Directory containing test template yaml files.
+TEST_TEMPLATES_DIR := $(TOP_DIR)/test/manifests/templates
 
 # Use git tags to set version string.
 VERSION := $(shell git describe --tags --always --dirty)
@@ -127,7 +133,7 @@ DOCKER_RUN_ARGS := \
 .DEFAULT_GOAL := test
 
 $(OUTPUT_DIR):
-	@echo "+++ Creating the local golang build output directory: $(OUTPUT_DIR)"
+	@echo "+++ Creating the local build output directory: $(OUTPUT_DIR)"
 	@mkdir -p \
 		$(BIN_DIR)/$(ARCH) \
 		$(GEN_YAML_DIR) \
@@ -139,6 +145,10 @@ $(OUTPUT_DIR):
 		$(DOCS_STAGING_DIR) \
 		$(SCRIPTS_STAGING_DIR) \
 		$(DOCKER_STAGING_DIR)
+
+$(TEST_GEN_YAML_DIR):
+	@echo "+++ Creating the local build output directory for test: $@"
+	@mkdir -p $@
 
 ##### TARGETS #####
 
@@ -204,6 +214,13 @@ gen-yaml-%:
 	@m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
+# Generates yaml for the test git server
+$(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml \
+	$(TEST_GEN_YAML_DIR)
+	@echo "+++ Generating yaml git-server"
+	@m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/git-server:$(IMAGE_TAG) < \
+			 $< > $@
+
 # Creates staging directory for building installer docker image.
 installer-staging: push-to-gcr-all gen-yaml-all
 	@echo "+++ Creating staging directory for building installer docker image"
@@ -247,11 +264,8 @@ deploy-interactive: $(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
 		--version=$(IMAGE_TAG)
 
 # Build, push, and generates yaml for the test git server
-deploy-test-git-server: $(OUTPUT_DIR) image-git-server push-to-gcr-git-server \
-	gen-yaml-git-server
-
-# Deploy test dependencies and then the normal deployment
-deploy-test-e2e: $(OUTPUT_DIR) deploy-test-git-server deploy
+deploy-test-git-server: $(OUTPUT_DIR) $(TEST_GEN_YAML_DIR) image-git-server \
+	push-to-gcr-git-server $(TEST_GEN_YAML_DIR)/git-server.yaml
 
 # Runs the installer via docker in batch mode using the installer config
 # file specied in the environment variable NOMOS_INSTALLER_CONFIG.
@@ -294,7 +308,7 @@ e2e-staging: installer-image
 	@cp -n $(HOME)/.ssh/id_rsa.nomos $(OUTPUT_DIR)/e2e/id_rsa.nomos
 	@cp $(HOME)/.ssh/id_rsa.nomos.pub $(OUTPUT_DIR)/e2e/id_rsa.nomos.pub
 	@cp $(TOP_DIR)/scripts/init-git-server.sh $(OUTPUT_DIR)/e2e/
-	@cp $(GEN_YAML_DIR)/git-server.yaml $(OUTPUT_DIR)/e2e/
+	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(OUTPUT_DIR)/e2e/
 
 # Builds the e2e docker image. Note that the GCP project is hardcoded since we currently don't want
 # or need a nomos-release version of the e2e-tests image.
