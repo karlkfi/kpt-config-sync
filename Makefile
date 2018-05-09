@@ -246,9 +246,11 @@ deploy-interactive: $(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
 		--version=$(IMAGE_TAG)
 
+# Build, push, and generates yaml for the test git server
 deploy-test-git-server: $(OUTPUT_DIR) image-git-server push-to-gcr-git-server \
 	gen-yaml-git-server
 
+# Deploy test dependencies and then the normal deployment
 deploy-test-e2e: $(OUTPUT_DIR) deploy-test-git-server deploy
 
 # Runs the installer via docker in batch mode using the installer config
@@ -307,11 +309,6 @@ e2e-image: deploy-test-git-server e2e-staging
 		--build-arg "GCP_PROJECT=$(GCP_PROJECT)" \
 		$(STAGING_DIR)/e2e-tests
 	@gcloud $(GCLOUD_QUIET) docker -- push gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG)
-
-deploy-test-git-server: $(OUTPUT_DIR) image-git-server push-to-gcr-git-server \
-	gen-yaml-git-server
-
-deploy-test-e2e: $(OUTPUT_DIR) deploy-test-git-server deploy
 
 test-e2e: clean e2e-image
 	@echo "+++ Running end-to-end tests"
