@@ -57,6 +57,10 @@ readonly logging_options="--vmodule=main=5,configgen=3,kubectl=3,installer=3,exe
 # seem to have ill effects on other terminals.
 export TERM=screen
 
+# Tells ncurses not to detect UTF-8 incapable terminals.  It misdiagnoses
+# some cloud shells as unable to display UTF-8.
+export NCURSES_NO_UTF8_ACS=1
+
 echo "+++ Running installer"
 INSTALLER_ARGS=(
   "${logging_options}"
