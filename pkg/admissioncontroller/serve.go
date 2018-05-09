@@ -32,10 +32,10 @@ import (
 	"github.com/google/nomos/pkg/service"
 	"github.com/pkg/errors"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionreg_v1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1"
 	"k8s.io/client-go/rest"
 )
 
@@ -84,27 +84,35 @@ func GetAPIServerCert(clientset *kubernetes.Clientset) ([]byte, error) {
 	return []byte(pem), nil
 }
 
-// GetWebhookClientAndCert returns a webhook client, which has cleared any existing configuration for this controller
-// and the contents of the certificate file.
-func GetWebhookClientAndCert(
-	clientset *kubernetes.Clientset,
-	caCertFile,
-	webHookConfigName string) (v1beta1.ValidatingWebhookConfigurationInterface, []byte, error) {
+// GetWebhookCert returns the contents of the certificate file.
+func GetWebhookCert(caCertFile string) ([]byte, error) {
 	caCert, err := ioutil.ReadFile(caCertFile)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to read ca bundle file")
+		return nil, errors.Wrapf(err, "failed to read ca bundle file %q", caCertFile)
 	}
+	return caCert, nil
+}
+
+// RegisterWebhook upserts the webhook configuration with the provided config.
+func RegisterWebhook(clientset *kubernetes.Clientset, webhookConfig *admissionreg_v1beta1.ValidatingWebhookConfiguration) error {
 	client := clientset.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations()
-	_, err = client.Get(webHookConfigName, metav1.GetOptions{})
+
+	existing, err := client.Get(webhookConfig.Name, metav1.GetOptions{})
 	if err == nil {
-		glog.Infof("Deleting the existing ValidatingWebhookConfiguration")
-		if err2 := client.Delete(webHookConfigName, nil); err2 != nil {
-			return nil, nil, errors.Wrap(err2, "failed to delete ValidatingWebhookConfiguration")
+		glog.Infof("Updating existing ValidatingWebhookConfiguration")
+		webhookConfig.ResourceVersion = existing.ResourceVersion
+		if _, err2 := client.Update(webhookConfig); err2 != nil {
+			return errors.Wrap(err2, "failed to update ValidatingWebhookConfiguration")
 		}
-	} else if !api_errors.IsNotFound(err) {
-		return nil, nil, errors.Wrap(err, "failed retrieving existing ValidatingWebhookConfiguration")
+	} else if api_errors.IsNotFound(err) {
+		glog.Infof("Creating ValidatingWebhookConfiguration")
+		if _, err2 := client.Create(webhookConfig); err2 != nil {
+			return errors.Wrap(err2, "failed to create ValidatingWebhookConfiguration")
+		}
+	} else {
+		return errors.Wrap(err, "failed retrieving existing ValidatingWebhookConfiguration")
 	}
-	return client, caCert, nil
+	return nil
 }
 
 // Serve returns a handler function for the Admission controller.

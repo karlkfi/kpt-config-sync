@@ -57,8 +57,6 @@ kubectl create secret tls policynodes-admission-controller-secret-ca \
     --namespace=nomos-system \
     --cert=${ca_cert_file} \
     --key=${ca_key_file}
-kubectl delete ValidatingWebhookConfiguration policy-nodes.nomos.dev \
-    --ignore-not-found
 
 kubectl apply -f ${YAML_DIR}/policynodes-admission-controller.yaml
 

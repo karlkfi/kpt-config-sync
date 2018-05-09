@@ -64,7 +64,7 @@ func setupResourceQuotaInformer(config *rest.Config) (informerscorev1.ResourceQu
 
 // register the webhook admission controller with the kube-apiserver.
 func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
-	client, caCert, err := admissioncontroller.GetWebhookClientAndCert(clientset, caCertFile, externalAdmissionHookConfigName)
+	caCert, err := admissioncontroller.GetWebhookCert(caCertFile)
 	if err != nil {
 		return err
 	}
@@ -103,9 +103,9 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 			},
 		},
 	}
-	glog.Info("Creating ValidatingWebhookConfiguration")
-	if _, err := client.Create(webhookConfig); err != nil {
-		return errors.Wrap(err, "failed to create ValidatingWebhookConfiguration")
+	err = admissioncontroller.RegisterWebhook(clientset, webhookConfig)
+	if err != nil {
+		return errors.Wrapf(err, "failed to self register webhook")
 	}
 	return nil
 }
