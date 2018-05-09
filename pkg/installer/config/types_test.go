@@ -117,6 +117,7 @@ contexts:
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+			c = c.ExpandVarsCopy()
 			if !cmp.Equal(c, tt.expected) {
 				t.Errorf("Load():\n%v\nwant: %v\ndiff: %v", c, tt.expected, cmp.Diff(tt.expected, c))
 			}
@@ -208,9 +209,9 @@ git:
   GIT_SYNC_REPO: ""
   GIT_SYNC_SSH: true
   GIT_SYNC_WAIT: 1
-  KNOWN_HOSTS_FILENAME: $HOME/known_hosts
+  KNOWN_HOSTS_FILENAME: /home/user/known_hosts
   POLICY_DIR: ""
-  PRIVATE_KEY_FILENAME: $HOME/private_key
+  PRIVATE_KEY_FILENAME: /home/user/private_key
 `,
 		},
 	}

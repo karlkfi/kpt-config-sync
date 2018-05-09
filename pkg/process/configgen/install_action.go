@@ -52,7 +52,7 @@ func (a *InstallAction) Run() (bool, error) {
 	if err != nil {
 		return done, errors.Wrapf(err, "while saving configuration")
 	}
-	i := installer.New(*a.cfg, a.dir)
+	i := installer.New((*a.cfg).ExpandVarsCopy(), a.dir)
 	err = i.Run(false /*useCurrent*/)
 	if err != nil {
 		if glog.V(5) {

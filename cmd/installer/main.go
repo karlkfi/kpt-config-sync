@@ -89,7 +89,7 @@ func noninteractiveMain() {
 	if *workDir != "" {
 		dir = *workDir
 	}
-	i := installer.New(config, dir)
+	i := installer.New(config.ExpandVarsCopy(), dir)
 
 	if *uninstall != "" {
 		if err := i.Uninstall(*uninstall); err != nil {

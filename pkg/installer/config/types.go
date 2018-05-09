@@ -41,10 +41,16 @@ type GitConfig struct {
 	// for SSH authentication.  This entry is communicated through a file
 	// to avoid exposing the contents of the secret in the process table.
 	// If this entry is empty, SSH will be set to false.
+	//
+	// This filename may contain a string $HOME, which is expanded by
+	// ExpandVarsCopy().
 	PrivateKeyFilename string `json:"PRIVATE_KEY_FILENAME,omitempty"`
 
 	// KnownHostsFilename is the filename containing the known hosts SSH
 	// file that Kubernetes will use.  Not copied if not defined.
+	//
+	// This filename may contain a string $HOME, which is expanded by
+	// ExpandVarsCopy().
 	KnownHostsFilename string `json:"KNOWN_HOSTS_FILENAME,omitempty"`
 
 	// SyncBranch is the branch to sync from.  Default: "master".
@@ -95,6 +101,19 @@ func NewDefaultConfig() Config {
 	return c
 }
 
+func expandHome(text string) string {
+	return strings.Replace(text, "$HOME", "/home/user", 1)
+}
+
+// ExpandVarsCopy makes a copy of c, expanding path variables like $HOME with
+// actual file paths.
+func (c Config) ExpandVarsCopy() Config {
+	newc := c
+	newc.Git.KnownHostsFilename = expandHome(newc.Git.KnownHostsFilename)
+	newc.Git.PrivateKeyFilename = expandHome(newc.Git.PrivateKeyFilename)
+	return newc
+}
+
 // Load loads configuration from a reader in either YAML or JSON format.
 func Load(r io.Reader) (Config, error) {
 	b, err := ioutil.ReadAll(r)
@@ -105,15 +124,11 @@ func Load(r io.Reader) (Config, error) {
 	if err := yaml.Unmarshal(b, &c, yaml.DisallowUnknownFields); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")
 	}
-	c.Git.KnownHostsFilename = strings.Replace(c.Git.KnownHostsFilename, "$HOME", "/home/user", 1)
-	c.Git.PrivateKeyFilename = strings.Replace(c.Git.PrivateKeyFilename, "$HOME", "/home/user", 1)
 	return c, nil
 }
 
 // WriteInto writes the configuration into supplied writer in JSON format.
 func (c Config) WriteInto(w io.Writer) error {
-	c.Git.KnownHostsFilename = strings.Replace(c.Git.KnownHostsFilename, "/home/user", "$HOME", 1)
-	c.Git.PrivateKeyFilename = strings.Replace(c.Git.PrivateKeyFilename, "/home/user", "$HOME", 1)
 	b, err := yaml.Marshal(c)
 	if err != nil {
 		return errors.Wrapf(err, "while marshalling config")
@@ -127,22 +142,23 @@ func (c Config) WriteInto(w io.Writer) error {
 
 // Validate runs validations on the fields in Config.
 func (c Config) Validate(exists FileExists) error {
-	if !c.Git.Empty() {
-		if c.Git.SyncRepo == "" {
+	rc := c.ExpandVarsCopy()
+	if !rc.Git.Empty() {
+		if rc.Git.SyncRepo == "" {
 			return errors.Errorf("git repo not specified")
 		}
-		if c.Git.UseSSH {
-			if !c.repoIsSSHURL() {
+		if rc.Git.UseSSH {
+			if !rc.repoIsSSHURL() {
 				return errors.Errorf("ssh specified for non-ssh git repo url")
 			}
-			if c.Git.PrivateKeyFilename == "" {
+			if rc.Git.PrivateKeyFilename == "" {
 				return errors.Errorf("ssh specified for git repo, but private key not specified")
 			}
-			if !exists.Check(c.Git.PrivateKeyFilename) {
-				return errors.Errorf("ssh specified for git repo, but private key doesn't exist: %v", c.Git.PrivateKeyFilename)
+			if !exists.Check(rc.Git.PrivateKeyFilename) {
+				return errors.Errorf("ssh specified for git repo, but private key doesn't exist: %v", rc.Git.PrivateKeyFilename)
 			}
 		} else {
-			if c.repoIsSSHURL() {
+			if rc.repoIsSSHURL() {
 				return errors.Errorf("ssh specified as disabled for ssh git repo url")
 			}
 		}
