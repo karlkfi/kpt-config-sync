@@ -158,7 +158,7 @@ $(SCRIPTS_STAGING_DIR)/run-installer.sh: $(OUTPUT_DIR) $(TOP_DIR)/scripts/run-in
 	    -u $$(id -u):$$(id -g) \
   		-v "$(TOP_DIR):/work" matejak/argbash \
 		/work/scripts/run-installer.sh.template \
-		--output=/work/.output/staging/scripts/run-installer.sh
+		--output=$(SCRIPTS_STAGING_DIR:$(TOP_DIR)%=/work%)/run-installer.sh
 
 
 .PHONY: build
