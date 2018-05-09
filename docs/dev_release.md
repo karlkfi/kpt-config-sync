@@ -13,8 +13,8 @@ $ git status  # should print an empty status
 
 Ensure you're connected to a kubernetes cluster, following
 [Setup](dev_setup.md#initial-setup-of-your-cluster-in-gce-one-time). (This will
-be used in e2e tests, which run automatically before the release.) You can verify
-quickly using
+be used in e2e tests, which run automatically before the release.) You can
+verify quickly using
 
 ```console
 $ kubectl get ns # lists the 3 default namespaces
@@ -23,8 +23,8 @@ $ kubectl get ns # lists the 3 default namespaces
 ## Release
 
 Set the release version. Make sure to uphold the [semantic versioning
-rules](http://semver.org).
-If the release fails, increment the patch number for the next release attempt.
+rules](http://semver.org). If the release fails, increment the patch number for
+the next release attempt.
 
 ```console
 $ export RELEASE_VERSION="v1.2.3"
@@ -62,7 +62,7 @@ $ TZ=America/Los_Angeles git log --pretty="format:%C(yellow)%h \
 
 ## Verify (optional)
 
-If the above commands succeeded (that is, `echo $?` prints 0), the release process
-was successful. The output is a new version of our container in gcr. Look for the
-new version
+If the above commands succeeded (that is, `echo $?` prints 0), the release
+process was successful. The output is a new version of our container in gcr.
+Look for the new version
 [here](https://pantheon.corp.google.com/gcr/images/nomos-release/GLOBAL/installer?project=nomos-release&organizationId=433637338589&gcrImageListsize=50).

@@ -5,7 +5,7 @@
 **Do not install Nomos on a cluster with existing namespaces or workloads**
 
 During the install process, Nomos deletes all namespaces that have been created
-on the cluster.  We are presently working on a non destructive installation
+on the cluster. We are presently working on a non destructive installation
 process, and this document will be updated accordingly when the mechanisms are
 avialable.
 
@@ -20,35 +20,35 @@ This setup takes about 30 minutes.
 ### Installation environments
 
 The installation environments are sessions on a computer that you will run the
-installation from.  Any environments not mentioned here explicitly are untested,
+installation from. Any environments not mentioned here explicitly are untested,
 so we can not make guarantees about them.
 
 #### Linux
 
-Currently the only tested environment for installation is Ubuntu 14.04 on
-amd64.
+Currently the only tested environment for installation is Ubuntu 14.04 on amd64.
 
 Prerequisites:
 
-* Installed `curl`: to download the installation script.
-* Installed `docker`: to run the installation script.
-* Installed `bash`: to run the installation script.
+*   Installed `curl`: to download the installation script.
+*   Installed `docker`: to run the installation script.
+*   Installed `bash`: to run the installation script.
 
 #### Google Cloud Shell
 
 *Since: v0.4.0*
 
-You can choose to install Nomos from within [Google Cloud shell](https://www.google.com/shell/docs).
+You can choose to install Nomos from within [Google Cloud
+shell](https://www.google.com/shell/docs).
 
 Prerequisites:
 
-* Verify that you can use `kubectl` within the Google Cloud shell to access the
-clusters that you plan to install Nomos on.
+*   Verify that you can use `kubectl` within the Google Cloud shell to access
+    the clusters that you plan to install Nomos on.
 
 ### Kubernetes
 
 You need to have up and running Kubernetes clusters that you intend to install
-Nomos on.  You must be able to contact these clusters using `kubectl` from the
+Nomos on. You must be able to contact these clusters using `kubectl` from the
 installation environment.
 
 In order to run Nomos components, the cluster has to meet these requirements:
@@ -187,7 +187,7 @@ contexts:
   - kubeconfig_context_of_your_cluster
 git:
   GIT_SYNC_BRANCH: master
-  GIT_SYNC_REPO: git@github.com:foo-corp/nomos-policies.git
+  GIT_SYNC_REPO: git@github.com:frankfarzan/foo-corp-example.git
   GIT_SYNC_SSH: true
   KNOWN_HOSTS_FILENAME: $HOME/.ssh/known_hosts
   PRIVATE_KEY_FILENAME: $HOME/.ssh/id_rsa.nomos
@@ -281,3 +281,8 @@ The affected components are:
 
 In addition, removing Nomos from the cluster may affect user workloads that
 interact with the Kubernetes API server.
+
+# Installing Nomosvet
+
+`nomosvet` is tool that validates a root policyspace directory. See [User
+Guide](user_guide.md#validation) for installation and usage.

@@ -330,10 +330,11 @@ the git repo.
 
 ### On Install
 
-**IMPORTANT: Do not install Nomos on a cluster with existing namespaces or workloads**
+**IMPORTANT: Do not install Nomos on a cluster with existing namespaces or
+workloads**
 
 During the install process, Nomos deletes all namespaces that have been created
-on the cluster.  We are presently working on a non destructive installation
+on the cluster. We are presently working on a non destructive installation
 process, and this document will be updated accordingly when the mechanisms are
 avialable.
 
@@ -341,95 +342,100 @@ avialable.
 
 Nomos will manage the lifecycle of all namespaces on a kubernetes cluster.
 
-There's two categories of namespaces: Managed, and Reserved.
-1. **Reserved Namespaces** are the default namespaces that are installed on the
-   kubernetes cluster (`kube-system`, `kube-public`, `default`) as well as the
-   `nomos-system` namespace.  These namespaces are exceptions and will not be
-   managed by Nomos.  Additionally, in order to be future proof, we also treat
-   all `kube-` prefixed namespaces as `Reserved Namespaces`.
-1. **Managed Namesapces** are all the other namespaces on the cluster that are
-   not Reserved Namespaces.  These are created by creating a namespace directory
-   and a namespace .yaml file in the git repo, and deleted by lack of their
-   declaration in git.  Examples:
-   *  [foo-corp/audit/namespace.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/audit/namespace.yaml)
-      will result in creation of the `audit` namespace with a parent `foo-corp`.
-      Removal of this namespace.yaml will result in Nomos deleting the `audit`
-      namespace.
-   *  [foo-corp/online/shipping-app-backend/shipping-prod/namespace.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/online/shipping-app-backend/shipping-prod/namespace.yaml)
-      will result in creation of the shipping-prod namespace with ancestry
-      [`shipping-app-backend`, `online`, `foo-corp`]. Deleting this
-      namespace.yaml will result in deleting the `shipping-prod` namespace.
+There's two categories of namespaces: Managed, and Reserved:
 
-The following table describes the action that Nomos will take regarding
-a namespace on the cluster.
+1.  **Reserved Namespaces** are the default namespaces that are installed on the
+    kubernetes cluster (`kube-system`, `kube-public`, `default`) as well as the
+    `nomos-system` namespace. These namespaces are exceptions and will not be
+    managed by Nomos. Additionally, in order to be future proof, we also treat
+    all `kube-` prefixed namespaces as `Reserved Namespaces`.
+1.  **Managed Namesapces** are all the other namespaces on the cluster that are
+    not Reserved Namespaces. These are created by creating a namespace directory
+    and a namespace .yaml file in the git repo, and deleted by lack of their
+    declaration in git.
 
-| Declared in git | Exists on cluster | Nomos Action                         |
-|-----------------|-------------------|--------------------------------------|
-| true            | true              | no action                            |
-| true            | false             | create namespace and manage policies |
-| false           | true              | delete namespace from cluster        |
-| false           | false             | no action                            |
+Examples:
+
+*   [foo-corp/audit/namespace.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/audit/namespace.yaml)
+    will result in creation of the `audit` namespace with a parent `foo-corp`.
+    Removal of this namespace.yaml will result in Nomos deleting the `audit`
+    namespace.
+*   [foo-corp/online/shipping-app-backend/shipping-prod/namespace.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/online/shipping-app-backend/shipping-prod/namespace.yaml)
+    will result in creation of the shipping-prod namespace with ancestry
+    [`shipping-app-backend`, `online`, `foo-corp`]. Deleting this namespace.yaml
+    will result in deleting the `shipping-prod` namespace.
+
+The following table describes the action that Nomos will take regarding a
+namespace on the cluster.
+
+Declared in git | Exists on cluster | Nomos Action
+--------------- | ----------------- | ------------------------------------
+true            | true              | no action
+true            | false             | create namespace and manage policies
+false           | true              | delete namespace from cluster
+false           | false             | no action
 
 ### Cluster Scoped Policies
 
 Policies in the cluster scope will be applied to the cluster exactly as they are
-specified in the git repo.  Existing resources at the cluster level will not be
+specified in the git repo. Existing resources at the cluster level will not be
 managed unless a resource with the same name exists git.
 
-| Declared in git | On Cluster         | Nomos Action                                    |
-|-----------------|--------------------|-------------------------------------------------|
-| true            | matches git repo   | no action                                       |
-| true            | different than git | Nomos updates resource to match git declaration |
-| true            | does not exist     | Nomos creates resource from git declaration     |
-| false           | exists             | no action                                       |
-| false           | does not exist     | no action                                       |
+Declared in git | On Cluster         | Nomos Action
+--------------- | ------------------ | -----------------------------------
+true            | matches git repo   | no action
+true            | different than git | Nomos updates resource to match git
+true            | does not exist     | Nomos creates resource from git
+false           | exists             | no action
+false           | does not exist     | no action
 
 Examples:
-1. ClusterRole `pod-accountant` exists on the cluster, but does not exist in
-   git for [foo-corp](https://github.com/frankfarzan/foo-corp-example). Nomos is
-   installed for foo-corp. Nomos will not delete or alter `pod-accountant`.
-1. ClusterRole `namespace-reader` exists on the cluster, and exists in git for
-   [foo-corp](https://github.com/frankfarzan/foo-corp-example). Nomos is
-   installed for foo-corp. Nomos will now update `namespace-reader` to match the
-   one declared in
-   [namespace-reader-clusterrole.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/namespace-reader-clusterrole.yaml).
-1. Nomos is installed for foo-corp. Someone adds a new ClusterRole
-   `quota-viewer` to git in `foo-corp/quota-viewer-clusterrole.yaml`. Nomos will
-   now create the `quota-viewer` ClusterRole matching the one in git. Time
-   passes. Someone deletes the `quota-viewer-clusterrole.yaml` from git. Nomos
-   will now remove `quota-viewer` from the cluster.
 
+*   ClusterRole `pod-accountant` exists on the cluster, but does not exist in
+    git for [foo-corp](https://github.com/frankfarzan/foo-corp-example). Nomos
+    is installed for foo-corp. Nomos will not delete or alter `pod-accountant`.
+*   ClusterRole `namespace-reader` exists on the cluster, and exists in git for
+    [foo-corp](https://github.com/frankfarzan/foo-corp-example). Nomos is
+    installed for foo-corp. Nomos will now update `namespace-reader` to match
+    the one declared in
+    [namespace-reader-clusterrole.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/namespace-reader-clusterrole.yaml).
+*   Nomos is installed for foo-corp. Someone adds a new ClusterRole
+    `quota-viewer` to git in `foo-corp/quota-viewer-clusterrole.yaml`. Nomos
+    will now create the `quota-viewer` ClusterRole matching the one in git. Time
+    passes. Someone deletes the `quota-viewer-clusterrole.yaml` from git. Nomos
+    will now remove `quota-viewer` from the cluster.
 
 ### Namespace Scoped Policies
 
 Namespace scoped policies will be applied to match the intent of the source of
-truth exactly as they are specified.  This means that Nomos will overwrite or
+truth exactly as they are specified. This means that Nomos will overwrite or
 delete any existing policies that do not match the declarations in the source of
 truth.
 
-| Declared in git | On Cluster         | Nomos Action                                    |
-|-----------------|--------------------|-------------------------------------------------|
-| true            | matches git        | no action                                       |
-| true            | different than git | Nomos updates resource to match git declaration |
-| true            | does not exist     | Nomos creates resource from git declaration     |
-| false           | resource exists    | Nomos deletes the resource                      |
-| false           | does not exist     | no action                                       |
+Declared in git | On Cluster         | Nomos Action
+--------------- | ------------------ | -----------------------------------
+true            | matches git        | no action
+true            | different than git | Nomos updates resource to match git
+true            | does not exist     | Nomos creates resource from git
+false           | resource exists    | Nomos deletes the resource
+false           | does not exist     | no action
 
 Examples:
-1. RoleBinding
-   [pod-creators](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/online/shipping-app-backend/pod-creator-rolebinding.yaml)
-   is in git for foo-corp.  Nomos will ensure that all `pod-creator`
-   rolebindings in descendants of the `shipping-app-backend` policyspace
-   (`shipping-prod`, `shipping-staging`, `shipping-dev`) exactly match the
-   declared `pod-creator` RoleBinding.  Time passes and someone modifies the
-   [shipping-prod](https://github.com/frankfarzan/foo-corp-example/tree/master/foo-corp/online/shipping-app-backend/shipping-prod)
-   `pod-creator` RoleBinding. Nomos will notice the change and update
-   `pod-creator` to match the declaration in git. Time passes and someone
-   removes `pod-creator` from git. Nomos will now remove the `pod-creator`
-   resource from the descendant namespaces.
-1. Someone creates a `secret-admin` Role in `shipping-prod`. Nomos will notice
-   that the Role is not declared in `shipping-prod` or any of its ancestors and
-   delete the `secret-admin` Role from the namespace.
-1. Someone adds a `secret-admin` Role to git in `shipping-prod`. Nomos will
-   notice the updated declarations and create the `secret-admin` role in the
-   `shipping-prod` namespace.
+
+*   RoleBinding
+    [pod-creators](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/online/shipping-app-backend/pod-creator-rolebinding.yaml)
+    is in git for foo-corp. Nomos will ensure that all `pod-creator`
+    rolebindings in descendants of the `shipping-app-backend` policyspace
+    (`shipping-prod`, `shipping-staging`, `shipping-dev`) exactly match the
+    declared `pod-creator` RoleBinding. Time passes and someone modifies the
+    [shipping-prod](https://github.com/frankfarzan/foo-corp-example/tree/master/foo-corp/online/shipping-app-backend/shipping-prod)
+    `pod-creator` RoleBinding. Nomos will notice the change and update
+    `pod-creator` to match the declaration in git. Time passes and someone
+    removes `pod-creator` from git. Nomos will now remove the `pod-creator`
+    resource from the descendant namespaces.
+*   Someone creates a `secret-admin` Role in `shipping-prod`. Nomos will notice
+    that the Role is not declared in `shipping-prod` or any of its ancestors and
+    delete the `secret-admin` Role from the namespace.
+*   Someone adds a `secret-admin` Role to git in `shipping-prod`. Nomos will
+    notice the updated declarations and create the `secret-admin` role in the
+    `shipping-prod` namespace.
