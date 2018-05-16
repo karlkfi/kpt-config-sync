@@ -203,6 +203,9 @@ follows:
 $ ./run-installer.sh --config=/path/to/your/config.yaml
 ```
 
+Installer creates ConfigMaps and Secrets used by Nomos components. Refer to
+[Reference](#config-reference) for details.
+
 ### Interactive installation
 
 Interactive installation is menu driven. It allows you to edit the configuration
@@ -227,6 +230,46 @@ $ ./run-installer.sh --interactive --config=/path/to/your/config.yaml
 installation. "Install" will run the installer on the chosen clusters. By
 default, the configuration is saved as `gen_configs/generated.yaml`, i.e. a
 subdirectory of the current working directory.
+
+### Config Reference
+
+This section enumerates ConfigMaps and Secrets used by Nomos. When using
+installer, these are automatically created in `nomos-system` namespace.
+
+#### Configmaps
+
+##### git-policy-importer
+
+Used by gitpolicyimporter deployment:
+
+Key                        | Description                                                                              | Container
+-------------------------- | ---------------------------------------------------------------------------------------- | ---------
+GIT_SYNC_REPO              | the git repository to clone                                                              | git-sync
+GIT_SYNC_BRANCH            | the git branch to check out                                                              | git-sync
+GIT_SYNC_REV               | the git revision (tag or hash) to checkout                                               | git-sync
+GIT_SYNC_DEPTH             | use a shallow clone with a history truncated to the specified number of commits          | git-sync
+GIT_SYNC_WAIT              | the number of seconds between syncs                                                      | git-sync
+GIT_SYNC_MAX_SYNC_FAILURES | the number of consecutive failures allowed before aborting (the first pull must succeed) | git-sync
+GIT_SYNC_USERNAME          | the username to use                                                                      | git-sync
+GIT_SYNC_PASSWORD          | the password to use                                                                      | git-sync
+GIT_SYNC_SSH               | use SSH for git operations                                                               | git-sync
+GIT_KNOWN_HOSTS            | enable SSH known_hosts verification                                                      | git-sync
+POLICY_DIR                 | Relative path of root policy directory in the repo                                       | policy-importer
+
+#### Secrets
+
+##### git-creds
+
+Used by gitpolicyimporter deployment:
+
+Key         | Description          | Container
+----------- | -------------------- | ---------
+ssh         | SSH private key      | git-sync
+known_hosts | SSH known hosts file | git-sync
+
+See [git-sync
+docs](https://github.com/kubernetes/git-sync/blob/master/docs/ssh.md) for more
+information
 
 ## Verify installation
 
