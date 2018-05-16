@@ -33,12 +33,20 @@ kubectl apply -f /opt/testing/git-server.yaml
 
 kubectl -n=nomos-system create secret generic ssh-pub --from-file=/opt/testing/id_rsa.nomos.pub
 echo -n "Waiting for test-git-server pod to be ready. This could take a minute..."
-until kubectl get pods -n=nomos-system -lapp=test-git-server | grep -qe Running; do
+
+NEXT_WAIT_TIME=0
+until kubectl get pods -n=nomos-system -lapp=test-git-server | grep -qe Running || [ $NEXT_WAIT_TIME -eq 10 ]; do
   # I've seen this take anywhere from 2 to 40 seconds, so set the polling
   # interval for reasonable granularity within that
-  sleep 5;
+  sleep $(( NEXT_WAIT_TIME++ ))
   echo -n "."
 done
+
+if [ $NEXT_WAIT_TIME -eq 10 ]
+then
+  echo "timeout waiting for test-git-server to come up expired"
+  exit 1
+fi
 
 echo "test-git-server ready"
 
