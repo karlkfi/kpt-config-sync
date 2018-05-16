@@ -158,7 +158,7 @@ func TestComparitor(t *testing.T) {
 			},
 		},
 		TestCase{
-			name: "b/79438010 - error on duplicate decl names",
+			name: "panic on duplicate decl names",
 			decls: TestItems{
 				TestItem{name: "pod-creator", value: "2"},
 				TestItem{name: "pod-creator", value: "2"},
