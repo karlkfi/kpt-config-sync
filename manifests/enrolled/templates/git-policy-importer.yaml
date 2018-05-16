@@ -50,7 +50,7 @@ spec:
           - configMapRef:
               name: git-policy-importer
       - name: git-sync
-        image: "gcr.io/google_containers/git-sync:v2.0.6"
+        image: gcr.io/nomos-release/git-sync-amd64:v2.0.6-7-gd26f48d
         args: ["--root=/repo", "--dest=rev"]
         volumeMounts:
         - name: repo
