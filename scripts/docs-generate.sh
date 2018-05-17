@@ -35,8 +35,12 @@ fi
 # Post-process HTML.
 # 1. Convert links to our docs to be relative.
 # 2. Convert links to reflect flattened directory.
-# 2. Convert links to our docs to use html suffix.
+# 3. Convert links to our docs to use html suffix.
 find ${DOCS_STAGING_DIR} -name "*.html" \
   -exec sed -i -r "s:/__/grip/::g" {} \;  \
   -exec sed -i -r "s:docs/(.*\.md):\1:g" {} \; \
   -exec sed -i -r "/http/b; s:\.md:\.html:g" {} \;
+
+# 4. Update path to asset dir for docs in dev/ subdir.
+find ${DOCS_STAGING_DIR}/dev -name "*.html" \
+  -exec sed -i -r "s:\"asset/:\"../asset/:g" {} \;

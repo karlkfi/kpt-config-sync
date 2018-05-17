@@ -29,7 +29,7 @@ See [Quickstart](docs/quickstart.md).
 
 ## Contributing to Nomos
 
-[Developer Guide](docs/dev_guide.md)
+[Developer Guide](docs/dev/guide.md)
 
 ## Send feedback
 

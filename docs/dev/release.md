@@ -12,7 +12,7 @@ $ git status  # should print an empty status
 ```
 
 Ensure you're connected to a kubernetes cluster, following
-[Setup](dev_setup.md#initial-setup-of-your-cluster-in-gce-one-time). (This will
+[Setup](setup.md#initial-setup-of-your-cluster-in-gce-one-time). (This will
 be used in e2e tests, which run automatically before the release.) You can
 verify quickly using
 
@@ -65,4 +65,4 @@ $ TZ=America/Los_Angeles git log --pretty="format:%C(yellow)%h \
 If the above commands succeeded (that is, `echo $?` prints 0), the release
 process was successful. The output is a new version of our container in gcr.
 Look for the new version
-[here](https://pantheon.corp.google.com/gcr/images/nomos-release/GLOBAL/installer?project=nomos-release&organizationId=433637338589&gcrImageListsize=50).
+[here](https://console.cloud.google.com/gcr/images/nomos-release/GLOBAL/installer?project=nomos-release&organizationId=433637338589&gcrImageListsize=50).
