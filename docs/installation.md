@@ -282,6 +282,23 @@ The affected components are:
 In addition, removing Nomos from the cluster may affect user workloads that
 interact with the Kubernetes API server.
 
+## Reinstalling
+
+It is possible to reuse an existing installer configuration multiple times to
+reinstall Nomos.  To run the reinstall use the batch installation mode with
+your existing configuration:
+
+```console
+$ ./run-installer.sh --config=/path/to/your/config.yaml
+```
+
+The effect of the reinstallation is to run the equivalent of `kubectl apply` to
+almost all the Kubernetes components in the Nomos installation package.  The
+exception are certificates and required secrets, which are removed prior to the
+bulk of reinstall process.  This has the effect of installing a fresh copy of
+the certificates and secrets.  Namespaces and deployments may not be affected
+if the reinstall would not change their state.
+
 # Installing Nomosvet
 
 `nomosvet` is tool that validates a root policyspace directory. See [User
