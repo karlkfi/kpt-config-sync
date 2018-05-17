@@ -68,9 +68,9 @@ func (f policyNodeActionFactory) NewDelete(nodeName string) action.Interface {
 }
 
 func policyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lRole := lhs.(*policyhierarchy_v1.PolicyNode)
-	rRole := rhs.(*policyhierarchy_v1.PolicyNode)
-	return reflect.DeepEqual(lRole.Spec, rRole.Spec)
+	l := lhs.(*policyhierarchy_v1.PolicyNode)
+	r := rhs.(*policyhierarchy_v1.PolicyNode)
+	return reflect.DeepEqual(l.Spec, r.Spec)
 }
 
 type clusterPolicyActionFactory struct {

@@ -49,11 +49,11 @@ func (p PolicyNodeType) IsUnmanagedNamespace() bool {
 const (
 	// Policyspace indicates that the PolicyNode is for a Policyspace and should not be manifested
 	// into a namespace
-	Policyspace = PolicyNodeType("namespace")
+	Policyspace = PolicyNodeType("policyspace")
 
 	// Namespace indicates that the PolicyNode is represents a Namespace that should be created
 	// and managed on the cluster.
-	Namespace = PolicyNodeType("policyspace")
+	Namespace = PolicyNodeType("namespace")
 
 	// UnmanagedNamespace indicates that the namespace's policies will not be managed by nomos but
 	// nomos will ensure the namespace exists.
