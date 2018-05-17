@@ -303,13 +303,14 @@ $ curl https://storage.googleapis.com/nomos-release/nomosvet.sh -o nomosvet.sh
 $ chmod +x nomosvet.sh
 ```
 
+The following commands assume that you placed `nomosvet.sh` in a directory
+mentioned in your `$PATH` environment variable.
+
 You can manually run nomosvet:
 
 ```console
 $ nomosvet.sh foo-corp
 ```
-
-This requires nomosvet.sh is in your PATH.
 
 You can also automatically run nomosvet as a git [pre-commit
 hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks). In the root of
