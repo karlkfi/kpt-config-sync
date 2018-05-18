@@ -178,17 +178,18 @@ func TestWorkingNamespace(t *testing.T) {
 		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
 	}
 
-	child1.Spec.Type = policyhierarchy_v1.Namespace
-	v = New()
-	v.Add(root)
-	v.Add(child1)
-	v.Add(child2)
-	if err := v.checkWorkingNamespace(); err == nil {
-		t.Errorf("Should have detected intermediate node working namespace error")
-	}
-	if err := v.Validate(); err == nil {
-		t.Errorf("Should have detected intermediate node working namespace error")
-	}
+	// TODO(b/79989196): Add back checkWorkingNamespace.
+	//child1.Spec.Type = policyhierarchy_v1.Namespace
+	//v = New()
+	//v.Add(root)
+	//v.Add(child1)
+	//v.Add(child2)
+	//if err := v.checkWorkingNamespace(); err == nil {
+	//	t.Errorf("Should have detected intermediate node working namespace error")
+	//}
+	//if err := v.Validate(); err == nil {
+	//	t.Errorf("Should have detected intermediate node working namespace error")
+	//}
 }
 
 func TestRootWorkingNamespace(t *testing.T) {

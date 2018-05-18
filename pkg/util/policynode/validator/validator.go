@@ -161,10 +161,11 @@ func (s *Validator) checkWorkingNamespace() error {
 			continue
 		}
 
-		if !node.Spec.Type.IsPolicyspace() && isParent[nodeName] {
-			return errors.Errorf(
-				"Node %s designated as %s, but has children", node.Spec.Type, nodeName)
-		}
+		// TODO(79989196): Enable this check.
+		//if !node.Spec.Type.IsPolicyspace() && isParent[nodeName] {
+		//	return errors.Errorf(
+		//		"Node %s designated as %s, but has children", node.Spec.Type, nodeName)
+		//}
 	}
 	return nil
 }
