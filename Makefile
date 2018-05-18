@@ -267,15 +267,20 @@ deploy-interactive: $(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
 deploy-test-git-server: $(OUTPUT_DIR) $(TEST_GEN_YAML_DIR) image-git-server \
 	push-to-gcr-git-server $(TEST_GEN_YAML_DIR)/git-server.yaml
 
+check-nomos-installer-config:
+	@echo "+++ Checking installer configuration"
+	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
+		echo '### Must set env variable NOMOS_INSTALLER_CONFIG to use make deploy'; \
+		exit 1; \
+	fi;
+
 # Runs the installer via docker in batch mode using the installer config
 # file specied in the environment variable NOMOS_INSTALLER_CONFIG.
 install: deploy
-deploy: $(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
-	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
-		echo 'Must set NOMOS_INSTALLER_CONFIG to use make deploy'; \
-		exit 1; \
-	fi; \
-	$(SCRIPTS_STAGING_DIR)/run-installer.sh \
+deploy: check-nomos-installer-config \
+		$(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
+	@echo "+++ Running installer with output directory: $(INSTALLER_OUTPUT_DIR)"
+	@$(SCRIPTS_STAGING_DIR)/run-installer.sh \
 		--config=$(NOMOS_INSTALLER_CONFIG) \
 		--container=gcr.io/$(GCP_PROJECT)/installer \
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
@@ -283,12 +288,10 @@ deploy: $(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
 		--version=$(IMAGE_TAG)
 
 # Runs uninstallation via docker in batch mode using the installer config.
-uninstall: $(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
-	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
-		echo 'Must set NOMOS_INSTALLER_CONFIG to use make uninstall'; \
-		exit 1; \
-	fi; \
-	$(SCRIPTS_STAGING_DIR)/run-installer.sh \
+uninstall: check-nomos-installer-config \
+		$(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
+	@echo "+++ Running installer with output directory: $(INSTALLER_OUTPUT_DIR)"
+	@$(SCRIPTS_STAGING_DIR)/run-installer.sh \
 		--config=$(NOMOS_INSTALLER_CONFIG) \
 		--container=gcr.io/$(GCP_PROJECT)/installer \
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
