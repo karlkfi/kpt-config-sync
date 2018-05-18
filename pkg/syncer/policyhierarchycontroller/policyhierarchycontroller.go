@@ -124,21 +124,21 @@ func NewController(
 }
 
 func (s *PolicyHieraryController) reconcile(k types.ReconcileKey) error {
-	namespace := k.Name
-	if namespaceutil.IsReserved(namespace) {
+	name := k.Name
+	if namespaceutil.IsReserved(name) {
 		return nil
 	}
 
 	metrics.EventTimes.WithLabelValues("hierarchy-reconcile").Set(float64(time.Now().Unix()))
 	reconcileTimer := prometheus.NewTimer(
-		metrics.HierarchicalReconcileDuration.WithLabelValues(namespace))
+		metrics.HierarchicalReconcileDuration.WithLabelValues(name))
 	defer reconcileTimer.ObserveDuration()
 
-	ancestry, err := s.hierarchy.Ancestry(namespace)
+	ancestry, err := s.hierarchy.Ancestry(name)
 	if err != nil {
 		switch {
 		case hierarchy.IsNotFoundError(err):
-			return s.handleUndeclaredNamespace(namespace)
+			return s.handleUndeclaredNamespace(name)
 		case hierarchy.IsIncompleteHierarchyError(err):
 			return errors.Wrapf(err, "incomplete ancestry")
 		default:
@@ -147,11 +147,11 @@ func (s *PolicyHieraryController) reconcile(k types.ReconcileKey) error {
 	}
 
 	if !ancestry.Node().Spec.Type.IsNamespace() {
-		return nil
+		return s.handlePolicyspace(name)
 	}
 
 	if err := s.upsertNamespace(ancestry.Node()); err != nil {
-		return errors.Wrapf(err, "failed to upsert namespace %s", namespace)
+		return errors.Wrapf(err, "failed to upsert namespace %s", name)
 	}
 
 	errBuilder := multierror.NewBuilder()
@@ -159,18 +159,18 @@ func (s *PolicyHieraryController) reconcile(k types.ReconcileKey) error {
 		declaredInstances := ancestry.Aggregate(module.NewAggregatedNode)
 
 		for _, decl := range declaredInstances {
-			decl.SetNamespace(namespace)
+			decl.SetNamespace(name)
 			decl.SetLabels(labeling.WithOriginLabel(decl.GetLabels()))
 		}
 
-		actualInstances, err := module.ActionSpec().List(namespace, labels.Everything())
+		actualInstances, err := module.ActionSpec().List(name, labels.Everything())
 		if err != nil {
 			return errors.Wrapf(err, "failed to list from policy controller for %s", module.Name())
 		}
 
 		diffs := comparator.Compare(module.Equal, declaredInstances, object.RuntimeToMeta(actualInstances))
 		for _, diff := range diffs {
-			if err := s.handleDiff(namespace, module, diff); err != nil {
+			if err := s.handleDiff(name, module, diff); err != nil {
 				errBuilder.Add(err)
 			}
 		}
@@ -214,12 +214,19 @@ func (s *PolicyHieraryController) upsertNamespace(policyNode *policyhierarchy_v1
 	return nil
 }
 
-func (s *PolicyHieraryController) handleUndeclaredNamespace(namespace string) error {
-	glog.V(1).Infof("Namespace %s not declared in a policy node, removing", namespace)
-	act := actions.NewNamespaceDeleteAction(
-		namespace, s.injectArgs.KubernetesClientSet, s.namespaceLister)
+func (s *PolicyHieraryController) handleUndeclaredNamespace(name string) error {
+	glog.V(1).Infof("Namespace %s not declared in a policy node, removing", name)
+	act := actions.NewNamespaceDeleteAction(name, s.injectArgs.KubernetesClientSet, s.namespaceLister)
 	if err := act.Execute(); err != nil {
 		return errors.Wrapf(err, "failed to execute delete action for %s", act)
+	}
+	return nil
+}
+
+func (s *PolicyHieraryController) handlePolicyspace(name string) error {
+	act := actions.NewNamespaceDeleteAction(name, s.injectArgs.KubernetesClientSet, s.namespaceLister)
+	if err := act.Execute(); err != nil {
+		return errors.Wrapf(err, "failed to execute delete action for policyspace %s", act)
 	}
 	return nil
 }
