@@ -307,6 +307,7 @@ e2e-staging: installer-image
 	@cp -r $(STAGING_DIR)/installer/* $(STAGING_DIR)/e2e-tests
 	@cp -r $(TOP_DIR)/build/e2e-tests/* $(STAGING_DIR)/e2e-tests
 	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
+	@cp -r $(TOP_DIR)/third_party/bats-core $(OUTPUT_DIR)/e2e/bats
 	@cp -r $(TOP_DIR)/examples/acme/sot $(OUTPUT_DIR)/e2e
 	@cp -n $(HOME)/.ssh/id_rsa.nomos $(OUTPUT_DIR)/e2e/id_rsa.nomos
 	@cp $(HOME)/.ssh/id_rsa.nomos.pub $(OUTPUT_DIR)/e2e/id_rsa.nomos.pub
