@@ -96,7 +96,7 @@ func NewController(
 	}
 
 	for _, m := range modules {
-		err := genericController.WatchControllerOf(m.Instance(), eventhandlers.Path{clusterPolicyController.ownerLookup})
+		err := genericController.WatchTransformationOf(m.Instance(), mapToClusterPolicy)
 		if err != nil {
 			panic(errors.Wrapf(err, "programmer error while adding WatchControllerOf for module %s", m.Name()))
 		}
@@ -168,10 +168,6 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 	return errBuilder.Build()
 }
 
-func (s *ClusterPolicyController) ownerLookup(k types.ReconcileKey) (interface{}, error) {
-	return s.lister.Get(k.Name)
-}
-
 // execute will execute an action based on the Diff.
 func execute(diff *comparator.Diff, spec *action.ReflectiveActionSpec) error {
 	var act action.Interface
@@ -189,4 +185,8 @@ func execute(diff *comparator.Diff, spec *action.ReflectiveActionSpec) error {
 		return errors.Wrapf(err, "failed to execute action: %s", act)
 	}
 	return nil
+}
+
+func mapToClusterPolicy(obj interface{}) string {
+	return policyhierarchy_v1.ClusterPolicyName
 }
