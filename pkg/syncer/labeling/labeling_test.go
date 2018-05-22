@@ -25,18 +25,18 @@ import (
 
 func TestLabeling(t *testing.T) {
 	var m meta_v1.ObjectMeta
-	m.Labels = NewOriginLabel()
+	m.Labels = NewManagedLabel()
 	if m.Labels == nil {
 		t.Errorf("Should have added map")
 	}
-	if m.Labels[OriginLabelKey] != OriginLabelValue {
+	if m.Labels[ManagedLabelKey] != True {
 		t.Errorf("Should have correct key/value in map")
 	}
-	if !HasOriginLabel(m) {
+	if !HasManagedLabel(m) {
 		t.Errorf("Should have found label in map")
 	}
 
-	selector := NewOriginSelector()
+	selector := NewManagedSelector()
 	if !selector.Matches(labels.Set(m.Labels)) {
 		t.Errorf("Selector should match label")
 	}

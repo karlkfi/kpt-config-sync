@@ -23,47 +23,53 @@ import (
 
 // Labels that indicate the resource was created by Nomos
 const (
-	// OriginLabelKey is the key for a label that we use to indicate that the resoruce is being
-	// managed by the nomos system.
-	OriginLabelKey = "nomos-managed"
-	// OriginLabelValue is the value we set for OriginLabelKey
-	OriginLabelValue = "true"
+	// ManagedLabelKey is the key for a label that we use to indicate that the resource is being
+	// managed by the nomos system. Resources that do not have this label will not be touched by
+	// Nomos.
+	ManagedLabelKey = "nomos-managed"
+	// True indicates that the label key's state is now active.
+	True = "true"
 )
 
-// NewOriginLabel creates a new map with the label.
-func NewOriginLabel() map[string]string {
+// NewManagedLabel creates a new map with the label.
+func NewManagedLabel() map[string]string {
 	return map[string]string{
-		OriginLabelKey: OriginLabelValue,
+		ManagedLabelKey: True,
 	}
 }
 
-// WithOriginLabel creates a copy of the map with the new label. This is useful if we are adding
-// to a value that we do not want to mutate.
-func WithOriginLabel(m map[string]string) map[string]string {
-	ret := NewOriginLabel()
+// AddManagedDeepCopy adds the managed label to a copy of the given map. The original map is not
+// modified.
+func AddManagedDeepCopy(m map[string]string) map[string]string {
+	ret := map[string]string{ManagedLabelKey: True}
 	for k, v := range m {
 		ret[k] = v
 	}
 	return ret
 }
 
-// NewOriginSelector returns a selector that will select items managed by nomos.
-func NewOriginSelector() labels.Selector {
-	return labels.Set(NewOriginLabel()).AsSelector()
+// AddManaged adds the managed label to a map.
+func AddManaged(m map[string]string) {
+	m[ManagedLabelKey] = True
 }
 
-// HasOriginLabel will return true if the given object metadata has been labeled by this package
-func HasOriginLabel(objectMeta meta_v1.ObjectMeta) bool {
+// NewManagedSelector returns a selector that will select items managed by nomos.
+func NewManagedSelector() labels.Selector {
+	return labels.Set(NewManagedLabel()).AsSelector()
+}
+
+// HasManagedLabel will return true if the given object metadata has been labeled by this package
+func HasManagedLabel(objectMeta meta_v1.ObjectMeta) bool {
 	if objectMeta.Labels == nil {
 		return false
 	}
-	return objectMeta.Labels[OriginLabelKey] == OriginLabelValue
+	return objectMeta.Labels[ManagedLabelKey] == True
 }
 
-// ObjectHasOriginLabel will return true if the given object has been labeled by this package
-func ObjectHasOriginLabel(object meta_v1.Object) bool {
+// ObjectHasManagedLabel will return true if the given object has been labeled by this package
+func ObjectHasManagedLabel(object meta_v1.Object) bool {
 	if object.GetLabels() == nil {
 		return false
 	}
-	return object.GetLabels()[OriginLabelKey] == OriginLabelValue
+	return object.GetLabels()[ManagedLabelKey] == True
 }

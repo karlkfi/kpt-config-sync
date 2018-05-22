@@ -160,7 +160,7 @@ func (s *PolicyHieraryController) reconcile(k types.ReconcileKey) error {
 
 		for _, decl := range declaredInstances {
 			decl.SetNamespace(name)
-			decl.SetLabels(labeling.WithOriginLabel(decl.GetLabels()))
+			decl.SetLabels(labeling.AddManagedDeepCopy(decl.GetLabels()))
 		}
 
 		actualInstances, err := module.ActionSpec().List(name, labels.Everything())
@@ -198,10 +198,9 @@ func (s PolicyHieraryController) handleDiff(namespace string, module Module, dif
 
 func (s *PolicyHieraryController) upsertNamespace(policyNode *policyhierarchy_v1.PolicyNode) error {
 	glog.V(1).Infof("Namespace %s declared in a policy node, upserting", policyNode.Name)
-	labels := map[string]string{
-		policyhierarchy_v1.ParentLabelKey: policyNode.Spec.Parent,
-		labeling.OriginLabelKey:           labeling.OriginLabelValue,
-	}
+
+	labels := labeling.NewManagedLabel()
+	labels[policyhierarchy_v1.ParentLabelKey] = policyNode.Spec.Parent
 	act := actions.NewNamespaceUpsertAction(
 		policyNode.Name,
 		policyNode.UID,
