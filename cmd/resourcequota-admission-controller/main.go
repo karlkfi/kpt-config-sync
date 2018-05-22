@@ -99,7 +99,15 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 					},
 					CABundle: caCert,
 				},
-				NamespaceSelector: metav1.SetAsLabelSelector(labeling.NewManagedLabel()),
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						metav1.LabelSelectorRequirement{
+							Key:      labeling.ManagementKey,
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{labeling.Policies, labeling.Full},
+						},
+					},
+				},
 			},
 		},
 	}

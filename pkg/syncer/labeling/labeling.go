@@ -21,55 +21,75 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// Labels that indicate the resource was created by Nomos
+// Labels that Nomos uses for determining how to manage namespaces.
 const (
-	// ManagedLabelKey is the key for a label that we use to indicate that the resource is being
-	// managed by the nomos system. Resources that do not have this label will not be touched by
-	// Nomos.
-	ManagedLabelKey = "nomos-managed"
-	// True indicates that the label key's state is now active.
-	True = "true"
+	// ManagementKey is the key for a label that Nomos uses to track which namespaces are under Nomos
+	// management and what sort of management Nomos will perform.
+	ManagementKey = "nomos.dev/namespace-management"
+
+	// Policies indicates that Nomos will manage policies for the namespace.
+	Policies = "policies"
+
+	// All indicates that Nomos will manage policies and namespace lifecycle for the given namespace.
+	Full = "full"
 )
 
-// NewManagedLabel creates a new map with the label.
-func NewManagedLabel() map[string]string {
-	return map[string]string{
-		ManagedLabelKey: True,
-	}
+// Labels that Nomos uses for determining how to manage resources other than namespaces.
+const (
+	// ResourceManagementKey indicates that Nomos manages the lifecycle for the resource (this label
+	// does not apply to namespaces.
+	ResourceManagementKey = "nomos.dev/managed"
+)
+
+// Label helps manage applying labels to objects.
+type Label struct {
+	key   string
+	value string
 }
 
-// AddManagedDeepCopy adds the managed label to a copy of the given map. The original map is not
-// modified.
-func AddManagedDeepCopy(m map[string]string) map[string]string {
-	ret := map[string]string{ManagedLabelKey: True}
-	for k, v := range m {
-		ret[k] = v
-	}
-	return ret
+// New returns a new map with the labels.
+func (l *Label) New() map[string]string {
+	return map[string]string{l.key: l.value}
 }
 
-// AddManaged adds the managed label to a map.
-func AddManaged(m map[string]string) {
-	m[ManagedLabelKey] = True
+// AddTo adds the label to a map.
+func (l *Label) AddTo(m map[string]string) {
+	m[l.key] = l.value
 }
 
-// NewManagedSelector returns a selector that will select items managed by nomos.
-func NewManagedSelector() labels.Selector {
-	return labels.Set(NewManagedLabel()).AsSelector()
+// AddDeepCopy creates a copy of the provided map then adds the label. The original map is not modified.
+func (l *Label) AddDeepCopy(m map[string]string) map[string]string {
+	return labels.Merge(m, l.New())
 }
 
-// HasManagedLabel will return true if the given object metadata has been labeled by this package
-func HasManagedLabel(objectMeta meta_v1.ObjectMeta) bool {
-	if objectMeta.Labels == nil {
+// Selector returns a selector for the label.
+func (l *Label) Selector() labels.Selector {
+	return labels.Set(l.New()).AsSelector()
+}
+
+// IsSet returns true if the label is set on the object with matching value.
+func (l *Label) IsSet(object meta_v1.Object) bool {
+	objectLabels := object.GetLabels()
+	if objectLabels == nil {
 		return false
 	}
-	return objectMeta.Labels[ManagedLabelKey] == True
+	return objectLabels[l.key] == l.value
 }
 
-// ObjectHasManagedLabel will return true if the given object has been labeled by this package
-func ObjectHasManagedLabel(object meta_v1.Object) bool {
-	if object.GetLabels() == nil {
-		return false
-	}
-	return object.GetLabels()[ManagedLabelKey] == True
+// ManagePolicies is the label indicating that Nomos owns management of policies.
+var ManagePolicies = Label{
+	key:   ManagementKey,
+	value: Policies,
+}
+
+// ManageAll is the label indicating that Nomos owns management of both policy and namespace lifecycle.
+var ManageAll = Label{
+	key:   ManagementKey,
+	value: Full,
+}
+
+// ManageResource is the label indicating that Nomos manages the lifecycle for a resource.
+var ManageResource = Label{
+	key:   ResourceManagementKey,
+	value: Full,
 }

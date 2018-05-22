@@ -19,26 +19,37 @@ package labeling
 import (
 	"testing"
 
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 func TestLabeling(t *testing.T) {
-	var m meta_v1.ObjectMeta
-	m.Labels = NewManagedLabel()
-	if m.Labels == nil {
-		t.Errorf("Should have added map")
-	}
-	if m.Labels[ManagedLabelKey] != True {
-		t.Errorf("Should have correct key/value in map")
-	}
-	if !HasManagedLabel(m) {
-		t.Errorf("Should have found label in map")
+	obj := &v1.Role{}
+	testKey := "test"
+	testValue := "true"
+	testLabel := Label{key: testKey, value: testValue}
+
+	if testLabel.IsSet(obj) {
+		t.Errorf("Should not be set")
 	}
 
-	selector := NewManagedSelector()
-	if !selector.Matches(labels.Set(m.Labels)) {
+	obj.ObjectMeta.Labels = testLabel.AddDeepCopy(obj.ObjectMeta.Labels)
+	if !testLabel.IsSet(obj) {
+		t.Errorf("Should be set")
+	}
+
+	if obj.ObjectMeta.Labels[testKey] != testValue {
+		t.Errorf("Wrong key/value for label")
+	}
+
+	selector := testLabel.Selector()
+	if !selector.Matches(labels.Set(testLabel.New())) {
 		t.Errorf("Selector should match label")
 	}
 
+	m := map[string]string{}
+	testLabel.AddTo(m)
+	if m[testKey] != testValue {
+		t.Errorf("Wrong key/value for label")
+	}
 }

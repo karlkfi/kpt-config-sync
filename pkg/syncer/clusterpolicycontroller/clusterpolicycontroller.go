@@ -144,12 +144,12 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 				},
 			})
 			// Label the ClusterPolicy resources as nomos-managed.
-			declaredInstances[idx].SetLabels(labeling.AddManagedDeepCopy(decl.GetLabels()))
+			declaredInstances[idx].SetLabels(labeling.ManagePolicies.AddDeepCopy(decl.GetLabels()))
 		}
 
 		// Only include nomos-managed resources as current resources. Otherwise, we would end up deleting resources not managed
 		// by Nomos.
-		actualInstances, err := module.ActionSpec().List("", labeling.NewManagedSelector())
+		actualInstances, err := module.ActionSpec().List("", labeling.ManagePolicies.Selector())
 		if err != nil {
 			errBuilder.Add(errors.Wrapf(err, "failed to list from policy controller for %s", module.Name()))
 			continue
