@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/policyimporter/reserved"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
@@ -194,7 +195,7 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 
 	root := allDirsOrdered[0]
 	rootInfos := dirInfos[root]
-	p, c, err := processRootDir(root, rootInfos)
+	p, c, r, err := processRootDir(root, rootInfos)
 	if err != nil {
 		return nil, errors.Wrapf(err, "root directory is invalid: %s", root)
 	}
@@ -207,13 +208,17 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 		if err != nil {
 			return nil, errors.Wrapf(err, "directory is invalid: %s", d)
 		}
+		if r.IsReserved(p.Name) {
+			return nil, errors.Errorf("namespace dir %q is a reserved namespace", p.Name)
+		}
 		policies.PolicyNodes[p.Name] = *p
 	}
 
 	return &policies, nil
 }
 
-func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.PolicyNode, *policyhierarchy_v1.ClusterPolicy, error) {
+func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.PolicyNode,
+	*policyhierarchy_v1.ClusterPolicy, *reserved.Namespaces, error) {
 	v := newValidator()
 	pn := policynode.NewPolicyNode(
 		filepath.Base(dir),
@@ -227,6 +232,7 @@ func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.Pol
 		&policyhierarchy_v1.ClusterPolicySpec{},
 	)
 
+	rns := reserved.EmptyNamespaces()
 	for _, i := range infos {
 		o := i.AsVersioned()
 
@@ -248,16 +254,21 @@ func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.Pol
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, "")
 			pn.Spec.RoleBindingsV1 = append(pn.Spec.RoleBindingsV1, *o)
+		case *core_v1.ConfigMap:
+			var err error
+			if rns, err = reserved.From(o); err != nil {
+				v.err = err
+			}
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
 		}
 
 		if v.err != nil {
-			return nil, nil, v.err
+			return nil, nil, nil, v.err
 		}
 	}
 	// There's a singleton ClusterPolicy object for the hierarchy.
-	return pn, cp, nil
+	return pn, cp, rns, nil
 }
 
 func processNonRootDir(dir string, infos []*resource.Info, namespaceDirs map[string]bool) (*policyhierarchy_v1.PolicyNode, error) {
@@ -311,6 +322,8 @@ func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, "")
 			pn.Spec.RoleBindingsV1 = append(pn.Spec.RoleBindingsV1, *o)
+		case *core_v1.ConfigMap:
+			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
 		}
@@ -356,6 +369,8 @@ func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, namespace)
 			pn.Spec.RoleBindingsV1 = append(pn.Spec.RoleBindingsV1, *o)
+		case *core_v1.ConfigMap:
+			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
 			continue

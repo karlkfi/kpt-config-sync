@@ -32,18 +32,24 @@ import (
 //
 // e.g.
 //
+// kind: ConfigMap
 // apiVersion: v1
 // data:
-//   search=reserved
-//   backend=reserved
-//   frontend=reserved
-// kind: ConfigMap
+//   search: reserved
+//   backend: reserved
+//   frontend: reserved
+// metadata:
+//   name: nomos-reserved-namespaces
 type Namespaces struct {
 	configMap *v1.ConfigMap
 }
 
 // validate validates that reserved namespaces are well formed.
 func (n *Namespaces) validate() error {
+	if n.configMap.Name != policyhierarchyv1.ReservedNamespacesConfigMapName {
+		return errors.Errorf("reserved namespace configmap name %q is invalid, it must be %q", n.configMap.Name,
+			policyhierarchyv1.ReservedNamespacesConfigMapName)
+	}
 	for name, attribute := range n.configMap.Data {
 		if errorStrings := validation.IsQualifiedName(name); len(errorStrings) > 0 {
 			return errors.Errorf("reserved namespace %q is invalid: %v", name, errorStrings)
@@ -57,8 +63,8 @@ func (n *Namespaces) validate() error {
 
 // IsReserved returns false when the namespace is not part of the reserved
 // namespaces.
-func (n *Namespaces) IsReserved(ns *v1.Namespace) bool {
-	attribute, ok := n.configMap.Data[ns.Name]
+func (n *Namespaces) IsReserved(namespaceName string) bool {
+	attribute, ok := n.configMap.Data[namespaceName]
 	return ok && policyhierarchyv1.NamespaceAttribute(attribute) == policyhierarchyv1.ReservedAttribute
 }
 
@@ -77,17 +83,23 @@ func (n *Namespaces) List(wantAttribute policyhierarchyv1.NamespaceAttribute) []
 // hierarchy source of truth.
 func From(reserved *v1.ConfigMap) (*Namespaces, error) {
 	if reserved == nil {
-		return &Namespaces{
-			configMap: &v1.ConfigMap{
-				Data: make(map[string]string),
-			},
-		}, nil
+		return EmptyNamespaces(), nil
 	}
 
 	ns := &Namespaces{reserved}
 	if err := ns.validate(); err != nil {
-		return nil, err
+		return EmptyNamespaces(), err
 	}
 
 	return ns, nil
+}
+
+// EmptyNamespaces returns an empty Namespaces struct that contains no
+// reserved namespace dta.
+func EmptyNamespaces() *Namespaces {
+	return &Namespaces{
+		configMap: &v1.ConfigMap{
+			Data: make(map[string]string),
+		},
+	}
 }

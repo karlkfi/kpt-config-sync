@@ -135,6 +135,15 @@ spec:
   volumes:
   - '*'
 `
+
+	aConfigMapTemplate = `
+kind: ConfigMap
+apiVersion: v1
+data:
+  {{.Namespace}}: {{.Attribute}}
+metadata:
+  name: {{.Name}}
+`
 )
 
 var (
@@ -146,11 +155,12 @@ var (
 	aClusterRole        = template.Must(template.New("aClusterRole").Parse(aClusterRoleTemplate))
 	aClusterRoleBinding = template.Must(template.New("aClusterRoleBinding").Parse(aClusterRoleBindingTemplate))
 	aPodSecurityPolicy  = template.Must(template.New("aPodSecurityPolicyTemplate").Parse(aPodSecurityPolicyTemplate))
+	aConfigMap          = template.Must(template.New("aConfigMap").Parse(aConfigMapTemplate))
 	numPolicies         = 2
 )
 
 type templateData struct {
-	ID, Name, Namespace string
+	ID, Name, Namespace, Attribute string
 }
 
 func (d templateData) apply(t *template.Template) string {
@@ -404,6 +414,40 @@ var parserTestCases = []parserTestCase{
 		expectedNumPolicies: map[string]int{"foo": 0, "bar": 2},
 	},
 	{
+		testName: "Namespace dir with non-conflicting reserved Namespace specified",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"reserved.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchy_v1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"bar/ns.yaml":   templateData{Name: "bar"}.apply(aNamespace),
+		},
+	},
+	{
+		testName: "Namespace dir with non-conflicting reserved Namespace, but invalid attribute specified",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"reserved.yaml": templateData{Namespace: "foo", Attribute: "invalid-attribute", Name: policyhierarchy_v1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"bar/ns.yaml":   templateData{Name: "bar"}.apply(aNamespace),
+		},
+		expectedError: true,
+	},
+	{
+		testName: "Namespace dir with conflicting reserved Namespace specified",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"reserved.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchy_v1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"foo/ns.yaml":   templateData{Name: "foo"}.apply(aNamespace),
+		},
+		expectedError: true,
+	},
+	{
+		testName: "reserved namespace ConfigMap with invalid name",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"reserved.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: "random-name"}.apply(aConfigMap),
+		},
+		expectedError: true,
+	},
+	{
 		testName: "Namespace dir with multiple Roles of the same name",
 		root:     "foo",
 		testFiles: fileContentMap{
@@ -453,6 +497,15 @@ var parserTestCases = []parserTestCase{
 		testFiles: fileContentMap{
 			"bar/ns.yaml":    templateData{Name: "baz"}.apply(aNamespace),
 			"bar/baz/ignore": "",
+		},
+		expectedError: true,
+	},
+	{
+		testName: "Namespace dir with ConfigMap",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"bar/cm.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchy_v1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 		},
 		expectedError: true,
 	},
@@ -536,6 +589,14 @@ var parserTestCases = []parserTestCase{
 		root:     "foo",
 		testFiles: fileContentMap{
 			"bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
+		},
+		expectedError: true,
+	},
+	{
+		testName: "Policyspace dir with ConfigMap",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/cm.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchy_v1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 		},
 		expectedError: true,
 	},

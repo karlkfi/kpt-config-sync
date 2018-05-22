@@ -28,6 +28,9 @@ const ParentLabelKey = "nomos-parent-ns"
 // ClusterPolicyName is the name of the singleton ClusterPolicy resource.
 const ClusterPolicyName = "nomos-cluster-policy"
 
+// ReservedNamespacesConfigMapName is the name of the ConfigMap specifying reserved namespaces.
+const ReservedNamespacesConfigMapName = "nomos-reserved-namespaces"
+
 // NamespaceAttribute is an attribute defining how Nomos reacts to reserved namespaces.
 type NamespaceAttribute string
 
@@ -44,7 +47,7 @@ func (p PolicyNodeType) IsNamespace() bool {
 	return p == Namespace
 }
 
-// IsPolicyspace returns true if the type corresponds to a policyspaace type.
+// IsPolicyspace returns true if the type corresponds to a policyspace type.
 func (p PolicyNodeType) IsPolicyspace() bool {
 	return p == Policyspace
 }

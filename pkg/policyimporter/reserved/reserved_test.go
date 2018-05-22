@@ -18,6 +18,7 @@ package reserved
 import (
 	"testing"
 
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/pkg/errors"
 	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +33,9 @@ func TestReservedNamespaces(t *testing.T) {
 		{
 			name: "valid",
 			configMap: &v1.ConfigMap{
+				ObjectMeta: meta_v1.ObjectMeta{
+					Name: policyhierarchyv1.ReservedNamespacesConfigMapName,
+				},
 				Data: map[string]string{
 					"eng":      "reserved",
 					"backend":  "reserved",
@@ -42,6 +46,9 @@ func TestReservedNamespaces(t *testing.T) {
 		{
 			name: "invalid attribute",
 			configMap: &v1.ConfigMap{
+				ObjectMeta: meta_v1.ObjectMeta{
+					Name: policyhierarchyv1.ReservedNamespacesConfigMapName,
+				},
 				Data: map[string]string{
 					"eng":      "reserved",
 					"backend":  "reserved",
@@ -53,6 +60,9 @@ func TestReservedNamespaces(t *testing.T) {
 		{
 			name: "invalid namespace name",
 			configMap: &v1.ConfigMap{
+				ObjectMeta: meta_v1.ObjectMeta{
+					Name: policyhierarchyv1.ReservedNamespacesConfigMapName,
+				},
 				Data: map[string]string{
 					"eng":       "reserved",
 					"backend":   "reserved",
@@ -60,6 +70,20 @@ func TestReservedNamespaces(t *testing.T) {
 				},
 			},
 			wantErr: errors.Errorf("the reserved namespace name, frontend@ is invalid: "),
+		},
+		{
+			name: "invalid configmap name",
+			configMap: &v1.ConfigMap{
+				ObjectMeta: meta_v1.ObjectMeta{
+					Name: "some-incorrect-name",
+				},
+				Data: map[string]string{
+					"eng":       "reserved",
+					"backend":   "reserved",
+					"frontend@": "reserved",
+				},
+			},
+			wantErr: errors.Errorf("the reserved namespace configmap name is invalid"),
 		},
 	}
 
@@ -75,6 +99,9 @@ func TestReservedNamespaces(t *testing.T) {
 
 func TestIsReservedNamespace(t *testing.T) {
 	configMap := &v1.ConfigMap{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: policyhierarchyv1.ReservedNamespacesConfigMapName,
+		},
 		Data: map[string]string{
 			"eng":      "reserved",
 			"backend":  "reserved",
@@ -84,37 +111,25 @@ func TestIsReservedNamespace(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		namespace *v1.Namespace
+		namespace string
 		configMap *v1.ConfigMap
 		want      bool
 	}{
 		{
-			name: "reserved namespace",
-			namespace: &v1.Namespace{
-				ObjectMeta: meta_v1.ObjectMeta{
-					Name: "eng",
-				},
-			},
+			name:      "reserved namespace",
+			namespace: "eng",
 			configMap: configMap,
 			want:      true,
 		},
 		{
-			name: "non-reserved namespace",
-			namespace: &v1.Namespace{
-				ObjectMeta: meta_v1.ObjectMeta{
-					Name: "foobar",
-				},
-			},
+			name:      "non-reserved namespace",
+			namespace: "foobar",
 			configMap: configMap,
 			want:      false,
 		},
 		{
-			name: "nil configMap still generates Namespaces",
-			namespace: &v1.Namespace{
-				ObjectMeta: meta_v1.ObjectMeta{
-					Name: "eng",
-				},
-			},
+			name:      "nil configMap still generates namespaces",
+			namespace: "eng",
 			configMap: nil,
 			want:      false,
 		},
