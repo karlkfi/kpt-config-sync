@@ -1,11 +1,10 @@
 #!/bin/bash
 
-TEST_REPO_DIR=/tmp/nomos-test
+TEST_REPO_DIR=${BATS_TMPDIR}
 
 # Run for every test
 setup() {
   CWD=$(pwd)
-  mkdir -p ${TEST_REPO_DIR}
   cd ${TEST_REPO_DIR}
   rm -rf repo
   git clone ssh://git@localhost:2222/git-server/repos/sot.git ${TEST_REPO_DIR}/repo
@@ -31,9 +30,11 @@ function assertContains() {
   fi
 }
 
+load e2e-git-api
+
 ######################## TESTS ########################
 @test "syncer namespace" {
-  sleep 5
+  sleep 5 # namespaces take a while to come up sometimes, but this should be a wait not a sleep
   run kubectl get ns eng
   assertContains "NotFound"
   run kubectl get ns backend
@@ -49,7 +50,7 @@ function assertContains() {
 
 @test "syncer roles" {
   run kubectl get roles -n new-prj
-  [[ "$output" == *'acme-admin'* ]]
+  assertContains "acme-admin"
 }
 
 @test "syncer role bindings" {
@@ -63,7 +64,10 @@ function assertContains() {
 }
 
 @test "syncer role bindings change" {
-  kubectl apply -f ${BATS_TEST_DIRNAME}/test-syncer-change-rolebinding-backend.yaml > /dev/null
+  run kubectl get rolebindings -n backend bob-rolebinding -o yaml
+  assertContains "acme-admin"
+  git_update ${BATS_TEST_DIRNAME}/test-syncer-change-rolebinding-backend.yaml acme/eng/backend/bob-rolebinding.yaml
+  git_commit
   sleep 1
   run kubectl get rolebindings -n backend bob-rolebinding
   assertContains "NotFound"
