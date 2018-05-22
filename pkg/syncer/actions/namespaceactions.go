@@ -84,6 +84,43 @@ func NewNamespaceUpsertAction(
 	return action.NewReflectiveUpsertAction("", namespace, ns, spec)
 }
 
+// NewNamespaceCreateAction creates a new ReflectiveCreateAction for the namespace.
+func NewNamespaceCreateAction(
+	namespace string,
+	ownerUID types.UID,
+	labels map[string]string,
+	client kubernetes.Interface,
+	lister listers_core_v1.NamespaceLister) *action.ReflectiveCreateAction {
+	blockOwnerDeletion := true
+	controller := true
+	spec := &action.ReflectiveActionSpec{
+		Resource:   action.LowerPlural(core_v1.Namespace{}),
+		KindPlural: action.Plural(core_v1.Namespace{}),
+		Group:      core_v1.SchemeGroupVersion.Group,
+		Version:    core_v1.SchemeGroupVersion.Version,
+		EqualSpec:  NamespacesEqual,
+		Client:     client.CoreV1(),
+		Lister:     lister,
+	}
+	ns := &core_v1.Namespace{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name:   namespace,
+			Labels: labels,
+			OwnerReferences: []meta_v1.OwnerReference{
+				{
+					APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
+					Kind:               "PolicyNode",
+					Name:               namespace,
+					UID:                ownerUID,
+					BlockOwnerDeletion: &blockOwnerDeletion,
+					Controller:         &controller,
+				},
+			},
+		},
+	}
+	return action.NewReflectiveCreateAction("", namespace, ns, spec)
+}
+
 // NamespacesEqual returns true if the two Namespaces have the same owner references.
 func NamespacesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	lNamespace := lhs.(*core_v1.Namespace)

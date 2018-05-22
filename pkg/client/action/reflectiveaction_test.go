@@ -41,9 +41,10 @@ type ResourceFactory func(namespace, name string) runtime.Object
 type ReflectiveActionTestCase struct {
 	TestName string // Test name for human readability
 
-	Namespaced bool            // True if this resource exists at namespace level
-	Operation  string          // Opertion to perform, "upsert" or "delete"
-	Resource   ResourceFactory // resource factory function, needs to set name/namespace appropriately
+	Namespaced      bool            // True if this resource exists at namespace level
+	Operation       string          // Opertion to perform, "upsert" or "delete"
+	Resource        ResourceFactory // resource factory function, needs to set name/namespace appropriately
+	CreateExpectErr bool            // True if the create operation should expect an error
 
 	// PrePopulate is a function that takes the original resource and returns nil or a resource that
 	// should be pre-populated on the host.
@@ -91,9 +92,24 @@ func (t *ReflectiveActionTestCase) Name() string {
 func (t *ReflectiveActionTestCase) Run(test *testing.T) {
 	operation := t.CreateOperation()
 	err := operation.Execute()
-	if err != nil {
-		test.Errorf("Encountered error in testcase %s: %s", t.TestName, err)
-		return
+	switch t.Operation {
+	case "create":
+		if t.CreateExpectErr {
+			if err == nil {
+				test.Errorf("Expected create error in testcase %s: %s", t.TestName, err)
+				return
+			}
+		} else {
+			if err != nil {
+				test.Errorf("Encountered error in testcase %s: %s", t.TestName, err)
+				return
+			}
+		}
+	case "upsert", "delete":
+		if err != nil {
+			test.Errorf("Encountered error in testcase %s: %s", t.TestName, err)
+			return
+		}
 	}
 
 	if msg := t.Validate(); msg != "" {
@@ -104,6 +120,29 @@ func (t *ReflectiveActionTestCase) Run(test *testing.T) {
 func (t *ReflectiveActionTestCase) Validate() string {
 	glog.Infof("Checking testcase %s", t.TestName)
 	switch t.Operation {
+	case "create":
+		// check resource exists and
+		resource := t.GetResource()
+		obj, err := t.Getter(t.client, t.Namespace(), t.Name())
+		if err != nil {
+			return fmt.Sprintf("Failed to get object: %s", err)
+		}
+		if resource == nil {
+			panic("resource is nil")
+		}
+		if obj == nil {
+			panic("object is nil")
+		}
+		if !t.CreateExpectErr {
+			if !t.spec.EqualSpec(obj, resource) {
+				return fmt.Sprintf("Objects %v and %v differ", spew.Sdump(obj), spew.Sdump(resource))
+			}
+			if !ObjectMetaSubset(obj, resource) {
+				return fmt.Sprintf("Objects %v and %v differ", spew.Sdump(obj), spew.Sdump(resource))
+			}
+		}
+		return ""
+
 	case "upsert":
 		// check resource exists and
 		resource := t.GetResource()
@@ -146,6 +185,9 @@ func (t *ReflectiveActionTestCase) Validate() string {
 
 func (t *ReflectiveActionTestCase) CreateOperation() Interface {
 	switch t.Operation {
+	case "create":
+		return NewReflectiveCreateAction(
+			t.Namespace(), t.Name(), t.GetResource(), t.spec)
 	case "upsert":
 		return NewReflectiveUpsertAction(
 			t.Namespace(), t.Name(), t.GetResource(), t.spec)
@@ -239,6 +281,25 @@ func namespacedRoleX(namespace, name string) runtime.Object {
 
 var namespacedTestCases = []ReflectiveActionTestCase{
 	{
+		TestName:    "create ok",
+		Operation:   "create",
+		Namespaced:  true,
+		Resource:    namespacedRoleX,
+		PrePopulate: func(runtime.Object) runtime.Object { return nil },
+	},
+	{
+		TestName:        "create fails",
+		Operation:       "create",
+		Namespaced:      true,
+		CreateExpectErr: true,
+		Resource:        namespacedRoleX,
+		PrePopulate: func(obj runtime.Object) runtime.Object {
+			role := obj.(*rbac_v1.Role).DeepCopy()
+			role.ObjectMeta.Labels["foo"] = "bar"
+			return role
+		},
+	},
+	{
 		TestName:    "upsert for create",
 		Operation:   "upsert",
 		Namespaced:  true,
@@ -328,6 +389,23 @@ func TestReflectiveActionNamespaced(t *testing.T) {
 }
 
 var clusterTestCases = []ReflectiveActionTestCase{
+	{
+		TestName:    "create ok",
+		Operation:   "create",
+		Resource:    clusterRoleX,
+		PrePopulate: func(runtime.Object) runtime.Object { return nil },
+	},
+	{
+		TestName:        "create fails",
+		Operation:       "create",
+		CreateExpectErr: true,
+		Resource:        clusterRoleX,
+		PrePopulate: func(obj runtime.Object) runtime.Object {
+			role := obj.(*rbac_v1.ClusterRole).DeepCopy()
+			role.ObjectMeta.Labels["foo"] = "bar"
+			return role
+		},
+	},
 	{
 		TestName:    "upsert for create",
 		Operation:   "upsert",

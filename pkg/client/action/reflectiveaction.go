@@ -33,6 +33,8 @@ import (
 type OperationType string
 
 const (
+	// CreateOperation will create the resource and fail if it exists.
+	CreateOperation = OperationType("create")
 	// UpsertOperation will create or update the resource
 	UpsertOperation = OperationType("upsert")
 	// DeleteOperation will delete the resource
@@ -207,6 +209,40 @@ func (s ReflectiveActionBase) toObjectError(returnValues []reflect.Value) (runti
 
 	retError := returnValues[1].Interface().(error)
 	return retObject, retError
+}
+
+// ReflectiveCreateAction implements a create action for all generated client stubs.  This will not
+// attempt to modify the action if it already exists.
+type ReflectiveCreateAction struct {
+	ReflectiveActionBase
+}
+
+var _ Interface = &ReflectiveCreateAction{}
+
+// Execute implements Interface
+func (s *ReflectiveCreateAction) Execute() error {
+	timer := prometheus.NewTimer(Duration.WithLabelValues(s.Namespace(), s.Resource(), string(s.Operation())))
+	defer timer.ObserveDuration()
+	glog.V(1).Infof("Executing %s", s)
+	if _, err := s.create(); err != nil {
+		return errors.Wrapf(err, "failed to create namespace %q", s.name)
+	}
+	return nil
+}
+
+// NewReflectiveCreateAction creates a new create action given a namespace, name and spec. Note that
+// for cluster level resources namespace MUST be the empty string.
+func NewReflectiveCreateAction(
+	namespace, name string, resource runtime.Object, spec *ReflectiveActionSpec) *ReflectiveCreateAction {
+	return &ReflectiveCreateAction{
+		ReflectiveActionBase: ReflectiveActionBase{
+			namespace: namespace,
+			name:      name,
+			operation: CreateOperation,
+			resource:  resource,
+			spec:      spec,
+		},
+	}
 }
 
 // ReflectiveUpsertAction implements an upsert action for all generated client stubs.
