@@ -18,7 +18,8 @@ setup() {
   git push origin master
   cd $CWD
   # Wait for syncer to update objects following the policynode updates
-  sleep 1
+  waitForSuccess "kubectl get ns backend"
+  waitForSuccess "kubectl get ns frontend"
 }
 
 # assertContains <command> <substring>
@@ -34,7 +35,6 @@ load e2e-git-api
 
 ######################## TESTS ########################
 @test "syncer namespace" {
-  sleep 5 # namespaces take a while to come up sometimes, but this should be a wait not a sleep
   run kubectl get ns eng
   assertContains "NotFound"
   run kubectl get ns backend
@@ -68,7 +68,7 @@ load e2e-git-api
   assertContains "acme-admin"
   git_update ${BATS_TEST_DIRNAME}/test-syncer-change-rolebinding-backend.yaml acme/eng/backend/bob-rolebinding.yaml
   git_commit
-  sleep 1
+  waitForFailure "kubectl get rolebindings -n backend bob-rolebinding"
   run kubectl get rolebindings -n backend bob-rolebinding
   assertContains "NotFound"
   run kubectl get rolebindings -n backend robert-rolebinding -o yaml
@@ -91,15 +91,7 @@ load e2e-git-api
   assertContains "pods is forbidden"
 }
 
-# Helper for quota tests
-function cleanTestConfigMaps() {
-  kubectl delete configmaps -n new-prj --all > /dev/null
-  kubectl delete configmaps -n newer-prj --all > /dev/null
-  sleep 1
-}
-
 @test "quota admission" {
-  cleanTestConfigMaps
   waitForSuccess "kubectl get ns new-prj"
   run kubectl create configmap map1 -n new-prj
   assertContains "created"
@@ -107,7 +99,6 @@ function cleanTestConfigMaps() {
   assertContains "created"
   run kubectl create configmap map3 -n new-prj
   assertContains "exceeded quota in policyspace rnd"
-  cleanTestConfigMaps
 }
 
 function waitForSuccess() {
@@ -120,7 +111,8 @@ function waitForSuccess() {
 function waitForFailure() {
   local command="${1:-}"
   local timeout=${2:-10}
-  local or_die=${3:-true} waitFor "${command}" "${timeout}" "${or_die}" false
+  local or_die=${3:-true}
+  waitFor "${command}" "${timeout}" "${or_die}" false
 }
 
 function waitFor() {
@@ -131,7 +123,8 @@ function waitFor() {
 
   echo -n "Waiting for ${command} to exit ${expect}"
   for i in $(seq 1 ${timeout}); do
-    if ${command} &> /dev/null; then
+    run ${command} &> /dev/null
+    if [ $status -eq 0 ]; then
       if ${expect}; then
         echo
         return 0

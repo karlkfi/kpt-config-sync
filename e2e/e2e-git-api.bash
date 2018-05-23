@@ -24,7 +24,6 @@ TEST_REPO=${BATS_TMPDIR}/repo
 # already exists, the function will fail the containing bats test.
 #
 function git_add() {
-  local cwd=$(pwd)
   local src=$1
   local dst=$2
 
@@ -38,7 +37,7 @@ function git_add() {
   cp $src ./$dst
   git add $dst
 
-  cd ${cwd}
+  cd -
 }
 
 # Update a file in the sot directory.
@@ -53,7 +52,6 @@ function git_add() {
 # does not already exist, the function will fail the containing bats test.
 #
 function git_update() {
-  local cwd=$(pwd)
   local src=$1
   local dst=$2
 
@@ -66,7 +64,7 @@ function git_update() {
   cp $src ./$dst
   git add $dst
 
-  cd ${cwd}
+  cd -
 }
 
 # Delete a file in the sot directory.
@@ -80,8 +78,6 @@ function git_update() {
 # does not already exist, the function will fail the containing bats test.
 #
 function git_rm() {
-  local cwd=$(pwd)
-
   cd ${TEST_REPO}
 
   [ ! -z $path ] || (echo "filename not provided to sot_delete" && false)
@@ -89,7 +85,7 @@ function git_rm() {
 
   git rm $path
 
-  cd ${cwd}
+  cd -
 }
 
 # Commit and push the add, update, and rm operations that are queued
@@ -98,13 +94,10 @@ function git_rm() {
 # git_commit
 #
 function git_commit() {
-  local cwd=$(pwd)
-
   cd ${TEST_REPO}
 
   git commit -m "commit for test"
   git push origin master
 
-  sleep 1
-  cd ${cwd}
+  cd -
 }
