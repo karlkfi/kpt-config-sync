@@ -331,6 +331,7 @@ e2e-image-all: deploy-test-git-server e2e-staging
 test-e2e-run:
 	@echo "+++ Running end-to-end tests"
 	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
+	@rm -rf $(OUTPUT_DIR)/e2e/testcases
 	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
 	docker run -it \
 	    -u $$(id -u):$$(id -g) \

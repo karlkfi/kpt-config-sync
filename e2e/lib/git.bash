@@ -35,6 +35,7 @@ function git::add() {
 
   mkdir -p $(dirname $dst)
   cp $src ./$dst
+  echo "git: add $dst"
   git add $dst
 
   cd -
@@ -62,6 +63,7 @@ function git::update() {
   [ -f $dst ] || (echo "$dst does not already exist but should" && false)
 
   cp $src ./$dst
+  echo "git: add $dst (updated from $src)"
   git add $dst
 
   cd -
@@ -85,6 +87,7 @@ function git::rm() {
   [ ! -z $path ] || (echo "filename not provided to git::rm" && false)
   [ -f $path ] || (echo "$path does not already exist but should" && false)
 
+  echo "git: rm $path"
   git rm $path
 
   cd -
@@ -98,6 +101,7 @@ function git::rm() {
 function git::commit() {
   cd ${TEST_REPO}
 
+  echo "git: commit / push"
   git commit -m "commit for test"
   git push origin master
 

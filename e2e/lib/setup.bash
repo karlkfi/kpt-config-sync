@@ -24,3 +24,9 @@ setup() {
   wait::for_success "kubectl get rolebindings bob-rolebinding -n backend"
 }
 
+teardown() {
+  if type local_teardown &> /dev/null; then
+    echo "Running local_teardown"
+    local_teardown
+  fi
+}

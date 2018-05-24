@@ -192,6 +192,8 @@ func (s *PolicyHieraryController) getNamespaceState(name string) (namespaceState
 		return namespaceStateManagePolicies, ns, nil
 	}
 
+	// TODO: warn if the label value is other.
+
 	return namespaceStateExists, ns, nil
 }
 

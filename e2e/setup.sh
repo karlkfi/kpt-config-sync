@@ -4,7 +4,6 @@ set -euo pipefail
 
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-
 function set_up_kube() {
   readonly kubeconfig_output="/opt/installer/kubeconfig/config"
   # We need to fix up the kubeconfig paths because these may not match between
@@ -93,10 +92,14 @@ function main() {
     done
   fi
 
-  ${TEST_DIR}/bats/bin/bats ${testcases[@]}
+  local retcode=0
+  if ! ${TEST_DIR}/bats/bin/bats ${testcases[@]}; then
+    retcode=1
+  fi
 
   end_time=$(date +%s)
   echo "Tests took $(( ${end_time} - ${start_time} )) seconds."
+  return ${retcode}
 }
 
 filter=""
@@ -133,7 +136,11 @@ if $setup ; then
 else
   set_up_env_minimal
 fi
-main ${filter}
+exitcode=0
+if ! main ${filter}; then
+  exitcode=1
+fi
 if $clean ; then
   clean_up
 fi
+exit ${exitcode}
