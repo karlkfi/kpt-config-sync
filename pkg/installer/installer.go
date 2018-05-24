@@ -141,9 +141,9 @@ func (i *Installer) applyAll(applyDir string) error {
 	return kc.Apply(applyDir)
 }
 
-func (i *Installer) deploySSHSecrets() error {
+func (i *Installer) deployGitSecrets() error {
 	const secret = "git-creds"
-	glog.V(5).Info("deploySSHSecrets: enter")
+	glog.V(5).Info("deployGitSecrets: enter")
 	var filenames []string
 	if i.c.Git.UseSSH {
 		filenames = append(filenames,
@@ -152,6 +152,9 @@ func (i *Installer) deploySSHSecrets() error {
 			filenames = append(filenames,
 				fmt.Sprintf("known_hosts=%v", i.c.Git.KnownHostsFilename))
 		}
+	} else if i.c.Git.CookieFilename != "" {
+		filenames = append(filenames,
+			fmt.Sprintf("cookie_file=%v", i.c.Git.CookieFilename))
 	} else {
 		glog.V(5).Info("no PrivateKeyFilename, deploying empty secret")
 	}
@@ -194,15 +197,16 @@ func (i *Installer) getGitConfigMapData() []string {
 		fmt.Sprintf("GIT_SYNC_BRANCH=%v", i.c.Git.SyncBranch),
 		fmt.Sprintf("GIT_SYNC_WAIT=%v", i.c.Git.SyncWaitSeconds),
 		fmt.Sprintf("GIT_KNOWN_HOSTS=%v", i.c.Git.KnownHostsFilename != ""),
+		fmt.Sprintf("GIT_COOKIE_FILE=%v", i.c.Git.CookieFilename != ""),
 		fmt.Sprintf("POLICY_DIR=%v", i.c.Git.RootPolicyDir),
 	}
 }
 
 func (i *Installer) deploySecrets() error {
 	glog.V(5).Info("deploySecrets: enter")
-	err := i.deploySSHSecrets()
+	err := i.deployGitSecrets()
 	if err != nil {
-		return errors.Wrapf(err, "while deploying ssh secrets")
+		return errors.Wrapf(err, "while deploying git secrets")
 	}
 	for _, certInstaller := range i.certInstallers {
 		if err := certInstaller.deploySecrets(i.workDir); err != nil {

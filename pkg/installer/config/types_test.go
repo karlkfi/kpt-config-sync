@@ -65,7 +65,8 @@ contexts:
 				"KNOWN_HOSTS_FILENAME": "knownHosts",
 				"GIT_SYNC_BRANCH": "test",
 				"GIT_SYNC_WAIT": 1,
-				"POLICY_DIR": "foo-corp"
+				"POLICY_DIR": "foo-corp",
+				"GIT_COOKIE_FILENAME": "gitcookies"
 		},
 			}`,
 			expected: Config{
@@ -78,6 +79,7 @@ contexts:
 					SyncBranch:         "test",
 					RootPolicyDir:      "foo-corp",
 					SyncRepo:           "git@github.com:repo/example.git",
+					CookieFilename:     "gitcookies",
 				},
 			},
 		},

@@ -63,6 +63,10 @@ type GitConfig struct {
 	// SyncWaitSeconds is the time duration in seconds between consecutive
 	// syncs.  Default: 15 seconds.
 	SyncWaitSeconds int64 `json:"GIT_SYNC_WAIT"`
+
+	// CookieFilename is the filename containing the git http cookies file.
+	// If this entry is empty, git-sync's GIT_COOKIE_FILE param will be set to false.
+	CookieFilename string `json:"GIT_COOKIE_FILENAME,omitempty"`
 }
 
 // Empty returns true if the config does not have necessary fields set and
@@ -111,6 +115,7 @@ func (c Config) ExpandVarsCopy() Config {
 	newc := c
 	newc.Git.KnownHostsFilename = expandHome(newc.Git.KnownHostsFilename)
 	newc.Git.PrivateKeyFilename = expandHome(newc.Git.PrivateKeyFilename)
+	newc.Git.CookieFilename = expandHome(newc.Git.CookieFilename)
 	return newc
 }
 
