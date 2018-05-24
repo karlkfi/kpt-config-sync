@@ -43,7 +43,7 @@ load e2e-git-api
   assertContains "Active"
 
   run kubectl get ns frontend -o yaml
-  assertContains 'nomos-managed: "true"'
+  assertContains 'nomos.dev/namespace-management: full'
   run kubectl get ns frontend -o yaml
   assertContains "nomos-parent-ns: eng"
 }
