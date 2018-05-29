@@ -30,14 +30,18 @@ acting as the source of truth for the policies.`
 	// The column at which the input field text starts.
 	gitFormInputColumn = 43
 
+	// The height of the overall git form menu
+	gitFormMenuHeight = 18
+
 	// Rows to display various input fields in.
-	gitRepoRow       = 2
-	useSSHRow        = 4
-	privateKeyRow    = 6
-	knownHostsRow    = 8
-	branchToSyncRow  = 10
-	rootPolicyDirRow = 12
-	syncWaitRow      = 14
+	gitRepoRow        = 2
+	useSSHRow         = 4
+	privateKeyRow     = 6
+	knownHostsRow     = 8
+	cookieFilenameRow = 10
+	branchToSyncRow   = 12
+	rootPolicyDirRow  = 14
+	syncWaitRow       = 16
 )
 
 var _ Action = (*GitForm)(nil)
@@ -64,7 +68,8 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 		gitSyncRepoText        = "Git repository (GIT_SYNC_REPO):"
 		useSSHText             = "Sync repo using ssh (Y/n) (GIT_SYNC_SSH):"
 		privateKeyFilenameText = "Private key filename:"
-		knownHostsFilenameText = "Known hosts filename (known_hosts)"
+		knownHostsFilenameText = "Known hosts filename (known_hosts):"
+		cookieFilenameText     = "Git cookie filename (cookie_file):"
 		branchToSyncText       = "Branch to sync (GIT_SYNC_BRANCH):"
 		rootPolicyDirText      = "Root policy directory (POLICY_DIR):"
 		syncWaitText           = "Sync wait (in seconds) (GIT_SYNC_WAIT):"
@@ -77,7 +82,7 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 	}
 	opts := []interface{}{
 		o,
-		dialog.MenuHeight(16),
+		dialog.MenuHeight(gitFormMenuHeight),
 		dialog.Message(gitSettingsMessage),
 		dialog.FormItem(
 			dialog.Label{
@@ -130,6 +135,20 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 			dialog.Field{
 				Input:   &gf.currentConfig.KnownHostsFilename,
 				Y:       knownHostsRow,
+				X:       gitFormInputColumn,
+				ViewLen: inputFieldVisibleLength,
+				MaxLen:  sshInputFieldMaxLength,
+			},
+		),
+		dialog.FormItem(
+			dialog.Label{
+				Text: cookieFilenameText,
+				Y:    cookieFilenameRow,
+				X:    gitFormTextColumn,
+			},
+			dialog.Field{
+				Input:   &gf.currentConfig.CookieFilename,
+				Y:       cookieFilenameRow,
 				X:       gitFormInputColumn,
 				ViewLen: inputFieldVisibleLength,
 				MaxLen:  sshInputFieldMaxLength,

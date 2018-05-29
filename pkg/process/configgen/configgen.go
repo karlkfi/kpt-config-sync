@@ -30,8 +30,15 @@ import (
 
 const (
 	menuTitle = "Configuration generator options"
+
 	// This is the title message shown in the first menu.
 	menuMessage = `Select one of the options below to change the installation options.`
+
+	// Width of the installer menu dialog
+	installerMenuWidth = 100
+
+	// Height of the installer menu dialog
+	installerMenuHeight = 26
 )
 
 // Generator maintains the state of the configuration generation operation
@@ -57,8 +64,8 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 	opts := dialog.NewOptions(
 		dialog.Backtitle(fmt.Sprintf("Configuration generator v%v", version)),
 		dialog.Title(menuTitle),
-		dialog.Width(100),
-		dialog.Height(24),
+		dialog.Width(installerMenuWidth),
+		dialog.Height(installerMenuHeight),
 		dialog.Colors(),
 	)
 	g := &Generator{

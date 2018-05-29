@@ -29,6 +29,7 @@ func TestGitForm(t *testing.T) {
 Y
 private_key_filename
 known_hosts_filename
+cookie_filename
 sync_branch
 root_policy_dir
 666
@@ -38,6 +39,7 @@ root_policy_dir
 				UseSSH:             true,
 				PrivateKeyFilename: "private_key_filename",
 				KnownHostsFilename: "known_hosts_filename",
+				CookieFilename:     "cookie_filename",
 				SyncBranch:         "sync_branch",
 				RootPolicyDir:      "root_policy_dir",
 				SyncWaitSeconds:    666,
@@ -49,6 +51,7 @@ root_policy_dir
 n
 private_key_filename
 known_hosts_filename
+
 sync_branch
 root_policy_dir
 666
@@ -58,6 +61,7 @@ root_policy_dir
 				UseSSH:             false,
 				PrivateKeyFilename: "private_key_filename",
 				KnownHostsFilename: "known_hosts_filename",
+				CookieFilename:     "",
 				SyncBranch:         "sync_branch",
 				RootPolicyDir:      "root_policy_dir",
 				SyncWaitSeconds:    666,
