@@ -341,7 +341,20 @@ avialable.
 
 ### Namespaces
 
-Nomos will manage the lifecycle of all namespaces on a kubernetes cluster.
+Nomos will manage the lifecycle of some namespaces on a kubernetes cluster.
+
+#### Management Labeling
+
+Nomos determines what to manage based on labels applied to the namespace on the
+cluster.
+
+Label                                   | Nomos Action
+--------------------------------------- | ------------
+none                                    | No management of the namespace in any way, but will warn about its existence if it is not one of the reserved namespaces
+nomos.dev/namespace-management=policies | Manage policies for the namespace, but will not delete the namespace if it is removed from git
+nomos.dev/namespace-management=full     | Manage policies and lifecycle of the namespace, so it will be automatically deleted when removed from git
+
+#### Types of Namespaces
 
 There's two categories of namespaces: Managed, and Reserved:
 
@@ -352,8 +365,9 @@ There's two categories of namespaces: Managed, and Reserved:
     all `kube-` prefixed namespaces as `Reserved Namespaces`.
 1.  **Managed Namesapces** are all the other namespaces on the cluster that are
     not Reserved Namespaces. These are created by creating a namespace directory
-    and a namespace .yaml file in the git repo, and deleted by lack of their
-    declaration in git.
+    and a namespace .yaml file in the git repo, and deleted when removed from
+    the git repo. When nomos creates a namespace, it applies the management
+    label nomos.dev/namespace-management=full.
 
 Examples:
 
@@ -369,12 +383,14 @@ Examples:
 The following table describes the action that Nomos will take regarding a
 namespace on the cluster.
 
-Declared in git | Exists on cluster | Nomos Action
---------------- | ----------------- | ------------------------------------
-true            | true              | no action
-true            | false             | create namespace and manage policies
-false           | true              | delete namespace from cluster
-false           | false             | no action
+Declared in git | Exists on Cluster | Management Label                        | Nomos Action
+--------------- | ----------------- | --------------------------------------- | ------------
+true            | true              | N/A                                     | no action
+true            | false             | N/A                                     | creates namespace and manage policies
+false           | true              | No label                                | warns about unknown namespace
+false           | true              | nomos.dev/namespace-management=policies | warns about unknown namespace
+false           | true              | nomos.dev/namespace-management=full     | deletes namespace from cluster
+false           | false             | N/A                                     | no action
 
 ### Cluster Scoped Policies
 
