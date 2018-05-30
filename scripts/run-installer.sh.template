@@ -30,6 +30,10 @@
 
 CONFIG="$_arg_config"
 if [[ "${CONFIG}" != "" ]]; then
+  if [ ! -f "${CONFIG}" ]; then
+    echo "### File '${CONFIG}' specified as argument to --config does not exist"
+	exit 2
+  fi
   CONFIG_DIR="$(dirname $(realpath ${CONFIG}))"
 fi
 
