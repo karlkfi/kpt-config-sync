@@ -404,6 +404,16 @@ var parserTestCases = []parserTestCase{
 		expectedNumPolicies: map[string]int{"foo": 0, "bar": 2},
 	},
 	{
+		testName: "Namespace dir with duplicate Roles",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
+			"bar/role1.yaml": templateData{Namespace: "bar"}.apply(aRole),
+			"bar/role2.yaml": templateData{Namespace: "bar"}.apply(aRole),
+		},
+		expectedError: true,
+	},
+	{
 		testName: "Namespace dir with multiple Rolebindings",
 		root:     "foo",
 		testFiles: fileContentMap{
@@ -412,6 +422,27 @@ var parserTestCases = []parserTestCase{
 			"bar/r2.yaml": templateData{ID: "2", Namespace: "bar"}.apply(aRoleBinding),
 		},
 		expectedNumPolicies: map[string]int{"foo": 0, "bar": 2},
+	},
+	{
+		testName: "Namespace dir with duplicate Rolebindings",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"bar/r1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"bar/r2.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+		},
+		expectedError: true,
+	},
+	{
+		testName: "Policyspace dir with duplicate Rolebindings",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ns.yaml":     templateData{Name: "bar"}.apply(aNamespace),
+			"bar/r1.yaml":     templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"bar/r2.yaml":     templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
+		},
+		expectedError: true,
 	},
 	{
 		testName: "Namespace dir with non-conflicting reserved Namespace specified",
@@ -444,26 +475,6 @@ var parserTestCases = []parserTestCase{
 		root:     "foo",
 		testFiles: fileContentMap{
 			"reserved.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: "random-name"}.apply(aConfigMap),
-		},
-		expectedError: true,
-	},
-	{
-		testName: "Namespace dir with multiple Roles of the same name",
-		root:     "foo",
-		testFiles: fileContentMap{
-			"bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
-			"bar/role1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRole),
-			"bar/role2.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRole),
-		},
-		expectedError: true,
-	},
-	{
-		testName: "Namespace dir with multiple Rolebindings of the same name",
-		root:     "foo",
-		testFiles: fileContentMap{
-			"bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-			"bar/r1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
-			"bar/r2.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
 		},
 		expectedError: true,
 	},
@@ -597,6 +608,16 @@ var parserTestCases = []parserTestCase{
 		root:     "foo",
 		testFiles: fileContentMap{
 			"bar/cm.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchy_v1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+		},
+		expectedError: true,
+	},
+	{
+		testName: "Policyspace and Namespace dir have duplicate rolebindings",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/rb1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
+			"bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
+			"bar/baz/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
 		expectedError: true,
 	},

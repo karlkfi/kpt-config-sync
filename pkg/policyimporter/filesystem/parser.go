@@ -30,6 +30,7 @@ import (
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/google/nomos/pkg/util/policynode"
+	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
 	extensions_v1beta1 "k8s.io/api/extensions/v1beta1"
@@ -218,7 +219,10 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 	if err := clusterpolicy.Validate(policies.ClusterPolicy); err != nil {
 		return nil, err
 	}
-	// TODO(80431650): Validate no duplicate resources names for each policynode ancestry.
+	v := policynodevalidator.FromMap(policies.PolicyNodes)
+	if err := v.Validate(); err != nil {
+		return nil, err
+	}
 
 	return &policies, nil
 }

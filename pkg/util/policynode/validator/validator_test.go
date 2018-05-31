@@ -40,6 +40,31 @@ func newNode(name string, parent string, policyspace bool) *policyhierarchy_v1.P
 	}
 }
 
+func setResources(pn *policyhierarchy_v1.PolicyNode, roleNames, roleBindingNames []string) {
+	var roles []rbac_v1.Role
+	for _, rn := range roleNames {
+		role := rbac_v1.Role{
+			ObjectMeta: meta_v1.ObjectMeta{
+				Name: rn,
+			},
+		}
+		roles = append(roles, role)
+	}
+
+	var roleBindings []rbac_v1.RoleBinding
+	for _, rn := range roleBindingNames {
+		roleBinding := rbac_v1.RoleBinding{
+			ObjectMeta: meta_v1.ObjectMeta{
+				Name: rn,
+			},
+		}
+		roleBindings = append(roleBindings, roleBinding)
+	}
+
+	pn.Spec.RolesV1 = roles
+	pn.Spec.RoleBindingsV1 = roleBindings
+}
+
 func TestDuplicateName(t *testing.T) {
 	v := New()
 	if err := v.Add(newNode("root", "", true)); err != nil {
@@ -339,5 +364,36 @@ func TestRemoveRemainingRoot(t *testing.T) {
 	}
 	if err := v.Validate(); err != nil {
 		t.Errorf("Should not have detected validation error after deleting nodes: %v", err)
+	}
+}
+
+func TestDuplicateResourcesInNode(t *testing.T) {
+	root := newNode("root", "", true)
+	child := newNode("child", "root", false)
+	setResources(child, []string{"role", "otherrole"}, []string{"rolebinding", "otherrolebinding"})
+
+	v := New()
+	for _, pn := range []*policyhierarchy_v1.PolicyNode{root, child} {
+		if err := v.Add(pn); err != nil {
+			t.Errorf("Should not have errored when adding %q node: %v", pn.Name, err)
+		}
+	}
+
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should not have detected duplicate names error: %v", err)
+	}
+
+	v.Remove(child)
+	setResources(child, []string{"role", "role"}, []string{"rolebinding"})
+	v.Add(child)
+	if err := v.Validate(); err == nil {
+		t.Error("Should have detected duplicate roles error")
+	}
+
+	v.Remove(child)
+	setResources(child, []string{"role"}, []string{"rolebinding", "rolebinding"})
+	v.Add(child)
+	if err := v.Validate(); err == nil {
+		t.Error("Should have detected duplicate rolebindings error")
 	}
 }

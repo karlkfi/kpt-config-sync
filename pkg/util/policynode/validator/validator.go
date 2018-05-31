@@ -111,7 +111,13 @@ func (s *Validator) Remove(policyNode *policyhierarchy_v1.PolicyNode) error {
 // Each leaf (non org node leaf) is a designated as a working namespace.
 func (s *Validator) Validate() error {
 	for _, checkFunction := range []func() error{
-		s.checkRoots, s.checkCycles, s.checkWorkingNamespace, s.checkPolicySpaceRoles, s.checkParents} {
+		s.checkRoots,
+		s.checkCycles,
+		s.checkWorkingNamespace,
+		s.checkPolicySpaceRoles,
+		s.checkParents,
+		s.checkDupeResources,
+	} {
 		if err := checkFunction(); err != nil {
 			return err
 		}
@@ -147,11 +153,6 @@ func (s *Validator) checkRoots() error {
 // checkWorkingNamespace checks that all non-root leaves are working namespaces while internal nodes
 // are not working namespaces
 func (s *Validator) checkWorkingNamespace() error {
-	isParent := map[string]bool{}
-	for _, node := range s.policyNodes {
-		isParent[node.Spec.Parent] = true
-	}
-
 	for nodeName, node := range s.policyNodes {
 		if node.Spec.Parent == rootParent {
 			// Root node should not be a working namespace
@@ -213,6 +214,28 @@ func (s *Validator) checkParents() error {
 		_, ok := s.policyNodes[parent]
 		if parent != rootParent && !ok {
 			return errors.Errorf("Node %s has no parent and is not a root node", nodeName)
+		}
+	}
+	return nil
+}
+
+// checkDupeResources checks that there are no resources with duplicate names
+// per PolicyNode.
+func (s *Validator) checkDupeResources() error {
+	for nodeName, node := range s.policyNodes {
+		roles := make(map[string]bool)
+		for _, role := range node.Spec.RolesV1 {
+			if roles[role.Name] {
+				return errors.Errorf("duplicate role %q encountered in policynode %q", role.Name, nodeName)
+			}
+			roles[role.Name] = true
+		}
+		roleBindings := make(map[string]bool)
+		for _, roleBinding := range node.Spec.RoleBindingsV1 {
+			if roleBindings[roleBinding.Name] {
+				return errors.Errorf("duplicate rolebinding %q encountered in policynode %q", roleBinding.Name, nodeName)
+			}
+			roleBindings[roleBinding.Name] = true
 		}
 	}
 	return nil
