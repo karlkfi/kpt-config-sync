@@ -60,6 +60,12 @@ var (
 	// deploymentClusterRolesAndBindings are the cluster roles and
 	// clusterrolebindings names created for the nomos system.
 	deploymentClusterRolesAndBindings = []string{
+		"nomos.dev:policy-importer",
+		"nomos.dev:resourcequota-admission-controller",
+		"nomos.dev:policynodes-admission-controller",
+		"nomos.dev:syncer",
+
+		// TODO(2018-05-31): these are legacy names, remove these at 0.9.0 <= release.
 		"nomos-nomosresourcequota-controller",
 		"nomos-policy-importer",
 		"nomos-resourcequota-admission-controller",
