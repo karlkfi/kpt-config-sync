@@ -332,7 +332,7 @@ test-e2e-run:
 	@echo "+++ Running end-to-end tests"
 	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
 	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
-	@docker run -it \
+	docker run -it \
 	    -u $$(id -u):$$(id -g) \
 	    -v "${HOME}":/home/user \
 	    -v "${INSTALLER_OUTPUT_DIR}/certs":/opt/installer/certs \
@@ -342,7 +342,8 @@ test-e2e-run:
 	    -v "$(TOP_DIR)/examples":/opt/installer/configs \
 	    -v "$(OUTPUT_DIR)/e2e":/opt/testing \
 	    -e "VERSION=$(IMAGE_TAG)" \
-	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" "$@" "${E2E_CLEAN}" "${E2E_SETUP}" \
+	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" \
+	    "$@" "${E2E_CLEAN}" "${E2E_SETUP}" --filter "$(TEST_FILTER)" \
 	    && echo "+++ E2E tests completed" \
 	    || (echo "### E2E tests failed. Logs are available in ${INSTALLER_OUTPUT_DIR}/logs"; exit 1)
 

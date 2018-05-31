@@ -37,7 +37,7 @@ function setUpEnv() {
 
   /opt/testing/init-git-server.sh
 
-  ./installer \
+  /opt/installer/installer \
     --config="${TEST_DIR}/install-config.yaml" \
     --log_dir=/tmp \
     --suggested_user="${suggested_user}" \
@@ -62,6 +62,9 @@ function minimalSetUpEnv() {
 }
 
 function main() {
+  local filter="${1:-}"
+
+  start_time=$(date +%s)
   if [[ ! "kubectl get ns > /dev/null" ]]; then
     echo "Kubectl/Cluster misconfigured"
     exit 1
@@ -69,7 +72,29 @@ function main() {
   GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/id_rsa.nomos"; export GIT_SSH_COMMAND
 
   echo "****************** Starting tests ******************"
-  ${TEST_DIR}/bats/bin/bats ${TEST_DIR}/e2e.bats
+  local bats_tests=$(
+    echo ${TEST_DIR}/e2e.bats;
+    find ${TEST_DIR}/testcases -name '*.bats'
+  )
+
+  local testcases=()
+  if [[ -n ${filter} ]]; then
+    for file in ${bats_tests}; do
+      if echo "${file}" | grep "${filter}" &> /dev/null; then
+        echo "Will run ${file}"
+        testcases+=("${file}")
+      fi
+    done
+  else
+    for file in ${bats_tests}; do
+      testcases+=("${file}")
+    done
+  fi
+
+  ${TEST_DIR}/bats/bin/bats ${testcases[@]}
+
+  end_time=$(date +%s)
+  echo "Tests took $(( ${end_time} - ${start_time} )) seconds."
 }
 
 function cleanUp() {
@@ -89,6 +114,7 @@ function cleanUp() {
   done
 }
 
+filter=""
 clean=false
 setup=false
 while [[ $# -gt 0 ]]; do
@@ -100,6 +126,11 @@ while [[ $# -gt 0 ]]; do
     ;;
     --setup)
       setup=true
+      shift
+    ;;
+    --filter)
+      filter="${2}"
+      shift
       shift
     ;;
     *)
@@ -117,7 +148,7 @@ if $setup ; then
 else
   minimalSetUpEnv
 fi
-main
+main ${filter}
 if $clean ; then
   cleanUp
 fi
