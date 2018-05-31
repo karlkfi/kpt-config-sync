@@ -214,6 +214,11 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 		policies.PolicyNodes[p.Name] = *p
 	}
 
+	if err := policies.ClusterPolicy.Validate(); err != nil {
+		return nil, err
+	}
+	// TODO(80431650): Validate no duplicate resources names for each policynode ancestry.
+
 	return &policies, nil
 }
 

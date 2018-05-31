@@ -698,6 +698,33 @@ var parserTestCases = []parserTestCase{
 		expectedNumClusterPolicies: &numPolicies,
 	},
 	{
+		testName: "Root dir with duplicate ClusterRole names",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"cr1.yaml": templateData{ID: "1"}.apply(aClusterRole),
+			"cr2.yaml": templateData{ID: "1"}.apply(aClusterRole),
+		},
+		expectedError: true,
+	},
+	{
+		testName: "Root dir with duplicate ClusterRoleBinding names",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
+			"crb2.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
+		},
+		expectedError: true,
+	},
+	{
+		testName: "Root dir with duplicate PodSecurityPolicy names",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
+			"psp2.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
+		},
+		expectedError: true,
+	},
+	{
 		testName: "Dir name not unique 1",
 		root:     "foo",
 		testFiles: fileContentMap{
