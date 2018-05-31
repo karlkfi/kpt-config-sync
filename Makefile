@@ -222,6 +222,7 @@ $(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml \
 			 $< > $@
 
 # Creates staging directory for building installer docker image.
+# TODO(filmil): Depending on push-to-gcr-all here seems unnecessary.
 installer-staging: push-to-gcr-all gen-yaml-all
 	@echo "+++ Creating staging directory for building installer docker image"
 	@cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
@@ -229,9 +230,9 @@ installer-staging: push-to-gcr-all gen-yaml-all
 	@mkdir -p $(STAGING_DIR)/installer/yaml
 	@cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/installer/yaml
 	@mkdir -p $(STAGING_DIR)/installer/manifests/enrolled
-	@cp -r $(TOP_DIR)/manifests/enrolled/* $(STAGING_DIR)/installer/manifests/enrolled
+	@cp $(TOP_DIR)/manifests/enrolled/*.yaml $(STAGING_DIR)/installer/manifests/enrolled
 	@mkdir -p $(STAGING_DIR)/installer/manifests/common
-	@cp -r $(TOP_DIR)/manifests/common/* $(STAGING_DIR)/installer/manifests/common
+	@cp $(TOP_DIR)/manifests/common/*.yaml $(STAGING_DIR)/installer/manifests/common
 	@mkdir -p $(STAGING_DIR)/installer/examples
 	@cp -r $(TOP_DIR)/build/installer/examples/* $(STAGING_DIR)/installer/examples
 	@cp $(TOP_DIR)/build/installer/entrypoint.sh $(STAGING_DIR)/installer
