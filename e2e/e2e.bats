@@ -92,6 +92,7 @@ load e2e-git-api
 }
 
 @test "quota admission" {
+  cleanTestConfigMaps
   waitForSuccess "kubectl get ns new-prj"
   run kubectl create configmap map1 -n new-prj
   assertContains "created"
@@ -99,7 +100,16 @@ load e2e-git-api
   assertContains "created"
   run kubectl create configmap map3 -n new-prj
   assertContains "exceeded quota in policyspace rnd"
+  cleanTestConfigMaps
 }
+
+function cleanTestConfigMaps() {
+  kubectl delete configmaps -n new-prj --all > /dev/null
+  kubectl delete configmaps -n newer-prj --all > /dev/null
+  waitForFailure "kubectl -n new-prj configmaps | grep map1"
+  waitForFailure "kubectl -n newer-prj configmaps | grep map2"
+}
+
 
 function waitForSuccess() {
   local command="${1:-}"

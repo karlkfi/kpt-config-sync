@@ -302,10 +302,9 @@ uninstall: check-nomos-installer-config \
 # plus a few extras for e2e.
 e2e-staging: installer-image
 	@echo "+++ Creating staging directory for building e2e docker image"
-	@mkdir -p $(STAGING_DIR)/e2e-tests
+	@mkdir -p $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
 	@cp -r $(STAGING_DIR)/installer/* $(STAGING_DIR)/e2e-tests
 	@cp -r $(TOP_DIR)/build/e2e-tests/* $(STAGING_DIR)/e2e-tests
-	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
 	@cp -r $(TOP_DIR)/third_party/bats-core $(OUTPUT_DIR)/e2e/bats
 	@cp -r $(TOP_DIR)/examples/acme/sot $(OUTPUT_DIR)/e2e
 	@cp -n $(HOME)/.ssh/id_rsa.nomos $(OUTPUT_DIR)/e2e/id_rsa.nomos
@@ -313,23 +312,25 @@ e2e-staging: installer-image
 	@cp $(TOP_DIR)/scripts/init-git-server.sh $(OUTPUT_DIR)/e2e/
 	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(OUTPUT_DIR)/e2e/
 
-# Builds the e2e docker image. Note that the GCP project is hardcoded since we currently don't want
+# Builds the e2e docker image and depencencies.
+# Note that the GCP project is hardcoded since we currently don't want
 # or need a nomos-release version of the e2e-tests image.
-e2e-image: deploy-test-git-server e2e-staging
+e2e-image-all: deploy-test-git-server e2e-staging
 	@echo "+++ Building the e2e docker image"
 	@docker build $(DOCKER_BUILD_QUIET) \
-		-t gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG) \
+		-t gcr.io/stolos-dev/e2e-tests:test-e2e-latest \
 		--build-arg "VERSION=$(IMAGE_TAG)" \
 		--build-arg "UID=$(UID)" \
 		--build-arg "GID=$(GID)" \
 		--build-arg "UNAME=$(USER)" \
 		--build-arg "GCP_PROJECT=$(GCP_PROJECT)" \
 		$(STAGING_DIR)/e2e-tests
-	@gcloud $(GCLOUD_QUIET) docker -- push gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG)
 
-test-e2e: clean e2e-image
+# Not to be called directly. Runs e2e tests. Depending rules must set IMAGE_TAG.
+test-e2e-run:
 	@echo "+++ Running end-to-end tests"
 	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
+	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
 	@docker run -it \
 	    -u $$(id -u):$$(id -g) \
 	    -v "${HOME}":/home/user \
@@ -339,13 +340,25 @@ test-e2e: clean e2e-image
 	    -v "${INSTALLER_OUTPUT_DIR}/logs":/tmp \
 	    -v "$(TOP_DIR)/examples":/opt/installer/configs \
 	    -v "$(OUTPUT_DIR)/e2e":/opt/testing \
-	    -e "VERSION=${IMAGE_TAG}" \
-	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" "$@" "${E2E_NOCLEAN}" \
+	    -e "VERSION=$(IMAGE_TAG)" \
+	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" "$@" "${E2E_CLEAN}" "${E2E_SETUP}" \
 	    && echo "+++ E2E tests completed" \
 	    || (echo "### E2E tests failed. Logs are available in ${INSTALLER_OUTPUT_DIR}/logs"; exit 1)
 
-test-e2e-noclean: E2E_NOCLEAN = "noclean"
-test-e2e-noclean: test-e2e
+# Clean, build, and run e2e tests. Cleans after running.
+test-e2e: E2E_SETUP = "--setup"
+test-e2e: E2E_CLEAN = "--clean"
+test-e2e: clean e2e-image-all test-e2e-run
+
+# Clean, build, and run e2e tests, but don't clean after running so that the cluster state can be investigated.
+test-e2e-noclean: E2E_SETUP = "--setup"
+test-e2e-noclean: e2e-image-all test-e2e-run
+
+# Run e2e tests but do not build. Assumes that the necesary images have already been built and pushed,
+# so `make test-e2e` should be run before this, and each time the system requires a rebuild as this
+# target has no intelligence about dependencies.
+test-e2e-nosetup: $(eval IMAGE_TAG=test-e2e-latest)
+test-e2e-nosetup: test-e2e-run
 
 # Redeploys all components to cluster without rerunning the installer.
 redeploy-all: $(addprefix redeploy-, $(ALL_K8S_APPS))

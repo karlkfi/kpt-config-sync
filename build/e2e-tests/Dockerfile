@@ -8,7 +8,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG VERSION=latest
+ARG VERSION=test-e2e-latest
 ARG GCP_PROJECT=stolos-dev
 FROM gcr.io/$GCP_PROJECT/installer:$VERSION
 

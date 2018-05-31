@@ -46,6 +46,21 @@ function setUpEnv() {
   echo "****************** Environment is ready ******************"
 }
 
+function minimalSetUpEnv() {
+  echo "****************** Minimal environment setup ******************"
+  TEST_LOG_REPO=/tmp/nomos-test
+
+  FWD_SSH_PORT=2222
+
+  POD_ID=$(kubectl get pods -n=nomos-system -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
+
+  mkdir -p ${TEST_LOG_REPO}
+  kubectl -n=nomos-system port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
+  kubectl exec -n=nomos-system -it ${POD_ID} -- git init --bare --shared /git-server/repos/sot.git
+
+  echo "****************** Environment is ready ******************"
+}
+
 function main() {
   if [[ ! "kubectl get ns > /dev/null" ]]; then
     echo "Kubectl/Cluster misconfigured"
@@ -74,11 +89,35 @@ function cleanUp() {
   done
 }
 
+clean=false
+setup=false
+while [[ $# -gt 0 ]]; do
+  arg=${1}
+  case ${arg} in
+    --clean)
+      clean=true
+      shift
+    ;;
+    --setup)
+      setup=true
+      shift
+    ;;
+    *)
+    shift
+    ;;
+  esac
+done
+
 kubeSetUp
-cleanUp
-setUpEnv
+if $clean ; then
+  cleanUp
+fi
+if $setup ; then
+  setUpEnv
+else
+  minimalSetUpEnv
+fi
 main
-if [ "$2" != "noclean" ]
-  then
-    cleanUp
+if $clean ; then
+  cleanUp
 fi
