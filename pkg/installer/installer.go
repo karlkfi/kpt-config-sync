@@ -273,19 +273,14 @@ func (i *Installer) processCluster(cluster string) error {
 	if err = c.DeleteDeployment("git-policy-importer", defaultNamespace); err != nil {
 		return errors.Wrapf(err, "while deleting git-policy-importer deployment")
 	}
-	// The common manifests need to be applied first, as they create the
-	// namespace.
-	if err = i.applyAll(filepath.Join(i.workDir, "manifests/common")); err != nil {
-		return errors.Wrapf(err, "while applying manifests/common")
+	if err = i.applyAll(filepath.Join(i.workDir, "manifests")); err != nil {
+		return errors.Wrapf(err, "while applying manifests")
 	}
 	if err = i.deployGitConfig(); err != nil {
 		return errors.Wrapf(err, "processCluster")
 	}
 	if err = i.deploySecrets(); err != nil {
 		return errors.Wrapf(err, "processCluster")
-	}
-	if err = i.applyAll(filepath.Join(i.workDir, "manifests/enrolled")); err != nil {
-		return errors.Wrapf(err, "while applying manifests/enrolled")
 	}
 	if err = i.applyAll(filepath.Join(i.workDir, "yaml")); err != nil {
 		return errors.Wrapf(err, "while applying yaml")

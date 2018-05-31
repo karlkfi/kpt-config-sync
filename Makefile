@@ -57,7 +57,7 @@ GEN_YAML_DIR := $(OUTPUT_DIR)/yaml
 TEST_GEN_YAML_DIR := $(OUTPUT_DIR)/test/yaml
 
 # Directory containing templates yaml files.
-TEMPLATES_DIR := $(TOP_DIR)/manifests/enrolled/templates
+TEMPLATES_DIR := $(TOP_DIR)/manifests/templates
 
 # Directory containing test template yaml files.
 TEST_TEMPLATES_DIR := $(TOP_DIR)/test/manifests/templates
@@ -229,10 +229,8 @@ installer-staging: push-to-gcr-all gen-yaml-all
 	@cp $(BIN_DIR)/$(ARCH)/installer $(STAGING_DIR)/installer
 	@mkdir -p $(STAGING_DIR)/installer/yaml
 	@cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/installer/yaml
-	@mkdir -p $(STAGING_DIR)/installer/manifests/enrolled
-	@cp $(TOP_DIR)/manifests/enrolled/*.yaml $(STAGING_DIR)/installer/manifests/enrolled
-	@mkdir -p $(STAGING_DIR)/installer/manifests/common
-	@cp $(TOP_DIR)/manifests/common/*.yaml $(STAGING_DIR)/installer/manifests/common
+	@mkdir -p $(STAGING_DIR)/installer/manifests
+	@cp $(TOP_DIR)/manifests/*.yaml $(STAGING_DIR)/installer/manifests
 	@mkdir -p $(STAGING_DIR)/installer/examples
 	@cp -r $(TOP_DIR)/build/installer/examples/* $(STAGING_DIR)/installer/examples
 	@cp $(TOP_DIR)/build/installer/entrypoint.sh $(STAGING_DIR)/installer
