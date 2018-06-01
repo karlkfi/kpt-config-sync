@@ -13,9 +13,9 @@ The interactive installer that is invoked by this command will save the
 generated configuration into
 `$NOMOS/.output/staging/installer_output/gen_configs/generated.yaml`.
 
-Subsequent deployments can reuse the generated configuration.  Be sure to put
-it into a safe place outside of the ephemeral `$NOMOS/.output` directory if
-you need to save it for later.
+Subsequent deployments can reuse the generated configuration. Be sure to put it
+into a safe place outside of the ephemeral `$NOMOS/.output` directory if you
+need to save it for later.
 
 ```console
 $ cd $NOMOS

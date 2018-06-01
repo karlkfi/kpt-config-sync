@@ -391,6 +391,9 @@ goimports:
 lint: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
 
+format-markdown:
+	@/google/data/ro/teams/g3doc/mdformat --in_place --compatibility $(shell find docs -name '*.md')
+
 .PHONY: clientgen
 clientgen:
 	@echo "+++ Generating clientgen directory"

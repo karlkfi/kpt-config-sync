@@ -208,19 +208,19 @@ Installer creates ConfigMaps and Secrets used by Nomos components. Refer to
 
 #### Git Config Object Parameters
 
-These are the supported keys for the the git object of the installer config file.
+These are the supported keys for the the git object of the installer config
+file.
 
-Key                        | Description
--------------------------- | ------------------------------------------------------------------------------------------------
-GIT_SYNC_REPO              | address of the git repo to sync from in https, ssh, or git format
-GIT_SYNC_BRANCH            | the git branch to check out. Default: "master"
-GIT_SYNC_WAIT              | the number of seconds between syncs. Default: 15 seconds
-GIT_SYNC_SSH               | true if ssh auth should be used to access the repo. Default: false
-PRIVATE_KEY_FILENAME       | path to the ssh private key to use for ssh access to the git repo
-KNOWN_HOSTS_FILENAME       | path to the ssh known hosts file to use during ssh access to the git repo. If omitted, strict known hosts checking is disabled
-GIT_COOKIE_FILENAME        | path to a [HTTP git cookie file](https://git-scm.com/docs/git-config/2.1.0#git-config-httpcookiefile) to use to authenticate to the git repo. Use only with HTTP auth
-POLICY_DIR                 | Relative path of root policy directory in the repo
-
+Key                  | Description
+-------------------- | -----------
+GIT_SYNC_REPO        | address of the git repo to sync from in https, ssh, or git format
+GIT_SYNC_BRANCH      | the git branch to check out. Default: "master"
+GIT_SYNC_WAIT        | the number of seconds between syncs. Default: 15 seconds
+GIT_SYNC_SSH         | true if ssh auth should be used to access the repo. Default: false
+PRIVATE_KEY_FILENAME | path to the ssh private key to use for ssh access to the git repo
+KNOWN_HOSTS_FILENAME | path to the ssh known hosts file to use during ssh access to the git repo. If omitted, strict known hosts checking is disabled
+GIT_COOKIE_FILENAME  | path to a [HTTP git cookie file](https://git-scm.com/docs/git-config/2.1.0#git-config-httpcookiefile) to use to authenticate to the git repo. Use only with HTTP auth
+POLICY_DIR           | Relative path of root policy directory in the repo
 
 ### Interactive installation
 
@@ -346,19 +346,19 @@ interact with the Kubernetes API server.
 ## Reinstalling
 
 It is possible to reuse an existing installer configuration multiple times to
-reinstall Nomos.  To run the reinstall use the batch installation mode with
-your existing configuration:
+reinstall Nomos. To run the reinstall use the batch installation mode with your
+existing configuration:
 
 ```console
 $ ./run-installer.sh --config=/path/to/your/config.yaml
 ```
 
 The effect of the reinstallation is to run the equivalent of `kubectl apply` to
-almost all the Kubernetes components in the Nomos installation package.  The
+almost all the Kubernetes components in the Nomos installation package. The
 exception are certificates and required secrets, which are removed prior to the
-bulk of reinstall process.  This has the effect of installing a fresh copy of
-the certificates and secrets.  Namespaces and deployments may not be affected
-if the reinstall would not change their state.
+bulk of reinstall process. This has the effect of installing a fresh copy of the
+certificates and secrets. Namespaces and deployments may not be affected if the
+reinstall would not change their state.
 
 # Installing Nomosvet
 

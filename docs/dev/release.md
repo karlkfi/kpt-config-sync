@@ -12,9 +12,9 @@ $ git status  # should print an empty status
 ```
 
 Ensure you're connected to a kubernetes cluster, following
-[Setup](setup.md#initial-setup-of-your-cluster-in-gce-one-time). (This will
-be used in e2e tests, which run automatically before the release.) You can
-verify quickly using
+[Setup](setup.md#initial-setup-of-your-cluster-in-gce-one-time). (This will be
+used in e2e tests, which run automatically before the release.) You can verify
+quickly using
 
 ```console
 $ kubectl get ns # lists the 3 default namespaces
