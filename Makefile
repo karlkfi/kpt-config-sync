@@ -319,6 +319,7 @@ e2e-image-all: deploy-test-git-server e2e-staging
 	@echo "+++ Building the e2e docker image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		-t gcr.io/stolos-dev/e2e-tests:test-e2e-latest \
+		-t gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG) \
 		--build-arg "VERSION=$(IMAGE_TAG)" \
 		--build-arg "UID=$(UID)" \
 		--build-arg "GID=$(GID)" \
@@ -357,7 +358,7 @@ test-e2e-noclean: e2e-image-all test-e2e-run
 # Run e2e tests but do not build. Assumes that the necesary images have already been built and pushed,
 # so `make test-e2e` should be run before this, and each time the system requires a rebuild as this
 # target has no intelligence about dependencies.
-test-e2e-nosetup: $(eval IMAGE_TAG=test-e2e-latest)
+test-e2e-nosetup: IMAGE_TAG=test-e2e-latest
 test-e2e-nosetup: test-e2e-run
 
 # Redeploys all components to cluster without rerunning the installer.
