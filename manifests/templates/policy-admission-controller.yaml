@@ -2,13 +2,13 @@ changecom(`<unused>')
 apiVersion: v1
 kind: Service
 metadata:
-  name: policynodes-admission-controller
+  name: policy-admission-controller
   namespace: nomos-system
   labels:
     monitored: "true"
 spec:
   selector:
-    app: policynodes-admission-controller
+    app: policy-admission-controller
   ports:
     - name: https
       port: 443
@@ -20,10 +20,10 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: policynodes-admission-controller
+  name: policy-admission-controller
   namespace: nomos-system
   labels:
-    app: policynodes-admission-controller
+    app: policy-admission-controller
 spec:
   minReadySeconds: 2
   replicas: 1
@@ -31,23 +31,23 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: policynodes-admission-controller
+      app: policy-admission-controller
   template:
     metadata:
       labels:
-        app: policynodes-admission-controller
+        app: policy-admission-controller
     spec:
-      serviceAccountName: policynodes-admission-controller
+      serviceAccountName: policy-admission-controller
       restartPolicy: Always
       volumes:
       - name: v1
         secret:
-          secretName: policynodes-admission-controller-secret
+          secretName: policy-admission-controller-secret
       - name: v2
         secret:
-          secretName: policynodes-admission-controller-secret-ca
+          secretName: policy-admission-controller-secret-ca
       containers:
-        - name: policynodes-admission-controller
+        - name: policy-admission-controller
           image: IMAGE_NAME
           ports:
             - containerPort: 8000
@@ -57,9 +57,9 @@ spec:
           args: ["--logtostderr"]
           volumeMounts:
           - name: v1
-            mountPath: "/etc/nomos/secrets/policynodes-admission-controller/server"
+            mountPath: "/etc/nomos/secrets/policy-admission-controller/server"
             readOnly: true
           - name: v2
-            mountPath: "/etc/nomos/secrets/policynodes-admission-controller/ca"
+            mountPath: "/etc/nomos/secrets/policy-admission-controller/ca"
             readOnly: true
 

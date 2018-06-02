@@ -22,7 +22,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/admissioncontroller"
-	"github.com/google/nomos/pkg/admissioncontroller/policynode"
+	"github.com/google/nomos/pkg/admissioncontroller/policy"
 
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
@@ -35,9 +35,9 @@ import (
 )
 
 const (
-	externalAdmissionHookConfigName = "policy-nodes.nomos.dev"
+	externalAdmissionHookConfigName = "policy.nomos.dev"
 	controllerNamespace             = "nomos-system"
-	controllerName                  = "policynodes-admission-controller"
+	controllerName                  = "policy-admission-controller"
 )
 
 var (
@@ -60,18 +60,20 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 		Webhooks: []admissionregistrationv1beta1.Webhook{
 			{
 				Name: externalAdmissionHookConfigName,
-				Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-					Operations: []admissionregistrationv1beta1.OperationType{
-						admissionregistrationv1beta1.Create,
-						admissionregistrationv1beta1.Update,
-						admissionregistrationv1beta1.Delete,
+				Rules: []admissionregistrationv1beta1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1beta1.OperationType{
+							admissionregistrationv1beta1.Create,
+							admissionregistrationv1beta1.Update,
+							admissionregistrationv1beta1.Delete,
+						},
+						Rule: admissionregistrationv1beta1.Rule{
+							APIGroups:   []string{"nomos.dev"},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"policynodes", "clusterpolicies"},
+						},
 					},
-					Rule: admissionregistrationv1beta1.Rule{
-						APIGroups:   []string{"nomos.dev"},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"policynodes"},
-					},
-				}},
+				},
 				FailurePolicy: &failurePolicy,
 				ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
 					Service: &admissionregistrationv1beta1.ServiceReference{
@@ -95,7 +97,7 @@ func main() {
 	flag.Parse()
 	log.Setup()
 
-	glog.Info("Policy Node Quota Admission Controller starting up")
+	glog.Info("Policy Admission Controller starting up")
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -114,18 +116,18 @@ func main() {
 	}
 	policyNodeInformer, err := admissioncontroller.SetupPolicyNodeInformer(config)
 	if err != nil {
-		glog.Fatal("Failed setting up policyNode informer: ", err)
+		glog.Fatal("Failed setting up policynode informer: ", err)
 	}
 	glog.Info("Waiting for informers to sync...")
 	if !cache.WaitForCacheSync(nil, policyNodeInformer.Informer().HasSynced) {
-		glog.Fatal("Failure while waiting for informers to sync")
+		glog.Fatal("Failure while waiting for policynode informer to sync")
 	}
 
 	go service.ServeMetrics()
 
 	server := service.Server(
 		admissioncontroller.ServeFunc(
-			policynode.NewAdmitter(policyNodeInformer)),
+			policy.NewAdmitter(policyNodeInformer)),
 		clientCert)
 
 	stopChannel := make(chan struct{})
@@ -145,7 +147,7 @@ func main() {
 		glog.Fatal("Failed waiting for endpoint: ", err)
 	}
 
-	// Finally register the webhook to block admission according to quota policy
+	// Finally register the webhook to block admission according to nomos policy constraints
 	if err := selfRegister(clientset, *caBundleFile); err != nil {
 		glog.Fatal("Failed to register webhook: ", err)
 	}

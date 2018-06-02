@@ -23,14 +23,14 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/admissioncontroller"
-	"github.com/google/nomos/pkg/admissioncontroller/policynode"
+	"github.com/google/nomos/pkg/admissioncontroller/policy"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
 func TestRequest(t *testing.T) {
-	ts := httptest.NewTLSServer(http.HandlerFunc(admissioncontroller.ServeFunc(policynode.NewAdmitter(
+	ts := httptest.NewTLSServer(http.HandlerFunc(admissioncontroller.ServeFunc(policy.NewAdmitter(
 		fakeinformers.NewPolicyNodeInformer()))))
 	defer ts.Close()
 

@@ -31,15 +31,15 @@
 # Parameters:
 #    OUTPUT_DIR: define this environment variable to set the output directory
 #       for the generated keys and certificates.  Otherwise, the output staging
-#       directory for the policynodes-admission-controller is assumed.
+#       directory for the policy-admission-controller is assumed.
 
 set -euo pipefail
 
 STAGING_DIR="${STAGING_DIR:-$(dirname ${0:-''})/../.output}/staging"
-readonly controller_staging_dir="${OUTPUT_DIR:-${STAGING_DIR}/policynodes-admission-controller}"
+readonly controller_staging_dir="${OUTPUT_DIR:-${STAGING_DIR}/policy-admission-controller}"
 
 # The name of the service (and the namespace it runs in).
-readonly cn_base="policynodes-admission-controller.nomos-system.svc"
+readonly cn_base="policy-admission-controller.nomos-system.svc"
 
 mkdir -p "${controller_staging_dir}"
 cd "${controller_staging_dir}"

@@ -13,11 +13,11 @@
 # limitations under the License.
 
 FROM busybox
-ADD policynodes-admission-controller policynodes-admission-controller
+ADD policy-admission-controller policy-admission-controller
 EXPOSE 8000
-ENTRYPOINT ["/policynodes-admission-controller", \
+ENTRYPOINT ["/policy-admission-controller", \
         "--enable-mutual-tls=false", \
-        "--server_key", "/etc/nomos/secrets/policynodes-admission-controller/server/tls.key", \
-        "--server_cert", "/etc/nomos/secrets/policynodes-admission-controller/server/tls.crt", \
-        "--ca-cert", "/etc/nomos/secrets/policynodes-admission-controller/ca/tls.crt"]
+        "--server_key", "/etc/nomos/secrets/policy-admission-controller/server/tls.key", \
+        "--server_cert", "/etc/nomos/secrets/policy-admission-controller/server/tls.crt", \
+        "--ca-cert", "/etc/nomos/secrets/policy-admission-controller/ca/tls.crt"]
 

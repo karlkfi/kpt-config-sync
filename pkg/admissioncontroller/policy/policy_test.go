@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package policynode
+package policy
 
 import (
 	"testing"
@@ -21,11 +21,12 @@ import (
 	pn_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	"k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func TestPolicyNodeAuthorize(t *testing.T) {
+func TestAuthorize(t *testing.T) {
 	// Initial PolicyNodes.
 	policyNodes := []runtime.Object{
 		&pn_v1.PolicyNode{
@@ -52,7 +53,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 
 	admitter := NewAdmitter(policyNodeInformer)
 
-	tt := []struct {
+	testCases := []struct {
 		name            string
 		request         admissionv1beta1.AdmissionReview
 		expectedAllowed bool
@@ -64,7 +65,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 			expectedAllowed: true,
 		},
 		{
-			name: "valid create request",
+			name: "valid policynode create request",
 			request: admissionv1beta1.AdmissionReview{
 				Request: &admissionv1beta1.AdmissionRequest{
 					Resource: metav1.GroupVersionResource{
@@ -75,7 +76,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 					Kind: metav1.GroupVersionKind{
 						Group:   "nomos.dev",
 						Version: "v1",
-						Kind:    "PolicyNodes",
+						Kind:    "PolicyNode",
 					},
 					Object: runtime.RawExtension{
 						Object: runtime.Object(&pn_v1.PolicyNode{
@@ -95,7 +96,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 			expectedAllowed: true,
 		},
 		{
-			name: "invalid create request: namespace parent",
+			name: "invalid policynode create request: namespace parent",
 			request: admissionv1beta1.AdmissionReview{
 				Request: &admissionv1beta1.AdmissionRequest{
 					Resource: metav1.GroupVersionResource{
@@ -106,7 +107,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 					Kind: metav1.GroupVersionKind{
 						Group:   "nomos.dev",
 						Version: "v1",
-						Kind:    "PolicyNodes",
+						Kind:    "PolicyNode",
 					},
 					Object: runtime.RawExtension{
 						Object: runtime.Object(&pn_v1.PolicyNode{
@@ -127,7 +128,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 			// expectedReason:  metav1.StatusReasonForbidden,
 		},
 		{
-			name: "valid update request",
+			name: "valid policynode update request",
 			request: admissionv1beta1.AdmissionReview{
 				Request: &admissionv1beta1.AdmissionRequest{
 					Resource: metav1.GroupVersionResource{
@@ -138,7 +139,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 					Kind: metav1.GroupVersionKind{
 						Group:   "nomos.dev",
 						Version: "v1",
-						Kind:    "PolicyNodes",
+						Kind:    "PolicyNode",
 					},
 					Object: runtime.RawExtension{
 						Object: runtime.Object(&pn_v1.PolicyNode{
@@ -158,7 +159,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 			expectedAllowed: true,
 		},
 		{
-			name: "invalid update request",
+			name: "invalid policynode update request: updating node that doesn't exist",
 			request: admissionv1beta1.AdmissionReview{
 				Request: &admissionv1beta1.AdmissionRequest{
 					Resource: metav1.GroupVersionResource{
@@ -169,7 +170,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 					Kind: metav1.GroupVersionKind{
 						Group:   "nomos.dev",
 						Version: "v1",
-						Kind:    "PolicyNodes",
+						Kind:    "PolicyNode",
 					},
 					Object: runtime.RawExtension{
 						Object: runtime.Object(&pn_v1.PolicyNode{
@@ -200,7 +201,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 					Kind: metav1.GroupVersionKind{
 						Group:   "nomos.dev",
 						Version: "v1",
-						Kind:    "PolicyNodes",
+						Kind:    "PolicyNode",
 					},
 					Name:      "kitties",
 					Operation: admissionv1beta1.Delete,
@@ -221,7 +222,7 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 					Kind: metav1.GroupVersionKind{
 						Group:   "nomos.dev",
 						Version: "v1",
-						Kind:    "PolicyNodes",
+						Kind:    "PolicyNode",
 					},
 					Name:      "bigkitties",
 					Operation: admissionv1beta1.Delete,
@@ -231,13 +232,152 @@ func TestPolicyNodeAuthorize(t *testing.T) {
 			expectedAllowed: false,
 			expectedReason:  metav1.StatusReasonForbidden,
 		},
+		{
+			name: "valid clusterpolicy create request",
+			request: admissionv1beta1.AdmissionReview{
+				Request: &admissionv1beta1.AdmissionRequest{
+					Resource: metav1.GroupVersionResource{
+						Group:    "nomos.dev",
+						Version:  "v1",
+						Resource: "clusterpolicies",
+					},
+					Kind: metav1.GroupVersionKind{
+						Group:   "nomos.dev",
+						Version: "v1",
+						Kind:    "ClusterPolicy",
+					},
+					Object: runtime.RawExtension{
+						Object: runtime.Object(&pn_v1.ClusterPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: pn_v1.ClusterPolicyName,
+							},
+						}),
+					},
+					Operation: admissionv1beta1.Create,
+				},
+			},
+			expectedAllowed: true,
+		},
+		{
+			name: "invalid clusterpolicy create request: namespace parent",
+			request: admissionv1beta1.AdmissionReview{
+				Request: &admissionv1beta1.AdmissionRequest{
+					Resource: metav1.GroupVersionResource{
+						Group:    "nomos.dev",
+						Version:  "v1",
+						Resource: "clusterpolicies",
+					},
+					Kind: metav1.GroupVersionKind{
+						Group:   "nomos.dev",
+						Version: "v1",
+						Kind:    "ClusterPolicy",
+					},
+					Object: runtime.RawExtension{
+						Object: runtime.Object(&pn_v1.ClusterPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "kitty",
+							},
+						}),
+					},
+					Operation: admissionv1beta1.Create,
+				},
+			},
+			expectedReason: metav1.StatusReasonForbidden,
+		},
+		{
+			name: "valid clusterpolicy update request",
+			request: admissionv1beta1.AdmissionReview{
+				Request: &admissionv1beta1.AdmissionRequest{
+					Resource: metav1.GroupVersionResource{
+						Group:    "nomos.dev",
+						Version:  "v1",
+						Resource: "clusterpolicies",
+					},
+					Kind: metav1.GroupVersionKind{
+						Group:   "nomos.dev",
+						Version: "v1",
+						Kind:    "ClusterPolicy",
+					},
+					Object: runtime.RawExtension{
+						Object: runtime.Object(&pn_v1.ClusterPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: pn_v1.ClusterPolicyName,
+							},
+						}),
+					},
+					Operation: admissionv1beta1.Update,
+				},
+			},
+			expectedAllowed: true,
+		},
+		{
+			name: "invalid clusterpolicy update request: duplicate clusterroles",
+			request: admissionv1beta1.AdmissionReview{
+				Request: &admissionv1beta1.AdmissionRequest{
+					Resource: metav1.GroupVersionResource{
+						Group:    "nomos.dev",
+						Version:  "v1",
+						Resource: "clusterpolicies",
+					},
+					Kind: metav1.GroupVersionKind{
+						Group:   "nomos.dev",
+						Version: "v1",
+						Kind:    "ClusterPolicy",
+					},
+					Object: runtime.RawExtension{
+						Object: runtime.Object(&pn_v1.ClusterPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: pn_v1.ClusterPolicyName,
+							},
+							Spec: pn_v1.ClusterPolicySpec{
+								ClusterRolesV1: []v1.ClusterRole{
+									{
+										ObjectMeta: metav1.ObjectMeta{
+											Name: "role",
+										},
+									},
+									{
+										ObjectMeta: metav1.ObjectMeta{
+											Name: "role",
+										},
+									},
+								},
+							},
+						}),
+					},
+					Operation: admissionv1beta1.Update,
+				},
+			},
+			expectedAllowed: false,
+			expectedReason:  metav1.StatusReasonForbidden,
+		},
+		{
+			name: "valid clusterpolicy delete request",
+			request: admissionv1beta1.AdmissionReview{
+				Request: &admissionv1beta1.AdmissionRequest{
+					Resource: metav1.GroupVersionResource{
+						Group:    "nomos.dev",
+						Version:  "v1",
+						Resource: "clusterpolicies",
+					},
+					Kind: metav1.GroupVersionKind{
+						Group:   "nomos.dev",
+						Version: "v1",
+						Kind:    "ClusterPolicy",
+					},
+					Name:      pn_v1.ClusterPolicyName,
+					Operation: admissionv1beta1.Delete,
+				},
+			},
+			expectedAllowed: true,
+		},
 	}
 
-	for _, ttt := range tt {
-		actual := admitter.Admit(ttt.request)
-		if actual.Allowed != ttt.expectedAllowed ||
-			(actual.Result != nil && actual.Result.Reason != ttt.expectedReason) {
-			t.Errorf("[%s] Expected:\n%+v\n---\nActual:\n%+v", ttt.name, ttt, actual)
+	for _, tc := range testCases {
+		actual := admitter.Admit(tc.request)
+		if actual.Allowed != tc.expectedAllowed ||
+			(actual.Result != nil && actual.Result.Reason != tc.expectedReason) {
+			t.Errorf("[%s] Expected:\n%+v\n---\nActual:\n%+v", tc.name, tc, actual)
 		}
 	}
 }

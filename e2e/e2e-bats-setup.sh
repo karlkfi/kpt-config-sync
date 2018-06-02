@@ -74,7 +74,7 @@ function main() {
 
 function cleanUp() {
   echo "****************** Cleaning up environment ******************"
-  kubectl delete ValidatingWebhookConfiguration policy-nodes.nomos.dev --ignore-not-found
+  kubectl delete ValidatingWebhookConfiguration policy.nomos.dev --ignore-not-found
   kubectl delete ValidatingWebhookConfiguration resource-quota.nomos.dev --ignore-not-found
   kubectl delete policynodes --all || true
   kubectl delete clusterpolicy --all || true

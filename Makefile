@@ -84,7 +84,7 @@ GCP_PROJECT ?= stolos-dev
 ALL_K8S_APPS := syncer \
 	git-policy-importer \
 	resourcequota-admission-controller \
-	policynodes-admission-controller
+	policy-admission-controller
 
 # ALl Nomos apps that are dockerized.
 ALL_APPS := $(ALL_K8S_APPS) \
@@ -239,9 +239,9 @@ installer-staging: push-to-gcr-all gen-yaml-all
 		$(STAGING_DIR)/installer/scripts
 	@cp $(TOP_DIR)/scripts/generate-resourcequota-admission-controller-certs.sh \
 		$(STAGING_DIR)/installer/scripts
-	@cp $(TOP_DIR)/scripts/deploy-policynodes-admission-controller.sh \
+	@cp $(TOP_DIR)/scripts/deploy-policy-admission-controller.sh \
 		$(STAGING_DIR)/installer/scripts
-	@cp $(TOP_DIR)/scripts/generate-policynodes-admission-controller-certs.sh \
+	@cp $(TOP_DIR)/scripts/generate-policy-admission-controller-certs.sh \
 		$(STAGING_DIR)/installer/scripts
 
 # Builds the installer docker image using the nomos release in $(OUTPUT_DIR)

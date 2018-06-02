@@ -44,19 +44,19 @@ readonly server_key_file="${SERVER_KEY_FILE:-${CERTS_INPUT_DIR}/server.key}"
 readonly ca_key_file="${CA_KEY_FILE:-${CERTS_INPUT_DIR}/ca.key}"
 readonly ca_cert_file="${CA_CERT_FILE:-${CERTS_INPUT_DIR}/ca.crt}"
 
-kubectl delete secret policynodes-admission-controller-secret \
+kubectl delete secret policy-admission-controller-secret \
     --namespace=nomos-system || true
-kubectl create secret tls policynodes-admission-controller-secret \
+kubectl create secret tls policy-admission-controller-secret \
     --namespace=nomos-system \
     --cert="${server_cert_file}" \
     --key="${server_key_file}"
 
-kubectl delete secret policynodes-admission-controller-secret-ca \
+kubectl delete secret policy-admission-controller-secret-ca \
     --namespace=nomos-system || true
-kubectl create secret tls policynodes-admission-controller-secret-ca \
+kubectl create secret tls policy-admission-controller-secret-ca \
     --namespace=nomos-system \
     --cert=${ca_cert_file} \
     --key=${ca_key_file}
 
-kubectl apply -f ${YAML_DIR}/policynodes-admission-controller.yaml
+kubectl apply -f ${YAML_DIR}/policy-admission-controller.yaml
 

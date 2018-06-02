@@ -91,7 +91,7 @@ $ kubectl get --all-namespaces pn
 See the controller logs:
 
 ```console
-$ kubectl logs -l app=policynodes-admission-controller -n nomos-system
+$ kubectl logs -l app=policy-admission-controller -n nomos-system
 ```
 
 To test the policy node check, try removing policy nodes.

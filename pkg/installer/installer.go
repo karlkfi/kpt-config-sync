@@ -53,7 +53,7 @@ var (
 	deploymentComponents = []string{
 		fmt.Sprintf("%v:git-policy-importer", defaultNamespace),
 		fmt.Sprintf("%v:resourcequota-admission-controller", defaultNamespace),
-		fmt.Sprintf("%v:policynodes-admission-controller", defaultNamespace),
+		fmt.Sprintf("%v:policy-admission-controller", defaultNamespace),
 		fmt.Sprintf("%v:syncer", defaultNamespace),
 	}
 
@@ -62,14 +62,14 @@ var (
 	deploymentClusterRolesAndBindings = []string{
 		"nomos.dev:policy-importer",
 		"nomos.dev:resourcequota-admission-controller",
-		"nomos.dev:policynodes-admission-controller",
+		"nomos.dev:policy-admission-controller",
 		"nomos.dev:syncer",
 
 		// TODO(2018-05-31): these are legacy names, remove these at 0.9.0 <= release.
 		"nomos-nomosresourcequota-controller",
 		"nomos-policy-importer",
 		"nomos-resourcequota-admission-controller",
-		"nomos-policynodes-admission-controller",
+		"nomos-policy-admission-controller",
 		"nomos-syncer",
 	}
 
@@ -77,7 +77,7 @@ var (
 	// webhook configurations created by our admission controllers.
 	validatingWebhookConfigurations = []string{
 		"resource-quota.nomos.dev",
-		"policy-nodes.nomos.dev",
+		"policy.nomos.dev",
 	}
 
 	// mv is the minimum supported cluster version.  It is not possible to install
@@ -106,8 +106,8 @@ func New(c config.Config, workDir string) *Installer {
 		subDir:         "resourcequota",
 	}
 	policyNodesCertsInstaller := &certInstaller{
-		generateScript: "generate-policynodes-admission-controller-certs.sh",
-		deployScript:   "deploy-policynodes-admission-controller.sh",
+		generateScript: "generate-policy-admission-controller-certs.sh",
+		deployScript:   "deploy-policy-admission-controller.sh",
 		subDir:         "policynodes",
 	}
 	return &Installer{

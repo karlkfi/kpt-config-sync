@@ -34,13 +34,13 @@ type Admitter interface {
 	Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse
 }
 
-// InternalErrorDeny generates a deny admission response based on an error
-func InternalErrorDeny(err error) *admissionv1beta1.AdmissionResponse {
+// Deny generates a deny admission response based on an error and reason.
+func Deny(reason metav1.StatusReason, err error) *admissionv1beta1.AdmissionResponse {
 	return &admissionv1beta1.AdmissionResponse{
 		Allowed: false,
 		Result: &metav1.Status{
 			Message: err.Error(),
-			Reason:  metav1.StatusReasonInternalError,
+			Reason:  reason,
 		},
 	}
 }

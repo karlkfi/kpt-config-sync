@@ -27,6 +27,7 @@ import (
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
+	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
@@ -214,7 +215,7 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 		policies.PolicyNodes[p.Name] = *p
 	}
 
-	if err := policies.ClusterPolicy.Validate(); err != nil {
+	if err := clusterpolicy.Validate(policies.ClusterPolicy); err != nil {
 		return nil, err
 	}
 	// TODO(80431650): Validate no duplicate resources names for each policynode ancestry.
