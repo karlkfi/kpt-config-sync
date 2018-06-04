@@ -96,7 +96,7 @@ func TestAuthorize(t *testing.T) {
 			expectedAllowed: true,
 		},
 		{
-			name: "invalid policynode create request: namespace parent",
+			name: "invalid create request: orphan add",
 			request: admissionv1beta1.AdmissionReview{
 				Request: &admissionv1beta1.AdmissionRequest{
 					Resource: metav1.GroupVersionResource{
@@ -115,7 +115,7 @@ func TestAuthorize(t *testing.T) {
 								Name: "moarkitties",
 							},
 							Spec: pn_v1.PolicyNodeSpec{
-								Parent: "kitties",
+								Parent: "does not exist",
 							},
 						}),
 					},
@@ -123,9 +123,7 @@ func TestAuthorize(t *testing.T) {
 					Namespace: "kitties",
 				},
 			},
-			// TODO(79989196): Make this fail.
-			expectedAllowed: true,
-			// expectedReason:  metav1.StatusReasonForbidden,
+			expectedReason: metav1.StatusReasonForbidden,
 		},
 		{
 			name: "valid policynode update request",

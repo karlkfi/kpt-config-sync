@@ -174,7 +174,6 @@ func (p *Admitter) policyNodeAdmit(request admissionv1beta1.AdmissionRequest) *a
 	// TODO(77731524): A way for the user to toggle multiple roots, orphan adds checks.
 	validator := validator.From(policyNodes...)
 	validator.AllowMultipleRoots = true
-	validator.AllowOrphanAdds = true
 
 	operation := attributes.GetOperation()
 	switch operation {

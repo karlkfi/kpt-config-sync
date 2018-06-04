@@ -35,6 +35,8 @@ import (
 type Differ struct {
 	current, desired v1.AllPolicies
 	factories        Factories
+	// SortDiff is true when we enforce an ordering for iterating over PolicyNode maps.
+	SortDiff bool
 }
 
 // NewDiffer creates a Differ.
@@ -63,8 +65,8 @@ func (d *Differ) policyNodeActions() []action.Interface {
 	policyimporter.Metrics.Operations.WithLabelValues("update").Add(float64(len(updates)))
 	policyimporter.Metrics.Operations.WithLabelValues("delete").Add(float64(len(deletes)))
 
-	desiredByDepth := nodesByDepth(d.desired.PolicyNodes)
-	currentByDepth := nodesByDepth(d.current.PolicyNodes)
+	desiredByDepth := d.nodesByDepth(d.desired.PolicyNodes)
+	currentByDepth := d.nodesByDepth(d.current.PolicyNodes)
 
 	// Sort nodeCreates and nodeUpdates by depth
 	sort.Slice(creates, func(i, j int) bool {
@@ -107,9 +109,9 @@ func (d *Differ) clusterPolicyActions() []action.Interface {
 func (d *Differ) nodeCreates() []string {
 	var creates []string
 
-	for key := range d.desired.PolicyNodes {
-		if _, exists := d.current.PolicyNodes[key]; !exists {
-			creates = append(creates, key)
+	for _, nodeName := range d.nodeNames(d.desired.PolicyNodes) {
+		if _, exists := d.current.PolicyNodes[nodeName]; !exists {
+			creates = append(creates, nodeName)
 		}
 	}
 	return creates
@@ -118,10 +120,11 @@ func (d *Differ) nodeCreates() []string {
 func (d *Differ) nodeUpdates() []string {
 	var updates []string
 
-	for key, newnode := range d.desired.PolicyNodes {
-		if oldnode, exists := d.current.PolicyNodes[key]; exists {
-			if !d.factories.PolicyNodeAction.Equal(&newnode, &oldnode) {
-				updates = append(updates, key)
+	for _, nodeName := range d.nodeNames(d.desired.PolicyNodes) {
+		newNode := d.desired.PolicyNodes[nodeName]
+		if oldNode, exists := d.current.PolicyNodes[nodeName]; exists {
+			if !d.factories.PolicyNodeAction.Equal(&newNode, &oldNode) {
+				updates = append(updates, nodeName)
 			}
 		}
 	}
@@ -131,24 +134,25 @@ func (d *Differ) nodeUpdates() []string {
 func (d *Differ) nodeDeletes() []string {
 	var deletes []string
 
-	for key := range d.current.PolicyNodes {
-		if _, exists := d.desired.PolicyNodes[key]; !exists {
-			deletes = append(deletes, key)
+	for _, nodeName := range d.nodeNames(d.current.PolicyNodes) {
+		if _, exists := d.desired.PolicyNodes[nodeName]; !exists {
+			deletes = append(deletes, nodeName)
 		}
 	}
 	return deletes
 }
 
 // Returns map of nodes to their depth, with root being at depth 0.
-func nodesByDepth(nodes map[string]v1.PolicyNode) map[string]int {
+func (d *Differ) nodesByDepth(nodes map[string]v1.PolicyNode) map[string]int {
 	// Create a tree of the nodes, by mapping each node to a list of its children
 	childrenByParent := map[string][]string{}
 
-	for _, node := range nodes {
+	for _, nodeName := range d.nodeNames(nodes) {
+		node := nodes[nodeName]
 		if children, exists := childrenByParent[node.Spec.Parent]; exists {
-			childrenByParent[node.Spec.Parent] = append(children, node.Name)
+			childrenByParent[node.Spec.Parent] = append(children, nodeName)
 		} else {
-			childrenByParent[node.Spec.Parent] = []string{node.Name}
+			childrenByParent[node.Spec.Parent] = []string{nodeName}
 		}
 	}
 
@@ -171,4 +175,19 @@ func nodesByDepth(nodes map[string]v1.PolicyNode) map[string]int {
 	}
 
 	return nodesByDepth
+}
+
+// nodeNames returns the policy node names from the map. When the results of a
+// diff should be deterministic, we sort the nodeNames returned in order to
+// bypass randomness associated with iterating over maps.
+func (d *Differ) nodeNames(nodes map[string]v1.PolicyNode) []string {
+	var nodeNames []string
+	for nodeName := range nodes {
+		nodeNames = append(nodeNames, nodeName)
+	}
+	if !d.SortDiff {
+		return nodeNames
+	}
+	sort.Strings(nodeNames)
+	return nodeNames
 }

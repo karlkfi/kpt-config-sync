@@ -25,9 +25,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// rootParent is the name of the parent of a root node.
-const rootParent = ""
-
 // Validator checks that a set of PolicyNode objects conform to certain constraints on the hierarchy.
 type Validator struct {
 	policyNodes map[string]policyhierarchy_v1.PolicyNode // name -> node
@@ -66,10 +63,10 @@ func From(policyNodes ...*policyhierarchy_v1.PolicyNode) *Validator {
 func (s *Validator) Add(policyNode *policyhierarchy_v1.PolicyNode) error {
 	nodeName := policyNode.Name
 	if _, ok := s.policyNodes[nodeName]; ok {
-		return errors.Errorf("Policy node %s already exists!", nodeName)
+		return errors.Errorf("policy node %q already exists!", nodeName)
 	}
 	if nodeName == "" {
-		return errors.Errorf("Policy node does not have a name")
+		return errors.Errorf("policy node does not have a name")
 	}
 
 	s.policyNodes[nodeName] = *policyNode
@@ -80,7 +77,7 @@ func (s *Validator) Add(policyNode *policyhierarchy_v1.PolicyNode) error {
 func (s *Validator) Update(policyNode *policyhierarchy_v1.PolicyNode) error {
 	nodeName := policyNode.Name
 	if _, ok := s.policyNodes[nodeName]; !ok {
-		return errors.Errorf("Policy node %s does not exist for update", nodeName)
+		return errors.Errorf("policy node %q does not exist for update", nodeName)
 	}
 
 	s.policyNodes[nodeName] = *policyNode
@@ -91,13 +88,13 @@ func (s *Validator) Update(policyNode *policyhierarchy_v1.PolicyNode) error {
 func (s *Validator) Remove(policyNode *policyhierarchy_v1.PolicyNode) error {
 	nodeName := policyNode.Name
 	if _, ok := s.policyNodes[nodeName]; !ok {
-		return errors.Errorf("Policy node %s does not exist for remove", nodeName)
+		return errors.Errorf("policy node %q does not exist for removal", nodeName)
 	}
 
 	for _, policyNode := range s.policyNodes {
 		parent := policyNode.Spec.Parent
 		if parent == nodeName {
-			return errors.Errorf("Policy node %s is a parent and cannot be removed", nodeName)
+			return errors.Errorf("policy node %q is a parent and cannot be removed", nodeName)
 		}
 	}
 
@@ -113,7 +110,6 @@ func (s *Validator) Validate() error {
 	for _, checkFunction := range []func() error{
 		s.checkRoots,
 		s.checkCycles,
-		s.checkWorkingNamespace,
 		s.checkPolicySpaceRoles,
 		s.checkParents,
 		s.checkDupeResources,
@@ -134,39 +130,24 @@ func (s *Validator) checkRoots() error {
 	}
 	var roots []string
 	for nodeName, node := range s.policyNodes {
-		if node.Spec.Parent == rootParent {
+		if node.Spec.Parent == policyhierarchy_v1.NoParentNamespace {
 			roots = append(roots, nodeName)
 		}
 	}
 
 	if len(roots) == 0 {
-		return errors.New("At least one root (organization) node is required, none exist")
+		return errors.New("at least one root (organization) node is required, none exist")
 	}
 
 	if len(roots) > 1 && !s.AllowMultipleRoots {
 		return errors.Errorf(
-			"Exactly one root (organization) node is required, found %d: %v", len(roots), roots)
+			"exactly one root (organization) node is required, found %d: %v", len(roots), roots)
 	}
-	return nil
-}
-
-// checkWorkingNamespace checks that all non-root leaves are working namespaces while internal nodes
-// are not working namespaces
-func (s *Validator) checkWorkingNamespace() error {
-	for nodeName, node := range s.policyNodes {
-		if node.Spec.Parent == rootParent {
-			// Root node should not be a working namespace
-			if !node.Spec.Type.IsPolicyspace() {
-				return errors.Errorf("Root node %s should not be a %s", node.Spec.Type, nodeName)
-			}
-			continue
+	for _, nodeName := range roots {
+		node := s.policyNodes[nodeName]
+		if !node.Spec.Type.IsPolicyspace() {
+			return errors.Errorf("root node %q should not be a %s", nodeName, node.Spec.Type)
 		}
-
-		// TODO(79989196): Enable this check.
-		//if !node.Spec.Type.IsPolicyspace() && isParent[nodeName] {
-		//	return errors.Errorf(
-		//		"Node %s designated as %s, but has children", node.Spec.Type, nodeName)
-		//}
 	}
 	return nil
 }
@@ -187,7 +168,7 @@ func (s *Validator) checkCycles() error {
 		}
 	}
 	if len(cycles) != 0 {
-		return errors.Errorf("Found cycles %s, graph %s", cycles, spew.Sdump(graph))
+		return errors.Errorf("found cycles %s, graph %s", cycles, spew.Sdump(graph))
 	}
 	return nil
 }
@@ -197,7 +178,7 @@ func (s *Validator) checkPolicySpaceRoles() error {
 	for nodeName, node := range s.policyNodes {
 		if node.Spec.Type.IsPolicyspace() && len(node.Spec.RolesV1) > 0 {
 			return errors.Errorf(
-				"Node %s designated as a policy space, but has roles", nodeName)
+				"node %q designated as a policy space, but has roles", nodeName)
 		}
 	}
 	return nil
@@ -212,8 +193,8 @@ func (s *Validator) checkParents() error {
 	for nodeName, node := range s.policyNodes {
 		parent := node.Spec.Parent
 		_, ok := s.policyNodes[parent]
-		if parent != rootParent && !ok {
-			return errors.Errorf("Node %s has no parent and is not a root node", nodeName)
+		if parent != policyhierarchy_v1.NoParentNamespace && !ok {
+			return errors.Errorf("node %q has no parent and is not a root node", nodeName)
 		}
 	}
 	return nil

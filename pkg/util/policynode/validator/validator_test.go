@@ -196,32 +196,25 @@ func TestWorkingNamespace(t *testing.T) {
 	v.Add(child1)
 	v.Add(child2)
 
-	if err := v.checkWorkingNamespace(); err != nil {
-		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
-	}
 	if err := v.Validate(); err != nil {
 		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
 	}
 
-	// TODO(b/79989196): Add back checkWorkingNamespace.
-	//child1.Spec.Type = policyhierarchy_v1.Namespace
-	//v = New()
-	//v.Add(root)
-	//v.Add(child1)
-	//v.Add(child2)
-	//if err := v.checkWorkingNamespace(); err == nil {
-	//	t.Errorf("Should have detected intermediate node working namespace error")
-	//}
-	//if err := v.Validate(); err == nil {
-	//	t.Errorf("Should have detected intermediate node working namespace error")
-	//}
+	child2.Spec.Type = policyhierarchy_v1.Policyspace
+	v = New()
+	v.Add(root)
+	v.Add(child1)
+	v.Add(child2)
+	if err := v.Validate(); err != nil {
+		t.Errorf("Should not error for policyspace leaf node: %v", err)
+	}
 }
 
 func TestRootWorkingNamespace(t *testing.T) {
 	v := New()
 	root := newNode("root", "", true)
 	v.Add(root)
-	if err := v.checkWorkingNamespace(); err != nil {
+	if err := v.checkRoots(); err != nil {
 		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
 	}
 	if err := v.Validate(); err != nil {
@@ -231,7 +224,7 @@ func TestRootWorkingNamespace(t *testing.T) {
 	v = New()
 	root.Spec.Type = policyhierarchy_v1.Namespace
 	v.Add(root)
-	if err := v.checkWorkingNamespace(); err == nil {
+	if err := v.checkRoots(); err == nil {
 		t.Errorf("Should have detected leaf node working namespace error")
 	}
 	if err := v.Validate(); err == nil {
