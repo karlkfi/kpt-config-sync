@@ -44,15 +44,15 @@ foo-corp
 
 1.  A namespace directory must be a leaf directory (i.e., it must not have any
     children).
-1.  A namespace directory can contain any number of Role and Rolebinding
-    resources, and a single ResourceQuota resource.
+1.  A namespace directory can contain any number of uniquely named Role and
+    Rolebinding resources, and a single ResourceQuota resource.
 1.  A namespace directory name must match the namespace name in all resources in
     that directory.
-1.  A policyspace directory can contain any number of Rolebinding resources and
-    a single ResourceQuota resource but must not contain Roles. These resources
-    must not specify a namespace.
-1.  The root policyspace directory can also contain any number of ClusterRole,
-    ClusterRolebinding, and PodSecurityPolicy resources.
+1.  A policyspace directory can contain any number of uniquely named Rolebinding
+    resources and a single ResourceQuota resource but must not contain Roles.
+    These resources must not specify a namespace.
+1.  The root policyspace directory can also contain any number of uniquely named
+    ClusterRole, ClusterRolebinding, and PodSecurityPolicy resources.
 1.  Both policyspace and namespace directory names must be valid Kubernetes
     namespace names (i.e. [DNS
     Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md))
