@@ -11,15 +11,15 @@ setup() {
   cd ${TEST_REPO_DIR}/repo
   git config user.name "Testing Nome"
   git config user.email testing_nome@example.com
-  git rm -rf acme
+  git rm -qrf acme
   cp -r /opt/testing/sot/acme ./
   git add -A
   git diff-index --quiet HEAD || git commit -m "setUp commit"
   git push origin master
   cd $CWD
   # Wait for syncer to update objects following the policynode updates
-  waitForSuccess "kubectl get ns backend"
-  waitForSuccess "kubectl get ns frontend"
+  wait_for_success "kubectl get ns backend"
+  wait_for_success "kubectl get ns frontend"
 }
 
 # assertContains <command> <substring>
@@ -68,7 +68,7 @@ load e2e-git-api
   assertContains "acme-admin"
   git_update ${BATS_TEST_DIRNAME}/test-syncer-change-rolebinding-backend.yaml acme/eng/backend/bob-rolebinding.yaml
   git_commit
-  waitForFailure "kubectl get rolebindings -n backend bob-rolebinding"
+  wait_for_failure "kubectl get rolebindings -n backend bob-rolebinding"
   run kubectl get rolebindings -n backend bob-rolebinding
   assertContains "NotFound"
   run kubectl get rolebindings -n backend robert-rolebinding -o yaml
@@ -93,7 +93,7 @@ load e2e-git-api
 
 @test "quota admission" {
   cleanTestConfigMaps
-  waitForSuccess "kubectl get ns new-prj"
+  wait_for_success "kubectl get ns new-prj"
   run kubectl create configmap map1 -n new-prj
   assertContains "created"
   run kubectl create configmap map2 -n newer-prj
@@ -103,29 +103,41 @@ load e2e-git-api
   cleanTestConfigMaps
 }
 
+@test "namespace garbage collection" {
+  git_add $BATS_TEST_DIRNAME/testcases/yaml/namespace-garbage-collection-namespace.yaml acme/eng/test-syncer-namespaces/namespace.yaml
+  git_commit
+  wait_for_success "kubectl get ns test-syncer-namespaces"
+  git_rm acme/eng/test-syncer-namespaces/namespace.yaml
+  git_commit
+  wait_for_failure "kubectl get ns test-syncer-namespaces" 20
+  run kubectl get policynodes new-ns
+  [ "$status" -eq 1 ]
+  assertContains "not found"
+}
+
 function cleanTestConfigMaps() {
   kubectl delete configmaps -n new-prj --all > /dev/null
   kubectl delete configmaps -n newer-prj --all > /dev/null
-  waitForFailure "kubectl -n new-prj configmaps | grep map1"
-  waitForFailure "kubectl -n newer-prj configmaps | grep map2"
+  wait_for_failure "kubectl -n new-prj configmaps | grep map1"
+  wait_for_failure "kubectl -n newer-prj configmaps | grep map2"
 }
 
 
-function waitForSuccess() {
+function wait_for_success() {
   local command="${1:-}"
   local timeout=${2:-10}
   local or_die=${3:-true}
-  waitFor "${command}" "${timeout}" "${or_die}" true
+  wait_for "${command}" "${timeout}" "${or_die}" true
 }
 
-function waitForFailure() {
+function wait_for_failure() {
   local command="${1:-}"
   local timeout=${2:-10}
   local or_die=${3:-true}
-  waitFor "${command}" "${timeout}" "${or_die}" false
+  wait_for "${command}" "${timeout}" "${or_die}" false
 }
 
-function waitFor() {
+function wait_for() {
   local command="${1:-}"
   local timeout=${2:-10}
   local or_die=${3:-true}

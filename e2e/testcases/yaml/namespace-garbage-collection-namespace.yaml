@@ -1,0 +1,5 @@
+# destined for eng/test-syncer-namespaces
+apiVersion: v1
+kind: Namespace
+metadata:
+   name: test-syncer-namespaces

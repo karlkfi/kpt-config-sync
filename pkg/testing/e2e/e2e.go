@@ -27,7 +27,6 @@ import (
 	"github.com/google/nomos/pkg/testing/e2e/testregistry"
 
 	_ "github.com/google/nomos/pkg/testing/e2e/admissiontests" // Register admission tests
-	_ "github.com/google/nomos/pkg/testing/e2e/syncertests"    // Register syncer tests
 	"github.com/google/nomos/pkg/testing/e2e/testcontext"
 )
 

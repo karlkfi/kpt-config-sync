@@ -29,8 +29,8 @@ function git_add() {
 
   cd ${TEST_REPO}
 
-  [ ! -z $src ] || (echo "source not provided to sot_create" && false)
-  [ ! -z $dst ] || (echo "destination not provided to sot_create" && false)
+  [ ! -z $src ] || (echo "source not provided to git_add" && false)
+  [ ! -z $dst ] || (echo "destination not provided to git_add" && false)
   [ ! -f $dst ] || (echo "$dst already exists but should not" && false)
 
   mkdir -p $(dirname $dst)
@@ -57,8 +57,8 @@ function git_update() {
 
   cd ${TEST_REPO}
 
-  [ ! -z $src ] || (echo "source not provided to sot_update" && false)
-  [ ! -z $dst ] || (echo "destination not provided to sot_update" && false)
+  [ ! -z $src ] || (echo "source not provided to git_update" && false)
+  [ ! -z $dst ] || (echo "destination not provided to git_update" && false)
   [ -f $dst ] || (echo "$dst does not already exist but should" && false)
 
   cp $src ./$dst
@@ -78,9 +78,11 @@ function git_update() {
 # does not already exist, the function will fail the containing bats test.
 #
 function git_rm() {
+  local path=$1
+
   cd ${TEST_REPO}
 
-  [ ! -z $path ] || (echo "filename not provided to sot_delete" && false)
+  [ ! -z $path ] || (echo "filename not provided to git_rm" && false)
   [ -f $path ] || (echo "$path does not already exist but should" && false)
 
   git rm $path
