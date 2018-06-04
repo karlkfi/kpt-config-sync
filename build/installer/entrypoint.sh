@@ -70,8 +70,7 @@ INSTALLER_ARGS=(
   --version="${INSTALLER_VERSION}"
 )
 if [[ "${CONFIG}" != "" ]]; then
-  CONFIG_BASENAME="$(basename $CONFIG)"
-  CONTAINER_CONFIG_FILE="configs/${CONFIG_BASENAME}"
+  CONTAINER_CONFIG_FILE="configs/config_in.yaml"
   INSTALLER_ARGS+=(
   	"--config=${CONTAINER_CONFIG_FILE}"
 	"--config_in=${CONTAINER_CONFIG_FILE}"

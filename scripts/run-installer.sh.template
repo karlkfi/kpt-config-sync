@@ -28,20 +28,18 @@
 
 # [ <-- needed because of Argbash
 
-CONFIG="$_arg_config"
-if [[ "${CONFIG}" != "" ]]; then
-  if [ ! -f "${CONFIG}" ]; then
-    echo "### File '${CONFIG}' specified as argument to --config does not exist"
+if [[ "${_arg_config}" != "" ]]; then
+  if [ ! -f "${_arg_config}" ]; then
+    echo "### File '${_arg_config}' specified as argument to --config does not exist"
 	exit 2
   fi
-  CONFIG_DIR="$(dirname $(realpath ${CONFIG}))"
 fi
 
 OUTPUT_DIR="${_arg_output_dir:-$(pwd)}"
 
 function installer::main() {
   echo "+++ Using output directory: ${OUTPUT_DIR}"
-  mkdir -p ${OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
+  mkdir -p ${OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs,configs}
   docker pull "${_arg_container}:${_arg_version}"
 
   VOLUME_ARGS=(
@@ -52,7 +50,7 @@ function installer::main() {
     "--volume=${HOME}:/home/user"
   )
   readonly config_arg="$(installer::optf \
-		  --volume=%s:/opt/installer/configs ${CONFIG_DIR})"
+		  --volume=%s:/opt/installer/configs/config_in.yaml ${_arg_config})"
   if [[ "${config_arg}" != "" ]]; then
     VOLUME_ARGS+=("${config_arg}")
   fi
@@ -73,7 +71,7 @@ function installer::main() {
     -u "$(id -u):$(id -g)" \
 	"${VOLUME_ARGS[@]}" \
     -e "VERSION=${_arg_version}" \
-    -e "CONFIG=${CONFIG}" \
+    -e "CONFIG=${_arg_config}" \
     -e "HOME_ON_HOST=${HOME}" \
     "${_arg_container}:${_arg_version}" "${FORWARDED_ARGS[@]}" \
   	&& echo "+++ Generated files are available in ${OUTPUT_DIR}" \
