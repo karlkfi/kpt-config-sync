@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -11,6 +12,7 @@ import (
 )
 
 func TestRead(t *testing.T) {
+	os.Setenv(homeOnHostEnv, "/user/home/on/host")
 	tests := []struct {
 		name     string
 		input    string
@@ -93,6 +95,7 @@ contexts:
 				"GIT_SYNC_REPO": "git@github.com:repo/example.git",
 				"PRIVATE_KEY_FILENAME": "$HOME/privateKey",
 				"KNOWN_HOSTS_FILENAME": "$HOME/knownHosts",
+				"GIT_COOKIE_FILENAME": "$HOME/cookieFilename",
 				"GIT_SYNC_BRANCH": "test",
 				"GIT_SYNC_WAIT": 1,
 				"POLICY_DIR": "foo-corp"
@@ -104,6 +107,37 @@ contexts:
 					UseSSH:             true,
 					PrivateKeyFilename: "/home/user/privateKey",
 					KnownHostsFilename: "/home/user/knownHosts",
+					CookieFilename:     "/home/user/cookieFilename",
+					SyncWaitSeconds:    1,
+					SyncBranch:         "test",
+					RootPolicyDir:      "foo-corp",
+					SyncRepo:           "git@github.com:repo/example.git",
+				},
+			},
+		},
+		{
+			name: "--user_home_on_host substitution",
+			input: `{
+		"contexts": [
+				"your_cluster"
+		],
+		"git": {
+				"GIT_SYNC_REPO": "git@github.com:repo/example.git",
+				"PRIVATE_KEY_FILENAME": "/user/home/on/host/privateKey",
+				"KNOWN_HOSTS_FILENAME": "/user/home/on/host/knownHosts",
+				"GIT_COOKIE_FILENAME": "/user/home/on/host/cookieFilename",
+				"GIT_SYNC_BRANCH": "test",
+				"GIT_SYNC_WAIT": 1,
+				"POLICY_DIR": "foo-corp"
+		},
+			}`,
+			expected: Config{
+				Contexts: []string{"your_cluster"},
+				Git: GitConfig{
+					UseSSH:             true,
+					PrivateKeyFilename: "/home/user/privateKey",
+					KnownHostsFilename: "/home/user/knownHosts",
+					CookieFilename:     "/home/user/cookieFilename",
 					SyncWaitSeconds:    1,
 					SyncBranch:         "test",
 					RootPolicyDir:      "foo-corp",

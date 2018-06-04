@@ -16,18 +16,12 @@ import (
 const (
 	defaultSyncWaitTimeoutSeconds = 15
 	defaultSyncBranch             = "master"
+	// homeOnHostEnv is the name of the environment variable defined in
+	// entrypoint.sh.template that contains the env variable storing the name
+	// of the $HOME directory of the user, on the host machine, not the
+	// container.
+	homeOnHostEnv = "HOME_ON_HOST"
 )
-
-// DefaultConfig contains the empty default values for a Config.
-var DefaultConfig = Config{
-	Git: GitConfig{
-		SyncWaitSeconds: defaultSyncWaitTimeoutSeconds,
-		SyncBranch:      defaultSyncBranch,
-		// Default to expecting an ssh url since we also do some checking to see
-		// if it's an ssh url during validation.
-		UseSSH: true,
-	},
-}
 
 // GitConfig contains the settings for the git importer repository.
 type GitConfig struct {
@@ -91,7 +85,7 @@ type Config struct {
 	Git GitConfig `json:"git,omitempty"`
 }
 
-// NewDefaultConfig creates a new Config struct with default values set
+// NewDefaultConfig creates a new Config struct with default values set.
 func NewDefaultConfig() Config {
 	c := Config{
 		Git: GitConfig{
@@ -106,7 +100,12 @@ func NewDefaultConfig() Config {
 }
 
 func expandHome(text string) string {
-	return strings.Replace(text, "$HOME", "/home/user", 1)
+	text = strings.Replace(text, "$HOME", "/home/user", 1)
+	userHomeOnHost := os.Getenv(homeOnHostEnv)
+	if userHomeOnHost != "" {
+		text = strings.Replace(text, userHomeOnHost, "/home/user", 1)
+	}
+	return text
 }
 
 // ExpandVarsCopy makes a copy of c, expanding path variables like $HOME with
