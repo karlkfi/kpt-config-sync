@@ -22,4 +22,4 @@ RUN apt-get update && apt-get install -y git
 RUN groupadd -g $GID $UNAME
 RUN useradd -u $UID -g $UNAME $UNAME
 
-ENTRYPOINT ["/opt/testing/e2e-bats-setup.sh"]
+ENTRYPOINT ["/opt/testing/e2e/setup.sh"]

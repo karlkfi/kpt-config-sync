@@ -1,17 +1,36 @@
 # Testing
 
-## e2e
-
-end-to-end tests deploy Nomos components on Kubernetes cluster and verify
-functionality.
+To run unit tests and linters:
 
 ```console
-$ cd $GOROOT/src
-$ go install github.com/google/nomos/cmd/nomos-end-to-end/
+make
 ```
 
-Run the end to end test
+end-to-end tests deploy Nomos components on a Kubernetes cluster and verify
+functionality through Git commits:
 
 ```console
-$ nomos-end-to-end -repo_dir $NOMOS
+make test-e2e
 ```
+
+If debugging something and want to prevent cleanup after tests runs:
+
+```console
+make test-e2e-nocleanup
+```
+
+During iterative development of e2e tests, you may want to skip time-consuming setup steps:
+
+1- Run tests without cleanup once:
+
+ ```console
+ make test-e2e-nocleanup
+ ```
+
+2- Make changes to tests and run:
+
+  ```console
+  make test-e2e-nosetup
+  ```
+ 
+3- Repeat step 2 as necessary.

@@ -29,9 +29,9 @@ FWD_SSH_PORT=2222
 
 rm -rf ${TEST_LOG_REPO}
 
-kubectl apply -f /opt/testing/git-server.yaml
+kubectl apply -f /opt/testing/e2e/git-server.yaml
 
-kubectl -n=nomos-system create secret generic ssh-pub --from-file=/opt/testing/id_rsa.nomos.pub
+kubectl -n=nomos-system create secret generic ssh-pub --from-file=/opt/testing/e2e/id_rsa.nomos.pub
 echo -n "Waiting for test-git-server pod to be ready. This could take a minute..."
 
 NEXT_WAIT_TIME=0
@@ -58,7 +58,7 @@ kubectl exec -n=nomos-system -it ${POD_ID} -- git init --bare --shared /git-serv
 
 # git-sync wants the designated sync branch to exist, so we create a dummy
 # commit so that the sync branch exists
-GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/id_rsa.nomos"; export GIT_SSH_COMMAND
+GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"; export GIT_SSH_COMMAND
 git clone ssh://git@localhost:2222/git-server/repos/sot.git ${TEST_LOG_REPO}/repo
 cd ${TEST_LOG_REPO}/repo
 git config user.name "Testing Nome"

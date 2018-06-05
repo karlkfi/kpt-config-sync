@@ -35,7 +35,7 @@ function setUpEnv() {
   echo "****************** Setting up environment ******************"
   suggested_user="$(gcloud config get-value account)"
 
-  /opt/testing/init-git-server.sh
+  /opt/testing/e2e/init-git-server.sh
 
   /opt/installer/installer \
     --config="${TEST_DIR}/install-config.yaml" \
@@ -69,7 +69,7 @@ function main() {
     echo "Kubectl/Cluster misconfigured"
     exit 1
   fi
-  GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/id_rsa.nomos"; export GIT_SSH_COMMAND
+  GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"; export GIT_SSH_COMMAND
 
   echo "****************** Starting tests ******************"
   local bats_tests=$(

@@ -340,7 +340,7 @@ test-e2e-run:
 	    -v "${INSTALLER_OUTPUT_DIR}/kubeconfig":/opt/installer/kubeconfig \
 	    -v "${INSTALLER_OUTPUT_DIR}/logs":/tmp \
 	    -v "$(TOP_DIR)/examples":/opt/installer/configs \
-	    -v "$(OUTPUT_DIR)/e2e":/opt/testing \
+	    -v "$(OUTPUT_DIR)/e2e":/opt/testing/e2e \
 	    -e "VERSION=$(IMAGE_TAG)" \
 	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" \
 	    "$@" "${E2E_CLEAN}" "${E2E_SETUP}" --filter "$(TEST_FILTER)" \

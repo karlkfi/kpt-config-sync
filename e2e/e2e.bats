@@ -12,7 +12,7 @@ setup() {
   git config user.name "Testing Nome"
   git config user.email testing_nome@example.com
   git rm -qrf acme
-  cp -r /opt/testing/sot/acme ./
+  cp -r /opt/testing/e2e/sot/acme ./
   git add -A
   git diff-index --quiet HEAD || git commit -m "setUp commit"
   git push origin master
@@ -31,7 +31,7 @@ function assertContains() {
   fi
 }
 
-load e2e-git-api
+load git-api
 
 ######################## TESTS ########################
 @test "syncer namespace" {
