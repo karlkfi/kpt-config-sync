@@ -1,6 +1,7 @@
 #!/bin/bash
 
 TEST_REPO_DIR=${BATS_TMPDIR}
+YAML_DIR=$BATS_TEST_DIRNAME/testcases/yaml
 
 # Run for every test
 setup() {
@@ -104,15 +105,24 @@ load git-api
 }
 
 @test "namespace garbage collection" {
-  git_add $BATS_TEST_DIRNAME/testcases/yaml/namespace-garbage-collection-namespace.yaml acme/eng/test-syncer-namespaces/namespace.yaml
+  git_add $YAML_DIR/accounting-namespace.yaml acme/eng/accounting/namespace.yaml
   git_commit
-  wait_for_success "kubectl get ns test-syncer-namespaces"
-  git_rm acme/eng/test-syncer-namespaces/namespace.yaml
+  wait_for_success "kubectl get ns accounting"
+  git_rm acme/eng/accounting/namespace.yaml
   git_commit
-  wait_for_failure "kubectl get ns test-syncer-namespaces" 20
+  wait_for_failure "kubectl get ns accounting" 20
   run kubectl get policynodes new-ns
   [ "$status" -eq 1 ]
   assertContains "not found"
+}
+
+@test "convert namespace to policyspace" {
+  git_rm acme/rnd/newer-prj/namespace.yaml
+  git_add $YAML_DIR/accounting-namespace.yaml acme/rnd/newer-prj/accounting/namespace.yaml
+  git_commit
+
+  wait_for_success "kubectl get ns accounting"
+  kubectl get ns newer-prj
 }
 
 function cleanTestConfigMaps() {
