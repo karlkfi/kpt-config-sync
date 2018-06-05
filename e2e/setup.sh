@@ -1,25 +1,11 @@
 #!/bin/bash
 
-# End to end tests for Nomos.
-# As a prerequisite for running this test, you must have
-# - A 1.9 kubernetes cluster configured for nomos. See
-# -- scripts/cluster/gce/kube-up.sh
-# -- scripts/cluster/gce/configure-apserver-for-nomos.sh
-# -- scripts/cluster/gce/configure-monitoring.sh
-# - kubectl configured with context pointing to that cluster
-# - Docker
-# - gcloud with access to a project that has GCR
-
-# To execute a subset of tests without setup, run as folows:
-# > SKIP_INITIAL_SETUP=1 TEST_FUNCTIONS=testNomosResourceQuota e2e/e2e.sh
-
-set -u
+set -euo pipefail
 
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 
-######################## MAIN #########################
-function kubeSetUp() {
+function set_up_kube() {
   readonly kubeconfig_output="/opt/installer/kubeconfig/config"
   # We need to fix up the kubeconfig paths because these may not match between
   # the container and the host.
@@ -31,7 +17,7 @@ function kubeSetUp() {
   chmod 600 ${kubeconfig_output}
 }
 
-function setUpEnv() {
+function set_up_env() {
   echo "****************** Setting up environment ******************"
   suggested_user="$(gcloud config get-value account)"
 
@@ -46,7 +32,7 @@ function setUpEnv() {
   echo "****************** Environment is ready ******************"
 }
 
-function minimalSetUpEnv() {
+function set_up_env_minimal() {
   echo "****************** Minimal environment setup ******************"
   TEST_LOG_REPO=/tmp/nomos-test
 
@@ -59,6 +45,23 @@ function minimalSetUpEnv() {
   kubectl exec -n=nomos-system -it ${POD_ID} -- git init --bare --shared /git-server/repos/sot.git
 
   echo "****************** Environment is ready ******************"
+}
+
+function clean_up() {
+  echo "****************** Cleaning up environment ******************"
+  kubectl delete ValidatingWebhookConfiguration policy.nomos.dev --ignore-not-found
+  kubectl delete ValidatingWebhookConfiguration resource-quota.nomos.dev --ignore-not-found
+  kubectl delete policynodes --all || true
+  kubectl delete clusterpolicy --all || true
+  kubectl delete --ignore-not-found ns nomos-system
+  ! pkill -f "kubectl -n=nomos-system port-forward.*2222:22"
+
+  echo "Deleting namespaces nomos-system, this may take a minute"
+  while kubectl get ns nomos-system > /dev/null 2>&1
+  do
+    sleep 3
+    echo -n "."
+  done
 }
 
 function main() {
@@ -97,23 +100,6 @@ function main() {
   echo "Tests took $(( ${end_time} - ${start_time} )) seconds."
 }
 
-function cleanUp() {
-  echo "****************** Cleaning up environment ******************"
-  kubectl delete ValidatingWebhookConfiguration policy.nomos.dev --ignore-not-found
-  kubectl delete ValidatingWebhookConfiguration resource-quota.nomos.dev --ignore-not-found
-  kubectl delete policynodes --all || true
-  kubectl delete clusterpolicy --all || true
-  kubectl delete --ignore-not-found ns nomos-system
-  ! pkill -f "kubectl -n=nomos-system port-forward.*2222:22"
-
-  echo "Deleting namespaces nomos-system, this may take a minute"
-  while kubectl get ns nomos-system > /dev/null 2>&1
-  do
-    sleep 3
-    echo -n "."
-  done
-}
-
 filter=""
 clean=false
 setup=false
@@ -139,16 +125,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-kubeSetUp
+set_up_kube
 if $clean ; then
-  cleanUp
+  clean_up
 fi
 if $setup ; then
-  setUpEnv
+  set_up_env
 else
-  minimalSetUpEnv
+  set_up_env_minimal
 fi
 main ${filter}
 if $clean ; then
-  cleanUp
+  clean_up
 fi

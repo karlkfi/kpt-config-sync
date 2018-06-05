@@ -1,9 +1,15 @@
 #!/bin/bash
 
+set -euo pipefail
+
 TEST_REPO_DIR=${BATS_TMPDIR}
 YAML_DIR=$BATS_TEST_DIRNAME/testcases/yaml
 
-# Run for every test
+load lib/assert
+load lib/git
+load lib/wait
+
+# Runs for every test (Called by Bats framework).
 setup() {
   CWD=$(pwd)
   cd ${TEST_REPO_DIR}
@@ -19,161 +25,103 @@ setup() {
   git push origin master
   cd $CWD
   # Wait for syncer to update objects following the policynode updates
-  wait_for_success "kubectl get ns backend"
-  wait_for_success "kubectl get ns frontend"
+  wait::for_success "kubectl get ns backend"
+  wait::for_success "kubectl get ns frontend"
 }
 
-# assertContains <command> <substring>
-# Will fail if the output of the command or its error message doesn't contain substring
-function assertContains() {
-  if [[ "$output" != *"$1"* ]]; then
-    echo "FAIL: [$output] does not contain [$1]"
-    false
-  fi
-}
-
-load git-api
-
-######################## TESTS ########################
-@test "syncer namespace" {
+@test "Namespaces created" {
   run kubectl get ns eng
-  assertContains "NotFound"
+  assert::contains "NotFound"
   run kubectl get ns backend
-  assertContains "Active"
+  assert::contains "Active"
   run kubectl get ns frontend
-  assertContains "Active"
+  assert::contains "Active"
 
   run kubectl get ns frontend -o yaml
-  assertContains 'nomos.dev/namespace-management: full'
+  assert::contains 'nomos.dev/namespace-management: full'
   run kubectl get ns frontend -o yaml
-  assertContains "nomos-parent-ns: eng"
+  assert::contains "nomos-parent-ns: eng"
 }
 
-@test "syncer roles" {
+@test "Roles created" {
   run kubectl get roles -n new-prj
-  assertContains "acme-admin"
+  assert::contains "acme-admin"
 }
 
-@test "syncer role bindings" {
+@test "RoleBindings created" {
   run kubectl get rolebindings -n backend bob-rolebinding -o yaml
-  assertContains "acme-admin"
+  assert::contains "acme-admin"
 
   run kubectl get rolebindings -n backend -o yaml
-  assertContains "alice"
+  assert::contains "alice"
   run kubectl get rolebindings -n frontend -o yaml
-  assertContains "alice"
+  assert::contains "alice"
 }
 
-@test "syncer role bindings change" {
+@test "RoleBindings updated" {
   run kubectl get rolebindings -n backend bob-rolebinding -o yaml
-  assertContains "acme-admin"
-  git_update ${BATS_TEST_DIRNAME}/test-syncer-change-rolebinding-backend.yaml acme/eng/backend/bob-rolebinding.yaml
-  git_commit
-  wait_for_failure "kubectl get rolebindings -n backend bob-rolebinding"
+  assert::contains "acme-admin"
+  git::update ${BATS_TEST_DIRNAME}/test-syncer-change-rolebinding-backend.yaml acme/eng/backend/bob-rolebinding.yaml
+  git::commit
+  wait::for_failure "kubectl get rolebindings -n backend bob-rolebinding"
   run kubectl get rolebindings -n backend bob-rolebinding
-  assertContains "NotFound"
+  assert::contains "NotFound"
   run kubectl get rolebindings -n backend robert-rolebinding -o yaml
-  assertContains "acme-admin"
+  assert::contains "acme-admin"
 }
 
-@test "syncer quota" {
-  run kubectl get quota -n backend -o yaml
-  assertContains 'pods: "1"'
-}
-
-@test "authorizer" {
+@test "RoleBindings enforced" {
   skip "broken currently"
   run kubectl get pods -n backend --as bob@acme.com
-  assertContains "No resources"
+  assert::contains "No resources"
   run kubectl get pods -n backend --as alice@acme.com
-  assertContains "No resources"
+  assert::contains "No resources"
 
   run kubectl get pods -n frontend --as bob@acme.com
-  assertContains "pods is forbidden"
+  assert::contains "pods is forbidden"
 }
 
-@test "quota admission" {
-  cleanTestConfigMaps
-  wait_for_success "kubectl get ns new-prj"
+@test "ResourceQuota created" {
+  run kubectl get quota -n backend -o yaml
+  assert::contains 'pods: "1"'
+}
+
+@test "ResourceQuota enforced" {
+  clean_test_configmaps
+  wait::for_success "kubectl get ns new-prj"
   run kubectl create configmap map1 -n new-prj
-  assertContains "created"
+  assert::contains "created"
   run kubectl create configmap map2 -n newer-prj
-  assertContains "created"
+  assert::contains "created"
   run kubectl create configmap map3 -n new-prj
-  assertContains "exceeded quota in policyspace rnd"
-  cleanTestConfigMaps
+  assert::contains "exceeded quota in policyspace rnd"
+  clean_test_configmaps
 }
 
-@test "namespace garbage collection" {
-  git_add $YAML_DIR/accounting-namespace.yaml acme/eng/accounting/namespace.yaml
-  git_commit
-  wait_for_success "kubectl get ns accounting"
-  git_rm acme/eng/accounting/namespace.yaml
-  git_commit
-  wait_for_failure "kubectl get ns accounting" 20
+@test "Namespace garbage collection" {
+  git::add $YAML_DIR/accounting-namespace.yaml acme/eng/accounting/namespace.yaml
+  git::commit
+  wait::for_success "kubectl get ns accounting"
+  git::rm acme/eng/accounting/namespace.yaml
+  git::commit
+  wait::for_failure "kubectl get ns accounting" 20
   run kubectl get policynodes new-ns
   [ "$status" -eq 1 ]
-  assertContains "not found"
+  assert::contains "not found"
 }
 
 @test "convert namespace to policyspace" {
-  git_rm acme/rnd/newer-prj/namespace.yaml
-  git_add $YAML_DIR/accounting-namespace.yaml acme/rnd/newer-prj/accounting/namespace.yaml
-  git_commit
+  git::rm acme/rnd/newer-prj/namespace.yaml
+  git::add $YAML_DIR/accounting-namespace.yaml acme/rnd/newer-prj/accounting/namespace.yaml
+  git::commit
 
-  wait_for_success "kubectl get ns accounting"
+  wait::for_success "kubectl get ns accounting"
   kubectl get ns newer-prj
 }
 
-function cleanTestConfigMaps() {
+function clean_test_configmaps() {
   kubectl delete configmaps -n new-prj --all > /dev/null
   kubectl delete configmaps -n newer-prj --all > /dev/null
-  wait_for_failure "kubectl -n new-prj configmaps | grep map1"
-  wait_for_failure "kubectl -n newer-prj configmaps | grep map2"
+  wait::for_failure "kubectl -n new-prj configmaps | grep map1"
+  wait::for_failure "kubectl -n newer-prj configmaps | grep map2"
 }
-
-
-function wait_for_success() {
-  local command="${1:-}"
-  local timeout=${2:-10}
-  local or_die=${3:-true}
-  wait_for "${command}" "${timeout}" "${or_die}" true
-}
-
-function wait_for_failure() {
-  local command="${1:-}"
-  local timeout=${2:-10}
-  local or_die=${3:-true}
-  wait_for "${command}" "${timeout}" "${or_die}" false
-}
-
-function wait_for() {
-  local command="${1:-}"
-  local timeout=${2:-10}
-  local or_die=${3:-true}
-  local expect=${4:-true}
-
-  echo -n "Waiting for ${command} to exit ${expect}"
-  for i in $(seq 1 ${timeout}); do
-    run ${command} &> /dev/null
-    if [ $status -eq 0 ]; then
-      if ${expect}; then
-        echo
-        return 0
-      fi
-    else
-      if ! ${expect}; then
-        echo
-        return 0
-      fi
-    fi
-    echo -n "."
-    sleep 0.5
-  done
-  echo
-  echo "Command '${command}' failed after ${timeout} seconds"
-  if ${or_die}; then
-    exit 1
-  fi
-}
-
