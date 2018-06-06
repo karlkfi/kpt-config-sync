@@ -44,7 +44,7 @@ function set_up_env_minimal() {
 function clean_up() {
   echo "****************** Cleaning up environment ******************"
   suggested_user="$(gcloud config get-value account)"
-  // TODO(b/109768593): Fix this hack.
+  # TODO(b/109768593): Fix this hack.
   current_context="$(kubectl config current-context)"
   cat <<EOT >> "${TEST_DIR}/install-config.yaml"
 contexts:
