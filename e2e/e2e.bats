@@ -24,9 +24,13 @@ setup() {
   git diff-index --quiet HEAD || git commit -m "setUp commit"
   git push origin master
   cd $CWD
-  # Wait for syncer to update objects following the policynode updates
+  # Wait for syncer to update each object type.
   wait::for_success "kubectl get ns backend"
-  wait::for_success "kubectl get ns frontend"
+  wait::for_success "kubectl get rolebindings -n backend"
+  wait::for_success "kubectl get roles -n new-prj"
+  wait::for_success "kubectl get quota -n backend"
+  # We delete bob-rolebinding in one test case, make sure it's restored.
+  wait::for_success "kubectl get rolebindings bob-rolebinding -n backend"
 }
 
 @test "Namespaces created" {
@@ -41,6 +45,27 @@ setup() {
   assert::contains 'nomos.dev/namespace-management: full'
   run kubectl get ns frontend -o yaml
   assert::contains "nomos-parent-ns: eng"
+}
+
+@test "Namespace garbage collection" {
+  git::add ${YAML_DIR}/accounting-namespace.yaml acme/eng/accounting/namespace.yaml
+  git::commit
+  wait::for_success "kubectl get ns accounting"
+  git::rm acme/eng/accounting/namespace.yaml
+  git::commit
+  wait::for_failure "kubectl get ns accounting" 20
+  run kubectl get policynodes new-ns
+  [ "$status" -eq 1 ]
+  assert::contains "not found"
+}
+
+@test "Namespace to Policyspace conversion" {
+  git::rm acme/rnd/newer-prj/namespace.yaml
+  git::add ${YAML_DIR}/accounting-namespace.yaml acme/rnd/newer-prj/accounting/namespace.yaml
+  git::commit
+
+  wait::for_success "kubectl get ns accounting"
+  kubectl get ns newer-prj
 }
 
 @test "Roles created" {
@@ -61,7 +86,7 @@ setup() {
 @test "RoleBindings updated" {
   run kubectl get rolebindings -n backend bob-rolebinding -o yaml
   assert::contains "acme-admin"
-  git::update ${BATS_TEST_DIRNAME}/test-syncer-change-rolebinding-backend.yaml acme/eng/backend/bob-rolebinding.yaml
+  git::update ${YAML_DIR}/robert-rolebinding.yaml acme/eng/backend/bob-rolebinding.yaml
   git::commit
   wait::for_failure "kubectl get rolebindings -n backend bob-rolebinding"
   run kubectl get rolebindings -n backend bob-rolebinding
@@ -71,14 +96,15 @@ setup() {
 }
 
 @test "RoleBindings enforced" {
-  skip "broken currently"
   run kubectl get pods -n backend --as bob@acme.com
   assert::contains "No resources"
   run kubectl get pods -n backend --as alice@acme.com
   assert::contains "No resources"
 
   run kubectl get pods -n frontend --as bob@acme.com
-  assert::contains "pods is forbidden"
+  assert::contains "forbidden"
+  run kubectl get pods -n frontend --as alice@acme.com
+  assert::contains "No resources"
 }
 
 @test "ResourceQuota created" {
@@ -96,27 +122,6 @@ setup() {
   run kubectl create configmap map3 -n new-prj
   assert::contains "exceeded quota in policyspace rnd"
   clean_test_configmaps
-}
-
-@test "Namespace garbage collection" {
-  git::add $YAML_DIR/accounting-namespace.yaml acme/eng/accounting/namespace.yaml
-  git::commit
-  wait::for_success "kubectl get ns accounting"
-  git::rm acme/eng/accounting/namespace.yaml
-  git::commit
-  wait::for_failure "kubectl get ns accounting" 20
-  run kubectl get policynodes new-ns
-  [ "$status" -eq 1 ]
-  assert::contains "not found"
-}
-
-@test "convert namespace to policyspace" {
-  git::rm acme/rnd/newer-prj/namespace.yaml
-  git::add $YAML_DIR/accounting-namespace.yaml acme/rnd/newer-prj/accounting/namespace.yaml
-  git::commit
-
-  wait::for_success "kubectl get ns accounting"
-  kubectl get ns newer-prj
 }
 
 function clean_test_configmaps() {
