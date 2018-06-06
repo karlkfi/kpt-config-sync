@@ -33,6 +33,7 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
+	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -375,7 +376,7 @@ func (t *Context) WaitForNamespaceDeleted(namespace string) error {
 // DeleteClusterrolebinding deletes a cluster role binding by the given name.
 func (t *Context) DeleteClusterrolebinding(name string) error {
 	if err := t.Kubernetes().RbacV1().ClusterRoleBindings().Delete(
-		name, &meta_v1.DeleteOptions{}); err != nil {
+		name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
 		return errors.Wrapf(err, "while deleting clusterrolebinding %q", name)
 	}
 	return nil
@@ -384,7 +385,7 @@ func (t *Context) DeleteClusterrolebinding(name string) error {
 // DeleteClusterrole deletes a cluster role by the given name.
 func (t *Context) DeleteClusterrole(name string) error {
 	if err := t.Kubernetes().RbacV1().ClusterRoles().Delete(
-		name, &meta_v1.DeleteOptions{}); err != nil {
+		name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
 		return errors.Wrapf(err, "while deleting clusterrole %q", name)
 	}
 	return nil
