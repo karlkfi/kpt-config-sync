@@ -3,7 +3,7 @@
 set -euo pipefail
 
 TEST_REPO_DIR=${BATS_TMPDIR}
-YAML_DIR=$BATS_TEST_DIRNAME/testcases/yaml
+YAML_DIR=${BATS_TEST_DIRNAME}/yaml
 
 load lib/assert
 load lib/git

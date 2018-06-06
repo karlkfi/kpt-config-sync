@@ -19,10 +19,8 @@ function set_up_kube() {
 
 function set_up_env() {
   echo "****************** Setting up environment ******************"
-  suggested_user="$(gcloud config get-value account)"
-
   /opt/testing/e2e/init-git-server.sh
-
+  suggested_user="$(gcloud config get-value account)"
   /opt/installer/installer \
     --config="${TEST_DIR}/install-config.yaml" \
     --log_dir=/tmp \
@@ -35,33 +33,32 @@ function set_up_env() {
 function set_up_env_minimal() {
   echo "****************** Minimal environment setup ******************"
   TEST_LOG_REPO=/tmp/nomos-test
-
   FWD_SSH_PORT=2222
-
   POD_ID=$(kubectl get pods -n=nomos-system -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
-
   mkdir -p ${TEST_LOG_REPO}
   kubectl -n=nomos-system port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
   kubectl exec -n=nomos-system -it ${POD_ID} -- git init --bare --shared /git-server/repos/sot.git
-
   echo "****************** Environment is ready ******************"
 }
 
 function clean_up() {
   echo "****************** Cleaning up environment ******************"
-  kubectl delete ValidatingWebhookConfiguration policy.nomos.dev --ignore-not-found
-  kubectl delete ValidatingWebhookConfiguration resource-quota.nomos.dev --ignore-not-found
-  kubectl delete policynodes --all || true
-  kubectl delete clusterpolicy --all || true
-  kubectl delete --ignore-not-found ns nomos-system
-  ! pkill -f "kubectl -n=nomos-system port-forward.*2222:22"
+  suggested_user="$(gcloud config get-value account)"
+  // TODO(b/109768593): Fix this hack.
+  current_context="$(kubectl config current-context)"
+  cat <<EOT >> "${TEST_DIR}/install-config.yaml"
+contexts:
+  - ${current_context}
+EOT
 
-  echo "Deleting namespaces nomos-system, this may take a minute"
-  while kubectl get ns nomos-system > /dev/null 2>&1
-  do
-    sleep 3
-    echo -n "."
-  done
+  /opt/installer/installer \
+    --config="${TEST_DIR}/install-config.yaml" \
+    --log_dir=/tmp \
+    --suggested_user="${suggested_user}" \
+    --use_current_context=true \
+		--uninstall=deletedeletedelete \
+    --vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10
+  ! pkill -f "kubectl -n=nomos-system port-forward.*2222:22"
 }
 
 function main() {

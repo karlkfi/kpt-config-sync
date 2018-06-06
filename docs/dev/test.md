@@ -1,11 +1,14 @@
 # Testing
 
+## Unit Tests
+
 To run unit tests and linters:
 
 ```console
 make
 ```
 
+## E2E Tests
 end-to-end tests deploy Nomos components on a Kubernetes cluster and verify
 functionality through Git commits:
 
@@ -34,3 +37,10 @@ During iterative development of e2e tests, you may want to skip time-consuming s
   ```
  
 3- Repeat step 2 as necessary.
+
+
+#### Options
+
+Env Var     | Value                                                           | Example
+----------- | --------------------------------------------------------------- | -------
+TEST_FILTER | regex for filtering test files from the e2e/testcases directory | make TEST_FILTER=syncer test-e2e
