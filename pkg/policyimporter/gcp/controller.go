@@ -17,7 +17,9 @@ package gcp
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -29,6 +31,8 @@ import (
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/oauth"
 )
 
 const resync = time.Minute * 15
@@ -37,6 +41,8 @@ const resync = time.Minute * 15
 type Controller struct {
 	org                 string
 	watcherAddr         string
+	credsFile           string
+	scopes              []string
 	client              meta.Interface
 	actionFactories     actions.Factories
 	informerFactory     externalversions.SharedInformerFactory
@@ -46,7 +52,7 @@ type Controller struct {
 }
 
 // NewController returns a new Controller.
-func NewController(org string, watcherAddr string, client meta.Interface, stopChan chan struct{}) *Controller {
+func NewController(org, watcherAddr, credsFile, scopeString string, client meta.Interface, stopChan chan struct{}) *Controller {
 	informerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), resync)
 	f := actions.NewFactories(
@@ -54,10 +60,14 @@ func NewController(org string, watcherAddr string, client meta.Interface, stopCh
 		informerFactory.Nomos().V1().PolicyNodes().Lister(),
 		informerFactory.Nomos().V1().ClusterPolicies().Lister())
 
+	scopes := strings.Split(scopeString, ",")
+
 	return &Controller{
 		org:                 org,
 		watcherAddr:         watcherAddr,
 		client:              client,
+		credsFile:           credsFile,
+		scopes:              scopes,
 		actionFactories:     f,
 		informerFactory:     informerFactory,
 		policyNodeLister:    informerFactory.Nomos().V1().PolicyNodes().Lister(),
@@ -86,13 +96,25 @@ func (c *Controller) Run() error {
 func (c *Controller) run() error {
 	glog.Infof("Running")
 
-	currentPolicies, err := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister)
-	if err != nil {
-		return errors.Wrapf(err, "failed to list current policies")
+	if c.credsFile == "" {
+		return fmt.Errorf("a credentials file is required")
 	}
 
-	// TODO(frankfarzan): Configure auth.
-	conn, err := grpc.Dial(c.watcherAddr, grpc.WithInsecure())
+	currentPolicies, listErr := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister)
+	if listErr != nil {
+		return errors.Wrapf(listErr, "failed to list current policies")
+	}
+
+	perRPC, err := oauth.NewServiceAccountFromFile(c.credsFile, c.scopes...)
+	if err != nil {
+		return errors.Wrapf(err, "while creating credentials from: %q", c.credsFile)
+	}
+	opts := []grpc.DialOption{
+		grpc.WithPerRPCCredentials(perRPC),
+		grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})),
+	}
+
+	conn, err := grpc.Dial(c.watcherAddr, opts...)
 	if err != nil {
 		return errors.Wrapf(err, "failed to dial to server")
 	}
