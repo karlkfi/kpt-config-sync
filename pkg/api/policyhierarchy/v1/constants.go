@@ -23,7 +23,7 @@ const NoParentNamespace = ""
 
 // ParentLabelKey is the Key of a label set on a namespace with value set to the parent namespace's
 // name.
-const ParentLabelKey = "nomos-parent-ns"
+const ParentLabelKey = "nomos.dev/parent-name"
 
 // ClusterPolicyName is the name of the singleton ClusterPolicy resource.
 const ClusterPolicyName = "nomos-cluster-policy"
