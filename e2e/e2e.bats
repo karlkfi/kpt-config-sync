@@ -2,36 +2,12 @@
 
 set -euo pipefail
 
-TEST_REPO_DIR=${BATS_TMPDIR}
 YAML_DIR=${BATS_TEST_DIRNAME}/yaml
 
 load lib/assert
 load lib/git
 load lib/wait
-
-# Runs for every test (Called by Bats framework).
-setup() {
-  CWD=$(pwd)
-  cd ${TEST_REPO_DIR}
-  rm -rf repo
-  git clone ssh://git@localhost:2222/git-server/repos/sot.git ${TEST_REPO_DIR}/repo
-  cd ${TEST_REPO_DIR}/repo
-  git config user.name "Testing Nome"
-  git config user.email testing_nome@example.com
-  git rm -qrf acme
-  cp -r /opt/testing/e2e/sot/acme ./
-  git add -A
-  git diff-index --quiet HEAD || git commit -m "setUp commit"
-  git push origin master
-  cd $CWD
-  # Wait for syncer to update each object type.
-  wait::for_success "kubectl get ns backend"
-  wait::for_success "kubectl get rolebindings -n backend"
-  wait::for_success "kubectl get roles -n new-prj"
-  wait::for_success "kubectl get quota -n backend"
-  # We delete bob-rolebinding in one test case, make sure it's restored.
-  wait::for_success "kubectl get rolebindings bob-rolebinding -n backend"
-}
+load lib/setup
 
 @test "Namespaces created" {
   run kubectl get ns eng
