@@ -37,9 +37,31 @@ const (
 	CreateOperation = OperationType("create")
 	// UpsertOperation will create or update the resource
 	UpsertOperation = OperationType("upsert")
+	// UpdateOperation will attempt to update the resource until it succeeds or gives up
+	UpdateOperation = OperationType("update")
 	// DeleteOperation will delete the resource
 	DeleteOperation = OperationType("delete")
 )
+
+// noUpdateNeededError is returned if no update is needed for the given resource.
+type noUpdateNeededError struct {
+}
+
+// Error implements error
+func (e *noUpdateNeededError) Error() string {
+	return "noUpdateNeededError"
+}
+
+// NoUpdateNeeded returns an error code for update not required.
+func NoUpdateNeeded() error {
+	return &noUpdateNeededError{}
+}
+
+// isNoUpdateNeeded checks for whether the returned error is noUpdateNeededError
+func isNoUpdateNeeded(err error) bool {
+	_, ok := err.(*noUpdateNeededError)
+	return ok
+}
 
 // ReflectiveActionBase is the base implementation for performing actions using reflection. This
 // supports both namespace and cluster scoped resources.
@@ -191,6 +213,18 @@ func (s *ReflectiveActionBase) update(currentResource runtime.Object) (runtime.O
 	return s.toObjectError(updateMethod.Call(updateArgs))
 }
 
+// tryUpdate will attempt to update on the current object.
+// Example code:
+// client := kubernetesClient.RbacV1().ClusterRoles() // first line
+// return client.Update(obj)
+func (s *ReflectiveActionBase) tryUpdate(obj runtime.Object) (runtime.Object, error) {
+	client := s.client()
+	updateMethod := client.MethodByName("Update")
+	updateObject := reflect.ValueOf(obj)
+	updateArgs := []reflect.Value{updateObject}
+	return s.toObjectError(updateMethod.Call(updateArgs))
+}
+
 // toObjectError takes a [runtime.Object, error] in the form of their reflect.Value representation
 // and appropriately converts to (runtime.Object, error)
 func (s ReflectiveActionBase) toObjectError(returnValues []reflect.Value) (runtime.Object, error) {
@@ -243,6 +277,71 @@ func NewReflectiveCreateAction(
 			spec:      spec,
 		},
 	}
+}
+
+// Update is a function that updates the state of an API object.
+type Update func(runtime.Object) (runtime.Object, error)
+
+// ReflectiveUpdateAction implements an update action for all generated client stubs.
+type ReflectiveUpdateAction struct {
+	ReflectiveActionBase
+	update   Update
+	MaxTries int
+}
+
+var _ Interface = &ReflectiveUpdateAction{}
+
+// NewReflectiveUpdateAction creates a new update action given a namespace, name and spec.  The
+// action will retry until the update succeeds or update returns error.
+func NewReflectiveUpdateAction(
+	namespace, name string, update Update, spec *ReflectiveActionSpec) *ReflectiveUpdateAction {
+	return &ReflectiveUpdateAction{
+		ReflectiveActionBase: ReflectiveActionBase{
+			namespace: namespace,
+			name:      name,
+			operation: UpdateOperation,
+			spec:      spec,
+		},
+		update:   update,
+		MaxTries: 5,
+	}
+}
+
+// Execute implements Interface
+func (s *ReflectiveUpdateAction) Execute() error {
+	timer := prometheus.NewTimer(Duration.WithLabelValues(s.Namespace(), s.Resource(), string(s.Operation())))
+	defer timer.ObserveDuration()
+	glog.V(1).Infof("Executing %s", s)
+	return s.doUpdate()
+}
+
+func (s *ReflectiveUpdateAction) doUpdate() error {
+	var err error
+	for tryNum := 0; tryNum < s.MaxTries; tryNum++ {
+		var obj, newObj runtime.Object
+		obj, err = s.listerGet()
+		if err != nil {
+			return err
+		}
+
+		newObj, err = s.update(obj)
+		if err != nil {
+			if isNoUpdateNeeded(err) {
+				return nil
+			}
+			return err
+		}
+
+		_, err = s.tryUpdate(newObj)
+		if err == nil {
+			glog.V(1).Infof("OK: %s", s)
+			return nil
+		}
+		if !api_errors.IsConflict(err) {
+			return err
+		}
+	}
+	return errors.Errorf("max update tries exceeded %s", s)
 }
 
 // ReflectiveUpsertAction implements an upsert action for all generated client stubs.

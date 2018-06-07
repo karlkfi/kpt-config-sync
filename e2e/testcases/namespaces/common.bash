@@ -3,6 +3,7 @@
 load ../../lib/assert
 load ../../lib/git
 load ../../lib/namespace
+load ../../lib/resource
 load ../../lib/setup
 load ../../lib/wait
 

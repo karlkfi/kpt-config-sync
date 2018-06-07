@@ -246,6 +246,9 @@ func (s *PolicyHieraryController) softReconcile(name string) error {
 		case namespaceStateExists:
 			s.warnNoLabel(ns)
 		case namespaceStateManagePolicies, namespaceStateManageFull:
+			if err := s.updateNamespace(ancestry.Node()); err != nil {
+				return err
+			}
 			return s.managePolicies(name, ancestry)
 		}
 
@@ -370,6 +373,21 @@ func (s *PolicyHieraryController) createNamespace(policyNode *policyhierarchy_v1
 	act := actions.NewNamespaceCreateAction(
 		policyNode.Name,
 		"",
+		labels,
+		s.injectArgs.KubernetesClientSet,
+		s.namespaceLister)
+	if err := act.Execute(); err != nil {
+		return errors.Wrapf(err, "failed to execute upsert action for %s", act)
+	}
+	return nil
+}
+
+func (s *PolicyHieraryController) updateNamespace(policyNode *policyhierarchy_v1.PolicyNode) error {
+	labels := map[string]string{}
+	labels[policyhierarchy_v1.ParentLabelKey] = policyNode.Spec.Parent
+
+	act := actions.NewNamespaceUpdateAction(
+		policyNode.Name,
 		labels,
 		s.injectArgs.KubernetesClientSet,
 		s.namespaceLister)

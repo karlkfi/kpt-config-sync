@@ -91,6 +91,31 @@ func NewNamespaceUpsertAction(
 	return action.NewReflectiveUpsertAction(writeParams(namespace, ownerUID, labels, client, lister))
 }
 
+// NewNamespaceUpdateAction creates a new ReflectiveUpdateAction for the namespace.
+func NewNamespaceUpdateAction(
+	namespace string,
+	labels map[string]string,
+	client kubernetes.Interface,
+	lister listers_core_v1.NamespaceLister) *action.ReflectiveUpdateAction {
+	updateFunction := func(old runtime.Object) (runtime.Object, error) {
+		oldNs := old.(*core_v1.Namespace)
+		newNs := oldNs.DeepCopy()
+		newNs.ResourceVersion = oldNs.ResourceVersion
+		dirty := false
+		for key, value := range labels {
+			if oldValue, found := newNs.Labels[key]; !found || oldValue != value {
+				dirty = true
+				newNs.Labels[key] = value
+			}
+		}
+		if !dirty {
+			return nil, action.NoUpdateNeeded()
+		}
+		return newNs, nil
+	}
+	return action.NewReflectiveUpdateAction("", namespace, updateFunction, nsSpec(client, lister))
+}
+
 // NewNamespaceCreateAction creates a new ReflectiveCreateAction for the namespace.
 func NewNamespaceCreateAction(
 	namespace string,

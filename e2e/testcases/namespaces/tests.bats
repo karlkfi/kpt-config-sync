@@ -134,3 +134,34 @@ load common
   namespace::check_warning $ns
 }
 
+@test "namespace declared, has policies label, update parent" {
+  local nsp=move-decl-policies
+  local nsf=move-decl-full
+  namespace::create ${nsp} policies
+  namespace::declare_policyspace src
+  namespace::declare_policyspace dst
+  namespace::declare src/$nsp
+  namespace::declare src/$nsf
+  git::commit
+
+  namespace::check_exists $nsp policies
+  namespace::check_exists $nsf full
+
+  local nsp_ver=$(resource::resource_version ns ${nsp})
+  local nsf_ver=$(resource::resource_version ns ${nsf})
+
+  namespace::declare dst/$nsp
+  namespace::declare dst/$nsf
+  git::rm acme/src/$nsp/namespace.yaml
+  git::rm acme/src/$nsf/namespace.yaml
+  git::commit
+
+  namespace::check_exists $nsp policies
+  namespace::check_exists $nsf full
+
+  resource::wait_for_update ns ${nsp} ${nsp_ver}
+  resource::wait_for_update ns ${nsf} ${nsf_ver}
+
+  namespace::check_parent $nsp dst
+  namespace::check_parent $nsf dst
+}
