@@ -51,6 +51,7 @@ contexts:
   - ${current_context}
 EOT
 
+  echo "  Uninstalling..."
   /opt/installer/installer \
     --config="${TEST_DIR}/install-config.yaml" \
     --log_dir=/tmp \
@@ -58,7 +59,8 @@ EOT
     --use_current_context=true \
 		--uninstall=deletedeletedelete \
     --vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10
-  ! pkill -f "kubectl -n=nomos-system port-forward.*2222:22"
+  echo "  killing kubectl port forward..."
+  pkill -f "kubectl -n=nomos-system port-forward.*2222:22" || true
 }
 
 function main() {
