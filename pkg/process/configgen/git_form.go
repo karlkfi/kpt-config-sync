@@ -21,8 +21,8 @@ acting as the source of truth for the policies.`
 	// The default visible length of each input field.
 	inputFieldVisibleLength = 60
 
-	// The default maximum input for ssh fields in this form.
-	sshInputFieldMaxLength = 200
+	// The default maximum input for fields in this form.
+	inputFieldMaxLength = 200
 
 	// The column at which the form text input starts.
 	gitFormTextColumn = 2
@@ -95,7 +95,7 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 				Y:       gitRepoRow,
 				X:       gitFormInputColumn,
 				ViewLen: inputFieldVisibleLength,
-				MaxLen:  inputFieldVisibleLength,
+				MaxLen:  inputFieldMaxLength,
 			},
 		),
 		dialog.FormItem(
@@ -123,7 +123,7 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 				Y:       privateKeyRow,
 				X:       gitFormInputColumn,
 				ViewLen: inputFieldVisibleLength,
-				MaxLen:  sshInputFieldMaxLength,
+				MaxLen:  inputFieldMaxLength,
 			},
 		),
 		dialog.FormItem(
@@ -137,7 +137,7 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 				Y:       knownHostsRow,
 				X:       gitFormInputColumn,
 				ViewLen: inputFieldVisibleLength,
-				MaxLen:  sshInputFieldMaxLength,
+				MaxLen:  inputFieldMaxLength,
 			},
 		),
 		dialog.FormItem(
@@ -151,7 +151,7 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 				Y:       cookieFilenameRow,
 				X:       gitFormInputColumn,
 				ViewLen: inputFieldVisibleLength,
-				MaxLen:  sshInputFieldMaxLength,
+				MaxLen:  inputFieldMaxLength,
 			},
 		),
 		dialog.FormItem(
@@ -165,7 +165,7 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 				Y:       branchToSyncRow,
 				X:       gitFormInputColumn,
 				ViewLen: inputFieldVisibleLength,
-				MaxLen:  inputFieldVisibleLength,
+				MaxLen:  inputFieldMaxLength,
 			},
 		),
 		dialog.FormItem(
@@ -179,7 +179,7 @@ func NewGitForm(o dialog.Options, cfg *config.GitConfig) *GitForm {
 				Y:       rootPolicyDirRow,
 				X:       gitFormInputColumn,
 				ViewLen: inputFieldVisibleLength,
-				MaxLen:  inputFieldVisibleLength,
+				MaxLen:  inputFieldMaxLength,
 			},
 		),
 		dialog.FormItem(
