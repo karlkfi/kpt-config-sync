@@ -123,7 +123,7 @@ func (c *Controller) run() error {
 	glog.Infof("Connected to Watcher service at %s", c.watcherAddr)
 
 	client := watcher.NewWatcherClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	stream, err := client.Watch(ctx, &watcher.Request{Target: fmt.Sprintf("organizations/%s?recursive=true", c.org)})
 	if err != nil {
@@ -131,12 +131,10 @@ func (c *Controller) run() error {
 	}
 	glog.Infof("Started streaming RPC to Watcher API")
 
-	ctx2, cancel2 := context.WithCancel(context.Background())
-	defer cancel2()
 	go func() {
 		<-c.stopChan
 		glog.Infof("Stop received, cancelling context")
-		cancel2()
+		cancel()
 	}()
 	ch := make(chan actionVal)
 	g := actionGenerator{
@@ -145,7 +143,7 @@ func (c *Controller) run() error {
 		currentPolicies: *currentPolicies,
 		actionFactories: c.actionFactories,
 	}
-	go g.generate(ctx2)
+	go g.generate(ctx)
 	return applyActions(ch)
 }
 

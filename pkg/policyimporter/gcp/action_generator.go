@@ -32,6 +32,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
 )
 
 const (
@@ -86,12 +87,16 @@ func (g *actionGenerator) generate(ctx context.Context) {
 
 	for {
 		changeBatch, err := g.stream.Recv()
-		if err == io.EOF {
-			glog.Info("Received graceful EOF")
-			return
-		}
 
 		if err != nil {
+			if err == io.EOF {
+				glog.Info("Received graceful EOF")
+				return
+			}
+			if s := status.Convert(err); s.Code() == codes.Canceled {
+				glog.Info("Receive context cancelled")
+				return
+			}
 			g.sendErr(ctx, errors.Wrapf(err, "failure on streaming receive"))
 			return
 		}
