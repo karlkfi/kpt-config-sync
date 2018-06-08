@@ -20,7 +20,7 @@ load lib/setup
   run kubectl get ns frontend -o yaml
   assert::contains 'nomos.dev/namespace-management: full'
   run kubectl get ns frontend -o yaml
-  assert::contains "nomos-parent-ns: eng"
+  assert::contains "nomos.dev/parent-name: eng"
 }
 
 @test "Namespace garbage collection" {
