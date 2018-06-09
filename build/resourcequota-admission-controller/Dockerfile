@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM busybox
+FROM alpine
 ADD resourcequota-admission-controller resourcequota-admission-controller
 EXPOSE 8000
 ENTRYPOINT ["/resourcequota-admission-controller", \

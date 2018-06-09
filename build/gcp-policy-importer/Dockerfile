@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM busybox
+FROM alpine
 ADD gcp-policy-importer gcp-policy-importer
 ENTRYPOINT ["/gcp-policy-importer"]

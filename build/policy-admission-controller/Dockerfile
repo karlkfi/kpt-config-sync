@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM busybox
+FROM alpine
 ADD policy-admission-controller policy-admission-controller
 EXPOSE 8000
 ENTRYPOINT ["/policy-admission-controller", \
