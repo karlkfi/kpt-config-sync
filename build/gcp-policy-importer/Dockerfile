@@ -13,5 +13,8 @@
 # limitations under the License.
 
 FROM alpine
+
+# https://github.com/GoogleCloudPlatform/google-cloud-go/issues/791#issuecomment-353689746
+RUN apk --no-cache --update add ca-certificates
+
 ADD gcp-policy-importer gcp-policy-importer
-ENTRYPOINT ["/gcp-policy-importer"]

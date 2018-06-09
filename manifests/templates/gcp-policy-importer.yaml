@@ -38,6 +38,7 @@ spec:
       containers:
       - name: gcp-policy-importer
         image: IMAGE_NAME
+        args: ["--gcp-credentials-file=/etc/gcp-creds/gcp-private-key"]
         ports:
           - containerPort: 8675
             name: metrics-port
