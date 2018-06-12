@@ -18,3 +18,4 @@ FROM alpine
 RUN apk --no-cache --update add ca-certificates
 
 ADD gcp-policy-importer gcp-policy-importer
+ENTRYPOINT ["/gcp-policy-importer"]

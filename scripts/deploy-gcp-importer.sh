@@ -6,7 +6,7 @@
 # $ ./scripts/deploy-gcp-importer.sh
 
 CREDS_FILE=~/watcher_client_key.json
-ORD_ID=515925372711
+ORG_ID=515925372711
 
 kubectl delete deployment git-policy-importer -n nomos-system
 kubectl delete configmap gcp-policy-importer -n nomos-system
