@@ -27,8 +27,14 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func RenameRoleBinding(r *rbac_v1.RoleBinding, name string) *rbac_v1.RoleBinding {
+	c := r.DeepCopy()
+	c.Name = name
+	return c
+}
+
 func TestRoleBindings(t *testing.T) {
-	admins := rbac_v1.RoleBinding{
+	admins := &rbac_v1.RoleBinding{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: "admins",
 		},
@@ -45,7 +51,7 @@ func TestRoleBindings(t *testing.T) {
 			Name:     "admin",
 		},
 	}
-	editors := rbac_v1.RoleBinding{
+	editors := &rbac_v1.RoleBinding{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: "editors",
 		},
@@ -62,7 +68,7 @@ func TestRoleBindings(t *testing.T) {
 			Name:     "editor",
 		},
 	}
-	bobs := rbac_v1.RoleBinding{
+	bobs := &rbac_v1.RoleBinding{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: "bobs",
 		},
@@ -134,54 +140,66 @@ func TestRoleBindings(t *testing.T) {
 				Name:       "Base case",
 				Aggregated: &AggregatedRoleBinding{},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
+					ObjectMeta: meta_v1.ObjectMeta{
+						Name: "current",
+					},
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
 						RoleBindingsV1: []rbac_v1.RoleBinding{
-							admins,
+							*admins,
 						},
 					},
 				},
 				Expect: hierarchy.Instances{
-					&admins,
+					RenameRoleBinding(admins, "current.admins"),
 				},
 			},
 			test.ModuleAggregationTestcase{
 				Name: "Node empty",
 				Aggregated: &AggregatedRoleBinding{
-					roleBindings: []rbac_v1.RoleBinding{editors},
+					roleBindings: []*rbac_v1.RoleBinding{editors},
 				},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{},
-				Expect:     hierarchy.Instances{&editors},
+				Expect:     hierarchy.Instances{editors},
 			},
 			test.ModuleAggregationTestcase{
 				Name:       "Base case",
 				Aggregated: &AggregatedRoleBinding{},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
+					ObjectMeta: meta_v1.ObjectMeta{
+						Name: "base",
+					},
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
 						RoleBindingsV1: []rbac_v1.RoleBinding{
-							admins,
+							*admins,
 						},
 					},
 				},
 				Expect: hierarchy.Instances{
-					&admins,
+					RenameRoleBinding(admins, "base.admins"),
 				},
 			},
 			test.ModuleAggregationTestcase{
 				Name: "Aggregation case",
 				Aggregated: &AggregatedRoleBinding{
-					roleBindings: []rbac_v1.RoleBinding{bobs, editors},
+					roleBindings: []*rbac_v1.RoleBinding{
+						RenameRoleBinding(bobs, "parent.bobs"),
+						RenameRoleBinding(editors, "parent.editors"),
+					},
 				},
 				PolicyNode: &policyhierarchy_v1.PolicyNode{
+					ObjectMeta: meta_v1.ObjectMeta{
+						Name: "current",
+					},
 					Spec: policyhierarchy_v1.PolicyNodeSpec{
 						RoleBindingsV1: []rbac_v1.RoleBinding{
-							admins,
+							*admins,
 						},
 					},
 				},
 				Expect: hierarchy.Instances{
-					&admins,
-					&bobs,
-					&editors,
+					RenameRoleBinding(admins, "current.admins"),
+					RenameRoleBinding(bobs, "parent.bobs"),
+					RenameRoleBinding(editors, "parent.editors"),
 				},
 			},
 		},

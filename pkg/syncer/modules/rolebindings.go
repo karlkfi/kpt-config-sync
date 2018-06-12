@@ -18,6 +18,7 @@ limitations under the License.
 package modules
 
 import (
+	"fmt"
 	"reflect"
 
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
@@ -34,22 +35,26 @@ import (
 
 // AggregatedRoleBinding provides aggregation operations for the RoleBinding resource.
 type AggregatedRoleBinding struct {
-	roleBindings []rbac_v1.RoleBinding
+	roleBindings []*rbac_v1.RoleBinding
 }
 
 // Aggregated implements hierarchy.AggregatedNode
 func (s *AggregatedRoleBinding) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarchy.AggregatedNode {
-	roleBindings := make([]rbac_v1.RoleBinding, len(s.roleBindings)+len(node.Spec.RoleBindingsV1))
+	roleBindings := make([]*rbac_v1.RoleBinding, len(s.roleBindings), len(s.roleBindings)+len(node.Spec.RoleBindingsV1))
 	copy(roleBindings[0:len(s.roleBindings)], s.roleBindings)
-	copy(roleBindings[len(s.roleBindings):], node.Spec.RoleBindingsV1)
+	for _, roleBinding := range node.Spec.RoleBindingsV1 {
+		renamedRoleBinding := roleBinding.DeepCopy()
+		renamedRoleBinding.Name = fmt.Sprintf("%s.%s", node.Name, roleBinding.Name)
+		roleBindings = append(roleBindings, renamedRoleBinding)
+	}
 	return &AggregatedRoleBinding{roleBindings: roleBindings}
 }
 
 // Generate implements hierarchy.AggregatedNode
 func (s *AggregatedRoleBinding) Generate() hierarchy.Instances {
-	var instances hierarchy.Instances
+	instances := make(hierarchy.Instances, 0, len(s.roleBindings))
 	for _, roleBinding := range s.roleBindings {
-		instances = append(instances, roleBinding.DeepCopy())
+		instances = append(instances, roleBinding)
 	}
 	return instances
 }

@@ -140,13 +140,16 @@ This is done by automatically creating inherited RoleBindings in a namespace:
 
 ```console
 $ kubectl get rolebinding --namespace shipping-dev -o name
-job-creators
-pod-creators
+shipping-dev.job-creators
+shipping-app-backend.pod-creators
+foo-corp.viewers
 ```
 
 Inheritance is implemented by flattening resources in namespaces. In
 `shipping-dev` namespace, `pod-creators` is inherited and `job-creators` is
-created directly in the namespace.
+created directly in the namespace. While inheriting, the rolebindinding
+resources have the directory name prepended with a dot separator. This is to
+allow a rolebinding to be created at any level without naming conflicts.
 
 Note that policies are themselves resources which means a user may be able to
 edit policies outside of Nomos (e.g. using kubectl) or create rolebindings

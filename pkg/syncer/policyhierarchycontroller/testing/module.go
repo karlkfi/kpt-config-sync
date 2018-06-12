@@ -81,6 +81,9 @@ func (tc ModuleAggregationTestcase) Run(module policyhierarchycontroller.Module)
 		for i := 0; i < len(tc.Expect); i++ {
 			expect := tc.Expect[i]
 			act := actual[i]
+			if expect.GetName() != act.GetName() {
+				t.Errorf("Name mismatch, expected %s, got %s", expect.GetName(), act.GetName())
+			}
 			if !module.Equal(expect, act) {
 				cfg := spew.NewDefaultConfig()
 				cfg.Indent = "  "

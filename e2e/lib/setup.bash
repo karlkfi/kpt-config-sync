@@ -41,7 +41,7 @@ setup() {
   wait::for_success "kubectl get roles -n new-prj"
   wait::for_success "kubectl get quota -n backend"
   # We delete bob-rolebinding in one test case, make sure it's restored.
-  wait::for_success "kubectl get rolebindings bob-rolebinding -n backend"
+  wait::for_success "kubectl get rolebindings backend.bob-rolebinding -n backend"
 }
 
 teardown() {

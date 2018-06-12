@@ -27,8 +27,8 @@ Rolebindings are inherited from parent directories:
 $ kubectl get rolebinding -n shipping-dev
 ```
 
-This should return 3 rolebindings: `job-creators`, `pod-creators`, and
-`viewers`.
+This should return 3 rolebindings: `shipping-dev.job-creators`,
+`shipping-app-backend.pod-creators`, and `foo-corp.viewers`.
 
 You can test effective RBAC policies by impersonating users. For example, this
 should be forbidden:
