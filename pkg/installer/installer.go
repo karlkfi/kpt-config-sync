@@ -66,7 +66,6 @@ var (
 		"nomos.dev:syncer",
 
 		// TODO(2018-05-31): these are legacy names, remove these at 0.9.0 <= release.
-		"nomos-nomosresourcequota-controller",
 		"nomos-policy-importer",
 		"nomos-resourcequota-admission-controller",
 		"nomos-policy-admission-controller",
