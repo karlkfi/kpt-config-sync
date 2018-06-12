@@ -1,4 +1,4 @@
-# Copyright 2018 Nomos Authors
+# Copyright 2017 Nomos Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,5 +17,17 @@ FROM alpine
 # https://github.com/GoogleCloudPlatform/google-cloud-go/issues/791#issuecomment-353689746
 RUN apk --no-cache --update add ca-certificates
 
-ADD gcp-policy-importer gcp-policy-importer
-ENTRYPOINT ["/gcp-policy-importer"]
+RUN mkdir -p /opt/nomos/bin
+ENV PATH="/opt/nomos/bin:${PATH}"
+WORKDIR /opt/nomos/bin
+COPY gcp-policy-importer gcp-policy-importer
+COPY git-policy-importer git-policy-importer
+COPY nomosvet nomosvet
+COPY policy-admission-controller policy-admission-controller
+COPY resourcequota-admission-controller resourcequota-admission-controller
+COPY syncer syncer
+
+# Required by admission controllers.
+EXPOSE 8000
+
+CMD echo -e "Need to specify a Nomos binary:\n\n$(ls .)" && exit 1

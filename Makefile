@@ -80,15 +80,14 @@ BUILD_IMAGE ?= buildenv
 # GCP project that owns container registry for local dev build.
 GCP_PROJECT ?= stolos-dev
 
-# All Nomos apps which run on K8S.
-ALL_K8S_APPS := syncer \
+# All Nomos K8S deployments.
+ALL_K8S_DEPLOYMENTS := syncer \
 	git-policy-importer \
 	resourcequota-admission-controller \
 	policy-admission-controller
 
-# ALl Nomos apps that are dockerized.
-ALL_APPS := $(ALL_K8S_APPS) \
-	nomosvet
+# Nomos docker images containing all binaries.
+NOMOS_IMAGE := nomos
 
 GIT_SERVER_SRC := https://github.com/jkarlosb/git-server-docker.git
 
@@ -173,20 +172,16 @@ $(SCRIPTS_STAGING_DIR)/run-installer.sh: $(OUTPUT_DIR) $(TOP_DIR)/scripts/run-in
 
 .PHONY: build
 build: buildenv
-	@echo "+++ Compiling nomos hermetically using a docker container"
+	@echo "+++ Compiling Nomos binaries hermetically using a docker container"
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/build.sh
 
-# Creates a docker image for each nomos component.
-image-all: $(addprefix image-, $(ALL_APPS))
-	@echo "+++ Finished packaging all"
-
 # Creates a docker image for the specified nomos component.
-image-%: build
-	@echo "+++ Building image for $*"
-	@cp -r $(TOP_DIR)/build/$* $(STAGING_DIR)
-	@cp $(BIN_DIR)/$(ARCH)/$* $(STAGING_DIR)/$*
+image-nomos: build
+	@echo "+++ Building the Nomos image"
+	@cp -r $(TOP_DIR)/build/$(NOMOS_IMAGE) $(STAGING_DIR)
+	@cp $(BIN_DIR)/$(ARCH)/* $(STAGING_DIR)/$(NOMOS_IMAGE)
 	@docker build $(DOCKER_BUILD_QUIET) \
-			-t gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) $(STAGING_DIR)/$*
+			-t gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG) $(STAGING_DIR)/$(NOMOS_IMAGE)
 
 # Creates docker image for the test git-server from github source
 image-git-server:
@@ -195,23 +190,19 @@ image-git-server:
 			-t gcr.io/$(GCP_PROJECT)/git-server:$(IMAGE_TAG) \
 			$(GIT_SERVER_SRC)
 
-# Pushes each component's docker image to gcr.io.
-push-to-gcr-all: $(addprefix push-to-gcr-, $(ALL_APPS))
-	@echo "+++ Finished pushing to all"
-
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-%: image-%
 	@echo "+++ Pushing $* to gcr.io"
 	@gcloud $(GCLOUD_QUIET) docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
 
 # Generates the podspec yaml for each component.
-gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_APPS))
+gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_DEPLOYMENTS))
 	@echo "+++ Finished generating all yaml"
 
 # Generates the podspec yaml for the component specified.
 gen-yaml-%:
 	@echo "+++ Generating yaml $*"
-	@m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG) < \
+	@m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG) < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
 # Generates yaml for the test git server
@@ -223,7 +214,7 @@ $(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml \
 
 # Creates staging directory for building installer docker image.
 # TODO(filmil): Depending on push-to-gcr-all here seems unnecessary.
-installer-staging: push-to-gcr-all gen-yaml-all
+installer-staging: push-to-gcr-nomos gen-yaml-all
 	@echo "+++ Creating staging directory for building installer docker image"
 	@cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
 	@cp $(BIN_DIR)/$(ARCH)/installer $(STAGING_DIR)/installer
@@ -364,11 +355,11 @@ test-e2e-nosetup: IMAGE_TAG=test-e2e-latest
 test-e2e-nosetup: test-e2e-run
 
 # Redeploys all components to cluster without rerunning the installer.
-redeploy-all: $(addprefix redeploy-, $(ALL_K8S_APPS))
+redeploy-all: $(addprefix redeploy-, $(ALL_K8S_DEPLOYMENTS))
 	@echo "+++ Finished redeploying all components"
 
 # Redeploy a component without rerunning the installer.
-redeploy-%: push-to-gcr-% gen-yaml-%
+redeploy-%: push-to-gcr-nomos gen-yaml-%
 	@echo "+++ Redeploying without rerunning the installer: $*"
 	@kubectl apply -f $(GEN_YAML_DIR)/$*.yaml
 

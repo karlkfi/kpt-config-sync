@@ -17,7 +17,7 @@
 set -eo pipefail
 
 # Nomosvet docker image (Docker image repo).
-IMAGE=${NOMOSVET_IMAGE:-"gcr.io/nomos-release/nomosvet"}
+IMAGE=${NOMOSVET_IMAGE:-"gcr.io/nomos-release/nomos"}
 
 # Nomosvet version (Docker image tag).
 VERSION=${NOMOSVET_VERSION:-"stable"}
@@ -26,7 +26,7 @@ docker pull "${IMAGE}:${VERSION}" > /dev/null
 
 if [[ -z "$1" ]] || [[ ! -d "$1" ]]; then
     docker run --rm \
-      "${IMAGE}:${VERSION}" "--help"
+      "${IMAGE}:${VERSION}" nomosvet --help
 else
     # Docker host volume bind should be an absolute path
     policy_dir="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
@@ -34,6 +34,6 @@ else
     docker run --rm \
       -u "$(id -u):$(id -g)" \
       -v "${policy_dir}":/policy-dir:ro \
-      "${IMAGE}:${VERSION}" "$@" "/policy-dir"
+      "${IMAGE}:${VERSION}" nomosvet "$@" "/policy-dir"
 fi
 

@@ -49,12 +49,18 @@ spec:
       containers:
         - name: policy-admission-controller
           image: IMAGE_NAME
+          command: ["policy-admission-controller"]
+          args:
+            - "--enable-mutual-tls=false"
+            - "--server_key=/etc/nomos/secrets/policy-admission-controller/server/tls.key"
+            - "--server_cert=/etc/nomos/secrets/policy-admission-controller/server/tls.crt"
+            - "--ca-cert=/etc/nomos/secrets/policy-admission-controller/ca/tls.crt"
+            - "--logtostderr"
           ports:
             - containerPort: 8000
               name: https-port
             - containerPort: 8675
               name: metrics-port
-          args: ["--logtostderr"]
           volumeMounts:
           - name: v1
             mountPath: "/etc/nomos/secrets/policy-admission-controller/server"

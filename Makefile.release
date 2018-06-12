@@ -79,8 +79,8 @@ release: clean \
 		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/installer:latest
 	gcloud container images add-tag --quiet \
-		gcr.io/$(GCP_PROJECT)/nomosvet:$(IMAGE_TAG) \
-		gcr.io/$(GCP_PROJECT)/nomosvet:latest
+		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
+		gcr.io/$(GCP_PROJECT)/nomos:latest
 
 # For releases we attach the :stable tag to the latest image
 # built and update the stable docs package.
@@ -90,8 +90,8 @@ bless-release:
 		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/installer:stable
 	gcloud container images add-tag --quiet \
-		gcr.io/$(GCP_PROJECT)/nomosvet:$(IMAGE_TAG) \
-		gcr.io/$(GCP_PROJECT)/nomosvet:stable
+		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
+		gcr.io/$(GCP_PROJECT)/nomos:stable
 	@echo "+++ Updating latest docs package"
 	gsutil cp -p $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip $(RELEASE_BUCKET)/nomos-docs-stable.zip
 

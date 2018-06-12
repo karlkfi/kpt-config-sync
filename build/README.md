@@ -1,3 +1,3 @@
-This directory contains the files needed during the building and
-installation of Nomos.
+This directory contains Dockerfiles and any required dependencies to build
+a docker image.
 
