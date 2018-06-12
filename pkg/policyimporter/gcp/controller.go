@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -36,8 +37,6 @@ import (
 
 const resync = time.Minute * 15
 
-var scopes = []string{"https://www.googleapis.com/auth/cloud-platform"}
-
 // Controller is a controller for managing Nomos CRDs by importing policies from a filesystem tree.
 type Controller struct {
 	org                 string
@@ -53,13 +52,15 @@ type Controller struct {
 }
 
 // NewController returns a new Controller.
-func NewController(org, watcherAddr, credsFile string, client meta.Interface, stopChan chan struct{}) *Controller {
+func NewController(org, watcherAddr, credsFile, scopeString string, client meta.Interface, stopChan chan struct{}) *Controller {
 	informerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), resync)
 	f := actions.NewFactories(
 		client.PolicyHierarchy().NomosV1(),
 		informerFactory.Nomos().V1().PolicyNodes().Lister(),
 		informerFactory.Nomos().V1().ClusterPolicies().Lister())
+
+	scopes := strings.Split(scopeString, ",")
 
 	return &Controller{
 		org:                 org,

@@ -33,6 +33,8 @@ var (
 	orgID      = flag.String("org-id", os.Getenv("ORG_ID"), "organization ID")
 	apiAddress = flag.String("policy-api-address", os.Getenv("POLICY_API_ADDRESS"), "Kubernetes Policy API address")
 	credsFile  = flag.String("gcp-credentials-file", os.Getenv("GOOGLE_GCP_CREDENTIALS_FILE"), "the gcp service account credentials file to use to open the connection")
+	// This should probably become a constant once we know which scope it is.
+	scopeString = flag.String("gcp-scopes", os.Getenv("GOOGLE_GCP_SCOPES"), "The scopes to use, comma separated")
 )
 
 func main() {
@@ -59,7 +61,7 @@ func main() {
 	go service.ServeMetrics()
 
 	stopChan := make(chan struct{})
-	c := gcp.NewController(*orgID, *apiAddress, *credsFile, client, stopChan)
+	c := gcp.NewController(*orgID, *apiAddress, *credsFile, *scopeString, client, stopChan)
 	go service.WaitForShutdownSignalCb(stopChan)
 	if err := c.Run(); err != nil {
 		glog.Fatalf("Failure running controller: %v", err)
