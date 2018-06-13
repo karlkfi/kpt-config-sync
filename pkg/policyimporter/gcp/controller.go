@@ -18,6 +18,7 @@ package gcp
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
+	"k8s.io/client-go/util/cert"
 )
 
 const resync = time.Minute * 15
@@ -43,6 +45,7 @@ type Controller struct {
 	org                 string
 	watcherAddr         string
 	credsFile           string
+	caFile              string
 	scopes              []string
 	client              meta.Interface
 	actionFactories     actions.Factories
@@ -53,7 +56,7 @@ type Controller struct {
 }
 
 // NewController returns a new Controller.
-func NewController(org, watcherAddr, credsFile string, client meta.Interface, stopChan chan struct{}) *Controller {
+func NewController(org, watcherAddr, credsFile, caFile string, client meta.Interface, stopChan chan struct{}) *Controller {
 	informerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), resync)
 	f := actions.NewFactories(
@@ -66,6 +69,7 @@ func NewController(org, watcherAddr, credsFile string, client meta.Interface, st
 		watcherAddr:         watcherAddr,
 		client:              client,
 		credsFile:           credsFile,
+		caFile:              caFile,
 		scopes:              scopes,
 		actionFactories:     f,
 		informerFactory:     informerFactory,
@@ -92,6 +96,29 @@ func (c *Controller) Run() error {
 	return c.run()
 }
 
+// tlsConfig returns a TLS configuration from a supplied CA certificate file,
+// if the file is not supplied (empty), the config defaults to using the system
+// root CA certificate file.  Taken from the K8S oidc implementation.
+func tlsConfig(caFile string) (*tls.Config, error) {
+	var roots *x509.CertPool
+	if caFile != "" {
+		var err error
+		roots, err = cert.NewPool(caFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read the CA file %q: %v", caFile, err)
+		}
+		glog.Infof("Loaded CA cert file: %q", caFile)
+	} else {
+		glog.Info("Using host CA certificates set.")
+	}
+	config := &tls.Config{
+		// If certpool is nil (caFile unset), this will default to using the
+		// system CA roots.
+		RootCAs: roots,
+	}
+	return config, nil
+}
+
 func (c *Controller) run() error {
 	glog.Infof("Running")
 
@@ -108,9 +135,13 @@ func (c *Controller) run() error {
 	if err != nil {
 		return errors.Wrapf(err, "while creating credentials from: %q", c.credsFile)
 	}
+	config, err := tlsConfig(c.caFile)
+	if err != nil {
+		return errors.Wrapf(err, "while creating TLS config")
+	}
 	opts := []grpc.DialOption{
 		grpc.WithPerRPCCredentials(perRPC),
-		grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})),
+		grpc.WithTransportCredentials(credentials.NewTLS(config)),
 	}
 
 	conn, err := grpc.Dial(c.watcherAddr, opts...)
