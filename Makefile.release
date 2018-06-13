@@ -43,6 +43,9 @@ VERSION := $(shell git describe --tags --always --dirty)
 # Set the IMAGE_TAG to only include the version info and no other build info.
 IMAGE_TAG := $(VERSION)
 
+# Enable optimzations.
+BUILD_MODE ?= release
+
 ##### SETUP ######
 
 include Makefile

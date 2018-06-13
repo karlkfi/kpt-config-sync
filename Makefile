@@ -80,6 +80,10 @@ BUILD_IMAGE ?= buildenv
 # GCP project that owns container registry for local dev build.
 GCP_PROJECT ?= stolos-dev
 
+# When set to "release", enables these optimizations:
+# - Compress binary sizes
+BUILD_MODE ?= debug
+
 # All Nomos K8S deployments.
 ALL_K8S_DEPLOYMENTS := syncer \
 	git-policy-importer \
@@ -118,6 +122,7 @@ DOCKER_RUN_ARGS := \
 	-e ARCH=$(ARCH)                                                    \
 	-e VERSION=$(VERSION)                                              \
 	-e PKG=$(REPO)                                                     \
+	-e BUILD_MODE=$(BUILD_MODE)                                        \
 	-u $$(id -u):$$(id -g)                                             \
 	-v $(GO_DIR):/go                                                   \
 	-v $$(pwd):/go/src/$(REPO)                                         \

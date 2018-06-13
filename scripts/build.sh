@@ -36,3 +36,8 @@ go install                                                         \
     -installsuffix "static"                                        \
     -ldflags "-X ${PKG}/pkg/version.VERSION=${VERSION}"            \
     ./...
+
+# Use upx to reduce binary size.
+if [ "${BUILD_MODE}" = "release" ]; then
+  upx $GOPATH/bin/*
+fi

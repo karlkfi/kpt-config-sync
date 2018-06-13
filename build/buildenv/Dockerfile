@@ -24,7 +24,8 @@ RUN apk add --no-cache \
   gcc \
   musl-dev \
   py-pip \
-  git
+  git \
+  upx
 
 RUN pip install grip
 
