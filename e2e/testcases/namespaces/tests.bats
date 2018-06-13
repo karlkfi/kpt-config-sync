@@ -4,132 +4,133 @@ set -u
 
 load common
 
-@test "namespace has full label and declared" {
+@test "Namespace has full label and declared" {
   local ns=decl-namespace-label-full
-  create_cluster_namespace $ns full
-  create_namespace $ns
+  namespace::create $ns full
+  namespace::declare $ns
   git::commit
 
-  check_ns_exists $ns full
-  check_ns_no_warn $ns
+  namespace::check_exists $ns full
+  namespace::check_no_warning $ns
 }
 
-@test "namespace exists and declared" {
+@test "Namespace exists and declared" {
   local ns=decl-namespace-label-none
-  create_cluster_namespace $ns
-  create_namespace $ns
+  namespace::create $ns
+  namespace::declare $ns
   git::commit
 
-  check_ns_exists $ns
-  check_ns_warn $ns
+  namespace::check_exists $ns
+  namespace::check_warning $ns
 }
 
-@test "namespace does not exist and declared" {
+@test "Namespace does not exist and declared" {
   local ns=decl-namespace-noexist
-  create_namespace $ns
+  namespace::declare $ns
   git::commit
 
-  check_ns_exists $ns full
-  check_ns_no_warn $ns
+  namespace::check_exists $ns full
+  namespace::check_no_warning $ns
 }
 
-@test "namespace has policies label and declared" {
+@test "Namespace has policies label and declared" {
   local ns=decl-namespace-label-policies
-  create_cluster_namespace $ns policies
-  create_namespace $ns
+  namespace::create $ns policies
+  namespace::declare $ns
   git::commit
 
-  check_ns_exists $ns policies
-  check_ns_no_warn $ns
+  namespace::check_exists $ns policies
+  namespace::check_no_warning $ns
 }
 
-@test "namespace has full label with no declarations" {
+@test "Namespace has full label with no declarations" {
   local ns=undeclared-label-full
-  create_cluster_namespace $ns full
-  check_ns_not_exists $ns
+  namespace::create $ns full
+  namespace::check_not_found $ns
 }
 
-@test "namespace exists with no declaration" {
+@test "Namespace exists with no declaration" {
   local ns=undeclared-label-none
-  create_cluster_namespace $ns
-  check_ns_warn $ns
+  namespace::create $ns
+  namespace::check_warning $ns
 }
 
-@test "namespace has policies label with no declaration" {
+@test "Namespace has policies label with no declaration" {
   local ns=undeclared-label-policies
-  create_cluster_namespace $ns policies
-  check_ns_warn $ns
+  namespace::create $ns policies
+  namespace::check_warning $ns
 }
 
-@test "namespace has full label and declared as policyspace" {
+@test "Namespace has full label and declared as policyspace" {
   local ns=decl-policyspace-label-full
-  create_cluster_namespace $ns full
-  create_policyspace $ns
+  namespace::create $ns full
+  namespace::declare_policyspace $ns
   git::commit
   wait::for "kubectl get pn $ns"
 
-  check_ns_not_exists $ns
+  namespace::check_not_found $ns
 }
 
-@test "namespace exists and declared as policyspace" {
+@test "Namespace exists and declared as policyspace" {
   local ns=decl-policyspace-label-none
-  create_cluster_namespace $ns
-  create_policyspace $ns
+  namespace::create $ns
+  namespace::declare_policyspace $ns
   git::commit
 
   wait::for "kubectl get pn $ns"
 
-  check_ns_exists $ns
-  check_ns_warn $ns
+  namespace::check_exists $ns
+  namespace::check_warning $ns
 }
 
-@test "namespace has policies label and declared as policyspace" {
+@test "Namespace has policies label and declared as policyspace" {
   local ns=decl-policyspace-label-policies
-  create_cluster_namespace $ns policies
-  create_policyspace $ns
+  namespace::create $ns policies
+  namespace::declare_policyspace $ns
   git::commit
 
   wait::for "kubectl get pn $ns"
 
-  check_ns_exists $ns policies
-  check_ns_warn $ns
+  namespace::check_exists $ns policies
+  namespace::check_warning $ns
 }
 
-@test "namespace has full label and reserved" {
+@test "Namespace has full label and reserved" {
   local ns=decl-reserved-label-full
-  create_cluster_namespace $ns full
-  create_reserved $ns
+  namespace::create $ns full
+  namespace::declare_reserved $ns
   git::commit
 
-  check_ns_exists $ns full
-  check_ns_warn $ns
+  namespace::check_exists $ns full
+  namespace::check_warning $ns
 }
 
-@test "namespace exists and reserved" {
+@test "Namespace exists and reserved" {
   local ns=decl-reserved-label-none
-  create_cluster_namespace $ns
-  create_reserved $ns
+  namespace::create $ns
+  namespace::declare_reserved $ns
   git::commit
 
-  check_ns_exists $ns
-  check_ns_no_warn $ns
+  namespace::check_exists $ns
+  namespace::check_no_warning $ns
 }
 
-@test "namespace does not exist and reserved" {
+@test "Namespace does not exist and reserved" {
   local ns=decl-reserved-noexist
-  create_reserved $ns
+  namespace::declare_reserved $ns
   git::commit
 
-  check_ns_not_exists $ns full
-  check_ns_no_warn $ns
+  namespace::check_not_found $ns full
+  namespace::check_no_warning $ns
 }
 
-@test "namespace has policies label and reserved" {
+@test "Namespace has policies label and reserved" {
   local ns=decl-reserved-label-policies
-  create_cluster_namespace $ns policies
-  create_reserved $ns
+  namespace::create $ns policies
+  namespace::declare_reserved $ns
   git::commit
 
-  check_ns_exists $ns policies
-  check_ns_warn $ns
+  namespace::check_exists $ns policies
+  namespace::check_warning $ns
 }
+
