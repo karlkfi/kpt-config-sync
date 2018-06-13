@@ -64,6 +64,19 @@ EOT
 
 function main() {
   local filter="${1:-}"
+  local file_filter=""
+  local testcase_filter=""
+
+  if [[ "$filter" == */* ]]; then
+    file_filter="$(echo $filter | sed -e 's|/.*||')"
+    testcase_filter="$(echo $filter | sed -e 's|[^/]*/||')"
+    echo "Filtering for files matching: ${file_filter}"
+  else
+    testcase_filter="$filter"
+  fi
+  if [[ "${testcase_filter}" != "" ]]; then
+    echo "Filtering for testcases matching: ${testcase_filter}"
+  fi
 
   start_time=$(date +%s)
   if [[ ! "kubectl get ns > /dev/null" ]]; then
@@ -79,9 +92,9 @@ function main() {
   )
 
   local testcases=()
-  if [[ -n ${filter} ]]; then
+  if [[ -n ${file_filter} ]]; then
     for file in ${bats_tests}; do
-      if echo "${file}" | grep "${filter}" &> /dev/null; then
+      if echo "${file}" | grep "${file_filter}" &> /dev/null; then
         echo "Will run ${file}"
         testcases+=("${file}")
       fi
@@ -93,7 +106,7 @@ function main() {
   fi
 
   local retcode=0
-  if ! ${TEST_DIR}/bats/bin/bats ${testcases[@]}; then
+  if ! E2E_TEST_FILTER="${testcase_filter}" ${TEST_DIR}/bats/bin/bats ${testcases[@]}; then
     retcode=1
   fi
 

@@ -340,7 +340,8 @@ test-e2e-run:
 	    -v "$(OUTPUT_DIR)/e2e":/opt/testing/e2e \
 	    -e "VERSION=$(IMAGE_TAG)" \
 	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" \
-	    "$@" "${E2E_CLEAN}" "${E2E_SETUP}" --filter "$(TEST_FILTER)" \
+	    "$@" "${E2E_CLEAN}" "${E2E_SETUP}" \
+		--filter "$(TEST_FILTER)" \
 	    && echo "+++ E2E tests completed" \
 	    || (echo "### E2E tests failed. Logs are available in ${INSTALLER_OUTPUT_DIR}/logs"; exit 1)
 

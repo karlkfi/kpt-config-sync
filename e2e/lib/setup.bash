@@ -2,6 +2,18 @@
 TEST_REPO_DIR=${BATS_TMPDIR}
 
 setup() {
+  if [[ "${E2E_TEST_FILTER}" != "" ]]; then
+    local cur_test=""
+    for func in "${FUNCNAME[@]}"; do
+      if echo "$func" | grep "^test_" &> /dev/null; then
+        cur_test="${func}"
+      fi
+    done
+    if ! [[ "${cur_test}" =~ "${E2E_TEST_FILTER}" ]]; then
+      skip
+    fi
+  fi
+
   CWD=$(pwd)
   cd ${TEST_REPO_DIR}
   rm -rf repo
