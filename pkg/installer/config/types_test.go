@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
 )
 
 func TestRead(t *testing.T) {
@@ -19,7 +18,7 @@ func TestRead(t *testing.T) {
 		expected Config
 	}{
 		{
-			name: "Basic",
+			name: "git: basic JSON",
 			input: `{
 				"user": "someuser@example.com",
 				"contexts": [
@@ -38,7 +37,7 @@ func TestRead(t *testing.T) {
 			},
 		},
 		{
-			name: "Basic YAML",
+			name: "git: basic YAML",
 			input: `user: someuser@example.com
 contexts:
 - foo
@@ -55,7 +54,7 @@ contexts:
 			},
 		},
 		{
-			name: "Example config",
+			name: "git: example config",
 			input: `{
 		"contexts": [
 				"your_cluster"
@@ -86,7 +85,7 @@ contexts:
 			},
 		},
 		{
-			name: "$HOME substitution",
+			name: "git: $HOME substitution",
 			input: `{
 		"contexts": [
 				"your_cluster"
@@ -116,7 +115,7 @@ contexts:
 			},
 		},
 		{
-			name: "--user_home_on_host substitution",
+			name: "git: $HOME_ON_HOST substitution",
 			input: `{
 		"contexts": [
 				"your_cluster"
@@ -142,6 +141,54 @@ contexts:
 					SyncBranch:         "test",
 					RootPolicyDir:      "foo-corp",
 					SyncRepo:           "git@github.com:repo/example.git",
+				},
+			},
+		},
+		{
+			name: "gcp",
+			input: `{
+		"contexts": [
+				"your_cluster"
+		],
+		"gcp": {
+				"ORG_ID": "1234",
+				"PRIVATE_KEY_FILENAME": "$HOME/privateKey",
+		},
+			}`,
+			expected: Config{
+				Contexts: []string{"your_cluster"},
+				GCP: GCPConfig{
+					OrgID:              "1234",
+					PrivateKeyFilename: "/home/user/privateKey",
+				},
+				Git: GitConfig{
+					UseSSH:          true,
+					SyncWaitSeconds: 15,
+					SyncBranch:      "master",
+				},
+			},
+		},
+		{
+			name: "gcp: $HOME_ON_HOST substitution",
+			input: `{
+		"contexts": [
+				"your_cluster"
+		],
+		"gcp": {
+				"ORG_ID": "1234",
+				"PRIVATE_KEY_FILENAME": "/user/home/on/host/privateKey",
+		},
+			}`,
+			expected: Config{
+				Contexts: []string{"your_cluster"},
+				GCP: GCPConfig{
+					OrgID:              "1234",
+					PrivateKeyFilename: "/home/user/privateKey",
+				},
+				Git: GitConfig{
+					UseSSH:          true,
+					SyncWaitSeconds: 15,
+					SyncBranch:      "master",
 				},
 			},
 		},
@@ -208,7 +255,7 @@ func TestWrite(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "Basic",
+			name: "Git",
 			input: Config{
 				Contexts: []string{"foo", "bar"},
 				Git: GitConfig{
@@ -218,6 +265,9 @@ func TestWrite(t *testing.T) {
 			expected: `contexts:
 - foo
 - bar
+gcp:
+  ORG_ID: ""
+  PRIVATE_KEY_FILENAME: ""
 git:
   GIT_SYNC_BRANCH: ""
   GIT_SYNC_REPO: ""
@@ -227,7 +277,7 @@ git:
 `,
 		},
 		{
-			name: "Basic",
+			name: "Git with file paths",
 			input: Config{
 				Contexts: []string{"foo", "bar"},
 				Git: GitConfig{
@@ -240,6 +290,9 @@ git:
 			expected: `contexts:
 - foo
 - bar
+gcp:
+  ORG_ID: ""
+  PRIVATE_KEY_FILENAME: ""
 git:
   GIT_SYNC_BRANCH: ""
   GIT_SYNC_REPO: ""
@@ -338,20 +391,41 @@ func TestValidate(t *testing.T) {
 		name       string
 		fileExists FileExists
 		config     Config
-		wantErr    error
+		wantErr    bool
 	}{
 		{
-			name: "no git repo specified",
+			name:    "Neither git or gcp specified",
+			config:  Config{},
+			wantErr: true,
+		},
+		{
+			name: "Both git or gcp specified",
+			config: Config{
+				Git: GitConfig{
+					SyncRepo:           "git@foobar.com/foo-corp-example.git",
+					UseSSH:             true,
+					PrivateKeyFilename: "/some/valid/path/id_rsa",
+				},
+				GCP: GCPConfig{
+					PrivateKeyFilename: "/some/valid/path/id_rsa",
+					OrgID:              "123",
+				},
+			},
+			fileExists: testExists{true},
+			wantErr:    true,
+		},
+		{
+			name: "git: no git repo specified",
 			config: Config{
 				Git: GitConfig{
 					SyncBranch:    "master",
 					RootPolicyDir: "foo",
 				},
 			},
-			wantErr: errors.Errorf("git repo not specified"),
+			wantErr: true,
 		},
 		{
-			name: "https uri w/ no keys specified",
+			name: "git: https uri w/ no keys specified",
 			config: Config{
 				Git: GitConfig{
 					SyncRepo: "https://foobar.com/foo-corp-example.git",
@@ -360,17 +434,17 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
-			name: "ssh uri w/ no keys specified",
+			name: "git: ssh uri w/ no keys specified",
 			config: Config{
 				Git: GitConfig{
 					SyncRepo: "git@foobar.com/foo-corp-example.git",
 					UseSSH:   true,
 				},
 			},
-			wantErr: errors.Errorf("ssh path specified for git repo, but private key not specified"),
+			wantErr: true,
 		},
 		{
-			name: "ssh uri w/ keys that don't exist specified",
+			name: "git: ssh uri w/ keys that don't exist specified",
 			config: Config{
 				Git: GitConfig{
 					SyncRepo:           "git@foobar.com/foo-corp-example.git",
@@ -379,10 +453,10 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			fileExists: testExists{false},
-			wantErr:    errors.Errorf("ssh path specified for git repo, but private key doesn't exist: /some/fake/path/id_rsa"),
+			wantErr:    true,
 		},
 		{
-			name: "allow no funny characters in the file path beginning with /home/user",
+			name: "git: allow no funny characters in the file path beginning with /home/user",
 			config: Config{
 				Git: GitConfig{
 					SyncRepo:           "git@foobar.com/foo-corp-example.git",
@@ -391,10 +465,10 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			fileExists: testExists{false},
-			wantErr:    errors.Errorf("ssh path specified for git repo, but private key doesn't exist: /some/fake/path/id_rsa"),
+			wantErr:    true,
 		},
 		{
-			name: "non-ssh uri with UseSSH specified",
+			name: "git: non-ssh uri with UseSSH specified",
 			config: Config{
 				Git: GitConfig{
 					SyncRepo:           "https://foobar.com/foo-corp-example.git",
@@ -403,10 +477,10 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			fileExists: testExists{true},
-			wantErr:    errors.Errorf("ssh not specified for ssh git repo url"),
+			wantErr:    true,
 		},
 		{
-			name: "ssh uri/UseSSH specified, no private key specified",
+			name: "git: ssh uri/UseSSH specified, no private key specified",
 			config: Config{
 				Git: GitConfig{
 					SyncRepo:           "git@foobar.com/foo-corp-example.git",
@@ -415,10 +489,10 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			fileExists: testExists{true},
-			wantErr:    errors.Errorf("ssh not specified for ssh git repo url"),
+			wantErr:    true,
 		},
 		{
-			name: "ssh uri w/ keys that exist specified",
+			name: "git: ssh uri w/ keys that exist specified",
 			config: Config{
 				Git: GitConfig{
 					SyncRepo:           "git@foobar.com/foo-corp-example.git",
@@ -428,12 +502,54 @@ func TestValidate(t *testing.T) {
 			},
 			fileExists: testExists{true},
 		},
+		{
+			name: "gcp: valid",
+			config: Config{
+				GCP: GCPConfig{
+					PrivateKeyFilename: "/some/valid/path/id_rsa",
+					OrgID:              "123",
+				},
+			},
+			fileExists: testExists{true},
+		},
+		{
+			name: "gcp: no org id specified",
+			config: Config{
+				GCP: GCPConfig{
+					PrivateKeyFilename: "/some/valid/path/id_rsa",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "gcp: no private key file specified",
+			config: Config{
+				GCP: GCPConfig{
+					OrgID: "123",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "gcp: private key does not exist",
+			config: Config{
+				GCP: GCPConfig{
+					PrivateKeyFilename: "/some/valid/path/id_rsa",
+					OrgID:              "123",
+				},
+			},
+			fileExists: testExists{false},
+			wantErr:    true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.Validate(tt.fileExists)
-			if (err != nil && tt.wantErr == nil) || (err == nil && tt.wantErr != nil) {
-				t.Fatalf("Unexpected error when validating:\n%v\nwant: %v", err, tt.wantErr)
+			if err != nil && !tt.wantErr {
+				t.Fatalf("Unexpected error when validating:\n%v", err)
+			}
+			if err == nil && tt.wantErr {
+				t.Fatalf("Expected error when validating")
 			}
 		})
 	}

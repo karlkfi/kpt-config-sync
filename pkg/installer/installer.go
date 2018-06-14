@@ -178,10 +178,6 @@ func (i *Installer) deployGitSecrets() error {
 func (i *Installer) deployGitConfig() error {
 	const configmap = "git-policy-importer"
 	glog.V(10).Info("deployGitConfig: enter")
-	if i.c.Git.Empty() {
-		glog.V(5).Info("Not deploying git configuration, no config specified.")
-		return nil
-	}
 	c := kubectl.New(context.Background())
 	if err := c.DeleteConfigmap(configmap, defaultNamespace); err != nil {
 		glog.V(5).Infof("Failed to delete configmap: %v", err)

@@ -23,7 +23,7 @@ const (
 	homeOnHostEnv = "HOME_ON_HOST"
 )
 
-// GitConfig contains the settings for the git importer repository.
+// GitConfig contains the configs needed by GitPolicyImporter.
 type GitConfig struct {
 	// SyncRepo is the git repository name to sync from.
 	SyncRepo string `json:"GIT_SYNC_REPO"`
@@ -69,6 +69,26 @@ func (g *GitConfig) Empty() bool {
 	return g.SyncRepo == "" && g.RootPolicyDir == ""
 }
 
+// GCPConfig contains the configs needed by GCPPolicyImporter.
+type GCPConfig struct {
+	// OrgID is the GCP organization id. See:
+	// https://cloud.google.com/resource-manager/docs/creating-managing-organization#retrieving_your_organization_id
+	OrgID string `json:"ORG_ID"`
+
+	// PrivateKeyFilename is the filename containing the GCP service account
+	// private key used for accessing GCP Kubernetes Policy API.
+	//
+	// This filename may contain a string $HOME, which is expanded by
+	// ExpandVarsCopy().
+	PrivateKeyFilename string `json:"PRIVATE_KEY_FILENAME"`
+}
+
+// Empty returns true if the config does not have necessary fields set and
+// should be treated as empty.
+func (g *GCPConfig) Empty() bool {
+	return g.OrgID == "" && g.PrivateKeyFilename == ""
+}
+
 // Config contains the configuration for the installer.  The install process
 // is made based on this configuration.
 // +k8s:deepcopy-gen=true
@@ -81,8 +101,13 @@ type Config struct {
 	// into.
 	Contexts []string `json:"contexts,omitempty"`
 
-	// Git contains the git-specific configuration.
+	// Git contains configuration specific to importing policies from a Git repo.
+	// Git and GCP fields are mutually exclusive.
 	Git GitConfig `json:"git,omitempty"`
+
+	// GCP contains configuration specific to importing policies from Google Cloud Platform.
+	// Git and GCP fields are mutually exclusive.
+	GCP GCPConfig `json:"gcp,omitempty"`
 }
 
 // NewDefaultConfig creates a new Config struct with default values set.
@@ -115,6 +140,7 @@ func (c Config) ExpandVarsCopy() Config {
 	newc.Git.KnownHostsFilename = expandHome(newc.Git.KnownHostsFilename)
 	newc.Git.PrivateKeyFilename = expandHome(newc.Git.PrivateKeyFilename)
 	newc.Git.CookieFilename = expandHome(newc.Git.CookieFilename)
+	newc.GCP.PrivateKeyFilename = expandHome(newc.GCP.PrivateKeyFilename)
 	return newc
 }
 
@@ -147,25 +173,40 @@ func (c Config) WriteInto(w io.Writer) error {
 // Validate runs validations on the fields in Config.
 func (c Config) Validate(exists FileExists) error {
 	rc := c.ExpandVarsCopy()
+	if !rc.Git.Empty() && !rc.GCP.Empty() {
+		return errors.Errorf("gcp and git fields are mutually exclusive. Only one can be specified.")
+	}
 	if !rc.Git.Empty() {
 		if rc.Git.SyncRepo == "" {
-			return errors.Errorf("git repo not specified")
+			return errors.Errorf("GIT_SYNC_REPO must be specified")
 		}
 		if rc.Git.UseSSH {
 			if !rc.repoIsSSHURL() {
-				return errors.Errorf("ssh specified for non-ssh git repo url")
+				return errors.Errorf("GIT_SYNC_SSH is set to true but GIT_SYNC_REPO is not using SSH protocol")
 			}
 			if rc.Git.PrivateKeyFilename == "" {
-				return errors.Errorf("ssh specified for git repo, but private key not specified")
+				return errors.Errorf("PRIVATE_KEY_FILE must be specified when GIT_SYNC_SSH is set to true")
 			}
 			if !exists.Check(rc.Git.PrivateKeyFilename) {
-				return errors.Errorf("ssh specified for git repo, but private key doesn't exist: %v", rc.Git.PrivateKeyFilename)
+				return errors.Errorf("SSH private key doesn't exist: %v", rc.Git.PrivateKeyFilename)
 			}
 		} else {
 			if rc.repoIsSSHURL() {
-				return errors.Errorf("ssh specified as disabled for ssh git repo url")
+				return errors.Errorf("GIT_SYNC_SSH must be set to true since GIT_SYNC_REPO is using SSH protocol")
 			}
 		}
+	} else if !rc.GCP.Empty() {
+		if rc.GCP.OrgID == "" {
+			return errors.Errorf("ORG_ID must be specified")
+		}
+		if rc.GCP.PrivateKeyFilename == "" {
+			return errors.Errorf("PRIVATE_KEY_FILE must be specified")
+		}
+		if !exists.Check(rc.GCP.PrivateKeyFilename) {
+			return errors.Errorf("private key doesn't exist: %v", rc.GCP.PrivateKeyFilename)
+		}
+	} else {
+		return errors.Errorf("must set either 'git' or 'gcp'")
 	}
 	return nil
 }
