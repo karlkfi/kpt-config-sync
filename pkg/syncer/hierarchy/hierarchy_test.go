@@ -27,31 +27,40 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func createTestNode(name, parent string) *policyhierarchy_v1.PolicyNode {
+func createTestNode(name, parent string, nodeType policyhierarchy_v1.PolicyNodeType) *policyhierarchy_v1.PolicyNode {
 	return &policyhierarchy_v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: name,
 		},
 		Spec: policyhierarchy_v1.PolicyNodeSpec{
 			Parent: parent,
+			Type:   nodeType,
 		},
 	}
 }
 
 func TestGetAncestry(t *testing.T) {
 	validHierarchy := New(fakeinformers.NewPolicyNodeInformer(
-		createTestNode("root", ""),
-		createTestNode("child1", "root"),
-		createTestNode("child2", "root"),
-		createTestNode("child1-1", "child1"),
-		createTestNode("child1-2", "child1"),
-		createTestNode("child2-1", "child2"),
+		createTestNode("root", "", policyhierarchy_v1.Policyspace),
+		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
+		createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
+		createTestNode("child1-1", "child1", policyhierarchy_v1.Namespace),
+		createTestNode("child1-2", "child1", policyhierarchy_v1.Namespace),
+		createTestNode("child2-1", "child2", policyhierarchy_v1.Namespace),
 	))
 	invalidHierarchy := New(fakeinformers.NewPolicyNodeInformer(
-		createTestNode("root", ""),
-		createTestNode("child1", "root"),
-		createTestNode("child2", "root"),
-		createTestNode("child3-1", "child3"),
+		createTestNode("root", "", policyhierarchy_v1.Policyspace),
+		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
+		createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
+		createTestNode("child3-1", "child3", policyhierarchy_v1.Namespace),
+
+		// reserved namespace in ancestry
+		createTestNode("reserved1", "root", policyhierarchy_v1.ReservedNamespace),
+		createTestNode("reserved-ns-1", "reserved1", policyhierarchy_v1.Policyspace),
+
+		// Namespace in ancestry
+		createTestNode("namespace-1", "root", policyhierarchy_v1.Namespace),
+		createTestNode("namespace-ns-1", "namespace-1", policyhierarchy_v1.Namespace),
 	))
 
 	tests := []struct {
@@ -66,9 +75,9 @@ func TestGetAncestry(t *testing.T) {
 			hierarchy: validHierarchy,
 			nodeName:  "child2-1",
 			wantAncestry: Ancestry{
-				createTestNode("child2-1", "child2"),
-				createTestNode("child2", "root"),
-				createTestNode("root", ""),
+				createTestNode("child2-1", "child2", policyhierarchy_v1.Namespace),
+				createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
+				createTestNode("root", "", policyhierarchy_v1.Policyspace),
 			},
 		},
 		{
@@ -76,8 +85,8 @@ func TestGetAncestry(t *testing.T) {
 			hierarchy: validHierarchy,
 			nodeName:  "child1",
 			wantAncestry: Ancestry{
-				createTestNode("child1", "root"),
-				createTestNode("root", ""),
+				createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
+				createTestNode("root", "", policyhierarchy_v1.Policyspace),
 			},
 		},
 		{
@@ -85,7 +94,7 @@ func TestGetAncestry(t *testing.T) {
 			hierarchy: validHierarchy,
 			nodeName:  "root",
 			wantAncestry: Ancestry{
-				createTestNode("root", ""),
+				createTestNode("root", "", policyhierarchy_v1.Policyspace),
 			},
 		},
 		{
@@ -98,14 +107,29 @@ func TestGetAncestry(t *testing.T) {
 			name:      "incomplete hierarchy",
 			hierarchy: invalidHierarchy,
 			nodeName:  "child3-1",
-			wantErr:   &IncompleteHierarchyError{"child3"},
+			wantErr: &ConsistencyError{
+				Ancestry{createTestNode("child3-1", "child3", policyhierarchy_v1.Namespace)}, "child3"},
+		},
+		{
+			name:      "reserved in ancestry",
+			hierarchy: invalidHierarchy,
+			nodeName:  "reserved-ns-1",
+			wantErr: &ConsistencyError{
+				Ancestry{createTestNode("reserved-ns-1", "reserved1", policyhierarchy_v1.Policyspace)}, ""},
+		},
+		{
+			name:      "namespace in ancestry",
+			hierarchy: invalidHierarchy,
+			nodeName:  "namespace-ns-1",
+			wantErr: &ConsistencyError{
+				Ancestry{createTestNode("namespace-ns-1", "namespace-1", policyhierarchy_v1.Namespace)}, ""},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotAncestry, err := tt.hierarchy.Ancestry(tt.nodeName)
-			if !cmp.Equal(err, tt.wantErr, cmp.AllowUnexported(NotFoundError{}, IncompleteHierarchyError{})) {
+			if !cmp.Equal(err, tt.wantErr, cmp.AllowUnexported(NotFoundError{}, ConsistencyError{})) {
 				t.Errorf("Unexpected ancestry error, got: %v, want: %v", err, tt.wantErr)
 			}
 			if !cmp.Equal(gotAncestry, tt.wantAncestry) {
@@ -117,12 +141,12 @@ func TestGetAncestry(t *testing.T) {
 
 func TestGetSubtree(t *testing.T) {
 	hierarchy := New(fakeinformers.NewPolicyNodeInformer(
-		createTestNode("root", ""),
-		createTestNode("child1", "root"),
-		createTestNode("child2", "root"),
-		createTestNode("child1-1", "child1"),
-		createTestNode("child1-2", "child1"),
-		createTestNode("child2-1", "child2"),
+		createTestNode("root", "", policyhierarchy_v1.Policyspace),
+		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
+		createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
+		createTestNode("child1-1", "child1", policyhierarchy_v1.Policyspace),
+		createTestNode("child1-2", "child1", policyhierarchy_v1.Policyspace),
+		createTestNode("child2-1", "child2", policyhierarchy_v1.Policyspace),
 	))
 
 	tests := []struct {
@@ -209,7 +233,7 @@ func TestAggregateAncestry(t *testing.T) {
 		{
 			name: "only root ancestry",
 			ancestry: Ancestry{
-				createTestNode("child", "root"),
+				createTestNode("child", "root", policyhierarchy_v1.Policyspace),
 			},
 			factory: func() AggregatedNode {
 				return &TestAggregatedNode{
@@ -226,16 +250,16 @@ func TestAggregateAncestry(t *testing.T) {
 					},
 				},
 			},
-			wantNode: createTestNode("child", "root"),
+			wantNode: createTestNode("child", "root", policyhierarchy_v1.Policyspace),
 		},
 		{
 			name: "extended ancestry",
 			ancestry: Ancestry{
-				createTestNode("child5", "child4"),
-				createTestNode("child4", "child3"),
-				createTestNode("child3", "child2"),
-				createTestNode("child2", "child1"),
-				createTestNode("child1", "root"),
+				createTestNode("child5", "child4", policyhierarchy_v1.Namespace),
+				createTestNode("child4", "child3", policyhierarchy_v1.Policyspace),
+				createTestNode("child3", "child2", policyhierarchy_v1.Policyspace),
+				createTestNode("child2", "child1", policyhierarchy_v1.Policyspace),
+				createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
 			},
 			factory: func() AggregatedNode {
 				return &TestAggregatedNode{
@@ -244,7 +268,7 @@ func TestAggregateAncestry(t *testing.T) {
 					},
 				}
 			},
-			wantNode: createTestNode("child5", "child4"),
+			wantNode: createTestNode("child5", "child4", policyhierarchy_v1.Namespace),
 			wantInstances: Instances{
 				&TestAggregatedOutput{
 					Ancestry: []string{

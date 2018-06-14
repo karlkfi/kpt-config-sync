@@ -49,20 +49,28 @@ func IsNotFoundError(err error) bool {
 	return ok
 }
 
-// IncompleteHierarchyError is returned when ancestry is not able to retrieve all ancestors to the
-// root node.
-type IncompleteHierarchyError struct {
-	name string
+// ConsistencyError is returned when the ancestry is in an inconsistent state. This can occur if
+// an update to the PolicyNode objects happens in an order where the hierarchy is slightly disrupted.
+type ConsistencyError struct {
+	ancestry Ancestry
+	missing  string
 }
 
 // Error implements error
-func (s *IncompleteHierarchyError) Error() string {
-	return fmt.Sprintf("ancestor policy node %s missing from hierarchy", s.name)
+func (s *ConsistencyError) Error() string {
+	var vals []string
+	for _, item := range s.ancestry {
+		vals = append(vals, fmt.Sprintf("[%s:%s]", item.Name, item.Spec.Type))
+	}
+	if len(s.missing) != 0 {
+		vals = append(vals, fmt.Sprintf("[%s:%s]", s.missing, "NotFound"))
+	}
+	return fmt.Sprintf("inconsistent heirarchy: %s", strings.Join(vals, " -> "))
 }
 
 // IsIncompleteHierarchyError returns true if the error is a NotFoundError
 func IsIncompleteHierarchyError(err error) bool {
-	_, ok := err.(*IncompleteHierarchyError)
+	_, ok := err.(*ConsistencyError)
 	return ok
 }
 
@@ -171,9 +179,13 @@ func (s *Hierarchy) Ancestry(name string) (Ancestry, error) {
 		node, err = s.lister.Get(current)
 		if err != nil {
 			if api_errors.IsNotFound(err) {
-				return nil, &IncompleteHierarchyError{current}
+				return nil, &ConsistencyError{ancestry, current}
 			}
 			panic("Lister returned error other than not found, this should not happen")
+		}
+
+		if !node.Spec.Type.IsPolicyspace() {
+			return nil, &ConsistencyError{ancestry, ""}
 		}
 
 		ancestry = append(ancestry, node)
