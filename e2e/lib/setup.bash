@@ -14,18 +14,26 @@ setup() {
     fi
   fi
 
+  # Reset git repo to initial state.
   CWD=$(pwd)
-  cd ${TEST_REPO_DIR}
-  rm -rf repo
-  git clone ssh://git@localhost:2222/git-server/repos/sot.git ${TEST_REPO_DIR}/repo
+  rm -rf ${TEST_REPO_DIR}/repo
+  mkdir -p ${TEST_REPO_DIR}/repo
   cd ${TEST_REPO_DIR}/repo
+
+  git init
+  git remote add origin ssh://git@localhost:2222/git-server/repos/sot.git
+  git fetch
   git config user.name "Testing Nome"
   git config user.email testing_nome@example.com
-  git rm -qrf acme
+  mkdir acme
+  touch acme/README.md
+  git add acme/README.md
+  git commit -a -m "initial commit"
+
   cp -r /opt/testing/e2e/sot/acme ./
   git add -A
-  git diff-index --quiet HEAD || git commit -m "setUp commit"
-  git push origin master
+  git commit -m "setUp commit"
+  git push origin master:master -f
   cd $CWD
   # Wait for syncer to update each object type.
   wait::for_success "kubectl get ns backend"

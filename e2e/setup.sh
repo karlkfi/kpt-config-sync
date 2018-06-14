@@ -36,7 +36,6 @@ function set_up_env_minimal() {
   POD_ID=$(kubectl get pods -n=nomos-system -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
   mkdir -p ${TEST_LOG_REPO}
   kubectl -n=nomos-system port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
-  kubectl exec -n=nomos-system -it ${POD_ID} -- git init --bare --shared /git-server/repos/sot.git
   echo "****************** Environment is ready ******************"
 }
 
