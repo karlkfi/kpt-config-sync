@@ -247,6 +247,19 @@ func (i *Installer) checkVersion(ctx *kubectl.Context) error {
 	return nil
 }
 
+// checkContexts examines whether contexts have been provided, and, if they have not and useCurrent
+// is true and cl.Current provided, uses the current context.
+func (i *Installer) checkContexts(cl kubectl.ClusterList, useCurrent bool) error {
+	if len(i.c.Contexts) == 0 {
+		if useCurrent && cl.Current != "" {
+			i.c.Contexts = []string{cl.Current}
+		} else {
+			return errors.Errorf("no clusters requested")
+		}
+	}
+	return nil
+}
+
 // processCluster installs the necessary files on the currently active cluster.
 // In addition the current cluster context is passed in.
 func (i *Installer) processCluster(cluster string) error {
@@ -315,16 +328,12 @@ func (i *Installer) Run(useCurrent bool) error {
 			glog.Errorf("while restoring context: %q: %v", cl.Current, err)
 		}
 	}()
-	if len(i.c.Contexts) == 0 {
-		if useCurrent && cl.Current != "" {
-			i.c.Contexts = []string{cl.Current}
-		} else {
-			return errors.Errorf("no clusters requested for installation")
-		}
-	}
-
 	if err != nil {
 		return errors.Wrapf(err, "while getting local list of clusters")
+	}
+	err = i.checkContexts(cl, useCurrent)
+	if err != nil {
+		return errors.Wrapf(err, "while checking cluster context")
 	}
 	if err := i.createCertificates(); err != nil {
 		return errors.Wrapf(err, "while creating certificates")
@@ -380,12 +389,12 @@ func (i *Installer) uninstallCluster() error {
 
 // Uninstall uninstalls the system from the cluster.  Uninstall is asynchronous,
 // so the uninstalled system will remain for a while after this completes.
-func (i *Installer) Uninstall(confirm string) error {
+// The correct confirm string must be provided for uninstallation to proceed.
+// If useCurrent is set, and the list of clusters to install is empty, Uninstall will
+// uninstall the cluster in the current context.
+func (i *Installer) Uninstall(confirm string, useCurrent bool) error {
 	if confirm != confirmUninstall {
 		return errors.Errorf("to confirm uninstall (destructive) set -uninstall=%q", confirmUninstall)
-	}
-	if len(i.c.Contexts) == 0 {
-		return errors.Errorf("no clusters requested")
 	}
 	cl, err := kubectl.LocalClusters()
 	defer func() {
@@ -395,6 +404,10 @@ func (i *Installer) Uninstall(confirm string) error {
 	}()
 	if err != nil {
 		return errors.Wrapf(err, "while getting local list of clusters")
+	}
+	err = i.checkContexts(cl, useCurrent)
+	if err != nil {
+		return errors.Wrapf(err, "while checking cluster context")
 	}
 	kc := kubectl.New(context.Background())
 	for _, cluster := range i.c.Contexts {

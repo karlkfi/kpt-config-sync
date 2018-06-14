@@ -92,7 +92,7 @@ func noninteractiveMain() {
 	i := installer.New(config.ExpandVarsCopy(), dir)
 
 	if *uninstall != "" {
-		if err := i.Uninstall(*uninstall); err != nil {
+		if err := i.Uninstall(*uninstall, *useCurrent); err != nil {
 			glog.Exit(errors.Wrapf(err, "uninstallation failed"))
 		}
 		glog.Infof("Uninstall successful!")
