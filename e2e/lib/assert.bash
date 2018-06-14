@@ -7,9 +7,22 @@
 # Will fail if the output of the command or its error message doesn't contain substring
 #
 function assert::contains() {
-  if [[ "$output" != *"$1"* ]]; then
-    echo "FAIL: [$output] does not contain [$1]"
+  local str="${1:-}"
+  if [[ "$output" != *"${str}"* ]]; then
+    echo "FAIL: [$output] does not contain [${str}]"
     false
   fi
 }
 
+# assert::equals <command> <string>
+#
+# Will fail if the output of the command or its error message doesn't match
+# string
+#
+function assert::equals() {
+  local str="${1:-}"
+  if [[ "$output" != "${str}" ]]; then
+    echo "FAIL: [$output] does not equal [${str}]"
+    false
+  fi
+}

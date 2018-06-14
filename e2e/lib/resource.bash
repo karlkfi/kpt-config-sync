@@ -56,3 +56,150 @@ function resource::wait_for_update() {
   return 1
 }
 
+
+# Checks the existence and labels of a given resource.
+# Flags:
+#  -n [namespace] get the count for a namespaced resource
+#  -l [label] (repeated) specify a label that must exist on the resource
+# Args:
+#  [resource] the resource, eg clusterrole
+#  [name] the resource name, eg, cluster-admin
+# Example:
+#  - Check that the namespace backend exists and has the label
+#    "nomos.dev/marked=true"
+#    resource::check ns backend -l "nomos.dev/marked=true"
+#  - Check that the role pod-editor exists in the frontend namespace
+#    resource::check -n frontend role pod-editor
+function resource::check() {
+  local arg
+  local args=()
+  local namespace=""
+  local labels=()
+  while [[ $# -gt 0 ]]; do
+    local arg="${1:-}"
+    shift
+    case $arg in
+      -n)
+        namespace=${1:-}
+        shift
+      ;;
+      -l)
+        labels+=(${1:-})
+        shift
+      ;;
+      *)
+        args+=("$arg")
+      ;;
+    esac
+  done
+
+  local resource="${args[0]}"
+  local name="${args[1]}"
+
+  local cmd=("kubectl" "get" "$resource" "$name" -ojson)
+  if [[ "$namespace" != "" ]]; then
+    cmd+=(-n $namespace)
+  fi
+
+  echo "${cmd[@]}  ${#labels[@]}"
+  output=$(${cmd[@]})
+  [ "$status" -eq 0 ]
+  local json="$output"
+  if [[ "${#labels[@]}" != 0 ]]; then
+    local label
+    for label in "${labels[@]}"; do
+      local key=$(echo "$label" | sed -e 's/=.*//')
+      local value=$(echo "$label" | sed -e 's/[^=]*=//')
+      output=$(echo "$json" | jq ".metadata.labels[\"${key}\"]")
+      if [[ "$output" != "\"$value\"" ]]; then
+        echo "Expected label $value, got $output"
+        false
+      fi
+    done
+  fi
+}
+
+# Checks the count of a given resource
+#
+# Flags:
+#  -n [namespace] get the count for a namespaced resource
+#  -l [selector] use a selector during list
+#  -r [resource] the resource, eg clusterrole
+#  -c [count] the expected count, eg 5
+function resource::check_count() {
+  local args=()
+  local count=""
+  while [[ $# -gt 0 ]]; do
+    local arg="${1:-}"
+    shift
+    case $arg in
+      -c)
+        count=${1:-}
+        shift
+      ;;
+      *)
+        args+=("$arg")
+      ;;
+    esac
+  done
+  [ -n "$count" ] || (echo "Must specify -c [count]"; return 1)
+
+  local actual=$(resource::count "${args[@]}")
+  if [[ $count != $actual ]]; then
+    echo "Expected $count, got $actual"
+    false
+  fi
+}
+
+# Get the count of a given resource
+#
+# Flags:
+#  -n [namespace] get the count for a namespaced resource
+#  -l [selector] use a selector during list
+#  -r [resource] the resource, eg clusterrole
+function resource::count() {
+  local namespace=""
+  local selector=""
+  local resource=""
+  while [[ $# -gt 0 ]]; do
+    local arg="${1:-}"
+    shift
+    case $arg in
+      -n)
+        namespace=${1:-}
+        shift
+      ;;
+      -l)
+        selector=${1:-}
+        shift
+      ;;
+      -r)
+        resource=${1:-}
+        shift
+      ;;
+      *)
+        echo "Unexpected arg $arg" >&3
+        return 1
+      ;;
+    esac
+  done
+  [ -n "$resource" ] || (echo "Must specify -r [resource]" >&3; return 1)
+
+  local cmd=("kubectl" "get" "$resource")
+  if [[ "$namespace" != "" ]]; then
+    cmd+=(-n $namespace)
+  fi
+  if [[ "$selector" != "" ]]; then
+    cmd+=(-l "$selector")
+  fi
+
+  debug::log "Running ${cmd[@]}"
+  local output="$("${cmd[@]}")"
+  debug::log "$output"
+  local count=0
+  if [[ "$output" != "No resources found." ]]; then
+    count=$(( $(echo "$output" | wc -l) - 1 ))
+  fi
+  echo $count
+}
+

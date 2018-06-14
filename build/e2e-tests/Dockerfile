@@ -18,7 +18,7 @@ ARG GID=1000
 
 ENV GIT_CONFIG_NOGLOBAL 1
 ENV GIT_CONFIG_NOSYSTEM 1
-RUN apt-get update && apt-get install -y git
+RUN apt-get update && apt-get install -y git jq
 RUN groupadd -g $GID $UNAME
 RUN useradd -u $UID -g $UNAME $UNAME
 
