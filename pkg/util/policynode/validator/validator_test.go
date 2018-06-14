@@ -40,6 +40,18 @@ func newNode(name string, parent string, policyspace bool) *policyhierarchy_v1.P
 	}
 }
 
+func newReservedNode(name string) *policyhierarchy_v1.PolicyNode {
+	return &policyhierarchy_v1.PolicyNode{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: name,
+		},
+		Spec: policyhierarchy_v1.PolicyNodeSpec{
+			Type:   policyhierarchy_v1.ReservedNamespace,
+			Parent: policyhierarchy_v1.NoParentNamespace,
+		},
+	}
+}
+
 func setResources(pn *policyhierarchy_v1.PolicyNode, roleNames, roleBindingNames []string) {
 	var roles []rbac_v1.Role
 	for _, rn := range roleNames {
@@ -131,12 +143,31 @@ func TestRemove(t *testing.T) {
 	}
 }
 
+func TestRootCannotBeNamespace(t *testing.T) {
+	v := New()
+	v.Add(newNode("root", "", false))
+	if err := v.checkRoots(); err == nil {
+		t.Errorf("Should have namespace is root error")
+	}
+	if err := v.Validate(); err == nil {
+		t.Errorf("Should have namespace is root error")
+	}
+}
+
 func TestMultipleRoots(t *testing.T) {
 	v := New()
 	v.Add(newNode("root", "", true))
 	v.Add(newNode("child1", "root", true))
 	v.Add(newNode("child2", "child1", false))
 
+	if err := v.checkRoots(); err != nil {
+		t.Errorf("Multiple roots state should be OK %s %s", err, spew.Sdump(v))
+	}
+	if err := v.Validate(); err != nil {
+		t.Errorf("Multiple roots state should be OK %s %s", err, spew.Sdump(v))
+	}
+
+	v.Add(newReservedNode("reserved-1"))
 	if err := v.checkRoots(); err != nil {
 		t.Errorf("Multiple roots state should be OK %s %s", err, spew.Sdump(v))
 	}

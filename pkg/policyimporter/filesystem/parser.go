@@ -197,12 +197,12 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 
 	root := allDirsOrdered[0]
 	rootInfos := dirInfos[root]
-	p, c, r, err := processRootDir(root, rootInfos)
+	policyNode, clusterPolicy, reservedNamespaces, err := processRootDir(root, rootInfos)
 	if err != nil {
 		return nil, errors.Wrapf(err, "root directory is invalid: %s", root)
 	}
-	policies.PolicyNodes[p.Name] = *p
-	policies.ClusterPolicy = c
+	policies.PolicyNodes[policyNode.Name] = *policyNode
+	policies.ClusterPolicy = clusterPolicy
 
 	for _, d := range allDirsOrdered[1:] {
 		infos := dirInfos[d]
@@ -210,10 +210,14 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 		if err != nil {
 			return nil, errors.Wrapf(err, "directory is invalid: %s", d)
 		}
-		if r.IsReserved(p.Name) {
+		if reservedNamespaces.IsReserved(p.Name) {
 			return nil, errors.Errorf("namespace dir %q is a reserved namespace", p.Name)
 		}
 		policies.PolicyNodes[p.Name] = *p
+	}
+
+	if err := generateReservedPolicyNodes(&policies, reservedNamespaces); err != nil {
+		return nil, err
 	}
 
 	if err := clusterpolicy.Validate(policies.ClusterPolicy); err != nil {
@@ -225,6 +229,29 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 	}
 
 	return &policies, nil
+}
+
+func generateReservedPolicyNodes(
+	policies *policyhierarchy_v1.AllPolicies, reservedNamespaces *reserved.Namespaces) error {
+	for _, reservedName := range reservedNamespaces.List(policyhierarchy_v1.ReservedAttribute) {
+		if pn, found := policies.PolicyNodes[reservedName]; found {
+			return errors.Errorf("%s cannot be both policy node and reserved namespace. %#v", reservedName, pn)
+		}
+
+		policies.PolicyNodes[reservedName] = policyhierarchy_v1.PolicyNode{
+			TypeMeta: meta_v1.TypeMeta{
+				Kind:       "PolicyNode",
+				APIVersion: policyhierarchy_v1.SchemeGroupVersion.String(),
+			},
+			ObjectMeta: meta_v1.ObjectMeta{
+				Name: reservedName,
+			},
+			Spec: policyhierarchy_v1.PolicyNodeSpec{
+				Type: policyhierarchy_v1.ReservedNamespace,
+			},
+		}
+	}
+	return nil
 }
 
 func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.PolicyNode,

@@ -130,7 +130,7 @@ func (s *Validator) checkRoots() error {
 	}
 	var roots []string
 	for nodeName, node := range s.policyNodes {
-		if node.Spec.Parent == policyhierarchy_v1.NoParentNamespace {
+		if node.Spec.Parent == policyhierarchy_v1.NoParentNamespace && node.Spec.Type != policyhierarchy_v1.ReservedNamespace {
 			roots = append(roots, nodeName)
 		}
 	}
@@ -145,7 +145,7 @@ func (s *Validator) checkRoots() error {
 	}
 	for _, nodeName := range roots {
 		node := s.policyNodes[nodeName]
-		if !node.Spec.Type.IsPolicyspace() {
+		if node.Spec.Type.IsNamespace() {
 			return errors.Errorf("root node %q should not be a %s", nodeName, node.Spec.Type)
 		}
 	}
