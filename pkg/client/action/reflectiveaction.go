@@ -255,9 +255,11 @@ var _ Interface = &ReflectiveCreateAction{}
 
 // Execute implements Interface
 func (s *ReflectiveCreateAction) Execute() error {
-	timer := prometheus.NewTimer(Duration.WithLabelValues(s.Namespace(), s.Resource(), string(s.Operation())))
-	defer timer.ObserveDuration()
 	glog.V(1).Infof("Executing %s", s)
+	Actions.WithLabelValues(s.Resource(), string(s.Operation())).Inc()
+	APICalls.WithLabelValues(s.Resource(), string(s.Operation())).Inc()
+	timer := prometheus.NewTimer(APICallDuration.WithLabelValues(s.Resource(), string(s.Operation())))
+	defer timer.ObserveDuration()
 	if _, err := s.create(); err != nil {
 		return errors.Wrapf(err, "failed to create namespace %q", s.name)
 	}
@@ -309,9 +311,8 @@ func NewReflectiveUpdateAction(
 
 // Execute implements Interface
 func (s *ReflectiveUpdateAction) Execute() error {
-	timer := prometheus.NewTimer(Duration.WithLabelValues(s.Namespace(), s.Resource(), string(s.Operation())))
-	defer timer.ObserveDuration()
 	glog.V(1).Infof("Executing %s", s)
+	Actions.WithLabelValues(s.Resource(), string(s.Operation())).Inc()
 	return s.doUpdate()
 }
 
@@ -332,7 +333,10 @@ func (s *ReflectiveUpdateAction) doUpdate() error {
 			return err
 		}
 
+		APICalls.WithLabelValues(s.Resource(), string(s.Operation())).Inc()
+		timer := prometheus.NewTimer(APICallDuration.WithLabelValues(s.Resource(), string(s.Operation())))
 		_, err = s.tryUpdate(newObj)
+		timer.ObserveDuration()
 		if err == nil {
 			glog.V(1).Infof("OK: %s", s)
 			return nil
@@ -373,14 +377,17 @@ func (s *ReflectiveUpsertAction) UpsertedResouce() runtime.Object {
 
 // Execute implements Interface
 func (s *ReflectiveUpsertAction) Execute() error {
-	timer := prometheus.NewTimer(Duration.WithLabelValues(s.Namespace(), s.Resource(), string(s.Operation())))
-	defer timer.ObserveDuration()
 	glog.V(1).Infof("Executing %s", s)
+	Actions.WithLabelValues(s.Resource(), string(s.Operation())).Inc()
 	return s.doUpsert()
 }
 
 func (s *ReflectiveActionBase) doCreate() error {
-	if _, err := s.create(); err != nil {
+	APICalls.WithLabelValues(s.Resource(), "create").Inc()
+	timer := prometheus.NewTimer(APICallDuration.WithLabelValues(s.Resource(), "create"))
+	_, err := s.create()
+	timer.ObserveDuration()
+	if err != nil {
 		if api_errors.IsAlreadyExists(err) {
 			return s.doUpsert()
 		}
@@ -403,6 +410,9 @@ func (s *ReflectiveActionBase) doUpsert() error {
 		return nil
 	}
 
+	APICalls.WithLabelValues(s.Resource(), "update").Inc()
+	timer := prometheus.NewTimer(APICallDuration.WithLabelValues(s.Resource(), "update"))
+	defer timer.ObserveDuration()
 	if _, err = s.update(resource); err != nil {
 		return errors.Wrapf(err, "failed to update for %s", s)
 	}
@@ -433,9 +443,8 @@ func NewReflectiveDeleteAction(
 
 // Execute implements Interface
 func (s *ReflectiveDeleteAction) Execute() error {
-	timer := prometheus.NewTimer(Duration.WithLabelValues(s.Namespace(), s.Resource(), string(s.Operation())))
-	defer timer.ObserveDuration()
 	glog.V(1).Infof("Executing %s", s)
+	Actions.WithLabelValues(s.Resource(), string(s.Operation())).Inc()
 
 	o, err := s.listerGet()
 	if err != nil {
@@ -455,6 +464,9 @@ func (s *ReflectiveDeleteAction) Execute() error {
 		return nil
 	}
 
+	APICalls.WithLabelValues(s.Resource(), "delete").Inc()
+	timer := prometheus.NewTimer(APICallDuration.WithLabelValues(s.Resource(), string(s.Operation())))
+	defer timer.ObserveDuration()
 	err = s.delete()
 	if err != nil {
 		if api_errors.IsNotFound(err) {

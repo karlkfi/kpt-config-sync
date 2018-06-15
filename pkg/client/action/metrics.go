@@ -17,18 +17,44 @@ package action
 
 import "github.com/prometheus/client_golang/prometheus"
 
-// Duration tracks the duration of Reflective action.
-var Duration = prometheus.NewHistogramVec(
+// Actions is a counter for the number of actions executed.
+var Actions = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Help:      "The total count of actions created",
+		Namespace: "nomos",
+		Subsystem: "action",
+		Name:      "executed",
+	},
+	[]string{"resource", "operation"},
+)
+
+// APICalls is a counter for actual api calls
+var APICalls = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Help:      "The total count of actual API calls (actions will elide noop API calls)",
+		Namespace: "nomos",
+		Subsystem: "action",
+		Name:      "api_calls",
+	},
+	[]string{"resource", "operation"},
+)
+
+// APICallDuration tracks the amount of time API calls take.
+var APICallDuration = prometheus.NewHistogramVec(
 	prometheus.HistogramOpts{
 		Help:      "Client action duration distributions",
 		Namespace: "nomos",
 		Subsystem: "action",
-		Name:      "duration_seconds",
-		Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
+		Name:      "api_duration_seconds",
+		Buckets:   []float64{.001, .01, .1, 1},
 	},
-	[]string{"namespace", "resource", "operation"},
+	[]string{"resource", "operation"},
 )
 
 func init() {
-	prometheus.MustRegister(Duration)
+	prometheus.MustRegister(
+		Actions,
+		APICalls,
+		APICallDuration,
+	)
 }
