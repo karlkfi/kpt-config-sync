@@ -21,6 +21,7 @@ limitations under the License.
 package policyhierarchycontroller
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/golang/glog"
@@ -48,7 +49,10 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/record"
 )
+
+const controllerName = "nomos-hierarchical-controller"
 
 // PolicyHieraryController controls policies based on the declarations in the PolicyNodes.
 type PolicyHieraryController struct {
@@ -56,6 +60,7 @@ type PolicyHieraryController struct {
 	namespaceLister listers_core_v1.NamespaceLister
 	hierarchy       hierarchy.Interface
 	modules         []Module
+	recorder        record.EventRecorder
 }
 
 // informerProvider is here to reduce some amount of redunancy with registering informer providers
@@ -74,6 +79,7 @@ func NewController(
 		namespaceLister: injectArgs.KubernetesInformers.Core().V1().Namespaces().Lister(),
 		modules:         modules,
 		hierarchy:       hierarchy.New(injectArgs.Informers.Nomos().V1().PolicyNodes()),
+		recorder:        injectArgs.CreateRecorder(controllerName),
 	}
 	err := injectArgs.Informers.Nomos().V1().PolicyNodes().Informer().AddIndexers(
 		parentindexer.Indexer())
@@ -82,7 +88,7 @@ func NewController(
 	}
 
 	genericController := &controller.GenericController{
-		Name:             "nomos-hierarchical-controller",
+		Name:             controllerName,
 		InformerRegistry: injectArgs.ControllerManager,
 		Reconcile:        policyHierarchyController.reconcile,
 	}
@@ -184,16 +190,25 @@ func (s *PolicyHieraryController) getNamespaceState(name string) (namespaceState
 		return namespaceStateNotFound, nil, errors.Wrapf(err, "got unhandled lister error")
 	}
 
-	if labeling.ManageAll.IsSet(ns) {
+	value, found := ns.Labels[labeling.ManagementKey]
+	if !found {
+		return namespaceStateExists, ns, nil
+	}
+
+	switch value {
+	case labeling.Policies:
+		return namespaceStateManagePolicies, ns, nil
+	case labeling.Full:
 		return namespaceStateManageFull, ns, nil
 	}
 
-	if labeling.ManagePolicies.IsSet(ns) {
-		return namespaceStateManagePolicies, ns, nil
-	}
-
-	// TODO: warn if the label value is other.
-
+	glog.Warningf("Namespace %s has invalid management label %s", name, value)
+	s.recorder.Event(
+		ns,
+		core_v1.EventTypeWarning,
+		"InvalidManagmentLabel",
+		fmt.Sprintf("Namespace %s has invalid management label %s", name, value),
+	)
 	return namespaceStateExists, ns, nil
 }
 

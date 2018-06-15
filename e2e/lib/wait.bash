@@ -2,6 +2,67 @@
 
 # Helpers for waiting for async events (e.g. Pods to come up).
 
+# Wait for an event to occur
+# Flags
+#  -n [namespace] - namespace to fetch event from
+#  -r [reason] - event reason
+#  -t [timeout] - timeout
+#  -d [deadline] - deadline in seconds from epoch
+# Args
+#  [reason]
+function wait::event() {
+  local deadline=""
+  local namespace=""
+  local timeout="10"
+  local args=()
+  while [[ $# -gt 0 ]]; do
+    local arg="${1:-}"
+    shift
+    case $arg in
+      -n)
+        namespace=${1:-}
+        shift
+        ;;
+      -t)
+        timeout=${1:-}
+        shift
+        ;;
+      -d)
+        timeout=""
+        deadline=${1:-}
+        shift
+        ;;
+      *)
+        args+=("$arg")
+        ;;
+    esac
+  done
+
+  local reason="${args[0]}"
+  [ -z "$reason" ] && echo "specify [reason] arg" && false
+
+  if [[ "$timeout" != "" ]]; then
+    deadline=$(( $(date +%s) + ${timeout} ))
+  fi
+
+  cmd=(
+    kubectl get event
+  )
+  if [[ "$namespace" != "" ]]; then
+    cmd+=("-n" "$namespace")
+  fi
+
+  while [[ "$(date +%s)" < "${deadline}" ]]; do
+    if "${cmd[@]}" | grep "${reason}" &> /dev/null; then
+      return 0
+    fi
+    sleep 0.5
+  done
+  echo "Failed to get event"
+  return 1
+}
+
+
 function wait::for_success() {
   local command="${1:-}"
   local timeout=${2:-10}

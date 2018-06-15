@@ -170,3 +170,18 @@ function local_teardown() {
   namespace::check_parent $nsp dst
   namespace::check_parent $nsf dst
 }
+
+
+@test "Warn on invalid management label" {
+  local ns=decl-invalid-label
+  namespace::create $ns a-garbage-label
+  namespace::declare $ns
+  git::commit
+
+  wait::event \
+    -n default \
+    InvalidManagmentLabel
+  namespace::check_exists $ns a-garbage-label
+  namespace::check_warning $ns
+}
+
