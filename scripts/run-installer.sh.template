@@ -16,8 +16,8 @@
 #
 # This file is using bash argument parsing from http://argbash.io
 #
-# ARG_HELP([Nomos installer script\n \n Example:\n \n./run-installer.sh --config=some/dir/config.yaml\n./run-installer.sh --interactive\n \n])
-# ARG_OPTIONAL_SINGLE([version], [v], [The gcr.io tag to use for each Nomos component's docker container], [stable])
+# ARG_HELP([Nomos installer script XXX_INSTALLER_DEFAULT_VERSION\n \n Example:\n \n./run-installer.sh --config=some/dir/config.yaml\n./run-installer.sh --interactive\n \n])
+# ARG_OPTIONAL_SINGLE([version], [v], [The gcr.io tag to use for each Nomos component's docker container], [XXX_INSTALLER_DEFAULT_VERSION])
 # ARG_OPTIONAL_SINGLE([config], , [The configuration file to use.  To create an installer yaml file, do an interactive install (--interactive), and copy the generated yaml file from $PWD/gen_configs/generated.yaml to a preferred location], [])
 # ARG_OPTIONAL_BOOLEAN([interactive], , [Run a menu driven interactive installer], off)
 # ARG_OPTIONAL_SINGLE([uninstall], , [If set, uninstalls Nomos based on the configuration file specified in --config. Requires that --config is set], [])

@@ -156,7 +156,7 @@ Download the Nomos installer script to a directory on your machine.
 $ cd
 $ mkdir -p tmp/nomos
 $ cd tmp/nomos
-$ curl https://storage.googleapis.com/nomos-release/run-installer.sh -o run-installer.sh
+$ curl https://storage.googleapis.com/nomos-release/stable/run-installer.sh -o run-installer.sh
 $ chmod +x run-installer.sh
 ```
 

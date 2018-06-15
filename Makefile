@@ -172,8 +172,13 @@ $(SCRIPTS_STAGING_DIR)/run-installer.sh: $(OUTPUT_DIR) $(TOP_DIR)/scripts/run-in
 	    -u $$(id -u):$$(id -g) \
   		-v "$(TOP_DIR):/work" matejak/argbash \
 		/work/scripts/run-installer.sh.template \
-		--output=$(SCRIPTS_STAGING_DIR:$(TOP_DIR)%=/work%)/run-installer.sh
-
+		--output=$(SCRIPTS_STAGING_DIR:$(TOP_DIR)%=/work%)/run-installer.sh.1
+	@cat \
+		$(TOP_DIR)/scripts/lib/installer.sh \
+		$(SCRIPTS_STAGING_DIR)/run-installer.sh.1 \
+		> $@
+	@sed -i -e "s/XXX_INSTALLER_DEFAULT_VERSION/${VERSION}/g" $@
+	@chmod +x $@
 
 .PHONY: build
 build: buildenv

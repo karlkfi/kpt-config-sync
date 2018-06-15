@@ -59,24 +59,24 @@ check-dirty:
 	@if [[ $(VERSION) == *"dirty"* ]]; then \
 		echo "Cannot release from a dirty client: VERSION=$(VERSION)"; \
 		exit 1; \
-    fi
+	fi \
 
-# Releases the run-installer script and docs to GCS bucket and apply
-# :latest tag to the built image, also updates the nomos-docs-latest.zip
+# Uploads the release artifacts to a versioned GCS release bucket. Also uploads
+# the artifacts to a GCS release bucket with version name "latest".
 release: clean \
-		check-dirty \
 		$(SCRIPTS_STAGING_DIR)/run-installer.sh \
 		test-all \
 		installer-image \
 		docs-package
-	gsutil cp $(SCRIPTS_STAGING_DIR)/run-installer.sh $(RELEASE_BUCKET)
-	gsutil cp $(TOP_DIR)/scripts/nomosvet.sh $(RELEASE_BUCKET)
-	gsutil cp $(STAGING_DIR)/nomos-docs.zip $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip
-	gsutil cp $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip $(RELEASE_BUCKET)/nomos-docs-latest.zip
-	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip \
-		$(RELEASE_BUCKET)/nomos-docs-latest.zip \
-		$(RELEASE_BUCKET)/run-installer.sh \
-		$(RELEASE_BUCKET)/nomosvet.sh
+	gsutil -m cp \
+		$(SCRIPTS_STAGING_DIR)/run-installer.sh \
+		$(STAGING_DIR)/nomos-docs.zip  \
+		$(TOP_DIR)/scripts/nomosvet.sh \
+		$(RELEASE_BUCKET)/$(VERSION)
+	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/$(VERSION)
+	gsutil -m cp -r -p \
+			$(RELEASE_BUCKET)/$(VERSION) \
+			$(RELEASE_BUCKET)/latest
 	@echo "+++ Moving 'latest' label to reflect the latest release candidate"
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
@@ -86,8 +86,9 @@ release: clean \
 		gcr.io/$(GCP_PROJECT)/nomos:latest
 
 # For releases we attach the :stable tag to the latest image
-# built and update the stable docs package.
-bless-release:
+# built and update the stable docs package.  Dirty package releases  are not
+# allowed.
+bless-release: check-dirty
 	@echo "+++ Moving 'stable' label to reflect a STABLE version release"
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
@@ -95,6 +96,6 @@ bless-release:
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/nomos:stable
-	@echo "+++ Updating latest docs package"
-	gsutil cp -p $(RELEASE_BUCKET)/nomos-docs-$(VERSION).zip $(RELEASE_BUCKET)/nomos-docs-stable.zip
+	@echo "+++ Updating stable release package"
+	gsutil -m cp -p -r $(RELEASE_BUCKET)/$(VERSION) $(RELEASE_BUCKET)/stable
 
