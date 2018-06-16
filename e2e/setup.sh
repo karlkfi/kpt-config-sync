@@ -31,11 +31,28 @@ function set_up_env() {
 
 function set_up_env_minimal() {
   echo "****************** Minimal environment setup ******************"
+  echo "Starting port forwarding"
   TEST_LOG_REPO=/tmp/nomos-test
   FWD_SSH_PORT=2222
   POD_ID=$(kubectl get pods -n=nomos-system -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
   mkdir -p ${TEST_LOG_REPO}
   kubectl -n=nomos-system port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
+  local start=$(date +%s)
+  local pid=$(pgrep kubectl)
+  # Our image doesn't have netstat, so we have check for listen by
+  # looking at kubectl's open tcp sockets in procfs.  This looks for listen on
+  # 127.0.0.1:2222 with remote of 0.0.0.0:0.
+  # TODO: This should use git ls-remote, but for some reason it fails to be able
+  # to connect to the remote.
+  while ! grep "0100007F:08AE 00000000:0000 0A" /proc/${pid}/net/tcp &> /dev/null; do
+    echo -n "."
+    sleep 0.1
+    if [[ $(( $(date +%s) - $start )) > 10 ]]; then
+      echo "Failed to set up kubectl tunnel!"
+      return 1
+    fi
+  done
+  echo
   echo "****************** Environment is ready ******************"
 }
 

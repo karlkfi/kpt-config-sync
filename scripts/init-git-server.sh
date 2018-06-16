@@ -74,4 +74,4 @@ mkdir acme
 touch acme/README.md
 git add acme/README.md
 git commit -a -m "initial commit"
-git push origin master
+git push origin master -f

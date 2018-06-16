@@ -16,6 +16,7 @@ setup() {
 
   # Reset git repo to initial state.
   CWD=$(pwd)
+  echo "Setting up local git repo"
   rm -rf ${TEST_REPO_DIR}/repo
   mkdir -p ${TEST_REPO_DIR}/repo
   cd ${TEST_REPO_DIR}/repo
