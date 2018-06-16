@@ -81,6 +81,10 @@ type GCPConfig struct {
 	// This filename may contain a string $HOME, which is expanded by
 	// ExpandVarsCopy().
 	PrivateKeyFilename string `json:"PRIVATE_KEY_FILENAME"`
+
+	// host:port endpoint of the Kubernetes Policy API.
+	// Optional. If not specified, default to "kubernetespolicy.googleapis.com:443".
+	PolicyAPIAddress string `json:"POLICY_API_ADDRESS,omitempty"`
 }
 
 // Empty returns true if the config does not have necessary fields set and

@@ -87,6 +87,7 @@ BUILD_MODE ?= debug
 # All Nomos K8S deployments.
 ALL_K8S_DEPLOYMENTS := syncer \
 	git-policy-importer \
+	gcp-policy-importer \
 	resourcequota-admission-controller \
 	policy-admission-controller
 
@@ -364,10 +365,6 @@ test-e2e-noclean: e2e-image-all test-e2e-run
 # target has no intelligence about dependencies.
 test-e2e-nosetup: IMAGE_TAG=test-e2e-latest
 test-e2e-nosetup: test-e2e-run
-
-# Redeploys all components to cluster without rerunning the installer.
-redeploy-all: $(addprefix redeploy-, $(ALL_K8S_DEPLOYMENTS))
-	@echo "+++ Finished redeploying all components"
 
 # Redeploy a component without rerunning the installer.
 redeploy-%: push-to-gcr-nomos gen-yaml-%

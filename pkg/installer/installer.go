@@ -22,7 +22,6 @@ package installer
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -40,21 +39,28 @@ const (
 	// deploymentTimeout is the default timeout to wait for each Nomos
 	// component to become functional.  Components initialize in parallel, so
 	// we expect that it's unlikely a wait would be
-	// deploymentTimeout*len(deploymentComponents).
+	// deploymentTimeout*len(deployments).
 	deploymentTimeout = 3 * time.Minute
 
 	// "Open sesame" for uninstallation.
 	confirmUninstall = "deletedeletedelete"
+
+	gitPolicyImporterDeployment = "git-policy-importer"
+	gcpPolicyImporterDeployment = "gcp-policy-importer"
+
+	gitPolicyImporterConfigMap = "git-policy-importer"
+	gcpPolicyImporterConfigMap = "gcp-policy-importer"
+
+	gitPolicyImporterCreds = "git-creds"
+	gcpPolicyImporterCreds = "gcp-creds"
 )
 
 var (
-	// deploymentComponents are the components that are expected to be running
-	// after installer completes.
-	deploymentComponents = []string{
-		fmt.Sprintf("%v:git-policy-importer", defaultNamespace),
-		fmt.Sprintf("%v:resourcequota-admission-controller", defaultNamespace),
-		fmt.Sprintf("%v:policy-admission-controller", defaultNamespace),
-		fmt.Sprintf("%v:syncer", defaultNamespace),
+	// commonDeployments are the common deployments managed by installer.
+	commonDeployments = []string{
+		"resourcequota-admission-controller",
+		"policy-admission-controller",
+		"syncer",
 	}
 
 	// deploymentClusterRolesAndBindings are the cluster roles and
@@ -132,23 +138,61 @@ func (i *Installer) createCertificates() error {
 	return nil
 }
 
-// applyAll runs 'kubectl apply -f applyDir'.
-func (i *Installer) applyAll(applyDir string) error {
+// apply runs 'kubectl apply -f p'.
+func (i *Installer) apply(p string) error {
 	kc := kubectl.New(context.Background())
-	glog.V(5).Infof("Applying YAML files from directory: %v", applyDir)
-	fi, err := os.Stat(applyDir)
-	if err != nil {
-		return errors.Wrapf(err, "applyAll: stat %v", applyDir)
-	}
-	if !fi.IsDir() {
-		return errors.Errorf("applyAll: not a directory: %v", applyDir)
-	}
-	return kc.Apply(applyDir)
+	glog.V(5).Infof("Applying YAML resources: %v", p)
+	return kc.Apply(p)
 }
 
-func (i *Installer) deployGitSecrets() error {
-	const secret = "git-creds"
-	glog.V(5).Info("deployGitSecrets: enter")
+func (i *Installer) deployConfigMap(name string, content []string) error {
+	c := kubectl.New(context.Background())
+	if err := c.DeleteConfigmap(name, defaultNamespace); err != nil {
+		glog.V(5).Infof("Failed to delete configmap: %v", err)
+	}
+
+	if err := c.CreateConfigmapFromLiterals(name, defaultNamespace, content...); err != nil {
+		return errors.Wrapf(err, "while creating configmap %s", name)
+	}
+	return nil
+}
+
+func (i *Installer) gitConfigMapContent() []string {
+	return []string{
+		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Git.UseSSH),
+		fmt.Sprintf("GIT_SYNC_REPO=%v", i.c.Git.SyncRepo),
+		fmt.Sprintf("GIT_SYNC_BRANCH=%v", i.c.Git.SyncBranch),
+		fmt.Sprintf("GIT_SYNC_WAIT=%v", i.c.Git.SyncWaitSeconds),
+		fmt.Sprintf("GIT_KNOWN_HOSTS=%v", i.c.Git.KnownHostsFilename != ""),
+		fmt.Sprintf("GIT_COOKIE_FILE=%v", i.c.Git.CookieFilename != ""),
+		fmt.Sprintf("POLICY_DIR=%v", i.c.Git.RootPolicyDir),
+	}
+}
+
+func (i *Installer) gcpConfigMapContent() []string {
+	c := []string{
+		fmt.Sprintf("ORG_ID=%v", i.c.GCP.OrgID),
+	}
+	if i.c.GCP.PolicyAPIAddress != "" {
+		c = append(c, fmt.Sprintf("POLICY_API_ADDRESS=%v", i.c.GCP.PolicyAPIAddress))
+	}
+	return c
+}
+
+func (i *Installer) deploySecret(name string, content []string) error {
+	c := kubectl.New(context.Background())
+	if err := c.DeleteSecret(name, defaultNamespace); err != nil {
+		glog.V(5).Infof("failed to delete secret %s: %v", name, err)
+	}
+	if err := c.CreateSecretGenericFromFile(
+		name, defaultNamespace, content...); err != nil {
+		return errors.Wrapf(err, "failed to create secret %s", name)
+	}
+	return nil
+}
+
+// gitSecretContent returns the content of the Secret consumed by GitPolicyImporter.
+func (i *Installer) gitSecretContent() []string {
 	var filenames []string
 	if i.c.Git.UseSSH {
 		filenames = append(filenames,
@@ -163,59 +207,15 @@ func (i *Installer) deployGitSecrets() error {
 	} else {
 		glog.V(5).Info("no PrivateKeyFilename, deploying empty secret")
 	}
-	c := kubectl.New(context.Background())
-	if err := c.DeleteSecret(secret, defaultNamespace); err != nil {
-		glog.V(5).Infof("failed to delete secret: %v", err)
-	}
-
-	if err := c.CreateSecretGenericFromFile(
-		secret, defaultNamespace, filenames...); err != nil {
-		return errors.Wrapf(err, "while creating ssh secrets")
-	}
-	return nil
+	return filenames
 }
 
-func (i *Installer) deployGitConfig() error {
-	const configmap = "git-policy-importer"
-	glog.V(10).Info("deployGitConfig: enter")
-	c := kubectl.New(context.Background())
-	if err := c.DeleteConfigmap(configmap, defaultNamespace); err != nil {
-		glog.V(5).Infof("Failed to delete configmap: %v", err)
-	}
-
-	if err := c.CreateConfigmapFromLiterals(
-		configmap, defaultNamespace, i.getGitConfigMapData()...,
-	); err != nil {
-		return errors.Wrapf(err, "while creating configmap git-policy-importer")
-	}
-	return nil
-}
-
-func (i *Installer) getGitConfigMapData() []string {
-	return []string{
-		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Git.UseSSH),
-		fmt.Sprintf("GIT_SYNC_REPO=%v", i.c.Git.SyncRepo),
-		fmt.Sprintf("GIT_SYNC_BRANCH=%v", i.c.Git.SyncBranch),
-		fmt.Sprintf("GIT_SYNC_WAIT=%v", i.c.Git.SyncWaitSeconds),
-		fmt.Sprintf("GIT_KNOWN_HOSTS=%v", i.c.Git.KnownHostsFilename != ""),
-		fmt.Sprintf("GIT_COOKIE_FILE=%v", i.c.Git.CookieFilename != ""),
-		fmt.Sprintf("POLICY_DIR=%v", i.c.Git.RootPolicyDir),
-	}
-}
-
-func (i *Installer) deploySecrets() error {
-	glog.V(5).Info("deploySecrets: enter")
-	err := i.deployGitSecrets()
-	if err != nil {
-		return errors.Wrapf(err, "while deploying git secrets")
-	}
-	for _, certInstaller := range i.certInstallers {
-		if err := certInstaller.deploySecrets(i.workDir); err != nil {
-			return errors.Wrapf(err, "while deploying %s secrets", certInstaller.name())
-		}
-	}
-
-	return nil
+// gitSecretContent returns the content of the Secret consumed by GCPPolicyImporter.
+func (i *Installer) gcpSecretContent() []string {
+	var filenames []string
+	filenames = append(filenames,
+		fmt.Sprintf("gcp-private-key=%v", i.c.GCP.PrivateKeyFilename))
+	return filenames
 }
 
 func (i *Installer) addClusterAdmin(user string) error {
@@ -282,24 +282,49 @@ func (i *Installer) processCluster(cluster string) error {
 	if err = i.c.Validate(config.OsFileExists{}); err != nil {
 		return errors.Wrapf(err, "while validating the configuration")
 	}
-	// Delete the git policy importer deployment.  This is important because a
-	// change in the git creds should also be reflected in the importer.
-	if err = c.DeleteDeployment("git-policy-importer", defaultNamespace); err != nil {
-		return errors.Wrapf(err, "while deleting git-policy-importer deployment")
-	}
-	if err = i.applyAll(filepath.Join(i.workDir, "manifests")); err != nil {
+	if err = i.apply(filepath.Join(i.workDir, "manifests")); err != nil {
 		return errors.Wrapf(err, "while applying manifests")
 	}
-	if err = i.deployGitConfig(); err != nil {
-		return errors.Wrapf(err, "processCluster")
+
+	var importerDeployment, importerConfigMapName, importerSecretName string
+	var importerConfigMapContent, importerSecretContent []string
+	if !i.c.Git.Empty() {
+		importerDeployment = gitPolicyImporterDeployment
+		importerConfigMapName = gitPolicyImporterConfigMap
+		importerConfigMapContent = i.gitConfigMapContent()
+		importerSecretName = gitPolicyImporterCreds
+		importerSecretContent = i.gitSecretContent()
+	} else {
+		importerDeployment = gcpPolicyImporterDeployment
+		importerConfigMapName = gcpPolicyImporterConfigMap
+		importerConfigMapContent = i.gcpConfigMapContent()
+		importerSecretName = gcpPolicyImporterCreds
+		importerSecretContent = i.gcpSecretContent()
 	}
-	if err = i.deploySecrets(); err != nil {
-		return errors.Wrapf(err, "processCluster")
+
+	// Delete the importer deployment.  This is important because a
+	// change in the secret should also be reflected in the importer.
+	if err = c.DeleteDeployment(importerDeployment, defaultNamespace); err != nil {
+		return errors.Wrapf(err, "while deleting Deployment %s", importerDeployment)
 	}
-	if err = i.applyAll(filepath.Join(i.workDir, "yaml")); err != nil {
-		return errors.Wrapf(err, "while applying yaml")
+	if err = i.deployConfigMap(importerConfigMapName, importerConfigMapContent); err != nil {
+		return errors.Wrapf(err, "failed to create ConfigMap: %v", importerConfigMapName)
 	}
-	if err = c.WaitForDeployments(deploymentTimeout, deploymentComponents...); err != nil {
+	if err = i.deploySecret(importerSecretName, importerSecretContent); err != nil {
+		return errors.Wrapf(err, "failed to create Secret: %v", importerSecretName)
+	}
+	for _, certInstaller := range i.certInstallers {
+		if err = certInstaller.deploySecrets(i.workDir); err != nil {
+			return errors.Wrapf(err, "while deploying %s Secrets", certInstaller.name())
+		}
+	}
+	deployments := append(commonDeployments, importerDeployment)
+	for _, d := range deployments {
+		if err = i.apply(filepath.Join(i.workDir, "yaml", fmt.Sprintf("%s.yaml", d))); err != nil {
+			return errors.Wrapf(err, "while applying Deployment: %s", d)
+		}
+	}
+	if err = c.WaitForDeployments(deploymentTimeout, defaultNamespace, deployments...); err != nil {
 		return errors.Wrapf(err, "while waiting for system components")
 	}
 	return err

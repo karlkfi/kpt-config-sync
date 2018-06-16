@@ -169,6 +169,32 @@ contexts:
 			},
 		},
 		{
+			name: "gcp: policy API address",
+			input: `{
+		"contexts": [
+				"your_cluster"
+		],
+		"gcp": {
+				"ORG_ID": "1234",
+				"PRIVATE_KEY_FILENAME": "$HOME/privateKey",
+				"POLICY_API_ADDRESS": "localhost:1234",
+		},
+			}`,
+			expected: Config{
+				Contexts: []string{"your_cluster"},
+				GCP: GCPConfig{
+					OrgID:              "1234",
+					PrivateKeyFilename: "/home/user/privateKey",
+					PolicyAPIAddress:   "localhost:1234",
+				},
+				Git: GitConfig{
+					UseSSH:          true,
+					SyncWaitSeconds: 15,
+					SyncBranch:      "master",
+				},
+			},
+		},
+		{
 			name: "gcp: $HOME_ON_HOST substitution",
 			input: `{
 		"contexts": [
@@ -508,6 +534,17 @@ func TestValidate(t *testing.T) {
 				GCP: GCPConfig{
 					PrivateKeyFilename: "/some/valid/path/id_rsa",
 					OrgID:              "123",
+				},
+			},
+			fileExists: testExists{true},
+		},
+		{
+			name: "gcp: with policy API address",
+			config: Config{
+				GCP: GCPConfig{
+					PrivateKeyFilename: "/some/valid/path/id_rsa",
+					OrgID:              "123",
+					PolicyAPIAddress:   "localhost:1234",
 				},
 			},
 			fileExists: testExists{true},

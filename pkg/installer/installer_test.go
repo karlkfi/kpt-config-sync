@@ -3,6 +3,8 @@ package installer
 import (
 	"testing"
 
+	"strings"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/installer/config"
 )
@@ -80,12 +82,45 @@ func TestGitConfigMap(t *testing.T) {
 				"POLICY_DIR=foo-corp",
 			},
 		},
+		{
+			name: "gcp",
+			config: config.Config{
+				GCP: config.GCPConfig{
+					OrgID:              "1234",
+					PrivateKeyFilename: "/some/file",
+				},
+			},
+			want: []string{
+				"ORG_ID=1234",
+			},
+		},
+		{
+			name: "gcp with api address",
+			config: config.Config{
+				GCP: config.GCPConfig{
+					OrgID:              "1234",
+					PrivateKeyFilename: "/some/file",
+					PolicyAPIAddress:   "localhost:1234",
+				},
+			},
+			want: []string{
+				"ORG_ID=1234",
+				"POLICY_API_ADDRESS=localhost:1234",
+			},
+		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Installer{c: tt.config}
-			got := i.getGitConfigMapData()
+			var got []string
+			if strings.Contains(tt.name, "git") {
+				got = i.gitConfigMapContent()
+			} else if strings.Contains(tt.name, "gcp") {
+				got = i.gcpConfigMapContent()
+			} else {
+				t.Errorf("test case name must contain either git or gcp")
+			}
 			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Errorf("expected %v got %v\ndiff %v", tt.want, got, diff)
 			}

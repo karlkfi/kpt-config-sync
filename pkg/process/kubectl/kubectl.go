@@ -323,13 +323,10 @@ func (t *Context) waitForDeployment(deadline time.Time, namespace string, name s
 
 // WaitForDeployments waits for deployments to be available, or returns error in
 // case of failure.
-func (t *Context) WaitForDeployments(timeout time.Duration, deployments ...string) error {
+func (t *Context) WaitForDeployments(timeout time.Duration, ns string, deployments ...string) error {
 	deadline := time.Now().Add(timeout)
-	for _, deployment := range deployments {
-		parts := strings.Split(deployment, ":")
-		namespace := parts[0]
-		name := parts[1]
-		err := t.waitForDeployment(deadline, namespace, name)
+	for _, d := range deployments {
+		err := t.waitForDeployment(deadline, ns, d)
 		if err != nil {
 			return err
 		}
