@@ -50,7 +50,8 @@ function installer::main() {
     "--volume=${HOME}:/home/user"
   )
   readonly config_arg="$(installer::optf \
-		  --volume=%s:/opt/installer/configs/config_in.yaml ${_arg_config})"
+		  --volume=%s:/opt/installer/configs/config_in.yaml \
+		  $(installer::abspath ${_arg_config}))"
   if [[ "${config_arg}" != "" ]]; then
     VOLUME_ARGS+=("${config_arg}")
   fi
@@ -78,28 +79,7 @@ function installer::main() {
   	|| (echo "### Installer failed.  Logs are available in ${OUTPUT_DIR}/logs"; exit 1)
 }
 
-# installer::bool converts the 'on' and 'off' permissions from argbash into
-# the 'true' and 'false' respectively.
-function installer::bool() {
-	case $1 in
-	off) echo "false"
-			;;
-	on) echo "true"
-			;;
-	default)
-		echo "### Can not be parsed as on/off value: ${@}"
-		exit 200
-	esac
-}
-
-# installer::optf optionally formats $@ into $1 if $2 is nonempty.  Otherwise
-# returns nothing.
-function installer::optf() {
-	if [[ "$2" != "" ]]; then
-			printf -- "$@"
-	fi
-}
-
 installer::main
 
 # ] <-- needed because of Argbash
+

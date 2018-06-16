@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright 2016 The Kubernetes Authors.
 #
@@ -18,8 +18,19 @@ set -euo pipefail
 
 export CGO_ENABLED=0
 
-echo "Running tests:"
+export PATH="${PATH}:./third_party/bats-core/libexec"
+
+echo "Running go tests:"
 go test -i -installsuffix "static" "$@"
 go test -installsuffix "static" "$@"
 echo "PASS"
+
+# Keep BATS tests behind go tests.  bats seems to pollute the environment, and
+# go doesn't like that.
+echo "Running BATS tests:"
+for testfile in "$(find ./scripts -name '*.bats')"; do
+  . ./third_party/bats-core/bin/bats "${testfile}"
+done
+echo "PASS"
+
 echo

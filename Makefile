@@ -50,6 +50,9 @@ DOCKER_STAGING_DIR := $(STAGING_DIR)/docker
 # Directory used for installer output.
 INSTALLER_OUTPUT_DIR := $(STAGING_DIR)/installer_output
 
+# Directory that gets mounted into /tmp for build and test containers.
+TEMP_OUTPUT_DIR := $(OUTPUT_DIR)/tmp
+
 # Directory containing gen-alld yaml files from manifest templates.
 GEN_YAML_DIR := $(OUTPUT_DIR)/yaml
 
@@ -124,11 +127,12 @@ DOCKER_RUN_ARGS := \
 	-e VERSION=$(VERSION)                                              \
 	-e PKG=$(REPO)                                                     \
 	-e BUILD_MODE=$(BUILD_MODE)                                        \
-	-u $$(id -u):$$(id -g)                                             \
+	-u $(UID):$(GID)                                                   \
 	-v $(GO_DIR):/go                                                   \
 	-v $$(pwd):/go/src/$(REPO)                                         \
 	-v $(BIN_DIR)/$(ARCH):/go/bin                                      \
 	-v $(GO_DIR)/std/$(ARCH):/usr/local/go/pkg/linux_$(ARCH)_static    \
+	-v $(TEMP_OUTPUT_DIR):/tmp                                         \
 	-w /go/src/$(REPO)                                                 \
 	--rm                                                               \
 	$(BUILD_IMAGE)                                                     \
@@ -141,15 +145,16 @@ $(OUTPUT_DIR):
 	@echo "+++ Creating the local build output directory: $(OUTPUT_DIR)"
 	@mkdir -p \
 		$(BIN_DIR)/$(ARCH) \
+		$(DOCKER_STAGING_DIR) \
+		$(DOCS_STAGING_DIR) \
 		$(GEN_YAML_DIR) \
 		$(GO_DIR)/pkg \
 		$(GO_DIR)/src/$(REPO) \
 		$(GO_DIR)/std/$(ARCH) \
 		$(INSTALLER_OUTPUT_DIR) \
-		$(STAGING_DIR) \
-		$(DOCS_STAGING_DIR) \
 		$(SCRIPTS_STAGING_DIR) \
-		$(DOCKER_STAGING_DIR)
+		$(STAGING_DIR) \
+		$(TEMP_OUTPUT_DIR)
 
 $(TEST_GEN_YAML_DIR):
 	@echo "+++ Creating the local build output directory for test: $@"
@@ -167,10 +172,13 @@ $(OUTPUT_DIR)/buildenv: build/buildenv/Dockerfile $(OUTPUT_DIR)
 buildenv: $(OUTPUT_DIR)/buildenv
 
 # The installer script is built by preprocessing a template script.
-$(SCRIPTS_STAGING_DIR)/run-installer.sh: $(OUTPUT_DIR) $(TOP_DIR)/scripts/run-installer.sh.template
+$(SCRIPTS_STAGING_DIR)/run-installer.sh: \
+		$(OUTPUT_DIR) \
+		$(TOP_DIR)/scripts/run-installer.sh.template \
+		$(TOP_DIR)/scripts/lib/installer.sh
 	@echo "+++ Building run-installer.sh"
 	@docker run -it --rm -e PROGRAM=argbash \
-	    -u $$(id -u):$$(id -g) \
+	    -u $(UID):$(GID) \
   		-v "$(TOP_DIR):/work" matejak/argbash \
 		/work/scripts/run-installer.sh.template \
 		--output=$(SCRIPTS_STAGING_DIR:$(TOP_DIR)%=/work%)/run-installer.sh.1
