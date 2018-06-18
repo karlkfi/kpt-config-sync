@@ -59,7 +59,7 @@ check-dirty:
 	@if [[ $(VERSION) == *"dirty"* ]]; then \
 		echo "Cannot release from a dirty client: VERSION=$(VERSION)"; \
 		exit 1; \
-	fi \
+	fi
 
 # Uploads the release artifacts to a versioned GCS release bucket. Also uploads
 # the artifacts to a GCS release bucket with version name "latest".

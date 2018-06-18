@@ -344,7 +344,7 @@ test-e2e-run:
 	@rm -rf $(OUTPUT_DIR)/e2e/testcases
 	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
 	docker run -it \
-	    -u $$(id -u):$$(id -g) \
+	    -u $(UID):$(GID) \
 	    -v "${HOME}":/home/user \
 	    -v "${INSTALLER_OUTPUT_DIR}/certs":/opt/installer/certs \
 	    -v "${INSTALLER_OUTPUT_DIR}/gen_configs":/opt/installer/gen_configs \
@@ -426,7 +426,7 @@ docs-staging: $(OUTPUT_DIR)
 docs-generate: buildenv docs-staging
 	@echo "+++ Converting Markdown docs into HTML"
 	@docker run $(DOCKER_INTERACTIVE) \
-		-u $$(id -u):$$(id -g)                                             \
+		-u $(UID):$(GID)                                                   \
 		-v $$(pwd):/go/src/$(REPO)                                         \
 		-w /go/src/$(REPO)                                                 \
 		-e HOME=/go/src/$(REPO)/.output/config                             \
