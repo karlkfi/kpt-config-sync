@@ -95,6 +95,9 @@ type Installer struct {
 	// The configuration that the installer works out of.
 	c config.Config
 
+	// Kubernetes context.
+	k *kubectl.Context
+
 	// The working directory of the installer.
 	workDir string
 
@@ -117,6 +120,7 @@ func New(c config.Config, workDir string) *Installer {
 	}
 	return &Installer{
 		c:       c,
+		k:       kubectl.New(context.Background()),
 		workDir: workDir,
 		certInstallers: []*certInstaller{
 			resourceQuotaCertsInstaller,
@@ -138,20 +142,12 @@ func (i *Installer) createCertificates() error {
 	return nil
 }
 
-// apply runs 'kubectl apply -f p'.
-func (i *Installer) apply(p string) error {
-	kc := kubectl.New(context.Background())
-	glog.V(5).Infof("Applying YAML resources: %v", p)
-	return kc.Apply(p)
-}
-
 func (i *Installer) deployConfigMap(name string, content []string) error {
-	c := kubectl.New(context.Background())
-	if err := c.DeleteConfigmap(name, defaultNamespace); err != nil {
+	if err := i.k.DeleteConfigmap(name, defaultNamespace); err != nil {
 		glog.V(5).Infof("Failed to delete configmap: %v", err)
 	}
 
-	if err := c.CreateConfigmapFromLiterals(name, defaultNamespace, content...); err != nil {
+	if err := i.k.CreateConfigmapFromLiterals(name, defaultNamespace, content...); err != nil {
 		return errors.Wrapf(err, "while creating configmap %s", name)
 	}
 	return nil
@@ -180,11 +176,10 @@ func (i *Installer) gcpConfigMapContent() []string {
 }
 
 func (i *Installer) deploySecret(name string, content []string) error {
-	c := kubectl.New(context.Background())
-	if err := c.DeleteSecret(name, defaultNamespace); err != nil {
+	if err := i.k.DeleteSecret(name, defaultNamespace); err != nil {
 		glog.V(5).Infof("failed to delete secret %s: %v", name, err)
 	}
-	if err := c.CreateSecretGenericFromFile(
+	if err := i.k.CreateSecretGenericFromFile(
 		name, defaultNamespace, content...); err != nil {
 		return errors.Wrapf(err, "failed to create secret %s", name)
 	}
@@ -216,18 +211,6 @@ func (i *Installer) gcpSecretContent() []string {
 	filenames = append(filenames,
 		fmt.Sprintf("gcp-private-key=%v", i.c.GCP.PrivateKeyFilename))
 	return filenames
-}
-
-func (i *Installer) addClusterAdmin(user string) error {
-	glog.V(5).Infof("Adding %q as cluster admin", user)
-	c := kubectl.New(context.Background())
-	return c.AddClusterAdmin(user)
-}
-
-func (i *Installer) removeClusterAdmin(user string) error {
-	glog.V(5).Infof("Removing %q as cluster admin", user)
-	c := kubectl.New(context.Background())
-	return c.RemoveClusterAdmin(user)
 }
 
 // checkVersion checks whether the cluster's kubernetes version is recent enough to
@@ -263,26 +246,25 @@ func (i *Installer) processCluster(cluster string) error {
 	glog.V(5).Info("processCluster: enter")
 
 	if i.c.User != "" {
-		if err = i.addClusterAdmin(i.c.User); err != nil {
+		if err = i.k.AddClusterAdmin(i.c.User); err != nil {
 			return errors.Wrapf(err, "could not make %v the cluster admin.", i.c.User)
 		}
 		defer func() {
 			// Ensure that this is ran at end of cluster process, irrespective
 			// of whether the install was successful.
-			if err = i.removeClusterAdmin(i.c.User); err != nil {
+			if err = i.k.RemoveClusterAdmin(i.c.User); err != nil {
 				glog.Warningf("could not remove cluster admin role for user: %v: %v", i.c.User, err)
 			}
 		}()
 	}
-	c := kubectl.New(context.Background())
 
-	if err = i.checkVersion(c); err != nil {
+	if err = i.checkVersion(i.k); err != nil {
 		return errors.Wrapf(err, "while checking version for context")
 	}
 	if err = i.c.Validate(config.OsFileExists{}); err != nil {
 		return errors.Wrapf(err, "while validating the configuration")
 	}
-	if err = i.apply(filepath.Join(i.workDir, "manifests")); err != nil {
+	if err = i.k.Apply(filepath.Join(i.workDir, "manifests")); err != nil {
 		return errors.Wrapf(err, "while applying manifests")
 	}
 
@@ -304,7 +286,7 @@ func (i *Installer) processCluster(cluster string) error {
 
 	// Delete the importer deployment.  This is important because a
 	// change in the secret should also be reflected in the importer.
-	if err = c.DeleteDeployment(importerDeployment, defaultNamespace); err != nil {
+	if err = i.k.DeleteDeployment(importerDeployment, defaultNamespace); err != nil {
 		return errors.Wrapf(err, "while deleting Deployment %s", importerDeployment)
 	}
 	if err = i.deployConfigMap(importerConfigMapName, importerConfigMapContent); err != nil {
@@ -320,23 +302,14 @@ func (i *Installer) processCluster(cluster string) error {
 	}
 	deployments := append(commonDeployments, importerDeployment)
 	for _, d := range deployments {
-		if err = i.apply(filepath.Join(i.workDir, "yaml", fmt.Sprintf("%s.yaml", d))); err != nil {
+		if err = i.k.Apply(filepath.Join(i.workDir, "yaml", fmt.Sprintf("%s.yaml", d))); err != nil {
 			return errors.Wrapf(err, "while applying Deployment: %s", d)
 		}
 	}
-	if err = c.WaitForDeployments(deploymentTimeout, defaultNamespace, deployments...); err != nil {
+	if err = i.k.WaitForDeployments(deploymentTimeout, defaultNamespace, deployments...); err != nil {
 		return errors.Wrapf(err, "while waiting for system components")
 	}
 	return err
-}
-
-// restoreContext sets the context to a (previously current) context.
-func restoreContext(c string) error {
-	k := kubectl.New(context.Background())
-	if err := k.SetContext(c); err != nil {
-		return errors.Wrapf(err, "while restoring context: %q", err)
-	}
-	return nil
 }
 
 // Run starts the installer process, and reports error at the process end, if any.
@@ -345,8 +318,8 @@ func restoreContext(c string) error {
 func (i *Installer) Run(useCurrent bool) error {
 	cl, err := kubectl.LocalClusters()
 	defer func() {
-		if err := restoreContext(cl.Current); err != nil {
-			glog.Errorf("while restoring context: %q: %v", cl.Current, err)
+		if err2 := i.k.SetContext(cl.Current); err2 != nil {
+			glog.Errorf("while restoring context: %q: %v", cl.Current, err2)
 		}
 	}()
 	if err != nil {
@@ -359,10 +332,9 @@ func (i *Installer) Run(useCurrent bool) error {
 	if err := i.createCertificates(); err != nil {
 		return errors.Wrapf(err, "while creating certificates")
 	}
-	kc := kubectl.New(context.Background())
 	for _, cluster := range i.c.Contexts {
 		glog.Infof("Setting up nomos on cluster: %q", cluster)
-		err := kc.SetContext(cluster)
+		err := i.k.SetContext(cluster)
 		if err != nil {
 			return errors.Wrapf(err, "while setting context: %q", cluster)
 		}
@@ -379,28 +351,27 @@ func (i *Installer) Run(useCurrent bool) error {
 // a functioning nomos cluster, and end with a cluster with all nomos-related
 // additions removed.
 func (i *Installer) uninstallCluster() error {
-	kc := kubectl.New(context.Background())
 	// Remove admission webhooks.
 	for _, w := range validatingWebhookConfigurations {
-		if err := kc.DeleteValidatingWebhookConfiguration(w); err != nil {
+		if err := i.k.DeleteValidatingWebhookConfiguration(w); err != nil {
 			return errors.Wrapf(err, "while deleting webhook configurations")
 		}
 	}
 	// Remove namespace
-	if err := kc.DeleteNamespace(defaultNamespace); err != nil {
+	if err := i.k.DeleteNamespace(defaultNamespace); err != nil {
 		return errors.Wrapf(err, "while removing namespace %q", defaultNamespace)
 	}
-	if err := kc.WaitForNamespaceDeleted(defaultNamespace); err != nil {
+	if err := i.k.WaitForNamespaceDeleted(defaultNamespace); err != nil {
 		return errors.Wrapf(err, "while waiting for namespace %q to disappear", defaultNamespace)
 	}
 	// Remove all managed cluster role bindings.  The code below assumes that
 	// roles and role bindings are named the same, which is currently true.
 	for _, name := range deploymentClusterRolesAndBindings {
 		// Ignore errors while deleting, but log them.
-		if err := kc.DeleteClusterrolebinding(name); err != nil {
+		if err := i.k.DeleteClusterrolebinding(name); err != nil {
 			glog.Errorf("%v", errors.Wrapf(err, "while uninstalling cluster"))
 		}
-		if err := kc.DeleteClusterrole(name); err != nil {
+		if err := i.k.DeleteClusterrole(name); err != nil {
 			glog.Errorf("%v", errors.Wrapf(err, "while uninstalling cluster"))
 		}
 	}
@@ -419,8 +390,8 @@ func (i *Installer) Uninstall(confirm string, useCurrent bool) error {
 	}
 	cl, err := kubectl.LocalClusters()
 	defer func() {
-		if err := restoreContext(cl.Current); err != nil {
-			glog.Errorf("while restoring context: %q: %v", cl.Current, err)
+		if err2 := i.k.SetContext(cl.Current); err2 != nil {
+			glog.Errorf("while restoring context: %q: %v", cl.Current, err2)
 		}
 	}()
 	if err != nil {
@@ -430,10 +401,9 @@ func (i *Installer) Uninstall(confirm string, useCurrent bool) error {
 	if err != nil {
 		return errors.Wrapf(err, "while checking cluster context")
 	}
-	kc := kubectl.New(context.Background())
 	for _, cluster := range i.c.Contexts {
 		glog.Infof("processing cluster: %q", cluster)
-		err := kc.SetContext(cluster)
+		err := i.k.SetContext(cluster)
 		if err != nil {
 			return errors.Wrapf(err, "while setting context: %q", cluster)
 		}
