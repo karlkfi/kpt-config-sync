@@ -302,7 +302,7 @@ $ kubectl apply -f foo-corp --recursive --dry-run
 To install nomosvet:
 
 ```console
-$ curl https://storage.googleapis.com/nomos-release/nomosvet.sh -o nomosvet.sh
+$ curl https://storage.googleapis.com/nomos-release/stable/nomosvet.sh -o nomosvet.sh
 $ chmod +x nomosvet.sh
 ```
 
