@@ -83,6 +83,9 @@ BUILD_IMAGE ?= buildenv
 # GCP project that owns container registry for local dev build.
 GCP_PROJECT ?= stolos-dev
 
+# GCP service account credentials used in e2e tests.
+GCP_E2E_CRED := gs://stolos-dev/e2e/watcher_client_key.json
+
 # When set to "release", enables these optimizations:
 # - Compress binary sizes
 BUILD_MODE ?= debug
@@ -97,6 +100,7 @@ ALL_K8S_DEPLOYMENTS := syncer \
 # Nomos docker images containing all binaries.
 NOMOS_IMAGE := nomos
 
+# Git server used in e2e tests.
 GIT_SERVER_SRC := https://github.com/jkarlosb/git-server-docker.git
 
 # Allows an interactive docker build or test session to be interrupted
@@ -337,13 +341,13 @@ e2e-image-all: deploy-test-git-server e2e-staging
 		--build-arg "GCP_PROJECT=$(GCP_PROJECT)" \
 		$(STAGING_DIR)/e2e-tests
 
-# Not to be called directly. Runs e2e tests. Depending rules must set IMAGE_TAG.
-test-e2e-run:
-	@echo "+++ Running end-to-end tests"
+# Runs e2e tests for a particular importer.
+test-e2e-run-%:
+	@echo "+++ Running $* e2e tests"
 	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
 	@rm -rf $(OUTPUT_DIR)/e2e/testcases
 	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
-	docker run -it \
+	@docker run -it \
 	    -u $(UID):$(GID) \
 	    -v "${HOME}":/home/user \
 	    -v "${INSTALLER_OUTPUT_DIR}/certs":/opt/installer/certs \
@@ -356,23 +360,38 @@ test-e2e-run:
 	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" \
 	    "$@" "${E2E_CLEAN}" "${E2E_SETUP}" \
 		--filter "$(TEST_FILTER)" \
-	    && echo "+++ E2E tests completed" \
-	    || (echo "### E2E tests failed. Logs are available in ${INSTALLER_OUTPUT_DIR}/logs"; exit 1)
+		--importer $* \
+		--gcp-cred "$(GCP_E2E_CRED)" \
+	    && echo "+++ $* e2e tests completed" \
+	    || (echo "### e2e tests failed. Logs are available in ${INSTALLER_OUTPUT_DIR}/logs"; exit 1)
 
-# Clean, build, and run e2e tests. Cleans after running.
-test-e2e: E2E_SETUP = "--setup"
-test-e2e: E2E_CLEAN = "--clean"
-test-e2e: clean e2e-image-all test-e2e-run
 
-# Clean, build, and run e2e tests, but don't clean after running so that the cluster state can be investigated.
-test-e2e-noclean: E2E_SETUP = "--setup"
-test-e2e-noclean: e2e-image-all test-e2e-run
+# Clean, build, and run e2e tests for all importers.
+# Clean cluster after running.
+test-e2e-all: E2E_SETUP = "--setup"
+test-e2e-all: E2E_CLEAN = "--clean"
+test-e2e-all: clean e2e-image-all test-e2e-run-git test-e2e-run-gcp
+	@true
+
+# Clean, build, and run e2e tests for a particular importer.
+# Clean cluster after running.
+test-e2e-%: E2E_SETUP = "--setup"
+test-e2e-%: E2E_CLEAN = "--clean"
+test-e2e-%: clean e2e-image-all test-e2e-run-%
+	@true
+
+# Clean, build, and run e2e tests for a parcular importer.
+# Do not clean cluster after running so that the state can be investigated.
+test-e2e-noclean-%: E2E_SETUP = "--setup"
+test-e2e-noclean-%: e2e-image-all test-e2e-run-%
+	@true
 
 # Run e2e tests but do not build. Assumes that the necesary images have already been built and pushed,
 # so `make test-e2e` should be run before this, and each time the system requires a rebuild as this
 # target has no intelligence about dependencies.
-test-e2e-nosetup: IMAGE_TAG=test-e2e-latest
-test-e2e-nosetup: test-e2e-run
+test-e2e-nosetup-%: IMAGE_TAG=test-e2e-latest
+test-e2e-nosetup-%: test-e2e-run-%
+	@true
 
 # Redeploy a component without rerunning the installer.
 redeploy-%: push-to-gcr-nomos gen-yaml-%
@@ -392,7 +411,7 @@ test-unit: buildenv
 test: test-unit lint
 
 # Runs all tests.
-test-all: test test-e2e
+test-all: test test-e2e-all
 
 goimports:
 	@echo "+++ Running goimports"
