@@ -1,5 +1,5 @@
 git:
-  GIT_SYNC_REPO: git@test-git-server.nomos-system:/git-server/repos/sot.git
+  GIT_SYNC_REPO: git@test-git-server.nomos-system-test:/git-server/repos/sot.git
   GIT_SYNC_SSH: true
   GIT_SYNC_WAIT: 1
   POLICY_DIR: acme

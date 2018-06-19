@@ -27,15 +27,17 @@ TEST_LOG_REPO=/tmp/nomos-test
 
 FWD_SSH_PORT=2222
 
+GIT_SERVER_NS=nomos-system-test
+
 rm -rf ${TEST_LOG_REPO}
 
 kubectl apply -f /opt/testing/e2e/git-server.yaml
 
-kubectl -n=nomos-system create secret generic ssh-pub --from-file=/opt/testing/e2e/id_rsa.nomos.pub
+kubectl -n=${GIT_SERVER_NS} create secret generic ssh-pub --from-file=/opt/testing/e2e/id_rsa.nomos.pub
 echo -n "Waiting for test-git-server pod to be ready. This could take a minute..."
 
 NEXT_WAIT_TIME=0
-until kubectl get pods -n=nomos-system -lapp=test-git-server | grep -qe Running || [ $NEXT_WAIT_TIME -eq 10 ]; do
+until kubectl get pods -n=${GIT_SERVER_NS} -lapp=test-git-server | grep -qe Running || [ $NEXT_WAIT_TIME -eq 10 ]; do
   # I've seen this take anywhere from 2 to 40 seconds, so set the polling
   # interval for reasonable granularity within that
   sleep $(( NEXT_WAIT_TIME++ ))
@@ -50,12 +52,12 @@ fi
 
 echo "test-git-server ready"
 
-POD_ID=$(kubectl get pods -n=nomos-system -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
+POD_ID=$(kubectl get pods -n=${GIT_SERVER_NS} -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
 
 echo "Setting up remote git repo"
 mkdir -p ${TEST_LOG_REPO}
-kubectl -n=nomos-system port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
-REMOTE_GIT=(kubectl exec -n=nomos-system -it ${POD_ID} -- git)
+kubectl -n=${GIT_SERVER_NS} port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
+REMOTE_GIT=(kubectl exec -n=${GIT_SERVER_NS} -it ${POD_ID} -- git)
 "${REMOTE_GIT[@]}" init --bare --shared /git-server/repos/sot.git
 "${REMOTE_GIT[@]}" \
   -C /git-server/repos/sot.git config receive.denyNonFastforwards false

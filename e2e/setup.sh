@@ -4,6 +4,8 @@ set -euo pipefail
 
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+FWD_SSH_PORT=2222
+
 function set_up_kube() {
   readonly kubeconfig_output="/opt/installer/kubeconfig/config"
   # We need to fix up the kubeconfig paths because these may not match between
@@ -41,15 +43,14 @@ function set_up_env_minimal() {
   if [[ "$importer" == "git" ]]; then
     echo "Starting port forwarding"
     TEST_LOG_REPO=/tmp/nomos-test
-    FWD_SSH_PORT=2222
-    POD_ID=$(kubectl get pods -n=nomos-system -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
+    POD_ID=$(kubectl get pods -n=nomos-system-test -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
     mkdir -p ${TEST_LOG_REPO}
-    kubectl -n=nomos-system port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
+    kubectl -n=nomos-system-test port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
     local start=$(date +%s)
     local pid=$(pgrep kubectl)
     # Our image doesn't have netstat, so we have check for listen by
     # looking at kubectl's open tcp sockets in procfs.  This looks for listen on
-    # 127.0.0.1:2222 with remote of 0.0.0.0:0.
+    # 127.0.0.1:$FWD_SSH_PORT with remote of 0.0.0.0:0.
     # TODO: This should use git ls-remote, but for some reason it fails to be able
     # to connect to the remote.
     while ! grep "0100007F:08AE 00000000:0000 0A" /proc/${pid}/net/tcp &> /dev/null; do
@@ -77,7 +78,14 @@ function clean_up() {
 
   if [[ "$importer" == "git" ]]; then
     echo "killing kubectl port forward..."
-    pkill -f "kubectl -n=nomos-system port-forward.*2222:22" || true
+    pkill -f "kubectl -n=nomos-system-test port-forward.*${FWD_SSH_PORT}:22" || true
+    echo "  taking down nomos-system-test namespace"
+    kubectl delete --ignore-not-found ns nomos-system-test
+    while kubectl get ns nomos-system-test > /dev/null 2>&1
+    do
+      sleep 3
+      echo -n "."
+    done
   fi
 }
 
