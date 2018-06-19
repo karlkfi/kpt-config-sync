@@ -53,7 +53,12 @@ var (
 // and server.
 type Context struct {
 	ctx    context.Context
-	client *meta.Client
+	client meta.Interface
+}
+
+// NewWithClient creates a new kubernetes context from a predefined client
+func NewWithClient(ctx context.Context, client meta.Interface) *Context {
+	return &Context{ctx, client}
 }
 
 // New creates a new kubernetes context.

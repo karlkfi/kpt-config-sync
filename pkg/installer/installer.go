@@ -30,6 +30,8 @@ import (
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/kubectl"
 	"github.com/pkg/errors"
+
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -347,6 +349,46 @@ func (i *Installer) Run(useCurrent bool) error {
 	return nil
 }
 
+// DeletePolicyNodes deletes all policynodes that are in the hierarchy. If an error is encountered
+// while listing or deleting a node, the DeletePolicyNodes terminates immediately.
+func (i *Installer) DeletePolicyNodes() error {
+	pn, err := i.k.PolicyHierarchy().NomosV1().PolicyNodes().List(meta_v1.ListOptions{
+		IncludeUninitialized: true,
+	})
+
+	if err != nil {
+		return errors.Wrapf(err, "error listing policynodes")
+	}
+
+	for _, n := range pn.Items {
+		err = i.k.PolicyHierarchy().NomosV1().PolicyNodes().Delete(n.Name, meta_v1.NewDeleteOptions(0))
+		if err != nil {
+			return errors.Wrapf(err, "error deleting policynode: %s", n.Name)
+		}
+	}
+	return nil
+}
+
+// DeleteClusterPolicies deletes all cluster policies in the Hierarchy. If an error is encountered
+// while listing or deleting a node, the DeletePolicyNodes terminates immediately.
+func (i *Installer) DeleteClusterPolicies() error {
+	cp, err := i.k.PolicyHierarchy().NomosV1().ClusterPolicies().List(meta_v1.ListOptions{
+		IncludeUninitialized: true,
+	})
+
+	if err != nil {
+		return errors.Wrapf(err, "error listing clusterpolicies")
+	}
+
+	for _, p := range cp.Items {
+		err = i.k.PolicyHierarchy().NomosV1().ClusterPolicies().Delete(p.Name, meta_v1.NewDeleteOptions(0))
+		if err != nil {
+			return errors.Wrapf(err, "error deleting clusterpolicy: %s", p.Name)
+		}
+	}
+	return nil
+}
+
 // uninstallCluster is supposed to do all the legwork in order to start from
 // a functioning nomos cluster, and end with a cluster with all nomos-related
 // additions removed.
@@ -375,7 +417,12 @@ func (i *Installer) uninstallCluster() error {
 			glog.Errorf("%v", errors.Wrapf(err, "while uninstalling cluster"))
 		}
 	}
-	// TODO(filmil): Remove any other cluster-level nomos resources.
+	if err := i.DeletePolicyNodes(); err != nil {
+		return err
+	}
+	if err := i.DeleteClusterPolicies(); err != nil {
+		return err
+	}
 	return nil
 }
 

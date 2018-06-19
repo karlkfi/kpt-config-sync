@@ -1,12 +1,17 @@
 package installer
 
 import (
+	"context"
+	"strings"
 	"testing"
 
-	"strings"
-
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/client/meta/fake"
 	"github.com/google/nomos/pkg/installer/config"
+	"github.com/google/nomos/pkg/process/kubectl"
+
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGitConfigMap(t *testing.T) {
@@ -125,5 +130,92 @@ func TestGitConfigMap(t *testing.T) {
 				t.Errorf("expected %v got %v\ndiff %v", tt.want, got, diff)
 			}
 		})
+	}
+}
+
+func TestInstaller_DeleteClusterPolicies(t *testing.T) {
+	const p1name = "mostExcellentPolicy"
+	const p2name = "mostHeinousPolicy"
+
+	client := fake.NewClient()
+	client.PolicyHierarchy().NomosV1().ClusterPolicies().Create(&v1.ClusterPolicy{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: p1name,
+		}})
+	client.PolicyHierarchy().NomosV1().ClusterPolicies().Create(&v1.ClusterPolicy{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: p2name,
+		}})
+
+	cp, err := client.PolicyHierarchy().NomosV1().ClusterPolicies().List(meta_v1.ListOptions{
+		IncludeUninitialized: true,
+	})
+	if err != nil {
+		t.Errorf("error listing cluster policies: %v", err)
+	}
+
+	items := cp.Items
+	if len(items) != 2 || items[0].Name != p1name || items[1].Name != p2name {
+		t.Errorf("unexpected cluster policies list. "+
+			"Wanted [ %s , %s ], got: %v", p1name, p2name, items)
+	}
+
+	i := &Installer{k: kubectl.NewWithClient(context.Background(), client)}
+	err = i.DeleteClusterPolicies()
+	if err != nil {
+		t.Error(err)
+	}
+
+	cp, err = client.PolicyHierarchy().NomosV1().ClusterPolicies().List(meta_v1.ListOptions{
+		IncludeUninitialized: true,
+	})
+	if err != nil {
+		t.Errorf("error listing cluster policies: %v", err)
+	}
+	if len(cp.Items) != 0 {
+		t.Errorf("expected empty list but got %v", items)
+	}
+}
+
+func TestInstaller_DeletePolicyNodes(t *testing.T) {
+	const n1name = "billNode"
+	const n2name = "tedNode"
+
+	client := fake.NewClient()
+
+	client.PolicyHierarchy().NomosV1().PolicyNodes().Create(&v1.PolicyNode{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: n1name,
+		}})
+	client.PolicyHierarchy().NomosV1().PolicyNodes().Create(&v1.PolicyNode{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: n2name,
+		}})
+
+	pn, err := client.PolicyHierarchy().NomosV1().PolicyNodes().List(meta_v1.ListOptions{
+		IncludeUninitialized: true,
+	})
+	if err != nil {
+		t.Errorf("error listing policy nodes: %v", err)
+	}
+
+	items := pn.Items
+	if len(items) != 2 || items[0].Name != n1name || items[1].Name != n2name {
+		t.Errorf("unexpected policy nodes list. "+
+			"Wanted [ %s, %s], got: %v", n1name, n2name, items)
+	}
+
+	i := &Installer{k: kubectl.NewWithClient(context.Background(), client)}
+	err = i.DeletePolicyNodes()
+	if err != nil {
+		t.Error(err)
+	}
+
+	pn, err = client.PolicyHierarchy().NomosV1().PolicyNodes().List(meta_v1.ListOptions{})
+	if err != nil {
+		t.Errorf("error listing policy nodes: %v", err)
+	}
+	if len(pn.Items) != 0 {
+		t.Errorf("expected empty list but got %v", items)
 	}
 }
