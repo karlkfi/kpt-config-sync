@@ -216,7 +216,8 @@ image-git-server:
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-%: image-%
 	@echo "+++ Pushing $* to gcr.io"
-	@gcloud $(GCLOUD_QUIET) docker -- push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
+	@gcloud $(GCLOUD_QUIET) auth configure-docker
+	@docker push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
 
 # Generates the podspec yaml for each component.
 gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_DEPLOYMENTS))
@@ -265,7 +266,8 @@ installer-image: installer-staging
 			-t gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
      		--build-arg "INSTALLER_VERSION=$(IMAGE_TAG)" \
 		$(STAGING_DIR)/installer
-	@gcloud $(GCLOUD_QUIET) docker -- push gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG)
+	@gcloud $(GCLOUD_QUIET) auth configure-docker
+	@docker push gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG)
 
 # Runs the installer via docker in interactive mode.
 install-interactive: deploy-interactive
