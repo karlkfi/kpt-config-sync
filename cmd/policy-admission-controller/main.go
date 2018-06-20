@@ -23,6 +23,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/admissioncontroller"
 	"github.com/google/nomos/pkg/admissioncontroller/policy"
+	"github.com/google/nomos/pkg/syncer/labeling"
 
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
@@ -55,7 +56,8 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	failurePolicy := admissionregistrationv1beta1.Fail
 	webhookConfig := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: externalAdmissionHookConfigName,
+			Name:   externalAdmissionHookConfigName,
+			Labels: labeling.NomosSystem.New(),
 		},
 		Webhooks: []admissionregistrationv1beta1.Webhook{
 			{

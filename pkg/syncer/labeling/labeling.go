@@ -21,6 +21,12 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+// Labels that are used to indicate that the resource is part of the nomos install.
+const (
+	NomosSystemKey   = "nomos.dev/system"
+	NomosSystemValue = "true"
+)
+
 // Labels that Nomos uses for determining how to manage namespaces.
 const (
 	// ManagementKey is the key for a label that Nomos uses to track which namespaces are under Nomos
@@ -92,4 +98,10 @@ var ManageAll = Label{
 var ManageResource = Label{
 	key:   ResourceManagementKey,
 	value: Full,
+}
+
+// NomosSystem indicates that this resource is part of the nomos install.
+var NomosSystem = Label{
+	key:   NomosSystemKey,
+	value: NomosSystemValue,
 }
