@@ -137,7 +137,7 @@ func (g *actionGenerator) generate(ctx context.Context) {
 }
 
 // processAtomicGroup returns updated state of policies given the changes.
-// It checks that the update policies form a valid hierarchy.
+// It checks that the updated policies form a valid hierarchy.
 func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Change) (*v1.AllPolicies, error) {
 	if !g.initialStateDone && resources[""] == nil {
 		return nil, errors.New("no initial state received for element \"\"")
@@ -174,7 +174,7 @@ func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Chang
 					return nil, err
 				}
 				updatedPolicies.ClusterPolicy = cp
-				// Ignore server-provider name of ClusterPolicy.
+				// Ignore server-provided name of ClusterPolicy.
 				updatedPolicies.ClusterPolicy.Name = v1.ClusterPolicyName
 			case rootResource:
 				// Root element contains no policy
