@@ -145,9 +145,14 @@ function main() {
     fi
   fi
 
+  local bats_flags=()
+  if $tap; then
+    bats_flags+=(--tap)
+  fi
+
   local retcode=0
   if [[ "${#testcases[@]}" != 0 ]]; then
-    if ! E2E_TEST_FILTER="${testcase_filter}" ${TEST_DIR}/bats/bin/bats ${testcases[@]}; then
+    if ! E2E_TEST_FILTER="${testcase_filter}" ${TEST_DIR}/bats/bin/bats ${bats_flags[@]} ${testcases[@]}; then
       retcode=1
     fi
   else
@@ -161,6 +166,7 @@ function main() {
 
 echo "executed with args $@"
 filter=""
+tap=false
 clean=false
 run_tests=false
 setup=false
@@ -168,6 +174,11 @@ gcp_cred=""
 while [[ $# -gt 0 ]]; do
   arg=${1}
   case ${arg} in
+    --tap)
+      tap=true
+      shift
+    ;;
+
     --clean)
       clean=true
       shift
