@@ -4,10 +4,7 @@ set -euo pipefail
 
 YAML_DIR=${BATS_TEST_DIRNAME}/yaml
 
-load lib/assert
-load lib/git
-load lib/wait
-load lib/setup
+load lib/loader
 
 @test "Namespaces created" {
   run kubectl get ns eng

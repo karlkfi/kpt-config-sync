@@ -2,7 +2,12 @@
 
 set -u
 
-load common
+load ../../lib/loader
+
+# This cleans up any namespaces that were created by a testcase
+function local_teardown() {
+  kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found=true || true
+}
 
 @test "Namespace has full label and declared" {
   local ns=decl-namespace-label-full
