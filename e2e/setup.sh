@@ -73,7 +73,7 @@ function clean_up() {
     --log_dir=/tmp \
     --suggested_user="${suggested_user}" \
     --use_current_context=true \
-		--uninstall=deletedeletedelete \
+    --uninstall=deletedeletedelete \
     --vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10
 
   if [[ "$importer" == "git" ]]; then
@@ -94,11 +94,6 @@ function main() {
   local file_filter=""
   local testcase_filter=""
 
-  # We don't have any GCP tests yet, skip all tests.
-  if [[ "$importer" == gcp ]]; then
-    filter="gcp"
-  fi
-
   if [[ "$filter" == */* ]]; then
     file_filter="$(echo $filter | sed -e 's|/.*||')"
     testcase_filter="$(echo $filter | sed -e 's|[^/]*/||')"
@@ -118,10 +113,15 @@ function main() {
   GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"; export GIT_SSH_COMMAND
 
   echo "++++ Starting tests"
-  local bats_tests=$(
-    echo ${TEST_DIR}/e2e.bats;
-    find ${TEST_DIR}/testcases -name '*.bats'
-  )
+  # We don't have any GCP tests yet, skip all tests.
+  if [[ "$importer" == gcp ]]; then
+    local bats_tests=()
+  else
+    local bats_tests=$(
+      echo ${TEST_DIR}/e2e.bats;
+      find ${TEST_DIR}/testcases -name '*.bats'
+    )
+  fi
 
   local testcases=()
   if [[ -n ${file_filter} ]]; then
