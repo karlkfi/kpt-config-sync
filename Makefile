@@ -360,8 +360,7 @@ test-e2e-run-%:
 	    -v "$(OUTPUT_DIR)/e2e":/opt/testing/e2e \
 	    -e "VERSION=$(IMAGE_TAG)" \
 	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" \
-	    "$@" "${E2E_CLEAN}" "${E2E_SETUP}" \
-		--filter "$(TEST_FILTER)" \
+	    "$@" ${E2E_FLAGS} \
 		--importer $* \
 		--gcp-cred "$(GCP_E2E_CRED)" \
 	    && echo "+++ $* e2e tests completed" \
@@ -370,30 +369,37 @@ test-e2e-run-%:
 
 # Clean, build, and run e2e tests for all importers.
 # Clean cluster after running.
-test-e2e-all: E2E_SETUP = "--setup"
-test-e2e-all: E2E_CLEAN = "--clean"
-test-e2e-all: clean e2e-image-all test-e2e-run-git test-e2e-run-gcp
-	@true
+test-e2e-all: clean e2e-image-all
+	$(MAKE) test-e2e-run-git \
+		E2E_FLAGS="--clean --test --setup"
+	$(MAKE) test-e2e-run-gcp \
+		E2E_FLAGS="--clean --test --setup"
 
 # Clean, build, and run e2e tests for a particular importer.
 # Clean cluster after running.
-test-e2e-%: E2E_SETUP = "--setup"
-test-e2e-%: E2E_CLEAN = "--clean"
-test-e2e-%: clean e2e-image-all test-e2e-run-%
-	@true
+test-e2e-%: clean e2e-image-all
+	$(MAKE) test-e2e-run-% \
+		E2E_FLAGS="--clean --test --setup"
 
 # Clean, build, and run e2e tests for a parcular importer.
 # Do not clean cluster after running so that the state can be investigated.
-test-e2e-noclean-%: E2E_SETUP = "--setup"
-test-e2e-noclean-%: e2e-image-all test-e2e-run-%
-	@true
+test-e2e-noclean-%: e2e-image-all
+	$(MAKE) test-e2e-run-% \
+		E2E_FLAGS="--test --setup"
 
 # Run e2e tests but do not build. Assumes that the necesary images have already been built and pushed,
 # so `make test-e2e` should be run before this, and each time the system requires a rebuild as this
 # target has no intelligence about dependencies.
-test-e2e-nosetup-%: IMAGE_TAG=test-e2e-latest
-test-e2e-nosetup-%: test-e2e-run-%
-	@true
+test-e2e-nosetup-%:
+	$(MAKE) test-e2e-run-% \
+		IMAGE_TAG=test-e2e-latest \
+		E2E_FLAGS="--test --clean"
+
+# Dev mode allows for specifying the args manually via E2E_FLAGS, see e2e/setup.sh for
+# allowed flags
+test-e2e-dev-git:
+	$(MAKE) test-e2e-run-git \
+		IMAGE_TAG=test-e2e-latest
 
 # Redeploy a component without rerunning the installer.
 redeploy-%: push-to-gcr-nomos gen-yaml-%

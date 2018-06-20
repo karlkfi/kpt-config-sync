@@ -29,6 +29,7 @@ function set_up_env() {
     ;;
   esac
 
+  echo "+++++ Installing..."
   suggested_user="$(gcloud config get-value account)"
   /opt/installer/installer \
     --config="${install_config}" \
@@ -65,6 +66,10 @@ function set_up_env_minimal() {
 }
 
 function clean_up() {
+  if ! $clean; then
+    return 0
+  fi
+
   echo "++++ Cleaning up environment"
   suggested_user="$(gcloud config get-value account)"
   echo "Uninstalling..."
@@ -147,8 +152,10 @@ function main() {
   return ${retcode}
 }
 
+echo "executed with args $@"
 filter=""
 clean=false
+run_tests=false
 setup=false
 gcp_cred=""
 while [[ $# -gt 0 ]]; do
@@ -158,10 +165,17 @@ while [[ $# -gt 0 ]]; do
       clean=true
       shift
     ;;
+
     --setup)
       setup=true
       shift
     ;;
+
+    --test)
+      run_tests=true
+      shift
+    ;;
+
     --filter)
       filter="${2}"
       shift
@@ -198,19 +212,22 @@ case ${importer} in
 esac
 
 set_up_kube
-if $clean ; then
-  clean_up
-fi
-if $setup ; then
+clean_up
+if $setup; then
   set_up_env
 else
-  set_up_env_minimal
+  if $clean; then
+    echo "Already cleaned up, skipping minimal setup!"
+  else
+    set_up_env_minimal
+  fi
 fi
-exitcode=0
-if ! main ${filter}; then
-  exitcode=1
+
+# Always run clean_up before exit at this point
+trap clean_up EXIT
+
+if $run_tests; then
+  main ${filter}
+else
+  echo "Skipping tests!"
 fi
-if $clean ; then
-  clean_up
-fi
-exit ${exitcode}
