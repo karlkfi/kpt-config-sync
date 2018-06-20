@@ -66,6 +66,8 @@ type actionGenerator struct {
 	actionFactories actions.Factories
 	// Maps GCP resource name (e.g. folders/456, namespaces/789) to K8S name (e.g folders-456, backend)
 	gcpToK8SName map[string]string
+	// Whether initial state has been processed.
+	initialStateDone bool
 }
 
 // generate watches changes from the grpc stream and generates corresponding K8S actions and
@@ -82,8 +84,7 @@ type actionGenerator struct {
 func (g *actionGenerator) generate(ctx context.Context) {
 	defer close(g.out)
 
-	initialState := true
-	initialResources := make(map[string]*watcher.Change)
+	resources := make(map[string]*watcher.Change)
 
 	for {
 		changeBatch, err := g.stream.Recv()
@@ -113,143 +114,101 @@ func (g *actionGenerator) generate(ctx context.Context) {
 				return
 			}
 
-			if initialState {
-				initialResources[change.Element] = change
-				if !change.Continued {
-					glog.V(2).Infof("Processing initial state for %d resources", len(initialResources))
-					actions, err := g.processInitialState(initialResources)
-					if err != nil {
-						g.sendErr(ctx, errors.Wrapf(err, "failed in processing initial state"))
+			resources[change.Element] = change
+			if !change.Continued {
+				updatedPolicies, err := g.processAtomicGroup(resources)
+				if err != nil {
+					g.sendErr(ctx, errors.Wrapf(err, "failed in processing atomic group"))
+					return
+				}
+				a := actions.NewDiffer(g.actionFactories).Diff(g.currentPolicies, *updatedPolicies)
+				glog.V(2).Infof("Processing of atomic group generated %d actions", len(a))
+				g.currentPolicies = *updatedPolicies
+				g.initialStateDone = true
+				resources = make(map[string]*watcher.Change)
+				for _, a := range a {
+					if !g.sendAction(ctx, a) {
 						return
 					}
-					glog.V(2).Infof("Initial state generated %d actions", len(actions))
-					for _, a := range actions {
-						if !g.sendAction(ctx, a) {
-							return
-						}
-					}
-					// Received all changes in initial state
-					initialState = false
-					initialResources = nil
-				}
-				continue
-			}
-
-			glog.V(2).Infof("Processing incremental change")
-			action, err := g.processIncrementalChange(change)
-			if err != nil {
-				g.sendErr(ctx, errors.Wrapf(err, "failed in processing incremental change"))
-				return
-			}
-			glog.V(2).Infof("Incremental change generated action: %t", action != nil)
-			if action != nil {
-				if !g.sendAction(ctx, action) {
-					return
 				}
 			}
 		}
 	}
 }
 
-// processInitialState generates the sequence of operations needed to transition from current to desired state of policies.
-// Desired state of policies is parsed from initial Watcher changes and validated to ensure they form a valid hierarchy.
-func (g *actionGenerator) processInitialState(resources map[string]*watcher.Change) ([]client_action.Interface, error) {
-	if resources[""] == nil {
+// processAtomicGroup returns updated state of policies given the changes.
+// It checks that the update policies form a valid hierarchy.
+func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Change) (*v1.AllPolicies, error) {
+	if !g.initialStateDone && resources[""] == nil {
 		return nil, errors.New("no initial state received for element \"\"")
 	}
 
-	var policies v1.AllPolicies
-	policies.PolicyNodes = make(map[string]v1.PolicyNode)
+	var updatedPolicies v1.AllPolicies
+	if g.initialStateDone {
+		g.currentPolicies.DeepCopyInto(&updatedPolicies)
+	} else {
+		updatedPolicies.PolicyNodes = make(map[string]v1.PolicyNode)
+	}
 
 	for name, change := range resources {
 		glog.V(2).Infof("Resource %q has state: %s", name, change.State)
+		t, err := policyResourceType(change.Element)
+		if err != nil {
+			return nil, err
+		}
+
 		switch change.State {
+
 		case watcher.Change_EXISTS:
-			t, err := policyResourceType(change.Element)
-			if err != nil {
-				return nil, err
-			}
 			switch t {
 			case policyNodeResource:
 				pn, err := unmarshalPolicyNode(change)
 				if err != nil {
 					return nil, err
 				}
-				policies.PolicyNodes[pn.Name] = *pn
-				g.gcpToK8SName[change.Element] = pn.Name
+				updatedPolicies.PolicyNodes[pn.Name] = *pn
+				g.gcpToK8SName[name] = pn.Name
 			case clusterPolicyResource:
 				cp, err := unmarshalClusterPolicy(change)
 				if err != nil {
 					return nil, err
 				}
-				policies.ClusterPolicy = cp
+				updatedPolicies.ClusterPolicy = cp
 				// Ignore server-provider name of ClusterPolicy.
-				policies.ClusterPolicy.Name = v1.ClusterPolicyName
+				updatedPolicies.ClusterPolicy.Name = v1.ClusterPolicyName
 			case rootResource:
 				// Root element contains no policy
 			}
+
 		case watcher.Change_DOES_NOT_EXIST:
-			glog.V(2).Infof("Ignoring resource %q", name)
+			if !g.initialStateDone {
+				glog.V(2).Infof("Initial state of resource cannot be %s", change.State)
+				continue
+			}
+			switch t {
+			case policyNodeResource:
+				nodeName, ok := g.gcpToK8SName[name]
+				if !ok {
+					return nil, errors.Errorf("cannot delete a non-existing resource %q", name)
+				}
+				delete(updatedPolicies.PolicyNodes, nodeName)
+			case clusterPolicyResource:
+				updatedPolicies.ClusterPolicy = nil
+			case rootResource:
+				// Root element contains no policy
+			}
 		default:
 			panic(errors.Errorf("unknown resource state: %s", change.State))
 		}
 	}
-	v := validator.FromMap(policies.PolicyNodes)
+
+	glog.V(3).Infof("Update state of policies: %#v", updatedPolicies)
+
+	v := validator.FromMap(updatedPolicies.PolicyNodes)
 	if err := v.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid PolicyNode hierarchy")
 	}
-
-	return actions.NewDiffer(g.actionFactories).Diff(g.currentPolicies, policies), nil
-}
-
-// processIncrementalChange converts the given Watcher change to a K8S API operation.
-// It assumes the given state transition is valid as guaranteed by the API, if this
-// is not the case, the operation will fail since PolicyNodeAdmissionController will reject it.
-func (g *actionGenerator) processIncrementalChange(change *watcher.Change) (client_action.Interface, error) {
-	gcpName := change.Element
-
-	t, err := policyResourceType(change.Element)
-	if err != nil {
-		return nil, err
-	}
-
-	switch change.State {
-	case watcher.Change_EXISTS:
-		switch t {
-		case policyNodeResource:
-			pn, err := unmarshalPolicyNode(change)
-			if err != nil {
-				return nil, err
-			}
-			g.gcpToK8SName[gcpName] = pn.Name
-			return g.actionFactories.PolicyNodeAction.NewUpsert(pn), nil
-		case clusterPolicyResource:
-			cp, err := unmarshalClusterPolicy(change)
-			if err != nil {
-				return nil, err
-			}
-			return g.actionFactories.ClusterPolicyAction.NewUpsert(cp), nil
-		case rootResource:
-			// Root element contains no policy
-		}
-	case watcher.Change_DOES_NOT_EXIST:
-		switch t {
-		case policyNodeResource:
-			nodeName, ok := g.gcpToK8SName[gcpName]
-			if !ok {
-				return nil, errors.Errorf("cannot delete a non-existing resource %q", gcpName)
-			}
-			return g.actionFactories.PolicyNodeAction.NewDelete(nodeName), nil
-		case clusterPolicyResource:
-			return g.actionFactories.ClusterPolicyAction.NewDelete(v1.ClusterPolicyName), nil
-		case rootResource:
-			// Root element contains no policy
-		}
-	default:
-		panic(errors.Errorf("unknown resource state: %s", change.State))
-	}
-
-	return nil, nil
+	return &updatedPolicies, nil
 }
 
 func (g *actionGenerator) sendAction(ctx context.Context, a client_action.Interface) bool {
