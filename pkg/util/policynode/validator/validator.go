@@ -113,6 +113,7 @@ func (s *Validator) Validate() error {
 		s.checkPolicySpaceRoles,
 		s.checkParents,
 		s.checkDupeResources,
+		s.checkNameLength,
 	} {
 		if err := checkFunction(); err != nil {
 			return err
@@ -217,6 +218,30 @@ func (s *Validator) checkDupeResources() error {
 				return errors.Errorf("duplicate rolebinding %q encountered in policynode %q", roleBinding.Name, nodeName)
 			}
 			roleBindings[roleBinding.Name] = true
+		}
+	}
+	return nil
+}
+
+// maxNameLen is the max length for a kubernetes resource
+// https://kubernetes.io/docs/concepts/overview/working-with-objects/names
+const maxNameLen = 253
+
+// checkNameLength checks that resources satisfy the maximum name length constraint.  For role bindings
+// the max length is reduced by the pPlicyNode name length as well as a '.' separator character.
+func (s *Validator) checkNameLength() error {
+	for nodeName, node := range s.policyNodes {
+		baseLen := len(nodeName) + 1
+		for _, roleBinding := range node.Spec.RoleBindingsV1 {
+			if maxNameLen < (baseLen + len(roleBinding.Name)) {
+				return errors.Errorf("policy node %s has RoleBinding that exceeds max name length of 253 chars: %s", nodeName, roleBinding.Name)
+			}
+		}
+
+		for _, role := range node.Spec.RolesV1 {
+			if maxNameLen < len(role.Name) {
+				return errors.Errorf("policy node %s has Role that exceeds max name length of 253 chars: %s", nodeName, role.Name)
+			}
 		}
 	}
 	return nil
