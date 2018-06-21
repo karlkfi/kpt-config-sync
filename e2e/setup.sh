@@ -137,14 +137,20 @@ function main() {
       fi
     done
   else
-    for file in ${bats_tests}; do
-      testcases+=("${file}")
-    done
+    if [[ "${#bats_tests[@]}" != 0 ]]; then
+      for file in ${bats_tests}; do
+        testcases+=("${file}")
+      done
+    fi
   fi
 
   local retcode=0
-  if ! E2E_TEST_FILTER="${testcase_filter}" ${TEST_DIR}/bats/bin/bats ${testcases[@]}; then
-    retcode=1
+  if [[ "${#testcases[@]}" != 0 ]]; then
+    if ! E2E_TEST_FILTER="${testcase_filter}" ${TEST_DIR}/bats/bin/bats ${testcases[@]}; then
+      retcode=1
+    fi
+  else
+    echo "No files to test!"
   fi
 
   end_time=$(date +%s)
