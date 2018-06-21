@@ -371,27 +371,31 @@ test-e2e-run-%:
 # Clean cluster after running.
 test-e2e-all: clean e2e-image-all
 	$(MAKE) test-e2e-run-git \
+		IMAGE_TAG=$(IMAGE_TAG) \
 		E2E_FLAGS="--clean --test --setup"
 	$(MAKE) test-e2e-run-gcp \
+		IMAGE_TAG=$(IMAGE_TAG) \
 		E2E_FLAGS="--clean --test --setup"
 
 # Clean, build, and run e2e tests for a particular importer.
 # Clean cluster after running.
 test-e2e-%: clean e2e-image-all
-	$(MAKE) test-e2e-run-% \
+	$(MAKE) test-e2e-run-$* \
+		IMAGE_TAG=$(IMAGE_TAG) \
 		E2E_FLAGS="--clean --test --setup"
 
 # Clean, build, and run e2e tests for a parcular importer.
 # Do not clean cluster after running so that the state can be investigated.
 test-e2e-noclean-%: e2e-image-all
-	$(MAKE) test-e2e-run-% \
+	$(MAKE) test-e2e-run-$* \
+		IMAGE_TAG=$(IMAGE_TAG) \
 		E2E_FLAGS="--test --setup"
 
 # Run e2e tests but do not build. Assumes that the necesary images have already been built and pushed,
 # so `make test-e2e` should be run before this, and each time the system requires a rebuild as this
 # target has no intelligence about dependencies.
 test-e2e-nosetup-%:
-	$(MAKE) test-e2e-run-% \
+	$(MAKE) test-e2e-run-$* \
 		IMAGE_TAG=test-e2e-latest \
 		E2E_FLAGS="--test --clean"
 
