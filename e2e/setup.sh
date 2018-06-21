@@ -118,11 +118,12 @@ function main() {
   GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"; export GIT_SSH_COMMAND
 
   echo "++++ Starting tests"
+  local bats_tests=()
   # We don't have any GCP tests yet, skip all tests.
   if [[ "$importer" == gcp ]]; then
-    local bats_tests=()
+    bats_tests=()
   else
-    local bats_tests=$(
+    bats_tests=$(
       echo ${TEST_DIR}/e2e.bats;
       find ${TEST_DIR}/testcases -name '*.bats'
     )
@@ -130,15 +131,15 @@ function main() {
 
   local testcases=()
   if [[ -n ${file_filter} ]]; then
-    for file in ${bats_tests}; do
+    for file in ${bats_tests[@]}; do
       if echo "${file}" | grep "${file_filter}" &> /dev/null; then
         echo "Will run ${file}"
         testcases+=("${file}")
       fi
     done
   else
-    if [[ "${#bats_tests[@]}" != 0 ]]; then
-      for file in ${bats_tests}; do
+    if [[ "${#bats_tests[@]}" != "0" ]]; then
+      for file in ${bats_tests[@]}; do
         testcases+=("${file}")
       done
     fi
