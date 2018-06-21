@@ -29,6 +29,7 @@ import (
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	client_action "github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
@@ -118,6 +119,7 @@ func (g *actionGenerator) generate(ctx context.Context) {
 			if !change.Continued {
 				updatedPolicies, err := g.processAtomicGroup(resources)
 				if err != nil {
+					policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
 					g.sendErr(ctx, errors.Wrapf(err, "failed in processing atomic group"))
 					return
 				}
@@ -126,11 +128,14 @@ func (g *actionGenerator) generate(ctx context.Context) {
 				g.currentPolicies = *updatedPolicies
 				g.initialStateDone = true
 				resources = make(map[string]*watcher.Change)
+				policyimporter.Metrics.Nodes.Set(float64(len(g.currentPolicies.PolicyNodes)))
 				for _, a := range a {
 					if !g.sendAction(ctx, a) {
+						policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
 						return
 					}
 				}
+				policyimporter.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
 			}
 		}
 	}
