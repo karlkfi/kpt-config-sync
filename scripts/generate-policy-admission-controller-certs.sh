@@ -35,40 +35,11 @@
 
 set -euo pipefail
 
-STAGING_DIR="${STAGING_DIR:-$(dirname ${0:-''})/../.output}/staging"
-readonly controller_staging_dir="${OUTPUT_DIR:-${STAGING_DIR}/policy-admission-controller}"
+readonly controller_staging_dir="${OUTPUT_DIR:-./policy-admission-controller}"
 
 # The name of the service (and the namespace it runs in).
 readonly cn_base="policy-admission-controller.nomos-system.svc"
 
-mkdir -p "${controller_staging_dir}"
-cd "${controller_staging_dir}"
-
-# Create a certificate authority
-openssl genrsa -out ca.key 2048
-openssl req -x509 -new -nodes -key ca.key -days 100000 \
-  -out ca.crt -subj "/CN=${cn_base}_ca"
-
-# Create a server certificate
-readonly tempfile=$(mktemp --tmpdir=${PWD} gencerts-server-cert-XXXXXX.conf)
-echo "Using config file: ${tempfile}"
-cat >"${tempfile}" <<EOF
-[req]
-req_extensions = v3_req
-distinguished_name = req_distinguished_name
-[req_distinguished_name]
-[ v3_req ]
-basicConstraints = CA:FALSE
-keyUsage = nonRepudiation, digitalSignature, keyEncipherment
-extendedKeyUsage = clientAuth, serverAuth
-EOF
-
-openssl genrsa -out server.key 2048
-openssl req -new -key server.key -out server.csr \
-  -subj "/CN=${cn_base}" -config "${tempfile}"
-openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key \
-  -CAcreateserial -out server.crt -days 100000 \
-  -extensions v3_req -extfile "${tempfile}"
-
-rm "${tempfile}"
-
+$(dirname $0)/generate-admission-controller-certs.sh \
+  --domain ${cn_base} \
+  --output_dir ${controller_staging_dir}
