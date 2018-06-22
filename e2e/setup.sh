@@ -81,6 +81,9 @@ function clean_up() {
     --uninstall=deletedeletedelete \
     --vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10
 
+  kubectl delete ns -l "nomos.dev/testdata=true"
+  kubectl delete ns -l "nomos.dev/namespace-management=full"
+
   if [[ "$importer" == "git" ]]; then
     echo "killing kubectl port forward..."
     pkill -f "kubectl -n=nomos-system-test port-forward.*${FWD_SSH_PORT}:22" || true
