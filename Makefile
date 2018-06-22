@@ -44,9 +44,6 @@ DOCS_STAGING_DIR := $(STAGING_DIR)/docs
 # Directory used for staging scripts.
 SCRIPTS_STAGING_DIR := $(STAGING_DIR)/scripts
 
-# Directory used for staging docker output.
-DOCKER_STAGING_DIR := $(STAGING_DIR)/docker
-
 # Directory used for installer output.
 INSTALLER_OUTPUT_DIR := $(STAGING_DIR)/installer_output
 
@@ -149,7 +146,6 @@ $(OUTPUT_DIR):
 	@echo "+++ Creating the local build output directory: $(OUTPUT_DIR)"
 	@mkdir -p \
 		$(BIN_DIR)/$(ARCH) \
-		$(DOCKER_STAGING_DIR) \
 		$(DOCS_STAGING_DIR) \
 		$(GEN_YAML_DIR) \
 		$(GO_DIR)/pkg \
