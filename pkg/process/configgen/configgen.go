@@ -34,6 +34,9 @@ const (
 	// This is the title message shown in the first menu.
 	menuMessage = `Select one of the options below to change the installation options.`
 
+	// successString is printed in the UI after installation succeeds
+	successString = "Nomos Installed Successfully."
+
 	// Width of the installer menu dialog
 	installerMenuWidth = 100
 
@@ -90,11 +93,13 @@ func New(version semver.Version, workDir string, cfg config.Config, out string) 
 
 // buildMenu creates a menu based on the current content of the actions. Uses
 // the global options specified in opts.
-func buildMenu(actions []Action, opts dialog.Options, err error) *dialog.Menu {
+func buildMenu(actions []Action, opts dialog.Options, success string, err error) *dialog.Menu {
 	o := []interface{}{opts}
 	messages := []string{menuMessage}
 	if err != nil {
 		messages = append(messages, fmt.Sprintf("\\Z1\\Zb%v\\Zn", err))
+	} else if success != "" {
+		messages = append(messages, fmt.Sprintf("\\Z2\\Zb%v\\Zn", success))
 	}
 	o = append(o, dialog.Message(strings.Join(messages, "\n")))
 	for _, action := range actions {
@@ -115,17 +120,22 @@ func (g *Generator) Run() error {
 		sel string
 	)
 	done := false
+	success := ""
 	for !done {
-		m := buildMenu(g.actions, g.opts, err)
+		m := buildMenu(g.actions, g.opts, success, err)
 		m.Display()
 		sel, err = m.Close()
 		if err != nil {
 			return errors.Wrapf(err, "configgen.Run(): while selecting options")
 		}
 		done, err = g.runSelection(sel)
+		success = "" // reset success after menu entered / install triggered
 		if err != nil {
 			// A non-nil error here will get surfaced in the UI.  Log it anyways.
 			glog.Warning(errors.Wrapf(err, "after runSelection"))
+		}
+		if sel == (&InstallAction{}).Name() && err == nil {
+			success = successString
 		}
 	}
 	return err
