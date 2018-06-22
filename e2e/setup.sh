@@ -109,9 +109,6 @@ function main() {
   else
     testcase_filter="$filter"
   fi
-  if [[ "${testcase_filter}" != "" ]]; then
-    echo "Filtering for testcases matching: ${testcase_filter}"
-  fi
 
   start_time=$(date +%s)
   if [[ ! "kubectl get ns > /dev/null" ]]; then
@@ -124,38 +121,32 @@ function main() {
   local bats_tests=()
   # We don't have any GCP tests yet, skip all tests.
   if [[ "$importer" == gcp ]]; then
-    bats_tests=()
+    echo "No tests for GCP"
   else
-    bats_tests=$(
-      echo ${TEST_DIR}/e2e.bats;
-      find ${TEST_DIR}/testcases -name '*.bats'
-    )
-  fi
-
-  local testcases=()
-  if [[ -n ${file_filter} ]]; then
-    for file in ${bats_tests[@]}; do
-      if echo "${file}" | grep "${file_filter}" &> /dev/null; then
-        echo "Will run ${file}"
-        testcases+=("${file}")
-      fi
+    for i in $(echo ${TEST_DIR}/e2e.bats; find ${TEST_DIR}/testcases -name '*.bats'); do
+      bats_tests+=($i)
     done
-  else
-    if [[ "${#bats_tests[@]}" != "0" ]]; then
-      for file in ${bats_tests[@]}; do
-        testcases+=("${file}")
-      done
-    fi
   fi
 
-  local bats_flags=()
+  local bats_args=()
+  if [[ "${file_filter}" == "" ]]; then
+    file_filter=".*"
+  fi
+
+  for file in ${bats_tests[@]}; do
+    if echo "${file}" | grep "${file_filter}" &> /dev/null; then
+      echo "Will run ${file}"
+      bats_args+=("${file}")
+    fi
+  done
+
   if $tap; then
-    bats_flags+=(--tap)
+    bats_args+=(--tap)
   fi
 
   local retcode=0
-  if [[ "${#testcases[@]}" != 0 ]]; then
-    if ! E2E_TEST_FILTER="${testcase_filter}" ${TEST_DIR}/bats/bin/bats ${bats_flags[@]} ${testcases[@]}; then
+  if [[ "${#bats_args[@]}" != 0 ]]; then
+    if ! E2E_TEST_FILTER="${testcase_filter}" ${TEST_DIR}/bats/bin/bats "${bats_args[@]}"; then
       retcode=1
     fi
   else
