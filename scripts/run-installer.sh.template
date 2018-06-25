@@ -48,6 +48,7 @@ function installer::main() {
     "--volume=${OUTPUT_DIR}/kubeconfig:/opt/installer/kubeconfig"
     "--volume=${OUTPUT_DIR}/logs:/tmp"
     "--volume=${HOME}:/home/user"
+    "--volume=${HOME}:${HOME}:ro"
   )
   readonly config_arg="$(installer::optf \
 		  --volume=%s:/opt/installer/configs/config_in.yaml \
@@ -68,12 +69,17 @@ function installer::main() {
 		  FORWARDED_ARGS+=("${interactive_arg}")
   fi
 
+  readonly uid_on_host="$(id -u)"
+  readonly gid_on_host="$(id -g)"
+
   docker run -it \
-    -u "$(id -u):$(id -g)" \
-	"${VOLUME_ARGS[@]}" \
+    -u "${uid_on_host}:${gid_on_host}" \
+    "${VOLUME_ARGS[@]}" \
     -e "VERSION=${_arg_version}" \
     -e "CONFIG=${_arg_config}" \
     -e "HOME_ON_HOST=${HOME}" \
+	-e "UID_ON_HOST=${uid_on_host}" \
+	-e "GID_ON_HOST=${gid_on_host}" \
     "${_arg_container}:${_arg_version}" "${FORWARDED_ARGS[@]}" \
   	&& echo "+++ Generated files are available in ${OUTPUT_DIR}" \
   	|| (echo "### Installer failed.  Logs are available in ${OUTPUT_DIR}/logs"; exit 1)
