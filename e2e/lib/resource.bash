@@ -193,9 +193,7 @@ function resource::count() {
     cmd+=(-l "$selector")
   fi
 
-  debug::log "Running ${cmd[@]}"
   local output="$("${cmd[@]}")"
-  debug::log "$output"
   local count=0
   if [[ "$output" != "No resources found." ]]; then
     count=$(( $(echo "$output" | wc -l) - 1 ))
