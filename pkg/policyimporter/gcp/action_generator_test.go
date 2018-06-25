@@ -144,6 +144,12 @@ func init() {
 			},
 		},
 		{
+			testName: "Initial state with non-existent root",
+			batch1: []*watcher.Change{
+				{Element: "", State: watcher.Change_DOES_NOT_EXIST, Continued: false, Data: emptyProto},
+			},
+		},
+		{
 			testName: "Initial state with non-existent resource",
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
