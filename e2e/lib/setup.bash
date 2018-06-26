@@ -58,30 +58,34 @@ setup() {
   git commit -m "setUp commit"
   git push origin master:master -f
   cd $CWD
+
+  setup::wait_for_namespaces
+
   # Wait for syncer to update each object type.
-  wait::for_success "kubectl get ns backend"
   wait::for_success "kubectl get rolebindings -n backend"
   wait::for_success "kubectl get roles -n new-prj"
   wait::for_success "kubectl get quota -n backend"
   # We delete bob-rolebinding in one test case, make sure it's restored.
   wait::for_success "kubectl get rolebindings backend.bob-rolebinding -n backend"
+  wait::for_success "kubectl get clusterrole acme-admin"
+}
 
-  # Note that we have to wait for "Terminating" namespaces from previous
-  # testcases to finalize so this can actually take quite some time.
-  echo -n "Waiting for namespaces to stabilize"
-  for i in $(seq 1 30); do
+# Previous tests can create / delete namespaces. This will wait for the
+# namespaces to finish terminating and the state to get restored to base acme.
+function setup::wait_for_namespaces() {
+  debug::log -n "Waiting for namespaces to stabilize"
+  local start=$(date +%s)
+  local deadline=$(( $(date +%s) + 30 ))
+  while [[ "$(date +%s)" < ${deadline} ]]; do
     if setup::check_stable; then
-      echo
-      echo "Namespaces stabilized"
+      debug::log "Namespaces stabilized in $(( $(date +%s) - ${start} )) seconds"
       return 0
     fi
-    echo -n "."
-    sleep 0.25
+    sleep 0.1
   done
-  echo
-  echo "Namespaces failed to stabilize to acme defaults, got:"
-  echo "$(kubectl get ns)"
-  false
+  debug::log "Namespaces failed to stabilize to acme defaults, got:"
+  debug::log "$(kubectl get ns)"
+  return 1
 }
 
 function setup::check_stable() {
@@ -94,7 +98,8 @@ function setup::check_stable() {
 
   echo "checking namespaces for active state"
   for ns in "${ACME_NAMESPACES[@]}" "${SYS_NAMESPACES[@]}"; do
-    if ! kubectl get ns ${ns} -oyaml | grep "phase: Active"; then
+    if ! kubectl get ns ${ns} -oyaml | grep "phase: Active" &> /dev/null; then
+      debug::log "namespace ${ns} not active yet"
       return 1
     fi
   done
