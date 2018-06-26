@@ -108,21 +108,22 @@ func TestGetAncestry(t *testing.T) {
 			hierarchy: invalidHierarchy,
 			nodeName:  "child3-1",
 			wantErr: &ConsistencyError{
-				Ancestry{createTestNode("child3-1", "child3", policyhierarchy_v1.Namespace)}, "child3"},
+				ancestry: Ancestry{createTestNode("child3-1", "child3", policyhierarchy_v1.Namespace)},
+				missing:  "child3"},
 		},
 		{
 			name:      "reserved in ancestry",
 			hierarchy: invalidHierarchy,
 			nodeName:  "reserved-ns-1",
 			wantErr: &ConsistencyError{
-				Ancestry{createTestNode("reserved-ns-1", "reserved1", policyhierarchy_v1.Policyspace)}, ""},
+				ancestry: Ancestry{createTestNode("reserved-ns-1", "reserved1", policyhierarchy_v1.Policyspace)}},
 		},
 		{
 			name:      "namespace in ancestry",
 			hierarchy: invalidHierarchy,
 			nodeName:  "namespace-ns-1",
 			wantErr: &ConsistencyError{
-				Ancestry{createTestNode("namespace-ns-1", "namespace-1", policyhierarchy_v1.Namespace)}, ""},
+				ancestry: Ancestry{createTestNode("namespace-ns-1", "namespace-1", policyhierarchy_v1.Namespace)}},
 		},
 	}
 

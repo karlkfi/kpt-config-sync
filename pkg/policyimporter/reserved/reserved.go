@@ -86,7 +86,7 @@ func From(reserved *v1.ConfigMap) (*Namespaces, error) {
 		return EmptyNamespaces(), nil
 	}
 
-	ns := &Namespaces{reserved}
+	ns := &Namespaces{configMap: reserved}
 	if err := ns.validate(); err != nil {
 		return EmptyNamespaces(), err
 	}

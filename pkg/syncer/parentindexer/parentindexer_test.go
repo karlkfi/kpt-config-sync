@@ -92,12 +92,12 @@ func expectChildren(t *testing.T, informer cache.SharedIndexInformer, node strin
 
 func TestIndexer(t *testing.T) {
 	specs := Specs{
-		{"root", ""},
-		{"no-children", "root"},
-		{"has-children", "root"},
-		{"child1", "has-children"},
-		{"child2", "has-children"},
-		{"child3", "has-children"},
+		{name: "root", parent: ""},
+		{name: "no-children", parent: "root"},
+		{name: "has-children", parent: "root"},
+		{name: "child1", parent: "has-children"},
+		{name: "child2", parent: "has-children"},
+		{name: "child3", parent: "has-children"},
 	}
 
 	var objs []runtime.Object

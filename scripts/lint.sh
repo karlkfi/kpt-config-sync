@@ -18,20 +18,34 @@ set -euo pipefail
 
 export CGO_ENABLED=0
 
+# TODO: transition the following gometalinter checks to use golangci-lint
+#
+#  --enable=deadcode \
+#  --enable=errcheck \
+#  --enable=govet \
+echo "Running golangci-lint: "
+golangci-lint run \
+  --deadline=90s \
+  --disable-all \
+  --enable=goimports \
+  --enable=ineffassign \
+  --enable=unconvert \
+  --enable=golint \
+  --enable=megacheck \
+  --exclude=generated\.pb\.go \
+  --exclude=generated\.go \
+  "$@"
+echo "PASS"
+
 echo "Running gometalinter: "
 if ! OUT="$(
   gometalinter.v2 \
     --deadline=90s \
     --disable-all \
     --enable=vet \
-    --enable=goimports \
     --enable=deadcode \
-    --enable=ineffassign \
     --enable=vetshadow \
-    --enable=unconvert \
     --enable=errcheck \
-    --enable=golint \
-    --enable=megacheck \
     --exclude=generated\.pb\.go \
     --exclude=generated\.go \
     "$@"\
@@ -51,7 +65,6 @@ if ! OUT="$(
   exit 1
 fi
 echo "PASS"
-
 
 echo "Running licenselinter: "
 licenselinter -dir $(pwd)
