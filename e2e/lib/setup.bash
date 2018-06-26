@@ -19,10 +19,6 @@ SYS_NAMESPACES=(
   nomos-system-test
 )
 
-# Total count of namespaces on system
-TOTAL_NS_COUNT=$(( ${#ACME_NAMESPACES[@]} + ${#SYS_NAMESPACES[@]} ))
-
-
 setup() {
   if [[ "${E2E_TEST_FILTER}" != "" ]]; then
     local cur_test=""
@@ -35,6 +31,9 @@ setup() {
       skip
     fi
   fi
+
+  # Delete testdata that might exist.
+  kubectl delete ns -l "nomos.dev/testdata=true" &> /dev/null || true
 
   # Reset git repo to initial state.
   CWD=$(pwd)
@@ -90,13 +89,25 @@ function setup::wait_for_namespaces() {
 
 function setup::check_stable() {
   debug::log "checking for stable"
-  local ns_count=$(resource::count -r ns)
-  if [[ $ns_count != ${TOTAL_NS_COUNT} ]]; then
-    debug::log "count mismatch $ns_count != ${TOTAL_NS_COUNT}"
+  local ns_states="$(
+    kubectl get ns -ojsonpath="{.items[*].status.phase}" \
+    | tr ' ' '\n' \
+    | sort \
+    | uniq -c
+  )"
+  if echo "${ns_states}" | grep "Terminating" &> /dev/null; then
+    local count=$(echo "${ns_states}" | grep "Terminating" | sed -e 's/^ *//' -e 's/T.*//')
+    debug::log "Waiting for $count namespaces to finalize"
     return 1
   fi
 
-  echo "checking namespaces for active state"
+  local ns_count=$(resource::count -r ns -l nomos.dev/namespace-management)
+  if [[ $ns_count != ${#ACME_NAMESPACES[@]} ]]; then
+    debug::log "count mismatch $ns_count != ${#ACME_NAMESPACES[@]}"
+    return 1
+  fi
+
+  echo "Checking namespaces for active state"
   for ns in "${ACME_NAMESPACES[@]}" "${SYS_NAMESPACES[@]}"; do
     if ! kubectl get ns ${ns} -oyaml | grep "phase: Active" &> /dev/null; then
       debug::log "namespace ${ns} not active yet"

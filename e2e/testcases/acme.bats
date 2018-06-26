@@ -10,7 +10,7 @@ load ../lib/loader
 @test "All acme corp created" {
   local ns
 
-  resource::check_count -r namespace -c ${TOTAL_NS_COUNT}
+  resource::check_count -r namespace -l nomos.dev/namespace-management ${#ACME_NAMESPACES[@]}
 
   for ns in ${ACME_NAMESPACES[@]}; do
     namespace::check_exists $ns full
