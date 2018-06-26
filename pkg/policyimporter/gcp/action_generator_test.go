@@ -388,9 +388,9 @@ func TestGen(t *testing.T) {
 			g := newActionGenerator(
 				stream, out, tc.currentPolicies, actions.NewFactories(nil, nil, nil))
 
-			stream.EXPECT().Recv().Return(&watcher.ChangeBatch{tc.batch1}, nil)
+			stream.EXPECT().Recv().Return(&watcher.ChangeBatch{Changes: tc.batch1}, nil)
 			if tc.batch2 != nil {
-				stream.EXPECT().Recv().Return(&watcher.ChangeBatch{tc.batch2}, nil)
+				stream.EXPECT().Recv().Return(&watcher.ChangeBatch{Changes: tc.batch2}, nil)
 			}
 			if !tc.expectedError {
 				stream.EXPECT().Recv().Return(nil, io.EOF)
@@ -436,7 +436,7 @@ func TestDone(t *testing.T) {
 	out := make(chan actionVal)
 	g := newActionGenerator(stream, out, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil))
 
-	stream.EXPECT().Recv().Return(&watcher.ChangeBatch{[]*watcher.Change{
+	stream.EXPECT().Recv().Return(&watcher.ChangeBatch{Changes: []*watcher.Change{
 		{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto},
 		{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
 	},

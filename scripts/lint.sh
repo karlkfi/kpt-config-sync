@@ -21,7 +21,7 @@ export CGO_ENABLED=0
 echo "Running gometalinter: "
 if ! OUT="$(
   gometalinter.v2 \
-    --deadline=60s \
+    --deadline=90s \
     --disable-all \
     --enable=vet \
     --enable=goimports \
