@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
+// nolint:deadcode
 func TestRequest(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(admissioncontroller.ServeFunc(resourcequota.NewAdmitter(
 		fakeinformers.NewPolicyNodeInformer(), fakeinformers.NewResourceQuotaInformer()))))

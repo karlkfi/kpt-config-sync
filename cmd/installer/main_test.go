@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+// nolint:deadcode
 func TestVersionOrDie(t *testing.T) {
 	tests := []struct {
 		input    string

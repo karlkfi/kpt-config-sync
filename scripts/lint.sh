@@ -20,18 +20,18 @@ export CGO_ENABLED=0
 
 # TODO: transition the following gometalinter checks to use golangci-lint
 #
-#  --enable=deadcode \
 #  --enable=errcheck \
 #  --enable=govet \
 echo "Running golangci-lint: "
 golangci-lint run \
   --deadline=90s \
   --disable-all \
+  --enable=deadcode \
   --enable=goimports \
-  --enable=ineffassign \
-  --enable=unconvert \
   --enable=golint \
+  --enable=ineffassign \
   --enable=megacheck \
+  --enable=unconvert \
   --exclude=generated\.pb\.go \
   --exclude=generated\.go \
   "$@"
@@ -43,7 +43,6 @@ if ! OUT="$(
     --deadline=90s \
     --disable-all \
     --enable=vet \
-    --enable=deadcode \
     --enable=vetshadow \
     --enable=errcheck \
     --exclude=generated\.pb\.go \
