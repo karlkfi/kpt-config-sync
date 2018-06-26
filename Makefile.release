@@ -74,28 +74,29 @@ release: clean \
 		$(TOP_DIR)/scripts/nomosvet.sh \
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/$(VERSION)
-	gsutil -m cp -r -p \
-			$(RELEASE_BUCKET)/$(VERSION) \
-			$(RELEASE_BUCKET)/latest
-	@echo "+++ Moving 'latest' label to reflect the latest release candidate"
+	@echo "+++ Marking release as 'latest'"
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/installer:latest
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/nomos:latest
+	gsutil -m rsync -r -d -p \
+			$(RELEASE_BUCKET)/$(VERSION) \
+			$(RELEASE_BUCKET)/latest
 
 # For releases we attach the :stable tag to the latest image
 # built and update the stable docs package.  Dirty package releases  are not
 # allowed.
 bless-release: check-dirty
-	@echo "+++ Moving 'stable' label to reflect a STABLE version release"
+	@echo "+++ Marking release as 'stable'"
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/installer:stable
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/nomos:stable
-	@echo "+++ Updating stable release package"
-	gsutil -m cp -p -r $(RELEASE_BUCKET)/$(VERSION) $(RELEASE_BUCKET)/stable
+	gsutil -m rsync -r -d -p \
+		$(RELEASE_BUCKET)/$(VERSION) \
+		$(RELEASE_BUCKET)/stable
 
