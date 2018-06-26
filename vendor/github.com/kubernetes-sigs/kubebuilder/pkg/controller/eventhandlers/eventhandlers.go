@@ -78,12 +78,12 @@ func (mp MapAndEnqueue) Get(r workqueue.RateLimitingInterface) cache.ResourceEve
 func (mp MapAndEnqueue) addRateLimited(r workqueue.RateLimitingInterface, obj interface{}) {
 	if mp.Map != nil {
 		if k := mp.Map(obj); len(k) > 0 {
-			r.AddRateLimited(k)
+			r.Add(k)
 		}
 	}
 	if mp.MultiMap != nil {
 		for _, k := range mp.MultiMap(obj) {
-			r.AddRateLimited(k.Namespace + "/" + k.Name)
+			r.Add(k.Namespace + "/" + k.Name)
 		}
 	}
 }
