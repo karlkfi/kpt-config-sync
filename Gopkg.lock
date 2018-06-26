@@ -382,7 +382,6 @@
   version = "1.0.3"
 
 [[projects]]
-  branch = "master"
   name = "github.com/kubernetes-sigs/kubebuilder"
   packages = [
     "pkg/controller",
@@ -395,7 +394,8 @@
     "pkg/inject/run",
     "pkg/signals"
   ]
-  revision = "02e01e3ed93e1f5d528d8310d6725e445ebfb79d"
+  revision = "a523fb6b174c2785084eb0948c4cfdaf2f818bc4"
+  version = "v0.1.12"
 
 [[projects]]
   branch = "master"
@@ -1187,6 +1187,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "559048553e607926a604ef4d53013618e0a170dc614599ec326705ab1eca3648"
+  inputs-digest = "e0dcf19f68f3ad17bc623dddb9af8382f2fc55fb6c7e4194527cfc1f8c0ea571"
   solver-name = "gps-cdcl"
   solver-version = 1

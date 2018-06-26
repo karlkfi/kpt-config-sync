@@ -65,9 +65,9 @@ required=[
   version = "v1.4-2-g300106c"
 
 # Required for vendoring github.com/kubernetes-sigs/kubebuilder
-[[override]]
+[[constraint]]
   name = "github.com/kubernetes-sigs/kubebuilder"
-  branch = "master"
+  version = "v0.1.12"
 
 # Required for vendoring github.com/kubernetes-sigs/kubebuilder
 [[override]]
