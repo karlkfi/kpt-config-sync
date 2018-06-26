@@ -1,4 +1,17 @@
-# Using Nomos
+# Git User Guide
+
+Nomos supports using Git to centrally manage Namespaces and policies across
+Kubernetes clusters. This *Policy as Code* approach ensures policy
+configurations are:
+
+*   __Immutable:__ A Git commit is an exact declaration of the desired state of
+    policies.
+*   __Auditable:__ Changes are reviewed and approved by administrators.
+*   __Revertable:__ Misconfiguration is one of the most common reasons for
+    service outages. It should be fast and easy to revert to a known good state.
+
+In addition, the rich CI/CD ecosystem built around Git enables building
+sophisticated pipelines for vetting and deploying at scale.
 
 ## Policy Hierarchy Operations
 

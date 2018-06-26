@@ -437,9 +437,6 @@ goimports:
 lint: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
 
-format-markdown:
-	@/google/data/ro/teams/g3doc/mdformat --in_place --compatibility $(shell find docs -name '*.md')
-
 .PHONY: clientgen
 clientgen:
 	@echo "+++ Generating clientgen directory"
@@ -479,3 +476,7 @@ docs-generate: buildenv docs-staging
 docs-package: docs-generate
 	@echo "+++ Packaging HTML docs into a zip package"
 	@cd $(STAGING_DIR); rm -f nomos-docs.zip; zip -r nomos-docs.zip docs
+
+docs-format:
+	@/google/data/ro/teams/g3doc/mdformat --in_place --compatibility $(shell find docs README.md -name '*.md')
+

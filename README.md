@@ -15,6 +15,10 @@ cluster. Nomos makes it easier to manage large multi-tenant and multi-cluster
 deployments, by reducing the load on cluster operators and reducing the surface
 area to secure.
 
+Nomos can be extended to support different sources of truth for centralized
+policy management. Currently, there is support for Git and Google Cloud
+Platform.
+
 ## Try Nomos
 
 See [Quickstart](docs/quickstart.md).
@@ -24,7 +28,9 @@ See [Quickstart](docs/quickstart.md).
 *   [Concepts](docs/concepts.md)
 *   [System Overview](docs/system_overview.md)
 *   [Installation](docs/installation.md)
-*   [User Guide](docs/user_guide.md)
+*   User Guides
+    *   [Git User Guide](docs/git_user_guide.md)
+    *   [GCP User Guide](docs/gcp_user_guide.md)
 *   [Monitoring and Debugging](docs/monitoring_and_debugging.md)
 
 ## Contributing to Nomos

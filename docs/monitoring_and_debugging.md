@@ -11,7 +11,7 @@ List all nomos-system pods:
 ```console
 $ kubectl get deployment -n nomos-system
 NAME                                 DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
-git-policy-importer                  1         1         1            1           13d
+[git|gcp]-policy-importer            1         1         1            1           13d
 policy-admission-controller          1         1         1            1           9d
 resourcequota-admission-controller   1         1         1            1           9d
 syncer                               1         1         1            1           13d

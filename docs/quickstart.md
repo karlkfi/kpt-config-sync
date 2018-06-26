@@ -75,4 +75,4 @@ Try changing the cpu request from `2` to `200m`. This time it should succeed.
 
 ## What's next
 
-[Nomos User Guide](user_guide.md)
+[Nomos User Guide](git_user_guide.md)
