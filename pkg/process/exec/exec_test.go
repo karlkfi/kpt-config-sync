@@ -63,7 +63,9 @@ func TestRun(t *testing.T) {
 			out := bytes.NewBuffer(nil)
 			err := bytes.NewBuffer(nil)
 			c := NewRedirected(strings.NewReader(tt.stdin), out, err)
-			c.Run(context.Background(), "foo", "bar")
+			if err := c.Run(context.Background(), "foo", "bar"); err != nil {
+				t.Errorf("unexpected error: %s", err)
+			}
 			if tt.expectedStdout != out.String() {
 				t.Errorf("out.String(): %q, want: %q", out.String(), tt.stdout)
 			}
@@ -126,7 +128,9 @@ func TestRunWithEnv(t *testing.T) {
 			err := bytes.NewBuffer(nil)
 			c := NewRedirected(strings.NewReader(""), out, err)
 			c.SetEnv([]string{tt.env})
-			c.Run(context.Background(), "dummy_command")
+			if err := c.Run(context.Background(), "dummy_command"); err != nil {
+				t.Errorf("unexpected error: %s", err)
+			}
 			if !strings.Contains(out.String(), tt.env) {
 				t.Errorf("Unexpected: %v, want: %v", out.String(), tt.env)
 			}

@@ -137,15 +137,22 @@ func TestInstaller_DeleteClusterPolicies(t *testing.T) {
 	const p1name = "mostExcellentPolicy"
 	const p2name = "mostHeinousPolicy"
 
+	var err error
 	client := fake.NewClient()
-	client.PolicyHierarchy().NomosV1().ClusterPolicies().Create(&v1.ClusterPolicy{
+	_, err = client.PolicyHierarchy().NomosV1().ClusterPolicies().Create(&v1.ClusterPolicy{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: p1name,
 		}})
-	client.PolicyHierarchy().NomosV1().ClusterPolicies().Create(&v1.ClusterPolicy{
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+	_, err = client.PolicyHierarchy().NomosV1().ClusterPolicies().Create(&v1.ClusterPolicy{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: p2name,
 		}})
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
 
 	cp, err := client.PolicyHierarchy().NomosV1().ClusterPolicies().List(meta_v1.ListOptions{
 		IncludeUninitialized: true,
@@ -181,16 +188,23 @@ func TestInstaller_DeletePolicyNodes(t *testing.T) {
 	const n1name = "billNode"
 	const n2name = "tedNode"
 
+	var err error
 	client := fake.NewClient()
 
-	client.PolicyHierarchy().NomosV1().PolicyNodes().Create(&v1.PolicyNode{
+	_, err = client.PolicyHierarchy().NomosV1().PolicyNodes().Create(&v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: n1name,
 		}})
-	client.PolicyHierarchy().NomosV1().PolicyNodes().Create(&v1.PolicyNode{
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+	_, err = client.PolicyHierarchy().NomosV1().PolicyNodes().Create(&v1.PolicyNode{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name: n2name,
 		}})
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
 
 	pn, err := client.PolicyHierarchy().NomosV1().PolicyNodes().List(meta_v1.ListOptions{
 		IncludeUninitialized: true,

@@ -107,7 +107,9 @@ func TestIndexer(t *testing.T) {
 	client := fake.NewSimpleClientset(objs...)
 	informerFactory := externalversions.NewSharedInformerFactory(client, 2*time.Minute)
 	informer := informerFactory.Nomos().V1().PolicyNodes().Informer()
-	informer.AddIndexers(Indexer())
+	if err := informer.AddIndexers(Indexer()); err != nil {
+		t.Errorf("unexpected error %s", err)
+	}
 
 	informerFactory.Start(nil)
 	for k, v := range informerFactory.WaitForCacheSync(nil) {
