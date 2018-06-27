@@ -20,7 +20,7 @@ quickly using
 $ kubectl get ns # lists the 3 default namespaces
 ```
 
-## Release
+## Create the Release Candidate
 
 Set the release version. Make sure to uphold the [semantic versioning
 rules](http://semver.org). If the release fails, increment the patch number for
@@ -37,22 +37,14 @@ $ git tag -a ${RELEASE_VERSION} -m "Meaningful message"
 $ git push origin ${RELEASE_VERSION}
 ```
 
-Finally, produce the release, which will move the `latest` label to the one just
-built and update the latest Nomos docs.
+Finally, produce the release candidate:
 
 ```console
 $ make -f Makefile.release release
 ```
 
-**Important**: If you are confident that this particular release candidate is
-functional and stable, then proceed to mark it as stable. This will move the
-`stable` tag to the version just built and update stable Nomos docs.
-
-```console
-$ make -f Makefile.release bless-release
-```
-
-To generate a changelog:
+Send an email to nomos-team@google.com with subject `Nomos Release
+${RELEASE_VERSION}` and body:
 
 ```
 $ TZ=America/Los_Angeles git log --pretty="format:%C(yellow)%h \
@@ -60,9 +52,19 @@ $ TZ=America/Los_Angeles git log --pretty="format:%C(yellow)%h \
     --date=local v0.3.4..v0.4.0
 ```
 
-## Verify (optional)
+The artifacts will be [available
+here](https://console.cloud.google.com/storage/browser/nomos-release/latest/?project=nomos-release).
 
-If the above commands succeeded (that is, `echo $?` prints 0), the release
-process was successful. The output is a new version of our container in gcr.
-Look for the new version
-[here](https://console.cloud.google.com/gcr/images/nomos-release/GLOBAL/installer?project=nomos-release&organizationId=433637338589&gcrImageListsize=50).
+## Bless the Release Candidate
+
+It is the responsibility of oncall primary and secondary to vet the RC. Wait
+until 24 hours to give others a chance to try out the RC as well.
+
+Finally, to bless the RC:
+
+```console
+$ make -f Makefile.release bless-release
+```
+
+The artifacts will be [available
+here](https://console.cloud.google.com/storage/browser/nomos-release/stable/?project=nomos-release).
