@@ -62,6 +62,23 @@ func TestGetAncestry(t *testing.T) {
 		createTestNode("namespace-1", "root", policyhierarchy_v1.Namespace),
 		createTestNode("namespace-ns-1", "namespace-1", policyhierarchy_v1.Namespace),
 	))
+	cyclicalHierarchy := New(fakeinformers.NewPolicyNodeInformer(
+		createTestNode("root", "", policyhierarchy_v1.Policyspace),
+		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
+		createTestNode("child2", "child1", policyhierarchy_v1.Policyspace),
+		createTestNode("child3", "child2", policyhierarchy_v1.Policyspace),
+
+		// isolated cycle of policyspaces
+		createTestNode("cycle-1", "cycle-2", policyhierarchy_v1.Policyspace),
+		createTestNode("cycle-2", "cycle-3", policyhierarchy_v1.Policyspace),
+		createTestNode("cycle-3", "cycle-1", policyhierarchy_v1.Policyspace),
+
+		// isolated cycle with namespace
+		createTestNode("cycle-10", "cycle-11", policyhierarchy_v1.Namespace),
+		createTestNode("cycle-11", "cycle-12", policyhierarchy_v1.Policyspace),
+		createTestNode("cycle-12", "cycle-13", policyhierarchy_v1.Policyspace),
+		createTestNode("cycle-13", "cycle-11", policyhierarchy_v1.Policyspace),
+	))
 
 	tests := []struct {
 		name         string
@@ -108,6 +125,7 @@ func TestGetAncestry(t *testing.T) {
 			hierarchy: invalidHierarchy,
 			nodeName:  "child3-1",
 			wantErr: &ConsistencyError{
+				errType:  "not found",
 				ancestry: Ancestry{createTestNode("child3-1", "child3", policyhierarchy_v1.Namespace)},
 				missing:  "child3"},
 		},
@@ -116,6 +134,7 @@ func TestGetAncestry(t *testing.T) {
 			hierarchy: invalidHierarchy,
 			nodeName:  "reserved-ns-1",
 			wantErr: &ConsistencyError{
+				errType:  "invalid parent",
 				ancestry: Ancestry{createTestNode("reserved-ns-1", "reserved1", policyhierarchy_v1.Policyspace)}},
 		},
 		{
@@ -123,7 +142,37 @@ func TestGetAncestry(t *testing.T) {
 			hierarchy: invalidHierarchy,
 			nodeName:  "namespace-ns-1",
 			wantErr: &ConsistencyError{
+				errType:  "invalid parent",
 				ancestry: Ancestry{createTestNode("namespace-ns-1", "namespace-1", policyhierarchy_v1.Namespace)}},
+		},
+		{
+			name:      "policyspace cycle",
+			hierarchy: cyclicalHierarchy,
+			nodeName:  "cycle-1",
+			wantErr: &ConsistencyError{
+				errType: "cycle",
+				ancestry: Ancestry{
+					createTestNode("cycle-1", "cycle-2", policyhierarchy_v1.Policyspace),
+					createTestNode("cycle-2", "cycle-3", policyhierarchy_v1.Policyspace),
+					createTestNode("cycle-3", "cycle-1", policyhierarchy_v1.Policyspace),
+					createTestNode("cycle-1", "cycle-2", policyhierarchy_v1.Policyspace),
+				},
+			},
+		},
+		{
+			name:      "namespace in cycle",
+			hierarchy: cyclicalHierarchy,
+			nodeName:  "cycle-10",
+			wantErr: &ConsistencyError{
+				errType: "cycle",
+				ancestry: Ancestry{
+					createTestNode("cycle-10", "cycle-11", policyhierarchy_v1.Namespace),
+					createTestNode("cycle-11", "cycle-12", policyhierarchy_v1.Policyspace),
+					createTestNode("cycle-12", "cycle-13", policyhierarchy_v1.Policyspace),
+					createTestNode("cycle-13", "cycle-11", policyhierarchy_v1.Policyspace),
+					createTestNode("cycle-11", "cycle-12", policyhierarchy_v1.Policyspace),
+				},
+			},
 		},
 	}
 

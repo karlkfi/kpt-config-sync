@@ -52,6 +52,7 @@ func IsNotFoundError(err error) bool {
 // ConsistencyError is returned when the ancestry is in an inconsistent state. This can occur if
 // an update to the PolicyNode objects happens in an order where the hierarchy is slightly disrupted.
 type ConsistencyError struct {
+	errType  string
 	ancestry Ancestry
 	missing  string
 }
@@ -65,7 +66,7 @@ func (s *ConsistencyError) Error() string {
 	if len(s.missing) != 0 {
 		vals = append(vals, fmt.Sprintf("[%s:%s]", s.missing, "NotFound"))
 	}
-	return fmt.Sprintf("inconsistent heirarchy: %s", strings.Join(vals, " -> "))
+	return fmt.Sprintf("inconsistent heirarchy (%s): %s", s.errType, strings.Join(vals, " -> "))
 }
 
 // IsIncompleteHierarchyError returns true if the error is a NotFoundError
@@ -173,21 +174,29 @@ func (s *Hierarchy) Ancestry(name string) (Ancestry, error) {
 		panic("Lister returned error other than not found, this should not happen")
 	}
 
+	names := map[string]bool{name: true}
 	ancestry := Ancestry{node}
 	current := node.Spec.Parent
 	for current != "" {
 		node, err = s.lister.Get(current)
 		if err != nil {
 			if api_errors.IsNotFound(err) {
-				return nil, &ConsistencyError{ancestry, current}
+				return nil, &ConsistencyError{
+					errType: "not found", ancestry: ancestry, missing: current}
 			}
 			panic("Lister returned error other than not found, this should not happen")
 		}
 
 		if !node.Spec.Type.IsPolicyspace() {
-			return nil, &ConsistencyError{ancestry, ""}
+			return nil, &ConsistencyError{errType: "invalid parent", ancestry: ancestry}
 		}
 
+		if names[node.Name] {
+			ancestry = append(ancestry, node)
+			return nil, &ConsistencyError{errType: "cycle", ancestry: ancestry}
+		}
+
+		names[node.Name] = true
 		ancestry = append(ancestry, node)
 		current = node.Spec.Parent
 	}
