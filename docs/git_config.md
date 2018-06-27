@@ -23,8 +23,9 @@ Note:
 *   Set `user` field to be set to your username that is valid for authenticating
     to the clusters. This username must be valid on all clusters included in the
     contexts field.
-*   Please do NOT replace $HOME with the name of your actual home directory,
-    leave it as a placeholder.
+*   You may use `$HOME` to refer to your home directory in the config file.
+*   Only files in the home directory (as resolved by `$HOME`) can be specified
+    in this config file and in kubectl config for the context.
 
 These are all the supported keys for the the *git* object of the installer
 config file.
