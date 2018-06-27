@@ -65,7 +65,7 @@ type actionGenerator struct {
 	// Current policies queried from K8S API.
 	currentPolicies v1.AllPolicies
 	actionFactories actions.Factories
-	// Maps GCP resource name (e.g. folders/456, namespaces/789) to K8S name (e.g folders-456, backend)
+	// Maps GCP resource name (e.g. folders/456, projects/789) to K8S name (e.g folders-456, backend)
 	gcpToK8SName map[string]string
 	// Whether initial state has been processed.
 	initialStateDone bool
@@ -283,7 +283,7 @@ func policyResourceType(n string) (resourceType, error) {
 	}
 	if mustMatch("PolicyNode", n) ||
 		mustMatch("folders/*/PolicyNode", n) ||
-		mustMatch("namespaces/*/PolicyNode", n) {
+		mustMatch("projects/*/PolicyNode", n) {
 		return policyNodeResource, nil
 	}
 	return "", errors.Errorf("invalid resource name: %q", n)

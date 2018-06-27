@@ -162,7 +162,7 @@ func init() {
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: true, Data: orgPNProto},
 				{Element: "folders/456/PolicyNode", State: watcher.Change_EXISTS, Continued: true, Data: folderPNProto},
-				{Element: "namespaces/backend/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
+				{Element: "projects/789/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
@@ -176,7 +176,7 @@ func init() {
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: true, Data: orgPNProto},
 				{Element: "folders/456/PolicyNode", State: watcher.Change_EXISTS, Continued: true, Data: folderPNProto},
-				{Element: "namespaces/backend/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
+				{Element: "projects/789/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
 			},
 			currentPolicies: v1.AllPolicies{PolicyNodes: map[string]v1.PolicyNode{
 				"organization-123": *orgPN,
@@ -258,7 +258,7 @@ func init() {
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
 				{Element: "folders/456/PolicyNode", State: watcher.Change_EXISTS, Continued: true, Data: folderPNProto},
-				{Element: "namespaces/backend/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
+				{Element: "projects/789/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
@@ -306,7 +306,7 @@ func init() {
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
-				{Element: "namespaces/backend/PolicyNode", State: watcher.Change_EXISTS, Continued: true, Data: nsPNProto},
+				{Element: "projects/789/PolicyNode", State: watcher.Change_EXISTS, Continued: true, Data: nsPNProto},
 				{Element: "folders/456/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: folderPNProto},
 			},
 			expectedActions: []string{
@@ -365,7 +365,7 @@ func init() {
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
 				{Element: "folders/456/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: folderPNProto},
-				{Element: "namespaces/backend/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
+				{Element: "projects/789/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
@@ -568,7 +568,7 @@ func TestPolicyResourceType(t *testing.T) {
 			expectedError: true,
 		},
 		{
-			input:          "namespaces/456/PolicyNode",
+			input:          "projects/456/PolicyNode",
 			expectedOutput: policyNodeResource,
 		},
 	}
