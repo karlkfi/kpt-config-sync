@@ -54,7 +54,7 @@ func Validate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) error {
 func validateNameLen(obj metav1.Object) error {
 	if !validation.IsValidSysctlName(obj.GetName()) {
 		return errors.Errorf(
-			"resource has invalid name: %s %s",
+			"resource with GroupVersionKind %q has invalid name %q",
 			obj.(runtime.Object).GetObjectKind().GroupVersionKind(),
 			obj.GetName(),
 		)
