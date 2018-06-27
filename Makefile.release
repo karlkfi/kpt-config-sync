@@ -65,13 +65,14 @@ check-dirty:
 # the artifacts to a GCS release bucket with version name "latest".
 release: clean \
 		$(SCRIPTS_STAGING_DIR)/run-installer.sh \
+		$(SCRIPTS_STAGING_DIR)/nomosvet.sh \
 		test-all \
 		installer-image \
 		docs-package
 	gsutil -m cp \
 		$(SCRIPTS_STAGING_DIR)/run-installer.sh \
+		$(SCRIPTS_STAGING_DIR)/nomosvet.sh \
 		$(STAGING_DIR)/nomos-docs.zip  \
-		$(TOP_DIR)/scripts/nomosvet.sh \
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/$(VERSION)
 	@echo "+++ Marking release as 'latest'"
