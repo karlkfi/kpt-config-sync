@@ -167,12 +167,7 @@ func (c *Controller) run() error {
 		cancel()
 	}()
 	ch := make(chan actionVal)
-	g := actionGenerator{
-		stream:          stream,
-		out:             ch,
-		currentPolicies: *currentPolicies,
-		actionFactories: c.actionFactories,
-	}
+	g := newActionGenerator(stream, ch, *currentPolicies, c.actionFactories)
 	go g.generate(ctx)
 	return applyActions(ch)
 }
