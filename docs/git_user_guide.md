@@ -70,9 +70,11 @@ foo-corp
     namespace names (i.e. [DNS
     Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md))
     and must be unique in the hierarchy. In addition a name cannot be `default`,
-    `nomos-system`, or have `kube-` prefix. Namespaces that match `kube-`,
-    `nomos-system` and `default` wil be refered to as `Reserved Namespaces` for
-    purposes of this document.
+    `nomos-system`, or have `kube-` prefix. Namespaces that match `kube-*`,
+    `nomos-system` and `default` are a special class of namespaces called
+    `Reserved Namespaces` that nomos will not interact with. This topic is
+    discussed in depth in the [namespaces user
+    guide](git_user_guide_namespaces.md)
 
 There are no requirements on file names or how many resources are packed in a
 file. Any other file not explicitly mentioned above is ignored by Nomos in this
@@ -100,7 +102,7 @@ directory recursively, deletes all descendаnt names and associated resources.
 ### Renaming
 
 Renaming a namespace directory (which requires renaming Namespace name as well)
-is destructive since it deletes that namespace and creates a new namespace.
+is destructive since it **deletes that namespace and creates a new namespace**.
 
 Renaming a policyspace directory has no externally visible effect.
 
@@ -108,6 +110,12 @@ Renaming a policyspace directory has no externally visible effect.
 
 Moving a policyspace or namespace directory can lead to policy changes in
 namespaces, but does not delete a namespace or workload resources.
+
+### Existing Namespaces
+
+Nomos will not manage namespaces that already exist on a cluster at install
+time. For details on how to configure namespaces that already exist, please see
+the [namespaces user guide](git_user_guide_namespaces.md)
 
 ## Policy Types
 
@@ -343,72 +351,9 @@ check](https://help.github.com/articles/about-required-status-checks/).
 ## Guarantees
 
 This section details the guarantees that Nomos makes based on the contents of
-the git repo.
+the git repo and what exists on cluster.
 
-### On Install
-
-**IMPORTANT: Do not install Nomos on a cluster with existing namespaces or
-workloads**
-
-During the install process, Nomos deletes all namespaces that have been created
-on the cluster. We are presently working on a non destructive installation
-process, and this document will be updated accordingly when the mechanisms are
-avialable.
-
-### Namespaces
-
-Nomos will manage the lifecycle of some namespaces on a kubernetes cluster.
-
-#### Management Labeling
-
-Nomos determines what to manage based on labels applied to the namespace on the
-cluster.
-
-Label                                   | Nomos Action
---------------------------------------- | ------------
-none                                    | No management of the namespace in any way, but will warn about its existence if it is not one of the reserved namespaces
-nomos.dev/namespace-management=policies | Manage policies for the namespace, but will not delete the namespace if it is removed from git
-nomos.dev/namespace-management=full     | Manage policies and lifecycle of the namespace, so it will be automatically deleted when removed from git
-
-#### Types of Namespaces
-
-There's two categories of namespaces: Managed, and Reserved:
-
-1.  **Reserved Namespaces** are the default namespaces that are installed on the
-    kubernetes cluster (`kube-system`, `kube-public`, `default`) as well as the
-    `nomos-system` namespace. These namespaces are exceptions and will not be
-    managed by Nomos. Additionally, in order to be future proof, we also treat
-    all `kube-` prefixed namespaces as `Reserved Namespaces`.
-1.  **Managed Namesapces** are all the other namespaces on the cluster that are
-    not Reserved Namespaces. These are created by creating a namespace directory
-    and a namespace .yaml file in the git repo, and deleted when removed from
-    the git repo. When nomos creates a namespace, it applies the management
-    label nomos.dev/namespace-management=full.
-
-Examples:
-
-*   [foo-corp/audit/namespace.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/audit/namespace.yaml)
-    will result in creation of the `audit` namespace with a parent `foo-corp`.
-    Removal of this namespace.yaml will result in Nomos deleting the `audit`
-    namespace.
-*   [foo-corp/online/shipping-app-backend/shipping-prod/namespace.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/online/shipping-app-backend/shipping-prod/namespace.yaml)
-    will result in creation of the shipping-prod namespace with ancestry
-    [`shipping-app-backend`, `online`, `foo-corp`]. Deleting this namespace.yaml
-    will result in deleting the `shipping-prod` namespace.
-
-The following table describes the action that Nomos will take regarding a
-namespace on the cluster.
-
-Declared in git | Exists on Cluster | Management Label                        | Nomos Action
---------------- | ----------------- | --------------------------------------- | ------------
-true            | true              | N/A                                     | no action
-true            | false             | N/A                                     | creates namespace and manage policies
-false           | true              | No label                                | warns about unknown namespace
-false           | true              | nomos.dev/namespace-management=policies | warns about unknown namespace
-false           | true              | nomos.dev/namespace-management=full     | deletes namespace from cluster
-false           | false             | N/A                                     | no action
-
-### Cluster Scoped Policies
+## Cluster Scoped Policies
 
 Policies in the cluster scope will be applied to the cluster exactly as they are
 specified in the git repo. Existing resources at the cluster level will not be
@@ -438,7 +383,7 @@ Examples:
     passes. Someone deletes the `quota-viewer-clusterrole.yaml` from git. Nomos
     will now remove `quota-viewer` from the cluster.
 
-### Namespace Scoped Policies
+## Namespace Scoped Policies
 
 Namespace scoped policies will be applied to match the intent of the source of
 truth exactly as they are specified. This means that Nomos will overwrite or
