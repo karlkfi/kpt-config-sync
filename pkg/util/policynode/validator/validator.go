@@ -18,12 +18,10 @@ limitations under the License.
 package validator
 
 import (
-	"fmt"
-
 	"github.com/davecgh/go-spew/spew"
-	"k8s.io/kubernetes/pkg/apis/core/validation"
 
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/util/meta"
 	"github.com/looplab/tarjan"
 	"github.com/pkg/errors"
 )
@@ -115,8 +113,7 @@ func (s *Validator) Validate() error {
 		s.checkCycles,
 		s.checkPolicySpaceRoles,
 		s.checkParents,
-		s.checkDupeResources,
-		s.checkNameLength,
+		s.checkResourceMetadata,
 	} {
 		if err := checkFunction(); err != nil {
 			return err
@@ -204,43 +201,19 @@ func (s *Validator) checkParents() error {
 	return nil
 }
 
-// checkDupeResources checks that there are no resources with duplicate names
-// per PolicyNode.
-func (s *Validator) checkDupeResources() error {
-	for nodeName, node := range s.policyNodes {
-		roles := make(map[string]bool)
-		for _, role := range node.Spec.RolesV1 {
-			if roles[role.Name] {
-				return errors.Errorf("duplicate Role %q encountered in PolicyNode %q", role.Name, nodeName)
-			}
-			roles[role.Name] = true
-		}
-		roleBindings := make(map[string]bool)
-		for _, roleBinding := range node.Spec.RoleBindingsV1 {
-			if roleBindings[roleBinding.Name] {
-				return errors.Errorf("duplicate RoleBinding %q encountered in PolicyNode %q", roleBinding.Name, nodeName)
-			}
-			roleBindings[roleBinding.Name] = true
-		}
-	}
-	return nil
-}
+// checkMetadata checks that the resource's metadata is allowed by nomos.
+func (s *Validator) checkResourceMetadata() error {
+	roleBindingValidator := meta.NewValidator()
+	roleBindingValidator.Flattened = true
+	validator := meta.NewValidator()
 
-// checkNameLength checks that resources satisfy the maximum name length constraint.  For role bindings
-// the max length is reduced by the pPlicyNode name length as well as a '.' separator character.
-func (s *Validator) checkNameLength() error {
 	for nodeName, node := range s.policyNodes {
-		for _, roleBinding := range node.Spec.RoleBindingsV1 {
-			rbName := fmt.Sprintf("%s.%s", nodeName, roleBinding.Name)
-			if !validation.IsValidSysctlName(rbName) {
-				return errors.Errorf("PolicyNode %q has RoleBinding with invalid name %q (%q)", nodeName, roleBinding.Name, rbName)
-			}
+		if err := roleBindingValidator.Validate(nodeName, node.Spec.RoleBindingsV1); err != nil {
+			return err
 		}
 
-		for _, role := range node.Spec.RolesV1 {
-			if !validation.IsValidSysctlName(role.Name) {
-				return errors.Errorf("PolicyNode %q has Role with invalid name %q", nodeName, role.Name)
-			}
+		if err := validator.Validate(nodeName, node.Spec.RolesV1); err != nil {
+			return err
 		}
 	}
 	return nil
