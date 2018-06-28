@@ -73,7 +73,7 @@ func (s *ReflectiveActionSpec) Equal(declared runtime.Object, actual runtime.Obj
 	if !s.EqualSpec(actual, declared) {
 		return false
 	}
-	return ObjectMetaSubset(actual, declared)
+	return ObjectMetaEqual(actual, declared)
 }
 
 // List will list the given namespace. Cluster level resources should pass empty string as the

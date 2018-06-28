@@ -20,13 +20,12 @@ import (
 
 	rbac_v1 "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type ObjectMetaSubsetTestcase struct {
+type ObjectMetaTestCase struct {
 	Name         string
-	Set          meta_v1.ObjectMeta
-	Subset       meta_v1.ObjectMeta
+	Left         meta_v1.ObjectMeta
+	Right        meta_v1.ObjectMeta
 	ExpectReturn bool
 }
 
@@ -37,59 +36,50 @@ func newObjectMeta(labels map[string]string, annotations map[string]string) meta
 	}
 }
 
-func (tc *ObjectMetaSubsetTestcase) Run(t *testing.T) {
-	var Set, Subset runtime.Object
-	Set = &rbac_v1.Role{ObjectMeta: tc.Set}
-	Subset = &rbac_v1.Role{ObjectMeta: tc.Subset}
-	if ObjectMetaSubset(Set, Subset) != tc.ExpectReturn {
-		t.Errorf("Testcase Failure %v", tc)
-	}
-}
-
-var objectMetaTestcases = []ObjectMetaSubsetTestcase{
-	ObjectMetaSubsetTestcase{
+var objectMetaSubsetTestcases = []ObjectMetaTestCase{
+	ObjectMetaTestCase{
 		Name: "labels and annotations are both subsets",
-		Set: newObjectMeta(
+		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
 			map[string]string{"k3": "v3", "k4": "v4"},
 		),
-		Subset: newObjectMeta(
+		Right: newObjectMeta(
 			map[string]string{"k1": "v1"},
 			map[string]string{"k3": "v3"},
 		),
 		ExpectReturn: true,
 	},
-	ObjectMetaSubsetTestcase{
+	ObjectMetaTestCase{
 		Name: "labels not subset",
-		Set: newObjectMeta(
+		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
 			map[string]string{"k3": "v3", "k4": "v4"},
 		),
-		Subset: newObjectMeta(
+		Right: newObjectMeta(
 			map[string]string{"k5": "v5"},
 			map[string]string{"k3": "v3"},
 		),
 		ExpectReturn: false,
 	},
-	ObjectMetaSubsetTestcase{
+	ObjectMetaTestCase{
 		Name: "annotations not subset",
-		Set: newObjectMeta(
+		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
 			map[string]string{"k3": "v3", "k4": "v4"},
 		),
-		Subset: newObjectMeta(
+		Right: newObjectMeta(
 			map[string]string{"k1": "v1"},
 			map[string]string{"k5": "v5"},
 		),
 		ExpectReturn: false,
 	},
-	ObjectMetaSubsetTestcase{
+	ObjectMetaTestCase{
 		Name: "neither are subset",
-		Set: newObjectMeta(
+		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
 			map[string]string{"k3": "v3", "k4": "v4"},
 		),
-		Subset: newObjectMeta(
+		Right: newObjectMeta(
 			map[string]string{"k5": "v5"},
 			map[string]string{"k6": "v6"},
 		),
@@ -98,77 +88,88 @@ var objectMetaTestcases = []ObjectMetaSubsetTestcase{
 }
 
 func TestObjectMetaSubset(t *testing.T) {
-	for _, testcase := range objectMetaTestcases {
-		t.Run(testcase.Name, testcase.Run)
+	for _, tc := range objectMetaSubsetTestcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			set := &rbac_v1.Role{ObjectMeta: tc.Left}
+			subset := &rbac_v1.Role{ObjectMeta: tc.Right}
+			if ObjectMetaSubset(set, subset) != tc.ExpectReturn {
+				t.Fatalf("Testcase Failure %v", tc)
+			}
+		})
 	}
 }
 
-type IsSubsetTestcase struct {
-	Name         string
-	Set          map[string]string
-	Subset       map[string]string
-	ExpectReturn bool
+var objectMetaEqualTestcases = []ObjectMetaTestCase{
+	ObjectMetaTestCase{
+		Name: "labels and annotations are qual",
+		Left: newObjectMeta(
+			map[string]string{"k1": "v1", "k2": "v2"},
+			map[string]string{"k3": "v3", "k4": "v4"},
+		),
+		Right: newObjectMeta(
+			map[string]string{"k1": "v1", "k2": "v2"},
+			map[string]string{"k3": "v3", "k4": "v4"},
+		),
+		ExpectReturn: true,
+	},
+	ObjectMetaTestCase{
+		Name:         "labels and annotations not set",
+		Left:         newObjectMeta(nil, nil),
+		Right:        newObjectMeta(nil, nil),
+		ExpectReturn: true,
+	},
+	ObjectMetaTestCase{
+		Name: "labels and annotations are subsets",
+		Left: newObjectMeta(
+			map[string]string{"k1": "v1", "k2": "v2"},
+			map[string]string{"k3": "v3", "k4": "v4"},
+		),
+		Right: newObjectMeta(
+			map[string]string{"k1": "v1"},
+			map[string]string{"k3": "v3"},
+		),
+		ExpectReturn: false,
+	},
+	ObjectMetaTestCase{
+		Name: "neither are subset",
+		Left: newObjectMeta(
+			map[string]string{"k1": "v1", "k2": "v2"},
+			map[string]string{"k3": "v3", "k4": "v4"},
+		),
+		Right: newObjectMeta(
+			map[string]string{"k5": "v5"},
+			map[string]string{"k6": "v6"},
+		),
+		ExpectReturn: false,
+	},
+	ObjectMetaTestCase{
+		Name: "left labels and annotations not set",
+		Left: newObjectMeta(nil, nil),
+		Right: newObjectMeta(
+			map[string]string{"k5": "v5"},
+			map[string]string{"k3": "v3"},
+		),
+		ExpectReturn: false,
+	},
+	ObjectMetaTestCase{
+		Name: "right labels and annotations not set",
+		Left: newObjectMeta(
+			map[string]string{"k5": "v5"},
+			map[string]string{"k3": "v3"},
+		),
+		Right:        newObjectMeta(nil, nil),
+		ExpectReturn: false,
+	},
 }
 
-func (tc *IsSubsetTestcase) Run(t *testing.T) {
-	if isSubset(tc.Set, tc.Subset) != tc.ExpectReturn {
-		t.Errorf("Testcase Failure %v", tc)
-	}
-}
-
-var isSubsetTestcases = []IsSubsetTestcase{
-	IsSubsetTestcase{
-		Name:         "both nil/empty",
-		Set:          nil,
-		Subset:       nil,
-		ExpectReturn: true,
-	},
-	IsSubsetTestcase{
-		Name:         "subset nil/empty",
-		Set:          map[string]string{"k1": "v1", "k2": "v2"},
-		Subset:       nil,
-		ExpectReturn: true,
-	},
-	IsSubsetTestcase{
-		Name:         "set nil/empty",
-		Set:          nil,
-		Subset:       map[string]string{"k1": "v1", "k2": "v2"},
-		ExpectReturn: false,
-	},
-	IsSubsetTestcase{
-		Name:         "subset is subset",
-		Set:          map[string]string{"k1": "v1", "k2": "v2"},
-		Subset:       map[string]string{"k1": "v1"},
-		ExpectReturn: true,
-	},
-	IsSubsetTestcase{
-		Name:         "both equivalent",
-		Set:          map[string]string{"k1": "v1", "k2": "v2"},
-		Subset:       map[string]string{"k1": "v1", "k2": "v2"},
-		ExpectReturn: true,
-	},
-	IsSubsetTestcase{
-		Name:         "subset has extra elements equivalent",
-		Set:          map[string]string{"k1": "v1", "k2": "v2"},
-		Subset:       map[string]string{"k1": "v1", "k2": "v2", "k3": "v3"},
-		ExpectReturn: false,
-	},
-	IsSubsetTestcase{
-		Name:         "subset is not subset",
-		Set:          map[string]string{"k1": "v1", "k2": "v2"},
-		Subset:       map[string]string{"k3": "v3"},
-		ExpectReturn: false,
-	},
-	IsSubsetTestcase{
-		Name:         "subset has different value",
-		Set:          map[string]string{"k1": "v1", "k2": "v2"},
-		Subset:       map[string]string{"k1": "v1", "k2": "mismatch"},
-		ExpectReturn: false,
-	},
-}
-
-func TestIsSubset(t *testing.T) {
-	for _, testcase := range isSubsetTestcases {
-		t.Run(testcase.Name, testcase.Run)
+func TestObjectMetaEqual(t *testing.T) {
+	for _, tc := range objectMetaEqualTestcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			left := &rbac_v1.Role{ObjectMeta: tc.Left}
+			right := &rbac_v1.Role{ObjectMeta: tc.Right}
+			if ObjectMetaEqual(left, right) != tc.ExpectReturn {
+				t.Fatalf("Testcase Failure %v", tc)
+			}
+		})
 	}
 }

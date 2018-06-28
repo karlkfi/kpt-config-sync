@@ -95,11 +95,8 @@ func Compare(equals Equals, declared []meta_v1.Object, existing []meta_v1.Object
 				Actual:   nil,
 			})
 		} else {
-			// We check equals on content body, but meta subset on the labels / annotations because
-			// it's possible for another controller to add some form of annotation or label to the object
-			// without changing the intent of what's going on. For an example of this, see ClusterRole
-			// aggregation.
-			if !equals(decl, actual) || !action.MetaSubset(actual, decl) {
+			// We check equals on content body, and label/annotations meta.
+			if !equals(decl, actual) || !action.MetaEqual(actual, decl) {
 				diffs = append(diffs, &Diff{
 					Name:     name,
 					Type:     Update,
