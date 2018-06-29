@@ -42,6 +42,17 @@ metadata:
   name: {{.Name}}
 `
 
+	aNamespaceWithLabelsAndAnnotations = `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bar
+  labels:
+    env: prod
+  annotations:
+    audit: "true"
+`
+
 	aNamespaceJSONTemplate = `
 {
   "apiVersion": "v1",
@@ -234,6 +245,18 @@ func createNamespacePN(
 	return createPolicyNode(name, parent, policyhierarchy_v1.Namespace, policies)
 }
 
+func createNamespacePNWithLabelsAndAnnotations(
+	name string,
+	parent string,
+	policies *Policies,
+	labels, annotations map[string]string,
+) policyhierarchy_v1.PolicyNode {
+	pn := createPolicyNode(name, parent, policyhierarchy_v1.Namespace, policies)
+	pn.Labels = labels
+	pn.Annotations = annotations
+	return pn
+}
+
 func createPolicyspacePN(
 	name string,
 	parent string,
@@ -304,6 +327,19 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
 			"bar": createNamespacePN("bar", "foo", nil),
+		},
+		expectedClusterPolicy: createClusterPolicy(),
+	},
+	{
+		testName: "Namespace dir with Namespace with labels/annotations",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ns.yaml": aNamespaceWithLabelsAndAnnotations,
+		},
+		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
+			"foo": createPolicyspacePN("foo", "", nil),
+			"bar": createNamespacePNWithLabelsAndAnnotations("bar", "foo", nil,
+				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},

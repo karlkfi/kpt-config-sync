@@ -58,7 +58,6 @@ func NewParser(inCluster bool) (*Parser, error) {
 	}
 
 	// If running in cluster, validate objects using OpenAPI schema downloaded from the API server.
-	// TODO(frankfarzan): Bake in the swagger spec when running outside the cluster?
 	if inCluster {
 		schema, err := p.factory.Validator(true)
 		if err != nil {
@@ -395,6 +394,8 @@ func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.Namespace:
 			v.HasName(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta)
+			pn.Labels = o.Labels
+			pn.Annotations = o.Annotations
 		case *extensions_v1beta1.PodSecurityPolicy:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:

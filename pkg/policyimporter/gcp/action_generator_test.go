@@ -39,9 +39,9 @@ import (
 
 var (
 	// Example PolicyNode resources
-	orgPN, orgPNUpdated, nsPN *v1.PolicyNode
+	orgPN, orgPNUpdated, orgPNUpdatedLabels, nsPN *v1.PolicyNode
 	// Example any proto marshalled policies resources.
-	emptyProto, orgPNProto, orgPNProtoUpdated, orgCPProto, folderPNProto, nsPNProto *ptypes.Any
+	emptyProto, orgPNProto, orgPNProtoUpdated, orgPNProtoUpdatedLabels, orgCPProto, folderPNProto, nsPNProto *ptypes.Any
 )
 
 var testCases []testCase
@@ -71,6 +71,9 @@ func init() {
 	orgPNUpdated = orgPN.DeepCopy()
 	orgPNUpdated.Spec.ResourceQuotaV1 = createResourceQuota("my-quota", "organization-123")
 	orgPNProtoUpdated = toAnyProto(orgPNUpdated)
+	orgPNUpdatedLabels = orgPN.DeepCopy()
+	orgPNUpdatedLabels.Labels = map[string]string{"env": "prod"}
+	orgPNProtoUpdatedLabels = toAnyProto(orgPNUpdatedLabels)
 	orgCPProto = toAnyProto(newClusterPolicy("organization-123"))
 	folderPNProto = toAnyProto(newPolicyNode("folder-456", "organization-123", true))
 	nsPN = newPolicyNode("backend", "folder-456", false)
@@ -324,11 +327,23 @@ func init() {
 			expectedError: true,
 		},
 		{
-			testName: "Incremental change update",
+			testName: "Incremental change update policy",
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProtoUpdated},
+			},
+			expectedActions: []string{
+				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
+			},
+		},
+		{
+			testName: "Incremental change update label",
+			batch1: []*watcher.Change{
+				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
+				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
+				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProtoUpdatedLabels},
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
