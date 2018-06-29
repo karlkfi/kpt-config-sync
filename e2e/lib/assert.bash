@@ -8,6 +8,7 @@
 #
 function assert::contains() {
   local str="${1:-}"
+  # shellcheck disable=SC2154
   if [[ "$output" != *"${str}"* ]]; then
     echo "FAIL: [$output] does not contain [${str}]"
     false
@@ -21,6 +22,7 @@ function assert::contains() {
 #
 function assert::equals() {
   local str="${1:-}"
+  # shellcheck disable=SC2154
   if [[ "$output" != "${str}" ]]; then
     echo "FAIL: [$output] does not equal [${str}]"
     false

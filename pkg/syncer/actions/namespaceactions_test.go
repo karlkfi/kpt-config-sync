@@ -16,148 +16,95 @@ limitations under the License.
 package actions
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
-	"time"
-
-	"github.com/davecgh/go-spew/spew"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	core_v1 "k8s.io/api/core/v1"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/client/meta/fake"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-	listers_core_v1 "k8s.io/client-go/listers/core/v1"
+	core_v1 "k8s.io/api/core/v1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const parentLabelValue = "parent-team"
-const testUID = types.UID("0844e3b3-1059-11e8-9233-42010a800005")
-
-func upsertNamespaceTestAction(ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) action.Interface {
-	return NewNamespaceUpsertAction(
-		ns,
-		testUID,
-		map[string]string{policyhierarchy_v1.ParentLabelKey: parentLabelValue},
-		client,
-		nsLister)
-}
-
-func deleteNamespaceTestAction(
-	ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) action.Interface {
-	return NewNamespaceDeleteAction(ns, client, nsLister)
-}
-
-type NamespaceActionCtor func(ns string, client kubernetes.Interface, nsLister listers_core_v1.NamespaceLister) action.Interface
-type NamespaceTestCase struct {
-	Name         string
-	Exists       bool
-	ActionCtor   NamespaceActionCtor
-	ExpectExists bool
-}
-
-func (s *NamespaceTestCase) Namespace(idx int) string {
-	return fmt.Sprintf("namespace-%d", idx)
-}
-
-var namespaceTestCases = []NamespaceTestCase{
-	{
-		Name:         "Create non-existing namespace",
-		Exists:       false,
-		ActionCtor:   upsertNamespaceTestAction,
-		ExpectExists: true,
-	},
-	{
-		Name:         "Update existing namespace",
-		Exists:       true,
-		ActionCtor:   upsertNamespaceTestAction,
-		ExpectExists: true,
-	},
-	{
-		Name:         "Delete non-existing namespace",
-		Exists:       false,
-		ActionCtor:   deleteNamespaceTestAction,
-		ExpectExists: false,
-	},
-	{
-		Name:         "Delete existing namespace",
-		Exists:       true,
-		ActionCtor:   deleteNamespaceTestAction,
-		ExpectExists: false,
-	},
-}
-
-func TestNamespaceActions(t *testing.T) {
-	client := fake.NewClient()
-	nsClient := client.Kubernetes().CoreV1().Namespaces()
-
-	// Setup, each testcase gets it's own namespace
-	for idx, testcase := range namespaceTestCases {
-		if testcase.Exists {
-			_, err := nsClient.Create(&core_v1.Namespace{
-				ObjectMeta: meta_v1.ObjectMeta{
-					Name: testcase.Namespace(idx),
-				}})
-			if err != nil {
-				t.Errorf("Failed to create initial state: %#v", err)
-			}
-		}
+func TestSetNamespaceLabelsFunc(t *testing.T) {
+	var testcases = []struct {
+		name           string
+		nsLabels       map[string]string
+		updateLabels   map[string]string
+		expectLabels   map[string]string
+		expectNoUpdate bool
+	}{
+		{
+			name:         "Add to labels",
+			nsLabels:     map[string]string{"foo-1": "bar-1"},
+			updateLabels: map[string]string{"foo-2": "bar-2"},
+			expectLabels: map[string]string{"foo-1": "bar-1", "foo-2": "bar-2"},
+		},
+		{
+			name:         "Update existing label",
+			nsLabels:     map[string]string{"foo-1": "bar-1"},
+			updateLabels: map[string]string{"foo-1": "new-value"},
+			expectLabels: map[string]string{"foo-1": "new-value"},
+		},
+		{
+			name:         "Update one label",
+			nsLabels:     map[string]string{"foo-1": "bar-1", "foo-2": "bar-2"},
+			updateLabels: map[string]string{"foo-1": "new-value"},
+			expectLabels: map[string]string{"foo-1": "new-value", "foo-2": "bar-2"},
+		},
+		{
+			name:         "Update multiple labels",
+			nsLabels:     map[string]string{"foo-1": "bar-1", "foo-2": "bar-2"},
+			updateLabels: map[string]string{"foo-1": "new-value", "foo-2": "new-value-2"},
+			expectLabels: map[string]string{"foo-1": "new-value", "foo-2": "new-value-2"},
+		},
+		{
+			name:           "No update needed emtpy",
+			nsLabels:       map[string]string{},
+			updateLabels:   map[string]string{},
+			expectNoUpdate: true,
+		},
+		{
+			name:           "No update needed one elt",
+			nsLabels:       map[string]string{"foo-1": "bar-1"},
+			updateLabels:   map[string]string{"foo-1": "bar-1"},
+			expectNoUpdate: true,
+		},
+		{
+			name:           "No update needed two elts",
+			nsLabels:       map[string]string{"foo-1": "bar-1", "foo-2": "bar-2"},
+			updateLabels:   map[string]string{"foo-1": "bar-1", "foo-2": "bar-2"},
+			expectNoUpdate: true,
+		},
 	}
 
-	kubernetesInformerFactory := informers.NewSharedInformerFactory(
-		client.Kubernetes(), time.Minute)
-	namespaceLister := kubernetesInformerFactory.Core().V1().Namespaces().Lister()
-	kubernetesInformerFactory.Start(nil)
-	kubernetesInformerFactory.WaitForCacheSync(nil)
-
-	for idx, testcase := range namespaceTestCases {
-		namespace := testcase.Namespace(idx)
-
-		action := testcase.ActionCtor(namespace, client.Kubernetes(), namespaceLister)
-		err := action.Execute()
-		if err != nil {
-			t.Errorf("Failed to execute action %s", action)
-		}
-
-		ns, err := nsClient.Get(namespace, meta_v1.GetOptions{})
-		if testcase.ExpectExists {
-			if err != nil {
-				if api_errors.IsNotFound(err) {
-					t.Errorf("Testcase should have created namespace")
-				}
-				t.Errorf("Unexpected error during testcase")
-			}
-			if ns.Labels[policyhierarchy_v1.ParentLabelKey] != parentLabelValue {
-				t.Errorf("Failed to update the parent label\ntestcase: %s\n %s", spew.Sdump(testcase), spew.Sdump(ns))
-			}
-			controller := true
-			blockOwnerDeletion := true
-			expectOwnerReferences := []meta_v1.OwnerReference{
-				{
-					APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
-					Kind:               "PolicyNode",
-					Name:               namespace,
-					UID:                testUID,
-					BlockOwnerDeletion: &blockOwnerDeletion,
-					Controller:         &controller,
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			ns := &core_v1.Namespace{
+				ObjectMeta: meta_v1.ObjectMeta{
+					Name:   "test-namespace",
+					Labels: tt.nsLabels,
 				},
 			}
-			if !reflect.DeepEqual(expectOwnerReferences, ns.OwnerReferences) {
-				t.Errorf("Failed to set owner reference on namespace %s != %s",
-					spew.Sdump(expectOwnerReferences), spew.Sdump(ns.OwnerReferences))
-			}
-		} else {
-			if err != nil {
-				if !api_errors.IsNotFound(err) {
-					t.Errorf("Unexpected error during testcase")
+
+			f := SetNamespaceLabelsFunc(tt.updateLabels)
+			obj, err := f(ns)
+			if tt.expectNoUpdate {
+				if err == nil {
+					t.Errorf("Expected error")
 				}
-			} else {
-				t.Errorf("Namespace should not exist at end of testcase.")
+				if !action.IsNoUpdateNeeded(err) {
+					t.Errorf("Expected no update needed error, got %s", err)
+				}
+				return
 			}
-		}
+
+			if err != nil {
+				t.Errorf("Unexpected error %s", err)
+			}
+
+			nsObj := obj.(*core_v1.Namespace)
+			if !reflect.DeepEqual(nsObj.Labels, tt.expectLabels) {
+				t.Errorf("new labels %v differ from expected %v", nsObj.Labels, tt.expectLabels)
+			}
+		})
 	}
 }

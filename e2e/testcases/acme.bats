@@ -12,9 +12,21 @@ load ../lib/loader
 
   resource::check_count -r namespace -l nomos.dev/namespace-management -c ${#ACME_NAMESPACES[@]}
 
-  for ns in ${ACME_NAMESPACES[@]}; do
-    namespace::check_exists $ns full
-  done
+  namespace::check_exists analytics \
+    -l "nomos.dev/parent-name=eng" \
+    -l "nomos.dev/namespace-management=full"
+  namespace::check_exists backend \
+    -l "nomos.dev/parent-name=eng" \
+    -l "nomos.dev/namespace-management=full"
+  namespace::check_exists frontend \
+    -l "nomos.dev/parent-name=eng" \
+    -l "nomos.dev/namespace-management=full"
+  namespace::check_exists new-prj \
+    -l "nomos.dev/parent-name=rnd" \
+    -l "nomos.dev/namespace-management=full"
+  namespace::check_exists newer-prj \
+    -l "nomos.dev/parent-name=rnd" \
+    -l "nomos.dev/namespace-management=full"
 
   resource::check_count -r validatingwebhookconfigurations -c 2
   resource::check validatingwebhookconfigurations policy.nomos.dev
@@ -46,6 +58,7 @@ load ../lib/loader
   resource::check_count -n backend -r resourcequota -c 1
   resource::check -n backend resourcequota nomos-resource-quota -l "nomos.dev/managed=full"
 
+  namespace::check_exists frontend -l "env=prod" -a "audit=true"
   resource::check_count -n frontend -r role -c 0
   resource::check_count -n frontend -r rolebinding -c 1
   resource::check -n frontend rolebinding eng.alice-rolebinding -l "nomos.dev/managed=full"

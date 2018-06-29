@@ -57,8 +57,8 @@ func NoUpdateNeeded() error {
 	return &noUpdateNeededError{}
 }
 
-// isNoUpdateNeeded checks for whether the returned error is noUpdateNeededError
-func isNoUpdateNeeded(err error) bool {
+// IsNoUpdateNeeded checks for whether the returned error is noUpdateNeededError
+func IsNoUpdateNeeded(err error) bool {
 	_, ok := err.(*noUpdateNeededError)
 	return ok
 }
@@ -327,7 +327,7 @@ func (s *ReflectiveUpdateAction) doUpdate() error {
 
 		newObj, err = s.update(obj)
 		if err != nil {
-			if isNoUpdateNeeded(err) {
+			if IsNoUpdateNeeded(err) {
 				return nil
 			}
 			return err

@@ -19,13 +19,9 @@ package actions
 import (
 	"reflect"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-
 	"github.com/google/nomos/pkg/client/action"
 	core_v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 )
@@ -49,58 +45,28 @@ func NewNamespaceDeleteAction(
 	namespace string,
 	client kubernetes.Interface,
 	lister listers_core_v1.NamespaceLister) *action.ReflectiveDeleteAction {
-	return action.NewReflectiveDeleteAction("", namespace, nsSpec(client, lister))
-}
-
-func writeParams(
-	namespace string,
-	ownerUID types.UID,
-	labels map[string]string,
-	client kubernetes.Interface,
-	lister listers_core_v1.NamespaceLister) (string, string, *core_v1.Namespace, *action.ReflectiveActionSpec) {
-	var ownerRefs []meta_v1.OwnerReference
-	if ownerUID != "" {
-		blockOwnerDeletion := true
-		controller := true
-		ownerRefs = append(ownerRefs, meta_v1.OwnerReference{
-			APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
-			Kind:               "PolicyNode",
-			Name:               namespace,
-			UID:                ownerUID,
-			BlockOwnerDeletion: &blockOwnerDeletion,
-			Controller:         &controller,
-		})
-	}
-	ns := &core_v1.Namespace{
-		ObjectMeta: meta_v1.ObjectMeta{
-			Name:            namespace,
-			Labels:          labels,
-			OwnerReferences: ownerRefs,
-		},
-	}
-	return "", namespace, ns, nsSpec(client, lister)
+	return action.NewReflectiveDeleteAction(
+		"", namespace, nsSpec(client, lister))
 }
 
 // NewNamespaceUpsertAction creates a new ReflectiveUpsertAction for the given namespace.
 func NewNamespaceUpsertAction(
-	namespace string,
-	ownerUID types.UID,
-	labels map[string]string,
+	namespace *core_v1.Namespace,
 	client kubernetes.Interface,
 	lister listers_core_v1.NamespaceLister) *action.ReflectiveUpsertAction {
-	return action.NewReflectiveUpsertAction(writeParams(namespace, ownerUID, labels, client, lister))
+	return action.NewReflectiveUpsertAction(
+		"", namespace.Name, namespace, nsSpec(client, lister))
 }
 
-// NewNamespaceUpdateAction creates a new ReflectiveUpdateAction for the namespace.
-func NewNamespaceUpdateAction(
-	namespace string,
-	labels map[string]string,
-	client kubernetes.Interface,
-	lister listers_core_v1.NamespaceLister) *action.ReflectiveUpdateAction {
-	updateFunction := func(old runtime.Object) (runtime.Object, error) {
+// UpdateObjectFunction is passed to NewNamespaceUpdateAction for updating a namespace
+type UpdateObjectFunction func(old runtime.Object) (runtime.Object, error)
+
+// SetNamespaceLabelsFunc produces a function that sets labels to specific values while preserving
+// the rest of the labels on the namespace
+func SetNamespaceLabelsFunc(labels map[string]string) UpdateObjectFunction {
+	return func(old runtime.Object) (runtime.Object, error) {
 		oldNs := old.(*core_v1.Namespace)
 		newNs := oldNs.DeepCopy()
-		newNs.ResourceVersion = oldNs.ResourceVersion
 		dirty := false
 		for key, value := range labels {
 			if oldValue, found := newNs.Labels[key]; !found || oldValue != value {
@@ -113,17 +79,24 @@ func NewNamespaceUpdateAction(
 		}
 		return newNs, nil
 	}
+}
+
+// NewNamespaceUpdateAction creates a new ReflectiveUpdateAction for the namespace.
+func NewNamespaceUpdateAction(
+	namespace string,
+	updateFunction func(old runtime.Object) (runtime.Object, error),
+	client kubernetes.Interface,
+	lister listers_core_v1.NamespaceLister) *action.ReflectiveUpdateAction {
 	return action.NewReflectiveUpdateAction("", namespace, updateFunction, nsSpec(client, lister))
 }
 
 // NewNamespaceCreateAction creates a new ReflectiveCreateAction for the namespace.
 func NewNamespaceCreateAction(
-	namespace string,
-	ownerUID types.UID,
-	labels map[string]string,
+	namespace *core_v1.Namespace,
 	client kubernetes.Interface,
 	lister listers_core_v1.NamespaceLister) *action.ReflectiveCreateAction {
-	return action.NewReflectiveCreateAction(writeParams(namespace, ownerUID, labels, client, lister))
+	return action.NewReflectiveCreateAction(
+		"", namespace.Name, namespace, nsSpec(client, lister))
 }
 
 // NamespacesEqual returns true if the two Namespaces have the same owner references.

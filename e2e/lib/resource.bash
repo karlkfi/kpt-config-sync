@@ -12,10 +12,10 @@ function resource::resource_version() {
   local type=$1
   local name=$2
 
-  args=("get" "${type}")
+  local args=("get" "${type}")
   if [[ "${name}" == *:* ]]; then
-    ns="$(echo ${name} | sed -e 's/:.*//')"
-    name="$(echo ${name} | sed -e 's/[^:]*://')"
+    local ns="$(echo ${name} | sed -e 's/:.*//')"
+    local name="$(echo ${name} | sed -e 's/[^:]*://')"
     args+=("-n" "${ns}")
   fi
   args+=(${name})
@@ -43,7 +43,7 @@ function resource::wait_for_update() {
 
   echo -n "Waiting for update of $type $name from version $resource_version"
   for i in $(seq 1 ${ticks}); do
-    current=$(resource::resource_version $type $name)
+    local current=$(resource::resource_version $type $name)
     if [[ "$current" != "$resource_version" ]]; then
       echo
       return 0
@@ -75,16 +75,21 @@ function resource::check() {
   local args=()
   local namespace=""
   local labels=()
+  local annotations=()
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
     shift
     case $arg in
       -n)
-        namespace=${1:-}
+        namespace="${1:-}" # local
         shift
       ;;
       -l)
         labels+=(${1:-})
+        shift
+      ;;
+      -a)
+        annotations+=(${1:-})
         shift
       ;;
       *)
@@ -101,9 +106,8 @@ function resource::check() {
     cmd+=(-n $namespace)
   fi
 
-  echo "${cmd[@]}  ${#labels[@]}"
   output=$(${cmd[@]})
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || debug::error "Command '${cmd[@]}' failed, output ${output}"
   local json="$output"
   if [[ "${#labels[@]}" != 0 ]]; then
     local label
@@ -112,8 +116,18 @@ function resource::check() {
       local value=$(echo "$label" | sed -e 's/[^=]*=//')
       output=$(echo "$json" | jq ".metadata.labels[\"${key}\"]")
       if [[ "$output" != "\"$value\"" ]]; then
-        echo "Expected label $value, got $output"
-        false
+        debug::error "Expected label $value, got $output"
+      fi
+    done
+  fi
+  if [[ "${#annotations[@]}" != 0 ]]; then
+    local annotation
+    for annotation in "${annotations[@]}"; do
+      local key=$(echo "$annotation" | sed -e 's/=.*//')
+      local value=$(echo "$annotation" | sed -e 's/[^=]*=//')
+      output=$(echo "$json" | jq ".metadata.annotations[\"${key}\"]")
+      if [[ "$output" != "\"$value\"" ]]; then
+        debug::error "Expected annotation $value, got $output"
       fi
     done
   fi

@@ -260,8 +260,13 @@ func (s *PolicyHieraryController) softReconcile(name string) error {
 			return s.managePolicies(name, ancestry)
 		case namespaceStateExists:
 			s.warnNoLabel(ns)
-		case namespaceStateManagePolicies, namespaceStateManageFull:
+		case namespaceStateManagePolicies:
 			if err := s.updateNamespace(ancestry.Node()); err != nil {
+				return err
+			}
+			return s.managePolicies(name, ancestry)
+		case namespaceStateManageFull:
+			if err := s.upsertNamespace(ancestry.Node()); err != nil {
 				return err
 			}
 			return s.managePolicies(name, ancestry)
@@ -382,28 +387,21 @@ func (s *PolicyHieraryController) handleDiff(namespace string, module Module, di
 	return nil
 }
 
-func (s *PolicyHieraryController) createNamespace(policyNode *policyhierarchy_v1.PolicyNode) error {
-	labels := labeling.ManageAll.New()
+func (s *PolicyHieraryController) namespaceValue(policyNode *policyhierarchy_v1.PolicyNode) *core_v1.Namespace {
+	labels := labeling.ManageAll.AddDeepCopy(policyNode.Labels)
 	labels[policyhierarchy_v1.ParentLabelKey] = policyNode.Spec.Parent
-	act := actions.NewNamespaceCreateAction(
-		policyNode.Name,
-		"",
-		labels,
-		s.injectArgs.KubernetesClientSet,
-		s.namespaceLister)
-	if err := act.Execute(); err != nil {
-		return errors.Wrapf(err, "failed to execute upsert action for %s", act)
+	return &core_v1.Namespace{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name:        policyNode.Name,
+			Labels:      labels,
+			Annotations: policyNode.Annotations,
+		},
 	}
-	return nil
 }
 
-func (s *PolicyHieraryController) updateNamespace(policyNode *policyhierarchy_v1.PolicyNode) error {
-	labels := map[string]string{}
-	labels[policyhierarchy_v1.ParentLabelKey] = policyNode.Spec.Parent
-
-	act := actions.NewNamespaceUpdateAction(
-		policyNode.Name,
-		labels,
+func (s *PolicyHieraryController) createNamespace(policyNode *policyhierarchy_v1.PolicyNode) error {
+	act := actions.NewNamespaceCreateAction(
+		s.namespaceValue(policyNode),
 		s.injectArgs.KubernetesClientSet,
 		s.namespaceLister)
 	if err := act.Execute(); err != nil {
@@ -414,13 +412,23 @@ func (s *PolicyHieraryController) updateNamespace(policyNode *policyhierarchy_v1
 
 func (s *PolicyHieraryController) upsertNamespace(policyNode *policyhierarchy_v1.PolicyNode) error {
 	glog.V(1).Infof("Namespace %s declared in a policy node, upserting", policyNode.Name)
-
-	labels := labeling.ManageAll.New()
-	labels[policyhierarchy_v1.ParentLabelKey] = policyNode.Spec.Parent
 	act := actions.NewNamespaceUpsertAction(
+		s.namespaceValue(policyNode),
+		s.injectArgs.KubernetesClientSet,
+		s.namespaceLister)
+	if err := act.Execute(); err != nil {
+		return errors.Wrapf(err, "failed to execute upsert action for %s", act)
+	}
+	return nil
+}
+
+// updateNamespace is used for updating the parent label on a namespace where we manage policy values
+// This is used since we can't update all the labels on the namespace.
+func (s *PolicyHieraryController) updateNamespace(policyNode *policyhierarchy_v1.PolicyNode) error {
+	labels := map[string]string{policyhierarchy_v1.ParentLabelKey: policyNode.Spec.Parent}
+	act := actions.NewNamespaceUpdateAction(
 		policyNode.Name,
-		policyNode.UID,
-		labels,
+		actions.SetNamespaceLabelsFunc(labels),
 		s.injectArgs.KubernetesClientSet,
 		s.namespaceLister)
 	if err := act.Execute(); err != nil {

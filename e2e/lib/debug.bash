@@ -21,3 +21,10 @@ function debug::warn() {
 function debug::log() {
   echo "$(debug::__header) $@"
 }
+
+# error sends info to tap output and fails, this is useful for indicating
+# programmer error such as invalid parameters to a function.
+function debug::error() {
+  echo "$(debug::__header) ERROR: $@"
+  return 1
+}
