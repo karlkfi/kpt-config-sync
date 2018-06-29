@@ -2,7 +2,7 @@
 
 set -u
 
-load ../../lib/loader
+load ../lib/loader
 
 # This cleans up any namespaces that were created by a testcase
 function local_teardown() {
@@ -139,7 +139,7 @@ function local_teardown() {
   namespace::check_warning $ns
 }
 
-@test "namespace declared, has policies label, update parent" {
+@test "Namespace declared, has policies label, update parent" {
   local nsp=move-decl-policies
   local nsf=move-decl-full
   namespace::create ${nsp} policies
@@ -172,7 +172,7 @@ function local_teardown() {
 }
 
 
-@test "Warn on invalid management label" {
+@test "Namespace warn on invalid management label" {
   local ns=decl-invalid-label
   namespace::create $ns a-garbage-label
   namespace::declare $ns

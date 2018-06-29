@@ -123,7 +123,7 @@ function main() {
   if [[ "$importer" == gcp ]]; then
     echo "No tests for GCP"
   else
-    for i in $(echo ${TEST_DIR}/e2e.bats; find ${TEST_DIR}/testcases -name '*.bats'); do
+    for i in $(find ${TEST_DIR}/testcases -name '*.bats'); do
       bats_tests+=($i)
     done
   fi

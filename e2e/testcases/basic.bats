@@ -2,9 +2,9 @@
 
 set -euo pipefail
 
-YAML_DIR=${BATS_TEST_DIRNAME}/yaml
+YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
-load lib/loader
+load ../lib/loader
 
 @test "Namespaces created" {
   run kubectl get ns eng
