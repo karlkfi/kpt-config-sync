@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package validator is used for validating that the hierarchy specified using policy nodes forms
+// Package validator is used for validating that the hierarchy specified using PolicyNodes forms
 // a tree structure.
 package validator
 
@@ -31,9 +31,9 @@ import (
 // Validator checks that a set of PolicyNode objects conform to certain constraints on the hierarchy.
 type Validator struct {
 	policyNodes map[string]policyhierarchy_v1.PolicyNode // name -> node
-	// AllowMultipleRoots disables checks for multiple root nodes in the policy node hierarchy, when true.
+	// AllowMultipleRoots disables checks for multiple root nodes in the PolicyNode hierarchy, when true.
 	AllowMultipleRoots bool
-	// AllowOrphanAdds disables checks for adding policy nodes with non-existent parents.
+	// AllowOrphanAdds disables checks for adding PolicyNodes with non-existent parents.
 	AllowOrphanAdds bool
 }
 
@@ -44,7 +44,7 @@ func New() *Validator {
 	}
 }
 
-// FromMap creates a new validator populating the policy nodes from a map.
+// FromMap creates a new validator populating the PolicyNodes from a map.
 func FromMap(policyNodes map[string]policyhierarchy_v1.PolicyNode) *Validator {
 	validator := New()
 	for name, node := range policyNodes {
@@ -66,10 +66,10 @@ func From(policyNodes ...*policyhierarchy_v1.PolicyNode) *Validator {
 func (s *Validator) Add(policyNode *policyhierarchy_v1.PolicyNode) error {
 	nodeName := policyNode.Name
 	if _, ok := s.policyNodes[nodeName]; ok {
-		return errors.Errorf("policy node %q already exists!", nodeName)
+		return errors.Errorf("PolicyNode %q already exists", nodeName)
 	}
 	if nodeName == "" {
-		return errors.Errorf("policy node does not have a name")
+		return errors.Errorf("PolicyNode does not have a name")
 	}
 
 	s.policyNodes[nodeName] = *policyNode
@@ -80,7 +80,7 @@ func (s *Validator) Add(policyNode *policyhierarchy_v1.PolicyNode) error {
 func (s *Validator) Update(policyNode *policyhierarchy_v1.PolicyNode) error {
 	nodeName := policyNode.Name
 	if _, ok := s.policyNodes[nodeName]; !ok {
-		return errors.Errorf("policy node %q does not exist for update", nodeName)
+		return errors.Errorf("PolicyNode %q does not exist for update", nodeName)
 	}
 
 	s.policyNodes[nodeName] = *policyNode
@@ -91,13 +91,13 @@ func (s *Validator) Update(policyNode *policyhierarchy_v1.PolicyNode) error {
 func (s *Validator) Remove(policyNode *policyhierarchy_v1.PolicyNode) error {
 	nodeName := policyNode.Name
 	if _, ok := s.policyNodes[nodeName]; !ok {
-		return errors.Errorf("policy node %q does not exist for removal", nodeName)
+		return errors.Errorf("PolicyNode %q does not exist for removal", nodeName)
 	}
 
 	for _, policyNode := range s.policyNodes {
 		parent := policyNode.Spec.Parent
 		if parent == nodeName {
-			return errors.Errorf("policy node %q is a parent and cannot be removed", nodeName)
+			return errors.Errorf("PolicyNode %q is a parent and cannot be removed", nodeName)
 		}
 	}
 
@@ -129,7 +129,7 @@ func (s *Validator) Validate() error {
 // that children of empty string (no parent) is the appropriate size.
 func (s *Validator) checkRoots() error {
 	if len(s.policyNodes) == 0 {
-		// There are no policy nodes, so no reason to check for root issues.
+		// There are no PolicyNodes, so no reason to check for root issues.
 		return nil
 	}
 	var roots []string
@@ -182,7 +182,7 @@ func (s *Validator) checkPolicySpaceRoles() error {
 	for nodeName, node := range s.policyNodes {
 		if node.Spec.Type.IsPolicyspace() && len(node.Spec.RolesV1) > 0 {
 			return errors.Errorf(
-				"node %q designated as a policy space, but has roles", nodeName)
+				"PolicyNode %q designated as a policy space, but has Roles", nodeName)
 		}
 	}
 	return nil
@@ -198,7 +198,7 @@ func (s *Validator) checkParents() error {
 		parent := node.Spec.Parent
 		_, ok := s.policyNodes[parent]
 		if parent != policyhierarchy_v1.NoParentNamespace && !ok {
-			return errors.Errorf("node %q has no parent and is not a root node", nodeName)
+			return errors.Errorf("PolicyNode %q has no parent and is not a root node", nodeName)
 		}
 	}
 	return nil
@@ -211,14 +211,14 @@ func (s *Validator) checkDupeResources() error {
 		roles := make(map[string]bool)
 		for _, role := range node.Spec.RolesV1 {
 			if roles[role.Name] {
-				return errors.Errorf("duplicate role %q encountered in policynode %q", role.Name, nodeName)
+				return errors.Errorf("duplicate Role %q encountered in PolicyNode %q", role.Name, nodeName)
 			}
 			roles[role.Name] = true
 		}
 		roleBindings := make(map[string]bool)
 		for _, roleBinding := range node.Spec.RoleBindingsV1 {
 			if roleBindings[roleBinding.Name] {
-				return errors.Errorf("duplicate rolebinding %q encountered in policynode %q", roleBinding.Name, nodeName)
+				return errors.Errorf("duplicate RoleBinding %q encountered in PolicyNode %q", roleBinding.Name, nodeName)
 			}
 			roleBindings[roleBinding.Name] = true
 		}
@@ -233,13 +233,13 @@ func (s *Validator) checkNameLength() error {
 		for _, roleBinding := range node.Spec.RoleBindingsV1 {
 			rbName := fmt.Sprintf("%s.%s", nodeName, roleBinding.Name)
 			if !validation.IsValidSysctlName(rbName) {
-				return errors.Errorf("policy node %s has RoleBinding with invalid name: %s (%s)", nodeName, roleBinding.Name, rbName)
+				return errors.Errorf("PolicyNode %q has RoleBinding with invalid name %q (%q)", nodeName, roleBinding.Name, rbName)
 			}
 		}
 
 		for _, role := range node.Spec.RolesV1 {
 			if !validation.IsValidSysctlName(role.Name) {
-				return errors.Errorf("policy node %s has Role with invalid name: %s", nodeName, role.Name)
+				return errors.Errorf("PolicyNode %q has Role with invalid name %q", nodeName, role.Name)
 			}
 		}
 	}

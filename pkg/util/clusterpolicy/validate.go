@@ -12,7 +12,7 @@ import (
 // contains sub-resources with duplicate names.
 func Validate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) error {
 	if clusterPolicy.Name != policyhierarchy_v1.ClusterPolicyName {
-		return errors.Errorf("invalid name %q, should be %q", clusterPolicy.Name, policyhierarchy_v1.ClusterPolicyName)
+		return errors.Errorf("invalid ClusterPolicy name %q, should be %q", clusterPolicy.Name, policyhierarchy_v1.ClusterPolicyName)
 	}
 	clusterRoleNames := make(map[string]bool)
 	for _, r := range clusterPolicy.Spec.ClusterRolesV1 {
@@ -21,7 +21,7 @@ func Validate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) error {
 		}
 		n := r.Name
 		if clusterRoleNames[n] {
-			return errors.Errorf("duplicate clusterrole name %q in clusterpolicy", n)
+			return errors.Errorf("duplicate ClusterRole name %q in ClusterPolicy", n)
 		}
 		clusterRoleNames[n] = true
 	}
@@ -32,7 +32,7 @@ func Validate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) error {
 		}
 		n := rb.Name
 		if clusterRoleBindingNames[n] {
-			return errors.Errorf("duplicate clusterrolebinding name %q in clusterpolicy", n)
+			return errors.Errorf("duplicate ClusterRoleBinding name %q in ClusterPolicy", n)
 		}
 		clusterRoleBindingNames[n] = true
 	}
@@ -43,7 +43,7 @@ func Validate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) error {
 		}
 		n := psp.Name
 		if podSecurityPolicyNames[n] {
-			return errors.Errorf("duplicate podsecuritypolicy name %q in clusterpolicy", n)
+			return errors.Errorf("duplicate PodSecurityPolicy name %q in ClusterPolicy", n)
 		}
 		podSecurityPolicyNames[n] = true
 	}
