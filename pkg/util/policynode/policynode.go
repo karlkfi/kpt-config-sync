@@ -70,15 +70,6 @@ func GetResourceVersion(node *policyhierarchy_v1.PolicyNode) (int64, error) {
 	return resourceVersion, nil
 }
 
-// GetResourceVersionOrDie parses the resource version into an int and panics if there is an error.
-func GetResourceVersionOrDie(node *policyhierarchy_v1.PolicyNode) int64 {
-	resourceVersion, err := GetResourceVersion(node)
-	if err != nil {
-		panic(err)
-	}
-	return resourceVersion
-}
-
 // ListPolicies returns all policies from API server.
 func ListPolicies(policyNodeLister listers_v1.PolicyNodeLister, clusterPolicyLister listers_v1.ClusterPolicyLister) (*policyhierarchy_v1.AllPolicies, error) {
 	policies := policyhierarchy_v1.AllPolicies{
