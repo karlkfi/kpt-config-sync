@@ -365,7 +365,7 @@ test-e2e-run-%:
 	    -v "$(OUTPUT_DIR)/e2e":/opt/testing/e2e \
 	    -e "VERSION=$(IMAGE_TAG)" \
 	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" \
-	    "$@" ${E2E_FLAGS} \
+	    ${E2E_FLAGS} \
 		--importer $* \
 		--gcp-cred "$(GCP_E2E_CRED)" \
 	    && echo "+++ $* e2e tests completed" \

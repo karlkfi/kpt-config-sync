@@ -167,44 +167,44 @@ setup=false
 gcp_cred=""
 while [[ $# -gt 0 ]]; do
   arg=${1}
+  shift
   case ${arg} in
     --tap)
       tap=true
-      shift
     ;;
 
     --clean)
       clean=true
-      shift
     ;;
 
     --setup)
       setup=true
-      shift
     ;;
 
     --test)
       run_tests=true
-      shift
     ;;
 
     --filter)
-      filter="${2}"
-      shift
+      filter="${1}"
       shift
     ;;
+
+    --filter=*)
+      filter="$(echo "$arg" | sed -e 's/--filter=//')"
+    ;;
+
     --importer)
-      importer="${2}"
-      shift
+      importer="${1}"
       shift
     ;;
     --gcp-cred)
-      gcp_cred="${2}"
-      shift
+      gcp_cred="${1}"
       shift
     ;;
     *)
-    shift
+      echo "Unrecognized arg $arg"
+      exit 1
     ;;
   esac
 done

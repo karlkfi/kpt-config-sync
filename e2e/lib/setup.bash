@@ -27,7 +27,7 @@ setup() {
         cur_test="${func}"
       fi
     done
-    if ! [[ "${cur_test}" =~ "${E2E_TEST_FILTER}" ]]; then
+    if ! echo "${cur_test}" | grep "${E2E_TEST_FILTER}" &> /dev/null; then
       skip
     fi
   fi
