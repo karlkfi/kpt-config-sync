@@ -39,6 +39,8 @@ spec:
         - name: syncer
           image: IMAGE_NAME
           command: ["syncer"]
+          args:
+          - "--v=2"
           ports:
             - containerPort: 8675
               name: metrics-port

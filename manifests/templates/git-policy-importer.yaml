@@ -40,6 +40,8 @@ spec:
       - name: policy-importer
         image: IMAGE_NAME
         command: ["git-policy-importer"]
+        args:
+        - "--v=2"
         ports:
           - containerPort: 8675
             name: metrics-port

@@ -12,8 +12,5 @@ func Setup() {
 	if err := flag.Set("logtostderr", "true"); err != nil {
 		panic(err)
 	}
-	if err := flag.Set("v", "2"); err != nil {
-		panic(err)
-	}
 	glog.Infof("Build Version: %s", version.VERSION)
 }

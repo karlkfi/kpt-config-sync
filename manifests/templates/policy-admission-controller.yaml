@@ -55,7 +55,7 @@ spec:
             - "--server_key=/etc/nomos/secrets/policy-admission-controller/server/tls.key"
             - "--server_cert=/etc/nomos/secrets/policy-admission-controller/server/tls.crt"
             - "--ca-cert=/etc/nomos/secrets/policy-admission-controller/ca/tls.crt"
-            - "--logtostderr"
+            - "--v=2"
           ports:
             - containerPort: 8000
               name: https-port
