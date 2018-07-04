@@ -437,10 +437,8 @@ goimports:
 lint: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
 
-LINT_IMAGE := koalaman/shellcheck:v0.5.0
 lint-bash:
-	@docker image inspect $(LINT_IMAGE) &> /dev/null || docker pull $(LINT_IMAGE)
-	@docker run $(DOCKER_INTERACTIVE) -v "$$(pwd):/mnt" --rm $(LINT_IMAGE) ./scripts/lint-bash.sh
+	@./scripts/lint-bash.sh
 
 .PHONY: clientgen
 clientgen:

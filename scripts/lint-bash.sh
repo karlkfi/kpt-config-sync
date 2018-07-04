@@ -2,17 +2,8 @@
 
 set -euo pipefail
 
-if ! command -v shellcheck &> /dev/null; then
-  echo "Requires shellcheck, please run:"
-  echo "sudo apt-get install shellcheck"
-  exit 1
-fi
-
-exclude=(
-  e2e/lib/assert.bash
-  e2e/lib/debug.bash
+readonly exclude=(
   e2e/lib/git.bash
-  e2e/lib/loader.bash
   e2e/lib/namespace.bash
   e2e/lib/resource.bash
   e2e/lib/setup.bash
@@ -55,6 +46,11 @@ mapfile -t check_files < <(
     | uniq -u
 )
 
+readonly linter=koalaman/shellcheck:v0.5.0
+
+if ! docker image inspect $linter &> /dev/null; then
+  docker pull "$linter"
+fi
 echo "Linting scripts..."
-shellcheck "${check_files[@]}"
+docker run -it -v "$(pwd):/mnt" --rm $linter "${check_files[@]}"
 echo "PASS"
