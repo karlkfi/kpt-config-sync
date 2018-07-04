@@ -158,7 +158,7 @@ func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Chang
 	}
 
 	for name, change := range resources {
-		glog.V(2).Infof("Resource %q has state: %s", name, change.State)
+		glog.V(2).Infof("Resource %q %s", name, change.State)
 		t, err := policyResourceType(change.Element)
 		if err != nil {
 			return nil, err
@@ -174,6 +174,7 @@ func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Chang
 					return nil, err
 				}
 				updatedPolicies.PolicyNodes[pn.Name] = *pn
+				glog.V(2).Infof("%q -> nomos.dev/v1/PolicyNodes/%s", name, pn.Name)
 				g.gcpToK8SName[name] = pn.Name
 			case clusterPolicyResource:
 				cp, err := unmarshalClusterPolicy(change)
@@ -198,6 +199,7 @@ func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Chang
 				if !ok {
 					return nil, errors.Errorf("cannot delete a non-existing resource %q", name)
 				}
+				glog.V(2).Infof("%q -> nomos.dev/v1/PolicyNodes/%s", name, nodeName)
 				delete(updatedPolicies.PolicyNodes, nodeName)
 			case clusterPolicyResource:
 				updatedPolicies.ClusterPolicy = nil
