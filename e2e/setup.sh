@@ -70,6 +70,12 @@ function clean_up() {
     return 0
   fi
 
+  # TODO: workaround for b/111218567 remove this once resolved
+  if ! kubectl get customresourcedefinition policynode &> /dev/null; then
+    echo "Policynodes not found, skipping uninstall"
+    return
+  fi
+
   echo "++++ Cleaning up environment"
   suggested_user="$(gcloud config get-value account)"
   echo "Uninstalling..."

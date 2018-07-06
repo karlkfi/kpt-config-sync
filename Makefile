@@ -363,6 +363,7 @@ test-e2e-run-%:
 	    -v "${INSTALLER_OUTPUT_DIR}/logs":/tmp \
 	    -v "$(TOP_DIR)/examples":/opt/installer/configs \
 	    -v "$(OUTPUT_DIR)/e2e":/opt/testing/e2e \
+		$(E2E_AUX_VOLUMES) \
 	    -e "VERSION=$(IMAGE_TAG)" \
 	    "gcr.io/stolos-dev/e2e-tests:${IMAGE_TAG}" \
 	    ${E2E_FLAGS} \
