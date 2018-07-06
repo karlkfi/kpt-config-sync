@@ -22,9 +22,9 @@ $ kubectl get ns # lists the 3 default namespaces
 
 ## Create the Release Candidate
 
-Set the release version. Make sure to uphold the [semantic versioning
-rules](http://semver.org). If the release fails, increment the patch number for
-the next release attempt.
+Set the release version. Make sure to uphold the
+[semantic versioning rules](http://semver.org). If the release fails, increment
+the patch number for the next release attempt.
 
 ```console
 $ export RELEASE_VERSION="v1.2.3"
@@ -52,8 +52,8 @@ $ TZ=America/Los_Angeles git log --pretty="format:%C(yellow)%h \
     --date=local v0.3.4..v0.4.0
 ```
 
-The artifacts will be [available
-here](https://console.cloud.google.com/storage/browser/nomos-release/latest/?project=nomos-release).
+The artifacts will be
+[available here](https://console.cloud.google.com/storage/browser/nomos-release/latest/?project=nomos-release).
 
 ## Bless the Release Candidate
 
@@ -66,5 +66,5 @@ Finally, to bless the RC:
 $ make -f Makefile.release bless-release
 ```
 
-The artifacts will be [available
-here](https://console.cloud.google.com/storage/browser/nomos-release/stable/?project=nomos-release).
+The artifacts will be
+[available here](https://console.cloud.google.com/storage/browser/nomos-release/stable/?project=nomos-release).

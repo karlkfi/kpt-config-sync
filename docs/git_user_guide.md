@@ -21,8 +21,8 @@ When using Git as source of truth, we represent the hierarchy of policyspaces
 and namespaces using the filesystem hierarchy.
 
 Following the [foo-corp example](concepts.md#example), we can have such a
-directory structure ([Available on this GitHub
-repo](https://github.com/frankfarzan/foo-corp-example)):
+directory structure
+([Available on this GitHub repo](https://github.com/frankfarzan/foo-corp-example)):
 
 ```console
 foo-corp
@@ -67,8 +67,8 @@ foo-corp
 1.  The root policyspace directory can also contain any number of uniquely named
     ClusterRole, ClusterRolebinding, and PodSecurityPolicy resources.
 1.  Both policyspace and namespace directory names must be valid Kubernetes
-    namespace names (i.e. [DNS
-    Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md))
+    namespace names (i.e.
+    [DNS Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md))
     and must be unique in the hierarchy. In addition a name cannot be `default`,
     `nomos-system`, or have `kube-` prefix. Namespaces that match `kube-*`,
     `nomos-system` and `default` are a special class of namespaces called
@@ -174,8 +174,8 @@ allow a rolebinding to be created at any level without naming conflicts.
 
 Note that policies are themselves resources which means a user may be able to
 edit policies outside of Nomos (e.g. using kubectl) or create rolebindings
-subject to [privilege escalation
-prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping)
+subject to
+[privilege escalation prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping)
 in Kubernetes.
 
 ##### ResourceQuota
@@ -336,17 +336,16 @@ You can manually run nomosvet:
 $ nomosvet.sh foo-corp
 ```
 
-You can also automatically run nomosvet as a git [pre-commit
-hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks). In the root of
-the repo, run:
+You can also automatically run nomosvet as a git
+[pre-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks). In
+the root of the repo, run:
 
 ```console
 $ echo "nomosvet.sh foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
 ```
 
 You can also integrate this into your CI/CD setup, e.g. when using GitHub
-[required status
-check](https://help.github.com/articles/about-required-status-checks/).
+[required status check](https://help.github.com/articles/about-required-status-checks/).
 
 ## Guarantees
 

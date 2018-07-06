@@ -75,9 +75,9 @@ ssh         | SSH private key      | git-sync
 known_hosts | SSH known hosts file | git-sync
 cookie_file | git HTTP cookie file | git-sync
 
-See [git-sync
-docs](https://github.com/kubernetes/git-sync/blob/master/docs/ssh.md) for more
-information
+See
+[git-sync docs](https://github.com/kubernetes/git-sync/blob/master/docs/ssh.md)
+for more information
 
 ## Using GitHub
 
@@ -86,8 +86,8 @@ repository, and ensure that those credentials are usable for GitHub access. You
 can choose to use any other Git provider instead and set up credentials
 accordingly, in which case you can skip this section.
 
-**IMPORTANT NOTE:** In production, it is recommended to use [deploy
-keys](https://developer.github.com/v3/guides/managing-deploy-keys/#deploy-keys)
+**IMPORTANT NOTE:** In production, it is recommended to use
+[deploy keys](https://developer.github.com/v3/guides/managing-deploy-keys/#deploy-keys)
 to grant access to a single GitHub repo instead of your personal account.
 
 In a terminal session of your Linux machine issue the following command:
@@ -118,10 +118,10 @@ $ ssh -o IdentityAgent=/dev/null -F /dev/null -i $HOME/.ssh/id_rsa.nomos -T git@
 Hi <your_username>! You've successfully authenticated, but GitHub does not provide shell access.
 ```
 
-An example policy hierarchy is available in [this Github
-repository](https://github.com/frankfarzan/foo-corp-example). [Fork this repo on
-Github](https://help.github.com/articles/fork-a-repo/) or to your preferred Git
-hosting provider if you want to make changes.
+An example policy hierarchy is available in
+[this Github repository](https://github.com/frankfarzan/foo-corp-example).
+[Fork this repo on Github](https://help.github.com/articles/fork-a-repo/) or to
+your preferred Git hosting provider if you want to make changes.
 
 You can now clone the sample repository locally as follows:
 

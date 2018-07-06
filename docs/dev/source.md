@@ -4,8 +4,7 @@
 
 We follow the following guides:
 
-1.  [K8S Coding
-    Conventions](https://github.com/kubernetes/kubernetes/blob/release-1.1/docs/devel/coding-conventions.md)
+1.  [K8S Coding Conventions](https://github.com/kubernetes/kubernetes/blob/release-1.1/docs/devel/coding-conventions.md)
 1.  [Naming](https://talks.golang.org/2014/names.slide#1)
 
 ## Commit Message

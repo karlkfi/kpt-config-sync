@@ -66,9 +66,9 @@ Note that GKE running K8S 1.9 satisfies all these requirements.
 **Warning:** In the current release of Nomos, we require that all namespaces be
 managed by Nomos. It is recommended to create a new cluster for use with Nomos.
 
-The easiest way to get all of these is to follow the [GKE quick start
-guide](https://cloud.google.com/kubernetes-engine/docs/quickstart) and make sure
-to select version 1.9+ when creating the cluster.
+The easiest way to get all of these is to follow the
+[GKE quick start guide](https://cloud.google.com/kubernetes-engine/docs/quickstart)
+and make sure to select version 1.9+ when creating the cluster.
 
 ## Installation
 

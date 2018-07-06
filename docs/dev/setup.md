@@ -52,8 +52,7 @@ $ kubectl get ns # lists the 3 default namespaces
 ## Initial setup of your cluster in GKE (one time)
 
 Create a cluster using the [web UI](https://console.cloud.google.com) or the
-[gcloud
-CLI](https://cloud.google.com/sdk/gcloud/reference/container/clusters/create).
+[gcloud CLI](https://cloud.google.com/sdk/gcloud/reference/container/clusters/create).
 Make sure the cluster version is 1.9+ (we suggest using the latest version). You
 should also select a machine type that has at least 2GB of RAM (eg
 n1-standard-1).

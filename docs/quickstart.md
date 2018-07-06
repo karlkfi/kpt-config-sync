@@ -11,8 +11,8 @@ Kuberentes clusters.
 ## Creating hierarchical policies
 
 Once Nomos components are deployed and running in a cluster, namespaces will be
-automatically created. For the [foo-corp
-example](https://github.com/frankfarzan/foo-corp-example):
+automatically created. For the
+[foo-corp example](https://github.com/frankfarzan/foo-corp-example):
 
 ```console
 $ kubectl get namespaces -l nomos-managed

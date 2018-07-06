@@ -2,8 +2,8 @@
 
 ## Logging
 
-Nomos follows [K8S logging
-convention](https://github.com/kubernetes/community/blob/master/contributors/devel/logging.md).
+Nomos follows
+[K8S logging convention](https://github.com/kubernetes/community/blob/master/contributors/devel/logging.md).
 By default, all binaries log at V(2).
 
 List all nomos-system pods:
@@ -67,16 +67,16 @@ nomos_syncer_action_duration_seconds                 | Histogram | namespace, re
 ### Scraping the Metrics
 
 All metrics are available for scraping at port 8675. Prometheus includes a
-process that you can optionally choose to [run on your
-cluster](https://prometheus.io/docs/prometheus/latest/getting_started/)
+process that you can optionally choose to
+[run on your cluster](https://prometheus.io/docs/prometheus/latest/getting_started/)
 alongside the Nomos processes. This process must be configured to scrape the
 metrics which you are interested in.
 
-Alternatively you can use [Prometheus
-Operator](https://coreos.com/operators/prometheus/docs/latest/) which is an
-abstraction layer provided by CoreOS to simplify conifguration of metrics
-scraping. The following ServiceMonitor manifest will scrape all Nomos metrics
-every 10 seconds:
+Alternatively you can use
+[Prometheus Operator](https://coreos.com/operators/prometheus/docs/latest/)
+which is an abstraction layer provided by CoreOS to simplify conifguration of
+metrics scraping. The following ServiceMonitor manifest will scrape all Nomos
+metrics every 10 seconds:
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1

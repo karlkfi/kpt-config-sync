@@ -21,7 +21,7 @@ have the Prometheus server process running then you can forward the port from it
 $ kubectl port-forward -n monitoring $(kubectl get pods -n monitoring -l app=prometheus -o jsonpath='{.items[0].metadata.name}') 9090
 ```
 
-Now you can use the [HTTP
-API](https://prometheus.io/docs/prometheus/latest/querying/api/) to send
+Now you can use the
+[HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/) to send
 queries. For example try
 http://localhost:9090/api/v1/query?query=nomos_policy_importer_policy_nodes.
