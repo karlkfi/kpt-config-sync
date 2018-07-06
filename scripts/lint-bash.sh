@@ -48,9 +48,21 @@ mapfile -t check_files < <(
 
 readonly linter=koalaman/shellcheck:v0.5.0
 
-if ! docker image inspect $linter &> /dev/null; then
+
+
+if ! docker image inspect "$linter" &> /dev/null; then
   docker pull "$linter"
 fi
+
+cmd=(docker run --interactive -v "$(pwd):/mnt")
+if [ -t 1 ]; then
+  cmd+=("--tty")
+fi
+cmd+=(
+  --rm
+  "$linter" "${check_files[@]}"
+)
+
 echo "Linting scripts..."
-docker run -it -v "$(pwd):/mnt" --rm $linter "${check_files[@]}"
+"${cmd[@]}"
 echo "PASS"
