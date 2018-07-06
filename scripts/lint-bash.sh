@@ -30,7 +30,6 @@ readonly exclude=(
   scripts/generate-watcher.sh
   scripts/init-git-server.sh
   scripts/lib/installer.sh
-  scripts/lint.sh
   scripts/nomosvet.sh
   scripts/test-unit.sh
 )

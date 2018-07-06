@@ -46,7 +46,7 @@ if ! OUT="$(
     --enable=vetshadow \
     --exclude=generated\.pb\.go \
     --exclude=generated\.go \
-    "$@"\
+    "$@" \
     )"; then
   echo "${OUT}"
 
@@ -65,6 +65,6 @@ fi
 echo "PASS"
 
 echo "Running licenselinter: "
-licenselinter -dir $(pwd)
+licenselinter -dir "$(pwd)"
 echo "PASS"
 echo
