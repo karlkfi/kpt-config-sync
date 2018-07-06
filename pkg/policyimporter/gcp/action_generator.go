@@ -158,7 +158,7 @@ func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Chang
 	}
 
 	for name, change := range resources {
-		glog.V(2).Infof("Resource %q %s", name, change.State)
+		glog.V(2).Infof("%q %s", name, change.State)
 		t, err := policyResourceType(change.Element)
 		if err != nil {
 			return nil, err

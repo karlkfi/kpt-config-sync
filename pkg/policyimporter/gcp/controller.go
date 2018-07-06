@@ -36,7 +36,11 @@ import (
 	"k8s.io/client-go/util/cert"
 )
 
-const resync = time.Minute * 15
+const (
+	informerResync = time.Minute * 15
+	// Context timeout for Watch RPC. See b/111133638.
+	watcherTimeout = time.Hour * 2
+)
 
 var scopes = []string{"https://www.googleapis.com/auth/cloud-platform"}
 
@@ -58,7 +62,7 @@ type Controller struct {
 // NewController returns a new Controller.
 func NewController(org, watcherAddr, credsFile, caFile string, client meta.Interface, stopChan chan struct{}) *Controller {
 	informerFactory := externalversions.NewSharedInformerFactory(
-		client.PolicyHierarchy(), resync)
+		client.PolicyHierarchy(), informerResync)
 	f := actions.NewFactories(
 		client.PolicyHierarchy().NomosV1(),
 		informerFactory.Nomos().V1().PolicyNodes().Lister(),
@@ -153,7 +157,7 @@ func (c *Controller) run() error {
 	glog.Infof("Connected to Watcher service at %s", c.watcherAddr)
 
 	client := watcher.NewWatcherClient(conn)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), watcherTimeout)
 	defer cancel()
 	stream, err := client.Watch(ctx, &watcher.Request{Target: fmt.Sprintf("organizations/%s?recursive=true", c.org)})
 	if err != nil {
