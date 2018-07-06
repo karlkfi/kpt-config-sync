@@ -3,7 +3,6 @@
 set -euo pipefail
 
 readonly exclude=(
-  e2e/lib/git.bash
   e2e/lib/namespace.bash
   e2e/lib/resource.bash
   e2e/lib/setup.bash

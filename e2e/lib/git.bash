@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Helpers for changing the state of the e2e source-of-truth git
 # repository. Prepare the next state to commit using git::add, git::update, and
 # git::rm and then commit these changes to the sot repo with git::commit.
@@ -27,16 +29,16 @@ function git::add() {
   local src=$1
   local dst=$2
 
-  cd ${TEST_REPO}
+  cd "${TEST_REPO}"
 
-  [ ! -z $src ] || (echo "source not provided to git::add" && false)
-  [ ! -z $dst ] || (echo "destination not provided to git::add" && false)
-  [ ! -f $dst ] || (echo "$dst already exists but should not" && false)
+  [ ! -z "$src" ] || (echo "source not provided to git::add" && false)
+  [ ! -z "$dst" ] || (echo "destination not provided to git::add" && false)
+  [ ! -f "$dst" ] || (echo "$dst already exists but should not" && false)
 
-  mkdir -p $(dirname $dst)
-  cp $src ./$dst
+  mkdir -p "$(dirname "$dst")"
+  cp "$src" "./$dst"
   echo "git: add $dst"
-  git add $dst
+  git add "$dst"
 
   cd -
 }
@@ -56,15 +58,15 @@ function git::update() {
   local src=$1
   local dst=$2
 
-  cd ${TEST_REPO}
+  cd "${TEST_REPO}"
 
-  [ ! -z $src ] || (echo "source not provided to git::update" && false)
-  [ ! -z $dst ] || (echo "destination not provided to git::update" && false)
-  [ -f $dst ] || (echo "$dst does not already exist but should" && false)
+  [ ! -z "$src" ] || (echo "source not provided to git::update" && false)
+  [ ! -z "$dst" ] || (echo "destination not provided to git::update" && false)
+  [ -f "$dst" ] || (echo "$dst does not already exist but should" && false)
 
-  cp $src ./$dst
+  cp "$src" "./$dst"
   echo "git: add $dst (updated from $src)"
-  git add $dst
+  git add "$dst"
 
   cd -
 }
@@ -82,13 +84,13 @@ function git::update() {
 function git::rm() {
   local path=$1
 
-  cd ${TEST_REPO}
+  cd "${TEST_REPO}"
 
-  [ ! -z $path ] || (echo "filename not provided to git::rm" && false)
-  [ -f $path ] || (echo "$path does not already exist but should" && false)
+  [ ! -z "$path" ] || (echo "filename not provided to git::rm" && false)
+  [ -f "$path" ] || (echo "$path does not already exist but should" && false)
 
   echo "git: rm $path"
-  git rm $path
+  git rm "$path"
 
   cd -
 }
@@ -99,7 +101,7 @@ function git::rm() {
 # git::commit
 #
 function git::commit() {
-  cd ${TEST_REPO}
+  cd "${TEST_REPO}"
 
   echo "git: commit / push"
   git commit -m "commit for test"
