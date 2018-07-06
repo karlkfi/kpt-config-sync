@@ -139,12 +139,14 @@ function main() {
     file_filter=".*"
   fi
 
-  for file in ${bats_tests[@]}; do
-    if echo "${file}" | grep "${file_filter}" &> /dev/null; then
-      echo "Will run ${file}"
-      bats_args+=("${file}")
-    fi
-  done
+  if (( ${#bats_tests[@]} != 0 )); then
+    for file in "${bats_tests[@]}"; do
+      if echo "${file}" | grep "${file_filter}" &> /dev/null; then
+        echo "Will run ${file}"
+        bats_args+=("${file}")
+      fi
+    done
+  fi
 
   if $tap; then
     bats_args+=(--tap)
