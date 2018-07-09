@@ -24,6 +24,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/validation/path"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/kubernetes/pkg/apis/core/validation"
@@ -46,24 +48,33 @@ func NewValidator() *Validator {
 	return &Validator{}
 }
 
-func (v *Validator) validateName(namespace string, obj apiObject) error {
+func makeValidator(f func(string, bool) []string) func(string) []string {
+	return func(n string) []string {
+		return f(n, false)
+	}
+}
+
+func (v *Validator) getEffectiveName(namespace string, obj apiObject) string {
 	if v.Flattened {
-		flattenedName := fmt.Sprintf("%s.%s", namespace, obj.GetName())
-		if !validation.IsValidSysctlName(flattenedName) {
-			return errors.Errorf(
-				"invalid name on %q %q (flattens to %q)",
-				obj.GetObjectKind().GroupVersionKind(),
-				obj.GetName(),
-				flattenedName)
-		}
-		return nil
+		return fmt.Sprintf("%s.%s", namespace, obj.GetName())
+	}
+	return obj.GetName()
+}
+
+func (v *Validator) validateName(namespace string, obj apiObject) error {
+	name := v.getEffectiveName(namespace, obj)
+
+	var validator func(string) []string
+	switch obj.(type) {
+	case *rbacv1.Role, *rbacv1.RoleBinding, *rbacv1.ClusterRole, *rbacv1.ClusterRoleBinding:
+		validator = path.IsValidPathSegmentName
+
+	default:
+		validator = makeValidator(validation.NameIsDNSSubdomain)
 	}
 
-	if !validation.IsValidSysctlName(obj.GetName()) {
-		return errors.Errorf(
-			"invalid name on %s %s",
-			obj.GetObjectKind().GroupVersionKind(),
-			obj.GetName())
+	if msgs := validator(name); msgs != nil {
+		return errors.Errorf("invalid name on %q: %s", name, strings.Join(msgs, ", "))
 	}
 	return nil
 }

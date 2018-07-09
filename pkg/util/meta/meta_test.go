@@ -19,8 +19,27 @@ import (
 	"strings"
 	"testing"
 
+	"k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// rbac allows all this for some reason.
+func isChr(c byte) bool {
+	return 0 <= c && c != '/' && c != '%' && c <= 127
+}
+
+func genRbacName(len int) string {
+	b := make([]byte, len)
+	a := 0
+	var c byte
+	for a < len {
+		for ; !isChr(c); c++ {
+		}
+		b[a] = c
+		a++
+	}
+	return string(b)
+}
 
 func genName(len int) string {
 	name := []string{}
@@ -30,119 +49,200 @@ func genName(len int) string {
 	return strings.Join(name, "")
 }
 
-func roleBindingMaxLen(namespace string) int {
+func subdomainMaxLen(namespace string) int {
 	return 253 - len(namespace) - 1
+}
+
+type fakeAPIObject struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+}
+
+func newFakeAPIObject(m metav1.ObjectMeta) *fakeAPIObject {
+	return &fakeAPIObject{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "FakeAPIObject",
+			APIVersion: "nomos.dev/v1",
+		},
+		ObjectMeta: m,
+	}
 }
 
 var metaValidationTestCases = []struct {
 	name      string
-	meta      metav1.ObjectMeta
+	obj       metav1.Object
 	flattened bool
 	namespace string
 	wantErr   bool
 }{
 	{
 		name:    "nil values in labels / annotations",
-		meta:    metav1.ObjectMeta{},
+		obj:     newFakeAPIObject(metav1.ObjectMeta{}),
 		wantErr: false,
 	},
 	{
 		name: "empty metadata",
-		meta: metav1.ObjectMeta{
+		obj: newFakeAPIObject(metav1.ObjectMeta{
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
-		},
+		}),
 		wantErr: false,
 	},
 	{
 		name: "valid label",
-		meta: metav1.ObjectMeta{
+		obj: newFakeAPIObject(metav1.ObjectMeta{
 			Labels:      map[string]string{"foo-corp.com/prod": "true"},
 			Annotations: map[string]string{},
-		},
+		}),
 		wantErr: false,
 	},
 	{
 		name: "valid annotation",
-		meta: metav1.ObjectMeta{
+		obj: newFakeAPIObject(metav1.ObjectMeta{
 			Labels:      map[string]string{},
 			Annotations: map[string]string{"foo-corp.com/omit-quarks": "up,charm,top"},
-		},
+		}),
 		wantErr: false,
 	},
 	{
 		name: "invalid label",
-		meta: metav1.ObjectMeta{
+		obj: newFakeAPIObject(metav1.ObjectMeta{
 			Labels:      map[string]string{"nomos.dev/property-xyz": "true"},
 			Annotations: map[string]string{},
-		},
+		}),
 		wantErr: true,
 	},
 	{
 		name: "invalid annotation",
-		meta: metav1.ObjectMeta{
+		obj: newFakeAPIObject(metav1.ObjectMeta{
 			Labels:      map[string]string{},
 			Annotations: map[string]string{"nomos.dev/property-xyz": "true"},
-		},
+		}),
 		wantErr: true,
 	},
 	{
 		name: "valid name",
-		meta: metav1.ObjectMeta{
+		obj: newFakeAPIObject(metav1.ObjectMeta{
 			Name:        "object-name",
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
-		},
+		}),
 		wantErr: false,
 	},
 	{
 		name: "invalid name",
-		meta: metav1.ObjectMeta{
+		obj: newFakeAPIObject(metav1.ObjectMeta{
 			Name:        "A name with invalid chars",
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
-		},
+		}),
 		wantErr: true,
 	},
 	{
 		name: "max name len (==253)",
-		meta: metav1.ObjectMeta{
+		obj: newFakeAPIObject(metav1.ObjectMeta{
 			Name:        genName(253),
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
-		},
+		}),
 		wantErr: false,
 	},
 	{
 		name: "invalid name len (>253)",
-		meta: metav1.ObjectMeta{
+		obj: newFakeAPIObject(metav1.ObjectMeta{
 			Name:        genName(254),
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
-		},
+		}),
 		wantErr: true,
 	},
 	{
 		name: "valid hierarchical name len (=253)",
-		meta: metav1.ObjectMeta{
-			Name:        genName(roleBindingMaxLen("foo-corp")),
+		obj: newFakeAPIObject(metav1.ObjectMeta{
+			Name:        genName(subdomainMaxLen("foo-corp")),
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
-		},
+		}),
 		flattened: true,
 		namespace: "foo-corp",
 		wantErr:   false,
 	},
 	{
 		name: "valid hierarchical name len (>253)",
-		meta: metav1.ObjectMeta{
-			Name:        genName(roleBindingMaxLen("foo-corp") + 1),
+		obj: newFakeAPIObject(metav1.ObjectMeta{
+			Name:        genName(subdomainMaxLen("foo-corp") + 1),
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
-		},
+		}),
 		flattened: true,
 		namespace: "foo-corp",
 		wantErr:   true,
+	},
+	{
+		name: "rbac Role",
+		obj: &v1.Role{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Role",
+				APIVersion: "rbac.authorization.k8s.io/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        genRbacName(2048),
+				Labels:      map[string]string{},
+				Annotations: map[string]string{},
+			},
+		},
+		flattened: true,
+		namespace: "foo-corp",
+		wantErr:   false,
+	},
+	{
+		name: "rbac RoleBinding",
+		obj: &v1.RoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "RoleBinding",
+				APIVersion: "rbac.authorization.k8s.io/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        genRbacName(2048),
+				Labels:      map[string]string{},
+				Annotations: map[string]string{},
+			},
+		},
+		flattened: true,
+		namespace: "foo-corp",
+		wantErr:   false,
+	},
+	{
+		name: "rbac ClusterRole",
+		obj: &v1.ClusterRole{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ClusterRole",
+				APIVersion: "rbac.authorization.k8s.io/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        genRbacName(2048),
+				Labels:      map[string]string{},
+				Annotations: map[string]string{},
+			},
+		},
+		flattened: true,
+		wantErr:   false,
+	},
+	{
+		name: "rbac ClusterRoleBinding",
+		obj: &v1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ClusterRoleBinding",
+				APIVersion: "rbac.authorization.k8s.io/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        genRbacName(2048),
+				Labels:      map[string]string{},
+				Annotations: map[string]string{},
+			},
+		},
+		flattened: true,
+		wantErr:   false,
 	},
 }
 
@@ -152,15 +252,10 @@ func init() {
 		if tt.namespace == "" {
 			metaValidationTestCases[i].namespace = "test-namespace"
 		}
-		if tt.meta.Name == "" {
-			metaValidationTestCases[i].meta.Name = "test-object"
+		if tt.obj.GetName() == "" {
+			metaValidationTestCases[i].obj.SetName("test-object")
 		}
 	}
-}
-
-type fakeAPIObject struct {
-	metav1.TypeMeta
-	metav1.ObjectMeta
 }
 
 func TestValidateObject(t *testing.T) {
@@ -168,15 +263,8 @@ func TestValidateObject(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewValidator()
 			validator.Flattened = tt.flattened
-			obj := &fakeAPIObject{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "FakeAPIObject",
-					APIVersion: "nomos.dev/v1",
-				},
-				ObjectMeta: tt.meta,
-			}
 
-			err := validator.ValidateObject(tt.namespace, obj)
+			err := validator.ValidateObject(tt.namespace, tt.obj)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Expected error, got nil")
@@ -196,12 +284,9 @@ func TestValidateMetaChecks(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewValidator()
 			validator.Flattened = tt.flattened
-			obj := &fakeAPIObject{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "FakeAPIObject",
-					APIVersion: "nomos.dev/v1",
-				},
-				ObjectMeta: tt.meta,
+			obj, ok := tt.obj.(*fakeAPIObject)
+			if !ok {
+				return
 			}
 
 			objValueList := []fakeAPIObject{*obj}

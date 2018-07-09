@@ -731,6 +731,7 @@
     "pkg/api/meta",
     "pkg/api/resource",
     "pkg/api/validation",
+    "pkg/api/validation/path",
     "pkg/apimachinery",
     "pkg/apimachinery/announced",
     "pkg/apimachinery/registered",
@@ -1186,6 +1187,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0425ad8be5ff0996157f3badd5b4870e9bae2e4fbeca3915cbd31d45e1f30b3f"
+  inputs-digest = "da7dd3cea9da86a781db3c406661a774bb71249a791b245d2c21ab0602dfe11f"
   solver-name = "gps-cdcl"
   solver-version = 1

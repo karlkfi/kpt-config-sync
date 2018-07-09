@@ -16,7 +16,6 @@ limitations under the License.
 package validator
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -427,51 +426,4 @@ func TestDuplicateResourcesInNode(t *testing.T) {
 	if err := v.Validate(); err == nil {
 		t.Error("Should have detected duplicate rolebindings error")
 	}
-}
-
-const testMaxLen = 253
-
-func TestMaxNameLength(t *testing.T) {
-	genStr := func(l int) string {
-		c := []string{}
-		for i := 0; i < l; i++ {
-			c = append(c, "a")
-		}
-		return strings.Join(c, "")
-	}
-
-	roleBindingMaxLen := func(namespace string) string {
-		return genStr(testMaxLen - len(namespace) - 1)
-	}
-
-	regularMaxLen := func() string {
-		return genStr(testMaxLen)
-	}
-
-	genTest := func(roleName string, roleBindingName string, ok bool) func(t *testing.T) {
-		return func(t *testing.T) {
-			v := New()
-			root := newNode("root", "", true)
-			child := newNode("child", "root", false)
-			setResources(child, []string{roleName}, []string{roleBindingName})
-			checkErr(t, v.Add(root))
-			checkErr(t, v.Add(child))
-			err := v.Validate()
-			if ok {
-				if err != nil {
-					t.Errorf("Expected OK, got error %s", err)
-				}
-			} else {
-				if err == nil {
-					t.Errorf("Expected error, got none")
-				}
-			}
-		}
-	}
-
-	t.Run("ok", genTest("role", "rolebinding", true))
-	t.Run("max-rolebinding", genTest("role", roleBindingMaxLen("child"), true))
-	t.Run("max-role", genTest(regularMaxLen(), "rolebinding", true))
-	t.Run("rolebinding-over", genTest("role", genStr(len(roleBindingMaxLen("child"))+1), false))
-	t.Run("role-over", genTest(genStr(testMaxLen+1), roleBindingMaxLen("rolebinding")+"a", false))
 }
