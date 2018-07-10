@@ -215,11 +215,12 @@ GIT_SERVER_RELEASE := v1.0.0
 build-git-server:
 	@echo "+++ Building image for test git server"
 	@mkdir -p $(OUTPUT_DIR)
+	@rm -rf $(GIT_SERVER_DOCKER)
 	@git clone https://github.com/jkarlosb/git-server-docker.git $(GIT_SERVER_DOCKER)
 	@cd $(GIT_SERVER_DOCKER) && git checkout $(GIT_SERVER_RELEASE)
-	@cd $(GIT_SERVER_DOCKER) && docker build $(DOCKER_BUILD_QUIET) \
-			-t gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE) \
-			$(GIT_SERVER_SRC)
+	@docker build $(DOCKER_BUILD_QUIET) \
+			$(GIT_SERVER_DOCKER) \
+			-t gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
 	@docker push gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
 
