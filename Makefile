@@ -209,12 +209,19 @@ image-nomos: build
 	@docker build $(DOCKER_BUILD_QUIET) \
 			-t gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG) $(STAGING_DIR)/$(NOMOS_IMAGE)
 
+GIT_SERVER_DOCKER := $(OUTPUT_DIR)/git-server-docker
+GIT_SERVER_RELEASE := v1.0.0
 # Creates docker image for the test git-server from github source
-image-git-server:
+build-git-server:
 	@echo "+++ Building image for test git server"
-	@docker build $(DOCKER_BUILD_QUIET) \
-			-t gcr.io/$(GCP_PROJECT)/git-server:$(IMAGE_TAG) \
+	@mkdir -p $(OUTPUT_DIR)
+	@git clone https://github.com/jkarlosb/git-server-docker.git $(GIT_SERVER_DOCKER)
+	@cd $(GIT_SERVER_DOCKER) && git checkout $(GIT_SERVER_RELEASE)
+	@cd $(GIT_SERVER_DOCKER) && docker build $(DOCKER_BUILD_QUIET) \
+			-t gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE) \
 			$(GIT_SERVER_SRC)
+	@gcloud $(GCLOUD_QUIET) auth configure-docker
+	@docker push gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
 
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-%: image-%
@@ -233,10 +240,10 @@ gen-yaml-%:
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
 # Generates yaml for the test git server
-$(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml \
-	$(TEST_GEN_YAML_DIR)
+$(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml Makefile
 	@echo "+++ Generating yaml git-server"
-	@m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/git-server:$(IMAGE_TAG) < \
+	@mkdir -p $(TEST_GEN_YAML_DIR)
+	@m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE) < \
 			 $< > $@
 
 # Creates staging directory for building installer docker image.
@@ -283,10 +290,6 @@ deploy-interactive: $(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
 		--output_dir=$(INSTALLER_OUTPUT_DIR) \
 		--version=$(IMAGE_TAG)
 
-# Build, push, and generates yaml for the test git server
-deploy-test-git-server: $(OUTPUT_DIR) $(TEST_GEN_YAML_DIR) image-git-server \
-	push-to-gcr-git-server $(TEST_GEN_YAML_DIR)/git-server.yaml
-
 check-nomos-installer-config:
 	@echo "+++ Checking installer configuration"
 	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
@@ -321,7 +324,7 @@ uninstall: check-nomos-installer-config \
 
 # Note that it is basically a copy of the staging directory for the installer
 # plus a few extras for e2e.
-e2e-staging: installer-image
+e2e-staging: installer-image $(TEST_GEN_YAML_DIR)/git-server.yaml
 	@echo "+++ Creating staging directory for building e2e docker image"
 	@mkdir -p $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
 	@cp -r $(STAGING_DIR)/installer/* $(STAGING_DIR)/e2e-tests
@@ -336,7 +339,7 @@ e2e-staging: installer-image
 # Builds the e2e docker image and depencencies.
 # Note that the GCP project is hardcoded since we currently don't want
 # or need a nomos-release version of the e2e-tests image.
-e2e-image-all: deploy-test-git-server e2e-staging
+e2e-image-all: e2e-staging
 	@echo "+++ Building the e2e docker image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		-t gcr.io/stolos-dev/e2e-tests:test-e2e-latest \
