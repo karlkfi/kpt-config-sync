@@ -74,11 +74,15 @@ UID := $(shell id -u)
 # GID of current user
 GID := $(shell id -g)
 
-# Docker image used for build and test. This image does not support CGO.
-BUILD_IMAGE ?= buildenv
-
 # GCP project that owns container registry for local dev build.
 GCP_PROJECT ?= stolos-dev
+
+# Docker image used for build and test. This image does not support CGO.
+# NOTE: nomos-public is fully accessible publicly, do not use for anything
+# other than buildenv
+BUILDENV_PROJECT ?= nomos-public
+BUILDENV_IMAGE_VERSION ?= v0.1.0
+BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
 # GCP service account credentials used in e2e tests.
 GCP_E2E_CRED := gs://stolos-dev/e2e/watcher_client_key.json
@@ -136,7 +140,7 @@ DOCKER_RUN_ARGS := \
 	-v $(TEMP_OUTPUT_DIR):/tmp                                         \
 	-w /go/src/$(REPO)                                                 \
 	--rm                                                               \
-	$(BUILD_IMAGE)                                                     \
+	$(BUILDENV_IMAGE)                                                  \
 
 ##### SETUP #####
 
@@ -161,15 +165,14 @@ $(TEST_GEN_YAML_DIR):
 	@mkdir -p $@
 
 ##### TARGETS #####
-
-# Uses a custom build environment.  See build/buildenv/Dockerfile for the
-# details on the build environment.
-$(OUTPUT_DIR)/buildenv: build/buildenv/Dockerfile $(OUTPUT_DIR)
+PULL_BUILDENV := \
+	docker image inspect $(BUILDENV_IMAGE) &> /dev/null \
+	|| docker pull $(BUILDENV_IMAGE)
+build-buildenv: build/buildenv/Dockerfile
 	@echo "+++ Creating the buildenv docker container"
-	@docker build $(DOCKER_BUILD_QUIET) $(dir $<) --tag=$(BUILD_IMAGE)
-	@echo "This file exists to track that buildenv is up to date" > $@
-
-buildenv: $(OUTPUT_DIR)/buildenv
+	@docker build build/buildenv -t $(BUILDENV_IMAGE)
+	@gcloud $(GCLOUD_QUIET) auth configure-docker
+	@docker push $(BUILDENV_IMAGE)
 
 # The installer script is built by preprocessing a template script.
 $(SCRIPTS_STAGING_DIR)/run-installer.sh: \
@@ -197,8 +200,9 @@ $(SCRIPTS_STAGING_DIR)/nomosvet.sh: \
 	@sed -i -e "s/XXX_NOMOSVET_DEFAULT_VERSION/${VERSION}/g" $@
 
 .PHONY: build
-build: buildenv
+build: $(OUTPUT_DIR)
 	@echo "+++ Compiling Nomos binaries hermetically using a docker container"
+	@$(PULL_BUILDENV)
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/build.sh
 
 # Creates a docker image for the specified nomos component.
@@ -425,8 +429,9 @@ clean:
 	@echo "+++ Cleaning $(OUTPUT_DIR)"
 	@rm -rf $(OUTPUT_DIR)
 
-test-unit: buildenv
+test-unit: $(OUTPUT_DIR)
 	@echo "+++ Running unit tests in a docker container"
+	@$(PULL_BUILDENV)
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/test-unit.sh $(NOMOS_GO_PKG)
 
 # Runs unit tests and linter.
@@ -464,8 +469,9 @@ docs-staging: $(OUTPUT_DIR)
 	@cp -r $(TOP_DIR)/docs $(STAGING_DIR)
 	@cp $(TOP_DIR)/README.md $(DOCS_STAGING_DIR)
 
-docs-generate: buildenv docs-staging
+docs-generate: $(OUTPUT_DIR) docs-staging
 	@echo "+++ Converting Markdown docs into HTML"
+	@$(PULL_BUILDENV)
 	@docker run $(DOCKER_INTERACTIVE) \
 		-u $(UID):$(GID)                                                   \
 		-v $$(pwd):/go/src/$(REPO)                                         \
@@ -475,7 +481,7 @@ docs-generate: buildenv docs-staging
 		-e DOCS_STAGING_DIR=/go/src/$(REPO)/.output/staging/docs           \
 		-e TOP_DIR=/go/src/$(REPO)                                         \
 		--rm                                                               \
-		$(BUILD_IMAGE)                                                     \
+		$(BUILDENV_IMAGE)                                                  \
 		/bin/bash -c " \
 		    ./scripts/docs-generate.sh \
 	    "
