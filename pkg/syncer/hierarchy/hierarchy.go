@@ -69,8 +69,8 @@ func (s *ConsistencyError) Error() string {
 	return fmt.Sprintf("inconsistent heirarchy (%s): %s", s.errType, strings.Join(vals, " -> "))
 }
 
-// IsIncompleteHierarchyError returns true if the error is a NotFoundError
-func IsIncompleteHierarchyError(err error) bool {
+// IsConsistencyError returns true if the error is a ConsistencyError
+func IsConsistencyError(err error) bool {
 	_, ok := err.(*ConsistencyError)
 	return ok
 }

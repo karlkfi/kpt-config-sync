@@ -21,6 +21,7 @@ limitations under the License.
 package policyhierarchycontroller
 
 import (
+	"flag"
 	"fmt"
 	"time"
 
@@ -52,15 +53,27 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
+var (
+	hierarchyWarningTimeout = flag.Duration(
+		"hierarchyWarningTimeout",
+		time.Minute*60,
+		"The amount of time that must pass before hierarchy issues are surfaced via warning events")
+	hierarchyWarningCount = flag.Int64(
+		"hierarchyWarningCount",
+		3,
+		"The number of times that hierarchy consistency errors must occur to be surfaced via warning events.")
+)
+
 const controllerName = "nomos-hierarchical-controller"
 
 // PolicyHieraryController controls policies based on the declarations in the PolicyNodes.
 type PolicyHieraryController struct {
-	injectArgs      args.InjectArgs
-	namespaceLister listers_core_v1.NamespaceLister
-	hierarchy       hierarchy.Interface
-	modules         []Module
-	recorder        record.EventRecorder
+	injectArgs        args.InjectArgs
+	namespaceLister   listers_core_v1.NamespaceLister
+	hierarchy         hierarchy.Interface
+	modules           []Module
+	recorder          record.EventRecorder
+	hierarchyWarnings *WarningFilter
 }
 
 // informerProvider is here to reduce some amount of redunancy with registering informer providers
@@ -75,11 +88,12 @@ func NewController(
 	injectArgs args.InjectArgs,
 	modules []Module) *controller.GenericController {
 	policyHierarchyController := &PolicyHieraryController{
-		injectArgs:      injectArgs,
-		namespaceLister: injectArgs.KubernetesInformers.Core().V1().Namespaces().Lister(),
-		modules:         modules,
-		hierarchy:       hierarchy.New(injectArgs.Informers.Nomos().V1().PolicyNodes()),
-		recorder:        injectArgs.CreateRecorder(controllerName),
+		injectArgs:        injectArgs,
+		namespaceLister:   injectArgs.KubernetesInformers.Core().V1().Namespaces().Lister(),
+		modules:           modules,
+		hierarchy:         hierarchy.New(injectArgs.Informers.Nomos().V1().PolicyNodes()),
+		recorder:          injectArgs.CreateRecorder(controllerName),
+		hierarchyWarnings: NewWarningFilter(*hierarchyWarningCount, *hierarchyWarningTimeout),
 	}
 	err := injectArgs.Informers.Nomos().V1().PolicyNodes().Informer().AddIndexers(
 		parentindexer.Indexer())
@@ -146,13 +160,20 @@ func (s *PolicyHieraryController) getPolicyNodeState(name string) (policyNodeSta
 	if err != nil {
 		switch {
 		case hierarchy.IsNotFoundError(err):
+			s.hierarchyWarnings.Clear(name)
 			return policyNodeStateNotFound, nil, nil
-		case hierarchy.IsIncompleteHierarchyError(err):
+		case hierarchy.IsConsistencyError(err):
+			if warning := s.hierarchyWarnings.Warning(name); warning != "" {
+				s.recorder.Event(
+					ancestry.Node(), core_v1.EventTypeWarning, "HierarchyConsistencyError",
+					fmt.Sprintf("%s: %s", warning, err))
+			}
 			return policyNodeStateNotFound, ancestry, errors.Wrapf(err, "incomplete ancestry")
 		default:
 			return policyNodeStateNotFound, ancestry, errors.Wrapf(err, "unhandled error while fetching ancestry")
 		}
 	}
+	s.hierarchyWarnings.Clear(name)
 
 	if namespaceutil.IsReserved(name) {
 		return policyNodeStateReserved, ancestry, nil
@@ -323,7 +344,7 @@ func (s *PolicyHieraryController) hardReconcile(name string) error {
 		switch {
 		case hierarchy.IsNotFoundError(err):
 			return s.deleteNamespace(name)
-		case hierarchy.IsIncompleteHierarchyError(err):
+		case hierarchy.IsConsistencyError(err):
 			return errors.Wrapf(err, "incomplete ancestry")
 		default:
 			return errors.Wrapf(err, "unhandled error while fetching ancestry")
