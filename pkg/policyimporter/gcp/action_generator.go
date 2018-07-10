@@ -22,8 +22,6 @@ import (
 	"io"
 	"path"
 
-	"strings"
-
 	"github.com/gogo/googleapis/google/rpc"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/gogo/status"
@@ -213,26 +211,11 @@ func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Chang
 
 	glog.V(3).Infof("Update state of policies: %#v", updatedPolicies)
 
-	sanitize(updatedPolicies)
 	v := validator.FromMap(updatedPolicies.PolicyNodes)
 	if err := v.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid PolicyNode hierarchy")
 	}
 	return &updatedPolicies, nil
-}
-
-// TODO(110848174): Remove this hack.
-func sanitize(p v1.AllPolicies) {
-	for k, v := range p.PolicyNodes {
-		pn := v.DeepCopy()
-		pn.Spec.RoleBindingsV1 = nil
-		for _, rb := range v.Spec.RoleBindingsV1 {
-			rb.Name = strings.ToLower(rb.Name)
-			rb.RoleRef.Name = strings.ToLower(rb.RoleRef.Name)
-			pn.Spec.RoleBindingsV1 = append(pn.Spec.RoleBindingsV1, rb)
-		}
-		p.PolicyNodes[k] = *pn
-	}
 }
 
 func (g *actionGenerator) sendAction(ctx context.Context, a client_action.Interface) bool {
