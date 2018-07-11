@@ -2,9 +2,9 @@
 
 set -euo pipefail
 
-TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-FWD_SSH_PORT=2222
+readonly FWD_SSH_PORT=2222
 
 function set_up_kube() {
   readonly kubeconfig_output="/opt/installer/kubeconfig/config"
@@ -12,8 +12,8 @@ function set_up_kube() {
   # the container and the host.
   # /somepath/gcloud becomes /use/local/gcloud/google-cloud/sdk/bin/gcloud.
   # Then, make it read-writable to the owner only.
-  cat /home/user/.kube/config | \
-    sed -e "s+cmd-path: [^ ]*gcloud+cmd-path: /usr/local/gcloud/google-cloud-sdk/bin/gcloud+g" \
+  sed -e "s+cmd-path: [^ ]*gcloud+cmd-path: /usr/local/gcloud/google-cloud-sdk/bin/gcloud+g" \
+    < /home/user/.kube/config \
     > "${kubeconfig_output}"
   chmod 600 ${kubeconfig_output}
 }
@@ -25,7 +25,7 @@ function set_up_env() {
     /opt/testing/e2e/init-git-server.sh
     ;;
     gcp)
-    gsutil cp ${gcp_cred} /tmp
+    gsutil cp "${gcp_cred}" /tmp
     ;;
   esac
 
@@ -46,18 +46,19 @@ function set_up_env_minimal() {
     TEST_LOG_REPO=/tmp/nomos-test
     POD_ID=$(kubectl get pods -n=nomos-system-test -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
     mkdir -p ${TEST_LOG_REPO}
-    kubectl -n=nomos-system-test port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
-    local start=$(date +%s)
-    local pid=$(pgrep kubectl)
+    kubectl -n=nomos-system-test port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > ${TEST_LOG_REPO}/port-forward.log &
+    local pid=$!
+    local start_time
+    start_time=$(date +%s)
     # Our image doesn't have netstat, so we have check for listen by
     # looking at kubectl's open tcp sockets in procfs.  This looks for listen on
     # 127.0.0.1:$FWD_SSH_PORT with remote of 0.0.0.0:0.
     # TODO: This should use git ls-remote, but for some reason it fails to be able
     # to connect to the remote.
-    while ! grep "0100007F:08AE 00000000:0000 0A" /proc/${pid}/net/tcp &> /dev/null; do
+    while ! grep "0100007F:08AE 00000000:0000 0A" "/proc/${pid}/net/tcp" &> /dev/null; do
       echo -n "."
       sleep 0.1
-      if [[ $(( $(date +%s) - $start )) > 10 ]]; then
+      if (( $(date +%s) - start_time > 10 )); then
         echo "Failed to set up kubectl tunnel!"
         return 1
       fi
@@ -109,52 +110,55 @@ function main() {
   local testcase_filter=""
 
   if [[ "$filter" == */* ]]; then
-    file_filter="$(echo $filter | sed -e 's|/.*||')"
-    testcase_filter="$(echo $filter | sed -e 's|[^/]*/||')"
+    file_filter="$(sed -e 's|/.*||' <<< "$filter")"
+    testcase_filter="$(sed -e 's|[^/]*/||' <<< "$filter")"
     echo "Filtering for files matching: ${file_filter}"
   else
     testcase_filter="$filter"
   fi
 
   start_time=$(date +%s)
-  if [[ ! "kubectl get ns > /dev/null" ]]; then
+  if ! kubectl get ns > /dev/null; then
     echo "Kubectl/Cluster misconfigured"
     exit 1
   fi
   GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"; export GIT_SSH_COMMAND
 
   echo "++++ Starting tests"
-  local bats_tests=()
+  local all_test_files=()
   # We don't have any GCP tests yet, skip all tests.
   if [[ "$importer" == gcp ]]; then
     echo "No tests for GCP"
   else
-    for i in $(find ${TEST_DIR}/testcases -name '*.bats'); do
-      bats_tests+=($i)
-    done
+    mapfile -t all_test_files < <(find "${TEST_DIR}/testcases" -name '*.bats' | sort)
   fi
 
-  local bats_args=()
+  local filtered_test_files=()
   if [[ "${file_filter}" == "" ]]; then
     file_filter=".*"
   fi
 
-  if (( ${#bats_tests[@]} != 0 )); then
-    for file in "${bats_tests[@]}"; do
+  if (( ${#all_test_files[@]} != 0 )); then
+    for file in "${all_test_files[@]}"; do
       if echo "${file}" | grep "${file_filter}" &> /dev/null; then
         echo "Will run ${file}"
-        bats_args+=("${file}")
+        filtered_test_files+=("${file}")
       fi
     done
   fi
 
+  local bats_cmd=("${TEST_DIR}/bats/bin/bats")
   if $tap; then
-    bats_args+=(--tap)
+    bats_cmd+=(--tap)
+  fi
+
+  if [[ "${testcase_filter}" != "" ]]; then
+    export E2E_TEST_FILTER="${testcase_filter}"
   fi
 
   local retcode=0
-  if [[ "${#bats_args[@]}" != 0 ]]; then
-    if ! E2E_TEST_FILTER="${testcase_filter}" ${TEST_DIR}/bats/bin/bats "${bats_args[@]}"; then
+  if (( ${#filtered_test_files[@]} != 0 )); then
+    if ! "${bats_cmd[@]}" "${filtered_test_files[@]}"; then
       retcode=1
     fi
   else
@@ -162,11 +166,11 @@ function main() {
   fi
 
   end_time=$(date +%s)
-  echo "Tests took $(( ${end_time} - ${start_time} )) seconds."
+  echo "Tests took $(( end_time - start_time )) seconds."
   return ${retcode}
 }
 
-echo "executed with args $@"
+echo "executed with args" "$@"
 filter=""
 tap=false
 clean=false
@@ -199,7 +203,7 @@ while [[ $# -gt 0 ]]; do
     ;;
 
     --filter=*)
-      filter="$(echo "$arg" | sed -e 's/--filter=//')"
+      filter="$(sed -e 's/--filter=//' <<< "$arg")"
     ;;
 
     --importer)
@@ -247,7 +251,7 @@ fi
 trap clean_up EXIT
 
 if $run_tests; then
-  main ${filter}
+  main "${filter}"
 else
   echo "Skipping tests!"
 fi
