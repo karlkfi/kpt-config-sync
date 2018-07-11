@@ -105,17 +105,8 @@ function clean_up() {
 }
 
 function main() {
-  local filter="${1:-}"
-  local file_filter=""
+  local file_filter="${1:-}"
   local testcase_filter=""
-
-  if [[ "$filter" == */* ]]; then
-    file_filter="$(sed -e 's|/.*||' <<< "$filter")"
-    testcase_filter="$(sed -e 's|[^/]*/||' <<< "$filter")"
-    echo "Filtering for files matching: ${file_filter}"
-  else
-    testcase_filter="$filter"
-  fi
 
   start_time=$(date +%s)
   if ! kubectl get ns > /dev/null; then
@@ -171,7 +162,7 @@ function main() {
 }
 
 echo "executed with args" "$@"
-filter=""
+file_filter=".*"
 tap=false
 clean=false
 run_tests=false
@@ -197,13 +188,22 @@ while [[ $# -gt 0 ]]; do
       run_tests=true
     ;;
 
-    --filter)
-      filter="${1}"
+    --test_filter)
+      test_filter="${1}"
+      export E2E_TEST_FILTER="${test_filter}"
       shift
     ;;
+    --test_filter=*)
+      test_filter="$(sed -e 's/[^=]*=//' <<< "$arg")"
+      export E2E_TEST_FILTER="${test_filter}"
+    ;;
 
-    --filter=*)
-      filter="$(sed -e 's/--filter=//' <<< "$arg")"
+    --file_filter)
+      file_filter="${1}"
+      shift
+    ;;
+    --file_filter=*)
+      file_filter="$(sed -e 's/[^=]*=//' <<< "$arg")"
     ;;
 
     --importer)
@@ -251,7 +251,7 @@ fi
 trap clean_up EXIT
 
 if $run_tests; then
-  main "${filter}"
+  main "${file_filter}"
 else
   echo "Skipping tests!"
 fi

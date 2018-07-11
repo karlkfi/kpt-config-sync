@@ -73,10 +73,11 @@ make test-e2e-dev-git E2E_FLAGS="--clean"
 
 ### E2E_FLAGS
 
-Name     | Value                                                                  | Example
--------- | ---------------------------------------------------------------------- | -------
---filter | the filter for tests, formatted as [file pattern] '/' [test pattern]   | The following filters for a file containing 'acme-foo' with a test containing 'backend' E2E_FLAGS="--filter acme-foo/backend"
---clean  | boolean, uninstalls nomos and test infra from cluster                  | E2E_FLAGS="--clean"
---setup  | boolean, sets up nomos and test infra on cluster                       | E2E_FLAGS="--setup"
---tap    | boolean, emit tap output while tests are running, useful for debugging | E2E_FLAGS="--tap"
---test   | boolean, run e2e tests                                                 | E2E_FLAGS="--test"
+Name          | Value                                                                  | Example
+------------- | ---------------------------------------------------------------------- | -------
+--test_filter | the filter for test casess as a regex                                  | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
+--file_filter | the filter for test files as a regex                                   | The following filters for a file containing 'acme-foo' E2E_FLAGS="--file_filter acme-foo"
+--clean       | boolean, uninstalls nomos and test infra from cluster                  | E2E_FLAGS="--clean"
+--setup       | boolean, sets up nomos and test infra on cluster                       | E2E_FLAGS="--setup"
+--tap         | boolean, emit tap output while tests are running, useful for debugging | E2E_FLAGS="--tap"
+--test        | boolean, run e2e tests                                                 | E2E_FLAGS="--test"
