@@ -67,7 +67,7 @@ release: clean \
 		$(SCRIPTS_STAGING_DIR)/run-installer.sh \
 		$(SCRIPTS_STAGING_DIR)/nomosvet.sh \
 		test-all \
-		installer-image \
+		push-to-gcr-installer \
 		docs-package
 	gsutil -m cp \
 		$(SCRIPTS_STAGING_DIR)/run-installer.sh \

@@ -274,19 +274,17 @@ installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
 		$(STAGING_DIR)/installer/scripts
 
 # Builds the installer docker image using the nomos release in $(OUTPUT_DIR)
-installer-image: installer-staging
+image-installer: installer-staging
 	@echo "+++ Building the installer docker image using the Nomos release in $(OUTPUT_DIR)"
 	@docker build $(DOCKER_BUILD_QUIET) \
 			-t gcr.io/$(GCP_PROJECT)/installer:test-e2e-latest \
 			-t gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
      		--build-arg "INSTALLER_VERSION=$(IMAGE_TAG)" \
 		$(STAGING_DIR)/installer
-	@gcloud $(GCLOUD_QUIET) auth configure-docker
-	@docker push gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG)
 
 # Runs the installer via docker in interactive mode.
 install-interactive: deploy-interactive
-deploy-interactive: $(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
+deploy-interactive: $(SCRIPTS_STAGING_DIR)/run-installer.sh image-installer
 	$(SCRIPTS_STAGING_DIR)/run-installer.sh \
 		--interactive \
 		--container=gcr.io/$(GCP_PROJECT)/installer \
@@ -304,7 +302,7 @@ check-nomos-installer-config:
 # file specied in the environment variable NOMOS_INSTALLER_CONFIG.
 install: deploy
 deploy: check-nomos-installer-config \
-		$(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
+		$(SCRIPTS_STAGING_DIR)/run-installer.sh image-installer
 	@echo "+++ Running installer with output directory: $(INSTALLER_OUTPUT_DIR)"
 	@$(SCRIPTS_STAGING_DIR)/run-installer.sh \
 		--config=$(NOMOS_INSTALLER_CONFIG) \
@@ -315,7 +313,7 @@ deploy: check-nomos-installer-config \
 
 # Runs uninstallation via docker in batch mode using the installer config.
 uninstall: check-nomos-installer-config \
-		$(SCRIPTS_STAGING_DIR)/run-installer.sh installer-image
+		$(SCRIPTS_STAGING_DIR)/run-installer.sh image-installer
 	@echo "+++ Running installer with output directory: $(INSTALLER_OUTPUT_DIR)"
 	@$(SCRIPTS_STAGING_DIR)/run-installer.sh \
 		--config=$(NOMOS_INSTALLER_CONFIG) \
@@ -352,7 +350,7 @@ e2e-image: e2e-staging
 		--build-arg "UNAME=$(USER)" \
 		$(STAGING_DIR)/e2e-tests
 
-e2e-image-all: e2e-image installer-image
+e2e-image-all: e2e-image image-installer
 
 # Runs e2e tests for a particular importer.
 GCLOUD_PATH = $(dir $(shell which gcloud))
