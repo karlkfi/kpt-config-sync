@@ -1,5 +1,7 @@
 #!/bin/bash
 
+declare status
+
 # Helpers for waiting for async events (e.g. Pods to come up).
 
 # Wait for an event to occur
@@ -42,7 +44,7 @@ function wait::event() {
   [ -z "$reason" ] && echo "specify [reason] arg" && false
 
   if [[ "$timeout" != "" ]]; then
-    deadline=$(( $(date +%s) + ${timeout} ))
+    deadline=$(( $(date +%s) + timeout ))
   fi
 
   cmd=(
@@ -77,6 +79,7 @@ function wait::for_failure() {
   wait::for "${command}" "${timeout}" "${or_die}" false
 }
 
+# NOTE: this function should be deprecated due to the way command is specified
 # Waits for the command to return with the given status within a timeout period.
 #
 # Usage:
@@ -93,9 +96,11 @@ function wait::for() {
   local expect=${4:-true}
 
   echo -n "Waiting for ${command} to exit ${expect}"
-  for i in $(seq 1 ${timeout}); do
+  # shellcheck disable=SC2034
+  for i in $(seq 1 "${timeout}"); do
+    # shellcheck disable=SC2086
     run ${command} &> /dev/null
-    if [ $status -eq 0 ]; then
+    if [ "$status" -eq 0 ]; then
       if ${expect}; then
         echo
         return 0

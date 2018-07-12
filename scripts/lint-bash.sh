@@ -6,7 +6,6 @@ readonly exclude=(
   e2e/lib/namespace.bash
   e2e/lib/resource.bash
   e2e/lib/setup.bash
-  e2e/lib/wait.bash
   scripts/build.sh
   scripts/cluster/gce/configure-monitoring.sh
   scripts/cluster/gce/download-k8s-release.sh
@@ -51,9 +50,9 @@ if ! docker image inspect "$linter" &> /dev/null; then
   docker pull "$linter"
 fi
 
-cmd=(docker run --interactive -v "$(pwd):/mnt")
+cmd=(docker run -v "$(pwd):/mnt")
 if [ -t 1 ]; then
-  cmd+=("--tty")
+  cmd+=(--tty)
 fi
 cmd+=(
   --rm
