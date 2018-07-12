@@ -356,7 +356,19 @@ e2e-image-all: e2e-image installer-image
 
 # Runs e2e tests for a particular importer.
 GCLOUD_PATH = $(dir $(shell which gcloud))
-KUBECTL_PATH = $(dir $(shell which KUBECTL))
+KUBECTL_PATH = $(dir $(shell which kubectl))
+
+# Hack around b/111407514 for goobuntu installed with standard
+# gcloud/kubectl packages.
+ifeq ($(KUBECTL_PATH),/usr/bin/)
+	KUBECTL_E2E_MOUNT := -v "/usr/bin/kubectl:/usr/bin/kubectl"
+endif
+ifeq ($(GCLOUD_PATH),/usr/bin/)
+	GCLOUD_E2E_MOUNT := \
+	  -v "/usr/lib/google-cloud-sdk:/usr/lib/google-cloud-sdk"
+	GCLOUD_PATH := /usr/lib/google-cloud-sdk/bin
+endif
+
 test-e2e-run-%:
 	@echo "+++ Running $* e2e tests"
 	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
@@ -368,6 +380,8 @@ test-e2e-run-%:
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v "$(HOME)":$(HOME) \
 	    -v "$(OUTPUT_DIR)/e2e":/opt/testing/e2e \
+		$(KUBECTL_E2E_MOUNT) \
+		$(GCLOUD_E2E_MOUNT) \
 		$(E2E_AUX_VOLUMES) \
 	    -e "CONTAINER=gcr.io/$(GCP_PROJECT)/installer" \
 	    -e "VERSION=$(IMAGE_TAG)" \
