@@ -33,13 +33,23 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
+	"google.golang.org/grpc/keepalive"
 	"k8s.io/client-go/util/cert"
 )
 
 const (
+	// Timeout for making initial grpc connection dial.
+	grpcDialTimeout = time.Second * 20
+	// Timeout for Watch streaming RPC regardless of activity.
+	grpcRPCTimeout = time.Hour * 24
+	// After a duration of this time if the client doesn't see any activity it pings the server to see if the transport is still alive.
+	grpcKeepaliveTime = time.Minute
+	// After having pinged for keepalive check, the client waits this long and if no activity is seen even after that
+	// the connection is closed. (This will eagerly fail inflight grpc requests even if they don't have timeouts.)
+	grpcKeepaliveTimeout = time.Minute
+
+	// Resync period for K8S informer.
 	informerResync = time.Minute * 15
-	// Context timeout for Watch RPC. See b/111133638.
-	watcherTimeout = time.Hour * 2
 )
 
 var scopes = []string{"https://www.googleapis.com/auth/cloud-platform"}
@@ -100,6 +110,66 @@ func (c *Controller) Run() error {
 	return c.run()
 }
 
+func (c *Controller) run() error {
+	glog.Infof("Running")
+
+	currentPolicies, listErr := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister)
+	if listErr != nil {
+		return errors.Wrapf(listErr, "failed to list current policies")
+	}
+
+	conn, err := c.dial()
+	if err != nil {
+		return errors.Wrapf(err, "failed to dial to server")
+	}
+	defer func() {
+		if err2 := conn.Close(); err2 != nil {
+			glog.Errorf("Failed to close connection: %v", err2)
+		}
+	}()
+	glog.Infof("Connected to Watcher service at %s", c.watcherAddr)
+
+	client := watcher.NewWatcherClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), grpcRPCTimeout)
+	defer cancel()
+	stream, err := client.Watch(ctx, &watcher.Request{Target: fmt.Sprintf("organizations/%s?recursive=true", c.org)})
+	if err != nil {
+		return errors.Wrap(err, "failed to start streaming RPC to Watcher API")
+	}
+	glog.Infof("Started streaming RPC to Watcher API")
+
+	go func() {
+		<-c.stopChan
+		glog.Infof("Stop received, cancelling context")
+		cancel()
+	}()
+	ch := make(chan actionVal)
+	g := newActionGenerator(stream, ch, *currentPolicies, c.actionFactories)
+	go g.generate(ctx)
+	return applyActions(ch)
+}
+
+func (c *Controller) dial() (*grpc.ClientConn, error) {
+	perRPC, err := oauth.NewServiceAccountFromFile(c.credsFile, c.scopes...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "while creating credentials from: %q", c.credsFile)
+	}
+	config, err := tlsConfig(c.caFile)
+	if err != nil {
+		return nil, errors.Wrapf(err, "while creating TLS config")
+	}
+	opts := []grpc.DialOption{
+		grpc.WithPerRPCCredentials(perRPC),
+		grpc.WithTransportCredentials(credentials.NewTLS(config)),
+		grpc.WithBlock(),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: grpcKeepaliveTime, Timeout: grpcKeepaliveTimeout}),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), grpcDialTimeout)
+	defer cancel()
+	return grpc.DialContext(ctx, c.watcherAddr, opts...)
+}
+
 // tlsConfig returns a TLS configuration from a supplied CA certificate file,
 // if the file is not supplied (empty), the config defaults to using the system
 // root CA certificate file.  Taken from the K8S oidc implementation.
@@ -121,59 +191,6 @@ func tlsConfig(caFile string) (*tls.Config, error) {
 		RootCAs: roots,
 	}
 	return config, nil
-}
-
-func (c *Controller) run() error {
-	glog.Infof("Running")
-
-	if c.credsFile == "" {
-		return fmt.Errorf("a credentials file is required")
-	}
-
-	currentPolicies, listErr := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister)
-	if listErr != nil {
-		return errors.Wrapf(listErr, "failed to list current policies")
-	}
-
-	perRPC, err := oauth.NewServiceAccountFromFile(c.credsFile, c.scopes...)
-	if err != nil {
-		return errors.Wrapf(err, "while creating credentials from: %q", c.credsFile)
-	}
-	config, err := tlsConfig(c.caFile)
-	if err != nil {
-		return errors.Wrapf(err, "while creating TLS config")
-	}
-	opts := []grpc.DialOption{
-		grpc.WithPerRPCCredentials(perRPC),
-		grpc.WithTransportCredentials(credentials.NewTLS(config)),
-	}
-
-	conn, err := grpc.Dial(c.watcherAddr, opts...)
-	if err != nil {
-		return errors.Wrapf(err, "failed to dial to server")
-	}
-	// nolint: errcheck
-	defer conn.Close()
-	glog.Infof("Connected to Watcher service at %s", c.watcherAddr)
-
-	client := watcher.NewWatcherClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), watcherTimeout)
-	defer cancel()
-	stream, err := client.Watch(ctx, &watcher.Request{Target: fmt.Sprintf("organizations/%s?recursive=true", c.org)})
-	if err != nil {
-		return errors.Wrap(err, "failed to start streaming RPC to Watcher API")
-	}
-	glog.Infof("Started streaming RPC to Watcher API")
-
-	go func() {
-		<-c.stopChan
-		glog.Infof("Stop received, cancelling context")
-		cancel()
-	}()
-	ch := make(chan actionVal)
-	g := newActionGenerator(stream, ch, *currentPolicies, c.actionFactories)
-	go g.generate(ctx)
-	return applyActions(ch)
 }
 
 func applyActions(ch <-chan actionVal) error {

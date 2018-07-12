@@ -55,6 +55,9 @@ func main() {
 	if *apiAddress == "" {
 		glog.Fatal("-policy-api-address must be specified")
 	}
+	if *credsFile == "" {
+		glog.Fatal("-gcp-credentials-file must be specified")
+	}
 
 	config, err := restconfig.NewRestConfig()
 	if err != nil {
