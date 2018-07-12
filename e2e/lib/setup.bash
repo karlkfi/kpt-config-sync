@@ -20,7 +20,7 @@ SYS_NAMESPACES=(
 )
 
 setup() {
-  if [[ "${E2E_TEST_FILTER}" != "" ]]; then
+  if [[ "${E2E_TEST_FILTER:-}" != "" ]]; then
     local cur_test=""
     for func in "${FUNCNAME[@]}"; do
       if echo "$func" | grep "^test_" &> /dev/null; then

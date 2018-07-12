@@ -6,18 +6,6 @@ readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 readonly FWD_SSH_PORT=2222
 
-function set_up_kube() {
-  readonly kubeconfig_output="/opt/installer/kubeconfig/config"
-  # We need to fix up the kubeconfig paths because these may not match between
-  # the container and the host.
-  # /somepath/gcloud becomes /use/local/gcloud/google-cloud/sdk/bin/gcloud.
-  # Then, make it read-writable to the owner only.
-  sed -e "s+cmd-path: [^ ]*gcloud+cmd-path: /usr/local/gcloud/google-cloud-sdk/bin/gcloud+g" \
-    < /home/user/.kube/config \
-    > "${kubeconfig_output}"
-  chmod 600 ${kubeconfig_output}
-}
-
 function set_up_env() {
   echo "++++ Setting up environment"
   case ${importer} in
@@ -30,13 +18,11 @@ function set_up_env() {
   esac
 
   echo "+++++ Installing..."
-  suggested_user="$(gcloud config get-value account)"
-  /opt/installer/installer \
-    --config="${install_config}" \
-    --log_dir=/tmp \
-    --suggested_user="${suggested_user}" \
-    --use_current_context=true \
-    --vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10
+  cd "${NOMOS_REPO}/.output/e2e"
+  "${run_installer}" --config="$(basename "${install_config}")" \
+    --container "$CONTAINER" \
+    --version "$VERSION"
+  cd -
 }
 
 function set_up_env_minimal() {
@@ -72,21 +58,18 @@ function clean_up() {
   fi
 
   # TODO: workaround for b/111218567 remove this once resolved
-  if ! kubectl get customresourcedefinition policynode &> /dev/null; then
+  if ! kubectl get customresourcedefinition policynodes.nomos.dev &> /dev/null; then
     echo "Policynodes not found, skipping uninstall"
     return
   fi
 
   echo "++++ Cleaning up environment"
-  suggested_user="$(gcloud config get-value account)"
-  echo "Uninstalling..."
-  /opt/installer/installer \
-    --config="${install_config}" \
-    --log_dir=/tmp \
-    --suggested_user="${suggested_user}" \
-    --use_current_context=true \
+  cd "${NOMOS_REPO}/.output/e2e"
+  "${run_installer}" --config="$(basename "${install_config}")" \
     --uninstall=deletedeletedelete \
-    --vmodule=main=10,configgen=10,kubectl=10,installer=10,exec=10
+    --container "$CONTAINER" \
+    --version "$VERSION"
+  cd -
 
   kubectl delete ns -l "nomos.dev/testdata=true"
   kubectl delete ns -l "nomos.dev/namespace-management=full"
@@ -221,21 +204,32 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-install_config=""
+install_config="${TEST_DIR}/install-config.yaml"
+install_config_template=""
 case ${importer} in
   git)
-  install_config="${TEST_DIR}/install-config-git.yaml"
+  install_config_template="${TEST_DIR}/install-config-git.yaml"
   ;;
+
   gcp)
-  install_config="${TEST_DIR}/install-config-gcp.yaml"
+  install_config_template="${TEST_DIR}/install-config-gcp.yaml"
   ;;
+
   *)
    echo "invalid importer value: ${importer}"
    exit 1
   ;;
 esac
 
-set_up_kube
+export PATH="${GCLOUD_PATH}:${KUBECTL_PATH}:$PATH"
+export KUBECONFIG=${HOME}/.kube/config
+suggested_user="$(gcloud config get-value account)"
+kubectl_context="$(kubectl config current-context)"
+run_installer="${TEST_DIR}/run-installer.sh"
+sed -e "s/CONTEXT/${kubectl_context}/" -e "s/USER/${suggested_user}/" \
+  < "${install_config_template}" \
+  > "${install_config}"
+
 clean_up
 if $setup; then
   set_up_env

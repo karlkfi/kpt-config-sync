@@ -4,3 +4,6 @@ git:
   GIT_SYNC_WAIT: 1
   POLICY_DIR: acme
   PRIVATE_KEY_FILENAME: $HOME/.ssh/id_rsa.nomos
+contexts:
+  - CONTEXT
+user: USER
