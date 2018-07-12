@@ -16,12 +16,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get upgrade -y
 RUN apt-get install -y \
-  apt-utils \
   apt-transport-https \
+  apt-utils \
   ca-certificates \
   curl \
   git \
   jq \
+  python \
   software-properties-common
 
 # Set up user (this has to go before docker installation so the GID can match host system)
