@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:16.04
+FROM ubuntu:16.04 AS install-base
 
 RUN apt-get update && apt-get install -y \
     curl \
 	dialog \
 	python
+
+FROM install-base AS utils
 
 # Installs the gcloud utility.
 RUN curl https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz > /tmp/google-cloud-sdk.tar.gz
@@ -28,6 +30,11 @@ ENV PATH $PATH:/usr/local/gcloud/google-cloud-sdk/bin
 
 # Installs kubectl
 RUN gcloud components install kubectl
+
+FROM install-base
+
+COPY --from=utils /usr/local/gcloud/google-cloud-sdk /usr/local/gcloud/google-cloud-sdk
+ENV PATH $PATH:/usr/local/gcloud/google-cloud-sdk/bin
 
 RUN mkdir -p /opt/installer
 RUN mkdir -p /home/user
