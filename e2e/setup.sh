@@ -13,7 +13,7 @@ function set_up_env() {
     /opt/testing/e2e/init-git-server.sh
     ;;
     gcp)
-    gsutil cp "${gcp_cred}" /tmp
+    gsutil cp "${gcp_cred}" "$HOME"
     ;;
   esac
 
