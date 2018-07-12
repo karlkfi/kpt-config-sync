@@ -398,7 +398,8 @@ test-e2e-run-%:
 
 E2E_PARAMS := \
 	IMAGE_TAG=$(IMAGE_TAG) \
-	GCP_PROJECT=$(GCP_PROJECT)
+	GCP_PROJECT=$(GCP_PROJECT) \
+	GCP_E2E_CRED=$(GCP_E2E_CRED)
 
 # Clean, build, and run e2e tests for all importers.
 # Clean cluster after running.
