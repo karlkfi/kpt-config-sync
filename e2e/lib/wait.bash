@@ -125,7 +125,7 @@ function wait::for() {
 #  Args for command
 function wait::__for() {
   local args=()
-  local deadline=""
+  local deadline="$(( $(date +%s) + 10 ))"
   local sleeptime="0.1"
   local exitf=(wait::__exit_eq 0)
 
@@ -175,18 +175,18 @@ function wait::__for() {
   fi
   args=("$@")
 
-  local out
-  local status
-  while (( "$(date +%s)" < "${deadline}" )); do
+  local out=""
+  local status=0
+  while (( $(date +%s) < deadline )); do
     status=0
-    out="$("${args[@]}")" || status=$?
+    out="$("${args[@]}" 2>&1)" || status=$?
     if "${exitf[@]}" "${status}"; then
       return 0
     fi
     sleep "$sleeptime"
   done
 
-  echo "Command timed out:" "${args[@]}" "last output: ${out}"
+  echo "Command timed out:" "${args[@]}" "status: ${status} last output: ${out}"
   return 1
 }
 
