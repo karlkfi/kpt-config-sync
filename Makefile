@@ -396,29 +396,32 @@ test-e2e-run-%:
 	    && echo "+++ $* e2e tests completed" \
 	    || (echo "### e2e tests failed. Logs are available in ${INSTALLER_OUTPUT_DIR}/logs"; exit 1)
 
+E2E_PARAMS := \
+	IMAGE_TAG=$(IMAGE_TAG) \
+	GCP_PROJECT=$(GCP_PROJECT)
 
 # Clean, build, and run e2e tests for all importers.
 # Clean cluster after running.
 test-e2e-all: clean e2e-image-all
 	$(MAKE) test-e2e-run-git \
-		IMAGE_TAG=$(IMAGE_TAG) \
+		$(E2E_PARAMS) \
 		E2E_FLAGS="--clean --test --setup $(E2E_FLAGS)"
 	$(MAKE) test-e2e-run-gcp \
-		IMAGE_TAG=$(IMAGE_TAG) \
+		$(E2E_PARAMS) \
 		E2E_FLAGS="--clean --test --setup $(E2E_FLAGS)"
 
 # Clean, build, and run e2e tests for a particular importer.
 # Clean cluster after running.
 test-e2e-%: clean e2e-image-all
 	$(MAKE) test-e2e-run-$* \
-		IMAGE_TAG=$(IMAGE_TAG) \
+		$(E2E_PARAMS) \
 		E2E_FLAGS="--clean --test --setup $(E2E_FLAGS)"
 
 # Clean, build, and run e2e tests for a parcular importer.
 # Do not clean cluster after running so that the state can be investigated.
 test-e2e-noclean-%: e2e-image-all
 	$(MAKE) test-e2e-run-$* \
-		IMAGE_TAG=$(IMAGE_TAG) \
+		$(E2E_PARAMS) \
 		E2E_FLAGS="--test --setup $(E2E_FLAGS)"
 
 # Run e2e tests but do not build. Assumes that the necesary images have already been built and pushed,
@@ -426,13 +429,14 @@ test-e2e-noclean-%: e2e-image-all
 # target has no intelligence about dependencies.
 test-e2e-nosetup-%:
 	$(MAKE) test-e2e-run-$* \
-		IMAGE_TAG=test-e2e-latest \
+		$(E2E_PARAMS) \
 		E2E_FLAGS="--test --clean $(E2E_FLAGS)"
 
 # Dev mode allows for specifying the args manually via E2E_FLAGS, see e2e/setup.sh for
 # allowed flags
 test-e2e-dev-git:
 	$(MAKE) test-e2e-run-git \
+		GCP_PROJECT=$(GCP_PROJECT) \
 		IMAGE_TAG=test-e2e-latest
 
 # Redeploy a component without rerunning the installer.
