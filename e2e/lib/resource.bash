@@ -1,4 +1,6 @@
+#!/bin/bash
 
+declare status
 
 # Prints the resource version of a resource.
 #
@@ -14,11 +16,13 @@ function resource::resource_version() {
 
   local args=("get" "${type}")
   if [[ "${name}" == *:* ]]; then
-    local ns="$(echo ${name} | sed -e 's/:.*//')"
-    local name="$(echo ${name} | sed -e 's/[^:]*://')"
+    local ns
+    local name
+    ns="$(sed -e 's/:.*//' <<< "$name")"
+    name="$(sed -e 's/[^:]*://' <<< "$name")"
     args+=("-n" "${ns}")
   fi
-  args+=(${name})
+  args+=("${name}")
   args+=("-ojsonpath='{.metadata.resourceVersion}'")
 
   kubectl "${args[@]}"
@@ -39,17 +43,20 @@ function resource::wait_for_update() {
   local name=$2
   local resource_version=$3
   local timeout=${4:-10}
-  local ticks=$(( ${timeout} * 2 ))
+
+  local deadline
+  (( deadline = $(date +%s) + timeout ))
 
   echo -n "Waiting for update of $type $name from version $resource_version"
-  for i in $(seq 1 ${ticks}); do
-    local current=$(resource::resource_version $type $name)
+  while (( "$(date +%s)" < "${deadline}" )); do
+    local current
+    current="$(resource::resource_version "$type" "$name")"
     if [[ "$current" != "$resource_version" ]]; then
       echo
       return 0
     fi
     echo -n "."
-    sleep 0.5
+    sleep 0.1
   done
   echo
   echo "Resource $type $name never updated from $resource_version"
@@ -85,11 +92,11 @@ function resource::check() {
         shift
       ;;
       -l)
-        labels+=(${1:-})
+        labels+=("${1:-}")
         shift
       ;;
       -a)
-        annotations+=(${1:-})
+        annotations+=("${1:-}")
         shift
       ;;
       *)
@@ -103,18 +110,21 @@ function resource::check() {
 
   local cmd=("kubectl" "get" "$resource" "$name" -ojson)
   if [[ "$namespace" != "" ]]; then
-    cmd+=(-n $namespace)
+    cmd+=(-n "$namespace")
   fi
 
-  output=$(${cmd[@]})
-  [ "$status" -eq 0 ] || debug::error "Command '${cmd[@]}' failed, output ${output}"
+  local output
+  output=$("${cmd[@]}")
+  [ "$status" -eq 0 ] || debug::error "Command" "${cmd[@]}" "failed, output ${output}"
   local json="$output"
+  local key
+  local value
   if [[ "${#labels[@]}" != 0 ]]; then
     local label
     for label in "${labels[@]}"; do
-      local key=$(echo "$label" | sed -e 's/=.*//')
-      local value=$(echo "$label" | sed -e 's/[^=]*=//')
-      output=$(echo "$json" | jq ".metadata.labels[\"${key}\"]")
+      key=$(sed -e 's/=.*//' <<< "$label")
+      value=$(sed -e 's/[^=]*=//' <<< "$label")
+      output=$(jq ".metadata.labels[\"${key}\"]" <<< "$json")
       if [[ "$output" != "\"$value\"" ]]; then
         debug::error "Expected label $value, got $output"
       fi
@@ -123,9 +133,9 @@ function resource::check() {
   if [[ "${#annotations[@]}" != 0 ]]; then
     local annotation
     for annotation in "${annotations[@]}"; do
-      local key=$(echo "$annotation" | sed -e 's/=.*//')
-      local value=$(echo "$annotation" | sed -e 's/[^=]*=//')
-      output=$(echo "$json" | jq ".metadata.annotations[\"${key}\"]")
+      key=$(sed -e 's/=.*//' <<< "$annotation")
+      value=$(sed -e 's/[^=]*=//' <<< "$annotation")
+      output=$(jq ".metadata.annotations[\"${key}\"]" <<< "$json")
       if [[ "$output" != "\"$value\"" ]]; then
         debug::error "Expected annotation $value, got $output"
       fi
@@ -158,8 +168,9 @@ function resource::check_count() {
   done
   [ -n "$count" ] || (echo "Must specify -c [count]"; return 1)
 
-  local actual=$(resource::count "${args[@]}")
-  if [[ $count != $actual ]]; then
+  local actual
+  actual="$(resource::count "${args[@]}")"
+  if (( count != actual )); then
     echo "Expected $count, got $actual"
     false
   fi
@@ -201,13 +212,14 @@ function resource::count() {
 
   local cmd=("kubectl" "get" "$resource")
   if [[ "$namespace" != "" ]]; then
-    cmd+=(-n $namespace)
+    cmd+=(-n "$namespace")
   fi
   if [[ "$selector" != "" ]]; then
     cmd+=(-l "$selector")
   fi
 
-  local output="$("${cmd[@]}")"
+  local output
+  output="$("${cmd[@]}")"
   local count=0
   if [[ "$output" != "No resources found." ]]; then
     count=$(( $(echo "$output" | wc -l) - 1 ))

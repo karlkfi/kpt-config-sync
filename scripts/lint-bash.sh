@@ -4,7 +4,6 @@ set -euo pipefail
 
 readonly exclude=(
   e2e/lib/namespace.bash
-  e2e/lib/resource.bash
   scripts/build.sh
   scripts/cluster/gce/configure-monitoring.sh
   scripts/cluster/gce/download-k8s-release.sh
