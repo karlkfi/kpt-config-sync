@@ -1,6 +1,7 @@
 # GCP Configuration
 
-**NOTE: GCP support is not yet available.**
+**NOTE: This is an Alpha release of Kubernetes Policy API and available to
+whitelisted customers.**
 
 A sample YAML file for configuring GCP-based Nomos is provided below:
 

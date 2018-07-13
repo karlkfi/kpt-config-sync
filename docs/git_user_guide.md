@@ -73,8 +73,8 @@ foo-corp
     `nomos-system`, or have `kube-` prefix. Namespaces that match `kube-*`,
     `nomos-system` and `default` are a special class of namespaces called
     `Reserved Namespaces` that nomos will not interact with. This topic is
-    discussed in depth in the [namespaces user
-    guide](git_user_guide_namespaces.md)
+    discussed in depth in the
+    [namespaces user guide](git_user_guide_namespaces.md)
 
 There are no requirements on file names or how many resources are packed in a
 file. Any other file not explicitly mentioned above is ignored by Nomos in this

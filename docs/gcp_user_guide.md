@@ -1,21 +1,20 @@
 # GCP User Guide
 
-**NOTE: GCP support is in alpha and restricted to customers by invite**
+**NOTE: This is an Alpha release of Kubernetes Policy API and available to
+whitelisted customers.**
 
 Nomos supports using Google Cloud Platform to centrally manage Namespaces and
 policies across Kubernetes clusters.
 
-[Resource Manager][1] API enables creating a hierarchy using Organizations,
-Folders, and Projects. Kubernetes Policy Namespaces API enables creating a
-single *Managed Namespace* in a Project, such that there is a 1-to-1 mapping
-between a Project and a Managed Namespace. The user can then set policies such
-as [IAM authorization][2] on each node in the hierarchy.
+Existing [Resource Manager][1] API enables creating a hierarchy using
+Organizations, Folders, and Projects. The new Kubernetes Policy API enables
+creating a single *Managed Namespace* in a Project, such that there is a 1-to-1
+mapping between a Project and a Managed Namespace. The user can then set
+policies such as [IAM authorization][2] on each node in the hierarchy.
 
 Nomos automatically creates and manages corresponding Kubernetes Namespaces in
 all enrolled clusters and creates Kubernetes policy resources such as RBAC based
-on hierarchical evaluation of policies defined in GCP. In addition, Nomos
-creates certain cluster-level resources such as ClusterRoles based on predefined
-IAM roles described [here][3].
+on hierarchical evaluation of policies defined in GCP.
 
 ## Managed Namespace Operations
 
@@ -32,15 +31,15 @@ You can do so by running the following command in each Project you intend to
 work in:
 
 ```console
-gcloud services enable kubernetespolicy.googleapis.com
+$ gcloud services enable kubernetespolicy.googleapis.com
 ```
 
 Kubernetes Policy Management APIs are in alpha and you must install gcloud alpha
 components to use them. You can do so by running these commands:
 
 ```console
-gcloud components install alpha
-gcloud components update
+$ gcloud components install alpha
+$ gcloud components update
 ```
 
 ### Creation
@@ -145,8 +144,8 @@ cluster:
 *   Editor
 *   Viewer
 
-See [3] for the permissions contained within the above roles. Custom roles are
-not supported in this release.
+Kubernetes Engine roles are described in more detail [here][3]. Custom roles are
+currently not supported in this release.
 
 [1]: https://cloud.google.com/resource-manager
 [2]: https://cloud.google.com/iam
