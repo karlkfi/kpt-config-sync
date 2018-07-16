@@ -421,6 +421,9 @@ test-e2e-%: clean e2e-image-all
 test-e2e-noclean-%: e2e-image-all
 	$(MAKE) test-e2e-run-$* \
 		$(E2E_PARAMS) \
+		IMAGE_TAG=test-e2e-latest \
+		GCP_PROJECT=$(GCP_PROJECT) \
+		GCP_E2E_CRED=$(GCP_E2E_CRED)
 		E2E_FLAGS="--test --setup $(E2E_FLAGS)"
 
 # Run e2e tests but do not build. Assumes that the necesary images have already been built and pushed,
@@ -428,13 +431,18 @@ test-e2e-noclean-%: e2e-image-all
 # target has no intelligence about dependencies.
 test-e2e-nosetup-%:
 	$(MAKE) test-e2e-run-$* \
-		$(E2E_PARAMS) \
+		IMAGE_TAG=test-e2e-latest \
+		GCP_PROJECT=$(GCP_PROJECT) \
+		GCP_E2E_CRED=$(GCP_E2E_CRED)
 		E2E_FLAGS="--test --clean $(E2E_FLAGS)"
 
+
+test-e2e-dev-gcp:
+test-e2e-dev-git:
 # Dev mode allows for specifying the args manually via E2E_FLAGS, see e2e/setup.sh for
 # allowed flags
-test-e2e-dev-git:
-	$(MAKE) test-e2e-run-git \
+test-e2e-dev-%:
+	$(MAKE) test-e2e-run-$* \
 		GCP_PROJECT=$(GCP_PROJECT) \
 		IMAGE_TAG=test-e2e-latest
 

@@ -44,7 +44,7 @@ setup steps:
 
 While doing development of e2e test / framework features, it's desirable to skip
 steps in the full e2e process. The following commands are available for finer
-grained control.
+grained control. This is now supported for -git and -gcp suffixes.
 
 1- Build nomos and end to end images
 
@@ -55,20 +55,32 @@ make e2e-image-all
 2- Set up the test environment on your cluster
 
 ```console
+# git
 make test-e2e-dev-git E2E_FLAGS="--setup"
+
+# gcp
+make test-e2e-dev-gcp E2E_FLAGS="--setup"
 ```
 
 3- Run specific test with full debug output. See E2E_FLAGS section for filter
 flag usage
 
 ```console
+# git
 make test-e2e-dev-git E2E_FLAGS="--test --tap --filter acme/acme"
+
+# gcp
+make test-e2e-dev-gcp E2E_FLAGS="--test --tap --filter acme/acme"
 ```
 
 4- Clean up the test environment
 
 ```console
+# git
 make test-e2e-dev-git E2E_FLAGS="--clean"
+
+# gcp
+make test-e2e-dev-gcp E2E_FLAGS="--clean"
 ```
 
 ### E2E_FLAGS
