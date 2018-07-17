@@ -1,3 +1,6 @@
+#!/bin/bash
+
+set -e
 
 TEST_REPO_DIR=${BATS_TMPDIR}
 
@@ -37,11 +40,11 @@ setup() {
   kubectl delete ns -l "nomos.dev/testdata=true" &> /dev/null || true
 
   # Reset git repo to initial state.
-  CWD=$(pwd)
+  CWD="$(pwd)"
   echo "Setting up local git repo"
-  rm -rf ${TEST_REPO_DIR}/repo
-  mkdir -p ${TEST_REPO_DIR}/repo
-  cd ${TEST_REPO_DIR}/repo
+  rm -rf "${TEST_REPO_DIR}/repo"
+  mkdir -p "${TEST_REPO_DIR}/repo"
+  cd "${TEST_REPO_DIR}/repo"
 
   git init
   git remote add origin ssh://git@localhost:2222/git-server/repos/sot.git
@@ -57,7 +60,7 @@ setup() {
   git add -A
   git commit -m "setUp commit"
   git push origin master:master -f
-  cd $CWD
+  cd "$CWD"
 
   setup::wait_for_namespaces
 
@@ -74,11 +77,13 @@ setup() {
 # namespaces to finish terminating and the state to get restored to base acme.
 function setup::wait_for_namespaces() {
   debug::log -n "Waiting for namespaces to stabilize"
-  local start=$(date +%s)
-  local deadline=$(( $(date +%s) + 30 ))
-  while [[ "$(date +%s)" < ${deadline} ]]; do
+  local start
+  start=$(date +%s)
+  local deadline
+  deadline=$(( $(date +%s) + 30 ))
+  while (( "$(date +%s)" < deadline )); do
     if setup::check_stable; then
-      debug::log "Namespaces stabilized in $(( $(date +%s) - ${start} )) seconds"
+      debug::log "Namespaces stabilized in $(( $(date +%s) - start )) seconds"
       return 0
     fi
     sleep 0.1
@@ -90,27 +95,30 @@ function setup::wait_for_namespaces() {
 
 function setup::check_stable() {
   debug::log "checking for stable"
-  local ns_states="$(
+  local ns_states
+  ns_states="$(
     kubectl get ns -ojsonpath="{.items[*].status.phase}" \
     | tr ' ' '\n' \
     | sort \
     | uniq -c
   )"
   if echo "${ns_states}" | grep "Terminating" &> /dev/null; then
-    local count=$(echo "${ns_states}" | grep "Terminating" | sed -e 's/^ *//' -e 's/T.*//')
+    local count
+    count=$(echo "${ns_states}" | grep "Terminating" | sed -e 's/^ *//' -e 's/T.*//')
     debug::log "Waiting for $count namespaces to finalize"
     return 1
   fi
 
-  local ns_count=$(resource::count -r ns -l nomos.dev/namespace-management)
-  if [[ $ns_count != ${#ACME_NAMESPACES[@]} ]]; then
+  local ns_count
+  ns_count=$(resource::count -r ns -l nomos.dev/namespace-management)
+  if (( ns_count != ${#ACME_NAMESPACES[@]} )); then
     debug::log "count mismatch $ns_count != ${#ACME_NAMESPACES[@]}"
     return 1
   fi
 
   echo "Checking namespaces for active state"
   for ns in "${ACME_NAMESPACES[@]}" "${SYS_NAMESPACES[@]}"; do
-    if ! kubectl get ns ${ns} -oyaml | grep "phase: Active" &> /dev/null; then
+    if ! kubectl get ns "${ns}" -oyaml | grep "phase: Active" &> /dev/null; then
       debug::log "namespace ${ns} not active yet"
       return 1
     fi
