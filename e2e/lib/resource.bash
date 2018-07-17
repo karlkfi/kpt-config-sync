@@ -4,32 +4,48 @@ declare status
 
 # Prints the resource version of a resource.
 #
+# Flags:
+#   -n [namespace] the namespace to request
+#
 # Arguments
 #   type: the resource type as specified to kubectl get
-#   name: the resource name, for namespaced types use [namespace]:[name]
+#   name: the resource name
 #
 # Returns
 #   Prints the current resource version for the resource.
 function resource::resource_version() {
-  local type=$1
-  local name=$2
+  local args=()
+  local cmd=(kubectl get)
+  while [[ $# -gt 0 ]]; do
+    local arg="${1:-}"
+    shift
+    case $arg in
+      -n)
+        cmd+=(-n "${1:-}")
+        shift
+      ;;
+      *)
+        args+=("$arg")
+      ;;
+    esac
+  done
 
-  local args=("get" "${type}")
-  if [[ "${name}" == *:* ]]; then
-    local ns
-    local name
-    ns="$(sed -e 's/:.*//' <<< "$name")"
-    name="$(sed -e 's/[^:]*://' <<< "$name")"
-    args+=("-n" "${ns}")
-  fi
-  args+=("${name}")
-  args+=("-ojsonpath='{.metadata.resourceVersion}'")
+  local type="${args[0]}"
+  local name="${args[1]}"
+  [ -n "$type" ] || debug::error "must specify resource type (positional arg)"
+  [ -n "$name" ] || debug::error "must specify resource name (positional arg)"
+  (( ${#args[@]} == 2 )) || debug::error "resource::resource_version takes exactly two args"
 
-  kubectl "${args[@]}"
+  cmd+=("$type" "$name" "-ojsonpath='{.metadata.resourceVersion}'")
+  "${cmd[@]}"
 }
 
 # Waits until a resource is updated. If timeout expires, this will be considered
 # an error.
+#
+# Flags:
+#   -n [namespace] the namespace of the resource
+#   -t [timeout] the timeout for checking in seconds
 #
 # Arguments
 #   type: the resource type as specified to kubectl get
@@ -39,30 +55,51 @@ function resource::resource_version() {
 #   timeout: (optional) number of seconds to wait before timing out.
 #
 function resource::wait_for_update() {
-  local type=$1
-  local name=$2
-  local resource_version=$3
-  local timeout=${4:-10}
+  local args=()
+  local cmd=(resource::resource_version)
+  local timeout=10
+  while [[ $# -gt 0 ]]; do
+    local arg="${1:-}"
+    shift
+    case $arg in
+      -n)
+        cmd+=(-n "${1:-}")
+        shift
+      ;;
+      -t)
+        timeout=${1:-}
+        shift
+      ;;
+      *)
+        args+=("$arg")
+      ;;
+    esac
+  done
+
+  local type="${args[0]}"
+  local name="${args[1]}"
+  local resource_version="${args[2]}"
+  [ -n "$type" ] || debug::error "must specify resource type (positional arg)"
+  [ -n "$name" ] || debug::error "must specify resource name (positional arg)"
+  [ -n "$resource_version" ] || debug::error "must specify resource version (positional arg)"
+  (( ${#args[@]} == 3 )) || debug::error "resource::wait_for_update takes exactly three args"
+
+  cmd+=("$type" "$name")
 
   local deadline
   (( deadline = $(date +%s) + timeout ))
-
-  echo -n "Waiting for update of $type $name from version $resource_version"
+  debug::log "Waiting for update of $type $name from version $resource_version"
   while (( "$(date +%s)" < "${deadline}" )); do
     local current
-    current="$(resource::resource_version "$type" "$name")"
+    current="$("${cmd[@]}")"
     if [[ "$current" != "$resource_version" ]]; then
-      echo
       return 0
     fi
-    echo -n "."
     sleep 0.1
   done
-  echo
-  echo "Resource $type $name never updated from $resource_version"
+  debug::log "Resource $type $name never updated from $resource_version"
   return 1
 }
-
 
 # Checks the existence and labels of a given resource.
 # Flags:

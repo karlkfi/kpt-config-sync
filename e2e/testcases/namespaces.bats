@@ -145,7 +145,8 @@ function local_teardown() {
 
   # Create policy managed namespace
   namespace::create ${nsp} -l "nomos.dev/namespace-management=policies"
-  local nsp_ver=$(resource::resource_version ns ${nsp})
+  local nsp_ver
+  nsp_ver=$(resource::resource_version ns ${nsp})
 
   namespace::declare_policyspace src
   namespace::declare_policyspace dst
@@ -165,8 +166,10 @@ function local_teardown() {
     -l "nomos.dev/parent-name=src"
 
   # get resource versions
-  local nsp_ver=$(resource::resource_version ns ${nsp})
-  local nsf_ver=$(resource::resource_version ns ${nsf})
+  local nsp_ver
+  local nsf_ver
+  nsp_ver=$(resource::resource_version ns ${nsp})
+  nsf_ver=$(resource::resource_version ns ${nsf})
 
   namespace::declare dst/$nsp
   namespace::declare dst/$nsf
