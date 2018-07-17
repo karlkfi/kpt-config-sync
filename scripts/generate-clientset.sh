@@ -36,7 +36,6 @@ K8S_APIS_PROTO=(
   +k8s.io/apimachinery/pkg/runtime/schema
   +k8s.io/apimachinery/pkg/runtime
   k8s.io/apimachinery/pkg/apis/meta/v1
-  k8s.io/apimachinery/pkg/apis/meta/v1alpha1
   k8s.io/api/core/v1
   k8s.io/api/rbac/v1
   k8s.io/api/extensions/v1beta1
