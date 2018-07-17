@@ -114,8 +114,9 @@ function resource::check() {
   fi
 
   local output
-  output=$("${cmd[@]}")
-  [ "$status" -eq 0 ] || debug::error "Command" "${cmd[@]}" "failed, output ${output}"
+  local status=0
+  output=$("${cmd[@]}") || status=$?
+  (( status == 0 )) || debug::error "Command" "${cmd[@]}" "failed, output ${output}"
   local json="$output"
   local key
   local value
@@ -219,7 +220,9 @@ function resource::count() {
   fi
 
   local output
-  output="$("${cmd[@]}")"
+  local status=0
+  output=$("${cmd[@]}") || status=$?
+  (( status == 0 )) || debug::error "Command" "${cmd[@]}" "failed, output ${output}"
   local count=0
   if [[ "$output" != "No resources found." ]]; then
     count=$(( $(echo "$output" | wc -l) - 1 ))
