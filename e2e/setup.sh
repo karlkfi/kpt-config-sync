@@ -102,9 +102,8 @@ function main() {
 
   echo "++++ Starting tests"
   local all_test_files=()
-  # We don't have any GCP tests yet, skip all tests.
   if [[ "$importer" == gcp ]]; then
-    echo "No tests for GCP"
+    mapfile -t all_test_files < <(find "${TEST_DIR}/gcp_testcases" -name '*.bats' | sort)
   else
     mapfile -t all_test_files < <(find "${TEST_DIR}/testcases" -name '*.bats' | sort)
   fi
@@ -127,6 +126,8 @@ function main() {
   if $tap; then
     bats_cmd+=(--tap)
   fi
+
+  export IMPORTER="${importer}"
 
   if [[ "${testcase_filter}" != "" ]]; then
     export E2E_TEST_FILTER="${testcase_filter}"

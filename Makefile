@@ -368,14 +368,15 @@ ifeq ($(GCLOUD_PATH),/usr/bin/)
 endif
 
 test-e2e-run-%:
-	@echo "+++ Running $* e2e tests"
+	@echo "+++ Running e2e tests: $*"
 	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
 	@rm -rf $(OUTPUT_DIR)/e2e/testcases
 	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
-	docker run -it \
+	@docker run -it \
 	    --group-add docker \
 	    -u $(UID):$(GID) \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
+        -v "$(TEMP_OUTPUT_DIR):/tmp" \
 	    -v "$(HOME)":$(HOME) \
 	    -v "$(OUTPUT_DIR)/e2e":/opt/testing/e2e \
 		$(KUBECTL_E2E_MOUNT) \
@@ -392,7 +393,7 @@ test-e2e-run-%:
 		--importer $* \
 		--gcp-cred "$(GCP_E2E_CRED)" \
 	    && echo "+++ $* e2e tests completed" \
-	    || (echo "### e2e tests failed. Logs are available in ${INSTALLER_OUTPUT_DIR}/logs"; exit 1)
+	    || (echo "### e2e tests failed. Temp dir (with test output logs etc) are available in ${TEMP_OUTPUT_DIR}"; exit 1)
 
 E2E_PARAMS := \
 	IMAGE_TAG=$(IMAGE_TAG) \
@@ -450,7 +451,7 @@ goimports:
 	@echo "+++ Running goimports"
 	@goimports -w $(NOMOS_CODE_DIRS)
 
-lint: build
+lint: build lint-bash
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
 
 lint-bash:

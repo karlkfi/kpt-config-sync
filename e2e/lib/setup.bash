@@ -22,23 +22,59 @@ SYS_NAMESPACES=(
   nomos-system-test
 )
 
-setup() {
-  E2E_TEST_FILTER="${E2E_TEST_FILTER:-}"
-  if [[ "${E2E_TEST_FILTER}" != "" ]]; then
-    local cur_test=""
-    for func in "${FUNCNAME[@]}"; do
-      if echo "$func" | grep "^test_" &> /dev/null; then
-        cur_test="${func}"
-      fi
-    done
-    if ! echo "${cur_test}" | grep "${E2E_TEST_FILTER}" &> /dev/null; then
-      skip
-    fi
+# Make available the general settings for running an end-to-end GCP test.
+# Since we are not allowed to create ephemeral projects in the e2e tests by
+# Elysium policy, some state must be reused across runs.  We set up that state
+# here so it is available to the test cases, and we create one test project per
+# different $USER.
+export GCP_TEST_ORGANIZATION_ID="515925372711"
+export GCP_TEST_NAMESPACE="$USER-nomos-e2e-tests"
+export GCP_TEST_PROJECT="${GCP_TEST_NAMESPACE}"
+export GCP_TEST_FOLDER="folder-$GCP_TEST_NAMESPACE"
+
+setup::gcp::delete_namespace() {
+  local namespace="$1"
+  local project_id="${namespace}"
+  echo "gcp::projects::delete namespace=${namespace}"
+  local project_num
+  project_num=$(gcloud projects describe "${project_id}" --format="get(projectNumber)")
+  echo "setup::gcp::delete project_num=${project_num}"
+
+  # || true to ignore scenario where the namespace is not found.
+  gcloud --quiet alpha container policy namespaces delete \
+	  --project="${project_id}" \
+	  "projects/${project_num}/namespaces/${namespace}" || true
+  echo "setup::gcp::delete exit"
+}
+
+setup::gcp::initialize() {
+  echo "setup::gcp::initialize"
+
+  if ! gcloud projects describe "${GCP_TEST_NAMESPACE}" &> /dev/null ; then
+    echo gcloud exit code: $?
+    # If an e2e test project does not exist for this user, create it and
+    # do what is necessary to make it a functional e2e project.
+    gcloud projects create \
+        --organization="${GCP_TEST_ORGANIZATION_ID}" \
+        "${GCP_TEST_NAMESPACE}"
   fi
+  echo "setup::gcp enable services"
+  gcloud --quiet services enable \
+      kubernetespolicy.googleapis.com --project="${GCP_TEST_NAMESPACE}"
+  
+  echo "Ensure that the test namespace does not exist upon exit."
+  setup::gcp::delete_namespace "${GCP_TEST_NAMESPACE}"
+  echo "setup::gcp::initialize exit"
+}
 
-  # Delete testdata that might exist.
-  kubectl delete ns -l "nomos.dev/testdata=true" &> /dev/null || true
+gcp::teardown() {
+  echo "gcp::teardown"
+  setup::gcp::delete_namespace "${GCP_TEST_NAMESPACE}"
+  echo "gcp::teardown exit"
+}
 
+# Git-specific repository initialization.
+setup::git::initialize() {
   # Reset git repo to initial state.
   CWD="$(pwd)"
   echo "Setting up local git repo"
@@ -76,6 +112,35 @@ setup() {
     echo "Running local_setup"
     local_setup
   fi
+}
+
+setup() {
+  E2E_TEST_FILTER="${E2E_TEST_FILTER:-}"
+  if [[ "${E2E_TEST_FILTER}" != "" ]]; then
+    local cur_test=""
+    for func in "${FUNCNAME[@]}"; do
+      if echo "$func" | grep "^test_" &> /dev/null; then
+        cur_test="${func}"
+      fi
+    done
+    if ! echo "${cur_test}" | grep "${E2E_TEST_FILTER}" &> /dev/null; then
+      skip
+    fi
+  fi
+
+  # Delete testdata that might exist.
+  kubectl delete ns -l "nomos.dev/testdata=true" &> /dev/null || true
+
+  case "${IMPORTER}" in
+    git)
+      setup::git::initialize
+	  ;;
+    gcp)
+      setup::gcp::initialize
+      ;;
+    *)
+      echo "Invalid importer: ${IMPORTER}"
+  esac
 }
 
 # Previous tests can create / delete namespaces. This will wait for the
@@ -134,6 +199,9 @@ teardown() {
   if type local_teardown &> /dev/null; then
     echo "Running local_teardown"
     local_teardown
+  fi
+  if [[ "$IMPORTER" == "gcp" ]]; then
+    gcp::teardown
   fi
 }
 

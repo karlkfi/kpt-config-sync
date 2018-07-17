@@ -105,9 +105,11 @@ EOM
 # Params
 #   -l [label]: the value of a label to check, formatted as "key=value"
 #   -a [annotation]: an annotation to check for, formatted as "key=value"
+#   -t [timeout_sec]: set a timeout to other than default, example: "-t 42"
 function namespace::check_exists() {
   local args=()
   local check_args=()
+  local timeout_sec="20"
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
     shift
@@ -120,6 +122,10 @@ function namespace::check_exists() {
         check_args+=(-l "${1:-}")
         shift
       ;;
+      -t)
+        timeout_sec="${1}"
+        shift
+      ;;
       *)
         args+=("${arg}")
       ;;
@@ -129,7 +135,7 @@ function namespace::check_exists() {
   local name=${args[0]:-}
   [ -n "$name" ] || debug::error "Must specify namespace name"
 
-  wait::for_success "kubectl get ns ${name}"
+  wait::for_success "kubectl get ns ${name}" "${timeout_sec}"
 
   if [[ "${#check_args[@]}" != 0 ]]; then
     resource::check ns "${name}" "${check_args[@]}"
@@ -140,9 +146,26 @@ function namespace::check_exists() {
 #
 # Arguments
 #   name: The name of the namespace
+# Params
+#   -t [timeout_sec]: set a timeout to other than default, example: "-t 42"
 function namespace::check_not_found() {
-  local ns=$1
-  wait::for_failure "kubectl get ns ${ns}"
+  local args=()
+  local timeout_sec="20"
+  while [[ $# -gt 0 ]]; do
+    local arg="${1:-}"
+    shift
+    case $arg in
+      -t)
+        timeout_sec="${1}"
+        shift
+      ;;
+      *)
+        args+=("${arg}")
+      ;;
+    esac
+  done
+  local ns="${args[0]}"
+  wait::for_failure "kubectl get ns ${ns}" "${timeout_sec}"
   run kubectl get ns "${ns}"
   assert::contains "NotFound"
 }

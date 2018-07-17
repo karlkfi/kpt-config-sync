@@ -1,7 +1,5 @@
 #!/bin/bash
 
-declare status
-
 # Helpers for waiting for async events (e.g. Pods to come up).
 
 # Wait for an event to occur
