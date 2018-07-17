@@ -10,12 +10,13 @@
 #   -l [label] a label for the namespace (repeated)
 #   -a [annotation] an annotation for the namespace (repeated)
 function namespace::create() {
-  local tmp="$(tempfile --directory ${BATS_TMPDIR} --prefix "ns-" --suffix ".yaml")"
+  local tmp
+  tmp="$(mktemp --tmpdir="${BATS_TMPDIR}" ns-XXXXXX.yaml)"
   namespace::__genyaml -l 'nomos.dev/testdata=true' "$@" "${tmp}"
   echo "Creating Cluster Namespace:"
-  cat ${tmp}
+  cat "${tmp}"
   echo
-  kubectl apply -f ${tmp}
+  kubectl apply -f "${tmp}"
 }
 
 # Creates a policyspace directory in the git repo.
@@ -24,12 +25,12 @@ function namespace::create() {
 #   path: The path to the policyspace directory under acme with the last portion being the policyspace name.
 #
 function namespace::declare_policyspace() {
-  local path=$1
-  local dst=acme/${path}/OWNERS
-  local abs_dst=${TEST_REPO}/${dst}
-  mkdir -p $(dirname ${abs_dst})
-  touch ${abs_dst}
-  git -C ${TEST_REPO} add ${dst}
+  local path="$1"
+  local dst="acme/${path}/OWNERS"
+  local abs_dst="${TEST_REPO}/${dst}"
+  mkdir -p "$(dirname "${abs_dst}")"
+  touch "${abs_dst}"
+  git -C "${TEST_REPO}" add "${dst}"
 }
 
 # Creates a namespace directory and yaml in the git repo.  If policyspaces are
@@ -61,17 +62,18 @@ function namespace::declare() {
     esac
   done
 
-  local path=${args[0]:-}
+  local path="${args[0]:-}"
   [ -n "$path" ] || debug::error "Must specify namespace name"
 
-  local name=$(basename ${path})
-  local dst=acme/${path}/namespace.yaml
-  local abs_dst=${TEST_REPO}/${dst}
+  local name
+  name="$(basename "${path}")"
+  local dst="acme/${path}/namespace.yaml"
+  local abs_dst="${TEST_REPO}/${dst}"
   genyaml_args+=("${name}" "${abs_dst}")
   namespace::__genyaml "${genyaml_args[@]}"
   echo "Declaring namespace:"
   cat "${abs_dst}"
-  git -C ${TEST_REPO} add ${dst}
+  git -C "${TEST_REPO}" add "${dst}"
 }
 
 # Designates a reserved namespace in the git repo in the
@@ -85,7 +87,7 @@ function namespace::declare_reserved() {
   local name=$1
   local dst=acme/nomos-reserved-namespaces.yaml
 
-  cat > ${TEST_REPO}/${dst} <<- EOM
+  cat > "${TEST_REPO}/${dst}" <<- EOM
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -93,7 +95,7 @@ metadata:
 data:
   ${name}: reserved
 EOM
-  git -C ${TEST_REPO} add ${dst}
+  git -C "${TEST_REPO}" add "${dst}"
 }
 
 # Checks that a namespace exists on the cluster.
@@ -130,7 +132,7 @@ function namespace::check_exists() {
   wait::for_success "kubectl get ns ${name}"
 
   if [[ "${#check_args[@]}" != 0 ]]; then
-    resource::check ns ${name} "${check_args[@]}"
+    resource::check ns "${name}" "${check_args[@]}"
   fi
 }
 
@@ -141,7 +143,7 @@ function namespace::check_exists() {
 function namespace::check_not_found() {
   local ns=$1
   wait::for_failure "kubectl get ns ${ns}"
-  run kubectl get ns ${ns}
+  run kubectl get ns "${ns}"
   assert::contains "NotFound"
 }
 
@@ -172,7 +174,7 @@ function namespace::check_no_warning() {
 #   [name] the namespace name
 #   [filename] the file to create
 function namespace::__genyaml() {
-  debug::log "namespace::__genyaml $@"
+  debug::log "namespace::__genyaml" "$@"
   local args=()
   local annotations=()
   local labels=()
@@ -199,24 +201,24 @@ function namespace::__genyaml() {
   [ -n "$filename" ] || debug::error "Must specify yaml filename"
 
   mkdir -p "$(dirname "$filename")"
-  cat > $filename <<- EOM
+  cat > "$filename" << EOM
 apiVersion: v1
 kind: Namespace
 metadata:
   name: ${name}
 EOM
-  if [[ "${#labels[@]}" != 0 ]]; then
-    echo "  labels:" >> $filename
+  if (( ${#labels[@]} != 0 )); then
+    echo "  labels:" >> "$filename"
     local label
     for label in "${labels[@]}"; do
-      namespace::__yaml::kv "    " "$label" >> $filename
+      namespace::__yaml::kv "    " "$label" >> "$filename"
     done
   fi
-  if [[ "${#annotations[@]}" != 0 ]]; then
-    echo "  annotations:" >> $filename
+  if (( ${#annotations[@]} != 0 )); then
+    echo "  annotations:" >> "$filename"
     local annotation
     for annotation in "${annotations[@]}"; do
-      namespace::__yaml::kv "    " "$annotation" >> $filename
+      namespace::__yaml::kv "    " "$annotation" >> "$filename"
     done
   fi
 }
@@ -228,13 +230,15 @@ EOM
 function namespace::__yaml::kv() {
   local indent=${1:-}
   local keyval="${2:-}"
-  local key=$(echo "${keyval}" | sed -e 's/=.*//')
-  local value=$(echo "${keyval}" | sed -e 's/[^=]*=//')
+  local key
+  local value
+  key=$(sed -e 's/=.*//' <<< "${keyval}")
+  value=$(sed -e 's/[^=]*=//' <<< "${keyval}")
   case "$value" in
     [0-9]*|true|false)
       value="\"$value\""
       ;;
   esac
-  echo "    $key: $value"
+  echo "${indent}${key}: ${value}"
 }
 
