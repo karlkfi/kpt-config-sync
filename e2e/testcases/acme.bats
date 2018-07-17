@@ -57,6 +57,8 @@ load ../lib/loader
   resource::check -n backend rolebinding eng.alice-rolebinding -l "nomos.dev/managed=full"
   resource::check_count -n backend -r resourcequota -c 1
   resource::check -n backend resourcequota nomos-resource-quota -l "nomos.dev/managed=full"
+  run kubectl get quota -n backend -o yaml
+  assert::contains 'pods: "1"'
 
   namespace::check_exists frontend -l "env=prod" -a "audit=true"
   resource::check_count -n frontend -r role -c 0

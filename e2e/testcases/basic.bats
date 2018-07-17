@@ -6,20 +6,6 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 load ../lib/loader
 
-@test "Namespaces created" {
-  run kubectl get ns eng
-  assert::contains "NotFound"
-  run kubectl get ns backend
-  assert::contains "Active"
-  run kubectl get ns frontend
-  assert::contains "Active"
-
-  run kubectl get ns frontend -o yaml
-  assert::contains 'nomos.dev/namespace-management: full'
-  run kubectl get ns frontend -o yaml
-  assert::contains "nomos.dev/parent-name: eng"
-}
-
 @test "Namespace garbage collection" {
   git::add ${YAML_DIR}/accounting-namespace.yaml acme/eng/accounting/namespace.yaml
   git::commit
@@ -39,21 +25,6 @@ load ../lib/loader
 
   wait::for_success "kubectl get ns accounting"
   kubectl get ns newer-prj
-}
-
-@test "Roles created" {
-  run kubectl get roles -n new-prj
-  assert::contains "acme-admin"
-}
-
-@test "RoleBindings created" {
-  run kubectl get rolebindings -n backend backend.bob-rolebinding -o yaml
-  assert::contains "acme-admin"
-
-  run kubectl get rolebindings -n backend -o yaml
-  assert::contains "alice"
-  run kubectl get rolebindings -n frontend -o yaml
-  assert::contains "alice"
 }
 
 @test "RoleBindings updated" {
@@ -78,11 +49,6 @@ load ../lib/loader
   assert::contains "forbidden"
   run kubectl get pods -n frontend --as alice@acme.com
   assert::contains "No resources"
-}
-
-@test "ResourceQuota created" {
-  run kubectl get quota -n backend -o yaml
-  assert::contains 'pods: "1"'
 }
 
 @test "ResourceQuota enforced" {
