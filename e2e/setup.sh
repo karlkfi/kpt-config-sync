@@ -53,10 +53,6 @@ function set_up_env_minimal() {
 }
 
 function clean_up() {
-  if ! $clean; then
-    return 0
-  fi
-
   # TODO: workaround for b/111218567 remove this once resolved
   if ! kubectl get customresourcedefinition policynodes.nomos.dev &> /dev/null; then
     echo "Policynodes not found, skipping uninstall"
@@ -84,6 +80,12 @@ function clean_up() {
       sleep 3
       echo -n "."
     done
+  fi
+}
+
+function post_clean() {
+  if $clean; then
+    clean_up
   fi
 }
 
@@ -147,6 +149,7 @@ function main() {
 echo "executed with args" "$@"
 file_filter=".*"
 tap=false
+preclean=false
 clean=false
 run_tests=false
 setup=false
@@ -157,6 +160,10 @@ while [[ $# -gt 0 ]]; do
   case ${arg} in
     --tap)
       tap=true
+    ;;
+
+    --preclean)
+      preclean=true
     ;;
 
     --clean)
@@ -230,7 +237,10 @@ sed -e "s/CONTEXT/${kubectl_context}/" -e "s/USER/${suggested_user}/" \
   < "${install_config_template}" \
   > "${install_config}"
 
-clean_up
+if $preclean; then
+  clean_up
+fi
+
 if $setup; then
   set_up_env
 else
@@ -242,7 +252,7 @@ else
 fi
 
 # Always run clean_up before exit at this point
-trap clean_up EXIT
+trap post_clean EXIT
 
 if $run_tests; then
   main "${file_filter}"

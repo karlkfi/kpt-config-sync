@@ -17,36 +17,14 @@ functionality through Git commits:
 make test-e2e-all
 ```
 
-If debugging something and want to prevent cleanup after tests runs:
-
-```console
-make test-e2e-nocleanup-{git,gcp}
-```
-
-During iterative development of e2e tests, you may want to skip time-consuming
-setup steps:
-
-1- Run tests without cleanup once:
-
-```console
- make test-e2e-nocleanup-{git,gcp}
-```
-
-2- Make changes to tests and run:
-
-```console
-  make test-e2e-nosetup-{git,gcp}
-```
-
-3- Repeat step 2 as necessary.
-
 ## Working on the e2e framework or e2e tests.
 
 While doing development of e2e test / framework features, it's desirable to skip
 steps in the full e2e process. The following commands are available for finer
 grained control. This is now supported for -git and -gcp suffixes.
 
-1- Build nomos and end to end images
+1- Build nomos and end to end images. You must do this each time you make
+changes to .go code.
 
 ```console
 make e2e-image-all
@@ -85,11 +63,12 @@ make test-e2e-dev-gcp E2E_FLAGS="--clean"
 
 ### E2E_FLAGS
 
-Name          | Value                                                                  | Example
-------------- | ---------------------------------------------------------------------- | -------
---test_filter | the filter for test casess as a regex                                  | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
---file_filter | the filter for test files as a regex                                   | The following filters for a file containing 'acme-foo' E2E_FLAGS="--file_filter acme-foo"
---clean       | boolean, uninstalls nomos and test infra from cluster                  | E2E_FLAGS="--clean"
---setup       | boolean, sets up nomos and test infra on cluster                       | E2E_FLAGS="--setup"
---tap         | boolean, emit tap output while tests are running, useful for debugging | E2E_FLAGS="--tap"
---test        | boolean, run e2e tests                                                 | E2E_FLAGS="--test"
+Name          | Value                                                                                                        | Example
+------------- | ------------------------------------------------------------------------------------------------------------ | -------
+--test_filter | the filter for test casess as a regex                                                                        | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
+--file_filter | the filter for test files as a regex                                                                         | The following filters for a file containing 'acme-foo' E2E_FLAGS="--file_filter acme-foo"
+--preclean    | boolean, uninstalls nomos prior to setup/test, useful for making a 'clean slate' without doing anything else | E2E_FLAGS="--preclean"
+--clean       | boolean, uninstalls nomos and test infra from cluster at end of execution                                    | E2E_FLAGS="--clean"
+--setup       | boolean, sets up nomos and test infra on cluster                                                             | E2E_FLAGS="--setup"
+--tap         | boolean, emit tap output while tests are running, useful for debugging                                       | E2E_FLAGS="--tap"
+--test        | boolean, run e2e tests                                                                                       | E2E_FLAGS="--test"

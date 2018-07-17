@@ -404,38 +404,17 @@ E2E_PARAMS := \
 test-e2e-all: clean e2e-image-all
 	$(MAKE) test-e2e-run-git \
 		$(E2E_PARAMS) \
-		E2E_FLAGS="--clean --test --setup $(E2E_FLAGS)"
+		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)"
 	$(MAKE) test-e2e-run-gcp \
 		$(E2E_PARAMS) \
-		E2E_FLAGS="--clean --test --setup $(E2E_FLAGS)"
+		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)"
 
 # Clean, build, and run e2e tests for a particular importer.
 # Clean cluster after running.
 test-e2e-%: clean e2e-image-all
 	$(MAKE) test-e2e-run-$* \
 		$(E2E_PARAMS) \
-		E2E_FLAGS="--clean --test --setup $(E2E_FLAGS)"
-
-# Clean, build, and run e2e tests for a parcular importer.
-# Do not clean cluster after running so that the state can be investigated.
-test-e2e-noclean-%: e2e-image-all
-	$(MAKE) test-e2e-run-$* \
-		$(E2E_PARAMS) \
-		IMAGE_TAG=test-e2e-latest \
-		GCP_PROJECT=$(GCP_PROJECT) \
-		GCP_E2E_CRED=$(GCP_E2E_CRED)
-		E2E_FLAGS="--test --setup $(E2E_FLAGS)"
-
-# Run e2e tests but do not build. Assumes that the necesary images have already been built and pushed,
-# so `make test-e2e` should be run before this, and each time the system requires a rebuild as this
-# target has no intelligence about dependencies.
-test-e2e-nosetup-%:
-	$(MAKE) test-e2e-run-$* \
-		IMAGE_TAG=test-e2e-latest \
-		GCP_PROJECT=$(GCP_PROJECT) \
-		GCP_E2E_CRED=$(GCP_E2E_CRED)
-		E2E_FLAGS="--test --clean $(E2E_FLAGS)"
-
+		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)"
 
 test-e2e-dev-gcp:
 test-e2e-dev-git:
