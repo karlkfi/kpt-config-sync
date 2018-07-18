@@ -44,6 +44,10 @@ message ClusterPolicy {
   // The actual object definition, per K8S object definition style.
   // +optional
   optional ClusterPolicySpec spec = 2;
+
+  // The current status of the object, per K8S object definition style.
+  // +optional
+  optional ClusterPolicyStatus status = 3;
 }
 
 // ClusterPolicyList holds a list of cluster level policies, returned as response to a List
@@ -69,6 +73,51 @@ message ClusterPolicySpec {
 
   // +optional
   repeated k8s.io.api.extensions.v1beta1.PodSecurityPolicy podSecurityPolicyV1Beta1 = 3;
+
+  // ImportToken indicates the version of the ClusterPolicy last imported from the source of truth.
+  // +optional
+  optional string importToken = 4;
+
+  // ImportTime is the timestamp of when the ClusterPolicy was updated by the Importer.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time importTime = 5;
+}
+
+// ClusterPolicyStatus contains fields that define the status of a ClusterPolicy.
+// +protobuf=true
+message ClusterPolicyStatus {
+  // SyncToken indicates the version of that policy that the Syncer last attempted to update from.
+  // +optional
+  optional string syncToken = 1;
+
+  // SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
+  // resources from the ClusterPolicy specs. This field will be empty on success.
+  // +optional
+  repeated ClusterSyncError syncErrors = 2;
+
+  // SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time syncTime = 3;
+}
+
+// SyncError represents a failed sync attempt for a single K8S resource.
+// +protobuf=true
+message ClusterSyncError {
+  // ResourceName is the name of the K8S resource that failed to sync.
+  // +optional
+  optional string resourceName = 1;
+
+  // ResourceKind is the type of the K8S resource (from TypeMeta.Kind).
+  // +optional
+  optional string resourceKind = 2;
+
+  // ResourceAPI is the API and version of the K8S resource (from TypeMeta.ApiVersion).
+  // +optional
+  optional string resourceApi = 3;
+
+  // ErrorMessage contains the error returned from API server when trying to sync.
+  // +optional
+  optional string errorMessage = 4;
 }
 
 // PolicyNode is the top-level object for the policy node data definition.
@@ -83,6 +132,10 @@ message PolicyNode {
   // The actual object definition, per K8S object definition style.
   // +optional
   optional PolicyNodeSpec spec = 2;
+
+  // The current status of the object, per K8S object definition style.
+  // +optional
+  optional PolicyNodeStatus status = 3;
 }
 
 // PolicyNodeList holds a list of namespace policies, as response to a List
@@ -115,5 +168,57 @@ message PolicyNodeSpec {
 
   // +optional
   optional k8s.io.api.core.v1.ResourceQuota resourceQuotaV1 = 5;
+
+  // ImportToken indicates the version of the PolicyNode last imported from the source of truth.
+  // +optional
+  optional string importToken = 6;
+
+  // ImportTime is the timestamp of when the PolicyNode was updated by the Importer.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time importTime = 7;
+}
+
+// PolicyNodeStatus contains fields that define the status of a PolicyNode. The fields related to Syncer
+// will never be populated for PolicySpaces since they are flattened down to child Namespaces.
+// +protobuf=true
+message PolicyNodeStatus {
+  // SyncTokens is a map of policy name to token indicating the version of that policy that the
+  // Syncer last attempted to update from. There will always be one entry for the PolicyNode itself
+  // as well as one entry for each PolicyNode up its hierarchy.
+  // +optional
+  map<string, string> syncTokens = 1;
+
+  // SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
+  // resources from the PolicyNode specs. This field will be empty on success.
+  // +optional
+  repeated PolicySyncError syncErrors = 2;
+
+  // SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time syncTime = 3;
+}
+
+// PolicySyncError represents a failed sync attempt for a single K8S resource.
+// +protobuf=true
+message PolicySyncError {
+  // SourceName is the name of the PolicyNode where the resource is defined.
+  // +optional
+  optional string sourceName = 1;
+
+  // ResourceName is the name of the K8S resource that failed to sync.
+  // +optional
+  optional string resourceName = 2;
+
+  // ResourceKind is the type of the K8S resource (from TypeMeta.Kind).
+  // +optional
+  optional string resourceKind = 3;
+
+  // ResourceAPI is the API and version of the K8S resource (from TypeMeta.ApiVersion).
+  // +optional
+  optional string resourceApi = 4;
+
+  // ErrorMessage contains the error returned from API server when trying to sync.
+  // +optional
+  optional string errorMessage = 5;
 }
 

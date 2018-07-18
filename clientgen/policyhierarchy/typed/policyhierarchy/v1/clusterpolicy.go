@@ -35,6 +35,7 @@ type ClusterPoliciesGetter interface {
 type ClusterPolicyInterface interface {
 	Create(*v1.ClusterPolicy) (*v1.ClusterPolicy, error)
 	Update(*v1.ClusterPolicy) (*v1.ClusterPolicy, error)
+	UpdateStatus(*v1.ClusterPolicy) (*v1.ClusterPolicy, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
 	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
 	Get(name string, options meta_v1.GetOptions) (*v1.ClusterPolicy, error)
@@ -105,6 +106,21 @@ func (c *clusterPolicies) Update(clusterPolicy *v1.ClusterPolicy) (result *v1.Cl
 	err = c.client.Put().
 		Resource("clusterpolicies").
 		Name(clusterPolicy.Name).
+		Body(clusterPolicy).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *clusterPolicies) UpdateStatus(clusterPolicy *v1.ClusterPolicy) (result *v1.ClusterPolicy, err error) {
+	result = &v1.ClusterPolicy{}
+	err = c.client.Put().
+		Resource("clusterpolicies").
+		Name(clusterPolicy.Name).
+		SubResource("status").
 		Body(clusterPolicy).
 		Do().
 		Into(result)

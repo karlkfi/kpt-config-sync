@@ -35,6 +35,7 @@ type PolicyNodesGetter interface {
 type PolicyNodeInterface interface {
 	Create(*v1.PolicyNode) (*v1.PolicyNode, error)
 	Update(*v1.PolicyNode) (*v1.PolicyNode, error)
+	UpdateStatus(*v1.PolicyNode) (*v1.PolicyNode, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
 	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
 	Get(name string, options meta_v1.GetOptions) (*v1.PolicyNode, error)
@@ -105,6 +106,21 @@ func (c *policyNodes) Update(policyNode *v1.PolicyNode) (result *v1.PolicyNode, 
 	err = c.client.Put().
 		Resource("policynodes").
 		Name(policyNode.Name).
+		Body(policyNode).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *policyNodes) UpdateStatus(policyNode *v1.PolicyNode) (result *v1.PolicyNode, err error) {
+	result = &v1.PolicyNode{}
+	err = c.client.Put().
+		Resource("policynodes").
+		Name(policyNode.Name).
+		SubResource("status").
 		Body(policyNode).
 		Do().
 		Into(result)

@@ -92,6 +92,17 @@ func (c *FakeClusterPolicies) Update(clusterPolicy *policyhierarchy_v1.ClusterPo
 	return obj.(*policyhierarchy_v1.ClusterPolicy), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeClusterPolicies) UpdateStatus(clusterPolicy *policyhierarchy_v1.ClusterPolicy) (*policyhierarchy_v1.ClusterPolicy, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateSubresourceAction(clusterpoliciesResource, "status", clusterPolicy), &policyhierarchy_v1.ClusterPolicy{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*policyhierarchy_v1.ClusterPolicy), err
+}
+
 // Delete takes name of the clusterPolicy and deletes it. Returns an error if one occurs.
 func (c *FakeClusterPolicies) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
