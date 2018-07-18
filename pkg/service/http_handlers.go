@@ -26,38 +26,34 @@ var (
 		"handler_url_path", "/", "The default handler URL path.")
 )
 
-// HandlerFunc is a shorthand for a HTTP handler function.
-type HandlerFunc func(http.ResponseWriter, *http.Request)
-
 // NoCache positively turns off page caching.
-func NoCache(handler HandlerFunc) HandlerFunc {
+func NoCache(handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set(
 			"Cache-Control",
 			"no-cache, no-store, must-revalidate")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
-		handler(w, req)
+		handler.ServeHTTP(w, req)
 	}
-
 }
 
 // WithRequestLogging decorates handler with a log statement that prints the
 // method and the URL requested.
-func WithRequestLogging(handler HandlerFunc) HandlerFunc {
+func WithRequestLogging(handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		glog.Infof("Method: %v, URL: %v", req.Method, req.URL)
-		handler(w, req)
+		handler.ServeHTTP(w, req)
 	}
 }
 
 // WithStrictTransport decorates handler to require strict transport security
 // when serving HTTPS request.
-func WithStrictTransport(handler HandlerFunc) HandlerFunc {
+func WithStrictTransport(handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Strict-Transport-Security",
 			"max-age=86400; includeSubdomains")
-		handler(w, req)
+		handler.ServeHTTP(w, req)
 	}
 }
 
@@ -104,6 +100,7 @@ func configTLS(clientCert []byte) *tls.Config {
 func ServeMetrics() {
 	// Expose prometheus metrics via HTTP.
 	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/threads", NoCache(http.HandlerFunc(GoRoutineHandler)))
 	glog.Infof("Serving metrics on :%d/metrics", *metricsPort)
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil)
 	if err != nil {
@@ -113,7 +110,7 @@ func ServeMetrics() {
 
 // Server configures and a https server from passed-in flags using
 // the supplied handler. If clientCert is not nil,
-func Server(handler HandlerFunc, clientCert []byte) *http.Server {
+func Server(handler http.HandlerFunc, clientCert []byte) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc(*handlerURLPath, handler)
 

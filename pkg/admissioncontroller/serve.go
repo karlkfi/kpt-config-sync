@@ -116,7 +116,7 @@ func RegisterWebhook(clientset *kubernetes.Clientset, webhookConfig *admissionre
 }
 
 // Serve returns a handler function for the Admission controller.
-func Serve(controller Admitter) service.HandlerFunc {
+func Serve(controller Admitter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body []byte
 		if r.Body == nil {
@@ -175,7 +175,7 @@ func ServeTLS(server *http.Server, listener net.Listener, stopChannel chan struc
 }
 
 // ServeFunc returns the serving function for this server.  Use for testing.
-func ServeFunc(controller Admitter) service.HandlerFunc {
+func ServeFunc(controller Admitter) http.HandlerFunc {
 	return service.WithStrictTransport(service.NoCache(Serve(controller)))
 }
 

@@ -7,6 +7,29 @@ set -euo pipefail
 
 load ../lib/loader
 
+declare KUBE_PROXY_PID
+function local_setup() {
+  kubectl proxy &
+  KUBE_PROXY_PID=$!
+}
+
+function local_teardown() {
+  kill $KUBE_PROXY_PID
+  wait $KUBE_PROXY_PID || true
+}
+
+function check_metrics_pages() {
+  local service="${1:-}"
+
+  local base_url="localhost:8001/api/v1/namespaces/nomos-system/services"
+  local port="metrics/proxy"
+  local output
+  output="$(curl ${base_url}/${service}:${port}/threads 2>&1)" \
+    || debug::error "Failed to scrape ${service} /threads: ${output}"
+  output="$(curl ${base_url}/${service}:${port}/metrics 2>&1)" \
+    || debug::error "Failed to scrape ${service} /metrics: ${output}"
+}
+
 @test "All acme corp created" {
   local ns
 
@@ -77,5 +100,16 @@ load ../lib/loader
   resource::check_count -n newer-prj -r rolebinding -c 0
   resource::check_count -n newer-prj -r resourcequota -c 1
   resource::check -n newer-prj resourcequota nomos-resource-quota -l "nomos.dev/managed=full"
+
+  local services=(
+    git-policy-importer
+    policy-admission-controller
+    resourcequota-admission-controller
+    syncer
+  )
+  for service in "${services[@]}"; do
+    check_metrics_pages ${service}
+  done
+
 }
 

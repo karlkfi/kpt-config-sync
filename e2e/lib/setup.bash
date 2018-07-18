@@ -71,6 +71,11 @@ setup() {
   # We delete bob-rolebinding in one test case, make sure it's restored.
   wait::for_success "kubectl get rolebindings backend.bob-rolebinding -n backend"
   wait::for_success "kubectl get clusterrole acme-admin"
+
+  if type local_setup &> /dev/null; then
+    echo "Running local_setup"
+    local_setup
+  fi
 }
 
 # Previous tests can create / delete namespaces. This will wait for the

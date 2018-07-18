@@ -31,8 +31,8 @@ import (
 
 // nolint:deadcode
 func TestRequest(t *testing.T) {
-	ts := httptest.NewTLSServer(http.HandlerFunc(admissioncontroller.ServeFunc(resourcequota.NewAdmitter(
-		fakeinformers.NewPolicyNodeInformer(), fakeinformers.NewResourceQuotaInformer()))))
+	ts := httptest.NewTLSServer(admissioncontroller.ServeFunc(resourcequota.NewAdmitter(
+		fakeinformers.NewPolicyNodeInformer(), fakeinformers.NewResourceQuotaInformer())))
 	defer ts.Close()
 
 	request := admissionv1beta1.AdmissionReview{
