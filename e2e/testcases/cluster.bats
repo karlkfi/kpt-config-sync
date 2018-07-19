@@ -34,7 +34,7 @@ function check_cluster_scoped_resource() {
 
   local resver
   resver=$(resource::resource_version ${res} e2e-test-${res})
-  git::update ${YAML_DIR}/${res}-modify.yaml ${respath}
+  git::update ${YAML_DIR}/${res}${resext}-modify.yaml ${respath}
   git::commit
 
   # wait for update
