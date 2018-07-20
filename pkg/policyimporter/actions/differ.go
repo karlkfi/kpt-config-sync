@@ -96,7 +96,8 @@ func (d *Differ) clusterPolicyActions() []action.Interface {
 	var actions []action.Interface
 	if d.current.ClusterPolicy == nil && d.desired.ClusterPolicy == nil {
 		return actions
-	} else if d.current.ClusterPolicy == nil {
+	}
+	if d.current.ClusterPolicy == nil {
 		actions = append(actions, d.factories.ClusterPolicyAction.NewUpsert(d.desired.ClusterPolicy))
 	} else if d.desired.ClusterPolicy == nil {
 		actions = append(actions, d.factories.ClusterPolicyAction.NewDelete(d.current.ClusterPolicy.Name))

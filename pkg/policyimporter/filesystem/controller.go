@@ -27,8 +27,10 @@ import (
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
+	"github.com/google/nomos/pkg/policyimporter/git"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const resync = time.Minute * 15
@@ -116,6 +118,25 @@ func (c *Controller) pollDir() error {
 				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
 				continue
 			}
+
+			// Parse the commit hash from the new directory to use as an import token.
+			token, err := git.CommitHash(newDir)
+			if err != nil {
+				glog.Warningf("Failed to parse commit hash: %v", err)
+				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				continue
+			}
+
+			// Update the import tokens and times for all policy nodes and cluster policy.
+			time := meta_v1.Now()
+			for n := range desiredPolicies.PolicyNodes {
+				pn := desiredPolicies.PolicyNodes[n]
+				pn.Spec.ImportToken = token
+				pn.Spec.ImportTime = time
+				desiredPolicies.PolicyNodes[n] = pn
+			}
+			desiredPolicies.ClusterPolicy.Spec.ImportToken = token
+			desiredPolicies.ClusterPolicy.Spec.ImportTime = time
 
 			// Calculate the sequence of actions needed to transition from current to desired state.
 			actions := c.differ.Diff(*currentPolicies, *desiredPolicies)

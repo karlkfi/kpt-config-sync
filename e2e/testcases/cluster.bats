@@ -42,6 +42,10 @@ function check_cluster_scoped_resource() {
   selection=$(kubectl get ${res} ${resname} -ojson | jq -c "${jsonpath}")
   [[ "$selection" == "$modify" ]] || debug::error "$selection != $modify"
 
+  # verify that importToken has been updated from the commit above
+  local itoken="$(kubectl get clusterpolicy -ojsonpath='{.items[0].spec.importToken}')"
+  git::check_hash "$itoken"
+
   # delete item
   git::rm ${respath}
   git::commit

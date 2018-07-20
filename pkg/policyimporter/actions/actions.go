@@ -17,13 +17,14 @@ limitations under the License.
 package actions
 
 import (
-	"reflect"
-
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	typed_v1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
 	api_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -67,10 +68,17 @@ func (f policyNodeActionFactory) NewDelete(nodeName string) action.Interface {
 	return action.NewReflectiveDeleteAction("", nodeName, f.ReflectiveActionSpec)
 }
 
+var pnsIgnore = []cmp.Option{
+	// Quantity has a few unexported fields which we need to explicitly ignore. The path is:
+	// PolicyNodeSpec -> ResourceQuota -> ResourceQuotaSpec -> ResourceList -> Quantity
+	cmpopts.IgnoreUnexported(resource.Quantity{}),
+	cmpopts.IgnoreFields(policyhierarchy_v1.PolicyNodeSpec{}, "ImportToken", "ImportTime"),
+}
+
 func policyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	l := lhs.(*policyhierarchy_v1.PolicyNode)
 	r := rhs.(*policyhierarchy_v1.PolicyNode)
-	return reflect.DeepEqual(l.Spec, r.Spec)
+	return cmp.Equal(l.Spec, r.Spec, pnsIgnore...)
 }
 
 type clusterPolicyActionFactory struct {
@@ -105,8 +113,12 @@ func (f clusterPolicyActionFactory) NewDelete(
 
 }
 
+var cpsIgnore = []cmp.Option{
+	cmpopts.IgnoreFields(policyhierarchy_v1.ClusterPolicySpec{}, "ImportToken", "ImportTime"),
+}
+
 func clusterPoliciesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lRole := lhs.(*policyhierarchy_v1.ClusterPolicy)
-	rRole := rhs.(*policyhierarchy_v1.ClusterPolicy)
-	return reflect.DeepEqual(lRole.Spec, rRole.Spec)
+	l := lhs.(*policyhierarchy_v1.ClusterPolicy)
+	r := rhs.(*policyhierarchy_v1.ClusterPolicy)
+	return cmp.Equal(l.Spec, r.Spec, cpsIgnore...)
 }

@@ -312,7 +312,9 @@ func TestDiffer(t *testing.T) {
 			g := NewDiffer(NewFactories(nil, nil, nil))
 			g.SortDiff = true
 
-			actual := g.Diff(allPolicies(test.oldNodes, test.oldClusterPolicy), allPolicies(test.newNodes, test.newClusterPolicy))
+			actual := g.Diff(
+				allPolicies(test.oldNodes, test.oldClusterPolicy),
+				allPolicies(test.newNodes, test.newClusterPolicy))
 
 			if len(actual) != len(test.expected) {
 				t.Fatalf("Actual number of actions was %d but expected %d",

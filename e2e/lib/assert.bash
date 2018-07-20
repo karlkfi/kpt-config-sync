@@ -28,3 +28,16 @@ function assert::equals() {
     false
   fi
 }
+
+# assert::not_equals <command> <string>
+#
+# Will fail if the output of the command or its error message matches string
+#
+function assert::not_equals() {
+  local str="${1:-}"
+  # shellcheck disable=SC2154
+  if [[ "$output" == "${str}" ]]; then
+    echo "FAIL: [$output] does equal [${str}]"
+    false
+  fi
+}

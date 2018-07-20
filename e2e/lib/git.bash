@@ -109,3 +109,14 @@ function git::commit() {
 
   cd -
 }
+
+# Check that the current commit hash equals the specified value.
+#
+# Usage:
+# git::check_hash "myhash"
+#
+function git::check_hash() {
+  local expected=$1
+  run git -C "${TEST_REPO}" log -n1 --format=%H
+  assert::equals "$expected"
+}
