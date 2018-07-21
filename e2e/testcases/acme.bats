@@ -69,14 +69,14 @@ function check_metrics_pages() {
 
   resource::check_count -n analytics -r role -c 0
   resource::check_count -n analytics -r rolebinding -c 2
-  resource::check -n analytics rolebinding analytics.mike-rolebinding -l "nomos.dev/managed=full"
+  resource::check -n analytics rolebinding mike-rolebinding -l "nomos.dev/managed=full"
   resource::check -n analytics rolebinding eng.alice-rolebinding -l "nomos.dev/managed=full"
   resource::check_count -n analytics -r resourcequota -c 1
   resource::check -n analytics resourcequota nomos-resource-quota -l "nomos.dev/managed=full"
 
   resource::check_count -n backend -r role -c 0
   resource::check_count -n backend -r rolebinding -c 2
-  resource::check -n backend rolebinding backend.bob-rolebinding -l "nomos.dev/managed=full"
+  resource::check -n backend rolebinding bob-rolebinding -l "nomos.dev/managed=full"
   resource::check -n backend rolebinding eng.alice-rolebinding -l "nomos.dev/managed=full"
   resource::check_count -n backend -r resourcequota -c 1
   resource::check -n backend resourcequota nomos-resource-quota -l "nomos.dev/managed=full"

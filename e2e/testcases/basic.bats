@@ -28,15 +28,15 @@ load ../lib/loader
 }
 
 @test "RoleBindings updated" {
-  run kubectl get rolebindings -n backend backend.bob-rolebinding -o yaml
+  run kubectl get rolebindings -n backend bob-rolebinding -o yaml
   assert::contains "acme-admin"
 
   git::update ${YAML_DIR}/robert-rolebinding.yaml acme/eng/backend/bob-rolebinding.yaml
   git::commit
-  wait::for -f -- kubectl get rolebindings -n backend backend.bob-rolebinding
-  run kubectl get rolebindings -n backend backend.bob-rolebinding
+  wait::for -f -- kubectl get rolebindings -n backend bob-rolebinding
+  run kubectl get rolebindings -n backend bob-rolebinding
   assert::contains "NotFound"
-  run kubectl get rolebindings -n backend backend.robert-rolebinding -o yaml
+  run kubectl get rolebindings -n backend robert-rolebinding -o yaml
   assert::contains "acme-admin"
 
   # verify that importToken has been updated from the commit above

@@ -35,26 +35,37 @@ import (
 
 // AggregatedRoleBinding provides aggregation operations for the RoleBinding resource.
 type AggregatedRoleBinding struct {
-	roleBindings []*rbac_v1.RoleBinding
+	namespace      bool
+	policyNodeName string
+	parent         *AggregatedRoleBinding
+	roleBindings   []rbac_v1.RoleBinding
 }
 
 // Aggregated implements hierarchy.AggregatedNode
 func (s *AggregatedRoleBinding) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarchy.AggregatedNode {
-	roleBindings := make([]*rbac_v1.RoleBinding, len(s.roleBindings), len(s.roleBindings)+len(node.Spec.RoleBindingsV1))
-	copy(roleBindings[0:len(s.roleBindings)], s.roleBindings)
-	for _, roleBinding := range node.Spec.RoleBindingsV1 {
-		renamedRoleBinding := roleBinding.DeepCopy()
-		renamedRoleBinding.Name = fmt.Sprintf("%s.%s", node.Name, roleBinding.Name)
-		roleBindings = append(roleBindings, renamedRoleBinding)
+	return &AggregatedRoleBinding{
+		namespace:      node.Spec.Type.IsNamespace(),
+		policyNodeName: node.Name,
+		parent:         s,
+		roleBindings:   node.Spec.RoleBindingsV1,
 	}
-	return &AggregatedRoleBinding{roleBindings: roleBindings}
 }
 
 // Generate implements hierarchy.AggregatedNode
 func (s *AggregatedRoleBinding) Generate() hierarchy.Instances {
-	instances := make(hierarchy.Instances, 0, len(s.roleBindings))
-	for _, roleBinding := range s.roleBindings {
-		instances = append(instances, roleBinding)
+	var instances hierarchy.Instances
+	for node := s; node != nil; node = node.parent {
+		for idx := range node.roleBindings {
+			roleBinding := &node.roleBindings[idx]
+			var rrb *rbac_v1.RoleBinding
+			if node.namespace {
+				rrb = roleBinding
+			} else {
+				rrb = roleBinding.DeepCopy()
+				rrb.Name = fmt.Sprintf("%s.%s", node.policyNodeName, roleBinding.Name)
+			}
+			instances = append(instances, rrb)
+		}
 	}
 	return instances
 }

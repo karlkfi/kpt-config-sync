@@ -34,7 +34,7 @@ load ../lib/loader
 
   echo "Checking for binding to be created in namespace"
   wait::for -- kubectl get rolebinding \
-      "${GCP_PROJECT_B}.${GCP_PROJECT_B}.container.viewer" \
+      "${GCP_PROJECT_B}.container.viewer" \
       -n "${GCP_PROJECT_B}"
   run kubectl get configmaps -n "${GCP_PROJECT_B}" \
       --as bob@nomos-e2e.joonix.net
@@ -69,7 +69,7 @@ load ../lib/loader
 
   echo "Checking for binding to be created in namespace"
   wait::for -- kubectl get rolebinding \
-      "${GCP_PROJECT_A}.folders-${FOLDER_ID}.container.viewer" \
+      "folders-${FOLDER_ID}.container.viewer" \
       -n "${GCP_PROJECT_A}"
   run kubectl get configmaps -n "${GCP_PROJECT_A}" \
       --as bob@nomos-e2e.joonix.net
@@ -108,7 +108,7 @@ load ../lib/loader
 
   echo "Checking for binding to be created in namespace"
   wait::for -- kubectl get rolebinding \
-      "${GCP_PROJECT_B}.folders-${FOLDER_ID}.container.viewer" \
+      "folders-${FOLDER_ID}.container.viewer" \
       -n "${GCP_PROJECT_B}"
   run kubectl get configmaps -n "${GCP_PROJECT_B}" \
       --as bob@nomos-e2e.joonix.net

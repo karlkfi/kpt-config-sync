@@ -169,7 +169,7 @@ setup::git::initialize() {
   wait::for kubectl get roles -n new-prj
   wait::for kubectl get quota -n backend
   # We delete bob-rolebinding in one test case, make sure it's restored.
-  wait::for kubectl get rolebindings backend.bob-rolebinding -n backend
+  wait::for kubectl get rolebindings bob-rolebinding -n backend
   wait::for kubectl get clusterrole acme-admin
 
   if type local_setup &> /dev/null; then
