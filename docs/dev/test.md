@@ -45,10 +45,10 @@ flag usage
 
 ```console
 # git
-make test-e2e-dev-git E2E_FLAGS="--test --tap --filter acme/acme"
+make test-e2e-dev-git E2E_FLAGS="--test --tap --test_filter acme"
 
 # gcp
-make test-e2e-dev-gcp E2E_FLAGS="--test --tap --filter acme/acme"
+make test-e2e-dev-gcp E2E_FLAGS="--test --tap --test_filter acme"
 ```
 
 4- Clean up the test environment
