@@ -9,10 +9,10 @@ load ../lib/loader
 @test "Namespace garbage collection" {
   git::add ${YAML_DIR}/accounting-namespace.yaml acme/eng/accounting/namespace.yaml
   git::commit
-  wait::for_success "kubectl get ns accounting"
+  wait::for kubectl get ns accounting
   git::rm acme/eng/accounting/namespace.yaml
   git::commit
-  wait::for_failure "kubectl get ns accounting" 20
+  wait::for -f -t 20 -- kubectl get ns accounting
   run kubectl get policynodes new-ns
   [ "$status" -eq 1 ]
   assert::contains "not found"
@@ -23,7 +23,7 @@ load ../lib/loader
   git::add ${YAML_DIR}/accounting-namespace.yaml acme/rnd/newer-prj/accounting/namespace.yaml
   git::commit
 
-  wait::for_success "kubectl get ns accounting"
+  wait::for kubectl get ns accounting
   kubectl get ns newer-prj
 }
 
@@ -32,7 +32,7 @@ load ../lib/loader
   assert::contains "acme-admin"
   git::update ${YAML_DIR}/robert-rolebinding.yaml acme/eng/backend/bob-rolebinding.yaml
   git::commit
-  wait::for_failure "kubectl get rolebindings -n backend backend.bob-rolebinding"
+  wait::for -f -- kubectl get rolebindings -n backend backend.bob-rolebinding
   run kubectl get rolebindings -n backend backend.bob-rolebinding
   assert::contains "NotFound"
   run kubectl get rolebindings -n backend backend.robert-rolebinding -o yaml
@@ -53,7 +53,7 @@ load ../lib/loader
 
 @test "ResourceQuota enforced" {
   clean_test_configmaps
-  wait::for_success "kubectl get ns new-prj"
+  wait::for kubectl get ns new-prj
   run kubectl create configmap map1 -n new-prj
   assert::contains "created"
   run kubectl create configmap map2 -n newer-prj
@@ -66,6 +66,6 @@ load ../lib/loader
 function clean_test_configmaps() {
   kubectl delete configmaps -n new-prj --all > /dev/null
   kubectl delete configmaps -n newer-prj --all > /dev/null
-  wait::for_failure "kubectl -n new-prj configmaps | grep map1"
-  wait::for_failure "kubectl -n newer-prj configmaps | grep map2"
+  wait::for -f -- kubectl -n new-prj configmaps map1
+  wait::for -f -- kubectl -n newer-prj configmaps map2
 }

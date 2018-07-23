@@ -25,7 +25,7 @@ function check_cluster_scoped_resource() {
   git::commit
 
   # wait for resource creation
-  wait::__for kubectl get ${res} ${resname}
+  wait::for kubectl get ${res} ${resname}
 
   # check selection for correct value
   local selection
@@ -47,7 +47,7 @@ function check_cluster_scoped_resource() {
   git::commit
 
   # check removed
-  wait::__for -f -- kubectl get ${res} ${resname}
+  wait::for -f -- kubectl get ${res} ${resname}
 }
 
 @test "Lifecycle for clusterroles" {

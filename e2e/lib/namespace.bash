@@ -135,7 +135,7 @@ function namespace::check_exists() {
   local name=${args[0]:-}
   [ -n "$name" ] || debug::error "Must specify namespace name"
 
-  wait::for_success "kubectl get ns ${name}" "${timeout_sec}"
+  wait::for -t "${timeout_sec}" -- kubectl get ns "${name}"
 
   if [[ "${#check_args[@]}" != 0 ]]; then
     resource::check ns "${name}" "${check_args[@]}"
@@ -165,7 +165,7 @@ function namespace::check_not_found() {
     esac
   done
   local ns="${args[0]}"
-  wait::for_failure "kubectl get ns ${ns}" "${timeout_sec}"
+  wait::for -f -t "${timeout_sec}" -- kubectl get ns "${ns}"
   run kubectl get ns "${ns}"
   assert::contains "NotFound"
 }

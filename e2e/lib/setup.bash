@@ -101,12 +101,12 @@ setup::git::initialize() {
   setup::wait_for_namespaces
 
   # Wait for syncer to update each object type.
-  wait::for_success "kubectl get rolebindings -n backend"
-  wait::for_success "kubectl get roles -n new-prj"
-  wait::for_success "kubectl get quota -n backend"
+  wait::for kubectl get rolebindings -n backend
+  wait::for kubectl get roles -n new-prj
+  wait::for kubectl get quota -n backend
   # We delete bob-rolebinding in one test case, make sure it's restored.
-  wait::for_success "kubectl get rolebindings backend.bob-rolebinding -n backend"
-  wait::for_success "kubectl get clusterrole acme-admin"
+  wait::for kubectl get rolebindings backend.bob-rolebinding -n backend
+  wait::for kubectl get clusterrole acme-admin
 
   if type local_setup &> /dev/null; then
     echo "Running local_setup"

@@ -71,7 +71,7 @@ function local_teardown() {
   namespace::create $ns -l "nomos.dev/namespace-management=full"
   namespace::declare_policyspace $ns
   git::commit
-  wait::for "kubectl get pn $ns"
+  wait::for kubectl get pn "$ns"
 
   namespace::check_not_found $ns
 }
@@ -82,7 +82,7 @@ function local_teardown() {
   namespace::declare_policyspace $ns
   git::commit
 
-  wait::for "kubectl get pn $ns"
+  wait::for kubectl get pn "$ns"
 
   namespace::check_exists $ns
   namespace::check_warning $ns
@@ -94,7 +94,7 @@ function local_teardown() {
   namespace::declare_policyspace $ns
   git::commit
 
-  wait::for "kubectl get pn $ns"
+  wait::for kubectl get pn "$ns"
 
   namespace::check_exists $ns -l "nomos.dev/namespace-management=policies"
   namespace::check_warning $ns

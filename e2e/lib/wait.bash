@@ -62,54 +62,6 @@ function wait::event() {
   return 1
 }
 
-
-function wait::for_success() {
-  local command="${1:-}"
-  local timeout=${2:-20}
-  local or_die=${3:-true}
-  wait::for "${command}" "${timeout}" "${or_die}" true
-}
-
-function wait::for_failure() {
-  local command="${1:-}"
-  local timeout=${2:-20}
-  local or_die=${3:-true}
-  wait::for "${command}" "${timeout}" "${or_die}" false
-}
-
-# NOTE: this function should be deprecated due to the way command is specified
-# Waits for the command to return with the given status within a timeout period.
-#
-# Usage:
-# wait::for COMMAND TIMEOUT_SEC EXIT_ON_TIMEOUT EXPECTED_STATUS
-#
-# Example:
-#
-# `wait::for "sleep 10" 11 true true`
-#
-function wait::for() {
-  local command="${1:-}"
-  local timeout="${2:-10}"
-  local or_die="${3:-true}"
-  local expect="${4:-true}"
-
-  args=(wait::__for -t "${timeout}")
-  if "${expect}"; then
-    args+=(-s)
-  else
-    args+=(-f)
-  fi
-  args+=(--)
-  # shellcheck disable=SC2206
-  args+=(${command})
-
-  if ! "${args[@]}"; then
-    if ${or_die}; then
-      exit 1
-    fi
-  fi
-}
-
 # A newer version of wait::for that does a better job at dealing with args
 # Flags
 #   -s                 Wait for success (exit 0)
@@ -121,11 +73,12 @@ function wait::for() {
 #   -- End of flags, command starts after this
 # Args
 #  Args for command
-function wait::__for() {
+function wait::for() {
   local args=()
   local deadline="$(( $(date +%s) + 10 ))"
   local sleeptime="0.1"
   local exitf=(wait::__exit_eq 0)
+  local timeout=15
 
   local parse_args=false
   for i in "$@"; do

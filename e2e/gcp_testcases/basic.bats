@@ -9,9 +9,8 @@ load ../lib/loader
   namespace::check_not_found "${GCP_TEST_NAMESPACE}"
 
   echo "Create the namespace under the test project"
-  wait::for_success "gcloud --quiet alpha container policy \
-      namespaces create ${GCP_TEST_NAMESPACE} --project=${GCP_TEST_PROJECT}" \
-      15
+  wait::for -t 15 -- gcloud --quiet alpha container policy \
+      namespaces create "${GCP_TEST_NAMESPACE}" --project="${GCP_TEST_PROJECT}"
 
   echo "Wait to see if the namespace appears on the cluster"
   namespace::check_exists "${GCP_TEST_NAMESPACE}" -t 20
