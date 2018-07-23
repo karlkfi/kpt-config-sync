@@ -61,7 +61,7 @@ gcp-private-key | GCP service account private key
 
 1.  [Create a service account][1]
 2.  [Grant the service account][2] `Kubernetes Policy Viewer` role
-3.  [Create a servie account key][3] and download the JSON private key.
+3.  [Create a service account key][3] and download the JSON private key.
 
 [1]: https://cloud.google.com/iam/docs/creating-managing-service-accounts
 [2]: https://cloud.google.com/iam/docs/granting-roles-to-service-accounts
