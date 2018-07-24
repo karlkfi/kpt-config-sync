@@ -54,6 +54,12 @@ gcloud iam service-accounts keys create ~/private_key.json \
     --iam-account policy-viewer-sa@my-sa-project.iam.gserviceaccount.com
 ```
 
+Be sure to enable the API in `my-sa-project` before installation:
+
+```console
+$ gcloud services enable kubernetespolicy.googleapis.com --project my-sa-project
+```
+
 ## Config Reference
 
 This section enumerates ConfigMaps and Secrets used by Nomos. When using
