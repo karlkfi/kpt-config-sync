@@ -70,8 +70,10 @@ order to create the Managed Namespace, you need to have the permission
 `kubernetespolicy.namespaces.create` at the Organization level, because by
 creating the Managed Namespace, you will be affecting all clusters enrolled in
 this Organization. The `kubernetespolicy.namespaces.create` permission is
-included in the `Kubernetes Policy Namespace Creator`, `Kubernetes Policy
-Namespace Administrator`, `Owner` and `Editor` roles.
+included in the `Kubernetes Policy Namespace Creator`
+(roles/kubernetespolicy.NamespaceCreator), `Kubernetes Policy Namespace
+Administrator` (roles/kubernetespolicy.namespaceAdmin), `Owner` and `Editor`
+roles.
 
 You are restricted to one Managed Namespace per Project to ensure you can grant
 granular permissions at the project level for each Managed Namespace.
@@ -85,15 +87,15 @@ including all the workloads running in them. This operation cannot be undone.
 Managed Namespaces can be deleted by running the command:
 
 ```console
-$ gcloud alpha container policy namespaces delete projects/3457816/namespaces/shipping-dev
+$ gcloud alpha container policy namespaces delete shipping-dev
 --project foo-project-shipping-dev
 ```
 
 The Managed Namespace name can be obtained from the result of the create call or
 by calling `namespaces list` on the Project. You will need the
 `kubernetespolicy.namespaces.delete` permission on the Project containing the
-Managed Namespace, which is included in the Kubernetes Policy Namespace Admin,
-Editor and Owner roles.
+Managed Namespace, which is included in the `Kubernetes Policy Namespace Admin`,
+`Editor` and `Owner` roles.
 
 ### Renaming
 

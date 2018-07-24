@@ -31,7 +31,28 @@ file.
 Key                  | Description
 -------------------- | -----------
 ORG_ID               | [GCP organization id](https://cloud.google.com/resource-manager/docs/creating-managing-organization#retrieving_your_organization_id)
-PRIVATE_KEY_FILENAME | Path to the file containing the [GCP service account private key](#creating-service-account) used for accessing GCP Kubernetes Policy API.
+PRIVATE_KEY_FILENAME | Path to the file containing the [GCP service account private key](#obtaining-private-key) used for accessing GCP Kubernetes Policy API.
+
+## Obtaining Private Key
+
+1.  [Create a service account][1]
+2.  [Grant the service account][2] `Kubernetes Policy Viewer` role
+3.  [Create a servie account key][3] and download the JSON private key.
+
+A sample script that creates a service account named `policy-viewer-sa` in
+project `my-sa-project` is provided below:
+
+```console
+gcloud iam service-accounts create policy-viewer-sa \
+    --display-name "GKE Policy Retriever Account" --project my-sa-project
+
+gcloud organizations add-iam-policy-binding 515925372711 \
+    --member serviceAccount:policy-viewer-sa@my-sa-project.iam.gserviceaccount.com \
+    --role roles/kubernetespolicy.policyViewer
+
+gcloud iam service-accounts keys create ~/private_key.json \
+    --iam-account policy-viewer-sa@my-sa-project.iam.gserviceaccount.com
+```
 
 ## Config Reference
 
@@ -56,12 +77,6 @@ Used by gcppolicyimporter deployment:
 Key             | Description
 --------------- | -------------------------------
 gcp-private-key | GCP service account private key
-
-## Creating Service Account
-
-1.  [Create a service account][1]
-2.  [Grant the service account][2] `Kubernetes Policy Viewer` role
-3.  [Create a service account key][3] and download the JSON private key.
 
 [1]: https://cloud.google.com/iam/docs/creating-managing-service-accounts
 [2]: https://cloud.google.com/iam/docs/granting-roles-to-service-accounts
