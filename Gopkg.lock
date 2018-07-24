@@ -112,6 +112,14 @@
   version = "v1.3.1"
 
 [[projects]]
+  digest = "1:2209584c0f7c9b68c23374e659357ab546e1b70eec2761f03280f69a8fd23d77"
+  name = "github.com/cenkalti/backoff"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2ea60e5f094469f9e65adb9cd103795b73ae743e"
+  version = "v2.0.0"
+
+[[projects]]
   digest = "1:1f7f77f3320fee4b173abc1fbbafc7ce17c99dfd0bf79ce080c0bf73a83c31f8"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -376,7 +384,7 @@
   revision = "316fb6d3f031ae8f4d457c6c5186b9e3ded70435"
 
 [[projects]]
-  digest = "1:c2cedb2f205fa918c14939c3b10635b92a02052774c911a8fb9c155b947c2b39"
+  digest = "1:84eb7f9f2d07909a7d689755d5781dfa57fda041b8b823dca03016f22ea65f6b"
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
@@ -386,7 +394,7 @@
     "cmp/internal/value",
   ]
   pruneopts = "UT"
-  revision = "97aa668b73e764ccdd786bc3ccd2edffe621150e"
+  revision = "5411ab924f9ffa6566244a9e504bc347edacffd3"
 
 [[projects]]
   branch = "master"
@@ -1377,6 +1385,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/blang/semver",
+    "github.com/cenkalti/backoff",
     "github.com/davecgh/go-spew/spew",
     "github.com/filmil/yaml",
     "github.com/go-test/deep",

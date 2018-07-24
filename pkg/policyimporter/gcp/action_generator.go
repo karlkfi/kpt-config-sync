@@ -18,7 +18,6 @@ limitations under the License.
 package gcp
 
 import (
-	"context"
 	"io"
 	"path"
 
@@ -43,25 +42,26 @@ const (
 )
 
 type resourceType string
+type applicator func(client_action.Interface) error
 
-// nolint: deadcode
-// newActionGenerator returns a new actionGenerator.
-// Only generate method is meant to to be called by users.
-func newActionGenerator(stream watcher.Watcher_WatchClient, out chan<- actionVal, currentPolicies v1.AllPolicies, factories actions.Factories) *actionGenerator {
-	return &actionGenerator{
-		stream:          stream,
-		out:             out,
-		currentPolicies: currentPolicies,
-		actionFactories: factories,
-		gcpToK8SName:    make(map[string]string),
+// newWatchProcessor returns a new watchProcessor.
+// Only the process() method is meant to to be called by users.
+func newWatchProcessor(stream watcher.Watcher_WatchClient, applyActionFn applicator, currentPolicies v1.AllPolicies, factories actions.Factories, initialStateDone bool) *watchProcessor {
+	return &watchProcessor{
+		stream:           stream,
+		applyActionFn:    applyActionFn,
+		currentPolicies:  currentPolicies,
+		actionFactories:  factories,
+		gcpToK8SName:     make(map[string]string),
+		initialStateDone: initialStateDone,
 	}
 }
 
-type actionGenerator struct {
+type watchProcessor struct {
 	// Stream client for Kubernetes Policy Watcher API.
 	stream watcher.Watcher_WatchClient
-	// Actions output channel.
-	out chan<- actionVal
+	// Actions application function.
+	applyActionFn applicator
 	// Current policies queried from K8S API.
 	currentPolicies v1.AllPolicies
 	actionFactories actions.Factories
@@ -71,36 +71,30 @@ type actionGenerator struct {
 	initialStateDone bool
 }
 
-// generate watches changes from the grpc stream and generates corresponding K8S actions and
-// writes them to the output channel.
+// process watches changes from the grpc stream and generates corresponding K8S actions and
+// passes them to applyActionFn.
 //
-// generate blocks until one of the events happens:
+// process blocks until one of the events happens:
 // 1. stream.Recv() returns an error
 // 2. context.Done() returns true
 // 3. An error occurs while processing a change
-//
-// In absent of these events, writing to output blocks indefinitely until the value is read by the receiver.
-// If an error value is written to output channel, it's guaranteed to be the last written value.
-// Output channel is closed when this method returns.
-func (g *actionGenerator) generate(ctx context.Context) {
-	defer close(g.out)
-
+func (p *watchProcessor) process() ([]byte, error) {
 	resources := make(map[string]*watcher.Change)
+	var resumeMarker []byte
 
 	for {
-		changeBatch, err := g.stream.Recv()
+		changeBatch, err := p.stream.Recv()
 
 		if err != nil {
 			if err == io.EOF {
 				glog.Info("Received graceful EOF")
-				return
+				return resumeMarker, nil
 			}
 			if s := status.Convert(err); s.Code() == codes.Canceled {
 				glog.Info("Receive context cancelled")
-				return
+				return resumeMarker, nil
 			}
-			g.sendErr(ctx, errors.Wrapf(err, "failure on streaming receive"))
-			return
+			return resumeMarker, errors.Wrapf(err, "failure on streaming receive")
 		}
 
 		for _, change := range changeBatch.Changes {
@@ -108,34 +102,34 @@ func (g *actionGenerator) generate(ctx context.Context) {
 
 			switch change.State {
 			case watcher.Change_ERROR:
-				g.sendErr(ctx, errors.Wrapf(unmarshalError(change), "error state for resource %q", change.Element))
-				return
+				return resumeMarker, errors.Wrapf(unmarshalError(change), "error state for resource %q", change.Element)
 			case watcher.Change_INITIAL_STATE_SKIPPED:
-				g.sendErr(ctx, errors.Errorf("unexpected state for resource %q: %s", change.Element, change.State))
-				return
+				return resumeMarker, errors.Errorf("unexpected state for resource %q: %s", change.Element, change.State)
 			}
 
 			resources[change.Element] = change
 			if !change.Continued {
-				updatedPolicies, err := g.processAtomicGroup(resources)
+				updatedPolicies, err := p.processAtomicGroup(resources)
 				if err != nil {
 					policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
-					g.sendErr(ctx, errors.Wrapf(err, "failed in processing atomic group"))
-					return
+					return resumeMarker, errors.Wrapf(err, "failed in processing atomic group")
 				}
-				a := actions.NewDiffer(g.actionFactories).Diff(g.currentPolicies, *updatedPolicies)
+				a := actions.NewDiffer(p.actionFactories).Diff(p.currentPolicies, *updatedPolicies)
 				glog.V(2).Infof("Processing of atomic group generated %d actions", len(a))
-				g.currentPolicies = *updatedPolicies
-				g.initialStateDone = true
+				p.currentPolicies = *updatedPolicies
+				p.initialStateDone = true
 				resources = make(map[string]*watcher.Change)
-				policyimporter.Metrics.Nodes.Set(float64(len(g.currentPolicies.PolicyNodes)))
+				policyimporter.Metrics.Nodes.Set(float64(len(p.currentPolicies.PolicyNodes)))
 				for _, a := range a {
-					if !g.sendAction(ctx, a) {
+					if err := p.applyActionFn(a); err != nil {
 						policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
-						return
+						return resumeMarker, errors.Wrapf(err, "failed in applying action %#v", a)
 					}
 				}
 				policyimporter.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
+				if change.GetResumeMarker() != nil {
+					resumeMarker = change.GetResumeMarker()
+				}
 			}
 		}
 	}
@@ -143,14 +137,14 @@ func (g *actionGenerator) generate(ctx context.Context) {
 
 // processAtomicGroup returns updated state of policies given the changes.
 // It checks that the updated policies form a valid hierarchy.
-func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Change) (*v1.AllPolicies, error) {
-	if !g.initialStateDone && resources[""] == nil {
+func (p *watchProcessor) processAtomicGroup(resources map[string]*watcher.Change) (*v1.AllPolicies, error) {
+	if !p.initialStateDone && resources[""] == nil {
 		return nil, errors.New("no initial state received for element \"\"")
 	}
 
 	var updatedPolicies v1.AllPolicies
-	if g.initialStateDone {
-		g.currentPolicies.DeepCopyInto(&updatedPolicies)
+	if p.initialStateDone {
+		p.currentPolicies.DeepCopyInto(&updatedPolicies)
 	} else {
 		updatedPolicies.PolicyNodes = make(map[string]v1.PolicyNode)
 	}
@@ -173,7 +167,7 @@ func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Chang
 				}
 				updatedPolicies.PolicyNodes[pn.Name] = *pn
 				glog.V(2).Infof("%q -> nomos.dev/v1/PolicyNodes/%s", name, pn.Name)
-				g.gcpToK8SName[name] = pn.Name
+				p.gcpToK8SName[name] = pn.Name
 			case clusterPolicyResource:
 				cp, err := unmarshalClusterPolicy(change)
 				if err != nil {
@@ -187,13 +181,13 @@ func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Chang
 			}
 
 		case watcher.Change_DOES_NOT_EXIST:
-			if !g.initialStateDone {
+			if !p.initialStateDone {
 				glog.V(2).Infof("Initial state of resource cannot be %s", change.State)
 				continue
 			}
 			switch t {
 			case policyNodeResource:
-				nodeName, ok := g.gcpToK8SName[name]
+				nodeName, ok := p.gcpToK8SName[name]
 				if !ok {
 					glog.Warningf("cannot delete non-existing resource %q", name)
 					continue
@@ -217,24 +211,6 @@ func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Chang
 		return nil, errors.Wrap(err, "invalid PolicyNode hierarchy")
 	}
 	return &updatedPolicies, nil
-}
-
-func (g *actionGenerator) sendAction(ctx context.Context, a client_action.Interface) bool {
-	return g.send(ctx, actionVal{action: a})
-}
-
-func (g *actionGenerator) sendErr(ctx context.Context, err error) bool {
-	return g.send(ctx, actionVal{err: err})
-}
-
-func (g *actionGenerator) send(ctx context.Context, v actionVal) bool {
-	select {
-	case g.out <- v:
-		return true
-	case <-ctx.Done():
-		glog.Warningf("Context is done: %v", ctx.Err())
-		return false
-	}
 }
 
 func unmarshalClusterPolicy(change *watcher.Change) (*v1.ClusterPolicy, error) {
@@ -298,9 +274,4 @@ func mustMatch(pattern, name string) bool {
 	} else {
 		return m
 	}
-}
-
-type actionVal struct {
-	action client_action.Interface
-	err    error
 }

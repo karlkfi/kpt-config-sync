@@ -16,11 +16,8 @@ limitations under the License.
 package gcp
 
 import (
-	"context"
-	"errors"
 	"io"
 	"testing"
-	"time"
 
 	"github.com/go-test/deep"
 	ptypes "github.com/gogo/protobuf/types"
@@ -29,8 +26,10 @@ import (
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	mock "github.com/google/nomos/clientgen/watcher/v1/testing"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	client_action "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -39,7 +38,7 @@ import (
 
 var (
 	// Example PolicyNode resources
-	orgPN, orgPNUpdated, orgPNUpdatedLabels, nsPN *v1.PolicyNode
+	orgPN, orgPNUpdated, orgPNUpdatedLabels, nsPN, folderPN *v1.PolicyNode
 	// Example any proto marshalled policies resources.
 	emptyProto, orgPNProto, orgPNProtoUpdated, orgPNProtoUpdatedLabels, orgCPProto, folderPNProto, nsPNProto *ptypes.Any
 )
@@ -58,6 +57,10 @@ type testCase struct {
 	expectedActions []string
 	// Whether an error is expected as the last value written to the output channel.
 	expectedError bool
+	// The expected resume marker.
+	expectedResumeMarker []byte
+	// The resume marker to send.
+	resumeMarker []byte
 }
 
 func init() {
@@ -75,7 +78,8 @@ func init() {
 	orgPNUpdatedLabels.Labels = map[string]string{"env": "prod"}
 	orgPNProtoUpdatedLabels = toAnyProto(orgPNUpdatedLabels)
 	orgCPProto = toAnyProto(newClusterPolicy("organization-123"))
-	folderPNProto = toAnyProto(newPolicyNode("folder-456", "organization-123", true))
+	folderPN = newPolicyNode("folder-456", "organization-123", true)
+	folderPNProto = toAnyProto(folderPN)
 	nsPN = newPolicyNode("backend", "folder-456", false)
 	nsPNProto = toAnyProto(nsPN)
 
@@ -403,6 +407,60 @@ func init() {
 				"nomos.dev/v1/PolicyNodes/backend/upsert",
 			},
 		},
+		{
+			testName: "Resume marker passed",
+			batch1: []*watcher.Change{
+				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto, ResumeMarker: []byte("token")},
+			},
+			expectedResumeMarker: []byte("token"),
+		},
+		{
+			testName: "Resume marker not clobbered by null",
+			batch1: []*watcher.Change{
+				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto, ResumeMarker: []byte("token")},
+			},
+			batch2: []*watcher.Change{
+				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto},
+			},
+			expectedResumeMarker: []byte("token"),
+		},
+		{
+			testName: "Resume marker clobbered by new marker",
+			batch1: []*watcher.Change{
+				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto, ResumeMarker: []byte("token")},
+			},
+			batch2: []*watcher.Change{
+				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto, ResumeMarker: []byte("token2")},
+			},
+			expectedResumeMarker: []byte("token2"),
+		},
+		{
+			testName: "Initial policies wiped without resume token",
+			batch1: []*watcher.Change{
+				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto},
+			},
+			currentPolicies: v1.AllPolicies{PolicyNodes: map[string]v1.PolicyNode{
+				"organization-123": *orgPN,
+				"folder-456":       *folderPN,
+			}},
+			expectedActions: []string{
+				"nomos.dev/v1/PolicyNodes/folder-456/delete",
+				"nomos.dev/v1/PolicyNodes/organization-123/delete",
+			},
+		},
+		{
+			testName: "Initial policies not wiped with resume token",
+			batch1: []*watcher.Change{
+				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
+				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
+			},
+			currentPolicies: v1.AllPolicies{PolicyNodes: map[string]v1.PolicyNode{
+				"organization-123": *orgPN,
+				"folder-456":       *folderPN,
+			}},
+			resumeMarker: []byte("hello"),
+			// No actions expected
+		},
 	}
 }
 
@@ -413,10 +471,6 @@ func TestGen(t *testing.T) {
 			defer ctrl.Finish()
 
 			stream := mock.NewMockWatcher_WatchClient(ctrl)
-			out := make(chan actionVal)
-			// Factories take nil arguments since we don't need to apply the actions for these tests.
-			g := newActionGenerator(
-				stream, out, tc.currentPolicies, actions.NewFactories(nil, nil, nil))
 
 			stream.EXPECT().Recv().Return(&watcher.ChangeBatch{Changes: tc.batch1}, nil)
 			if tc.batch2 != nil {
@@ -426,56 +480,30 @@ func TestGen(t *testing.T) {
 				stream.EXPECT().Recv().Return(nil, io.EOF)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-			defer cancel()
-
-			go g.generate(ctx)
-
-			var actualError bool
-			var actualErrorMsg string
 			var actualActions []string
-			for v := range out {
-				if v.err != nil {
-					actualError = true
-					actualErrorMsg = v.err.Error()
-				} else {
-					if actualError {
-						t.Fatalf("Error must be last actionVal send to channel")
-					}
-					actualActions = append(actualActions, v.action.String())
-				}
+			recordAction := func(a client_action.Interface) error {
+				actualActions = append(actualActions, a.String())
+				return nil
+			}
+			// Factories take nil arguments since we don't need to apply the actions for these tests.
+			p := newWatchProcessor(
+				stream, recordAction, tc.currentPolicies, actions.NewFactories(nil, nil, nil), len(tc.resumeMarker) != 0)
+
+			resumeMarker, err := p.process()
+
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("Err state is %v, wanted %v. Actual error: %s", !tc.expectedError, tc.expectedError, err)
 			}
 
-			if diff := deep.Equal(actualError, tc.expectedError); diff != nil {
-				t.Fatalf("Actual and expected error don't match: %v. Actual error: %s", diff, actualErrorMsg)
+			if diff := deep.Equal(resumeMarker, tc.expectedResumeMarker); diff != nil {
+				t.Fatalf("Resume marker is %v, wanted %v", resumeMarker, tc.expectedResumeMarker)
 			}
 
 			if diff := deep.Equal(actualActions, tc.expectedActions); diff != nil {
-				t.Fatalf("Actual and expected actions don't match: %v", diff)
+				t.Fatalf("Actual and expected actions don't match: %v\n%v\n%v", diff, actualActions, tc.expectedActions)
 			}
 		})
 	}
-}
-
-// Test that generate() returns when context is done.
-func TestDone(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	stream := mock.NewMockWatcher_WatchClient(ctrl)
-	out := make(chan actionVal)
-	g := newActionGenerator(stream, out, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil))
-
-	stream.EXPECT().Recv().Return(&watcher.ChangeBatch{Changes: []*watcher.Change{
-		{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto},
-		{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
-	},
-	}, nil)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	g.generate(ctx)
 }
 
 func TestRecvErr(t *testing.T) {
@@ -483,23 +511,20 @@ func TestRecvErr(t *testing.T) {
 	defer ctrl.Finish()
 
 	stream := mock.NewMockWatcher_WatchClient(ctrl)
-	out := make(chan actionVal)
-	g := newActionGenerator(stream, out, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil))
+	a := func(_ client_action.Interface) error {
+		return nil
+	}
+	p := newWatchProcessor(stream, a, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil), false)
 
 	stream.EXPECT().Recv().Return(nil, errors.New("receive error"))
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go g.generate(ctx)
-
-	var vals []actionVal
-	for v := range out {
-		vals = append(vals, v)
+	_, err := p.process()
+	expectedErr := errors.New("receive error")
+	if err == nil {
+		t.Fatalf("Expected error")
 	}
-	expectedVals := []actionVal{{err: errors.New("receive error")}}
-	if diff := deep.Equal(vals, expectedVals); diff != nil {
-		t.Fatalf("Actual and expected actions don't match: %v", diff)
+	if diff := deep.Equal(errors.Cause(err), expectedErr); diff != nil {
+		t.Fatalf("Actual and expected errors don't match: %v", diff)
 	}
 }
 

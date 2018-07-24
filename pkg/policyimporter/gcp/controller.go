@@ -22,11 +22,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/informers/externalversions"
 	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	policyhierarchyscheme "github.com/google/nomos/clientgen/policyhierarchy/scheme"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
+	client_action "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -42,14 +44,11 @@ import (
 const (
 	// Timeout for making initial grpc connection dial.
 	grpcDialTimeout = time.Second * 20
-	// Timeout for Watch streaming RPC regardless of activity.
-	grpcRPCTimeout = time.Hour * 24
 	// After a duration of this time if the client doesn't see any activity it pings the server to see if the transport is still alive.
 	grpcKeepaliveTime = time.Minute
 	// After having pinged for keepalive check, the client waits this long and if no activity is seen even after that
 	// the connection is closed. (This will eagerly fail inflight grpc requests even if they don't have timeouts.)
 	grpcKeepaliveTimeout = time.Minute
-
 	// Resync period for K8S informer.
 	informerResync = time.Minute * 15
 )
@@ -97,7 +96,7 @@ func NewController(org, watcherAddr, credsFile, caFile string, client meta.Inter
 	}
 }
 
-// Run runs the controller and blocks until an error occurs or stopChan is closed. func (c *Controller) Run() error {
+// Run runs the controller and blocks until an error occurs or stopChan is closed.
 func (c *Controller) Run() error {
 	// Start informers
 	c.informerFactory.Start(c.stopChan)
@@ -111,20 +110,79 @@ func (c *Controller) Run() error {
 	}
 	glog.Infof("Caches synced")
 
-	return c.run()
+	return c.watchLoop()
 }
 
-func (c *Controller) run() error {
-	glog.Infof("Running")
+// Executes startWatch() in a loop, returning if it fails too many times or stopChan is closed.
+func (c *Controller) watchLoop() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		<-c.stopChan
+		glog.Infof("Stop received, cancelling context")
+		cancel()
+	}()
+
+	var resumeMarker []byte
+	throttler := time.NewTicker(time.Second)
+	defer throttler.Stop()
+
+	for {
+		select {
+		case <-c.stopChan:
+			glog.Infof("Stop received, cancelling watch loop")
+			return nil
+		default:
+			var b backoff.BackOff
+			b = &backoff.ExponentialBackOff{
+				InitialInterval:     2 * time.Second,
+				RandomizationFactor: 0.5,
+				Multiplier:          2,
+				MaxInterval:         5 * time.Minute,
+				MaxElapsedTime:      0,
+				Clock:               backoff.SystemClock,
+			}
+			b = backoff.WithContext(b, ctx)
+			b = backoff.WithMaxRetries(b, 5)
+
+			err := backoff.RetryNotify(func() error {
+				rm, err := c.watchIteration(ctx, resumeMarker)
+				if rm != nil {
+					resumeMarker = rm
+				}
+				return err
+			},
+				b,
+				func(err error, next time.Duration) {
+					glog.Warningf("error: retrying in %v on error %v", next, err)
+				})
+
+			// Maximum number of retries hit, fail out
+			if err != nil {
+				return err
+			}
+
+			// Throttle all reconnections to occur at most once per second
+			// This part of the loop should only be hit on normal connection terminations (i.e.
+			// backoff didn't return an error)
+			<-throttler.C
+		}
+	}
+}
+
+// Executes the Watch API with the given resume marker and returns any errors and a resume marker.
+func (c *Controller) watchIteration(ctx context.Context, resumeMarker []byte) ([]byte, error) {
+	glog.Infof("Starting watch")
 
 	currentPolicies, listErr := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister)
 	if listErr != nil {
-		return errors.Wrapf(listErr, "failed to list current policies")
+		return nil, errors.Wrapf(listErr, "failed to list current policies")
 	}
 
 	conn, err := c.dial()
 	if err != nil {
-		return errors.Wrapf(err, "failed to dial to server")
+		return nil, errors.Wrapf(err, "failed to dial to server")
 	}
 	defer func() {
 		if err2 := conn.Close(); err2 != nil {
@@ -134,23 +192,15 @@ func (c *Controller) run() error {
 	glog.Infof("Connected to Watcher service at %s", c.watcherAddr)
 
 	client := watcher.NewWatcherClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), grpcRPCTimeout)
-	defer cancel()
-	stream, err := client.Watch(ctx, &watcher.Request{Target: fmt.Sprintf("organizations/%s?recursive=true", c.org)})
+	ctx, cancelWatch := context.WithCancel(ctx)
+	defer cancelWatch()
+	stream, err := client.Watch(ctx, &watcher.Request{Target: fmt.Sprintf("organizations/%s?recursive=true", c.org), ResumeMarker: resumeMarker})
 	if err != nil {
-		return errors.Wrap(err, "failed to start streaming RPC to Watcher API")
+		return nil, errors.Wrap(err, "failed to start streaming RPC to Watcher API")
 	}
 	glog.Infof("Started streaming RPC to Watcher API")
 
-	go func() {
-		<-c.stopChan
-		glog.Infof("Stop received, cancelling context")
-		cancel()
-	}()
-	ch := make(chan actionVal)
-	g := newActionGenerator(stream, ch, *currentPolicies, c.actionFactories)
-	go g.generate(ctx)
-	return applyActions(ch)
+	return newWatchProcessor(stream, applyActions, *currentPolicies, c.actionFactories, len(resumeMarker) != 0).process()
 }
 
 func (c *Controller) dial() (*grpc.ClientConn, error) {
@@ -197,14 +247,6 @@ func tlsConfig(caFile string) (*tls.Config, error) {
 	return config, nil
 }
 
-func applyActions(ch <-chan actionVal) error {
-	for d := range ch {
-		if d.err != nil {
-			return d.err
-		}
-		if err := d.action.Execute(); err != nil {
-			return err
-		}
-	}
-	return nil
+func applyActions(action client_action.Interface) error {
+	return action.Execute()
 }
