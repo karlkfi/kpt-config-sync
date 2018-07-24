@@ -37,7 +37,7 @@ PRIVATE_KEY_FILENAME | Path to the file containing the [GCP service account priv
 
 1.  [Create a service account][1]
 2.  [Grant the service account][2] `Kubernetes Policy Viewer` role
-3.  [Create a servie account key][3] and download the JSON private key.
+3.  [Create a service account key][3] and download the JSON private key.
 
 A sample script that creates a service account named `policy-viewer-sa` in
 project `my-sa-project` is provided below:
