@@ -145,7 +145,7 @@ func (i *Installer) createCertificates() error {
 }
 
 func (i *Installer) deployConfigMap(name string, content []string) error {
-	if err := i.k.DeleteConfigmap(name, defaultNamespace); err != nil {
+	if err := i.k.DeleteConfigMap(name, defaultNamespace); err != nil {
 		glog.V(5).Infof("Failed to delete configmap: %v", err)
 	}
 

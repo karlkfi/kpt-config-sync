@@ -107,15 +107,15 @@ func (t *Context) Apply(path string) error {
 
 // DeleteSecret deletes a secret from Kubernetes.
 func (t *Context) DeleteSecret(name, namespace string) error {
-	if _, _, err := t.Kubectl("delete", "secret", fmt.Sprintf("-n=%v", namespace), name); err != nil {
+	if err := t.Kubernetes().CoreV1().Secrets(namespace).Delete(name, &meta_v1.DeleteOptions{}); err != nil {
 		return errors.Wrapf(err, "delete secret name=%q, namespace=%q", name, namespace)
 	}
 	return nil
 }
 
-// DeleteConfigmap deletes a configmap from Kubernetes.
-func (t *Context) DeleteConfigmap(name, namespace string) error {
-	if _, _, err := t.Kubectl("delete", "configmap", fmt.Sprintf("-n=%v", namespace), name); err != nil {
+// DeleteConfigMap deletes a configmap from Kubernetes.
+func (t *Context) DeleteConfigMap(name, namespace string) error {
+	if err := t.Kubernetes().CoreV1().ConfigMaps(namespace).Delete(name, &meta_v1.DeleteOptions{}); err != nil {
 		return errors.Wrapf(err, "delete configmap name=%q, namespace=%q", name, namespace)
 	}
 	return nil
@@ -342,16 +342,16 @@ func (t *Context) WaitForDeployments(timeout time.Duration, ns string, deploymen
 // DeleteDeployment deletes a deployment in the given namespace.  No effect if
 // the deployment isn't already running.
 func (t *Context) DeleteDeployment(name, namespace string) error {
-	if _, _, err := t.Kubectl("delete", "deployment", "--ignore-not-found", fmt.Sprintf("-n=%v", namespace), name); err != nil {
+	if err := t.Kubernetes().AppsV1().Deployments(namespace).Delete(name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
 		return errors.Wrapf(err, "while deleting deployment: %v:%v", namespace, name)
 	}
 	return nil
 }
 
 // DeleteNamespace deletes the supplied namespace.
-func (t *Context) DeleteNamespace(namespace string) error {
-	if _, _, err := t.Kubectl("delete", "namespace", namespace, "--ignore-not-found"); err != nil {
-		return errors.Wrapf(err, "while deleting namespace: %q", namespace)
+func (t *Context) DeleteNamespace(name string) error {
+	if err := t.Kubernetes().CoreV1().Namespaces().Delete(name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
+		return errors.Wrapf(err, "while deleting namespace: %q", name)
 	}
 	return nil
 }
