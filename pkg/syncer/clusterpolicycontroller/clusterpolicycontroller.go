@@ -38,6 +38,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const reconcileMetricsLabel = "cluster-reconcile"
@@ -120,15 +121,19 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 		return nil
 	}
 
-	clusterPolicy, err := s.lister.Get(name)
+	cp, err := s.lister.Get(name)
 	if err != nil {
 		return errors.Wrapf(err, "failed to look up clusterpolicy, %s, for reconciliation", name)
 	}
+	return s.managePolicies(cp)
+}
 
-	// We return the first error we encounter during module processing.
+func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterPolicy) error {
+	var syncErrs []policyhierarchy_v1.ClusterSyncError
 	errBuilder := multierror.NewBuilder()
 	for _, module := range s.modules {
-		declaredInstances := module.Extract(clusterPolicy)
+		declaredInstances := module.Extract(cp)
+
 		for idx, decl := range declaredInstances {
 			// Identify the ClusterPolicy that is managing this resource.
 			blockOwnerDeletion := true
@@ -137,8 +142,8 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 				{
 					APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
 					Kind:               "ClusterPolicy",
-					Name:               clusterPolicy.Name,
-					UID:                clusterPolicy.UID,
+					Name:               cp.Name,
+					UID:                cp.UID,
 					BlockOwnerDeletion: &blockOwnerDeletion,
 					Controller:         &controller,
 				},
@@ -152,6 +157,7 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 		actualInstances, err := module.ActionSpec().List("", labeling.ManageResource.Selector())
 		if err != nil {
 			errBuilder.Add(errors.Wrapf(err, "failed to list from policy controller for %s", module.Name()))
+			syncErrs = append(syncErrs, NewClusterSyncError(cp.Name, module.ActionSpec(), err))
 			continue
 		}
 
@@ -159,13 +165,33 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 		for _, diff := range diffs {
 			if err := execute(diff, module.ActionSpec()); err != nil {
 				errBuilder.Add(err)
+				syncErrs = append(syncErrs, NewClusterSyncError(cp.Name, module.ActionSpec(), err))
 			}
 		}
 	}
+	setClusterPolicyStatus(cp, syncErrs)
+
 	if errBuilder.Len() != 0 {
 		glog.Warningf("reconcile encountered %d errors", errBuilder.Len())
 	}
 	return errBuilder.Build()
+}
+
+func setClusterPolicyStatus(cp *policyhierarchy_v1.ClusterPolicy, errs []policyhierarchy_v1.ClusterSyncError) {
+	// TODO(ekitson): Use .DeepCopy() to avoid updating the shared cache version of the clusterpolicy.
+	cp.Status.SyncToken = cp.Spec.ImportToken
+	cp.Status.SyncTime = meta_v1.Now()
+	cp.Status.SyncErrors = errs
+}
+
+func NewClusterSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.ClusterSyncError {
+	gv := schema.GroupVersion{Group: spec.Group, Version: spec.Version}
+	return policyhierarchy_v1.ClusterSyncError{
+		ResourceName: name,
+		ResourceKind: spec.Resource,
+		ResourceAPI:  gv.String(),
+		ErrorMessage: err.Error(),
+	}
 }
 
 // execute will execute an action based on the Diff.

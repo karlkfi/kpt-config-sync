@@ -66,7 +66,7 @@ func (s *ConsistencyError) Error() string {
 	if len(s.missing) != 0 {
 		vals = append(vals, fmt.Sprintf("[%s:%s]", s.missing, "NotFound"))
 	}
-	return fmt.Sprintf("inconsistent heirarchy (%s): %s", s.errType, strings.Join(vals, " -> "))
+	return fmt.Sprintf("inconsistent hierarchy (%s): %s", s.errType, strings.Join(vals, " -> "))
 }
 
 // IsConsistencyError returns true if the error is a ConsistencyError
@@ -137,6 +137,15 @@ func (s Ancestry) String() string {
 		names = append(names, policyNode.Name)
 	}
 	return strings.Join(names, " -> ")
+}
+
+// TokenMap returns a map of node name to current import token for all nodes in the ancestry.
+func (s Ancestry) TokenMap() map[string]string {
+	tokens := make(map[string]string, len(s))
+	for _, node := range s {
+		tokens[node.Name] = node.Spec.ImportToken
+	}
+	return tokens
 }
 
 // Interface is the interface that the Hierarchy object fulfills.

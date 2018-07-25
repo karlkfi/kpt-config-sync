@@ -49,6 +49,7 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 )
@@ -366,6 +367,7 @@ func (s *PolicyHieraryController) hardReconcile(name string) error {
 }
 
 func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy.Ancestry) error {
+	var syncErrs []policyhierarchy_v1.PolicySyncError
 	errBuilder := multierror.NewBuilder()
 	for _, module := range s.modules {
 		declaredInstances := ancestry.Aggregate(module.NewAggregatedNode)
@@ -377,17 +379,41 @@ func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy
 
 		actualInstances, err := module.ActionSpec().List(name, labels.Everything())
 		if err != nil {
-			return errors.Wrapf(err, "failed to list from policy controller for %s", module.Name())
+			errBuilder.Add(errors.Wrapf(err, "failed to list from policy controller for %s", module.Name()))
+			syncErrs = append(syncErrs, NewPolicySyncError(name, module.ActionSpec(), err))
+			continue
 		}
 
 		diffs := comparator.Compare(module.Equal, declaredInstances, object.RuntimeToMeta(actualInstances))
 		for _, diff := range diffs {
 			if err := s.handleDiff(name, module, diff); err != nil {
 				errBuilder.Add(err)
+				pse := NewPolicySyncError(name, module.ActionSpec(), err)
+				pse.ResourceName = diff.Name
+				syncErrs = append(syncErrs, pse)
 			}
 		}
 	}
-	return nil
+	setPolicyNodeStatus(ancestry, syncErrs)
+	return errBuilder.Build()
+}
+
+func setPolicyNodeStatus(ancestry hierarchy.Ancestry, errs []policyhierarchy_v1.PolicySyncError) {
+	// TODO(ekitson): Use .DeepCopy() to avoid updating the shared cache version of the policynode.
+	node := ancestry.Node()
+	node.Status.SyncTokens = ancestry.TokenMap()
+	node.Status.SyncTime = meta_v1.Now()
+	node.Status.SyncErrors = errs
+}
+
+func NewPolicySyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.PolicySyncError {
+	gv := schema.GroupVersion{Group: spec.Group, Version: spec.Version}
+	return policyhierarchy_v1.PolicySyncError{
+		SourceName:   name,
+		ResourceKind: spec.Resource,
+		ResourceAPI:  gv.String(),
+		ErrorMessage: err.Error(),
+	}
 }
 
 func (s *PolicyHieraryController) handleDiff(namespace string, module Module, diff *comparator.Diff) error {

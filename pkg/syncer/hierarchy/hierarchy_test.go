@@ -39,6 +39,13 @@ func createTestNode(name, parent string, nodeType policyhierarchy_v1.PolicyNodeT
 	}
 }
 
+func createImportedTestNode(name, parent string, nodeType policyhierarchy_v1.PolicyNodeType, token string) *policyhierarchy_v1.PolicyNode {
+	node := createTestNode(name, parent, nodeType)
+	node.Spec.ImportToken = token
+	node.Spec.ImportTime = meta_v1.Now()
+	return node
+}
+
 func TestGetAncestry(t *testing.T) {
 	validHierarchy := New(fakeinformers.NewPolicyNodeInformer(
 		createTestNode("root", "", policyhierarchy_v1.Policyspace),
@@ -345,6 +352,61 @@ func TestAggregateAncestry(t *testing.T) {
 				if !cmp.Equal(gotNode, tt.wantNode) {
 					t.Errorf("Ancestry requested node is incorrect got: %s, want: %s", gotInstances, tt.wantInstances)
 				}
+			}
+		})
+	}
+}
+
+func TestAncestryTokenMap(t *testing.T) {
+	hier := New(fakeinformers.NewPolicyNodeInformer(
+		createImportedTestNode("root", "", policyhierarchy_v1.Policyspace, "abc123"),
+		createImportedTestNode("child1", "root", policyhierarchy_v1.Policyspace, "def123"),
+		createImportedTestNode("child2", "root", policyhierarchy_v1.Policyspace, "ghi123"),
+		createImportedTestNode("child1-1", "child1", policyhierarchy_v1.Namespace, "jkl123"),
+		createImportedTestNode("child1-2", "child1", policyhierarchy_v1.Namespace, "mno123"),
+		createImportedTestNode("child2-1", "child2", policyhierarchy_v1.Namespace, "pqr123"),
+	))
+	for _, tt := range []struct {
+		name     string
+		ancestry string
+		want     map[string]string
+	}{
+		{
+			"Token map of child1-1",
+			"child1-1",
+			map[string]string{
+				"root":     "abc123",
+				"child1":   "def123",
+				"child1-1": "jkl123",
+			},
+		},
+		{
+			"Token map of child1-2",
+			"child1-2",
+			map[string]string{
+				"root":     "abc123",
+				"child1":   "def123",
+				"child1-2": "mno123",
+			},
+		},
+		{
+			"Token map of child2-1",
+			"child2-1",
+			map[string]string{
+				"root":     "abc123",
+				"child2":   "ghi123",
+				"child2-1": "pqr123",
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			a, err := hier.Ancestry(tt.ancestry)
+			if err != nil {
+				t.Fatalf("Failed to fetch ancestry %s: %v", tt.ancestry, err)
+			}
+			got := a.TokenMap()
+			if !cmp.Equal(got, tt.want) {
+				t.Errorf("Ancestry token map is incorrect got:\n%v\nwant:\n%v", got, tt.want)
 			}
 		})
 	}
