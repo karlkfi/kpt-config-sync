@@ -210,7 +210,7 @@ func TestDeleteSecret(t *testing.T) {
 		outErr     error
 	}{
 		{
-			name:       "basic positive test",
+			name:       "basic positive",
 			secretName: "someSecret",
 			namespace:  "someNamespace",
 			outErr:     nil,
@@ -255,7 +255,7 @@ func TestDeleteConfigmap(t *testing.T) {
 		outErr        error
 	}{
 		{
-			name:          "basic positive test",
+			name:          "basic positive",
 			configMapName: "aConfigMap",
 			namespace:     "someNamespace",
 			outErr:        nil,
@@ -298,35 +298,45 @@ func TestDeleteDeployment(t *testing.T) {
 		deploymentName string
 		namespace      string
 		outErr         error
+		skipCreate     bool
 	}{
 		{
-			name:           "basic positive test",
+			name:           "basic positive",
 			deploymentName: "aDeployment",
 			namespace:      "someNamespace",
 			outErr:         nil,
+		},
+		{
+			name:           "ignore not found",
+			namespace:      "testNamespace",
+			deploymentName: "iDoNotExist",
+			outErr:         nil,
+			skipCreate:     true,
 		},
 	}
 	client := fake.NewClient()
 	kc := NewWithClient(context.Background(), client)
 	for _, test := range tests {
-		cm, err := client.Kubernetes().AppsV1().Deployments(test.namespace).Create(&appsv1.Deployment{
-			ObjectMeta: meta_v1.ObjectMeta{
-				Name: test.deploymentName,
-			}})
-		if cm == nil {
-			t.Errorf("No deployment created. Should have created %s", test.deploymentName)
+		if !test.skipCreate {
+			cm, err := client.Kubernetes().AppsV1().Deployments(test.namespace).Create(&appsv1.Deployment{
+				ObjectMeta: meta_v1.ObjectMeta{
+					Name: test.deploymentName,
+				}})
+			if cm == nil {
+				t.Errorf("No deployment created. Should have created %s", test.deploymentName)
+			}
+			if err != nil {
+				t.Errorf("Error creating deployment %s : %v", test.deploymentName, err)
+			}
+			cm, err = client.Kubernetes().AppsV1().Deployments(test.namespace).Get(test.deploymentName, meta_v1.GetOptions{})
+			if cm == nil {
+				t.Errorf("Deployment %s not found", test.deploymentName)
+			}
+			if err != nil {
+				t.Errorf("Error getting deployment %s : %v", test.deploymentName, err)
+			}
 		}
-		if err != nil {
-			t.Errorf("Error creating deployment %s : %v", test.deploymentName, err)
-		}
-		cm, err = client.Kubernetes().AppsV1().Deployments(test.namespace).Get(test.deploymentName, meta_v1.GetOptions{})
-		if cm == nil {
-			t.Errorf("Deployment %s not found", test.deploymentName)
-		}
-		if err != nil {
-			t.Errorf("Error getting deployment %s : %v", test.deploymentName, err)
-		}
-		err = kc.DeleteDeployment(test.deploymentName, test.namespace)
+		err := kc.DeleteDeployment(test.deploymentName, test.namespace)
 		if err != test.outErr {
 			t.Errorf("Expected %v returned from DeleteDeployment, but got %v", test.outErr, err)
 		}
@@ -339,14 +349,21 @@ func TestDeleteDeployment(t *testing.T) {
 
 func TestDeleteNamespace(t *testing.T) {
 	tests := []struct {
-		name      string
-		namespace string
-		outErr    error
+		name       string
+		namespace  string
+		outErr     error
+		skipCreate bool
 	}{
 		{
-			name:      "basic positive test",
+			name:      "basic positive",
 			namespace: "someNamespace",
 			outErr:    nil,
+		},
+		{
+			name:       "ignore not found",
+			namespace:  "iDoNotExist",
+			outErr:     nil,
+			skipCreate: true,
 		},
 	}
 	client := fake.NewClient()
@@ -356,18 +373,20 @@ func TestDeleteNamespace(t *testing.T) {
 			ObjectMeta: meta_v1.ObjectMeta{
 				Name: test.namespace,
 			}})
-		if cm == nil {
-			t.Errorf("No namespace created. Should have created %s", test.namespace)
-		}
-		if err != nil {
-			t.Errorf("Error creating namespace %s : %v", test.namespace, err)
-		}
-		cm, err = client.Kubernetes().CoreV1().Namespaces().Get(test.namespace, meta_v1.GetOptions{})
-		if cm == nil {
-			t.Errorf("ConfigMap %s not found", test.namespace)
-		}
-		if err != nil {
-			t.Errorf("Error getting namespace %s : %v", test.namespace, err)
+		if !test.skipCreate {
+			if cm == nil {
+				t.Errorf("No namespace created. Should have created %s", test.namespace)
+			}
+			if err != nil {
+				t.Errorf("Error creating namespace %s : %v", test.namespace, err)
+			}
+			cm, err = client.Kubernetes().CoreV1().Namespaces().Get(test.namespace, meta_v1.GetOptions{})
+			if cm == nil {
+				t.Errorf("ConfigMap %s not found", test.namespace)
+			}
+			if err != nil {
+				t.Errorf("Error getting namespace %s : %v", test.namespace, err)
+			}
 		}
 		err = kc.DeleteNamespace(test.namespace)
 		if err != test.outErr {
