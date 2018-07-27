@@ -68,7 +68,7 @@ ${RELEASE_VERSION}` and body:
 ```
 $ TZ=America/Los_Angeles git log --pretty="format:%C(yellow)%h \
     %C(cyan)%>(12,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" \
-    --date=local v0.3.4..v0.4.0
+    --date=local ${PREVIOUS_RELEASE}..${RELEASE_VERSION}
 ```
 
 The artifacts will be
