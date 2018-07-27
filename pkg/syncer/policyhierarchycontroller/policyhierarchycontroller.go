@@ -367,7 +367,7 @@ func (s *PolicyHieraryController) hardReconcile(name string) error {
 }
 
 func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy.Ancestry) error {
-	var syncErrs []policyhierarchy_v1.PolicySyncError
+	var syncErrs []policyhierarchy_v1.PolicyNodeSyncError
 	errBuilder := multierror.NewBuilder()
 	for _, module := range s.modules {
 		declaredInstances := ancestry.Aggregate(module.NewAggregatedNode)
@@ -380,7 +380,7 @@ func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy
 		actualInstances, err := module.ActionSpec().List(name, labels.Everything())
 		if err != nil {
 			errBuilder.Add(errors.Wrapf(err, "failed to list from policy controller for %s", module.Name()))
-			syncErrs = append(syncErrs, NewPolicySyncError(name, module.ActionSpec(), err))
+			syncErrs = append(syncErrs, NewSyncError(name, module.ActionSpec(), err))
 			continue
 		}
 
@@ -388,7 +388,7 @@ func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy
 		for _, diff := range diffs {
 			if err := s.handleDiff(name, module, diff); err != nil {
 				errBuilder.Add(err)
-				pse := NewPolicySyncError(name, module.ActionSpec(), err)
+				pse := NewSyncError(name, module.ActionSpec(), err)
 				pse.ResourceName = diff.Name
 				syncErrs = append(syncErrs, pse)
 			}
@@ -398,7 +398,7 @@ func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy
 	return errBuilder.Build()
 }
 
-func setPolicyNodeStatus(ancestry hierarchy.Ancestry, errs []policyhierarchy_v1.PolicySyncError) {
+func setPolicyNodeStatus(ancestry hierarchy.Ancestry, errs []policyhierarchy_v1.PolicyNodeSyncError) {
 	// TODO(ekitson): Use .DeepCopy() to avoid updating the shared cache version of the policynode.
 	node := ancestry.Node()
 	node.Status.SyncTokens = ancestry.TokenMap()
@@ -406,9 +406,9 @@ func setPolicyNodeStatus(ancestry hierarchy.Ancestry, errs []policyhierarchy_v1.
 	node.Status.SyncErrors = errs
 }
 
-func NewPolicySyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.PolicySyncError {
+func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.PolicyNodeSyncError {
 	gv := schema.GroupVersion{Group: spec.Group, Version: spec.Version}
-	return policyhierarchy_v1.PolicySyncError{
+	return policyhierarchy_v1.PolicyNodeSyncError{
 		SourceName:   name,
 		ResourceKind: spec.Resource,
 		ResourceAPI:  gv.String(),

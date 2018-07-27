@@ -79,16 +79,16 @@ type ClusterPolicyStatus struct {
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
 	// resources from the ClusterPolicy specs. This field will be empty on success.
 	// +optional
-	SyncErrors []ClusterSyncError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
+	SyncErrors []ClusterPolicySyncError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
 
 	// SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
 	// +optional
 	SyncTime metav1.Time `json:"syncTime,omitempty" protobuf:"bytes,3,opt,name=syncTime"`
 }
 
-// SyncError represents a failed sync attempt for a single K8S resource.
+// ClusterPolicySyncError represents a failed sync attempt for a ClusterPolicy.
 // +protobuf=true
-type ClusterSyncError struct {
+type ClusterPolicySyncError struct {
 	// ResourceName is the name of the K8S resource that failed to sync.
 	// +optional
 	ResourceName string `json:"resourceName,omitempty" protobuf:"bytes,1,opt,name=resourceName"`
@@ -190,16 +190,16 @@ type PolicyNodeStatus struct {
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
 	// resources from the PolicyNode specs. This field will be empty on success.
 	// +optional
-	SyncErrors []PolicySyncError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
+	SyncErrors []PolicyNodeSyncError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
 
 	// SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
 	// +optional
 	SyncTime metav1.Time `json:"syncTime,omitempty" protobuf:"bytes,3,opt,name=syncTime"`
 }
 
-// PolicySyncError represents a failed sync attempt for a single K8S resource.
+// PolicyNodeSyncError represents a failed sync attempt for a PolicyNode.
 // +protobuf=true
-type PolicySyncError struct {
+type PolicyNodeSyncError struct {
 	// SourceName is the name of the PolicyNode where the resource is defined.
 	// +optional
 	SourceName string `json:"sourceName,omitempty" protobuf:"bytes,1,opt,name=sourceName"`

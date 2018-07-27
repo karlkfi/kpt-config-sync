@@ -93,16 +93,16 @@ message ClusterPolicyStatus {
   // SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
   // resources from the ClusterPolicy specs. This field will be empty on success.
   // +optional
-  repeated ClusterSyncError syncErrors = 2;
+  repeated ClusterPolicySyncError syncErrors = 2;
 
   // SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time syncTime = 3;
 }
 
-// SyncError represents a failed sync attempt for a single K8S resource.
+// ClusterPolicySyncError represents a failed sync attempt for a ClusterPolicy.
 // +protobuf=true
-message ClusterSyncError {
+message ClusterPolicySyncError {
   // ResourceName is the name of the K8S resource that failed to sync.
   // +optional
   optional string resourceName = 1;
@@ -191,16 +191,16 @@ message PolicyNodeStatus {
   // SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
   // resources from the PolicyNode specs. This field will be empty on success.
   // +optional
-  repeated PolicySyncError syncErrors = 2;
+  repeated PolicyNodeSyncError syncErrors = 2;
 
   // SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time syncTime = 3;
 }
 
-// PolicySyncError represents a failed sync attempt for a single K8S resource.
+// PolicyNodeSyncError represents a failed sync attempt for a PolicyNode.
 // +protobuf=true
-message PolicySyncError {
+message PolicyNodeSyncError {
   // SourceName is the name of the PolicyNode where the resource is defined.
   // +optional
   optional string sourceName = 1;

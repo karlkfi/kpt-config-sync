@@ -129,7 +129,7 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 }
 
 func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterPolicy) error {
-	var syncErrs []policyhierarchy_v1.ClusterSyncError
+	var syncErrs []policyhierarchy_v1.ClusterPolicySyncError
 	errBuilder := multierror.NewBuilder()
 	for _, module := range s.modules {
 		declaredInstances := module.Extract(cp)
@@ -157,7 +157,7 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterP
 		actualInstances, err := module.ActionSpec().List("", labeling.ManageResource.Selector())
 		if err != nil {
 			errBuilder.Add(errors.Wrapf(err, "failed to list from policy controller for %s", module.Name()))
-			syncErrs = append(syncErrs, NewClusterSyncError(cp.Name, module.ActionSpec(), err))
+			syncErrs = append(syncErrs, NewSyncError(cp.Name, module.ActionSpec(), err))
 			continue
 		}
 
@@ -165,7 +165,7 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterP
 		for _, diff := range diffs {
 			if err := execute(diff, module.ActionSpec()); err != nil {
 				errBuilder.Add(err)
-				syncErrs = append(syncErrs, NewClusterSyncError(cp.Name, module.ActionSpec(), err))
+				syncErrs = append(syncErrs, NewSyncError(cp.Name, module.ActionSpec(), err))
 			}
 		}
 	}
@@ -177,16 +177,16 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterP
 	return errBuilder.Build()
 }
 
-func setClusterPolicyStatus(cp *policyhierarchy_v1.ClusterPolicy, errs []policyhierarchy_v1.ClusterSyncError) {
+func setClusterPolicyStatus(cp *policyhierarchy_v1.ClusterPolicy, errs []policyhierarchy_v1.ClusterPolicySyncError) {
 	// TODO(ekitson): Use .DeepCopy() to avoid updating the shared cache version of the clusterpolicy.
 	cp.Status.SyncToken = cp.Spec.ImportToken
 	cp.Status.SyncTime = meta_v1.Now()
 	cp.Status.SyncErrors = errs
 }
 
-func NewClusterSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.ClusterSyncError {
+func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.ClusterPolicySyncError {
 	gv := schema.GroupVersion{Group: spec.Group, Version: spec.Version}
-	return policyhierarchy_v1.ClusterSyncError{
+	return policyhierarchy_v1.ClusterPolicySyncError{
 		ResourceName: name,
 		ResourceKind: spec.Resource,
 		ResourceAPI:  gv.String(),
