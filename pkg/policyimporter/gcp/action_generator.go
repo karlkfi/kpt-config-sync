@@ -195,7 +195,8 @@ func (g *actionGenerator) processAtomicGroup(resources map[string]*watcher.Chang
 			case policyNodeResource:
 				nodeName, ok := g.gcpToK8SName[name]
 				if !ok {
-					return nil, errors.Errorf("cannot delete a non-existing resource %q", name)
+					glog.Warningf("cannot delete non-existing resource %q", name)
+					continue
 				}
 				glog.V(2).Infof("%q -> nomos.dev/v1/PolicyNodes/%s", name, nodeName)
 				delete(updatedPolicies.PolicyNodes, nodeName)

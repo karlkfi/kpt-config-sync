@@ -286,6 +286,21 @@ func init() {
 			},
 		},
 		{
+			testName: "Incremental change delete non-existent PolicyNode",
+			batch1: []*watcher.Change{
+				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
+				{Element: "folders/456/PolicyNode", State: watcher.Change_EXISTS, Continued: true, Data: folderPNProto},
+				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
+				{Element: "folders/999/PolicyNode", State: watcher.Change_DOES_NOT_EXIST, Continued: false, Data: emptyProto},
+				{Element: "folders/456/PolicyNode", State: watcher.Change_DOES_NOT_EXIST, Continued: false, Data: emptyProto},
+			},
+			expectedActions: []string{
+				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
+				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
+				"nomos.dev/v1/PolicyNodes/folder-456/delete",
+			},
+		},
+		{
 			testName: "Incremental change delete ClusterPolicy",
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
