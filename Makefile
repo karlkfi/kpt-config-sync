@@ -460,9 +460,7 @@ lint-bash:
 .PHONY: clientgen
 clientgen:
 	@echo "+++ Generating clientgen directory"
-	rm -rf $(TOP_DIR)/clientgen
 	$(TOP_DIR)/scripts/generate-clientset.sh
-	$(TOP_DIR)/scripts/generate-watcher.sh
 
 # Installs Nomos kubectl plugin.
 install-kubectl-plugin:
