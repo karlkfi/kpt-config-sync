@@ -121,6 +121,12 @@ sufficiently by automated tests. If we develop a feature that can't be verified 
 need a documented process for manual verification before release. For now, automated tests, plus the
 above sanity test, are sufficient.
 
+### GCP e2e tests
+
+Run any GCP e2e cases not yet automated:
+
+go/nomos-gcp-e2e-tests
+
 ### Blessing
 
 Once manual QA is complete:
