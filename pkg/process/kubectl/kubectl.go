@@ -33,6 +33,7 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
+	"k8s.io/api/rbac/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -123,7 +124,7 @@ func (t *Context) DeleteConfigMap(name, namespace string) error {
 
 // DeleteValidatingWebhookConfiguration deletes a validatingwebhookconfiguration from Kubernetes.
 func (t *Context) DeleteValidatingWebhookConfiguration(name string) error {
-	if _, _, err := t.Kubectl("delete", "validatingwebhookconfiguration", name, "--ignore-not-found"); err != nil {
+	if err := t.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
 		return errors.Wrapf(err, "delete validatingwebhookconfiguration name=%q")
 	}
 	return nil
@@ -164,6 +165,12 @@ func (t *Context) CreateConfigmapFromLiterals(name, namespace string, literals .
 	return nil
 }
 
+// clusterAdminRoleBingingName returns the name of the ClusterRoleBinding of the provided
+// user to the cluster-admin role, or what that name should be if the binding were to exist.
+func clusterAdminRoleBindingName(user string) string {
+	return fmt.Sprintf("%v-cluster-admin-binding", user)
+}
+
 // AddClusterAdmin adds user as a cluster admin.  This is only useful on clusters
 // that require such a change.  For example GKE.
 func (t *Context) AddClusterAdmin(user string) error {
@@ -171,15 +178,21 @@ func (t *Context) AddClusterAdmin(user string) error {
 	if err := t.RemoveClusterAdmin(user); err != nil {
 		return errors.Wrapf(err, "while trying to clean up cluster admin for user")
 	}
-	// TODO(filmil): 'user' here comes from user-supplied configuration.  Should
-	// it be sanitized, or is placement in 'args' enough?
-	args := []string{
-		"create", "clusterrolebinding",
-		fmt.Sprintf("%v-cluster-admin-binding", user),
-		"--clusterrole=cluster-admin",
-		fmt.Sprintf("--user=%v", user),
+	name := clusterAdminRoleBindingName(user)
+	cr := &v1.ClusterRoleBinding{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: name,
+		},
+		Subjects: []v1.Subject{{
+			Kind: v1.UserKind,
+			Name: user,
+		}},
+		RoleRef: v1.RoleRef{
+			Kind: "ClusterRole",
+			Name: "cluster-admin",
+		},
 	}
-	if _, _, err := t.Kubectl(args...); err != nil {
+	if _, err := t.Kubernetes().RbacV1().ClusterRoleBindings().Create(cr); err != nil {
 		return errors.Wrapf(err, "making admin: %q", user)
 	}
 	return nil
@@ -188,12 +201,8 @@ func (t *Context) AddClusterAdmin(user string) error {
 // RemoveClusterAdmin removes the user from the cluster admin role.  This is only
 // useful on GKE, and does nothing on other platforms.
 func (t *Context) RemoveClusterAdmin(user string) error {
-	args := []string{
-		"delete", "clusterrolebinding",
-		fmt.Sprintf("%v-cluster-admin-binding", user),
-		"--ignore-not-found",
-	}
-	if _, _, err := t.Kubectl(args...); err != nil {
+	name := clusterAdminRoleBindingName(user)
+	if err := t.Kubernetes().RbacV1().ClusterRoleBindings().Delete(name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
 		return errors.Wrapf(err, "unmaking admin: %q", user)
 	}
 	return nil

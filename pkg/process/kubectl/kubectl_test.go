@@ -16,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
+	"k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -382,7 +383,7 @@ func TestDeleteNamespace(t *testing.T) {
 			}
 			cm, err = client.Kubernetes().CoreV1().Namespaces().Get(test.namespace, meta_v1.GetOptions{})
 			if cm == nil {
-				t.Errorf("ConfigMap %s not found", test.namespace)
+				t.Errorf("Namespace %s not found", test.namespace)
 			}
 			if err != nil {
 				t.Errorf("Error getting namespace %s : %v", test.namespace, err)
@@ -390,11 +391,92 @@ func TestDeleteNamespace(t *testing.T) {
 		}
 		err = kc.DeleteNamespace(test.namespace)
 		if err != test.outErr {
-			t.Errorf("Expected %v returned from DeleteConfigMap, but got %v", test.outErr, err)
+			t.Errorf("Expected %v returned from DeleteNamespace, but got %v", test.outErr, err)
 		}
 		_, err = client.Kubernetes().CoreV1().Namespaces().Get(test.namespace, meta_v1.GetOptions{})
 		if !api_errors.IsNotFound(err) {
 			t.Errorf("Deleted namespace %v still exists", test.namespace)
+		}
+	}
+}
+
+func TestDeleteValidatingWebhookConfiguration(t *testing.T) {
+	tests := []struct {
+		name    string
+		vwcName string
+		outErr  error
+	}{
+		{
+			name:    "basic positive",
+			vwcName: "ConfigMyVWCPlz",
+			outErr:  nil,
+		},
+	}
+	client := fake.NewClient()
+	kc := NewWithClient(context.Background(), client)
+	for _, test := range tests {
+		vwc, err := client.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Create(&v1beta1.ValidatingWebhookConfiguration{
+			ObjectMeta: meta_v1.ObjectMeta{
+				Name: test.vwcName,
+			}})
+		if vwc == nil {
+			t.Errorf("No ValidatingWebhookConfiguration created. Should have created %s", test.vwcName)
+		}
+		if err != nil {
+			t.Errorf("Error creating ValidatingWebhookConfiguration %s : %v", test.vwcName, err)
+		}
+		vwc, err = client.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(test.vwcName, meta_v1.GetOptions{})
+		if vwc == nil {
+			t.Errorf("ValidatinWebhookConfiguration %s not found", test.vwcName)
+		}
+		if err != nil {
+			t.Errorf("Error getting ValidatingWebhookConfiguration %s : %v", test.vwcName, err)
+		}
+		err = kc.DeleteValidatingWebhookConfiguration(test.vwcName)
+		if err != test.outErr {
+			t.Errorf("Expected %v returned from DeleteValidatingWebhookConfiguration, but got %v", test.outErr, err)
+		}
+		_, err = client.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(test.vwcName, meta_v1.GetOptions{})
+		if !api_errors.IsNotFound(err) {
+			t.Errorf("Deleted ValidatingWebhookConfiguration %v still exists", test.vwcName)
+		}
+	}
+}
+
+func TestAddRemoveClusterAdmin(t *testing.T) {
+	tests := []struct {
+		name    string
+		crbUser string
+		outErr  error
+	}{
+		{
+			name:    "basic positive",
+			crbUser: "weBeSushi",
+			outErr:  nil,
+		},
+	}
+	client := fake.NewClient()
+	kc := NewWithClient(context.Background(), client)
+	for _, test := range tests {
+		crbName := fmt.Sprintf("%v-cluster-admin-binding", test.crbUser)
+		err := kc.AddClusterAdmin(test.crbUser)
+		if err != nil {
+			t.Errorf("Error while adding cluster admin: %v", err)
+		}
+		crb, err := client.Kubernetes().RbacV1().ClusterRoleBindings().Get(crbName, meta_v1.GetOptions{})
+		if crb == nil {
+			t.Errorf("No ClusterRoleBinding found created. Should have created %s", test.crbUser)
+		}
+		if err != nil {
+			t.Errorf("Error getting ClusterRoleBinding %s : %v", crbName, err)
+		}
+		err = kc.RemoveClusterAdmin(test.crbUser)
+		if err != test.outErr {
+			t.Errorf("Expected %v returned from RemoveClusterAdmin, but got %v", test.outErr, err)
+		}
+		_, err = client.Kubernetes().RbacV1().ClusterRoleBindings().Get(test.crbUser, meta_v1.GetOptions{})
+		if !api_errors.IsNotFound(err) {
+			t.Errorf("Deleted ClusterRoleBinding %v still exists", crbName)
 		}
 	}
 }
