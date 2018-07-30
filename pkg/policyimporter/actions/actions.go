@@ -24,6 +24,7 @@ import (
 	api_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -88,16 +89,7 @@ type clusterPolicyActionFactory struct {
 func newClusterPolicyActionFactory(
 	client typed_v1.NomosV1Interface,
 	lister listers_v1.ClusterPolicyLister) clusterPolicyActionFactory {
-	return clusterPolicyActionFactory{&action.ReflectiveActionSpec{
-		Resource:   action.LowerPlural(policyhierarchy_v1.ClusterPolicy{}),
-		KindPlural: action.Plural(policyhierarchy_v1.ClusterPolicy{}),
-		Group:      api_v1.GroupName,
-		Version:    api_v1.SchemeGroupVersion.Version,
-		EqualSpec:  clusterPoliciesEqual,
-		Client:     client,
-		Lister:     lister,
-	},
-	}
+	return clusterPolicyActionFactory{clusterpolicy.NewActionSpec(client, lister)}
 }
 
 // NewUpsert creates an action for upserting ClusterPolicies.
@@ -110,15 +102,4 @@ func (f clusterPolicyActionFactory) NewUpsert(
 func (f clusterPolicyActionFactory) NewDelete(
 	clusterPolicyName string) action.Interface {
 	return action.NewReflectiveDeleteAction("", clusterPolicyName, f.ReflectiveActionSpec)
-
-}
-
-var cpsIgnore = []cmp.Option{
-	cmpopts.IgnoreFields(policyhierarchy_v1.ClusterPolicySpec{}, "ImportToken", "ImportTime"),
-}
-
-func clusterPoliciesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	l := lhs.(*policyhierarchy_v1.ClusterPolicy)
-	r := rhs.(*policyhierarchy_v1.ClusterPolicy)
-	return cmp.Equal(l.Spec, r.Spec, cpsIgnore...)
 }

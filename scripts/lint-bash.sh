@@ -30,7 +30,7 @@ readonly exclude=(
 readonly exclude_bats=(
   e2e/testcases/acme.bats
   e2e/testcases/basic.bats
-  e2e/testcases/cluster.bats
+  e2e/testcases/cluster_resources.bats
   e2e/testcases/namespaces.bats
   scripts/lib/installer.bats
 )

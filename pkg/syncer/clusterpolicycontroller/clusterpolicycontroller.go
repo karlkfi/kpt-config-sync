@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/glog"
 	policyhierarchy_lister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	typed_v1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/object"
@@ -30,6 +31,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/multierror"
+	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/eventhandlers"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
@@ -46,6 +48,7 @@ const reconcileMetricsLabel = "cluster-reconcile"
 // ClusterPolicyController syncs native Kubernetes resources with the policy
 // data in ClusterPolicies.
 type ClusterPolicyController struct {
+	client  typed_v1.NomosV1Interface
 	lister  policyhierarchy_lister.ClusterPolicyLister
 	modules []Module
 }
@@ -63,6 +66,7 @@ func NewController(
 	modules []Module) *controller.GenericController {
 	informer := injectArgs.Informers.Nomos().V1().ClusterPolicies()
 	clusterPolicyController := &ClusterPolicyController{
+		client:  injectArgs.Clientset.NomosV1(),
 		lister:  informer.Lister(),
 		modules: modules,
 	}
@@ -169,7 +173,9 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterP
 			}
 		}
 	}
-	setClusterPolicyStatus(cp, syncErrs)
+	if err := s.setClusterPolicyStatus(cp, syncErrs); err != nil {
+		errBuilder.Add(errors.Wrapf(err, "failed to set status for %s", cp.Name))
+	}
 
 	if errBuilder.Len() != 0 {
 		glog.Warningf("reconcile encountered %d errors", errBuilder.Len())
@@ -177,11 +183,27 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterP
 	return errBuilder.Build()
 }
 
-func setClusterPolicyStatus(cp *policyhierarchy_v1.ClusterPolicy, errs []policyhierarchy_v1.ClusterPolicySyncError) {
-	// TODO(ekitson): Use .DeepCopy() to avoid updating the shared cache version of the clusterpolicy.
-	cp.Status.SyncToken = cp.Spec.ImportToken
-	cp.Status.SyncTime = meta_v1.Now()
-	cp.Status.SyncErrors = errs
+func (s *ClusterPolicyController) setClusterPolicyStatus(cp *policyhierarchy_v1.ClusterPolicy, errs []policyhierarchy_v1.ClusterPolicySyncError) error {
+	if isSynced(cp) && len(errs) == 0 {
+		glog.Infof("Status for ClusterPolicy %s is already up-to-date.", cp.Name)
+		return nil
+	}
+	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
+	updateCB := func(old runtime.Object) (runtime.Object, error) {
+		oldCP := old.(*policyhierarchy_v1.ClusterPolicy)
+		newCP := oldCP.DeepCopy()
+		newCP.Status.SyncToken = cp.Spec.ImportToken
+		newCP.Status.SyncTime = meta_v1.Now()
+		newCP.Status.SyncErrors = errs
+		return newCP, nil
+	}
+	ua := action.NewReflectiveUpdateAction(
+		"", cp.Name, updateCB, clusterpolicy.NewActionSpec(s.client, s.lister))
+	return ua.Execute()
+}
+
+func isSynced(cp *policyhierarchy_v1.ClusterPolicy) bool {
+	return cp.Spec.ImportToken == cp.Status.SyncToken && len(cp.Status.SyncErrors) == 0
 }
 
 func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.ClusterPolicySyncError {

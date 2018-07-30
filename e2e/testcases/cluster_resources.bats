@@ -46,6 +46,15 @@ function check_cluster_scoped_resource() {
   local itoken="$(kubectl get clusterpolicy -ojsonpath='{.items[0].spec.importToken}')"
   git::check_hash "$itoken"
 
+  # sleep to try to reduce potential flakiness between syncer updating the resources and syncer
+  # updating the syncToken of the clusterpolicy
+  # TODO(ekitson): Use wait::event when we publish a sync event to look for
+  sleep 1
+
+  # verify that syncToken has been updated as well
+  run kubectl get clusterpolicy -ojsonpath='{.items[0].status.syncToken}'
+  assert::equals "$itoken"
+
   # delete item
   git::rm ${respath}
   git::commit
