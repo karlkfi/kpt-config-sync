@@ -14,6 +14,7 @@ protoc\
   -I /tmp/watcher \
   -I vendor/github.com/gogo/googleapis/ \
   -I vendor/ \
+  -I third_party/protobuf/ \
   --gogo_out=plugins=grpc,\
 Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api,\
 Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,\
