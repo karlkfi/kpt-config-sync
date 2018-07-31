@@ -61,10 +61,11 @@ setup::gcp::initialize() {
         --organization="${GCP_TEST_ORGANIZATION_ID}" \
         "${GCP_TEST_NAMESPACE}"
     echo "IF RUNNING FOR THE FIRST TIME THIS WILL FAIL. See b/111757245"
+
+    echo "setup::gcp enable services"
+    gcloud --quiet services enable \
+        kubernetespolicy.googleapis.com --project="${GCP_TEST_NAMESPACE}"
   fi
-  echo "setup::gcp enable services"
-  gcloud --quiet services enable \
-      kubernetespolicy.googleapis.com --project="${GCP_TEST_NAMESPACE}"
 
   echo "Ensure that the test namespace does not exist upon exit."
   setup::gcp::delete_namespace "${GCP_TEST_NAMESPACE}"
