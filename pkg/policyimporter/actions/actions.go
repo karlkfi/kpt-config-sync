@@ -17,16 +17,12 @@ limitations under the License.
 package actions
 
 import (
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	typed_v1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
-	api_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/google/nomos/pkg/util/policynode"
 )
 
 // Factories contains factories for creating actions on Nomos custom resources.
@@ -46,17 +42,7 @@ type policyNodeActionFactory struct {
 }
 
 func newPolicyNodeActionFactory(client typed_v1.NomosV1Interface, lister listers_v1.PolicyNodeLister) policyNodeActionFactory {
-	return policyNodeActionFactory{
-		&action.ReflectiveActionSpec{
-			Resource:   action.LowerPlural(policyhierarchy_v1.PolicyNode{}),
-			KindPlural: action.Plural(policyhierarchy_v1.PolicyNode{}),
-			Group:      api_v1.GroupName,
-			Version:    api_v1.SchemeGroupVersion.Version,
-			EqualSpec:  policyNodesEqual,
-			Client:     client,
-			Lister:     lister,
-		},
-	}
+	return policyNodeActionFactory{policynode.NewActionSpec(client, lister)}
 }
 
 // NewUpsert nodeCreates an action for upserting PolicyNodes.
@@ -67,19 +53,6 @@ func (f policyNodeActionFactory) NewUpsert(policyNode *policyhierarchy_v1.Policy
 // NewDelete nodeCreates an action for deleting PolicyNodes.
 func (f policyNodeActionFactory) NewDelete(nodeName string) action.Interface {
 	return action.NewReflectiveDeleteAction("", nodeName, f.ReflectiveActionSpec)
-}
-
-var pnsIgnore = []cmp.Option{
-	// Quantity has a few unexported fields which we need to explicitly ignore. The path is:
-	// PolicyNodeSpec -> ResourceQuota -> ResourceQuotaSpec -> ResourceList -> Quantity
-	cmpopts.IgnoreUnexported(resource.Quantity{}),
-	cmpopts.IgnoreFields(policyhierarchy_v1.PolicyNodeSpec{}, "ImportToken", "ImportTime"),
-}
-
-func policyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	l := lhs.(*policyhierarchy_v1.PolicyNode)
-	r := rhs.(*policyhierarchy_v1.PolicyNode)
-	return cmp.Equal(l.Spec, r.Spec, pnsIgnore...)
 }
 
 type clusterPolicyActionFactory struct {

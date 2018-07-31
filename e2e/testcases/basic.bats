@@ -39,9 +39,26 @@ load ../lib/loader
   run kubectl get rolebindings -n backend backend.robert-rolebinding -o yaml
   assert::contains "acme-admin"
 
-  # Verify that importToken has been updated from the commit above.
+  # verify that importToken has been updated from the commit above
   local itoken="$(kubectl get policynode backend -ojsonpath='{.spec.importToken}')"
   git::check_hash "$itoken"
+
+  # sleep to try to reduce potential flakiness between syncer updating the resources and syncer
+  # updating the syncToken of the policynodes
+  # TODO(ekitson): Use wait::event when we publish a sync event to look for
+  sleep 1
+
+  # verify that syncToken has been updated as well
+  run kubectl get policynode backend -ojsonpath='{.status.syncTokens.backend}'
+  assert::equals "$itoken"
+
+  # verify the other syncTokens in the hierarchy
+  itoken="$(kubectl get policynode eng -ojsonpath='{.spec.importToken}')"
+  run kubectl get policynode backend -ojsonpath='{.status.syncTokens.eng}'
+  assert::equals "$itoken"
+  itoken="$(kubectl get policynode acme -ojsonpath='{.spec.importToken}')"
+  run kubectl get policynode backend -ojsonpath='{.status.syncTokens.acme}'
+  assert::equals "$itoken"
 }
 
 @test "RoleBindings enforced" {

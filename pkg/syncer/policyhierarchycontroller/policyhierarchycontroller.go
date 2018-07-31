@@ -26,6 +26,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
+	policyhierarchy_lister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	typed_v1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/object"
@@ -39,6 +42,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/multierror"
 	"github.com/google/nomos/pkg/syncer/parentindexer"
 	"github.com/google/nomos/pkg/util/namespaceutil"
+	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
@@ -70,6 +74,8 @@ const controllerName = "nomos-hierarchical-controller"
 // PolicyHieraryController controls policies based on the declarations in the PolicyNodes.
 type PolicyHieraryController struct {
 	injectArgs        args.InjectArgs
+	client            typed_v1.NomosV1Interface
+	nodeLister        policyhierarchy_lister.PolicyNodeLister
 	namespaceLister   listers_core_v1.NamespaceLister
 	hierarchy         hierarchy.Interface
 	modules           []Module
@@ -90,6 +96,8 @@ func NewController(
 	modules []Module) *controller.GenericController {
 	policyHierarchyController := &PolicyHieraryController{
 		injectArgs:        injectArgs,
+		client:            injectArgs.Clientset.NomosV1(),
+		nodeLister:        injectArgs.Informers.Nomos().V1().PolicyNodes().Lister(),
 		namespaceLister:   injectArgs.KubernetesInformers.Core().V1().Namespaces().Lister(),
 		modules:           modules,
 		hierarchy:         hierarchy.New(injectArgs.Informers.Nomos().V1().PolicyNodes()),
@@ -394,16 +402,37 @@ func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy
 			}
 		}
 	}
-	setPolicyNodeStatus(ancestry, syncErrs)
+	if err := s.setPolicyNodeStatus(ancestry, syncErrs); err != nil {
+		errBuilder.Add(errors.Wrapf(err, "failed to set status for %s", name))
+	}
 	return errBuilder.Build()
 }
 
-func setPolicyNodeStatus(ancestry hierarchy.Ancestry, errs []policyhierarchy_v1.PolicyNodeSyncError) {
-	// TODO(ekitson): Use .DeepCopy() to avoid updating the shared cache version of the policynode.
+func (s *PolicyHieraryController) setPolicyNodeStatus(ancestry hierarchy.Ancestry, errs []policyhierarchy_v1.PolicyNodeSyncError) error {
+	if isSynced(ancestry) && len(errs) == 0 {
+		glog.Infof("Status for PolicyNode %s is already up-to-date.", ancestry.Node().Name)
+		return nil
+	}
+	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
+	updateCB := func(old runtime.Object) (runtime.Object, error) {
+		oldPN := old.(*policyhierarchy_v1.PolicyNode)
+		newPN := oldPN.DeepCopy()
+		newPN.Status.SyncTokens = ancestry.TokenMap()
+		newPN.Status.SyncTime = meta_v1.Now()
+		newPN.Status.SyncErrors = errs
+		return newPN, nil
+	}
+	ua := action.NewReflectiveUpdateAction(
+		"", ancestry.Node().Name, updateCB, policynode.NewActionSpec(s.client, s.nodeLister))
+	return ua.Execute()
+}
+
+func isSynced(ancestry hierarchy.Ancestry) bool {
 	node := ancestry.Node()
-	node.Status.SyncTokens = ancestry.TokenMap()
-	node.Status.SyncTime = meta_v1.Now()
-	node.Status.SyncErrors = errs
+	if len(node.Status.SyncErrors) > 0 {
+		return false
+	}
+	return cmp.Equal(node.Status.SyncTokens, ancestry.TokenMap())
 }
 
 func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.PolicyNodeSyncError {
