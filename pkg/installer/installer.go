@@ -31,6 +31,7 @@ import (
 	"github.com/google/nomos/pkg/process/kubectl"
 	"github.com/pkg/errors"
 
+	"k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -43,6 +44,9 @@ const (
 	// we expect that it's unlikely a wait would be
 	// deploymentTimeout*len(deployments).
 	deploymentTimeout = 3 * time.Minute
+
+	// nomosLabel is a label applied to nomos-created resources not under default namespace
+	nomosLabel = "nomos.dev/system"
 
 	// "Open sesame" for uninstallation.
 	confirmUninstall = "deletedeletedelete"
@@ -60,31 +64,13 @@ const (
 var (
 	// commonDeployments are the common deployments managed by installer.
 	commonDeployments = []string{
-		"resourcequota-admission-controller",
 		"policy-admission-controller",
 		"syncer",
 	}
 
-	// deploymentClusterRolesAndBindings are the cluster roles and
-	// clusterrolebindings names created for the nomos system.
-	deploymentClusterRolesAndBindings = []string{
-		"nomos.dev:policy-importer",
-		"nomos.dev:resourcequota-admission-controller",
-		"nomos.dev:policy-admission-controller",
-		"nomos.dev:syncer",
-
-		// TODO(2018-05-31): these are legacy names, remove these at 0.9.0 <= release.
-		"nomos-policy-importer",
-		"nomos-resourcequota-admission-controller",
-		"nomos-policy-admission-controller",
-		"nomos-syncer",
-	}
-
-	// validatingWebhookConfigurations is a list of cluster-level validating
-	// webhook configurations created by our admission controllers.
-	validatingWebhookConfigurations = []string{
-		"resource-quota.nomos.dev",
-		"policy.nomos.dev",
+	// gitDeployments is the deployments only used on Git-configured deployments
+	gitDeployments = []string{
+		"resourcequota-admission-controller",
 	}
 
 	// mv is the minimum supported cluster version.  It is not possible to install
@@ -110,25 +96,29 @@ type Installer struct {
 
 // New returns a new Installer instance.
 func New(c config.Config, workDir string) *Installer {
-	resourceQuotaCertsInstaller := &certInstaller{
-		generateScript: "generate-resourcequota-admission-controller-certs.sh",
-		deployScript:   "deploy-resourcequota-admission-controller.sh",
-		subDir:         "resourcequota",
-	}
 	policyNodesCertsInstaller := &certInstaller{
 		generateScript: "generate-policy-admission-controller-certs.sh",
 		deployScript:   "deploy-policy-admission-controller.sh",
 		subDir:         "policynodes",
 	}
-	return &Installer{
+	ins := &Installer{
 		c:       c,
 		k:       kubectl.New(context.Background()),
 		workDir: workDir,
 		certInstallers: []*certInstaller{
-			resourceQuotaCertsInstaller,
 			policyNodesCertsInstaller,
 		},
 	}
+	// we don't use resource quota control in GCP installs
+	if !c.Git.Empty() {
+		resourceQuotaCertsInstaller := &certInstaller{
+			generateScript: "generate-resourcequota-admission-controller-certs.sh",
+			deployScript:   "deploy-resourcequota-admission-controller.sh",
+			subDir:         "resourcequota",
+		}
+		ins.certInstallers = append(ins.certInstallers, resourceQuotaCertsInstaller)
+	}
+	return ins
 }
 
 // createCertificates creates the certificates needed to bootstrap the syncing
@@ -302,7 +292,12 @@ func (i *Installer) processCluster(cluster string) error {
 			return errors.Wrapf(err, "while deploying %s Secrets", certInstaller.name())
 		}
 	}
-	deployments := append(commonDeployments, importerDeployment)
+	var deployments []string
+	deployments = append(deployments, commonDeployments...)
+	deployments = append(deployments, importerDeployment)
+	if !i.c.Git.Empty() {
+		deployments = append(deployments, gitDeployments...)
+	}
 	for _, d := range deployments {
 		if err = i.k.Apply(filepath.Join(i.workDir, "yaml", fmt.Sprintf("%s.yaml", d))); err != nil {
 			return errors.Wrapf(err, "while applying Deployment: %s", d)
@@ -389,38 +384,75 @@ func (i *Installer) DeleteClusterPolicies() error {
 	return nil
 }
 
+// names returns an array of ClusterRoleBinding and ClusterRole names that are in the input
+// lists. The function does not output duplicates, and does not do any validation of the similarity
+// of the two input lists.
+func names(crbl *v1.ClusterRoleBindingList, crl *v1.ClusterRoleList) []string {
+	nameMap := map[string]bool{}
+	for _, v := range crbl.Items {
+		if !nameMap[v.Name] {
+			nameMap[v.Name] = true
+		}
+	}
+	for _, v := range crl.Items {
+		if !nameMap[v.Name] {
+			nameMap[v.Name] = true
+		}
+	}
+	var names []string
+	for k := range nameMap {
+		names = append(names, k)
+	}
+	return names
+}
+
 // uninstallCluster is supposed to do all the legwork in order to start from
 // a functioning nomos cluster, and end with a cluster with all nomos-related
 // additions removed.
 func (i *Installer) uninstallCluster() error {
 	// Remove admission webhooks.
-	for _, w := range validatingWebhookConfigurations {
-		if err := i.k.DeleteValidatingWebhookConfiguration(w); err != nil {
+	vwcToDelete, err := i.k.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().List(
+		meta_v1.ListOptions{LabelSelector: nomosLabel})
+	if err != nil {
+		return errors.Wrapf(err, "while listing webhook configurations to delete")
+	}
+	for _, w := range vwcToDelete.Items {
+		if err = i.k.DeleteValidatingWebhookConfiguration(w.Name); err != nil {
 			return errors.Wrapf(err, "while deleting webhook configurations")
 		}
 	}
 	// Remove namespace
-	if err := i.k.DeleteNamespace(defaultNamespace); err != nil {
+	if err = i.k.DeleteNamespace(defaultNamespace); err != nil {
 		return errors.Wrapf(err, "while removing namespace %q", defaultNamespace)
 	}
-	if err := i.k.WaitForNamespaceDeleted(defaultNamespace); err != nil {
+	if err = i.k.WaitForNamespaceDeleted(defaultNamespace); err != nil {
 		return errors.Wrapf(err, "while waiting for namespace %q to disappear", defaultNamespace)
 	}
 	// Remove all managed cluster role bindings.  The code below assumes that
 	// roles and role bindings are named the same, which is currently true.
-	for _, name := range deploymentClusterRolesAndBindings {
+	crbToDelete, err := i.k.Kubernetes().RbacV1().ClusterRoleBindings().List(
+		meta_v1.ListOptions{LabelSelector: nomosLabel})
+	if err != nil {
+		return errors.Wrapf(err, "while listing cluster role bindings to delete")
+	}
+	crToDelete, err := i.k.Kubernetes().RbacV1().ClusterRoles().List(meta_v1.ListOptions{LabelSelector: nomosLabel})
+	if err != nil {
+		return errors.Wrapf(err, "while listing cluster roles to delete")
+	}
+	dcrb := names(crbToDelete, crToDelete)
+	for _, name := range dcrb {
 		// Ignore errors while deleting, but log them.
-		if err := i.k.DeleteClusterrolebinding(name); err != nil {
-			glog.Errorf("%v", errors.Wrapf(err, "while uninstalling cluster"))
+		if err = i.k.DeleteClusterrolebinding(name); err != nil {
+			glog.Errorf("%v", errors.Wrapf(err, "while deleting cluster role binding"))
 		}
-		if err := i.k.DeleteClusterrole(name); err != nil {
-			glog.Errorf("%v", errors.Wrapf(err, "while uninstalling cluster"))
+		if err = i.k.DeleteClusterrole(name); err != nil {
+			glog.Errorf("%v", errors.Wrapf(err, "while deleting cluster role"))
 		}
 	}
-	if err := i.DeletePolicyNodes(); err != nil {
+	if err = i.DeletePolicyNodes(); err != nil {
 		return err
 	}
-	if err := i.DeleteClusterPolicies(); err != nil {
+	if err = i.DeleteClusterPolicies(); err != nil {
 		return err
 	}
 	return nil
