@@ -30,7 +30,8 @@ SYS_NAMESPACES=(
 export GCP_TEST_ORGANIZATION_ID="495131404417" # nomos-e2e.joonix.net
 export GCP_TEST_NAMESPACE="$USER-nomos-e2e"
 export GCP_TEST_PROJECT="${GCP_TEST_NAMESPACE}"
-export GCP_TEST_FOLDER="folder-$GCP_TEST_NAMESPACE"
+export GCP_TEST_PROJECT_SUBFOLDER="${GCP_TEST_NAMESPACE}-sf"
+export GCP_TEST_FOLDER="$GCP_TEST_NAMESPACE-folder"
 
 setup::gcp::delete_namespace() {
   local namespace="$1"
@@ -47,25 +48,64 @@ setup::gcp::delete_namespace() {
   echo "setup::gcp::delete exit"
 }
 
+# Creates a project with the given id if it doesn't already exist
+setup::gcp::create_project() {
+  local project="$1"
+  echo "setup::gcp::create_project=${project}"
+
+  if ! gcloud projects describe "${project}" &> /dev/null ; then
+    echo gcloud exit code: $?
+    # If an e2e test project does not exist for this user, create it and
+    # do what is necessary to make it a functional e2e project.
+    gcloud projects create \
+        --organization="${GCP_TEST_ORGANIZATION_ID}" \
+        "${project}"
+    echo "IF RUNNING FOR THE FIRST TIME THIS WILL FAIL. See b/111757245"
+
+    echo "setup::gcp enable services"
+    gcloud --quiet services enable \
+        kubernetespolicy.googleapis.com --project="${project}"
+  fi
+}
+
+# Sets the FOLDER_ID variable to the ID of the folder with the given display
+# name. Creates the folder if needed.
+setup::gcp::set_or_create_folder() {
+  local folder_display_name="$1"
+
+  echo "setup::gcp::set_or_create_folder=${folder_display_name}"
+
+  # This returns the folder number if exists
+  run gcloud alpha resource-manager folders list --organization "${GCP_TEST_ORGANIZATION_ID}" \
+    --filter=display_name:"${folder_display_name}" --format="value(name)"
+
+  # shellcheck disable=SC2154
+  if [[ -z $output ]]; then
+    # This will return folder name "folders/foldernumber"
+    run gcloud alpha resource-manager folders create --display-name="${folder_display_name}" \
+      --organization "${GCP_TEST_ORGANIZATION_ID}" --format="value(name)"
+    # shellcheck disable=SC2154
+    [ "$status" -eq 0 ]
+    FOLDER_ID=$(echo "$output" | awk '/^folders/' | cut -d / -f 2) # extract foldernumber
+  else
+    FOLDER_ID=$output
+  fi
+  echo "Folder id=${FOLDER_ID} found"
+}
+
 setup::gcp::initialize() {
   echo "setup::gcp::initialize"
   GCLOUD_CONTEXT="$(gcloud config get-value account)"
   gcloud auth activate-service-account test-runner@nomos-e2e-test1.iam.gserviceaccount.com \
           --key-file="$HOME/test_runner_client_key.json"
 
-  if ! gcloud projects describe "${GCP_TEST_NAMESPACE}" &> /dev/null ; then
-    echo gcloud exit code: $?
-    # If an e2e test project does not exist for this user, create it and
-    # do what is necessary to make it a functional e2e project.
-    gcloud projects create \
-        --organization="${GCP_TEST_ORGANIZATION_ID}" \
-        "${GCP_TEST_NAMESPACE}"
-    echo "IF RUNNING FOR THE FIRST TIME THIS WILL FAIL. See b/111757245"
+  setup::gcp::create_project "${GCP_TEST_PROJECT}"
+  setup::gcp::create_project "${GCP_TEST_PROJECT_SUBFOLDER}"
 
-    echo "setup::gcp enable services"
-    gcloud --quiet services enable \
-        kubernetespolicy.googleapis.com --project="${GCP_TEST_NAMESPACE}"
-  fi
+  setup::gcp::set_or_create_folder "${GCP_TEST_FOLDER}"
+
+  echo "ensure project is under the folder"
+  gcloud alpha projects move "${GCP_TEST_PROJECT_SUBFOLDER}" --folder="${FOLDER_ID}"
 
   echo "Ensure that the test namespace does not exist upon exit."
   setup::gcp::delete_namespace "${GCP_TEST_NAMESPACE}"
