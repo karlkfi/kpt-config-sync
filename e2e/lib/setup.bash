@@ -49,6 +49,9 @@ setup::gcp::delete_namespace() {
 
 setup::gcp::initialize() {
   echo "setup::gcp::initialize"
+  GCLOUD_CONTEXT="$(gcloud config get-value account)"
+  gcloud auth activate-service-account test-runner@nomos-e2e-test1.iam.gserviceaccount.com \
+          --key-file="$HOME/test_runner_client_key.json"
 
   if ! gcloud projects describe "${GCP_TEST_NAMESPACE}" &> /dev/null ; then
     echo gcloud exit code: $?
@@ -71,6 +74,8 @@ setup::gcp::initialize() {
 gcp::teardown() {
   echo "gcp::teardown"
   setup::gcp::delete_namespace "${GCP_TEST_NAMESPACE}"
+
+  gcloud config set account "${GCLOUD_CONTEXT}"
   echo "gcp::teardown exit"
 }
 

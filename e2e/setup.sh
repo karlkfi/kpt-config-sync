@@ -15,8 +15,6 @@ function set_up_env() {
     gcp)
     gsutil cp "${gcp_watcher_cred}" "$HOME"
     gsutil cp "${gcp_runner_cred}" "$HOME"
-    gcloud auth activate-service-account test-runner@nomos-e2e-test1.iam.gserviceaccount.com \
-      --key-file="$HOME/test_runner_client_key.json"
     ;;
   esac
 
@@ -58,10 +56,6 @@ function set_up_env_minimal() {
 function clean_up() {
 
   echo "++++ Cleaning up environment"
-  if [[ "$importer" == "gcp" ]]; then
-    echo "Setting gcloud account back to ${suggested_user}"
-    gcloud config set account "${suggested_user}"
-  fi
 
   # TODO: workaround for b/111218567 remove this once resolved
   if ! kubectl get customresourcedefinition policynodes.nomos.dev &> /dev/null; then
