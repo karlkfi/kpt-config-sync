@@ -85,7 +85,7 @@ BUILDENV_IMAGE_VERSION ?= v0.1.0
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
 # GCP service account credentials used in e2e tests.
-GCP_E2E_CRED := gs://stolos-dev/e2e/watcher_client_key.json
+GCP_E2E_CRED := gs://stolos-dev/e2e/nomos-e2e.joonix.net/watcher_client_key.json
 
 # When set to "release", enables these optimizations:
 # - Compress binary sizes

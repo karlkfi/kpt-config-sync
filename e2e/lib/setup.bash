@@ -27,8 +27,8 @@ SYS_NAMESPACES=(
 # Elysium policy, some state must be reused across runs.  We set up that state
 # here so it is available to the test cases, and we create one test project per
 # different $USER.
-export GCP_TEST_ORGANIZATION_ID="515925372711"
-export GCP_TEST_NAMESPACE="$USER-nomos-e2e-tests"
+export GCP_TEST_ORGANIZATION_ID="495131404417" # nomos-e2e.joonix.net
+export GCP_TEST_NAMESPACE="$USER-nomos-e2e"
 export GCP_TEST_PROJECT="${GCP_TEST_NAMESPACE}"
 export GCP_TEST_FOLDER="folder-$GCP_TEST_NAMESPACE"
 
@@ -42,8 +42,8 @@ setup::gcp::delete_namespace() {
 
   # || true to ignore scenario where the namespace is not found.
   gcloud --quiet alpha container policy namespaces delete \
-	  --project="${project_id}" \
-	  "projects/${project_num}/namespaces/${namespace}" || true
+          --project="${project_id}" \
+          "projects/${project_num}/namespaces/${namespace}" || true
   echo "setup::gcp::delete exit"
 }
 
@@ -57,11 +57,12 @@ setup::gcp::initialize() {
     gcloud projects create \
         --organization="${GCP_TEST_ORGANIZATION_ID}" \
         "${GCP_TEST_NAMESPACE}"
+    echo "IF RUNNING FOR THE FIRST TIME THIS WILL FAIL. See b/111757245"
   fi
   echo "setup::gcp enable services"
   gcloud --quiet services enable \
       kubernetespolicy.googleapis.com --project="${GCP_TEST_NAMESPACE}"
-  
+
   echo "Ensure that the test namespace does not exist upon exit."
   setup::gcp::delete_namespace "${GCP_TEST_NAMESPACE}"
   echo "setup::gcp::initialize exit"
