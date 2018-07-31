@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/blang/semver"
@@ -86,15 +85,6 @@ func (t *Context) Kubectl(args ...string) (stdout, stderr string, err error) {
 		glog.V(9).Infof("err: %v", err)
 	}
 	return // naked
-}
-
-// KubectlOrDie will execute a kubectl command and panic if the script fails.
-func (t *Context) KubectlOrDie(args ...string) (stdout, stderr string) {
-	stdout, stderr, err := t.Kubectl(args...)
-	if err != nil {
-		panic(errors.Errorf("Command %s failed, stdout: %s stderr: %s", strings.Join(args, " "), stdout, stderr))
-	}
-	return stdout, stderr
 }
 
 // Apply runs kubectl apply -f on a given path.
