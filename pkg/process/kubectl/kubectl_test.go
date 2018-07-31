@@ -14,13 +14,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/client/meta/fake"
 	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
 	"k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/version"
+	dis_fake "k8s.io/client-go/discovery/fake"
 )
 
 func TestClusterList(t *testing.T) {
@@ -137,57 +138,40 @@ func TestVersion(t *testing.T) {
 	// Replacement for user.Current() which is not usable without CGO.
 	restconfig.SetCurrentUserForTest(&user.User{Uid: "0", Username: "nobody"}, nil)
 	tests := []struct {
-		name     string
-		output   string
-		expected semver.Version
-		err      error
+		name          string
+		serverVersion version.Info
+		expected      semver.Version
+		err           error
 	}{
 		{
 			name: "Simple version",
-			output: `{
-  "clientVersion": {
-    "major": "1",
-    "minor": "8",
-    "gitVersion": "v1.8.6",
-    "gitCommit": "6260bb08c46c31eea6cb538b34a9ceb3e406689c",
-    "gitTreeState": "clean",
-    "buildDate": "2017-12-21T06:34:11Z",
-    "goVersion": "go1.8.3",
-    "compiler": "gc",
-    "platform": "linux/amd64"
-  },
-  "serverVersion": {
-    "major": "1",
-    "minor": "9",
-    "gitVersion": "v1.9.1",
-    "gitCommit": "3a1c9449a956b6026f075fa3134ff92f7d55f812",
-    "gitTreeState": "clean",
-    "buildDate": "2018-01-04T11:40:06Z",
-    "goVersion": "go1.9.2",
-    "compiler": "gc",
-    "platform": "linux/amd64"
-  }
-}
-		`,
+			serverVersion: version.Info{
+				Major:        "1",
+				Minor:        "9",
+				GitVersion:   "v1.9.1",
+				GitCommit:    "3a1c9449a956b6026f075fa3134ff92f7d55f812",
+				GitTreeState: "clean",
+				BuildDate:    "2018-01-04T11:40:06Z",
+				GoVersion:    "go1.9.2",
+				Compiler:     "gc",
+				Platform:     "linux/amd64",
+			},
 			expected: semver.MustParse("1.9.1"),
 		},
 		{
 			name: "Complex semver",
-			output: `{
-  "clientVersion": {
-  },
-  "serverVersion": {
-    "gitVersion": "v1.9.2-rc.alpha.something.other+dirty"
-  }
-}
-		`,
+			serverVersion: version.Info{
+				GitVersion: "v1.9.2-rc.alpha.something.other+dirty",
+			},
 			expected: semver.MustParse("1.9.2-rc.alpha.something.other+dirty"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			exec.SetFakeOutputsForTest(strings.NewReader(tt.output), nil, nil)
-			c := New(context.Background())
+			client := fake.NewClient()
+			c := NewWithClient(context.Background(), client)
+			fd, _ := client.Kubernetes().Discovery().(*dis_fake.FakeDiscovery)
+			fd.FakedServerVersion = &tt.serverVersion
 			actual, err := c.GetClusterVersion()
 			if err != nil {
 				if tt.err != nil && err.Error() != tt.err.Error() {

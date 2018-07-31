@@ -19,7 +19,6 @@ package kubectl
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -208,41 +207,19 @@ func (t *Context) RemoveClusterAdmin(user string) error {
 	return nil
 }
 
-// versionInfo is a partial parsed output of the "kubectl version" command.
-type versionInfo struct {
-	GitVersion string `json:"gitVersion"`
-}
-type versionOutput struct {
-	ClientVersion versionInfo `json:"clientVersion"`
-	ServerVersion versionInfo `json:"serverVersion"`
-}
-
 // GetClusterVersion obtains the semantic version information from the cluster in the
 // current context.
 func (t *Context) GetClusterVersion() (semver.Version, error) {
-	stdout, stderr, err := t.Kubectl("version", "-o", "json")
-	if glog.V(8) {
-		glog.Infof("stdout: %v\nstderr:%v", stdout, stderr)
-	}
-	if stderr != "" {
-		glog.Warningf("GetClusterVersion(): nonempty stderr: %v", stderr)
-	}
+	serv, err := t.Kubernetes().Discovery().ServerVersion()
 	if err != nil {
 		return semver.Version{}, errors.Wrapf(err, "while getting cluster version")
 	}
-	var vs versionOutput
-	err = json.Unmarshal([]byte(stdout), &vs)
-	if err != nil {
-		return semver.Version{}, errors.Wrapf(err, "while unmarshalling")
-	}
-	glog.Warningf("vs: %+v", vs)
-	// GitVersion is of the form "v1.9.2-something"
-	version := vs.ServerVersion.GitVersion[1:]
-	v, err := semver.Parse(version)
+	// GitVersion is of the form "v1.9.2-something". Strip off the "v"" and return.
+	semv, err := semver.Parse(serv.GitVersion[1:])
 	if err != nil {
 		return semver.Version{}, errors.Wrapf(err, "while parsing version")
 	}
-	return v, nil
+	return semv, nil
 }
 
 // ClusterList encapsulates a list of clusters
