@@ -13,7 +13,10 @@ function set_up_env() {
     /opt/testing/e2e/init-git-server.sh
     ;;
     gcp)
-    gsutil cp "${gcp_cred}" "$HOME"
+    gsutil cp "${gcp_watcher_cred}" "$HOME"
+    gsutil cp "${gcp_runner_cred}" "$HOME"
+    gcloud auth activate-service-account test-runner@nomos-e2e-test1.iam.gserviceaccount.com \
+      --key-file="$HOME/test_runner_client_key.json"
     ;;
   esac
 
@@ -53,13 +56,19 @@ function set_up_env_minimal() {
 }
 
 function clean_up() {
+
+  echo "++++ Cleaning up environment"
+  if [[ "$importer" == "gcp" ]]; then
+    echo "Setting gcloud account back to ${suggested_user}"
+    gcloud config set account "${suggested_user}"
+  fi
+
   # TODO: workaround for b/111218567 remove this once resolved
   if ! kubectl get customresourcedefinition policynodes.nomos.dev &> /dev/null; then
     echo "Policynodes not found, skipping uninstall"
     return
   fi
 
-  echo "++++ Cleaning up environment"
   cd "${NOMOS_REPO}/.output/e2e"
   "${run_installer}" --config="$(basename "${install_config}")" \
     --uninstall=deletedeletedelete \
@@ -154,7 +163,8 @@ preclean=false
 clean=false
 run_tests=false
 setup=false
-gcp_cred=""
+gcp_watcher_cred=""
+gcp_runner_cred=""
 while [[ $# -gt 0 ]]; do
   arg=${1}
   shift
@@ -201,8 +211,12 @@ while [[ $# -gt 0 ]]; do
       importer="${1}"
       shift
     ;;
-    --gcp-cred)
-      gcp_cred="${1}"
+    --gcp-watcher-cred)
+      gcp_watcher_cred="${1}"
+      shift
+    ;;
+    --gcp-runner-cred)
+      gcp_runner_cred="${1}"
       shift
     ;;
     *)

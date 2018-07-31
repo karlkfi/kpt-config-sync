@@ -84,8 +84,9 @@ BUILDENV_PROJECT ?= nomos-public
 BUILDENV_IMAGE_VERSION ?= v0.1.0
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
-# GCP service account credentials used in e2e tests.
-GCP_E2E_CRED := gs://stolos-dev/e2e/nomos-e2e.joonix.net/watcher_client_key.json
+# GCP service account credentials used in gcp e2e tests.
+GCP_E2E_WATCHER_CRED := gs://stolos-dev/e2e/nomos-e2e.joonix.net/watcher_client_key.json
+GCP_E2E_RUNNER_CRED := gs://stolos-dev/e2e/nomos-e2e.joonix.net/test_runner_client_key.json
 
 # When set to "release", enables these optimizations:
 # - Compress binary sizes
@@ -391,14 +392,16 @@ test-e2e-run-%:
 	    "gcr.io/stolos-dev/e2e-tests:test-e2e-latest" \
 	    ${E2E_FLAGS} \
 		--importer $* \
-		--gcp-cred "$(GCP_E2E_CRED)" \
+		--gcp-watcher-cred "$(GCP_E2E_WATCHER_CRED)" \
+		--gcp-runner-cred "$(GCP_E2E_RUNNER_CRED)" \
 	    && echo "+++ $* e2e tests completed" \
 	    || (echo "### e2e tests failed. Temp dir (with test output logs etc) are available in ${TEMP_OUTPUT_DIR}"; exit 1)
 
 E2E_PARAMS := \
 	IMAGE_TAG=$(IMAGE_TAG) \
 	GCP_PROJECT=$(GCP_PROJECT) \
-	GCP_E2E_CRED=$(GCP_E2E_CRED)
+	GCP_E2E_WATCHER_CRED=$(GCP_E2E_WATCHER_CRED) \
+        GCP_E2E_RUNNER_CRED=$(GCP_E2E_RUNNER_CRED)
 
 # Clean, build, and run e2e tests for all importers.
 # Clean cluster after running.
