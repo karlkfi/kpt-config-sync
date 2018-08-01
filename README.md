@@ -1,7 +1,7 @@
 # Google Kubernetes Engine Policy Management
 
-GKE Policy Management enables policy distribution and hierarchical policy
-enforcement for multi-tenant multi-cluster Kubernetes deployments.
+GKE Policy Management (aka Nomos) enables policy distribution and hierarchical
+policy enforcement for multi-tenant multi-cluster Kubernetes deployments.
 
 In environments with many users spread across many teams, having multiple
 tenants within a cluster, allocated into namespaces, maximizes resource
@@ -11,7 +11,7 @@ per-namespace policies like authorization (RBAC Roles/Rolebinding) and quota
 (ResourceQuota), etc. In addition, real world deployments often require multiple
 clusters in order to tolerate region failures, reduce network latencies for end
 users, or simply to scale beyond the current size limits of a Kubernetes
-cluster. GKE Policy Management makes it easier to manage large multi-tenant and 
+cluster. GKE Policy Management makes it easier to manage large multi-tenant and
 multi-cluster deployments, by reducing the load on cluster operators and
 reducing the surface area to secure.
 

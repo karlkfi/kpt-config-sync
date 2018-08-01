@@ -63,12 +63,12 @@ make test-e2e-dev-gcp E2E_FLAGS="--clean"
 
 ### E2E_FLAGS
 
-Name          | Value                                                                                                        | Example
-------------- | ------------------------------------------------------------------------------------------------------------ | -------
---test_filter | the filter for test casess as a regex                                                                        | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
---file_filter | the filter for test files as a regex                                                                         | The following filters for a file containing 'acme-foo' E2E_FLAGS="--file_filter acme-foo"
+Name          | Value                                                                                                                        | Example
+------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------
+--test_filter | the filter for test casess as a regex                                                                                        | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
+--file_filter | the filter for test files as a regex                                                                                         | The following filters for a file containing 'acme-foo' E2E_FLAGS="--file_filter acme-foo"
 --preclean    | boolean, uninstalls GKE Policy Management prior to setup/test, useful for making a 'clean slate' without doing anything else | E2E_FLAGS="--preclean"
 --clean       | boolean, uninstalls GKE Policy Management and test infra from cluster at end of execution                                    | E2E_FLAGS="--clean"
 --setup       | boolean, sets up GKE Policy Management and test infra on cluster                                                             | E2E_FLAGS="--setup"
---tap         | boolean, emit tap output while tests are running, useful for debugging                                       | E2E_FLAGS="--tap"
---test        | boolean, run e2e tests                                                                                       | E2E_FLAGS="--test"
+--tap         | boolean, emit tap output while tests are running, useful for debugging                                                       | E2E_FLAGS="--tap"
+--test        | boolean, run e2e tests                                                                                                       | E2E_FLAGS="--test"

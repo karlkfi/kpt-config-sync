@@ -59,8 +59,7 @@ Finally, produce the release candidate:
 $ make -f Makefile.release release
 ```
 
-If the release fails, increment
-the patch number for the next release attempt.
+If the release fails, increment the patch number for the next release attempt.
 
 Send an email to nomos-team@google.com with subject `Nomos Release
 ${RELEASE_VERSION}` and body:
@@ -76,21 +75,22 @@ The artifacts will be
 
 ## Bless the Release Candidate
 
-We do a manual QA pass before releasing an RC to stable. This includes a sanity check to back up the
-e2e tests, as well as any extra testing required for new features.
+We do a manual QA pass before releasing an RC to stable. This includes a sanity
+check to back up the e2e tests, as well as any extra testing required for new
+features.
 
 ### Basic manual test
 
-This duplicates the e2e tests, so it's not expected to be comprehensive. This only covers the
-possibility that e2e tests are so badly broken that they fail to run at all but still report
-passing.
+This duplicates the e2e tests, so it's not expected to be comprehensive. This
+only covers the possibility that e2e tests are so badly broken that they fail to
+run at all but still report passing.
 
 Follow [installation instructions](installation.md), but use the
 [latest installer](https://console.cloud.google.com/storage/browser/nomos-release/latest/?project=nomos-release),
-which you just created. Follow instructions for [Git config](git_config.md). Use the sample YAML
-from those instructions, for the foo-corp repo. You will most likely have memorized these steps, but
-try to follow the documentation as best you can. This is our only regular review of the
-documentation.
+which you just created. Follow instructions for [Git config](git_config.md). Use
+the sample YAML from those instructions, for the foo-corp repo. You will most
+likely have memorized these steps, but try to follow the documentation as best
+you can. This is our only regular review of the documentation.
 
 After installation completes, check that the foo-corp namespaces are installed:
 
@@ -116,10 +116,11 @@ $ kubectl get ns --as=cheryl@foo-corp.com
 
 ### Feature QA
 
-Generally, features should be tested by their authors before check-in, and they should be covered
-sufficiently by automated tests. If we develop a feature that can't be verified by tests, we will
-need a documented process for manual verification before release. For now, automated tests, plus the
-above sanity test, are sufficient.
+Generally, features should be tested by their authors before check-in, and they
+should be covered sufficiently by automated tests. If we develop a feature that
+can't be verified by tests, we will need a documented process for manual
+verification before release. For now, automated tests, plus the above sanity
+test, are sufficient.
 
 ### GCP e2e tests
 

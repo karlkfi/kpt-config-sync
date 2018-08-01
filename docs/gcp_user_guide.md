@@ -3,7 +3,7 @@
 **NOTE: This is an Alpha release of Kubernetes Policy API and available to
 whitelisted customers.**
 
-GKE Policy Management supports using Google Cloud Platform to centrally manage 
+GKE Policy Management supports using Google Cloud Platform to centrally manage
 Namespaces and policies across Kubernetes clusters.
 
 Existing [Resource Manager][1] API enables creating a hierarchy using

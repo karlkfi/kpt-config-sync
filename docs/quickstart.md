@@ -1,18 +1,19 @@
 # GKE Policy Management Quickstart
 
-This quickstart shows a step-by-step guide to install GKE Policy Management on 
+This quickstart shows a step-by-step guide to install GKE Policy Management on
 Kubernetes clusters and create and synchronize hierarchical policies from a Git
 repository.
 
 ## Installation
 
-Follow the [Installation Guide](installation.md) to install GKE Policy 
+Follow the [Installation Guide](installation.md) to install GKE Policy
 Management on one or more Kuberentes clusters.
 
 ## Creating hierarchical policies
 
-Once GKE Policy Management components are deployed and running in a cluster, 
-namespaces will be automatically created. For the [foo-corp example](https://github.com/frankfarzan/foo-corp-example):
+Once GKE Policy Management components are deployed and running in a cluster,
+namespaces will be automatically created. For the
+[foo-corp example](https://github.com/frankfarzan/foo-corp-example):
 
 ```console
 $ kubectl get namespaces -l nomos-managed
