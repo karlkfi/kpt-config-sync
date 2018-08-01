@@ -44,20 +44,26 @@ func (s *SyncerController) Start(runArgs run.RunArguments) {
 	policyhierarchyscheme.AddToScheme(scheme.Scheme)
 
 	hierarchyModules := []policyhierarchycontroller.Module{
-		modules.NewResourceQuota(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
 		modules.NewRole(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
 		modules.NewRoleBinding(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
 	}
-	s.injectArgs.ControllerManager.AddController(
-		policyhierarchycontroller.NewController(s.injectArgs, hierarchyModules))
-
 	clusterModules := []clusterpolicycontroller.Module{
 		clustermodules.NewClusterRoles(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
 		clustermodules.NewClusterRoleBindings(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
-		clustermodules.NewPodSecurityPolicies(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
 	}
+
+	if !s.injectArgs.SyncerOptions.GCPMode {
+		hierarchyModules = append(
+			hierarchyModules,
+			modules.NewResourceQuota(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers))
+		clusterModules = append(
+			clusterModules,
+			clustermodules.NewPodSecurityPolicies(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers))
+	}
+
+	s.injectArgs.ControllerManager.AddController(
+		policyhierarchycontroller.NewController(s.injectArgs, hierarchyModules))
 	s.injectArgs.ControllerManager.AddController(
 		clusterpolicycontroller.NewController(s.injectArgs, clusterModules))
-
 	s.injectArgs.ControllerManager.RunInformersAndControllers(runArgs)
 }

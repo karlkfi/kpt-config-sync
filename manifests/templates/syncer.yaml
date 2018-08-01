@@ -10,9 +10,9 @@ spec:
   selector:
     app: syncer
   ports:
-    - name: metrics
-      port: 8675
-      targetPort: metrics-port
+  - name: metrics
+    port: 8675
+    targetPort: metrics-port
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -36,11 +36,17 @@ spec:
     spec:
       serviceAccountName: syncer
       containers:
-        - name: syncer
-          image: IMAGE_NAME
-          command: ["syncer"]
-          args:
-          - "--v=2"
-          ports:
-            - containerPort: 8675
-              name: metrics-port
+      - name: syncer
+        image: IMAGE_NAME
+        command: ["syncer"]
+        args:
+        - "--v=2"
+        ports:
+        - containerPort: 8675
+          name: metrics-port
+        env:
+        - name: GCP_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: syncer
+              key: gcp.mode

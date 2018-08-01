@@ -145,6 +145,40 @@ load ../lib/loader
       --as bob@nomos-e2e.joonix.net
 }
 
+@test "Resource quota not managed" {
+  echo "Create the namespace under the test project"
+  run gcloud --quiet alpha container policy \
+      namespaces create "${GCP_PROJECT_A}" \
+      --project="${GCP_PROJECT_A}"
+  assert::contains "namespaces/${GCP_PROJECT_A}"
+  [ "$status" -eq 0 ]
+
+  echo "Wait to see if the namespace appears on the cluster"
+  namespace::check_exists "${GCP_PROJECT_A}"
+
+  wait::for -- kubectl get -n "${GCP_PROJECT_A}" resourcequota pod-quota &
+  local pid=$!
+
+  echo "Creating resource quota"
+  kubectl apply -f - << EOF
+kind: ResourceQuota
+apiVersion: v1
+metadata:
+  name: pod-quota
+  namespace: ${GCP_PROJECT_A}
+spec:
+  hard:
+    pods: "1"
+    secrets: "5"
+EOF
+
+  echo "Waiting for get quota to complete"
+  wait "$pid"
+  sleep 1
+
+  echo "Removing resource quota"
+  kubectl delete -n "${GCP_PROJECT_A}" resourcequota pod-quota
+}
 
 function test_create_get_delete() {
   local ns="$1"
