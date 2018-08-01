@@ -100,6 +100,15 @@ setup::gcp::set_or_create_folder() {
       --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer || true
 }
 
+# GCP Initialize will set the gcloud auth to use the test_runner_creds
+# And ensure you have a clean hierarchy of a project, a folder, and another
+# project under the folder with no namespaces and clean rolebindings.
+#
+# GCP_TEST_ORGANIZATION
+# |_ GCP_TEST_PROJECT
+# |_ GCP_TEST_FOLDER
+#    |_ GCP_TEST_PROJECT_SUBFOLDER
+#
 setup::gcp::initialize() {
   echo "setup::gcp::initialize"
   GCLOUD_CONTEXT="$(gcloud config get-value account)"

@@ -2,7 +2,10 @@
 
 # Helpers for waiting for async events (e.g. Pods to come up).
 
-# Wait for an event to occur
+# Wait for an event to occur in the kubernetes event log
+#
+# wait::event <string>
+#
 # Flags
 #  -n [namespace] - namespace to fetch event from
 #  -r [reason] - event reason
@@ -62,12 +65,18 @@ function wait::event() {
   return 1
 }
 
-# A newer version of wait::for that does a better job at dealing with args
+# Waits for the command finish with a certain exit code.
+#
+# Wait for success:
+#  wait:for -- <command>
+# Wait for failure:
+#  wait::for -f -- <command>
+#
 # Flags
 #   -s                 Wait for success (exit 0)
 #   -f                 Wait for failure (exit nonzero)
 #   -e [exit code]     Wait for specific integer exit code
-#   -t [timeout]       The timeout in seconds
+#   -t [timeout]       The timeout in seconds (default 15 seconds)
 #   -d [deadline]      The deadline in seconds since the epoch
 #   -p [poll interval] The amount of time to wait between executions
 #   -- End of flags, command starts after this

@@ -2,9 +2,10 @@
 
 # Helpers for test assertions.
 
-# assert::contains <command> <substring>
+# assert::contains <substring>
 #
-# Will fail if the output of the command or its error message doesn't contain substring
+# Following a run command, will fail if the output of the command
+# or its error message doesn't contain substring
 #
 function assert::contains() {
   local str="${1:-}"
@@ -15,10 +16,10 @@ function assert::contains() {
   fi
 }
 
-# assert::equals <command> <string>
+# assert::equals <string>
 #
-# Will fail if the output of the command or its error message doesn't match
-# string
+# Following a run command, will fail if the output of the command
+# or its error message doesn't match string
 #
 function assert::equals() {
   local str="${1:-}"
@@ -29,9 +30,10 @@ function assert::equals() {
   fi
 }
 
-# assert::not_equals <command> <string>
+# assert::not_equals <string>
 #
-# Will fail if the output of the command or its error message matches string
+# Following a run command, will fail if the output of the command
+# or its error message matches string
 #
 function assert::not_equals() {
   local str="${1:-}"
