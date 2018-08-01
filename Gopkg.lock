@@ -497,7 +497,8 @@
     "pkg/signals",
   ]
   pruneopts = "UT"
-  revision = "5db3f0da666b9e440921e8d5710550687dafa22c"
+  revision = "9c4c6c213a8d17f8c21cf4f1aa9cefb99fbbf5ca"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
