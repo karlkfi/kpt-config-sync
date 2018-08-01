@@ -1,9 +1,10 @@
-# GCP Configuration
+# Google Cloud Platform Configuration
 
 **NOTE: This is an Alpha release of Kubernetes Policy API and available to
 whitelisted customers.**
 
-A sample YAML file for configuring GCP-based Nomos is provided below:
+A sample YAML file for configuring GCP-based GKE Policy Management is provided 
+below:
 
 ```yaml
 contexts:
@@ -16,8 +17,9 @@ user: youruser@foo-corp.com
 
 Note:
 
-*   `contexts` field is a list of clusters where Nomos will be installed. Run
-    `kubectl config get-contexts` to see what contexts are available to you.
+*   `contexts` field is a list of clusters where GKE Policy Management will be 
+    installed. Run `kubectl config get-contexts` to see what contexts are 
+	available to you.
 *   Set `user` field to be set to your username that is valid for authenticating
     to the clusters. This username must be valid on all clusters included in the
     contexts field.
@@ -62,8 +64,9 @@ $ gcloud services enable kubernetespolicy.googleapis.com --project my-sa-project
 
 ## Config Reference
 
-This section enumerates ConfigMaps and Secrets used by Nomos. When using
-installer, these are automatically created in `nomos-system` namespace.
+This section enumerates ConfigMaps and Secrets used by GKE Policy Management. 
+When using installer, these are automatically created in `nomos-system`
+namespace.
 
 ### configmap/gcp-policy-importer
 
@@ -84,6 +87,15 @@ Key             | Description
 --------------- | -------------------------------
 gcp-private-key | GCP service account private key
 
+<<<<<<< HEAD
+=======
+## Creating Service Account
+
+1.  [Create a service account][1]
+2.  [Grant the service account][2] `Kubernetes Policy Viewer` role
+3.  [Create a servie account key][3] and download the JSON private key.
+
+>>>>>>> Renaming Nomos to GKE Policy Management in docs
 [1]: https://cloud.google.com/iam/docs/creating-managing-service-accounts
 [2]: https://cloud.google.com/iam/docs/granting-roles-to-service-accounts
 [3]: https://cloud.google.com/iam/docs/creating-managing-service-account-keys

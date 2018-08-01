@@ -1,8 +1,8 @@
 # Git User Guide
 
-Nomos supports using Git to centrally manage Namespaces and policies across
-Kubernetes clusters. This *Policy as Code* approach ensures policy
-configurations are:
+GKE Policy Management supports using Git to centrally manage Namespaces and 
+policies across Kubernetes clusters. This *Policy as Code* approach ensures 
+policy configurations are:
 
 *   __Immutable:__ A Git commit is an exact declaration of the desired state of
     policies.
@@ -72,19 +72,20 @@ foo-corp
     and must be unique in the hierarchy. In addition a name cannot be `default`,
     `nomos-system`, or have `kube-` prefix. Namespaces that match `kube-*`,
     `nomos-system` and `default` are a special class of namespaces called
-    `Reserved Namespaces` that nomos will not interact with. This topic is
-    discussed in depth in the
+    `Reserved Namespaces` that GKE Policy Management will not interact with. 
+	This topic is discussed in depth in the
     [namespaces user guide](git_user_guide_namespaces.md)
 
 There are no requirements on file names or how many resources are packed in a
-file. Any other file not explicitly mentioned above is ignored by Nomos in this
-release (e.g. OWNERS files).
+file. Any other file not explicitly mentioned above is ignored by GKE Policy 
+Management in this release (e.g. OWNERS files).
 
-When a valid tree is committed to Git and synced, Nomos controllers
-automatically create namespaces and corresponding policy resources to enforce
-hierarchical policy. In this example, Nomos automatically creates
-`shipping-dev`, `shipping-staging`, and `shipping-prod` namespaces. We discuss
-specific policy types and their enforcement in later sections.
+When a valid tree is committed to Git and synced, GKE Policy Management 
+controllers automatically create namespaces and corresponding policy resources
+to enforce hierarchical policy. In this example, GKE Policy Management
+automatically creates `shipping-dev`, `shipping-staging`, and `shipping-prod`
+namespaces. We discuss specific policy types and their enforcement in later
+sections.
 
 Note that when using Git as source of truth, it is up to the repo owners to set
 proper access control mechanism (e.g. using OWNERS or CODEOWNER files) to ensure
@@ -113,9 +114,9 @@ namespaces, but does not delete a namespace or workload resources.
 
 ### Existing Namespaces
 
-Nomos will not manage namespaces that already exist on a cluster at install
-time. For details on how to configure namespaces that already exist, please see
-the [namespaces user guide](git_user_guide_namespaces.md)
+GKE Policy Management will not manage namespaces that already exist on a cluster
+at install time. For details on how to configure namespaces that already exist,
+please see the [namespaces user guide](git_user_guide_namespaces.md)
 
 ## Policy Types
 
@@ -123,8 +124,8 @@ the [namespaces user guide](git_user_guide_namespaces.md)
 
 ##### Role/Rolebinding
 
-Nomos enables RBAC policies to be applied hierarchically following these
-properties:
+GKE Policy Management enables RBAC policies to be applied hierarchically
+following these properties:
 
 1.  A RoleBinding specified in a policyspace is inherited by all descendant
     namespaces
@@ -173,22 +174,22 @@ resources have the directory name prepended with a dot separator. This is to
 allow a rolebinding to be created at any level without naming conflicts.
 
 Note that policies are themselves resources which means a user may be able to
-edit policies outside of Nomos (e.g. using kubectl) or create rolebindings
-subject to
+edit policies outside of GKE Policy Management (e.g. using kubectl) or create
+rolebindings subject to
 [privilege escalation prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping)
 in Kubernetes.
 
 ##### ResourceQuota
 
 A quota set on a namespace behaves just like it does in native kubernetes,
-restricting the specified resources. In Nomos you can also set resource quota on
-policyspaces. This will set the quota limit on all the namespaces that are
-children of the provided policyspace within a single cluster. The policyspace
-limit ensures that the sum of all the resources of a specified type in all the
-children of the policyspace do not exceed the specified quota. Quota is
-evaluated in a hierarchical fashion starting from the namespace, up the
-policyspace hierarchy - this means that a quota violation at any level will
-result in a Forbidden exception.
+restricting the specified resources. In GKE Policy Management you can also set 
+resource quota on policyspaces. This will set the quota limit on all the 
+namespaces that are children of the provided policyspace within a single 
+cluster. The policyspace limit ensures that the sum of all the resources of a
+specified type in all the children of the policyspace do not exceed the 
+specified quota. Quota is evaluated in a hierarchical fashion starting from the 
+namespace, up the policyspace hierarchy - this means that a quota violation at 
+any level will result in a Forbidden exception.
 
 A quota is allowed to be set to immediately be in violation. For example, when a
 workload namespace has 11 pods, we can still set quota to `pods: 10` in a parent
@@ -225,8 +226,8 @@ Error from server (Forbidden): exceeded quota in policyspace "shipping-app-backe
 ### Cluster-level Policies
 
 Cluster-level policies will function in the same manner as in a vanilla
-kubernetes cluster with the only addition being that Nomos will distribute and
-manage them on the workload clusters.
+kubernetes cluster with the only addition being that GKE Policy Management will 
+distribute and manage them on the workload clusters.
 
 Cluster-level policies must be placed immediately within the root policyspace
 directory. Since cluster-level policies have far-reaching effect, they should
@@ -307,15 +308,16 @@ clusters, it is important to validate them first.
 
 ### Kubectl
 
-Since Nomos uses a filesystem tree of Kubernetes resources, `kubectl` can be
-used to validate resource schemas. The following command recursively validates
-all the resources in `foo-corp` directory without applying changes:
+Since GKE Policy Management uses a filesystem tree of Kubernetes resources, 
+`kubectl` can be used to validate resource schemas. The following command
+recursively validates all the resources in `foo-corp` directory without applying
+changes:
 
 ```console
 $ kubectl apply -f foo-corp --recursive --dry-run
 ```
 
-### Nomosvet
+### GKE Policy Managementvet
 
 `nomosvet` is tool that validates a root policyspace directory against the
 [constraints](#constraints) listed above.
@@ -349,8 +351,8 @@ You can also integrate this into your CI/CD setup, e.g. when using GitHub
 
 ## Guarantees
 
-This section details the guarantees that Nomos makes based on the contents of
-the git repo and what exists on cluster.
+This section details the guarantees that GKE Policy Management makes based on 
+the contents of the git repo and what exists on cluster.
 
 ## Cluster Scoped Policies
 
@@ -358,61 +360,64 @@ Policies in the cluster scope will be applied to the cluster exactly as they are
 specified in the git repo. Existing resources at the cluster level will not be
 managed unless a resource with the same name exists git.
 
-Declared in git | On Cluster         | Nomos Action
+Declared in git | On Cluster         | GKE Policy Management Action
 --------------- | ------------------ | -----------------------------------
 true            | matches git repo   | no action
-true            | different than git | Nomos updates resource to match git
-true            | does not exist     | Nomos creates resource from git
+true            | different than git | GKE Policy Management updates resource to match git
+true            | does not exist     | GKE Policy Management creates resource from git
 false           | exists             | no action
 false           | does not exist     | no action
 
 Examples:
 
 *   ClusterRole `pod-accountant` exists on the cluster, but does not exist in
-    git for [foo-corp](https://github.com/frankfarzan/foo-corp-example). Nomos
-    is installed for foo-corp. Nomos will not delete or alter `pod-accountant`.
+    git for [foo-corp](https://github.com/frankfarzan/foo-corp-example). GKE 
+	Policy Management is installed for foo-corp. GKE Policy Management will not
+	delete or alter `pod-accountant`.
 *   ClusterRole `namespace-reader` exists on the cluster, and exists in git for
-    [foo-corp](https://github.com/frankfarzan/foo-corp-example). Nomos is
-    installed for foo-corp. Nomos will now update `namespace-reader` to match
-    the one declared in
+    [foo-corp](https://github.com/frankfarzan/foo-corp-example). GKE Policy 
+	Management is installed for foo-corp. GKE Policy Management will now update
+	`namespace-reader` to match the one declared in
     [namespace-reader-clusterrole.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/namespace-reader-clusterrole.yaml).
-*   Nomos is installed for foo-corp. Someone adds a new ClusterRole
-    `quota-viewer` to git in `foo-corp/quota-viewer-clusterrole.yaml`. Nomos
-    will now create the `quota-viewer` ClusterRole matching the one in git. Time
-    passes. Someone deletes the `quota-viewer-clusterrole.yaml` from git. Nomos
-    will now remove `quota-viewer` from the cluster.
+*   GKE Policy Management is installed for foo-corp. Someone adds a new 
+    ClusterRole `quota-viewer` to git in 
+	`foo-corp/quota-viewer-clusterrole.yaml`. GKE Policy Management will now 
+	create the `quota-viewer` ClusterRole matching the one in git. Time passes.
+	Someone deletes the `quota-viewer-clusterrole.yaml` from git. GKE Policy 
+	Management will now remove `quota-viewer` from the cluster.
 
 ## Namespace Scoped Policies
 
 Namespace scoped policies will be applied to match the intent of the source of
-truth exactly as they are specified. This means that Nomos will overwrite or
-delete any existing policies that do not match the declarations in the source of
-truth.
+truth exactly as they are specified. This means that GKE Policy Management will
+overwrite or delete any existing policies that do not match the declarations in
+the source of truth.
 
-Declared in git | On Cluster         | Nomos Action
+Declared in git | On Cluster         | GKE Policy Management Action
 --------------- | ------------------ | -----------------------------------
 true            | matches git        | no action
-true            | different than git | Nomos updates resource to match git
-true            | does not exist     | Nomos creates resource from git
-false           | resource exists    | Nomos deletes the resource
+true            | different than git | GKE Policy Management updates resource to match git
+true            | does not exist     | GKE Policy Management creates resource from git
+false           | resource exists    | GKE Policy Management deletes the resource
 false           | does not exist     | no action
 
 Examples:
 
 *   RoleBinding
     [pod-creators](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/online/shipping-app-backend/pod-creator-rolebinding.yaml)
-    is in git for foo-corp. Nomos will ensure that all `pod-creator`
-    rolebindings in descendants of the `shipping-app-backend` policyspace
-    (`shipping-prod`, `shipping-staging`, `shipping-dev`) exactly match the
-    declared `pod-creator` RoleBinding. Time passes and someone modifies the
+    is in git for foo-corp. GKE Policy Management will ensure that all 
+	`pod-creator` rolebindings in descendants of the `shipping-app-backend` 
+	policyspace (`shipping-prod`, `shipping-staging`, `shipping-dev`) exactly 
+	match the declared `pod-creator` RoleBinding. Time passes and someone 
+	modifies the
     [shipping-prod](https://github.com/frankfarzan/foo-corp-example/tree/master/foo-corp/online/shipping-app-backend/shipping-prod)
-    `pod-creator` RoleBinding. Nomos will notice the change and update
-    `pod-creator` to match the declaration in git. Time passes and someone
-    removes `pod-creator` from git. Nomos will now remove the `pod-creator`
-    resource from the descendant namespaces.
-*   Someone creates a `secret-admin` Role in `shipping-prod`. Nomos will notice
-    that the Role is not declared in `shipping-prod` or any of its ancestors and
-    delete the `secret-admin` Role from the namespace.
-*   Someone adds a `secret-admin` Role to git in `shipping-prod`. Nomos will
-    notice the updated declarations and create the `secret-admin` role in the
-    `shipping-prod` namespace.
+    `pod-creator` RoleBinding. GKE Policy Management will notice the change and
+	update `pod-creator` to match the declaration in git. Time passes and 
+	someone removes `pod-creator` from git. GKE Policy Management will now 
+	remove the `pod-creator` resource from the descendant namespaces.
+*   Someone creates a `secret-admin` Role in `shipping-prod`. GKE Policy 
+    Management will notice that the Role is not declared in `shipping-prod` or 
+	any of its ancestors and delete the `secret-admin` Role from the namespace.
+*   Someone adds a `secret-admin` Role to git in `shipping-prod`. GKE Policy 
+    Management will notice the updated declarations and create the 
+	`secret-admin` role in the `shipping-prod` namespace.

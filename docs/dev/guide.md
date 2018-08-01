@@ -1,4 +1,4 @@
-# Nomos Developer Guide
+# GKE Policy Management Developer Guide
 
 *   [Initial Setup](setup.md)
 *   [Making changes](source.md)

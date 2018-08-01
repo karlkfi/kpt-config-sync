@@ -2,22 +2,22 @@
 
 ![drawing](img/nomos_arch.png)
 
-The above diagram is a simplified view of Nomos components running on a workload
-cluster. Each component is described below.
+The above diagram is a simplified view of GKE Policy Management components 
+running on a workload cluster. Each component is described below.
 
 ## PolicyImporter
 
 PolicyImporter is an abstraction for a controller that consumes policy
 definitions from an external source of truth and builds a canonical
-representation of the hierarchy using cluster-level CRD(s) defined by Nomos.
-Nomos can be extended to support different sources of truth (e.g. Git, GCP,
-Active Directory) using different implementations of this abstraction. Note that
-we treat this canonical representation as internal implementation which should
-not be directly consumed by users.
+representation of the hierarchy using cluster-level CRD(s) defined by GKE Policy
+Management. GKE Policy Management can be extended to support different sources
+of truth (e.g. Git, GCP, Active Directory) using different implementations of 
+this abstraction. Note that we treat this canonical representation as internal 
+implementation which should not be directly consumed by users.
 
 ## CustomResourceDefinitions
 
-Nomos defines two custom resources:
+GKE Policy Management defines two custom resources:
 
 *   PolicyNode: A resource that stores hierarchical policy information. This
     includes Roles, RoleBindings and ResourceQuota. PolicyNodes form a tree,

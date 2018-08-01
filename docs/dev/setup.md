@@ -59,15 +59,16 @@ n1-standard-1).
 
 ## Configure monitoring (optional)
 
-You can now configure the server side processes for monitoring Nomos. This step
-is optional but we strongly recommend it since the monitoring can be useful for
-debugging as well as measuring performance.
+You can now configure the server side processes for monitoring GKE Policy 
+Management. This step is optional but we strongly recommend it since the 
+monitoring can be useful for debugging as well as measuring performance.
 
 Install [Helm](https://docs.helm.sh/using_helm/#installing-helm):
 
 1.  Go to the [Helm releases](https://github.com/kubernetes/helm/releases) page,
     find the heading "Installation and Upgrades", and download the binary
-    archive for your OS of choice, e.g. likely Linux for Nomos work.
+    archive for your OS of choice, e.g. likely Linux for GKE Policy Management 
+	work.
 1.  From the downloaded archive in the previous step, extract the `helm` binary
     to somewhere in your path.
 1.  Run `helm init --client-only`. This makes the next step possible.

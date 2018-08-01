@@ -1,6 +1,6 @@
 # Building
 
-To build and deploy all Nomos binaries:
+To build and deploy all GKE Policy Management binaries:
 
 First time to create the deployment configuration:
 
@@ -132,9 +132,9 @@ $ kubectl scale deployment git-policy-importer -n nomos-system --replicas=0
 $ kubectl scale deployment git-policy-importer -n nomos-system --replicas=1
 ```
 
-## Nomos kubectl plugin
+## GKE Policy Management kubectl plugin
 
-This installs Nomos-specific commands as a `kubectl` plugin.
+This installs GKE Policy Management-specific commands as a `kubectl` plugin.
 
 ```console
 $ make install-kubectl-plugin
@@ -153,7 +153,7 @@ The `--as` impersonation works as well:
 $ kubectl plugin nomos get namespaces --namespace=frontend --as=alice@acme.com
 ```
 
-This command gets all applicable Nomos quota objects.
+This command gets all applicable GKE Policy Management quota objects.
 
 ```console
 $ kubectl plugin nomos get quota --namespace=frontend

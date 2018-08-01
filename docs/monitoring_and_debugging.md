@@ -2,7 +2,7 @@
 
 ## Logging
 
-Nomos follows
+GKE Policy Management follows
 [K8S logging convention](https://github.com/kubernetes/community/blob/master/contributors/devel/logging.md).
 By default, all binaries log at V(2).
 
@@ -39,13 +39,13 @@ $ kubectl logs -l app=git-policy-importer -c git-sync -n nomos-system
 
 ## Monitoring
 
-Nomos uses [Prometheus](https://prometheus.io/) to monitor the various processes
-that comprise a Nomos deployment. These processes include the
-NamespaceController, ResourceQuotaAdmissionController, and others. Each process
-exports certain metrics that are available for you to scrape from the configured
-port using Prometheus or any other tools you wish.
+GKE Policy Management uses [Prometheus](https://prometheus.io/) to monitor the 
+various processes that comprise a GKE Policy Management deployment. These 
+processes include the NamespaceController, ResourceQuotaAdmissionController, and
+others. Each process exports certain metrics that are available for you to 
+scrape from the configured port using Prometheus or any other tools you wish.
 
-### Nomos Metrics
+### GKE Policy Management Metrics
 
 These are the [metrics](https://prometheus.io/docs/concepts/metric_types/) we
 currently export:
@@ -69,14 +69,14 @@ nomos_syncer_action_duration_seconds                 | Histogram | namespace, re
 All metrics are available for scraping at port 8675. Prometheus includes a
 process that you can optionally choose to
 [run on your cluster](https://prometheus.io/docs/prometheus/latest/getting_started/)
-alongside the Nomos processes. This process must be configured to scrape the
-metrics which you are interested in.
+alongside the GKE Policy Management processes. This process must be configured 
+to scrape the metrics which you are interested in.
 
 Alternatively you can use
 [Prometheus Operator](https://coreos.com/operators/prometheus/docs/latest/)
 which is an abstraction layer provided by CoreOS to simplify conifguration of
-metrics scraping. The following ServiceMonitor manifest will scrape all Nomos
-metrics every 10 seconds:
+metrics scraping. The following ServiceMonitor manifest will scrape all GKE 
+Policy Management metrics every 10 seconds:
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1

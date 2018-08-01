@@ -3,8 +3,8 @@
 **NOTE: This is an Alpha release of Kubernetes Policy API and available to
 whitelisted customers.**
 
-Nomos supports using Google Cloud Platform to centrally manage Namespaces and
-policies across Kubernetes clusters.
+GKE Policy Management supports using Google Cloud Platform to centrally manage 
+Namespaces and policies across Kubernetes clusters.
 
 Existing [Resource Manager][1] API enables creating a hierarchy using
 Organizations, Folders, and Projects. The new Kubernetes Policy API enables
@@ -12,9 +12,9 @@ creating a single *Managed Namespace* in a Project, such that there is a 1-to-1
 mapping between a Project and a Managed Namespace. The user can then set
 policies such as [IAM authorization][2] on each node in the hierarchy.
 
-Nomos automatically creates and manages corresponding Kubernetes Namespaces in
-all enrolled clusters and creates Kubernetes policy resources such as RBAC based
-on hierarchical evaluation of policies defined in GCP.
+GKE Policy Management automatically creates and manages corresponding Kubernetes
+Namespaces in all enrolled clusters and creates Kubernetes policy resources such
+as RBAC based on hierarchical evaluation of policies defined in GCP.
 
 ## Managed Namespace Operations
 

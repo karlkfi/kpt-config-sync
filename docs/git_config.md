@@ -1,6 +1,6 @@
 # Git Configuration
 
-A sample YAML file for configuring git-based Nomos is provided below:
+A sample YAML file for configuring git-based GKE Policy Management is provided below:
 
 ```yaml
 contexts:
@@ -18,8 +18,9 @@ user: youruser@foo-corp.com
 
 Note:
 
-*   `contexts` field is a list of clusters where Nomos will be installed. Run
-    `kubectl config get-contexts` to see what contexts are available to you.
+*   `contexts` field is a list of clusters where GKE Policy Management will be 
+    installed. Run `kubectl config get-contexts` to see what contexts are 
+	available to you.
 *   Set `user` field to be set to your username that is valid for authenticating
     to the clusters. This username must be valid on all clusters included in the
     contexts field.
@@ -43,8 +44,9 @@ POLICY_DIR           | Relative path of root policy directory in the repo
 
 ## Config Reference
 
-This section enumerates ConfigMaps and Secrets used by Nomos. When using
-installer, these are automatically created in `nomos-system` namespace.
+This section enumerates ConfigMaps and Secrets used by GKE Policy Management. 
+When using installer, these are automatically created in `nomos-system` 
+namespace.
 
 ### configmap/git-policy-importer
 
@@ -98,15 +100,15 @@ $ ssh-keygen -t rsa -b 4096 -C "your_email@example.com" -N '' -f $HOME/.ssh/id_r
 
 This command will create a pair of keys, `$HOME/.ssh.id_rsa.nomos`, and
 `$HOME/.ssh.id_rsa.nomos.pub` that will be used to set up git repo access in
-Nomos.
+GKE Policy Management.
 
 Note that the resulting private key must _not_ be password protected. This key
 should not be used for purposes other than this example exercise.
 
 [Upload](https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/)
 the file `$HOME/.ssh/id_rsa.nomos.pub`, which was generated in the previous
-step, to your account on Github. This file will be used by the Nomos
-installation to access the sample git repository. The file
+step, to your account on Github. This file will be used by the GKE Policy 
+anagement installation to access the sample git repository. The file
 `$HOME/.ssh/id_rsa.nomos` should be guarded carefully as any other private key
 file.
 

@@ -1,4 +1,4 @@
-## Nomos Concepts
+## GKE Policy Management Concepts
 
 ### Namespaces
 
@@ -14,16 +14,17 @@ team for dev workloads), it makes sense to create a new namespace. If you want
 to have a common person or set of people be able to perform the same set of
 operations within a set of namespaces, create a policyspace.
 
-Nomos with its hierarchical control allows many namespaces to be managed by the
-same set of people so it's possible to create more granular namespaces for a
-team of people without incurring additional policy administration overhead.
+GKE Policy Management with its hierarchical control allows many namespaces to be
+managed by the same set of people so it's possible to create more granular 
+namespaces for a team of people without incurring additional policy 
+administration overhead.
 
 ### Policyspaces
 
-With Nomos, we give admins the ability to group namespaces together and to form
-groups of groups through a hierarchy. We call a non-leaf node in this tree,
-whose leaves are namespaces, a policyspace. We can think of policyspaces as
-Organization Units (or Policy Information Point in
+With GKE Policy Management, we give admins the ability to group namespaces 
+together and to form groups of groups through a hierarchy. We call a non-leaf 
+node in this tree, whose leaves are namespaces, a policyspace. We can think of
+policyspaces as Organization Units (or Policy Information Point in
 [XACML](https://en.wikipedia.org/wiki/XACML#Terminology) parlance). They exist
 to delegate policy control to sub organization leaders. This approach has been
 long established by LDAP and Active Directory.

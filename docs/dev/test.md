@@ -10,8 +10,8 @@ make
 
 ## E2E Tests
 
-end-to-end tests deploy Nomos components on a Kubernetes cluster and verify
-functionality through Git commits:
+end-to-end tests deploy GKE Policy Management components on a Kubernetes cluster
+and verify functionality through Git commits:
 
 ```console
 make test-e2e-all
@@ -23,8 +23,8 @@ While doing development of e2e test / framework features, it's desirable to skip
 steps in the full e2e process. The following commands are available for finer
 grained control. This is now supported for -git and -gcp suffixes.
 
-1- Build nomos and end to end images. You must do this each time you make
-changes to .go code.
+1- Build GKE Policy Management and end to end images. You must do this each time
+you make changes to .go code.
 
 ```console
 make e2e-image-all
@@ -67,8 +67,8 @@ Name          | Value                                                           
 ------------- | ------------------------------------------------------------------------------------------------------------ | -------
 --test_filter | the filter for test casess as a regex                                                                        | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
 --file_filter | the filter for test files as a regex                                                                         | The following filters for a file containing 'acme-foo' E2E_FLAGS="--file_filter acme-foo"
---preclean    | boolean, uninstalls nomos prior to setup/test, useful for making a 'clean slate' without doing anything else | E2E_FLAGS="--preclean"
---clean       | boolean, uninstalls nomos and test infra from cluster at end of execution                                    | E2E_FLAGS="--clean"
---setup       | boolean, sets up nomos and test infra on cluster                                                             | E2E_FLAGS="--setup"
+--preclean    | boolean, uninstalls GKE Policy Management prior to setup/test, useful for making a 'clean slate' without doing anything else | E2E_FLAGS="--preclean"
+--clean       | boolean, uninstalls GKE Policy Management and test infra from cluster at end of execution                                    | E2E_FLAGS="--clean"
+--setup       | boolean, sets up GKE Policy Management and test infra on cluster                                                             | E2E_FLAGS="--setup"
 --tap         | boolean, emit tap output while tests are running, useful for debugging                                       | E2E_FLAGS="--tap"
 --test        | boolean, run e2e tests                                                                                       | E2E_FLAGS="--test"

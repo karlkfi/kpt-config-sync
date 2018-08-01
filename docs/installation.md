@@ -1,10 +1,10 @@
-# Installing Nomos
+# Installing GKE Policy Management
 
 ## Requirements
 
-Before installing Nomos, there are a few tasks that must be performed once to
-ensure that your work environment is complete and able to support the
-installation.
+Before installing GKE Policy Management, there are a few tasks that must be 
+performed once to ensure that your work environment is complete and able to
+support the installation.
 
 This setup takes about 30 minutes.
 
@@ -27,10 +27,11 @@ Prerequisites:
 ### Kubernetes
 
 You need to have up and running Kubernetes clusters that you intend to install
-Nomos on. You must be able to contact these clusters using `kubectl` from the
-installation environment.
+GKE Policy Management on. You must be able to contact these clusters using 
+`kubectl` from the installation environment.
 
-In order to run Nomos components, the cluster has to meet these requirements:
+In order to run GKE Policy Management components, the cluster has to meet these
+requirements:
 
 <table>
   <tr>
@@ -63,8 +64,9 @@ Minimum required Kubernetes Server Version: **1.9**
 
 Note that GKE running K8S 1.9 satisfies all these requirements.
 
-**Warning:** In the current release of Nomos, we require that all namespaces be
-managed by Nomos. It is recommended to create a new cluster for use with Nomos.
+**Warning:** In the current release of GKE Policy Management, we require that 
+all namespaces be managed by GKE Policy Management. It is recommended to create
+a new cluster for use with GKE Policy Management.
 
 The easiest way to get all of these is to follow the
 [GKE quick start guide](https://cloud.google.com/kubernetes-engine/docs/quickstart)
@@ -72,7 +74,8 @@ and make sure to select version 1.9+ when creating the cluster.
 
 ## Installation
 
-Download the Nomos installer script to a directory on your machine.
+Download the GKE Policy Management installer script to a directory on your
+machine.
 
 ```console
 $ cd
@@ -94,9 +97,9 @@ $ ./run-installer.sh --config=/path/to/your/config.yaml
 
 ## Verify installation
 
-To verify that Nomos components are correctly installed, issue the following
-command and verify that all components listed have status displayed as
-"Running."
+To verify that GKE Policy Management components are correctly installed, issue 
+the following command and verify that all components listed have status
+displayed as "Running."
 
 Check running components:
 
@@ -111,10 +114,11 @@ syncer-58545bc77d-l485n                               1/1       Running   0     
 
 ## Uninstalling
 
-To uninstall Nomos from a set of clusters, you need the `config.yaml` file used
-for the original installation, and the `run-installer.sh` script.
+To uninstall GKE Policy Management from a set of clusters, you need the 
+`config.yaml` file used for the original installation, and the 
+`run-installer.sh` script.
 
-Executing the following command will uninstall Nomos components.
+Executing the following command will uninstall GKE Policy Management components.
 
 ```console
 ./run-installer.sh --config=/path/to/your/config.yaml --uninstall=deletedeletedelete
@@ -124,25 +128,25 @@ Executing the following command will uninstall Nomos components.
 The affected components are:
 
 *   The namespace `nomos-system` along any workloads running inside of it.
-*   Any cluster level roles and role bindings installed by Nomos.
-*   Any admission controller configurations installed by Nomos.
+*   Any cluster level roles and role bindings installed by GKE Policy Management.
+*   Any admission controller configurations installed by GKE Policy Management.
 
-In addition, removing Nomos from the cluster may affect user workloads that
-interact with the Kubernetes API server.
+In addition, removing GKE Policy Management from the cluster may affect user 
+workloads that interact with the Kubernetes API server.
 
 ## Reinstalling
 
 It is possible to reuse an existing installer configuration multiple times to
-reinstall Nomos. To run the reinstall use the batch installation mode with your
-existing configuration:
+reinstall GKE Policy Management. To run the reinstall use the batch installation
+mode with your existing configuration:
 
 ```console
 $ ./run-installer.sh --config=/path/to/your/config.yaml
 ```
 
 The effect of the reinstallation is to run the equivalent of `kubectl apply` to
-almost all the Kubernetes components in the Nomos installation package. The
-exception are certificates and required secrets, which are removed prior to the
-bulk of reinstall process. This has the effect of installing a fresh copy of the
-certificates and secrets. Namespaces and deployments may not be affected if the
-reinstall would not change their state.
+almost all the Kubernetes components in the GKE Policy Management installation 
+package. The exception are certificates and required secrets, which are removed 
+prior to the bulk of reinstall process. This has the effect of installing a 
+fresh copy of the certificates and secrets. Namespaces and deployments may not 
+be affected if the reinstall would not change their state.
