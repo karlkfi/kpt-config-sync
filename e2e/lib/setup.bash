@@ -36,16 +36,16 @@ export GCP_TEST_FOLDER="$GCP_TEST_NAMESPACE-folder"
 setup::gcp::delete_namespace() {
   local namespace="$1"
   local project_id="${namespace}"
-  echo "gcp::projects::delete namespace=${namespace}"
+  echo "setup::gcp::delete_namespace namespace=${namespace}"
   local project_num
   project_num=$(gcloud projects describe "${project_id}" --format="get(projectNumber)")
-  echo "setup::gcp::delete project_num=${project_num}"
+  echo "setup::gcp::delete_namespace project_num=${project_num}"
 
   # || true to ignore scenario where the namespace is not found.
   gcloud --quiet alpha container policy namespaces delete \
           --project="${project_id}" \
           "projects/${project_num}/namespaces/${namespace}" || true
-  echo "setup::gcp::delete exit"
+  echo "setup::gcp::delete_namespace exit"
 }
 
 # Creates a project with the given id if it doesn't already exist
@@ -66,6 +66,9 @@ setup::gcp::create_project() {
     gcloud --quiet services enable \
         kubernetespolicy.googleapis.com --project="${project}"
   fi
+
+  echo "Ensure that the test namespace does not exist."
+  setup::gcp::delete_namespace "${project}"
 }
 
 # Sets the FOLDER_ID variable to the ID of the folder with the given display
@@ -91,6 +94,10 @@ setup::gcp::set_or_create_folder() {
     FOLDER_ID=$output
   fi
   echo "Folder id=${FOLDER_ID} found"
+
+  echo "Clearing IAM binding"
+  gcloud alpha resource-manager folders remove-iam-policy-binding "${FOLDER_ID}" \
+      --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer || true
 }
 
 setup::gcp::initialize() {
@@ -104,11 +111,13 @@ setup::gcp::initialize() {
 
   setup::gcp::set_or_create_folder "${GCP_TEST_FOLDER}"
 
-  echo "ensure project is under the folder"
+  echo "ensure subfolder project is under the folder"
   gcloud alpha projects move "${GCP_TEST_PROJECT_SUBFOLDER}" --folder="${FOLDER_ID}"
 
-  echo "Ensure that the test namespace does not exist upon exit."
-  setup::gcp::delete_namespace "${GCP_TEST_NAMESPACE}"
+  echo "ensure suborg project is under the org"
+  gcloud alpha projects move "${GCP_TEST_PROJECT_SUBFOLDER}" \
+      --organization="${GCP_TEST_ORGANIZATION_ID}"
+
   echo "setup::gcp::initialize exit"
 }
 
