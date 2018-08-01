@@ -36,7 +36,7 @@ type InjectArgs struct {
 // CreateInjectArgs returns new controller args
 func CreateInjectArgs(config *rest.Config) InjectArgs {
 	client := policyhierarchy.NewForConfigOrDie(config)
-	syncerOptions := options.FromFlags()
+	syncerOptions := options.FromFlagsAndEnv()
 	return InjectArgs{
 		InjectArgs:    args.CreateInjectArgs(config),
 		Clientset:     client,
