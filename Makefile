@@ -353,47 +353,21 @@ e2e-image: e2e-staging
 
 e2e-image-all: e2e-image image-installer
 
-# Runs e2e tests for a particular importer.
-GCLOUD_PATH = $(dir $(shell which gcloud))
-KUBECTL_PATH = $(dir $(shell which kubectl))
-
-# Hack around b/111407514 for goobuntu installed with standard
-# gcloud/kubectl packages.
-ifeq ($(KUBECTL_PATH),/usr/bin/)
-	KUBECTL_E2E_MOUNT := -v "/usr/bin/kubectl:/usr/bin/kubectl"
-endif
-ifeq ($(GCLOUD_PATH),/usr/bin/)
-	GCLOUD_E2E_MOUNT := \
-	  -v "/usr/lib/google-cloud-sdk:/usr/lib/google-cloud-sdk"
-	GCLOUD_PATH := /usr/lib/google-cloud-sdk/bin
-endif
-
 test-e2e-run-%:
 	@echo "+++ Running e2e tests: $*"
 	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
 	@rm -rf $(OUTPUT_DIR)/e2e/testcases
 	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
-	@docker run -it \
-	    --group-add docker \
-	    -u $(UID):$(GID) \
-	    -v /var/run/docker.sock:/var/run/docker.sock \
-        -v "$(TEMP_OUTPUT_DIR):/tmp" \
-	    -v "$(HOME)":$(HOME) \
-	    -v "$(OUTPUT_DIR)/e2e":/opt/testing/e2e \
-		$(KUBECTL_E2E_MOUNT) \
-		$(GCLOUD_E2E_MOUNT) \
-		$(E2E_AUX_VOLUMES) \
-	    -e "CONTAINER=gcr.io/$(GCP_PROJECT)/installer" \
-	    -e "VERSION=$(IMAGE_TAG)" \
-	    -e "HOME=$(HOME)" \
-	    -e "GCLOUD_PATH=$(GCLOUD_PATH)" \
-	    -e "KUBECTL_PATH=$(KUBECTL_PATH)" \
-	    -e "NOMOS_REPO=$(shell pwd)" \
-	    "gcr.io/stolos-dev/e2e-tests:test-e2e-latest" \
-	    ${E2E_FLAGS} \
-		--importer $* \
-		--gcp-watcher-cred "$(GCP_E2E_WATCHER_CRED)" \
-		--gcp-runner-cred "$(GCP_E2E_RUNNER_CRED)" \
+	@e2e/e2e.sh \
+		--TEMP_OUTPUT_DIR "$(TEMP_OUTPUT_DIR)" \
+		--OUTPUT_DIR "$(OUTPUT_DIR)" \
+		--GCP_PROJECT "$(GCP_PROJECT)" \
+		--IMAGE_TAG "$(IMAGE_TAG)" \
+		--IMPORTER "$*" \
+		--GCP_E2E_WATCHER_CRED "$(GCP_E2E_WATCHER_CRED)" \
+		--GCP_E2E_RUNNER_CRED "$(GCP_E2E_RUNNER_CRED)" \
+		-- \
+		$(E2E_FLAGS) \
 	    && echo "+++ $* e2e tests completed" \
 	    || (echo "### e2e tests failed. Temp dir (with test output logs etc) are available in ${TEMP_OUTPUT_DIR}"; exit 1)
 
