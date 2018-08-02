@@ -60,16 +60,19 @@ func (tcs ModuleEqualTestcases) RunAll(module policyhierarchycontroller.Module, 
 // ModuleAggregationTestcase is a testcase for testing out the module's AggregatedNode.Aggregate
 // method.
 type ModuleAggregationTestcase struct {
-	Name       string
-	Aggregated hierarchy.AggregatedNode
-	PolicyNode *policyhierarchy_v1.PolicyNode
-	Expect     hierarchy.Instances
+	Name        string
+	PolicyNodes []*policyhierarchy_v1.PolicyNode
+	Expect      hierarchy.Instances
 }
 
 // Run runs the ModuleAggregationTestcase
 func (tc ModuleAggregationTestcase) Run(module policyhierarchycontroller.Module) func(t *testing.T) {
 	return func(t *testing.T) {
-		actual := tc.Aggregated.Aggregated(tc.PolicyNode).Generate()
+		an := module.NewAggregatedNode()
+		for _, pn := range tc.PolicyNodes {
+			an = an.Aggregated(pn)
+		}
+		actual := an.Generate()
 
 		actual.Sort()
 		tc.Expect.Sort()

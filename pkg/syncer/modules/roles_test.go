@@ -26,6 +26,15 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func WithRole(t policyhierarchy_v1.PolicyNodeType, r ...rbac_v1.Role) *policyhierarchy_v1.PolicyNode {
+	return &policyhierarchy_v1.PolicyNode{
+		Spec: policyhierarchy_v1.PolicyNodeSpec{
+			Type:    t,
+			RolesV1: r,
+		},
+	}
+}
+
 func TestRoles(t *testing.T) {
 	admin := rbac_v1.Role{
 		ObjectMeta: meta_v1.ObjectMeta{
@@ -88,23 +97,16 @@ func TestRoles(t *testing.T) {
 		},
 		Aggregation: test.ModuleAggregationTestcases{
 			test.ModuleAggregationTestcase{
-				Name:       "Both empty",
-				Aggregated: &AggregatedRole{},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{
-					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Type: policyhierarchy_v1.Namespace,
-					},
+				Name: "Both empty",
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithRole(policyhierarchy_v1.Namespace),
 				},
 				Expect: hierarchy.Instances{},
 			},
 			test.ModuleAggregationTestcase{
-				Name:       "Base case to workload namespace",
-				Aggregated: &AggregatedRole{},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{
-					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Type:    policyhierarchy_v1.Namespace,
-						RolesV1: []rbac_v1.Role{admin, editor},
-					},
+				Name: "Base case to workload namespace",
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithRole(policyhierarchy_v1.Namespace, admin, editor),
 				},
 				Expect: hierarchy.Instances{
 					&admin,
@@ -112,23 +114,26 @@ func TestRoles(t *testing.T) {
 				},
 			},
 			test.ModuleAggregationTestcase{
-				Name:       "Workload namespace empty",
-				Aggregated: &AggregatedRole{},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{
-					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Type: policyhierarchy_v1.Namespace,
-					},
+				Name: "Ignore policyspace roles",
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithRole(policyhierarchy_v1.Policyspace, admin),
+					WithRole(policyhierarchy_v1.Namespace, editor),
+				},
+				Expect: hierarchy.Instances{
+					&editor,
+				},
+			},
+			test.ModuleAggregationTestcase{
+				Name: "Workload namespace empty",
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithRole(policyhierarchy_v1.Namespace),
 				},
 				Expect: hierarchy.Instances{},
 			},
 			test.ModuleAggregationTestcase{
-				Name:       "Ignore policyspaces",
-				Aggregated: &AggregatedRole{},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{
-					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						Type:    policyhierarchy_v1.Policyspace,
-						RolesV1: []rbac_v1.Role{admin, editor},
-					},
+				Name: "Ignore policyspaces",
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithRole(policyhierarchy_v1.Policyspace, admin, editor),
 				},
 				Expect: hierarchy.Instances{},
 			},

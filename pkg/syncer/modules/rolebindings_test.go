@@ -33,6 +33,17 @@ func RenameRoleBinding(r *rbac_v1.RoleBinding, name string) *rbac_v1.RoleBinding
 	return c
 }
 
+func WithRoleBindings(name string, rbs ...rbac_v1.RoleBinding) *policyhierarchy_v1.PolicyNode {
+	return &policyhierarchy_v1.PolicyNode{
+		ObjectMeta: meta_v1.ObjectMeta{
+			Name: name,
+		},
+		Spec: policyhierarchy_v1.PolicyNodeSpec{
+			RoleBindingsV1: rbs,
+		},
+	}
+}
+
 func TestRoleBindings(t *testing.T) {
 	admins := &rbac_v1.RoleBinding{
 		ObjectMeta: meta_v1.ObjectMeta{
@@ -131,23 +142,16 @@ func TestRoleBindings(t *testing.T) {
 		},
 		Aggregation: test.ModuleAggregationTestcases{
 			test.ModuleAggregationTestcase{
-				Name:       "Both empty",
-				Aggregated: &AggregatedRoleBinding{},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{},
-				Expect:     hierarchy.Instances{},
+				Name: "Both empty",
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					&policyhierarchy_v1.PolicyNode{},
+				},
+				Expect: hierarchy.Instances{},
 			},
 			test.ModuleAggregationTestcase{
-				Name:       "Base case",
-				Aggregated: &AggregatedRoleBinding{},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{
-					ObjectMeta: meta_v1.ObjectMeta{
-						Name: "current",
-					},
-					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						RoleBindingsV1: []rbac_v1.RoleBinding{
-							*admins,
-						},
-					},
+				Name: "Base case",
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithRoleBindings("current", *admins),
 				},
 				Expect: hierarchy.Instances{
 					RenameRoleBinding(admins, "current.admins"),
@@ -155,24 +159,18 @@ func TestRoleBindings(t *testing.T) {
 			},
 			test.ModuleAggregationTestcase{
 				Name: "Node empty",
-				Aggregated: &AggregatedRoleBinding{
-					roleBindings: []*rbac_v1.RoleBinding{editors},
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithRoleBindings("editors", *editors),
+					WithRoleBindings("empty"),
 				},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{},
-				Expect:     hierarchy.Instances{editors},
+				Expect: hierarchy.Instances{
+					RenameRoleBinding(editors, "editors.editors"),
+				},
 			},
 			test.ModuleAggregationTestcase{
-				Name:       "Base case",
-				Aggregated: &AggregatedRoleBinding{},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{
-					ObjectMeta: meta_v1.ObjectMeta{
-						Name: "base",
-					},
-					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						RoleBindingsV1: []rbac_v1.RoleBinding{
-							*admins,
-						},
-					},
+				Name: "Base case",
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithRoleBindings("base", *admins),
 				},
 				Expect: hierarchy.Instances{
 					RenameRoleBinding(admins, "base.admins"),
@@ -180,21 +178,9 @@ func TestRoleBindings(t *testing.T) {
 			},
 			test.ModuleAggregationTestcase{
 				Name: "Aggregation case",
-				Aggregated: &AggregatedRoleBinding{
-					roleBindings: []*rbac_v1.RoleBinding{
-						RenameRoleBinding(bobs, "parent.bobs"),
-						RenameRoleBinding(editors, "parent.editors"),
-					},
-				},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{
-					ObjectMeta: meta_v1.ObjectMeta{
-						Name: "current",
-					},
-					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						RoleBindingsV1: []rbac_v1.RoleBinding{
-							*admins,
-						},
-					},
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithRoleBindings("parent", *bobs, *editors),
+					WithRoleBindings("current", *admins),
 				},
 				Expect: hierarchy.Instances{
 					RenameRoleBinding(admins, "current.admins"),

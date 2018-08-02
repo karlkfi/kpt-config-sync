@@ -29,6 +29,18 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func WithResourceQuota(hardResList core_v1.ResourceList) *policyhierarchy_v1.PolicyNode {
+	return &policyhierarchy_v1.PolicyNode{
+		Spec: policyhierarchy_v1.PolicyNodeSpec{
+			ResourceQuotaV1: &core_v1.ResourceQuota{
+				Spec: core_v1.ResourceQuotaSpec{
+					Hard: hardResList,
+				},
+			},
+		},
+	}
+}
+
 func TestQuota(t *testing.T) {
 	testSuite := test.ModuleTest{
 		Module: NewResourceQuota(nil, nil),
@@ -116,16 +128,9 @@ func TestQuota(t *testing.T) {
 		},
 		Aggregation: test.ModuleAggregationTestcases{
 			test.ModuleAggregationTestcase{
-				Name:       "Base case",
-				Aggregated: &AggregatedQuota{},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{
-					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						ResourceQuotaV1: &core_v1.ResourceQuota{
-							Spec: core_v1.ResourceQuotaSpec{
-								Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
-							},
-						},
-					},
+				Name: "Base case",
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithResourceQuota(core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")}),
 				},
 				Expect: hierarchy.Instances{
 					&core_v1.ResourceQuota{
@@ -141,17 +146,9 @@ func TestQuota(t *testing.T) {
 			},
 			test.ModuleAggregationTestcase{
 				Name: "Accumulate extra fields",
-				Aggregated: &AggregatedQuota{
-					limits: core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("100")},
-				},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{
-					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						ResourceQuotaV1: &core_v1.ResourceQuota{
-							Spec: core_v1.ResourceQuotaSpec{
-								Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
-							},
-						},
-					},
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithResourceQuota(core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("100")}),
+					WithResourceQuota(core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")}),
 				},
 				Expect: hierarchy.Instances{
 					&core_v1.ResourceQuota{
@@ -170,17 +167,9 @@ func TestQuota(t *testing.T) {
 			},
 			test.ModuleAggregationTestcase{
 				Name: "Accumulate min value",
-				Aggregated: &AggregatedQuota{
-					limits: core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("100")},
-				},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{
-					Spec: policyhierarchy_v1.PolicyNodeSpec{
-						ResourceQuotaV1: &core_v1.ResourceQuota{
-							Spec: core_v1.ResourceQuotaSpec{
-								Hard: core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("10")},
-							},
-						},
-					},
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithResourceQuota(core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("100")}),
+					WithResourceQuota(core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("10")}),
 				},
 				Expect: hierarchy.Instances{
 					&core_v1.ResourceQuota{
@@ -198,10 +187,10 @@ func TestQuota(t *testing.T) {
 			},
 			test.ModuleAggregationTestcase{
 				Name: "Accumulate nil quota",
-				Aggregated: &AggregatedQuota{
-					limits: core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("100")},
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithResourceQuota(core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("100")}),
+					WithResourceQuota(core_v1.ResourceList{}),
 				},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{},
 				Expect: hierarchy.Instances{
 					&core_v1.ResourceQuota{
 						ObjectMeta: meta_v1.ObjectMeta{
@@ -217,10 +206,11 @@ func TestQuota(t *testing.T) {
 				},
 			},
 			test.ModuleAggregationTestcase{
-				Name:       "No quota",
-				Aggregated: &AggregatedQuota{},
-				PolicyNode: &policyhierarchy_v1.PolicyNode{},
-				Expect:     hierarchy.Instances{},
+				Name: "No quota",
+				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
+					WithResourceQuota(core_v1.ResourceList{}),
+				},
+				Expect: hierarchy.Instances{},
 			},
 		},
 	}
