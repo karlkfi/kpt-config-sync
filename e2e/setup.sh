@@ -188,6 +188,16 @@ while [[ $# -gt 0 ]]; do
       run_tests=true
     ;;
 
+    --image_tag)
+      VERSION="${1}"
+      shift
+    ;;
+
+    --container)
+      CONTAINER="${1}"
+      shift
+    ;;
+
     --test_filter)
       test_filter="${1}"
       export E2E_TEST_FILTER="${test_filter}"
@@ -242,8 +252,6 @@ case ${importer} in
   ;;
 esac
 
-export PATH="${GCLOUD_PATH}:${KUBECTL_PATH}:$PATH"
-export KUBECONFIG=${HOME}/.kube/config
 suggested_user="$(gcloud config get-value account)"
 kubectl_context="$(kubectl config current-context)"
 run_installer="${TEST_DIR}/run-installer.sh"
