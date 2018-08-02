@@ -27,11 +27,11 @@ SYS_NAMESPACES=(
 # Elysium policy, some state must be reused across runs.  We set up that state
 # here so it is available to the test cases, and we create one test project per
 # different $USER.
-export GCP_TEST_ORGANIZATION_ID="495131404417" # nomos-e2e.joonix.net
+export GCP_ORG_ID="495131404417" # nomos-e2e.joonix.net
 export GCP_TEST_NAMESPACE="$USER-nomos-e2e"
-export GCP_TEST_PROJECT="${GCP_TEST_NAMESPACE}"
-export GCP_TEST_PROJECT_SUBFOLDER="${GCP_TEST_NAMESPACE}-sf"
-export GCP_TEST_FOLDER="$GCP_TEST_NAMESPACE-folder"
+export GCP_PROJECT_A="${GCP_TEST_NAMESPACE}-sf"
+export GCP_PROJECT_B="${GCP_TEST_NAMESPACE}"
+export GCP_FOLDER="$GCP_TEST_NAMESPACE-folder"
 
 setup::gcp::delete_namespace() {
   local namespace="$1"
@@ -58,7 +58,7 @@ setup::gcp::create_project() {
     # If an e2e test project does not exist for this user, create it and
     # do what is necessary to make it a functional e2e project.
     gcloud projects create \
-        --organization="${GCP_TEST_ORGANIZATION_ID}" \
+        --organization="${GCP_ORG_ID}" \
         "${project}"
     echo "IF RUNNING FOR THE FIRST TIME THIS WILL FAIL. See b/111757245"
 
@@ -66,31 +66,24 @@ setup::gcp::create_project() {
     gcloud --quiet services enable \
         kubernetespolicy.googleapis.com --project="${project}"
   fi
-
-  echo "Removing IAM binding from project"
-  run gcloud projects remove-iam-policy-binding "${project}" \
-      --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer || true
-
-  echo "Ensure that the test namespace does not exist."
-  setup::gcp::delete_namespace "${project}"
 }
 
 # Sets the FOLDER_ID variable to the ID of the folder with the given display
 # name. Creates the folder if needed.
-setup::gcp::set_or_create_folder() {
+setup::gcp::create_folder() {
   local folder_display_name="$1"
 
   echo "setup::gcp::set_or_create_folder=${folder_display_name}"
 
   # This returns the folder number if exists
-  run gcloud alpha resource-manager folders list --organization "${GCP_TEST_ORGANIZATION_ID}" \
+  run gcloud alpha resource-manager folders list --organization "${GCP_ORG_ID}" \
     --filter=display_name:"${folder_display_name}" --format="value(name)"
 
   # shellcheck disable=SC2154
   if [[ -z $output ]]; then
     # This will return folder name "folders/foldernumber"
     run gcloud alpha resource-manager folders create --display-name="${folder_display_name}" \
-      --organization "${GCP_TEST_ORGANIZATION_ID}" --format="value(name)"
+      --organization "${GCP_ORG_ID}" --format="value(name)"
     # shellcheck disable=SC2154
     [ "$status" -eq 0 ]
     FOLDER_ID=$(echo "$output" | awk '/^folders/' | cut -d / -f 2) # extract foldernumber
@@ -100,19 +93,16 @@ setup::gcp::set_or_create_folder() {
   export FOLDER_ID
   echo "Folder id=${FOLDER_ID} found"
 
-  echo "Clearing IAM binding"
-  gcloud alpha resource-manager folders remove-iam-policy-binding "${FOLDER_ID}" \
-      --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer || true
 }
 
 # GCP Initialize will set the gcloud auth to use the test_runner_creds
 # And ensure you have a clean hierarchy of a project, a folder, and another
 # project under the folder with no namespaces and clean rolebindings.
 #
-# GCP_TEST_ORGANIZATION
-# |_ GCP_TEST_PROJECT
-# |_ GCP_TEST_FOLDER
-#    |_ GCP_TEST_PROJECT_SUBFOLDER
+# GCP_ORG
+# |_ GCP_FOLDER
+# |  |_ GCP_PROJECT_A
+# |_ GCP_PROJECT_B
 #
 setup::gcp::initialize() {
   echo "setup::gcp::initialize"
@@ -120,25 +110,29 @@ setup::gcp::initialize() {
   gcloud auth activate-service-account test-runner@nomos-e2e-test1.iam.gserviceaccount.com \
           --key-file="$HOME/test_runner_client_key.json"
 
-  setup::gcp::create_project "${GCP_TEST_PROJECT}"
-  setup::gcp::create_project "${GCP_TEST_PROJECT_SUBFOLDER}"
+  setup::gcp::create_project "${GCP_PROJECT_A}"
+  setup::gcp::create_project "${GCP_PROJECT_B}"
+  setup::gcp::create_folder "${GCP_FOLDER}"
 
-  setup::gcp::set_or_create_folder "${GCP_TEST_FOLDER}"
+  gcloud alpha projects move "${GCP_PROJECT_A}" --folder="${FOLDER_ID}"
+  gcloud alpha projects move "${GCP_PROJECT_B}" \
+      --organization="${GCP_ORG_ID}"
 
-  echo "ensure subfolder project is under the folder"
-  gcloud alpha projects move "${GCP_TEST_PROJECT_SUBFOLDER}" --folder="${FOLDER_ID}"
+  setup::gcp::delete_namespace "${GCP_PROJECT_A}"
+  setup::gcp::delete_namespace "${GCP_PROJECT_B}"
 
-  echo "ensure suborg project is under the org"
-  gcloud alpha projects move "${GCP_TEST_PROJECT_SUBFOLDER}" \
-      --organization="${GCP_TEST_ORGANIZATION_ID}"
+  gcloud projects remove-iam-policy-binding "${GCP_PROJECT_A}" \
+      --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer || true
+  gcloud projects remove-iam-policy-binding "${GCP_PROJECT_B}" \
+      --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer || true
+  gcloud alpha resource-manager folders remove-iam-policy-binding "${FOLDER_ID}" \
+      --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer || true
 
   echo "setup::gcp::initialize exit"
 }
 
 gcp::teardown() {
   echo "gcp::teardown"
-  setup::gcp::delete_namespace "${GCP_TEST_NAMESPACE}"
-
   gcloud config set account "${GCLOUD_CONTEXT}"
   echo "gcp::teardown exit"
 }

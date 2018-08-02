@@ -6,60 +6,97 @@ load ../lib/loader
 
 # Project should exist
 @test "Namespace under org create/get/delete" {
-  test_create_get_delete "${GCP_TEST_PROJECT}"
+  test_create_get_delete "${GCP_PROJECT_B}"
 }
 
 @test "Namespace under folder create/get/delete" {
-  test_create_get_delete "${GCP_TEST_PROJECT_SUBFOLDER}"
+  test_create_get_delete "${GCP_PROJECT_A}"
 }
 
 @test "Project IAM create/delete" {
   echo "The namespace should not exist initially"
-  namespace::check_not_found "${GCP_TEST_PROJECT}"
+  namespace::check_not_found "${GCP_PROJECT_B}"
 
   echo "Create the namespace under the test project"
   run gcloud --quiet alpha container policy \
-      namespaces create "${GCP_TEST_PROJECT}" \
-      --project="${GCP_TEST_PROJECT}"
-  assert::contains "namespaces/${GCP_TEST_PROJECT}"
+      namespaces create "${GCP_PROJECT_B}" \
+      --project="${GCP_PROJECT_B}"
+  assert::contains "namespaces/${GCP_PROJECT_B}"
   [ "$status" -eq 0 ]
 
   echo "Wait to see if the namespace appears on the cluster"
-  namespace::check_exists "${GCP_TEST_PROJECT}"
+  namespace::check_exists "${GCP_PROJECT_B}"
 
   echo "Adding IAM binding to project"
-  run gcloud projects add-iam-policy-binding "${GCP_TEST_PROJECT}" \
+  run gcloud projects add-iam-policy-binding "${GCP_PROJECT_B}" \
       --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer
   [ "$status" -eq 0 ]
 
   echo "Checking for binding to be created in namespace"
-  wait::for -- kubectl get configmaps -n "${GCP_TEST_PROJECT}" \
+  wait::for -- kubectl get rolebinding \
+      "${GCP_PROJECT_B}.${GCP_PROJECT_B}.container.viewer" \
+      -n "${GCP_PROJECT_B}"
+  run kubectl get configmaps -n "${GCP_PROJECT_B}" \
       --as bob@nomos-e2e.joonix.net
-  resource::check -n "${GCP_TEST_PROJECT}" rolebinding \
-      "${GCP_TEST_PROJECT}.${GCP_TEST_PROJECT}.container.viewer"
 
   echo "Removing IAM binding from project"
-  run gcloud projects remove-iam-policy-binding "${GCP_TEST_PROJECT}" \
+  run gcloud projects remove-iam-policy-binding "${GCP_PROJECT_B}" \
       --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer
 
   echo "Checking for binding to be removed from namespace"
-  wait::for -f -- kubectl get configmaps -n "${GCP_TEST_PROJECT}" \
+  wait::for -f -- kubectl get configmaps -n "${GCP_PROJECT_B}" \
       --as bob@nomos-e2e.joonix.net
 }
 
-@test "Project move to folder with IAM" {
+@test "Folder IAM create/delete" {
   echo "The namespace should not exist initially"
-  namespace::check_not_found "${GCP_TEST_PROJECT}"
+  namespace::check_not_found "${GCP_PROJECT_A}"
 
   echo "Create the namespace under the test project"
   run gcloud --quiet alpha container policy \
-      namespaces create "${GCP_TEST_PROJECT}" \
-      --project="${GCP_TEST_PROJECT}"
-  assert::contains "namespaces/${GCP_TEST_PROJECT}"
+      namespaces create "${GCP_PROJECT_A}" \
+      --project="${GCP_PROJECT_A}"
+  assert::contains "namespaces/${GCP_PROJECT_A}"
   [ "$status" -eq 0 ]
 
   echo "Wait to see if the namespace appears on the cluster"
-  namespace::check_exists "${GCP_TEST_PROJECT}"
+  namespace::check_exists "${GCP_PROJECT_A}"
+
+  echo "Adding IAM binding to folder"
+  run gcloud alpha resource-manager folders add-iam-policy-binding "${FOLDER_ID}" \
+      --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer
+  [ "$status" -eq 0 ]
+
+  echo "Checking for binding to be created in namespace"
+  wait::for -- kubectl get rolebinding \
+      "${GCP_PROJECT_A}.folders-${FOLDER_ID}.container.viewer" \
+      -n "${GCP_PROJECT_A}"
+  run kubectl get configmaps -n "${GCP_PROJECT_A}" \
+      --as bob@nomos-e2e.joonix.net
+  [ "$status" -eq 0 ]
+
+  echo "Removing IAM binding from folder"
+  run gcloud alpha resource-manager folders remove-iam-policy-binding "${FOLDER_ID}" \
+      --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer || true
+
+  echo "Checking for binding to be removed from namespace"
+  wait::for -f -- kubectl get configmaps -n "${GCP_PROJECT_A}" \
+      --as bob@nomos-e2e.joonix.net
+}
+
+@test "Project move to folder" {
+  echo "The namespace should not exist initially"
+  namespace::check_not_found "${GCP_PROJECT_B}"
+
+  echo "Create the namespace under the test project"
+  run gcloud --quiet alpha container policy \
+      namespaces create "${GCP_PROJECT_B}" \
+      --project="${GCP_PROJECT_B}"
+  assert::contains "namespaces/${GCP_PROJECT_B}"
+  [ "$status" -eq 0 ]
+
+  echo "Wait to see if the namespace appears on the cluster"
+  namespace::check_exists "${GCP_PROJECT_B}"
 
   echo "Adding IAM binding to folder"
   run gcloud alpha resource-manager folders add-iam-policy-binding "${FOLDER_ID}" \
@@ -67,20 +104,22 @@ load ../lib/loader
   [ "$status" -eq 0 ]
 
   echo "Moving project into folder"
-  run gcloud alpha projects move "${GCP_TEST_PROJECT}" --folder "${FOLDER_ID}"
+  run gcloud alpha projects move "${GCP_PROJECT_B}" --folder "${FOLDER_ID}"
 
   echo "Checking for binding to be created in namespace"
-  wait::for -- kubectl get configmaps -n "${GCP_TEST_PROJECT}" \
+  wait::for -- kubectl get rolebinding \
+      "${GCP_PROJECT_B}.folders-${FOLDER_ID}.container.viewer" \
+      -n "${GCP_PROJECT_B}"
+  run kubectl get configmaps -n "${GCP_PROJECT_B}" \
       --as bob@nomos-e2e.joonix.net
-  resource::check -n "${GCP_TEST_PROJECT}" rolebinding \
-      "${GCP_TEST_PROJECT}.folders-${FOLDER_ID}.container.viewer"
+  [ "$status" -eq 0 ]
 
   echo "Moving project back to org"
-  run gcloud alpha projects move "${GCP_TEST_PROJECT}" \
-      --organization "${GCP_TEST_ORGANIZATION_ID}"
+  run gcloud alpha projects move "${GCP_PROJECT_B}" \
+      --organization "${GCP_ORG_ID}"
 
   echo "Checking for binding to be removed from namespace"
-  wait::for -f -- kubectl get configmaps -n "${GCP_TEST_PROJECT}" \
+  wait::for -f -- kubectl get configmaps -n "${GCP_PROJECT_B}" \
       --as bob@nomos-e2e.joonix.net
 }
 

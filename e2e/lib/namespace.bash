@@ -109,7 +109,7 @@ EOM
 function namespace::check_exists() {
   local args=()
   local check_args=()
-  local timeout_sec="20"
+  local timeout_sec="60"
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
     shift
@@ -150,7 +150,7 @@ function namespace::check_exists() {
 #   -t [timeout_sec]: set a timeout to other than default, example: "-t 42"
 function namespace::check_not_found() {
   local args=()
-  local timeout_sec="20"
+  local timeout_sec="60"
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
     shift
