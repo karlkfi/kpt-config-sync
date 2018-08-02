@@ -20,10 +20,7 @@ package options
 
 import (
 	"flag"
-	"os"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 var (
@@ -35,9 +32,6 @@ var (
 
 	workerNumRetries = flag.Int(
 		"worker_num_retries", 3, "Number of retries for an action before giving up.")
-
-	gcpMode = flag.Bool(
-		"gcpMode", false, "Runs syncer in GCP mode.")
 )
 
 // Options are the flag value options for the syncer
@@ -45,22 +39,13 @@ type Options struct {
 	ResyncPeriod     time.Duration // flag resync_period
 	DryRun           bool          // flag dry_run
 	WorkerNumRetries int           // flag worker_num_retries
-	GCPMode          bool          // flag to indicate the sync is from GCP.
 }
 
-// FromFlagsAndEnv returns a copy of the options from flag and environment values.
-func FromFlagsAndEnv() Options {
-	var sycnerGCPMode bool
-	envGcpMode := os.Getenv("GCP_MODE")
-	if envGcpMode == "true" || *gcpMode {
-		sycnerGCPMode = true
-		glog.Info("Running in GCP mode.")
-	}
-
+// FromFlags returns a copy of the options from flag values
+func FromFlags() Options {
 	return Options{
 		ResyncPeriod:     *resyncPeriod,
 		DryRun:           *dryRun,
 		WorkerNumRetries: *workerNumRetries,
-		GCPMode:          sycnerGCPMode,
 	}
 }

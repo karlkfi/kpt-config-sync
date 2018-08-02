@@ -156,22 +156,3 @@ the reconciliation for each and every event.
 1.  The computed policy is compared to the policy on the API server and the
     appropriate API operations are made to bring the API server's policies to
     the intended state.
-
-## Configuration
-
-### GCP Mode
-
-GCP mode (not syncing ResourceQuota and PodSecurityPolicy) will be handled by
-the GCP_MODE environment variable being set to true or the -gcpMode flag being
-specified on the command line.  This should be set via a configmap in the
-nomos-system namespace named sycncer with the gcp.mode=true.  Example:
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  namespace: nomos-system
-  name: syncer
-data:
-  gcp.mode: true
-```
