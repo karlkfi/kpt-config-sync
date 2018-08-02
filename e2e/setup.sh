@@ -28,7 +28,8 @@ function set_up_env() {
 
 function set_up_env_minimal() {
   echo "++++ Setting up environment (minimal)"
-  if [[ "$importer" == "git" ]]; then
+  case ${importer} in
+    git)
     echo "Starting port forwarding"
     TEST_LOG_REPO=/tmp/nomos-test
     POD_ID=$(kubectl get pods -n=nomos-system-test -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
@@ -50,7 +51,11 @@ function set_up_env_minimal() {
         return 1
       fi
     done
-  fi
+    ;;
+    gcp)
+    gsutil cp "${gcp_runner_cred}" "$HOME"
+    ;;
+  esac
 }
 
 function clean_up() {

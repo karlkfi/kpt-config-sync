@@ -67,6 +67,10 @@ setup::gcp::create_project() {
         kubernetespolicy.googleapis.com --project="${project}"
   fi
 
+  echo "Removing IAM binding from project"
+  run gcloud projects remove-iam-policy-binding "${project}" \
+      --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer || true
+
   echo "Ensure that the test namespace does not exist."
   setup::gcp::delete_namespace "${project}"
 }
@@ -93,6 +97,7 @@ setup::gcp::set_or_create_folder() {
   else
     FOLDER_ID=$output
   fi
+  export FOLDER_ID
   echo "Folder id=${FOLDER_ID} found"
 
   echo "Clearing IAM binding"
