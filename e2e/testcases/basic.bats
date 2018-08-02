@@ -28,12 +28,15 @@ load ../lib/loader
 }
 
 @test "RoleBindings updated" {
+  kubectl delete events --wait --now --field-selector reason=ReconcileComplete
+
   run kubectl get rolebindings -n backend bob-rolebinding -o yaml
   assert::contains "acme-admin"
 
   git::update ${YAML_DIR}/robert-rolebinding.yaml acme/eng/backend/bob-rolebinding.yaml
   git::commit
   wait::for -f -- kubectl get rolebindings -n backend bob-rolebinding
+
   run kubectl get rolebindings -n backend bob-rolebinding
   assert::contains "NotFound"
   run kubectl get rolebindings -n backend robert-rolebinding -o yaml
@@ -43,10 +46,7 @@ load ../lib/loader
   local itoken="$(kubectl get policynode backend -ojsonpath='{.spec.importToken}')"
   git::check_hash "$itoken"
 
-  # sleep to try to reduce potential flakiness between syncer updating the resources and syncer
-  # updating the syncToken of the policynodes
-  # TODO(ekitson): Use wait::event when we publish a sync event to look for
-  sleep 1
+  wait::event ReconcileComplete
 
   # verify that syncToken has been updated as well
   run kubectl get policynode backend -ojsonpath='{.status.syncTokens.backend}'

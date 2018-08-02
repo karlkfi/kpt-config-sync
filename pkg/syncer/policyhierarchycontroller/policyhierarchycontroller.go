@@ -22,7 +22,6 @@ package policyhierarchycontroller
 
 import (
 	"flag"
-	"fmt"
 	"time"
 
 	"github.com/golang/glog"
@@ -172,9 +171,10 @@ func (s *PolicyHieraryController) getPolicyNodeState(name string) (policyNodeSta
 			return policyNodeStateNotFound, nil, nil
 		case hierarchy.IsConsistencyError(err):
 			if warning := s.hierarchyWarnings.Warning(name); warning != "" {
-				s.recorder.Event(
+				s.recorder.Eventf(
 					ancestry.Node(), core_v1.EventTypeWarning, "HierarchyConsistencyError",
-					fmt.Sprintf("%s: %s", warning, err))
+					"%s: %s",
+					warning, err)
 			}
 			return policyNodeStateNotFound, ancestry, errors.Wrapf(err, "incomplete ancestry")
 		default:
@@ -232,11 +232,12 @@ func (s *PolicyHieraryController) getNamespaceState(name string) (namespaceState
 	}
 
 	glog.Warningf("Namespace %s has invalid management label %s", name, value)
-	s.recorder.Event(
+	s.recorder.Eventf(
 		ns,
 		core_v1.EventTypeWarning,
 		"InvalidManagmentLabel",
-		fmt.Sprintf("Namespace %s has invalid management label %s", name, value),
+		"Namespace %s has invalid management label %s",
+		name, value,
 	)
 	return namespaceStateExists, ns, nil
 }
@@ -309,7 +310,7 @@ func (s *PolicyHieraryController) softReconcile(name string) error {
 		case namespaceStateManagePolicies:
 			s.warnPolicyspaceHasNamespace(ns)
 		case namespaceStateManageFull:
-			return s.deleteNamespace(name)
+			return s.handlePolicyspace(ancestry.Node())
 		}
 
 	case policyNodeStateReserved:
@@ -325,21 +326,32 @@ func (s *PolicyHieraryController) softReconcile(name string) error {
 	return nil
 }
 
-// TODO: emit warning events for the warn* functions
 func (s *PolicyHieraryController) warnUndeclaredNamespace(ns *core_v1.Namespace) {
 	glog.Warningf("namespace %q exists but is not declared in the source of truth", ns.Name)
+	s.recorder.Event(
+		ns, core_v1.EventTypeWarning, "UnmanagedNamespace",
+		"namespace is not declared in the source of truth")
 }
 
 func (s *PolicyHieraryController) warnPolicyspaceHasNamespace(ns *core_v1.Namespace) {
 	glog.Warningf("namespace %q exists but is declared as a policyspace in the source of truth", ns.Name)
+	s.recorder.Event(
+		ns, core_v1.EventTypeWarning, "NamespaceInPolicySpace",
+		"namespace is declared as a policyspace in the source of truth")
 }
 
 func (s *PolicyHieraryController) warnReservedLabel(ns *core_v1.Namespace) {
 	glog.Warningf("reserved namespace %q has a management label", ns.Name)
+	s.recorder.Event(
+		ns, core_v1.EventTypeWarning, "UnmanagedNamespace",
+		"reserved namespace has a management label")
 }
 
 func (s *PolicyHieraryController) warnNoLabel(ns *core_v1.Namespace) {
 	glog.Warningf("namespace %q is declared in the source of truth but does not have a management label", ns.Name)
+	s.recorder.Event(
+		ns, core_v1.EventTypeWarning, "UnmanagedNamespace",
+		"namespace is declared in the source of truth but does not have a management label")
 }
 
 func (s *PolicyHieraryController) hardReconcile(name string) error {
@@ -361,7 +373,7 @@ func (s *PolicyHieraryController) hardReconcile(name string) error {
 
 	switch ancestry.Node().Spec.Type {
 	case policyhierarchy_v1.Policyspace:
-		return s.handlePolicyspace(name)
+		return s.handlePolicyspace(ancestry.Node())
 	case policyhierarchy_v1.ReservedNamespace:
 		return nil
 	}
@@ -376,6 +388,7 @@ func (s *PolicyHieraryController) hardReconcile(name string) error {
 func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy.Ancestry) error {
 	var syncErrs []policyhierarchy_v1.PolicyNodeSyncError
 	errBuilder := multierror.NewBuilder()
+	reconcileCount := 0
 	for _, module := range s.modules {
 		declaredInstances := ancestry.Aggregate(module.NewAggregatedNode)
 
@@ -398,11 +411,19 @@ func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy
 				pse := NewSyncError(name, module.ActionSpec(), err)
 				pse.ResourceName = diff.Name
 				syncErrs = append(syncErrs, pse)
+			} else {
+				reconcileCount++
 			}
 		}
 	}
 	if err := s.setPolicyNodeStatus(ancestry, syncErrs); err != nil {
 		errBuilder.Add(errors.Wrapf(err, "failed to set status for %s", name))
+		s.recorder.Eventf(ancestry.Node(), core_v1.EventTypeWarning, "StatusUpdateFailed",
+			"failed to update policy node status: %s", err)
+	}
+	if errBuilder.Len() == 0 && reconcileCount > 0 {
+		s.recorder.Eventf(ancestry.Node(), core_v1.EventTypeNormal, "ReconcileComplete",
+			"policy node was successfully reconciled: %d changes", reconcileCount)
 	}
 	return errBuilder.Build()
 }
@@ -479,7 +500,9 @@ func (s *PolicyHieraryController) createNamespace(policyNode *policyhierarchy_v1
 		s.injectArgs.KubernetesClientSet,
 		s.namespaceLister)
 	if err := act.Execute(); err != nil {
-		return errors.Wrapf(err, "failed to execute upsert action for %s", act)
+		s.recorder.Eventf(policyNode, core_v1.EventTypeWarning, "NamespaceCreateFailed",
+			"failed to create matching namespace for policyspace: %s", err)
+		return errors.Wrapf(err, "failed to execute create action for %s", act)
 	}
 	return nil
 }
@@ -491,6 +514,8 @@ func (s *PolicyHieraryController) upsertNamespace(policyNode *policyhierarchy_v1
 		s.injectArgs.KubernetesClientSet,
 		s.namespaceLister)
 	if err := act.Execute(); err != nil {
+		s.recorder.Eventf(policyNode, core_v1.EventTypeWarning, "NamespaceUpsertFailed",
+			"failed to upsert matching namespace for policyspace: %s", err)
 		return errors.Wrapf(err, "failed to execute upsert action for %s", act)
 	}
 	return nil
@@ -506,7 +531,9 @@ func (s *PolicyHieraryController) updateNamespace(policyNode *policyhierarchy_v1
 		s.injectArgs.KubernetesClientSet,
 		s.namespaceLister)
 	if err := act.Execute(); err != nil {
-		return errors.Wrapf(err, "failed to execute upsert action for %s", act)
+		s.recorder.Eventf(policyNode, core_v1.EventTypeWarning, "NamespaceUpdateFailed",
+			"failed to update matching namespace for policyspace: %s", err)
+		return errors.Wrapf(err, "failed to execute update action for %s", act)
 	}
 	return nil
 }
@@ -520,10 +547,14 @@ func (s *PolicyHieraryController) deleteNamespace(name string) error {
 	return nil
 }
 
-func (s *PolicyHieraryController) handlePolicyspace(name string) error {
-	act := actions.NewNamespaceDeleteAction(name, s.injectArgs.KubernetesClientSet, s.namespaceLister)
+func (s *PolicyHieraryController) handlePolicyspace(policyNode *policyhierarchy_v1.PolicyNode) error {
+	act := actions.NewNamespaceDeleteAction(policyNode.Name, s.injectArgs.KubernetesClientSet, s.namespaceLister)
 	if err := act.Execute(); err != nil {
+		s.recorder.Eventf(policyNode, core_v1.EventTypeWarning, "NamespaceDeleteFailed",
+			"failed to delete matching namespace for policyspace: %s", err)
 		return errors.Wrapf(err, "failed to execute delete action for policyspace %s", act)
 	}
+	s.recorder.Event(policyNode, core_v1.EventTypeNormal, "NamespaceDeleted",
+		"removed matching namespace for policyspace")
 	return nil
 }

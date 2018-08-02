@@ -38,18 +38,24 @@ import (
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	core_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 )
 
-const reconcileMetricsLabel = "cluster-reconcile"
+const (
+	controllerName        = "nomos-cluster-controller"
+	reconcileMetricsLabel = "cluster-reconcile"
+)
 
 // ClusterPolicyController syncs native Kubernetes resources with the policy
 // data in ClusterPolicies.
 type ClusterPolicyController struct {
-	client  typed_v1.NomosV1Interface
-	lister  policyhierarchy_lister.ClusterPolicyLister
-	modules []Module
+	client   typed_v1.NomosV1Interface
+	lister   policyhierarchy_lister.ClusterPolicyLister
+	modules  []Module
+	recorder record.EventRecorder
 }
 
 // informerProvider is here to reduce some amount of redundancy with registering informer providers
@@ -65,13 +71,14 @@ func NewController(
 	modules []Module) *controller.GenericController {
 	informer := injectArgs.Informers.Nomos().V1().ClusterPolicies()
 	clusterPolicyController := &ClusterPolicyController{
-		client:  injectArgs.Clientset.NomosV1(),
-		lister:  informer.Lister(),
-		modules: modules,
+		client:   injectArgs.Clientset.NomosV1(),
+		lister:   informer.Lister(),
+		modules:  modules,
+		recorder: injectArgs.CreateRecorder(controllerName),
 	}
 
 	genericController := &controller.GenericController{
-		Name:             "nomos-cluster-controller",
+		Name:             controllerName,
 		InformerRegistry: injectArgs.ControllerManager,
 		Reconcile:        clusterPolicyController.reconcile,
 	}
@@ -117,16 +124,17 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 	defer timer.ObserveDuration()
 
 	name := k.Name
-	if name != policyhierarchy_v1.ClusterPolicyName {
-		// TODO(briantkennedy): we may want to generate a kubernetes event for this scenario.
-		glog.Warningf("ClusterPolicy resource has invalid name %s", name)
-		// Return nil since we don't want kubebuilder to queue a retry for this object.
-		return nil
-	}
-
 	cp, err := s.lister.Get(name)
 	if err != nil {
 		return errors.Wrapf(err, "failed to look up clusterpolicy, %s, for reconciliation", name)
+	}
+
+	if name != policyhierarchy_v1.ClusterPolicyName {
+		s.recorder.Eventf(cp, core_v1.EventTypeWarning, "InvalidClusterPolicy",
+			"ClusterPolicy resource has invalid name %s", name)
+		glog.Warningf("ClusterPolicy resource has invalid name %s", name)
+		// Return nil since we don't want kubebuilder to queue a retry for this object.
+		return nil
 	}
 	return s.managePolicies(cp)
 }
@@ -134,6 +142,7 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterPolicy) error {
 	var syncErrs []policyhierarchy_v1.ClusterPolicySyncError
 	errBuilder := multierror.NewBuilder()
+	reconcileCount := 0
 	for _, module := range s.modules {
 		declaredInstances := module.Extract(cp)
 
@@ -169,15 +178,19 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterP
 			if err := execute(diff, module.ActionSpec()); err != nil {
 				errBuilder.Add(err)
 				syncErrs = append(syncErrs, NewSyncError(cp.Name, module.ActionSpec(), err))
+			} else {
+				reconcileCount++
 			}
 		}
 	}
 	if err := s.setClusterPolicyStatus(cp, syncErrs); err != nil {
 		errBuilder.Add(errors.Wrapf(err, "failed to set status for %s", cp.Name))
+		s.recorder.Eventf(cp, core_v1.EventTypeWarning, "StatusUpdateFailed",
+			"failed to update ClusterPolicy status: %s", err)
 	}
-
-	if errBuilder.Len() != 0 {
-		glog.Warningf("reconcile encountered %d errors", errBuilder.Len())
+	if errBuilder.Len() == 0 && reconcileCount > 0 {
+		s.recorder.Eventf(cp, core_v1.EventTypeNormal, "ReconcileComplete",
+			"ClusterPolicy was successfully reconciled: %d changes", reconcileCount)
 	}
 	return errBuilder.Build()
 }
