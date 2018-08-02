@@ -40,7 +40,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const reconcileMetricsLabel = "cluster-reconcile"
@@ -207,11 +206,10 @@ func isSynced(cp *policyhierarchy_v1.ClusterPolicy) bool {
 }
 
 func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.ClusterPolicySyncError {
-	gv := schema.GroupVersion{Group: spec.Group, Version: spec.Version}
 	return policyhierarchy_v1.ClusterPolicySyncError{
 		ResourceName: name,
 		ResourceKind: spec.Resource,
-		ResourceAPI:  gv.String(),
+		ResourceAPI:  spec.GroupVersion.String(),
 		ErrorMessage: err.Error(),
 	}
 }

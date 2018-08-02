@@ -53,7 +53,6 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	listers_core_v1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 )
@@ -436,11 +435,10 @@ func isSynced(ancestry hierarchy.Ancestry) bool {
 }
 
 func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.PolicyNodeSyncError {
-	gv := schema.GroupVersion{Group: spec.Group, Version: spec.Version}
 	return policyhierarchy_v1.PolicyNodeSyncError{
 		SourceName:   name,
 		ResourceKind: spec.Resource,
-		ResourceAPI:  gv.String(),
+		ResourceAPI:  spec.GroupVersion.String(),
 		ErrorMessage: err.Error(),
 	}
 }

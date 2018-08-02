@@ -24,13 +24,12 @@ import (
 	"github.com/google/nomos/clientgen/informers/externalversions"
 	"github.com/google/nomos/clientgen/policyhierarchy"
 	fakepolicyhierarchy "github.com/google/nomos/clientgen/policyhierarchy/fake"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
-
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 )
 
 // Client implements meta.Interface with fake clientsets.
@@ -62,7 +61,7 @@ func NewClientWithStorage(storage []runtime.Object) *Client {
 
 	phTypes := map[reflect.Type]bool{}
 	for gvk, t := range scheme.AllKnownTypes() {
-		if gvk.Group != policyhierarchy_v1.GroupName {
+		if gvk.Group != policyhierarchy_v1.SchemeGroupVersion.Group {
 			continue
 		}
 		phTypes[t] = true

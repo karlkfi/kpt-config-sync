@@ -62,30 +62,24 @@ func (s *RoleBindingResource) Values(namespace string) (map[string]interface{}, 
 // NewRoleBindingDeleteAction returns a reflective delete action for the rolebinding.
 func NewRoleBindingDeleteAction(
 	roleBinding *rbac_v1.RoleBinding, roleBindingResource *RoleBindingResource) *action.ReflectiveDeleteAction {
-	spec := &action.ReflectiveActionSpec{
-		Resource:   action.LowerPlural(rbac_v1.RoleBinding{}),
-		KindPlural: action.Plural(rbac_v1.RoleBinding{}),
-		Group:      rbac_v1.SchemeGroupVersion.Group,
-		Version:    rbac_v1.SchemeGroupVersion.Version,
-		EqualSpec:  RoleBindingsEqual,
-		Client:     roleBindingResource.client.RbacV1(),
-		Lister:     roleBindingResource.lister,
-	}
+	spec := action.NewSpec(
+		new(rbac_v1.RoleBinding),
+		rbac_v1.SchemeGroupVersion,
+		RoleBindingsEqual,
+		roleBindingResource.client.RbacV1(),
+		roleBindingResource.lister)
 	return action.NewReflectiveDeleteAction(roleBinding.Namespace, roleBinding.Name, spec)
 }
 
 // NewRoleBindingUpsertAction returns a new reflective upsert action for role bindings.
 func NewRoleBindingUpsertAction(
 	roleBinding *rbac_v1.RoleBinding, roleBindingResource *RoleBindingResource) *action.ReflectiveUpsertAction {
-	spec := &action.ReflectiveActionSpec{
-		Resource:   action.LowerPlural(rbac_v1.RoleBinding{}),
-		KindPlural: action.Plural(rbac_v1.RoleBinding{}),
-		Group:      rbac_v1.SchemeGroupVersion.Group,
-		Version:    rbac_v1.SchemeGroupVersion.Version,
-		EqualSpec:  RoleBindingsEqual,
-		Client:     roleBindingResource.client.RbacV1(),
-		Lister:     roleBindingResource.lister,
-	}
+	spec := action.NewSpec(
+		new(rbac_v1.RoleBinding),
+		rbac_v1.SchemeGroupVersion,
+		RoleBindingsEqual,
+		roleBindingResource.client.RbacV1(),
+		roleBindingResource.lister)
 	return action.NewReflectiveUpsertAction(roleBinding.Namespace, roleBinding.Name, roleBinding, spec)
 }
 

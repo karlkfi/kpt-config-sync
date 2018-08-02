@@ -33,15 +33,12 @@ func NewResourceQuotaDeleteAction(
 	namespace string,
 	kubernetesInterface kubernetes.Interface,
 	resourceQuotaLister listers_core_v1.ResourceQuotaLister) *action.ReflectiveDeleteAction {
-	spec := &action.ReflectiveActionSpec{
-		Resource:   action.LowerPlural(core_v1.ResourceQuota{}),
-		KindPlural: action.Plural(core_v1.ResourceQuota{}),
-		Group:      core_v1.SchemeGroupVersion.Group,
-		Version:    core_v1.SchemeGroupVersion.Version,
-		EqualSpec:  ResourceQuotasEqual,
-		Client:     kubernetesInterface.CoreV1(),
-		Lister:     resourceQuotaLister,
-	}
+	spec := action.NewSpec(
+		new(core_v1.ResourceQuota),
+		core_v1.SchemeGroupVersion,
+		ResourceQuotasEqual,
+		kubernetesInterface.CoreV1(),
+		resourceQuotaLister)
 	return action.NewReflectiveDeleteAction(namespace, resourcequota.ResourceQuotaObjectName, spec)
 }
 
@@ -53,15 +50,12 @@ func NewResourceQuotaUpsertAction(
 	kubernetesInterface kubernetes.Interface,
 	resourceQuotaLister listers_core_v1.ResourceQuotaLister,
 ) *action.ReflectiveUpsertAction {
-	spec := &action.ReflectiveActionSpec{
-		Resource:   action.LowerPlural(core_v1.ResourceQuota{}),
-		KindPlural: action.Plural(core_v1.ResourceQuota{}),
-		Group:      core_v1.SchemeGroupVersion.Group,
-		Version:    core_v1.SchemeGroupVersion.Version,
-		EqualSpec:  ResourceQuotasEqual,
-		Client:     kubernetesInterface.CoreV1(),
-		Lister:     resourceQuotaLister,
-	}
+	spec := action.NewSpec(
+		new(core_v1.ResourceQuota),
+		core_v1.SchemeGroupVersion,
+		ResourceQuotasEqual,
+		kubernetesInterface.CoreV1(),
+		resourceQuotaLister)
 	quota := &core_v1.ResourceQuota{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:   resourcequota.ResourceQuotaObjectName,

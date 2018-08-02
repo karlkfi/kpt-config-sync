@@ -29,15 +29,12 @@ import (
 func nsSpec(
 	client kubernetes.Interface,
 	lister listers_core_v1.NamespaceLister) *action.ReflectiveActionSpec {
-	return &action.ReflectiveActionSpec{
-		Resource:   action.LowerPlural(core_v1.Namespace{}),
-		KindPlural: action.Plural(core_v1.Namespace{}),
-		Group:      core_v1.SchemeGroupVersion.Group,
-		Version:    core_v1.SchemeGroupVersion.Version,
-		EqualSpec:  NamespacesEqual,
-		Client:     client.CoreV1(),
-		Lister:     lister,
-	}
+	return action.NewSpec(
+		new(core_v1.Namespace),
+		core_v1.SchemeGroupVersion,
+		NamespacesEqual,
+		client.CoreV1(),
+		lister)
 }
 
 // NewNamespaceDeleteAction creates a new ReflectiveDeleteAction to delete the given namespace.

@@ -32,10 +32,8 @@ type ReflectiveActionSpec struct {
 	// The plural of a kind, eg, Roles, RoleBindings, Policies as used for getting the client from
 	// the generated code.
 	KindPlural string
-	// The group name of the GroupVersionKind being acted on.
-	Group string
-	// The version of the GroupVersionKind being acted on.
-	Version string
+	// The group name and version of the GroupVersionKind being acted on.
+	GroupVersion schema.GroupVersion
 	// EqualSpec is the per-Kind equal operation that check for equality for the spec of an object.
 	// Meta fields (ObjectMeta and TypeMeta) equality is done automatically and need not be done
 	// by this function.
@@ -57,13 +55,12 @@ func NewSpec(
 	client interface{},
 	lister interface{}) *ReflectiveActionSpec {
 	return &ReflectiveActionSpec{
-		Resource:   LowerPlural(instance),
-		KindPlural: Plural(instance),
-		Group:      groupVersion.Group,
-		Version:    groupVersion.Version,
-		EqualSpec:  equals,
-		Client:     client,
-		Lister:     lister,
+		Resource:     LowerPlural(instance),
+		KindPlural:   Plural(instance),
+		GroupVersion: groupVersion,
+		EqualSpec:    equals,
+		Client:       client,
+		Lister:       lister,
 	}
 }
 

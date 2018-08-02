@@ -23,6 +23,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/informers/externalversions"
 	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchyscheme "github.com/google/nomos/clientgen/policyhierarchy/scheme"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter"
@@ -31,6 +32,7 @@ import (
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 const resync = time.Minute * 15
@@ -49,6 +51,8 @@ type Controller struct {
 
 // NewController returns a new Controller.
 func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, client meta.Interface, stopChan chan struct{}) *Controller {
+	policyhierarchyscheme.AddToScheme(scheme.Scheme)
+
 	informerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), resync)
 	differ := actions.NewDiffer(

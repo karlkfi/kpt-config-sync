@@ -17,12 +17,14 @@ limitations under the License.
 package syncercontroller
 
 import (
+	policyhierarchyscheme "github.com/google/nomos/clientgen/policyhierarchy/scheme"
 	"github.com/google/nomos/pkg/syncer/args"
 	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
 	clustermodules "github.com/google/nomos/pkg/syncer/clusterpolicycontroller/modules"
 	"github.com/google/nomos/pkg/syncer/modules"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/run"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // SyncerController sets up the kubebuilder framework
@@ -39,6 +41,8 @@ func New(injectArgs args.InjectArgs) *SyncerController {
 
 // Start creates the appropriate sub modules and then starts the controller
 func (s *SyncerController) Start(runArgs run.RunArguments) {
+	policyhierarchyscheme.AddToScheme(scheme.Scheme)
+
 	hierarchyModules := []policyhierarchycontroller.Module{
 		modules.NewResourceQuota(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),
 		modules.NewRole(s.injectArgs.KubernetesClientSet, s.injectArgs.KubernetesInformers),

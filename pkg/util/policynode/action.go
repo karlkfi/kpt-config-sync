@@ -5,7 +5,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	typed_v1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
-	api_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -14,15 +13,12 @@ import (
 
 // NewActionSpec returns a ReflectiveActionSpec appropriate for PolicyNode objects.
 func NewActionSpec(client typed_v1.NomosV1Interface, lister listers_v1.PolicyNodeLister) *action.ReflectiveActionSpec {
-	return &action.ReflectiveActionSpec{
-		Resource:   action.LowerPlural(policyhierarchy_v1.PolicyNode{}),
-		KindPlural: action.Plural(policyhierarchy_v1.PolicyNode{}),
-		Group:      api_v1.GroupName,
-		Version:    api_v1.SchemeGroupVersion.Version,
-		EqualSpec:  policyNodesEqual,
-		Client:     client,
-		Lister:     lister,
-	}
+	return action.NewSpec(
+		new(policyhierarchy_v1.PolicyNode),
+		policyhierarchy_v1.SchemeGroupVersion,
+		policyNodesEqual,
+		client,
+		lister)
 }
 
 var pnsIgnore = []cmp.Option{

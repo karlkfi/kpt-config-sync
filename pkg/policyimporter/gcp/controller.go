@@ -25,6 +25,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/informers/externalversions"
 	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchyscheme "github.com/google/nomos/clientgen/policyhierarchy/scheme"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter/actions"
@@ -34,6 +35,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/keepalive"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/cert"
 )
 
@@ -71,6 +73,8 @@ type Controller struct {
 
 // NewController returns a new Controller.
 func NewController(org, watcherAddr, credsFile, caFile string, client meta.Interface, stopChan chan struct{}) *Controller {
+	policyhierarchyscheme.AddToScheme(scheme.Scheme)
+
 	informerFactory := externalversions.NewSharedInformerFactory(
 		client.PolicyHierarchy(), informerResync)
 	f := actions.NewFactories(

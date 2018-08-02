@@ -95,12 +95,12 @@ func (s *ReflectiveActionBase) Namespace() string {
 
 // Group implements Interface
 func (s *ReflectiveActionBase) Group() string {
-	return s.spec.Group
+	return s.spec.GroupVersion.Group
 }
 
 // Version implements Interface
 func (s *ReflectiveActionBase) Version() string {
-	return s.spec.Version
+	return s.spec.GroupVersion.Version
 }
 
 // Name implements Interface
