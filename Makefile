@@ -343,13 +343,9 @@ e2e-staging: $(TEST_GEN_YAML_DIR)/git-server.yaml $(SCRIPTS_STAGING_DIR)/run-ins
 # or need a nomos-release version of the e2e-tests image.
 e2e-image: e2e-staging
 	@echo "+++ Building the e2e docker image"
-	@docker build $(DOCKER_BUILD_QUIET) \
+	@build/e2e-tests/build.sh \
 		-t gcr.io/stolos-dev/e2e-tests:test-e2e-latest \
-		--build-arg "DOCKER_GID=$(shell stat -c '%g' /var/run/docker.sock)" \
-		--build-arg "UID=$(UID)" \
-		--build-arg "GID=$(GID)" \
-		--build-arg "UNAME=$(USER)" \
-		$(STAGING_DIR)/e2e-tests
+		$(DOCKER_BUILD_QUIET)
 
 e2e-image-all: e2e-image image-installer
 

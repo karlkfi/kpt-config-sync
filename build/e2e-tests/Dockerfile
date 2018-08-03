@@ -8,14 +8,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Build intermediate image for gcloud / kubectl
+FROM ubuntu:16.04 as gcloud-install
+
+ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
+RUN apt-get update && apt-get install -y curl python
+RUN curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-210.0.0-linux-x86_64.tar.gz > /tmp/google-cloud-sdk.tar.gz
+RUN mkdir -p /opt/gcloud
+RUN tar -C /opt/gcloud -xvf /tmp/google-cloud-sdk.tar.gz
+RUN /opt/gcloud/google-cloud-sdk/install.sh --quiet
+RUN gcloud components install alpha beta kubectl
+RUN rm -rf /opt/gcloud/google-cloud-sdk/.install
+
+# Build e2e image
 FROM ubuntu:16.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system stuff
-RUN apt-get update
-RUN apt-get upgrade -y
-RUN apt-get install -y \
+RUN apt-get update \
+  && apt-get upgrade -y \
+  && apt-get install -y \
   apt-transport-https \
   apt-utils \
   ca-certificates \
@@ -33,14 +46,18 @@ ARG UNAME
 ARG UID
 ARG GID
 ARG DOCKER_GID
-RUN groupadd -or -g $DOCKER_GID docker
-RUN useradd -u $UID -G $DOCKER_GID $UNAME
 
 # Install docker as per docker website instructions.
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
-RUN apt-get update
-RUN apt-get install -y docker-ce
+RUN groupadd -or -g $DOCKER_GID docker \
+  && useradd -u $UID -G $DOCKER_GID $UNAME \
+  && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+  && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable" \
+  && apt-get update \
+  && apt-get install -y docker-ce
+
+# Copy installed gcloud into image
+COPY --from=gcloud-install /opt/gcloud/google-cloud-sdk /opt/gcloud/google-cloud-sdk
+ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
 
 ENV GIT_CONFIG_NOGLOBAL 1
 ENV GIT_CONFIG_NOSYSTEM 1
