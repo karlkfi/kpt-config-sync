@@ -21,7 +21,7 @@ function check_cluster_scoped_resource() {
   [ -n "$create" ]
   [ -n "$modify" ]
 
-  kubectl delete events --wait --now --field-selector reason=ReconcileComplete
+  kubectl delete events --now --field-selector reason=ReconcileComplete
 
   git::add ${YAML_DIR}/${res}${resext}-create.yaml ${respath}
   git::commit

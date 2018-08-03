@@ -28,7 +28,7 @@ load ../lib/loader
 }
 
 @test "RoleBindings updated" {
-  kubectl delete events --wait --now --field-selector reason=ReconcileComplete
+  kubectl delete events --now --field-selector reason=ReconcileComplete
 
   run kubectl get rolebindings -n backend bob-rolebinding -o yaml
   assert::contains "acme-admin"
