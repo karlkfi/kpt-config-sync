@@ -51,6 +51,8 @@ const (
 	// "Open sesame" for uninstallation.
 	confirmUninstall = "deletedeletedelete"
 
+	syncerConfigMapName = "syncer"
+
 	gitPolicyImporterDeployment = "git-policy-importer"
 	gcpPolicyImporterDeployment = "gcp-policy-importer"
 
@@ -167,6 +169,13 @@ func (i *Installer) gcpConfigMapContent() []string {
 	return c
 }
 
+// syncerConfigMapContent returns a list of listerals defining the ConfigMap for the syncer
+func (i *Installer) syncerConfigMapContent() []string {
+	return []string{
+		fmt.Sprintf("gcp.mode=%v", !i.c.GCP.Empty()),
+	}
+}
+
 func (i *Installer) deploySecret(name string, content []string) error {
 	if err := i.k.DeleteSecret(name, defaultNamespace); err != nil {
 		glog.V(5).Infof("failed to delete secret %s: %v", name, err)
@@ -275,6 +284,7 @@ func (i *Installer) processCluster(cluster string) error {
 		importerSecretName = gcpPolicyImporterCreds
 		importerSecretContent = i.gcpSecretContent()
 	}
+	syncerConfigMapContent := i.syncerConfigMapContent()
 
 	// Delete the importer deployment.  This is important because a
 	// change in the secret should also be reflected in the importer.
@@ -282,10 +292,13 @@ func (i *Installer) processCluster(cluster string) error {
 		return errors.Wrapf(err, "while deleting Deployment %s", importerDeployment)
 	}
 	if err = i.deployConfigMap(importerConfigMapName, importerConfigMapContent); err != nil {
-		return errors.Wrapf(err, "failed to create ConfigMap: %v", importerConfigMapName)
+		return errors.Wrapf(err, "failed to create importer ConfigMap: %v", importerConfigMapName)
 	}
 	if err = i.deploySecret(importerSecretName, importerSecretContent); err != nil {
 		return errors.Wrapf(err, "failed to create Secret: %v", importerSecretName)
+	}
+	if err = i.deployConfigMap(syncerConfigMapName, syncerConfigMapContent); err != nil {
+		return errors.Wrapf(err, "failed to create syncer ConfigMap: %v", syncerConfigMapContent)
 	}
 	for _, certInstaller := range i.certInstallers {
 		if err = certInstaller.deploySecrets(i.workDir); err != nil {
