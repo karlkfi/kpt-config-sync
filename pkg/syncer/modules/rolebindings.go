@@ -57,11 +57,8 @@ func (s *AggregatedRoleBinding) Generate() hierarchy.Instances {
 	for node := s; node != nil; node = node.parent {
 		for idx := range node.roleBindings {
 			roleBinding := &node.roleBindings[idx]
-			var rrb *rbac_v1.RoleBinding
-			if node.namespace {
-				rrb = roleBinding
-			} else {
-				rrb = roleBinding.DeepCopy()
+			rrb := roleBinding.DeepCopy()
+			if !node.namespace {
 				rrb.Name = fmt.Sprintf("%s.%s", node.policyNodeName, roleBinding.Name)
 			}
 			instances = append(instances, rrb)
