@@ -207,10 +207,14 @@ function resource::check_count() {
   [ -n "$count" ] || (echo "Must specify -c [count]"; return 1)
 
   local actual
-  actual="$(resource::count "${args[@]}")"
+  local status=0
+  actual="$(resource::count "${args[@]}")" || status=$?
+  if (( status != 0 )); then
+    return 1
+  fi
   if (( count != actual )); then
     echo "Expected $count, got $actual"
-    false
+    return 1
   fi
 }
 
@@ -258,8 +262,11 @@ function resource::count() {
 
   local output
   local status=0
-  output=$("${cmd[@]}") || status=$?
-  (( status == 0 )) || debug::error "Command" "${cmd[@]}" "failed, output ${output}"
+  output="$("${cmd[@]}")" || status=$?
+  if (( status != 0 )); then
+    debug::error "Command" "${cmd[@]}" "failed, output ${output}"
+    return 1
+  fi
   local count=0
   if [[ "$output" != "No resources found." ]]; then
     count=$(( $(echo "$output" | wc -l) - 1 ))
