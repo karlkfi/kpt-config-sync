@@ -49,6 +49,13 @@ To update unconstrained packages:
 $ dep ensure -update
 ```
 
+To update a single package (desired):
+
+```console
+$ dep ensure -update -v [package path]
+$ ./scripts/fix-dep.sh  # clears out license related changes.
+```
+
 ## Useful Git Tools
 
 git gui is useful for ammending commits
