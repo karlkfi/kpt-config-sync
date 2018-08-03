@@ -17,11 +17,11 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/google/nomos/clientgen/policyhierarchy"
-	bespinv1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyascode/v1"
-	fakebespinv1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyascode/v1/fake"
-	nomosv1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
-	fakenomosv1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1/fake"
+	clientset "github.com/google/nomos/clientgen/policyascode"
+	bespinv1 "github.com/google/nomos/clientgen/policyascode/typed/policyascode/v1"
+	fakebespinv1 "github.com/google/nomos/clientgen/policyascode/typed/policyascode/v1/fake"
+	nomosv1 "github.com/google/nomos/clientgen/policyascode/typed/policyhierarchy/v1"
+	fakenomosv1 "github.com/google/nomos/clientgen/policyascode/typed/policyhierarchy/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
