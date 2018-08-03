@@ -13,7 +13,7 @@ load ../lib/loader
   test_create_get_delete "${GCP_PROJECT_A}"
 }
 
-@test "Project IAM create/delete" {
+@test "Project IAM binding create/delete" {
   echo "The namespace should not exist initially"
   namespace::check_not_found "${GCP_PROJECT_B}"
 
@@ -48,7 +48,7 @@ load ../lib/loader
       --as bob@nomos-e2e.joonix.net
 }
 
-@test "Folder IAM create/delete" {
+@test "Folder IAM binding create/delete" {
   echo "The namespace should not exist initially"
   namespace::check_not_found "${GCP_PROJECT_A}"
 
@@ -82,6 +82,28 @@ load ../lib/loader
   echo "Checking for binding to be removed from namespace"
   wait::for -f -- kubectl get configmaps -n "${GCP_PROJECT_A}" \
       --as bob@nomos-e2e.joonix.net
+}
+
+@test "Default IAM bindings" {
+  echo "The namespace should not exist initially"
+  namespace::check_not_found "${GCP_PROJECT_A}"
+
+  echo "Create the namespace under the test project"
+  run gcloud --quiet alpha container policy \
+      namespaces create "${GCP_PROJECT_A}" \
+      --project="${GCP_PROJECT_A}"
+  assert::contains "namespaces/${GCP_PROJECT_A}"
+
+  echo "Wait to see if the namespace appears on the cluster"
+  namespace::check_exists "${GCP_PROJECT_A}"
+
+  wait::for -- kubectl get rolebinding \
+      "organizations-${GCP_ORG_ID}.owner" \
+      -n "${GCP_PROJECT_A}"
+  wait::for -- kubectl get rolebinding \
+      "${GCP_PROJECT_A}.owner" \
+      -n "${GCP_PROJECT_A}"
+  resource::check_count -r rolebinding -c 2 -n "${GCP_PROJECT_A}"
 }
 
 @test "Project move to folder" {
