@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package policyhierarchy
+package policyascode
 
 import (
 	glog "github.com/golang/glog"
-	bespinv1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyascode/v1"
-	nomosv1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
+	bespinv1 "github.com/google/nomos/clientgen/policyascode/typed/policyascode/v1"
+	nomosv1 "github.com/google/nomos/clientgen/policyascode/typed/policyhierarchy/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
