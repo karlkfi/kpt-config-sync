@@ -16,8 +16,10 @@ limitations under the License.
 package gcp
 
 import (
+	"context"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	ptypes "github.com/gogo/protobuf/types"
@@ -485,10 +487,11 @@ func TestGen(t *testing.T) {
 				actualActions = append(actualActions, a.String())
 				return nil
 			}
+			_, cancel := context.WithCancel(context.Background())
+			defer cancel()
 			// Factories take nil arguments since we don't need to apply the actions for these tests.
 			p := newWatchProcessor(
-				stream, recordAction, tc.currentPolicies, actions.NewFactories(nil, nil, nil), len(tc.resumeMarker) != 0)
-
+				stream, recordAction, tc.currentPolicies, actions.NewFactories(nil, nil, nil), len(tc.resumeMarker) != 0, cancel, 1*time.Minute)
 			resumeMarker, err := p.process()
 
 			if (err != nil) != tc.expectedError {
@@ -511,12 +514,14 @@ func TestRecvErr(t *testing.T) {
 	defer ctrl.Finish()
 
 	stream := mock.NewMockWatcher_WatchClient(ctrl)
+	stream.EXPECT().Recv().Return(nil, errors.New("receive error"))
+
 	a := func(_ client_action.Interface) error {
 		return nil
 	}
-	p := newWatchProcessor(stream, a, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil), false)
-
-	stream.EXPECT().Recv().Return(nil, errors.New("receive error"))
+	_, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	p := newWatchProcessor(stream, a, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil), false, cancel, 1*time.Minute)
 
 	_, err := p.process()
 	expectedErr := errors.New("receive error")
@@ -526,6 +531,26 @@ func TestRecvErr(t *testing.T) {
 	if diff := deep.Equal(errors.Cause(err), expectedErr); diff != nil {
 		t.Fatalf("Actual and expected errors don't match: %v", diff)
 	}
+}
+
+// Test that generate() returns when context is done.
+func TestTimeout(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := mock.NewMockWatcher_WatchClient(ctrl)
+	stream.EXPECT().Recv().DoAndReturn(func() (*watcher.ChangeBatch, error) {
+		<-ctx.Done()
+		return &watcher.ChangeBatch{}, status.Error(codes.Canceled, "canceled")
+	}).MinTimes(0)
+	a := func(_ client_action.Interface) error {
+		return nil
+	}
+	defer cancel()
+	g := newWatchProcessor(stream, a, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil), false, cancel, time.Nanosecond)
+
+	_, _ = g.process()
 }
 
 func newPolicyNode(name string, parent string, policyspace bool) *v1.PolicyNode {

@@ -36,7 +36,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
-	"google.golang.org/grpc/keepalive"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/cert"
 )
@@ -44,11 +43,8 @@ import (
 const (
 	// Timeout for making initial grpc connection dial.
 	grpcDialTimeout = time.Second * 20
-	// After a duration of this time if the client doesn't see any activity it pings the server to see if the transport is still alive.
-	grpcKeepaliveTime = time.Minute
-	// After having pinged for keepalive check, the client waits this long and if no activity is seen even after that
-	// the connection is closed. (This will eagerly fail inflight grpc requests even if they don't have timeouts.)
-	grpcKeepaliveTimeout = time.Minute
+	// Timeout for Watch streaming RPC after no activity.
+	grpcRPCTimeout = time.Minute * 3
 	// Resync period for K8S informer.
 	informerResync = time.Minute * 15
 )
@@ -200,7 +196,7 @@ func (c *Controller) watchIteration(ctx context.Context, resumeMarker []byte) ([
 	}
 	glog.Infof("Started streaming RPC to Watcher API")
 
-	return newWatchProcessor(stream, applyActions, *currentPolicies, c.actionFactories, len(resumeMarker) != 0).process()
+	return newWatchProcessor(stream, applyActions, *currentPolicies, c.actionFactories, len(resumeMarker) != 0, cancelWatch, grpcRPCTimeout).process()
 }
 
 func (c *Controller) dial() (*grpc.ClientConn, error) {
@@ -216,7 +212,6 @@ func (c *Controller) dial() (*grpc.ClientConn, error) {
 		grpc.WithPerRPCCredentials(perRPC),
 		grpc.WithTransportCredentials(credentials.NewTLS(config)),
 		grpc.WithBlock(),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: grpcKeepaliveTime, Timeout: grpcKeepaliveTimeout}),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), grpcDialTimeout)

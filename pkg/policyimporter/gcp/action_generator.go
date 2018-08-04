@@ -20,6 +20,7 @@ package gcp
 import (
 	"io"
 	"path"
+	"time"
 
 	"github.com/gogo/googleapis/google/rpc"
 	ptypes "github.com/gogo/protobuf/types"
@@ -46,7 +47,7 @@ type applicator func(client_action.Interface) error
 
 // newWatchProcessor returns a new watchProcessor.
 // Only the process() method is meant to to be called by users.
-func newWatchProcessor(stream watcher.Watcher_WatchClient, applyActionFn applicator, currentPolicies v1.AllPolicies, factories actions.Factories, initialStateDone bool) *watchProcessor {
+func newWatchProcessor(stream watcher.Watcher_WatchClient, applyActionFn applicator, currentPolicies v1.AllPolicies, factories actions.Factories, initialStateDone bool, cancelWatchFn func(), timeout time.Duration) *watchProcessor {
 	return &watchProcessor{
 		stream:           stream,
 		applyActionFn:    applyActionFn,
@@ -54,6 +55,8 @@ func newWatchProcessor(stream watcher.Watcher_WatchClient, applyActionFn applica
 		actionFactories:  factories,
 		gcpToK8SName:     make(map[string]string),
 		initialStateDone: initialStateDone,
+		cancelWatchFn:    cancelWatchFn,
+		timeout:          timeout,
 	}
 }
 
@@ -69,6 +72,10 @@ type watchProcessor struct {
 	gcpToK8SName map[string]string
 	// Whether initial state has been processed.
 	initialStateDone bool
+	// Function that cancels the watch streaming RPC context
+	cancelWatchFn func()
+	// How long we wait to receive a message before timing out
+	timeout time.Duration
 }
 
 // process watches changes from the grpc stream and generates corresponding K8S actions and
@@ -76,14 +83,19 @@ type watchProcessor struct {
 //
 // process blocks until one of the events happens:
 // 1. stream.Recv() returns an error
-// 2. context.Done() returns true
+// 2. stream does not return a value by the time timeout expires
 // 3. An error occurs while processing a change
 func (p *watchProcessor) process() ([]byte, error) {
 	resources := make(map[string]*watcher.Change)
 	var resumeMarker []byte
 
 	for {
+		t := time.AfterFunc(p.timeout, func() {
+			glog.Error("Liveliness timeout on watch process.")
+			p.cancelWatchFn()
+		})
 		changeBatch, err := p.stream.Recv()
+		t.Stop()
 
 		if err != nil {
 			if err == io.EOF {
