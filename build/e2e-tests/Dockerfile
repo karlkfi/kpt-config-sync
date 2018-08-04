@@ -17,7 +17,7 @@ RUN curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud
 RUN mkdir -p /opt/gcloud
 RUN tar -C /opt/gcloud -xvf /tmp/google-cloud-sdk.tar.gz
 RUN /opt/gcloud/google-cloud-sdk/install.sh --quiet
-RUN gcloud components install alpha beta kubectl
+RUN gcloud components install alpha beta
 RUN rm -rf /opt/gcloud/google-cloud-sdk/.install
 
 # Build e2e image
@@ -46,6 +46,12 @@ ARG UNAME
 ARG UID
 ARG GID
 ARG DOCKER_GID
+
+# Install kubectl 1.11
+RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+  && echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list \
+  && apt-get update \
+  && apt-get install -y kubectl=1.11.1-00
 
 # Install docker as per docker website instructions.
 RUN groupadd -or -g $DOCKER_GID docker \
