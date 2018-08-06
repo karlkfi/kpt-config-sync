@@ -44,7 +44,6 @@ K8S_APIS_PROTO=(
 # Where to put the generated client set
 OUTPUT_BASE="${GOWORK}/src"
 OUTPUT_CLIENT="${REPO}/clientgen"
-CLIENTSET_NAME=policyhierarchy
 
 BOILERPLATE="$(dirname ${0})/boilerplate.go.txt"
 
@@ -85,17 +84,19 @@ fi
 echo "Using GOPATH base ${GOBASE}"
 echo "Using GOPATH work ${GOWORK}"
 
-${GOBASE}/bin/client-gen \
-  --input-base "${INPUT_BASE}" \
-  --input="${INPUT_APIS}" \
-  --clientset-name="${CLIENTSET_NAME}" \
-  --output-base="${OUTPUT_BASE}" \
-  --go-header-file="${BOILERPLATE}" \
-  --clientset-path "${OUTPUT_CLIENT}"
-
 echo "Generating APIs"
 
 for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
+  CLIENTSET_NAME=$(echo "$api" | sed 's|\/v[0-9]||')
+
+  ${GOBASE}/bin/client-gen \
+    --input-base "${INPUT_BASE}" \
+    --input="${INPUT_APIS}" \
+    --clientset-name="${CLIENTSET_NAME}" \
+    --output-base="${OUTPUT_BASE}" \
+    --go-header-file="${BOILERPLATE}" \
+    --clientset-path "${OUTPUT_CLIENT}"
+
   echo "Generating API: ${api}"
   echo "deepcopy"
   # Creates types.generated.go
@@ -122,7 +123,8 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
     --listers-package="${OUTPUT_CLIENT}/listers" \
     --output-base="$GOWORK/src" \
     --go-header-file="${BOILERPLATE}" \
-    --output-package="${OUTPUT_CLIENT}/informers"
+    --output-package="${OUTPUT_CLIENT}/informers/${CLIENTSET_NAME}" \
+    --single-directory
 
   echo "protobuf"
   ${GOBASE}/bin/go-to-protobuf \

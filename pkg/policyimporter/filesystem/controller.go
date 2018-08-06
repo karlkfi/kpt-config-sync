@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/clientgen/informers/externalversions"
+	"github.com/google/nomos/clientgen/informers/policyhierarchy"
 	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	policyhierarchyscheme "github.com/google/nomos/clientgen/policyhierarchy/scheme"
 	"github.com/google/nomos/pkg/client/action"
@@ -43,7 +43,7 @@ type Controller struct {
 	pollPeriod          time.Duration
 	parser              *Parser
 	differ              *actions.Differ
-	informerFactory     externalversions.SharedInformerFactory
+	informerFactory     policyhierarchy.SharedInformerFactory
 	policyNodeLister    listers_v1.PolicyNodeLister
 	clusterPolicyLister listers_v1.ClusterPolicyLister
 	stopChan            chan struct{}
@@ -53,7 +53,7 @@ type Controller struct {
 func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, client meta.Interface, stopChan chan struct{}) *Controller {
 	policyhierarchyscheme.AddToScheme(scheme.Scheme)
 
-	informerFactory := externalversions.NewSharedInformerFactory(
+	informerFactory := policyhierarchy.NewSharedInformerFactory(
 		client.PolicyHierarchy(), resync)
 	differ := actions.NewDiffer(
 		actions.NewFactories(

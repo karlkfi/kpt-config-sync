@@ -18,7 +18,7 @@ package resourcequota
 
 import (
 	"github.com/golang/glog"
-	informerspolicynodev1 "github.com/google/nomos/clientgen/informers/externalversions/policyhierarchy/v1"
+	informerspolicynodev1 "github.com/google/nomos/clientgen/informers/policyhierarchy/policyhierarchy/v1"
 	pn_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"

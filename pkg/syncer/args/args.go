@@ -17,7 +17,7 @@ limitations under the License.
 package args
 
 import (
-	"github.com/google/nomos/clientgen/informers/externalversions"
+	informers "github.com/google/nomos/clientgen/informers/policyhierarchy"
 	"github.com/google/nomos/clientgen/policyhierarchy"
 	"github.com/google/nomos/pkg/syncer/options"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/args"
@@ -29,7 +29,7 @@ type InjectArgs struct {
 	args.InjectArgs // kubebuilder inject args
 
 	Clientset     *policyhierarchy.Clientset
-	Informers     externalversions.SharedInformerFactory
+	Informers     informers.SharedInformerFactory
 	SyncerOptions options.Options
 }
 
@@ -40,7 +40,7 @@ func CreateInjectArgs(config *rest.Config) InjectArgs {
 	return InjectArgs{
 		InjectArgs:    args.CreateInjectArgs(config),
 		Clientset:     client,
-		Informers:     externalversions.NewSharedInformerFactory(client, syncerOptions.ResyncPeriod),
+		Informers:     informers.NewSharedInformerFactory(client, syncerOptions.ResyncPeriod),
 		SyncerOptions: syncerOptions,
 	}
 }

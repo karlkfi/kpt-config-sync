@@ -19,7 +19,7 @@ limitations under the License.
 package eventprocessor
 
 import (
-	policyhierarchyinformer_v1 "github.com/google/nomos/clientgen/informers/externalversions/policyhierarchy/v1"
+	policyhierarchyinformer_v1 "github.com/google/nomos/clientgen/informers/policyhierarchy/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
 	"github.com/pkg/errors"

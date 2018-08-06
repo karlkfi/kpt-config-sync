@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/google/nomos/clientgen/informers/externalversions"
+	phinformers "github.com/google/nomos/clientgen/informers/policyhierarchy"
 	"github.com/google/nomos/clientgen/policyhierarchy"
 	fakepolicyhierarchy "github.com/google/nomos/clientgen/policyhierarchy/fake"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
@@ -37,7 +37,7 @@ type Client struct {
 	KubernetesClientset      *fakekubernetes.Clientset
 	PolicyhierarchyClientset *fakepolicyhierarchy.Clientset
 
-	PolicyHierarchyInformers externalversions.SharedInformerFactory
+	PolicyHierarchyInformers phinformers.SharedInformerFactory
 	KubernetesInformers      informers.SharedInformerFactory
 	ResyncPeriod             time.Duration
 }
@@ -82,7 +82,7 @@ func NewClientWithStorage(storage []runtime.Object) *Client {
 		KubernetesClientset:      kubernetesClientset,
 		PolicyhierarchyClientset: policyhierarchyClientset,
 		KubernetesInformers:      informers.NewSharedInformerFactory(kubernetesClientset, time.Second*2),
-		PolicyHierarchyInformers: externalversions.NewSharedInformerFactory(policyhierarchyClientset, time.Second*2),
+		PolicyHierarchyInformers: phinformers.NewSharedInformerFactory(policyhierarchyClientset, time.Second*2),
 	}
 }
 
