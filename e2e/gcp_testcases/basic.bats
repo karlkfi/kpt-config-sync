@@ -129,7 +129,7 @@ load ../lib/loader
   run gcloud alpha projects move "${GCP_PROJECT_B}" --folder "${FOLDER_ID}"
 
   echo "Checking for binding to be created in namespace"
-  wait::for -- kubectl get rolebinding \
+  wait::for -t 60 -- kubectl get rolebinding \
       "folders-${FOLDER_ID}.container.viewer" \
       -n "${GCP_PROJECT_B}"
   run kubectl get configmaps -n "${GCP_PROJECT_B}" \

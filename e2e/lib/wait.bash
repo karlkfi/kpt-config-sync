@@ -76,7 +76,7 @@ function wait::event() {
 #   -s                 Wait for success (exit 0)
 #   -f                 Wait for failure (exit nonzero)
 #   -e [exit code]     Wait for specific integer exit code
-#   -t [timeout]       The timeout in seconds (default 15 seconds)
+#   -t [timeout]       The timeout in seconds (default 30 seconds)
 #   -d [deadline]      The deadline in seconds since the epoch
 #   -p [poll interval] The amount of time to wait between executions
 #   -- End of flags, command starts after this
@@ -86,7 +86,7 @@ function wait::for() {
   local args=()
   local sleeptime="0.1"
   local exitf=(wait::__exit_eq 0)
-  local timeout=10
+  local timeout=30
   local deadline="$(( $(date +%s) + timeout ))"
 
   local parse_args=false
