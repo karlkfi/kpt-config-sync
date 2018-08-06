@@ -205,6 +205,7 @@ setup() {
     *)
       echo "Invalid importer: ${IMPORTER}"
   esac
+  echo "--- SETUP COMPLETE ---------------------------------------------------"
 }
 
 # Previous tests can create / delete namespaces. This will wait for the
@@ -260,6 +261,7 @@ function setup::check_stable() {
 }
 
 teardown() {
+  echo "--- BEGINNING TEARDOWN -----------------------------------------------"
   if type local_teardown &> /dev/null; then
     echo "Running local_teardown"
     local_teardown
