@@ -45,15 +45,19 @@ const (
 type resourceType string
 type applicator func(client_action.Interface) error
 
+// ToK8SNameMap maps GCP Watch element names to Kubernetes resource names that correspond to those names.
+// Example: {"folders/456/PolicyNode": "folders-456"}
+type ToK8SNameMap map[string]string
+
 // newWatchProcessor returns a new watchProcessor.
 // Only the process() method is meant to to be called by users.
-func newWatchProcessor(stream watcher.Watcher_WatchClient, applyActionFn applicator, currentPolicies v1.AllPolicies, factories actions.Factories, initialStateDone bool, cancelWatchFn func(), timeout time.Duration) *watchProcessor {
+func newWatchProcessor(stream watcher.Watcher_WatchClient, applyActionFn applicator, currentPolicies v1.AllPolicies, factories actions.Factories, nameMap ToK8SNameMap, initialStateDone bool, cancelWatchFn func(), timeout time.Duration) *watchProcessor {
 	return &watchProcessor{
 		stream:           stream,
 		applyActionFn:    applyActionFn,
 		currentPolicies:  currentPolicies,
 		actionFactories:  factories,
-		gcpToK8SName:     make(map[string]string),
+		gcpToK8SName:     nameMap,
 		initialStateDone: initialStateDone,
 		cancelWatchFn:    cancelWatchFn,
 		timeout:          timeout,
@@ -69,7 +73,7 @@ type watchProcessor struct {
 	currentPolicies v1.AllPolicies
 	actionFactories actions.Factories
 	// Maps GCP resource name (e.g. folders/456, projects/789) to K8S name (e.g folders-456, backend)
-	gcpToK8SName map[string]string
+	gcpToK8SName ToK8SNameMap
 	// Whether initial state has been processed.
 	initialStateDone bool
 	// Function that cancels the watch streaming RPC context

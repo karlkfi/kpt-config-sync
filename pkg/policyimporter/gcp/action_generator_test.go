@@ -63,6 +63,7 @@ type testCase struct {
 	expectedResumeMarker []byte
 	// The resume marker to send.
 	resumeMarker []byte
+	nameMap      ToK8SNameMap
 }
 
 func init() {
@@ -307,6 +308,21 @@ func init() {
 			},
 		},
 		{
+			testName: "Incremental change delete existing PolicyNode",
+			batch1: []*watcher.Change{
+				{Element: "folders/456/PolicyNode", State: watcher.Change_DOES_NOT_EXIST, Continued: false, Data: emptyProto},
+			},
+			nameMap:      ToK8SNameMap{"folders/456/PolicyNode": "folder-456"},
+			resumeMarker: []byte("hello"),
+			currentPolicies: v1.AllPolicies{PolicyNodes: map[string]v1.PolicyNode{
+				"organization-123": *orgPN,
+				"folder-456":       *folderPN,
+			}},
+			expectedActions: []string{
+				"nomos.dev/v1/PolicyNodes/folder-456/delete",
+			},
+		},
+		{
 			testName: "Incremental change delete ClusterPolicy",
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
@@ -489,9 +505,15 @@ func TestGen(t *testing.T) {
 			}
 			_, cancel := context.WithCancel(context.Background())
 			defer cancel()
+			// Initialize the map to nonempty only for test cases that specify a nonempty one.
+			nameMap := tc.nameMap
+			if nameMap == nil {
+				nameMap = ToK8SNameMap(map[string]string{})
+			}
 			// Factories take nil arguments since we don't need to apply the actions for these tests.
 			p := newWatchProcessor(
-				stream, recordAction, tc.currentPolicies, actions.NewFactories(nil, nil, nil), len(tc.resumeMarker) != 0, cancel, 1*time.Minute)
+				stream, recordAction, tc.currentPolicies, actions.NewFactories(nil, nil, nil), nameMap, len(tc.resumeMarker) != 0, cancel, 1*time.Minute)
+
 			resumeMarker, err := p.process()
 
 			if (err != nil) != tc.expectedError {
@@ -521,7 +543,7 @@ func TestRecvErr(t *testing.T) {
 	}
 	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	p := newWatchProcessor(stream, a, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil), false, cancel, 1*time.Minute)
+	p := newWatchProcessor(stream, a, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil), ToK8SNameMap(map[string]string{}), false, cancel, 1*time.Minute)
 
 	_, err := p.process()
 	expectedErr := errors.New("receive error")
@@ -548,7 +570,7 @@ func TestTimeout(t *testing.T) {
 		return nil
 	}
 	defer cancel()
-	g := newWatchProcessor(stream, a, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil), false, cancel, time.Nanosecond)
+	g := newWatchProcessor(stream, a, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil), ToK8SNameMap{}, false, cancel, time.Nanosecond)
 
 	_, _ = g.process()
 }

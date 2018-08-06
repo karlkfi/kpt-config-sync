@@ -64,6 +64,7 @@ type Controller struct {
 	policyNodeLister    listers_v1.PolicyNodeLister
 	clusterPolicyLister listers_v1.ClusterPolicyLister
 	stopChan            chan struct{}
+	nameMap             ToK8SNameMap
 }
 
 // NewController returns a new Controller.
@@ -89,6 +90,7 @@ func NewController(org, watcherAddr, credsFile, caFile string, client meta.Inter
 		policyNodeLister:    informerFactory.Nomos().V1().PolicyNodes().Lister(),
 		clusterPolicyLister: informerFactory.Nomos().V1().ClusterPolicies().Lister(),
 		stopChan:            stopChan,
+		nameMap:             ToK8SNameMap(map[string]string{}),
 	}
 }
 
@@ -196,7 +198,7 @@ func (c *Controller) watchIteration(ctx context.Context, resumeMarker []byte) ([
 	}
 	glog.Infof("Started streaming RPC to Watcher API")
 
-	return newWatchProcessor(stream, applyActions, *currentPolicies, c.actionFactories, len(resumeMarker) != 0, cancelWatch, grpcRPCTimeout).process()
+	return newWatchProcessor(stream, applyActions, *currentPolicies, c.actionFactories, c.nameMap, len(resumeMarker) != 0, cancelWatch, grpcRPCTimeout).process()
 }
 
 func (c *Controller) dial() (*grpc.ClientConn, error) {
