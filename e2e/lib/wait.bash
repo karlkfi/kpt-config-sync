@@ -16,7 +16,7 @@
 function wait::event() {
   local deadline=""
   local namespace=""
-  local timeout="10"
+  local timeout="30"
   local args=()
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
@@ -84,10 +84,10 @@ function wait::event() {
 #  Args for command
 function wait::for() {
   local args=()
-  local deadline="$(( $(date +%s) + 10 ))"
   local sleeptime="0.1"
   local exitf=(wait::__exit_eq 0)
-  local timeout=15
+  local timeout=10
+  local deadline="$(( $(date +%s) + timeout ))"
 
   local parse_args=false
   for i in "$@"; do
@@ -112,11 +112,13 @@ function wait::for() {
           shift
         ;;
         -t)
+          timeout="${1:-}"
           deadline=$(( $(date +%s) + timeout ))
           shift
         ;;
         -d)
           deadline=${1:-}
+          timeout=$(( deadline - $(date +%s) ))
           shift
         ;;
         -p)
