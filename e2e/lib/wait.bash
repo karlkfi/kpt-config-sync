@@ -146,7 +146,8 @@ function wait::for() {
     sleep "$sleeptime"
   done
 
-  echo "Command timed out:" "${args[@]}" "status: ${status} last output: ${out}"
+  echo "Command timed out after ${timeout} sec:" \
+    "${args[@]}" "status: ${status} last output: ${out}"
   return 1
 }
 
