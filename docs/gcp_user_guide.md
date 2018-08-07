@@ -148,8 +148,15 @@ cluster:
 *   Editor
 *   Viewer
 
-Kubernetes Engine roles are described in more detail [here][3]. Custom roles are
-currently not supported in this release.
+Kubernetes Engine roles are described in more detail [here][3].
+
+#### Current Limitations
+
+In the alpha release, the following are not supported:
+
+* Custom roles
+* IAM binding conditions
+
 
 [1]: https://cloud.google.com/resource-manager
 [2]: https://cloud.google.com/iam
