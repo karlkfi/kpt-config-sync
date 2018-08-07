@@ -19,9 +19,10 @@ GKE Policy Management can be extended to support different sources of truth for
 centralized policy management. Currently, there is support for Git and Google
 Cloud Platform.
 
-## Try GKE Policy Management
+## First Steps
+Watch the [demo](https://storage.googleapis.com/nomos-release/demo.mp4).
 
-See [Quickstart](docs/quickstart.md).
+Try it out by following the [Quickstart Guide](docs/quickstart.md).
 
 ## Using GKE Policy Management
 
