@@ -108,9 +108,11 @@ $ kubectl get pods -n=nomos-system
 NAME                                                  READY     STATUS    RESTARTS   AGE
 [git|gcp]-policy-importer-66bf6b9db4-pbsxn            2/2       Running   0          24m
 policy-admission-controller-6746f96cbb-2h2sf          1/1       Running   0          24m
-resourcequota-admission-controller-64988d97f4-nxmsc   1/1       Running   0          24m
+resourcequota-admission-controller-64988d97f4-nxmsc*  1/1       Running   0          24m
 syncer-58545bc77d-l485n                               1/1       Running   0          24m
 ```
+**Note:** The resource quota admission controller will only be running for Git
+  installations.
 
 ## Uninstalling
 
