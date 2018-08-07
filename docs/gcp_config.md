@@ -1,6 +1,6 @@
 # Google Cloud Platform Configuration
 
-**NOTE: This is an Alpha release of Kubernetes Policy API and available to
+**NOTE: This is an alpha release of Kubernetes Policy API and available to
 whitelisted customers.**
 
 A sample YAML file for configuring GCP-based GKE Policy Management is provided
