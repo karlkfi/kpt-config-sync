@@ -60,6 +60,8 @@ the following commands:
 $ gcloud projects create foo-corp-shipping-dev --folder shipping-app-backend
 $ gcloud services enable kubernetespolicy.googleapis.com --project
 foo-corp-shipping-dev
+$ gcloud organizations add-iam-policy-binding 515925372711
+--member=user:me@foo-corp.com --role=roles/kubernetespolicy.namespaceCreator
 $ gcloud alpha container policy namespaces create shipping-dev --project
 foo-corp-shipping-dev
 ```
@@ -71,8 +73,8 @@ order to create the Managed Namespace, you need to have the permission
 creating the Managed Namespace, you will be affecting all clusters enrolled in
 this Organization. The `kubernetespolicy.namespaces.create` permission is
 included in the `Kubernetes Policy Namespace Creator`
-(roles/kubernetespolicy.NamespaceCreator), `Kubernetes Policy Namespace
-Administrator` (roles/kubernetespolicy.namespaceAdmin), `Owner` and `Editor`
+(`roles/kubernetespolicy.namespaceCreator`), `Kubernetes Policy Namespace
+Administrator` (`roles/kubernetespolicy.namespaceAdmin`), `Owner` and `Editor`
 roles.
 
 You are restricted to one Managed Namespace per Project to ensure you can grant
