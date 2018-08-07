@@ -17,7 +17,6 @@ limitations under the License.
 package scheme
 
 import (
-	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -49,7 +48,6 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	bespinv1.AddToScheme(scheme)
 	nomosv1.AddToScheme(scheme)
 
 }
