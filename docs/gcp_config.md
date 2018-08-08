@@ -33,7 +33,7 @@ file.
 Key                  | Description
 -------------------- | -----------
 ORG_ID               | [GCP organization id](https://cloud.google.com/resource-manager/docs/creating-managing-organization#retrieving_your_organization_id)
-PRIVATE_KEY_FILENAME | Path to the file containing the [GCP service account private key](#obtaining-private-key) used for accessing GCP Kubernetes Policy API.
+PRIVATE_KEY_FILENAME | Absolute path to the file containing the [GCP service account private key](#obtaining-private-key) used for accessing GCP Kubernetes Policy API.
 
 ## Obtaining Private Key
 
