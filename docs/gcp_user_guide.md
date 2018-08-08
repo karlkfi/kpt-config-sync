@@ -26,13 +26,23 @@ on-prem clusters using Kubernetes Policy Management.
 
 ### Before you begin
 
+#### Set up GCP resources hierarchy
+
+Organization, Folders, and Projects resources represent the hierarchy in an
+organization. Refer to [Quickstarts][6] or more detailed [How-to Guides][7] to
+create these resources and configure their IAM policies.
+
+#### Activate API for each project
+
 All the operations below require that the Kubernetes Policy API is activated.
-You can do so by running the following command in each Project you intend to
-work in:
+You can do so by running the following command in each Project containing a
+Managed Namespace:
 
 ```console
 $ gcloud services enable kubernetespolicy.googleapis.com
 ```
+
+#### Update gcloud components
 
 Kubernetes Policy Management APIs are in alpha and you must install gcloud alpha
 components to use them. You can do so by running these commands:
@@ -154,12 +164,14 @@ Kubernetes Engine roles are described in more detail [here][3].
 
 In the alpha release, the following are not supported:
 
-* Custom roles
-* IAM binding conditions
-
+*   Custom roles
+*   IAM binding conditions
 
 [1]: https://cloud.google.com/resource-manager
 [2]: https://cloud.google.com/iam
 [3]: https://cloud.google.com/kubernetes-engine/docs/how-to/iam#predefined
 [4]: https://cloud.google.com/resource-manager/docs/creating-managing-projects
 [5]: https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md
+[6]: https://cloud.google.com/resource-manager/docs/quickstart-organizations
+[7]: https://cloud.google.com/resource-manager/docs/how-to
+

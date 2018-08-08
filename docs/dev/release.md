@@ -139,5 +139,5 @@ $ make -f Makefile.release bless-release
 The artifacts will be
 [available here](https://console.cloud.google.com/storage/browser/nomos-release/stable/?project=nomos-release).
 
-Publicly-accessible docs will be [available
-here](https://storage.googleapis.com/nomos-release/stable/nomos-docs.zip)
+Publicly-accessible docs will be
+[available here](https://storage.googleapis.com/nomos-release/stable/nomos-docs.zip)

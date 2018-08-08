@@ -39,8 +39,9 @@ PRIVATE_KEY_FILENAME | Path to the file containing the [GCP service account priv
 
 1.  [Create a service account][1]
 2.  [Grant the service account][2] `Kubernetes Policy Viewer` role
-   *  Currently the `Kubernetes Policy Viewer` role is not visible from the Google Cloud
-      Console. You must use the gcloud CLI to make the change, see the example below.
+    *   Currently the `Kubernetes Policy Viewer` role is not visible from the
+        Google Cloud Console. You must use the gcloud CLI to make the change,
+        see the example below.
 3.  [Create a service account key][3] and download the JSON private key.
 
 A sample script that creates a service account named `policy-viewer-sa` in
