@@ -198,7 +198,16 @@ func (c *Controller) watchIteration(ctx context.Context, resumeMarker []byte) ([
 	}
 	glog.Infof("Started streaming RPC to Watcher API")
 
-	return newWatchProcessor(stream, applyActions, *currentPolicies, c.actionFactories, c.nameMap, len(resumeMarker) != 0, cancelWatch, grpcRPCTimeout).process()
+	w := watchProcessor{
+		stream,
+		applyActions,
+		*currentPolicies,
+		c.actionFactories,
+		c.nameMap,
+		len(resumeMarker) != 0,
+		cancelWatch,
+		grpcRPCTimeout}
+	return w.process()
 }
 
 func (c *Controller) dial() (*grpc.ClientConn, error) {

@@ -511,8 +511,14 @@ func TestGen(t *testing.T) {
 				nameMap = ToK8SNameMap(map[string]string{})
 			}
 			// Factories take nil arguments since we don't need to apply the actions for these tests.
-			p := newWatchProcessor(
-				stream, recordAction, tc.currentPolicies, actions.NewFactories(nil, nil, nil), nameMap, len(tc.resumeMarker) != 0, cancel, 1*time.Minute)
+			p := watchProcessor{
+				stream,
+				recordAction,
+				tc.currentPolicies,
+				actions.NewFactories(nil, nil, nil),
+				nameMap, len(tc.resumeMarker) != 0,
+				cancel,
+				time.Minute}
 
 			resumeMarker, err := p.process()
 
@@ -543,7 +549,16 @@ func TestRecvErr(t *testing.T) {
 	}
 	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	p := newWatchProcessor(stream, a, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil), ToK8SNameMap(map[string]string{}), false, cancel, 1*time.Minute)
+	p := watchProcessor{
+		stream,
+		a,
+		v1.AllPolicies{},
+		actions.NewFactories(nil, nil, nil),
+		ToK8SNameMap(map[string]string{}),
+		false,
+		cancel,
+		time.Minute,
+	}
 
 	_, err := p.process()
 	expectedErr := errors.New("receive error")
@@ -570,9 +585,18 @@ func TestTimeout(t *testing.T) {
 		return nil
 	}
 	defer cancel()
-	g := newWatchProcessor(stream, a, v1.AllPolicies{}, actions.NewFactories(nil, nil, nil), ToK8SNameMap{}, false, cancel, time.Nanosecond)
+	p := watchProcessor{
+		stream,
+		a,
+		v1.AllPolicies{},
+		actions.NewFactories(nil, nil, nil),
+		ToK8SNameMap{},
+		false,
+		cancel,
+		time.Nanosecond,
+	}
 
-	_, _ = g.process()
+	_, _ = p.process()
 }
 
 func newPolicyNode(name string, parent string, policyspace bool) *v1.PolicyNode {

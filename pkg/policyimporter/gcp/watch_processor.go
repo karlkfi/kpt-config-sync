@@ -49,21 +49,7 @@ type applicator func(client_action.Interface) error
 // Example: {"folders/456/PolicyNode": "folders-456"}
 type ToK8SNameMap map[string]string
 
-// newWatchProcessor returns a new watchProcessor.
 // Only the process() method is meant to to be called by users.
-func newWatchProcessor(stream watcher.Watcher_WatchClient, applyActionFn applicator, currentPolicies v1.AllPolicies, factories actions.Factories, nameMap ToK8SNameMap, initialStateDone bool, cancelWatchFn func(), timeout time.Duration) *watchProcessor {
-	return &watchProcessor{
-		stream:           stream,
-		applyActionFn:    applyActionFn,
-		currentPolicies:  currentPolicies,
-		actionFactories:  factories,
-		gcpToK8SName:     nameMap,
-		initialStateDone: initialStateDone,
-		cancelWatchFn:    cancelWatchFn,
-		timeout:          timeout,
-	}
-}
-
 type watchProcessor struct {
 	// Stream client for Kubernetes Policy Watcher API.
 	stream watcher.Watcher_WatchClient
