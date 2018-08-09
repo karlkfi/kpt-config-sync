@@ -52,7 +52,7 @@ sed -i -e \
 
 DOCKER_CMD=(
   docker run -it
-    --group-add docker
+    --group-add docker # Used for gcloud to get instance metadata.
     -u "$(id -u):$(id -g)"
     -v /var/run/docker.sock:/var/run/docker.sock
     -v "${TEMP_OUTPUT_DIR}:/tmp"

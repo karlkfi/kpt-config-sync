@@ -6,8 +6,39 @@ readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 readonly FWD_SSH_PORT=2222
 
+# Runs the installer process to set up the cluster under test.
+function install() {
+  if $do_installation; then
+    echo "+++++ Installing..."
+    (  # Linter says this is better than "cd -"
+      cd "${NOMOS_REPO}/.output/e2e"
+      "${run_installer}" \
+        --config="$(basename "${install_config}")" \
+        --container "$CONTAINER" \
+        --version "$VERSION"
+    )
+  fi
+}
+
+# Runs the uninstaller process to uninstall nomos in the cluster under test.
+function uninstall() {
+  if $do_installation; then
+    # If we did the installation, then we should uninstall as well.
+    echo "+++++ Uninstalling..."
+    (
+      cd "${NOMOS_REPO}/.output/e2e"
+      "${run_installer}" \
+        --config="$(basename "${install_config}")" \
+        --uninstall=deletedeletedelete \
+        --container "$CONTAINER" \
+        --version "$VERSION"
+    )
+  fi
+}
+
+
 function set_up_env() {
-  echo "++++ Setting up environment"
+  echo "++++ Setting up environment: ${importer}"
   case ${importer} in
     git)
     /opt/testing/e2e/init-git-server.sh
@@ -18,12 +49,7 @@ function set_up_env() {
     ;;
   esac
 
-  echo "+++++ Installing..."
-  cd "${NOMOS_REPO}/.output/e2e"
-  "${run_installer}" --config="$(basename "${install_config}")" \
-    --container "$CONTAINER" \
-    --version "$VERSION"
-  cd -
+  install
 }
 
 function set_up_env_minimal() {
@@ -39,7 +65,7 @@ function set_up_env_minimal() {
     local start_time
     start_time=$(date +%s)
     # Our image doesn't have netstat, so we have check for listen by
-    # looking at kubectl's open tcp sockets in procfs.  This looks for listen on
+    # looking at kubectl's Uninstalling tcp sockets in procfs.  This looks for listen on
     # 127.0.0.1:$FWD_SSH_PORT with remote of 0.0.0.0:0.
     # TODO: This should use git ls-remote, but for some reason it fails to be able
     # to connect to the remote.
@@ -68,12 +94,7 @@ function clean_up() {
     return
   fi
 
-  cd "${NOMOS_REPO}/.output/e2e"
-  "${run_installer}" --config="$(basename "${install_config}")" \
-    --uninstall=deletedeletedelete \
-    --container "$CONTAINER" \
-    --version "$VERSION"
-  cd -
+  uninstall
 
   kubectl delete ns -l "nomos.dev/testdata=true"
   kubectl delete ns -l "nomos.dev/namespace-management=full"
@@ -155,6 +176,25 @@ function main() {
   return ${retcode}
 }
 
+# Configures gcloud and kubectl to use supplied service account credentials
+# to interact with the cluster under test.
+#
+# Params:
+#   $1: File path to the JSON file containing service account credentials.
+setup_prober_cred() {
+  local _cred_file="$1"
+
+  # Makes the service account from ${_cred_file} the active account that drives
+  # cluster changes.
+  gcloud --quiet auth activate-service-account --key-file="${_cred_file}"
+
+  # Installs gcloud as an auth helper for kubectl with the credentials that
+  # were set with the service account activation above.
+  # Needs cloud.containers.get permission.
+  gcloud --quiet container clusters get-credentials \
+    prober-cluster-1 --zone us-central1-a --project stolos-dev
+}
+
 echo "executed with args" "$@"
 file_filter=".*"
 tap=false
@@ -164,6 +204,15 @@ run_tests=false
 setup=false
 gcp_watcher_cred=""
 gcp_runner_cred=""
+
+# If set, the tests will skip the installation.
+do_installation=true
+
+# If set, the supplied credentials file will be used to set up the identity
+# of the test runner.  Otherwise defaults to whatever user is the current
+# default in gcloud and kubectl config.
+gcp_prober_cred=""
+
 while [[ $# -gt 0 ]]; do
   arg=${1}
   shift
@@ -228,12 +277,23 @@ while [[ $# -gt 0 ]]; do
       gcp_runner_cred="${1}"
       shift
     ;;
+    --gcp-prober-cred)
+      gcp_prober_cred="${1}"
+      shift
+    ;;
+    --skip-installation)
+      do_installation=false
+    ;;
     *)
-      echo "Unrecognized arg $arg"
+      echo "setup.sh: unrecognized arg $arg"
       exit 1
     ;;
   esac
 done
+
+if [[ "${gcp_prober_cred}" != "" ]]; then
+  setup_prober_cred "${gcp_prober_cred}"
+fi
 
 install_config="${TEST_DIR}/install-config.yaml"
 install_config_template=""
@@ -252,12 +312,14 @@ case ${importer} in
   ;;
 esac
 
-suggested_user="$(gcloud config get-value account)"
-kubectl_context="$(kubectl config current-context)"
-run_installer="${TEST_DIR}/run-installer.sh"
-sed -e "s/CONTEXT/${kubectl_context}/" -e "s/USER/${suggested_user}/" \
-  < "${install_config_template}" \
-  > "${install_config}"
+if $do_installation; then
+  suggested_user="$(gcloud config get-value account)"
+  kubectl_context="$(kubectl config current-context)"
+  run_installer="${TEST_DIR}/run-installer.sh"
+  sed -e "s/CONTEXT/${kubectl_context}/" -e "s/USER/${suggested_user}/" \
+    < "${install_config_template}" \
+    > "${install_config}"
+fi
 
 if $preclean; then
   clean_up

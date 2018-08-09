@@ -1,0 +1,13 @@
+# e2e-prober is the same as e2e-base, except it hard-codes the test environment
+# instead of mounting it in.
+FROM gcr.io/stolos-dev/e2e-tests:test-e2e-latest
+
+# Requires that the files have already been staged here.
+COPY .output/e2e /opt/testing/e2e
+
+RUN mkdir -p /tmp/home/user
+
+# This is where gcloud and kubectl will store their configuration.
+ENV HOME /tmp/home/user
+ENV USER prober
+ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH

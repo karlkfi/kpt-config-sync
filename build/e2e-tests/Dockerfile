@@ -18,10 +18,9 @@ RUN mkdir -p /opt/gcloud
 RUN tar -C /opt/gcloud -xvf /tmp/google-cloud-sdk.tar.gz
 RUN /opt/gcloud/google-cloud-sdk/install.sh --quiet
 RUN gcloud components install alpha beta
-RUN rm -rf /opt/gcloud/google-cloud-sdk/.install
 
 # Build e2e image
-FROM ubuntu:16.04
+FROM ubuntu:16.04 as e2e-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -74,3 +73,4 @@ USER $UNAME
 WORKDIR /opt/testing/e2e
 
 ENTRYPOINT ["/opt/testing/e2e/setup.sh"]
+

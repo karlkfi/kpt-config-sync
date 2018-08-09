@@ -243,14 +243,11 @@ gen-yaml-%:
 	@m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG) < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
-# Generates yaml for the test git server
 $(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml Makefile $(OUTPUT_DIR)
-	@echo "+++ Generating yaml git-server"
+	@echo "+++ Generating yaml for git-server"
 	@m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE) < \
 			 $< > $@
 
-# Creates staging directory for building installer docker image.
-# TODO(filmil): Depending on push-to-gcr-all here seems unnecessary.
 installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
 	@echo "+++ Creating staging directory for building installer docker image"
 	@cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
@@ -274,7 +271,6 @@ installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
 	@cp $(TOP_DIR)/scripts/generate-policy-admission-controller-certs.sh \
 		$(STAGING_DIR)/installer/scripts
 
-# Builds the installer docker image using the nomos release in $(OUTPUT_DIR)
 image-installer: installer-staging
 	@echo "+++ Building the installer docker image using the Nomos release in $(OUTPUT_DIR)"
 	@docker build $(DOCKER_BUILD_QUIET) \
@@ -326,7 +322,7 @@ uninstall: check-nomos-installer-config \
 
 # Note that it is basically a copy of the staging directory for the installer
 # plus a few extras for e2e.
-e2e-staging: $(TEST_GEN_YAML_DIR)/git-server.yaml $(SCRIPTS_STAGING_DIR)/run-installer.sh $(OUTPUT_DIR)
+e2e-staging: $(TEST_GEN_YAML_DIR)/git-server.yaml $(SCRIPTS_STAGING_DIR)/run-installer.sh $(OUTPUT_DIR) $(wildcard $(TOP_DIR)/e2e/*)
 	@echo "+++ Creating staging directory for building e2e docker image"
 	@mkdir -p $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
 	@cp -r $(TOP_DIR)/build/e2e-tests/* $(STAGING_DIR)/e2e-tests
@@ -337,23 +333,37 @@ e2e-staging: $(TEST_GEN_YAML_DIR)/git-server.yaml $(SCRIPTS_STAGING_DIR)/run-ins
 	@cp $(TOP_DIR)/scripts/init-git-server.sh $(OUTPUT_DIR)/e2e/
 	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(OUTPUT_DIR)/e2e/
 	@cp $(SCRIPTS_STAGING_DIR)/run-installer.sh $(OUTPUT_DIR)/e2e/
+	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
 
 # Builds the e2e docker image and depencencies.
 # Note that the GCP project is hardcoded since we currently don't want
 # or need a nomos-release version of the e2e-tests image.
-e2e-image: e2e-staging
+image-e2e-tests: e2e-staging
 	@echo "+++ Building the e2e docker image"
 	@build/e2e-tests/build.sh \
+		-t gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG) \
 		-t gcr.io/stolos-dev/e2e-tests:test-e2e-latest \
 		$(DOCKER_BUILD_QUIET)
 
-e2e-image-all: e2e-image image-installer
+image-e2e-prober: image-e2e-tests build/e2e-tests/Dockerfile.prober
+	@echo "+++ Building the e2e prober image"
+	docker build \
+	  --file=build/e2e-tests/Dockerfile.prober \
+	  --build-arg "DOCKER_GID=$(shell stat -c '%g' /var/run/docker.sock)" \
+	  --build-arg "UID=$(UID)" \
+	  --build-arg "GID=$(GID)" \
+	  --build-arg "UNAME=${USER}" \
+	  -t gcr.io/stolos-dev/e2e-prober:$(IMAGE_TAG) \
+	  -t gcr.io/stolos-dev/e2e-prober:test-e2e-latest \
+	  $(DOCKER_BUILD_QUIET) \
+	  .
+
+e2e-image-all: image-e2e-tests image-installer
 
 test-e2e-run-%:
 	@echo "+++ Running e2e tests: $*"
 	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
 	@rm -rf $(OUTPUT_DIR)/e2e/testcases
-	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
 	@e2e/e2e.sh \
 		--TEMP_OUTPUT_DIR "$(TEMP_OUTPUT_DIR)" \
 		--OUTPUT_DIR "$(OUTPUT_DIR)" \
