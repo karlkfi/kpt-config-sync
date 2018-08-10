@@ -30,7 +30,6 @@ ENV PATH $PATH:/usr/local/gcloud/google-cloud-sdk/bin
 
 # Installs kubectl
 RUN gcloud components install kubectl
-RUN rm -rf /usr/local/gcloud/google-cloud-sdk/.install
 
 FROM install-base
 
