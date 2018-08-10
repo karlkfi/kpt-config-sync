@@ -196,14 +196,16 @@ setup_prober_cred() {
 }
 
 echo "executed with args" "$@"
-file_filter=".*"
-tap=false
-preclean=false
+
 clean=false
+file_filter=".*"
+gcp_runner_cred=""
+gcp_watcher_cred=""
+importer=""
+preclean=false
 run_tests=false
 setup=false
-gcp_watcher_cred=""
-gcp_runner_cred=""
+tap=false
 
 # If set, the tests will skip the installation.
 do_installation=true
