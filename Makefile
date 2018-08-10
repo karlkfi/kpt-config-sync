@@ -347,7 +347,7 @@ image-e2e-tests: e2e-staging
 
 image-e2e-prober: image-e2e-tests build/e2e-tests/Dockerfile.prober
 	@echo "+++ Building the e2e prober image"
-	docker build \
+	@docker build \
 	  --file=build/e2e-tests/Dockerfile.prober \
 	  --build-arg "DOCKER_GID=$(shell stat -c '%g' /var/run/docker.sock)" \
 	  --build-arg "UID=$(UID)" \
@@ -357,6 +357,10 @@ image-e2e-prober: image-e2e-tests build/e2e-tests/Dockerfile.prober
 	  -t gcr.io/stolos-dev/e2e-prober:test-e2e-latest \
 	  $(DOCKER_BUILD_QUIET) \
 	  .
+
+test-e2e-prober: image-e2e-prober scripts/run-prober.sh
+	@echo "+++ Running prober e2e test in a local docker container."
+	@./scripts/run-prober.sh
 
 e2e-image-all: image-e2e-tests image-installer
 

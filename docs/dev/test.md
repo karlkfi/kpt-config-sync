@@ -11,10 +11,20 @@ make
 ## E2E Tests
 
 end-to-end tests deploy GKE Policy Management components on a Kubernetes cluster
-and verify functionality through Git commits:
+from your current context, and then verify functionality through Git commits:
 
 ```console
 make test-e2e-all
+```
+
+## E2E prober tests
+
+Prober tests verify the GCP functionality on a predefined test cluster, using
+the tests defined in your local repository, and a predefined prober GCP
+service account.
+
+```console
+make test-e2e-prober
 ```
 
 ## Working on the e2e framework or e2e tests.

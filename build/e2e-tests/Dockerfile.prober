@@ -11,3 +11,14 @@ RUN mkdir -p /tmp/home/user
 ENV HOME /tmp/home/user
 ENV USER prober
 ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
+
+ENTRYPOINT [ \
+  "/opt/testing/e2e/setup.sh", \
+  "--gcp-prober-cred", "/etc/prober-gcp-service-account/prober_runner_client_key.json", \
+  "--gcp-runner-cred", "gs://stolos-dev/e2e/nomos-e2e.joonix.net/test_runner_client_key.json", \
+  "--gcp-watcher-cred", "gs://stolos-dev/e2e/nomos-e2e.joonix.net/watcher_client_key.json", \
+  "--importer", "gcp", \
+  "--skip-installation", \
+  "--tap", \
+  "--test" \
+]
