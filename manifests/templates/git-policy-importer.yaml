@@ -53,7 +53,7 @@ spec:
           - configMapRef:
               name: git-policy-importer
       - name: git-sync
-        image: gcr.io/nomos-release/git-sync-amd64:v2.0.6-7-gd26f48d
+        image: gcr.io/nomos-release/git-sync-amd64:v2.0.6-15-g2e46b74
         # Do not put "rev-" in the root arg or you will break our parsing of commit hashes. See
         # pkg/policyimporter/git/git.go to see where we depend on that magic string from git-sync.
         args: ["--root=/repo", "--dest=rev"]
