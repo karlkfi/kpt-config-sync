@@ -36,7 +36,7 @@ func main() {
 
 	restConfig, err := restconfig.NewRestConfig()
 	if err != nil {
-		panic(errors.Wrapf(err, "Failed to create rest config"))
+		panic(errors.Wrapf(err, "failed to create rest config"))
 	}
 
 	go service.ServeMetrics()
@@ -45,7 +45,10 @@ func main() {
 	syncerController := syncercontroller.New(injectArgs)
 
 	runArgs := run.RunArguments{Stop: signals.SetupSignalHandler()}
-	syncerController.Start(runArgs)
+	err = syncerController.Start(runArgs)
+	if err != nil {
+		panic(errors.Wrapf(err, "failed to start controller"))
+	}
 
 	<-runArgs.Stop
 }
