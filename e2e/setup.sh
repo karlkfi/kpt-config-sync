@@ -145,7 +145,7 @@ function main() {
   if (( ${#all_test_files[@]} != 0 )); then
     for file in "${all_test_files[@]}"; do
       if echo "${file}" | grep "${file_filter}" &> /dev/null; then
-        echo "Will run ${file}"
+        echo "+++ Will run ${file}"
         filtered_test_files+=("${file}")
       fi
     done
@@ -162,10 +162,29 @@ function main() {
     export E2E_TEST_FILTER="${testcase_filter}"
   fi
 
+  # prow test runner defines the $ARTIFACTS env variable pointing to a
+  # directory to be used to output test results that are automatically
+  # presented to various dashboards.
+  local result_file=""
+  local has_artifacts=false
+  if [ -n "${ARTIFACTS+x}" ]; then
+    result_file="${ARTIFACTS}/result.bats"
+    has_artifacts=true
+  fi
+
   local retcode=0
   if (( ${#filtered_test_files[@]} != 0 )); then
-    if ! "${bats_cmd[@]}" "${filtered_test_files[@]}"; then
-      retcode=1
+    if "${has_artifacts}"; then
+      # TODO(filmil): Find a way to unify the 'if' and 'else' branches without
+      # side effects on log output.
+      echo "+++ Adding results also to: ${result_file}"
+      if ! "${bats_cmd[@]}" "${filtered_test_files[@]}" | tee "${result_file}"; then
+        retcode=1
+      fi
+    else
+      if ! "${bats_cmd[@]}" "${filtered_test_files[@]}"; then
+        retcode=1
+      fi
     fi
   else
     echo "No files to test!"
