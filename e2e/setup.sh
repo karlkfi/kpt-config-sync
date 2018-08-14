@@ -186,6 +186,14 @@ function main() {
         retcode=1
       fi
     fi
+
+    if "${has_artifacts}"; then
+      echo "+++ Converting test results from TAP format to jUnit"
+      tap2junit "${result_file}"
+      # Testgrid requires this particular file name, and tap2junit doesn't allow
+      # renames. So...
+      mv "${result_file}".xml "${ARTIFACTS}/junit.xml"
+    fi
   else
     echo "No files to test!"
   fi

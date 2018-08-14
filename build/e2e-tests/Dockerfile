@@ -34,6 +34,7 @@ RUN apt-get update \
   curl \
   git \
   jq \
+  libtap-formatter-junit-perl \
   python \
   software-properties-common
 
