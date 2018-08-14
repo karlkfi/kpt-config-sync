@@ -367,7 +367,6 @@ e2e-image-all: image-e2e-tests image-installer
 test-e2e-run-%:
 	@echo "+++ Running e2e tests: $*"
 	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
-	@rm -rf $(OUTPUT_DIR)/e2e/testcases
 	@e2e/e2e.sh \
 		--TEMP_OUTPUT_DIR "$(TEMP_OUTPUT_DIR)" \
 		--OUTPUT_DIR "$(OUTPUT_DIR)" \
