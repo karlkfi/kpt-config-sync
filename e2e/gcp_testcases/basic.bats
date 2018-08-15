@@ -34,7 +34,7 @@ load ../lib/loader
 
   echo "Checking for binding to be created in namespace"
   wait::for -- kubectl get rolebinding \
-      "${GCP_PROJECT_B}.container.viewer" \
+      "${GCP_PROJECT_B}.gcp-iam:container.viewer" \
       -n "${GCP_PROJECT_B}"
   run kubectl get configmaps -n "${GCP_PROJECT_B}" \
       --as bob@nomos-e2e.joonix.net
@@ -69,7 +69,7 @@ load ../lib/loader
 
   echo "Checking for binding to be created in namespace"
   wait::for -- kubectl get rolebinding \
-      "folders-${FOLDER_ID}.container.viewer" \
+      "folders-${FOLDER_ID}.gcp-iam:container.viewer" \
       -n "${GCP_PROJECT_A}"
   run kubectl get configmaps -n "${GCP_PROJECT_A}" \
       --as bob@nomos-e2e.joonix.net
@@ -98,10 +98,10 @@ load ../lib/loader
   namespace::check_exists "${GCP_PROJECT_A}"
 
   wait::for -- kubectl get rolebinding \
-      "organizations-${GCP_ORG_ID}.owner" \
+      "organizations-${GCP_ORG_ID}.gcp-iam:owner" \
       -n "${GCP_PROJECT_A}"
   wait::for -- kubectl get rolebinding \
-      "${GCP_PROJECT_A}.owner" \
+      "${GCP_PROJECT_A}.gcp-iam:owner" \
       -n "${GCP_PROJECT_A}"
   resource::check_count -r rolebinding -c 2 -n "${GCP_PROJECT_A}"
 }
@@ -130,7 +130,7 @@ load ../lib/loader
 
   echo "Checking for binding to be created in namespace"
   wait::for -t 60 -- kubectl get rolebinding \
-      "folders-${FOLDER_ID}.container.viewer" \
+      "folders-${FOLDER_ID}.gcp-iam:container.viewer" \
       -n "${GCP_PROJECT_B}"
   run kubectl get configmaps -n "${GCP_PROJECT_B}" \
       --as bob@nomos-e2e.joonix.net
