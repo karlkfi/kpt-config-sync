@@ -148,6 +148,39 @@ func (s Ancestry) TokenMap() map[string]string {
 	return tokens
 }
 
+// BuildAncestries constructs an Ancestry for each leaf node in the given policy nodes. Returns an
+// error if the given nodes do not comprise the full hierarchy for the leaf nodes.
+func BuildAncestries(policyNodes []*policyhierarchy_v1.PolicyNode) ([]Ancestry, error) {
+	nodeMap := make(map[string]*policyhierarchy_v1.PolicyNode, len(policyNodes))
+	for _, pn := range policyNodes {
+		nodeMap[pn.Name] = pn
+	}
+	var ancestries []Ancestry
+	for _, pn := range policyNodes {
+		// Look for Namespaces (which are leaf nodes) and build Ancestries from each of them.
+		if pn.Spec.Type.IsNamespace() {
+			ancestry := Ancestry{pn}
+			parentName := pn.Spec.Parent
+			seen := map[string]bool{}
+
+			for parentName != "" {
+				parent := nodeMap[parentName]
+				if parent == nil {
+					return nil, &ConsistencyError{errType: "not found", ancestry: ancestry, missing: parentName}
+				}
+				ancestry = append(ancestry, parent)
+				if seen[parentName] {
+					return nil, &ConsistencyError{errType: "cycle", ancestry: ancestry}
+				}
+				seen[parentName] = true
+				parentName = parent.Spec.Parent
+			}
+			ancestries = append(ancestries, ancestry)
+		}
+	}
+	return ancestries, nil
+}
+
 // Interface is the interface that the Hierarchy object fulfills.
 type Interface interface {
 	Ancestry(name string) (Ancestry, error)
