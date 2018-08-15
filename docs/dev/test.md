@@ -27,6 +27,25 @@ service account.
 make test-e2e-prober
 ```
 
+### Deploying e2e prober
+
+E2E prober is currently deployed manually, while work is underway to ensure that
+it gets deployed continuously.
+
+Deploying a new version of the prober, based on the code that is currently
+checked out in your git repo, you need this process.
+
+1. Build and push the image like this:
+
+```console
+make push-to-gcr-e2e-prober
+```
+
+2. Manually add the tag `test-e2e-latest` to the image you just built
+[in Pantheon][1].
+
+The next scheduled run of the [nomos prober][2] will use the newly built image.
+
 ## Working on the e2e framework or e2e tests.
 
 While doing development of e2e test / framework features, it's desirable to skip
@@ -82,3 +101,7 @@ Name          | Value                                                           
 --setup       | boolean, sets up GKE Policy Management and test infra on cluster                                                             | E2E_FLAGS="--setup"
 --tap         | boolean, emit tap output while tests are running, useful for debugging                                                       | E2E_FLAGS="--tap"
 --test        | boolean, run e2e tests                                                                                                       | E2E_FLAGS="--test"
+
+[1]: https://pantheon.corp.google.com/gcr/images/stolos-dev/GLOBAL/e2e-prober?project=stolos-dev&gcrImageListsize=50
+[2]: https://prow-gob.gcpnode.com/?job=nomos-prober
+
