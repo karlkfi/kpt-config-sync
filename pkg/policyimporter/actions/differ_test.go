@@ -52,7 +52,7 @@ func TestDiffer(t *testing.T) {
 			newNodes: []v1.PolicyNode{
 				policyNode("r", "", v1.Policyspace),
 			},
-			expected: []string{"nomos.dev/v1/PolicyNodes/r/upsert"},
+			expected: []string{"nomos.dev/v1/PolicyNodes/r/create"},
 		},
 		{
 			testName: "One node delete",
@@ -71,7 +71,7 @@ func TestDiffer(t *testing.T) {
 				policyNode("r2", "", v1.Policyspace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/r2/upsert",
+				"nomos.dev/v1/PolicyNodes/r2/create",
 				"nomos.dev/v1/PolicyNodes/r/delete",
 			},
 		},
@@ -90,9 +90,9 @@ func TestDiffer(t *testing.T) {
 				policyNode("c3", "c4", v1.Namespace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c4/upsert",
-				"nomos.dev/v1/PolicyNodes/c2/upsert",
-				"nomos.dev/v1/PolicyNodes/c3/upsert",
+				"nomos.dev/v1/PolicyNodes/c4/create",
+				"nomos.dev/v1/PolicyNodes/c2/update",
+				"nomos.dev/v1/PolicyNodes/c3/update",
 				"nomos.dev/v1/PolicyNodes/c1/delete",
 			},
 		},
@@ -107,8 +107,8 @@ func TestDiffer(t *testing.T) {
 				policyNode("c2", "c1", v1.Namespace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c1/upsert",
-				"nomos.dev/v1/PolicyNodes/c2/upsert",
+				"nomos.dev/v1/PolicyNodes/c1/create",
+				"nomos.dev/v1/PolicyNodes/c2/create",
 			},
 		},
 		{
@@ -124,8 +124,8 @@ func TestDiffer(t *testing.T) {
 				policyNode("c1", "r", v1.Policyspace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c1/upsert",
-				"nomos.dev/v1/PolicyNodes/c2/upsert",
+				"nomos.dev/v1/PolicyNodes/c1/create",
+				"nomos.dev/v1/PolicyNodes/c2/create",
 				"nomos.dev/v1/PolicyNodes/co2/delete",
 				"nomos.dev/v1/PolicyNodes/co1/delete",
 			},
@@ -143,8 +143,8 @@ func TestDiffer(t *testing.T) {
 				policyNode("c3", "co2", v1.Namespace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c3/upsert",
-				"nomos.dev/v1/PolicyNodes/co2/upsert",
+				"nomos.dev/v1/PolicyNodes/c3/create",
+				"nomos.dev/v1/PolicyNodes/co2/update",
 				"nomos.dev/v1/PolicyNodes/co1/delete",
 			},
 		},
@@ -163,7 +163,7 @@ func TestDiffer(t *testing.T) {
 				policyNode("c3", "c2", v1.Namespace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c3/upsert",
+				"nomos.dev/v1/PolicyNodes/c3/update",
 			},
 		},
 		{
@@ -181,7 +181,7 @@ func TestDiffer(t *testing.T) {
 				policyNode("c3", "c2", v1.Namespace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c2/upsert",
+				"nomos.dev/v1/PolicyNodes/c2/update",
 			},
 		},
 		{
@@ -198,9 +198,9 @@ func TestDiffer(t *testing.T) {
 				policyNode("c3.1", "c3", v1.Namespace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c3/upsert",
-				"nomos.dev/v1/PolicyNodes/c3.1/upsert",
-				"nomos.dev/v1/PolicyNodes/c2/upsert",
+				"nomos.dev/v1/PolicyNodes/c3/create",
+				"nomos.dev/v1/PolicyNodes/c3.1/create",
+				"nomos.dev/v1/PolicyNodes/c2/update",
 				"nomos.dev/v1/PolicyNodes/c1/delete",
 			},
 		},
@@ -217,8 +217,8 @@ func TestDiffer(t *testing.T) {
 				policyNode("c1", "c2", v1.Namespace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c2/upsert",
-				"nomos.dev/v1/PolicyNodes/c1/upsert",
+				"nomos.dev/v1/PolicyNodes/c2/update",
+				"nomos.dev/v1/PolicyNodes/c1/update",
 			},
 		},
 		{
@@ -235,9 +235,9 @@ func TestDiffer(t *testing.T) {
 				policyNode("c3", "c1", v1.Namespace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c3/upsert",
-				"nomos.dev/v1/PolicyNodes/c2/upsert",
-				"nomos.dev/v1/PolicyNodes/c1/upsert",
+				"nomos.dev/v1/PolicyNodes/c3/create",
+				"nomos.dev/v1/PolicyNodes/c2/update",
+				"nomos.dev/v1/PolicyNodes/c1/update",
 			},
 		},
 		{
@@ -257,16 +257,16 @@ func TestDiffer(t *testing.T) {
 				policyNode("c1", "c2", v1.Namespace),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c4/upsert",
-				"nomos.dev/v1/PolicyNodes/c1/upsert",
-				"nomos.dev/v1/PolicyNodes/c3/upsert",
+				"nomos.dev/v1/PolicyNodes/c4/update",
+				"nomos.dev/v1/PolicyNodes/c1/update",
+				"nomos.dev/v1/PolicyNodes/c3/update",
 			},
 		},
 		{
 			testName:         "ClusterPolicy create",
 			newClusterPolicy: clusterPolicy("foo", true),
 			expected: []string{
-				"nomos.dev/v1/ClusterPolicies/foo/upsert",
+				"nomos.dev/v1/ClusterPolicies/foo/create",
 			},
 		},
 		{
@@ -274,7 +274,7 @@ func TestDiffer(t *testing.T) {
 			oldClusterPolicy: clusterPolicy("foo", true),
 			newClusterPolicy: clusterPolicy("foo", false),
 			expected: []string{
-				"nomos.dev/v1/ClusterPolicies/foo/upsert",
+				"nomos.dev/v1/ClusterPolicies/foo/update",
 			},
 		},
 		{
@@ -302,9 +302,9 @@ func TestDiffer(t *testing.T) {
 			},
 			newClusterPolicy: clusterPolicy("foo", true),
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c1/upsert",
-				"nomos.dev/v1/PolicyNodes/c2/upsert",
-				"nomos.dev/v1/ClusterPolicies/foo/upsert",
+				"nomos.dev/v1/PolicyNodes/c1/create",
+				"nomos.dev/v1/PolicyNodes/c2/create",
+				"nomos.dev/v1/ClusterPolicies/foo/create",
 			},
 		},
 	} {
@@ -357,6 +357,19 @@ func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.PolicyN
 	}
 	op := a.Operation()
 	switch op {
+	case action.CreateOperation:
+		r := a.(*action.ReflectiveCreateAction).Item()
+		pn := r.(*v1.PolicyNode)
+		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Parent, pn.Spec.Type)
+	case action.UpdateOperation:
+		upAct := a.(*action.ReflectiveUpdateAction)
+		old := nodes[upAct.Resource()]
+		r, err := upAct.UpdatedResource(&old)
+		if err != nil {
+			t.Fatalf("Failed to update resource: %v", err)
+		}
+		pn := r.(*v1.PolicyNode)
+		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Parent, pn.Spec.Type)
 	case action.UpsertOperation:
 		r := a.(*action.ReflectiveUpsertAction).UpsertedResouce()
 		pn := r.(*v1.PolicyNode)

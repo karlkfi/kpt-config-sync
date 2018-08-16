@@ -117,7 +117,7 @@ func init() {
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
 			},
 		},
 		{
@@ -127,7 +127,7 @@ func init() {
 				{Element: "ClusterPolicy", State: watcher.Change_EXISTS, Continued: false, Data: orgCPProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/upsert",
+				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/create",
 			},
 		},
 		{
@@ -138,8 +138,8 @@ func init() {
 				{Element: "ClusterPolicy", State: watcher.Change_EXISTS, Continued: false, Data: orgCPProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/create",
 			},
 		},
 		{
@@ -150,7 +150,7 @@ func init() {
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
 			},
 		},
 		{
@@ -175,9 +175,9 @@ func init() {
 				{Element: "projects/789/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
-				"nomos.dev/v1/PolicyNodes/backend/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/folder-456/create",
+				"nomos.dev/v1/PolicyNodes/backend/create",
 			},
 		},
 		{
@@ -192,8 +192,8 @@ func init() {
 				"organization-123": *orgPN,
 			}},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
-				"nomos.dev/v1/PolicyNodes/backend/upsert",
+				"nomos.dev/v1/PolicyNodes/folder-456/create",
+				"nomos.dev/v1/PolicyNodes/backend/create",
 			},
 		},
 		{
@@ -206,8 +206,8 @@ func init() {
 				{Element: "folders/456/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: folderPNProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/folder-456/create",
 			},
 		},
 		{
@@ -218,8 +218,8 @@ func init() {
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/folder-456/create",
 			},
 		},
 		{
@@ -271,9 +271,9 @@ func init() {
 				{Element: "projects/789/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
-				"nomos.dev/v1/PolicyNodes/backend/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/folder-456/create",
+				"nomos.dev/v1/PolicyNodes/backend/create",
 			},
 		},
 		{
@@ -286,8 +286,8 @@ func init() {
 				{Element: "folders/456/PolicyNode", State: watcher.Change_DOES_NOT_EXIST, Continued: false, Data: emptyProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/folder-456/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/delete",
 				"nomos.dev/v1/PolicyNodes/organization-123/delete",
 			},
@@ -302,8 +302,8 @@ func init() {
 				{Element: "folders/456/PolicyNode", State: watcher.Change_DOES_NOT_EXIST, Continued: false, Data: emptyProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/folder-456/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/delete",
 			},
 		},
@@ -330,7 +330,7 @@ func init() {
 				{Element: "ClusterPolicy", State: watcher.Change_DOES_NOT_EXIST, Continued: false, Data: emptyProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/upsert",
+				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/create",
 				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/delete",
 			},
 		},
@@ -350,9 +350,9 @@ func init() {
 				{Element: "folders/456/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: folderPNProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
-				"nomos.dev/v1/PolicyNodes/backend/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/folder-456/create",
+				"nomos.dev/v1/PolicyNodes/backend/create",
 			},
 		},
 		{
@@ -371,8 +371,8 @@ func init() {
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProtoUpdated},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/organization-123/update",
 			},
 		},
 		{
@@ -383,8 +383,8 @@ func init() {
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProtoUpdatedLabels},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/organization-123/update",
 			},
 		},
 		{
@@ -395,7 +395,7 @@ func init() {
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
 			},
 		},
 		{
@@ -407,8 +407,8 @@ func init() {
 				{Element: "folders/456/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: folderPNProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/folder-456/create",
 			},
 		},
 		{
@@ -420,9 +420,9 @@ func init() {
 				{Element: "projects/789/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: nsPNProto},
 			},
 			expectedActions: []string{
-				"nomos.dev/v1/PolicyNodes/organization-123/upsert",
-				"nomos.dev/v1/PolicyNodes/folder-456/upsert",
-				"nomos.dev/v1/PolicyNodes/backend/upsert",
+				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1/PolicyNodes/folder-456/create",
+				"nomos.dev/v1/PolicyNodes/backend/create",
 			},
 		},
 		{

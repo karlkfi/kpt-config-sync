@@ -81,9 +81,13 @@ func (d *Differ) policyNodeActions() []action.Interface {
 	})
 
 	var actions []action.Interface
-	for _, name := range append(creates, updates...) {
+	for _, name := range creates {
 		node := d.desired.PolicyNodes[name]
-		actions = append(actions, d.factories.PolicyNodeAction.NewUpsert(&node))
+		actions = append(actions, d.factories.PolicyNodeAction.NewCreate(&node))
+	}
+	for _, name := range updates {
+		node := d.desired.PolicyNodes[name]
+		actions = append(actions, d.factories.PolicyNodeAction.NewUpdate(&node))
 	}
 	for _, name := range deletes {
 		node := d.current.PolicyNodes[name]
@@ -98,11 +102,11 @@ func (d *Differ) clusterPolicyActions() []action.Interface {
 		return actions
 	}
 	if d.current.ClusterPolicy == nil {
-		actions = append(actions, d.factories.ClusterPolicyAction.NewUpsert(d.desired.ClusterPolicy))
+		actions = append(actions, d.factories.ClusterPolicyAction.NewCreate(d.desired.ClusterPolicy))
 	} else if d.desired.ClusterPolicy == nil {
 		actions = append(actions, d.factories.ClusterPolicyAction.NewDelete(d.current.ClusterPolicy.Name))
 	} else if !d.factories.ClusterPolicyAction.Equal(d.desired.ClusterPolicy, d.current.ClusterPolicy) {
-		actions = append(actions, d.factories.ClusterPolicyAction.NewUpsert(d.desired.ClusterPolicy))
+		actions = append(actions, d.factories.ClusterPolicyAction.NewUpdate(d.desired.ClusterPolicy))
 	}
 	return actions
 }

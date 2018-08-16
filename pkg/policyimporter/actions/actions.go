@@ -23,6 +23,7 @@ import (
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/policynode"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // Factories contains factories for creating actions on Nomos custom resources.
@@ -45,12 +46,25 @@ func newPolicyNodeActionFactory(client typed_v1.NomosV1Interface, lister listers
 	return policyNodeActionFactory{policynode.NewActionSpec(client, lister)}
 }
 
-// NewUpsert nodeCreates an action for upserting PolicyNodes.
-func (f policyNodeActionFactory) NewUpsert(policyNode *policyhierarchy_v1.PolicyNode) action.Interface {
-	return action.NewReflectiveUpsertAction("", policyNode.Name, policyNode, f.ReflectiveActionSpec)
+// NewCreate returns an action for creating PolicyNodes.
+func (f policyNodeActionFactory) NewCreate(policyNode *policyhierarchy_v1.PolicyNode) action.Interface {
+	return action.NewReflectiveCreateAction("", policyNode.Name, policyNode, f.ReflectiveActionSpec)
 }
 
-// NewDelete nodeCreates an action for deleting PolicyNodes.
+// NewUpdate returns an action for updating PolicyNodes. This action ignores the Status and
+// ResourceVersion of the new PolicyNode.
+func (f policyNodeActionFactory) NewUpdate(policyNode *policyhierarchy_v1.PolicyNode) action.Interface {
+	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
+		newPN := policyNode.DeepCopy()
+		oldPN := old.(*policyhierarchy_v1.PolicyNode)
+		newPN.ResourceVersion = oldPN.ResourceVersion
+		oldPN.Status.DeepCopyInto(&newPN.Status)
+		return newPN, nil
+	}
+	return action.NewReflectiveUpdateAction("", policyNode.Name, updatePolicy, f.ReflectiveActionSpec)
+}
+
+// NewDelete returns an action for deleting PolicyNodes.
 func (f policyNodeActionFactory) NewDelete(nodeName string) action.Interface {
 	return action.NewReflectiveDeleteAction("", nodeName, f.ReflectiveActionSpec)
 }
@@ -65,13 +79,25 @@ func newClusterPolicyActionFactory(
 	return clusterPolicyActionFactory{clusterpolicy.NewActionSpec(client, lister)}
 }
 
-// NewUpsert creates an action for upserting ClusterPolicies.
-func (f clusterPolicyActionFactory) NewUpsert(
-	clusterPolicy *policyhierarchy_v1.ClusterPolicy) action.Interface {
-	return action.NewReflectiveUpsertAction("", clusterPolicy.Name, clusterPolicy, f.ReflectiveActionSpec)
+// NewCreate returns an action for creating ClusterPolicies.
+func (f clusterPolicyActionFactory) NewCreate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) action.Interface {
+	return action.NewReflectiveCreateAction("", clusterPolicy.Name, clusterPolicy, f.ReflectiveActionSpec)
 }
 
-// NewDelete creates an action for upserting ClusterPolicies.
+// NewUpdate returns an action for updating ClusterPolicies. This action ignores the Status and
+// ResourceVersion of the new ClusterPolicy.
+func (f clusterPolicyActionFactory) NewUpdate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) action.Interface {
+	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
+		newCP := clusterPolicy.DeepCopy()
+		oldCP := old.(*policyhierarchy_v1.ClusterPolicy)
+		newCP.ResourceVersion = oldCP.ResourceVersion
+		oldCP.Status.DeepCopyInto(&newCP.Status)
+		return newCP, nil
+	}
+	return action.NewReflectiveUpdateAction("", clusterPolicy.Name, updatePolicy, f.ReflectiveActionSpec)
+}
+
+// NewDelete returns an action for deleting ClusterPolicies.
 func (f clusterPolicyActionFactory) NewDelete(
 	clusterPolicyName string) action.Interface {
 	return action.NewReflectiveDeleteAction("", clusterPolicyName, f.ReflectiveActionSpec)
