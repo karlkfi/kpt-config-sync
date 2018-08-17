@@ -1,7 +1,6 @@
 gcp:
   ORG_ID: 495131404417
   PRIVATE_KEY_FILENAME: $HOME/watcher_client_key.json
-  POLICY_API_ADDRESS: autopush-kubernetespolicy.sandbox.googleapis.com:443
 contexts:
   - CONTEXT
 user: USER
