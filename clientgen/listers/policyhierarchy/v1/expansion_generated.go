@@ -22,6 +22,10 @@ package v1
 // ClusterPolicyLister.
 type ClusterPolicyListerExpansion interface{}
 
+// NamespaceSelectorListerExpansion allows custom methods to be added to
+// NamespaceSelectorLister.
+type NamespaceSelectorListerExpansion interface{}
+
 // PolicyNodeListerExpansion allows custom methods to be added to
 // PolicyNodeLister.
 type PolicyNodeListerExpansion interface{}

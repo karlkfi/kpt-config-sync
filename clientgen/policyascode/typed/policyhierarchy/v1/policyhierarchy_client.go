@@ -26,6 +26,7 @@ import (
 type NomosV1Interface interface {
 	RESTClient() rest.Interface
 	ClusterPoliciesGetter
+	NamespaceSelectorsGetter
 	PolicyNodesGetter
 }
 
@@ -36,6 +37,10 @@ type NomosV1Client struct {
 
 func (c *NomosV1Client) ClusterPolicies() ClusterPolicyInterface {
 	return newClusterPolicies(c)
+}
+
+func (c *NomosV1Client) NamespaceSelectors() NamespaceSelectorInterface {
+	return newNamespaceSelectors(c)
 }
 
 func (c *NomosV1Client) PolicyNodes() PolicyNodeInterface {

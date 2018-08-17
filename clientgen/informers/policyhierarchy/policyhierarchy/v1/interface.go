@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// ClusterPolicies returns a ClusterPolicyInformer.
 	ClusterPolicies() ClusterPolicyInformer
+	// NamespaceSelectors returns a NamespaceSelectorInformer.
+	NamespaceSelectors() NamespaceSelectorInformer
 	// PolicyNodes returns a PolicyNodeInformer.
 	PolicyNodes() PolicyNodeInformer
 }
@@ -44,6 +46,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // ClusterPolicies returns a ClusterPolicyInformer.
 func (v *version) ClusterPolicies() ClusterPolicyInformer {
 	return &clusterPolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// NamespaceSelectors returns a NamespaceSelectorInformer.
+func (v *version) NamespaceSelectors() NamespaceSelectorInformer {
+	return &namespaceSelectorInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // PolicyNodes returns a PolicyNodeInformer.

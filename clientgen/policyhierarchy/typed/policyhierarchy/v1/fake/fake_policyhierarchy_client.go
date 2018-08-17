@@ -30,6 +30,10 @@ func (c *FakeNomosV1) ClusterPolicies() v1.ClusterPolicyInterface {
 	return &FakeClusterPolicies{c}
 }
 
+func (c *FakeNomosV1) NamespaceSelectors() v1.NamespaceSelectorInterface {
+	return &FakeNamespaceSelectors{c}
+}
+
 func (c *FakeNomosV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
 }

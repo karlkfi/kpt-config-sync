@@ -120,6 +120,32 @@ message ClusterPolicySyncError {
   optional string errorMessage = 4;
 }
 
+// NamespaceSelector specifies a LabelSelector applied to namespaces that exist within a
+// PolicyNode hierarchy.
+// 
+// +protobuf=true
+message NamespaceSelector {
+  // Standard object's metadata. The Name field of the policy node must match the namespace name.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Selects namespaces.
+  // This field is NOT optional and follows standard
+  // label selector semantics. An empty selector matches all namespaces.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 2;
+}
+
+// NamespaceSelectorList holds a list of NamespaceSelector resources.
+// +protobuf=true
+message NamespaceSelectorList {
+  // Standard object's metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is a list of policy nodes that apply.
+  repeated NamespaceSelector items = 2;
+}
+
 // PolicyNode is the top-level object for the policy node data definition.
 // 
 // It holds a policy defined for a single org unit (namespace).
