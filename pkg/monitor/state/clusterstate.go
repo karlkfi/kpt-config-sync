@@ -102,6 +102,10 @@ func (c *ClusterState) ProcessPolicyNode(ancestry hierarchy.Ancestry) error {
 
 	pn := ancestry.Node()
 	c.updateTimes(pn.Spec.ImportTime, pn.Status.SyncTime)
+
+	if !pn.Spec.Type.IsNamespace() {
+		return nil
+	}
 	newState := policyNodeState(ancestry)
 	c.recordLatency(pn.Name, newState, pn.Spec.ImportTime, pn.Status.SyncTime)
 

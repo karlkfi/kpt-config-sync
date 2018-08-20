@@ -42,8 +42,6 @@ func main() {
 	injectArgs := args.CreateInjectArgs(config)
 	runArgs := run.RunArguments{Stop: signals.SetupSignalHandler()}
 	controller := monitor.NewController(injectArgs)
-	if err := controller.Start(runArgs); err != nil {
-		panic(errors.Wrapf(err, "failed to initialize monitor controller"))
-	}
+	controller.Start(runArgs)
 	<-runArgs.Stop
 }
