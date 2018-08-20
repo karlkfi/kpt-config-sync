@@ -1,7 +1,0 @@
-apiVersion: "nomos.dev/v1"
-kind: PolicyNode
-metadata:
-  name: new-prj
-spec:
-  type: 1
-  parent: eng
