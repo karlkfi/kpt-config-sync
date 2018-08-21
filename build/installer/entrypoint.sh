@@ -50,6 +50,16 @@ else
    exit 1
 fi
 
+# Make sure the nomos-system k8s namespace exists before starting installation.
+kubectl apply -f - << EOF
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nomos-system
+  labels:
+    nomos.dev/system: "true"
+EOF
+
 # Set logging levels to high for specific modules only.
 readonly logging_options="--vmodule=main=5,configgen=3,kubectl=3,installer=3,exec=3"
 
