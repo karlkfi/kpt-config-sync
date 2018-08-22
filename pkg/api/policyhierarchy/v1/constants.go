@@ -73,3 +73,24 @@ const (
 	// ReservedNamespace indicates that the namespace's policies will not be managed by Nomos.
 	ReservedNamespace = PolicyNodeType("reservedNamespace")
 )
+
+// PolicySyncState represents the states that a policynode or clusterpolicy can be in with regards
+// to the source of truth.
+type PolicySyncState string
+
+const (
+	// StateUnknown indicates that the policy's state is undeclared or unknown.
+	StateUnknown = PolicySyncState("")
+
+	// StateSynced indicates that the policy is the same as the last known version from the source of
+	// truth.
+	StateSynced = PolicySyncState("synced")
+
+	// StateStale indicates that the policy is different than the last known version from the source
+	// of truth.
+	StateStale = PolicySyncState("stale")
+
+	// StateError indicates that there was an error updating the policy to match the last known
+	// version from the source of truth.
+	StateError = PolicySyncState("error")
+)

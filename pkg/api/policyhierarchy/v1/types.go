@@ -84,6 +84,10 @@ type ClusterPolicyStatus struct {
 	// SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
 	// +optional
 	SyncTime metav1.Time `json:"syncTime,omitempty" protobuf:"bytes,3,opt,name=syncTime"`
+
+	// SyncState is the current state of the policy resources (eg synced, stale, error).
+	// +optional
+	SyncState PolicySyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
 }
 
 // ClusterPolicySyncError represents a failed sync attempt for a ClusterPolicy.
@@ -178,9 +182,6 @@ type PolicyNodeSpec struct {
 // will never be populated for PolicySpaces since they are flattened down to child Namespaces.
 // +protobuf=true
 type PolicyNodeStatus struct {
-	// TODO(ekitson): Revisit SyncTokens once the Syncer and Reporter are interacting with it. We may
-	// want a list of structs instead of a map so we can preserve hierarchical ordering.
-
 	// SyncTokens is a map of policy name to token indicating the version of that policy that the
 	// Syncer last attempted to update from. There will always be one entry for the PolicyNode itself
 	// as well as one entry for each PolicyNode up its hierarchy.
@@ -195,6 +196,10 @@ type PolicyNodeStatus struct {
 	// SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
 	// +optional
 	SyncTime metav1.Time `json:"syncTime,omitempty" protobuf:"bytes,3,opt,name=syncTime"`
+
+	// SyncState is the current state of the policy resources (eg synced, stale, error).
+	// +optional
+	SyncState PolicySyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
 }
 
 // PolicyNodeSyncError represents a failed sync attempt for a PolicyNode.

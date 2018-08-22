@@ -98,6 +98,10 @@ message ClusterPolicyStatus {
   // SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time syncTime = 3;
+
+  // SyncState is the current state of the policy resources (eg synced, stale, error).
+  // +optional
+  optional string syncState = 4;
 }
 
 // ClusterPolicySyncError represents a failed sync attempt for a ClusterPolicy.
@@ -222,6 +226,10 @@ message PolicyNodeStatus {
   // SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time syncTime = 3;
+
+  // SyncState is the current state of the policy resources (eg synced, stale, error).
+  // +optional
+  optional string syncState = 4;
 }
 
 // PolicyNodeSyncError represents a failed sync attempt for a PolicyNode.
