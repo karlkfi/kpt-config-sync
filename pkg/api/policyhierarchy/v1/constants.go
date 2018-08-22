@@ -25,6 +25,10 @@ const NoParentNamespace = ""
 // name.
 const ParentLabelKey = "nomos.dev/parent-name"
 
+// NamespaceSelectorAnnotationKey is the annotation key set on policy resources that refers to
+// name of NamespaceSelector resource.
+const NamespaceSelectorAnnotationKey = "nomos.dev/namespace-selector"
+
 // ClusterPolicyName is the name of the singleton ClusterPolicy resource.
 const ClusterPolicyName = "nomos-cluster-policy"
 

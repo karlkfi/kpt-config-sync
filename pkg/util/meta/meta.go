@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/validation/path"
@@ -147,6 +148,9 @@ func (v *Validator) validateObject(namespace string, obj apiObject) error {
 func checkNomosPrefix(m map[string]string) error {
 	for k := range m {
 		if strings.HasPrefix(k, "nomos.dev/") {
+			if k == v1.NamespaceSelectorAnnotationKey {
+				continue
+			}
 			return errors.Errorf("key %s contains nomos.dev/ prefix", k)
 		}
 	}

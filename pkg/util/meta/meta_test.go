@@ -105,6 +105,14 @@ var metaValidationTestCases = []struct {
 		wantErr: false,
 	},
 	{
+		name: "valid nomos.dev annotation",
+		obj: newFakeAPIObject(metav1.ObjectMeta{
+			Labels:      map[string]string{},
+			Annotations: map[string]string{"nomos.dev/namespace-selector": "sre-supported"},
+		}),
+		wantErr: false,
+	},
+	{
 		name: "invalid label",
 		obj: newFakeAPIObject(metav1.ObjectMeta{
 			Labels:      map[string]string{"nomos.dev/property-xyz": "true"},
