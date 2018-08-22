@@ -1,0 +1,46 @@
+changecom(`<unused>')
+apiVersion: v1
+kind: Service
+metadata:
+  name: monitor
+  namespace: nomos-system
+  labels:
+    monitored: "true"
+spec:
+  selector:
+    app: monitor
+  ports:
+  - name: metrics
+    port: 8675
+    targetPort: metrics-port
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitor
+  namespace: nomos-system
+  labels:
+    app: monitor
+spec:
+  minReadySeconds: 1
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: monitor
+  template:
+    metadata:
+      labels:
+        app: monitor
+    spec:
+      serviceAccountName: monitor
+      containers:
+      - name: monitor
+        image: IMAGE_NAME
+        command: ["monitor"]
+        args:
+        - "--v=2"
+        ports:
+        - containerPort: 8675
+          name: metrics-port

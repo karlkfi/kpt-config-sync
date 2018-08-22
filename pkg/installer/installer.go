@@ -66,6 +66,7 @@ const (
 var (
 	// commonDeployments are the common deployments managed by installer.
 	commonDeployments = []string{
+		"monitor",
 		"policy-admission-controller",
 		"syncer",
 	}
