@@ -37,6 +37,7 @@ import (
 	rbac_v1 "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/clientcmd"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
 	"k8s.io/kubernetes/pkg/kubectl/validation"
@@ -44,27 +45,24 @@ import (
 
 // Parser reads files on disk and builds Nomos CRDs.
 type Parser struct {
-	factory   cmdutil.Factory
-	schema    validation.Schema
-	inCluster bool
+	factory cmdutil.Factory
+	schema  validation.Schema
 }
 
 // NewParser creates a new Parser.
-// inCluster boolean determines if this is running in a cluster and can talk to api server.
-func NewParser(inCluster bool) (*Parser, error) {
+// clientConfig can be used to configure api server client. It should be set to nil when running in cluster.
+// validate determines whether to validate schema using OpenAPI spec. To validate arbirary resources,
+// importer must be able to talk to the API server to download the spec.
+func NewParser(clientConfig clientcmd.ClientConfig, validate bool) (*Parser, error) {
 	p := Parser{
-		factory:   cmdutil.NewFactory(nil),
-		inCluster: inCluster,
+		factory: cmdutil.NewFactory(clientConfig),
 	}
 
-	// If running in cluster, validate objects using OpenAPI schema downloaded from the API server.
-	if inCluster {
-		schema, err := p.factory.Validator(true)
-		if err != nil {
-			return nil, errors.Wrap(err, "fail to get schema")
-		}
-		p.schema = schema
+	schema, err := p.factory.Validator(validate)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get schema")
 	}
+	p.schema = schema
 
 	return &p, nil
 }
@@ -89,13 +87,9 @@ func (p Parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
 	}
 	var fileInfos []*resource.Info
 	if len(visitors) > 0 {
-		builder := p.factory.NewBuilder().Internal()
-		if p.inCluster {
-			builder = builder.Schema(p.schema)
-		} else {
-			builder = builder.Local()
-		}
-		result := builder.
+		result := p.factory.NewBuilder().
+			Unstructured().
+			Schema(p.schema).
 			ContinueOnError().
 			FilenameParam(false, &resource.FilenameOptions{Recursive: true, Filenames: []string{root}}).
 			Do()

@@ -57,7 +57,7 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	parser, err := filesystem.NewParser(true)
+	parser, err := filesystem.NewParser(nil, true)
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %v", err)
 	}

@@ -863,7 +863,7 @@ func TestParser(t *testing.T) {
 				d.createTestFile(k, v)
 			}
 
-			p, err := NewParser(false)
+			p, err := NewParser(nil, false)
 			if err != nil {
 				t.Fatalf("Failed to create parser: %v", err)
 			}

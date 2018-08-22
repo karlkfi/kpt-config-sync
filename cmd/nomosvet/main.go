@@ -23,14 +23,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/pkg/errors"
 )
-
-func printErrAndDie(err error) {
-	fmt.Fprintln(os.Stderr, err)
-	os.Exit(1)
-}
 
 const usage = `Nomosvet is a tool for validating a policy directory tree.
 
@@ -48,6 +44,13 @@ Example:
 Options:
 
 `
+
+var validate = flag.Bool("validate", true, "If true, use a schema to validate the input")
+
+func printErrAndDie(err error) {
+	fmt.Fprintln(os.Stderr, err)
+	os.Exit(1)
+}
 
 func main() {
 	flag.Usage = func() {
@@ -67,7 +70,11 @@ func main() {
 		printErrAndDie(errors.Wrap(err, "Failed to get absolute path"))
 	}
 
-	p, err := filesystem.NewParser(false)
+	clientConfig, err := restconfig.NewClientConfig()
+	if err != nil {
+		printErrAndDie(errors.Wrap(err, "Failed to get kubectl config"))
+	}
+	p, err := filesystem.NewParser(clientConfig, *validate)
 	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Failed to create parser"))
 	}
