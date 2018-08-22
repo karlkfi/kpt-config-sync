@@ -29,3 +29,7 @@ type NamespaceSelectorListerExpansion interface{}
 // PolicyNodeListerExpansion allows custom methods to be added to
 // PolicyNodeLister.
 type PolicyNodeListerExpansion interface{}
+
+// SyncDeclarationListerExpansion allows custom methods to be added to
+// SyncDeclarationLister.
+type SyncDeclarationListerExpansion interface{}

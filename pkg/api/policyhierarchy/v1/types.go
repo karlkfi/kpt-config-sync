@@ -294,3 +294,67 @@ type NamespaceSelectorList struct {
 	// Items is a list of policy nodes that apply.
 	Items []NamespaceSelector `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// SyncDeclaration is used for configuring sync of generic resources.
+type SyncDeclaration struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// +optional
+	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Spec is the standard spec field.
+	Spec SyncDeclarationSpec `json:"spec"`
+
+	// Status is the status for the sync declaration.
+	Status SyncDeclarationStatus `json:"status"`
+}
+
+// SyncDeclarationSpec specifies the sync declaration which corresponds to an API Group and contained
+// kinds and versions.
+type SyncDeclarationSpec struct {
+	Group string              `json:"group"` // group, eg nomos.dev
+	Kinds SyncDeclarationKind `json:"kinds"`
+}
+
+// SyncDeclarationKind represents the spec for a Kind of object we are syncing.
+type SyncDeclarationKind struct {
+	// Kind is the string that represents the Kind for the object as given in TypeMeta.
+	Kind string `json:"kind,omitempty"`
+	// Versions indicates the versions that will be handled for the object of Group and Kind.
+	Versions []SyncDeclarationVersion `json:"versions,omitempty"`
+}
+
+// SyncDeclarationVersion corresponds to a single version in a (group, kind)
+type SyncDeclarationVersion struct {
+	// Version indicates the version used for the API Group, for example v1 or v1beta1.
+	Version string `json:"version"`
+
+	// CompareFields is a list of fields to compare against.  This will default to ["spec"] which should
+	// be sufficient for most obejcts, however, there are exceptions (RBAC) so these need to be declared.
+	CompareFields []string `json:"compareFields,omitempty"`
+}
+
+// SyncDeclarationStatus represents the status for a sync declaration
+type SyncDeclarationStatus struct {
+	Syncing bool   `json:"syncing,omitempty"` // Syncer should set this to true when it has begun using the sync decl
+	Error   string `json:"error,omitempty"`   // Any errors encountered for this declaration.
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// SyncDeclarationList holds a list of SyncDeclaration resources.
+type SyncDeclarationList struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
+
+	// Items is a list of sync declarations.
+	Items []SyncDeclaration `json:"items"`
+}

@@ -21,3 +21,5 @@ type ClusterPolicyExpansion interface{}
 type NamespaceSelectorExpansion interface{}
 
 type PolicyNodeExpansion interface{}
+
+type SyncDeclarationExpansion interface{}
