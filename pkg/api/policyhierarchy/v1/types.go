@@ -21,6 +21,7 @@ import (
 	extensions_v1beta1 "k8s.io/api/extensions/v1beta1"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // These comments must remain outside the package docstring.
@@ -67,6 +68,10 @@ type ClusterPolicySpec struct {
 	// ImportTime is the timestamp of when the ClusterPolicy was updated by the Importer.
 	// +optional
 	ImportTime metav1.Time `json:"importTime,omitempty" protobuf:"bytes,5,opt,name=importTime"`
+
+	// Resources contains namespace scoped resources that are synced to the API server.
+	// +optional
+	Resources []GenericResources `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
 }
 
 // ClusterPolicyStatus contains fields that define the status of a ClusterPolicy.
@@ -176,6 +181,10 @@ type PolicyNodeSpec struct {
 	// ImportTime is the timestamp of when the PolicyNode was updated by the Importer.
 	// +optional
 	ImportTime metav1.Time `json:"importTime,omitempty" protobuf:"bytes,7,opt,name=importTime"`
+
+	// Resources contains namespace scoped resources that are synced to the API server.
+	// +optional
+	Resources []GenericResources `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
 }
 
 // PolicyNodeStatus contains fields that define the status of a PolicyNode. The fields related to Syncer
@@ -240,6 +249,30 @@ type PolicyNodeList struct {
 
 	// Items is a list of policy nodes that apply.
 	Items []PolicyNode `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// GenericResources contains API objects of a specified Group and Kind.
+// +protobuf=true
+type GenericResources struct {
+	// Group is the Group for all resources contained within
+	// +optional
+	Group string `json:"group,omitempty" protobuf:"bytes,1,opt,name=group"`
+
+	// Kind is the Kind for all resoruces contained within.
+	Kind string `json:"kind" protobuf:"bytes,2,opt,name=kind"`
+
+	// Versions is a list Versions corresponding to the Version for this Group and Kind.
+	Versions []GenericVersionResources `json:"versions" protobuf:"bytes,3,opt,name=versions"` // Per version information.
+}
+
+// GenericVersionResources holds a set of resources of a single version for a Group and Kind.
+// +protobuf=true
+type GenericVersionResources struct {
+	// Version is the version of all objects in Objects.
+	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
+
+	// Objects is the list of objects of a single Group Version and Kind.
+	Objects []runtime.RawExtension `json:"objects" protobuf:"bytes,2,opt,name=object"`
 }
 
 // AllPolicies holds all PolicyNodes and the ClusterPolicy.

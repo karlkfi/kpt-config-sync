@@ -81,6 +81,10 @@ message ClusterPolicySpec {
   // ImportTime is the timestamp of when the ClusterPolicy was updated by the Importer.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time importTime = 5;
+
+  // Resources contains namespace scoped resources that are synced to the API server.
+  // +optional
+  repeated GenericResources resources = 8;
 }
 
 // ClusterPolicyStatus contains fields that define the status of a ClusterPolicy.
@@ -122,6 +126,30 @@ message ClusterPolicySyncError {
   // ErrorMessage contains the error returned from API server when trying to sync.
   // +optional
   optional string errorMessage = 4;
+}
+
+// GenericResources contains API objects of a specified Group and Kind.
+// +protobuf=true
+message GenericResources {
+  // Group is the Group for all resources contained within
+  // +optional
+  optional string group = 1;
+
+  // Kind is the Kind for all resoruces contained within.
+  optional string kind = 2;
+
+  // Versions is a list Versions corresponding to the Version for this Group and Kind.
+  repeated GenericVersionResources versions = 3;
+}
+
+// GenericVersionResources holds a set of resources of a single version for a Group and Kind.
+// +protobuf=true
+message GenericVersionResources {
+  // Version is the version of all objects in Objects.
+  optional string version = 1;
+
+  // Objects is the list of objects of a single Group Version and Kind.
+  repeated k8s.io.apimachinery.pkg.runtime.RawExtension object = 2;
 }
 
 // NamespaceSelector specifies a LabelSelector applied to namespaces that exist within a
@@ -214,6 +242,10 @@ message PolicyNodeSpec {
   // ImportTime is the timestamp of when the PolicyNode was updated by the Importer.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time importTime = 7;
+
+  // Resources contains namespace scoped resources that are synced to the API server.
+  // +optional
+  repeated GenericResources resources = 8;
 }
 
 // PolicyNodeStatus contains fields that define the status of a PolicyNode. The fields related to Syncer
