@@ -320,22 +320,27 @@ $ kubectl apply -f foo-corp --recursive --dry-run
 ### GKE Policy Managementvet
 
 `nomosvet` is tool that validates a root policyspace directory against the
-[constraints](#constraints) listed above.
+[constraints](#constraints) listed above as well as validating resources using
+their schema (Similar to `kubectl apply --dry-run`).
 
 To install nomosvet:
 
 ```console
-$ curl https://storage.googleapis.com/nomos-release/stable/nomosvet.sh -o nomosvet.sh
-$ chmod +x nomosvet.sh
+$ curl https://storage.googleapis.com/nomos-release/stable/linux_amd64/nomosvet -o nomosvet
+$ chmod u+x nomosvet
 ```
 
-The following commands assume that you placed `nomosvet.sh` in a directory
+You can replace `linux_amd64` in the URL with other supported platforms:
+* `darwin_amd64`
+* `windows_amd64`
+
+The following commands assume that you placed `nomosvet` in a directory
 mentioned in your `$PATH` environment variable.
 
 You can manually run nomosvet:
 
 ```console
-$ nomosvet.sh foo-corp
+$ nomosvet foo-corp
 ```
 
 You can also automatically run nomosvet as a git
@@ -343,7 +348,7 @@ You can also automatically run nomosvet as a git
 the root of the repo, run:
 
 ```console
-$ echo "nomosvet.sh foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
+$ echo "nomosvet foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
 ```
 
 You can also integrate this into your CI/CD setup, e.g. when using GitHub

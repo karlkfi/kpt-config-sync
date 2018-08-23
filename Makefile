@@ -197,13 +197,6 @@ $(SCRIPTS_STAGING_DIR)/run-installer.sh: \
 	@sed -i -e "s/XXX_INSTALLER_DEFAULT_VERSION/${VERSION}/g" $@
 	@chmod +x $@
 
-$(SCRIPTS_STAGING_DIR)/nomosvet.sh: \
-		$(OUTPUT_DIR) \
-		$(TOP_DIR)/scripts/nomosvet.sh
-	@echo "+++ Building nomosvet.sh"
-	@cp $(TOP_DIR)/scripts/nomosvet.sh $@
-	@sed -i -e "s/XXX_NOMOSVET_DEFAULT_VERSION/${VERSION}/g" $@
-
 # Compiles binaries for a specific platform (e.g. "linux-amd64").
 build-platform-%:
 	@echo "+++ Compiling Nomos binaries for $* platform"

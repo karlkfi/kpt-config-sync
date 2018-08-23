@@ -24,7 +24,6 @@ readonly exclude=(
   scripts/generate-watcher.sh
   scripts/init-git-server.sh
   scripts/lib/installer.sh
-  scripts/nomosvet.sh
   scripts/test-unit.sh
 )
 readonly exclude_bats=(
