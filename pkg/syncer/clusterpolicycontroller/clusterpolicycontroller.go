@@ -196,7 +196,7 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterP
 }
 
 func (s *ClusterPolicyController) setClusterPolicyStatus(cp *policyhierarchy_v1.ClusterPolicy, errs []policyhierarchy_v1.ClusterPolicySyncError) error {
-	if isSynced(cp) && len(errs) == 0 {
+	if cp.Status.SyncState.IsSynced() && len(errs) == 0 {
 		glog.Infof("Status for ClusterPolicy %s is already up-to-date.", cp.Name)
 		return nil
 	}
@@ -207,15 +207,16 @@ func (s *ClusterPolicyController) setClusterPolicyStatus(cp *policyhierarchy_v1.
 		newCP.Status.SyncToken = cp.Spec.ImportToken
 		newCP.Status.SyncTime = meta_v1.Now()
 		newCP.Status.SyncErrors = errs
+		if len(errs) > 0 {
+			newCP.Status.SyncState = policyhierarchy_v1.StateError
+		} else {
+			newCP.Status.SyncState = policyhierarchy_v1.StateSynced
+		}
 		return newCP, nil
 	}
 	ua := action.NewReflectiveUpdateAction(
 		"", cp.Name, updateCB, clusterpolicy.NewActionSpec(s.client, s.lister))
 	return ua.Execute()
-}
-
-func isSynced(cp *policyhierarchy_v1.ClusterPolicy) bool {
-	return cp.Spec.ImportToken == cp.Status.SyncToken && len(cp.Status.SyncErrors) == 0
 }
 
 func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.ClusterPolicySyncError {

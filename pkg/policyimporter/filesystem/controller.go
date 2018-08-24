@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/clientgen/informers/policyhierarchy"
 	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	policyhierarchyscheme "github.com/google/nomos/clientgen/policyhierarchy/scheme"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter"
@@ -137,10 +138,12 @@ func (c *Controller) pollDir() error {
 				pn := desiredPolicies.PolicyNodes[n]
 				pn.Spec.ImportToken = token
 				pn.Spec.ImportTime = time
+				pn.Status.SyncState = policyhierarchy_v1.StateStale
 				desiredPolicies.PolicyNodes[n] = pn
 			}
 			desiredPolicies.ClusterPolicy.Spec.ImportToken = token
 			desiredPolicies.ClusterPolicy.Spec.ImportTime = time
+			desiredPolicies.ClusterPolicy.Status.SyncState = policyhierarchy_v1.StateStale
 
 			// Calculate the sequence of actions needed to transition from current to desired state.
 			actions := c.differ.Diff(*currentPolicies, *desiredPolicies)

@@ -19,43 +19,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// SyncState enumerates the current status between a Nomos custom resource and its core resources.
-type SyncState string
-
-const (
-	stateUnknown SyncState = ""
-	stateSynced  SyncState = "synced"
-	stateStale   SyncState = "stale"
-	stateError   SyncState = "error"
-)
-
-func clusterPolicyState(cp *policyhierarchy_v1.ClusterPolicy) SyncState {
-	if len(cp.Status.SyncErrors) > 0 {
-		return stateError
-	}
-	if cp.Spec.ImportToken == cp.Status.SyncToken {
-		return stateSynced
-	}
-	return stateStale
-}
-
-func policyNodeState(ancestry hierarchy.Ancestry) SyncState {
-	pn := ancestry.Node()
-	if len(pn.Status.SyncErrors) > 0 {
-		return stateError
-	}
-	if cmp.Equal(pn.Status.SyncTokens, ancestry.TokenMap()) {
-		return stateSynced
-	}
-	return stateStale
-}
 
 // ClusterState maintains the status of imports and syncs at the cluster level and exports them as
 // Prometheus metrics.
@@ -63,12 +31,12 @@ type ClusterState struct {
 	mux        sync.Mutex
 	lastImport time.Time
 	lastSync   time.Time
-	syncStates map[string]SyncState
+	syncStates map[string]policyhierarchy_v1.PolicySyncState
 }
 
 func NewClusterState() *ClusterState {
 	return &ClusterState{
-		syncStates: map[string]SyncState{},
+		syncStates: map[string]policyhierarchy_v1.PolicySyncState{},
 	}
 }
 
@@ -86,10 +54,9 @@ func (c *ClusterState) ProcessClusterPolicy(cp *policyhierarchy_v1.ClusterPolicy
 	defer c.mux.Unlock()
 
 	c.updateTimes(cp.Spec.ImportTime, cp.Status.SyncTime)
-	newState := clusterPolicyState(cp)
-	c.recordLatency(cp.Name, newState, cp.Spec.ImportTime, cp.Status.SyncTime)
+	c.recordLatency(cp.Name, cp.Status.SyncState, cp.Spec.ImportTime, cp.Status.SyncTime)
 
-	if err := c.updateState(cp.Name, newState); err != nil {
+	if err := c.updateState(cp.Name, cp.Status.SyncState); err != nil {
 		return errors.Wrap(err, "while processing cluster policy state")
 	}
 	return nil
@@ -106,24 +73,23 @@ func (c *ClusterState) ProcessPolicyNode(ancestry hierarchy.Ancestry) error {
 	if !pn.Spec.Type.IsNamespace() {
 		return nil
 	}
-	newState := policyNodeState(ancestry)
-	c.recordLatency(pn.Name, newState, pn.Spec.ImportTime, pn.Status.SyncTime)
+	c.recordLatency(pn.Name, pn.Status.SyncState, pn.Spec.ImportTime, pn.Status.SyncTime)
 
-	if err := c.updateState(pn.Name, newState); err != nil {
+	if err := c.updateState(pn.Name, pn.Status.SyncState); err != nil {
 		return errors.Wrap(err, "while processing policy node state")
 	}
 	return nil
 }
 
-func (c *ClusterState) recordLatency(name string, newState SyncState, importTime, syncTime metav1.Time) {
+func (c *ClusterState) recordLatency(name string, newState policyhierarchy_v1.PolicySyncState, importTime, syncTime metav1.Time) {
 	oldState := c.syncStates[name]
-	if oldState == stateSynced || newState != stateSynced {
+	if oldState.IsSynced() || !newState.IsSynced() {
 		return
 	}
 	Metrics.SyncLatency.Observe(float64(syncTime.Unix() - importTime.Unix()))
 }
 
-func (c *ClusterState) updateState(name string, newState SyncState) error {
+func (c *ClusterState) updateState(name string, newState policyhierarchy_v1.PolicySyncState) error {
 	oldState := c.syncStates[name]
 	if oldState == newState {
 		return nil
@@ -134,7 +100,7 @@ func (c *ClusterState) updateState(name string, newState SyncState) error {
 	}
 	newMetric.Inc()
 
-	if oldState != stateUnknown {
+	if oldState != policyhierarchy_v1.StateUnknown {
 		oldMetric, err := Metrics.ClusterNodes.GetMetricWithLabelValues(string(oldState))
 		if err != nil {
 			return err

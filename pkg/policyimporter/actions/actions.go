@@ -51,14 +51,19 @@ func (f policyNodeActionFactory) NewCreate(policyNode *policyhierarchy_v1.Policy
 	return action.NewReflectiveCreateAction("", policyNode.Name, policyNode, f.ReflectiveActionSpec)
 }
 
-// NewUpdate returns an action for updating PolicyNodes. This action ignores the Status and
-// ResourceVersion of the new PolicyNode.
+// NewUpdate returns an action for updating PolicyNodes. This action ignores the ResourceVersion of
+// the new PolicyNode as well as most of the Status. If Status.SyncState has been set then that will
+// be copied over.
 func (f policyNodeActionFactory) NewUpdate(policyNode *policyhierarchy_v1.PolicyNode) action.Interface {
 	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
 		newPN := policyNode.DeepCopy()
 		oldPN := old.(*policyhierarchy_v1.PolicyNode)
 		newPN.ResourceVersion = oldPN.ResourceVersion
+		newSyncState := newPN.Status.SyncState
 		oldPN.Status.DeepCopyInto(&newPN.Status)
+		if !newSyncState.IsUnknown() {
+			newPN.Status.SyncState = newSyncState
+		}
 		return newPN, nil
 	}
 	return action.NewReflectiveUpdateAction("", policyNode.Name, updatePolicy, f.ReflectiveActionSpec)
@@ -84,14 +89,19 @@ func (f clusterPolicyActionFactory) NewCreate(clusterPolicy *policyhierarchy_v1.
 	return action.NewReflectiveCreateAction("", clusterPolicy.Name, clusterPolicy, f.ReflectiveActionSpec)
 }
 
-// NewUpdate returns an action for updating ClusterPolicies. This action ignores the Status and
-// ResourceVersion of the new ClusterPolicy.
+// NewUpdate returns an action for updating ClusterPolicies. This action ignores the ResourceVersion
+// of the new ClusterPolicy as well as most of the Status. If Status.SyncState has been set then
+// that will be copied over.
 func (f clusterPolicyActionFactory) NewUpdate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) action.Interface {
 	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
 		newCP := clusterPolicy.DeepCopy()
 		oldCP := old.(*policyhierarchy_v1.ClusterPolicy)
 		newCP.ResourceVersion = oldCP.ResourceVersion
+		newSyncState := newCP.Status.SyncState
 		oldCP.Status.DeepCopyInto(&newCP.Status)
+		if !newSyncState.IsUnknown() {
+			newCP.Status.SyncState = newSyncState
+		}
 		return newCP, nil
 	}
 	return action.NewReflectiveUpdateAction("", clusterPolicy.Name, updatePolicy, f.ReflectiveActionSpec)

@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/go-cmp/cmp"
 	policyhierarchy_lister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	typed_v1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
@@ -429,7 +428,7 @@ func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy
 }
 
 func (s *PolicyHieraryController) setPolicyNodeStatus(ancestry hierarchy.Ancestry, errs []policyhierarchy_v1.PolicyNodeSyncError) error {
-	if isSynced(ancestry) && len(errs) == 0 {
+	if ancestry.Node().Status.SyncState.IsSynced() && len(errs) == 0 {
 		glog.Infof("Status for PolicyNode %s is already up-to-date.", ancestry.Node().Name)
 		return nil
 	}
@@ -440,19 +439,16 @@ func (s *PolicyHieraryController) setPolicyNodeStatus(ancestry hierarchy.Ancestr
 		newPN.Status.SyncTokens = ancestry.TokenMap()
 		newPN.Status.SyncTime = meta_v1.Now()
 		newPN.Status.SyncErrors = errs
+		if len(errs) > 0 {
+			newPN.Status.SyncState = policyhierarchy_v1.StateError
+		} else {
+			newPN.Status.SyncState = policyhierarchy_v1.StateSynced
+		}
 		return newPN, nil
 	}
 	ua := action.NewReflectiveUpdateAction(
 		"", ancestry.Node().Name, updateCB, policynode.NewActionSpec(s.client, s.nodeLister))
 	return ua.Execute()
-}
-
-func isSynced(ancestry hierarchy.Ancestry) bool {
-	node := ancestry.Node()
-	if len(node.Status.SyncErrors) > 0 {
-		return false
-	}
-	return cmp.Equal(node.Status.SyncTokens, ancestry.TokenMap())
 }
 
 func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.PolicyNodeSyncError {

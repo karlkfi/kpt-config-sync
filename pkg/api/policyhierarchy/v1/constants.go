@@ -78,6 +78,16 @@ const (
 // to the source of truth.
 type PolicySyncState string
 
+// IsSynced returns true if the state indicates a policy that is synced to the source of truth.
+func (p PolicySyncState) IsSynced() bool {
+	return p == StateSynced
+}
+
+// IsUnknown returns true if the state is unknown or undeclared.
+func (p PolicySyncState) IsUnknown() bool {
+	return p == StateUnknown
+}
+
 const (
 	// StateUnknown indicates that the policy's state is undeclared or unknown.
 	StateUnknown = PolicySyncState("")
