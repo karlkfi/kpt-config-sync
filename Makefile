@@ -392,10 +392,19 @@ E2E_PARAMS := \
 test-e2e-all: clean e2e-image-all
 	$(MAKE) test-e2e-run-git \
 		$(E2E_PARAMS) \
-		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)"
+		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
+		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
 	$(MAKE) test-e2e-run-gcp \
 		$(E2E_PARAMS) \
-		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)"
+		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
+		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
+
+# Target intended for running the e2e tests with installation as a self-contained
+# setup using a custom identity file.
+ci-test-e2e: test-e2e-all
+	$(MAKE) $(E2E_PARAMS) \
+			E2E_FLAGS="--tap" \
+			test-e2e-all
 
 # Clean, build, and run e2e tests for a particular importer.
 # Clean cluster after running.

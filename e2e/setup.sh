@@ -168,7 +168,7 @@ function main() {
   local result_file=""
   local has_artifacts=false
   if [ -n "${ARTIFACTS+x}" ]; then
-    result_file="${ARTIFACTS}/result.bats"
+    result_file="${ARTIFACTS}/result_${importer}.bats"
     has_artifacts=true
   fi
 
@@ -192,7 +192,7 @@ function main() {
       tap2junit --name "${importer}_tests" "${result_file}"
       # Testgrid requires this particular file name, and tap2junit doesn't allow
       # renames. So...
-      mv "${result_file}".xml "${ARTIFACTS}/junit.xml"
+      mv "${result_file}".xml "${ARTIFACTS}/junit_${importer}.xml"
     fi
   else
     echo "No files to test!"
@@ -219,7 +219,7 @@ setup_prober_cred() {
   # were set with the service account activation above.
   # Needs cloud.containers.get permission.
   gcloud --quiet container clusters get-credentials \
-    prober-cluster-1 --zone us-central1-a --project stolos-dev
+    "${gcp_cluster_name}" --zone us-central1-a --project stolos-dev
 }
 
 echo "executed with args" "$@"
@@ -241,6 +241,10 @@ do_installation=true
 # of the test runner.  Otherwise defaults to whatever user is the current
 # default in gcloud and kubectl config.
 gcp_prober_cred=""
+
+# The name of the cluster to use for testing by default.    This is used to
+# obtain cluster credentials at start of the installation process.
+gcp_cluster_name="$USER-cluster-1"
 
 while [[ $# -gt 0 ]]; do
   arg=${1}
@@ -308,6 +312,10 @@ while [[ $# -gt 0 ]]; do
     ;;
     --gcp-prober-cred)
       gcp_prober_cred="${1}"
+      shift
+    ;;
+    --gcp-cluster-name)
+      gcp_cluster_name="${1}"
       shift
     ;;
     --skip-installation)
