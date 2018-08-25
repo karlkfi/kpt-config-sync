@@ -281,15 +281,6 @@ image-installer: installer-staging
      		--build-arg "INSTALLER_VERSION=$(IMAGE_TAG)" \
 		$(STAGING_DIR)/installer
 
-# Runs the installer via docker in interactive mode.
-install-interactive: deploy-interactive
-deploy-interactive: $(SCRIPTS_STAGING_DIR)/run-installer.sh image-installer
-	$(SCRIPTS_STAGING_DIR)/run-installer.sh \
-		--interactive \
-		--container=gcr.io/$(GCP_PROJECT)/installer \
-		--output_dir=$(INSTALLER_OUTPUT_DIR) \
-		--version=$(IMAGE_TAG)
-
 check-nomos-installer-config:
 	@echo "+++ Checking installer configuration"
 	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
