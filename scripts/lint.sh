@@ -65,6 +65,6 @@ fi
 echo "PASS"
 
 echo "Running licenselinter: "
-licenselinter -dir "$(pwd)"
+"${GOPATH}/bin/linux_amd64/licenselinter" -dir "$(pwd)"
 echo "PASS"
 echo

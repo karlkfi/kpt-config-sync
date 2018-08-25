@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright 2016 The Kubernetes Authors.
 #
@@ -20,24 +20,33 @@ if [ -z "${PKG}" ]; then
     echo "PKG must be set"
     exit 1
 fi
-if [ -z "${ARCH}" ]; then
-    echo "ARCH must be set"
-    exit 1
-fi
 if [ -z "${VERSION}" ]; then
     echo "VERSION must be set"
     exit 1
 fi
 
-export CGO_ENABLED=0
-export GOARCH="${ARCH}"
+# Platform format: $GOOS-$GOARCH (e.g. linux-amd64).
+if [ -z "${PLATFORM}" ]; then
+    echo "PLATFORM must be set"
+    exit 1
+fi
 
-go install                                                         \
+platform_split=(${PLATFORM//-/ })
+GOOS=${platform_split[0]}
+GOARCH=${platform_split[1]}
+
+env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go install             \
     -installsuffix "static"                                        \
     -ldflags "-X ${PKG}/pkg/version.VERSION=${VERSION}"            \
     ./...
 
+output_dir="${GOPATH}/bin/${GOOS}_${GOARCH}"
+mkdir -p $output_dir
+find "${GOPATH}/bin" -maxdepth 1 -type f -exec mv {} $output_dir \;
+
 # Use upx to reduce binary size.
 if [ "${BUILD_MODE}" = "release" ]; then
-  upx $GOPATH/bin/*
+  upx $output_dir/*
 fi
+
+

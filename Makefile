@@ -20,6 +20,10 @@
 
 TOP_DIR := $(shell pwd)
 
+# List of GOOS-GOARCH cross compilation targets
+# Corresponding host mounts for Go std packages should be set below.
+PLATFORMS ?= linux-amd64
+
 REPO := github.com/google/nomos
 
 # List of dirs containing go code owned by Nomos
@@ -64,9 +68,6 @@ TEST_TEMPLATES_DIR := $(TOP_DIR)/test/manifests/templates
 
 # Use git tags to set version string.
 VERSION := $(shell git describe --tags --always --dirty)
-
-# Which architecture to build.
-ARCH ?= amd64
 
 # UID of current user
 UID := $(shell id -u)
@@ -130,15 +131,15 @@ IMAGE_TAG ?= $(VERSION)-$(USER)-$(DATE)
 
 DOCKER_RUN_ARGS := \
 	$(DOCKER_INTERACTIVE)                                              \
-	-e ARCH=$(ARCH)                                                    \
 	-e VERSION=$(VERSION)                                              \
 	-e PKG=$(REPO)                                                     \
 	-e BUILD_MODE=$(BUILD_MODE)                                        \
 	-u $(UID):$(GID)                                                   \
 	-v $(GO_DIR):/go                                                   \
 	-v $$(pwd):/go/src/$(REPO)                                         \
-	-v $(BIN_DIR)/$(ARCH):/go/bin                                      \
-	-v $(GO_DIR)/std/$(ARCH):/usr/local/go/pkg/linux_$(ARCH)_static    \
+	-v $(GO_DIR)/std/linux_amd64_static:/usr/local/go/pkg/linux_amd64_static    \
+	-v $(GO_DIR)/std/darwin_amd64_static:/usr/local/go/pkg/darwin_amd64_static   \
+	-v $(GO_DIR)/std/windows_amd64_static:/usr/local/go/pkg/windows_amd64_static   \
 	-v $(TEMP_OUTPUT_DIR):/tmp                                         \
 	-w /go/src/$(REPO)                                                 \
 	--rm                                                               \
@@ -152,22 +153,26 @@ DOCKER_RUN_ARGS := \
 $(OUTPUT_DIR):
 	@echo "+++ Creating the local build output directory: $(OUTPUT_DIR)"
 	@mkdir -p \
-		$(BIN_DIR)/$(ARCH) \
-		$(DOCS_STAGING_DIR) \
-		$(GEN_YAML_DIR) \
+		$(BIN_DIR) \
 		$(GO_DIR)/pkg \
 		$(GO_DIR)/src/$(REPO) \
-		$(GO_DIR)/std/$(ARCH) \
+	    $(GO_DIR)/std/linux_amd64_static \
+	    $(GO_DIR)/std/darwin_amd64_static \
+	    $(GO_DIR)/std/windows_amd64_static \
 		$(INSTALLER_OUTPUT_DIR) \
-		$(SCRIPTS_STAGING_DIR) \
 		$(STAGING_DIR) \
+		$(SCRIPTS_STAGING_DIR) \
+		$(DOCS_STAGING_DIR) \
+		$(GEN_YAML_DIR) \
 		$(TEMP_OUTPUT_DIR) \
 		$(TEST_GEN_YAML_DIR)
 
 ##### TARGETS #####
-PULL_BUILDENV := \
-	docker image inspect $(BUILDENV_IMAGE) &> /dev/null \
+# Pulls the cached builenv docker image from gcrio.
+pull-buildenv:
+	@docker image inspect $(BUILDENV_IMAGE) &> /dev/null \
 	|| docker pull $(BUILDENV_IMAGE)
+
 build-buildenv: build/buildenv/Dockerfile
 	@echo "+++ Creating the buildenv docker container"
 	@docker build build/buildenv -t $(BUILDENV_IMAGE)
@@ -199,17 +204,20 @@ $(SCRIPTS_STAGING_DIR)/nomosvet.sh: \
 	@cp $(TOP_DIR)/scripts/nomosvet.sh $@
 	@sed -i -e "s/XXX_NOMOSVET_DEFAULT_VERSION/${VERSION}/g" $@
 
+# Compiles binaries for a specific platform (e.g. "linux-amd64").
+build-platform-%:
+	@echo "+++ Compiling Nomos binaries for $* platform"
+	@docker run -e PLATFORM=$* $(DOCKER_RUN_ARGS) ./scripts/build.sh
+
 .PHONY: build
-build: $(OUTPUT_DIR)
-	@echo "+++ Compiling Nomos binaries hermetically using a docker container"
-	@$(PULL_BUILDENV)
-	@docker run $(DOCKER_RUN_ARGS) ./scripts/build.sh
+build: $(OUTPUT_DIR) pull-buildenv $(addprefix build-platform-, $(PLATFORMS))
+	@echo "+++ Finished building"
 
 # Creates a docker image for the specified nomos component.
 image-nomos: build
 	@echo "+++ Building the Nomos image"
 	@cp -r $(TOP_DIR)/build/$(NOMOS_IMAGE) $(STAGING_DIR)
-	@cp $(BIN_DIR)/$(ARCH)/* $(STAGING_DIR)/$(NOMOS_IMAGE)
+	@cp $(BIN_DIR)/linux_amd64/* $(STAGING_DIR)/$(NOMOS_IMAGE)
 	@docker build $(DOCKER_BUILD_QUIET) \
 			-t gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG) $(STAGING_DIR)/$(NOMOS_IMAGE)
 
@@ -252,7 +260,7 @@ $(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml Make
 installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
 	@echo "+++ Creating staging directory for building installer docker image"
 	@cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
-	@cp $(BIN_DIR)/$(ARCH)/installer $(STAGING_DIR)/installer
+	@cp $(BIN_DIR)/linux_amd64/installer $(STAGING_DIR)/installer
 	@mkdir -p $(STAGING_DIR)/installer/yaml
 	@cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/installer/yaml
 	@mkdir -p $(STAGING_DIR)/installer/manifests
@@ -390,7 +398,7 @@ E2E_PARAMS := \
 
 # Clean, build, and run e2e tests for all importers.
 # Clean cluster after running.
-test-e2e-all: clean e2e-image-all
+test-e2e-all: e2e-image-all
 	$(MAKE) test-e2e-run-git \
 		$(E2E_PARAMS) \
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
@@ -413,7 +421,7 @@ ci-test-e2e:
 
 # Clean, build, and run e2e tests for a particular importer.
 # Clean cluster after running.
-test-e2e-%: clean e2e-image-all
+test-e2e-%: e2e-image-all
 	$(MAKE) test-e2e-run-$* \
 		$(E2E_PARAMS) \
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)"
@@ -437,9 +445,8 @@ clean:
 	@echo "+++ Cleaning $(OUTPUT_DIR)"
 	@rm -rf $(OUTPUT_DIR)
 
-test-unit: $(OUTPUT_DIR)
+test-unit: $(OUTPUT_DIR) pull-buildenv
 	@echo "+++ Running unit tests in a docker container"
-	@$(PULL_BUILDENV)
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/test-unit.sh $(NOMOS_GO_PKG)
 
 # Runs unit tests and linter.
