@@ -16,11 +16,6 @@ import (
 const (
 	defaultSyncWaitTimeoutSeconds = 15
 	defaultSyncBranch             = "master"
-	// homeOnHostEnv is the name of the environment variable defined in
-	// entrypoint.sh.template that contains the env variable storing the name
-	// of the $HOME directory of the user, on the host machine, not the
-	// container.
-	homeOnHostEnv = "HOME_ON_HOST"
 )
 
 // GitConfig contains the configs needed by GitPolicyImporter.
@@ -129,12 +124,7 @@ func NewDefaultConfig() Config {
 }
 
 func expandHome(text string) string {
-	text = strings.Replace(text, "$HOME", "/home/user", 1)
-	userHomeOnHost := os.Getenv(homeOnHostEnv)
-	if userHomeOnHost != "" {
-		text = strings.Replace(text, userHomeOnHost, "/home/user", 1)
-	}
-	return text
+	return strings.Replace(text, "$HOME", os.Getenv("HOME"), 1)
 }
 
 // ExpandVarsCopy makes a copy of c, expanding path variables like $HOME with

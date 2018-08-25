@@ -65,6 +65,7 @@ else
     "$TEMP_OUTPUT_DIR/config/.kube/config"
   EXTRA_ARGS+=(-e "HOME=${HOME}")
   EXTRA_ARGS+=(-v "${HOME}:${HOME}")
+  EXTRA_ARGS+=(-v "${HOME}:/home/user")
 fi
 
 

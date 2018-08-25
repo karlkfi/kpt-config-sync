@@ -11,11 +11,9 @@ function install() {
   if $do_installation; then
     echo "+++++ Installing..."
     (  # Linter says this is better than "cd -"
-      cd "${NOMOS_REPO}/.output/e2e"
+      cd "${NOMOS_REPO}/.output/e2e/installer"
       "${run_installer}" \
-        --config="$(basename "${install_config}")" \
-        --container "$CONTAINER" \
-        --version "$VERSION"
+        --config="${install_config}"
     )
   fi
 }
@@ -26,12 +24,10 @@ function uninstall() {
     # If we did the installation, then we should uninstall as well.
     echo "+++++ Uninstalling..."
     (
-      cd "${NOMOS_REPO}/.output/e2e"
+      cd "${NOMOS_REPO}/.output/e2e/installer"
       "${run_installer}" \
-        --config="$(basename "${install_config}")" \
-        --uninstall=deletedeletedelete \
-        --container "$CONTAINER" \
-        --version "$VERSION"
+        --config="${install_config}" \
+        --uninstall=deletedeletedelete
     )
   fi
 }
@@ -271,16 +267,6 @@ while [[ $# -gt 0 ]]; do
       run_tests=true
     ;;
 
-    --image_tag)
-      VERSION="${1}"
-      shift
-    ;;
-
-    --container)
-      CONTAINER="${1}"
-      shift
-    ;;
-
     --test_filter)
       test_filter="${1}"
       export E2E_TEST_FILTER="${test_filter}"
@@ -353,7 +339,7 @@ esac
 if $do_installation; then
   suggested_user="$(gcloud config get-value account)"
   kubectl_context="$(kubectl config current-context)"
-  run_installer="${TEST_DIR}/run-installer.sh"
+  run_installer="${TEST_DIR}/installer/install.sh"
   sed -e "s/CONTEXT/${kubectl_context}/" -e "s/USER/${suggested_user}/" \
     < "${install_config_template}" \
     > "${install_config}"

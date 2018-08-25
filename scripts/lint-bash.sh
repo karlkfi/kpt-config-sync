@@ -23,7 +23,6 @@ readonly exclude=(
   scripts/generate-resourcequota-admission-controller-certs.sh
   scripts/generate-watcher.sh
   scripts/init-git-server.sh
-  scripts/lib/installer.sh
   scripts/test-unit.sh
 )
 readonly exclude_bats=(
@@ -32,7 +31,6 @@ readonly exclude_bats=(
   e2e/testcases/cluster_resources.bats
   e2e/testcases/namespaces.bats
   e2e/gcp_testcases/basic.bats
-  scripts/lib/installer.bats
 )
 
 # mapfile reads stdin lines into array, -t trims newlines

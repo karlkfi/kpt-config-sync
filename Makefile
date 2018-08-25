@@ -179,24 +179,6 @@ build-buildenv: build/buildenv/Dockerfile
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
 	@docker push $(BUILDENV_IMAGE)
 
-# The installer script is built by preprocessing a template script.
-$(SCRIPTS_STAGING_DIR)/run-installer.sh: \
-		$(OUTPUT_DIR) \
-		$(TOP_DIR)/scripts/run-installer.sh.template \
-		$(TOP_DIR)/scripts/lib/installer.sh
-	@echo "+++ Building run-installer.sh"
-	@docker run -it --rm -e PROGRAM=argbash \
-	    -u $(UID):$(GID) \
-  		-v "$(TOP_DIR):/work" matejak/argbash \
-		/work/scripts/run-installer.sh.template \
-		--output=$(SCRIPTS_STAGING_DIR:$(TOP_DIR)%=/work%)/run-installer.sh.1
-	@cat \
-		$(TOP_DIR)/scripts/lib/installer.sh \
-		$(SCRIPTS_STAGING_DIR)/run-installer.sh.1 \
-		> $@
-	@sed -i -e "s/XXX_INSTALLER_DEFAULT_VERSION/${VERSION}/g" $@
-	@chmod +x $@
-
 # Compiles binaries for a specific platform (e.g. "linux-amd64").
 build-platform-%:
 	@echo "+++ Compiling Nomos binaries for $* platform"
@@ -251,16 +233,19 @@ $(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml Make
 			 $< > $@
 
 installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
-	@echo "+++ Creating staging directory for building installer docker image"
+	@echo "+++ Creating installer staging directory"
+	@( \
+			cd $(GO_DIR); \
+			rsync --relative --quiet \
+			      `find -name '*' -type f | grep installer` \
+			      $(STAGING_DIR)/installer/; \
+	)
 	@cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
-	@cp $(BIN_DIR)/linux_amd64/installer $(STAGING_DIR)/installer
 	@mkdir -p $(STAGING_DIR)/installer/yaml
 	@cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/installer/yaml
 	@mkdir -p $(STAGING_DIR)/installer/manifests
 	@cp $(TOP_DIR)/manifests/*.yaml $(STAGING_DIR)/installer/manifests
-	@mkdir -p $(STAGING_DIR)/installer/examples
-	@cp -r $(TOP_DIR)/build/installer/examples/* $(STAGING_DIR)/installer/examples
-	@cp $(TOP_DIR)/build/installer/entrypoint.sh $(STAGING_DIR)/installer
+	@cp $(TOP_DIR)/build/installer/install.sh $(STAGING_DIR)/installer
 	@mkdir -p $(STAGING_DIR)/installer/scripts
 	@cp $(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh \
 		$(STAGING_DIR)/installer/scripts
@@ -273,14 +258,6 @@ installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
 	@cp $(TOP_DIR)/scripts/generate-policy-admission-controller-certs.sh \
 		$(STAGING_DIR)/installer/scripts
 
-image-installer: installer-staging
-	@echo "+++ Building the installer docker image using the Nomos release in $(OUTPUT_DIR)"
-	@docker build $(DOCKER_BUILD_QUIET) \
-			-t gcr.io/$(GCP_PROJECT)/installer:test-e2e-latest \
-			-t gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
-     		--build-arg "INSTALLER_VERSION=$(IMAGE_TAG)" \
-		$(STAGING_DIR)/installer
-
 check-nomos-installer-config:
 	@echo "+++ Checking installer configuration"
 	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
@@ -288,34 +265,13 @@ check-nomos-installer-config:
 		exit 1; \
 	fi;
 
-# Runs the installer via docker in batch mode using the installer config
-# file specied in the environment variable NOMOS_INSTALLER_CONFIG.
-install: deploy
-deploy: check-nomos-installer-config \
-		$(SCRIPTS_STAGING_DIR)/run-installer.sh image-installer
-	@echo "+++ Running installer with output directory: $(INSTALLER_OUTPUT_DIR)"
-	@$(SCRIPTS_STAGING_DIR)/run-installer.sh \
-		--config=$(NOMOS_INSTALLER_CONFIG) \
-		--container=gcr.io/$(GCP_PROJECT)/installer \
-		--output_dir=$(INSTALLER_OUTPUT_DIR) \
-		--use_current_context=true \
-		--version=$(IMAGE_TAG)
-
-# Runs uninstallation via docker in batch mode using the installer config.
-uninstall: check-nomos-installer-config \
-		$(SCRIPTS_STAGING_DIR)/run-installer.sh image-installer
-	@echo "+++ Running installer with output directory: $(INSTALLER_OUTPUT_DIR)"
-	@$(SCRIPTS_STAGING_DIR)/run-installer.sh \
-		--config=$(NOMOS_INSTALLER_CONFIG) \
-		--container=gcr.io/$(GCP_PROJECT)/installer \
-		--output_dir=$(INSTALLER_OUTPUT_DIR) \
-		--use_current_context=true \
-		--uninstall=deletedeletedelete \
-		--version=$(IMAGE_TAG)
-
 # Note that it is basically a copy of the staging directory for the installer
 # plus a few extras for e2e.
-e2e-staging: $(TEST_GEN_YAML_DIR)/git-server.yaml $(SCRIPTS_STAGING_DIR)/run-installer.sh $(OUTPUT_DIR) $(wildcard $(TOP_DIR)/e2e/*)
+e2e-staging: \
+		$(OUTPUT_DIR) \
+		$(TEST_GEN_YAML_DIR)/git-server.yaml \
+		installer-staging \
+		$(wildcard $(TOP_DIR)/e2e/*)
 	@echo "+++ Creating staging directory for building e2e docker image"
 	@mkdir -p $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
 	@cp -r $(TOP_DIR)/build/e2e-tests/* $(STAGING_DIR)/e2e-tests
@@ -325,7 +281,7 @@ e2e-staging: $(TEST_GEN_YAML_DIR)/git-server.yaml $(SCRIPTS_STAGING_DIR)/run-ins
 	@cp $(HOME)/.ssh/id_rsa.nomos.pub $(OUTPUT_DIR)/e2e/id_rsa.nomos.pub
 	@cp $(TOP_DIR)/scripts/init-git-server.sh $(OUTPUT_DIR)/e2e/
 	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(OUTPUT_DIR)/e2e/
-	@cp $(SCRIPTS_STAGING_DIR)/run-installer.sh $(OUTPUT_DIR)/e2e/
+	@cp -r $(STAGING_DIR)/installer $(OUTPUT_DIR)/e2e/
 	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
 
 # Builds the e2e docker image and depencencies.
@@ -355,7 +311,7 @@ test-e2e-prober: image-e2e-prober scripts/run-prober.sh
 	@echo "+++ Running prober e2e test in a local docker container."
 	@./scripts/run-prober.sh
 
-e2e-image-all: image-e2e-tests image-installer
+e2e-image-all: image-e2e-tests installer-staging
 
 test-e2e-run-%:
 	@echo "+++ Running e2e tests: $*"
@@ -365,8 +321,6 @@ test-e2e-run-%:
 		--OUTPUT_DIR "$(OUTPUT_DIR)" \
 		$(TEST_E2E_RUN_FLAGS) \
 		-- \
-		--image_tag "$(IMAGE_TAG)" \
-		--container "gcr.io/$(GCP_PROJECT)/installer" \
 		--importer "$*" \
 		--gcp-watcher-cred "$(GCP_E2E_WATCHER_CRED)" \
 		--gcp-runner-cred "$(GCP_E2E_RUNNER_CRED)" \

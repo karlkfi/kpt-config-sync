@@ -11,7 +11,7 @@ import (
 )
 
 func TestRead(t *testing.T) {
-	os.Setenv(homeOnHostEnv, "/user/home/on/host")
+	os.Setenv("HOME", "/home/user")
 	tests := []struct {
 		name     string
 		input    string
@@ -115,36 +115,6 @@ contexts:
 			},
 		},
 		{
-			name: "git: $HOME_ON_HOST substitution",
-			input: `{
-		"contexts": [
-				"your_cluster"
-		],
-		"git": {
-				"GIT_SYNC_REPO": "git@github.com:repo/example.git",
-				"PRIVATE_KEY_FILENAME": "/user/home/on/host/privateKey",
-				"KNOWN_HOSTS_FILENAME": "/user/home/on/host/knownHosts",
-				"GIT_COOKIE_FILENAME": "/user/home/on/host/cookieFilename",
-				"GIT_SYNC_BRANCH": "test",
-				"GIT_SYNC_WAIT": 1,
-				"POLICY_DIR": "foo-corp"
-		},
-			}`,
-			expected: Config{
-				Contexts: []string{"your_cluster"},
-				Git: GitConfig{
-					UseSSH:             true,
-					PrivateKeyFilename: "/home/user/privateKey",
-					KnownHostsFilename: "/home/user/knownHosts",
-					CookieFilename:     "/home/user/cookieFilename",
-					SyncWaitSeconds:    1,
-					SyncBranch:         "test",
-					RootPolicyDir:      "foo-corp",
-					SyncRepo:           "git@github.com:repo/example.git",
-				},
-			},
-		},
-		{
 			name: "gcp",
 			input: `{
 		"contexts": [
@@ -186,30 +156,6 @@ contexts:
 					OrgID:              "1234",
 					PrivateKeyFilename: "/home/user/privateKey",
 					PolicyAPIAddress:   "localhost:1234",
-				},
-				Git: GitConfig{
-					UseSSH:          true,
-					SyncWaitSeconds: 15,
-					SyncBranch:      "master",
-				},
-			},
-		},
-		{
-			name: "gcp: $HOME_ON_HOST substitution",
-			input: `{
-		"contexts": [
-				"your_cluster"
-		],
-		"gcp": {
-				"ORG_ID": "1234",
-				"PRIVATE_KEY_FILENAME": "/user/home/on/host/privateKey",
-		},
-			}`,
-			expected: Config{
-				Contexts: []string{"your_cluster"},
-				GCP: GCPConfig{
-					OrgID:              "1234",
-					PrivateKeyFilename: "/home/user/privateKey",
 				},
 				Git: GitConfig{
 					UseSSH:          true,

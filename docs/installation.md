@@ -21,8 +21,10 @@ Currently the only tested environment for installation is Ubuntu 14.04 on amd64.
 Prerequisites:
 
 *   Installed `curl`: to download the installation script.
-*   Installed `docker`: to run the installation script.
 *   Installed `bash`: to run the installation script.
+*   Installed `gcloud`(optional): for auto-detecting advanced setting.
+*   Installed `kubectl`: for applying YAML files.
+*   Installed `openssl`: for generating component certificates.
 
 ### Kubernetes
 
@@ -74,15 +76,14 @@ and make sure to select version 1.9+ when creating the cluster.
 
 ## Installation
 
-Download the GKE Policy Management installer script to a directory on your
-machine.
+Download the GKE Policy Management installer to a directory on your machine.
 
 ```console
 $ cd
 $ mkdir -p tmp/nomos
 $ cd tmp/nomos
-$ curl https://storage.googleapis.com/nomos-release/stable/run-installer.sh -o run-installer.sh
-$ chmod +x run-installer.sh
+$ curl https://storage.googleapis.com/nomos-release/stable/installer.zip -o installer.zip
+$ unzip installer.zip
 ```
 
 Installation configuration is defined in a YAML file. When using Git, follow the
@@ -92,7 +93,8 @@ using GCP, follow the guide for [GCP Configuration](gcp_config.md) instead.
 Once you have created a config file, you can run the installer as follows:
 
 ```console
-$ ./run-installer.sh --config=/path/to/your/config.yaml
+$ cd installer
+$ ./install.sh --config=/path/to/your/config.yaml
 ```
 
 ## Verify installation

@@ -64,23 +64,24 @@ check-dirty:
 		exit 1; \
 	fi
 
+$(STAGING_DIR)/installer.zip: \
+		installer-staging \
+		$(wildcard $(STAGING_DIR)/installer/*)
+	@echo "+++ Building installer archive: $@"
+	@(cd .output/staging ; zip -r $@ installer)
+
 # Uploads the release artifacts to a versioned GCS release bucket. Also uploads
 # the artifacts to a GCS release bucket with version name "latest".
-release: clean \
-		$(SCRIPTS_STAGING_DIR)/run-installer.sh \
-		test-all \
-		push-to-gcr-installer \
+release: \
+		$(STAGING_DIR)/installer.zip \
 		docs-package
 	gsutil -m cp -R \
-		$(SCRIPTS_STAGING_DIR)/run-installer.sh \
+		$(STAGING_DIR)/installer.zip \
 		$(STAGING_DIR)/nomos-docs.zip  \
 	    $(BIN_DIR) \
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/$(VERSION)
 	@echo "+++ Marking release as 'latest'"
-	gcloud container images add-tag --quiet \
-		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
-		gcr.io/$(GCP_PROJECT)/installer:latest
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/nomos:latest
@@ -93,9 +94,6 @@ release: clean \
 # allowed.
 bless-release: check-dirty
 	@echo "+++ Marking release as 'stable'"
-	gcloud container images add-tag --quiet \
-		gcr.io/$(GCP_PROJECT)/installer:$(IMAGE_TAG) \
-		gcr.io/$(GCP_PROJECT)/installer:stable
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/nomos:stable
