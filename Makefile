@@ -241,12 +241,12 @@ gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_DEPLOYMENTS))
 # Generates the podspec yaml for the component specified.
 gen-yaml-%:
 	@echo "+++ Generating yaml $*"
-	@m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG) < \
+	@sed -e 's|IMAGE_NAME|gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG)|' < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
 $(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml Makefile $(OUTPUT_DIR)
 	@echo "+++ Generating yaml for git-server"
-	@m4 -DIMAGE_NAME=gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE) < \
+	@sed -e 's|IMAGE_NAME|gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE)|' < \
 			 $< > $@
 
 installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
@@ -371,6 +371,7 @@ test-e2e-run-%:
 	@e2e/e2e.sh \
 		--TEMP_OUTPUT_DIR "$(TEMP_OUTPUT_DIR)" \
 		--OUTPUT_DIR "$(OUTPUT_DIR)" \
+		$(TEST_E2E_RUN_FLAGS) \
 		-- \
 		--image_tag "$(IMAGE_TAG)" \
 		--container "gcr.io/$(GCP_PROJECT)/installer" \
@@ -401,10 +402,14 @@ test-e2e-all: clean e2e-image-all
 
 # Target intended for running the e2e tests with installation as a self-contained
 # setup using a custom identity file.
-ci-test-e2e: test-e2e-all
+ci-test-e2e:
 	$(MAKE) $(E2E_PARAMS) \
-			E2E_FLAGS="--tap" \
-			test-e2e-all
+      E2E_FLAGS="\
+        --tap \
+        --gcp-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
+			" \
+     TEST_E2E_RUN_FLAGS="--hermetic" \
+     test-e2e-all
 
 # Clean, build, and run e2e tests for a particular importer.
 # Clean cluster after running.
