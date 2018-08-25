@@ -306,19 +306,6 @@ spec:
 Before committing policy configuration in Git and pushing changes to Kubernetes
 clusters, it is important to validate them first.
 
-### Kubectl
-
-Since GKE Policy Management uses a filesystem tree of Kubernetes resources,
-`kubectl` can be used to validate resource schemas. The following command
-recursively validates all the resources in `foo-corp` directory without applying
-changes:
-
-```console
-$ kubectl apply -f foo-corp --recursive --dry-run
-```
-
-### GKE Policy Managementvet
-
 `nomosvet` is tool that validates a root policyspace directory against the
 [constraints](#constraints) listed above as well as validating resources using
 their schema (Similar to `kubectl apply --dry-run`).
@@ -331,8 +318,9 @@ $ chmod u+x nomosvet
 ```
 
 You can replace `linux_amd64` in the URL with other supported platforms:
-* `darwin_amd64`
-* `windows_amd64`
+
+*   `darwin_amd64`
+*   `windows_amd64`
 
 The following commands assume that you placed `nomosvet` in a directory
 mentioned in your `$PATH` environment variable.

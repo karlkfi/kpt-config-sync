@@ -20,6 +20,7 @@ centralized policy management. Currently, there is support for Git and Google
 Cloud Platform.
 
 ## First Steps
+
 Watch the [demo](https://storage.googleapis.com/nomos-release/demo.mp4).
 
 Try it out by following the [Quickstart Guide](docs/quickstart.md).

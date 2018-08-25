@@ -55,8 +55,8 @@ $ gcloud components update
 #### Whitelist your organization
 
 Your organization must also be whitelisted to use the API by filling out the
-[signup form][8] and getting approved. Customers who have not
-been whitelisted will receive a `permission denied` error during creation.
+[signup form][8] and getting approved. Customers who have not been whitelisted
+will receive a `permission denied` error during creation.
 
 ### Creation
 
@@ -181,4 +181,3 @@ In the alpha release, the following are not supported:
 [6]: https://cloud.google.com/resource-manager/docs/quickstart-organizations
 [7]: https://cloud.google.com/resource-manager/docs/how-to
 [8]: http://goog.page.link/kpm-alpha
-

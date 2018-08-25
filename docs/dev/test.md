@@ -20,8 +20,8 @@ make test-e2e-all
 ## E2E prober tests
 
 Prober tests verify the GCP functionality on a predefined test cluster, using
-the tests defined in your local repository, and a predefined prober GCP
-service account.
+the tests defined in your local repository, and a predefined prober GCP service
+account.
 
 ```console
 make test-e2e-prober
@@ -35,14 +35,14 @@ it gets deployed continuously.
 Deploying a new version of the prober, based on the code that is currently
 checked out in your git repo, you need this process.
 
-1. Build and push the image like this:
+1.  Build and push the image like this:
 
 ```console
 make push-to-gcr-e2e-prober
 ```
 
-2. Manually add the tag `test-e2e-latest` to the image you just built
-[in Pantheon][1].
+1.  Manually add the tag `test-e2e-latest` to the image you just built
+    [in Pantheon][1].
 
 The next scheduled run of the [nomos prober][2] will use the newly built image.
 
@@ -104,4 +104,3 @@ Name          | Value                                                           
 
 [1]: https://pantheon.corp.google.com/gcr/images/stolos-dev/GLOBAL/e2e-prober?project=stolos-dev&gcrImageListsize=50
 [2]: https://prow-gob.gcpnode.com/?job=nomos-prober
-
