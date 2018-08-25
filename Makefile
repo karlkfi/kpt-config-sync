@@ -347,16 +347,36 @@ test-e2e-all: e2e-image-all
 		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
 
 # Target intended for running the e2e tests with installation as a self-contained
-# setup using a custom identity file.
+# setup using a custom identity file.  The identity file is mounted in by the
+# test runner.
 ci-test-e2e:
 	$(MAKE) $(E2E_PARAMS) \
       E2E_FLAGS="\
         --tap \
-        --gcp-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
-			" \
-     TEST_E2E_RUN_FLAGS="--hermetic" \
+		--create-ssh-key \
+        --gcp-prober-cred /tmp/config/prober_runner_client_key.json \
+		$(E2E_FLAGS) \
+     " \
+     TEST_E2E_RUN_FLAGS="\
+	    --hermetic \
+	 " \
      test-e2e-all
 
+# Same target as above, except set up so that it can be ran from a local machine.
+# We must download the gcs prober credentials, as they will not be mounted in.
+ci-test-e2e-local:
+	$(MAKE) $(E2E_PARAMS) \
+      E2E_FLAGS="\
+        --tap \
+		--create-ssh-key \
+        --gcp-prober-cred /tmp/config/prober_runner_client_key.json \
+		$(E2E_FLAGS) \
+     " \
+     TEST_E2E_RUN_FLAGS="\
+	    --hermetic \
+		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json\
+	 " \
+     ci-test-e2e
 # Clean, build, and run e2e tests for a particular importer.
 # Clean cluster after running.
 test-e2e-%: e2e-image-all

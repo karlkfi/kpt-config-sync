@@ -10,6 +10,11 @@ set -euo pipefail
 # container that uses it.
 hermetic=false
 
+# If set, we will copy the prober creds into the container from gcs.  This is
+# useful in hermetic tests where one can not rely on the credentials being
+# mounted into the container.
+gcs_prober_cred=""
+
 EXTRA_ARGS=()
 while (( $# > 0 )); do
   arg=${1}
@@ -21,6 +26,10 @@ while (( $# > 0 )); do
     ;;
     --OUTPUT_DIR)
       OUTPUT_DIR="${1:-}"
+      shift
+    ;;
+    --gcs-prober-cred)
+      gcs_prober_cred="${1:-}"
       shift
     ;;
     --hermetic)
@@ -38,11 +47,33 @@ while (( $# > 0 )); do
   esac
 done
 
+if [[ "${gcs_prober_cred}" != "" ]]; then
+  echo "+++ Downloading GCS credentials: ${gcs_prober_cred}"
+  gsutil cp "${gcs_prober_cred}" "${TEMP_OUTPUT_DIR}/config/prober_runner_client_key.json"
+fi
+
 if "${hermetic}"; then
+  # In hermetic mode, the e2e tests do most of the setup required to connect to
+  # the test environment.
+  #
+  # gcloud and kubectl are configured based on the credentials provided by the
+  # test runner.   The credentials are either mounted into the container (if
+  # the test runner is based on Kubernetes), in which case they are expected in
+  # ${TEMP_OUTPUT_DIR}/config/... (see above), or downloaded from GCS using the
+  # credentials of the user that is running this wrapper using the flag
+  # --gcs-prober-cred if the test runner is based off of local file content.
   echo "+++ Executing e2e tests in hermetic mode."
 
+  rm -rf "${TEMP_OUTPUT_DIR}/user"
+  mkdir -p "${TEMP_OUTPUT_DIR}/user"
+
   # Place the user's home in a writable directory.
-  EXTRA_ARGS+=(-e "HOME=/tmp/home/user")
+  EXTRA_ARGS+=(-e "HOME=/tmp/user")
+
+  # Make the currently checked out directory available.
+  EXTRA_ARGS+=(-e "NOMOS_REPO=/tmp/nomos")
+  EXTRA_ARGS+=(-v "$(pwd):/tmp/nomos")
+
 else
   # Copy the gcloud and kubectl configuration into a separate directory then
   # update the gcloud auth provider path to point to the gcloud in the e2e image
@@ -66,6 +97,7 @@ else
   EXTRA_ARGS+=(-e "HOME=${HOME}")
   EXTRA_ARGS+=(-v "${HOME}:${HOME}")
   EXTRA_ARGS+=(-v "${HOME}:/home/user")
+  EXTRA_ARGS+=(-e "NOMOS_REPO=$(pwd)")
 fi
 
 

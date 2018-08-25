@@ -6,6 +6,8 @@ readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 readonly FWD_SSH_PORT=2222
 
+NOMOS_REPO="${NOMOS_REPO:-.}"
+
 # Runs the installer process to set up the cluster under test.
 function install() {
   if $do_installation; then
@@ -13,7 +15,8 @@ function install() {
     (  # Linter says this is better than "cd -"
       cd "${NOMOS_REPO}/.output/e2e/installer"
       "${run_installer}" \
-        --config="${install_config}"
+        --config="${install_config}" \
+        --work_dir="${PWD}"
     )
   fi
 }
@@ -27,6 +30,7 @@ function uninstall() {
       cd "${NOMOS_REPO}/.output/e2e/installer"
       "${run_installer}" \
         --config="${install_config}" \
+        --work_dir="${PWD}" \
         --uninstall=deletedeletedelete
     )
   fi
@@ -206,6 +210,7 @@ function main() {
 #   $1: File path to the JSON file containing service account credentials.
 #   #2: Optional, GCS file that we want to download the configuration from.
 setup_prober_cred() {
+  echo "+++ Setting up prober credentials"
   local cred_file="$1"
 
   # Makes the service account from ${_cred_file} the active account that drives
@@ -217,6 +222,18 @@ setup_prober_cred() {
   # Needs cloud.containers.get permission.
   gcloud --quiet container clusters get-credentials \
     "${gcp_cluster_name}" --zone us-central1-a --project stolos-dev
+}
+
+# Creates a public-private ssh key pair.
+create_keypair() {
+  mkdir -p "$HOME/.ssh"
+  # Skipping confirmation in keygen returns nonzero code even if it was a
+  # success.
+  (yes | ssh-keygen \
+        -t rsa -b 4096 \
+        -C "your_email@example.com" \
+        -N '' -f "/opt/testing/e2e/id_rsa.nomos") || echo "Key created here."
+  ln -s "/opt/testing/e2e/id_rsa.nomos" "${HOME}/.ssh/id_rsa.nomos"
 }
 
 echo "e2e/setup.sh: executed with args" "$@"
@@ -242,6 +259,9 @@ gcp_prober_cred=""
 # The name of the cluster to use for testing by default.    This is used to
 # obtain cluster credentials at start of the installation process.
 gcp_cluster_name="$USER-cluster-1"
+
+# If set, the setup will create a new ssh key to use in the tests.
+create_ssh_key=false
 
 while [[ $# -gt 0 ]]; do
   arg=${1}
@@ -308,6 +328,9 @@ while [[ $# -gt 0 ]]; do
     --skip-installation)
       do_installation=false
     ;;
+    --create-ssh-key)
+      create_ssh_key=true
+    ;;
     *)
       echo "setup.sh: unrecognized arg $arg"
       exit 1
@@ -317,6 +340,10 @@ done
 
 if [[ "${gcp_prober_cred}" != "" ]]; then
   setup_prober_cred "${gcp_prober_cred}"
+fi
+
+if ${create_ssh_key}; then
+  create_keypair
 fi
 
 install_config="${TEST_DIR}/install-config.yaml"
