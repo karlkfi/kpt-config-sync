@@ -112,7 +112,8 @@ anagement installation to access the sample git repository. The file
 file.
 
 Now, [test](https://help.github.com/articles/testing-your-ssh-connection/) your
-SSH connection to github using the key you just generated.
+SSH connection to github using the key you just generated and populate known
+hosts file:
 
 ```console
 $ ssh -o IdentityAgent=/dev/null -F /dev/null -i $HOME/.ssh/id_rsa.nomos -T git@github.com

@@ -10,13 +10,7 @@ This setup takes about 30 minutes.
 
 ### Installation environments
 
-The installation environments are sessions on a computer that you will run the
-installation from. Any environments not mentioned here explicitly are untested,
-so we can not make guarantees about them.
-
-#### Linux
-
-Currently the only tested environment for installation is Ubuntu 14.04 on amd64.
+Currently, there is support for Linux and Mac on amd64 architecture.
 
 Prerequisites:
 
@@ -82,7 +76,7 @@ Download the GKE Policy Management installer to a directory on your machine.
 $ cd
 $ mkdir -p tmp/nomos
 $ cd tmp/nomos
-$ curl https://storage.googleapis.com/nomos-release/stable/installer.zip -o installer.zip
+$ curl -LO https://storage.googleapis.com/nomos-release/stable/installer.zip
 $ unzip installer.zip
 ```
 
@@ -126,7 +120,7 @@ To uninstall GKE Policy Management from a set of clusters, you need the
 Executing the following command will uninstall GKE Policy Management components.
 
 ```console
-./run-installer.sh --config=/path/to/your/config.yaml --uninstall=deletedeletedelete
+$ ./install.sh --config=/path/to/your/config.yaml --uninstall=deletedeletedelete
 
 ```
 
@@ -147,7 +141,7 @@ reinstall GKE Policy Management. To run the reinstall use the batch installation
 mode with your existing configuration:
 
 ```console
-$ ./run-installer.sh --config=/path/to/your/config.yaml
+$ ./install.sh --config=/path/to/your/config.yaml
 ```
 
 The effect of the reinstallation is to run the equivalent of `kubectl apply` to

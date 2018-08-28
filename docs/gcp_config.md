@@ -46,14 +46,14 @@ A sample script that creates a service account named `policy-viewer-sa` in
 project `my-sa-project` is provided below:
 
 ```console
-gcloud iam service-accounts create policy-viewer-sa \
+$ gcloud iam service-accounts create policy-viewer-sa \
     --display-name "GKE Policy Retriever Account" --project my-sa-project
 
-gcloud organizations add-iam-policy-binding 515925372711 \
+$ gcloud organizations add-iam-policy-binding 515925372711 \
     --member serviceAccount:policy-viewer-sa@my-sa-project.iam.gserviceaccount.com \
     --role roles/kubernetespolicy.policyViewer
 
-gcloud iam service-accounts keys create ~/private_key.json \
+$ gcloud iam service-accounts keys create ~/private_key.json \
     --iam-account policy-viewer-sa@my-sa-project.iam.gserviceaccount.com
 ```
 

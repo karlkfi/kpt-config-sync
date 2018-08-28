@@ -64,7 +64,8 @@ openssl req -x509 -new -nodes -key ca.key -days 100000 \
   -out ca.crt -subj "/CN=${domain_name}_ca"
 
 # Create a server certificate
-readonly tempfile=$(mktemp --tmpdir=${PWD} gencerts-server-cert-XXXXXX.conf)
+TMPDIR=${PWD}
+readonly tempfile=$(mktemp gencerts-server-cert-XXXXXX.conf)
 echo "Using config file: ${tempfile}"
 cat >"${tempfile}" <<EOF
 [req]

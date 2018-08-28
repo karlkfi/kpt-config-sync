@@ -313,7 +313,7 @@ their schema (Similar to `kubectl apply --dry-run`).
 To install nomosvet:
 
 ```console
-$ curl https://storage.googleapis.com/nomos-release/stable/linux_amd64/nomosvet -o nomosvet
+$ curl -LO https://storage.googleapis.com/nomos-release/stable/linux_amd64/nomosvet
 $ chmod u+x nomosvet
 ```
 
