@@ -214,6 +214,8 @@ build-git-server:
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-%: image-%
 	@echo "+++ Pushing $* to gcr.io"
+	@echo "+++ Using account:"
+	gcloud config get-value account
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
 	@docker push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
 
