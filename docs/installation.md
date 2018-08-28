@@ -73,9 +73,6 @@ and make sure to select version 1.9+ when creating the cluster.
 Download the GKE Policy Management installer to a directory on your machine.
 
 ```console
-$ cd
-$ mkdir -p tmp/nomos
-$ cd tmp/nomos
 $ curl -LO https://storage.googleapis.com/nomos-release/stable/installer.zip
 $ unzip installer.zip
 ```
