@@ -55,6 +55,7 @@ INSTALLER_ARGS=(
   --log_dir=/tmp
   --suggested_user="${suggested_user}"
   --vmodule=main=5,configgen=3,kubectl=3,installer=3,exec=3
+  --work_dir="${PWD}"
 )
 ./bin/"${dir}"/installer "${INSTALLER_ARGS[@]}" "$@"
 
