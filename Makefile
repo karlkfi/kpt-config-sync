@@ -291,7 +291,9 @@ e2e-staging: \
 # Builds the e2e docker image and depencencies.
 # Note that the GCP project is hardcoded since we currently don't want
 # or need a nomos-release version of the e2e-tests image.
-image-e2e-tests: e2e-staging
+image-e2e-tests: e2e-staging \
+		build/e2e-tests/Dockerfile \
+		build/e2e-tests/build.sh
 	@echo "+++ Building the e2e docker image"
 	@build/e2e-tests/build.sh \
 		-t gcr.io/stolos-dev/e2e-tests:$(IMAGE_TAG) \
@@ -353,6 +355,10 @@ test-e2e-all: e2e-image-all
 # Target intended for running the e2e tests with installation as a self-contained
 # setup using a custom identity file.  The identity file is mounted in by the
 # test runner.
+#
+# Environment:
+#   E2E_FLAGS: flag passed into the test container
+#   TEST_E2E_RUN_FLAGS: flags passed to the e2e/e2e.sh script.
 ci-test-e2e:
 	$(MAKE) $(E2E_PARAMS) \
       E2E_FLAGS="\
@@ -371,14 +377,7 @@ ci-test-e2e:
 # We must download the gcs prober credentials, as they will not be mounted in.
 ci-test-e2e-local:
 	$(MAKE) $(E2E_PARAMS) \
-      E2E_FLAGS="\
-        --tap \
-		--create-ssh-key \
-        --gcp-prober-cred /tmp/config/prober_runner_client_key.json \
-		$(E2E_FLAGS) \
-     " \
      TEST_E2E_RUN_FLAGS="\
-	    --hermetic \
 		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json\
 	 " \
      ci-test-e2e

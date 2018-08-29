@@ -100,16 +100,19 @@ else
   EXTRA_ARGS+=(-e "NOMOS_REPO=$(pwd)")
 fi
 
+DOCKER_FLAGS=("--interactive")
+if [ -t 0 ]; then
+  echo "+++ Docker will use a terminal."
+  DOCKER_FLAGS+=("--tty")
+fi
 
-DOCKER_CMD=(
-  docker run -it
+DOCKER_FLAGS+=(
     -u "$(id -u):$(id -g)"
     -v "${TEMP_OUTPUT_DIR}:/tmp"
     -v "${OUTPUT_DIR}/e2e":/opt/testing/e2e
     -e "NOMOS_REPO=$(pwd)"
     "${EXTRA_ARGS[@]}"
     "gcr.io/stolos-dev/e2e-tests:test-e2e-latest"
-    "$@"
 )
 
-"${DOCKER_CMD[@]}"
+docker run "${DOCKER_FLAGS[@]}" "$@"

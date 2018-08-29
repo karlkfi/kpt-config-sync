@@ -38,29 +38,20 @@ RUN apt-get update \
   python \
   software-properties-common
 
-# Set up user (this has to go before docker installation so the GID can match host system)
-# This does the following:
-#   Creates group docker with same GID as host system
-#   Creates user with same UID as host system in docker and primarygroup group
 ARG UNAME
 ARG UID
 ARG GID
-ARG DOCKER_GID
+
+# The existence of a valid UID, GID and UNAME (USER) is required for programs
+# that expect a "regular" unix environment, for example 'git'.
+RUN bash -c 'UID=${UID}; GID=${GID}; UNAME=${UNAME}'
+RUN groupadd -or -g $GID grp && useradd -u $UID -G $GID $UNAME
 
 # Install kubectl 1.11
 RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
   && echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list \
   && apt-get update \
   && apt-get install -y kubectl=1.11.1-00
-
-# Install docker as per docker website instructions.
-RUN bash -c 'echo "DOCKER_GID=${DOCKER_GID}; UID=${UID}; GID=${GID}; UNAME=${UNAME}"'
-#RUN groupadd -or -g $DOCKER_GID docker \
-  #&& useradd -u $UID -G $DOCKER_GID $UNAME \
-  #&& curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
-  #&& add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable" \
-  #&& apt-get update \
-  #&& apt-get install -y docker-ce
 
 # Copy installed gcloud into image
 COPY --from=gcloud-install /opt/gcloud/google-cloud-sdk /opt/gcloud/google-cloud-sdk
