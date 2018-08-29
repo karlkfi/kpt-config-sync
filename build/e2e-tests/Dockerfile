@@ -44,7 +44,7 @@ ARG GID
 
 # The existence of a valid UID, GID and UNAME (USER) is required for programs
 # that expect a "regular" unix environment, for example 'git'.
-RUN bash -c 'UID=${UID}; GID=${GID}; UNAME=${UNAME}'
+RUN bash -c 'echo UID=${UID}; GID=${GID}; UNAME=${UNAME}'
 RUN groupadd -or -g $GID grp && useradd -u $UID -G $GID $UNAME
 
 # Install kubectl 1.11
