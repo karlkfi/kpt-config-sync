@@ -45,7 +45,12 @@ ARG GID
 # The existence of a valid UID, GID and UNAME (USER) is required for programs
 # that expect a "regular" unix environment, for example 'git'.
 RUN bash -c 'echo UID=${UID}; GID=${GID}; UNAME=${UNAME}'
-RUN groupadd -or -g $GID grp && useradd -u $UID -G $GID $UNAME
+
+# This is needed to get build going on any environment with a nonprivileged
+# user.  Turns out that on go/prow, the build is ran as root, so no need for
+# any such setup.  Hence is done conditionally.
+RUN bash -c '[ $GID == 0 ] || groupadd -or -g $GID grp '
+RUN bash -c '[ $UID == 0 ] || useradd -u $UID -G $GID $UNAME'
 
 # Install kubectl 1.11
 RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
