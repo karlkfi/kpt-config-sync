@@ -73,6 +73,8 @@ $(STAGING_DIR)/installer.zip: \
 # Uploads the release artifacts to a versioned GCS release bucket. Also uploads
 # the artifacts to a GCS release bucket with version name "latest".
 release: \
+		clean \
+		test-all \
 		$(STAGING_DIR)/installer.zip \
 		docs-package
 	gsutil -m cp -R \
