@@ -133,10 +133,9 @@ message NamespaceSelector {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
-  // Selects namespaces.
-  // This field is NOT optional and follows standard
-  // label selector semantics. An empty selector matches all namespaces.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 2;
+  // The actual object definition, per K8S object definition style.
+  // +optional
+  optional NamespaceSelectorSpec spec = 2;
 }
 
 // NamespaceSelectorList holds a list of NamespaceSelector resources.
@@ -148,6 +147,15 @@ message NamespaceSelectorList {
 
   // Items is a list of policy nodes that apply.
   repeated NamespaceSelector items = 2;
+}
+
+// NamespaceSelectorSpec contains spec fields for NamespaceSelector.
+// +protobuf=true
+message NamespaceSelectorSpec {
+  // Selects namespaces.
+  // This field is NOT optional and follows standard
+  // label selector semantics. An empty selector matches all namespaces.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 1;
 }
 
 // PolicyNode is the top-level object for the policy node data definition.

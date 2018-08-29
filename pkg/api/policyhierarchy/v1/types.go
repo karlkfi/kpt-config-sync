@@ -266,11 +266,18 @@ type NamespaceSelector struct {
 	// Standard object's metadata. The Name field of the policy node must match the namespace name.
 	// +optional
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+	// The actual object definition, per K8S object definition style.
+	// +optional
+	Spec NamespaceSelectorSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+}
 
+// NamespaceSelectorSpec contains spec fields for NamespaceSelector.
+// +protobuf=true
+type NamespaceSelectorSpec struct {
 	// Selects namespaces.
 	// This field is NOT optional and follows standard
 	// label selector semantics. An empty selector matches all namespaces.
-	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
+	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,1,opt,name=selector"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
