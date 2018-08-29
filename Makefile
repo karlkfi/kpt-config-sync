@@ -239,7 +239,7 @@ installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
 	@( \
 			cd $(GO_DIR); \
 			rsync --relative --quiet \
-			      `find -name '*' -type f | grep installer` \
+			      `find bin -type f | grep installer` \
 			      $(STAGING_DIR)/installer/; \
 	)
 	@cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
