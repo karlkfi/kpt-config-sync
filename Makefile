@@ -363,6 +363,7 @@ ci-test-e2e:
      " \
      TEST_E2E_RUN_FLAGS="\
 	    --hermetic \
+		$(TEST_E2E_RUN_FLAGS) \
 	 " \
      test-e2e-all
 

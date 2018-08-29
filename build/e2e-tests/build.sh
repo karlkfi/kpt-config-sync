@@ -24,18 +24,18 @@ while (( $# != 0 )); do
   esac
 done
 
-echo "Building intermediate e2e image"
+echo "+++ Building intermediate e2e image"
 docker build --target gcloud-install \
   -t e2e-tests-gcloud \
-  --quiet=$quiet \
   "$(dirname "$0")"
 
-echo "Building e2e image"
+GID="${GID:-$(id -g)}"
+
+echo "+++ Building e2e image"
 exec docker build \
   --build-arg "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" \
-  --build-arg "UID=$(id -u)" \
-  --build-arg "GID=$(id -g)" \
+  --build-arg "UID=${UID}" \
+  --build-arg "GID=${GID}" \
   --build-arg "UNAME=${USER}" \
-  --quiet=$quiet \
   "${tags[@]}" \
   "$(dirname "$0")"

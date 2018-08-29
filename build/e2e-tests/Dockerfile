@@ -54,12 +54,13 @@ RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add 
   && apt-get install -y kubectl=1.11.1-00
 
 # Install docker as per docker website instructions.
-RUN groupadd -or -g $DOCKER_GID docker \
-  && useradd -u $UID -G $DOCKER_GID $UNAME \
-  && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
-  && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable" \
-  && apt-get update \
-  && apt-get install -y docker-ce
+RUN bash -c 'echo "DOCKER_GID=${DOCKER_GID}; UID=${UID}; GID=${GID}; UNAME=${UNAME}"'
+#RUN groupadd -or -g $DOCKER_GID docker \
+  #&& useradd -u $UID -G $DOCKER_GID $UNAME \
+  #&& curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+  #&& add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable" \
+  #&& apt-get update \
+  #&& apt-get install -y docker-ce
 
 # Copy installed gcloud into image
 COPY --from=gcloud-install /opt/gcloud/google-cloud-sdk /opt/gcloud/google-cloud-sdk
