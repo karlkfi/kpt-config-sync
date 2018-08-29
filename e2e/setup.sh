@@ -225,7 +225,10 @@ setup_prober_cred() {
 }
 
 # Creates a public-private ssh key pair.
+# TODO(filmil): Eliminate the need for the keypair to exist both in $HOME
+# and /opt/testing.
 create_keypair() {
+  echo "+++ Creating keypair at: ${HOME}/.ssh"
   mkdir -p "$HOME/.ssh"
   # Skipping confirmation in keygen returns nonzero code even if it was a
   # success.
