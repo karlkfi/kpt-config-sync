@@ -284,8 +284,8 @@ func (t *TestHelper) acmeReserved() *ast.ReservedNamespaces {
 	}
 }
 
-func (t *TestHelper) acmeTree() *ast.Node {
-	return &ast.Node{
+func (t *TestHelper) acmeTree() *ast.TreeNode {
+	return &ast.TreeNode{
 		Type: ast.Policyspace,
 		Path: "acme",
 		Objects: ObjectSets(
@@ -293,8 +293,8 @@ func (t *TestHelper) acmeTree() *ast.Node {
 			t.AdminRoleBinding(),
 			t.AcmeResourceQuota(),
 		),
-		Children: []*ast.Node{
-			&ast.Node{
+		Children: []*ast.TreeNode{
+			&ast.TreeNode{
 				Type:        ast.Namespace,
 				Path:        "acme/frontend",
 				Labels:      map[string]string{"environment": "prod"},
@@ -305,7 +305,7 @@ func (t *TestHelper) acmeTree() *ast.Node {
 					t.FrontendResourceQuota(),
 				),
 			},
-			&ast.Node{
+			&ast.TreeNode{
 				Type:        ast.Namespace,
 				Path:        "acme/frontend-test",
 				Labels:      map[string]string{"environment": "test"},

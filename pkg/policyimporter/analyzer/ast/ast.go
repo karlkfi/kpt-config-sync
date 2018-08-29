@@ -17,7 +17,6 @@ limitations under the License.
 package ast
 
 import (
-	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -32,44 +31,15 @@ type Context struct {
 
 	ReservedNamespaces *ReservedNamespaces // Reserved namespaces
 	Cluster            *Cluster            // Cluster scoped info
-	Tree               *Node               // Hirearchical policies
+	Tree               *TreeNode           // Hirearchical policies
 }
 
 // Accept implements Visitable
-func (g *Context) Accept(visitor Visitor) {
-	visitor.VisitContext(g)
-}
-
-// UnlinkedCopy returns a shallow copy of the current struct.  Slices and Maps contained as members
-// of the struct will be copied as to prevent issues on update.
-func (g Context) UnlinkedCopy() *Context {
-	g.Cluster = nil
-	g.ReservedNamespaces = nil
-	g.Tree = nil
-	return &g
-}
-
-// AddChild implements Visitable
-func (g *Context) AddChild(child Visitable) {
-	switch c := child.(type) {
-	case *Cluster:
-		if g.Cluster != nil {
-			panic("cluster already specified")
-		}
-		g.Cluster = c
-	case *Node:
-		if g.Tree != nil {
-			panic("node already specified")
-		}
-		g.Tree = c
-	case *ReservedNamespaces:
-		if g.ReservedNamespaces != nil {
-			panic("node already specified")
-		}
-		g.ReservedNamespaces = c
-	default:
-		panic(fmt.Sprintf("invalid child type for GitContext: %#v", child))
+func (c *Context) Accept(visitor Visitor) Node {
+	if c == nil {
+		return nil
 	}
+	return visitor.VisitContext(c)
 }
 
 // Cluster represents cluster scoped policies.
@@ -78,24 +48,47 @@ type Cluster struct {
 }
 
 // Accept implements Visitable
-func (c *Cluster) Accept(visitor Visitor) {
-	visitor.VisitCluster(c)
-}
-
-// UnlinkedCopy returns a shallow copy of the current struct.
-func (c Cluster) UnlinkedCopy() *Cluster {
-	c.Objects = nil
-	return &c
-}
-
-// AddChild implements Visitable
-func (c *Cluster) AddChild(v Visitable) {
-	switch child := v.(type) {
-	case *Object:
-		c.Objects = append(c.Objects, child)
-	default:
-		panic(fmt.Sprintf("invalid child type for Cluster: %#v", child))
+func (c *Cluster) Accept(visitor Visitor) Node {
+	if c == nil {
+		return nil
 	}
+	return visitor.VisitCluster(c)
+}
+
+// TreeNodeType represents the type of the node.
+type TreeNodeType string
+
+const (
+	// Namespace represents a kubernetes namespace
+	Namespace = TreeNodeType("namespace")
+	// Policyspace represents a nomos policy space
+	Policyspace = TreeNodeType("policyspace")
+)
+
+// TreeNode is analgous to a directory in the policy hierarchy.
+type TreeNode struct {
+	// Path is the path to the current directory from the root of the tree, may be useful
+	// for adding annotations or other things.
+	Path string
+
+	// The type of the HierarchyNode
+	Type        TreeNodeType
+	Labels      map[string]string
+	Annotations map[string]string
+
+	// Objects from the directory
+	Objects []*Object
+
+	// children of the directory
+	Children []*TreeNode
+}
+
+// Accept implements Visitable
+func (n *TreeNode) Accept(visitor Visitor) Node {
+	if n == nil {
+		return nil
+	}
+	return visitor.VisitTreeNode(n)
 }
 
 // Object extends runtime.Object to implement Visitable.
@@ -109,18 +102,16 @@ func (o *Object) ToMeta() metav1.Object {
 }
 
 // Accept implements Visitable
-func (o *Object) Accept(visitor Visitor) {
-	visitor.VisitObject(o)
+func (o *Object) Accept(visitor Visitor) Node {
+	if o == nil {
+		return nil
+	}
+	return visitor.VisitObject(o)
 }
 
 // DeepCopy creates a deep copy of the object
 func (o *Object) DeepCopy() *Object {
 	return &Object{o.DeepCopyObject()}
-}
-
-// AddChild implements Visitable
-func (o *Object) AddChild(child Visitable) {
-	panic("children cannot be added to Object")
 }
 
 // ReservedNamespaces represents the reserved namespaces object
@@ -129,16 +120,14 @@ type ReservedNamespaces struct {
 }
 
 // Accept implements Visitable
-func (r *ReservedNamespaces) Accept(visitor Visitor) {
-	visitor.VisitReservedNamespaces(r)
+func (r *ReservedNamespaces) Accept(visitor Visitor) Node {
+	if r == nil {
+		return nil
+	}
+	return visitor.VisitReservedNamespaces(r)
 }
 
 // DeepCopy creates a deep copy of ReservedNamespaces
 func (r *ReservedNamespaces) DeepCopy() *ReservedNamespaces {
 	return &ReservedNamespaces{*r.ConfigMap.DeepCopy()}
-}
-
-// AddChild implements Visitable
-func (r *ReservedNamespaces) AddChild(child Visitable) {
-	panic("children cannot be added to ReservedNamespaces")
 }

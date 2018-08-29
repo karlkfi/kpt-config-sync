@@ -42,41 +42,40 @@ func (vb *Base) SetImpl(impl ast.Visitor) {
 }
 
 // VisitContext implements Visitor
-func (vb *Base) VisitContext(g *ast.Context) {
-	if g.Cluster != nil {
-		g.Cluster.Accept(vb.impl)
-	}
-	if g.ReservedNamespaces != nil {
-		g.ReservedNamespaces.Accept(vb.impl)
-	}
-	if g.Tree != nil {
-		g.Tree.Accept(vb.impl)
-	}
+func (vb *Base) VisitContext(g *ast.Context) ast.Node {
+	g.Cluster.Accept(vb.impl)
+	g.ReservedNamespaces.Accept(vb.impl)
+	g.Tree.Accept(vb.impl)
+	return nil
 }
 
 // VisitReservedNamespaces implements Visitor
-func (vb *Base) VisitReservedNamespaces(r *ast.ReservedNamespaces) {
+func (vb *Base) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
 	// leaf - noop
+	return nil
 }
 
 // VisitCluster implements Visitor
-func (vb *Base) VisitCluster(c *ast.Cluster) {
+func (vb *Base) VisitCluster(c *ast.Cluster) ast.Node {
 	for _, object := range c.Objects {
 		object.Accept(vb.impl)
 	}
+	return nil
 }
 
-// VisitNode implements Visitor
-func (vb *Base) VisitNode(n *ast.Node) {
+// VisitTreeNode implements Visitor
+func (vb *Base) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	for _, obj := range n.Objects {
 		obj.Accept(vb.impl)
 	}
 	for _, child := range n.Children {
 		child.Accept(vb.impl)
 	}
+	return nil
 }
 
 // VisitObject implements Visitor
-func (vb *Base) VisitObject(o *ast.Object) {
+func (vb *Base) VisitObject(o *ast.Object) ast.Node {
 	// leaf - noop
+	return nil
 }

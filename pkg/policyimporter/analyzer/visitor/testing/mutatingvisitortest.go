@@ -43,8 +43,12 @@ func ResourceVersionCmp() cmp.Option {
 // Runf returns a function that runs the testcase.
 func (tc *MutatingVisitorTestcase) Runf(visitor ast.MutatingVisitor) func(t *testing.T) {
 	return func(t *testing.T) {
-		tc.Input.Accept(visitor)
-		actual, err := visitor.Result()
+		output := tc.Input.Accept(visitor)
+		actual, ok := output.(*ast.Context)
+		if !ok {
+			t.Errorf("Wrong type returned %#v", output)
+		}
+		err := visitor.Result()
 		if (err != nil) != tc.ExpectErr {
 			if tc.ExpectErr {
 				t.Errorf("expected error, got nil")

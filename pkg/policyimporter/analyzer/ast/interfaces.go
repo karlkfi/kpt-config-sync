@@ -16,26 +16,27 @@ limitations under the License.
 
 package ast
 
-// Visitable is an interface for all the nodes in the tree.  Note that this represents all types
+// Node is an interface for all the nodes in the tree.  Note that this represents all types
 // Visitor will visit via the Visit* methods.
-type Visitable interface {
-	// Accept is called on a visitable object to accept the visitor.  The visitor in turn must then
-	// call accept an child nodes to visit descendants.
-	Accept(v Visitor)
-
-	// AddChild adds a child visitable to the current visitable.  Note that some Visitables
-	// may not be feasible to add to other visitables.
-	AddChild(v Visitable)
+type Node interface {
+	// Accept is called on a visitable object to accept the visitor.  This method must call and return
+	// the result of the Visit[Type] method of the visitor passed to Accept.
+	Accept(v Visitor) Node
 }
 
 // Visitor allows for writing transforms on the GitContext.  The various visit methods
-// will visit each type.
+// will visit each type.  The return values for each Visit[Type] function are implementation dependant.
+// For visitors that are transforming the tree (based on Copying), the function should return one of
+// the following:
+//   Unmodified Subtree: the visitor may return the value passed to the Visit[Type] function.
+//   Modified Subtree: the visitor must return a new copy of the object.
+//   Deleted: the visitor should return nil to indicate deleted.
 type Visitor interface {
-	VisitContext(g *Context)
-	VisitReservedNamespaces(r *ReservedNamespaces)
-	VisitCluster(c *Cluster)
-	VisitNode(n *Node)
-	VisitObject(o *Object)
+	VisitContext(g *Context) Node
+	VisitReservedNamespaces(r *ReservedNamespaces) Node
+	VisitCluster(c *Cluster) Node
+	VisitTreeNode(n *TreeNode) Node
+	VisitObject(o *Object) Node
 }
 
 // MutatingVisitor is an interface for writing a visitor that will modify the context
@@ -44,6 +45,6 @@ type Visitor interface {
 type MutatingVisitor interface {
 	Visitor
 
-	// Result is the mutated GitContext produced by the visitor.
-	Result() (*Context, error)
+	// Result allows the visitor to emit errors that may have occured while operating.
+	Result() error
 }

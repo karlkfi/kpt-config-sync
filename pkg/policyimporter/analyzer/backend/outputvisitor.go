@@ -63,7 +63,7 @@ func (ov *OutputVisitor) AllPolicies() *policyhierarchyv1.AllPolicies {
 }
 
 // VisitContext implements Visitor
-func (ov *OutputVisitor) VisitContext(g *ast.Context) {
+func (ov *OutputVisitor) VisitContext(g *ast.Context) ast.Node {
 	ov.allPolicies = &policyhierarchyv1.AllPolicies{
 		PolicyNodes:   map[string]policyhierarchyv1.PolicyNode{},
 		ClusterPolicy: &policyhierarchyv1.ClusterPolicy{},
@@ -71,10 +71,11 @@ func (ov *OutputVisitor) VisitContext(g *ast.Context) {
 	ov.commitHash = g.ImportToken
 	ov.loadTime = g.LoadTime
 	ov.base.VisitContext(g)
+	return nil
 }
 
 // VisitReservedNamespaces implements Visitor
-func (ov *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) {
+func (ov *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
 	for namespace := range r.ConfigMap.Data {
 		ov.allPolicies.PolicyNodes[namespace] = policyhierarchyv1.PolicyNode{
 			ObjectMeta: metav1.ObjectMeta{
@@ -85,16 +86,18 @@ func (ov *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) {
 			},
 		}
 	}
+	return nil
 }
 
 // VisitCluster implements Visitor
-func (ov *OutputVisitor) VisitCluster(c *ast.Cluster) {
+func (ov *OutputVisitor) VisitCluster(c *ast.Cluster) ast.Node {
 	ov.context = contextCluster
 	ov.base.VisitCluster(c)
+	return nil
 }
 
-// VisitNode implements Visitor
-func (ov *OutputVisitor) VisitNode(n *ast.Node) {
+// VisitTreeNode implements Visitor
+func (ov *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	ov.context = contextNode
 	origLen := len(ov.policyNode)
 	var parent string
@@ -117,13 +120,14 @@ func (ov *OutputVisitor) VisitNode(n *ast.Node) {
 		pn.Spec.Type = policyhierarchyv1.Policyspace
 	}
 	ov.policyNode = append(ov.policyNode, pn)
-	ov.base.VisitNode(n)
+	ov.base.VisitTreeNode(n)
 	ov.policyNode = ov.policyNode[:origLen]
 	ov.allPolicies.PolicyNodes[pn.Name] = *pn
+	return nil
 }
 
 // VisitObject implements Visitor
-func (ov *OutputVisitor) VisitObject(o *ast.Object) {
+func (ov *OutputVisitor) VisitObject(o *ast.Object) ast.Node {
 	switch ov.context {
 	case contextCluster:
 		spec := &ov.allPolicies.ClusterPolicy.Spec
@@ -152,4 +156,5 @@ func (ov *OutputVisitor) VisitObject(o *ast.Object) {
 	default:
 		glog.Fatal("programmer error: invalid context %q", ov.context)
 	}
+	return nil
 }
