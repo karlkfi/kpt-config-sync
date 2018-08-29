@@ -56,6 +56,10 @@ nomos_admission_controller_usage                     | Gauge     | app, policysp
 nomos_admission_controller_duration_seconds          | Histogram | app, namespace, allowed        | Admission duration distributions for apps such as resource quota
 nomos_admission_controller_error_total               | Counter   | app, namespace                 | Total internal errors that occurred when reviewing admission requests
 nomos_admission_controller_violations_total          | Counter   | app, policyspace, resource     | Policyspace quota violations per resource type
+nomos_monitor_policies                               | Gauge     | state                          | Total number of policies (cluster and node) grouped by their sync status; should be similar to nomos_policy_importer_policy_nodes metric
+nomos_monitor_last_import_timestamp                  | Gauge     |                                | Timestamp of the most recent import
+nomos_monitor_last_sync_timestamp                    | Gauge     |                                | Timestamp of the most recent sync
+nomos_monitor_sync_latency_seconds                   | Histogram |                                | Distribution of the latencies between importing and syncing each node
 nomos_policy_importer_policy_node_operations_total   | Counter   | operation                      | Total operations that have been performed to keep policy node hierarchy up-to-date with source of truth
 nomos_policy_importer_policy_nodes                   | Gauge     |                                | Number of policy nodes in current state
 nomos_policy_importer_policy_state_transitions_total | Counter   | status                         | Total number of policy state transitions (A state transition can include changes to multiple resources)
