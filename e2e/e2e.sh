@@ -66,6 +66,15 @@ if [[ "${mounted_prober_cred}" != "" ]]; then
   DOCKER_FLAGS+=(-v "${mounted_prober_cred}:${mounted_prober_cred}")
 fi
 
+# The ARTIFACTS env variable has the name of the directory that the test artifacts
+# should be written to.  If one is defined, propagate it into the tester.
+if [ -n "${ARTIFACTS+x}" ]; then
+  DOCKER_FLAGS+=(
+    -e "ARTIFACTS=${ARTIFACTS}"
+    -v "${ARTIFACTS}:${ARTIFACTS}"
+  )
+fi
+
 if "${hermetic}"; then
   # In hermetic mode, the e2e tests do most of the setup required to connect to
   # the test environment.
