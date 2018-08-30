@@ -39,20 +39,28 @@ type AggregatedQuota struct {
 // AggregatedQuota implements hierarchy.AggregatedNode
 var _ hierarchy.AggregatedNode = &AggregatedQuota{}
 
+// MergeLimits takes two ResourceList objects and performs the union on all specified limits.   Conflicting
+// limits will be resolved by taking the lower of the two.
+func MergeLimits(lhs, rhs core_v1.ResourceList) core_v1.ResourceList {
+	merged := core_v1.ResourceList{}
+	for k, v := range lhs {
+		merged[k] = v
+	}
+
+	for k, v := range rhs {
+		if limit, exists := merged[k]; !exists || (v.Cmp(limit) < 0) {
+			merged[k] = v
+		}
+	}
+	return merged
+}
+
 // Aggregated implements hierarchy.AggregatedNode
 func (s *AggregatedQuota) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarchy.AggregatedNode {
-	limits := core_v1.ResourceList{}
 	if node.Spec.ResourceQuotaV1 != nil {
-		for k, v := range node.Spec.ResourceQuotaV1.Spec.Hard {
-			limits[k] = v
-		}
+		return &AggregatedQuota{limits: MergeLimits(node.Spec.ResourceQuotaV1.Spec.Hard, s.limits)}
 	}
-	for k, aggregatedLimit := range s.limits {
-		if limit, exists := limits[k]; !exists || (exists && aggregatedLimit.Cmp(limit) < 0) {
-			limits[k] = aggregatedLimit
-		}
-	}
-	return &AggregatedQuota{limits: limits}
+	return &AggregatedQuota{limits: s.limits}
 }
 
 // Generate implements hierarchy.AggregatedNode
