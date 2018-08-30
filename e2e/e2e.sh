@@ -54,6 +54,9 @@ while (( $# > 0 )); do
   esac
 done
 
+echo "+++ Environment: "
+env
+
 DOCKER_FLAGS=()
 
 if [[ "${gcs_prober_cred}" != "" ]]; then
@@ -66,9 +69,16 @@ if [[ "${mounted_prober_cred}" != "" ]]; then
   DOCKER_FLAGS+=(-v "${mounted_prober_cred}:${mounted_prober_cred}")
 fi
 
+# Old-style podutils for go/prow use ${WORKSPACE} as base directory but do not
+# define $ARTIFACTS.
+if [ -n "${WORKSPACE+x}" ]; then
+  ARTIFACTS="${WORKSPACE}/_artifacts"
+fi
+
 # The ARTIFACTS env variable has the name of the directory that the test artifacts
 # should be written to.  If one is defined, propagate it into the tester.
 if [ -n "${ARTIFACTS+x}" ]; then
+  echo "+++ Artifacts directory: ${ARTIFACTS}"
   DOCKER_FLAGS+=(
     -e "ARTIFACTS=${ARTIFACTS}"
     -v "${ARTIFACTS}:${ARTIFACTS}"
