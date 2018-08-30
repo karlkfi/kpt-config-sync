@@ -15,6 +15,9 @@ hermetic=false
 # mounted into the container.
 gcs_prober_cred=""
 
+# If set, we will mount the prober creds path into the test runner from here.
+mounted_prober_cred=""
+
 EXTRA_ARGS=()
 while (( $# > 0 )); do
   arg=${1}
@@ -32,6 +35,10 @@ while (( $# > 0 )); do
       gcs_prober_cred="${1:-}"
       shift
     ;;
+    --mounted-prober-cred)
+      mounted_prober_cred="${1:-}"
+      shift
+    ;;
     --hermetic)
       hermetic=true
     ;;
@@ -47,9 +54,16 @@ while (( $# > 0 )); do
   esac
 done
 
+DOCKER_FLAGS=()
+
 if [[ "${gcs_prober_cred}" != "" ]]; then
   echo "+++ Downloading GCS credentials: ${gcs_prober_cred}"
   gsutil cp "${gcs_prober_cred}" "${TEMP_OUTPUT_DIR}/config/prober_runner_client_key.json"
+fi
+
+if [[ "${mounted_prober_cred}" != "" ]]; then
+  echo "+++ Mounting creds from: ${mounted_prober_cred}"
+  DOCKER_FLAGS+=(-v "${mounted_prober_cred}:${mounted_prober_cred}")
 fi
 
 if "${hermetic}"; then
@@ -100,7 +114,7 @@ else
   EXTRA_ARGS+=(-e "NOMOS_REPO=$(pwd)")
 fi
 
-DOCKER_FLAGS=("--interactive")
+DOCKER_FLAGS+=("--interactive")
 if [ -t 0 ]; then
   echo "+++ Docker will use a terminal."
   DOCKER_FLAGS+=("--tty")

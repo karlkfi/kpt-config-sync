@@ -372,6 +372,7 @@ ci-test-e2e:
      " \
      TEST_E2E_RUN_FLAGS="\
 	    --hermetic \
+		--mounted-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
 		$(TEST_E2E_RUN_FLAGS) \
 	 " \
      test-e2e-all
@@ -384,7 +385,7 @@ ci-test-e2e-local:
 		--gcp-prober-cred /tmp/config/prober_runner_client_key.json \
 	 " \
      TEST_E2E_RUN_FLAGS="\
-		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json\
+		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json \
 	 " \
      ci-test-e2e
 # Clean, build, and run e2e tests for a particular importer.
