@@ -35,7 +35,7 @@ Key                  | Description
 GIT_SYNC_REPO        | Address of the git repo to sync from in https, ssh, or git format
 GIT_SYNC_BRANCH      | Git branch to check out. Default: "master"
 GIT_SYNC_WAIT        | Number of seconds between syncs. Default: 15 seconds
-GIT_SYNC_SSH         | true if ssh auth should be used to access the repo. Default: false
+GIT_SYNC_SSH         | true if ssh auth should be used to access the repo. Default: true
 PRIVATE_KEY_FILENAME | Absolute path to the ssh private key to use for ssh access to the git repo
 KNOWN_HOSTS_FILENAME | Absolute path to the ssh known hosts file to use during ssh access to the git repo. If omitted, strict known hosts checking is disabled
 GIT_COOKIE_FILENAME  | Absolute path to a [HTTP git cookie file](https://git-scm.com/docs/git-config/2.1.0#git-config-httpcookiefile) to use to authenticate to the git repo. Use only with HTTP auth
