@@ -1,0 +1,113 @@
+// Reviewed by sunilarora
+/*
+Copyright 2017 The Nomos Authors.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package filesystem
+
+import (
+	"testing"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+)
+
+type directoryTreeInput struct {
+	path string
+	typ  ast.TreeNodeType
+}
+
+type directoryTreeTestcase struct {
+	name      string
+	inputs    []directoryTreeInput
+	expect    *ast.TreeNode
+	expectErr bool
+}
+
+func (tc *directoryTreeTestcase) Run(t *testing.T) {
+	tg := NewDirectoryTree()
+	tg.SetRootDir(tc.inputs[0].path)
+	for _, inp := range tc.inputs[1:] {
+		typ := inp.typ
+		if typ == "" {
+			typ = ast.Policyspace
+		}
+		n := tg.AddDir(inp.path, typ)
+		if n == nil {
+			t.Errorf("AddNode returned nil")
+		}
+	}
+	tree, err := tg.Build()
+	if err != nil != tc.expectErr {
+		if tc.expectErr {
+			t.Errorf("Expected err, got nil")
+		} else {
+			t.Errorf("Unexpected error %v", err)
+		}
+	}
+
+	if diff := cmp.Diff(tc.expect, tree); diff != "" {
+		spew.Printf("%#v\n", tree)
+		t.Errorf("unexpected output:\n%s", diff)
+	}
+}
+
+var directoryTreeTestcases = []directoryTreeTestcase{
+	{
+		name: "only root",
+		inputs: []directoryTreeInput{
+			{path: "/a/b/c"},
+		},
+		expect: &ast.TreeNode{Path: "c", Type: ast.TreeNodeType("policyspace")},
+	},
+	{
+		name: "small tree",
+		inputs: []directoryTreeInput{
+			{path: "/a/b/c"},
+			{path: "/a/b/c/d/e", typ: ast.Namespace},
+			{path: "/a/b/c/d"},
+		},
+		expect: &ast.TreeNode{
+			Path: "c",
+			Type: ast.TreeNodeType("policyspace"),
+			Children: []*ast.TreeNode{
+				&ast.TreeNode{
+					Path: "c/d",
+					Type: ast.TreeNodeType("policyspace"),
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Path: "c/d/e",
+							Type: ast.TreeNodeType("namespace"),
+						},
+					},
+				},
+			},
+		},
+	},
+	{
+		name: "missing node",
+		inputs: []directoryTreeInput{
+			{path: "/a/b/c"},
+			{path: "/a/b/c/d/e", typ: ast.Namespace},
+		},
+		expectErr: true,
+	},
+}
+
+func TestDirectoryTree(t *testing.T) {
+	for _, tc := range directoryTreeTestcases {
+		t.Run(tc.name, tc.Run)
+	}
+}

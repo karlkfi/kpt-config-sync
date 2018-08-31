@@ -19,17 +19,16 @@ limitations under the License.
 package filesystem
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
-	"fmt"
-
 	"github.com/golang/glog"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/policyimporter/reserved"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/namespaceutil"
-	"github.com/google/nomos/pkg/util/policynode"
 	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
@@ -185,33 +184,38 @@ func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {
 func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) (*policyhierarchy_v1.AllPolicies, error) {
 	namespaceDirs := make(map[string]bool)
 
-	var policies policyhierarchy_v1.AllPolicies
-	policies.PolicyNodes = make(map[string]policyhierarchy_v1.PolicyNode)
-
 	root := allDirsOrdered[0]
 	rootInfos := dirInfos[root]
-	policyNode, clusterPolicy, reservedNamespaces, err := processRootDir(root, rootInfos)
+
+	treeGenerator := NewDirectoryTree()
+	fsCtx, err := processRootDir(root, rootInfos, treeGenerator)
 	if err != nil {
 		return nil, errors.Wrapf(err, "root directory is invalid: %s", root)
 	}
-	policies.PolicyNodes[policyNode.Name] = *policyNode
-	policies.ClusterPolicy = clusterPolicy
 
 	for _, d := range allDirsOrdered[1:] {
 		infos := dirInfos[d]
-		p, err := processNonRootDir(d, infos, namespaceDirs)
-		if err != nil {
-			return nil, errors.Wrapf(err, "directory is invalid: %s", d)
+		err2 := processNonRootDir(d, infos, namespaceDirs, treeGenerator)
+		if err2 != nil {
+			return nil, errors.Wrapf(err2, "directory is invalid: %s", d)
 		}
-		if reservedNamespaces.IsReserved(p.Name) {
-			return nil, errors.Errorf("namespace dir %q is a reserved namespace", p.Name)
-		}
-		policies.PolicyNodes[p.Name] = *p
 	}
 
-	if err := generateReservedPolicyNodes(&policies, reservedNamespaces); err != nil {
+	tree, err := treeGenerator.Build()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to treeify policy nodes")
+	}
+	fsCtx.Tree = tree
+
+	inputValidator := NewInputValidator()
+	fsCtx.Accept(inputValidator)
+	if err := inputValidator.Result(); err != nil {
 		return nil, err
 	}
+
+	outputVisitor := backend.NewOutputVisitor()
+	fsCtx.Accept(outputVisitor)
+	policies := outputVisitor.AllPolicies()
 
 	if err := clusterpolicy.Validate(policies.ClusterPolicy); err != nil {
 		return nil, err
@@ -221,91 +225,71 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 		return nil, err
 	}
 
-	return &policies, nil
+	return policies, nil
 }
 
-func generateReservedPolicyNodes(
-	policies *policyhierarchy_v1.AllPolicies, reservedNamespaces *reserved.Namespaces) error {
-	for _, reservedName := range reservedNamespaces.List(policyhierarchy_v1.ReservedAttribute) {
-		if pn, found := policies.PolicyNodes[reservedName]; found {
-			return errors.Errorf("%s cannot be both policy node and reserved namespace. %#v", reservedName, pn)
-		}
-
-		policies.PolicyNodes[reservedName] = policyhierarchy_v1.PolicyNode{
-			TypeMeta: meta_v1.TypeMeta{
-				Kind:       "PolicyNode",
-				APIVersion: policyhierarchy_v1.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: meta_v1.ObjectMeta{
-				Name: reservedName,
-			},
-			Spec: policyhierarchy_v1.PolicyNodeSpec{
-				Type: policyhierarchy_v1.ReservedNamespace,
-			},
-		}
-	}
-	return nil
-}
-
-func processRootDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.PolicyNode,
-	*policyhierarchy_v1.ClusterPolicy, *reserved.Namespaces, error) {
+func processRootDir(
+	dir string,
+	infos []*resource.Info,
+	treeGenerator *DirectoryTree) (*ast.Context, error) {
 	v := newValidator()
-	pn := policynode.NewPolicyNode(
-		filepath.Base(dir),
-		&policyhierarchy_v1.PolicyNodeSpec{
-			Type:   policyhierarchy_v1.Policyspace,
-			Parent: policyhierarchy_v1.NoParentNamespace,
-		},
-	)
-	cp := policynode.NewClusterPolicy(
-		policyhierarchy_v1.ClusterPolicyName,
-		&policyhierarchy_v1.ClusterPolicySpec{},
-	)
+	fsCtx := &ast.Context{Cluster: &ast.Cluster{}}
+	rootNode := treeGenerator.SetRootDir(dir)
 
-	rns := reserved.EmptyNamespaces()
 	for _, i := range infos {
 		o := i.AsVersioned()
 
-		// Types in alphabetical order.
+		// Types in scope then alphabetical order.
 		switch o := o.(type) {
+		// System scope
+		case *core_v1.ConfigMap:
+			if o.Name == policyhierarchy_v1.ReservedNamespacesConfigMapName {
+				fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
+			} else {
+				v.err = errors.Errorf("Invalid configmap in root dir %#v", o)
+			}
+
+		// Cluster scope
 		case *rbac_v1.ClusterRole:
-			cp.Spec.ClusterRolesV1 = append(cp.Spec.ClusterRolesV1, *o)
+			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.Object{Object: o})
 		case *rbac_v1.ClusterRoleBinding:
-			cp.Spec.ClusterRoleBindingsV1 = append(cp.Spec.ClusterRoleBindingsV1, *o)
+			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.Object{Object: o})
 		case *core_v1.Namespace:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *extensions_v1beta1.PodSecurityPolicy:
-			cp.Spec.PodSecurityPoliciesV1Beta1 = append(cp.Spec.PodSecurityPoliciesV1Beta1, *o)
+			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.Object{Object: o})
+
+		// Namespace Scope
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, "")
-			pn.Spec.ResourceQuotaV1 = o
+			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.Role:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, "")
-			pn.Spec.RoleBindingsV1 = append(pn.Spec.RoleBindingsV1, *o)
-		case *core_v1.ConfigMap:
-			var err error
-			if rns, err = reserved.From(o); err != nil {
-				v.err = err
-			}
+			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
+
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
 		}
 
 		if v.err != nil {
-			return nil, nil, nil, v.err
+			return nil, v.err
 		}
 	}
-	// There's a singleton ClusterPolicy object for the hierarchy.
-	return pn, cp, rns, nil
+
+	return fsCtx, nil
 }
 
-func processNonRootDir(dir string, infos []*resource.Info, namespaceDirs map[string]bool) (*policyhierarchy_v1.PolicyNode, error) {
+func processNonRootDir(
+	dir string,
+	infos []*resource.Info,
+	namespaceDirs map[string]bool,
+	treeGenerator *DirectoryTree) error {
 	parent := filepath.Dir(dir)
 	// Since directories are processed in DFS order, it's guaranteed that parent was already processed.
 	if namespaceDirs[parent] {
-		return nil, errors.Errorf("Namespace dir %s must not have children", parent)
+		return errors.Errorf("Namespace dir %s must not have children", parent)
 	}
 	for _, i := range infos {
 		o := i.AsVersioned()
@@ -313,22 +297,16 @@ func processNonRootDir(dir string, infos []*resource.Info, namespaceDirs map[str
 		switch o.(type) {
 		case *core_v1.Namespace:
 			namespaceDirs[dir] = true
-			return processNamespaceDir(dir, infos)
+			return processNamespaceDir(dir, infos, treeGenerator)
 		}
 	}
 	// No namespace resource was found.
-	return processPolicyspaceDir(dir, infos)
+	return processPolicyspaceDir(dir, infos, treeGenerator)
 }
 
-func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.PolicyNode, error) {
+func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *DirectoryTree) error {
 	v := newValidator()
-	pn := policynode.NewPolicyNode(
-		filepath.Base(dir),
-		&policyhierarchy_v1.PolicyNodeSpec{
-			Type:   policyhierarchy_v1.Policyspace,
-			Parent: filepath.Base(filepath.Dir(dir)),
-		},
-	)
+	treeNode := treeGenerator.AddDir(dir, ast.Policyspace)
 
 	for _, i := range infos {
 		o := i.AsVersioned()
@@ -346,12 +324,12 @@ func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, "")
-			pn.Spec.ResourceQuotaV1 = o
+			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.Role:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, "")
-			pn.Spec.RoleBindingsV1 = append(pn.Spec.RoleBindingsV1, *o)
+			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *core_v1.ConfigMap:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		default:
@@ -359,23 +337,17 @@ func processPolicyspaceDir(dir string, infos []*resource.Info) (*policyhierarchy
 		}
 
 		if v.err != nil {
-			return nil, v.err
+			return v.err
 		}
 	}
 
-	return pn, nil
+	return nil
 }
 
-func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v1.PolicyNode, error) {
+func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *DirectoryTree) error {
 	namespace := filepath.Base(dir)
 	v := newValidator()
-	pn := policynode.NewPolicyNode(
-		filepath.Base(dir),
-		&policyhierarchy_v1.PolicyNodeSpec{
-			Type:   policyhierarchy_v1.Namespace,
-			Parent: filepath.Base(filepath.Dir(dir)),
-		},
-	)
+	treeNode := treeGenerator.AddDir(dir, ast.Namespace)
 
 	for _, i := range infos {
 		o := i.AsVersioned()
@@ -388,19 +360,19 @@ func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.Namespace:
 			v.HasName(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta)
-			pn.Labels = o.Labels
-			pn.Annotations = o.Annotations
+			treeNode.Labels = o.Labels
+			treeNode.Annotations = o.Annotations
 		case *extensions_v1beta1.PodSecurityPolicy:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta)
-			pn.Spec.ResourceQuotaV1 = o
+			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.Role:
 			v.HasNamespace(i, namespace)
-			pn.Spec.RolesV1 = append(pn.Spec.RolesV1, *o)
+			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, namespace)
-			pn.Spec.RoleBindingsV1 = append(pn.Spec.RoleBindingsV1, *o)
+			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *core_v1.ConfigMap:
 			v.ObjectDisallowedInContext(i, o.TypeMeta)
 		default:
@@ -409,14 +381,14 @@ func processNamespaceDir(dir string, infos []*resource.Info) (*policyhierarchy_v
 		}
 
 		if v.err != nil {
-			return nil, v.err
+			return v.err
 		}
 	}
 
 	v.HaveSeen(meta_v1.TypeMeta{Kind: "Namespace", APIVersion: "v1"})
 	if v.err != nil {
-		return nil, v.err
+		return v.err
 	}
 
-	return pn, nil
+	return nil
 }

@@ -276,6 +276,9 @@ func (t *TestHelper) acmeCluster() *ast.Cluster {
 func (t *TestHelper) acmeReserved() *ast.ReservedNamespaces {
 	return &ast.ReservedNamespaces{
 		ConfigMap: corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: policyhierarchyv1.ReservedNamespacesConfigMapName,
+			},
 			Data: map[string]string{
 				"testing":      string(policyhierarchyv1.ReservedAttribute),
 				"more-testing": string(policyhierarchyv1.ReservedAttribute),

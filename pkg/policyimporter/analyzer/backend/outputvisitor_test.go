@@ -60,7 +60,15 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		name:  "empty",
 		input: vt.Helper.EmptyContext(),
 		expect: allPolicies(
-			policyhierarchyv1.ClusterPolicy{},
+			policyhierarchyv1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+					Kind:       "ClusterPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: policyhierarchyv1.ClusterPolicyName,
+				},
+			},
 			[]policyhierarchyv1.PolicyNode{},
 		),
 	},
@@ -68,7 +76,15 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		name:  "emtpy cluster policies",
 		input: &ast.Context{Cluster: &ast.Cluster{Objects: []*ast.Object{}}},
 		expect: allPolicies(
-			policyhierarchyv1.ClusterPolicy{},
+			policyhierarchyv1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+					Kind:       "ClusterPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: policyhierarchyv1.ClusterPolicyName,
+				},
+			},
 			[]policyhierarchyv1.PolicyNode{},
 		),
 	},
@@ -77,6 +93,13 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		input: vt.Helper.ClusterPolicies(),
 		expect: allPolicies(
 			policyhierarchyv1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+					Kind:       "ClusterPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: policyhierarchyv1.ClusterPolicyName,
+				},
 				Spec: policyhierarchyv1.ClusterPolicySpec{
 					ClusterRolesV1:             []rbacv1.ClusterRole{*vt.Helper.NomosAdminClusterRole()},
 					ClusterRoleBindingsV1:      []rbacv1.ClusterRoleBinding{*vt.Helper.NomosAdminClusterRoleBinding()},
@@ -90,9 +113,21 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		name:  "reserved namespaces",
 		input: vt.Helper.ReservedNamespaces(),
 		expect: allPolicies(
-			policyhierarchyv1.ClusterPolicy{},
+			policyhierarchyv1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+					Kind:       "ClusterPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: policyhierarchyv1.ClusterPolicyName,
+				},
+			},
 			[]policyhierarchyv1.PolicyNode{
 				policyhierarchyv1.PolicyNode{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+						Kind:       "PolicyNode",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "testing",
 					},
@@ -101,6 +136,10 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					},
 				},
 				policyhierarchyv1.PolicyNode{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+						Kind:       "PolicyNode",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "more-testing",
 					},
@@ -115,9 +154,21 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		name:  "namespace policies",
 		input: vt.Helper.NamespacePolicies(),
 		expect: allPolicies(
-			policyhierarchyv1.ClusterPolicy{},
+			policyhierarchyv1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+					Kind:       "ClusterPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: policyhierarchyv1.ClusterPolicyName,
+				},
+			},
 			[]policyhierarchyv1.PolicyNode{
 				policyhierarchyv1.PolicyNode{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+						Kind:       "PolicyNode",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "acme",
 					},
@@ -129,6 +180,10 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					},
 				},
 				policyhierarchyv1.PolicyNode{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+						Kind:       "PolicyNode",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "frontend",
 						Labels:      map[string]string{"environment": "prod"},
@@ -143,6 +198,10 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					},
 				},
 				policyhierarchyv1.PolicyNode{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+						Kind:       "PolicyNode",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "frontend-test",
 						Labels:      map[string]string{"environment": "test"},
