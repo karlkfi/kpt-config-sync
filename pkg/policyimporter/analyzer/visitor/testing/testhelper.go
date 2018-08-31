@@ -112,7 +112,7 @@ func (t *TestHelper) EmptyContext() *ast.Context {
 
 // ClusterPolicies returns a GitContext with only cluster policies
 func (t *TestHelper) ClusterPolicies() *ast.Context {
-	return &ast.Context{Cluster: t.acmeCluster()}
+	return &ast.Context{Cluster: t.AcmeCluster()}
 }
 
 func (t *TestHelper) AdminRoleBinding() *rbacv1.RoleBinding {
@@ -259,11 +259,11 @@ func (t *TestHelper) FrontendResourceQuota() *corev1.ResourceQuota {
 func (t *TestHelper) ReservedNamespaces() *ast.Context {
 	return &ast.Context{
 		Cluster:            &ast.Cluster{},
-		ReservedNamespaces: t.acmeReserved(),
+		ReservedNamespaces: t.AcmeReserved(),
 	}
 }
 
-func (t *TestHelper) acmeCluster() *ast.Cluster {
+func (t *TestHelper) AcmeCluster() *ast.Cluster {
 	return &ast.Cluster{
 		Objects: ObjectSets(
 			t.NomosAdminClusterRole(),
@@ -273,7 +273,7 @@ func (t *TestHelper) acmeCluster() *ast.Cluster {
 	}
 }
 
-func (t *TestHelper) acmeReserved() *ast.ReservedNamespaces {
+func (t *TestHelper) AcmeReserved() *ast.ReservedNamespaces {
 	return &ast.ReservedNamespaces{
 		ConfigMap: corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -333,8 +333,8 @@ func (t *TestHelper) NamespacePolicies() *ast.Context {
 // AcmeContext returns a GitContext with an example hierarchy
 func (t *TestHelper) AcmeContext() *ast.Context {
 	return &ast.Context{
-		Cluster:            t.acmeCluster(),
-		ReservedNamespaces: t.acmeReserved(),
+		Cluster:            t.AcmeCluster(),
+		ReservedNamespaces: t.AcmeReserved(),
 		Tree:               t.acmeTree(),
 	}
 }
