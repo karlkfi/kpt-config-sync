@@ -1,30 +1,20 @@
 # Building
 
-To build and deploy all GKE Policy Management binaries:
-
-First time to create the deployment configuration:
-
-```console
- $ cd $NOMOS
- $ make deploy-interactive
-```
-
-The interactive installer that is invoked by this command will save the
-generated configuration into
-`$NOMOS/.output/staging/installer_output/gen_configs/generated.yaml`.
-
-Subsequent deployments can reuse the generated configuration. Be sure to put it
-into a safe place outside of the ephemeral `$NOMOS/.output` directory if you
-need to save it for later.
+To build and deploy all GKE Policy Management binaries,
+first create a yaml configuration file, following either
+the [Git Configuration](git_config.md) or
+[GCP Configuration](gcp_config.md) instructions, according
+to your choice of source of truth. Then:
 
 ```console
-$ cd $NOMOS
-$ make NOMOS_INSTALLER_CONFIG=path/to/config deploy
+$ make installer-staging
+$ cd .output/staging/installer
+$ ./install.sh --config=PATH_TO_YOUR_CONFIG_YAML
 ```
 
 This should be sufficent to successfully deploy all components.
 
-Rest of the section discusses individual components.
+The rest of the section discusses managing individual components.
 
 ## Syncer
 
