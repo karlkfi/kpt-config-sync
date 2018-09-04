@@ -413,3 +413,23 @@ type SyncList struct {
 	// Items is a list of sync declarations.
 	Items []Sync `json:"items"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// NomosConfig holds configuration for Nomos itself.
+type NomosConfig struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec NomosConfigSpec `json:"spec,omitempty"`
+}
+
+// NomosConfigSpec contains spec fields for NomosConfig.
+type NomosConfigSpec struct {
+	// Repo version string, corresponds to how policy importer should handle the
+	// directory structure (implicit assumptions).
+	RepoVersion string `json:"repoVersion"`
+}

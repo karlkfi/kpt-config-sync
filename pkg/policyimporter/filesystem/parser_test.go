@@ -168,6 +168,13 @@ spec:
     matchLabels:
       environment: prod
 `
+
+	aNomosConfig = `
+kind: NomosConfig
+apiVersion: nomos.dev/v1
+spec:
+  repoVersion: "1.0.0"
+`
 )
 
 var (
@@ -972,5 +979,21 @@ func TestParser(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestParser_NewFormat(t *testing.T) {
+	*newRepoFormat = true
+	d := newTestDir(t, "foo")
+	defer d.remove()
+
+	d.createTestFile("system/nomos.yaml", aNomosConfig)
+	f := fstesting.NewTestFactory()
+	defer f.Cleanup()
+
+	p := Parser{f, true}
+
+	if _, err := p.Parse(d.rootDir); err != nil {
+		t.Fatal("unexpected error:", err)
 	}
 }

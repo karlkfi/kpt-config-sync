@@ -278,7 +278,7 @@ func (f *TestFactory) Object() (meta.RESTMapper, runtime.ObjectTyper) {
 		}),
 	)
 	// for backwards compatibility with existing tests, allow rest mappings from the scheme to show up
-	// TODO: make this opt-in?
+	// TODO(frankf): make this opt-in?
 	mapper = meta.FirstHitRESTMapper{
 		MultiRESTMapper: meta.MultiRESTMapper{
 			mapper,
@@ -286,7 +286,7 @@ func (f *TestFactory) Object() (meta.RESTMapper, runtime.ObjectTyper) {
 		},
 	}
 
-	// TODO: should probably be the external scheme
+	// TODO(frankf): should probably be the external scheme
 	typer := discovery.NewUnstructuredObjectTyper(groupResources, legacyscheme.Scheme)
 	fakeDs := &fakeCachedDiscoveryClient{}
 	expander := cmdutil.NewShortcutExpander(mapper, fakeDs)
@@ -440,6 +440,7 @@ func testDynamicResources() []*discovery.APIGroupResources {
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1": {
 					{Name: "namespaceselectors", Namespaced: true, Kind: "NamespaceSelector"},
+					{Name: "nomosconfigs", Namespaced: true, Kind: "NomosConfig"},
 				},
 			},
 		},

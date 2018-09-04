@@ -20,10 +20,12 @@ package filesystem
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/blang/semver"
 	"github.com/golang/glog"
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
@@ -51,6 +53,16 @@ type Parser struct {
 	validate bool
 }
 
+const (
+	// systemDir is the name of the system directory
+	systemDir = "system"
+	// nomosYamlFilename is the name of the nomos.yaml file.
+	nomosYamlFilename = "nomos.yaml"
+)
+
+var newRepoFormat = flag.Bool("new-repo-format", false,
+	"Whether to expect the repo format described in go/nomos-generic-sync")
+
 // NewParser creates a new Parser.
 // clientConfig can be used to configure api server client. It should be set to nil when running in cluster.
 // validate determines whether to validate schema using OpenAPI spec.
@@ -66,6 +78,14 @@ func NewParser(config clientcmd.ClientConfig, validate bool) (*Parser, error) {
 // Parse recursively parses file tree rooted at root and builds policy CRDs from
 // supported Kubernetes policy resources.
 func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
+	if *newRepoFormat {
+		glog.Warning("newRepoFormat is still in development. Use at your own risk.")
+		if _, err := p.processSystemDir(root); err != nil {
+			return nil, err
+		}
+		return &policyhierarchyv1.AllPolicies{}, nil
+	}
+
 	allDirsOrdered, err := allDirs(root)
 	if err != nil {
 		return nil, err
@@ -449,4 +469,65 @@ func parseNamespaceSelector(o runtime.Unstructured, node *ast.TreeNode) error {
 	}
 	node.Selectors[ns.Name] = ns
 	return nil
+}
+
+// processSystemDir loads configs from the <root>/system directory. Currently, this only includes
+// the nomos.yaml file.
+func (p Parser) processSystemDir(root string) (*policyhierarchyv1.NomosConfig, error) {
+	nomosYamlPath := filepath.Join(root, systemDir, nomosYamlFilename)
+	schema, err := p.factory.Validator(p.validate)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get schema")
+	}
+	result := p.factory.NewBuilder().
+		Unstructured().
+		Schema(schema).
+		ContinueOnError().
+		FilenameParam(false, &resource.FilenameOptions{Recursive: true, Filenames: []string{nomosYamlPath}}).
+		Do()
+	fileInfos, err := result.Infos()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read resources from %s", nomosYamlPath)
+	}
+	for _, i := range fileInfos {
+		o := i.AsVersioned()
+
+		// Types in scope then alphabetical order.
+		switch o := o.(type) {
+		// System scope
+		case runtime.Unstructured:
+			switch o.GetObjectKind().GroupVersionKind() {
+			case policyhierarchyv1.SchemeGroupVersion.WithKind("NomosConfig"):
+				nc, err := parseNomosConfig(o)
+				if err != nil {
+					return nil, errors.Wrapf(err, "failed to parse NomosConfig in %s", i.Source)
+				}
+				return nc, nil
+			}
+		default:
+			return nil, errors.Errorf("Ignoring unsupported object type %T in %s", o, i.Source)
+		}
+	}
+
+	return nil, errors.Errorf("failed to find object of type NomosConfig in system/nomos.yaml")
+}
+
+func parseNomosConfig(o runtime.Unstructured) (*policyhierarchyv1.NomosConfig, error) {
+	j, err := json.Marshal(o.UnstructuredContent())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal object in %s", j)
+	}
+	config := &policyhierarchyv1.NomosConfig{}
+	err = json.Unmarshal(j, config)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal NomosConfig")
+	}
+
+	if _, err = semver.Parse(config.Spec.RepoVersion); err != nil {
+		return nil, errors.Wrapf(err, "invalid semantic version %s. "+
+			"NomosConfig.Spec.RepoVersion must follow semantic versioning rules at http://semver.org",
+			config.Spec.RepoVersion)
+	}
+
+	return config, nil
 }
