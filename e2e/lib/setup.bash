@@ -22,13 +22,18 @@ SYS_NAMESPACES=(
   nomos-system-test
 )
 
+# Make "prefix" short, so that project and folder names don't go over name
+# length limit.  This is not ironclad, but should work for most things. The
+# chosen length is completely arbitrary.
+readonly prefix="${USER:0:11}"
+
 # Make available the general settings for running an end-to-end GCP test.
 # Since we are not allowed to create ephemeral projects in the e2e tests by
 # Elysium policy, some state must be reused across runs.  We set up that state
 # here so it is available to the test cases, and we create one test project per
 # different $USER.
 export GCP_ORG_ID="495131404417" # nomos-e2e.joonix.net
-export GCP_TEST_NAMESPACE="$USER-nomos-e2e"
+export GCP_TEST_NAMESPACE="${prefix}-nomos-e2e"
 export GCP_PROJECT_A="${GCP_TEST_NAMESPACE}-sf"
 export GCP_PROJECT_B="${GCP_TEST_NAMESPACE}"
 export GCP_FOLDER="$GCP_TEST_NAMESPACE-folder"
