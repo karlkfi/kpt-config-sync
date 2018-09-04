@@ -23,9 +23,13 @@ SYS_NAMESPACES=(
 )
 
 # Make "prefix" short, so that project and folder names don't go over name
-# length limit.  This is not ironclad, but should work for most things. The
-# chosen length is completely arbitrary.
-readonly prefix="${USER:0:11}"
+# length limit.  This is not ironclad, but should work for most things.  The
+# length is bounded from below by the need for $prefix to be unique among all
+# the tests we run.  The length is bounded from above by the maximum name
+# length allowed for projects and folders (30).  It must also not clash with
+# already used names (of which there are a few). Naming schema below uses a max
+# of 10 characters ("-n-e2e-fld") so 30-10=20 remains for the prefix.
+readonly prefix="${USER:0:20}"
 
 # Make available the general settings for running an end-to-end GCP test.
 # Since we are not allowed to create ephemeral projects in the e2e tests by
@@ -33,10 +37,10 @@ readonly prefix="${USER:0:11}"
 # here so it is available to the test cases, and we create one test project per
 # different $USER.
 export GCP_ORG_ID="495131404417" # nomos-e2e.joonix.net
-export GCP_TEST_NAMESPACE="${prefix}-nomos-e2e"
+export GCP_TEST_NAMESPACE="${prefix}-n-e2e"
 export GCP_PROJECT_A="${GCP_TEST_NAMESPACE}-sf"
 export GCP_PROJECT_B="${GCP_TEST_NAMESPACE}"
-export GCP_FOLDER="$GCP_TEST_NAMESPACE-folder"
+export GCP_FOLDER="${GCP_TEST_NAMESPACE}-fld"
 
 setup::gcp::delete_namespace() {
   local namespace="$1"
@@ -76,29 +80,35 @@ setup::gcp::create_project() {
 
 # Sets the FOLDER_ID variable to the ID of the folder with the given display
 # name. Creates the folder if needed.
-setup::gcp::create_folder() {
+setup::gcp::set_or_create_folder() {
   local folder_display_name="$1"
 
   echo "setup::gcp::set_or_create_folder=${folder_display_name}"
 
-  # This returns the folder number if exists
+  [ "${#folder_display_name}" -le 30 ]
+
+  # This returns the folder number if exists.  In the format:
+  # "folders/123456".
   run gcloud alpha resource-manager folders list --organization "${GCP_ORG_ID}" \
     --filter=display_name:"${folder_display_name}" --format="value(name)"
 
+  # If $output is empty, there is no such folder, so attempt to create.
   # shellcheck disable=SC2154
   if [[ -z $output ]]; then
     # This will return folder name "folders/foldernumber"
     run gcloud alpha resource-manager folders create --display-name="${folder_display_name}" \
       --organization "${GCP_ORG_ID}" --format="value(name)"
+    echo "gcloud exit code: $?"
     # shellcheck disable=SC2154
     [ "$status" -eq 0 ]
-    FOLDER_ID=$(echo "$output" | awk '/^folders/' | cut -d / -f 2) # extract foldernumber
+    # Extract folder number "123456" from "folder/123456"
+    FOLDER_ID=$(echo "$output" | awk '/^folders/' | cut -d / -f 2)
   else
+    echo "reusing folder output: ${output}"
     FOLDER_ID=$output
   fi
   export FOLDER_ID
   echo "Folder id=${FOLDER_ID} found"
-
 }
 
 # GCP Initialize will set the gcloud auth to use the test_runner_creds
@@ -118,7 +128,7 @@ setup::gcp::initialize() {
 
   setup::gcp::create_project "${GCP_PROJECT_A}"
   setup::gcp::create_project "${GCP_PROJECT_B}"
-  setup::gcp::create_folder "${GCP_FOLDER}"
+  setup::gcp::set_or_create_folder "${GCP_FOLDER}"
 
   gcloud alpha projects move "${GCP_PROJECT_A}" --folder="${FOLDER_ID}"
   gcloud alpha projects move "${GCP_PROJECT_B}" \
