@@ -218,6 +218,7 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 				},
 			},
 		),
+		transform.NewQuotaVisitor(),
 	}
 
 	for _, visitor := range visitors {

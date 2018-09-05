@@ -733,7 +733,8 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", policyhierarchy_v1.Policyspace,
 				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
-			"bar": createNamespacePN("bar", "foo", nil),
+			"bar": createNamespacePN("bar", "foo",
+				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
