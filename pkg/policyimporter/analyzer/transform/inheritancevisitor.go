@@ -17,6 +17,8 @@ limitations under the License.
 package transform
 
 import (
+	"path/filepath"
+
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,26 +31,33 @@ type nodeContext struct {
 	inherited []*ast.Object    // the objects that are inherited from the node.
 }
 
+// InheritanceSpec defines the spec for inherited resources.
+type InheritanceSpec struct {
+	GroupVersionKind  schema.GroupVersionKind
+	PolicyspacePrefix bool
+}
+
 // InheritanceVisitor aggregates hierarchical quota.
 type InheritanceVisitor struct {
 	// cv is used for copying parts of the ast.Context tree and continuing underlying visitor iteration.
 	cv *visitor.Copying
 	// groupKinds contains the set of GroupKind that will be targeted during the inheritance transform.
-	groupKinds map[schema.GroupKind]bool
+	inheritanceSpecs map[schema.GroupVersionKind]*InheritanceSpec
 	// treeContext is a stack that tracks ancestry and inherited objects during the tree traversal.
 	treeContext []nodeContext
 }
 
 // NewInheritanceVisitor returns a new InheritanceVisitor for the given GroupKind
-func NewInheritanceVisitor(resources []schema.GroupKind) *InheritanceVisitor {
-	resourceMap := map[schema.GroupKind]bool{}
-	for _, r := range resources {
-		resourceMap[r] = true
+func NewInheritanceVisitor(resources []InheritanceSpec) *InheritanceVisitor {
+	resourceMap := map[schema.GroupVersionKind]*InheritanceSpec{}
+	for idx := range resources {
+		r := &resources[idx]
+		resourceMap[r.GroupVersionKind] = r
 	}
 	cv := visitor.NewCopying()
 	iv := &InheritanceVisitor{
-		cv:         cv,
-		groupKinds: resourceMap,
+		cv:               cv,
+		inheritanceSpecs: resourceMap,
 	}
 	cv.SetImpl(iv)
 	return iv
@@ -93,8 +102,13 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 // VisitObject implements Visitor
 func (v *InheritanceVisitor) VisitObject(o *ast.Object) ast.Node {
 	context := &v.treeContext[len(v.treeContext)-1]
-	groupKind := o.GetObjectKind().GroupVersionKind().GroupKind()
-	if context.nodeType == ast.Policyspace && v.groupKinds[groupKind] {
+	gvk := o.GetObjectKind().GroupVersionKind()
+	if spec, found := v.inheritanceSpecs[gvk]; context.nodeType == ast.Policyspace && found {
+		if spec.PolicyspacePrefix {
+			o = o.DeepCopy()
+			meta := o.ToMeta()
+			meta.SetName(filepath.Base(context.nodePath) + "." + meta.GetName())
+		}
 		context.inherited = append(context.inherited, o)
 		return nil
 	}

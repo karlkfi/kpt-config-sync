@@ -21,17 +21,28 @@ import (
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
+
+func withName(o runtime.Object, name string) runtime.Object {
+	m := o.(metav1.Object)
+	m.SetName(name)
+	return o
+}
 
 var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.MutatingVisitor {
 		return NewInheritanceVisitor(
-			[]schema.GroupKind{
-				schema.GroupKind{
-					Kind:  "RoleBinding",
-					Group: rbacv1.SchemeGroupVersion.Group,
+			[]InheritanceSpec{
+				InheritanceSpec{
+					GroupVersionKind:  rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
+					PolicyspacePrefix: true,
+				},
+				InheritanceSpec{
+					GroupVersionKind: corev1.SchemeGroupVersion.WithKind("ResourceQuota"),
 				},
 			},
 		)
@@ -56,9 +67,6 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
-					Objects: vt.ObjectSets(
-						vt.Helper.AcmeResourceQuota(),
-					),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type:        ast.Namespace,
@@ -69,7 +77,8 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 								vt.Helper.PodReaderRoleBinding(),
 								vt.Helper.PodReaderRole(),
 								vt.Helper.FrontendResourceQuota(),
-								vt.Helper.AdminRoleBinding(),
+								withName(vt.Helper.AdminRoleBinding(), "acme.admin"),
+								vt.Helper.AcmeResourceQuota(),
 							),
 						},
 						&ast.TreeNode{
@@ -80,7 +89,8 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 							Objects: vt.ObjectSets(
 								vt.Helper.DeployemntReaderRoleBinding(),
 								vt.Helper.DeploymentReaderRole(),
-								vt.Helper.AdminRoleBinding(),
+								withName(vt.Helper.AdminRoleBinding(), "acme.admin"),
+								vt.Helper.AcmeResourceQuota(),
 							),
 						},
 					},
