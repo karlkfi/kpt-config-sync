@@ -640,7 +640,7 @@ var parserTestCases = []parserTestCase{
 			"bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"bar/rb2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{"foo": 0, "bar": 2},
+		expectedNumPolicies: map[string]int{"foo": 0, "bar": 0},
 	},
 	{
 		testName: "Policyspace dir with ClusterRole",
@@ -752,7 +752,17 @@ var parserTestCases = []parserTestCase{
 			"r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"r2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{"foo": 2},
+		expectedNumPolicies: map[string]int{"foo": 0},
+	},
+	{
+		testName: "Root dir with multiple inherited Rolebindings",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"r1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
+			"r2.yaml":     templateData{ID: "2"}.apply(aRoleBinding),
+			"bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+		},
+		expectedNumPolicies: map[string]int{"foo": 0, "bar": 2},
 	},
 	{
 		testName: "Root dir with multiple ClusterRoles",

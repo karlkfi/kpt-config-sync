@@ -27,6 +27,7 @@ import (
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
@@ -207,10 +208,23 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 	}
 	fsCtx.Tree = tree
 
-	inputValidator := NewInputValidator()
-	fsCtx.Accept(inputValidator)
-	if err := inputValidator.Result(); err != nil {
-		return nil, err
+	visitors := []ast.MutatingVisitor{
+		NewInputValidator(),
+		transform.NewInheritanceVisitor(
+			[]transform.InheritanceSpec{
+				{
+					GroupVersionKind:  rbac_v1.SchemeGroupVersion.WithKind("RoleBinding"),
+					PolicyspacePrefix: true,
+				},
+			},
+		),
+	}
+
+	for _, visitor := range visitors {
+		fsCtx = fsCtx.Accept(visitor).(*ast.Context)
+		if err := visitor.Result(); err != nil {
+			return nil, err
+		}
 	}
 
 	outputVisitor := backend.NewOutputVisitor()
