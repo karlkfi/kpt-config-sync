@@ -240,19 +240,23 @@ func createPolicyNode(
 }
 
 func createNamespacePN(
-	name string,
+	path string,
 	parent string,
 	policies *Policies) policyhierarchy_v1.PolicyNode {
-	return createPolicyNode(name, parent, policyhierarchy_v1.Namespace, policies)
+	return createNamespacePNWithLabelsAndAnnotations(path, parent, policies, nil, nil)
 }
 
 func createNamespacePNWithLabelsAndAnnotations(
-	name string,
+	path string,
 	parent string,
 	policies *Policies,
 	labels, annotations map[string]string,
 ) policyhierarchy_v1.PolicyNode {
-	pn := createPolicyNode(name, parent, policyhierarchy_v1.Namespace, policies)
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations["nomos.dev/declaration-path"] = path
+	pn := createPolicyNode(filepath.Base(filepath.Dir(path)), parent, policyhierarchy_v1.Namespace, policies)
 	pn.Labels = labels
 	pn.Annotations = annotations
 	return pn
@@ -277,8 +281,8 @@ func createClusterPolicy() *policyhierarchy_v1.ClusterPolicy {
 		&policyhierarchy_v1.ClusterPolicySpec{})
 }
 
-func createResourceQuota(name string, namespace string, labels map[string]string) *core_v1.ResourceQuota {
-	return &core_v1.ResourceQuota{
+func createResourceQuota(path, name, namespace string, labels map[string]string) *core_v1.ResourceQuota {
+	rq := &core_v1.ResourceQuota{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ResourceQuota",
@@ -292,6 +296,10 @@ func createResourceQuota(name string, namespace string, labels map[string]string
 			Hard: core_v1.ResourceList{"pods": resource.MustParse("10")},
 		},
 	}
+	if path != "" {
+		rq.ObjectMeta.Annotations = map[string]string{"nomos.dev/declaration-path": path}
+	}
+	return rq
 }
 
 type fileContentMap map[string]string
@@ -316,7 +324,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
-			"bar": createNamespacePN("bar", "foo", nil),
+			"bar": createNamespacePN("foo/bar/ns.yaml", "foo", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -328,7 +336,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
-			"bar": createNamespacePN("bar", "foo", nil),
+			"bar": createNamespacePN("foo/bar/ns.json", "foo", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -340,7 +348,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
-			"bar": createNamespacePNWithLabelsAndAnnotations("bar", "foo", nil,
+			"bar": createNamespacePNWithLabelsAndAnnotations("foo/bar/ns.yaml", "foo", nil,
 				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -354,7 +362,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
-			"bar": createNamespacePN("bar", "foo", nil),
+			"bar": createNamespacePN("foo/bar/ns.yaml", "foo", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -368,7 +376,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
-			"bar": createNamespacePN("bar", "foo", nil),
+			"bar": createNamespacePN("foo/bar/ns.yaml", "foo", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -415,10 +423,10 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
-			"bar": createNamespacePN("bar", "foo",
+			"bar": createNamespacePN("foo/bar/ns.yaml", "foo",
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
-						resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
+						"foo/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
 				},
 			),
 		},
@@ -432,9 +440,9 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
-			"bar": createNamespacePN("bar", "foo",
+			"bar": createNamespacePN("foo/bar/combo.yaml", "foo",
 				&Policies{ResourceQuotaV1: createResourceQuota(
-					resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
+					"foo/bar/combo.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
 				},
 			),
 		},
@@ -521,7 +529,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
 			"baz": createReservedPN("baz", "", nil),
-			"bar": createNamespacePN("bar", "foo", nil),
+			"bar": createNamespacePN("foo/bar/ns.yaml", "foo", nil),
 		},
 	},
 	{
@@ -613,7 +621,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
 			"bar": createPolicyspacePN("bar", "foo",
-				&Policies{ResourceQuotaV1: createResourceQuota(resourcequota.ResourceQuotaObjectName, "", nil)}),
+				&Policies{ResourceQuotaV1: createResourceQuota("foo/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -728,7 +736,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", &Policies{
-				ResourceQuotaV1: createResourceQuota(resourcequota.ResourceQuotaObjectName, "", nil)}),
+				ResourceQuotaV1: createResourceQuota("foo/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -741,10 +749,10 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", policyhierarchy_v1.Policyspace,
-				&Policies{ResourceQuotaV1: createResourceQuota(resourcequota.ResourceQuotaObjectName, "", nil)}),
-			"bar": createNamespacePN("bar", "foo",
+				&Policies{ResourceQuotaV1: createResourceQuota("foo/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+			"bar": createNamespacePN("foo/bar/ns.yaml", "foo",
 				&Policies{ResourceQuotaV1: createResourceQuota(
-					resourcequota.ResourceQuotaObjectName, "", resourcequota.NewNomosQuotaLabels()),
+					"foo/rq.yaml", resourcequota.ResourceQuotaObjectName, "", resourcequota.NewNomosQuotaLabels()),
 				}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -911,7 +919,7 @@ func TestParser(t *testing.T) {
 					}
 				}
 				if diff := deep.Equal(n, tc.expectedNumPolicies); diff != nil {
-					t.Fatalf("Actual and expected number of policy nodes didn't match: %v", diff)
+					t.Errorf("Actual and expected number of policy nodes didn't match: %v", diff)
 				}
 			}
 
@@ -919,7 +927,7 @@ func TestParser(t *testing.T) {
 				p := actualPolicies.ClusterPolicy.Spec
 				n := len(p.ClusterRolesV1) + len(p.ClusterRoleBindingsV1) + len(p.PodSecurityPoliciesV1Beta1)
 				if diff := deep.Equal(n, *tc.expectedNumClusterPolicies); diff != nil {
-					t.Fatalf("Actual and expected number of cluster policies didn't match: %v", diff)
+					t.Errorf("Actual and expected number of cluster policies didn't match: %v", diff)
 				}
 			}
 
@@ -930,12 +938,11 @@ func TestParser(t *testing.T) {
 				}
 
 				if diff := deep.Equal(actualPolicies, expectedPolicies); diff != nil {
-					t.Fatalf("Actual and expected policies didn't match: %v", diff)
+					t.Errorf("Actual and expected policies didn't match: %v", diff)
 				}
 			}
 		})
 	}
-
 }
 
 // TODO(frankfarzan): Add a test for acme example.

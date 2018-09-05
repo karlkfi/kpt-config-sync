@@ -36,6 +36,7 @@ import (
 	extensions_v1beta1 "k8s.io/api/extensions/v1beta1"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/clientcmd"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
@@ -243,6 +244,16 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 	return policies, nil
 }
 
+func applyPathAnnotation(o runtime.Object, info *resource.Info, dir string) {
+	metaObj := o.(meta_v1.Object)
+	a := metaObj.GetAnnotations()
+	if a == nil {
+		a = map[string]string{}
+		metaObj.SetAnnotations(a)
+	}
+	a[policyhierarchy_v1.AnnotationKeyDeclarationPath] = filepath.Join(dir, filepath.Base(info.Source))
+}
+
 func processRootDir(
 	dir string,
 	infos []*resource.Info,
@@ -253,6 +264,7 @@ func processRootDir(
 
 	for _, i := range infos {
 		o := i.AsVersioned()
+		applyPathAnnotation(o, i, rootNode.Path)
 
 		// Types in scope then alphabetical order.
 		switch o := o.(type) {
@@ -325,6 +337,7 @@ func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *Di
 
 	for _, i := range infos {
 		o := i.AsVersioned()
+		applyPathAnnotation(o, i, treeNode.Path)
 
 		// Types in alphabetical order.
 		switch o := o.(type) {
@@ -366,6 +379,7 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 
 	for _, i := range infos {
 		o := i.AsVersioned()
+		applyPathAnnotation(o, i, treeNode.Path)
 
 		// Types in alphabetical order.
 		switch o := o.(type) {

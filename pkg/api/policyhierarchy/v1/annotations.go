@@ -15,3 +15,7 @@ limitations under the License.
 */
 
 package v1
+
+// AnnotationKeyDeclarationPath is an annotation indicates the path in the source of truth where the
+// policy was originally declared.
+const AnnotationKeyDeclarationPath = "nomos.dev/declaration-path"
