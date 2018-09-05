@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-test/deep"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
@@ -155,6 +156,17 @@ data:
   {{.Namespace}}: {{.Attribute}}
 metadata:
   name: {{.Name}}
+`
+
+	aNamespaceSelectorTemplate = `
+kind: NamespaceSelector
+apiVersion: nomos.dev/v1
+metadata:
+  name: sre-supported
+spec:
+  selector:
+    matchLabels:
+      environment: prod
 `
 )
 
@@ -692,6 +704,14 @@ var parserTestCases = []parserTestCase{
 		expectedError: true,
 	},
 	{
+		testName: "Policyspace dir with NamespaceSelector CRD",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/ns-selector.yaml": aNamespaceSelectorTemplate,
+		},
+		expectedNumPolicies: map[string]int{"foo": 0, "bar": 0},
+	},
+	{
 		testName: "Policyspace and Namespace dir have duplicate rolebindings",
 		root:     "foo",
 		testFiles: fileContentMap{
@@ -893,10 +913,10 @@ func TestParser(t *testing.T) {
 				d.createTestFile(k, v)
 			}
 
-			p, err := NewParser(nil, false)
-			if err != nil {
-				t.Fatalf("Failed to create parser: %v", err)
-			}
+			f := fstesting.NewTestFactory()
+			defer f.Cleanup()
+
+			p := Parser{f, true}
 
 			actualPolicies, err := p.Parse(d.rootDir)
 			if tc.expectedError {
@@ -944,5 +964,3 @@ func TestParser(t *testing.T) {
 		})
 	}
 }
-
-// TODO(frankfarzan): Add a test for acme example.

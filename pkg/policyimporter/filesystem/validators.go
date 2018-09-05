@@ -18,12 +18,12 @@ package filesystem
 
 import (
 	"github.com/pkg/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
 )
 
 type validator struct {
-	seen map[meta_v1.TypeMeta]bool
+	seen map[schema.GroupVersionKind]bool
 	err  error
 }
 
@@ -31,7 +31,7 @@ type validator struct {
 // err holds the first encountered error. Subsequent errors are short-circuited.
 // Error messages here must be as specific and actionable as possible.
 func newValidator() *validator {
-	return &validator{seen: make(map[meta_v1.TypeMeta]bool)}
+	return &validator{seen: make(map[schema.GroupVersionKind]bool)}
 }
 
 // HasNamespace validates that the object in info has the given namespace.
@@ -57,13 +57,13 @@ func (v *validator) HasName(info *resource.Info, name string) *validator {
 }
 
 // MarkSeen marks the given type as seen.
-func (v *validator) MarkSeen(t meta_v1.TypeMeta) *validator {
+func (v *validator) MarkSeen(t schema.GroupVersionKind) *validator {
 	v.seen[t] = true
 	return v
 }
 
 // HaveNotSeen validates that the MarkSeen method is called at most once with the given type.
-func (v *validator) HaveNotSeen(t meta_v1.TypeMeta) *validator {
+func (v *validator) HaveNotSeen(t schema.GroupVersionKind) *validator {
 	if v.err != nil {
 		return v
 	}
@@ -74,7 +74,7 @@ func (v *validator) HaveNotSeen(t meta_v1.TypeMeta) *validator {
 }
 
 // HaveSeen validates that the MarkSeen method is called at least once with the given type.
-func (v *validator) HaveSeen(t meta_v1.TypeMeta) *validator {
+func (v *validator) HaveSeen(t schema.GroupVersionKind) *validator {
 	if v.err != nil {
 		return v
 	}
@@ -85,7 +85,7 @@ func (v *validator) HaveSeen(t meta_v1.TypeMeta) *validator {
 }
 
 // ObjectedDisallowedContext indicates that an object of given type is not allowed in this directory.
-func (v *validator) ObjectDisallowedInContext(info *resource.Info, t meta_v1.TypeMeta) *validator {
+func (v *validator) ObjectDisallowedInContext(info *resource.Info, t schema.GroupVersionKind) *validator {
 	if v.err != nil {
 		return v
 	}

@@ -19,6 +19,7 @@ limitations under the License.
 package filesystem
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,24 +47,18 @@ import (
 
 // Parser reads files on disk and builds Nomos CRDs.
 type Parser struct {
-	factory cmdutil.Factory
-	schema  validation.Schema
+	factory  cmdutil.Factory
+	validate bool
 }
 
 // NewParser creates a new Parser.
 // clientConfig can be used to configure api server client. It should be set to nil when running in cluster.
-// validate determines whether to validate schema using OpenAPI spec. To validate arbirary resources,
-// importer must be able to talk to the API server to download the spec.
-func NewParser(clientConfig clientcmd.ClientConfig, validate bool) (*Parser, error) {
+// validate determines whether to validate schema using OpenAPI spec.
+func NewParser(config clientcmd.ClientConfig, validate bool) (*Parser, error) {
 	p := Parser{
-		factory: cmdutil.NewFactory(clientConfig),
+		factory:  cmdutil.NewFactory(config),
+		validate: validate,
 	}
-
-	schema, err := p.factory.Validator(validate)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get schema")
-	}
-	p.schema = schema
 
 	return &p, nil
 }
@@ -88,9 +83,13 @@ func (p Parser) Parse(root string) (*policyhierarchy_v1.AllPolicies, error) {
 	}
 	var fileInfos []*resource.Info
 	if len(visitors) > 0 {
+		schema, err := p.factory.Validator(p.validate)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get schema")
+		}
 		result := p.factory.NewBuilder().
 			Unstructured().
-			Schema(p.schema).
+			Schema(schema).
 			ContinueOnError().
 			FilenameParam(false, &resource.FilenameOptions{Recursive: true, Filenames: []string{root}}).
 			Do()
@@ -276,26 +275,32 @@ func processRootDir(
 				v.err = errors.Errorf("Invalid configmap in root dir %#v", o)
 			}
 
-		// Cluster scope
+			// Cluster scope
 		case *rbac_v1.ClusterRole:
 			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.Object{Object: o})
 		case *rbac_v1.ClusterRoleBinding:
 			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.Object{Object: o})
 		case *core_v1.Namespace:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *extensions_v1beta1.PodSecurityPolicy:
 			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.Object{Object: o})
 
-		// Namespace Scope
+			// Namespace Scope
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, "")
 			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.Role:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, "")
 			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
-
+		case runtime.Unstructured:
+			switch o.GetObjectKind().GroupVersionKind() {
+			case policyhierarchy_v1.SchemeGroupVersion.WithKind("NamespaceSelector"):
+				v.err = parseNamespaceSelector(o, rootNode)
+			default:
+				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
+			}
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
 		}
@@ -342,24 +347,31 @@ func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *Di
 		// Types in alphabetical order.
 		switch o := o.(type) {
 		case *rbac_v1.ClusterRole:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *rbac_v1.ClusterRoleBinding:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *core_v1.Namespace:
 			// Should not be reachable.
 			panic(fmt.Sprintf("%s processed as policyspace but contains a namespace resource", dir))
 		case *extensions_v1beta1.PodSecurityPolicy:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *core_v1.ResourceQuota:
 			v.HasNamespace(i, "")
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.Role:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *rbac_v1.RoleBinding:
 			v.HasNamespace(i, "")
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *core_v1.ConfigMap:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
+		case runtime.Unstructured:
+			switch o.GetObjectKind().GroupVersionKind() {
+			case policyhierarchy_v1.SchemeGroupVersion.WithKind("NamespaceSelector"):
+				v.err = parseNamespaceSelector(o, treeNode)
+			default:
+				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
+			}
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
 		}
@@ -384,17 +396,17 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 		// Types in alphabetical order.
 		switch o := o.(type) {
 		case *rbac_v1.ClusterRole:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *rbac_v1.ClusterRoleBinding:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *core_v1.Namespace:
-			v.HasName(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta)
+			v.HasName(i, namespace).HaveNotSeen(o.GroupVersionKind()).MarkSeen(o.GroupVersionKind())
 			treeNode.Labels = o.Labels
 			treeNode.Annotations = o.Annotations
 		case *extensions_v1beta1.PodSecurityPolicy:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *core_v1.ResourceQuota:
-			v.HasNamespace(i, namespace).HaveNotSeen(o.TypeMeta).MarkSeen(o.TypeMeta)
+			v.HasNamespace(i, namespace).HaveNotSeen(o.GroupVersionKind()).MarkSeen(o.GroupVersionKind())
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.Role:
 			v.HasNamespace(i, namespace)
@@ -403,7 +415,14 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 			v.HasNamespace(i, namespace)
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *core_v1.ConfigMap:
-			v.ObjectDisallowedInContext(i, o.TypeMeta)
+			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
+		case runtime.Unstructured:
+			switch o.GetObjectKind().GroupVersionKind() {
+			case policyhierarchy_v1.SchemeGroupVersion.WithKind("NamespaceSelector"):
+				v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
+			default:
+				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
+			}
 		default:
 			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
 			continue
@@ -414,10 +433,28 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 		}
 	}
 
-	v.HaveSeen(meta_v1.TypeMeta{Kind: "Namespace", APIVersion: "v1"})
+	v.HaveSeen(schema.GroupVersionKind{Version: "v1", Kind: "Namespace"})
 	if v.err != nil {
 		return v.err
 	}
 
+	return nil
+}
+
+func parseNamespaceSelector(o runtime.Unstructured, node *ast.TreeNode) error {
+	j, err := json.Marshal(o.UnstructuredContent())
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal object in %s to NamespaceSelector")
+	}
+	ns := &policyhierarchy_v1.NamespaceSelector{}
+	err = json.Unmarshal(j, ns)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal NamespaceSelector")
+	}
+
+	if node.Selectors == nil {
+		node.Selectors = make(map[string]*policyhierarchy_v1.NamespaceSelector)
+	}
+	node.Selectors[ns.Name] = ns
 	return nil
 }

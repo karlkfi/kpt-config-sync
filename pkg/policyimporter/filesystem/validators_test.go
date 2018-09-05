@@ -19,7 +19,7 @@ package filesystem
 import (
 	"testing"
 
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
 )
 
@@ -29,7 +29,7 @@ type validatorsTestCase struct {
 	expectedError bool
 }
 
-var namespaceType = meta_v1.TypeMeta{Kind: "Namespace", APIVersion: "v1"}
+var namespaceType = schema.GroupVersionKind{Version: "v1", Kind: "Namespace"}
 
 var testCases = []validatorsTestCase{
 	{"HasName valid", newValidator().HasName(&resource.Info{Name: "foo"}, "foo"), false},
