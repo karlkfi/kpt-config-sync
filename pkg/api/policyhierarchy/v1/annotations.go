@@ -15,7 +15,3 @@ limitations under the License.
 */
 
 package v1
-
-// AnnotationKeyDeclarationDirectory is an annotation indicates the directory in the source of truth where the
-// policy was originally declared.
-const AnnotationKeyDeclarationDirectory = "nomos.dev/declaration-directory"

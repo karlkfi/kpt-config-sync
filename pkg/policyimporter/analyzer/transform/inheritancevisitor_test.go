@@ -22,16 +22,8 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
-
-func withAnnotations(obj runtime.Object, annotations map[string]string) runtime.Object {
-	n := obj.DeepCopyObject()
-	n.(metav1.Object).SetAnnotations(annotations)
-	return n
-}
 
 var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.MutatingVisitor {
@@ -77,7 +69,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 								vt.Helper.PodReaderRoleBinding(),
 								vt.Helper.PodReaderRole(),
 								vt.Helper.FrontendResourceQuota(),
-								withAnnotations(vt.Helper.AdminRoleBinding(), map[string]string{"nomos.dev/declaration-directory": "acme"}),
+								vt.Helper.AdminRoleBinding(),
 							),
 						},
 						&ast.TreeNode{
@@ -88,7 +80,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 							Objects: vt.ObjectSets(
 								vt.Helper.DeployemntReaderRoleBinding(),
 								vt.Helper.DeploymentReaderRole(),
-								withAnnotations(vt.Helper.AdminRoleBinding(), map[string]string{"nomos.dev/declaration-directory": "acme"}),
+								vt.Helper.AdminRoleBinding(),
 							),
 						},
 					},

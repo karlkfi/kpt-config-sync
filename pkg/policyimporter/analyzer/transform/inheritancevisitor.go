@@ -17,7 +17,6 @@ limitations under the License.
 package transform
 
 import (
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -96,14 +95,7 @@ func (v *InheritanceVisitor) VisitObject(o *ast.Object) ast.Node {
 	context := &v.treeContext[len(v.treeContext)-1]
 	groupKind := o.GetObjectKind().GroupVersionKind().GroupKind()
 	if context.nodeType == ast.Policyspace && v.groupKinds[groupKind] {
-		obj := o.DeepCopy()
-		annotations := obj.ToMeta().GetAnnotations()
-		if annotations == nil {
-			annotations = map[string]string{}
-		}
-		annotations[policyhierarchyv1.AnnotationKeyDeclarationDirectory] = context.nodePath
-		obj.ToMeta().SetAnnotations(annotations)
-		context.inherited = append(context.inherited, obj)
+		context.inherited = append(context.inherited, o)
 		return nil
 	}
 	return o
