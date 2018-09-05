@@ -83,25 +83,25 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	name := filepath.Base(n.Path)
 	if v.reserved.IsReserved(name) {
 		v.errs.Add(errors.Errorf(
-			"Reserved namespaces cannot be used for %s names.  "+
+			"Reserved namespaces must not be used for %s names.  "+
 				"Directory %q declares a %s which conflicts with a reserved namespace name, "+
-				"adjust the directory name for %q or remove %s from the reserved namespace config to resolve.",
+				"adjust the directory name for %q or remove %s from the reserved namespace config.",
 			n.Type, n.Path, n.Type, n.Path, filepath.Base(n.Path)))
 	}
 	if other, found := v.names[name]; found {
 		v.errs.Add(errors.Errorf(
-			"Names for %s cannot duplicate names for %ss.  "+
+			"Names for %s must not match names for other %ss.  "+
 				"Declaration in directory %q duplicates name from declaration in %q, "+
-				"adjust one of the directory names to resolve.",
+				"adjust one of the directory names.",
 			n.Type, other.Type, n.Path, other.Path))
 	}
 
 	if len(v.nodes) != 0 {
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == ast.Namespace {
 			v.errs.Add(errors.Errorf(
-				"Namespaces cannot contain children.  "+
+				"Namespaces must not contain children.  "+
 					"Namespace declared in directory %q cannot have child declared in subdirectory %q, "+
-					"restructure directories so namespace %q does not have children to resolve.",
+					"restructure directories so namespace %q does not have children.",
 				parent.Path, n.Path, filepath.Base(n.Path)))
 		}
 	}
@@ -118,8 +118,8 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 	if ns := metaObj.GetNamespace(); ns != "" {
 		if len(v.nodes) == 0 {
 			v.errs.Add(errors.Errorf(
-				"Cluster scoped objects are not associated with a namespace, "+
-					"remove the namespace field from object to resolve.  "+
+				"Cluster scoped objects must not be associated with a namespace, "+
+					"remove the namespace field from object.  "+
 					"Object %s, Name=%q is declared with namespace %s",
 				o.Object.GetObjectKind().GroupVersionKind(),
 				metaObj.GetName(),
@@ -128,9 +128,10 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 			node := v.nodes[len(v.nodes)-1]
 			if node.Type == ast.Policyspace {
 				v.errs.Add(errors.Errorf(
-					"Objects declared in policyspace directories are not allowed to have a namespace specified, "+
-						"remove the namespace field from object to resolve.  "+
-						"Directory has declaration for %s, Name=%q with namespace %s",
+					"Objects declared in policyspace directories must not have a namespace specified, "+
+						"remove the namespace field from object.  "+
+						"Directory %q has declaration for %s, Name=%q with namespace %s",
+					node.Path,
 					o.Object.GetObjectKind().GroupVersionKind(),
 					metaObj.GetName(),
 					ns))
