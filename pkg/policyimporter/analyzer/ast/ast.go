@@ -47,6 +47,9 @@ type Root struct {
 	ReservedNamespaces *ReservedNamespaces // Reserved namespaces
 	Cluster            *Cluster            // Cluster scoped info
 	Tree               *TreeNode           // Hirearchical policies
+
+	// Extension holds visitor specific data.
+	Data *Extension
 }
 
 // Accept implements Visitable
@@ -127,6 +130,9 @@ type TreeNode struct {
 	// Selectors is a map of name to NamespaceSelector objects found at this node.
 	// One or more Objects may have an annotation referring to these NamespaceSelectors by name.
 	Selectors map[string]*v1alpha1.NamespaceSelector
+
+	// Extension holds visitor specific data.
+	Data *Extension
 
 	// children of the directory
 	Children []*TreeNode
