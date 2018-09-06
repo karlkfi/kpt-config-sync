@@ -85,9 +85,9 @@ This duplicates the e2e tests, so it's not expected to be comprehensive. This
 only covers the possibility that e2e tests are so badly broken that they fail to
 run at all but still report passing.
 
-Follow [installation instructions](installation.md), but use the
+Follow [installation instructions](../installation.md), but use the
 [latest installer](https://console.cloud.google.com/storage/browser/nomos-release/latest/?project=nomos-release),
-which you just created. Follow instructions for [Git config](git_config.md). Use
+which you just created. Follow instructions for [Git config](../git_config.md). Use
 the sample YAML from those instructions, for the foo-corp repo. You will most
 likely have memorized these steps, but try to follow the documentation as best
 you can. This is our only regular review of the documentation.
