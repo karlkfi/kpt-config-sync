@@ -103,3 +103,5 @@ bless-release: check-dirty
 		$(RELEASE_BUCKET)/$(VERSION) \
 		$(RELEASE_BUCKET)/stable
 
+autorelease:
+	$(info Work in progress)
