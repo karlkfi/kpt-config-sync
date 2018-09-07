@@ -384,7 +384,7 @@
   revision = "316fb6d3f031ae8f4d457c6c5186b9e3ded70435"
 
 [[projects]]
-  digest = "1:84eb7f9f2d07909a7d689755d5781dfa57fda041b8b823dca03016f22ea65f6b"
+  digest = "1:c2cedb2f205fa918c14939c3b10635b92a02052774c911a8fb9c155b947c2b39"
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
@@ -394,7 +394,7 @@
     "cmp/internal/value",
   ]
   pruneopts = "UT"
-  revision = "5411ab924f9ffa6566244a9e504bc347edacffd3"
+  revision = "97aa668b73e764ccdd786bc3ccd2edffe621150e"
 
 [[projects]]
   branch = "master"
@@ -1413,12 +1413,12 @@
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
+    "github.com/prometheus/common/expfmt",
     "golang.org/x/net/context",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/credentials",
     "google.golang.org/grpc/credentials/oauth",
-    "google.golang.org/grpc/keepalive",
     "google.golang.org/grpc/metadata",
     "k8s.io/api/admission/v1beta1",
     "k8s.io/api/admissionregistration/v1beta1",
@@ -1429,6 +1429,7 @@
     "k8s.io/api/extensions/v1beta1",
     "k8s.io/api/rbac/v1",
     "k8s.io/apimachinery/pkg/api/errors",
+    "k8s.io/apimachinery/pkg/api/meta",
     "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/api/validation/path",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
@@ -1451,6 +1452,7 @@
     "k8s.io/client-go/informers/core/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
+    "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/listers/core/v1",
     "k8s.io/client-go/listers/rbac/v1",
