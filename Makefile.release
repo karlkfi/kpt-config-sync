@@ -101,10 +101,12 @@ endif
 # a dirty git client.
 check-dirty:
 	@echo "VERSION=$(VERSION)"
-	@if [[ $(VERSION) == *"dirty"* ]]; then \
+	@bash -c '\
+		if [[ $(VERSION) == *"dirty"* ]]; then \
 		echo "Cannot release from a dirty client: VERSION=$(VERSION)"; \
 		exit 1; \
-	fi
+	fi\
+	'
 
 $(STAGING_DIR)/installer.zip: \
 		installer-staging \
@@ -141,7 +143,7 @@ release: \
 # built and update the stable docs package.  Dirty package releases  are not
 # allowed.
 bless-release: check-dirty
-	@echo "+++ Marking release as 'stable'"
+	@echo "+++ Marking release $(IMAGE_TAG) as 'stable'"
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/nomos:stable
@@ -223,6 +225,57 @@ __internal-autorelease-local: \
 		git-relnotes-rc
 	$(info +++ Completed releasing $(NEXT_RC) [LOCAL RELEASE])
 
+define bless_autorelease_instructions =
++++
++++ Bless an automated release from go/nomos-releaser
++++
++++
++++ Previous release tag:                             $(LAST_RELEASE)
++++ Last release candidate tag found in the git repo: $(LAST_RC)
++++ Proposed release tag:                             $(NEXT_RELEASE)
++++
++++ Proposed changelog is below.
+endef
+
+# Promote the latest release candidate
+bless-autorelease: NEXT_RELEASE=$(shell \
+		docker run --rm $(BUILDENV_IMAGE) sembump $(LAST_RC))
+bless-autorelease:
+	$(info $(bless_autorelease_instructions))
+	TZ=America/Los_Angeles \
+  	  git log \
+	     --pretty="format:%C(yellow)%h %C(cyan)%>(12,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" \
+	  --date=local \
+	  $(LAST_RELEASE)..$(LAST_RC)
+	@bash -c '\
+			read -p "Release candidate to promote (default=$(LAST_RC)): " chosen_rc;           \
+	        chosen_rc="$${chosen_rc:-$(LAST_RC)}";                                         \
+			read -p "Blessed release version      (default=$(NEXT_RELEASE)): " chosen_release; \
+	        chosen_release="$${chosen_release:-$(NEXT_RELEASE)}";                          \
+		    echo "Chosen:  $${chosen_release}";                                            \
+			echo "RC:      $${chosen_rc}";                                                 \
+			git tag -a $${chosen_release} -m "Blessed release $${chosen_release}" ; \
+			gcloud container images add-tag --quiet                                        \
+			   gcr.io/$(GCP_PROJECT)/nomos:$${chosen_rc}                                   \
+			   gcr.io/$(GCP_PROJECT)/nomos:$${chosen_release} ;                            \
+			gcloud container images add-tag --quiet                                        \
+			   gcr.io/$(GCP_PROJECT)/nomos:$${chosen_release}                              \
+			   gcr.io/$(GCP_PROJECT)/nomos:stable ;                                        \
+			gsutil -m rsync -r -d -p                                                       \
+			   $(RELEASE_BUCKET)/$${chosen_rc}                                             \
+			   $(RELEASE_BUCKET)/$${chosen_release} ;                                      \
+			gsutil -m rsync -r -d -p                                                       \
+			   $(RELEASE_BUCKET)/$${chosen_release}                                        \
+			   $(RELEASE_BUCKET)/stable ;                                                  \
+			git push origin $${chosen_release};                                            \
+			echo -e "\nRelease notes $(LAST_RELEASE)..$${chosen_release}:\n"; \
+			TZ=America/Los_Angeles \
+			  git log \
+			     --pretty="format:%C(yellow)%h %C(cyan)%>(12,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" \
+                 --date=local $(LAST_RELEASE)..$${chosen_release} ; \
+	'
+
+	
 #############################################################################
 # Various release info printed for diagnostics.
 
