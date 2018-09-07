@@ -19,31 +19,10 @@ package modules
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/resourcequota"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
-
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	test "github.com/google/nomos/pkg/syncer/policyhierarchycontroller/testing"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func WithResourceQuota(hardResList core_v1.ResourceList) *policyhierarchy_v1.PolicyNode {
-	return &policyhierarchy_v1.PolicyNode{
-		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			ResourceQuotaV1: &core_v1.ResourceQuota{
-				ObjectMeta: meta_v1.ObjectMeta{
-					Name:   resourcequota.ResourceQuotaObjectName,
-					Labels: resourcequota.NewNomosQuotaLabels(),
-				},
-				Spec: core_v1.ResourceQuotaSpec{
-					Hard: hardResList,
-				},
-			},
-		},
-	}
-}
 
 func TestQuota(t *testing.T) {
 	testSuite := test.ModuleTest{
@@ -128,32 +107,6 @@ func TestQuota(t *testing.T) {
 					},
 				},
 				ExpectEqual: false,
-			},
-		},
-		Aggregation: test.ModuleAggregationTestcases{
-			test.ModuleAggregationTestcase{
-				Name: "Base case",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithResourceQuota(core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")}),
-				},
-				Expect: hierarchy.Instances{
-					&core_v1.ResourceQuota{
-						ObjectMeta: meta_v1.ObjectMeta{
-							Name:   resourcequota.ResourceQuotaObjectName,
-							Labels: resourcequota.NewNomosQuotaLabels(),
-						},
-						Spec: core_v1.ResourceQuotaSpec{
-							Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
-						},
-					},
-				},
-			},
-			test.ModuleAggregationTestcase{
-				Name: "No quota",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithResourceQuota(core_v1.ResourceList{}),
-				},
-				Expect: hierarchy.Instances{},
 			},
 		},
 	}

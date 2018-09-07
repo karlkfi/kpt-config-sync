@@ -20,42 +20,16 @@ package modules
 import (
 	"reflect"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
 	controller_informers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
-	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 )
-
-// AggregatedRole provides aggregation operations for the Role resource.
-type AggregatedRole struct {
-	roles []rbac_v1.Role
-}
-
-// Aggregated implements hierarchy.AggregatedNode
-func (s *AggregatedRole) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarchy.AggregatedNode {
-	if !node.Spec.Type.IsNamespace() {
-		return &AggregatedRole{}
-	}
-
-	return &AggregatedRole{roles: node.Spec.RolesV1}
-}
-
-// Generate implements hierarchy.AggregatedNode
-func (s *AggregatedRole) Generate() hierarchy.Instances {
-	var instances hierarchy.Instances
-	for _, role := range s.roles {
-		instances = append(instances, role.DeepCopy())
-	}
-	return instances
-}
-
-var _ hierarchy.AggregatedNode = &AggregatedRole{}
 
 // Role implements a module for flattening roles.
 type Role struct {
@@ -80,9 +54,9 @@ func (s *Role) Name() string {
 }
 
 // Equal implements policyhierarchycontroller.Module
-func (s *Role) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
-	lhs := lhsObj.(*rbac_v1.Role)
-	rhs := rhsObj.(*rbac_v1.Role)
+func (s *Role) Equal(lhsObj metav1.Object, rhsObj metav1.Object) bool {
+	lhs := lhsObj.(*rbacv1.Role)
+	rhs := rhsObj.(*rbacv1.Role)
 	if len(lhs.Rules) == 0 && len(rhs.Rules) == 0 {
 		return true
 	}
@@ -91,17 +65,21 @@ func (s *Role) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
 
 // equalSpec performs equals on runtime.Objects
 func (s *Role) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
-	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
+	return s.Equal(lhsObj.(metav1.Object), rhsObj.(metav1.Object))
 }
 
-// NewAggregatedNode implements policyhierarchycontroller.Module
-func (s *Role) NewAggregatedNode() hierarchy.AggregatedNode {
-	return &AggregatedRole{}
+// Instances implements policyhierarchycontroller.Module
+func (s *Role) Instances(policyNode *policyhierarchyv1.PolicyNode) []metav1.Object {
+	var rs []metav1.Object
+	for i := range policyNode.Spec.RolesV1 {
+		rs = append(rs, &policyNode.Spec.RolesV1[i])
+	}
+	return rs
 }
 
 // Instance implements policyhierarchycontroller.Module
-func (s *Role) Instance() meta_v1.Object {
-	return &rbac_v1.Role{}
+func (s *Role) Instance() metav1.Object {
+	return &rbacv1.Role{}
 }
 
 // InformerProvider implements policyhierarchycontroller.Module
@@ -112,8 +90,8 @@ func (s *Role) InformerProvider() controller_informers.InformerProvider {
 // ActionSpec implements policyhierarchycontroller.Module
 func (s *Role) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
-		&rbac_v1.Role{},
-		rbac_v1.SchemeGroupVersion,
+		&rbacv1.Role{},
+		rbacv1.SchemeGroupVersion,
 		s.equalSpec,
 		s.client.RbacV1(),
 		s.informers.Rbac().V1().Roles().Lister(),

@@ -17,8 +17,9 @@ limitations under the License.
 package policyhierarchycontroller
 
 import (
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Module is a type specific implementation for hierarchical synchronization.
@@ -26,7 +27,6 @@ import (
 type Module interface {
 	syncer.Module
 
-	// NewAggregatedNode returns a new aggregated node object that will
-	// perform hierarchy aggregation operations for the type.
-	NewAggregatedNode() hierarchy.AggregatedNode
+	// Instances returns the module specific instances from the policy node.
+	Instances(policyNode *policyhierarchyv1.PolicyNode) []metav1.Object
 }

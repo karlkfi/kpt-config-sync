@@ -19,21 +19,10 @@ package modules
 import (
 	"testing"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
 	test "github.com/google/nomos/pkg/syncer/policyhierarchycontroller/testing"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func WithRole(t policyhierarchy_v1.PolicyNodeType, r ...rbac_v1.Role) *policyhierarchy_v1.PolicyNode {
-	return &policyhierarchy_v1.PolicyNode{
-		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			Type:    t,
-			RolesV1: r,
-		},
-	}
-}
 
 func TestRoles(t *testing.T) {
 	admin := rbac_v1.Role{
@@ -45,18 +34,6 @@ func TestRoles(t *testing.T) {
 				Verbs:     []string{"*"},
 				APIGroups: []string{"*"},
 				Resources: []string{"*"},
-			},
-		},
-	}
-	editor := rbac_v1.Role{
-		ObjectMeta: meta_v1.ObjectMeta{
-			Name: "editor",
-		},
-		Rules: []rbac_v1.PolicyRule{
-			rbac_v1.PolicyRule{
-				Verbs:     []string{"*"},
-				APIGroups: []string{""},
-				Resources: []string{"pods", "deployments", "services"},
 			},
 		},
 	}
@@ -93,49 +70,6 @@ func TestRoles(t *testing.T) {
 				LHS:         &rbac_v1.Role{Rules: bob.Rules},
 				RHS:         &rbac_v1.Role{Rules: admin.Rules},
 				ExpectEqual: false,
-			},
-		},
-		Aggregation: test.ModuleAggregationTestcases{
-			test.ModuleAggregationTestcase{
-				Name: "Both empty",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithRole(policyhierarchy_v1.Namespace),
-				},
-				Expect: hierarchy.Instances{},
-			},
-			test.ModuleAggregationTestcase{
-				Name: "Base case to workload namespace",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithRole(policyhierarchy_v1.Namespace, admin, editor),
-				},
-				Expect: hierarchy.Instances{
-					&admin,
-					&editor,
-				},
-			},
-			test.ModuleAggregationTestcase{
-				Name: "Ignore policyspace roles",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithRole(policyhierarchy_v1.Policyspace, admin),
-					WithRole(policyhierarchy_v1.Namespace, editor),
-				},
-				Expect: hierarchy.Instances{
-					&editor,
-				},
-			},
-			test.ModuleAggregationTestcase{
-				Name: "Workload namespace empty",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithRole(policyhierarchy_v1.Namespace),
-				},
-				Expect: hierarchy.Instances{},
-			},
-			test.ModuleAggregationTestcase{
-				Name: "Ignore policyspaces",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithRole(policyhierarchy_v1.Policyspace, admin, editor),
-				},
-				Expect: hierarchy.Instances{},
 			},
 		},
 	}

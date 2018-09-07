@@ -21,12 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
-
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	visitortesting "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -59,62 +53,13 @@ func (tcs ModuleEqualTestcases) RunAll(module policyhierarchycontroller.Module, 
 	}
 }
 
-// ModuleAggregationTestcase is a testcase for testing out the module's AggregatedNode.Aggregate
-// method.
-type ModuleAggregationTestcase struct {
-	Name        string
-	PolicyNodes []*policyhierarchy_v1.PolicyNode
-	Expect      hierarchy.Instances
-}
-
-// Run runs the ModuleAggregationTestcase
-func (tc ModuleAggregationTestcase) Run(module policyhierarchycontroller.Module) func(t *testing.T) {
-	return func(t *testing.T) {
-		an := module.NewAggregatedNode()
-		for _, pn := range tc.PolicyNodes {
-			an = an.Aggregated(pn)
-		}
-		actual := an.Generate()
-
-		actual.Sort()
-		tc.Expect.Sort()
-
-		if len(tc.Expect) == 0 && len(actual) == 0 {
-			return
-		}
-
-		for i := 0; i < len(tc.Expect); i++ {
-			expect := tc.Expect[i]
-			act := actual[i]
-
-			if !cmp.Equal(act, expect, visitortesting.ResourceVersionCmp()) {
-				cfg := spew.NewDefaultConfig()
-				cfg.Indent = "  "
-				t.Errorf(cfg.Sprintf("index %v %s", i, cmp.Diff(tc.Expect[i], actual[i], visitortesting.ResourceVersionCmp())))
-			}
-		}
-	}
-}
-
-// ModuleAggregationTestcases is a list of ModuleAggregationTestcase
-type ModuleAggregationTestcases []ModuleAggregationTestcase
-
-// RunAll runs all ModuleAggregationTestcases in the slice
-func (tcs ModuleAggregationTestcases) RunAll(module policyhierarchycontroller.Module, t *testing.T) {
-	for _, tc := range tcs {
-		t.Run(fmt.Sprintf("ModuleAggregationTestcase %s", tc.Name), tc.Run(module))
-	}
-}
-
 // ModuleTest is a data-driven test for Modules that tests the non-boilerplate aspects of a module.
 type ModuleTest struct {
-	Module      policyhierarchycontroller.Module
-	Equals      ModuleEqualTestcases
-	Aggregation ModuleAggregationTestcases
+	Module policyhierarchycontroller.Module
+	Equals ModuleEqualTestcases
 }
 
 // RunAll runs all tests in the ModuleTest.
 func (tc *ModuleTest) RunAll(t *testing.T) {
 	tc.Equals.RunAll(tc.Module, t)
-	tc.Aggregation.RunAll(tc.Module, t)
 }

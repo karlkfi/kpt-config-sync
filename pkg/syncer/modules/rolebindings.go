@@ -18,56 +18,18 @@ limitations under the License.
 package modules
 
 import (
-	"fmt"
 	"reflect"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
 	controller_informers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
-	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 )
-
-// AggregatedRoleBinding provides aggregation operations for the RoleBinding resource.
-type AggregatedRoleBinding struct {
-	namespace      bool
-	policyNodeName string
-	parent         *AggregatedRoleBinding
-	roleBindings   []rbac_v1.RoleBinding
-}
-
-// Aggregated implements hierarchy.AggregatedNode
-func (s *AggregatedRoleBinding) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarchy.AggregatedNode {
-	return &AggregatedRoleBinding{
-		namespace:      node.Spec.Type.IsNamespace(),
-		policyNodeName: node.Name,
-		parent:         s,
-		roleBindings:   node.Spec.RoleBindingsV1,
-	}
-}
-
-// Generate implements hierarchy.AggregatedNode
-func (s *AggregatedRoleBinding) Generate() hierarchy.Instances {
-	var instances hierarchy.Instances
-	for node := s; node != nil; node = node.parent {
-		for idx := range node.roleBindings {
-			roleBinding := &node.roleBindings[idx]
-			rrb := roleBinding.DeepCopy()
-			if !node.namespace {
-				rrb.Name = fmt.Sprintf("%s.%s", node.policyNodeName, roleBinding.Name)
-			}
-			instances = append(instances, rrb)
-		}
-	}
-	return instances
-}
-
-var _ hierarchy.AggregatedNode = &AggregatedRoleBinding{}
 
 // RoleBinding implements a module for flattening roles.
 type RoleBinding struct {
@@ -91,7 +53,7 @@ func (s *RoleBinding) Name() string {
 	return "RoleBinding"
 }
 
-func (s *RoleBinding) subjectsEqual(lhs *rbac_v1.RoleBinding, rhs *rbac_v1.RoleBinding) bool {
+func (s *RoleBinding) subjectsEqual(lhs *rbacv1.RoleBinding, rhs *rbacv1.RoleBinding) bool {
 	if len(lhs.Subjects) == 0 && len(rhs.Subjects) == 0 {
 		return true
 	}
@@ -99,25 +61,29 @@ func (s *RoleBinding) subjectsEqual(lhs *rbac_v1.RoleBinding, rhs *rbac_v1.RoleB
 }
 
 // Equal implements policyhierarchycontroller.Module
-func (s *RoleBinding) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
-	lhs := lhsObj.(*rbac_v1.RoleBinding)
-	rhs := rhsObj.(*rbac_v1.RoleBinding)
+func (s *RoleBinding) Equal(lhsObj metav1.Object, rhsObj metav1.Object) bool {
+	lhs := lhsObj.(*rbacv1.RoleBinding)
+	rhs := rhsObj.(*rbacv1.RoleBinding)
 	return reflect.DeepEqual(lhs.RoleRef, rhs.RoleRef) && s.subjectsEqual(lhs, rhs)
 }
 
 // equalSpec performs equals on runtime.Objects
 func (s *RoleBinding) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
-	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
+	return s.Equal(lhsObj.(metav1.Object), rhsObj.(metav1.Object))
 }
 
-// NewAggregatedNode implements policyhierarchycontroller.Module
-func (s *RoleBinding) NewAggregatedNode() hierarchy.AggregatedNode {
-	return &AggregatedRoleBinding{}
+// Instances implements policyhierarchycontroller.Module
+func (s *RoleBinding) Instances(policyNode *policyhierarchyv1.PolicyNode) []metav1.Object {
+	var rbs []metav1.Object
+	for _, o := range policyNode.Spec.RoleBindingsV1 {
+		rbs = append(rbs, o.DeepCopy())
+	}
+	return rbs
 }
 
 // Instance implements policyhierarchycontroller.Module
-func (s *RoleBinding) Instance() meta_v1.Object {
-	return &rbac_v1.RoleBinding{}
+func (s *RoleBinding) Instance() metav1.Object {
+	return &rbacv1.RoleBinding{}
 }
 
 // InformerProvider implements policyhierarchycontroller.Module
@@ -128,8 +94,8 @@ func (s *RoleBinding) InformerProvider() controller_informers.InformerProvider {
 // ActionSpec implements policyhierarchycontroller.Module
 func (s *RoleBinding) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
-		&rbac_v1.RoleBinding{},
-		rbac_v1.SchemeGroupVersion,
+		&rbacv1.RoleBinding{},
+		rbacv1.SchemeGroupVersion,
 		s.equalSpec,
 		s.client.RbacV1(),
 		s.informers.Rbac().V1().RoleBindings().Lister(),

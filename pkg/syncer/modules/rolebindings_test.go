@@ -19,34 +19,10 @@ package modules
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/syncer/hierarchy"
-
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	test "github.com/google/nomos/pkg/syncer/policyhierarchycontroller/testing"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func RenameRoleBinding(r *rbac_v1.RoleBinding, name string) *rbac_v1.RoleBinding {
-	c := r.DeepCopy()
-	c.Name = name
-	return c
-}
-
-func WithRoleBindings(
-	name string,
-	t policyhierarchy_v1.PolicyNodeType,
-	rbs ...rbac_v1.RoleBinding) *policyhierarchy_v1.PolicyNode {
-	return &policyhierarchy_v1.PolicyNode{
-		ObjectMeta: meta_v1.ObjectMeta{
-			Name: name,
-		},
-		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			Type:           t,
-			RoleBindingsV1: rbs,
-		},
-	}
-}
 
 func TestRoleBindings(t *testing.T) {
 	admins := &rbac_v1.RoleBinding{
@@ -64,23 +40,6 @@ func TestRoleBindings(t *testing.T) {
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
 			Name:     "admin",
-		},
-	}
-	editors := &rbac_v1.RoleBinding{
-		ObjectMeta: meta_v1.ObjectMeta{
-			Name: "editors",
-		},
-		Subjects: []rbac_v1.Subject{
-			rbac_v1.Subject{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "User",
-				Name:     "edward@megacorp.org",
-			},
-		},
-		RoleRef: rbac_v1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
-			Name:     "editor",
 		},
 	}
 	bobs := &rbac_v1.RoleBinding{
@@ -142,55 +101,6 @@ func TestRoleBindings(t *testing.T) {
 					RoleRef:  rbac_v1.RoleRef{},
 				},
 				ExpectEqual: false,
-			},
-		},
-		Aggregation: test.ModuleAggregationTestcases{
-			test.ModuleAggregationTestcase{
-				Name: "Both empty",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					&policyhierarchy_v1.PolicyNode{},
-				},
-				Expect: hierarchy.Instances{},
-			},
-			test.ModuleAggregationTestcase{
-				Name: "Base case",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithRoleBindings("current", policyhierarchy_v1.Namespace, *admins),
-				},
-				Expect: hierarchy.Instances{
-					RenameRoleBinding(admins, "admins"),
-				},
-			},
-			test.ModuleAggregationTestcase{
-				Name: "Node empty",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithRoleBindings("editors", policyhierarchy_v1.Policyspace, *editors),
-					WithRoleBindings("empty", policyhierarchy_v1.Namespace),
-				},
-				Expect: hierarchy.Instances{
-					RenameRoleBinding(editors, "editors.editors"),
-				},
-			},
-			test.ModuleAggregationTestcase{
-				Name: "Base case",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithRoleBindings("base", policyhierarchy_v1.Namespace, *admins),
-				},
-				Expect: hierarchy.Instances{
-					RenameRoleBinding(admins, "admins"),
-				},
-			},
-			test.ModuleAggregationTestcase{
-				Name: "Aggregation case",
-				PolicyNodes: []*policyhierarchy_v1.PolicyNode{
-					WithRoleBindings("parent", policyhierarchy_v1.Policyspace, *bobs, *editors),
-					WithRoleBindings("current", policyhierarchy_v1.Namespace, *admins),
-				},
-				Expect: hierarchy.Instances{
-					RenameRoleBinding(admins, "admins"),
-					RenameRoleBinding(bobs, "parent.bobs"),
-					RenameRoleBinding(editors, "parent.editors"),
-				},
 			},
 		},
 	}

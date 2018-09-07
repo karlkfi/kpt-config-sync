@@ -18,31 +18,22 @@ limitations under the License.
 package modules
 
 import (
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/resourcequota"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
 	controller_informers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
-	core_v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 )
 
-// AggregatedQuota provides aggregation operations for the ResourceQuota resource.
-type AggregatedQuota struct {
-	quota *core_v1.ResourceQuota
-}
-
-// AggregatedQuota implements hierarchy.AggregatedNode
-var _ hierarchy.AggregatedNode = &AggregatedQuota{}
-
 // MergeLimits takes two ResourceList objects and performs the union on all specified limits.   Conflicting
 // limits will be resolved by taking the lower of the two.
-func MergeLimits(lhs, rhs core_v1.ResourceList) core_v1.ResourceList {
-	merged := core_v1.ResourceList{}
+func MergeLimits(lhs, rhs corev1.ResourceList) corev1.ResourceList {
+	merged := corev1.ResourceList{}
 	for k, v := range lhs {
 		merged[k] = v
 	}
@@ -53,20 +44,6 @@ func MergeLimits(lhs, rhs core_v1.ResourceList) core_v1.ResourceList {
 		}
 	}
 	return merged
-}
-
-// Aggregated implements hierarchy.AggregatedNode
-func (s *AggregatedQuota) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarchy.AggregatedNode {
-	return &AggregatedQuota{quota: node.Spec.ResourceQuotaV1}
-}
-
-// Generate implements hierarchy.AggregatedNode
-func (s *AggregatedQuota) Generate() hierarchy.Instances {
-	var instances hierarchy.Instances
-	if s.quota != nil {
-		instances = append(instances, s.quota)
-	}
-	return instances
 }
 
 // ResourceQuota implements a module for flattening quota.
@@ -92,25 +69,28 @@ func (s *ResourceQuota) Name() string {
 }
 
 // Equal implements policyhierarchycontroller.Module
-func (s *ResourceQuota) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
-	lhs := lhsObj.(*core_v1.ResourceQuota)
-	rhs := rhsObj.(*core_v1.ResourceQuota)
+func (s *ResourceQuota) Equal(lhsObj metav1.Object, rhsObj metav1.Object) bool {
+	lhs := lhsObj.(*corev1.ResourceQuota)
+	rhs := rhsObj.(*corev1.ResourceQuota)
 	return resourcequota.ResourceListsEqual(lhs.Spec.Hard, rhs.Spec.Hard)
 }
 
 // equalSpec performs equals on runtime.Objects
 func (s *ResourceQuota) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
-	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
+	return s.Equal(lhsObj.(metav1.Object), rhsObj.(metav1.Object))
 }
 
-// NewAggregatedNode implements policyhierarchycontroller.Module
-func (s *ResourceQuota) NewAggregatedNode() hierarchy.AggregatedNode {
-	return &AggregatedQuota{}
+// Instances implements policyhierarchycontroller.Module
+func (s *ResourceQuota) Instances(policyNode *policyhierarchyv1.PolicyNode) []metav1.Object {
+	if policyNode.Spec.ResourceQuotaV1 != nil {
+		return []metav1.Object{policyNode.Spec.ResourceQuotaV1}
+	}
+	return nil
 }
 
 // Instance implements policyhierarchycontroller.Module
-func (s *ResourceQuota) Instance() meta_v1.Object {
-	return &core_v1.ResourceQuota{}
+func (s *ResourceQuota) Instance() metav1.Object {
+	return &corev1.ResourceQuota{}
 }
 
 // InformerProvider implements policyhierarchycontroller.Module
@@ -121,8 +101,8 @@ func (s *ResourceQuota) InformerProvider() controller_informers.InformerProvider
 // ActionSpec implements policyhierarchycontroller.Module
 func (s *ResourceQuota) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
-		&core_v1.ResourceQuota{},
-		core_v1.SchemeGroupVersion,
+		&corev1.ResourceQuota{},
+		corev1.SchemeGroupVersion,
 		s.equalSpec,
 		s.client.CoreV1(),
 		s.informers.Core().V1().ResourceQuotas().Lister(),

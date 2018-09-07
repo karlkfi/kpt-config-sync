@@ -389,7 +389,7 @@ func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy
 	errBuilder := multierror.NewBuilder()
 	reconcileCount := 0
 	for _, module := range s.modules {
-		declaredInstances := ancestry.Aggregate(module.NewAggregatedNode)
+		declaredInstances := module.Instances(ancestry.Node())
 
 		for _, decl := range declaredInstances {
 			decl.SetNamespace(name)
@@ -451,6 +451,7 @@ func (s *PolicyHieraryController) setPolicyNodeStatus(ancestry hierarchy.Ancestr
 	return ua.Execute()
 }
 
+// NewSyncError returns a PolicyNodeSyncError corresponding to the given error and action
 func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.PolicyNodeSyncError {
 	return policyhierarchy_v1.PolicyNodeSyncError{
 		SourceName:   name,
