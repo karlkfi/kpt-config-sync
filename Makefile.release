@@ -40,8 +40,17 @@ GCP_PROJECT ?= nomos-release
 # The GCS bucket containing official releases.
 RELEASE_BUCKET ?= gs://nomos-release
 
+FETCH_TAGS := $(shell git fetch --tags)
+
 # Use git tags to set version string.
 VERSION := $(shell git describe --tags --always --dirty)
+
+# The version of the last known release candidate, e.g. v1.2.3-rc.4, but could
+# also be v1.2.3 if the last release candidate was promoted to a release.
+LAST_RC := $(shell git tag --sort=version:refname | tail -n1)
+
+# The version of the last known release (without -rc.X), e.g. v1.2.3
+LAST_RELEASE := $(shell git tag --sort=version:refname | grep -v "rc" | tail -n1)
 
 # Set the IMAGE_TAG to only include the version info and no other build info.
 IMAGE_TAG := $(VERSION)
@@ -52,6 +61,39 @@ BUILD_MODE ?= release
 ##### SETUP ######
 
 include Makefile
+
+##### Post-setup env variable evaulations #####
+
+# Finds any backwards incompatible changes since last tagged release candidate.
+BACKWARDS_INCOMPATIBLE_RC := $(shell \
+		git log $(LAST_RC)..$(NEXT_RC) | grep 'BACKWARDS INCOMPATIBLE')
+
+# Finds any backwards incompatible changes since last tagged full release.
+BACKWARDS_INCOMPATIBLE_RELEASE := $(shell \
+		git log $(LAST_RELEASE)..$(NEXT_RC) | grep 'BACKWARDS INCOMPATIBLE')
+
+# Finds the next minor release after the last release candidate.
+# v1.2.3-rc.4 -> v1.3.0
+# v1.2.3      -> v1.3.0
+NEXT_MINOR_RELEASE := $(shell \
+		docker run --rm $(BUILDENV_IMAGE) sembump $(LAST_RC) | \
+		xargs docker run --rm $(BUILDENV_IMAGE) sembump --kind=minor)
+
+# If a release candidate has backwards incompatible changes with respect to
+# last one built, then increment the minor version to denote that.
+# TODO(filmil): Re-verify reasoning about semver jump-around since it's a bit
+# involved.
+HAS_BACKWARDS_INCOMPATIBLE := $(shell \
+		[ -n "$(BACKWARDS_INCOMPATIBLE_RC)" ] && echo 1 || echo 0)
+ifeq ($(HAS_BACKWARDS_INCOMPATIBLE),0)
+  # v1.2.3-rc.4 -> v1.2.3-rc.5
+  # v1.2.3      -> v1.2.3-rc.1
+  NEXT_RC = $(shell docker run --rm $(BUILDENV_IMAGE) sembump -pre $(LAST_RC))
+else
+  # v1.2.3-rc.4 -> v1.3.0-rc.1
+  # v1.2.3      -> v1.3.0-rc.1
+  NEXT_RC = $(NEXT_MINOR_RELEASE)-rc.1
+endif
 
 ##### TARGETS #####
 
@@ -70,26 +112,30 @@ $(STAGING_DIR)/installer.zip: \
 	@echo "+++ Building installer archive: $@"
 	@(cd .output/staging ; zip -r $@ installer)
 
-# Uploads the release artifacts to a versioned GCS release bucket. Also uploads
-# the artifacts to a GCS release bucket with version name "latest".
-release: \
-		clean \
-		test-all \
-		$(STAGING_DIR)/installer.zip \
-		docs-package
+# Unconditional upload of nomos artifacts tagged with $(IMAGE_TAG) to gcr.io.
+upload-release:
+	@echo "+++ Marking release $(IMAGE_TAG) as 'latest'"
 	gsutil -m cp -R \
 		$(STAGING_DIR)/installer.zip \
 		$(STAGING_DIR)/nomos-docs.zip  \
 	    $(BIN_DIR) \
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/$(VERSION)
-	@echo "+++ Marking release as 'latest'"
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
 		gcr.io/$(GCP_PROJECT)/nomos:latest
 	gsutil -m rsync -r -d -p \
 			$(RELEASE_BUCKET)/$(VERSION) \
 			$(RELEASE_BUCKET)/latest
+
+# Uploads the release artifacts to a versioned GCS release bucket. Also uploads
+# the artifacts to a GCS release bucket with version name "latest".
+release: \
+		clean \
+		test-all \
+		$(STAGING_DIR)/installer.zip \
+		docs-package \
+		upload-release
 
 # For releases we attach the :stable tag to the latest image
 # built and update the stable docs package.  Dirty package releases  are not
@@ -103,5 +149,91 @@ bless-release: check-dirty
 		$(RELEASE_BUCKET)/$(VERSION) \
 		$(RELEASE_BUCKET)/stable
 
-autorelease:
-	$(info Work in progress)
+##### Git operations as make targets #####
+
+# Ensures that tags are fetched from the git repository.
+git-tag:
+	git tag --sort=version:refname
+
+# Commits the NEXT_RC release tag.
+git-tag-commit:
+	git tag -a $(NEXT_RC) -m "Release candidate $(NEXT_RC)"
+
+# Uploads a newly-tagged NEXT_RC (e.g. v1.2.3-rc.4)
+git-tag-upload:
+	$(info +++ Uploading tag $(NEXT_RC))
+	git push origin $(NEXT_RC)
+
+git-relnotes-rc:
+	$(info +++ Relnotes for $(LAST_RC)..$(NEXT_RC))
+	git log $(LAST_RC)..$(NEXT_RC)
+	$(info +++ ----)
+
+# Release target used by automated releaser on go/prow.  It keeps building
+# ever-newer release candidates from the HEAD rev of master.
+#
+# The __internal-* target is split out because the build process must redefine
+# VERSION and IMAGE_TAG to tag the release correctly.
+# TODO(filmil): This makes the version tags on the YAML files always reference
+# release candidates.  This doesn't seem to be a big problem though.
+# TODO(filmil): Remove the repetition in this target and the -local one.
+autorelease: \
+		info \
+		check-dirty \
+		clean \
+	    test \
+		ci-test-e2e \
+		$(STAGING_DIR)/installer.zip \
+		docs-package \
+		upload-release
+
+__internal-autorelease: VERSION=$(NEXT_RC)
+__internal-autorelease: IMAGE_TAG=$(NEXT_RC)
+__internal-autorelease: \
+		git-tag \
+		info \
+		clean \
+	    test \
+		ci-test-e2e \
+		$(STAGING_DIR)/installer.zip \
+		docs-package \
+		upload-release \
+		git-tag-commit \
+		git-tag-upload \
+		git-relnotes-rc
+	$(info +++ Completed releasing $(NEXT_RC))
+
+# Same as 'autorelease', except rigged so that it works on a local machine.
+autorelease-local: \
+		__internal-autorelease-local
+
+__internal-autorelease-local: VERSION=$(NEXT_RC)
+__internal-autorelease-local: IMAGE_TAG=$(NEXT_RC)
+__internal-autorelease-local: \
+		git-tag \
+		info \
+		clean \
+	    test \
+		ci-test-e2e-local \
+		$(STAGING_DIR)/installer.zip \
+		docs-package \
+		upload-release \
+		git-tag-commit \
+		git-tag-upload \
+		git-relnotes-rc
+	$(info +++ Completed releasing $(NEXT_RC) [LOCAL RELEASE])
+
+#############################################################################
+# Various release info printed for diagnostics.
+
+info:
+	$(info +++ Releasing version:            $(IMAGE_TAG))
+	$(info +++ Last known release candidate: $(LAST_RC))
+	$(info +++ Next minor release:       $(NEXT_MINOR_RELEASE))
+	$(info +++ Last known blessed release:   $(LAST_RELEASE))
+	$(info +++ Next release candidate:       $(NEXT_RC))
+	$(info +++ Backwards incompatible from RC:      $(BACKWARDS_INCOMPATIBLE_RC))
+	$(info +++ Backwards incompatible from RELEASE: $(BACKWARDS_INCOMPATIBLE_RELEASE))
+	$(info +++ Incompatible:                 $(HAS_BACKWARDS_INCOMPATIBLE))
+	$(info +++ Building version: $(VERSION); $(IMAGE_TAG))
+
