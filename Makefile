@@ -82,7 +82,7 @@ GCP_PROJECT ?= stolos-dev
 # NOTE: nomos-public is fully accessible publicly, do not use for anything
 # other than buildenv
 BUILDENV_PROJECT ?= nomos-public
-BUILDENV_IMAGE_VERSION ?= v0.1.0
+BUILDENV_IMAGE_VERSION ?= v0.1.1
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
 # GCP service account credentials used in gcp e2e tests.
@@ -174,8 +174,10 @@ pull-buildenv:
 	|| docker pull $(BUILDENV_IMAGE)
 
 build-buildenv: build/buildenv/Dockerfile
-	@echo "+++ Creating the buildenv docker container"
-	@docker build build/buildenv -t $(BUILDENV_IMAGE)
+	@echo "+++ Creating the docker container for $(BUILDENV_IMAGE)"
+	@docker build $(DOCKER_BUILD_QUIET) build/buildenv -t $(BUILDENV_IMAGE)
+
+push-buildenv: build-buildenv
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
 	@docker push $(BUILDENV_IMAGE)
 

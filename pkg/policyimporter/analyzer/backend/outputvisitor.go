@@ -161,7 +161,7 @@ func (v *OutputVisitor) VisitObject(o *ast.Object) ast.Node {
 		case *extensionsv1beta1.PodSecurityPolicy:
 			spec.PodSecurityPoliciesV1Beta1 = append(spec.PodSecurityPoliciesV1Beta1, *obj)
 		default:
-			glog.Fatal("programmer error: invalid type %v in context %q", obj, v.context)
+			glog.Fatalf("programmer error: invalid type %v in context %q", obj, v.context)
 		}
 	case contextNode:
 		spec := &v.policyNode[len(v.policyNode)-1].Spec
@@ -173,10 +173,10 @@ func (v *OutputVisitor) VisitObject(o *ast.Object) ast.Node {
 		case *corev1.ResourceQuota:
 			spec.ResourceQuotaV1 = obj
 		default:
-			glog.Fatal("programmer error: invalid type %v in context %q", obj, v.context)
+			glog.Fatalf("programmer error: invalid type %v in context %q", obj, v.context)
 		}
 	default:
-		glog.Fatal("programmer error: invalid context %q", v.context)
+		glog.Fatalf("programmer error: invalid context %q", v.context)
 	}
 	return nil
 }

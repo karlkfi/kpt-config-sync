@@ -130,7 +130,7 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 				v.errs.Add(errors.Errorf(
 					"Objects declared in policyspace directories are not allowed to have a namespace specified, "+
 						"remove the namespace field from object to resolve.  "+
-						"Directory %q has declaration for %s, Name=%q with namespace %s",
+						"Directory has declaration for %s, Name=%q with namespace %s",
 					o.Object.GetObjectKind().GroupVersionKind(),
 					metaObj.GetName(),
 					ns))

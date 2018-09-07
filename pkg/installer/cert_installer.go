@@ -59,7 +59,7 @@ type certInstaller struct {
 
 // deploySecrets deploys the generated certificates as secrets.
 func (c *certInstaller) deploySecrets(workDir string) error {
-	glog.V(5).Info("deploySecrets: %s enter", c.name())
+	glog.V(5).Infof("deploySecrets: %s enter", c.name())
 
 	certsPath := filepath.Join(workDir, certsDirectory, c.subDir)
 	scriptPath := filepath.Join(workDir, scriptsDirectory, c.deployScript)

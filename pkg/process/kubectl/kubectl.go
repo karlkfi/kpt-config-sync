@@ -114,7 +114,7 @@ func (t *Context) DeleteConfigMap(name, namespace string) error {
 // DeleteValidatingWebhookConfiguration deletes a validatingwebhookconfiguration from Kubernetes.
 func (t *Context) DeleteValidatingWebhookConfiguration(name string) error {
 	if err := t.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
-		return errors.Wrapf(err, "delete validatingwebhookconfiguration name=%q")
+		return errors.Wrapf(err, "delete validatingwebhookconfiguration name=%q", name)
 	}
 	return nil
 }

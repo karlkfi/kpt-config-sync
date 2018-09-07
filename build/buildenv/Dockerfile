@@ -16,7 +16,7 @@
 #
 
 # The build environment docker file.
-FROM golang:1.10.1-alpine
+FROM golang:1.11-alpine
 
 # Adds support for building dynamically linked libraries.
 RUN apk add --no-cache \
@@ -35,5 +35,11 @@ ENV GOCACHE=/go/cache
 
 RUN go get gopkg.in/alecthomas/gometalinter.v2 && gometalinter.v2 --install
 RUN go get github.com/golangci/golangci-lint/cmd/golangci-lint
+
+# sembump knows how to increment semvers.
+# sembump -kind=minor v1.2.3
+# --> 1.3.0
+RUN go get github.com/jessfraz/junk/sembump && \
+    go install github.com/jessfraz/junk/sembump
 
 RUN mv /go/bin/* /bin
