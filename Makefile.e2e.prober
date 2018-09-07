@@ -1,0 +1,18 @@
+# rules related to prober
+
+image-e2e-prober: image-e2e-tests build/e2e-tests/Dockerfile.prober
+	@echo "+++ Building the e2e prober image"
+	@docker build \
+	  --file=build/e2e-tests/Dockerfile.prober \
+	  --build-arg "DOCKER_GID=$(shell stat -c '%g' /var/run/docker.sock)" \
+	  --build-arg "UID=$(UID)" \
+	  --build-arg "GID=$(GID)" \
+	  --build-arg "UNAME=${USER}" \
+	  -t gcr.io/stolos-dev/e2e-prober:$(IMAGE_TAG) \
+	  -t gcr.io/stolos-dev/e2e-prober:test-e2e-latest \
+	  $(DOCKER_BUILD_QUIET) \
+	  .
+
+test-e2e-prober: image-e2e-prober scripts/run-prober.sh
+	@echo "+++ Running prober e2e test in a local docker container."
+	@./scripts/run-prober.sh

@@ -1,0 +1,33 @@
+# Included by Makefile
+
+# Creates staging directory for generating docs.
+docs-staging: $(OUTPUT_DIR)
+	@echo "+++ Creating directory for generating docs: $(OUTPUT_DIR)"
+	@rm -rf $(DOCS_STAGING_DIR)/*.html $(DOCS_STAGING_DIR)/img
+	@cp -r $(TOP_DIR)/docs $(STAGING_DIR)
+	@cp $(TOP_DIR)/README.md $(DOCS_STAGING_DIR)
+
+docs-generate: $(OUTPUT_DIR) docs-staging
+	@echo "+++ Converting Markdown docs into HTML"
+	@$(PULL_BUILDENV)
+	@docker run $(DOCKER_INTERACTIVE) \
+		-u $(UID):$(GID)                                                   \
+		-v $$(pwd):/go/src/$(REPO)                                         \
+		-w /go/src/$(REPO)                                                 \
+		-e HOME=/go/src/$(REPO)/.output/config                             \
+		-e REPO=$(REPO)                                                    \
+		-e DOCS_STAGING_DIR=/go/src/$(REPO)/.output/staging/docs           \
+		-e TOP_DIR=/go/src/$(REPO)                                         \
+		--rm                                                               \
+		$(BUILDENV_IMAGE)                                                  \
+		/bin/bash -c " \
+		    ./scripts/docs-generate.sh \
+	    "
+	@echo "Open in your browser: file://$(DOCS_STAGING_DIR)/README.html"
+
+docs-package: docs-generate
+	@echo "+++ Packaging HTML docs into a zip package"
+	@cd $(STAGING_DIR); rm -f nomos-docs.zip; zip -r nomos-docs.zip docs
+
+docs-format:
+	@/google/data/ro/teams/g3doc/mdformat --in_place --compatibility $(shell find docs README.md -name '*.md')

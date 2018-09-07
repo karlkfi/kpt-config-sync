@@ -1,0 +1,34 @@
+# Rules for building the installer
+
+installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
+	@echo "+++ Creating installer staging directory"
+	@( \
+			cd $(GO_DIR); \
+			rsync --relative --quiet \
+			      `find bin -type f | grep installer` \
+			      $(STAGING_DIR)/installer/; \
+	)
+	@cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
+	@mkdir -p $(STAGING_DIR)/installer/yaml
+	@cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/installer/yaml
+	@mkdir -p $(STAGING_DIR)/installer/manifests
+	@cp $(TOP_DIR)/manifests/*.yaml $(STAGING_DIR)/installer/manifests
+	@cp $(TOP_DIR)/build/installer/install.sh $(STAGING_DIR)/installer
+	@mkdir -p $(STAGING_DIR)/installer/scripts
+	@cp $(TOP_DIR)/scripts/deploy-resourcequota-admission-controller.sh \
+		$(STAGING_DIR)/installer/scripts
+	@cp $(TOP_DIR)/scripts/generate-admission-controller-certs.sh \
+		$(STAGING_DIR)/installer/scripts
+	@cp $(TOP_DIR)/scripts/generate-resourcequota-admission-controller-certs.sh \
+		$(STAGING_DIR)/installer/scripts
+	@cp $(TOP_DIR)/scripts/deploy-policy-admission-controller.sh \
+		$(STAGING_DIR)/installer/scripts
+	@cp $(TOP_DIR)/scripts/generate-policy-admission-controller-certs.sh \
+		$(STAGING_DIR)/installer/scripts
+
+check-nomos-installer-config:
+	@echo "+++ Checking installer configuration"
+	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
+		echo '### Must set env variable NOMOS_INSTALLER_CONFIG to use make deploy'; \
+		exit 1; \
+	fi;

@@ -1,0 +1,87 @@
+# Included by Makefile.
+# Rules related to building nomos and docker images.
+
+###################################
+# Build environment
+###################################
+
+# Pulls the cached builenv docker image from gcrio.
+pull-buildenv:
+	@docker image inspect $(BUILDENV_IMAGE) &> /dev/null \
+	|| docker pull $(BUILDENV_IMAGE)
+
+build-buildenv: build/buildenv/Dockerfile
+	@echo "+++ Creating the docker container for $(BUILDENV_IMAGE)"
+	@docker build $(DOCKER_BUILD_QUIET) build/buildenv -t $(BUILDENV_IMAGE)
+
+push-buildenv: build-buildenv
+	@gcloud $(GCLOUD_QUIET) auth configure-docker
+	@docker push $(BUILDENV_IMAGE)
+
+###################################
+# Docker images
+###################################
+
+.PHONY: build
+build: $(OUTPUT_DIR) pull-buildenv $(addprefix build-platform-, $(PLATFORMS))
+	@echo "+++ Finished building"
+
+# Compiles binaries for a specific platform (e.g. "linux-amd64").
+build-platform-%:
+	@echo "+++ Compiling Nomos binaries for $* platform"
+	@docker run -e PLATFORM=$* $(DOCKER_RUN_ARGS) ./scripts/build.sh
+
+# Creates a docker image for the specified nomos component.
+image-nomos: build
+	@echo "+++ Building the Nomos image"
+	@cp -r $(TOP_DIR)/build/$(NOMOS_IMAGE) $(STAGING_DIR)
+	@cp $(BIN_DIR)/linux_amd64/* $(STAGING_DIR)/$(NOMOS_IMAGE)
+	@docker build $(DOCKER_BUILD_QUIET) \
+			-t gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG) $(STAGING_DIR)/$(NOMOS_IMAGE)
+
+# Pushes the specified component's docker image to gcr.io.
+push-to-gcr-%: image-%
+	@echo "+++ Pushing $* to gcr.io"
+	@echo "+++ Using account:"
+	gcloud config get-value account
+	@gcloud $(GCLOUD_QUIET) auth configure-docker
+	@docker push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
+
+###################################
+# YAML generation
+###################################
+
+# Generates the podspec yaml for each component.
+gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_DEPLOYMENTS))
+	@echo "+++ Finished generating all yaml"
+
+# Generates the podspec yaml for the component specified.
+gen-yaml-%:
+	@echo "+++ Generating yaml $*"
+	@sed -e 's|IMAGE_NAME|gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG)|' < \
+			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
+
+###################################
+# E2E Git Server
+###################################
+
+# Generates yaml for git server used in e2e testing.
+$(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml Makefile $(OUTPUT_DIR)
+	@echo "+++ Generating yaml for git-server"
+	@sed -e 's|IMAGE_NAME|gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE)|' < \
+			 $< > $@
+
+GIT_SERVER_DOCKER := $(OUTPUT_DIR)/git-server-docker
+GIT_SERVER_RELEASE := v1.0.0
+# Creates docker image for the test git-server from github source
+build-git-server:
+	@echo "+++ Building image for test git server"
+	@mkdir -p $(OUTPUT_DIR)
+	@rm -rf $(GIT_SERVER_DOCKER)
+	@git clone https://github.com/jkarlosb/git-server-docker.git $(GIT_SERVER_DOCKER)
+	@cd $(GIT_SERVER_DOCKER) && git checkout $(GIT_SERVER_RELEASE)
+	@docker build $(DOCKER_BUILD_QUIET) \
+			$(GIT_SERVER_DOCKER) \
+			-t gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
+	@gcloud $(GCLOUD_QUIET) auth configure-docker
+	@docker push gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
