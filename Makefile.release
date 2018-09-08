@@ -180,14 +180,7 @@ git-relnotes-rc:
 # release candidates.  This doesn't seem to be a big problem though.
 # TODO(filmil): Remove the repetition in this target and the -local one.
 autorelease: \
-		info \
-		check-dirty \
-		clean \
-	    test \
-		ci-test-e2e \
-		$(STAGING_DIR)/installer.zip \
-		docs-package \
-		upload-release
+		__internal-autorelease
 
 __internal-autorelease: VERSION=$(NEXT_RC)
 __internal-autorelease: IMAGE_TAG=$(NEXT_RC)
@@ -275,7 +268,7 @@ bless-autorelease:
                  --date=local $(LAST_RELEASE)..$${chosen_release} ; \
 	'
 
-	
+
 #############################################################################
 # Various release info printed for diagnostics.
 
