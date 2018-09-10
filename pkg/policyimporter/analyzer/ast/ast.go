@@ -44,10 +44,12 @@ type Root struct {
 	LoadTime    time.Time             // Time at which the context was generated
 	Config      *v1alpha1.NomosConfig // NomosConfig
 
+	// ReservedNamespaces corresponds to the reserved namespaces declared in the system dir.
 	ReservedNamespaces *ReservedNamespaces // Reserved namespaces
-	Cluster            *Cluster            // Cluster scoped info
-	Tree               *TreeNode           // Hirearchical policies
-
+	// Cluster represents resources that are cluster scoped.
+	Cluster *Cluster
+	// Tree represents the directory hierarchy containing namespace scoped resources.
+	Tree *TreeNode
 	// Extension holds visitor specific data.
 	Data *Extension
 }
