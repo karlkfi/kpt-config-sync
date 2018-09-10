@@ -21,12 +21,15 @@ import (
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
+	"github.com/google/nomos/pkg/resourcequota"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func withLimits(q *corev1.ResourceQuota, limits corev1.ResourceList) *corev1.ResourceQuota {
+func modQuota(q *corev1.ResourceQuota, name string, labels map[string]string, limits corev1.ResourceList) *corev1.ResourceQuota {
 	nq := q.DeepCopy()
+	nq.Name = name
+	nq.Labels = labels
 	nq.Spec.Hard = limits
 	return nq
 }
@@ -57,7 +60,13 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Path: "acme",
 					Objects: vt.ObjectSets(
 						vt.Helper.AdminRoleBinding(),
-						vt.Helper.AcmeResourceQuota(),
+						modQuota(
+							vt.Helper.AcmeResourceQuota(),
+							resourcequota.ResourceQuotaObjectName,
+							nil,
+							corev1.ResourceList{
+								corev1.ResourceCPU: resource.MustParse("5"),
+							}),
 					),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
@@ -68,10 +77,14 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 							Objects: vt.ObjectSets(
 								vt.Helper.PodReaderRoleBinding(),
 								vt.Helper.PodReaderRole(),
-								withLimits(vt.Helper.AcmeResourceQuota(), corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("5"),
-									corev1.ResourceMemory: resource.MustParse("5"),
-								}),
+								modQuota(
+									vt.Helper.AcmeResourceQuota(),
+									resourcequota.ResourceQuotaObjectName,
+									resourcequota.NewNomosQuotaLabels(),
+									corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("5"),
+										corev1.ResourceMemory: resource.MustParse("5"),
+									}),
 							),
 						},
 						&ast.TreeNode{
@@ -82,7 +95,13 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 							Objects: vt.ObjectSets(
 								vt.Helper.DeployemntReaderRoleBinding(),
 								vt.Helper.DeploymentReaderRole(),
-								vt.Helper.AcmeResourceQuota(),
+								modQuota(
+									vt.Helper.AcmeResourceQuota(),
+									resourcequota.ResourceQuotaObjectName,
+									resourcequota.NewNomosQuotaLabels(),
+									corev1.ResourceList{
+										corev1.ResourceCPU: resource.MustParse("5"),
+									}),
 							),
 						},
 					},
@@ -115,9 +134,17 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Context{
 				Tree: &ast.TreeNode{
-					Type:    ast.Policyspace,
-					Path:    "acme",
-					Objects: vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
+					Type: ast.Policyspace,
+					Path: "acme",
+					Objects: vt.ObjectSets(
+						modQuota(
+							vt.Helper.AcmeResourceQuota(),
+							resourcequota.ResourceQuotaObjectName,
+							nil,
+							corev1.ResourceList{
+								corev1.ResourceCPU: resource.MustParse("5"),
+							}),
+					),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.Policyspace,
@@ -127,10 +154,14 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 									Type: ast.Namespace,
 									Path: "acme/eng/frontend",
 									Objects: vt.ObjectSets(
-										withLimits(vt.Helper.AcmeResourceQuota(), corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("5"),
-											corev1.ResourceMemory: resource.MustParse("5"),
-										}),
+										modQuota(
+											vt.Helper.AcmeResourceQuota(),
+											resourcequota.ResourceQuotaObjectName,
+											resourcequota.NewNomosQuotaLabels(),
+											corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("5"),
+												corev1.ResourceMemory: resource.MustParse("5"),
+											}),
 									),
 								},
 							},

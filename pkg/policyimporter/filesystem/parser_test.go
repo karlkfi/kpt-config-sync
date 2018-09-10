@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-test/deep"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"
@@ -276,7 +277,7 @@ func createClusterPolicy() *policyhierarchy_v1.ClusterPolicy {
 		&policyhierarchy_v1.ClusterPolicySpec{})
 }
 
-func createResourceQuota(name string, namespace string) *core_v1.ResourceQuota {
+func createResourceQuota(name string, namespace string, labels map[string]string) *core_v1.ResourceQuota {
 	return &core_v1.ResourceQuota{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "v1",
@@ -285,6 +286,7 @@ func createResourceQuota(name string, namespace string) *core_v1.ResourceQuota {
 		ObjectMeta: v1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    labels,
 		},
 		Spec: core_v1.ResourceQuotaSpec{
 			Hard: core_v1.ResourceList{"pods": resource.MustParse("10")},
@@ -414,7 +416,11 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
 			"bar": createNamespacePN("bar", "foo",
-				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "bar")}),
+				&Policies{
+					ResourceQuotaV1: createResourceQuota(
+						resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
+				},
+			),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -427,7 +433,10 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
 			"bar": createNamespacePN("bar", "foo",
-				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "bar")}),
+				&Policies{ResourceQuotaV1: createResourceQuota(
+					resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
+				},
+			),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -604,7 +613,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyspacePN("foo", "", nil),
 			"bar": createPolicyspacePN("bar", "foo",
-				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
+				&Policies{ResourceQuotaV1: createResourceQuota(resourcequota.ResourceQuotaObjectName, "", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -718,8 +727,8 @@ var parserTestCases = []parserTestCase{
 			"rq.yaml": templateData{}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
-			"foo": createPolicyspacePN("foo", "",
-				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
+			"foo": createPolicyspacePN("foo", "", &Policies{
+				ResourceQuotaV1: createResourceQuota(resourcequota.ResourceQuotaObjectName, "", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -732,9 +741,11 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchy_v1.PolicyNode{
 			"foo": createPolicyNode("foo", "", policyhierarchy_v1.Policyspace,
-				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
+				&Policies{ResourceQuotaV1: createResourceQuota(resourcequota.ResourceQuotaObjectName, "", nil)}),
 			"bar": createNamespacePN("bar", "foo",
-				&Policies{ResourceQuotaV1: createResourceQuota("pod-quota", "")}),
+				&Policies{ResourceQuotaV1: createResourceQuota(
+					resourcequota.ResourceQuotaObjectName, "", resourcequota.NewNomosQuotaLabels()),
+				}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},

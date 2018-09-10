@@ -19,6 +19,7 @@ package transform
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/syncer/modules"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +54,7 @@ func merge(lhs, rhs *corev1.ResourceQuota) *corev1.ResourceQuota {
 			Kind:       "ResourceQuota",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: rhs.Name,
+			Name: resourcequota.ResourceQuotaObjectName,
 		},
 		Spec: corev1.ResourceQuotaSpec{
 			Hard: modules.MergeLimits(lhs.Spec.Hard, rhs.Spec.Hard),
@@ -109,7 +110,12 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 
 	if (n.Type == ast.Policyspace && context.quota != nil) || (n.Type == ast.Namespace) {
 		if quota := context.aggregated(); quota != nil {
-			newNode.Objects = append(newNode.Objects, &ast.Object{Object: context.aggregated()})
+			if n.Type == ast.Namespace {
+				labeledQuota := *quota
+				labeledQuota.Labels = resourcequota.NewNomosQuotaLabels()
+				quota = &labeledQuota
+			}
+			newNode.Objects = append(newNode.Objects, &ast.Object{Object: quota})
 		}
 	}
 
@@ -122,7 +128,9 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 func (v *QuotaVisitor) VisitObject(o *ast.Object) ast.Node {
 	gvk := o.GetObjectKind().GroupVersionKind()
 	if gvk.Group == "" && gvk.Kind == "ResourceQuota" {
-		v.ctx.quota = o.Object.(*corev1.ResourceQuota)
+		quota := *o.Object.(*corev1.ResourceQuota)
+		quota.Name = resourcequota.ResourceQuotaObjectName
+		v.ctx.quota = &quota
 		return nil
 	}
 	return o
