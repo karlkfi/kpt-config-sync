@@ -24,7 +24,7 @@ import (
 )
 
 var copyingVisitorTestcases = vt.MutatingVisitorTestcases{
-	VisitorCtor: func() ast.MutatingVisitor {
+	VisitorCtor: func() ast.CheckingVisitor {
 		return NewCopying()
 	},
 	Testcases: []vt.MutatingVisitorTestcase{

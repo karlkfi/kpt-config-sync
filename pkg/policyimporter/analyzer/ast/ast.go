@@ -25,7 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// Context represents a hierarchy of kubernetes policies.
+// Context represents a set of declared policies, configuration for how those policies will be
+// interpreted, and information regarding where those policies came from.
 type Context struct {
 	ImportToken string    // Import token for context
 	LoadTime    time.Time // Time at which the context was generated

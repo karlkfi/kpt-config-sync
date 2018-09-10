@@ -39,10 +39,10 @@ type Visitor interface {
 	VisitObject(o *Object) Node
 }
 
-// MutatingVisitor is an interface for writing a visitor that will modify the context
-// in some manner and create a new GitContext (must copy not mutate).  MutatingVisitors
-// can be chained together to compose transforms on the hierarchy.
-type MutatingVisitor interface {
+// CheckingVisitor is an interface for writing a visitor that processes the tree in some manner
+// then optionally emits an error message.  This facilitates chaining visitors and stopping if one
+// encounters an error.
+type CheckingVisitor interface {
 	Visitor
 
 	// Result allows the visitor to emit errors that may have occured while operating.

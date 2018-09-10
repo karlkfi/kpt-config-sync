@@ -41,7 +41,7 @@ func ResourceVersionCmp() cmp.Option {
 }
 
 // Runf returns a function that runs the testcase.
-func (tc *MutatingVisitorTestcase) Runf(visitor ast.MutatingVisitor) func(t *testing.T) {
+func (tc *MutatingVisitorTestcase) Runf(visitor ast.CheckingVisitor) func(t *testing.T) {
 	return func(t *testing.T) {
 		output := tc.Input.Accept(visitor)
 		actual, ok := output.(*ast.Context)
@@ -65,7 +65,7 @@ func (tc *MutatingVisitorTestcase) Runf(visitor ast.MutatingVisitor) func(t *tes
 
 // MutatingVisitorTestcases specifies a list of testcases for the
 type MutatingVisitorTestcases struct {
-	VisitorCtor func() ast.MutatingVisitor
+	VisitorCtor func() ast.CheckingVisitor
 	Testcases   []MutatingVisitorTestcase
 }
 

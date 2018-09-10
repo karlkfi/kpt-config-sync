@@ -34,7 +34,7 @@ func withName(o runtime.Object, name string) runtime.Object {
 }
 
 var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
-	VisitorCtor: func() ast.MutatingVisitor {
+	VisitorCtor: func() ast.CheckingVisitor {
 		return NewInheritanceVisitor(
 			[]InheritanceSpec{
 				InheritanceSpec{

@@ -208,7 +208,7 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 	}
 	fsCtx.Tree = tree
 
-	visitors := []ast.MutatingVisitor{
+	visitors := []ast.CheckingVisitor{
 		NewInputValidator(),
 		transform.NewInheritanceVisitor(
 			[]transform.InheritanceSpec{

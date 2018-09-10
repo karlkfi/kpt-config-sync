@@ -35,7 +35,7 @@ func modQuota(q *corev1.ResourceQuota, name string, labels map[string]string, li
 }
 
 var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
-	VisitorCtor: func() ast.MutatingVisitor {
+	VisitorCtor: func() ast.CheckingVisitor {
 		return NewQuotaVisitor()
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
