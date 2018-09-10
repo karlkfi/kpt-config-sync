@@ -148,7 +148,7 @@ func (in *ClusterPolicySpec) DeepCopyInto(out *ClusterPolicySpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	out.ImportTime = in.ImportTime
+	in.ImportTime.DeepCopyInto(&out.ImportTime)
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
 		*out = make([]GenericResources, len(*in))
@@ -177,7 +177,7 @@ func (in *ClusterPolicyStatus) DeepCopyInto(out *ClusterPolicyStatus) {
 		*out = make([]ClusterPolicySyncError, len(*in))
 		copy(*out, *in)
 	}
-	out.SyncTime = in.SyncTime
+	in.SyncTime.DeepCopyInto(&out.SyncTime)
 	return
 }
 
@@ -386,7 +386,7 @@ func (in *PolicyNodeSpec) DeepCopyInto(out *PolicyNodeSpec) {
 			(*in).DeepCopyInto(*out)
 		}
 	}
-	out.ImportTime = in.ImportTime
+	in.ImportTime.DeepCopyInto(&out.ImportTime)
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
 		*out = make([]GenericResources, len(*in))
@@ -422,7 +422,7 @@ func (in *PolicyNodeStatus) DeepCopyInto(out *PolicyNodeStatus) {
 		*out = make([]PolicyNodeSyncError, len(*in))
 		copy(*out, *in)
 	}
-	out.SyncTime = in.SyncTime
+	in.SyncTime.DeepCopyInto(&out.SyncTime)
 	return
 }
 

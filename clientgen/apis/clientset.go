@@ -18,7 +18,6 @@ package apis
 
 import (
 	glog "github.com/golang/glog"
-	bespinv1 "github.com/google/nomos/clientgen/apis/typed/policyascode/v1"
 	nomosv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
 	nomosv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
@@ -28,9 +27,6 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	BespinV1() bespinv1.BespinV1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Bespin() bespinv1.BespinV1Interface
 	NomosV1() nomosv1.NomosV1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Nomos() nomosv1.NomosV1Interface
@@ -41,20 +37,8 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	bespinV1      *bespinv1.BespinV1Client
 	nomosV1       *nomosv1.NomosV1Client
 	nomosV1alpha1 *nomosv1alpha1.NomosV1alpha1Client
-}
-
-// BespinV1 retrieves the BespinV1Client
-func (c *Clientset) BespinV1() bespinv1.BespinV1Interface {
-	return c.bespinV1
-}
-
-// Deprecated: Bespin retrieves the default version of BespinClient.
-// Please explicitly pick a version.
-func (c *Clientset) Bespin() bespinv1.BespinV1Interface {
-	return c.bespinV1
 }
 
 // NomosV1 retrieves the NomosV1Client
@@ -89,10 +73,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.bespinV1, err = bespinv1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
 	cs.nomosV1, err = nomosv1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -114,7 +94,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.bespinV1 = bespinv1.NewForConfigOrDie(c)
 	cs.nomosV1 = nomosv1.NewForConfigOrDie(c)
 	cs.nomosV1alpha1 = nomosv1alpha1.NewForConfigOrDie(c)
 
@@ -125,7 +104,6 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.bespinV1 = bespinv1.New(c)
 	cs.nomosV1 = nomosv1.New(c)
 	cs.nomosV1alpha1 = nomosv1alpha1.New(c)
 

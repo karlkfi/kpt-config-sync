@@ -20,8 +20,7 @@ package informer
 
 import (
 	"fmt"
-	v1 "github.com/google/nomos/pkg/api/policyascode/v1"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
@@ -53,16 +52,12 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=bespin.dev, Version=v1
-	case v1.SchemeGroupVersion.WithResource("prototypepolicyascodes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Bespin().V1().PrototypePolicyAsCodes().Informer()}, nil
-
-		// Group=nomos.dev, Version=v1
-	case policyhierarchy_v1.SchemeGroupVersion.WithResource("clusterpolicies"):
+	// Group=nomos.dev, Version=v1
+	case v1.SchemeGroupVersion.WithResource("clusterpolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().ClusterPolicies().Informer()}, nil
-	case policyhierarchy_v1.SchemeGroupVersion.WithResource("policynodes"):
+	case v1.SchemeGroupVersion.WithResource("policynodes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().PolicyNodes().Informer()}, nil
-	case policyhierarchy_v1.SchemeGroupVersion.WithResource("syncs"):
+	case v1.SchemeGroupVersion.WithResource("syncs"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().Syncs().Informer()}, nil
 
 		// Group=nomos.dev, Version=v1alpha1
