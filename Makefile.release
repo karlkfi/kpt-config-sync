@@ -58,6 +58,13 @@ IMAGE_TAG := $(VERSION)
 # Enable optimzations.
 BUILD_MODE ?= release
 
+# This is the hash of the last release candidate's revision.  No need to run the
+# release process if this has not changed since the last run.
+LAST_RC_GIT_HASH := $(shell git rev-list -n 1 $(LAST_RC))
+
+# This is the hash of the current git HEAD
+HEAD_GIT_HASH := $(shell git rev-parse HEAD)
+
 # TODO(filmil): See if we can avoid referring explicitly to the internal
 # repository.
 NOMOS_GIT_REPO := https://team.googlesource.com/gke-kubernetes-enterprise-control/prototype
@@ -191,6 +198,12 @@ git-relnotes-rc:
 autorelease: \
 		__internal-autorelease
 
+ifeq ($(LAST_RC_GIT_HASH), $(HEAD_GIT_HASH))
+# No need to do any work if we didn't commit any changes since last release
+# candidate had been built.
+__internal-autorelease:
+	$(info +++ Git has has not changed since $(LAST_RC).  Nothing to do.)
+else
 __internal-autorelease: VERSION=$(NEXT_RC)
 __internal-autorelease: IMAGE_TAG=$(NEXT_RC)
 __internal-autorelease: \
@@ -207,11 +220,18 @@ __internal-autorelease: \
 		git-tag-upload \
 		git-relnotes-rc
 	$(info +++ Completed releasing $(NEXT_RC))
+endif
 
 # Same as 'autorelease', except rigged so that it works on a local machine.
 autorelease-local: \
 		__internal-autorelease-local
 
+ifeq ($(LAST_RC_GIT_HASH), $(HEAD_GIT_HASH))
+# No need to do any work if we didn't commit any changes since last release
+# candidate had been built.
+__internal-autorelease-local:
+	$(info +++ Git has has not changed since $(LAST_RC).  Nothing to do.)
+else
 __internal-autorelease-local: VERSION=$(NEXT_RC)
 __internal-autorelease-local: IMAGE_TAG=$(NEXT_RC)
 __internal-autorelease-local: \
@@ -227,6 +247,7 @@ __internal-autorelease-local: \
 		git-tag-upload \
 		git-relnotes-rc
 	$(info +++ Completed releasing $(NEXT_RC) [LOCAL RELEASE])
+endif
 
 define bless_autorelease_instructions =
 +++
@@ -292,4 +313,6 @@ info:
 	$(info +++ Backwards incompatible from RELEASE: $(BACKWARDS_INCOMPATIBLE_RELEASE))
 	$(info +++ Incompatible:                 $(HAS_BACKWARDS_INCOMPATIBLE))
 	$(info +++ Building version: $(VERSION); $(IMAGE_TAG))
+	$(info +++ hash1: $(LAST_RC_GIT_HASH))
+	$(info +++ hash2: $(HEAD_GIT_HASH))
 
