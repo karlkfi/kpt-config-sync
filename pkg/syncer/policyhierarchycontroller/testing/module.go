@@ -22,9 +22,11 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/syncer/hierarchy"
 
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	visitortesting "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -84,13 +86,11 @@ func (tc ModuleAggregationTestcase) Run(module policyhierarchycontroller.Module)
 		for i := 0; i < len(tc.Expect); i++ {
 			expect := tc.Expect[i]
 			act := actual[i]
-			if expect.GetName() != act.GetName() {
-				t.Errorf("Name mismatch, expected %s, got %s", expect.GetName(), act.GetName())
-			}
-			if !module.Equal(expect, act) {
+
+			if !cmp.Equal(act, expect, visitortesting.ResourceVersionCmp()) {
 				cfg := spew.NewDefaultConfig()
 				cfg.Indent = "  "
-				t.Errorf(cfg.Sprintf("index %v expected:\n%v\ngot\n%v", i, tc.Expect[i], actual[i]))
+				t.Errorf(cfg.Sprintf("index %v %s", i, cmp.Diff(tc.Expect[i], actual[i], visitortesting.ResourceVersionCmp())))
 			}
 		}
 	}

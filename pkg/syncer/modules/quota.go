@@ -33,7 +33,7 @@ import (
 
 // AggregatedQuota provides aggregation operations for the ResourceQuota resource.
 type AggregatedQuota struct {
-	limits core_v1.ResourceList
+	quota *core_v1.ResourceQuota
 }
 
 // AggregatedQuota implements hierarchy.AggregatedNode
@@ -57,28 +57,15 @@ func MergeLimits(lhs, rhs core_v1.ResourceList) core_v1.ResourceList {
 
 // Aggregated implements hierarchy.AggregatedNode
 func (s *AggregatedQuota) Aggregated(node *policyhierarchy_v1.PolicyNode) hierarchy.AggregatedNode {
-	if node.Spec.ResourceQuotaV1 != nil {
-		return &AggregatedQuota{limits: MergeLimits(node.Spec.ResourceQuotaV1.Spec.Hard, s.limits)}
-	}
-	return &AggregatedQuota{limits: s.limits}
+	return &AggregatedQuota{quota: node.Spec.ResourceQuotaV1}
 }
 
 // Generate implements hierarchy.AggregatedNode
 func (s *AggregatedQuota) Generate() hierarchy.Instances {
 	var instances hierarchy.Instances
-	if len(s.limits) == 0 {
-		return instances
+	if s.quota != nil {
+		instances = append(instances, s.quota)
 	}
-
-	instances = append(instances, &core_v1.ResourceQuota{
-		ObjectMeta: meta_v1.ObjectMeta{
-			Name:   resourcequota.ResourceQuotaObjectName,
-			Labels: resourcequota.NewNomosQuotaLabels(),
-		},
-		Spec: core_v1.ResourceQuotaSpec{
-			Hard: s.limits,
-		},
-	})
 	return instances
 }
 
