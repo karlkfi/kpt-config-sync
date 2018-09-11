@@ -58,6 +58,10 @@ IMAGE_TAG := $(VERSION)
 # Enable optimzations.
 BUILD_MODE ?= release
 
+# TODO(filmil): See if we can avoid referring explicitly to the internal
+# repository.
+NOMOS_GIT_REPO := https://team.googlesource.com/gke-kubernetes-enterprise-control/prototype
+
 ##### SETUP ######
 
 include Makefile
@@ -153,6 +157,11 @@ bless-release: check-dirty
 
 ##### Git operations as make targets #####
 
+# Where the "origin" remote is not defined, define it.   go/prow jobs don't have
+# it defined, and this matters in the 'autorelease' target below.
+git-remote-add:
+	git remote add origin $(NOMOS_GIT_REPO)
+
 # Ensures that tags are fetched from the git repository.
 git-tag:
 	git tag --sort=version:refname
@@ -185,6 +194,7 @@ autorelease: \
 __internal-autorelease: VERSION=$(NEXT_RC)
 __internal-autorelease: IMAGE_TAG=$(NEXT_RC)
 __internal-autorelease: \
+		git-remote-add \
 		git-tag \
 		info \
 		clean \
