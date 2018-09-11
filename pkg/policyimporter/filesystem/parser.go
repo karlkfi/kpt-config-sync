@@ -287,12 +287,10 @@ func processRootDir(
 
 			// Namespace Scope
 		case *core_v1.ResourceQuota:
-			v.HasNamespace(i, "")
 			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.Role:
 			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *rbac_v1.RoleBinding:
-			v.HasNamespace(i, "")
 			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
@@ -356,12 +354,10 @@ func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *Di
 		case *extensions_v1beta1.PodSecurityPolicy:
 			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *core_v1.ResourceQuota:
-			v.HasNamespace(i, "")
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.Role:
 			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *rbac_v1.RoleBinding:
-			v.HasNamespace(i, "")
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *core_v1.ConfigMap:
 			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
@@ -406,13 +402,10 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 		case *extensions_v1beta1.PodSecurityPolicy:
 			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *core_v1.ResourceQuota:
-			v.HasNamespace(i, namespace).HaveNotSeen(o.GroupVersionKind()).MarkSeen(o.GroupVersionKind())
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.Role:
-			v.HasNamespace(i, namespace)
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *rbac_v1.RoleBinding:
-			v.HasNamespace(i, namespace)
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *core_v1.ConfigMap:
 			v.ObjectDisallowedInContext(i, o.GroupVersionKind())

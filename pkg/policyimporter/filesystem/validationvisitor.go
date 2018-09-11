@@ -23,6 +23,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/reserved"
 	"github.com/google/nomos/pkg/syncer/multierror"
 	"github.com/pkg/errors"
+	core_v1 "k8s.io/api/core/v1"
 )
 
 // InputValidator checks various filesystem constraints after loading into the tree format.
@@ -30,11 +31,12 @@ import (
 // that is being violated, then print a useful error message on what is voilating the constraint
 // and what is required to fix it.
 type InputValidator struct {
-	base     *visitor.Base
-	errs     *multierror.Builder
-	reserved *reserved.Namespaces
-	names    map[string]*ast.TreeNode
-	nodes    []*ast.TreeNode
+	base               *visitor.Base
+	errs               *multierror.Builder
+	reserved           *reserved.Namespaces
+	names              map[string]*ast.TreeNode
+	nodes              []*ast.TreeNode
+	seenResourceQuotas map[string]struct{}
 }
 
 // InputValidator implements ast.Visitor
@@ -43,9 +45,10 @@ var _ ast.Visitor = &InputValidator{}
 // NewInputValidator creates a new validator
 func NewInputValidator() *InputValidator {
 	v := &InputValidator{
-		base:     visitor.NewBase(),
-		errs:     multierror.NewBuilder(),
-		reserved: reserved.EmptyNamespaces(),
+		base:               visitor.NewBase(),
+		errs:               multierror.NewBuilder(),
+		reserved:           reserved.EmptyNamespaces(),
+		seenResourceQuotas: make(map[string]struct{}),
 	}
 	v.base.SetImpl(v)
 	return v
@@ -84,15 +87,15 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	if v.reserved.IsReserved(name) {
 		v.errs.Add(errors.Errorf(
 			"Reserved namespaces must not be used for %s names.  "+
-				"Directory %q declares a %s which conflicts with a reserved namespace name, "+
-				"adjust the directory name for %q or remove %s from the reserved namespace config.",
+				"Directory %q declares a %s which conflicts with a reserved namespace name. "+
+				"Adjust the directory name for %q or remove %s from the reserved namespace config.",
 			n.Type, n.Path, n.Type, n.Path, filepath.Base(n.Path)))
 	}
 	if other, found := v.names[name]; found {
 		v.errs.Add(errors.Errorf(
 			"Names for %s must not match names for other %ss.  "+
-				"Declaration in directory %q duplicates name from declaration in %q, "+
-				"adjust one of the directory names.",
+				"Declaration in directory %q duplicates name from declaration in %q. "+
+				"Adjust one of the directory names.",
 			n.Type, other.Type, n.Path, other.Path))
 	}
 
@@ -100,8 +103,8 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == ast.Namespace {
 			v.errs.Add(errors.Errorf(
 				"Namespaces must not contain children.  "+
-					"Namespace declared in directory %q cannot have child declared in subdirectory %q, "+
-					"restructure directories so namespace %q does not have children.",
+					"Namespace declared in directory %q cannot have child declared in subdirectory %q. "+
+					"Restructure directories so namespace %q does not have children.",
 				parent.Path, n.Path, filepath.Base(n.Path)))
 		}
 	}
@@ -119,12 +122,15 @@ func (v *InputValidator) VisitObjectList(o ast.ObjectList) ast.Node {
 
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
+	v.checkSingleResourceQuota(o)
+
 	metaObj := o.ToMeta()
-	if ns := metaObj.GetNamespace(); ns != "" {
+	ns := metaObj.GetNamespace()
+	if ns != "" {
 		if len(v.nodes) == 0 {
 			v.errs.Add(errors.Errorf(
-				"Cluster scoped objects must not be associated with a namespace, "+
-					"remove the namespace field from object.  "+
+				"Cluster scoped objects must not be associated with a namespace. "+
+					"Remove the namespace field from object.  "+
 					"Object %s, Name=%q is declared with namespace %s",
 				o.Object.GetObjectKind().GroupVersionKind(),
 				metaObj.GetName(),
@@ -133,8 +139,8 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 			node := v.nodes[len(v.nodes)-1]
 			if node.Type == ast.Policyspace {
 				v.errs.Add(errors.Errorf(
-					"Objects declared in policyspace directories must not have a namespace specified, "+
-						"remove the namespace field from object.  "+
+					"Objects declared in policyspace directories must not have a namespace specified. "+
+						"Remove the namespace field from object.  "+
 						"Directory %q has declaration for %s, Name=%q with namespace %s",
 					node.Path,
 					o.Object.GetObjectKind().GroupVersionKind(),
@@ -143,5 +149,35 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 			}
 		}
 	}
+	if len(v.nodes) != 0 {
+		node := v.nodes[len(v.nodes)-1]
+		if nodeNS := filepath.Base(node.Path); nodeNS != ns && node.Type == ast.Namespace {
+			v.errs.Add(errors.Errorf("Object's Namespace must match the name of the namespace "+
+				"directory in which the object appears. Object Namespace is %s. Directory name is %s.",
+				ns, nodeNS))
+		}
+	}
 	return nil
+}
+
+// checkSingleResourceQuota ensures that at most one ResourceQuota object is present in each
+// directory.
+func (v *InputValidator) checkSingleResourceQuota(o *ast.Object) {
+	if o.Object.GetObjectKind().GroupVersionKind() != core_v1.SchemeGroupVersion.WithKind("ResourceQuota") {
+		return
+	}
+	var path string
+	if len(v.nodes) == 0 {
+		return
+		// TODO(b/113900647): ResourceQuota should be disallowed in cluster scope. Handle this when
+		// moving over ObjectDisallowedInContext.
+	}
+	path = v.nodes[len(v.nodes)-1].Path
+
+	if _, found := v.seenResourceQuotas[path]; found {
+		v.errs.Add(errors.Errorf("Each directory must contain at most one ResourceQuota object. "+
+			"Object name: \"%s\", found at path \"%s\".", o.ToMeta().GetName(), path))
+	} else {
+		v.seenResourceQuotas[path] = struct{}{}
+	}
 }

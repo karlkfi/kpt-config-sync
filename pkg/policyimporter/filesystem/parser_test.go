@@ -471,6 +471,16 @@ var parserTestCases = []parserTestCase{
 		expectedError: true,
 	},
 	{
+		testName: "Policyspace dir with multiple ResourceQuota",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"bar/rq.yaml":     templateData{ID: "1"}.apply(aQuota),
+			"bar/rq2.yaml":    templateData{ID: "2"}.apply(aQuota),
+			"bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
+		},
+		expectedError: true,
+	},
+	{
 		testName: "Namespace dir with ResourceQuota namespace mismatch",
 		root:     "foo",
 		testFiles: fileContentMap{
@@ -923,10 +933,10 @@ func TestParser(t *testing.T) {
 				if err != nil {
 					return
 				}
-				t.Fatalf("Expected error")
+				t.Errorf("Expected error but got none")
 			}
 			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
+				t.Errorf("Unexpected error: %v", err)
 			}
 
 			if len(tc.expectedNumPolicies) > 0 {

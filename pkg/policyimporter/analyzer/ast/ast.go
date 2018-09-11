@@ -67,10 +67,9 @@ const (
 	Policyspace = TreeNodeType("policyspace")
 )
 
-// TreeNode is analgous to a directory in the policy hierarchy.
+// TreeNode is analogous to a directory in the policy hierarchy.
 type TreeNode struct {
-	// Path is the path to the current directory from the root of the tree, may be useful
-	// for adding annotations or other things.
+	// Path is the path to the current directory from the root of the tree.
 	Path string
 
 	// The type of the HierarchyNode
@@ -107,6 +106,9 @@ func (o ObjectList) Accept(visitor Visitor) Node {
 }
 
 // Object extends runtime.Object to implement Visitable.
+//
+// An Object represents a resource found in a directory in the policy
+// hierarchy.
 type Object struct {
 	runtime.Object
 }
