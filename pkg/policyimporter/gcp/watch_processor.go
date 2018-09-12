@@ -34,6 +34,7 @@ import (
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -116,6 +117,19 @@ func (p *watchProcessor) process() ([]byte, error) {
 					policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
 					return resumeMarker, errors.Wrapf(err, "failed in processing atomic group")
 				}
+				// Update the import times for all policy nodes and cluster policy.
+				time := meta_v1.Now()
+				for n, pn := range updatedPolicies.PolicyNodes {
+					pn.Spec.ImportTime = time
+					pn.Status.SyncState = v1.StateStale
+					updatedPolicies.PolicyNodes[n] = pn
+				}
+				if updatedPolicies.ClusterPolicy != nil {
+					updatedPolicies.ClusterPolicy.Spec.ImportTime = time
+					updatedPolicies.ClusterPolicy.Status.SyncState = v1.StateStale
+				}
+
+				// Calculate the sequence of actions needed to transition from current to desired state.
 				a := actions.NewDiffer(p.actionFactories).Diff(p.currentPolicies, *updatedPolicies)
 				glog.V(2).Infof("Processing of atomic group generated %d actions", len(a))
 				p.currentPolicies = *updatedPolicies
