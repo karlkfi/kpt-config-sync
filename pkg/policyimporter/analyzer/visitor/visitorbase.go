@@ -46,36 +46,40 @@ func (vb *Base) VisitContext(g *ast.Context) ast.Node {
 	g.Cluster.Accept(vb.impl)
 	g.ReservedNamespaces.Accept(vb.impl)
 	g.Tree.Accept(vb.impl)
-	return nil
+	return g
 }
 
 // VisitReservedNamespaces implements Visitor
 func (vb *Base) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
 	// leaf - noop
-	return nil
+	return r
 }
 
 // VisitCluster implements Visitor
 func (vb *Base) VisitCluster(c *ast.Cluster) ast.Node {
-	for _, object := range c.Objects {
-		object.Accept(vb.impl)
-	}
-	return nil
+	c.Objects.Accept(vb.impl)
+	return c
 }
 
 // VisitTreeNode implements Visitor
 func (vb *Base) VisitTreeNode(n *ast.TreeNode) ast.Node {
-	for _, obj := range n.Objects {
-		obj.Accept(vb.impl)
-	}
+	n.Objects.Accept(vb.impl)
 	for _, child := range n.Children {
 		child.Accept(vb.impl)
 	}
-	return nil
+	return n
+}
+
+// VisitObjectList implements Visitor
+func (vb *Base) VisitObjectList(o ast.ObjectList) ast.Node {
+	for _, obj := range o {
+		obj.Accept(vb.impl)
+	}
+	return o
 }
 
 // VisitObject implements Visitor
 func (vb *Base) VisitObject(o *ast.Object) ast.Node {
 	// leaf - noop
-	return nil
+	return o
 }

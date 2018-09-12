@@ -28,12 +28,12 @@ import (
 )
 
 // ObjectSets constructs a list of ObjectSet from a list of runtime.Object
-func ObjectSets(runtimeObjs ...runtime.Object) []*ast.Object {
+func ObjectSets(runtimeObjs ...runtime.Object) ast.ObjectList {
 	astObjs := make([]*ast.Object, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.Object{Object: runtimeObjs[idx]}
 	}
-	return astObjs
+	return ast.ObjectList(astObjs)
 }
 
 // Helper provides a number of pre-built types for use in testcases.

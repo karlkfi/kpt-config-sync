@@ -74,7 +74,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 	},
 	OutputVisitorTestcase{
 		name:  "emtpy cluster policies",
-		input: &ast.Context{Cluster: &ast.Cluster{Objects: []*ast.Object{}}},
+		input: &ast.Context{Cluster: &ast.Cluster{}},
 		expect: allPolicies(
 			policyhierarchyv1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{

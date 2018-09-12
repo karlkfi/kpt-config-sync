@@ -123,6 +123,11 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	return newNode
 }
 
+// VisitObjectList implements Visitor
+func (v *QuotaVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
+	return v.cv.VisitObjectList(o)
+}
+
 // VisitObject implements Visitor, this should only be visited if the objectset
 // is of type ResourceQuota.
 func (v *QuotaVisitor) VisitObject(o *ast.Object) ast.Node {

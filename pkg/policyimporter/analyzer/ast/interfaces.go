@@ -36,6 +36,7 @@ type Visitor interface {
 	VisitReservedNamespaces(r *ReservedNamespaces) Node
 	VisitCluster(c *Cluster) Node
 	VisitTreeNode(n *TreeNode) Node
+	VisitObjectList(o ObjectList) Node
 	VisitObject(o *Object) Node
 }
 

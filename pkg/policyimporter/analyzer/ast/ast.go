@@ -46,7 +46,7 @@ func (c *Context) Accept(visitor Visitor) Node {
 
 // Cluster represents cluster scoped policies.
 type Cluster struct {
-	Objects []*Object
+	Objects ObjectList
 }
 
 // Accept implements Visitable
@@ -79,7 +79,7 @@ type TreeNode struct {
 	Annotations map[string]string
 
 	// Objects from the directory
-	Objects []*Object
+	Objects ObjectList
 
 	Selectors map[string]*v1.NamespaceSelector
 
@@ -93,6 +93,17 @@ func (n *TreeNode) Accept(visitor Visitor) Node {
 		return nil
 	}
 	return visitor.VisitTreeNode(n)
+}
+
+// ObjectList represents a set of objects.
+type ObjectList []*Object
+
+// Accept implements Visitable
+func (o ObjectList) Accept(visitor Visitor) Node {
+	if o == nil {
+		return nil
+	}
+	return visitor.VisitObjectList(o)
 }
 
 // Object extends runtime.Object to implement Visitable.

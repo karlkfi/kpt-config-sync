@@ -112,6 +112,11 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	return nil
 }
 
+// VisitObjectList implements Visitor
+func (v *InputValidator) VisitObjectList(o ast.ObjectList) ast.Node {
+	return v.base.VisitObjectList(o)
+}
+
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 	metaObj := o.ToMeta()

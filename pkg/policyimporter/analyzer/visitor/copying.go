@@ -58,25 +58,25 @@ func (v *Copying) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
 // VisitCluster implements Visitor
 func (v *Copying) VisitCluster(c *ast.Cluster) ast.Node {
 	nc := *c
-	nc.Objects = v.VisitObjectList(c.Objects)
+	nc.Objects, _ = c.Objects.Accept(v.impl).(ast.ObjectList)
 	return &nc
 }
 
-// VisitObjectList is a helper for copying a list of objects
-func (v *Copying) VisitObjectList(objects []*ast.Object) []*ast.Object {
-	var objCopy []*ast.Object
-	for _, object := range objects {
+// VisitObjectList implements Visitor
+func (v *Copying) VisitObjectList(objectList ast.ObjectList) ast.Node {
+	var olc ast.ObjectList
+	for _, object := range objectList {
 		if obj, ok := object.Accept(v.impl).(*ast.Object); ok {
-			objCopy = append(objCopy, obj)
+			olc = append(olc, obj)
 		}
 	}
-	return objCopy
+	return olc
 }
 
 // VisitTreeNode implements Visitor
 func (v *Copying) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	nn := *n
-	nn.Objects = v.VisitObjectList(n.Objects)
+	nn.Objects, _ = n.Objects.Accept(v.impl).(ast.ObjectList)
 	nn.Children = nil
 	for _, child := range n.Children {
 		if ch, ok := child.Accept(v.impl).(*ast.TreeNode); ok {

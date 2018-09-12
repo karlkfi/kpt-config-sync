@@ -99,6 +99,11 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	return newNode
 }
 
+// VisitObjectList implements Visitor
+func (v *InheritanceVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
+	return v.cv.VisitObjectList(o)
+}
+
 // VisitObject implements Visitor
 func (v *InheritanceVisitor) VisitObject(o *ast.Object) ast.Node {
 	context := &v.treeContext[len(v.treeContext)-1]
