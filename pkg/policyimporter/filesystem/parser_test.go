@@ -727,7 +727,7 @@ var parserTestCases = []parserTestCase{
 		testFiles: fileContentMap{
 			"bar/rb1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
-			"bar/baz/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+			"bar/baz/rb1.yaml": templateData{ID: "1", Namespace: "baz"}.apply(aRoleBinding),
 		},
 		expectedError: true,
 	},
