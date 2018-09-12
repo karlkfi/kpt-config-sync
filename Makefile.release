@@ -45,12 +45,29 @@ FETCH_TAGS := $(shell git fetch --tags)
 # Use git tags to set version string.
 VERSION := $(shell git describe --tags --always --dirty)
 
+# TODO(filmil): See if we can avoid referring explicitly to the internal
+# repository.
+NOMOS_GIT_REPO := https://team.googlesource.com/gke-kubernetes-enterprise-control/prototype
+
+##### SETUP ######
+
+include Makefile
+
+##### Post-setup env variable evaulations #####
+
 # The version of the last known release candidate, e.g. v1.2.3-rc.4, but could
 # also be v1.2.3 if the last release candidate was promoted to a release.
-LAST_RC := $(shell git tag --sort=version:refname | tail -n1)
+LAST_RC := $(shell \
+		git tag --sort=version:refname | \
+		docker run -i $(BUILDENV_IMAGE) semsort 2>&1 | \
+		tail -n 1)
 
 # The version of the last known release (without -rc.X), e.g. v1.2.3
-LAST_RELEASE := $(shell git tag --sort=version:refname | grep -v "rc" | tail -n1)
+LAST_RELEASE := $(shell \
+		git tag --sort=version:refname | \
+		grep -v "rc" | \
+		docker run -i $(BUILDENV_IMAGE) semsort 2>&1 | \
+		tail -n 1)
 
 # Set the IMAGE_TAG to only include the version info and no other build info.
 IMAGE_TAG := $(VERSION)
@@ -64,16 +81,6 @@ LAST_RC_GIT_HASH := $(shell git rev-list -n 1 $(LAST_RC))
 
 # This is the hash of the current git HEAD
 HEAD_GIT_HASH := $(shell git rev-parse HEAD)
-
-# TODO(filmil): See if we can avoid referring explicitly to the internal
-# repository.
-NOMOS_GIT_REPO := https://team.googlesource.com/gke-kubernetes-enterprise-control/prototype
-
-##### SETUP ######
-
-include Makefile
-
-##### Post-setup env variable evaulations #####
 
 # Finds any backwards incompatible changes since last tagged release candidate.
 BACKWARDS_INCOMPATIBLE_RC := $(shell \
@@ -304,15 +311,21 @@ bless-autorelease:
 # Various release info printed for diagnostics.
 
 info:
-	$(info +++ Releasing version:            $(IMAGE_TAG))
-	$(info +++ Last known release candidate: $(LAST_RC))
-	$(info +++ Next minor release:       $(NEXT_MINOR_RELEASE))
-	$(info +++ Last known blessed release:   $(LAST_RELEASE))
-	$(info +++ Next release candidate:       $(NEXT_RC))
-	$(info +++ Backwards incompatible from RC:      $(BACKWARDS_INCOMPATIBLE_RC))
-	$(info +++ Backwards incompatible from RELEASE: $(BACKWARDS_INCOMPATIBLE_RELEASE))
-	$(info +++ Incompatible:                 $(HAS_BACKWARDS_INCOMPATIBLE))
-	$(info +++ Building version: $(VERSION); $(IMAGE_TAG))
-	$(info +++ hash1: $(LAST_RC_GIT_HASH))
-	$(info +++ hash2: $(HEAD_GIT_HASH))
+	$(info +++)
+	$(info +++ RELEASE CANDIDATE INFORMATION)
+	$(info +++)
+	$(info +++ Last blessed version:             $(LAST_RELEASE))
+	$(info +++ Last release candidate:           $(LAST_RC))
+	$(info +++ Next release candidate:           $(NEXT_RC))
+	$(info +++)
+	$(info +++ Last release candidate commit ID: $(LAST_RC_GIT_HASH))
+	$(info +++ Next release candidate commit ID: $(HEAD_GIT_HASH))
+	$(info +++)
+	$(info +++ Diagnostics (to be removed once the process is validated): )
+	$(info +++ BACKWARDS_INCOMPATIBLE_RC:        $(BACKWARDS_INCOMPATIBLE_RC))
+	$(info +++ BACKWARDS_INCOMPATIBLE_RELEASE:   $(BACKWARDS_INCOMPATIBLE_RELEASE))
+	$(info +++ HAS_BACKWARDS_INCOMPATIBLE:       $(HAS_BACKWARDS_INCOMPATIBLE))
+	$(info +++ IMAGE_TAG:                        $(IMAGE_TAG))
+	$(info +++ NEXT_MINOR_RELEASE:               $(NEXT_MINOR_RELEASE) [after $(LAST_RELEASE)])
+	$(info +++ VERSION:                          $(VERSION))
 

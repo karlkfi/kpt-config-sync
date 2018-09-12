@@ -82,7 +82,7 @@ GCP_PROJECT ?= stolos-dev
 # NOTE: nomos-public is fully accessible publicly, do not use for anything
 # other than buildenv
 BUILDENV_PROJECT ?= nomos-public
-BUILDENV_IMAGE_VERSION ?= v0.1.1
+BUILDENV_IMAGE_VERSION ?= v0.1.2
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
 # GCP service account credentials used in gcp e2e tests.

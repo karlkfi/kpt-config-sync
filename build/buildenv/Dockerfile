@@ -42,4 +42,11 @@ RUN go get github.com/golangci/golangci-lint/cmd/golangci-lint
 RUN go get github.com/jessfraz/junk/sembump && \
     go install github.com/jessfraz/junk/sembump
 
+# semsort knows how to sort semvers.
+# echo "1.1.0 1.0.0" | semsort
+# 1.0.0
+# 1.1.0
+RUN go get github.com/filmil/semsort/... && \
+    go install github.com/filmil/semsort/...
+
 RUN mv /go/bin/* /bin
