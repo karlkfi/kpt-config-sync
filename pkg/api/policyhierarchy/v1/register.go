@@ -49,8 +49,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&PolicyNodeList{},
 		&ClusterPolicy{},
 		&ClusterPolicyList{},
-		&SyncDeclaration{},
-		&SyncDeclarationList{},
+		&Sync{},
+		&SyncList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

@@ -299,8 +299,8 @@ type NamespaceSelectorList struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SyncDeclaration is used for configuring sync of generic resources.
-type SyncDeclaration struct {
+// Sync is used for configuring sync of generic resources.
+type Sync struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// Standard object's metadata. The Name field of the policy node must match the namespace name.
@@ -308,47 +308,70 @@ type SyncDeclaration struct {
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec is the standard spec field.
-	Spec SyncDeclarationSpec `json:"spec"`
+	Spec SyncSpec `json:"spec"`
 
 	// Status is the status for the sync declaration.
-	Status SyncDeclarationStatus `json:"status"`
+	Status SyncStatus `json:"status,omitempty"`
 }
 
-// SyncDeclarationSpec specifies the sync declaration which corresponds to an API Group and contained
+// SyncSpec specifies the sync declaration which corresponds to an API Group and contained
 // kinds and versions.
-type SyncDeclarationSpec struct {
-	Group string              `json:"group"` // group, eg nomos.dev
-	Kinds SyncDeclarationKind `json:"kinds"`
+type SyncSpec struct {
+	// Groups represents all groups that are declared for sync.
+	Groups []SyncGroup `json:"groups"` // groups, eg nomos.dev
 }
 
-// SyncDeclarationKind represents the spec for a Kind of object we are syncing.
-type SyncDeclarationKind struct {
-	// Kind is the string that represents the Kind for the object as given in TypeMeta.
-	Kind string `json:"kind,omitempty"`
+// SyncGroup represents sync declarations for a Group.
+type SyncGroup struct {
+	// Group is the group, for example nomos.dev or rbac.authorization.k8s.io
+	Group string `json:"group"` // group, eg nomos.dev
+	// Kinds represents kinds from the Group.
+	Kinds SyncKind `json:"kinds"`
+}
+
+// SyncKind represents the spec for a Kind of object we are syncing.
+type SyncKind struct {
+	// Kind is the string that represents the Kind for the object as given in TypeMeta, for exmple
+	// ClusterRole, Namespace or Deployment.
+	Kind string `json:"kind"`
 	// Versions indicates the versions that will be handled for the object of Group and Kind.
-	Versions []SyncDeclarationVersion `json:"versions,omitempty"`
+	Versions []SyncVersion `json:"versions"`
 }
 
-// SyncDeclarationVersion corresponds to a single version in a (group, kind)
-type SyncDeclarationVersion struct {
-	// Version indicates the version used for the API Group, for example v1 or v1beta1.
+// SyncVersion corresponds to a single version in a (group, kind)
+type SyncVersion struct {
+	// Version indicates the version used for the API Group, for example v1, v1beta1, v1alpha1.
 	Version string `json:"version"`
 
-	// CompareFields is a list of fields to compare against.  This will default to ["spec"] which should
-	// be sufficient for most obejcts, however, there are exceptions (RBAC) so these need to be declared.
+	// CompareFields is an optional list of fields to compare against.  This will default to ["spec"]
+	// which should be sufficient for most obejcts, however, there are exceptions (RBAC) so these need
+	// to be declared.
 	CompareFields []string `json:"compareFields,omitempty"`
 }
 
-// SyncDeclarationStatus represents the status for a sync declaration
-type SyncDeclarationStatus struct {
-	Syncing bool   `json:"syncing,omitempty"` // Syncer should set this to true when it has begun using the sync decl
-	Error   string `json:"error,omitempty"`   // Any errors encountered for this declaration.
+// SyncStatus represents the status for a sync declaration
+type SyncStatus struct {
+	GroupKinds []SyncGroupKindStatus `json:"groupKinds,omitempty"`
+}
+
+// SyncGroupKindStatus is a per Group, Kind status for the sync state of a resource.
+type SyncGroupKindStatus struct {
+	// Group is the group, for example nomos.dev or rbac.authorization.k8s.io
+	Group string `json:"group"`
+	// Kind is the string that represents the Kind for the object as given in TypeMeta, for exmple
+	// ClusterRole, Namespace or Deployment.
+	Kind string `json:"kind"`
+	// Status indicates the state of the sync.  One of "syncing", or "error".  If "error" is specified
+	// then Error will be populated with a message regarding the error.
+	Status string `json:"status"`
+	// Message indicates a message associated with the status.
+	Message string `json:"error,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SyncDeclarationList holds a list of SyncDeclaration resources.
-type SyncDeclarationList struct {
+// SyncList holds a list of Sync resources.
+type SyncList struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// Standard object's metadata.
@@ -356,5 +379,5 @@ type SyncDeclarationList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is a list of sync declarations.
-	Items []SyncDeclaration `json:"items"`
+	Items []Sync `json:"items"`
 }

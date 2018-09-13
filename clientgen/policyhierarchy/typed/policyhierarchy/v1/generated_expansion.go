@@ -22,4 +22,4 @@ type NamespaceSelectorExpansion interface{}
 
 type PolicyNodeExpansion interface{}
 
-type SyncDeclarationExpansion interface{}
+type SyncExpansion interface{}

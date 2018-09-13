@@ -28,7 +28,7 @@ type NomosV1Interface interface {
 	ClusterPoliciesGetter
 	NamespaceSelectorsGetter
 	PolicyNodesGetter
-	SyncDeclarationsGetter
+	SyncsGetter
 }
 
 // NomosV1Client is used to interact with features provided by the nomos.dev group.
@@ -48,8 +48,8 @@ func (c *NomosV1Client) PolicyNodes() PolicyNodeInterface {
 	return newPolicyNodes(c)
 }
 
-func (c *NomosV1Client) SyncDeclarations() SyncDeclarationInterface {
-	return newSyncDeclarations(c)
+func (c *NomosV1Client) Syncs() SyncInterface {
+	return newSyncs(c)
 }
 
 // NewForConfig creates a new NomosV1Client for the given config.

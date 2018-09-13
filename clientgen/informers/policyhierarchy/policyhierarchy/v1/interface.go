@@ -30,8 +30,8 @@ type Interface interface {
 	NamespaceSelectors() NamespaceSelectorInformer
 	// PolicyNodes returns a PolicyNodeInformer.
 	PolicyNodes() PolicyNodeInformer
-	// SyncDeclarations returns a SyncDeclarationInformer.
-	SyncDeclarations() SyncDeclarationInformer
+	// Syncs returns a SyncInformer.
+	Syncs() SyncInformer
 }
 
 type version struct {
@@ -60,7 +60,7 @@ func (v *version) PolicyNodes() PolicyNodeInformer {
 	return &policyNodeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// SyncDeclarations returns a SyncDeclarationInformer.
-func (v *version) SyncDeclarations() SyncDeclarationInformer {
-	return &syncDeclarationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+// Syncs returns a SyncInformer.
+func (v *version) Syncs() SyncInformer {
+	return &syncInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

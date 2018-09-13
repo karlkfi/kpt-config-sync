@@ -30,58 +30,58 @@ import (
 	time "time"
 )
 
-// SyncDeclarationInformer provides access to a shared informer and lister for
-// SyncDeclarations.
-type SyncDeclarationInformer interface {
+// SyncInformer provides access to a shared informer and lister for
+// Syncs.
+type SyncInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.SyncDeclarationLister
+	Lister() v1.SyncLister
 }
 
-type syncDeclarationInformer struct {
+type syncInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 }
 
-// NewSyncDeclarationInformer constructs a new informer for SyncDeclaration type.
+// NewSyncInformer constructs a new informer for Sync type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewSyncDeclarationInformer(client policyhierarchy.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredSyncDeclarationInformer(client, resyncPeriod, indexers, nil)
+func NewSyncInformer(client policyhierarchy.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredSyncInformer(client, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredSyncDeclarationInformer constructs a new informer for SyncDeclaration type.
+// NewFilteredSyncInformer constructs a new informer for Sync type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredSyncDeclarationInformer(client policyhierarchy.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredSyncInformer(client policyhierarchy.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().SyncDeclarations().List(options)
+				return client.NomosV1().Syncs().List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().SyncDeclarations().Watch(options)
+				return client.NomosV1().Syncs().Watch(options)
 			},
 		},
-		&policyhierarchy_v1.SyncDeclaration{},
+		&policyhierarchy_v1.Sync{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *syncDeclarationInformer) defaultInformer(client policyhierarchy.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredSyncDeclarationInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *syncInformer) defaultInformer(client policyhierarchy.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredSyncInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *syncDeclarationInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&policyhierarchy_v1.SyncDeclaration{}, f.defaultInformer)
+func (f *syncInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&policyhierarchy_v1.Sync{}, f.defaultInformer)
 }
 
-func (f *syncDeclarationInformer) Lister() v1.SyncDeclarationLister {
-	return v1.NewSyncDeclarationLister(f.Informer().GetIndexer())
+func (f *syncInformer) Lister() v1.SyncLister {
+	return v1.NewSyncLister(f.Informer().GetIndexer())
 }

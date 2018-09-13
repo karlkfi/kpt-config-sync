@@ -38,8 +38,8 @@ func (c *FakeNomosV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
 }
 
-func (c *FakeNomosV1) SyncDeclarations() v1.SyncDeclarationInterface {
-	return &FakeSyncDeclarations{c}
+func (c *FakeNomosV1) Syncs() v1.SyncInterface {
+	return &FakeSyncs{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
