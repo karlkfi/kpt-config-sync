@@ -178,7 +178,7 @@ git-remote-add:
 
 # Ensures that tags are fetched from the git repository.
 git-tag:
-	git tag --sort=version:refname
+	git fetch --tag
 
 # Commits the NEXT_RC release tag.
 git-tag-commit:
@@ -285,7 +285,8 @@ bless-autorelease:
 	        chosen_release="$${chosen_release:-$(NEXT_RELEASE)}";                          \
 		    echo "Chosen:  $${chosen_release}";                                            \
 			echo "RC:      $${chosen_rc}";                                                 \
-			git tag -a $${chosen_release} -m "Blessed release $${chosen_release}" ; \
+			git tag -a $${chosen_release} $${chosen_rc}                                    \
+			   -m "Blessed release $${chosen_release}" ;                                   \
 			gcloud container images add-tag --quiet                                        \
 			   gcr.io/$(GCP_PROJECT)/nomos:$${chosen_rc}                                   \
 			   gcr.io/$(GCP_PROJECT)/nomos:$${chosen_release} ;                            \
