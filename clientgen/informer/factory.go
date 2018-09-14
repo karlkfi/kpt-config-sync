@@ -21,8 +21,8 @@ package informer
 import (
 	apis "github.com/google/nomos/clientgen/apis"
 	internalinterfaces "github.com/google/nomos/clientgen/informer/internalinterfaces"
+	nomos "github.com/google/nomos/clientgen/informer/nomos"
 	policyascode "github.com/google/nomos/clientgen/informer/policyascode"
-	policyhierarchy "github.com/google/nomos/clientgen/informer/policyhierarchy"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -123,14 +123,14 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
+	Nomos() nomos.Interface
 	Bespin() policyascode.Interface
-	Nomos() policyhierarchy.Interface
+}
+
+func (f *sharedInformerFactory) Nomos() nomos.Interface {
+	return nomos.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Bespin() policyascode.Interface {
 	return policyascode.New(f, f.namespace, f.tweakListOptions)
-}
-
-func (f *sharedInformerFactory) Nomos() policyhierarchy.Interface {
-	return policyhierarchy.New(f, f.namespace, f.tweakListOptions)
 }

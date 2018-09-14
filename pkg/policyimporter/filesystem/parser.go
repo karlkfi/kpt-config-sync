@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 
 	"github.com/golang/glog"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"

@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	policyinformer "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	policyinformer "github.com/google/nomos/clientgen/informer/nomos/v1"
 	"github.com/google/nomos/pkg/admissioncontroller"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"

@@ -17,7 +17,7 @@ limitations under the License.
 package testing
 
 import (
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"

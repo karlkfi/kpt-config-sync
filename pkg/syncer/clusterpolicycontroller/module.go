@@ -15,7 +15,7 @@ limitations under the License.
 package clusterpolicycontroller
 
 import (
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/google/nomos/pkg/syncer"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

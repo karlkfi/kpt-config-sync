@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"time"
 
-	informerspolicynodev1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	informerspolicynodev1 "github.com/google/nomos/clientgen/informer/nomos/v1"
 	"github.com/google/nomos/pkg/admissioncontroller"
 	"github.com/google/nomos/pkg/resourcequota"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"

@@ -20,7 +20,7 @@ package modules
 import (
 	"reflect"
 
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
 	controller_informers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"

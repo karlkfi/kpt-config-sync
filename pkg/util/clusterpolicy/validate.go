@@ -1,7 +1,7 @@
 package clusterpolicy
 
 import (
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/google/nomos/pkg/util/meta"
 	"github.com/pkg/errors"
 )

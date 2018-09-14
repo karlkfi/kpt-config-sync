@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/testing/fakeorg"
 	"github.com/google/nomos/pkg/testing/orgdriver"

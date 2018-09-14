@@ -27,7 +27,7 @@ REPO="github.com/google/nomos"
 
 # Comma separted list of APIs to generate for clientset.
 INPUT_BASE="${REPO}/pkg/api"
-INPUT_APIS="policyhierarchy/v1,policyascode/v1"
+INPUT_APIS="nomos/v1,policyascode/v1"
 
 # Nomos proto dependencies.
 K8S_APIS_PROTO=(

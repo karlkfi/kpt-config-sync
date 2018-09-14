@@ -24,7 +24,7 @@ import (
 	"github.com/google/nomos/clientgen/apis"
 	fakepolicyhierarchy "github.com/google/nomos/clientgen/apis/fake"
 	phinformers "github.com/google/nomos/clientgen/informer"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"

@@ -17,7 +17,7 @@ limitations under the License.
 package policyhierarchycontroller
 
 import (
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/google/nomos/pkg/syncer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

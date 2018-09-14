@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/google/nomos/pkg/cli"
 	"github.com/google/nomos/pkg/client/meta/fake"
 	core_v1 "k8s.io/api/core/v1"

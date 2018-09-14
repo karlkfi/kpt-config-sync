@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/nomos/v1"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/validation/path"
