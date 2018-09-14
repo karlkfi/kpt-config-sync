@@ -300,7 +300,6 @@ type NamespaceSelector struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 	// The actual object definition, per K8S object definition style.
-	// +optional
 	Spec NamespaceSelectorSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 }
 
