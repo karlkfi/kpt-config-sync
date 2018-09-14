@@ -17,8 +17,8 @@ package args
 import (
 	"time"
 
-	informers "github.com/google/nomos/clientgen/informers/policyhierarchy"
-	"github.com/google/nomos/clientgen/policyhierarchy"
+	"github.com/google/nomos/clientgen/apis"
+	informers "github.com/google/nomos/clientgen/informer"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/args"
 	"k8s.io/client-go/rest"
 )
@@ -32,7 +32,7 @@ type InjectArgs struct {
 
 // CreateInjectArgs returns new controller args.
 func CreateInjectArgs(config *rest.Config) InjectArgs {
-	client := policyhierarchy.NewForConfigOrDie(config)
+	client := apis.NewForConfigOrDie(config)
 	return InjectArgs{
 		InjectArgs: args.CreateInjectArgs(config),
 		Informers:  informers.NewSharedInformerFactory(client, time.Minute),

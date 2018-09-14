@@ -16,7 +16,7 @@ limitations under the License.
 package monitor
 
 import (
-	policyhierarchyscheme "github.com/google/nomos/clientgen/policyhierarchy/scheme"
+	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/pkg/monitor/args"
 	"github.com/google/nomos/pkg/monitor/clusterpolicy"
 	"github.com/google/nomos/pkg/monitor/policynode"

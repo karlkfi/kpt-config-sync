@@ -42,7 +42,7 @@ K8S_APIS_PROTO=(
 )
 
 # Where to put the generated client set
-OUTPUT_BASE="${GOWORK}/src"
+OUTPUT_BASE="${GOPATH}/src"
 OUTPUT_CLIENT="${REPO}/clientgen"
 
 BOILERPLATE="$(dirname ${0})/boilerplate.go.txt"
@@ -85,47 +85,54 @@ echo "Using GOPATH base ${GOBASE}"
 echo "Using GOPATH work ${GOWORK}"
 
 echo "Generating APIs"
+${GOBASE}/bin/client-gen \
+  --input-base "${INPUT_BASE}" \
+  --input="${INPUT_APIS}" \
+  --clientset-name="apis" \
+  --output-base="${OUTPUT_BASE}" \
+  --go-header-file="${BOILERPLATE}" \
+  --clientset-path "${OUTPUT_CLIENT}"
+
+informer_inputs=""
+for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
+  if [[ "$informer_inputs" != "" ]]; then
+    informer_inputs="$informer_inputs,"
+  fi
+  informer_inputs="${informer_inputs}${INPUT_BASE}/${api}"
+done
+
+echo "informer"
+${GOBASE}/bin/informer-gen \
+  ${LOGGING_FLAGS} \
+  --input-dirs="${informer_inputs}" \
+  --versioned-clientset-package="${OUTPUT_CLIENT}/apis" \
+  --listers-package="${OUTPUT_CLIENT}/listers" \
+  --output-base="$GOWORK/src" \
+  --go-header-file="${BOILERPLATE}" \
+  --output-package="${OUTPUT_CLIENT}/informer" \
+  --single-directory
+
+echo "deepcopy"
+# Creates types.generated.go
+${GOBASE}/bin/deepcopy-gen \
+  ${LOGGING_FLAGS} \
+  --input-dirs="${informer_inputs}" \
+  --output-file-base="types.generated" \
+  --go-header-file="${BOILERPLATE}" \
+  --output-base="${OUTPUT_BASE}"
+
+echo "lister"
+${GOBASE}/bin/lister-gen \
+  ${LOGGING_FLAGS} \
+  --input-dirs="${informer_inputs}" \
+  --output-base="$GOWORK/src" \
+  --go-header-file="${BOILERPLATE}" \
+  --output-package="${OUTPUT_CLIENT}/listers"
 
 for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
   CLIENTSET_NAME=$(echo "$api" | sed 's|\/v[0-9]||')
 
-  ${GOBASE}/bin/client-gen \
-    --input-base "${INPUT_BASE}" \
-    --input="${INPUT_APIS}" \
-    --clientset-name="${CLIENTSET_NAME}" \
-    --output-base="${OUTPUT_BASE}" \
-    --go-header-file="${BOILERPLATE}" \
-    --clientset-path "${OUTPUT_CLIENT}"
-
   echo "Generating API: ${api}"
-  echo "deepcopy"
-  # Creates types.generated.go
-  ${GOBASE}/bin/deepcopy-gen \
-    ${LOGGING_FLAGS} \
-    --input-dirs="${INPUT_BASE}/${api}" \
-    --output-file-base="types.generated" \
-    --go-header-file="${BOILERPLATE}" \
-    --output-base="${OUTPUT_BASE}"
-
-  echo "lister"
-  ${GOBASE}/bin/lister-gen \
-    ${LOGGING_FLAGS} \
-    --input-dirs="${INPUT_BASE}/${api}" \
-    --output-base="$GOWORK/src" \
-    --go-header-file="${BOILERPLATE}" \
-    --output-package="${OUTPUT_CLIENT}/listers"
-
-  echo "informer"
-  ${GOBASE}/bin/informer-gen \
-    ${LOGGING_FLAGS} \
-    --input-dirs="${INPUT_BASE}/${api}" \
-    --versioned-clientset-package="${OUTPUT_CLIENT}/${CLIENTSET_NAME}" \
-    --listers-package="${OUTPUT_CLIENT}/listers" \
-    --output-base="$GOWORK/src" \
-    --go-header-file="${BOILERPLATE}" \
-    --output-package="${OUTPUT_CLIENT}/informers/${CLIENTSET_NAME}" \
-    --single-directory
-
   echo "protobuf"
   ${GOBASE}/bin/go-to-protobuf \
     ${LOGGING_FLAGS} \

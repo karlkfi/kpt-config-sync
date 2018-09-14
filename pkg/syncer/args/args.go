@@ -17,8 +17,8 @@ limitations under the License.
 package args
 
 import (
-	informers "github.com/google/nomos/clientgen/informers/policyhierarchy"
-	"github.com/google/nomos/clientgen/policyhierarchy"
+	"github.com/google/nomos/clientgen/apis"
+	informers "github.com/google/nomos/clientgen/informer"
 	"github.com/google/nomos/pkg/syncer/options"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/args"
 	"k8s.io/client-go/rest"
@@ -28,14 +28,14 @@ import (
 type InjectArgs struct {
 	args.InjectArgs // kubebuilder inject args
 
-	Clientset     *policyhierarchy.Clientset
+	Clientset     *apis.Clientset
 	Informers     informers.SharedInformerFactory
 	SyncerOptions options.Options
 }
 
 // CreateInjectArgs returns new controller args
 func CreateInjectArgs(config *rest.Config) InjectArgs {
-	client := policyhierarchy.NewForConfigOrDie(config)
+	client := apis.NewForConfigOrDie(config)
 	syncerOptions := options.FromFlagsAndEnv()
 	return InjectArgs{
 		InjectArgs:    args.CreateInjectArgs(config),

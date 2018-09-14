@@ -24,7 +24,7 @@ import (
 	"net"
 
 	"github.com/golang/glog"
-	policyhierarchyscheme "github.com/google/nomos/clientgen/policyhierarchy/scheme"
+	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/pkg/syncer/args"
 	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
 	clustermodules "github.com/google/nomos/pkg/syncer/clusterpolicycontroller/modules"

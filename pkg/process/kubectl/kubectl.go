@@ -26,7 +26,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
-	"github.com/google/nomos/clientgen/policyhierarchy"
+	"github.com/google/nomos/clientgen/apis"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/process/exec"
@@ -375,6 +375,6 @@ func (t *Context) Kubernetes() kubernetes.Interface {
 }
 
 // PolicyHierarchy returns the policyhierarchy client interface
-func (t *Context) PolicyHierarchy() policyhierarchy.Interface {
+func (t *Context) PolicyHierarchy() apis.Interface {
 	return t.client.PolicyHierarchy()
 }

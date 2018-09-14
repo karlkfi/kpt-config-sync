@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/clientgen/informers/policyhierarchy"
-	pn_v1 "github.com/google/nomos/clientgen/informers/policyhierarchy/policyhierarchy/v1"
-	pn_fake "github.com/google/nomos/clientgen/policyhierarchy/fake"
+	pn_fake "github.com/google/nomos/clientgen/apis/fake"
+	"github.com/google/nomos/clientgen/informer"
+	pn_v1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/parentindexer"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
@@ -20,7 +20,7 @@ import (
 // objects were already inserted.
 func NewPolicyNodeInformer(content ...runtime.Object) pn_v1.PolicyNodeInformer {
 	fakeClientSet := pn_fake.NewSimpleClientset(content...)
-	factory := policyhierarchy.NewSharedInformerFactory(
+	factory := informer.NewSharedInformerFactory(
 		fakeClientSet, 1*time.Minute)
 	informer := factory.Nomos().V1().PolicyNodes()
 	if err := informer.Informer().AddIndexers(parentindexer.Indexer()); err != nil {

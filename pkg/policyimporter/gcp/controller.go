@@ -24,9 +24,9 @@ import (
 
 	"github.com/cenkalti/backoff"
 	"github.com/golang/glog"
-	"github.com/google/nomos/clientgen/informers/policyhierarchy"
+	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
+	"github.com/google/nomos/clientgen/informer"
 	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchyscheme "github.com/google/nomos/clientgen/policyhierarchy/scheme"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	client_action "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
@@ -60,7 +60,7 @@ type Controller struct {
 	scopes              []string
 	client              meta.Interface
 	actionFactories     actions.Factories
-	informerFactory     policyhierarchy.SharedInformerFactory
+	informerFactory     informer.SharedInformerFactory
 	policyNodeLister    listers_v1.PolicyNodeLister
 	clusterPolicyLister listers_v1.ClusterPolicyLister
 	stopChan            chan struct{}
@@ -71,7 +71,7 @@ type Controller struct {
 func NewController(org, watcherAddr, credsFile, caFile string, client meta.Interface, stopChan chan struct{}) *Controller {
 	policyhierarchyscheme.AddToScheme(scheme.Scheme)
 
-	informerFactory := policyhierarchy.NewSharedInformerFactory(
+	informerFactory := informer.NewSharedInformerFactory(
 		client.PolicyHierarchy(), informerResync)
 	f := actions.NewFactories(
 		client.PolicyHierarchy().NomosV1(),

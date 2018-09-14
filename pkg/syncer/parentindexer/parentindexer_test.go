@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/clientgen/informers/policyhierarchy"
-	"github.com/google/nomos/clientgen/policyhierarchy/fake"
+	"github.com/google/nomos/clientgen/apis/fake"
+	"github.com/google/nomos/clientgen/informer"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -105,7 +105,7 @@ func TestIndexer(t *testing.T) {
 		objs = append(objs, node)
 	}
 	client := fake.NewSimpleClientset(objs...)
-	informerFactory := policyhierarchy.NewSharedInformerFactory(client, 2*time.Minute)
+	informerFactory := informer.NewSharedInformerFactory(client, 2*time.Minute)
 	informer := informerFactory.Nomos().V1().PolicyNodes().Informer()
 	if err := informer.AddIndexers(Indexer()); err != nil {
 		t.Errorf("unexpected error %s", err)

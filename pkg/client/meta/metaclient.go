@@ -18,7 +18,7 @@ limitations under the License.
 package meta
 
 import (
-	"github.com/google/nomos/clientgen/policyhierarchy"
+	"github.com/google/nomos/clientgen/apis"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -27,13 +27,13 @@ import (
 // Interface specifies the interface for Client.
 type Interface interface {
 	Kubernetes() kubernetes.Interface
-	PolicyHierarchy() policyhierarchy.Interface
+	PolicyHierarchy() apis.Interface
 }
 
 // Client is a container for the kubernetes Clientset and the policyhierarchy clientset.
 type Client struct {
 	kubernetesClientset      *kubernetes.Clientset
-	policyHierarchyClientset *policyhierarchy.Clientset
+	policyHierarchyClientset *apis.Clientset
 }
 
 var _ Interface = &Client{}
@@ -44,14 +44,14 @@ func (c *Client) Kubernetes() kubernetes.Interface {
 }
 
 // PolicyHierarchy returns the policyhierarchy clientse
-func (c *Client) PolicyHierarchy() policyhierarchy.Interface {
+func (c *Client) PolicyHierarchy() apis.Interface {
 	return c.policyHierarchyClientset
 }
 
 // New creates a new Client directly from member client sets.
 func New(
 	kubernetesClientset *kubernetes.Clientset,
-	policyHierarchyClientset *policyhierarchy.Clientset) *Client {
+	policyHierarchyClientset *apis.Clientset) *Client {
 	return &Client{
 		kubernetesClientset:      kubernetesClientset,
 		policyHierarchyClientset: policyHierarchyClientset,
@@ -65,7 +65,7 @@ func NewForConfig(cfg *rest.Config) (*Client, error) {
 		return nil, errors.Wrapf(err, "Failed to create kubernetes clientset")
 	}
 
-	policyHierarchyClientSet, err := policyhierarchy.NewForConfig(cfg)
+	policyHierarchyClientSet, err := apis.NewForConfig(cfg)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to create policyhierarchy clientset")
 	}
@@ -77,6 +77,6 @@ func NewForConfig(cfg *rest.Config) (*Client, error) {
 func NewForConfigOrDie(cfg *rest.Config) *Client {
 	return &Client{
 		kubernetesClientset:      kubernetes.NewForConfigOrDie(cfg),
-		policyHierarchyClientset: policyhierarchy.NewForConfigOrDie(cfg),
+		policyHierarchyClientset: apis.NewForConfigOrDie(cfg),
 	}
 }

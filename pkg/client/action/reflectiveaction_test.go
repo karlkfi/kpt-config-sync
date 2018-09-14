@@ -25,7 +25,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/google/nomos/clientgen/informers/policyhierarchy"
+	"github.com/google/nomos/clientgen/informer"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta/fake"
 	rbac_v1 "k8s.io/api/rbac/v1"
@@ -630,7 +630,7 @@ func TestReflectiveActionPolicyNode(t *testing.T) {
 
 	test.PrePopulate()
 
-	factory := policyhierarchy.NewSharedInformerFactory(test.client.PolicyHierarchy(), time.Second*10)
+	factory := informer.NewSharedInformerFactory(test.client.PolicyHierarchy(), time.Second*10)
 
 	spec := &ReflectiveActionSpec{
 		KindPlural: "PolicyNodes",

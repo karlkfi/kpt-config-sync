@@ -21,9 +21,9 @@ import (
 	"reflect"
 	"time"
 
-	phinformers "github.com/google/nomos/clientgen/informers/policyhierarchy"
-	"github.com/google/nomos/clientgen/policyhierarchy"
-	fakepolicyhierarchy "github.com/google/nomos/clientgen/policyhierarchy/fake"
+	"github.com/google/nomos/clientgen/apis"
+	fakepolicyhierarchy "github.com/google/nomos/clientgen/apis/fake"
+	phinformers "github.com/google/nomos/clientgen/informer"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -92,6 +92,6 @@ func (c *Client) Kubernetes() kubernetes.Interface {
 }
 
 // PolicyHierarchy implements meta.Interface
-func (c *Client) PolicyHierarchy() policyhierarchy.Interface {
+func (c *Client) PolicyHierarchy() apis.Interface {
 	return c.PolicyhierarchyClientset
 }

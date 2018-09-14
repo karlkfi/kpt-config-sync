@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	policyinformer "github.com/google/nomos/clientgen/informers/policyhierarchy/policyhierarchy/v1"
+	policyinformer "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/admissioncontroller"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/util/clusterpolicy"

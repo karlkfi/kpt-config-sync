@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	typed_v1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
 	policyhierarchy_lister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	typed_v1 "github.com/google/nomos/clientgen/policyhierarchy/typed/policyhierarchy/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/object"
