@@ -27,7 +27,7 @@ import (
 
 	"github.com/golang/glog"
 	policynodeversions "github.com/google/nomos/clientgen/informer"
-	informerspolicynodev1 "github.com/google/nomos/clientgen/informer/nomos/v1"
+	informerspolicynodev1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
 	policynodemeta "github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/service"
 	"github.com/pkg/errors"

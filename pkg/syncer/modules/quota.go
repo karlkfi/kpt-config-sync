@@ -18,7 +18,7 @@ limitations under the License.
 package modules
 
 import (
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/nomos/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"

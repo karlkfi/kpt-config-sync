@@ -18,7 +18,7 @@ package policy
 import (
 	"testing"
 
-	pn_v1 "github.com/google/nomos/pkg/api/nomos/v1"
+	pn_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/api/rbac/v1"

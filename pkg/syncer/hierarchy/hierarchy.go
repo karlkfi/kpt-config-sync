@@ -24,9 +24,9 @@ import (
 
 	"strings"
 
-	policyhierarchyinformer_v1 "github.com/google/nomos/clientgen/informer/nomos/v1"
-	policyhierarchylister_v1 "github.com/google/nomos/clientgen/listers/nomos/v1"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/nomos/v1"
+	policyhierarchyinformer_v1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	policyhierarchylister_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/parentindexer"
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

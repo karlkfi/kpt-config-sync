@@ -19,7 +19,7 @@ package actions
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/nomos/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	"k8s.io/api/extensions/v1beta1"

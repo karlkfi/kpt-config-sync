@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/nomos/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
 	rbac_v1 "k8s.io/api/rbac/v1"
 )

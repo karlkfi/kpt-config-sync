@@ -18,10 +18,10 @@ package fake
 
 import (
 	clientset "github.com/google/nomos/clientgen/apis"
-	nomosv1 "github.com/google/nomos/clientgen/apis/typed/nomos/v1"
-	fakenomosv1 "github.com/google/nomos/clientgen/apis/typed/nomos/v1/fake"
 	bespinv1 "github.com/google/nomos/clientgen/apis/typed/policyascode/v1"
 	fakebespinv1 "github.com/google/nomos/clientgen/apis/typed/policyascode/v1/fake"
+	nomosv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
+	fakenomosv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -62,16 +62,6 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// NomosV1 retrieves the NomosV1Client
-func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
-	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
-}
-
-// Nomos retrieves the NomosV1Client
-func (c *Clientset) Nomos() nomosv1.NomosV1Interface {
-	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
-}
-
 // BespinV1 retrieves the BespinV1Client
 func (c *Clientset) BespinV1() bespinv1.BespinV1Interface {
 	return &fakebespinv1.FakeBespinV1{Fake: &c.Fake}
@@ -80,4 +70,14 @@ func (c *Clientset) BespinV1() bespinv1.BespinV1Interface {
 // Bespin retrieves the BespinV1Client
 func (c *Clientset) Bespin() bespinv1.BespinV1Interface {
 	return &fakebespinv1.FakeBespinV1{Fake: &c.Fake}
+}
+
+// NomosV1 retrieves the NomosV1Client
+func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
+	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
+}
+
+// Nomos retrieves the NomosV1Client
+func (c *Clientset) Nomos() nomosv1.NomosV1Interface {
+	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
 }

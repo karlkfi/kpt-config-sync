@@ -18,7 +18,7 @@ package reserved
 import (
 	"testing"
 
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/nomos/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/pkg/errors"
 	"k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

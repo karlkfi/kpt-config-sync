@@ -19,7 +19,7 @@ package ast
 import (
 	"time"
 
-	"github.com/google/nomos/pkg/api/nomos/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

@@ -20,7 +20,7 @@ package validator
 import (
 	"github.com/davecgh/go-spew/spew"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/nomos/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/util/meta"
 	"github.com/looplab/tarjan"
 	"github.com/pkg/errors"

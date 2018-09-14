@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	pn_v1 "github.com/google/nomos/pkg/api/nomos/v1"
+	pn_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

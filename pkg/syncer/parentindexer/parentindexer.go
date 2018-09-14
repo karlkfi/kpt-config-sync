@@ -19,7 +19,7 @@ limitations under the License.
 package parentindexer
 
 import (
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/nomos/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"k8s.io/client-go/tools/cache"
 )
 

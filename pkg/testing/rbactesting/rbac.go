@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/nomos/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	authz "k8s.io/api/authorization/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"

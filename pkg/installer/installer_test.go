@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/nomos/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta/fake"
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/kubectl"

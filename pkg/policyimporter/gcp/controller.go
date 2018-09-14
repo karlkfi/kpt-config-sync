@@ -26,7 +26,7 @@ import (
 	"github.com/golang/glog"
 	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
-	listers_v1 "github.com/google/nomos/clientgen/listers/nomos/v1"
+	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	client_action "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"

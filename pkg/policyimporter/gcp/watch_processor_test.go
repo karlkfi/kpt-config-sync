@@ -27,7 +27,7 @@ import (
 	"github.com/golang/mock/gomock"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	mock "github.com/google/nomos/clientgen/watcher/v1/testing"
-	"github.com/google/nomos/pkg/api/nomos/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	client_action "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode"

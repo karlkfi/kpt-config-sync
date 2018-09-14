@@ -19,14 +19,14 @@ limitations under the License.
 package eventprocessor
 
 import (
-	policyhierarchyinformer_v1 "github.com/google/nomos/clientgen/informer/nomos/v1"
+	policyhierarchyinformer_v1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/nomos/v1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 )
 
 // Factory returns a types.HandleFnProvider that will create a PolicyNodeEventProcessor with the

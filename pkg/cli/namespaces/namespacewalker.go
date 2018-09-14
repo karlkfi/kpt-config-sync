@@ -17,7 +17,7 @@ package namespaces
 
 import (
 	"github.com/golang/glog"
-	apipolicyhierarchy "github.com/google/nomos/pkg/api/nomos/v1"
+	apipolicyhierarchy "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/cli"
 	"github.com/pkg/errors"
 	core_v1 "k8s.io/api/core/v1"

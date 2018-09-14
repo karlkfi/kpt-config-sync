@@ -27,7 +27,7 @@ import (
 	"github.com/gogo/status"
 	"github.com/golang/glog"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
-	"github.com/google/nomos/pkg/api/nomos/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	client_action "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"

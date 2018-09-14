@@ -17,8 +17,8 @@ limitations under the License.
 package fake
 
 import (
-	nomosv1 "github.com/google/nomos/pkg/api/nomos/v1"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -49,7 +49,7 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	nomosv1.AddToScheme(scheme)
 	bespinv1.AddToScheme(scheme)
+	nomosv1.AddToScheme(scheme)
 
 }
