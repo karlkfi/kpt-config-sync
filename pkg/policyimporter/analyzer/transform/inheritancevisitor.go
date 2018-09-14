@@ -17,8 +17,6 @@ limitations under the License.
 package transform
 
 import (
-	"path/filepath"
-
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,8 +31,7 @@ type nodeContext struct {
 
 // InheritanceSpec defines the spec for inherited resources.
 type InheritanceSpec struct {
-	GroupVersionKind  schema.GroupVersionKind
-	PolicyspacePrefix bool
+	GroupVersionKind schema.GroupVersionKind
 }
 
 // InheritanceVisitor aggregates hierarchical quota.
@@ -108,12 +105,7 @@ func (v *InheritanceVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
 func (v *InheritanceVisitor) VisitObject(o *ast.Object) ast.Node {
 	context := &v.treeContext[len(v.treeContext)-1]
 	gvk := o.GetObjectKind().GroupVersionKind()
-	if spec, found := v.inheritanceSpecs[gvk]; context.nodeType == ast.Policyspace && found {
-		if spec.PolicyspacePrefix {
-			o = o.DeepCopy()
-			meta := o.ToMeta()
-			meta.SetName(filepath.Base(context.nodePath) + "." + meta.GetName())
-		}
+	if _, found := v.inheritanceSpecs[gvk]; context.nodeType == ast.Policyspace && found {
 		context.inherited = append(context.inherited, o)
 		return nil
 	}

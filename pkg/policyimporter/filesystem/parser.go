@@ -213,8 +213,7 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 		transform.NewInheritanceVisitor(
 			[]transform.InheritanceSpec{
 				{
-					GroupVersionKind:  rbac_v1.SchemeGroupVersion.WithKind("RoleBinding"),
-					PolicyspacePrefix: true,
+					GroupVersionKind: rbac_v1.SchemeGroupVersion.WithKind("RoleBinding"),
 				},
 			},
 		),

@@ -38,8 +38,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 		return NewInheritanceVisitor(
 			[]InheritanceSpec{
 				InheritanceSpec{
-					GroupVersionKind:  rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
-					PolicyspacePrefix: true,
+					GroupVersionKind: rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
 				},
 				InheritanceSpec{
 					GroupVersionKind: corev1.SchemeGroupVersion.WithKind("ResourceQuota"),
@@ -77,7 +76,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 								vt.Helper.PodReaderRoleBinding(),
 								vt.Helper.PodReaderRole(),
 								vt.Helper.FrontendResourceQuota(),
-								withName(vt.Helper.AdminRoleBinding(), "acme.admin"),
+								withName(vt.Helper.AdminRoleBinding(), "admin"),
 								vt.Helper.AcmeResourceQuota(),
 							),
 						},
@@ -89,7 +88,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 							Objects: vt.ObjectSets(
 								vt.Helper.DeployemntReaderRoleBinding(),
 								vt.Helper.DeploymentReaderRole(),
-								withName(vt.Helper.AdminRoleBinding(), "acme.admin"),
+								withName(vt.Helper.AdminRoleBinding(), "admin"),
 								vt.Helper.AcmeResourceQuota(),
 							),
 						},
