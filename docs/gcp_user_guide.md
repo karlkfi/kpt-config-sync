@@ -173,6 +173,11 @@ In the alpha release, the following are not supported:
 *   Custom roles
 *   IAM binding conditions
 
+## Next Steps
+
+Consult the [installation guide](installation.md) for instructions on how to
+install GKE Policy Management.
+
 [1]: https://cloud.google.com/resource-manager
 [2]: https://cloud.google.com/iam
 [3]: https://cloud.google.com/kubernetes-engine/docs/how-to/iam#predefined

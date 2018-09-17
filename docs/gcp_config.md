@@ -88,6 +88,11 @@ Key             | Description
 --------------- | -------------------------------
 gcp-private-key | GCP service account private key
 
+## Next Steps
+
+Consult the [installation guide](installation.md) for instructions on how
+to apply the config.
+
 [1]: https://cloud.google.com/iam/docs/creating-managing-service-accounts
 [2]: https://cloud.google.com/iam/docs/granting-roles-to-service-accounts
 [3]: https://cloud.google.com/iam/docs/creating-managing-service-account-keys

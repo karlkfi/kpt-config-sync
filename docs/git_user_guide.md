@@ -414,3 +414,8 @@ Examples:
 *   Someone adds a `secret-admin` Role to git in `shipping-prod`. GKE Policy
     Management will notice the updated declarations and create the
     `secret-admin` role in the `shipping-prod` namespace.
+
+## Next Steps
+
+Consult the [installation guide](installation.md) for instructions on how to
+install GKE Policy Management.

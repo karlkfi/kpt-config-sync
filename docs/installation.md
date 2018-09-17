@@ -8,7 +8,7 @@ support the installation.
 
 This setup takes about 30 minutes.
 
-### Installation environments
+### Installation Environments
 
 Currently, there is support for Linux and Mac on amd64 architecture.
 
@@ -70,6 +70,8 @@ and make sure to select version 1.9+ when creating the cluster.
 
 ## Installation
 
+### Download Install Script
+
 Download the GKE Policy Management installer to a directory on your machine.
 
 ```console
@@ -77,9 +79,13 @@ $ curl -LO https://storage.googleapis.com/nomos-release/stable/installer.zip
 $ unzip installer.zip
 ```
 
+### Create Installation Config
+
 Installation configuration is defined in a YAML file. When using Git, follow the
 guide for [Git Configuration](git_config.md) to create this config file. When
 using GCP, follow the guide for [GCP Configuration](gcp_config.md) instead.
+
+### Run Install Script
 
 Once you have created a config file, you can run the installer as follows:
 
@@ -88,7 +94,7 @@ $ cd installer
 $ ./install.sh --config=/path/to/your/config.yaml
 ```
 
-## Verify installation
+## Verify Installation
 
 To verify that GKE Policy Management components are correctly installed, issue
 the following command and verify that all components listed have status
