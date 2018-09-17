@@ -17,7 +17,7 @@ e2e-staging: \
 	@mkdir -p $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
 	@cp -r $(TOP_DIR)/build/e2e-tests/* $(STAGING_DIR)/e2e-tests
 	@cp -r $(TOP_DIR)/third_party/bats-core $(OUTPUT_DIR)/e2e/bats
-	@cp -r $(TOP_DIR)/examples/acme/sot $(OUTPUT_DIR)/e2e
+	@cp -r $(TOP_DIR)/examples/acme $(OUTPUT_DIR)/e2e
 	@if [ -f $(HOME)/.ssh/id_rsa.nomos ]; then \
 	  cp -n $(HOME)/.ssh/id_rsa.nomos $(OUTPUT_DIR)/e2e/id_rsa.nomos; \
 	  cp $(HOME)/.ssh/id_rsa.nomos.pub $(OUTPUT_DIR)/e2e/id_rsa.nomos.pub; \
