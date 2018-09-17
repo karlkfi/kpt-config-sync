@@ -129,7 +129,7 @@ function main() {
   fi
   GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"; export GIT_SSH_COMMAND
 
-  echo "++++ Starting tests"
+  echo "+++ Starting tests"
   local all_test_files=()
   if [[ "$importer" == gcp ]]; then
     mapfile -t all_test_files < <(find "${TEST_DIR}/gcp_testcases" -name '*.bats' | sort)
@@ -145,8 +145,14 @@ function main() {
   if (( ${#all_test_files[@]} != 0 )); then
     for file in "${all_test_files[@]}"; do
       if echo "${file}" | grep "${file_filter}" &> /dev/null; then
-        echo "+++ Will run ${file}"
-        filtered_test_files+=("${file}")
+        if [ -x "${file}" ]  && [ -r "${file}" ]; then
+          echo "+++ Will run ${file}"
+          filtered_test_files+=("${file}")
+        else
+          echo "### File not readable or executable: ${file}"
+          stat "${file}"
+          return 1
+        fi
       fi
     done
   fi
