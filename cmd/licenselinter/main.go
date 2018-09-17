@@ -14,6 +14,10 @@ limitations under the License.
 */
 
 // Tool for linting vendor/ packages LICENSES and optionally generating METADATA files.
+//
+// The METADATA files and unified LICENSE files that this generates are required for all Google
+// code with third-party dependencies. See
+// https://g3doc.corp.google.com/company/thirdparty/non-google3.md?cl=head.
 package main
 
 import (
@@ -272,7 +276,9 @@ func fixLicenseFiles(licenses []string) error {
 	}
 
 	if !*renameFiles {
-		return errors.New("need to fix license files, rerun with -rename-files")
+		return errors.New("need to fix license files. Did you update deps using " +
+			"`dep ensure`? Try running scripts/fix-dep.sh. Otherwise, you may need to rerun " +
+			"licenselinter with -rename-files.")
 	}
 	var content []string
 	for _, l := range licenses {
