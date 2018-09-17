@@ -7,8 +7,9 @@ import (
 	"os"
 	"strings"
 
-	// TODO(filmil): Revisit once https://github.com/ghodss/yaml/pull/27
-	// is resolved.
+	// TODO(filmil): Revisit once https://github.com/ghodss/yaml has a new
+	// release that includes the closed pull request
+	// https://github.com/ghodss/yaml/pull/27
 	"github.com/filmil/yaml"
 	"github.com/pkg/errors"
 )
