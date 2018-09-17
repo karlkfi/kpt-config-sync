@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package configgen contains the utility for generating configurations.
+// Binary installer installs Nomos to a target cluster based on a configuration file.
 package main
 
 import (
@@ -30,7 +30,7 @@ import (
 )
 
 var (
-	workDir       = flag.String("work_dir", "", "The working directory for the configgen.  If not set, defaults to the directory where the configgen is run.")
+	workDir       = flag.String("work_dir", "", "The working directory for the installer.  If not set, defaults to the directory where the installer is run.")
 	suggestedUser = flag.String("suggested_user", "", "The user to run the installation as.")
 	configFile    = flag.String("config", "", "The file name containing the installer configuration.")
 	uninstall     = flag.String("uninstall", "", "If set, the supplied clusters will be uninstalled.")
