@@ -31,22 +31,23 @@ if [ -z "${PLATFORM}" ]; then
     exit 1
 fi
 
-platform_split=(${PLATFORM//-/ })
-GOOS=${platform_split[0]}
-GOARCH=${platform_split[1]}
+# Example: "linux-amd64" -> ["linux" "amd64"]
+IFS='-' read -r -a platform_split <<< "${PLATFORM}"
+GOOS="${platform_split[0]}"
+GOARCH="${platform_split[1]}"
 
-env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go install             \
+env GOOS="${GOOS}" GOARCH="${GOARCH}" CGO_ENABLED="0" go install             \
     -installsuffix "static"                                        \
     -ldflags "-X ${PKG}/pkg/version.VERSION=${VERSION}"            \
     ./...
 
 output_dir="${GOPATH}/bin/${GOOS}_${GOARCH}"
-mkdir -p $output_dir
-find "${GOPATH}/bin" -maxdepth 1 -type f -exec mv {} $output_dir \;
+mkdir -p "${output_dir}"
+find "${GOPATH}/bin" -maxdepth 1 -type f -exec mv {} "${output_dir}" \;
 
 # Use upx to reduce binary size.
 if [ "${BUILD_MODE}" = "release" ]; then
-  upx $output_dir/*
+  upx "${output_dir}/*"
 fi
 
 
