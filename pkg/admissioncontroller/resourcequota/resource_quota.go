@@ -27,7 +27,7 @@ import (
 	"github.com/google/nomos/pkg/admissioncontroller"
 	"github.com/google/nomos/pkg/resourcequota"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	core_v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -55,7 +55,7 @@ func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 
 	// Decoder. Right now, only v1 types are needed as they are the only ones being monitored
 	scheme := runtime.NewScheme()
-	if err := core_v1.AddToScheme(scheme); err != nil {
+	if err := corev1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 	decoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
@@ -104,8 +104,8 @@ func (r *Admitter) internalAdmit(review admissionv1beta1.AdmissionReview) *admis
 }
 
 // getNewUsage returns the resource usage that would result from the given request.
-func (r *Admitter) getNewUsage(request admissionv1beta1.AdmissionRequest) (core_v1.ResourceList, error) {
-	v1NewUsage := core_v1.ResourceList{}
+func (r *Admitter) getNewUsage(request admissionv1beta1.AdmissionRequest) (corev1.ResourceList, error) {
+	v1NewUsage := corev1.ResourceList{}
 	attributes := admissioncontroller.GetAttributes(r.decoder, request)
 	evaluator := r.quotaRegistry.Get(attributes.GetResource().GroupResource())
 
@@ -115,7 +115,7 @@ func (r *Admitter) getNewUsage(request admissionv1beta1.AdmissionRequest) (core_
 			return nil, err
 		}
 		for key, val := range newUsage {
-			v1NewUsage[core_v1.ResourceName(key)] = val
+			v1NewUsage[corev1.ResourceName(key)] = val
 		}
 	}
 	return v1NewUsage, nil

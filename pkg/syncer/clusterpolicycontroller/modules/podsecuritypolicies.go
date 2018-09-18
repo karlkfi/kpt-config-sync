@@ -17,13 +17,13 @@ package modules
 import (
 	"reflect"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/object"
 	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
-	controller_informers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
+	controllerinformers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
 	v1beta "k8s.io/api/extensions/v1beta1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -53,7 +53,7 @@ func (s *PodSecurityPolicies) Name() string {
 }
 
 // Equal implements clusterpolicycontroller.Module.
-func (s *PodSecurityPolicies) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
+func (s *PodSecurityPolicies) Equal(lhsObj metav1.Object, rhsObj metav1.Object) bool {
 	lhs := lhsObj.(*v1beta.PodSecurityPolicy)
 	rhs := rhsObj.(*v1beta.PodSecurityPolicy)
 
@@ -66,21 +66,21 @@ func (s *PodSecurityPolicies) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object
 
 // equalSpec performs equals on runtime.Objects
 func (s *PodSecurityPolicies) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
-	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
+	return s.Equal(lhsObj.(metav1.Object), rhsObj.(metav1.Object))
 }
 
 // InformerProvider implements clusterpolicycontroller.Module
-func (s *PodSecurityPolicies) InformerProvider() controller_informers.InformerProvider {
+func (s *PodSecurityPolicies) InformerProvider() controllerinformers.InformerProvider {
 	return s.informers.Extensions().V1beta1().PodSecurityPolicies()
 }
 
 // Instance implements clusterpolicycontroller.Module
-func (s *PodSecurityPolicies) Instance() meta_v1.Object {
+func (s *PodSecurityPolicies) Instance() metav1.Object {
 	return &v1beta.PodSecurityPolicy{}
 }
 
 // Extract implements clusterpolicycontroller.Module
-func (s *PodSecurityPolicies) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
+func (s *PodSecurityPolicies) Extract(clusterPolicy *policyhierarchyv1.ClusterPolicy) []metav1.Object {
 	var policies []runtime.Object
 	for _, p := range clusterPolicy.Spec.PodSecurityPoliciesV1Beta1 {
 		policies = append(policies, p.DeepCopy())

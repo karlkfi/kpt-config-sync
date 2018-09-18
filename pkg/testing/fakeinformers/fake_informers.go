@@ -4,22 +4,22 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	pn_fake "github.com/google/nomos/clientgen/apis/fake"
+	pnfake "github.com/google/nomos/clientgen/apis/fake"
 	"github.com/google/nomos/clientgen/informer"
-	pn_v1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	pnv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/parentindexer"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
-	core_v1 "k8s.io/client-go/informers/core/v1"
-	core_fake "k8s.io/client-go/kubernetes/fake"
+	corev1 "k8s.io/client-go/informers/core/v1"
+	corefake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/cache"
 )
 
 // NewPolicyNodeInformer creates a fake SharedIndexInformer, injecting 'content'
 // into the backing store.  Later calls on the client will pretend as if those
 // objects were already inserted.
-func NewPolicyNodeInformer(content ...runtime.Object) pn_v1.PolicyNodeInformer {
-	fakeClientSet := pn_fake.NewSimpleClientset(content...)
+func NewPolicyNodeInformer(content ...runtime.Object) pnv1.PolicyNodeInformer {
+	fakeClientSet := pnfake.NewSimpleClientset(content...)
 	factory := informer.NewSharedInformerFactory(
 		fakeClientSet, 1*time.Minute)
 	informer := factory.Nomos().V1().PolicyNodes()
@@ -37,8 +37,8 @@ func NewPolicyNodeInformer(content ...runtime.Object) pn_v1.PolicyNodeInformer {
 // NewResourceQuotaInformer creates a fake SharedIndexInformer, injecting 'content'
 // into the backing store.  Later calls on the client will pretend as if those
 // objects were already inserted.
-func NewResourceQuotaInformer(content ...runtime.Object) core_v1.ResourceQuotaInformer {
-	fakeClientSet := core_fake.NewSimpleClientset(content...)
+func NewResourceQuotaInformer(content ...runtime.Object) corev1.ResourceQuotaInformer {
+	fakeClientSet := corefake.NewSimpleClientset(content...)
 	factory := informers.NewSharedInformerFactory(
 		fakeClientSet, 1*time.Minute)
 	informer := factory.Core().V1().ResourceQuotas()

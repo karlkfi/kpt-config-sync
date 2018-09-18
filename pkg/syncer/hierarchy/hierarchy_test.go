@@ -22,61 +22,61 @@ import (
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func createTestNode(name, parent string, nodeType policyhierarchy_v1.PolicyNodeType) *policyhierarchy_v1.PolicyNode {
-	return &policyhierarchy_v1.PolicyNode{
-		ObjectMeta: meta_v1.ObjectMeta{
+func createTestNode(name, parent string, nodeType policyhierarchyv1.PolicyNodeType) *policyhierarchyv1.PolicyNode {
+	return &policyhierarchyv1.PolicyNode{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: policyhierarchy_v1.PolicyNodeSpec{
+		Spec: policyhierarchyv1.PolicyNodeSpec{
 			Parent: parent,
 			Type:   nodeType,
 		},
 	}
 }
 
-func createImportedTestNode(name, parent string, nodeType policyhierarchy_v1.PolicyNodeType, token string) *policyhierarchy_v1.PolicyNode {
+func createImportedTestNode(name, parent string, nodeType policyhierarchyv1.PolicyNodeType, token string) *policyhierarchyv1.PolicyNode {
 	node := createTestNode(name, parent, nodeType)
 	node.Spec.ImportToken = token
-	node.Spec.ImportTime = meta_v1.Now()
+	node.Spec.ImportTime = metav1.Now()
 	return node
 }
 
 func TestBuildAncestries(t *testing.T) {
-	validHierarchy := []*policyhierarchy_v1.PolicyNode{
-		createTestNode("root", "", policyhierarchy_v1.Policyspace),
-		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child1-1", "child1", policyhierarchy_v1.Namespace),
-		createTestNode("child1-2", "child1", policyhierarchy_v1.Namespace),
-		createTestNode("child2-1", "child2", policyhierarchy_v1.Namespace),
+	validHierarchy := []*policyhierarchyv1.PolicyNode{
+		createTestNode("root", "", policyhierarchyv1.Policyspace),
+		createTestNode("child1", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child2", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child1-1", "child1", policyhierarchyv1.Namespace),
+		createTestNode("child1-2", "child1", policyhierarchyv1.Namespace),
+		createTestNode("child2-1", "child2", policyhierarchyv1.Namespace),
 	}
-	invalidHierarchy := []*policyhierarchy_v1.PolicyNode{
-		createTestNode("root", "", policyhierarchy_v1.Policyspace),
-		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
+	invalidHierarchy := []*policyhierarchyv1.PolicyNode{
+		createTestNode("root", "", policyhierarchyv1.Policyspace),
+		createTestNode("child1", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child2", "root", policyhierarchyv1.Policyspace),
 		// Missing child3
-		createTestNode("child3-1", "child3", policyhierarchy_v1.Namespace),
+		createTestNode("child3-1", "child3", policyhierarchyv1.Namespace),
 	}
-	cyclicalHierarchy := []*policyhierarchy_v1.PolicyNode{
-		createTestNode("root", "", policyhierarchy_v1.Policyspace),
-		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child2", "child1", policyhierarchy_v1.Policyspace),
-		createTestNode("child3", "child2", policyhierarchy_v1.Policyspace),
+	cyclicalHierarchy := []*policyhierarchyv1.PolicyNode{
+		createTestNode("root", "", policyhierarchyv1.Policyspace),
+		createTestNode("child1", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child2", "child1", policyhierarchyv1.Policyspace),
+		createTestNode("child3", "child2", policyhierarchyv1.Policyspace),
 		// isolated cycle with namespace
-		createTestNode("cycle-10", "cycle-11", policyhierarchy_v1.Namespace),
-		createTestNode("cycle-11", "cycle-12", policyhierarchy_v1.Policyspace),
-		createTestNode("cycle-12", "cycle-13", policyhierarchy_v1.Policyspace),
-		createTestNode("cycle-13", "cycle-11", policyhierarchy_v1.Policyspace),
+		createTestNode("cycle-10", "cycle-11", policyhierarchyv1.Namespace),
+		createTestNode("cycle-11", "cycle-12", policyhierarchyv1.Policyspace),
+		createTestNode("cycle-12", "cycle-13", policyhierarchyv1.Policyspace),
+		createTestNode("cycle-13", "cycle-11", policyhierarchyv1.Policyspace),
 	}
 
 	tests := []struct {
 		name    string
-		nodes   []*policyhierarchy_v1.PolicyNode
+		nodes   []*policyhierarchyv1.PolicyNode
 		want    []Ancestry
 		wantErr error
 	}{
@@ -85,19 +85,19 @@ func TestBuildAncestries(t *testing.T) {
 			nodes: validHierarchy,
 			want: []Ancestry{
 				{
-					createTestNode("child1-1", "child1", policyhierarchy_v1.Namespace),
-					createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
-					createTestNode("root", "", policyhierarchy_v1.Policyspace),
+					createTestNode("child1-1", "child1", policyhierarchyv1.Namespace),
+					createTestNode("child1", "root", policyhierarchyv1.Policyspace),
+					createTestNode("root", "", policyhierarchyv1.Policyspace),
 				},
 				{
-					createTestNode("child1-2", "child1", policyhierarchy_v1.Namespace),
-					createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
-					createTestNode("root", "", policyhierarchy_v1.Policyspace),
+					createTestNode("child1-2", "child1", policyhierarchyv1.Namespace),
+					createTestNode("child1", "root", policyhierarchyv1.Policyspace),
+					createTestNode("root", "", policyhierarchyv1.Policyspace),
 				},
 				{
-					createTestNode("child2-1", "child2", policyhierarchy_v1.Namespace),
-					createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
-					createTestNode("root", "", policyhierarchy_v1.Policyspace),
+					createTestNode("child2-1", "child2", policyhierarchyv1.Namespace),
+					createTestNode("child2", "root", policyhierarchyv1.Policyspace),
+					createTestNode("root", "", policyhierarchyv1.Policyspace),
 				},
 			},
 		},
@@ -106,7 +106,7 @@ func TestBuildAncestries(t *testing.T) {
 			nodes: invalidHierarchy,
 			wantErr: &ConsistencyError{
 				errType:  "not found",
-				ancestry: Ancestry{createTestNode("child3-1", "child3", policyhierarchy_v1.Namespace)},
+				ancestry: Ancestry{createTestNode("child3-1", "child3", policyhierarchyv1.Namespace)},
 				missing:  "child3",
 			},
 		},
@@ -116,11 +116,11 @@ func TestBuildAncestries(t *testing.T) {
 			wantErr: &ConsistencyError{
 				errType: "cycle",
 				ancestry: Ancestry{
-					createTestNode("cycle-10", "cycle-11", policyhierarchy_v1.Namespace),
-					createTestNode("cycle-11", "cycle-12", policyhierarchy_v1.Policyspace),
-					createTestNode("cycle-12", "cycle-13", policyhierarchy_v1.Policyspace),
-					createTestNode("cycle-13", "cycle-11", policyhierarchy_v1.Policyspace),
-					createTestNode("cycle-11", "cycle-12", policyhierarchy_v1.Policyspace),
+					createTestNode("cycle-10", "cycle-11", policyhierarchyv1.Namespace),
+					createTestNode("cycle-11", "cycle-12", policyhierarchyv1.Policyspace),
+					createTestNode("cycle-12", "cycle-13", policyhierarchyv1.Policyspace),
+					createTestNode("cycle-13", "cycle-11", policyhierarchyv1.Policyspace),
+					createTestNode("cycle-11", "cycle-12", policyhierarchyv1.Policyspace),
 				},
 			},
 		},
@@ -141,43 +141,43 @@ func TestBuildAncestries(t *testing.T) {
 
 func TestGetAncestry(t *testing.T) {
 	validHierarchy := New(fakeinformers.NewPolicyNodeInformer(
-		createTestNode("root", "", policyhierarchy_v1.Policyspace),
-		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child1-1", "child1", policyhierarchy_v1.Namespace),
-		createTestNode("child1-2", "child1", policyhierarchy_v1.Namespace),
-		createTestNode("child2-1", "child2", policyhierarchy_v1.Namespace),
+		createTestNode("root", "", policyhierarchyv1.Policyspace),
+		createTestNode("child1", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child2", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child1-1", "child1", policyhierarchyv1.Namespace),
+		createTestNode("child1-2", "child1", policyhierarchyv1.Namespace),
+		createTestNode("child2-1", "child2", policyhierarchyv1.Namespace),
 	))
 	invalidHierarchy := New(fakeinformers.NewPolicyNodeInformer(
-		createTestNode("root", "", policyhierarchy_v1.Policyspace),
-		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child3-1", "child3", policyhierarchy_v1.Namespace),
+		createTestNode("root", "", policyhierarchyv1.Policyspace),
+		createTestNode("child1", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child2", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child3-1", "child3", policyhierarchyv1.Namespace),
 
 		// reserved namespace in ancestry
-		createTestNode("reserved1", "root", policyhierarchy_v1.ReservedNamespace),
-		createTestNode("reserved-ns-1", "reserved1", policyhierarchy_v1.Policyspace),
+		createTestNode("reserved1", "root", policyhierarchyv1.ReservedNamespace),
+		createTestNode("reserved-ns-1", "reserved1", policyhierarchyv1.Policyspace),
 
 		// Namespace in ancestry
-		createTestNode("namespace-1", "root", policyhierarchy_v1.Namespace),
-		createTestNode("namespace-ns-1", "namespace-1", policyhierarchy_v1.Namespace),
+		createTestNode("namespace-1", "root", policyhierarchyv1.Namespace),
+		createTestNode("namespace-ns-1", "namespace-1", policyhierarchyv1.Namespace),
 	))
 	cyclicalHierarchy := New(fakeinformers.NewPolicyNodeInformer(
-		createTestNode("root", "", policyhierarchy_v1.Policyspace),
-		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child2", "child1", policyhierarchy_v1.Policyspace),
-		createTestNode("child3", "child2", policyhierarchy_v1.Policyspace),
+		createTestNode("root", "", policyhierarchyv1.Policyspace),
+		createTestNode("child1", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child2", "child1", policyhierarchyv1.Policyspace),
+		createTestNode("child3", "child2", policyhierarchyv1.Policyspace),
 
 		// isolated cycle of policyspaces
-		createTestNode("cycle-1", "cycle-2", policyhierarchy_v1.Policyspace),
-		createTestNode("cycle-2", "cycle-3", policyhierarchy_v1.Policyspace),
-		createTestNode("cycle-3", "cycle-1", policyhierarchy_v1.Policyspace),
+		createTestNode("cycle-1", "cycle-2", policyhierarchyv1.Policyspace),
+		createTestNode("cycle-2", "cycle-3", policyhierarchyv1.Policyspace),
+		createTestNode("cycle-3", "cycle-1", policyhierarchyv1.Policyspace),
 
 		// isolated cycle with namespace
-		createTestNode("cycle-10", "cycle-11", policyhierarchy_v1.Namespace),
-		createTestNode("cycle-11", "cycle-12", policyhierarchy_v1.Policyspace),
-		createTestNode("cycle-12", "cycle-13", policyhierarchy_v1.Policyspace),
-		createTestNode("cycle-13", "cycle-11", policyhierarchy_v1.Policyspace),
+		createTestNode("cycle-10", "cycle-11", policyhierarchyv1.Namespace),
+		createTestNode("cycle-11", "cycle-12", policyhierarchyv1.Policyspace),
+		createTestNode("cycle-12", "cycle-13", policyhierarchyv1.Policyspace),
+		createTestNode("cycle-13", "cycle-11", policyhierarchyv1.Policyspace),
 	))
 
 	tests := []struct {
@@ -192,9 +192,9 @@ func TestGetAncestry(t *testing.T) {
 			hierarchy: validHierarchy,
 			nodeName:  "child2-1",
 			wantAncestry: Ancestry{
-				createTestNode("child2-1", "child2", policyhierarchy_v1.Namespace),
-				createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
-				createTestNode("root", "", policyhierarchy_v1.Policyspace),
+				createTestNode("child2-1", "child2", policyhierarchyv1.Namespace),
+				createTestNode("child2", "root", policyhierarchyv1.Policyspace),
+				createTestNode("root", "", policyhierarchyv1.Policyspace),
 			},
 		},
 		{
@@ -202,8 +202,8 @@ func TestGetAncestry(t *testing.T) {
 			hierarchy: validHierarchy,
 			nodeName:  "child1",
 			wantAncestry: Ancestry{
-				createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
-				createTestNode("root", "", policyhierarchy_v1.Policyspace),
+				createTestNode("child1", "root", policyhierarchyv1.Policyspace),
+				createTestNode("root", "", policyhierarchyv1.Policyspace),
 			},
 		},
 		{
@@ -211,7 +211,7 @@ func TestGetAncestry(t *testing.T) {
 			hierarchy: validHierarchy,
 			nodeName:  "root",
 			wantAncestry: Ancestry{
-				createTestNode("root", "", policyhierarchy_v1.Policyspace),
+				createTestNode("root", "", policyhierarchyv1.Policyspace),
 			},
 		},
 		{
@@ -226,7 +226,7 @@ func TestGetAncestry(t *testing.T) {
 			nodeName:  "child3-1",
 			wantErr: &ConsistencyError{
 				errType:  "not found",
-				ancestry: Ancestry{createTestNode("child3-1", "child3", policyhierarchy_v1.Namespace)},
+				ancestry: Ancestry{createTestNode("child3-1", "child3", policyhierarchyv1.Namespace)},
 				missing:  "child3"},
 		},
 		{
@@ -235,7 +235,7 @@ func TestGetAncestry(t *testing.T) {
 			nodeName:  "reserved-ns-1",
 			wantErr: &ConsistencyError{
 				errType:  "invalid parent",
-				ancestry: Ancestry{createTestNode("reserved-ns-1", "reserved1", policyhierarchy_v1.Policyspace)}},
+				ancestry: Ancestry{createTestNode("reserved-ns-1", "reserved1", policyhierarchyv1.Policyspace)}},
 		},
 		{
 			name:      "namespace in ancestry",
@@ -243,7 +243,7 @@ func TestGetAncestry(t *testing.T) {
 			nodeName:  "namespace-ns-1",
 			wantErr: &ConsistencyError{
 				errType:  "invalid parent",
-				ancestry: Ancestry{createTestNode("namespace-ns-1", "namespace-1", policyhierarchy_v1.Namespace)}},
+				ancestry: Ancestry{createTestNode("namespace-ns-1", "namespace-1", policyhierarchyv1.Namespace)}},
 		},
 		{
 			name:      "policyspace cycle",
@@ -252,10 +252,10 @@ func TestGetAncestry(t *testing.T) {
 			wantErr: &ConsistencyError{
 				errType: "cycle",
 				ancestry: Ancestry{
-					createTestNode("cycle-1", "cycle-2", policyhierarchy_v1.Policyspace),
-					createTestNode("cycle-2", "cycle-3", policyhierarchy_v1.Policyspace),
-					createTestNode("cycle-3", "cycle-1", policyhierarchy_v1.Policyspace),
-					createTestNode("cycle-1", "cycle-2", policyhierarchy_v1.Policyspace),
+					createTestNode("cycle-1", "cycle-2", policyhierarchyv1.Policyspace),
+					createTestNode("cycle-2", "cycle-3", policyhierarchyv1.Policyspace),
+					createTestNode("cycle-3", "cycle-1", policyhierarchyv1.Policyspace),
+					createTestNode("cycle-1", "cycle-2", policyhierarchyv1.Policyspace),
 				},
 			},
 		},
@@ -266,11 +266,11 @@ func TestGetAncestry(t *testing.T) {
 			wantErr: &ConsistencyError{
 				errType: "cycle",
 				ancestry: Ancestry{
-					createTestNode("cycle-10", "cycle-11", policyhierarchy_v1.Namespace),
-					createTestNode("cycle-11", "cycle-12", policyhierarchy_v1.Policyspace),
-					createTestNode("cycle-12", "cycle-13", policyhierarchy_v1.Policyspace),
-					createTestNode("cycle-13", "cycle-11", policyhierarchy_v1.Policyspace),
-					createTestNode("cycle-11", "cycle-12", policyhierarchy_v1.Policyspace),
+					createTestNode("cycle-10", "cycle-11", policyhierarchyv1.Namespace),
+					createTestNode("cycle-11", "cycle-12", policyhierarchyv1.Policyspace),
+					createTestNode("cycle-12", "cycle-13", policyhierarchyv1.Policyspace),
+					createTestNode("cycle-13", "cycle-11", policyhierarchyv1.Policyspace),
+					createTestNode("cycle-11", "cycle-12", policyhierarchyv1.Policyspace),
 				},
 			},
 		},
@@ -291,12 +291,12 @@ func TestGetAncestry(t *testing.T) {
 
 func TestGetSubtree(t *testing.T) {
 	hierarchy := New(fakeinformers.NewPolicyNodeInformer(
-		createTestNode("root", "", policyhierarchy_v1.Policyspace),
-		createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child2", "root", policyhierarchy_v1.Policyspace),
-		createTestNode("child1-1", "child1", policyhierarchy_v1.Policyspace),
-		createTestNode("child1-2", "child1", policyhierarchy_v1.Policyspace),
-		createTestNode("child2-1", "child2", policyhierarchy_v1.Policyspace),
+		createTestNode("root", "", policyhierarchyv1.Policyspace),
+		createTestNode("child1", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child2", "root", policyhierarchyv1.Policyspace),
+		createTestNode("child1-1", "child1", policyhierarchyv1.Policyspace),
+		createTestNode("child1-2", "child1", policyhierarchyv1.Policyspace),
+		createTestNode("child2-1", "child2", policyhierarchyv1.Policyspace),
 	))
 
 	tests := []struct {
@@ -361,7 +361,7 @@ func TestAggregateAncestry(t *testing.T) {
 		ancestry      Ancestry
 		factory       AggregatedNodeFactory
 		wantInstances Instances
-		wantNode      *policyhierarchy_v1.PolicyNode
+		wantNode      *policyhierarchyv1.PolicyNode
 	}{
 		{
 			name: "empty ancestry",
@@ -383,7 +383,7 @@ func TestAggregateAncestry(t *testing.T) {
 		{
 			name: "only root ancestry",
 			ancestry: Ancestry{
-				createTestNode("child", "root", policyhierarchy_v1.Policyspace),
+				createTestNode("child", "root", policyhierarchyv1.Policyspace),
 			},
 			factory: func() AggregatedNode {
 				return &TestAggregatedNode{
@@ -400,16 +400,16 @@ func TestAggregateAncestry(t *testing.T) {
 					},
 				},
 			},
-			wantNode: createTestNode("child", "root", policyhierarchy_v1.Policyspace),
+			wantNode: createTestNode("child", "root", policyhierarchyv1.Policyspace),
 		},
 		{
 			name: "extended ancestry",
 			ancestry: Ancestry{
-				createTestNode("child5", "child4", policyhierarchy_v1.Namespace),
-				createTestNode("child4", "child3", policyhierarchy_v1.Policyspace),
-				createTestNode("child3", "child2", policyhierarchy_v1.Policyspace),
-				createTestNode("child2", "child1", policyhierarchy_v1.Policyspace),
-				createTestNode("child1", "root", policyhierarchy_v1.Policyspace),
+				createTestNode("child5", "child4", policyhierarchyv1.Namespace),
+				createTestNode("child4", "child3", policyhierarchyv1.Policyspace),
+				createTestNode("child3", "child2", policyhierarchyv1.Policyspace),
+				createTestNode("child2", "child1", policyhierarchyv1.Policyspace),
+				createTestNode("child1", "root", policyhierarchyv1.Policyspace),
 			},
 			factory: func() AggregatedNode {
 				return &TestAggregatedNode{
@@ -418,7 +418,7 @@ func TestAggregateAncestry(t *testing.T) {
 					},
 				}
 			},
-			wantNode: createTestNode("child5", "child4", policyhierarchy_v1.Namespace),
+			wantNode: createTestNode("child5", "child4", policyhierarchyv1.Namespace),
 			wantInstances: Instances{
 				&TestAggregatedOutput{
 					Ancestry: []string{
@@ -452,12 +452,12 @@ func TestAggregateAncestry(t *testing.T) {
 
 func TestAncestryTokenMap(t *testing.T) {
 	hier := New(fakeinformers.NewPolicyNodeInformer(
-		createImportedTestNode("root", "", policyhierarchy_v1.Policyspace, "abc123"),
-		createImportedTestNode("child1", "root", policyhierarchy_v1.Policyspace, "def123"),
-		createImportedTestNode("child2", "root", policyhierarchy_v1.Policyspace, "ghi123"),
-		createImportedTestNode("child1-1", "child1", policyhierarchy_v1.Namespace, "jkl123"),
-		createImportedTestNode("child1-2", "child1", policyhierarchy_v1.Namespace, "mno123"),
-		createImportedTestNode("child2-1", "child2", policyhierarchy_v1.Namespace, "pqr123"),
+		createImportedTestNode("root", "", policyhierarchyv1.Policyspace, "abc123"),
+		createImportedTestNode("child1", "root", policyhierarchyv1.Policyspace, "def123"),
+		createImportedTestNode("child2", "root", policyhierarchyv1.Policyspace, "ghi123"),
+		createImportedTestNode("child1-1", "child1", policyhierarchyv1.Namespace, "jkl123"),
+		createImportedTestNode("child1-2", "child1", policyhierarchyv1.Namespace, "mno123"),
+		createImportedTestNode("child2-1", "child2", policyhierarchyv1.Namespace, "pqr123"),
 	))
 	for _, tt := range []struct {
 		name     string

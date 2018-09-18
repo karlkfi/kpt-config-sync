@@ -16,11 +16,11 @@ limitations under the License.
 
 package policyhierarchycontroller
 
-import meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // objectKeyNamespaceToName will be used for translating controlled resource events to the namespace
 // they belong to, for example, quota, roles, rolebindings will generate events for the namespace
 // in which they reside.
 func objectKeyNamespaceToName(obj interface{}) string {
-	return obj.(meta_v1.Object).GetNamespace()
+	return obj.(metav1.Object).GetNamespace()
 }

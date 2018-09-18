@@ -33,8 +33,8 @@ import (
 	"github.com/google/nomos/pkg/testing/orgdriver"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
-	core_v1 "k8s.io/api/core/v1"
-	rbac_v1 "k8s.io/api/rbac/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -163,21 +163,21 @@ func Run(syncDir string, updatePeriod time.Duration, maxNamespaces int) {
 
 				nodeSpec := &v1.PolicyNodeSpec{
 					Type: v1.Namespace,
-					RolesV1: []rbac_v1.Role{
-						rbac_v1.Role{
+					RolesV1: []rbacv1.Role{
+						rbacv1.Role{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "pod-reader",
 							},
-							Rules: []rbac_v1.PolicyRule{
-								rbac_v1.PolicyRule{
+							Rules: []rbacv1.PolicyRule{
+								rbacv1.PolicyRule{
 									Resources: []string{"pods"},
 									Verbs:     []string{"get"},
 								},
 							},
 						},
 					},
-					RoleBindingsV1:  []rbac_v1.RoleBinding{},
-					ResourceQuotaV1: &core_v1.ResourceQuota{},
+					RoleBindingsV1:  []rbacv1.RoleBinding{},
+					ResourceQuotaV1: &corev1.ResourceQuota{},
 				}
 				policyNode := policynode.NewPolicyNode(name, nodeSpec)
 

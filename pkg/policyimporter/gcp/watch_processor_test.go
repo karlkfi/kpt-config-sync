@@ -28,14 +28,14 @@ import (
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	mock "github.com/google/nomos/clientgen/watcher/v1/testing"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	client_action "github.com/google/nomos/pkg/client/action"
+	clientaction "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
-	core_v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -499,7 +499,7 @@ func TestGen(t *testing.T) {
 			}
 
 			var actualActions []string
-			recordAction := func(a client_action.Interface) error {
+			recordAction := func(a clientaction.Interface) error {
 				actualActions = append(actualActions, a.String())
 				return nil
 			}
@@ -544,7 +544,7 @@ func TestRecvErr(t *testing.T) {
 	stream := mock.NewMockWatcher_WatchClient(ctrl)
 	stream.EXPECT().Recv().Return(nil, errors.New("receive error"))
 
-	a := func(_ client_action.Interface) error {
+	a := func(_ clientaction.Interface) error {
 		return nil
 	}
 	_, cancel := context.WithCancel(context.Background())
@@ -581,7 +581,7 @@ func TestTimeout(t *testing.T) {
 		<-ctx.Done()
 		return &watcher.ChangeBatch{}, status.Error(codes.Canceled, "canceled")
 	}).MinTimes(0)
-	a := func(_ client_action.Interface) error {
+	a := func(_ clientaction.Interface) error {
 		return nil
 	}
 	defer cancel()
@@ -635,18 +635,18 @@ func toAnyProto(m interface{}) *ptypes.Any {
 	}
 }
 
-func createResourceQuota(name string, namespace string) *core_v1.ResourceQuota {
-	return &core_v1.ResourceQuota{
-		TypeMeta: meta_v1.TypeMeta{
+func createResourceQuota(name string, namespace string) *corev1.ResourceQuota {
+	return &corev1.ResourceQuota{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ResourceQuota",
 		},
-		ObjectMeta: meta_v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: core_v1.ResourceQuotaSpec{
-			Hard: core_v1.ResourceList{"pods": resource.MustParse("10")},
+		Spec: corev1.ResourceQuotaSpec{
+			Hard: corev1.ResourceList{"pods": resource.MustParse("10")},
 		},
 	}
 }

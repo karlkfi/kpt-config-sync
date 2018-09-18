@@ -23,7 +23,7 @@ import (
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
-	controller_informers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
+	controllerinformers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -83,7 +83,7 @@ func (s *Role) Instance() metav1.Object {
 }
 
 // InformerProvider implements policyhierarchycontroller.Module
-func (s *Role) InformerProvider() controller_informers.InformerProvider {
+func (s *Role) InformerProvider() controllerinformers.InformerProvider {
 	return s.informers.Rbac().V1().Roles()
 }
 

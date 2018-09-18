@@ -17,8 +17,8 @@ package policynode
 
 import (
 	"github.com/golang/glog"
-	policyhierarchy_lister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchylister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/monitor/args"
 	"github.com/google/nomos/pkg/monitor/state"
 	"github.com/google/nomos/pkg/syncer/hierarchy"
@@ -34,7 +34,7 @@ const (
 
 // Controller responds to changes to PolicyNodes by updating its ClusterState.
 type Controller struct {
-	lister    policyhierarchy_lister.PolicyNodeLister
+	lister    policyhierarchylister.PolicyNodeLister
 	hierarchy hierarchy.Interface
 	state     *state.ClusterState
 }
@@ -53,7 +53,7 @@ func NewController(injectArgs args.InjectArgs, state *state.ClusterState) *contr
 		InformerRegistry: injectArgs.ControllerManager,
 		Reconcile:        pnController.reconcile,
 	}
-	pn := &policyhierarchy_v1.PolicyNode{}
+	pn := &policyhierarchyv1.PolicyNode{}
 
 	if err := injectArgs.ControllerManager.AddInformerProvider(pn, informer); err != nil {
 		panic(errors.Wrap(err, "programmer error while adding informer to controller manager"))

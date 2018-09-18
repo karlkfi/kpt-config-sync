@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	rbac_v1 "k8s.io/api/rbac/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 type transformerTestCase struct {
@@ -70,7 +70,7 @@ func TestTransformer(t *testing.T) {
 	for _, tc := range transformerTestCases {
 		t.Run(tc.testName, func(t *testing.T) {
 
-			rb := rbac_v1.RoleBinding{}
+			rb := rbacv1.RoleBinding{}
 			rb.SetName("rb")
 			rb.SetAnnotations(map[string]string{"key1": "val1", "key2": "val2"})
 
@@ -88,7 +88,7 @@ func TestTransformer(t *testing.T) {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 
-			actual := rb2.(*rbac_v1.RoleBinding).GetAnnotations()
+			actual := rb2.(*rbacv1.RoleBinding).GetAnnotations()
 
 			if diff := deep.Equal(actual, tc.expectedAnnotations); diff != nil {
 				t.Fatalf("Actual and expected annotations didn't match: %v", diff)

@@ -24,14 +24,14 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 )
 
 // Node wraps PolicyNode for fakeorg so we can track parent / child
 type Node struct {
-	policyNode *policyhierarchy_v1.PolicyNode
+	policyNode *policyhierarchyv1.PolicyNode
 	parent     *Node
 	children   map[string]*Node
 }
@@ -41,7 +41,7 @@ func NewNode(name string) *Node {
 	return &Node{
 		policyNode: policynode.NewPolicyNode(
 			name,
-			&policyhierarchy_v1.PolicyNodeSpec{}),
+			&policyhierarchyv1.PolicyNodeSpec{}),
 		children: map[string]*Node{},
 	}
 }
@@ -76,7 +76,7 @@ func (s *Node) Parent() string {
 }
 
 // PolicyNode returns the underlying policy node
-func (s *Node) PolicyNode() *policyhierarchy_v1.PolicyNode {
+func (s *Node) PolicyNode() *policyhierarchyv1.PolicyNode {
 	return s.policyNode
 }
 

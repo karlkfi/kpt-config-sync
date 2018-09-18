@@ -26,9 +26,9 @@ import (
 	"github.com/golang/glog"
 	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
-	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
-	client_action "github.com/google/nomos/pkg/client/action"
+	clientaction "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -61,8 +61,8 @@ type Controller struct {
 	client              meta.Interface
 	actionFactories     actions.Factories
 	informerFactory     informer.SharedInformerFactory
-	policyNodeLister    listers_v1.PolicyNodeLister
-	clusterPolicyLister listers_v1.ClusterPolicyLister
+	policyNodeLister    listersv1.PolicyNodeLister
+	clusterPolicyLister listersv1.ClusterPolicyLister
 	stopChan            chan struct{}
 	nameMap             ToK8SNameMap
 }
@@ -253,6 +253,6 @@ func tlsConfig(caFile string) (*tls.Config, error) {
 	return config, nil
 }
 
-func applyActions(action client_action.Interface) error {
+func applyActions(action clientaction.Interface) error {
 	return action.Execute()
 }

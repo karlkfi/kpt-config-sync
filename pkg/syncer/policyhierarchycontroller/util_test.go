@@ -19,14 +19,14 @@ package policyhierarchycontroller
 import (
 	"testing"
 
-	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestObjectKeyNamespaceToName(t *testing.T) {
 	namespace := "item-namespace"
-	item := &rbac_v1.Role{
-		ObjectMeta: meta_v1.ObjectMeta{
+	item := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "item-name",
 			Namespace: namespace,
 		},

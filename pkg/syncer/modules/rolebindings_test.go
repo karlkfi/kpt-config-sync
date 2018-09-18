@@ -20,40 +20,40 @@ import (
 	"testing"
 
 	test "github.com/google/nomos/pkg/syncer/policyhierarchycontroller/testing"
-	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestRoleBindings(t *testing.T) {
-	admins := &rbac_v1.RoleBinding{
-		ObjectMeta: meta_v1.ObjectMeta{
+	admins := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "admins",
 		},
-		Subjects: []rbac_v1.Subject{
-			rbac_v1.Subject{
+		Subjects: []rbacv1.Subject{
+			rbacv1.Subject{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "User",
 				Name:     "alice@megacorp.org",
 			},
 		},
-		RoleRef: rbac_v1.RoleRef{
+		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
 			Name:     "admin",
 		},
 	}
-	bobs := &rbac_v1.RoleBinding{
-		ObjectMeta: meta_v1.ObjectMeta{
+	bobs := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "bobs",
 		},
-		Subjects: []rbac_v1.Subject{
-			rbac_v1.Subject{
+		Subjects: []rbacv1.Subject{
+			rbacv1.Subject{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "User",
 				Name:     "bob@megacorp.org",
 			},
 		},
-		RoleRef: rbac_v1.RoleRef{
+		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
 			Name:     "bob",
@@ -65,40 +65,40 @@ func TestRoleBindings(t *testing.T) {
 		Equals: test.ModuleEqualTestcases{
 			test.ModuleEqualTestcase{
 				Name:        "Both empty",
-				LHS:         &rbac_v1.RoleBinding{},
-				RHS:         &rbac_v1.RoleBinding{},
+				LHS:         &rbacv1.RoleBinding{},
+				RHS:         &rbacv1.RoleBinding{},
 				ExpectEqual: true,
 			},
 			test.ModuleEqualTestcase{
 				Name: "Nil vs non nil lists",
-				LHS: &rbac_v1.RoleBinding{
-					Subjects: []rbac_v1.Subject{},
-					RoleRef:  rbac_v1.RoleRef{},
+				LHS: &rbacv1.RoleBinding{
+					Subjects: []rbacv1.Subject{},
+					RoleRef:  rbacv1.RoleRef{},
 				},
-				RHS:         &rbac_v1.RoleBinding{},
+				RHS:         &rbacv1.RoleBinding{},
 				ExpectEqual: true,
 			},
 			test.ModuleEqualTestcase{
 				Name: "Different RoleRef",
-				LHS: &rbac_v1.RoleBinding{
-					Subjects: []rbac_v1.Subject{},
+				LHS: &rbacv1.RoleBinding{
+					Subjects: []rbacv1.Subject{},
 					RoleRef:  admins.RoleRef,
 				},
-				RHS: &rbac_v1.RoleBinding{
-					Subjects: []rbac_v1.Subject{},
+				RHS: &rbacv1.RoleBinding{
+					Subjects: []rbacv1.Subject{},
 					RoleRef:  bobs.RoleRef,
 				},
 				ExpectEqual: false,
 			},
 			test.ModuleEqualTestcase{
 				Name: "Different Subjects",
-				LHS: &rbac_v1.RoleBinding{
+				LHS: &rbacv1.RoleBinding{
 					Subjects: bobs.Subjects,
-					RoleRef:  rbac_v1.RoleRef{},
+					RoleRef:  rbacv1.RoleRef{},
 				},
-				RHS: &rbac_v1.RoleBinding{
+				RHS: &rbacv1.RoleBinding{
 					Subjects: admins.Subjects,
-					RoleRef:  rbac_v1.RoleRef{},
+					RoleRef:  rbacv1.RoleRef{},
 				},
 				ExpectEqual: false,
 			},

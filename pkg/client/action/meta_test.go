@@ -18,19 +18,19 @@ package action
 import (
 	"testing"
 
-	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type ObjectMetaTestCase struct {
 	Name         string
-	Left         meta_v1.ObjectMeta
-	Right        meta_v1.ObjectMeta
+	Left         metav1.ObjectMeta
+	Right        metav1.ObjectMeta
 	ExpectReturn bool
 }
 
-func newObjectMeta(labels map[string]string, annotations map[string]string) meta_v1.ObjectMeta {
-	return meta_v1.ObjectMeta{
+func newObjectMeta(labels map[string]string, annotations map[string]string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
 		Labels:      labels,
 		Annotations: annotations,
 	}
@@ -90,8 +90,8 @@ var objectMetaSubsetTestcases = []ObjectMetaTestCase{
 func TestObjectMetaSubset(t *testing.T) {
 	for _, tc := range objectMetaSubsetTestcases {
 		t.Run(tc.Name, func(t *testing.T) {
-			set := &rbac_v1.Role{ObjectMeta: tc.Left}
-			subset := &rbac_v1.Role{ObjectMeta: tc.Right}
+			set := &rbacv1.Role{ObjectMeta: tc.Left}
+			subset := &rbacv1.Role{ObjectMeta: tc.Right}
 			if ObjectMetaSubset(set, subset) != tc.ExpectReturn {
 				t.Fatalf("Testcase Failure %v", tc)
 			}
@@ -165,8 +165,8 @@ var objectMetaEqualTestcases = []ObjectMetaTestCase{
 func TestObjectMetaEqual(t *testing.T) {
 	for _, tc := range objectMetaEqualTestcases {
 		t.Run(tc.Name, func(t *testing.T) {
-			left := &rbac_v1.Role{ObjectMeta: tc.Left}
-			right := &rbac_v1.Role{ObjectMeta: tc.Right}
+			left := &rbacv1.Role{ObjectMeta: tc.Left}
+			right := &rbacv1.Role{ObjectMeta: tc.Right}
 			if ObjectMetaEqual(left, right) != tc.ExpectReturn {
 				t.Fatalf("Testcase Failure %v", tc)
 			}

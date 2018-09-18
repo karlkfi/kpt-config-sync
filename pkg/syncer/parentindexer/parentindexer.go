@@ -19,7 +19,7 @@ limitations under the License.
 package parentindexer
 
 import (
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -28,7 +28,7 @@ const parentIndex = "PolicyNode-Parent"
 
 // policyNodeIndexParent returns the index key (parnent) for the given policy node.
 func policyNodeIndexParent(obj interface{}) ([]string, error) {
-	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
+	policyNode := obj.(*policyhierarchyv1.PolicyNode)
 	return []string{policyNode.Spec.Parent}, nil
 }
 
@@ -40,15 +40,15 @@ func Indexer() cache.Indexers {
 }
 
 // GetChildNodes will return the policy nodes that are children of parent.
-func GetChildNodes(informer cache.SharedIndexInformer, parent string) ([]*policyhierarchy_v1.PolicyNode, error) {
+func GetChildNodes(informer cache.SharedIndexInformer, parent string) ([]*policyhierarchyv1.PolicyNode, error) {
 	objs, err := informer.GetIndexer().ByIndex(parentIndex, parent)
 	if err != nil {
 		return nil, err
 	}
 
-	policyNodes := make([]*policyhierarchy_v1.PolicyNode, len(objs))
+	policyNodes := make([]*policyhierarchyv1.PolicyNode, len(objs))
 	for idx, obj := range objs {
-		policyNodes[idx] = obj.(*policyhierarchy_v1.PolicyNode)
+		policyNodes[idx] = obj.(*policyhierarchyv1.PolicyNode)
 	}
 	return policyNodes, nil
 }

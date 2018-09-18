@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	rbac_v1 "k8s.io/api/rbac/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -91,7 +91,7 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 }
 
 func createPolicy(s *v1.NamespaceSelector) metav1.Object {
-	rb := &rbac_v1.RoleBinding{}
+	rb := &rbacv1.RoleBinding{}
 	rb.SetName("rb")
 	if s != nil {
 		j, err := json.Marshal(s)

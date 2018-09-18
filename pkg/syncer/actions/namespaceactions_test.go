@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/client/action"
-	core_v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestSetNamespaceLabelsFunc(t *testing.T) {
@@ -78,8 +78,8 @@ func TestSetNamespaceLabelsFunc(t *testing.T) {
 
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			ns := &core_v1.Namespace{
-				ObjectMeta: meta_v1.ObjectMeta{
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:   "test-namespace",
 					Labels: tt.nsLabels,
 				},
@@ -101,7 +101,7 @@ func TestSetNamespaceLabelsFunc(t *testing.T) {
 				t.Errorf("Unexpected error %s", err)
 			}
 
-			nsObj := obj.(*core_v1.Namespace)
+			nsObj := obj.(*corev1.Namespace)
 			if !reflect.DeepEqual(nsObj.Labels, tt.expectLabels) {
 				t.Errorf("new labels %v differ from expected %v", nsObj.Labels, tt.expectLabels)
 			}

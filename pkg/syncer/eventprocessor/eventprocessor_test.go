@@ -21,9 +21,9 @@ import (
 	"reflect"
 	"testing"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/hierarchy"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -71,7 +71,7 @@ func TestAdd(t *testing.T) {
 	fh, ep := setup([]string{"a", "b", "c", "d"}, nil)
 
 	name := "foobar"
-	ep.OnAdd(&policyhierarchy_v1.PolicyNode{ObjectMeta: meta_v1.ObjectMeta{Name: name}})
+	ep.OnAdd(&policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
 
 	if name != fh.subtreeName {
 		t.Errorf("Expected lookup for name %s got %s", name, fh.subtreeName)
@@ -86,8 +86,8 @@ func TestUpdate(t *testing.T) {
 	fh, ep := setup([]string{"a", "b", "c", "d", "e"}, nil)
 
 	name := "foobar"
-	oldNode := &policyhierarchy_v1.PolicyNode{ObjectMeta: meta_v1.ObjectMeta{Name: name}}
-	newNode := &policyhierarchy_v1.PolicyNode{ObjectMeta: meta_v1.ObjectMeta{Name: name}}
+	oldNode := &policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	newNode := &policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	ep.OnUpdate(oldNode, newNode)
 	if name != fh.subtreeName {
 		t.Errorf("Expected lookup for name %s got %s", name, fh.subtreeName)
@@ -102,7 +102,7 @@ func TestError(t *testing.T) {
 	name := "foobar"
 	fh, ep := setup([]string{}, &hierarchy.NotFoundError{})
 
-	ep.OnAdd(&policyhierarchy_v1.PolicyNode{ObjectMeta: meta_v1.ObjectMeta{Name: name}})
+	ep.OnAdd(&policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
 	if name != fh.subtreeName {
 		t.Errorf("Expected lookup for name %s got %s", name, fh.subtreeName)
 	}
@@ -116,7 +116,7 @@ func TestDelete(t *testing.T) {
 	_, ep := setup([]string{"a", "b", "c", "d", "e"}, nil)
 
 	name := "foobar"
-	ep.OnDelete(&policyhierarchy_v1.PolicyNode{ObjectMeta: meta_v1.ObjectMeta{Name: name}})
+	ep.OnDelete(&policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
 	expect := []string{name}
 	elts := getQueueElements(ep.queue)
 	if !reflect.DeepEqual(expect, elts) {

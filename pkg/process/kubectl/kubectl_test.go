@@ -18,10 +18,10 @@ import (
 	"k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
-	dis_fake "k8s.io/client-go/discovery/fake"
+	disfake "k8s.io/client-go/discovery/fake"
 )
 
 func TestClusterList(t *testing.T) {
@@ -170,7 +170,7 @@ func TestVersion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := fake.NewClient()
 			c := NewWithClient(context.Background(), client)
-			fd, _ := client.Kubernetes().Discovery().(*dis_fake.FakeDiscovery)
+			fd, _ := client.Kubernetes().Discovery().(*disfake.FakeDiscovery)
 			fd.FakedServerVersion = &tt.serverVersion
 			actual, err := c.GetClusterVersion()
 			if err != nil {
@@ -205,7 +205,7 @@ func TestDeleteSecret(t *testing.T) {
 	kc := NewWithClient(context.Background(), client)
 	for _, test := range tests {
 		s, err := client.Kubernetes().CoreV1().Secrets(test.namespace).Create(&v1.Secret{
-			ObjectMeta: meta_v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: test.secretName,
 			}})
 		if s == nil {
@@ -214,7 +214,7 @@ func TestDeleteSecret(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error creating secret %s : %v", test.secretName, err)
 		}
-		s, err = client.Kubernetes().CoreV1().Secrets(test.namespace).Get(test.secretName, meta_v1.GetOptions{})
+		s, err = client.Kubernetes().CoreV1().Secrets(test.namespace).Get(test.secretName, metav1.GetOptions{})
 		if s == nil {
 			t.Errorf("Secret %s not found", test.secretName)
 		}
@@ -225,8 +225,8 @@ func TestDeleteSecret(t *testing.T) {
 		if err != test.outErr {
 			t.Errorf("Expected %v returned from DeleteSecret, but got %v", test.outErr, err)
 		}
-		_, err = client.Kubernetes().CoreV1().Secrets(test.namespace).Get(test.secretName, meta_v1.GetOptions{})
-		if !api_errors.IsNotFound(err) {
+		_, err = client.Kubernetes().CoreV1().Secrets(test.namespace).Get(test.secretName, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
 			t.Errorf("Deleted secret %v still exists", test.secretName)
 		}
 	}
@@ -250,7 +250,7 @@ func TestDeleteConfigmap(t *testing.T) {
 	kc := NewWithClient(context.Background(), client)
 	for _, test := range tests {
 		cm, err := client.Kubernetes().CoreV1().ConfigMaps(test.namespace).Create(&v1.ConfigMap{
-			ObjectMeta: meta_v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: test.configMapName,
 			}})
 		if cm == nil {
@@ -259,7 +259,7 @@ func TestDeleteConfigmap(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error creating configmap %s : %v", test.configMapName, err)
 		}
-		cm, err = client.Kubernetes().CoreV1().ConfigMaps(test.namespace).Get(test.configMapName, meta_v1.GetOptions{})
+		cm, err = client.Kubernetes().CoreV1().ConfigMaps(test.namespace).Get(test.configMapName, metav1.GetOptions{})
 		if cm == nil {
 			t.Errorf("ConfigMap %s not found", test.configMapName)
 		}
@@ -270,8 +270,8 @@ func TestDeleteConfigmap(t *testing.T) {
 		if err != test.outErr {
 			t.Errorf("Expected %v returned from DeleteConfigMap, but got %v", test.outErr, err)
 		}
-		_, err = client.Kubernetes().CoreV1().ConfigMaps(test.namespace).Get(test.configMapName, meta_v1.GetOptions{})
-		if !api_errors.IsNotFound(err) {
+		_, err = client.Kubernetes().CoreV1().ConfigMaps(test.namespace).Get(test.configMapName, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
 			t.Errorf("Deleted configmap %v still exists", test.configMapName)
 		}
 	}
@@ -304,7 +304,7 @@ func TestDeleteDeployment(t *testing.T) {
 	for _, test := range tests {
 		if !test.skipCreate {
 			cm, err := client.Kubernetes().AppsV1().Deployments(test.namespace).Create(&appsv1.Deployment{
-				ObjectMeta: meta_v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: test.deploymentName,
 				}})
 			if cm == nil {
@@ -313,7 +313,7 @@ func TestDeleteDeployment(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error creating deployment %s : %v", test.deploymentName, err)
 			}
-			cm, err = client.Kubernetes().AppsV1().Deployments(test.namespace).Get(test.deploymentName, meta_v1.GetOptions{})
+			cm, err = client.Kubernetes().AppsV1().Deployments(test.namespace).Get(test.deploymentName, metav1.GetOptions{})
 			if cm == nil {
 				t.Errorf("Deployment %s not found", test.deploymentName)
 			}
@@ -325,8 +325,8 @@ func TestDeleteDeployment(t *testing.T) {
 		if err != test.outErr {
 			t.Errorf("Expected %v returned from DeleteDeployment, but got %v", test.outErr, err)
 		}
-		_, err = client.Kubernetes().AppsV1().Deployments(test.namespace).Get(test.deploymentName, meta_v1.GetOptions{})
-		if !api_errors.IsNotFound(err) {
+		_, err = client.Kubernetes().AppsV1().Deployments(test.namespace).Get(test.deploymentName, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
 			t.Errorf("Deleted deployment %v still exists", test.deploymentName)
 		}
 	}
@@ -355,7 +355,7 @@ func TestDeleteNamespace(t *testing.T) {
 	kc := NewWithClient(context.Background(), client)
 	for _, test := range tests {
 		cm, err := client.Kubernetes().CoreV1().Namespaces().Create(&v1.Namespace{
-			ObjectMeta: meta_v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: test.namespace,
 			}})
 		if !test.skipCreate {
@@ -365,7 +365,7 @@ func TestDeleteNamespace(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error creating namespace %s : %v", test.namespace, err)
 			}
-			cm, err = client.Kubernetes().CoreV1().Namespaces().Get(test.namespace, meta_v1.GetOptions{})
+			cm, err = client.Kubernetes().CoreV1().Namespaces().Get(test.namespace, metav1.GetOptions{})
 			if cm == nil {
 				t.Errorf("Namespace %s not found", test.namespace)
 			}
@@ -377,8 +377,8 @@ func TestDeleteNamespace(t *testing.T) {
 		if err != test.outErr {
 			t.Errorf("Expected %v returned from DeleteNamespace, but got %v", test.outErr, err)
 		}
-		_, err = client.Kubernetes().CoreV1().Namespaces().Get(test.namespace, meta_v1.GetOptions{})
-		if !api_errors.IsNotFound(err) {
+		_, err = client.Kubernetes().CoreV1().Namespaces().Get(test.namespace, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
 			t.Errorf("Deleted namespace %v still exists", test.namespace)
 		}
 	}
@@ -400,7 +400,7 @@ func TestDeleteValidatingWebhookConfiguration(t *testing.T) {
 	kc := NewWithClient(context.Background(), client)
 	for _, test := range tests {
 		vwc, err := client.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Create(&v1beta1.ValidatingWebhookConfiguration{
-			ObjectMeta: meta_v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: test.vwcName,
 			}})
 		if vwc == nil {
@@ -409,7 +409,7 @@ func TestDeleteValidatingWebhookConfiguration(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error creating ValidatingWebhookConfiguration %s : %v", test.vwcName, err)
 		}
-		vwc, err = client.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(test.vwcName, meta_v1.GetOptions{})
+		vwc, err = client.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(test.vwcName, metav1.GetOptions{})
 		if vwc == nil {
 			t.Errorf("ValidatinWebhookConfiguration %s not found", test.vwcName)
 		}
@@ -420,8 +420,8 @@ func TestDeleteValidatingWebhookConfiguration(t *testing.T) {
 		if err != test.outErr {
 			t.Errorf("Expected %v returned from DeleteValidatingWebhookConfiguration, but got %v", test.outErr, err)
 		}
-		_, err = client.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(test.vwcName, meta_v1.GetOptions{})
-		if !api_errors.IsNotFound(err) {
+		_, err = client.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(test.vwcName, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
 			t.Errorf("Deleted ValidatingWebhookConfiguration %v still exists", test.vwcName)
 		}
 	}
@@ -447,7 +447,7 @@ func TestAddRemoveClusterAdmin(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error while adding cluster admin: %v", err)
 		}
-		crb, err := client.Kubernetes().RbacV1().ClusterRoleBindings().Get(crbName, meta_v1.GetOptions{})
+		crb, err := client.Kubernetes().RbacV1().ClusterRoleBindings().Get(crbName, metav1.GetOptions{})
 		if crb == nil {
 			t.Errorf("No ClusterRoleBinding found created. Should have created %s", test.crbUser)
 		}
@@ -458,8 +458,8 @@ func TestAddRemoveClusterAdmin(t *testing.T) {
 		if err != test.outErr {
 			t.Errorf("Expected %v returned from RemoveClusterAdmin, but got %v", test.outErr, err)
 		}
-		_, err = client.Kubernetes().RbacV1().ClusterRoleBindings().Get(test.crbUser, meta_v1.GetOptions{})
-		if !api_errors.IsNotFound(err) {
+		_, err = client.Kubernetes().RbacV1().ClusterRoleBindings().Get(test.crbUser, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
 			t.Errorf("Deleted ClusterRoleBinding %v still exists", crbName)
 		}
 	}

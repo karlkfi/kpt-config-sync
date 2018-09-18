@@ -20,23 +20,23 @@ import (
 	"reflect"
 
 	"github.com/google/nomos/pkg/client/action"
-	rbac_v1 "k8s.io/api/rbac/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	listers_rbac_v1 "k8s.io/client-go/listers/rbac/v1"
+	listersrbacv1 "k8s.io/client-go/listers/rbac/v1"
 )
 
 // RoleBindingResource is an implementation of ResourceInterface for rolebindings.
 type RoleBindingResource struct {
 	client kubernetes.Interface
-	lister listers_rbac_v1.RoleBindingLister
+	lister listersrbacv1.RoleBindingLister
 }
 
 // NewRoleBindingResource creates a role binding resource from the kubernetes client objects.
 func NewRoleBindingResource(
 	client kubernetes.Interface,
-	lister listers_rbac_v1.RoleBindingLister) *RoleBindingResource {
+	lister listersrbacv1.RoleBindingLister) *RoleBindingResource {
 	return &RoleBindingResource{
 		client: client,
 		lister: lister,
@@ -61,10 +61,10 @@ func (s *RoleBindingResource) Values(namespace string) (map[string]interface{}, 
 
 // NewRoleBindingDeleteAction returns a reflective delete action for the rolebinding.
 func NewRoleBindingDeleteAction(
-	roleBinding *rbac_v1.RoleBinding, roleBindingResource *RoleBindingResource) *action.ReflectiveDeleteAction {
+	roleBinding *rbacv1.RoleBinding, roleBindingResource *RoleBindingResource) *action.ReflectiveDeleteAction {
 	spec := action.NewSpec(
-		new(rbac_v1.RoleBinding),
-		rbac_v1.SchemeGroupVersion,
+		new(rbacv1.RoleBinding),
+		rbacv1.SchemeGroupVersion,
 		RoleBindingsEqual,
 		roleBindingResource.client.RbacV1(),
 		roleBindingResource.lister)
@@ -73,10 +73,10 @@ func NewRoleBindingDeleteAction(
 
 // NewRoleBindingUpsertAction returns a new reflective upsert action for role bindings.
 func NewRoleBindingUpsertAction(
-	roleBinding *rbac_v1.RoleBinding, roleBindingResource *RoleBindingResource) *action.ReflectiveUpsertAction {
+	roleBinding *rbacv1.RoleBinding, roleBindingResource *RoleBindingResource) *action.ReflectiveUpsertAction {
 	spec := action.NewSpec(
-		new(rbac_v1.RoleBinding),
-		rbac_v1.SchemeGroupVersion,
+		new(rbacv1.RoleBinding),
+		rbacv1.SchemeGroupVersion,
 		RoleBindingsEqual,
 		roleBindingResource.client.RbacV1(),
 		roleBindingResource.lister)
@@ -85,8 +85,8 @@ func NewRoleBindingUpsertAction(
 
 // RoleBindingsEqual returns true if two RoleBindings have equivalent Subjects and RoleRef.
 func RoleBindingsEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lRoleBinding := lhs.(*rbac_v1.RoleBinding)
-	rRoleBinding := rhs.(*rbac_v1.RoleBinding)
+	lRoleBinding := lhs.(*rbacv1.RoleBinding)
+	rRoleBinding := rhs.(*rbacv1.RoleBinding)
 	return reflect.DeepEqual(lRoleBinding.Subjects, rRoleBinding.Subjects) &&
 		reflect.DeepEqual(lRoleBinding.RoleRef, rRoleBinding.RoleRef)
 }

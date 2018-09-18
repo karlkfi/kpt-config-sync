@@ -20,18 +20,18 @@ import (
 	"reflect"
 
 	"github.com/google/nomos/pkg/client/action"
-	core_v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	listers_core_v1 "k8s.io/client-go/listers/core/v1"
+	listerscorev1 "k8s.io/client-go/listers/core/v1"
 )
 
 func nsSpec(
 	client kubernetes.Interface,
-	lister listers_core_v1.NamespaceLister) *action.ReflectiveActionSpec {
+	lister listerscorev1.NamespaceLister) *action.ReflectiveActionSpec {
 	return action.NewSpec(
-		new(core_v1.Namespace),
-		core_v1.SchemeGroupVersion,
+		new(corev1.Namespace),
+		corev1.SchemeGroupVersion,
 		NamespacesEqual,
 		client.CoreV1(),
 		lister)
@@ -41,16 +41,16 @@ func nsSpec(
 func NewNamespaceDeleteAction(
 	namespace string,
 	client kubernetes.Interface,
-	lister listers_core_v1.NamespaceLister) *action.ReflectiveDeleteAction {
+	lister listerscorev1.NamespaceLister) *action.ReflectiveDeleteAction {
 	return action.NewReflectiveDeleteAction(
 		"", namespace, nsSpec(client, lister))
 }
 
 // NewNamespaceUpsertAction creates a new ReflectiveUpsertAction for the given namespace.
 func NewNamespaceUpsertAction(
-	namespace *core_v1.Namespace,
+	namespace *corev1.Namespace,
 	client kubernetes.Interface,
-	lister listers_core_v1.NamespaceLister) *action.ReflectiveUpsertAction {
+	lister listerscorev1.NamespaceLister) *action.ReflectiveUpsertAction {
 	return action.NewReflectiveUpsertAction(
 		"", namespace.Name, namespace, nsSpec(client, lister))
 }
@@ -62,7 +62,7 @@ type UpdateObjectFunction func(old runtime.Object) (runtime.Object, error)
 // the rest of the labels on the namespace
 func SetNamespaceLabelsFunc(labels map[string]string) UpdateObjectFunction {
 	return func(old runtime.Object) (runtime.Object, error) {
-		oldNs := old.(*core_v1.Namespace)
+		oldNs := old.(*corev1.Namespace)
 		newNs := oldNs.DeepCopy()
 		dirty := false
 		for key, value := range labels {
@@ -83,22 +83,22 @@ func NewNamespaceUpdateAction(
 	namespace string,
 	updateFunction func(old runtime.Object) (runtime.Object, error),
 	client kubernetes.Interface,
-	lister listers_core_v1.NamespaceLister) *action.ReflectiveUpdateAction {
+	lister listerscorev1.NamespaceLister) *action.ReflectiveUpdateAction {
 	return action.NewReflectiveUpdateAction("", namespace, updateFunction, nsSpec(client, lister))
 }
 
 // NewNamespaceCreateAction creates a new ReflectiveCreateAction for the namespace.
 func NewNamespaceCreateAction(
-	namespace *core_v1.Namespace,
+	namespace *corev1.Namespace,
 	client kubernetes.Interface,
-	lister listers_core_v1.NamespaceLister) *action.ReflectiveCreateAction {
+	lister listerscorev1.NamespaceLister) *action.ReflectiveCreateAction {
 	return action.NewReflectiveCreateAction(
 		"", namespace.Name, namespace, nsSpec(client, lister))
 }
 
 // NamespacesEqual returns true if the two Namespaces have the same owner references.
 func NamespacesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lNamespace := lhs.(*core_v1.Namespace)
-	rNamespace := rhs.(*core_v1.Namespace)
+	lNamespace := lhs.(*corev1.Namespace)
+	rNamespace := rhs.(*corev1.Namespace)
 	return reflect.DeepEqual(lNamespace.OwnerReferences, rNamespace.OwnerReferences)
 }

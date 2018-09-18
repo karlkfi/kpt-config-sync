@@ -24,7 +24,7 @@ import (
 	"github.com/google/nomos/clientgen/apis"
 	fakepolicyhierarchy "github.com/google/nomos/clientgen/apis/fake"
 	phinformers "github.com/google/nomos/clientgen/informer"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
@@ -55,13 +55,13 @@ func NewClient() *Client {
 // objects from policy hierarchy.
 func NewClientWithStorage(storage []runtime.Object) *Client {
 	scheme := runtime.NewScheme()
-	if err := policyhierarchy_v1.AddToScheme(scheme); err != nil {
+	if err := policyhierarchyv1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 
 	phTypes := map[reflect.Type]bool{}
 	for gvk, t := range scheme.AllKnownTypes() {
-		if gvk.Group != policyhierarchy_v1.SchemeGroupVersion.Group {
+		if gvk.Group != policyhierarchyv1.SchemeGroupVersion.Group {
 			continue
 		}
 		phTypes[t] = true

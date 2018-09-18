@@ -19,19 +19,19 @@ limitations under the License.
 package eventprocessor
 
 import (
-	policyhierarchyinformer_v1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	policyhierarchyinformerv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 )
 
 // Factory returns a types.HandleFnProvider that will create a PolicyNodeEventProcessor with the
 // passed informer.
-func Factory(informer policyhierarchyinformer_v1.PolicyNodeInformer) types.HandleFnProvider {
+func Factory(informer policyhierarchyinformerv1.PolicyNodeInformer) types.HandleFnProvider {
 	return func(queue workqueue.RateLimitingInterface) cache.ResourceEventHandler {
 		processor := &PolicyNodeEventProcessor{
 			queue:     queue,
@@ -50,16 +50,16 @@ type PolicyNodeEventProcessor struct {
 
 // OnAdd implements cache.ResourceEventHandler.
 func (p *PolicyNodeEventProcessor) OnAdd(obj interface{}) {
-	p.subtreeEvents(obj.(*policyhierarchy_v1.PolicyNode))
+	p.subtreeEvents(obj.(*policyhierarchyv1.PolicyNode))
 }
 
 // OnUpdate implements cache.ResourceEventHandler.
 func (p *PolicyNodeEventProcessor) OnUpdate(oldObj, newObj interface{}) {
-	p.subtreeEvents(newObj.(*policyhierarchy_v1.PolicyNode))
+	p.subtreeEvents(newObj.(*policyhierarchyv1.PolicyNode))
 }
 
 // subtreeEvents handles generating all events for a subtree.
-func (p *PolicyNodeEventProcessor) subtreeEvents(policyNode *policyhierarchy_v1.PolicyNode) {
+func (p *PolicyNodeEventProcessor) subtreeEvents(policyNode *policyhierarchyv1.PolicyNode) {
 	names, err := p.hierarchy.Subtree(policyNode.Name)
 	if err != nil {
 		if hierarchy.IsNotFoundError(err) {
@@ -77,6 +77,6 @@ func (p *PolicyNodeEventProcessor) subtreeEvents(policyNode *policyhierarchy_v1.
 
 // OnDelete implements cache.ResourceEventHandler.
 func (p *PolicyNodeEventProcessor) OnDelete(obj interface{}) {
-	policyNode := obj.(*policyhierarchy_v1.PolicyNode)
+	policyNode := obj.(*policyhierarchyv1.PolicyNode)
 	p.queue.Add(policyNode.Name)
 }

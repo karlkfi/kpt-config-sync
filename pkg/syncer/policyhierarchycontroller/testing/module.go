@@ -22,14 +22,14 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ModuleEqualTestcase is a testcase for Module.Equal
 type ModuleEqualTestcase struct {
 	Name        string
-	LHS         meta_v1.Object
-	RHS         meta_v1.Object
+	LHS         metav1.Object
+	RHS         metav1.Object
 	ExpectEqual bool
 }
 

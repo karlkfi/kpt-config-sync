@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	rbac_v1 "k8s.io/api/rbac/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 type pluralTestCase struct {
@@ -27,22 +27,22 @@ func (s *pluralTestCase) Run(t *testing.T) {
 
 var pluralTestCases = []pluralTestCase{
 	pluralTestCase{
-		input:       policyhierarchy_v1.PolicyNode{},
+		input:       policyhierarchyv1.PolicyNode{},
 		output:      "PolicyNodes",
 		outputLower: "policynodes",
 	},
 	pluralTestCase{
-		input:       policyhierarchy_v1.ClusterPolicy{},
+		input:       policyhierarchyv1.ClusterPolicy{},
 		output:      "ClusterPolicies",
 		outputLower: "clusterpolicies",
 	},
 	pluralTestCase{
-		input:       rbac_v1.ClusterRole{},
+		input:       rbacv1.ClusterRole{},
 		output:      "ClusterRoles",
 		outputLower: "clusterroles",
 	},
 	pluralTestCase{
-		input:       &rbac_v1.ClusterRole{},
+		input:       &rbacv1.ClusterRole{},
 		output:      "ClusterRoles",
 		outputLower: "clusterroles",
 	},

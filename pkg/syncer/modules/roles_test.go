@@ -20,29 +20,29 @@ import (
 	"testing"
 
 	test "github.com/google/nomos/pkg/syncer/policyhierarchycontroller/testing"
-	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestRoles(t *testing.T) {
-	admin := rbac_v1.Role{
-		ObjectMeta: meta_v1.ObjectMeta{
+	admin := rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "admin",
 		},
-		Rules: []rbac_v1.PolicyRule{
-			rbac_v1.PolicyRule{
+		Rules: []rbacv1.PolicyRule{
+			rbacv1.PolicyRule{
 				Verbs:     []string{"*"},
 				APIGroups: []string{"*"},
 				Resources: []string{"*"},
 			},
 		},
 	}
-	bob := rbac_v1.Role{
-		ObjectMeta: meta_v1.ObjectMeta{
+	bob := rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "bob",
 		},
-		Rules: []rbac_v1.PolicyRule{
-			rbac_v1.PolicyRule{
+		Rules: []rbacv1.PolicyRule{
+			rbacv1.PolicyRule{
 				Verbs:     []string{"get", "list"},
 				APIGroups: []string{""},
 				Resources: []string{"pods"},
@@ -55,20 +55,20 @@ func TestRoles(t *testing.T) {
 		Equals: test.ModuleEqualTestcases{
 			test.ModuleEqualTestcase{
 				Name:        "Both empty",
-				LHS:         &rbac_v1.Role{},
-				RHS:         &rbac_v1.Role{},
+				LHS:         &rbacv1.Role{},
+				RHS:         &rbacv1.Role{},
 				ExpectEqual: true,
 			},
 			test.ModuleEqualTestcase{
 				Name:        "Nil vs non nil lists",
-				LHS:         &rbac_v1.Role{Rules: []rbac_v1.PolicyRule{}},
-				RHS:         &rbac_v1.Role{},
+				LHS:         &rbacv1.Role{Rules: []rbacv1.PolicyRule{}},
+				RHS:         &rbacv1.Role{},
 				ExpectEqual: true,
 			},
 			test.ModuleEqualTestcase{
 				Name:        "Different Rules",
-				LHS:         &rbac_v1.Role{Rules: bob.Rules},
-				RHS:         &rbac_v1.Role{Rules: admin.Rules},
+				LHS:         &rbacv1.Role{Rules: bob.Rules},
+				RHS:         &rbacv1.Role{Rules: admin.Rules},
 				ExpectEqual: false,
 			},
 		},

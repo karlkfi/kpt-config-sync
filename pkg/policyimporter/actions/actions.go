@@ -17,9 +17,9 @@ limitations under the License.
 package actions
 
 import (
-	typed_v1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
-	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	typedv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
+	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -34,7 +34,7 @@ type Factories struct {
 
 // NewFactories creates a new Factories.
 func NewFactories(
-	client typed_v1.NomosV1Interface, pnLister listers_v1.PolicyNodeLister, cpLister listers_v1.ClusterPolicyLister) Factories {
+	client typedv1.NomosV1Interface, pnLister listersv1.PolicyNodeLister, cpLister listersv1.ClusterPolicyLister) Factories {
 	return Factories{newPolicyNodeActionFactory(client, pnLister), newClusterPolicyActionFactory(client, cpLister)}
 }
 
@@ -42,22 +42,22 @@ type policyNodeActionFactory struct {
 	*action.ReflectiveActionSpec
 }
 
-func newPolicyNodeActionFactory(client typed_v1.NomosV1Interface, lister listers_v1.PolicyNodeLister) policyNodeActionFactory {
+func newPolicyNodeActionFactory(client typedv1.NomosV1Interface, lister listersv1.PolicyNodeLister) policyNodeActionFactory {
 	return policyNodeActionFactory{policynode.NewActionSpec(client, lister)}
 }
 
 // NewCreate returns an action for creating PolicyNodes.
-func (f policyNodeActionFactory) NewCreate(policyNode *policyhierarchy_v1.PolicyNode) action.Interface {
+func (f policyNodeActionFactory) NewCreate(policyNode *policyhierarchyv1.PolicyNode) action.Interface {
 	return action.NewReflectiveCreateAction("", policyNode.Name, policyNode, f.ReflectiveActionSpec)
 }
 
 // NewUpdate returns an action for updating PolicyNodes. This action ignores the ResourceVersion of
 // the new PolicyNode as well as most of the Status. If Status.SyncState has been set then that will
 // be copied over.
-func (f policyNodeActionFactory) NewUpdate(policyNode *policyhierarchy_v1.PolicyNode) action.Interface {
+func (f policyNodeActionFactory) NewUpdate(policyNode *policyhierarchyv1.PolicyNode) action.Interface {
 	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
 		newPN := policyNode.DeepCopy()
-		oldPN := old.(*policyhierarchy_v1.PolicyNode)
+		oldPN := old.(*policyhierarchyv1.PolicyNode)
 		newPN.ResourceVersion = oldPN.ResourceVersion
 		newSyncState := newPN.Status.SyncState
 		oldPN.Status.DeepCopyInto(&newPN.Status)
@@ -79,23 +79,23 @@ type clusterPolicyActionFactory struct {
 }
 
 func newClusterPolicyActionFactory(
-	client typed_v1.NomosV1Interface,
-	lister listers_v1.ClusterPolicyLister) clusterPolicyActionFactory {
+	client typedv1.NomosV1Interface,
+	lister listersv1.ClusterPolicyLister) clusterPolicyActionFactory {
 	return clusterPolicyActionFactory{clusterpolicy.NewActionSpec(client, lister)}
 }
 
 // NewCreate returns an action for creating ClusterPolicies.
-func (f clusterPolicyActionFactory) NewCreate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) action.Interface {
+func (f clusterPolicyActionFactory) NewCreate(clusterPolicy *policyhierarchyv1.ClusterPolicy) action.Interface {
 	return action.NewReflectiveCreateAction("", clusterPolicy.Name, clusterPolicy, f.ReflectiveActionSpec)
 }
 
 // NewUpdate returns an action for updating ClusterPolicies. This action ignores the ResourceVersion
 // of the new ClusterPolicy as well as most of the Status. If Status.SyncState has been set then
 // that will be copied over.
-func (f clusterPolicyActionFactory) NewUpdate(clusterPolicy *policyhierarchy_v1.ClusterPolicy) action.Interface {
+func (f clusterPolicyActionFactory) NewUpdate(clusterPolicy *policyhierarchyv1.ClusterPolicy) action.Interface {
 	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
 		newCP := clusterPolicy.DeepCopy()
-		oldCP := old.(*policyhierarchy_v1.ClusterPolicy)
+		oldCP := old.(*policyhierarchyv1.ClusterPolicy)
 		newCP.ResourceVersion = oldCP.ResourceVersion
 		newSyncState := newCP.Status.SyncState
 		oldCP.Status.DeepCopyInto(&newCP.Status)

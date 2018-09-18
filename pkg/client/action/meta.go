@@ -18,7 +18,7 @@ package action
 import (
 	"reflect"
 
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -45,27 +45,27 @@ func isSubset(set map[string]string, subset map[string]string) bool {
 
 // MetaSubset returns true if subset's labels and annotations are a subset of the labels and
 // annotations in set.  See isSubset for the definition of subset for labels / annotations.
-func MetaSubset(set meta_v1.Object, subset meta_v1.Object) bool {
+func MetaSubset(set metav1.Object, subset metav1.Object) bool {
 	return isSubset(set.GetLabels(), subset.GetLabels()) && isSubset(set.GetAnnotations(), subset.GetAnnotations())
 }
 
 // MetaEqual returns true if left objects's labels and annotations are equal to labels and
 // annotations right object.
-func MetaEqual(left meta_v1.Object, right meta_v1.Object) bool {
+func MetaEqual(left metav1.Object, right metav1.Object) bool {
 	return reflect.DeepEqual(left.GetLabels(), right.GetLabels()) && reflect.DeepEqual(left.GetAnnotations(), right.GetAnnotations())
 }
 
 // ObjectMetaSubset returns true if the Meta field of subset is a subset of the meta field for set.
 func ObjectMetaSubset(set runtime.Object, subset runtime.Object) bool {
-	return MetaSubset(set.(meta_v1.Object), subset.(meta_v1.Object))
+	return MetaSubset(set.(metav1.Object), subset.(metav1.Object))
 }
 
 // ObjectMetaMatch returns true if the Meta field of left and right objects are equal.
 func ObjectMetaEqual(left runtime.Object, right runtime.Object) bool {
-	return MetaEqual(left.(meta_v1.Object), right.(meta_v1.Object))
+	return MetaEqual(left.(metav1.Object), right.(metav1.Object))
 }
 
 // IsFinalizing returns true if the object is finalizing.
-func IsFinalizing(m meta_v1.Object) bool {
+func IsFinalizing(m metav1.Object) bool {
 	return m.GetDeletionTimestamp() != nil
 }

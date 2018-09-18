@@ -17,14 +17,14 @@ package modules
 import (
 	"reflect"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/object"
 	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
-	controller_informers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
-	core_v1 "k8s.io/api/core/v1"
-	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	controllerinformers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -54,9 +54,9 @@ func (s *ClusterRoles) Name() string {
 }
 
 // Equal implements clusterpolicycontroller.Module.
-func (s *ClusterRoles) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
-	lhs := lhsObj.(*rbac_v1.ClusterRole)
-	rhs := rhsObj.(*rbac_v1.ClusterRole)
+func (s *ClusterRoles) Equal(lhsObj metav1.Object, rhsObj metav1.Object) bool {
+	lhs := lhsObj.(*rbacv1.ClusterRole)
+	rhs := rhsObj.(*rbacv1.ClusterRole)
 
 	if lhs == nil || rhs == nil {
 		return lhs == rhs
@@ -70,21 +70,21 @@ func (s *ClusterRoles) Equal(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool 
 
 // equalSpec performs equals on runtime.Objects
 func (s *ClusterRoles) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bool {
-	return s.Equal(lhsObj.(meta_v1.Object), rhsObj.(meta_v1.Object))
+	return s.Equal(lhsObj.(metav1.Object), rhsObj.(metav1.Object))
 }
 
 // InformerProvider implements clusterpolicycontroller.Module
-func (s *ClusterRoles) InformerProvider() controller_informers.InformerProvider {
+func (s *ClusterRoles) InformerProvider() controllerinformers.InformerProvider {
 	return s.informers.Rbac().V1().ClusterRoles()
 }
 
 // Instance implements clusterpolicycontroller.Module
-func (s *ClusterRoles) Instance() meta_v1.Object {
-	return &rbac_v1.ClusterRole{}
+func (s *ClusterRoles) Instance() metav1.Object {
+	return &rbacv1.ClusterRole{}
 }
 
 // Extract implements clusterpolicycontroller.Module
-func (s *ClusterRoles) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) []meta_v1.Object {
+func (s *ClusterRoles) Extract(clusterPolicy *policyhierarchyv1.ClusterPolicy) []metav1.Object {
 	var roles []runtime.Object
 	for _, r := range clusterPolicy.Spec.ClusterRolesV1 {
 		roles = append(roles, r.DeepCopy())
@@ -95,8 +95,8 @@ func (s *ClusterRoles) Extract(clusterPolicy *policyhierarchy_v1.ClusterPolicy) 
 // ActionSpec implements clusterpolicycontroller.Module
 func (s *ClusterRoles) ActionSpec() *action.ReflectiveActionSpec {
 	return action.NewSpec(
-		&rbac_v1.ClusterRole{},
-		core_v1.SchemeGroupVersion,
+		&rbacv1.ClusterRole{},
+		corev1.SchemeGroupVersion,
 		s.equalSpec,
 		s.client.RbacV1(),
 		s.informers.Rbac().V1().ClusterRoles().Lister(),

@@ -18,7 +18,7 @@ package policy
 import (
 	"testing"
 
-	pn_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	pnv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/api/rbac/v1"
@@ -29,22 +29,22 @@ import (
 func TestAuthorize(t *testing.T) {
 	// Initial PolicyNodes.
 	policyNodes := []runtime.Object{
-		&pn_v1.PolicyNode{
+		&pnv1.PolicyNode{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "kitties",
 			},
-			Spec: pn_v1.PolicyNodeSpec{
+			Spec: pnv1.PolicyNodeSpec{
 				Parent: "bigkitties",
-				Type:   pn_v1.Namespace,
+				Type:   pnv1.Namespace,
 			},
 		},
-		&pn_v1.PolicyNode{
+		&pnv1.PolicyNode{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bigkitties",
 			},
-			Spec: pn_v1.PolicyNodeSpec{
+			Spec: pnv1.PolicyNodeSpec{
 				Parent: "",
-				Type:   pn_v1.Policyspace,
+				Type:   pnv1.Policyspace,
 			},
 		},
 	}
@@ -79,13 +79,13 @@ func TestAuthorize(t *testing.T) {
 						Kind:    "PolicyNode",
 					},
 					Object: runtime.RawExtension{
-						Object: runtime.Object(&pn_v1.PolicyNode{
+						Object: runtime.Object(&pnv1.PolicyNode{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "moarkitties",
 							},
-							Spec: pn_v1.PolicyNodeSpec{
+							Spec: pnv1.PolicyNodeSpec{
 								Parent: "bigkitties",
-								Type:   pn_v1.Policyspace,
+								Type:   pnv1.Policyspace,
 							},
 						}),
 					},
@@ -110,11 +110,11 @@ func TestAuthorize(t *testing.T) {
 						Kind:    "PolicyNode",
 					},
 					Object: runtime.RawExtension{
-						Object: runtime.Object(&pn_v1.PolicyNode{
+						Object: runtime.Object(&pnv1.PolicyNode{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "moarkitties",
 							},
-							Spec: pn_v1.PolicyNodeSpec{
+							Spec: pnv1.PolicyNodeSpec{
 								Parent: "does not exist",
 							},
 						}),
@@ -140,13 +140,13 @@ func TestAuthorize(t *testing.T) {
 						Kind:    "PolicyNode",
 					},
 					Object: runtime.RawExtension{
-						Object: runtime.Object(&pn_v1.PolicyNode{
+						Object: runtime.Object(&pnv1.PolicyNode{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "kitties",
 							},
-							Spec: pn_v1.PolicyNodeSpec{
+							Spec: pnv1.PolicyNodeSpec{
 								Parent: "bigkitties",
-								Type:   pn_v1.Policyspace,
+								Type:   pnv1.Policyspace,
 							},
 						}),
 					},
@@ -171,11 +171,11 @@ func TestAuthorize(t *testing.T) {
 						Kind:    "PolicyNode",
 					},
 					Object: runtime.RawExtension{
-						Object: runtime.Object(&pn_v1.PolicyNode{
+						Object: runtime.Object(&pnv1.PolicyNode{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "moarkitties",
 							},
-							Spec: pn_v1.PolicyNodeSpec{
+							Spec: pnv1.PolicyNodeSpec{
 								Parent: "kitties",
 							},
 						}),
@@ -245,9 +245,9 @@ func TestAuthorize(t *testing.T) {
 						Kind:    "ClusterPolicy",
 					},
 					Object: runtime.RawExtension{
-						Object: runtime.Object(&pn_v1.ClusterPolicy{
+						Object: runtime.Object(&pnv1.ClusterPolicy{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: pn_v1.ClusterPolicyName,
+								Name: pnv1.ClusterPolicyName,
 							},
 						}),
 					},
@@ -271,7 +271,7 @@ func TestAuthorize(t *testing.T) {
 						Kind:    "ClusterPolicy",
 					},
 					Object: runtime.RawExtension{
-						Object: runtime.Object(&pn_v1.ClusterPolicy{
+						Object: runtime.Object(&pnv1.ClusterPolicy{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "kitty",
 							},
@@ -297,9 +297,9 @@ func TestAuthorize(t *testing.T) {
 						Kind:    "ClusterPolicy",
 					},
 					Object: runtime.RawExtension{
-						Object: runtime.Object(&pn_v1.ClusterPolicy{
+						Object: runtime.Object(&pnv1.ClusterPolicy{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: pn_v1.ClusterPolicyName,
+								Name: pnv1.ClusterPolicyName,
 							},
 						}),
 					},
@@ -323,11 +323,11 @@ func TestAuthorize(t *testing.T) {
 						Kind:    "ClusterPolicy",
 					},
 					Object: runtime.RawExtension{
-						Object: runtime.Object(&pn_v1.ClusterPolicy{
+						Object: runtime.Object(&pnv1.ClusterPolicy{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: pn_v1.ClusterPolicyName,
+								Name: pnv1.ClusterPolicyName,
 							},
-							Spec: pn_v1.ClusterPolicySpec{
+							Spec: pnv1.ClusterPolicySpec{
 								ClusterRolesV1: []v1.ClusterRole{
 									{
 										ObjectMeta: metav1.ObjectMeta{
@@ -363,7 +363,7 @@ func TestAuthorize(t *testing.T) {
 						Version: "v1",
 						Kind:    "ClusterPolicy",
 					},
-					Name:      pn_v1.ClusterPolicyName,
+					Name:      pnv1.ClusterPolicyName,
 					Operation: admissionv1beta1.Delete,
 				},
 			},

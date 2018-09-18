@@ -17,7 +17,7 @@ limitations under the License.
 package labeling
 
 import (
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
@@ -74,7 +74,7 @@ func (l *Label) Selector() labels.Selector {
 }
 
 // IsSet returns true if the label is set on the object with matching value.
-func (l *Label) IsSet(object meta_v1.Object) bool {
+func (l *Label) IsSet(object metav1.Object) bool {
 	objectLabels := object.GetLabels()
 	if objectLabels == nil {
 		return false

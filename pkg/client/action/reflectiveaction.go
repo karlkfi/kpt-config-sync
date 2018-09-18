@@ -24,8 +24,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -166,13 +166,13 @@ func (s *ReflectiveActionBase) listerGet() (runtime.Object, error) {
 // delete deletes the resource using the client
 // Example of what this is effectively doing:
 // client := kubernetesClient.RbacV1().ClusterRoles() // first line
-// return client.Delete("foo", &meta_v1.DeleteOptions{})
+// return client.Delete("foo", &metav1.DeleteOptions{})
 func (s *ReflectiveActionBase) delete() error {
 	client := s.client()
 	deleteMethod := client.MethodByName("Delete")
 	deleteArgs := []reflect.Value{
 		reflect.ValueOf(s.name),
-		reflect.ValueOf(&meta_v1.DeleteOptions{}),
+		reflect.ValueOf(&metav1.DeleteOptions{}),
 	}
 	deleteReturns := deleteMethod.Call(deleteArgs)
 	if len(deleteReturns) != 1 {
@@ -341,7 +341,7 @@ func (s *ReflectiveUpdateAction) doUpdate() error {
 			glog.V(1).Infof("OK: %s", s)
 			return nil
 		}
-		if !api_errors.IsConflict(err) {
+		if !apierrors.IsConflict(err) {
 			return err
 		}
 	}
@@ -393,7 +393,7 @@ func (s *ReflectiveActionBase) doCreate() error {
 	_, err := s.create()
 	timer.ObserveDuration()
 	if err != nil {
-		if api_errors.IsAlreadyExists(err) {
+		if apierrors.IsAlreadyExists(err) {
 			return s.doUpsert()
 		}
 		return errors.Wrapf(err, "failed during create for %s", s)
@@ -405,7 +405,7 @@ func (s *ReflectiveActionBase) doCreate() error {
 func (s *ReflectiveActionBase) doUpsert() error {
 	resource, err := s.listerGet()
 	if err != nil {
-		if api_errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return s.doCreate()
 		}
 		return errors.Wrapf(err, "failed to get resource for %s", s)
@@ -453,14 +453,14 @@ func (s *ReflectiveDeleteAction) Execute() error {
 
 	o, err := s.listerGet()
 	if err != nil {
-		if api_errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			glog.V(5).Infof("not found during lister get %s", s)
 			return nil
 		}
 		return errors.Wrapf(err, "get failed for %s", s)
 	}
 
-	m, ok := o.(meta_v1.Object)
+	m, ok := o.(metav1.Object)
 	if !ok {
 		panic(fmt.Sprintf("programmer error, attempting to delete object with no metadata field: %v", m))
 	}
@@ -474,7 +474,7 @@ func (s *ReflectiveDeleteAction) Execute() error {
 	defer timer.ObserveDuration()
 	err = s.delete()
 	if err != nil {
-		if api_errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			glog.V(5).Infof("not found during delete %s", s)
 			return nil
 		}

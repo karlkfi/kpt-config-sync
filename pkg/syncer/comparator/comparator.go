@@ -22,7 +22,7 @@ import (
 
 	"github.com/google/nomos/pkg/client/action"
 
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Type indicates the state of the given resource
@@ -39,14 +39,14 @@ const (
 
 // Equals is a function that takes two objects then compares them while ignoring the object meta
 // labels and annotations.
-type Equals func(meta_v1.Object, meta_v1.Object) bool
+type Equals func(metav1.Object, metav1.Object) bool
 
 // Diff is resource where Declared and Actual do not match.
 type Diff struct {
 	Name     string
 	Type     Type
-	Declared meta_v1.Object
-	Actual   meta_v1.Object
+	Declared metav1.Object
+	Actual   metav1.Object
 }
 
 // Comparator handles comparing declared to actual on arbitrary resources given a type-specific
@@ -62,16 +62,16 @@ func New(equals Equals) *Comparator {
 
 // Compare returns the diffs between declared and actual state. The diffs will be returned in an
 // arbitrary order.
-func (s *Comparator) Compare(declared []meta_v1.Object, actual []meta_v1.Object) []*Diff {
+func (s *Comparator) Compare(declared []metav1.Object, actual []metav1.Object) []*Diff {
 	return Compare(s.equals, declared, actual)
 }
 
 // Compare returns the diffs between declared and actual state. The diffs will be returned in an
 // arbitrary order.
-func Compare(equals Equals, declared []meta_v1.Object, existing []meta_v1.Object) []*Diff {
+func Compare(equals Equals, declared []metav1.Object, existing []metav1.Object) []*Diff {
 	var diffs []*Diff
 
-	decls := map[string]meta_v1.Object{}
+	decls := map[string]metav1.Object{}
 	for _, decl := range declared {
 		name := decl.GetName()
 		if _, found := decls[name]; found {
@@ -80,7 +80,7 @@ func Compare(equals Equals, declared []meta_v1.Object, existing []meta_v1.Object
 		decls[name] = decl
 	}
 
-	actuals := map[string]meta_v1.Object{}
+	actuals := map[string]metav1.Object{}
 	for _, item := range existing {
 		actuals[item.GetName()] = item
 	}

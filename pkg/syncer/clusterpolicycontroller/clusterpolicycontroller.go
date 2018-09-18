@@ -21,9 +21,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	typed_v1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
-	policyhierarchy_lister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	typedv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
+	policyhierarchylister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/object"
 	"github.com/google/nomos/pkg/syncer/args"
@@ -38,8 +38,8 @@ import (
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	core_v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 )
@@ -52,8 +52,8 @@ const (
 // ClusterPolicyController syncs native Kubernetes resources with the policy
 // data in ClusterPolicies.
 type ClusterPolicyController struct {
-	client   typed_v1.NomosV1Interface
-	lister   policyhierarchy_lister.ClusterPolicyLister
+	client   typedv1.NomosV1Interface
+	lister   policyhierarchylister.ClusterPolicyLister
 	modules  []Module
 	recorder record.EventRecorder
 }
@@ -61,7 +61,7 @@ type ClusterPolicyController struct {
 // informerProvider is here to reduce some amount of redundancy with registering informer providers
 // with the controller manager.
 type informerProvider struct {
-	instance         meta_v1.Object
+	instance         metav1.Object
 	informerProvider informers.InformerProvider
 }
 
@@ -84,7 +84,7 @@ func NewController(
 	}
 
 	informerProviders := []informerProvider{
-		{&policyhierarchy_v1.ClusterPolicy{}, informer},
+		{&policyhierarchyv1.ClusterPolicy{}, informer},
 	}
 
 	for _, m := range modules {
@@ -101,7 +101,7 @@ func NewController(
 		}
 	}
 
-	err := genericController.WatchTransformationOf(&policyhierarchy_v1.ClusterPolicy{}, eventhandlers.MapToSelf)
+	err := genericController.WatchTransformationOf(&policyhierarchyv1.ClusterPolicy{}, eventhandlers.MapToSelf)
 	if err != nil {
 		panic(errors.Wrap(err, "programmer error while adding WatchInstanceOf for ClusterPolicies"))
 	}
@@ -129,8 +129,8 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 		return errors.Wrapf(err, "failed to look up clusterpolicy, %s, for reconciliation", name)
 	}
 
-	if name != policyhierarchy_v1.ClusterPolicyName {
-		s.recorder.Eventf(cp, core_v1.EventTypeWarning, "InvalidClusterPolicy",
+	if name != policyhierarchyv1.ClusterPolicyName {
+		s.recorder.Eventf(cp, corev1.EventTypeWarning, "InvalidClusterPolicy",
 			"ClusterPolicy resource has invalid name %s", name)
 		glog.Warningf("ClusterPolicy resource has invalid name %s", name)
 		// Return nil since we don't want kubebuilder to queue a retry for this object.
@@ -139,8 +139,8 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 	return s.managePolicies(cp)
 }
 
-func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterPolicy) error {
-	var syncErrs []policyhierarchy_v1.ClusterPolicySyncError
+func (s *ClusterPolicyController) managePolicies(cp *policyhierarchyv1.ClusterPolicy) error {
+	var syncErrs []policyhierarchyv1.ClusterPolicySyncError
 	errBuilder := multierror.NewBuilder()
 	reconcileCount := 0
 	for _, module := range s.modules {
@@ -150,9 +150,9 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterP
 			// Identify the ClusterPolicy that is managing this resource.
 			blockOwnerDeletion := true
 			controller := true
-			declaredInstances[idx].SetOwnerReferences([]meta_v1.OwnerReference{
+			declaredInstances[idx].SetOwnerReferences([]metav1.OwnerReference{
 				{
-					APIVersion:         policyhierarchy_v1.SchemeGroupVersion.String(),
+					APIVersion:         policyhierarchyv1.SchemeGroupVersion.String(),
 					Kind:               "ClusterPolicy",
 					Name:               cp.Name,
 					UID:                cp.UID,
@@ -185,32 +185,32 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchy_v1.ClusterP
 	}
 	if err := s.setClusterPolicyStatus(cp, syncErrs); err != nil {
 		errBuilder.Add(errors.Wrapf(err, "failed to set status for %s", cp.Name))
-		s.recorder.Eventf(cp, core_v1.EventTypeWarning, "StatusUpdateFailed",
+		s.recorder.Eventf(cp, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update ClusterPolicy status: %s", err)
 	}
 	if errBuilder.Len() == 0 && reconcileCount > 0 {
-		s.recorder.Eventf(cp, core_v1.EventTypeNormal, "ReconcileComplete",
+		s.recorder.Eventf(cp, corev1.EventTypeNormal, "ReconcileComplete",
 			"ClusterPolicy was successfully reconciled: %d changes", reconcileCount)
 	}
 	return errBuilder.Build()
 }
 
-func (s *ClusterPolicyController) setClusterPolicyStatus(cp *policyhierarchy_v1.ClusterPolicy, errs []policyhierarchy_v1.ClusterPolicySyncError) error {
+func (s *ClusterPolicyController) setClusterPolicyStatus(cp *policyhierarchyv1.ClusterPolicy, errs []policyhierarchyv1.ClusterPolicySyncError) error {
 	if cp.Status.SyncState.IsSynced() && len(errs) == 0 {
 		glog.Infof("Status for ClusterPolicy %s is already up-to-date.", cp.Name)
 		return nil
 	}
 	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
 	updateCB := func(old runtime.Object) (runtime.Object, error) {
-		oldCP := old.(*policyhierarchy_v1.ClusterPolicy)
+		oldCP := old.(*policyhierarchyv1.ClusterPolicy)
 		newCP := oldCP.DeepCopy()
 		newCP.Status.SyncToken = cp.Spec.ImportToken
-		newCP.Status.SyncTime = meta_v1.Now()
+		newCP.Status.SyncTime = metav1.Now()
 		newCP.Status.SyncErrors = errs
 		if len(errs) > 0 {
-			newCP.Status.SyncState = policyhierarchy_v1.StateError
+			newCP.Status.SyncState = policyhierarchyv1.StateError
 		} else {
-			newCP.Status.SyncState = policyhierarchy_v1.StateSynced
+			newCP.Status.SyncState = policyhierarchyv1.StateSynced
 		}
 		return newCP, nil
 	}
@@ -219,8 +219,8 @@ func (s *ClusterPolicyController) setClusterPolicyStatus(cp *policyhierarchy_v1.
 	return ua.Execute()
 }
 
-func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchy_v1.ClusterPolicySyncError {
-	return policyhierarchy_v1.ClusterPolicySyncError{
+func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchyv1.ClusterPolicySyncError {
+	return policyhierarchyv1.ClusterPolicySyncError{
 		ResourceName: name,
 		ResourceKind: spec.Resource,
 		ResourceAPI:  spec.GroupVersion.String(),
@@ -248,5 +248,5 @@ func execute(diff *comparator.Diff, spec *action.ReflectiveActionSpec) error {
 }
 
 func mapToClusterPolicy(obj interface{}) string {
-	return policyhierarchy_v1.ClusterPolicyName
+	return policyhierarchyv1.ClusterPolicyName
 }

@@ -23,17 +23,17 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type TestObject struct {
-	meta_v1.ObjectMeta
-	meta_v1.TypeMeta
+	metav1.ObjectMeta
+	metav1.TypeMeta
 
 	value string
 }
 
-func testEquals(lhsObj meta_v1.Object, rhsObj meta_v1.Object) bool {
+func testEquals(lhsObj metav1.Object, rhsObj metav1.Object) bool {
 	lhs := lhsObj.(*TestObject)
 	rhs := rhsObj.(*TestObject)
 	return lhs.value == rhs.value
@@ -46,9 +46,9 @@ type TestItem struct {
 	annotations map[string]string
 }
 
-func (t TestItem) Object() meta_v1.Object {
+func (t TestItem) Object() metav1.Object {
 	return &TestObject{
-		ObjectMeta: meta_v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:        t.name,
 			Labels:      t.labels,
 			Annotations: t.annotations,
@@ -59,8 +59,8 @@ func (t TestItem) Object() meta_v1.Object {
 
 type TestItems []TestItem
 
-func (t TestItems) Objects() []meta_v1.Object {
-	ret := make([]meta_v1.Object, len(t))
+func (t TestItems) Objects() []metav1.Object {
+	ret := make([]metav1.Object, len(t))
 	for idx, item := range t {
 		ret[idx] = item.Object()
 	}

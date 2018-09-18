@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
@@ -34,10 +34,10 @@ func fakeEqual(lhs runtime.Object, rhs runtime.Object) bool {
 }
 
 func TestSpecListNamespaced(t *testing.T) {
-	roles := []*rbac_v1.Role{
-		&rbac_v1.Role{ObjectMeta: meta_v1.ObjectMeta{Namespace: "ns", Name: "role-1"}},
-		&rbac_v1.Role{ObjectMeta: meta_v1.ObjectMeta{Namespace: "ns", Name: "role-2"}},
-		&rbac_v1.Role{ObjectMeta: meta_v1.ObjectMeta{Namespace: "ns", Name: "role-3"}},
+	roles := []*rbacv1.Role{
+		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "role-1"}},
+		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "role-2"}},
+		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "role-3"}},
 	}
 	var objs []runtime.Object
 	for _, role := range roles {
@@ -47,7 +47,7 @@ func TestSpecListNamespaced(t *testing.T) {
 	client := fake.NewSimpleClientset(objs...)
 	factory := informers.NewSharedInformerFactory(client, time.Second*10)
 	lister := factory.Rbac().V1().Roles().Lister()
-	roleSpec := NewSpec(&rbac_v1.Role{}, rbac_v1.SchemeGroupVersion, fakeEqual, client.RbacV1(), lister)
+	roleSpec := NewSpec(&rbacv1.Role{}, rbacv1.SchemeGroupVersion, fakeEqual, client.RbacV1(), lister)
 
 	factory.Start(nil)
 	factory.WaitForCacheSync(nil)
@@ -58,7 +58,7 @@ func TestSpecListNamespaced(t *testing.T) {
 	}
 	names := []string{}
 	for _, obj := range listObjs {
-		names = append(names, obj.(meta_v1.Object).GetName())
+		names = append(names, obj.(metav1.Object).GetName())
 	}
 	sort.Strings(names)
 	expect := []string{"role-1", "role-2", "role-3"}
@@ -68,10 +68,10 @@ func TestSpecListNamespaced(t *testing.T) {
 }
 
 func TestSpecListCluster(t *testing.T) {
-	clusterRoles := []*rbac_v1.ClusterRole{
-		&rbac_v1.ClusterRole{ObjectMeta: meta_v1.ObjectMeta{Name: "cluster-1"}},
-		&rbac_v1.ClusterRole{ObjectMeta: meta_v1.ObjectMeta{Name: "cluster-2"}},
-		&rbac_v1.ClusterRole{ObjectMeta: meta_v1.ObjectMeta{Name: "cluster-3"}},
+	clusterRoles := []*rbacv1.ClusterRole{
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "cluster-1"}},
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "cluster-2"}},
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "cluster-3"}},
 	}
 	var objs []runtime.Object
 	for _, clusterRole := range clusterRoles {
@@ -80,7 +80,7 @@ func TestSpecListCluster(t *testing.T) {
 	client := fake.NewSimpleClientset(objs...)
 	factory := informers.NewSharedInformerFactory(client, time.Second*10)
 	lister := factory.Rbac().V1().ClusterRoles().Lister()
-	clusterRoleSpec := NewSpec(&rbac_v1.ClusterRole{}, rbac_v1.SchemeGroupVersion, fakeEqual, client.RbacV1(), lister)
+	clusterRoleSpec := NewSpec(&rbacv1.ClusterRole{}, rbacv1.SchemeGroupVersion, fakeEqual, client.RbacV1(), lister)
 
 	factory.Start(nil)
 	factory.WaitForCacheSync(nil)
@@ -91,7 +91,7 @@ func TestSpecListCluster(t *testing.T) {
 	}
 	names := []string{}
 	for _, obj := range listObjs {
-		names = append(names, obj.(meta_v1.Object).GetName())
+		names = append(names, obj.(metav1.Object).GetName())
 	}
 	sort.Strings(names)
 	expect := []string{"cluster-1", "cluster-2", "cluster-3"}

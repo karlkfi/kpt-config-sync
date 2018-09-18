@@ -18,9 +18,9 @@ import (
 	"reflect"
 	"testing"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
-	rbac_v1 "k8s.io/api/rbac/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 type UnpackTest struct {
@@ -31,7 +31,7 @@ type UnpackTest struct {
 }
 
 func (u *UnpackTest) Run(t *testing.T) {
-	cp := &policyhierarchy_v1.ClusterPolicy{}
+	cp := &policyhierarchyv1.ClusterPolicy{}
 	cpsVal := reflect.ValueOf(&cp.Spec).Elem()
 	listVal := cpsVal.FieldByName(u.field)
 	newListVal := reflect.New(listVal.Type()).Elem()
@@ -98,8 +98,8 @@ func TestRoleBindingsEqual(t *testing.T) {
 	clusterRolesModule := NewClusterRoleBindings(nil, nil)
 	testCases := []struct {
 		name         string
-		roleBindingL *rbac_v1.ClusterRoleBinding
-		roleBindingR *rbac_v1.ClusterRoleBinding
+		roleBindingL *rbacv1.ClusterRoleBinding
+		roleBindingR *rbacv1.ClusterRoleBinding
 		wantEqual    bool
 	}{
 		{
@@ -108,31 +108,31 @@ func TestRoleBindingsEqual(t *testing.T) {
 		},
 		{
 			name:         "empty rolebindings",
-			roleBindingL: &rbac_v1.ClusterRoleBinding{},
-			roleBindingR: &rbac_v1.ClusterRoleBinding{},
+			roleBindingL: &rbacv1.ClusterRoleBinding{},
+			roleBindingR: &rbacv1.ClusterRoleBinding{},
 			wantEqual:    true,
 		},
 		{
 			name: "nil vs empty subjects",
-			roleBindingL: &rbac_v1.ClusterRoleBinding{
-				Subjects: []rbac_v1.Subject{},
+			roleBindingL: &rbacv1.ClusterRoleBinding{
+				Subjects: []rbacv1.Subject{},
 			},
-			roleBindingR: &rbac_v1.ClusterRoleBinding{},
+			roleBindingR: &rbacv1.ClusterRoleBinding{},
 			wantEqual:    true,
 		},
 		{
 			name: "different RoleRefs",
-			roleBindingL: &rbac_v1.ClusterRoleBinding{
-				Subjects: []rbac_v1.Subject{},
-				RoleRef: rbac_v1.RoleRef{
+			roleBindingL: &rbacv1.ClusterRoleBinding{
+				Subjects: []rbacv1.Subject{},
+				RoleRef: rbacv1.RoleRef{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Role",
 					Name:     "admin",
 				},
 			},
-			roleBindingR: &rbac_v1.ClusterRoleBinding{
-				Subjects: []rbac_v1.Subject{},
-				RoleRef: rbac_v1.RoleRef{
+			roleBindingR: &rbacv1.ClusterRoleBinding{
+				Subjects: []rbacv1.Subject{},
+				RoleRef: rbacv1.RoleRef{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Role",
 					Name:     "readonly",
@@ -142,25 +142,25 @@ func TestRoleBindingsEqual(t *testing.T) {
 		},
 		{
 			name: "different subjects",
-			roleBindingL: &rbac_v1.ClusterRoleBinding{
-				Subjects: []rbac_v1.Subject{
+			roleBindingL: &rbacv1.ClusterRoleBinding{
+				Subjects: []rbacv1.Subject{
 					{
 						APIGroup: "rbac.authorization.k8s.io",
 						Kind:     "User",
 						Name:     "alice@megacorp.org",
 					},
 				},
-				RoleRef: rbac_v1.RoleRef{},
+				RoleRef: rbacv1.RoleRef{},
 			},
-			roleBindingR: &rbac_v1.ClusterRoleBinding{
-				Subjects: []rbac_v1.Subject{
+			roleBindingR: &rbacv1.ClusterRoleBinding{
+				Subjects: []rbacv1.Subject{
 					{
 						APIGroup: "rbac.authorization.k8s.io",
 						Kind:     "User",
 						Name:     "bob@megacorp.org",
 					},
 				},
-				RoleRef: rbac_v1.RoleRef{},
+				RoleRef: rbacv1.RoleRef{},
 			},
 			wantEqual: false,
 		},

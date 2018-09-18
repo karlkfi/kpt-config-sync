@@ -20,30 +20,30 @@ limitations under the License.
 package object
 
 import (
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// RuntimeToMeta converts a list of runtime.Object to a list of meta_v1.Object
-func RuntimeToMeta(runtimeObjs []runtime.Object) []meta_v1.Object {
-	metaObjs := make([]meta_v1.Object, len(runtimeObjs))
+// RuntimeToMeta converts a list of runtime.Object to a list of metav1.Object
+func RuntimeToMeta(runtimeObjs []runtime.Object) []metav1.Object {
+	metaObjs := make([]metav1.Object, len(runtimeObjs))
 	for idx := range runtimeObjs {
-		metaObjs[idx] = runtimeObjs[idx].(meta_v1.Object)
+		metaObjs[idx] = runtimeObjs[idx].(metav1.Object)
 	}
 	return metaObjs
 }
 
-// RuntimeToMetaMap converts a map of string to runtime.Object to a map of string to meta_v1.Object
-func RuntimeToMetaMap(runMap map[string]runtime.Object) map[string]meta_v1.Object {
-	metaMap := map[string]meta_v1.Object{}
+// RuntimeToMetaMap converts a map of string to runtime.Object to a map of string to metav1.Object
+func RuntimeToMetaMap(runMap map[string]runtime.Object) map[string]metav1.Object {
+	metaMap := map[string]metav1.Object{}
 	for k, v := range runMap {
-		metaMap[k] = v.(meta_v1.Object)
+		metaMap[k] = v.(metav1.Object)
 	}
 	return metaMap
 }
 
-// MetaToRuntime converts a list of meta_v1.Object to a list of runtime.Object
-func MetaToRuntime(metaObjs []meta_v1.Object) []runtime.Object {
+// MetaToRuntime converts a list of metav1.Object to a list of runtime.Object
+func MetaToRuntime(metaObjs []metav1.Object) []runtime.Object {
 	runtimeObjs := make([]runtime.Object, len(metaObjs))
 	for idx := range runtimeObjs {
 		runtimeObjs[idx] = metaObjs[idx].(runtime.Object)
@@ -51,8 +51,8 @@ func MetaToRuntime(metaObjs []meta_v1.Object) []runtime.Object {
 	return runtimeObjs
 }
 
-// MetaToRuntimeMap converts a map of string to meta_v1.Object to a map of string to runtime.Object
-func MetaToRuntimeMap(metaMap map[string]meta_v1.Object) map[string]runtime.Object {
+// MetaToRuntimeMap converts a map of string to metav1.Object to a map of string to runtime.Object
+func MetaToRuntimeMap(metaMap map[string]metav1.Object) map[string]runtime.Object {
 	runMap := map[string]runtime.Object{}
 	for k, v := range metaMap {
 		runMap[k] = v.(runtime.Object)

@@ -19,12 +19,12 @@ import (
 	"fmt"
 	"reflect"
 
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // Meta returns mutable TypeMeta and ObjectMeta fields from a runtime.Object.
-func Meta(obj runtime.Object) (*meta_v1.TypeMeta, *meta_v1.ObjectMeta) {
+func Meta(obj runtime.Object) (*metav1.TypeMeta, *metav1.ObjectMeta) {
 	objValue := reflect.ValueOf(obj)
 	if objValue.Type().Kind() != reflect.Ptr {
 		panic(fmt.Sprintf("Invalid type passed to Meta: %v", obj))
@@ -33,13 +33,13 @@ func Meta(obj runtime.Object) (*meta_v1.TypeMeta, *meta_v1.ObjectMeta) {
 		panic(fmt.Sprintf("Nil object passed to Meta"))
 	}
 
-	objElem := objValue.Elem()                                    // Dereference the pointer
-	typeMetaValue := objElem.FieldByName("TypeMeta")              // Get the TypeMeta field
-	objectMetaValue := objElem.FieldByName("ObjectMeta")          // Get the ObjectMeta field
-	typeMetaPtr := typeMetaValue.Addr()                           // Get a pointer to the TypeMeta field
-	objectMetaPtr := objectMetaValue.Addr()                       // Get a pointer to the ObjectMeta field
-	typeMeta := typeMetaPtr.Interface().(*meta_v1.TypeMeta)       // Cast the interface to a TypeMeta pointer
-	objectMeta := objectMetaPtr.Interface().(*meta_v1.ObjectMeta) // Cast the interface to an ObjectMeta pointer
+	objElem := objValue.Elem()                                   // Dereference the pointer
+	typeMetaValue := objElem.FieldByName("TypeMeta")             // Get the TypeMeta field
+	objectMetaValue := objElem.FieldByName("ObjectMeta")         // Get the ObjectMeta field
+	typeMetaPtr := typeMetaValue.Addr()                          // Get a pointer to the TypeMeta field
+	objectMetaPtr := objectMetaValue.Addr()                      // Get a pointer to the ObjectMeta field
+	typeMeta := typeMetaPtr.Interface().(*metav1.TypeMeta)       // Cast the interface to a TypeMeta pointer
+	objectMeta := objectMetaPtr.Interface().(*metav1.ObjectMeta) // Cast the interface to an ObjectMeta pointer
 	return typeMeta, objectMeta
 }
 

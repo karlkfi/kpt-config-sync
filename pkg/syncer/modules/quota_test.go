@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	test "github.com/google/nomos/pkg/syncer/policyhierarchycontroller/testing"
-	core_v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -30,80 +30,80 @@ func TestQuota(t *testing.T) {
 		Equals: test.ModuleEqualTestcases{
 			test.ModuleEqualTestcase{
 				Name:        "Both empty",
-				LHS:         &core_v1.ResourceQuota{},
-				RHS:         &core_v1.ResourceQuota{},
+				LHS:         &corev1.ResourceQuota{},
+				RHS:         &corev1.ResourceQuota{},
 				ExpectEqual: true,
 			},
 			test.ModuleEqualTestcase{
 				Name: "Ignores status",
-				LHS:  &core_v1.ResourceQuota{},
-				RHS: &core_v1.ResourceQuota{
-					Status: core_v1.ResourceQuotaStatus{
-						Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
+				LHS:  &corev1.ResourceQuota{},
+				RHS: &corev1.ResourceQuota{
+					Status: corev1.ResourceQuotaStatus{
+						Hard: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10")},
 					},
 				},
 				ExpectEqual: true,
 			},
 			test.ModuleEqualTestcase{
 				Name: "Nil / non nil empty maps equivalent",
-				LHS: &core_v1.ResourceQuota{
-					Spec: core_v1.ResourceQuotaSpec{},
+				LHS: &corev1.ResourceQuota{
+					Spec: corev1.ResourceQuotaSpec{},
 				},
-				RHS:         &core_v1.ResourceQuota{},
+				RHS:         &corev1.ResourceQuota{},
 				ExpectEqual: true,
 			},
 			test.ModuleEqualTestcase{
 				Name: "Equal Limits",
-				LHS: &core_v1.ResourceQuota{
-					Spec: core_v1.ResourceQuotaSpec{
-						Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
+				LHS: &corev1.ResourceQuota{
+					Spec: corev1.ResourceQuotaSpec{
+						Hard: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10")},
 					},
 				},
-				RHS: &core_v1.ResourceQuota{
-					Spec: core_v1.ResourceQuotaSpec{
-						Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
+				RHS: &corev1.ResourceQuota{
+					Spec: corev1.ResourceQuotaSpec{
+						Hard: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10")},
 					},
 				},
 				ExpectEqual: true,
 			},
 			test.ModuleEqualTestcase{
 				Name: "Equal Limits Int vs Float",
-				LHS: &core_v1.ResourceQuota{
-					Spec: core_v1.ResourceQuotaSpec{
-						Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
+				LHS: &corev1.ResourceQuota{
+					Spec: corev1.ResourceQuotaSpec{
+						Hard: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10")},
 					},
 				},
-				RHS: &core_v1.ResourceQuota{
-					Spec: core_v1.ResourceQuotaSpec{
-						Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10.0")},
+				RHS: &corev1.ResourceQuota{
+					Spec: corev1.ResourceQuotaSpec{
+						Hard: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10.0")},
 					},
 				},
 				ExpectEqual: true,
 			},
 			test.ModuleEqualTestcase{
 				Name: "Not equal Limits",
-				LHS: &core_v1.ResourceQuota{
-					Spec: core_v1.ResourceQuotaSpec{
-						Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
+				LHS: &corev1.ResourceQuota{
+					Spec: corev1.ResourceQuotaSpec{
+						Hard: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10")},
 					},
 				},
-				RHS: &core_v1.ResourceQuota{
-					Spec: core_v1.ResourceQuotaSpec{
-						Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("11")},
+				RHS: &corev1.ResourceQuota{
+					Spec: corev1.ResourceQuotaSpec{
+						Hard: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("11")},
 					},
 				},
 				ExpectEqual: false,
 			},
 			test.ModuleEqualTestcase{
 				Name: "Different keys",
-				LHS: &core_v1.ResourceQuota{
-					Spec: core_v1.ResourceQuotaSpec{
-						Hard: core_v1.ResourceList{core_v1.ResourceCPU: resource.MustParse("10")},
+				LHS: &corev1.ResourceQuota{
+					Spec: corev1.ResourceQuotaSpec{
+						Hard: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10")},
 					},
 				},
-				RHS: &core_v1.ResourceQuota{
-					Spec: core_v1.ResourceQuotaSpec{
-						Hard: core_v1.ResourceList{core_v1.ResourceMemory: resource.MustParse("11")},
+				RHS: &corev1.ResourceQuota{
+					Spec: corev1.ResourceQuotaSpec{
+						Hard: corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("11")},
 					},
 				},
 				ExpectEqual: false,

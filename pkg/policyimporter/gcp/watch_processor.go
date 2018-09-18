@@ -28,13 +28,13 @@ import (
 	"github.com/golang/glog"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	client_action "github.com/google/nomos/pkg/client/action"
+	clientaction "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -44,7 +44,7 @@ const (
 )
 
 type resourceType string
-type applicator func(client_action.Interface) error
+type applicator func(clientaction.Interface) error
 
 // ToK8SNameMap maps GCP Watch element names to Kubernetes resource names that correspond to those names.
 // Example: {"folders/456/PolicyNode": "folders-456"}
@@ -118,7 +118,7 @@ func (p *watchProcessor) process() ([]byte, error) {
 					return resumeMarker, errors.Wrapf(err, "failed in processing atomic group")
 				}
 				// Update the import times for all policy nodes and cluster policy.
-				time := meta_v1.Now()
+				time := metav1.Now()
 				for n, pn := range updatedPolicies.PolicyNodes {
 					pn.Spec.ImportTime = time
 					pn.Status.SyncState = v1.StateStale

@@ -20,17 +20,17 @@ import (
 	"reflect"
 
 	"github.com/google/nomos/pkg/client/action"
-	rbac_v1 "k8s.io/api/rbac/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	listers_rbac_v1 "k8s.io/client-go/listers/rbac/v1"
+	listersrbacv1 "k8s.io/client-go/listers/rbac/v1"
 )
 
 // RoleResource is an implementation of ResourceInterface for roles.
 type RoleResource struct {
 	client kubernetes.Interface
-	lister listers_rbac_v1.RoleLister
+	lister listersrbacv1.RoleLister
 }
 
 // RoleResource implements ResourceInterface
@@ -39,7 +39,7 @@ var _ ResourceInterface = &RoleResource{}
 // NewRoleResource creates a role binding resource from the kubernetes client objects.
 func NewRoleResource(
 	client kubernetes.Interface,
-	lister listers_rbac_v1.RoleLister) *RoleResource {
+	lister listersrbacv1.RoleLister) *RoleResource {
 	return &RoleResource{
 		client: client,
 		lister: lister,
@@ -63,8 +63,8 @@ func (s *RoleResource) Values(namespace string) (map[string]interface{}, error) 
 func NewRoleDeleteAction(
 	namespace, name string, roleResource *RoleResource) *action.ReflectiveDeleteAction {
 	spec := action.NewSpec(
-		new(rbac_v1.Role),
-		rbac_v1.SchemeGroupVersion,
+		new(rbacv1.Role),
+		rbacv1.SchemeGroupVersion,
 		RolesEqual,
 		roleResource.client.RbacV1(),
 		roleResource.lister)
@@ -73,10 +73,10 @@ func NewRoleDeleteAction(
 
 // NewRoleUpsertAction returns a new upsert action for role bindings.
 func NewRoleUpsertAction(
-	role *rbac_v1.Role, roleResource *RoleResource) *action.ReflectiveUpsertAction {
+	role *rbacv1.Role, roleResource *RoleResource) *action.ReflectiveUpsertAction {
 	spec := action.NewSpec(
-		new(rbac_v1.Role),
-		rbac_v1.SchemeGroupVersion,
+		new(rbacv1.Role),
+		rbacv1.SchemeGroupVersion,
 		RolesEqual,
 		roleResource.client.RbacV1(),
 		roleResource.lister)
@@ -85,7 +85,7 @@ func NewRoleUpsertAction(
 
 // RolesEqual returns true if the rules in two Role objects are equal.
 func RolesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lRole := lhs.(*rbac_v1.Role)
-	rRole := rhs.(*rbac_v1.Role)
+	lRole := lhs.(*rbacv1.Role)
+	rRole := rhs.(*rbacv1.Role)
 	return reflect.DeepEqual(lRole.Rules, rRole.Rules)
 }

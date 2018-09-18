@@ -7,9 +7,9 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/cli"
 	"github.com/google/nomos/pkg/client/meta/fake"
-	core_v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	client_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 type namespaceConfig struct {
@@ -17,7 +17,7 @@ type namespaceConfig struct {
 	parent string
 }
 
-func setUpNamespaces(t *testing.T, client client_v1.NamespaceInterface) {
+func setUpNamespaces(t *testing.T, client clientv1.NamespaceInterface) {
 
 	for _, ns := range []namespaceConfig{
 		{
@@ -33,16 +33,16 @@ func setUpNamespaces(t *testing.T, client client_v1.NamespaceInterface) {
 			parent: "",
 		},
 	} {
-		_, err := client.Create(&core_v1.Namespace{
-			ObjectMeta: meta_v1.ObjectMeta{Name: ns.name,
+		_, err := client.Create(&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{Name: ns.name,
 				Labels: map[string]string{v1.ParentLabelKey: ns.parent}}})
 		if err != nil {
 			t.Errorf("Failed to create initial state: %v", err)
 		}
 	}
 
-	_, err := client.Create(&core_v1.Namespace{
-		ObjectMeta: meta_v1.ObjectMeta{Name: "default"}})
+	_, err := client.Create(&corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "default"}})
 	if err != nil {
 		t.Errorf("Failed to create initial state: %v", err)
 	}
@@ -100,8 +100,8 @@ func runNamespaceActions(
 	t *testing.T,
 	testFunction func(
 		fakeClient *fake.Client,
-		namespaceInterface client_v1.NamespaceInterface,
-		namespace string) ([]*core_v1.Namespace, bool, error),
+		namespaceInterface clientv1.NamespaceInterface,
+		namespace string) ([]*corev1.Namespace, bool, error),
 ) {
 	fakeClient := fake.NewClient()
 	client := fakeClient.Kubernetes().CoreV1().Namespaces()
@@ -142,8 +142,8 @@ func runNamespaceActions(
 func TestNamespaceActions(t *testing.T) {
 	runNamespaceActions(t, func(
 		fakeClient *fake.Client,
-		namespaceInterface client_v1.NamespaceInterface,
-		namespace string) ([]*core_v1.Namespace, bool, error) {
+		namespaceInterface clientv1.NamespaceInterface,
+		namespace string) ([]*corev1.Namespace, bool, error) {
 		return GetAncestry(namespaceInterface, namespace)
 	})
 }
@@ -151,8 +151,8 @@ func TestNamespaceActions(t *testing.T) {
 func TestNamespaceActionsFromClient(t *testing.T) {
 	runNamespaceActions(t, func(
 		fakeClient *fake.Client,
-		namespaceInterface client_v1.NamespaceInterface,
-		namespace string) ([]*core_v1.Namespace, bool, error) {
+		namespaceInterface clientv1.NamespaceInterface,
+		namespace string) ([]*corev1.Namespace, bool, error) {
 		ctx := cli.CommandContext{
 			Client:    fakeClient,
 			Namespace: namespace,

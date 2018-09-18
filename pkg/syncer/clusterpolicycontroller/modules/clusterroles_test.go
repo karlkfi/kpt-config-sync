@@ -16,8 +16,8 @@ package modules
 import (
 	"testing"
 
-	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestRolesUnpack(t *testing.T) {
@@ -50,8 +50,8 @@ func TestRolesEqual(t *testing.T) {
 	clusterRolesModule := NewClusterRoles(nil, nil)
 	testCases := []struct {
 		name         string
-		clusterRoleL *rbac_v1.ClusterRole
-		clusterRoleR *rbac_v1.ClusterRole
+		clusterRoleL *rbacv1.ClusterRole
+		clusterRoleR *rbacv1.ClusterRole
 		wantEqual    bool
 	}{
 		{
@@ -60,11 +60,11 @@ func TestRolesEqual(t *testing.T) {
 		},
 		{
 			name: "different rules",
-			clusterRoleL: &rbac_v1.ClusterRole{
-				ObjectMeta: meta_v1.ObjectMeta{
+			clusterRoleL: &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "admin",
 				},
-				Rules: []rbac_v1.PolicyRule{
+				Rules: []rbacv1.PolicyRule{
 					{
 						Verbs:     []string{"*"},
 						APIGroups: []string{"*"},
@@ -72,11 +72,11 @@ func TestRolesEqual(t *testing.T) {
 					},
 				},
 			},
-			clusterRoleR: &rbac_v1.ClusterRole{
-				ObjectMeta: meta_v1.ObjectMeta{
+			clusterRoleR: &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "readonly",
 				},
-				Rules: []rbac_v1.PolicyRule{
+				Rules: []rbacv1.PolicyRule{
 					{
 						Verbs:     []string{"get list"},
 						APIGroups: []string{"*"},
@@ -88,12 +88,12 @@ func TestRolesEqual(t *testing.T) {
 		},
 		{
 			name: "different aggregation rules",
-			clusterRoleL: &rbac_v1.ClusterRole{
-				ObjectMeta: meta_v1.ObjectMeta{
+			clusterRoleL: &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "admin",
 				},
-				AggregationRule: &rbac_v1.AggregationRule{
-					ClusterRoleSelectors: []meta_v1.LabelSelector{
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
 						{
 							MatchLabels: map[string]string{
 								"rbac.authorization.k8s.io/aggregate-to-edit": "true",
@@ -102,12 +102,12 @@ func TestRolesEqual(t *testing.T) {
 					},
 				},
 			},
-			clusterRoleR: &rbac_v1.ClusterRole{
-				ObjectMeta: meta_v1.ObjectMeta{
+			clusterRoleR: &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "admin",
 				},
-				AggregationRule: &rbac_v1.AggregationRule{
-					ClusterRoleSelectors: []meta_v1.LabelSelector{
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
 						{
 							MatchLabels: map[string]string{
 								"rbac.authorization.k8s.io/aggregate-to-view": "true",
@@ -120,12 +120,12 @@ func TestRolesEqual(t *testing.T) {
 		},
 		{
 			name: "different aggregation rules, same rules",
-			clusterRoleL: &rbac_v1.ClusterRole{
-				ObjectMeta: meta_v1.ObjectMeta{
+			clusterRoleL: &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "admin",
 				},
-				AggregationRule: &rbac_v1.AggregationRule{
-					ClusterRoleSelectors: []meta_v1.LabelSelector{
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
 						{
 							MatchLabels: map[string]string{
 								"rbac.authorization.k8s.io/aggregate-to-edit": "true",
@@ -133,7 +133,7 @@ func TestRolesEqual(t *testing.T) {
 						},
 					},
 				},
-				Rules: []rbac_v1.PolicyRule{
+				Rules: []rbacv1.PolicyRule{
 					{
 						Verbs:     []string{"get list"},
 						APIGroups: []string{"*"},
@@ -141,12 +141,12 @@ func TestRolesEqual(t *testing.T) {
 					},
 				},
 			},
-			clusterRoleR: &rbac_v1.ClusterRole{
-				ObjectMeta: meta_v1.ObjectMeta{
+			clusterRoleR: &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "admin",
 				},
-				AggregationRule: &rbac_v1.AggregationRule{
-					ClusterRoleSelectors: []meta_v1.LabelSelector{
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
 						{
 							MatchLabels: map[string]string{
 								"rbac.authorization.k8s.io/aggregate-to-view": "true",
@@ -154,7 +154,7 @@ func TestRolesEqual(t *testing.T) {
 						},
 					},
 				},
-				Rules: []rbac_v1.PolicyRule{
+				Rules: []rbacv1.PolicyRule{
 					{
 						Verbs:     []string{"get list"},
 						APIGroups: []string{"*"},
@@ -166,12 +166,12 @@ func TestRolesEqual(t *testing.T) {
 		},
 		{
 			name: "same aggregation rules, same rules",
-			clusterRoleL: &rbac_v1.ClusterRole{
-				ObjectMeta: meta_v1.ObjectMeta{
+			clusterRoleL: &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "admin",
 				},
-				AggregationRule: &rbac_v1.AggregationRule{
-					ClusterRoleSelectors: []meta_v1.LabelSelector{
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
 						{
 							MatchLabels: map[string]string{
 								"rbac.authorization.k8s.io/aggregate-to-view": "true",
@@ -179,7 +179,7 @@ func TestRolesEqual(t *testing.T) {
 						},
 					},
 				},
-				Rules: []rbac_v1.PolicyRule{
+				Rules: []rbacv1.PolicyRule{
 					{
 						Verbs:     []string{"get list"},
 						APIGroups: []string{"*"},
@@ -187,12 +187,12 @@ func TestRolesEqual(t *testing.T) {
 					},
 				},
 			},
-			clusterRoleR: &rbac_v1.ClusterRole{
-				ObjectMeta: meta_v1.ObjectMeta{
+			clusterRoleR: &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "admin",
 				},
-				AggregationRule: &rbac_v1.AggregationRule{
-					ClusterRoleSelectors: []meta_v1.LabelSelector{
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
 						{
 							MatchLabels: map[string]string{
 								"rbac.authorization.k8s.io/aggregate-to-view": "true",
@@ -200,7 +200,7 @@ func TestRolesEqual(t *testing.T) {
 						},
 					},
 				},
-				Rules: []rbac_v1.PolicyRule{
+				Rules: []rbacv1.PolicyRule{
 					{
 						Verbs:     []string{"get list"},
 						APIGroups: []string{"*"},

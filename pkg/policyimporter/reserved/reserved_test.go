@@ -21,7 +21,7 @@ import (
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/pkg/errors"
 	"k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestReservedNamespaces(t *testing.T) {
@@ -33,7 +33,7 @@ func TestReservedNamespaces(t *testing.T) {
 		{
 			name: "valid",
 			configMap: &v1.ConfigMap{
-				ObjectMeta: meta_v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: policyhierarchyv1.ReservedNamespacesConfigMapName,
 				},
 				Data: map[string]string{
@@ -46,7 +46,7 @@ func TestReservedNamespaces(t *testing.T) {
 		{
 			name: "invalid attribute",
 			configMap: &v1.ConfigMap{
-				ObjectMeta: meta_v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: policyhierarchyv1.ReservedNamespacesConfigMapName,
 				},
 				Data: map[string]string{
@@ -60,7 +60,7 @@ func TestReservedNamespaces(t *testing.T) {
 		{
 			name: "invalid namespace name",
 			configMap: &v1.ConfigMap{
-				ObjectMeta: meta_v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: policyhierarchyv1.ReservedNamespacesConfigMapName,
 				},
 				Data: map[string]string{
@@ -74,7 +74,7 @@ func TestReservedNamespaces(t *testing.T) {
 		{
 			name: "invalid configmap name",
 			configMap: &v1.ConfigMap{
-				ObjectMeta: meta_v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "some-incorrect-name",
 				},
 				Data: map[string]string{
@@ -99,7 +99,7 @@ func TestReservedNamespaces(t *testing.T) {
 
 func TestIsReservedNamespace(t *testing.T) {
 	configMap := &v1.ConfigMap{
-		ObjectMeta: meta_v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: policyhierarchyv1.ReservedNamespacesConfigMapName,
 		},
 		Data: map[string]string{

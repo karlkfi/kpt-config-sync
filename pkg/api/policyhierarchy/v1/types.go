@@ -17,9 +17,9 @@ limitations under the License.
 package v1
 
 import (
-	core_v1 "k8s.io/api/core/v1"
-	extensions_v1beta1 "k8s.io/api/extensions/v1beta1"
-	rbac_v1 "k8s.io/api/rbac/v1"
+	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -53,13 +53,13 @@ type ClusterPolicy struct {
 // +protobuf=true
 type ClusterPolicySpec struct {
 	// +optional
-	ClusterRolesV1 []rbac_v1.ClusterRole `json:"clusterRolesV1,omitempty" protobuf:"bytes,1,rep,name=clusterRolesV1"`
+	ClusterRolesV1 []rbacv1.ClusterRole `json:"clusterRolesV1,omitempty" protobuf:"bytes,1,rep,name=clusterRolesV1"`
 
 	// +optional
-	ClusterRoleBindingsV1 []rbac_v1.ClusterRoleBinding `json:"clusterRoleBindingsV1,omitempty" protobuf:"bytes,2,rep,name=clusterRoleBindingsV1"`
+	ClusterRoleBindingsV1 []rbacv1.ClusterRoleBinding `json:"clusterRoleBindingsV1,omitempty" protobuf:"bytes,2,rep,name=clusterRoleBindingsV1"`
 
 	// +optional
-	PodSecurityPoliciesV1Beta1 []extensions_v1beta1.PodSecurityPolicy `json:"podSecurityPolicyV1Beta1,omitempty" protobuf:"bytes,3,rep,name=podSecurityPolicyV1Beta1"`
+	PodSecurityPoliciesV1Beta1 []extensionsv1beta1.PodSecurityPolicy `json:"podSecurityPolicyV1Beta1,omitempty" protobuf:"bytes,3,rep,name=podSecurityPolicyV1Beta1"`
 
 	// ImportToken indicates the version of the ClusterPolicy last imported from the source of truth.
 	// +optional
@@ -166,13 +166,13 @@ type PolicyNodeSpec struct {
 	Parent string `json:"parent,omitempty" protobuf:"bytes,2,opt,name=parent"`
 
 	// +optional
-	RolesV1 []rbac_v1.Role `json:"rolesV1,omitempty" protobuf:"bytes,3,rep,name=rolesV1"`
+	RolesV1 []rbacv1.Role `json:"rolesV1,omitempty" protobuf:"bytes,3,rep,name=rolesV1"`
 
 	// +optional
-	RoleBindingsV1 []rbac_v1.RoleBinding `json:"roleBindingsV1,omitempty" protobuf:"bytes,4,rep,name=roleBindingsV1"`
+	RoleBindingsV1 []rbacv1.RoleBinding `json:"roleBindingsV1,omitempty" protobuf:"bytes,4,rep,name=roleBindingsV1"`
 
 	// +optional
-	ResourceQuotaV1 *core_v1.ResourceQuota `json:"resourceQuotaV1,omitempty" protobuf:"bytes,5,opt,name=resourceQuotaV1"`
+	ResourceQuotaV1 *corev1.ResourceQuota `json:"resourceQuotaV1,omitempty" protobuf:"bytes,5,opt,name=resourceQuotaV1"`
 
 	// ImportToken indicates the version of the PolicyNode last imported from the source of truth.
 	// +optional

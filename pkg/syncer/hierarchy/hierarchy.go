@@ -24,12 +24,12 @@ import (
 
 	"strings"
 
-	policyhierarchyinformer_v1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
-	policyhierarchylister_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyinformerv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	policyhierarchylisterv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/parentindexer"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -76,7 +76,7 @@ func IsConsistencyError(err error) bool {
 }
 
 // Instances represents all nodes in an AggregatedNode.
-type Instances []meta_v1.Object
+type Instances []metav1.Object
 
 // Len implements sort.Interface
 func (m Instances) Len() int {
@@ -102,7 +102,7 @@ func (m Instances) Sort() {
 type AggregatedNode interface {
 	// Aggregated produces the result of aggregating the current node with a policy node that is a
 	// child of the current node.
-	Aggregated(node *policyhierarchy_v1.PolicyNode) AggregatedNode
+	Aggregated(node *policyhierarchyv1.PolicyNode) AggregatedNode
 
 	// Generate returns all policies that are specified by the aggregation operations.
 	Generate() Instances
@@ -113,7 +113,7 @@ type AggregatedNodeFactory func() AggregatedNode
 
 // Ancestry represents the ancestry of a given policy node where the 0'th element is the requested
 // node and last node is the root of the hierarchy.
-type Ancestry []*policyhierarchy_v1.PolicyNode
+type Ancestry []*policyhierarchyv1.PolicyNode
 
 // Aggregate takes an AggregatedNodeFactory and produces instances based on a hierarchical
 // evaluation.
@@ -126,7 +126,7 @@ func (s Ancestry) Aggregate(factory AggregatedNodeFactory) Instances {
 }
 
 // Node returns the node that was requested during the ancestry lookup.
-func (s Ancestry) Node() *policyhierarchy_v1.PolicyNode {
+func (s Ancestry) Node() *policyhierarchyv1.PolicyNode {
 	return s[0]
 }
 
@@ -150,8 +150,8 @@ func (s Ancestry) TokenMap() map[string]string {
 
 // BuildAncestries constructs an Ancestry for each leaf node in the given policy nodes. Returns an
 // error if the given nodes do not comprise the full hierarchy for the leaf nodes.
-func BuildAncestries(policyNodes []*policyhierarchy_v1.PolicyNode) ([]Ancestry, error) {
-	nodeMap := make(map[string]*policyhierarchy_v1.PolicyNode, len(policyNodes))
+func BuildAncestries(policyNodes []*policyhierarchyv1.PolicyNode) ([]Ancestry, error) {
+	nodeMap := make(map[string]*policyhierarchyv1.PolicyNode, len(policyNodes))
 	for _, pn := range policyNodes {
 		nodeMap[pn.Name] = pn
 	}
@@ -189,7 +189,7 @@ type Interface interface {
 
 // Hierarchy performs common operations involved in hierarchical evaluation.
 type Hierarchy struct {
-	lister   policyhierarchylister_v1.PolicyNodeLister
+	lister   policyhierarchylisterv1.PolicyNodeLister
 	informer cache.SharedIndexInformer
 }
 
@@ -197,7 +197,7 @@ type Hierarchy struct {
 var _ Interface = &Hierarchy{}
 
 // New returns new Hierarchy object.
-func New(informer policyhierarchyinformer_v1.PolicyNodeInformer) *Hierarchy {
+func New(informer policyhierarchyinformerv1.PolicyNodeInformer) *Hierarchy {
 	return &Hierarchy{
 		lister:   informer.Lister(),
 		informer: informer.Informer(),
@@ -210,7 +210,7 @@ func New(informer policyhierarchyinformer_v1.PolicyNodeInformer) *Hierarchy {
 func (s *Hierarchy) Ancestry(name string) (Ancestry, error) {
 	node, err := s.lister.Get(name)
 	if err != nil {
-		if api_errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return nil, &NotFoundError{name}
 		}
 		panic("Lister returned error other than not found, this should not happen")
@@ -222,7 +222,7 @@ func (s *Hierarchy) Ancestry(name string) (Ancestry, error) {
 	for current != "" {
 		node, err = s.lister.Get(current)
 		if err != nil {
-			if api_errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return nil, &ConsistencyError{
 					errType: "not found", ancestry: ancestry, missing: current}
 			}
@@ -251,7 +251,7 @@ func (s *Hierarchy) Ancestry(name string) (Ancestry, error) {
 // it's not possible to detect an incomplete hierarchy.
 func (s *Hierarchy) Subtree(name string) ([]string, error) {
 	if _, err := s.lister.Get(name); err != nil {
-		if api_errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return nil, &NotFoundError{name}
 		}
 		panic("Lister returned error other than not found, this should not happen")

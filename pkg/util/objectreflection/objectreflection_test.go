@@ -18,13 +18,13 @@ package objectreflection
 import (
 	"testing"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestMeta(t *testing.T) {
-	orig := &policyhierarchy_v1.PolicyNode{}
+	orig := &policyhierarchyv1.PolicyNode{}
 	var obj runtime.Object = orig
 
 	aTypeMeta, aObjectMeta := Meta(obj)
@@ -37,8 +37,8 @@ func TestMeta(t *testing.T) {
 }
 
 func TestGetNamespaceAndName(t *testing.T) {
-	orig := &policyhierarchy_v1.PolicyNode{
-		ObjectMeta: meta_v1.ObjectMeta{
+	orig := &policyhierarchyv1.PolicyNode{
+		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "the-namespace",
 			Name:      "the-name",
 		},

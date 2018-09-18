@@ -23,8 +23,8 @@ import (
 	"github.com/golang/glog"
 	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
-	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter"
@@ -32,7 +32,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/git"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -45,8 +45,8 @@ type Controller struct {
 	parser              *Parser
 	differ              *actions.Differ
 	informerFactory     informer.SharedInformerFactory
-	policyNodeLister    listers_v1.PolicyNodeLister
-	clusterPolicyLister listers_v1.ClusterPolicyLister
+	policyNodeLister    listersv1.PolicyNodeLister
+	clusterPolicyLister listersv1.ClusterPolicyLister
 	stopChan            chan struct{}
 }
 
@@ -133,17 +133,17 @@ func (c *Controller) pollDir() error {
 			}
 
 			// Update the import tokens and times for all policy nodes and cluster policy.
-			time := meta_v1.Now()
+			time := metav1.Now()
 			for n := range desiredPolicies.PolicyNodes {
 				pn := desiredPolicies.PolicyNodes[n]
 				pn.Spec.ImportToken = token
 				pn.Spec.ImportTime = time
-				pn.Status.SyncState = policyhierarchy_v1.StateStale
+				pn.Status.SyncState = policyhierarchyv1.StateStale
 				desiredPolicies.PolicyNodes[n] = pn
 			}
 			desiredPolicies.ClusterPolicy.Spec.ImportToken = token
 			desiredPolicies.ClusterPolicy.Spec.ImportTime = time
-			desiredPolicies.ClusterPolicy.Status.SyncState = policyhierarchy_v1.StateStale
+			desiredPolicies.ClusterPolicy.Status.SyncState = policyhierarchyv1.StateStale
 
 			// Calculate the sequence of actions needed to transition from current to desired state.
 			actions := c.differ.Diff(*currentPolicies, *desiredPolicies)

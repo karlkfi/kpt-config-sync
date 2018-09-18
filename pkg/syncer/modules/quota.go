@@ -22,7 +22,7 @@ import (
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
-	controller_informers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
+	controllerinformers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -94,7 +94,7 @@ func (s *ResourceQuota) Instance() metav1.Object {
 }
 
 // InformerProvider implements policyhierarchycontroller.Module
-func (s *ResourceQuota) InformerProvider() controller_informers.InformerProvider {
+func (s *ResourceQuota) InformerProvider() controllerinformers.InformerProvider {
 	return s.informers.Core().V1().ResourceQuotas()
 }
 

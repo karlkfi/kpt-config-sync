@@ -32,7 +32,7 @@ import (
 	"github.com/pkg/errors"
 
 	"k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -361,7 +361,7 @@ func (i *Installer) Run(useCurrent bool) error {
 // DeletePolicyNodes deletes all policynodes that are in the hierarchy. If an error is encountered
 // while listing or deleting a node, the DeletePolicyNodes terminates immediately.
 func (i *Installer) DeletePolicyNodes() error {
-	pn, err := i.k.PolicyHierarchy().NomosV1().PolicyNodes().List(meta_v1.ListOptions{
+	pn, err := i.k.PolicyHierarchy().NomosV1().PolicyNodes().List(metav1.ListOptions{
 		IncludeUninitialized: true,
 	})
 
@@ -370,7 +370,7 @@ func (i *Installer) DeletePolicyNodes() error {
 	}
 
 	for _, n := range pn.Items {
-		err = i.k.PolicyHierarchy().NomosV1().PolicyNodes().Delete(n.Name, meta_v1.NewDeleteOptions(0))
+		err = i.k.PolicyHierarchy().NomosV1().PolicyNodes().Delete(n.Name, metav1.NewDeleteOptions(0))
 		if err != nil {
 			return errors.Wrapf(err, "error deleting policynode: %s", n.Name)
 		}
@@ -381,7 +381,7 @@ func (i *Installer) DeletePolicyNodes() error {
 // DeleteClusterPolicies deletes all cluster policies in the Hierarchy. If an error is encountered
 // while listing or deleting a node, the DeletePolicyNodes terminates immediately.
 func (i *Installer) DeleteClusterPolicies() error {
-	cp, err := i.k.PolicyHierarchy().NomosV1().ClusterPolicies().List(meta_v1.ListOptions{
+	cp, err := i.k.PolicyHierarchy().NomosV1().ClusterPolicies().List(metav1.ListOptions{
 		IncludeUninitialized: true,
 	})
 
@@ -390,7 +390,7 @@ func (i *Installer) DeleteClusterPolicies() error {
 	}
 
 	for _, p := range cp.Items {
-		err = i.k.PolicyHierarchy().NomosV1().ClusterPolicies().Delete(p.Name, meta_v1.NewDeleteOptions(0))
+		err = i.k.PolicyHierarchy().NomosV1().ClusterPolicies().Delete(p.Name, metav1.NewDeleteOptions(0))
 		if err != nil {
 			return errors.Wrapf(err, "error deleting clusterpolicy: %s", p.Name)
 		}
@@ -426,7 +426,7 @@ func names(crbl *v1.ClusterRoleBindingList, crl *v1.ClusterRoleList) []string {
 func (i *Installer) uninstallCluster() error {
 	// Remove admission webhooks.
 	vwcToDelete, err := i.k.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().List(
-		meta_v1.ListOptions{LabelSelector: nomosLabel})
+		metav1.ListOptions{LabelSelector: nomosLabel})
 	if err != nil {
 		return errors.Wrapf(err, "while listing webhook configurations to delete")
 	}
@@ -445,11 +445,11 @@ func (i *Installer) uninstallCluster() error {
 	// Remove all managed cluster role bindings.  The code below assumes that
 	// roles and role bindings are named the same, which is currently true.
 	crbToDelete, err := i.k.Kubernetes().RbacV1().ClusterRoleBindings().List(
-		meta_v1.ListOptions{LabelSelector: nomosLabel})
+		metav1.ListOptions{LabelSelector: nomosLabel})
 	if err != nil {
 		return errors.Wrapf(err, "while listing cluster role bindings to delete")
 	}
-	crToDelete, err := i.k.Kubernetes().RbacV1().ClusterRoles().List(meta_v1.ListOptions{LabelSelector: nomosLabel})
+	crToDelete, err := i.k.Kubernetes().RbacV1().ClusterRoles().List(metav1.ListOptions{LabelSelector: nomosLabel})
 	if err != nil {
 		return errors.Wrapf(err, "while listing cluster roles to delete")
 	}

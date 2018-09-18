@@ -23,7 +23,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/reserved"
 	"github.com/google/nomos/pkg/syncer/multierror"
 	"github.com/pkg/errors"
-	core_v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // InputValidator checks various filesystem constraints after loading into the tree format.
@@ -163,7 +163,7 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 // checkSingleResourceQuota ensures that at most one ResourceQuota object is present in each
 // directory.
 func (v *InputValidator) checkSingleResourceQuota(o *ast.Object) {
-	if o.Object.GetObjectKind().GroupVersionKind() != core_v1.SchemeGroupVersion.WithKind("ResourceQuota") {
+	if o.Object.GetObjectKind().GroupVersionKind() != corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
 		return
 	}
 	var path string

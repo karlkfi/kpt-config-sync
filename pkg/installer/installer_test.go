@@ -11,7 +11,7 @@ import (
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/kubectl"
 
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestImporterConfigMap(t *testing.T) {
@@ -182,21 +182,21 @@ func TestInstaller_DeleteClusterPolicies(t *testing.T) {
 	var err error
 	client := fake.NewClient()
 	_, err = client.PolicyHierarchy().NomosV1().ClusterPolicies().Create(&v1.ClusterPolicy{
-		ObjectMeta: meta_v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: p1name,
 		}})
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
 	_, err = client.PolicyHierarchy().NomosV1().ClusterPolicies().Create(&v1.ClusterPolicy{
-		ObjectMeta: meta_v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: p2name,
 		}})
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
 
-	cp, err := client.PolicyHierarchy().NomosV1().ClusterPolicies().List(meta_v1.ListOptions{
+	cp, err := client.PolicyHierarchy().NomosV1().ClusterPolicies().List(metav1.ListOptions{
 		IncludeUninitialized: true,
 	})
 	if err != nil {
@@ -215,7 +215,7 @@ func TestInstaller_DeleteClusterPolicies(t *testing.T) {
 		t.Error(err)
 	}
 
-	cp, err = client.PolicyHierarchy().NomosV1().ClusterPolicies().List(meta_v1.ListOptions{
+	cp, err = client.PolicyHierarchy().NomosV1().ClusterPolicies().List(metav1.ListOptions{
 		IncludeUninitialized: true,
 	})
 	if err != nil {
@@ -234,21 +234,21 @@ func TestInstaller_DeletePolicyNodes(t *testing.T) {
 	client := fake.NewClient()
 
 	_, err = client.PolicyHierarchy().NomosV1().PolicyNodes().Create(&v1.PolicyNode{
-		ObjectMeta: meta_v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: n1name,
 		}})
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
 	_, err = client.PolicyHierarchy().NomosV1().PolicyNodes().Create(&v1.PolicyNode{
-		ObjectMeta: meta_v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: n2name,
 		}})
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
 
-	pn, err := client.PolicyHierarchy().NomosV1().PolicyNodes().List(meta_v1.ListOptions{
+	pn, err := client.PolicyHierarchy().NomosV1().PolicyNodes().List(metav1.ListOptions{
 		IncludeUninitialized: true,
 	})
 	if err != nil {
@@ -267,7 +267,7 @@ func TestInstaller_DeletePolicyNodes(t *testing.T) {
 		t.Error(err)
 	}
 
-	pn, err = client.PolicyHierarchy().NomosV1().PolicyNodes().List(meta_v1.ListOptions{})
+	pn, err = client.PolicyHierarchy().NomosV1().PolicyNodes().List(metav1.ListOptions{})
 	if err != nil {
 		t.Errorf("error listing policy nodes: %v", err)
 	}

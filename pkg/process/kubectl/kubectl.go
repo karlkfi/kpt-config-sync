@@ -32,8 +32,8 @@ import (
 	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
 	"k8s.io/api/rbac/v1"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -97,7 +97,7 @@ func (t *Context) Apply(path string) error {
 
 // DeleteSecret deletes a secret from Kubernetes.
 func (t *Context) DeleteSecret(name, namespace string) error {
-	if err := t.Kubernetes().CoreV1().Secrets(namespace).Delete(name, &meta_v1.DeleteOptions{}); err != nil {
+	if err := t.Kubernetes().CoreV1().Secrets(namespace).Delete(name, &metav1.DeleteOptions{}); err != nil {
 		return errors.Wrapf(err, "delete secret name=%q, namespace=%q", name, namespace)
 	}
 	return nil
@@ -105,7 +105,7 @@ func (t *Context) DeleteSecret(name, namespace string) error {
 
 // DeleteConfigMap deletes a configmap from Kubernetes.
 func (t *Context) DeleteConfigMap(name, namespace string) error {
-	if err := t.Kubernetes().CoreV1().ConfigMaps(namespace).Delete(name, &meta_v1.DeleteOptions{}); err != nil {
+	if err := t.Kubernetes().CoreV1().ConfigMaps(namespace).Delete(name, &metav1.DeleteOptions{}); err != nil {
 		return errors.Wrapf(err, "delete configmap name=%q, namespace=%q", name, namespace)
 	}
 	return nil
@@ -113,7 +113,7 @@ func (t *Context) DeleteConfigMap(name, namespace string) error {
 
 // DeleteValidatingWebhookConfiguration deletes a validatingwebhookconfiguration from Kubernetes.
 func (t *Context) DeleteValidatingWebhookConfiguration(name string) error {
-	if err := t.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
+	if err := t.Kubernetes().AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrapf(err, "delete validatingwebhookconfiguration name=%q", name)
 	}
 	return nil
@@ -169,7 +169,7 @@ func (t *Context) AddClusterAdmin(user string) error {
 	}
 	name := clusterAdminRoleBindingName(user)
 	cr := &v1.ClusterRoleBinding{
-		ObjectMeta: meta_v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Subjects: []v1.Subject{{
@@ -191,7 +191,7 @@ func (t *Context) AddClusterAdmin(user string) error {
 // useful on GKE, and does nothing on other platforms.
 func (t *Context) RemoveClusterAdmin(user string) error {
 	name := clusterAdminRoleBindingName(user)
-	if err := t.Kubernetes().RbacV1().ClusterRoleBindings().Delete(name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
+	if err := t.Kubernetes().RbacV1().ClusterRoleBindings().Delete(name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrapf(err, "unmaking admin: %q", user)
 	}
 	return nil
@@ -280,14 +280,14 @@ func run(ctx context.Context, args []string) (stdout, stderr string, err error) 
 func (t *Context) waitForDeployment(deadline time.Time, namespace string, name string) error {
 	glog.V(2).Infof("Waiting for deployment %s to become available...", name)
 	deployment, err := t.Kubernetes().ExtensionsV1beta1().Deployments(
-		namespace).Get(name, meta_v1.GetOptions{})
+		namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "Error getting deployment %s:%s", namespace, name)
 	}
 	time.Sleep(time.Duration(deployment.Spec.MinReadySeconds) * time.Second)
 	for time.Now().Before(deadline) {
 		deployment, err = t.Kubernetes().ExtensionsV1beta1().Deployments(
-			namespace).Get(name, meta_v1.GetOptions{})
+			namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			return errors.Wrapf(err, "Error getting deployment %s:%s", namespace, name)
 		}
@@ -318,7 +318,7 @@ func (t *Context) WaitForDeployments(timeout time.Duration, ns string, deploymen
 // DeleteDeployment deletes a deployment in the given namespace.  No effect if
 // the deployment isn't already running.
 func (t *Context) DeleteDeployment(name, namespace string) error {
-	if err := t.Kubernetes().AppsV1().Deployments(namespace).Delete(name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
+	if err := t.Kubernetes().AppsV1().Deployments(namespace).Delete(name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrapf(err, "while deleting deployment: %v:%v", namespace, name)
 	}
 	return nil
@@ -326,7 +326,7 @@ func (t *Context) DeleteDeployment(name, namespace string) error {
 
 // DeleteNamespace deletes the supplied namespace.
 func (t *Context) DeleteNamespace(name string) error {
-	if err := t.Kubernetes().CoreV1().Namespaces().Delete(name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
+	if err := t.Kubernetes().CoreV1().Namespaces().Delete(name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrapf(err, "while deleting namespace: %q", name)
 	}
 	return nil
@@ -336,7 +336,7 @@ func (t *Context) DeleteNamespace(name string) error {
 // or a timeout occurs.
 func (t *Context) WaitForNamespaceDeleted(namespace string) error {
 	return wait.Poll(10*time.Second, 3*time.Minute, func() (done bool, e error) {
-		ns, err := t.Kubernetes().CoreV1().Namespaces().List(meta_v1.ListOptions{})
+		ns, err := t.Kubernetes().CoreV1().Namespaces().List(metav1.ListOptions{})
 		if err != nil {
 			return false, errors.Wrapf(err, "while listing namespace: %q", namespace)
 		}
@@ -354,7 +354,7 @@ func (t *Context) WaitForNamespaceDeleted(namespace string) error {
 // DeleteClusterrolebinding deletes a cluster role binding by the given name.
 func (t *Context) DeleteClusterrolebinding(name string) error {
 	if err := t.Kubernetes().RbacV1().ClusterRoleBindings().Delete(
-		name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
+		name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrapf(err, "while deleting clusterrolebinding %q", name)
 	}
 	return nil
@@ -363,7 +363,7 @@ func (t *Context) DeleteClusterrolebinding(name string) error {
 // DeleteClusterrole deletes a cluster role by the given name.
 func (t *Context) DeleteClusterrole(name string) error {
 	if err := t.Kubernetes().RbacV1().ClusterRoles().Delete(
-		name, &meta_v1.DeleteOptions{}); err != nil && !api_errors.IsNotFound(err) {
+		name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrapf(err, "while deleting clusterrole %q", name)
 	}
 	return nil

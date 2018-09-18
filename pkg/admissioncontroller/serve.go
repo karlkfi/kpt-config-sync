@@ -32,8 +32,8 @@ import (
 	"github.com/google/nomos/pkg/service"
 	"github.com/pkg/errors"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	admissionreg_v1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
+	admissionregv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -47,7 +47,7 @@ func WaitForEndpoint(clientset *kubernetes.Clientset, name, namespace string, ti
 	for t := time.Now(); time.Since(t) < timeout; time.Sleep(time.Second) {
 		endpoint, err := clientset.CoreV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
 
-		if api_errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			glog.Info("Endpoint not ready yet...")
 			continue
 		}
@@ -94,7 +94,7 @@ func GetWebhookCert(caCertFile string) ([]byte, error) {
 }
 
 // RegisterWebhook upserts the webhook configuration with the provided config.
-func RegisterWebhook(clientset *kubernetes.Clientset, webhookConfig *admissionreg_v1beta1.ValidatingWebhookConfiguration) error {
+func RegisterWebhook(clientset *kubernetes.Clientset, webhookConfig *admissionregv1beta1.ValidatingWebhookConfiguration) error {
 	client := clientset.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations()
 
 	existing, err := client.Get(webhookConfig.Name, metav1.GetOptions{})
@@ -104,7 +104,7 @@ func RegisterWebhook(clientset *kubernetes.Clientset, webhookConfig *admissionre
 		if _, err2 := client.Update(webhookConfig); err2 != nil {
 			return errors.Wrap(err2, "failed to update ValidatingWebhookConfiguration")
 		}
-	} else if api_errors.IsNotFound(err) {
+	} else if apierrors.IsNotFound(err) {
 		glog.Infof("Creating ValidatingWebhookConfiguration")
 		if _, err2 := client.Create(webhookConfig); err2 != nil {
 			return errors.Wrap(err2, "failed to create ValidatingWebhookConfiguration")

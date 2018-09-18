@@ -17,9 +17,9 @@ limitations under the License.
 package hierarchy
 
 import (
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/pkg/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // TestNodeSpec is a convenience struct for generating a hierarchy of PolicyNode objects.
@@ -59,8 +59,8 @@ func (s TestNodeSpecs) Subtree(name string) []string {
 
 // TestAggregatedOutput is a fake output type for our TestAggregatedNode.
 type TestAggregatedOutput struct {
-	meta_v1.TypeMeta
-	meta_v1.ObjectMeta
+	metav1.TypeMeta
+	metav1.ObjectMeta
 
 	Ancestry []string
 }
@@ -71,7 +71,7 @@ type TestAggregatedNode struct {
 }
 
 // Aggregated implements AggregatedNode
-func (s *TestAggregatedNode) Aggregated(childNode *policyhierarchy_v1.PolicyNode) AggregatedNode {
+func (s *TestAggregatedNode) Aggregated(childNode *policyhierarchyv1.PolicyNode) AggregatedNode {
 	ancestry := make([]string, len(s.Ancestry))
 	copy(ancestry, s.Ancestry)
 	ancestry = append(ancestry, childNode.Name)

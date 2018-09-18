@@ -17,15 +17,15 @@ package clusterpolicy
 
 import (
 	"github.com/golang/glog"
-	policyhierarchy_lister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchylister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/monitor/args"
 	"github.com/google/nomos/pkg/monitor/state"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/eventhandlers"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
 	"github.com/pkg/errors"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -34,7 +34,7 @@ const (
 
 // Controller responds to changes to ClusterPolicies by updating its ClusterState.
 type Controller struct {
-	lister policyhierarchy_lister.ClusterPolicyLister
+	lister policyhierarchylister.ClusterPolicyLister
 	state  *state.ClusterState
 }
 
@@ -48,7 +48,7 @@ func NewController(injectArgs args.InjectArgs, state *state.ClusterState) *contr
 		InformerRegistry: injectArgs.ControllerManager,
 		Reconcile:        cpController.reconcile,
 	}
-	cp := &policyhierarchy_v1.ClusterPolicy{}
+	cp := &policyhierarchyv1.ClusterPolicy{}
 
 	if err := injectArgs.ControllerManager.AddInformerProvider(cp, informer); err != nil {
 		panic(errors.Wrap(err, "programmer error while adding informer to controller manager"))
@@ -63,13 +63,13 @@ func (c *Controller) reconcile(k types.ReconcileKey) error {
 	name := k.Name
 	cp, err := c.lister.Get(name)
 	if err != nil {
-		if api_errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			c.state.DeletePolicy(name)
 			return nil
 		}
 		return errors.Wrapf(err, "failed to look up clusterpolicy %s for monitoring", name)
 	}
-	if name != policyhierarchy_v1.ClusterPolicyName {
+	if name != policyhierarchyv1.ClusterPolicyName {
 		glog.Errorf("clusterpolicy resource has invalid name %q", name)
 		// Return nil since we don't want kubebuilder to queue a retry.
 		return nil

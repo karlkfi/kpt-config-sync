@@ -21,20 +21,20 @@ import (
 
 	"github.com/pkg/errors"
 
-	listers_v1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 // NewPolicyNode creates a PolicyNode from the given spec and name.
-func NewPolicyNode(name string, spec *policyhierarchy_v1.PolicyNodeSpec) *policyhierarchy_v1.PolicyNode {
-	return &policyhierarchy_v1.PolicyNode{
-		TypeMeta: meta_v1.TypeMeta{
+func NewPolicyNode(name string, spec *policyhierarchyv1.PolicyNodeSpec) *policyhierarchyv1.PolicyNode {
+	return &policyhierarchyv1.PolicyNode{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       "PolicyNode",
-			APIVersion: policyhierarchy_v1.SchemeGroupVersion.String(),
+			APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
 		},
-		ObjectMeta: meta_v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: *spec,
@@ -42,13 +42,13 @@ func NewPolicyNode(name string, spec *policyhierarchy_v1.PolicyNodeSpec) *policy
 }
 
 // NewClusterPolicy creates a PolicyNode from the given spec and name.
-func NewClusterPolicy(name string, spec *policyhierarchy_v1.ClusterPolicySpec) *policyhierarchy_v1.ClusterPolicy {
-	return &policyhierarchy_v1.ClusterPolicy{
-		TypeMeta: meta_v1.TypeMeta{
+func NewClusterPolicy(name string, spec *policyhierarchyv1.ClusterPolicySpec) *policyhierarchyv1.ClusterPolicy {
+	return &policyhierarchyv1.ClusterPolicy{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterPolicy",
-			APIVersion: policyhierarchy_v1.SchemeGroupVersion.String(),
+			APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
 		},
-		ObjectMeta: meta_v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: *spec,
@@ -56,7 +56,7 @@ func NewClusterPolicy(name string, spec *policyhierarchy_v1.ClusterPolicySpec) *
 }
 
 // GetResourceVersion parses the resource version string into an int64
-func GetResourceVersion(node *policyhierarchy_v1.PolicyNode) (int64, error) {
+func GetResourceVersion(node *policyhierarchyv1.PolicyNode) (int64, error) {
 	resourceVersionStr := node.ResourceVersion
 	if resourceVersionStr == "" {
 		return 0, errors.Errorf("Empty resource version in %#v", node)
@@ -71,9 +71,9 @@ func GetResourceVersion(node *policyhierarchy_v1.PolicyNode) (int64, error) {
 }
 
 // ListPolicies returns all policies from API server.
-func ListPolicies(policyNodeLister listers_v1.PolicyNodeLister, clusterPolicyLister listers_v1.ClusterPolicyLister) (*policyhierarchy_v1.AllPolicies, error) {
-	policies := policyhierarchy_v1.AllPolicies{
-		PolicyNodes: make(map[string]policyhierarchy_v1.PolicyNode),
+func ListPolicies(policyNodeLister listersv1.PolicyNodeLister, clusterPolicyLister listersv1.ClusterPolicyLister) (*policyhierarchyv1.AllPolicies, error) {
+	policies := policyhierarchyv1.AllPolicies{
+		PolicyNodes: make(map[string]policyhierarchyv1.PolicyNode),
 	}
 
 	pn, err := policyNodeLister.List(labels.Everything())
@@ -97,8 +97,8 @@ func ListPolicies(policyNodeLister listers_v1.PolicyNodeLister, clusterPolicyLis
 		return nil, errors.Errorf("found more than one ClusterPolicy object. The cluster may be in an inconsistent state: %v", names)
 	}
 	if len(cp) == 1 {
-		if cp[0].Name != policyhierarchy_v1.ClusterPolicyName {
-			return nil, errors.Errorf("expected ClusterPolicy with name %q instead found %q", policyhierarchy_v1.ClusterPolicyName, cp[0].Name)
+		if cp[0].Name != policyhierarchyv1.ClusterPolicyName {
+			return nil, errors.Errorf("expected ClusterPolicy with name %q instead found %q", policyhierarchyv1.ClusterPolicyName, cp[0].Name)
 		}
 		policies.ClusterPolicy = cp[0].DeepCopy()
 	}

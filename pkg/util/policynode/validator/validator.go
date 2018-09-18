@@ -20,7 +20,7 @@ package validator
 import (
 	"github.com/davecgh/go-spew/spew"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/util/meta"
 	"github.com/looplab/tarjan"
 	"github.com/pkg/errors"
@@ -28,7 +28,7 @@ import (
 
 // Validator checks that a set of PolicyNode objects conform to certain constraints on the hierarchy.
 type Validator struct {
-	policyNodes map[string]policyhierarchy_v1.PolicyNode // name -> node
+	policyNodes map[string]policyhierarchyv1.PolicyNode // name -> node
 	// AllowMultipleRoots disables checks for multiple root nodes in the PolicyNode hierarchy, when true.
 	AllowMultipleRoots bool
 	// AllowOrphanAdds disables checks for adding PolicyNodes with non-existent parents.
@@ -38,12 +38,12 @@ type Validator struct {
 // New creates a new Validator.
 func New() *Validator {
 	return &Validator{
-		policyNodes: map[string]policyhierarchy_v1.PolicyNode{},
+		policyNodes: map[string]policyhierarchyv1.PolicyNode{},
 	}
 }
 
 // FromMap creates a new validator populating the PolicyNodes from a map.
-func FromMap(policyNodes map[string]policyhierarchy_v1.PolicyNode) *Validator {
+func FromMap(policyNodes map[string]policyhierarchyv1.PolicyNode) *Validator {
 	validator := New()
 	for name, node := range policyNodes {
 		validator.policyNodes[name] = node
@@ -52,7 +52,7 @@ func FromMap(policyNodes map[string]policyhierarchy_v1.PolicyNode) *Validator {
 }
 
 // From creates a new Validator populating the nodes from a list of args.
-func From(policyNodes ...*policyhierarchy_v1.PolicyNode) *Validator {
+func From(policyNodes ...*policyhierarchyv1.PolicyNode) *Validator {
 	validator := New()
 	for _, policyNode := range policyNodes {
 		validator.policyNodes[policyNode.Name] = *policyNode
@@ -61,7 +61,7 @@ func From(policyNodes ...*policyhierarchy_v1.PolicyNode) *Validator {
 }
 
 // Add adds a node in the hierarchy to the validator.
-func (s *Validator) Add(policyNode *policyhierarchy_v1.PolicyNode) error {
+func (s *Validator) Add(policyNode *policyhierarchyv1.PolicyNode) error {
 	nodeName := policyNode.Name
 	if _, ok := s.policyNodes[nodeName]; ok {
 		return errors.Errorf("PolicyNode %q already exists", nodeName)
@@ -75,7 +75,7 @@ func (s *Validator) Add(policyNode *policyhierarchy_v1.PolicyNode) error {
 }
 
 // Update updates a node in the validator
-func (s *Validator) Update(policyNode *policyhierarchy_v1.PolicyNode) error {
+func (s *Validator) Update(policyNode *policyhierarchyv1.PolicyNode) error {
 	nodeName := policyNode.Name
 	if _, ok := s.policyNodes[nodeName]; !ok {
 		return errors.Errorf("PolicyNode %q does not exist for update", nodeName)
@@ -86,7 +86,7 @@ func (s *Validator) Update(policyNode *policyhierarchy_v1.PolicyNode) error {
 }
 
 // Remove removes a node from the validator
-func (s *Validator) Remove(policyNode *policyhierarchy_v1.PolicyNode) error {
+func (s *Validator) Remove(policyNode *policyhierarchyv1.PolicyNode) error {
 	nodeName := policyNode.Name
 	if _, ok := s.policyNodes[nodeName]; !ok {
 		return errors.Errorf("PolicyNode %q does not exist for removal", nodeName)
@@ -131,7 +131,7 @@ func (s *Validator) checkRoots() error {
 	}
 	var roots []string
 	for nodeName, node := range s.policyNodes {
-		if node.Spec.Parent == policyhierarchy_v1.NoParentNamespace && node.Spec.Type != policyhierarchy_v1.ReservedNamespace {
+		if node.Spec.Parent == policyhierarchyv1.NoParentNamespace && node.Spec.Type != policyhierarchyv1.ReservedNamespace {
 			roots = append(roots, nodeName)
 		}
 	}
@@ -194,7 +194,7 @@ func (s *Validator) checkParents() error {
 	for nodeName, node := range s.policyNodes {
 		parent := node.Spec.Parent
 		_, ok := s.policyNodes[parent]
-		if parent != policyhierarchy_v1.NoParentNamespace && !ok {
+		if parent != policyhierarchyv1.NoParentNamespace && !ok {
 			return errors.Errorf("PolicyNode %q has no parent and is not a root node", nodeName)
 		}
 	}

@@ -3,13 +3,13 @@ package admissioncontroller
 import (
 	"testing"
 
-	admission_v1beta1 "k8s.io/api/admission/v1beta1"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apiserver/pkg/admission"
 )
 
 func TestConversion(t *testing.T) {
-	x := admission_v1beta1.AdmissionRequest{
+	x := admissionv1beta1.AdmissionRequest{
 		Name:      "ice cream",
 		Operation: "DELETE",
 		UserInfo: authenticationv1.UserInfo{

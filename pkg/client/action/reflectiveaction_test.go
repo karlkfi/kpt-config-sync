@@ -26,11 +26,11 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/google/nomos/clientgen/informer"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta/fake"
-	rbac_v1 "k8s.io/api/rbac/v1"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 )
@@ -174,7 +174,7 @@ func (t *ReflectiveActionTestCase) Validate() string {
 			}
 			return "Resource should have been deleted"
 		}
-		if err != nil && api_errors.IsNotFound(err) {
+		if err != nil && apierrors.IsNotFound(err) {
 			return ""
 		}
 		return fmt.Sprintf("Error other than not found: %s", err)
@@ -245,25 +245,25 @@ func (t *ReflectiveActionTest) RunTests(spec *ReflectiveActionSpec, getter TypeG
 }
 
 func RolesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lRole := lhs.(*rbac_v1.Role)
-	rRole := rhs.(*rbac_v1.Role)
+	lRole := lhs.(*rbacv1.Role)
+	rRole := rhs.(*rbacv1.Role)
 	return reflect.DeepEqual(lRole.Rules, rRole.Rules)
 }
 
 func RoleGetter(client *fake.Client, namespace, name string) (runtime.Object, error) {
-	return client.Kubernetes().RbacV1().Roles(namespace).Get(name, meta_v1.GetOptions{})
+	return client.Kubernetes().RbacV1().Roles(namespace).Get(name, metav1.GetOptions{})
 }
 
-var namespacedBaseTestObject = &rbac_v1.Role{
-	TypeMeta: meta_v1.TypeMeta{
+var namespacedBaseTestObject = &rbacv1.Role{
+	TypeMeta: metav1.TypeMeta{
 		Kind:       "Role",
 		APIVersion: "v1",
 	},
-	ObjectMeta: meta_v1.ObjectMeta{
+	ObjectMeta: metav1.ObjectMeta{
 		Labels:      map[string]string{"fuzzy": "true"},
 		Annotations: map[string]string{"api.foo.future/deny": "*"},
 	},
-	Rules: []rbac_v1.PolicyRule{
+	Rules: []rbacv1.PolicyRule{
 		{
 			Verbs:     []string{"get"},
 			APIGroups: []string{"some.group.k8s.io"},
@@ -294,7 +294,7 @@ var namespacedTestCases = []ReflectiveActionTestCase{
 		CreateExpectErr: true,
 		Resource:        namespacedRoleX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			role := obj.(*rbac_v1.Role).DeepCopy()
+			role := obj.(*rbacv1.Role).DeepCopy()
 			role.ObjectMeta.Labels["foo"] = "bar"
 			return role
 		},
@@ -312,7 +312,7 @@ var namespacedTestCases = []ReflectiveActionTestCase{
 		Namespaced: true,
 		Resource:   namespacedRoleX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			role := obj.(*rbac_v1.Role).DeepCopy()
+			role := obj.(*rbacv1.Role).DeepCopy()
 			role.ObjectMeta.Labels["foo"] = "bar"
 			return role
 		},
@@ -323,7 +323,7 @@ var namespacedTestCases = []ReflectiveActionTestCase{
 		Namespaced: true,
 		Resource:   namespacedRoleX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			role := obj.(*rbac_v1.Role).DeepCopy()
+			role := obj.(*rbacv1.Role).DeepCopy()
 			role.ObjectMeta.Annotations["foo"] = "bar"
 			return role
 		},
@@ -334,8 +334,8 @@ var namespacedTestCases = []ReflectiveActionTestCase{
 		Namespaced: true,
 		Resource:   namespacedRoleX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			role := obj.(*rbac_v1.Role).DeepCopy()
-			role.Rules = append(role.Rules, rbac_v1.PolicyRule{
+			role := obj.(*rbacv1.Role).DeepCopy()
+			role.Rules = append(role.Rules, rbacv1.PolicyRule{
 				Verbs:     []string{"*"},
 				APIGroups: []string{""},
 				Resources: []string{"*"},
@@ -401,7 +401,7 @@ var clusterTestCases = []ReflectiveActionTestCase{
 		CreateExpectErr: true,
 		Resource:        clusterRoleX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			role := obj.(*rbac_v1.ClusterRole).DeepCopy()
+			role := obj.(*rbacv1.ClusterRole).DeepCopy()
 			role.ObjectMeta.Labels["foo"] = "bar"
 			return role
 		},
@@ -417,7 +417,7 @@ var clusterTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterRoleX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			role := obj.(*rbac_v1.ClusterRole).DeepCopy()
+			role := obj.(*rbacv1.ClusterRole).DeepCopy()
 			role.ObjectMeta.Labels["foo"] = "bar"
 			return role
 		},
@@ -427,7 +427,7 @@ var clusterTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterRoleX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			role := obj.(*rbac_v1.ClusterRole).DeepCopy()
+			role := obj.(*rbacv1.ClusterRole).DeepCopy()
 			role.ObjectMeta.Annotations["foo"] = "bar"
 			return role
 		},
@@ -437,8 +437,8 @@ var clusterTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterRoleX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			role := obj.(*rbac_v1.ClusterRole).DeepCopy()
-			role.Rules = append(role.Rules, rbac_v1.PolicyRule{
+			role := obj.(*rbacv1.ClusterRole).DeepCopy()
+			role.Rules = append(role.Rules, rbacv1.PolicyRule{
 				Verbs:     []string{"*"},
 				APIGroups: []string{""},
 				Resources: []string{"*"},
@@ -468,8 +468,8 @@ var clusterTestCases = []ReflectiveActionTestCase{
 		Resource:  clusterRoleX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
 			o := obj.DeepCopyObject()
-			m := o.(meta_v1.Object)
-			ts := meta_v1.Now()
+			m := o.(metav1.Object)
+			ts := metav1.Now()
 			m.SetDeletionTimestamp(&ts)
 			return m.(runtime.Object)
 		},
@@ -482,25 +482,25 @@ var clusterTestCases = []ReflectiveActionTestCase{
 }
 
 func ClusterRolesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lRole := lhs.(*rbac_v1.ClusterRole)
-	rRole := rhs.(*rbac_v1.ClusterRole)
+	lRole := lhs.(*rbacv1.ClusterRole)
+	rRole := rhs.(*rbacv1.ClusterRole)
 	return reflect.DeepEqual(lRole.Rules, rRole.Rules)
 }
 
 func ClusterRoleGetter(client *fake.Client, _, name string) (runtime.Object, error) {
-	return client.Kubernetes().RbacV1().ClusterRoles().Get(name, meta_v1.GetOptions{})
+	return client.Kubernetes().RbacV1().ClusterRoles().Get(name, metav1.GetOptions{})
 }
 
-var clusterBaseTestObject = &rbac_v1.ClusterRole{
-	TypeMeta: meta_v1.TypeMeta{
+var clusterBaseTestObject = &rbacv1.ClusterRole{
+	TypeMeta: metav1.TypeMeta{
 		Kind:       "ClusterRole",
 		APIVersion: "v1",
 	},
-	ObjectMeta: meta_v1.ObjectMeta{
+	ObjectMeta: metav1.ObjectMeta{
 		Labels:      map[string]string{"fuzzy": "true"},
 		Annotations: map[string]string{"api.foo.future/deny": "*"},
 	},
-	Rules: []rbac_v1.PolicyRule{
+	Rules: []rbacv1.PolicyRule{
 		{
 			Verbs:     []string{"get"},
 			APIGroups: []string{"some.group.k8s.io"},
@@ -547,7 +547,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterPolicyNodeX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*policyhierarchy_v1.PolicyNode).DeepCopy()
+			policyNode := obj.(*policyhierarchyv1.PolicyNode).DeepCopy()
 			policyNode.ObjectMeta.Labels["foo"] = "bar"
 			return policyNode
 		},
@@ -557,7 +557,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterPolicyNodeX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*policyhierarchy_v1.PolicyNode).DeepCopy()
+			policyNode := obj.(*policyhierarchyv1.PolicyNode).DeepCopy()
 			policyNode.ObjectMeta.Annotations["foo"] = "bar"
 			return policyNode
 		},
@@ -567,7 +567,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterPolicyNodeX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*policyhierarchy_v1.PolicyNode).DeepCopy()
+			policyNode := obj.(*policyhierarchyv1.PolicyNode).DeepCopy()
 			policyNode.Spec.Parent = "some-other-node"
 			return policyNode
 		},
@@ -595,26 +595,26 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 }
 
 func PolicyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lPn := lhs.(*policyhierarchy_v1.PolicyNode)
-	rPn := rhs.(*policyhierarchy_v1.PolicyNode)
+	lPn := lhs.(*policyhierarchyv1.PolicyNode)
+	rPn := rhs.(*policyhierarchyv1.PolicyNode)
 	return reflect.DeepEqual(lPn.Spec, rPn.Spec)
 }
 
 func ClusterPolicyNodeGetter(client *fake.Client, _, name string) (runtime.Object, error) {
-	return client.PolicyHierarchy().NomosV1().PolicyNodes().Get(name, meta_v1.GetOptions{})
+	return client.PolicyHierarchy().NomosV1().PolicyNodes().Get(name, metav1.GetOptions{})
 }
 
-var clusterPolicyNodeBaseTestObject = &policyhierarchy_v1.PolicyNode{
-	TypeMeta: meta_v1.TypeMeta{
+var clusterPolicyNodeBaseTestObject = &policyhierarchyv1.PolicyNode{
+	TypeMeta: metav1.TypeMeta{
 		Kind:       "PolicyNode",
-		APIVersion: policyhierarchy_v1.SchemeGroupVersion.String(),
+		APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
 	},
-	ObjectMeta: meta_v1.ObjectMeta{
+	ObjectMeta: metav1.ObjectMeta{
 		Labels:      map[string]string{"fuzzy": "true"},
 		Annotations: map[string]string{"api.foo.future/deny": "*"},
 	},
-	Spec: policyhierarchy_v1.PolicyNodeSpec{
-		Type:   policyhierarchy_v1.Policyspace,
+	Spec: policyhierarchyv1.PolicyNodeSpec{
+		Type:   policyhierarchyv1.Policyspace,
 		Parent: "does-not-exist",
 	},
 }

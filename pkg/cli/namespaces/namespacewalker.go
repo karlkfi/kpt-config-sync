@@ -20,10 +20,10 @@ import (
 	apipolicyhierarchy "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/cli"
 	"github.com/pkg/errors"
-	core_v1 "k8s.io/api/core/v1"
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	client_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	clientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 // GetAncestry returns the ancestors of the given namespace by following the
@@ -35,14 +35,14 @@ import (
 // if the user is not authorized to get namespaces above a certain level in the
 // hierarchy.  If the user is not authorized to get the given namespace itself,
 // error is returned.
-func GetAncestry(client client_v1.NamespaceInterface, namespace string) (
-	namespaces []*core_v1.Namespace, includesRoot bool, error error) {
-	nsAncestry := make([]*core_v1.Namespace, 0)
+func GetAncestry(client clientv1.NamespaceInterface, namespace string) (
+	namespaces []*corev1.Namespace, includesRoot bool, error error) {
+	nsAncestry := make([]*corev1.Namespace, 0)
 
 	for {
 		ns, err := client.Get(namespace, meta.GetOptions{})
 		if err != nil {
-			if api_errors.IsForbidden(err) {
+			if apierrors.IsForbidden(err) {
 				if len(nsAncestry) == 0 {
 					return nil, false, err
 				}
@@ -68,7 +68,7 @@ func GetAncestry(client client_v1.NamespaceInterface, namespace string) (
 // GetAncestryFromContext returns namespace ancestry as suppplied in the cli
 // context.
 func GetAncestryFromContext(ctx *cli.CommandContext) (
-	[]*core_v1.Namespace, bool, error) {
+	[]*corev1.Namespace, bool, error) {
 	apiGroupClient := ctx.Client.Kubernetes().CoreV1()
 	namespaces, isRoot, err := GetAncestry(
 		apiGroupClient.Namespaces(), ctx.Namespace)

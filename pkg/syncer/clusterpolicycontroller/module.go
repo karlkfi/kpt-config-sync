@@ -15,9 +15,9 @@ limitations under the License.
 package clusterpolicycontroller
 
 import (
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Module is a type specific implementation for cluster synchronization.
@@ -27,6 +27,6 @@ type Module interface {
 
 	// Extract returns the instances of the type that this module is going
 	// to be synchronizing. Since it operates on API types, they should all
-	// satisfy the meta_v1.Object interface.
-	Extract(*policyhierarchy_v1.ClusterPolicy) []meta_v1.Object
+	// satisfy the metav1.Object interface.
+	Extract(*policyhierarchyv1.ClusterPolicy) []metav1.Object
 }

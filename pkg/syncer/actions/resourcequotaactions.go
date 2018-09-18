@@ -21,21 +21,21 @@ import (
 
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/resourcequota"
-	core_v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	listers_core_v1 "k8s.io/client-go/listers/core/v1"
+	listerscorev1 "k8s.io/client-go/listers/core/v1"
 )
 
 // NewResourceQuotaDeleteAction creates a delete action that will remove quota limits.
 func NewResourceQuotaDeleteAction(
 	namespace string,
 	kubernetesInterface kubernetes.Interface,
-	resourceQuotaLister listers_core_v1.ResourceQuotaLister) *action.ReflectiveDeleteAction {
+	resourceQuotaLister listerscorev1.ResourceQuotaLister) *action.ReflectiveDeleteAction {
 	spec := action.NewSpec(
-		new(core_v1.ResourceQuota),
-		core_v1.SchemeGroupVersion,
+		new(corev1.ResourceQuota),
+		corev1.SchemeGroupVersion,
 		ResourceQuotasEqual,
 		kubernetesInterface.CoreV1(),
 		resourceQuotaLister)
@@ -46,18 +46,18 @@ func NewResourceQuotaDeleteAction(
 func NewResourceQuotaUpsertAction(
 	namespace string,
 	labels map[string]string,
-	resourceQuotaSpec core_v1.ResourceQuotaSpec,
+	resourceQuotaSpec corev1.ResourceQuotaSpec,
 	kubernetesInterface kubernetes.Interface,
-	resourceQuotaLister listers_core_v1.ResourceQuotaLister,
+	resourceQuotaLister listerscorev1.ResourceQuotaLister,
 ) *action.ReflectiveUpsertAction {
 	spec := action.NewSpec(
-		new(core_v1.ResourceQuota),
-		core_v1.SchemeGroupVersion,
+		new(corev1.ResourceQuota),
+		corev1.SchemeGroupVersion,
 		ResourceQuotasEqual,
 		kubernetesInterface.CoreV1(),
 		resourceQuotaLister)
-	quota := &core_v1.ResourceQuota{
-		ObjectMeta: meta_v1.ObjectMeta{
+	quota := &corev1.ResourceQuota{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:   resourcequota.ResourceQuotaObjectName,
 			Labels: labels,
 		},
@@ -68,7 +68,7 @@ func NewResourceQuotaUpsertAction(
 
 // ResourceQuotasEqual returns true if both resource quotas have functionally equivalent limits.
 func ResourceQuotasEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lQuota := lhs.(*core_v1.ResourceQuota)
-	rQuota := rhs.(*core_v1.ResourceQuota)
+	lQuota := lhs.(*corev1.ResourceQuota)
+	rQuota := rhs.(*corev1.ResourceQuota)
 	return reflect.DeepEqual(lQuota.Spec, rQuota.Spec) && lQuota.Name == rQuota.Name
 }

@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,12 +31,12 @@ type ClusterState struct {
 	mux        sync.Mutex
 	lastImport time.Time
 	lastSync   time.Time
-	syncStates map[string]policyhierarchy_v1.PolicySyncState
+	syncStates map[string]policyhierarchyv1.PolicySyncState
 }
 
 func NewClusterState() *ClusterState {
 	return &ClusterState{
-		syncStates: map[string]policyhierarchy_v1.PolicySyncState{},
+		syncStates: map[string]policyhierarchyv1.PolicySyncState{},
 	}
 }
 
@@ -49,7 +49,7 @@ func (c *ClusterState) DeletePolicy(name string) {
 }
 
 // ProcessClusterPolicy updates the ClusterState with the current status of the ClusterPolicy.
-func (c *ClusterState) ProcessClusterPolicy(cp *policyhierarchy_v1.ClusterPolicy) error {
+func (c *ClusterState) ProcessClusterPolicy(cp *policyhierarchyv1.ClusterPolicy) error {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
@@ -81,7 +81,7 @@ func (c *ClusterState) ProcessPolicyNode(ancestry hierarchy.Ancestry) error {
 	return nil
 }
 
-func (c *ClusterState) recordLatency(name string, newState policyhierarchy_v1.PolicySyncState, importTime, syncTime metav1.Time) {
+func (c *ClusterState) recordLatency(name string, newState policyhierarchyv1.PolicySyncState, importTime, syncTime metav1.Time) {
 	oldState := c.syncStates[name]
 	if oldState.IsSynced() || !newState.IsSynced() {
 		return
@@ -89,7 +89,7 @@ func (c *ClusterState) recordLatency(name string, newState policyhierarchy_v1.Po
 	Metrics.SyncLatency.Observe(float64(syncTime.Unix() - importTime.Unix()))
 }
 
-func (c *ClusterState) updateState(name string, newState policyhierarchy_v1.PolicySyncState) error {
+func (c *ClusterState) updateState(name string, newState policyhierarchyv1.PolicySyncState) error {
 	oldState := c.syncStates[name]
 	if oldState == newState {
 		return nil
@@ -100,7 +100,7 @@ func (c *ClusterState) updateState(name string, newState policyhierarchy_v1.Poli
 	}
 	newMetric.Inc()
 
-	if oldState != policyhierarchy_v1.StateUnknown {
+	if oldState != policyhierarchyv1.StateUnknown {
 		oldMetric, err := Metrics.ClusterNodes.GetMetricWithLabelValues(string(oldState))
 		if err != nil {
 			return err

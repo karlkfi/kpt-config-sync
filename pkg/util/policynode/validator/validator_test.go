@@ -19,9 +19,9 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	rbac_v1 "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func checkErr(t *testing.T, err error) {
@@ -30,49 +30,49 @@ func checkErr(t *testing.T, err error) {
 	}
 }
 
-func newNode(name string, parent string, policyspace bool) *policyhierarchy_v1.PolicyNode {
-	pnt := policyhierarchy_v1.Namespace
+func newNode(name string, parent string, policyspace bool) *policyhierarchyv1.PolicyNode {
+	pnt := policyhierarchyv1.Namespace
 	if policyspace {
-		pnt = policyhierarchy_v1.Policyspace
+		pnt = policyhierarchyv1.Policyspace
 	}
-	return &policyhierarchy_v1.PolicyNode{
-		ObjectMeta: meta_v1.ObjectMeta{
+	return &policyhierarchyv1.PolicyNode{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: policyhierarchy_v1.PolicyNodeSpec{
+		Spec: policyhierarchyv1.PolicyNodeSpec{
 			Type:   pnt,
 			Parent: parent,
 		},
 	}
 }
 
-func newReservedNode(name string) *policyhierarchy_v1.PolicyNode {
-	return &policyhierarchy_v1.PolicyNode{
-		ObjectMeta: meta_v1.ObjectMeta{
+func newReservedNode(name string) *policyhierarchyv1.PolicyNode {
+	return &policyhierarchyv1.PolicyNode{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: policyhierarchy_v1.PolicyNodeSpec{
-			Type:   policyhierarchy_v1.ReservedNamespace,
-			Parent: policyhierarchy_v1.NoParentNamespace,
+		Spec: policyhierarchyv1.PolicyNodeSpec{
+			Type:   policyhierarchyv1.ReservedNamespace,
+			Parent: policyhierarchyv1.NoParentNamespace,
 		},
 	}
 }
 
-func setResources(pn *policyhierarchy_v1.PolicyNode, roleNames, roleBindingNames []string) {
-	var roles []rbac_v1.Role
+func setResources(pn *policyhierarchyv1.PolicyNode, roleNames, roleBindingNames []string) {
+	var roles []rbacv1.Role
 	for _, rn := range roleNames {
-		role := rbac_v1.Role{
-			ObjectMeta: meta_v1.ObjectMeta{
+		role := rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: rn,
 			},
 		}
 		roles = append(roles, role)
 	}
 
-	var roleBindings []rbac_v1.RoleBinding
+	var roleBindings []rbacv1.RoleBinding
 	for _, rn := range roleBindingNames {
-		roleBinding := rbac_v1.RoleBinding{
-			ObjectMeta: meta_v1.ObjectMeta{
+		roleBinding := rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: rn,
 			},
 		}
@@ -237,7 +237,7 @@ func TestWorkingNamespace(t *testing.T) {
 		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
 	}
 
-	child2.Spec.Type = policyhierarchy_v1.Policyspace
+	child2.Spec.Type = policyhierarchyv1.Policyspace
 	v = New()
 	checkErr(t, v.Add(root))
 	checkErr(t, v.Add(child1))
@@ -259,7 +259,7 @@ func TestRootWorkingNamespace(t *testing.T) {
 	}
 
 	v = New()
-	root.Spec.Type = policyhierarchy_v1.Namespace
+	root.Spec.Type = policyhierarchyv1.Namespace
 	checkErr(t, v.Add(root))
 	if err := v.checkRoots(); err == nil {
 		t.Errorf("Should have detected leaf node working namespace error")
@@ -298,7 +298,7 @@ func TestPolicySpaceWithRoles(t *testing.T) {
 	checkErr(t, v.Add(newNode("root", "", true)))
 
 	policySpaceWithRole := newNode("policyspacewithrole", "root", true)
-	policySpaceWithRole.Spec.RolesV1 = []rbac_v1.Role{{}}
+	policySpaceWithRole.Spec.RolesV1 = []rbacv1.Role{{}}
 	checkErr(t, v.Add(policySpaceWithRole))
 
 	checkErr(t, v.Add(newNode("child2", "policyspacewithrole", false)))
@@ -369,7 +369,7 @@ func TestRemoveParents(t *testing.T) {
 }
 
 func TestRemoveRemainingRoot(t *testing.T) {
-	nodes := []*policyhierarchy_v1.PolicyNode{
+	nodes := []*policyhierarchyv1.PolicyNode{
 		newNode("root", "", true),
 		newNode("child1", "root", true),
 		newNode("child2", "child1", false),
@@ -403,7 +403,7 @@ func TestDuplicateResourcesInNode(t *testing.T) {
 	setResources(child, []string{"role", "otherrole"}, []string{"rolebinding", "otherrolebinding"})
 
 	v := New()
-	for _, pn := range []*policyhierarchy_v1.PolicyNode{root, child} {
+	for _, pn := range []*policyhierarchyv1.PolicyNode{root, child} {
 		if err := v.Add(pn); err != nil {
 			t.Errorf("Should not have errored when adding %q node: %v", pn.Name, err)
 		}
