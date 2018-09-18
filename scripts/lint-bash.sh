@@ -16,12 +16,7 @@
 
 set -euo pipefail
 
-# Shell scripts to exclude from linting.  This list ideally remains empty.
-readonly exclude=(
-  scripts/generate-clientset.sh
-  scripts/generate-watcher.sh
-  scripts/test-unit.sh
-)
+# bats tests aren't really bash, so exclude them.
 readonly exclude_bats=(
   e2e/testcases/acme.bats
   e2e/testcases/basic.bats
@@ -35,7 +30,7 @@ mapfile -t files < <(
   find scripts e2e -type f \( -name '*.sh' -o -name '*.bash' \)
 )
 mapfile -t check_files < <(
-  echo "${files[@]}" "${exclude[@]}" \
+  echo "${files[@]}" \
     | tr ' ' '\n' \
     | sort \
     | uniq -u

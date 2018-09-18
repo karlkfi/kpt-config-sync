@@ -48,9 +48,14 @@ for pkg in $(find cmd pkg -name '*.go' \
   fi
 done
 
+# The linters run for a long time and even longer on shared machines that run
+# our presubmit tests.  Allow a generous timeout for the linter checks to
+# finish.
+export linter_deadline="300s"
+
 echo "Running golint, errcheck and deadcode: "
 gometalinter.v2 \
-  --deadline=90s \
+  --deadline="${linter_deadline}" \
   --disable-all \
   --enable=deadcode \
   --enable=errcheck \
@@ -63,7 +68,7 @@ echo "PASS"
 echo "Running gometalinter: "
 if ! OUT="$(
   gometalinter.v2 \
-    --deadline=90s \
+    --deadline="${linter_deadline}" \
     --disable-all \
     --enable=goimports \
     --enable=ineffassign \

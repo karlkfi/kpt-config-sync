@@ -17,12 +17,12 @@
 
 set -euo pipefail
 
-NOMOS_ROOT=$(dirname "${BASH_SOURCE}")/..
+NOMOS_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
 # The tool doesn't gracefully handle multiple GOPATH values, so this will get
 # the first and last values from GOPATH.
-GOBASE=$(echo $GOPATH | sed 's/:.*//')
-GOWORK=$(echo $GOPATH | sed 's/.*://')
+GOBASE="${GOPATH//:.*/}"
+GOWORK="${GOPATH//.*:/}"
 REPO="github.com/google/nomos"
 
 # Comma separted list of APIs to generate for clientset.
@@ -45,7 +45,7 @@ K8S_APIS_PROTO=(
 OUTPUT_BASE="${GOPATH}/src"
 OUTPUT_CLIENT="${REPO}/clientgen"
 
-BOILERPLATE="$(dirname ${0})/boilerplate.go.txt"
+BOILERPLATE="$(dirname "${0}")/boilerplate.go.txt"
 
 LOGGING_FLAGS=${LOGGING_FLAGS:- --logtostderr -v 5}
 if ${SILENT:-false}; then
@@ -70,7 +70,7 @@ fi
 echo "Building gen tools..."
 go install "${tools[@]}"
 
-if [[ -z "$(which protoc)" || "$(protoc --version)" != "libprotoc 3."* ]]; then
+if [[ -z "$(command -v protoc)" || "$(protoc --version)" != "libprotoc 3."* ]]; then
   echo "ERROR:"
   echo "Generating protobuf requires protoc 3.0.0-beta1 or newer. Please download and"
   echo "install the platform appropriate Protobuf package for your OS: "
@@ -85,7 +85,7 @@ echo "Using GOPATH base ${GOBASE}"
 echo "Using GOPATH work ${GOWORK}"
 
 echo "Generating APIs"
-${GOBASE}/bin/client-gen \
+"${GOBASE}/bin/client-gen" \
   --input-base "${INPUT_BASE}" \
   --input="${INPUT_APIS}" \
   --clientset-name="apis" \
@@ -102,7 +102,7 @@ for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
 done
 
 echo "informer"
-${GOBASE}/bin/informer-gen \
+"${GOBASE}/bin/informer-gen" \
   ${LOGGING_FLAGS} \
   --input-dirs="${informer_inputs}" \
   --versioned-clientset-package="${OUTPUT_CLIENT}/apis" \
@@ -114,7 +114,7 @@ ${GOBASE}/bin/informer-gen \
 
 echo "deepcopy"
 # Creates types.generated.go
-${GOBASE}/bin/deepcopy-gen \
+"${GOBASE}/bin/deepcopy-gen" \
   ${LOGGING_FLAGS} \
   --input-dirs="${informer_inputs}" \
   --output-file-base="types.generated" \
@@ -122,7 +122,7 @@ ${GOBASE}/bin/deepcopy-gen \
   --output-base="${OUTPUT_BASE}"
 
 echo "lister"
-${GOBASE}/bin/lister-gen \
+"${GOBASE}/bin/lister-gen" \
   ${LOGGING_FLAGS} \
   --input-dirs="${informer_inputs}" \
   --output-base="$GOWORK/src" \
@@ -130,23 +130,23 @@ ${GOBASE}/bin/lister-gen \
   --output-package="${OUTPUT_CLIENT}/listers"
 
 for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
-  CLIENTSET_NAME=$(echo "$api" | sed 's|\/v[0-9]||')
 
   echo "Generating API: ${api}"
   echo "protobuf"
-  ${GOBASE}/bin/go-to-protobuf \
-    ${LOGGING_FLAGS} \
+  "${GOBASE}/bin/go-to-protobuf" \
+    "${LOGGING_FLAGS}" \
     --proto-import="${NOMOS_ROOT}/vendor" \
     --proto-import="${NOMOS_ROOT}/third_party/protobuf" \
     --packages="+${INPUT_BASE}/${api}" \
-    --apimachinery-packages=$(IFS=, ; echo "${K8S_APIS_PROTO[*]}") \
+    --apimachinery-packages="$(IFS=, ; echo "${K8S_APIS_PROTO[*]}")" \
     --output-base="$GOWORK/src" \
     --go-header-file="${BOILERPLATE}"
 done
 
 # go-to-protobuf changes generated proto given in K8S_APIS_PROTO
 # Revert these unneeded changes.
-find ${NOMOS_ROOT}/vendor \( -name "generated.proto" -o -name "generated.pb.go" \) \
-    -exec git checkout {} \;
+find "${NOMOS_ROOT}/vendor" \
+  \( -name "generated.proto" -o -name "generated.pb.go" \) \
+  -exec git checkout {} \;
 
 echo "Generation Completed!"
