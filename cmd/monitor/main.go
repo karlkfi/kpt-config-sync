@@ -18,6 +18,7 @@ package main
 import (
 	"flag"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/monitor"
 	"github.com/google/nomos/pkg/monitor/args"
@@ -25,7 +26,6 @@ import (
 	"github.com/google/nomos/pkg/util/log"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/run"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
-	"github.com/pkg/errors"
 )
 
 func main() {
@@ -34,7 +34,7 @@ func main() {
 
 	config, err := restconfig.NewRestConfig()
 	if err != nil {
-		panic(errors.Wrapf(err, "failed to create rest config"))
+		glog.Fatalf("failed to create rest config: %v", err)
 	}
 
 	go service.ServeMetrics()

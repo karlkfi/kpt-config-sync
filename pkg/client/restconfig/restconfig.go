@@ -64,7 +64,7 @@ func NewRestConfig() (*rest.Config, error) {
 				return source.create()
 			}
 		}
-		panic(errors.Errorf("No rest config source named %s", *flagRestConfigSource))
+		glog.Fatalf("No rest config source named %s", *flagRestConfigSource)
 	}
 
 	var errorStrs []string

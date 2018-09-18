@@ -20,6 +20,7 @@ package main
 import (
 	"flag"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/syncer/args"
@@ -27,7 +28,6 @@ import (
 	"github.com/google/nomos/pkg/util/log"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/run"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
-	"github.com/pkg/errors"
 )
 
 func main() {
@@ -36,7 +36,7 @@ func main() {
 
 	restConfig, err := restconfig.NewRestConfig()
 	if err != nil {
-		panic(errors.Wrapf(err, "failed to create rest config"))
+		glog.Fatalf("failed to create rest config: %v", err)
 	}
 
 	go service.ServeMetrics()
@@ -47,7 +47,7 @@ func main() {
 	runArgs := run.RunArguments{Stop: signals.SetupSignalHandler()}
 	err = syncerController.Start(runArgs)
 	if err != nil {
-		panic(errors.Wrapf(err, "failed to start controller"))
+		glog.Fatalf("failed to start controller: %v", err)
 	}
 
 	<-runArgs.Stop
