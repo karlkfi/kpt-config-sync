@@ -3,9 +3,6 @@
 set -euo pipefail
 
 readonly exclude=(
-  scripts/cluster/gce/full-setup.sh
-  scripts/cluster/gce/gce-common.sh
-  scripts/cluster/gce/gencerts.sh
   scripts/cluster/gce/generate_diff.sh
   scripts/cluster/gce/install.sh
   scripts/cluster/gce/kube-down.sh

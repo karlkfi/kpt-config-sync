@@ -18,11 +18,11 @@
 
 # Directory for keeping the persistent Nomos state.  Ensure it exists and is
 # a directory.
-NOMOS_TMP=${NOMOS_TMP:-$HOME/nomos}
-if [ ! -e ${NOMOS_TMP} ]; then
-  mkdir ${NOMOS_TMP}
+NOMOS_TMP="${NOMOS_TMP:-$HOME/nomos}"
+if [ ! -e "${NOMOS_TMP}" ]; then
+  mkdir "${NOMOS_TMP}"
 fi
-if [ ! -d ${NOMOS_TMP} ]; then
+if [ ! -d "${NOMOS_TMP}" ]; then
   echo "File ${NOMOS_TMP} exists, but must be a directory."
   echo "Please either remove the file from that file path, or set $NOMOS_TMP"
   echo "to point to a path where you want us to store persistent state."
@@ -31,4 +31,4 @@ fi
 
 # GCE configuration
 export NUM_NODES=1
-export KUBE_GCE_INSTANCE_PREFIX=${KUBE_GCE_INSTANCE_PREFIX:-${USER}}
+export KUBE_GCE_INSTANCE_PREFIX="${KUBE_GCE_INSTANCE_PREFIX:-${USER}}"
