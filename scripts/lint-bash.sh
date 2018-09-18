@@ -3,8 +3,6 @@
 set -euo pipefail
 
 readonly exclude=(
-  scripts/cluster/gce/configure-monitoring.sh
-  scripts/cluster/gce/download-k8s-release.sh
   scripts/cluster/gce/full-setup.sh
   scripts/cluster/gce/gce-common.sh
   scripts/cluster/gce/gencerts.sh
