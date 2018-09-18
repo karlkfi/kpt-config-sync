@@ -36,8 +36,8 @@
 
 set -euo pipefail
 
-CERTS_INPUT_DIR=${CERTS_INPUT_DIR:-""}
-YAML_DIR=$YAML_DIR
+CERTS_INPUT_DIR="${CERTS_INPUT_DIR:-}"
+YAML_DIR="${YAML_DIR}"
 
 readonly server_cert_file="${SERVER_CERT_FILE:-${CERTS_INPUT_DIR}/server.crt}"
 readonly server_key_file="${SERVER_KEY_FILE:-${CERTS_INPUT_DIR}/server.key}"
@@ -55,8 +55,8 @@ kubectl delete secret resourcequota-admission-controller-secret-ca \
     --namespace=nomos-system || true
 kubectl create secret tls resourcequota-admission-controller-secret-ca \
     --namespace=nomos-system \
-    --cert=${ca_cert_file} \
-    --key=${ca_key_file}
+    --cert="${ca_cert_file}" \
+    --key="${ca_key_file}"
 
-kubectl apply -f ${YAML_DIR}/resourcequota-admission-controller.yaml
+kubectl apply -f "${YAML_DIR}/resourcequota-admission-controller.yaml"
 

@@ -16,9 +16,10 @@
 
 set -euo pipefail
 
-source $(dirname $0)/gce-common.sh
+# shellcheck source=/dev/null
+source "$(dirname "$0")/gce-common.sh"
 
-if kubectl config use-context stolos-dev_${KUBE_GCE_INSTANCE_PREFIX} &> /dev/null; then
+if kubectl config use-context "stolos-dev_${KUBE_GCE_INSTANCE_PREFIX}" &> /dev/null; then
   if kubectl get ns &> /dev/null; then
     echo "Cluster already created"
     exit
@@ -27,4 +28,4 @@ fi
 
 gcloud config get-value project
 export NOMOS_ADMISSION_CONTROL="ValidatingAdmissionWebhook"
-${NOMOS_TMP}/kubernetes/cluster/kube-up.sh
+"${NOMOS_TMP}/kubernetes/cluster/kube-up.sh"
