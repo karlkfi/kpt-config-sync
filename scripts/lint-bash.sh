@@ -19,10 +19,7 @@ set -euo pipefail
 # Shell scripts to exclude from linting.  This list ideally remains empty.
 readonly exclude=(
   scripts/generate-clientset.sh
-  scripts/generate-policy-admission-controller-certs.sh
-  scripts/generate-resourcequota-admission-controller-certs.sh
   scripts/generate-watcher.sh
-  scripts/init-git-server.sh
   scripts/test-unit.sh
 )
 readonly exclude_bats=(

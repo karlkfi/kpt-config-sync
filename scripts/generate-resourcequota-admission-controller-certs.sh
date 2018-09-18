@@ -40,6 +40,6 @@ readonly controller_staging_dir="${OUTPUT_DIR:-./resourcequota-admission-control
 # The name of the service (and the namespace it runs in).
 readonly cn_base="resourcequota-admission-controller.nomos-system.svc"
 
-$(dirname $0)/generate-admission-controller-certs.sh \
-  --domain ${cn_base} \
-  --output_dir ${controller_staging_dir}
+"$(dirname "$0")"/generate-admission-controller-certs.sh \
+  --domain "${cn_base}" \
+  --output_dir "${controller_staging_dir}"

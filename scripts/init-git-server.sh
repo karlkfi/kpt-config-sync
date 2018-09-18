@@ -29,11 +29,13 @@ FWD_SSH_PORT=2222
 
 GIT_SERVER_NS=nomos-system-test
 
-rm -rf ${TEST_LOG_REPO}
+rm -rf "${TEST_LOG_REPO}"
 
 kubectl apply -f /opt/testing/e2e/git-server.yaml
 
-kubectl -n=${GIT_SERVER_NS} create secret generic ssh-pub --from-file=/opt/testing/e2e/id_rsa.nomos.pub
+kubectl -n="${GIT_SERVER_NS}" \
+  create secret generic ssh-pub \
+  --from-file=/opt/testing/e2e/id_rsa.nomos.pub
 echo -n "Waiting for test-git-server pod to be ready. This could take a minute..."
 
 NEXT_WAIT_TIME=0
@@ -56,8 +58,9 @@ POD_ID=$(kubectl get pods -n=${GIT_SERVER_NS} -l app=test-git-server -o jsonpath
 
 echo "Setting up remote git repo"
 mkdir -p ${TEST_LOG_REPO}
-kubectl -n=${GIT_SERVER_NS} port-forward ${POD_ID} ${FWD_SSH_PORT}:22 > ${TEST_LOG_REPO}/port-forward.log &
-REMOTE_GIT=(kubectl exec -n=${GIT_SERVER_NS} -it ${POD_ID} -- git)
+kubectl -n="${GIT_SERVER_NS}" port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > "${TEST_LOG_REPO}/port-forward.log" &
+# shellcheck disable=SC2191
+REMOTE_GIT=(kubectl exec -n="${GIT_SERVER_NS}" -it "${POD_ID}" -- git)
 "${REMOTE_GIT[@]}" init --bare --shared /git-server/repos/sot.git
 "${REMOTE_GIT[@]}" \
   -C /git-server/repos/sot.git config receive.denyNonFastforwards false
@@ -65,9 +68,9 @@ REMOTE_GIT=(kubectl exec -n=${GIT_SERVER_NS} -it ${POD_ID} -- git)
 echo "Setting up local git repo"
 # git-sync wants the designated sync branch to exist, so we create a dummy
 # commit so that the sync branch exists
-GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"; export GIT_SSH_COMMAND
-mkdir -p ${TEST_LOG_REPO}/repo
-cd ${TEST_LOG_REPO}/repo
+export GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"
+mkdir -p "${TEST_LOG_REPO}/repo"
+cd "${TEST_LOG_REPO}/repo" || exit 1
 git init
 git remote add origin ssh://git@localhost:2222/git-server/repos/sot.git
 git config user.name "Testing Nome"
