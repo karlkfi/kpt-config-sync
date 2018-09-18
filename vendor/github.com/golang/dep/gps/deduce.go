@@ -5,9 +5,11 @@
 package gps
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"path"
@@ -871,7 +873,11 @@ func getMetadata(ctx context.Context, path, scheme string) (string, string, stri
 	}
 	defer rc.Close()
 
-	imports, err := parseMetaGoImports(rc)
+	buf := new(bytes.Buffer)
+	tee := io.TeeReader(rc, buf)
+
+	imports, err := parseMetaGoImports(tee)
+	log.Printf("Metadata for dependency %s is:\n%s\n", path, buf.String())
 	if err != nil {
 		return "", "", "", errors.Wrapf(err, "unable to parse go-import metadata")
 	}

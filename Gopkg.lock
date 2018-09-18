@@ -324,7 +324,7 @@
   version = "v1.0.2"
 
 [[projects]]
-  digest = "1:c55ad0cc543392141cfecc18e1b5dbf253e56c88549aa7b29deb2db6946a4e7a"
+  digest = "1:475ef99fb340441140e682be97f5caf541aa36305cc8549fa56dadbe205648b9"
   name = "github.com/golang/dep"
   packages = [
     ".",
@@ -335,8 +335,8 @@
     "internal/fs",
   ]
   pruneopts = "UT"
-  revision = "37d9ea0ac16f0e0a05afc3b60e1ac8c364b6c329"
-  version = "v0.4.1"
+  revision = "c85ba7e9f526a2bebaaab7e259f7ad750a07b01b"
+  source = "https://github.com/sbochins-k8s/dep.git"
 
 [[projects]]
   branch = "master"
