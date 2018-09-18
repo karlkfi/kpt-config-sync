@@ -145,10 +145,12 @@ setup::gcp::initialize() {
       --member=user:bob@nomos-e2e.joonix.net --role=roles/container.viewer || true
 
   echo "setup::gcp::initialize exit"
+  date
 }
 
 gcp::teardown() {
   echo "gcp::teardown"
+  date
   gcloud config set account "${GCLOUD_CONTEXT}"
   echo "gcp::teardown exit"
 }
