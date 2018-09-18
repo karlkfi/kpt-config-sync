@@ -46,21 +46,23 @@ A sample script that creates a service account named `policy-viewer-sa` in
 project `my-sa-project` is provided below:
 
 ```console
-$ gcloud iam service-accounts create policy-viewer-sa \
-    --display-name "GKE Policy Retriever Account" --project my-sa-project
+$ SERVICE_ACCOUNT="policy-viewer-sa"
+$ PROJECT_ID="my-sa-project"
+$ gcloud iam service-accounts create $SERVICE_ACCOUNT \
+    --display-name "GKE Policy Retriever Account" --project $PROJECT_ID
 
 $ gcloud organizations add-iam-policy-binding 515925372711 \
-    --member serviceAccount:policy-viewer-sa@my-sa-project.iam.gserviceaccount.com \
+    --member "serviceAccount:${SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com" \
     --role roles/kubernetespolicy.policyViewer
 
 $ gcloud iam service-accounts keys create ~/private_key.json \
-    --iam-account policy-viewer-sa@my-sa-project.iam.gserviceaccount.com
+    --iam-account "${SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
 ```
 
-Be sure to enable the API in `my-sa-project` before installation:
+Be sure to enable the API in `PROJECT_ID` before installation:
 
 ```console
-$ gcloud services enable kubernetespolicy.googleapis.com --project my-sa-project
+$ gcloud services enable kubernetespolicy.googleapis.com --project $PROJECT_ID
 ```
 
 ## Config Reference
@@ -90,8 +92,8 @@ gcp-private-key | GCP service account private key
 
 ## Next Steps
 
-Consult the [installation guide](installation.md) for instructions on how
-to apply the config.
+Consult the [installation guide](installation.md) for instructions on how to
+apply the config.
 
 [1]: https://cloud.google.com/iam/docs/creating-managing-service-accounts
 [2]: https://cloud.google.com/iam/docs/granting-roles-to-service-accounts
