@@ -208,9 +208,3 @@ lint-bash:
 clientgen:
 	@echo "+++ Generating clientgen directory"
 	$(TOP_DIR)/scripts/generate-clientset.sh
-
-# Installs Nomos kubectl plugin.
-install-kubectl-plugin:
-	@echo "+++ Installing Nomos kubectl plugin"
-	@cd $(TOP_DIR)/cmd/kubectl-nomos; ./install.sh
-
