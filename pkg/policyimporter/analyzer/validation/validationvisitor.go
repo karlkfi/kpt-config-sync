@@ -13,10 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package filesystem
+package validation
 
 import (
-	"path/filepath"
+	"path"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -83,13 +83,13 @@ func (v *InputValidator) VisitCluster(c *ast.Cluster) ast.Node {
 
 // VisitTreeNode implements Visitor
 func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
-	name := filepath.Base(n.Path)
+	name := path.Base(n.Path)
 	if v.reserved.IsReserved(name) {
 		v.errs.Add(errors.Errorf(
 			"Reserved namespaces must not be used for %s names.  "+
 				"Directory %q declares a %s which conflicts with a reserved namespace name. "+
 				"Adjust the directory name for %q or remove %s from the reserved namespace config.",
-			n.Type, n.Path, n.Type, n.Path, filepath.Base(n.Path)))
+			n.Type, n.Path, n.Type, n.Path, path.Base(n.Path)))
 	}
 	if other, found := v.names[name]; found {
 		v.errs.Add(errors.Errorf(
@@ -105,7 +105,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 				"Namespaces must not contain children.  "+
 					"Namespace declared in directory %q cannot have child declared in subdirectory %q. "+
 					"Restructure directories so namespace %q does not have children.",
-				parent.Path, n.Path, filepath.Base(n.Path)))
+				parent.Path, n.Path, path.Base(n.Path)))
 		}
 	}
 
@@ -151,7 +151,7 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 	}
 	if len(v.nodes) != 0 {
 		node := v.nodes[len(v.nodes)-1]
-		if nodeNS := filepath.Base(node.Path); nodeNS != ns && node.Type == ast.Namespace {
+		if nodeNS := path.Base(node.Path); nodeNS != ns && node.Type == ast.Namespace {
 			v.errs.Add(errors.Errorf("Object's Namespace must match the name of the namespace "+
 				"directory in which the object appears. Object Namespace is %s. Directory name is %s.",
 				ns, nodeNS))

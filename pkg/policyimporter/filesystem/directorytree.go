@@ -18,6 +18,7 @@ package filesystem
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
@@ -26,7 +27,8 @@ import (
 
 // DirectoryTree handles constructing an ast.TreeNode tree from directory paths.
 type DirectoryTree struct {
-	// rootParent is the parent directory of the root node
+	// rootParent is the parent directory of the root node.
+	// Uses OS-specific path separators
 	rootParent string
 	// root is the root node of the tree
 	root *ast.TreeNode
@@ -39,31 +41,31 @@ func NewDirectoryTree() *DirectoryTree {
 	return &DirectoryTree{nodes: map[string]*ast.TreeNode{}}
 }
 
-// SetRootDir creates a root node and stores the parent path
-func (t *DirectoryTree) SetRootDir(path string) *ast.TreeNode {
+// SetRootDir sets the given OS-specific path as the root path.
+func (t *DirectoryTree) SetRootDir(p string) *ast.TreeNode {
 	if t.root != nil {
 		panic("programmer error, cannot set root dir multiple times")
 	}
-	t.rootParent = filepath.Dir(path)
+	t.rootParent = filepath.Dir(p)
 	t.root = &ast.TreeNode{
-		Path: filepath.Base(path),
+		Path: path.Base(filepath.ToSlash(p)),
 		Type: ast.Policyspace,
 	}
 	t.nodes[t.root.Path] = t.root
 	return t.root
 }
 
-// AddDir creates a node and converts the path to a path relative to the root's parent.
-func (t *DirectoryTree) AddDir(path string, typ ast.TreeNodeType) *ast.TreeNode {
+// AddDir adds the given node at the the given OS-specific path.
+func (t *DirectoryTree) AddDir(p string, typ ast.TreeNodeType) *ast.TreeNode {
 	if t.root == nil {
 		panic("programmer error, cannot add dir without root")
 	}
-	relPath, err := filepath.Rel(t.rootParent, path)
+	relPath, err := filepath.Rel(t.rootParent, p)
 	if err != nil {
 		panic(fmt.Sprintf("programmer error, should not be non-relative path here: %s", err))
 	}
 	n := &ast.TreeNode{
-		Path: relPath,
+		Path: filepath.ToSlash(relPath),
 		Type: typ,
 	}
 	t.nodes[relPath] = n

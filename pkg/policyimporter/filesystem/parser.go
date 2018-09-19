@@ -31,6 +31,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
@@ -44,7 +45,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
-	"k8s.io/kubernetes/pkg/kubectl/validation"
+	kubevalidation "k8s.io/kubernetes/pkg/kubectl/validation"
 )
 
 // Parser reads files on disk and builds Nomos CRDs.
@@ -97,7 +98,7 @@ func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
 	// Walk the filesystem looking for resources. If there aren't any, skip builder, because builder
 	// treats that as an error.
 	visitors, err := resource.ExpandPathsToFileVisitors(
-		&resource.Mapper{}, root, true, resource.FileExtensions, validation.NullSchema{})
+		&resource.Mapper{}, root, true, resource.FileExtensions, kubevalidation.NullSchema{})
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +230,7 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 	fsCtx.Tree = tree
 
 	visitors := []ast.CheckingVisitor{
-		NewInputValidator(),
+		validation.NewInputValidator(),
 		transform.NewInheritanceVisitor(
 			[]transform.InheritanceSpec{
 				{

@@ -18,7 +18,7 @@ package backend
 
 import (
 	"fmt"
-	"path/filepath"
+	"path"
 	"time"
 
 	"github.com/golang/glog"
@@ -128,7 +128,7 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 			Kind:       "PolicyNode",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        filepath.Base(n.Path),
+			Name:        path.Base(n.Path),
 			Annotations: n.Annotations,
 			Labels:      n.Labels,
 		},

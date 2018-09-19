@@ -69,7 +69,7 @@ const (
 
 // TreeNode is analogous to a directory in the policy hierarchy.
 type TreeNode struct {
-	// Path is the path to the current directory from the root of the tree.
+	// Path is the OS-agnostic slash-separated path to the current node from the root of the tree.
 	Path string
 
 	// The type of the HierarchyNode
