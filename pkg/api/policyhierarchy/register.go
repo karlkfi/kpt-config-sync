@@ -17,5 +17,6 @@ limitations under the License.
 package policyhierarchy
 
 const (
+	// GroupName is the name of the group of policyhierarchy resources.
 	GroupName = "nomos.dev"
 )

@@ -34,7 +34,6 @@ RUN pip install grip
 ENV GOCACHE=/go/cache
 
 RUN go get gopkg.in/alecthomas/gometalinter.v2 && gometalinter.v2 --install
-RUN go get github.com/golangci/golangci-lint/cmd/golangci-lint
 
 # sembump knows how to increment semvers.
 # sembump -kind=minor v1.2.3

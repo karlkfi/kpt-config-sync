@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 // Package state contains information about the state of Nomos on a cluster.
 package state
 
@@ -34,6 +35,7 @@ type ClusterState struct {
 	syncStates map[string]policyhierarchyv1.PolicySyncState
 }
 
+// NewClusterState returns a new ClusterState.
 func NewClusterState() *ClusterState {
 	return &ClusterState{
 		syncStates: map[string]policyhierarchyv1.PolicySyncState{},
@@ -62,7 +64,7 @@ func (c *ClusterState) ProcessClusterPolicy(cp *policyhierarchyv1.ClusterPolicy)
 	return nil
 }
 
-// ProcessClusterPolicy updates the ClusterState with the current status of the PolicyNode.
+// ProcessPolicyNode updates the ClusterState with the current status of the PolicyNode.
 func (c *ClusterState) ProcessPolicyNode(ancestry hierarchy.Ancestry) error {
 	c.mux.Lock()
 	defer c.mux.Unlock()

@@ -37,6 +37,7 @@ var (
 	useCurrent    = flag.Bool("use_current_context", false, "If set, and if the list of clusters in the install config is empty, use current context to install into.")
 )
 
+// nolint:deadcode
 // version parses vstr, which could be of the form "prefix1.2.3-blah+blah".
 func versionOrDie(vstr string) semver.Version {
 	// Rewind the regexp to the first digit so it can be parsed as a semver.

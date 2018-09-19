@@ -931,7 +931,11 @@ func TestParser(t *testing.T) {
 			}
 
 			f := fstesting.NewTestFactory()
-			defer f.Cleanup()
+			defer func() {
+				if err := f.Cleanup(); err != nil {
+					t.Fatal(errors.Wrap(err, "could not clean up"))
+				}
+			}()
 
 			p := Parser{f, true}
 

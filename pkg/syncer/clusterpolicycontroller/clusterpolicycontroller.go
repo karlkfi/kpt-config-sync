@@ -219,6 +219,7 @@ func (s *ClusterPolicyController) setClusterPolicyStatus(cp *policyhierarchyv1.C
 	return ua.Execute()
 }
 
+// NewSyncError returns a ClusterPolicySyncError for the specified error and action.
 func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchyv1.ClusterPolicySyncError {
 	return policyhierarchyv1.ClusterPolicySyncError{
 		ResourceName: name,

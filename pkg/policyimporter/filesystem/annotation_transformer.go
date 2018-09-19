@@ -24,6 +24,7 @@ import (
 // Map of annotation keys to a map of old values to new values.
 type annotationTransformer map[string]map[string]string
 
+// nolint: deadcode
 func newAnnotationTransformer() annotationTransformer {
 	return make(map[string]map[string]string)
 }

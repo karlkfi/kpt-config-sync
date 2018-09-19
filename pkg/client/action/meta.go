@@ -60,7 +60,7 @@ func ObjectMetaSubset(set runtime.Object, subset runtime.Object) bool {
 	return MetaSubset(set.(metav1.Object), subset.(metav1.Object))
 }
 
-// ObjectMetaMatch returns true if the Meta field of left and right objects are equal.
+// ObjectMetaEqual returns true if the Meta field of left and right objects are equal.
 func ObjectMetaEqual(left runtime.Object, right runtime.Object) bool {
 	return MetaEqual(left.(metav1.Object), right.(metav1.Object))
 }

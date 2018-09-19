@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 // Package monitor contains the controller for monitoring the state of Nomos on a cluster.
 package monitor
 
@@ -31,6 +32,7 @@ type Controller struct {
 	clusterState *state.ClusterState
 }
 
+// NewController returns a new Controller.
 func NewController(injectArgs args.InjectArgs) *Controller {
 	return &Controller{injectArgs, state.NewClusterState()}
 }

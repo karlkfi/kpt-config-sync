@@ -48,12 +48,14 @@ Options:
 var validate = flag.Bool("validate", true, "If true, use a schema to validate the input")
 
 func printErrAndDie(err error) {
+	// nolint: errcheck
 	fmt.Fprintln(os.Stderr, err)
 	os.Exit(1)
 }
 
 func main() {
 	flag.Usage = func() {
+		// nolint: errcheck
 		fmt.Fprint(os.Stderr, usage)
 		flag.PrintDefaults()
 	}

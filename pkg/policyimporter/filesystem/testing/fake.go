@@ -95,12 +95,12 @@ func NewTestFactory() *TestFactory {
 	}
 }
 
-func (f *TestFactory) Cleanup() {
+func (f *TestFactory) Cleanup() error {
 	if f.tempConfigFile == nil {
-		return
+		return nil
 	}
 
-	os.Remove(f.tempConfigFile.Name())
+	return os.Remove(f.tempConfigFile.Name())
 }
 
 func defaultFakeClientConfig() (clientcmd.ClientConfig, *os.File) {

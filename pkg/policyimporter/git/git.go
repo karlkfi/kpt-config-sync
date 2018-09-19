@@ -1,4 +1,4 @@
-// package git provides functionality related to Git repos.
+// Package git provides functionality related to Git repos.
 package git
 
 import (
