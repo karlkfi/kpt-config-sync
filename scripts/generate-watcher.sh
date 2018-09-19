@@ -23,4 +23,7 @@ Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types,\
 $TMP_PROTO
 
 mkdir -p clientgen/watcher/v1/testing
+
+# go install github.com/golang/mock/mockgen
+
 mockgen github.com/google/nomos/clientgen/watcher/v1 WatcherClient,Watcher_WatchClient > clientgen/watcher/v1/testing/watcher_mock.go

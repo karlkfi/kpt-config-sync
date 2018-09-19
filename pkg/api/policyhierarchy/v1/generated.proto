@@ -162,7 +162,6 @@ message NamespaceSelector {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // The actual object definition, per K8S object definition style.
-  // +optional
   optional NamespaceSelectorSpec spec = 2;
 }
 
