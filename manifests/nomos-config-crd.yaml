@@ -17,8 +17,9 @@ spec:
     # openAPIV3Schema is the schema for validating custom objects
     # TODO(phillipao): Complete and test when 1.11 beta is out.
     openAPIV3Schema:
-      required:
-      - spec
+      # TODO(b/116048028): Add back.
+      # required:
+      # - spec
       properties:
         spec:
           required:
