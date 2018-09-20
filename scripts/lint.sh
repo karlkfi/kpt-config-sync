@@ -51,7 +51,7 @@ done
 # The linters run for a long time and even longer on shared machines that run
 # our presubmit tests.  Allow a generous timeout for the linter checks to
 # finish.
-export linter_deadline="300s"
+export linter_deadline="500s"
 
 echo "Running golint, errcheck and deadcode: "
 gometalinter.v2 \
