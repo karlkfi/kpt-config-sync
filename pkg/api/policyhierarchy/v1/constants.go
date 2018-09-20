@@ -21,14 +21,6 @@ package v1
 // This is also used as the value for the label set on a namespace.
 const NoParentNamespace = ""
 
-// ParentLabelKey is the Key of a label set on a namespace with value set to the parent namespace's
-// name.
-const ParentLabelKey = "nomos.dev/parent-name"
-
-// NamespaceSelectorAnnotationKey is the annotation key set on policy resources that refers to
-// name of NamespaceSelector resource.
-const NamespaceSelectorAnnotationKey = "nomos.dev/namespace-selector"
-
 // ClusterPolicyName is the name of the singleton ClusterPolicy resource.
 const ClusterPolicyName = "nomos-cluster-policy"
 

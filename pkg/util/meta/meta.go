@@ -148,7 +148,7 @@ func (v *Validator) validateObject(namespace string, obj apiObject) error {
 func checkNomosPrefix(m map[string]string) error {
 	for k := range m {
 		if strings.HasPrefix(k, "nomos.dev/") {
-			if k == v1.NamespaceSelectorAnnotationKey || k == v1.AnnotationKeyDeclarationPath {
+			if k == v1.NamespaceSelectorAnnotationKey || k == v1.DeclarationPathAnnotationKey {
 				continue
 			}
 			return errors.Errorf("key %s contains nomos.dev/ prefix", k)

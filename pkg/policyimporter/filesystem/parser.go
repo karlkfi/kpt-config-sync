@@ -270,7 +270,7 @@ func applyPathAnnotation(o runtime.Object, info *resource.Info, dir string) {
 		a = map[string]string{}
 		metaObj.SetAnnotations(a)
 	}
-	a[policyhierarchyv1.AnnotationKeyDeclarationPath] = filepath.Join(dir, filepath.Base(info.Source))
+	a[policyhierarchyv1.DeclarationPathAnnotationKey] = filepath.Join(dir, filepath.Base(info.Source))
 }
 
 func processRootDir(

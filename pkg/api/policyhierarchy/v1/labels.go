@@ -16,10 +16,6 @@ limitations under the License.
 
 package v1
 
-// DeclarationPathAnnotationKey is an annotation indicates the path in the source of truth where the
-// policy was originally declared.
-const DeclarationPathAnnotationKey = "nomos.dev/declaration-path"
-
-// NamespaceSelectorAnnotationKey is the annotation key set on policy resources that refers to
-// name of NamespaceSelector resource.
-const NamespaceSelectorAnnotationKey = "nomos.dev/namespace-selector"
+// ParentLabelKey is the Key of a label set on a namespace with value set to the parent namespace's
+// name.
+const ParentLabelKey = "nomos.dev/parent-name"
