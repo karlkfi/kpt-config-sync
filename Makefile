@@ -55,7 +55,7 @@ INSTALLER_OUTPUT_DIR := $(STAGING_DIR)/installer_output
 TEMP_OUTPUT_DIR := $(OUTPUT_DIR)/tmp
 
 # Directory containing gen-alld yaml files from manifest templates.
-GEN_YAML_DIR := $(OUTPUT_DIR)/yaml
+GEN_YAML_DIR := $(OUTPUT_DIR)/deployment
 
 # Directory containing generated test yamls
 TEST_GEN_YAML_DIR := $(OUTPUT_DIR)/test/yaml

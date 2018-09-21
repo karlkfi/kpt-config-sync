@@ -313,7 +313,7 @@ func (i *Installer) processCluster(cluster string) error {
 		deployments = append(deployments, gitDeployments...)
 	}
 	for _, d := range deployments {
-		if err = i.k.Apply(filepath.Join(i.workDir, "yaml", fmt.Sprintf("%s.yaml", d))); err != nil {
+		if err = i.k.Apply(filepath.Join(i.workDir, "manifests/deployment", fmt.Sprintf("%s.yaml", d))); err != nil {
 			return errors.Wrapf(err, "while applying Deployment: %s", d)
 		}
 	}

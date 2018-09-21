@@ -38,7 +38,7 @@ const (
 
 	// yamlDirectory is the directory relative to workDir that contains the
 	// YAML files to apply on a cluster.
-	yamlDirectory = "yaml"
+	yamlDirectory = "manifests/deployment"
 )
 
 // certInstaller generates certificates and deploys secrets for admission

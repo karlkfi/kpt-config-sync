@@ -9,9 +9,8 @@ installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
 			      $(STAGING_DIR)/installer/; \
 	)
 	@cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
-	@mkdir -p $(STAGING_DIR)/installer/yaml
-	@cp $(OUTPUT_DIR)/yaml/*  $(STAGING_DIR)/installer/yaml
-	@mkdir -p $(STAGING_DIR)/installer/manifests
+	@mkdir -p $(STAGING_DIR)/installer/manifests/deployment
+	@cp $(OUTPUT_DIR)/deployment/*  $(STAGING_DIR)/installer/manifests/deployment
 	@cp $(TOP_DIR)/manifests/*.yaml $(STAGING_DIR)/installer/manifests
 	@cp $(TOP_DIR)/build/installer/install.sh $(STAGING_DIR)/installer
 	@mkdir -p $(STAGING_DIR)/installer/scripts
