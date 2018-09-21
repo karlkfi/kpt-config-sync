@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// ObjectSets constructs a list of ObjectSet from a list of runtime.Object
+// ObjectSets constructs a list of ObjectSet from a list of runtime.Object.
 func ObjectSets(runtimeObjs ...runtime.Object) ast.ObjectList {
 	astObjs := make([]*ast.Object, len(runtimeObjs))
 	for idx := range runtimeObjs {
@@ -43,7 +43,7 @@ var Helper TestHelper
 type TestHelper struct {
 }
 
-// NomosAdminClusterRole returns a ClusterRole for testing
+// NomosAdminClusterRole returns a ClusterRole for testing.
 func (t *TestHelper) NomosAdminClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
@@ -61,7 +61,7 @@ func (t *TestHelper) NomosAdminClusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-// NomosAdminClusterRoleBinding returns a ClusterRoleBinding for testing
+// NomosAdminClusterRoleBinding returns a ClusterRoleBinding for testing.
 func (t *TestHelper) NomosAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
@@ -86,7 +86,7 @@ func (t *TestHelper) NomosAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-// NomosPodSecurityPolicy returns a PodSecurityPolicy for testing
+// NomosPodSecurityPolicy returns a PodSecurityPolicy for testing.
 func (t *TestHelper) NomosPodSecurityPolicy() *extensionsv1beta1.PodSecurityPolicy {
 	return &extensionsv1beta1.PodSecurityPolicy{
 		TypeMeta: metav1.TypeMeta{
@@ -105,16 +105,17 @@ func (t *TestHelper) NomosPodSecurityPolicy() *extensionsv1beta1.PodSecurityPoli
 	}
 }
 
-// EmptyContext returns an empty git context
+// EmptyContext returns an empty git context.
 func (t *TestHelper) EmptyContext() *ast.Context {
 	return &ast.Context{}
 }
 
-// ClusterPolicies returns a GitContext with only cluster policies
+// ClusterPolicies returns a GitContext with only cluster policies.
 func (t *TestHelper) ClusterPolicies() *ast.Context {
 	return &ast.Context{Cluster: t.AcmeCluster()}
 }
 
+// AdminRoleBinding returns the role binding for the admin role.
 func (t *TestHelper) AdminRoleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
@@ -139,6 +140,7 @@ func (t *TestHelper) AdminRoleBinding() *rbacv1.RoleBinding {
 	}
 }
 
+// PodReaderRole returns the contents of the pod-reader role.
 func (t *TestHelper) PodReaderRole() *rbacv1.Role {
 	return &rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
@@ -156,6 +158,7 @@ func (t *TestHelper) PodReaderRole() *rbacv1.Role {
 	}
 }
 
+// PodReaderRoleBinding returns the role binding for the pod-reader role.
 func (t *TestHelper) PodReaderRoleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
@@ -180,6 +183,7 @@ func (t *TestHelper) PodReaderRoleBinding() *rbacv1.RoleBinding {
 	}
 }
 
+// DeploymentReaderRole returns the contents of the deployment-reader role.
 func (t *TestHelper) DeploymentReaderRole() *rbacv1.Role {
 	return &rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
@@ -197,7 +201,8 @@ func (t *TestHelper) DeploymentReaderRole() *rbacv1.Role {
 	}
 }
 
-func (t *TestHelper) DeployemntReaderRoleBinding() *rbacv1.RoleBinding {
+// DeploymentReaderRoleBinding returns the rolebinding for deployment-reader role.
+func (t *TestHelper) DeploymentReaderRoleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
@@ -221,6 +226,7 @@ func (t *TestHelper) DeployemntReaderRoleBinding() *rbacv1.RoleBinding {
 	}
 }
 
+// AcmeResourceQuota returns the resource quota for Acme corp.
 func (t *TestHelper) AcmeResourceQuota() *corev1.ResourceQuota {
 	return &corev1.ResourceQuota{
 		TypeMeta: metav1.TypeMeta{
@@ -238,6 +244,7 @@ func (t *TestHelper) AcmeResourceQuota() *corev1.ResourceQuota {
 	}
 }
 
+// FrontendResourceQuota returns the resource quota for the frontend namespace.
 func (t *TestHelper) FrontendResourceQuota() *corev1.ResourceQuota {
 	return &corev1.ResourceQuota{
 		TypeMeta: metav1.TypeMeta{
@@ -255,7 +262,7 @@ func (t *TestHelper) FrontendResourceQuota() *corev1.ResourceQuota {
 	}
 }
 
-// ReservedNamespaces returns a GitContext with only reserved namespaces
+// ReservedNamespaces returns a GitContext with only reserved namespaces.
 func (t *TestHelper) ReservedNamespaces() *ast.Context {
 	return &ast.Context{
 		Cluster:            &ast.Cluster{},
@@ -263,6 +270,7 @@ func (t *TestHelper) ReservedNamespaces() *ast.Context {
 	}
 }
 
+// AcmeCluster returns the cluster info for Acme corp.
 func (t *TestHelper) AcmeCluster() *ast.Cluster {
 	return &ast.Cluster{
 		Objects: ObjectSets(
@@ -273,6 +281,7 @@ func (t *TestHelper) AcmeCluster() *ast.Cluster {
 	}
 }
 
+// AcmeReserved returns the reserved namespaces for Acme corp.
 func (t *TestHelper) AcmeReserved() *ast.ReservedNamespaces {
 	return &ast.ReservedNamespaces{
 		ConfigMap: corev1.ConfigMap{
@@ -314,7 +323,7 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 				Labels:      map[string]string{"environment": "test"},
 				Annotations: map[string]string{"has-waffles": "false"},
 				Objects: ObjectSets(
-					t.DeployemntReaderRoleBinding(),
+					t.DeploymentReaderRoleBinding(),
 					t.DeploymentReaderRole(),
 				),
 			},
@@ -322,7 +331,7 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 	}
 }
 
-// NamespacePolicies returns a GitContext with an example hierarchy
+// NamespacePolicies returns a GitContext with an example hierarchy.
 func (t *TestHelper) NamespacePolicies() *ast.Context {
 	return &ast.Context{
 		Cluster: &ast.Cluster{},
@@ -330,7 +339,7 @@ func (t *TestHelper) NamespacePolicies() *ast.Context {
 	}
 }
 
-// AcmeContext returns a GitContext with an example hierarchy
+// AcmeContext returns a GitContext with an example hierarchy.
 func (t *TestHelper) AcmeContext() *ast.Context {
 	return &ast.Context{
 		Cluster:            t.AcmeCluster(),

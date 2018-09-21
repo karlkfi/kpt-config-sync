@@ -93,7 +93,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 							Labels:      map[string]string{"environment": "test"},
 							Annotations: map[string]string{"has-waffles": "false"},
 							Objects: vt.ObjectSets(
-								vt.Helper.DeployemntReaderRoleBinding(),
+								vt.Helper.DeploymentReaderRoleBinding(),
 								vt.Helper.DeploymentReaderRole(),
 								modQuota(
 									vt.Helper.AcmeResourceQuota(),
@@ -186,7 +186,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						&ast.TreeNode{
 							Type:    ast.Namespace,
 							Path:    "acme/frontend-test",
-							Objects: vt.ObjectSets(vt.Helper.DeployemntReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
+							Objects: vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
 						},
 					},
 				},
@@ -205,7 +205,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						&ast.TreeNode{
 							Type:    ast.Namespace,
 							Path:    "acme/frontend-test",
-							Objects: vt.ObjectSets(vt.Helper.DeployemntReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
+							Objects: vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
 						},
 					},
 				},

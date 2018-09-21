@@ -81,7 +81,9 @@ func (s *SyncerController) waitForImporter(timeout time.Duration) error {
 		var parser expfmt.TextParser
 		mf, err := parser.TextToMetricFamilies(resp.Body)
 		if err != nil {
-			resp.Body.Close()
+			if err2 := resp.Body.Close(); err2 != nil {
+				glog.Warningf("Error sending response: %v", err2)
+			}
 			return errors.Wrap(err, "failed while parsing metrics")
 		}
 		metrics := mf["nomos_policy_importer_policy_state_transitions_total"].GetMetric()
@@ -90,12 +92,16 @@ func (s *SyncerController) waitForImporter(timeout time.Duration) error {
 			for _, l := range labels {
 				if *l.Name == "status" && *l.Value == "succeeded" && m.Counter.GetValue() > 0 {
 					glog.Info("initial importer sync completed")
-					resp.Body.Close()
+					if err := resp.Body.Close(); err != nil {
+						glog.Warningf("Error sending response: %v", err)
+					}
 					return nil
 				}
 			}
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			glog.Warningf("Error sending response: %v", err)
+		}
 	}
 	return fmt.Errorf("timed out waiting for importer to sync state")
 }

@@ -86,7 +86,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 							Labels:      map[string]string{"environment": "test"},
 							Annotations: map[string]string{"has-waffles": "false"},
 							Objects: vt.ObjectSets(
-								vt.Helper.DeployemntReaderRoleBinding(),
+								vt.Helper.DeploymentReaderRoleBinding(),
 								vt.Helper.DeploymentReaderRole(),
 								withName(vt.Helper.AdminRoleBinding(), "admin"),
 								vt.Helper.AcmeResourceQuota(),

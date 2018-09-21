@@ -210,7 +210,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Spec: policyhierarchyv1.PolicyNodeSpec{
 						Type:           policyhierarchyv1.Namespace,
 						Parent:         "acme",
-						RoleBindingsV1: []rbacv1.RoleBinding{*vt.Helper.DeployemntReaderRoleBinding()},
+						RoleBindingsV1: []rbacv1.RoleBinding{*vt.Helper.DeploymentReaderRoleBinding()},
 						RolesV1:        []rbacv1.Role{*vt.Helper.DeploymentReaderRole()},
 					},
 				},

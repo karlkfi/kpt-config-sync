@@ -18,59 +18,20 @@ set -euo pipefail
 
 export CGO_ENABLED=0
 
-# TODO(116152665): Fix golint, errcheck and deadcode issues in these packages
-# and remove them from here. When all have been fixed, run these linters against
-# all of the codebase.
-GOLINT_EXCLUDE_PACKAGES=(
-  pkg/api/policyascode
-  pkg/api/policyascode/v1
-  pkg/monitor
-  pkg/policyimporter/analyzer/visitor/testing
-  pkg/policyimporter/filesystem/testing
-  pkg/syncer/syncercontroller
-)
-function exclude() {
-  local value="${1:-}"
-  for i in "${GOLINT_EXCLUDE_PACKAGES[@]}"; do
-    if [[ "${i}" == "${value}" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
-LINT_PKGS=()
-for pkg in $(find cmd pkg -name '*.go' \
-    | sed -e 's|/[^/]*$||' \
-    | sort \
-    | uniq); do
-  if ! exclude "${pkg}"; then
-    LINT_PKGS+=("${pkg}")
-  fi
-done
-
 # The linters run for a long time and even longer on shared machines that run
 # our presubmit tests.  Allow a generous timeout for the linter checks to
 # finish.
 export linter_deadline="500s"
-
-echo "Running golint, errcheck and deadcode: "
-gometalinter.v2 \
-  --deadline="${linter_deadline}" \
-  --disable-all \
-  --enable=deadcode \
-  --enable=errcheck \
-  --enable=golint \
-  --exclude=generated\.pb\.go \
-  --exclude=generated\.go \
-  "${LINT_PKGS[@]}"
-echo "PASS"
 
 echo "Running gometalinter: "
 if ! OUT="$(
   gometalinter.v2 \
     --deadline="${linter_deadline}" \
     --disable-all \
+    --enable=deadcode \
+    --enable=errcheck \
     --enable=goimports \
+    --enable=golint \
     --enable=ineffassign \
     --enable=megacheck \
     --enable=unconvert \
