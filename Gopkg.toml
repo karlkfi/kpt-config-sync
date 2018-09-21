@@ -85,7 +85,7 @@ required=[
 [[constraint]]
   name = "github.com/golang/dep"
   source = "https://github.com/sbochins-k8s/dep.git"
-  revision = "03840a644f0e34c69234c57eae3f86825bb0ffda"
+  revision = "7f4b84b1f66aa1a7d542877bd06b08bdb2a5aa70"
   # TODO(114492892): go back to using v0.4.1 of deps after debugging licenselinter issue.
 
 [prune]

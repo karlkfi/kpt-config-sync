@@ -324,7 +324,7 @@
   version = "v1.0.2"
 
 [[projects]]
-  digest = "1:475ef99fb340441140e682be97f5caf541aa36305cc8549fa56dadbe205648b9"
+  digest = "1:53f1fddde3aee2e97a856f7fba1401e7fdfadc301c8dceade3fdcfb356b5cc5d"
   name = "github.com/golang/dep"
   packages = [
     ".",
@@ -335,7 +335,7 @@
     "internal/fs",
   ]
   pruneopts = "UT"
-  revision = "c85ba7e9f526a2bebaaab7e259f7ad750a07b01b"
+  revision = "7f4b84b1f66aa1a7d542877bd06b08bdb2a5aa70"
   source = "https://github.com/sbochins-k8s/dep.git"
 
 [[projects]]
@@ -1445,7 +1445,6 @@
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/apimachinery/pkg/runtime/serializer",
-    "k8s.io/apimachinery/pkg/runtime/serializer/json",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/json",
     "k8s.io/apimachinery/pkg/util/validation",
@@ -1456,12 +1455,12 @@
     "k8s.io/apiserver/pkg/authentication/user",
     "k8s.io/client-go/discovery",
     "k8s.io/client-go/discovery/fake",
+    "k8s.io/client-go/dynamic",
     "k8s.io/client-go/informers",
     "k8s.io/client-go/informers/core/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/scheme",
-    "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/listers/core/v1",
     "k8s.io/client-go/listers/rbac/v1",
     "k8s.io/client-go/plugin/pkg/client/auth",
