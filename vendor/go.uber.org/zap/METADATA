@@ -1,0 +1,12 @@
+name: "zap"
+description: "Blazing fast, structured, leveled logging in Go."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/uber-go/zap"
+  }
+  version: "v1.9.1"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}
