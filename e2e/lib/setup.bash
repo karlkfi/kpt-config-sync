@@ -54,7 +54,7 @@ setup::gcp::delete_namespace() {
   ignore::log_err gcloud --quiet alpha container policy namespaces delete \
           --project="${project_id}" \
           "projects/${project_num}/namespaces/${namespace}"
-  namespace::check_not_found -t 120 "${namespace}"
+  namespace::check_not_found -t 300 "${namespace}"
   echo "setup::gcp::delete_namespace exit"
 }
 

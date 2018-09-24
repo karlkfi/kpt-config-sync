@@ -16,7 +16,7 @@
 function wait::event() {
   local deadline=""
   local namespace=""
-  local timeout="30"
+  local timeout="300"
   local args=()
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
@@ -86,7 +86,7 @@ function wait::for() {
   local args=()
   local sleeptime="0.1"
   local exitf=(wait::__exit_eq 0)
-  local timeout=30
+  local timeout=300
   local deadline="$(( $(date +%s) + timeout ))"
 
   local parse_args=false
