@@ -30,6 +30,7 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -166,6 +167,7 @@ func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	default:
 		glog.Fatalf("programmer error: invalid type %v in context %q", obj, v.context)
 	}
+	spec.Resources = appendResource(spec.Resources, o.Object)
 	return nil
 }
 
@@ -187,5 +189,42 @@ func (v *OutputVisitor) VisitObject(o *ast.Object) ast.Node {
 	default:
 		glog.Fatalf("programmer error: invalid type %v in context %q", obj, v.context)
 	}
+	spec.Resources = appendResource(spec.Resources, o.Object)
 	return nil
+}
+
+// appendResource adds Object o to resources.
+// GenericResources is grouped first by kind and then by version, and this method takes care of
+// adding any required groupings for the new object, or adding to existing groupings if present.
+func appendResource(resources []policyhierarchyv1.GenericResources, o runtime.Object) []policyhierarchyv1.GenericResources {
+	gvk := o.GetObjectKind().GroupVersionKind()
+	var gr *policyhierarchyv1.GenericResources
+	for i := range resources {
+		if resources[i].Group == gvk.Group && resources[i].Kind == gvk.Kind {
+			gr = &resources[i]
+			break
+		}
+	}
+	if gr == nil {
+		resources = append(resources, policyhierarchyv1.GenericResources{
+			Group: gvk.Group,
+			Kind:  gvk.Kind,
+		})
+		gr = &resources[len(resources)-1]
+	}
+	var gvr *policyhierarchyv1.GenericVersionResources
+	for i := range gr.Versions {
+		if gr.Versions[i].Version == gvk.Version {
+			gvr = &gr.Versions[i]
+			break
+		}
+	}
+	if gvr == nil {
+		gr.Versions = append(gr.Versions, policyhierarchyv1.GenericVersionResources{
+			Version: gvk.Version,
+		})
+		gvr = &gr.Versions[len(gr.Versions)-1]
+	}
+	gvr.Objects = append(gvr.Objects, runtime.RawExtension{Object: o})
+	return resources
 }

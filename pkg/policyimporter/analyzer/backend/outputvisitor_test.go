@@ -26,6 +26,7 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func allPolicies(cp policyhierarchyv1.ClusterPolicy, pns []policyhierarchyv1.PolicyNode) *policyhierarchyv1.AllPolicies {
@@ -56,7 +57,7 @@ func (tc *OutputVisitorTestcase) Run(t *testing.T) {
 }
 
 var outputVisitorTestCases = []OutputVisitorTestcase{
-	OutputVisitorTestcase{
+	{
 		name:  "empty",
 		input: vt.Helper.EmptyContext(),
 		expect: allPolicies(
@@ -72,7 +73,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			[]policyhierarchyv1.PolicyNode{},
 		),
 	},
-	OutputVisitorTestcase{
+	{
 		name:  "emtpy cluster policies",
 		input: &ast.Context{Cluster: &ast.Cluster{}},
 		expect: allPolicies(
@@ -88,7 +89,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			[]policyhierarchyv1.PolicyNode{},
 		),
 	},
-	OutputVisitorTestcase{
+	{
 		name:  "cluster policies",
 		input: vt.Helper.ClusterPolicies(),
 		expect: allPolicies(
@@ -104,12 +105,44 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					ClusterRolesV1:             []rbacv1.ClusterRole{*vt.Helper.NomosAdminClusterRole()},
 					ClusterRoleBindingsV1:      []rbacv1.ClusterRoleBinding{*vt.Helper.NomosAdminClusterRoleBinding()},
 					PodSecurityPoliciesV1Beta1: []extensionsv1beta1.PodSecurityPolicy{*vt.Helper.NomosPodSecurityPolicy()},
+					Resources: []policyhierarchyv1.GenericResources{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kind:  "ClusterRole",
+							Versions: []policyhierarchyv1.GenericVersionResources{
+								{
+									Version: "v1",
+									Objects: []runtime.RawExtension{{Object: vt.Helper.NomosAdminClusterRole()}},
+								},
+							},
+						},
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kind:  "ClusterRoleBinding",
+							Versions: []policyhierarchyv1.GenericVersionResources{
+								{
+									Version: "v1",
+									Objects: []runtime.RawExtension{{Object: vt.Helper.NomosAdminClusterRoleBinding()}},
+								},
+							},
+						},
+						{
+							Group: "extensions",
+							Kind:  "PodSecurityPolicy",
+							Versions: []policyhierarchyv1.GenericVersionResources{
+								{
+									Version: "v1beta1",
+									Objects: []runtime.RawExtension{{Object: vt.Helper.NomosPodSecurityPolicy()}},
+								},
+							},
+						},
+					},
 				},
 			},
 			[]policyhierarchyv1.PolicyNode{},
 		),
 	},
-	OutputVisitorTestcase{
+	{
 		name:  "reserved namespaces",
 		input: vt.Helper.ReservedNamespaces(),
 		expect: allPolicies(
@@ -123,7 +156,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 			},
 			[]policyhierarchyv1.PolicyNode{
-				policyhierarchyv1.PolicyNode{
+				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
 						Kind:       "PolicyNode",
@@ -135,7 +168,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Type: policyhierarchyv1.ReservedNamespace,
 					},
 				},
-				policyhierarchyv1.PolicyNode{
+				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
 						Kind:       "PolicyNode",
@@ -150,7 +183,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			},
 		),
 	},
-	OutputVisitorTestcase{
+	{
 		name:  "namespace policies",
 		input: vt.Helper.NamespacePolicies(),
 		expect: allPolicies(
@@ -164,7 +197,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 			},
 			[]policyhierarchyv1.PolicyNode{
-				policyhierarchyv1.PolicyNode{
+				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
 						Kind:       "PolicyNode",
@@ -177,9 +210,31 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Parent:          "",
 						RoleBindingsV1:  []rbacv1.RoleBinding{*vt.Helper.AdminRoleBinding()},
 						ResourceQuotaV1: vt.Helper.AcmeResourceQuota(),
+						Resources: []policyhierarchyv1.GenericResources{
+							{
+								Group: "rbac.authorization.k8s.io",
+								Kind:  "RoleBinding",
+								Versions: []policyhierarchyv1.GenericVersionResources{
+									{
+										Version: "v1",
+										Objects: []runtime.RawExtension{{Object: vt.Helper.AdminRoleBinding()}},
+									},
+								},
+							},
+							{
+								Group: "",
+								Kind:  "ResourceQuota",
+								Versions: []policyhierarchyv1.GenericVersionResources{
+									{
+										Version: "v1",
+										Objects: []runtime.RawExtension{{Object: vt.Helper.AcmeResourceQuota()}},
+									},
+								},
+							},
+						},
 					},
 				},
-				policyhierarchyv1.PolicyNode{
+				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
 						Kind:       "PolicyNode",
@@ -195,9 +250,41 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						RoleBindingsV1:  []rbacv1.RoleBinding{*vt.Helper.PodReaderRoleBinding()},
 						RolesV1:         []rbacv1.Role{*vt.Helper.PodReaderRole()},
 						ResourceQuotaV1: vt.Helper.FrontendResourceQuota(),
+						Resources: []policyhierarchyv1.GenericResources{
+							{
+								Group: "rbac.authorization.k8s.io",
+								Kind:  "RoleBinding",
+								Versions: []policyhierarchyv1.GenericVersionResources{
+									{
+										Version: "v1",
+										Objects: []runtime.RawExtension{{Object: vt.Helper.PodReaderRoleBinding()}},
+									},
+								},
+							},
+							{
+								Group: "rbac.authorization.k8s.io",
+								Kind:  "Role",
+								Versions: []policyhierarchyv1.GenericVersionResources{
+									{
+										Version: "v1",
+										Objects: []runtime.RawExtension{{Object: vt.Helper.PodReaderRole()}},
+									},
+								},
+							},
+							{
+								Group: "",
+								Kind:  "ResourceQuota",
+								Versions: []policyhierarchyv1.GenericVersionResources{
+									{
+										Version: "v1",
+										Objects: []runtime.RawExtension{{Object: vt.Helper.FrontendResourceQuota()}},
+									},
+								},
+							},
+						},
 					},
 				},
-				policyhierarchyv1.PolicyNode{
+				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
 						Kind:       "PolicyNode",
@@ -212,6 +299,28 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Parent:         "acme",
 						RoleBindingsV1: []rbacv1.RoleBinding{*vt.Helper.DeploymentReaderRoleBinding()},
 						RolesV1:        []rbacv1.Role{*vt.Helper.DeploymentReaderRole()},
+						Resources: []policyhierarchyv1.GenericResources{
+							{
+								Group: "rbac.authorization.k8s.io",
+								Kind:  "RoleBinding",
+								Versions: []policyhierarchyv1.GenericVersionResources{
+									{
+										Version: "v1",
+										Objects: []runtime.RawExtension{{Object: vt.Helper.DeploymentReaderRoleBinding()}},
+									},
+								},
+							},
+							{
+								Group: "rbac.authorization.k8s.io",
+								Kind:  "Role",
+								Versions: []policyhierarchyv1.GenericVersionResources{
+									{
+										Version: "v1",
+										Objects: []runtime.RawExtension{{Object: vt.Helper.DeploymentReaderRole()}},
+									},
+								},
+							},
+						},
 					},
 				},
 			},

@@ -34,6 +34,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
@@ -240,6 +242,7 @@ type Policies struct {
 	ResourceQuotaV1 *corev1.ResourceQuota
 }
 
+// createPolicyNode constructs a PolicyNode based on a Policies struct.
 func createPolicyNode(
 	name string,
 	parent string,
@@ -250,12 +253,54 @@ func createPolicyNode(
 			Type:   nodeType,
 			Parent: parent,
 		})
-	if policies != nil {
-		pn.Spec.RolesV1 = policies.RolesV1
-		pn.Spec.RoleBindingsV1 = policies.RoleBindingsV1
-		pn.Spec.ResourceQuotaV1 = policies.ResourceQuotaV1
+	if policies == nil {
+		return *pn
+	}
+
+	pn.Spec.RolesV1 = policies.RolesV1
+	pn.Spec.RoleBindingsV1 = policies.RoleBindingsV1
+	pn.Spec.ResourceQuotaV1 = policies.ResourceQuotaV1
+
+	if len(pn.Spec.RolesV1) > 0 {
+		var roleObjects []runtime.Object
+		for _, role := range policies.RolesV1 {
+			roleObjects = append(roleObjects, runtime.Object(&role))
+		}
+		pn.Spec.Resources = append(pn.Spec.Resources, resourcesFromObjects(roleObjects, rbacv1.SchemeGroupVersion, "Role")...)
+	}
+	if len(pn.Spec.RoleBindingsV1) > 0 {
+		var rbObjects []runtime.Object
+		for _, rb := range policies.RoleBindingsV1 {
+			rbObjects = append(rbObjects, runtime.Object(&rb))
+		}
+		pn.Spec.Resources = append(pn.Spec.Resources, resourcesFromObjects(rbObjects, rbacv1.SchemeGroupVersion, "RoleBinding")...)
+	}
+	if policies.ResourceQuotaV1 != nil {
+		o := runtime.Object(policies.ResourceQuotaV1)
+		pn.Spec.Resources = append(pn.Spec.Resources, resourcesFromObjects([]runtime.Object{o}, corev1.SchemeGroupVersion, "ResourceQuota")...)
 	}
 	return *pn
+}
+
+func resourcesFromObjects(objects []runtime.Object, gv schema.GroupVersion, kind string) []policyhierarchyv1.GenericResources {
+	raws := []runtime.RawExtension{}
+	for _, o := range objects {
+		raws = append(raws, runtime.RawExtension{Object: o})
+	}
+	if len(raws) > 0 {
+		res := policyhierarchyv1.GenericResources{
+			Group: gv.Group,
+			Kind:  kind,
+			Versions: []policyhierarchyv1.GenericVersionResources{
+				{
+					Version: gv.Version,
+					Objects: raws,
+				},
+			},
+		}
+		return []policyhierarchyv1.GenericResources{res}
+	}
+	return []policyhierarchyv1.GenericResources{}
 }
 
 func createNamespacePN(
