@@ -56,9 +56,12 @@ test-e2e-run-%:
 
 e2e-image-all: image-e2e-tests installer-staging
 
+banner:
+	@cat $(TOP_DIR)/build/banner.txt
+
 # Clean, build, and run e2e tests for all importers.
 # Clean cluster after running.
-test-e2e-all: e2e-image-all
+test-e2e-all: banner e2e-image-all
 	$(MAKE) test-e2e-run-git \
 		$(E2E_PARAMS) \
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
