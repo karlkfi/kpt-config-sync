@@ -22,6 +22,8 @@ import (
 	fakebespinv1 "github.com/google/nomos/clientgen/apis/typed/policyascode/v1/fake"
 	nomosv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
 	fakenomosv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1/fake"
+	nomosv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1"
+	fakenomosv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -80,4 +82,9 @@ func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
 // Nomos retrieves the NomosV1Client
 func (c *Clientset) Nomos() nomosv1.NomosV1Interface {
 	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
+}
+
+// NomosV1alpha1 retrieves the NomosV1alpha1Client
+func (c *Clientset) NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface {
+	return &fakenomosv1alpha1.FakeNomosV1alpha1{Fake: &c.Fake}
 }

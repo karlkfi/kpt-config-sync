@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1 contains the version 1 data definition for the PolicyHierarchy custom
+// Package v1alpha1 contains the version alpha1 data definition for the PolicyHierarchy custom
 // resources.
 //
 // To regenerate clientset and deepcopy run:
@@ -25,4 +25,4 @@ limitations under the License.
 // +k8s:deepcopy-gen=package,register
 // +k8s:openapi-gen=true
 // +groupName=nomos.dev
-package v1
+package v1alpha1

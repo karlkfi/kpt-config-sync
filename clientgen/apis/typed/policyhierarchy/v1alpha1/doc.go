@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,15 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1 contains the version 1 data definition for the PolicyHierarchy custom
-// resources.
-//
-// To regenerate clientset and deepcopy run:
-//
-//     make clientgen
-//
-// DO NOT MOVE THESE OUT OF THE PACKAGE DOCSTRING, GENERATING CODE PROPERLY DEPENDS ON THEM BEING HERE.
-// +k8s:deepcopy-gen=package,register
-// +k8s:openapi-gen=true
-// +groupName=nomos.dev
-package v1
+// This package has the automatically generated typed clients.
+package v1alpha1

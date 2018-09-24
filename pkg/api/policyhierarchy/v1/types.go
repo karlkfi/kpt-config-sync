@@ -284,49 +284,6 @@ type AllPolicies struct {
 	ClusterPolicy *ClusterPolicy `protobuf:"bytes,2,opt,name=clusterPolicy"`
 }
 
-// These comments must remain outside the package docstring.
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// NamespaceSelector specifies a LabelSelector applied to namespaces that exist within a
-// PolicyNode hierarchy.
-//
-// +protobuf=true
-type NamespaceSelector struct {
-	metav1.TypeMeta `json:",inline"`
-
-	// Standard object's metadata. The Name field of the policy node must match the namespace name.
-	// +optional
-	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
-	// The actual object definition, per K8S object definition style.
-	Spec NamespaceSelectorSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
-}
-
-// NamespaceSelectorSpec contains spec fields for NamespaceSelector.
-// +protobuf=true
-type NamespaceSelectorSpec struct {
-	// Selects namespaces.
-	// This field is NOT optional and follows standard
-	// label selector semantics. An empty selector matches all namespaces.
-	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,1,opt,name=selector"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// NamespaceSelectorList holds a list of NamespaceSelector resources.
-// +protobuf=true
-type NamespaceSelectorList struct {
-	metav1.TypeMeta `json:",inline"`
-
-	// Standard object's metadata.
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
-	// Items is a list of policy nodes that apply.
-	Items []NamespaceSelector `json:"items" protobuf:"bytes,2,rep,name=items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

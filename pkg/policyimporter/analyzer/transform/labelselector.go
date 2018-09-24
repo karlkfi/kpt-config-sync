@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labelpkg "k8s.io/apimachinery/pkg/labels"
@@ -46,7 +47,7 @@ func IsPolicyApplicableToNamespace(nsLabels map[string]string, policy metav1.Obj
 	if !exists {
 		return true
 	}
-	var ns policyhierarchyv1.NamespaceSelector
+	var ns policyhierarchyv1alpha1.NamespaceSelector
 	if err := json.Unmarshal([]byte(ls), &ns); err != nil {
 		panic(errors.Wrapf(err, "failed to unmarshal NamespaceSelector in object %q", policy.GetName()))
 	}

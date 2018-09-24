@@ -22,6 +22,7 @@ import (
 	"fmt"
 	v1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -59,12 +60,14 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=nomos.dev, Version=v1
 	case policyhierarchy_v1.SchemeGroupVersion.WithResource("clusterpolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().ClusterPolicies().Informer()}, nil
-	case policyhierarchy_v1.SchemeGroupVersion.WithResource("namespaceselectors"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().NamespaceSelectors().Informer()}, nil
 	case policyhierarchy_v1.SchemeGroupVersion.WithResource("policynodes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().PolicyNodes().Informer()}, nil
 	case policyhierarchy_v1.SchemeGroupVersion.WithResource("syncs"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().Syncs().Informer()}, nil
+
+		// Group=nomos.dev, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("namespaceselectors"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1alpha1().NamespaceSelectors().Informer()}, nil
 
 	}
 

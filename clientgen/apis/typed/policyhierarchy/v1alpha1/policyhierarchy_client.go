@@ -14,41 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package v1alpha1
 
 import (
 	"github.com/google/nomos/clientgen/apis/scheme"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
 
-type NomosV1Interface interface {
+type NomosV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	ClusterPoliciesGetter
-	PolicyNodesGetter
-	SyncsGetter
+	NamespaceSelectorsGetter
 }
 
-// NomosV1Client is used to interact with features provided by the nomos.dev group.
-type NomosV1Client struct {
+// NomosV1alpha1Client is used to interact with features provided by the nomos.dev group.
+type NomosV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *NomosV1Client) ClusterPolicies() ClusterPolicyInterface {
-	return newClusterPolicies(c)
+func (c *NomosV1alpha1Client) NamespaceSelectors() NamespaceSelectorInterface {
+	return newNamespaceSelectors(c)
 }
 
-func (c *NomosV1Client) PolicyNodes() PolicyNodeInterface {
-	return newPolicyNodes(c)
-}
-
-func (c *NomosV1Client) Syncs() SyncInterface {
-	return newSyncs(c)
-}
-
-// NewForConfig creates a new NomosV1Client for the given config.
-func NewForConfig(c *rest.Config) (*NomosV1Client, error) {
+// NewForConfig creates a new NomosV1alpha1Client for the given config.
+func NewForConfig(c *rest.Config) (*NomosV1alpha1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -57,12 +47,12 @@ func NewForConfig(c *rest.Config) (*NomosV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &NomosV1Client{client}, nil
+	return &NomosV1alpha1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new NomosV1Client for the given config and
+// NewForConfigOrDie creates a new NomosV1alpha1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *NomosV1Client {
+func NewForConfigOrDie(c *rest.Config) *NomosV1alpha1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -70,13 +60,13 @@ func NewForConfigOrDie(c *rest.Config) *NomosV1Client {
 	return client
 }
 
-// New creates a new NomosV1Client for the given RESTClient.
-func New(c rest.Interface) *NomosV1Client {
-	return &NomosV1Client{c}
+// New creates a new NomosV1alpha1Client for the given RESTClient.
+func New(c rest.Interface) *NomosV1alpha1Client {
+	return &NomosV1alpha1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v1.SchemeGroupVersion
+	gv := v1alpha1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
@@ -90,7 +80,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *NomosV1Client) RESTClient() rest.Interface {
+func (c *NomosV1alpha1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

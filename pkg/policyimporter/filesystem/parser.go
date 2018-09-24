@@ -28,6 +28,7 @@ import (
 	"github.com/blang/semver"
 	"github.com/golang/glog"
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
@@ -459,14 +460,14 @@ func parseNamespaceSelector(o runtime.Unstructured, node *ast.TreeNode) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal object in %s to NamespaceSelector")
 	}
-	ns := &policyhierarchyv1.NamespaceSelector{}
+	ns := &policyhierarchyv1alpha1.NamespaceSelector{}
 	err = json.Unmarshal(j, ns)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal NamespaceSelector")
 	}
 
 	if node.Selectors == nil {
-		node.Selectors = make(map[string]*policyhierarchyv1.NamespaceSelector)
+		node.Selectors = make(map[string]*policyhierarchyv1alpha1.NamespaceSelector)
 	}
 	node.Selectors[ns.Name] = ns
 	return nil

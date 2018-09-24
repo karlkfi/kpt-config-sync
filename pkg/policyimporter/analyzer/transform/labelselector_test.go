@@ -21,19 +21,20 @@ import (
 
 	"encoding/json"
 
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var simpleSelector = v1.NamespaceSelector{
-	Spec: v1.NamespaceSelectorSpec{
+var simpleSelector = v1alpha1.NamespaceSelector{
+	Spec: v1alpha1.NamespaceSelectorSpec{
 		Selector: metav1.LabelSelector{
 			MatchLabels: map[string]string{"env": "prod"}}}}
 
-var complexSelector = v1.NamespaceSelector{
-	Spec: v1.NamespaceSelectorSpec{
+var complexSelector = v1alpha1.NamespaceSelector{
+	Spec: v1alpha1.NamespaceSelectorSpec{
 		Selector: metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "privacy", Operator: metav1.LabelSelectorOpIn, Values: []string{"sensitive", "restricted"}}},
 			MatchLabels:      map[string]string{"env": "prod"}}}}
@@ -90,7 +91,7 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 	}
 }
 
-func createPolicy(s *v1.NamespaceSelector) metav1.Object {
+func createPolicy(s *v1alpha1.NamespaceSelector) metav1.Object {
 	rb := &rbacv1.RoleBinding{}
 	rb.SetName("rb")
 	if s != nil {

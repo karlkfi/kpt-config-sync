@@ -19,6 +19,7 @@ package fake
 import (
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -51,5 +52,6 @@ func init() {
 func AddToScheme(scheme *runtime.Scheme) {
 	bespinv1.AddToScheme(scheme)
 	nomosv1.AddToScheme(scheme)
+	nomosv1alpha1.AddToScheme(scheme)
 
 }

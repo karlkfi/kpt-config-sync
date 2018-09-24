@@ -18,8 +18,6 @@ package v1
 
 type ClusterPolicyExpansion interface{}
 
-type NamespaceSelectorExpansion interface{}
-
 type PolicyNodeExpansion interface{}
 
 type SyncExpansion interface{}
