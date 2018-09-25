@@ -46,19 +46,22 @@ func (tc *MutatingVisitorTestcase) Runf(visitor ast.CheckingVisitor) func(t *tes
 		output := tc.Input.Accept(visitor)
 		actual, ok := output.(*ast.Context)
 		if !ok {
-			t.Errorf("Wrong type returned %#v", output)
+			t.Fatalf("Wrong type returned %#v", output)
 		}
 		err := visitor.Result()
 		if (err != nil) != tc.ExpectErr {
 			if tc.ExpectErr {
-				t.Errorf("expected error, got nil")
+				t.Fatalf("expected error, got nil")
 			} else {
-				t.Errorf("unexpected error: %v", err)
+				t.Fatalf("unexpected error: %v", err)
 			}
 			return
 		}
+		if tc.ExpectErr {
+			return
+		}
 		if !cmp.Equal(actual, tc.ExpectOutput, ResourceVersionCmp()) {
-			t.Errorf("mismatch on expected vs actual: %s", cmp.Diff(tc.ExpectOutput, actual, ResourceVersionCmp()))
+			t.Fatalf("mismatch on expected vs actual: %s", cmp.Diff(tc.ExpectOutput, actual, ResourceVersionCmp()))
 		}
 	}
 }

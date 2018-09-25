@@ -13,31 +13,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package filesystem
+package transform
 
 import (
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Map of annotation keys to a map of old values to new values.
-type annotationTransformer map[string]map[string]string
+type valueMap map[string]string
 
-// nolint: deadcode
-func newAnnotationTransformer() annotationTransformer {
-	return make(map[string]map[string]string)
-}
+// annotationTransformer is a map of annotation keys to a map of old values to new values.
+// Example usage:
+//
+// t := annotationTransformer{}
+// t.addMappingForKey("myannotation", valueMap{"oldval": "newval"})
+// err := t.transform(object)
+//
+type annotationTransformer map[string]valueMap
 
-func (t annotationTransformer) addMappingForKey(key string, mapping map[string]string) {
+func (t annotationTransformer) addMappingForKey(key string, mapping valueMap) {
 	t[key] = mapping
 }
 
-func (t annotationTransformer) transform(obj interface{}) (interface{}, error) {
-	o, err := meta.Accessor(obj)
-	if err != nil {
-		panic(err)
-	}
+func (t annotationTransformer) transform(o metav1.Object) error {
 	a := o.GetAnnotations()
 	for k, vOldToNew := range t {
 		vOld, ok := a[k]
@@ -46,9 +45,9 @@ func (t annotationTransformer) transform(obj interface{}) (interface{}, error) {
 		}
 		vNew, ok := vOldToNew[vOld]
 		if !ok {
-			return nil, fmt.Errorf("invalid annotation value %s=%s", k, vOld)
+			return fmt.Errorf("unrecognized annotation value %s=%s", k, vOld)
 		}
 		a[k] = vNew
 	}
-	return obj, nil
+	return nil
 }

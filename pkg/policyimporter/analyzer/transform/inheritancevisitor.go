@@ -44,6 +44,8 @@ type InheritanceVisitor struct {
 	treeContext []nodeContext
 }
 
+var _ ast.Visitor = &InheritanceVisitor{}
+
 // NewInheritanceVisitor returns a new InheritanceVisitor for the given GroupKind
 func NewInheritanceVisitor(resources []InheritanceSpec) *InheritanceVisitor {
 	resourceMap := map[schema.GroupVersionKind]*InheritanceSpec{}

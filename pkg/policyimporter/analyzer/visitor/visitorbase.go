@@ -21,6 +21,13 @@ import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 // Base implements visiting all children for a visitor (like a base class).
 // Derived children need to have a Base and invoke base.VisitX(x) to continue
 // visiting children (like calling a base class method).
+//
+// The order of traversal:
+//
+// 1. Context
+// 2. Cluster
+// 3. ReservedNamespaces
+// 4. Pre-order traversal of TreeNode(s)
 type Base struct {
 	// impl handles the upper most implementation for the visitor.  This allows VisitorBase
 	// to return control to the top object in the visitor chain.

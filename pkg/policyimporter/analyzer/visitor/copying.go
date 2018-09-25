@@ -18,11 +18,20 @@ package visitor
 
 import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 
-// Copying is a Visitor with a default implementation that creates a copy of the
+// Copying is a Visitor implementation that creates and returns a copy of the
 // tree.  Member functions can be overridden in order to facilitate other transforms.
+//
+// The order of traversal:
+//
+// 1. Context
+// 2. Cluster
+// 3. ReservedNamespaces
+// 4. Pre-order traversal of TreeNode(s)
 type Copying struct {
 	impl ast.Visitor
 }
+
+var _ ast.Visitor = &Copying{}
 
 // NewCopying creates a new Copying
 func NewCopying() *Copying {

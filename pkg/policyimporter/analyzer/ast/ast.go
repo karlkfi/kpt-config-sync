@@ -80,6 +80,8 @@ type TreeNode struct {
 	// Objects from the directory
 	Objects ObjectList
 
+	// Selectors is a map of name to NamespaceSelector objects found at this node.
+	// One or more Objects may have an annotation referring to these NamespaceSelectors by name.
 	Selectors map[string]*v1alpha1.NamespaceSelector
 
 	// children of the directory

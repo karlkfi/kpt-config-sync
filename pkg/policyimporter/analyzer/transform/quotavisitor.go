@@ -33,6 +33,8 @@ type QuotaVisitor struct {
 	ctx *quotaContext    // The context list for the hierarchy
 }
 
+var _ ast.Visitor = &QuotaVisitor{}
+
 // quotaContext keeps track of the ancestry's quota policies.
 type quotaContext struct {
 	prev  *quotaContext         // previous context
