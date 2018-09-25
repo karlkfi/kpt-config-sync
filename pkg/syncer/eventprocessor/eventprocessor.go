@@ -19,10 +19,10 @@ limitations under the License.
 package eventprocessor
 
 import (
-	policyhierarchyinformerv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
+	policyhierarchylisterv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -31,11 +31,11 @@ import (
 
 // Factory returns a types.HandleFnProvider that will create a PolicyNodeEventProcessor with the
 // passed informer.
-func Factory(informer policyhierarchyinformerv1.PolicyNodeInformer) types.HandleFnProvider {
+func Factory(lister policyhierarchylisterv1.PolicyNodeLister) types.HandleFnProvider {
 	return func(queue workqueue.RateLimitingInterface) cache.ResourceEventHandler {
 		processor := &PolicyNodeEventProcessor{
-			queue:     queue,
-			hierarchy: hierarchy.New(informer),
+			queue:      queue,
+			nodeLister: lister,
 		}
 		return processor
 	}
@@ -44,8 +44,8 @@ func Factory(informer policyhierarchyinformerv1.PolicyNodeInformer) types.Handle
 // PolicyNodeEventProcessor handles translating events for policy nodes into events for all spaces
 // associated with the node in the hierarchy.
 type PolicyNodeEventProcessor struct {
-	queue     workqueue.Interface
-	hierarchy hierarchy.Interface
+	queue      workqueue.Interface
+	nodeLister policyhierarchylisterv1.PolicyNodeLister
 }
 
 // OnAdd implements cache.ResourceEventHandler.
@@ -60,9 +60,9 @@ func (p *PolicyNodeEventProcessor) OnUpdate(oldObj, newObj interface{}) {
 
 // subtreeEvents handles generating all events for a subtree.
 func (p *PolicyNodeEventProcessor) subtreeEvents(policyNode *policyhierarchyv1.PolicyNode) {
-	names, err := p.hierarchy.Subtree(policyNode.Name)
+	_, err := p.nodeLister.Get(policyNode.Name)
 	if err != nil {
-		if hierarchy.IsNotFoundError(err) {
+		if apierrors.IsNotFound(err) {
 			// This is possible if the resource is added/updated then deleted before we process this event.
 			return
 		}
@@ -70,9 +70,7 @@ func (p *PolicyNodeEventProcessor) subtreeEvents(policyNode *policyhierarchyv1.P
 		// is the only error we should expect at this point).
 		panic(errors.Wrapf(err, "encountered programmer error"))
 	}
-	for _, name := range names {
-		p.queue.Add(name)
-	}
+	p.queue.Add(policyNode.Name)
 }
 
 // OnDelete implements cache.ResourceEventHandler.

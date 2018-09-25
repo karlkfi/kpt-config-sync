@@ -51,14 +51,6 @@ load ../lib/loader
   # verify that syncToken has been updated as well
   run kubectl get policynode backend -ojsonpath='{.status.syncTokens.backend}'
   assert::equals "$itoken"
-
-  # verify the other syncTokens in the hierarchy
-  itoken="$(kubectl get policynode eng -ojsonpath='{.spec.importToken}')"
-  run kubectl get policynode backend -ojsonpath='{.status.syncTokens.eng}'
-  assert::equals "$itoken"
-  itoken="$(kubectl get policynode acme -ojsonpath='{.spec.importToken}')"
-  run kubectl get policynode backend -ojsonpath='{.status.syncTokens.acme}'
-  assert::equals "$itoken"
 }
 
 @test "RoleBindings enforced" {

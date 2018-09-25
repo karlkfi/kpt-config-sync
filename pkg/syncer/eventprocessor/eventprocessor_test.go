@@ -22,104 +22,113 @@ import (
 	"testing"
 
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/workqueue"
 )
 
-type FakeHierarchy struct {
-	subtreeName string
-	subtree     []string
-	subtreeErr  error
+type FakeLister struct {
+	queriedName string
+	get         *policyhierarchyv1.PolicyNode
+	getErr      error
 }
 
-func (s *FakeHierarchy) Ancestry(name string) (hierarchy.Ancestry, error) {
+func (l *FakeLister) Get(name string) (*policyhierarchyv1.PolicyNode, error) {
+	l.queriedName = name
+	return l.get, l.getErr
+}
+
+func (l *FakeLister) List(selector labels.Selector) ([]*policyhierarchyv1.PolicyNode, error) {
 	return nil, nil
 }
 
-func (s *FakeHierarchy) Subtree(name string) ([]string, error) {
-	s.subtreeName = name
-	return s.subtree, s.subtreeErr
-}
+func setup(name string, err error) (*FakeLister, *PolicyNodeEventProcessor) {
+	pn := &policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	if name == "" {
+		pn = nil
+	}
 
-func setup(subtree []string, err error) (*FakeHierarchy, *PolicyNodeEventProcessor) {
-	fh := &FakeHierarchy{
-		subtree:    subtree,
-		subtreeErr: err,
+	fl := &FakeLister{
+		get:    pn,
+		getErr: err,
 	}
 	ep := &PolicyNodeEventProcessor{
-		queue:     workqueue.New(),
-		hierarchy: fh,
+		queue:      workqueue.New(),
+		nodeLister: fl,
 	}
-	return fh, ep
+	return fl, ep
 }
 
 func getQueueElements(queue workqueue.Interface) []string {
 	queue.ShutDown()
-	subtree := []string{}
+	items := []string{}
 	for {
 		item, done := queue.Get()
 		if done {
 			break
 		}
-		subtree = append(subtree, item.(string))
+		items = append(items, item.(string))
 	}
-	return subtree
+	return items
 }
 
 func TestAdd(t *testing.T) {
-	fh, ep := setup([]string{"a", "b", "c", "d"}, nil)
-
 	name := "foobar"
+	fl, ep := setup(name, nil)
+
 	ep.OnAdd(&policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
 
-	if name != fh.subtreeName {
-		t.Errorf("Expected lookup for name %s got %s", name, fh.subtreeName)
+	if name != fl.queriedName {
+		t.Errorf("Expected lookup for name %s got %s", name, fl.queriedName)
 	}
 	elts := getQueueElements(ep.queue)
-	if !reflect.DeepEqual(fh.subtree, elts) {
-		t.Errorf("Expected subtree %s got %s", fh.subtree, elts)
+	expected := []string{name}
+	if !reflect.DeepEqual(expected, elts) {
+		t.Errorf("Expected queue %s got %s", expected, elts)
 	}
 }
 
 func TestUpdate(t *testing.T) {
-	fh, ep := setup([]string{"a", "b", "c", "d", "e"}, nil)
-
 	name := "foobar"
+	fl, ep := setup(name, nil)
+
 	oldNode := &policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	newNode := &policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	ep.OnUpdate(oldNode, newNode)
-	if name != fh.subtreeName {
-		t.Errorf("Expected lookup for name %s got %s", name, fh.subtreeName)
+	if name != fl.queriedName {
+		t.Errorf("Expected lookup for name %s got %s", name, fl.queriedName)
 	}
 	elts := getQueueElements(ep.queue)
-	if !reflect.DeepEqual(fh.subtree, elts) {
-		t.Errorf("Expected subtree %s got %s", fh.subtree, elts)
+	expected := []string{name}
+	if !reflect.DeepEqual(expected, elts) {
+		t.Errorf("Expected queue %s got %s", expected, elts)
 	}
 }
 
 func TestError(t *testing.T) {
 	name := "foobar"
-	fh, ep := setup([]string{}, &hierarchy.NotFoundError{})
+	fl, ep := setup("", apierrors.NewNotFound(schema.GroupResource{}, "not found"))
 
 	ep.OnAdd(&policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
-	if name != fh.subtreeName {
-		t.Errorf("Expected lookup for name %s got %s", name, fh.subtreeName)
+	if name != fl.queriedName {
+		t.Errorf("Expected lookup for name %s got %s", name, fl.queriedName)
 	}
 	elts := getQueueElements(ep.queue)
 	if len(elts) != 0 {
-		t.Errorf("Expected no elements in subtree")
+		t.Errorf("Expected no elements in queue")
 	}
 }
 
 func TestDelete(t *testing.T) {
-	_, ep := setup([]string{"a", "b", "c", "d", "e"}, nil)
-
 	name := "foobar"
+	_, ep := setup(name, nil)
+
 	ep.OnDelete(&policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
 	expect := []string{name}
 	elts := getQueueElements(ep.queue)
 	if !reflect.DeepEqual(expect, elts) {
-		t.Errorf("Expected subtree %s got %s", expect, elts)
+		t.Errorf("Expected queue %s got %s", expect, elts)
 	}
 }

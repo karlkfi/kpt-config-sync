@@ -10,7 +10,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	action "github.com/google/nomos/pkg/client/action"
-	hierarchy "github.com/google/nomos/pkg/syncer/hierarchy"
 	informers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -96,16 +95,4 @@ func (m *MockModule) Name() string {
 // Name indicates an expected call of Name
 func (mr *MockModuleMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockModule)(nil).Name))
-}
-
-// NewAggregatedNode mocks base method
-func (m *MockModule) NewAggregatedNode() hierarchy.AggregatedNode {
-	ret := m.ctrl.Call(m, "NewAggregatedNode")
-	ret0, _ := ret[0].(hierarchy.AggregatedNode)
-	return ret0
-}
-
-// NewAggregatedNode indicates an expected call of NewAggregatedNode
-func (mr *MockModuleMockRecorder) NewAggregatedNode() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAggregatedNode", reflect.TypeOf((*MockModule)(nil).NewAggregatedNode))
 }

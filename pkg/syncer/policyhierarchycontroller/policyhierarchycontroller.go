@@ -15,7 +15,7 @@ limitations under the License.
 // Reviewed by sunilarora
 
 // Package policyhierarchycontroller defines a kubebuilder controller.GenericController that will
-// handle hierarchical policy synchonization.  The goal for this package is to create a common
+// handle hierarchical policy synchronization.  The goal for this package is to create a common
 // controller and enable additional policies to be onboarded by implementing only the minimal
 // logic required for hierarchical policy computation and resource reconciliation.
 package policyhierarchycontroller
@@ -34,7 +34,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/args"
 	"github.com/google/nomos/pkg/syncer/comparator"
 	"github.com/google/nomos/pkg/syncer/eventprocessor"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/multierror"
@@ -74,7 +73,6 @@ type PolicyHieraryController struct {
 	client            typedv1.NomosV1Interface
 	nodeLister        policyhierarchylister.PolicyNodeLister
 	namespaceLister   listerscorev1.NamespaceLister
-	hierarchy         hierarchy.Interface
 	modules           []Module
 	recorder          record.EventRecorder
 	hierarchyWarnings *WarningFilter
@@ -97,7 +95,6 @@ func NewController(
 		nodeLister:        injectArgs.Informers.Nomos().V1().PolicyNodes().Lister(),
 		namespaceLister:   injectArgs.KubernetesInformers.Core().V1().Namespaces().Lister(),
 		modules:           modules,
-		hierarchy:         hierarchy.New(injectArgs.Informers.Nomos().V1().PolicyNodes()),
 		recorder:          injectArgs.CreateRecorder(controllerName),
 		hierarchyWarnings: NewWarningFilter(*hierarchyWarningCount, *hierarchyWarningTimeout),
 	}
@@ -131,7 +128,7 @@ func NewController(
 	}
 
 	err = genericController.WatchEvents(&policyhierarchyv1.PolicyNode{}, eventprocessor.Factory(
-		injectArgs.Informers.Nomos().V1().PolicyNodes()))
+		injectArgs.Informers.Nomos().V1().PolicyNodes().Lister()))
 	if err != nil {
 		panic(errors.Wrapf(err, "programmer error while adding WatchEvents for policynode"))
 	}
@@ -160,41 +157,30 @@ const (
 	policyNodeStateReserved    = policyNodeState("reserved")    // the policy node is declared as a reserved namespace
 )
 
-// getPolicyNodeState normalizes the state of the policy node while retrieving ancestry.
-func (s *PolicyHieraryController) getPolicyNodeState(name string) (policyNodeState, hierarchy.Ancestry, error) {
-	ancestry, err := s.hierarchy.Ancestry(name)
+// getPolicyNodeState normalizes the state of the policy node and returns the node.
+func (s *PolicyHieraryController) getPolicyNodeState(name string) (policyNodeState, *policyhierarchyv1.PolicyNode, error) {
+	node, err := s.nodeLister.Get(name)
 	if err != nil {
-		switch {
-		case hierarchy.IsNotFoundError(err):
-			s.hierarchyWarnings.Clear(name)
+		if apierrors.IsNotFound(err) {
 			return policyNodeStateNotFound, nil, nil
-		case hierarchy.IsConsistencyError(err):
-			if warning := s.hierarchyWarnings.Warning(name); warning != "" {
-				s.recorder.Eventf(
-					ancestry.Node(), corev1.EventTypeWarning, "HierarchyConsistencyError",
-					"%s: %s",
-					warning, err)
-			}
-			return policyNodeStateNotFound, ancestry, errors.Wrapf(err, "incomplete ancestry")
-		default:
-			return policyNodeStateNotFound, ancestry, errors.Wrapf(err, "unhandled error while fetching ancestry")
 		}
+		panic("Lister returned error other than not found, this should not happen")
 	}
 	s.hierarchyWarnings.Clear(name)
 
 	if namespaceutil.IsReserved(name) {
-		return policyNodeStateReserved, ancestry, nil
+		return policyNodeStateReserved, node, nil
 	}
 
-	switch ancestry.Node().Spec.Type {
+	switch node.Spec.Type {
 	case policyhierarchyv1.Policyspace:
-		return policyNodeStatePolicyspace, ancestry, nil
+		return policyNodeStatePolicyspace, node, nil
 	case policyhierarchyv1.Namespace:
-		return policyNodeStateNamespace, ancestry, nil
+		return policyNodeStateNamespace, node, nil
 	case policyhierarchyv1.ReservedNamespace:
-		return policyNodeStateReserved, ancestry, nil
+		return policyNodeStateReserved, node, nil
 	default:
-		return policyNodeStateNotFound, ancestry, errors.Errorf("Invalid node type %q for ancestry %v", ancestry.Node().Spec.Type, ancestry)
+		return policyNodeStateNotFound, nil, errors.Errorf("Invalid node type %q", node.Spec.Type)
 	}
 }
 
@@ -255,7 +241,7 @@ func (s *PolicyHieraryController) reconcile(k types.ReconcileKey) error {
 }
 
 func (s *PolicyHieraryController) softReconcile(name string) error {
-	pnState, ancestry, pnErr := s.getPolicyNodeState(name)
+	pnState, node, pnErr := s.getPolicyNodeState(name)
 	if pnErr != nil {
 		return pnErr
 	}
@@ -283,22 +269,22 @@ func (s *PolicyHieraryController) softReconcile(name string) error {
 	case policyNodeStateNamespace:
 		switch nsState {
 		case namespaceStateNotFound:
-			if err := s.createNamespace(ancestry.Node()); err != nil {
+			if err := s.createNamespace(node); err != nil {
 				return err
 			}
-			return s.managePolicies(name, ancestry)
+			return s.managePolicies(name, node)
 		case namespaceStateExists:
 			s.warnNoLabel(ns)
 		case namespaceStateManagePolicies:
-			if err := s.updateNamespace(ancestry.Node()); err != nil {
+			if err := s.updateNamespace(node); err != nil {
 				return err
 			}
-			return s.managePolicies(name, ancestry)
+			return s.managePolicies(name, node)
 		case namespaceStateManageFull:
-			if err := s.upsertNamespace(ancestry.Node()); err != nil {
+			if err := s.upsertNamespace(node); err != nil {
 				return err
 			}
-			return s.managePolicies(name, ancestry)
+			return s.managePolicies(name, node)
 		}
 
 	case policyNodeStatePolicyspace:
@@ -309,7 +295,7 @@ func (s *PolicyHieraryController) softReconcile(name string) error {
 		case namespaceStateManagePolicies:
 			s.warnPolicyspaceHasNamespace(ns)
 		case namespaceStateManageFull:
-			return s.handlePolicyspace(ancestry.Node())
+			return s.handlePolicyspace(node)
 		}
 
 	case policyNodeStateReserved:
@@ -358,38 +344,34 @@ func (s *PolicyHieraryController) hardReconcile(name string) error {
 		return nil
 	}
 
-	ancestry, err := s.hierarchy.Ancestry(name)
+	node, err := s.nodeLister.Get(name)
 	if err != nil {
-		switch {
-		case hierarchy.IsNotFoundError(err):
+		if apierrors.IsNotFound(err) {
 			return s.deleteNamespace(name)
-		case hierarchy.IsConsistencyError(err):
-			return errors.Wrapf(err, "incomplete ancestry")
-		default:
-			return errors.Wrapf(err, "unhandled error while fetching ancestry")
 		}
+		panic("Lister returned error other than not found, this should not happen")
 	}
 
-	switch ancestry.Node().Spec.Type {
+	switch node.Spec.Type {
 	case policyhierarchyv1.Policyspace:
-		return s.handlePolicyspace(ancestry.Node())
+		return s.handlePolicyspace(node)
 	case policyhierarchyv1.ReservedNamespace:
 		return nil
 	}
 
-	if err := s.upsertNamespace(ancestry.Node()); err != nil {
+	if err := s.upsertNamespace(node); err != nil {
 		return errors.Wrapf(err, "failed to upsert namespace %s", name)
 	}
 
-	return s.managePolicies(name, ancestry)
+	return s.managePolicies(name, node)
 }
 
-func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy.Ancestry) error {
+func (s *PolicyHieraryController) managePolicies(name string, node *policyhierarchyv1.PolicyNode) error {
 	var syncErrs []policyhierarchyv1.PolicyNodeSyncError
 	errBuilder := multierror.NewBuilder()
 	reconcileCount := 0
 	for _, module := range s.modules {
-		declaredInstances := module.Instances(ancestry.Node())
+		declaredInstances := module.Instances(node)
 
 		for _, decl := range declaredInstances {
 			decl.SetNamespace(name)
@@ -415,28 +397,28 @@ func (s *PolicyHieraryController) managePolicies(name string, ancestry hierarchy
 			}
 		}
 	}
-	if err := s.setPolicyNodeStatus(ancestry, syncErrs); err != nil {
+	if err := s.setPolicyNodeStatus(node, syncErrs); err != nil {
 		errBuilder.Add(errors.Wrapf(err, "failed to set status for %s", name))
-		s.recorder.Eventf(ancestry.Node(), corev1.EventTypeWarning, "StatusUpdateFailed",
+		s.recorder.Eventf(node, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update policy node status: %s", err)
 	}
 	if errBuilder.Len() == 0 && reconcileCount > 0 {
-		s.recorder.Eventf(ancestry.Node(), corev1.EventTypeNormal, "ReconcileComplete",
+		s.recorder.Eventf(node, corev1.EventTypeNormal, "ReconcileComplete",
 			"policy node was successfully reconciled: %d changes", reconcileCount)
 	}
 	return errBuilder.Build()
 }
 
-func (s *PolicyHieraryController) setPolicyNodeStatus(ancestry hierarchy.Ancestry, errs []policyhierarchyv1.PolicyNodeSyncError) error {
-	if ancestry.Node().Status.SyncState.IsSynced() && len(errs) == 0 {
-		glog.Infof("Status for PolicyNode %s is already up-to-date.", ancestry.Node().Name)
+func (s *PolicyHieraryController) setPolicyNodeStatus(node *policyhierarchyv1.PolicyNode, errs []policyhierarchyv1.PolicyNodeSyncError) error {
+	if node.Status.SyncState.IsSynced() && len(errs) == 0 {
+		glog.Infof("Status for PolicyNode %s is already up-to-date.", node.Name)
 		return nil
 	}
 	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
 	updateCB := func(old runtime.Object) (runtime.Object, error) {
 		oldPN := old.(*policyhierarchyv1.PolicyNode)
 		newPN := oldPN.DeepCopy()
-		newPN.Status.SyncTokens = ancestry.TokenMap()
+		newPN.Status.SyncTokens = map[string]string{node.Name: node.Spec.ImportToken}
 		newPN.Status.SyncTime = metav1.Now()
 		newPN.Status.SyncErrors = errs
 		if len(errs) > 0 {
@@ -447,7 +429,7 @@ func (s *PolicyHieraryController) setPolicyNodeStatus(ancestry hierarchy.Ancestr
 		return newPN, nil
 	}
 	ua := action.NewReflectiveUpdateAction(
-		"", ancestry.Node().Name, updateCB, policynode.NewActionSpec(s.client, s.nodeLister))
+		"", node.Name, updateCB, policynode.NewActionSpec(s.client, s.nodeLister))
 	return ua.Execute()
 }
 
