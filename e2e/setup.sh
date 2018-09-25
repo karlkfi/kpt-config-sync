@@ -84,20 +84,9 @@ function set_up_env_minimal() {
   esac
 }
 
-function clean_up() {
-
-  echo "++++ Cleaning up environment"
-
-  # TODO: workaround for b/111218567 remove this once resolved
-  if ! kubectl get customresourcedefinition policynodes.nomos.dev &> /dev/null; then
-    echo "Policynodes not found, skipping uninstall"
-    return
-  fi
-
-  uninstall
-
-  kubectl delete ns -l "nomos.dev/testdata=true"
-  kubectl delete ns -l "nomos.dev/namespace-management=full"
+function clean_up_test_resources() {
+  kubectl delete --ignore-not-found ns -l "nomos.dev/testdata=true"
+  kubectl delete --ignore-not-found ns -l "nomos.dev/namespace-management=full"
 
   if [[ "$importer" == "git" ]]; then
     echo "killing kubectl port forward..."
@@ -110,6 +99,22 @@ function clean_up() {
       echo -n "."
     done
   fi
+}
+
+function clean_up() {
+
+  echo "++++ Cleaning up environment"
+
+  # TODO: workaround for b/111218567 remove this once resolved
+  if ! kubectl get customresourcedefinition policynodes.nomos.dev &> /dev/null; then
+    echo "Policynodes not found, skipping uninstall"
+    clean_up_test_resources
+    return
+  fi
+
+  uninstall
+
+  clean_up_test_resources
 }
 
 function post_clean() {
