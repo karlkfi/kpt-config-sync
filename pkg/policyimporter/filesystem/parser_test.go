@@ -160,7 +160,7 @@ metadata:
 
 	aNamespaceSelectorTemplate = `
 kind: NamespaceSelector
-apiVersion: nomos.dev/v1
+apiVersion: nomos.dev/v1alpha1
 metadata:
   name: sre-supported
 spec:
@@ -171,7 +171,7 @@ spec:
 
 	aNomosConfig = `
 kind: NomosConfig
-apiVersion: nomos.dev/v1
+apiVersion: nomos.dev/v1alpha1
 spec:
   repoVersion: "1.0.0"
 `

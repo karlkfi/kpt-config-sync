@@ -315,7 +315,7 @@ func processRootDir(
 			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
-			case policyhierarchyv1.SchemeGroupVersion.WithKind("NamespaceSelector"):
+			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
 				v.err = parseNamespaceSelector(o, rootNode)
 			default:
 				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
@@ -384,7 +384,7 @@ func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *Di
 			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
-			case policyhierarchyv1.SchemeGroupVersion.WithKind("NamespaceSelector"):
+			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
 				v.err = parseNamespaceSelector(o, treeNode)
 			default:
 				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
@@ -432,7 +432,7 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
-			case policyhierarchyv1.SchemeGroupVersion.WithKind("NamespaceSelector"):
+			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
 				v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
 			default:
 				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
@@ -499,7 +499,7 @@ func (p Parser) processSystemDir(root string) (*policyhierarchyv1alpha1.NomosCon
 		// System scope
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
-			case policyhierarchyv1.SchemeGroupVersion.WithKind("NomosConfig"):
+			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NomosConfig"):
 				nc, err := parseNomosConfig(o)
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed to parse NomosConfig in %s", i.Source)

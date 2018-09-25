@@ -456,14 +456,15 @@ func testDynamicResources() []*discovery.APIGroupResources {
 			Group: metav1.APIGroup{
 				Name: "nomos.dev",
 				Versions: []metav1.GroupVersionForDiscovery{
-					{Version: "v1"},
+					{Version: "v1alpha1"},
 				},
-				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1"},
+				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1alpha1"},
 			},
 			VersionedResources: map[string][]metav1.APIResource{
-				"v1": {
-					{Name: "namespaceselectors", Namespaced: true, Kind: "NamespaceSelector"},
-					{Name: "nomosconfigs", Namespaced: true, Kind: "NomosConfig"},
+				"v1alpha1": {
+					{Name: "namespaceselectors", Namespaced: false, Kind: "NamespaceSelector"},
+					{Name: "nomosconfigs", Namespaced: false, Kind: "NomosConfig"},
+					{Name: "syncs", Namespaced: false, Kind: "Sync"},
 				},
 			},
 		},
