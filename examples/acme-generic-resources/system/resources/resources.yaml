@@ -6,16 +6,16 @@ spec:
   groups:
   - group: apps
     kinds:
-    - kind: Deployment
+      kind: Deployment
       versions:
       - version: v1
   - group: ""
     kinds:
-    - kind: ConfigMap
+      kind: ConfigMap
       versions:
       - version: v1
   - group: extensions
     kinds:
-    - kind: PodSecurityPolicy
+      kind: PodSecurityPolicy
       versions:
       - version: v1beta1
