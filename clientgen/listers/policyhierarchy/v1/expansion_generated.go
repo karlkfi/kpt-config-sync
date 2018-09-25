@@ -25,7 +25,3 @@ type ClusterPolicyListerExpansion interface{}
 // PolicyNodeListerExpansion allows custom methods to be added to
 // PolicyNodeLister.
 type PolicyNodeListerExpansion interface{}
-
-// SyncListerExpansion allows custom methods to be added to
-// SyncLister.
-type SyncListerExpansion interface{}

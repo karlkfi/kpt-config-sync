@@ -30,6 +30,10 @@ func (c *FakeNomosV1alpha1) NamespaceSelectors() v1alpha1.NamespaceSelectorInter
 	return &FakeNamespaceSelectors{c}
 }
 
+func (c *FakeNomosV1alpha1) Syncs() v1alpha1.SyncInterface {
+	return &FakeSyncs{c}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeNomosV1alpha1) RESTClient() rest.Interface {

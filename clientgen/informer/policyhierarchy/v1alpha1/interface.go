@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// NamespaceSelectors returns a NamespaceSelectorInformer.
 	NamespaceSelectors() NamespaceSelectorInformer
+	// Syncs returns a SyncInformer.
+	Syncs() SyncInformer
 }
 
 type version struct {
@@ -42,4 +44,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // NamespaceSelectors returns a NamespaceSelectorInformer.
 func (v *version) NamespaceSelectors() NamespaceSelectorInformer {
 	return &namespaceSelectorInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// Syncs returns a SyncInformer.
+func (v *version) Syncs() SyncInformer {
+	return &syncInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

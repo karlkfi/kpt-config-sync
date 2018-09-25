@@ -63,3 +63,110 @@ type NamespaceSelectorList struct {
 	// Items is a list of policy nodes that apply.
 	Items []NamespaceSelector `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// Sync is used for configuring sync of generic resources.
+type Sync struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// +optional
+	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Spec is the standard spec field.
+	Spec SyncSpec `json:"spec"`
+
+	// Status is the status for the sync declaration.
+	Status SyncStatus `json:"status,omitempty"`
+}
+
+// SyncSpec specifies the sync declaration which corresponds to an API Group and contained
+// kinds and versions.
+type SyncSpec struct {
+	// Groups represents all groups that are declared for sync.
+	Groups []SyncGroup `json:"groups"` // groups, eg nomos.dev
+}
+
+// SyncGroup represents sync declarations for a Group.
+type SyncGroup struct {
+	// Group is the group, for example nomos.dev or rbac.authorization.k8s.io
+	Group string `json:"group"` // group, eg nomos.dev
+	// Kinds represents kinds from the Group.
+	Kinds SyncKind `json:"kinds"`
+}
+
+// SyncKind represents the spec for a Kind of object we are syncing.
+type SyncKind struct {
+	// Kind is the string that represents the Kind for the object as given in TypeMeta, for exmple
+	// ClusterRole, Namespace or Deployment.
+	Kind string `json:"kind"`
+	// Versions indicates the versions that will be handled for the object of Group and Kind.
+	Versions []SyncVersion `json:"versions"`
+}
+
+// SyncVersion corresponds to a single version in a (group, kind)
+type SyncVersion struct {
+	// Version indicates the version used for the API Group, for example v1, v1beta1, v1alpha1.
+	Version string `json:"version"`
+
+	// CompareFields is an optional list of fields to compare against.  This will default to ["spec"]
+	// which should be sufficient for most obejcts, however, there are exceptions (RBAC) so these need
+	// to be declared.
+	CompareFields []string `json:"compareFields,omitempty"`
+}
+
+// SyncStatus represents the status for a sync declaration
+type SyncStatus struct {
+	GroupKinds []SyncGroupKindStatus `json:"groupKinds,omitempty"`
+}
+
+// SyncGroupKindStatus is a per Group, Kind status for the sync state of a resource.
+type SyncGroupKindStatus struct {
+	// Group is the group, for example nomos.dev or rbac.authorization.k8s.io
+	Group string `json:"group"`
+	// Kind is the string that represents the Kind for the object as given in TypeMeta, for exmple
+	// ClusterRole, Namespace or Deployment.
+	Kind string `json:"kind"`
+	// Status indicates the state of the sync.  One of "syncing", or "error".  If "error" is specified
+	// then Error will be populated with a message regarding the error.
+	Status string `json:"status"`
+	// Message indicates a message associated with the status.
+	Message string `json:"error,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// SyncList holds a list of Sync resources.
+type SyncList struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
+
+	// Items is a list of sync declarations.
+	Items []Sync `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// NomosConfig holds configuration for Nomos itself.
+type NomosConfig struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec NomosConfigSpec `json:"spec,omitempty"`
+}
+
+// NomosConfigSpec contains spec fields for NomosConfig.
+type NomosConfigSpec struct {
+	// Repo version string, corresponds to how policy importer should handle the
+	// directory structure (implicit assumptions).
+	RepoVersion string `json:"repoVersion"`
+}

@@ -475,7 +475,7 @@ func parseNamespaceSelector(o runtime.Unstructured, node *ast.TreeNode) error {
 
 // processSystemDir loads configs from the <root>/system directory. Currently, this only includes
 // the nomos.yaml file.
-func (p Parser) processSystemDir(root string) (*policyhierarchyv1.NomosConfig, error) {
+func (p Parser) processSystemDir(root string) (*policyhierarchyv1alpha1.NomosConfig, error) {
 	nomosYamlPath := filepath.Join(root, systemDir, nomosYamlFilename)
 	schema, err := p.factory.Validator(p.validate)
 	if err != nil {
@@ -514,12 +514,12 @@ func (p Parser) processSystemDir(root string) (*policyhierarchyv1.NomosConfig, e
 	return nil, errors.Errorf("failed to find object of type NomosConfig in system/nomos.yaml")
 }
 
-func parseNomosConfig(o runtime.Unstructured) (*policyhierarchyv1.NomosConfig, error) {
+func parseNomosConfig(o runtime.Unstructured) (*policyhierarchyv1alpha1.NomosConfig, error) {
 	j, err := json.Marshal(o.UnstructuredContent())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal object in %s", j)
 	}
-	config := &policyhierarchyv1.NomosConfig{}
+	config := &policyhierarchyv1alpha1.NomosConfig{}
 	err = json.Unmarshal(j, config)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal NomosConfig")

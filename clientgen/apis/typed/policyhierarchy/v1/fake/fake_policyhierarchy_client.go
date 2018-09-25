@@ -34,10 +34,6 @@ func (c *FakeNomosV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
 }
 
-func (c *FakeNomosV1) Syncs() v1.SyncInterface {
-	return &FakeSyncs{c}
-}
-
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeNomosV1) RESTClient() rest.Interface {

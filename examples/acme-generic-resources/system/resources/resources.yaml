@@ -1,5 +1,5 @@
-kind: SyncDeclaration
-apiVersion: nomos.dev/v1
+kind: Sync
+apiVersion: nomos.dev/v1alpha1
 metadata:
   name: resources
 spec:

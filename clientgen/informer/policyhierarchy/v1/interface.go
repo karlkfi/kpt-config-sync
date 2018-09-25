@@ -28,8 +28,6 @@ type Interface interface {
 	ClusterPolicies() ClusterPolicyInformer
 	// PolicyNodes returns a PolicyNodeInformer.
 	PolicyNodes() PolicyNodeInformer
-	// Syncs returns a SyncInformer.
-	Syncs() SyncInformer
 }
 
 type version struct {
@@ -51,9 +49,4 @@ func (v *version) ClusterPolicies() ClusterPolicyInformer {
 // PolicyNodes returns a PolicyNodeInformer.
 func (v *version) PolicyNodes() PolicyNodeInformer {
 	return &policyNodeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// Syncs returns a SyncInformer.
-func (v *version) Syncs() SyncInformer {
-	return &syncInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

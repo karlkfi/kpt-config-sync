@@ -57,12 +57,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().ClusterPolicies().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("policynodes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().PolicyNodes().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("syncs"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().Syncs().Informer()}, nil
 
 		// Group=nomos.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("namespaceselectors"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1alpha1().NamespaceSelectors().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("syncs"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1alpha1().Syncs().Informer()}, nil
 
 	}
 

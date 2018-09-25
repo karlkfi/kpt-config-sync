@@ -26,6 +26,7 @@ import (
 type NomosV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	NamespaceSelectorsGetter
+	SyncsGetter
 }
 
 // NomosV1alpha1Client is used to interact with features provided by the nomos.dev group.
@@ -35,6 +36,10 @@ type NomosV1alpha1Client struct {
 
 func (c *NomosV1alpha1Client) NamespaceSelectors() NamespaceSelectorInterface {
 	return newNamespaceSelectors(c)
+}
+
+func (c *NomosV1alpha1Client) Syncs() SyncInterface {
+	return newSyncs(c)
 }
 
 // NewForConfig creates a new NomosV1alpha1Client for the given config.
