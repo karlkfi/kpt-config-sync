@@ -109,7 +109,7 @@ EOM
 function namespace::check_exists() {
   local args=()
   local check_args=()
-  local timeout_sec="120"
+  local timeout_sec="200"
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
     shift
