@@ -232,6 +232,7 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 
 	visitors := []ast.CheckingVisitor{
 		validation.NewInputValidator(),
+		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(
 			[]transform.InheritanceSpec{
 				{

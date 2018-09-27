@@ -92,7 +92,11 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	v.treeContext = v.treeContext[:len(v.treeContext)-1]
 	if n.Type == ast.Namespace {
 		for _, ctx := range v.treeContext {
-			newNode.Objects = append(newNode.Objects, ctx.inherited...)
+			for _, inherited := range ctx.inherited {
+				if isPolicyApplicableToNamespace(n.Labels, inherited.ToMeta()) {
+					newNode.Objects = append(newNode.Objects, inherited)
+				}
+			}
 		}
 	}
 	return newNode

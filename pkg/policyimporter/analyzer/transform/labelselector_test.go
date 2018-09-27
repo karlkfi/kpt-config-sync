@@ -28,12 +28,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var simpleSelector = v1alpha1.NamespaceSelector{
+var prodNamespaceSelector = v1alpha1.NamespaceSelector{
 	Spec: v1alpha1.NamespaceSelectorSpec{
 		Selector: metav1.LabelSelector{
 			MatchLabels: map[string]string{"env": "prod"}}}}
 
-var complexSelector = v1alpha1.NamespaceSelector{
+var sensitiveNamespaceSelector = v1alpha1.NamespaceSelector{
 	Spec: v1alpha1.NamespaceSelectorSpec{
 		Selector: metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "privacy", Operator: metav1.LabelSelectorOpIn, Values: []string{"sensitive", "restricted"}}},
@@ -56,25 +56,25 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 		},
 		{
 			testName:           "Simple selector",
-			policy:             createPolicy(&simpleSelector),
+			policy:             createPolicy(&prodNamespaceSelector),
 			nsLabels:           map[string]string{"env": "prod"},
 			expectedApplicable: true,
 		},
 		{
 			testName:           "Complex selector",
-			policy:             createPolicy(&complexSelector),
+			policy:             createPolicy(&sensitiveNamespaceSelector),
 			nsLabels:           map[string]string{"env": "prod", "privacy": "sensitive"},
 			expectedApplicable: true,
 		},
 		{
 			testName:           "No match",
-			policy:             createPolicy(&complexSelector),
+			policy:             createPolicy(&sensitiveNamespaceSelector),
 			nsLabels:           map[string]string{"env": "prod", "privacy": "open"},
 			expectedApplicable: false,
 		},
 		{
 			testName:           "No labels",
-			policy:             createPolicy(&simpleSelector),
+			policy:             createPolicy(&prodNamespaceSelector),
 			expectedApplicable: false,
 		},
 	}
@@ -82,7 +82,7 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
 
-			applicable := IsPolicyApplicableToNamespace(tc.nsLabels, tc.policy)
+			applicable := isPolicyApplicableToNamespace(tc.nsLabels, tc.policy)
 			if tc.expectedApplicable != applicable {
 				t.Fatalf("Result didn't match, expected=%t, actual=%t", tc.expectedApplicable, applicable)
 			}

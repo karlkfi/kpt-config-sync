@@ -6,7 +6,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/syncer/multierror"
+	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
 )
 
@@ -92,7 +92,7 @@ func (v *AnnotationInlinerVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
 func (v *AnnotationInlinerVisitor) VisitObject(o *ast.Object) ast.Node {
 	newObject := v.cv.VisitObject(o).(*ast.Object)
 	if err := v.transformer.transform(newObject.ToMeta()); err != nil {
-		v.errs.Add(errors.Wrapf(err, "failed to inline annotation for Object %q", newObject.ToMeta().GetName()))
+		v.errs.Add(errors.Wrapf(err, "failed to inline annotation for object %q", newObject.ToMeta().GetName()))
 	}
 	return newObject
 }

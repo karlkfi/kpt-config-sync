@@ -39,10 +39,10 @@ func isSelected(labels map[string]string, labelselector *metav1.LabelSelector) (
 	return selector.Matches(labelpkg.Set(labels)), nil
 }
 
-// IsPolicyApplicableToNamespace returns whether the NamespaceSelector annotation on the given policy object
+// isPolicyApplicableToNamespace returns whether the NamespaceSelector annotation on the given policy object
 // matches the given labels on a namespace.
 // The policy is applicable if it has no such annotation.
-func IsPolicyApplicableToNamespace(nsLabels map[string]string, policy metav1.Object) bool {
+func isPolicyApplicableToNamespace(namespaceLabels map[string]string, policy metav1.Object) bool {
 	ls, exists := policy.GetAnnotations()[policyhierarchyv1.NamespaceSelectorAnnotationKey]
 	if !exists {
 		return true
@@ -51,7 +51,7 @@ func IsPolicyApplicableToNamespace(nsLabels map[string]string, policy metav1.Obj
 	if err := json.Unmarshal([]byte(ls), &ns); err != nil {
 		panic(errors.Wrapf(err, "failed to unmarshal NamespaceSelector in object %q", policy.GetName()))
 	}
-	selected, err := isSelected(nsLabels, &ns.Spec.Selector)
+	selected, err := isSelected(namespaceLabels, &ns.Spec.Selector)
 	if err != nil {
 		panic(errors.Wrapf(err, "failed to evaluate LabelSelector in object %q", policy.GetName()))
 	}

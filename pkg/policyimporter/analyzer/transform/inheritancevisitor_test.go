@@ -58,7 +58,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: vt.Helper.ReservedNamespaces(),
 		},
 		{
-			Name:  "Inherit policies",
+			Name:  "inherit policies",
 			Input: vt.Helper.AcmeContext(),
 			ExpectOutput: &ast.Context{
 				Cluster:            vt.Helper.AcmeCluster(),
@@ -91,6 +91,51 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 								withName(vt.Helper.AdminRoleBinding(), "admin"),
 								vt.Helper.AcmeResourceQuota(),
 							),
+						},
+					},
+				},
+			},
+		},
+		{
+			Name: "inherit filtered by NamespaceSelector",
+			Input: &ast.Context{
+				Tree: &ast.TreeNode{
+					Type: ast.Policyspace,
+					Path: "acme",
+					Objects: vt.ObjectSets(
+						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
+					),
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:   ast.Namespace,
+							Path:   "acme/frontend",
+							Labels: map[string]string{"env": "prod"},
+						},
+						&ast.TreeNode{
+							Type:   ast.Namespace,
+							Path:   "acme/frontend-test",
+							Labels: map[string]string{"env": "test"},
+						},
+					},
+				},
+			},
+			ExpectOutput: &ast.Context{
+				Tree: &ast.TreeNode{
+					Type: ast.Policyspace,
+					Path: "acme",
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:   ast.Namespace,
+							Path:   "acme/frontend",
+							Labels: map[string]string{"env": "prod"},
+							Objects: vt.ObjectSets(
+								withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
+							),
+						},
+						&ast.TreeNode{
+							Type:   ast.Namespace,
+							Path:   "acme/frontend-test",
+							Labels: map[string]string{"env": "test"},
 						},
 					},
 				},

@@ -58,10 +58,10 @@ type MultiError struct {
 // Error implements error
 func (m *MultiError) Error() string {
 	allErrors := []string{
-		fmt.Sprintf("error count: %d", len(m.errs)),
+		fmt.Sprintf("%d error(s)\n", len(m.errs)),
 	}
 	for idx, err := range m.errs {
-		allErrors = append(allErrors, fmt.Sprintf("error %d:\n%v", idx+1, err))
+		allErrors = append(allErrors, fmt.Sprintf("[%d] %v\n", idx+1, err))
 	}
 	return strings.Join(allErrors, "\n")
 }

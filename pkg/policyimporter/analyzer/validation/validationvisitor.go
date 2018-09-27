@@ -21,7 +21,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
-	"github.com/google/nomos/pkg/syncer/multierror"
+	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 )

@@ -67,7 +67,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.ObjectSets(
 						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), "prod"),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 				},
 			},
 			ExpectOutput: &ast.Context{
@@ -75,9 +75,9 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.Policyspace,
 					Path: "acme",
 					Objects: vt.ObjectSets(
-						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(simpleSelector)),
+						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 				},
 			},
 		},
@@ -92,7 +92,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 						withSelectorAnnotation(vt.Helper.PodReaderRole(), "prod"),
 						withSelectorAnnotation(vt.Helper.AcmeResourceQuota(), "sensitive"),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector, "sensitive": &complexSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector, "sensitive": &sensitiveNamespaceSelector},
 				},
 			},
 			ExpectOutput: &ast.Context{
@@ -100,11 +100,11 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.Policyspace,
 					Path: "acme",
 					Objects: vt.ObjectSets(
-						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(simpleSelector)),
-						withSelectorAnnotation(vt.Helper.PodReaderRole(), toJSON(simpleSelector)),
-						withSelectorAnnotation(vt.Helper.AcmeResourceQuota(), toJSON(complexSelector)),
+						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
+						withSelectorAnnotation(vt.Helper.PodReaderRole(), toJSON(prodNamespaceSelector)),
+						withSelectorAnnotation(vt.Helper.AcmeResourceQuota(), toJSON(sensitiveNamespaceSelector)),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector, "sensitive": &complexSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector, "sensitive": &sensitiveNamespaceSelector},
 				},
 			},
 		},
@@ -117,7 +117,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.ObjectSets(
 						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), "prod"),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.Policyspace,
@@ -125,7 +125,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 							Objects: vt.ObjectSets(
 								withSelectorAnnotation(vt.Helper.AdminRoleBinding(), "prod"),
 							),
-							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 						},
 					},
 				},
@@ -135,17 +135,17 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.Policyspace,
 					Path: "acme",
 					Objects: vt.ObjectSets(
-						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(simpleSelector)),
+						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.Policyspace,
 							Path: "acme/frontend",
 							Objects: vt.ObjectSets(
-								withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(simpleSelector)),
+								withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
 							),
-							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 						},
 					},
 				},
@@ -170,7 +170,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 				Tree: &ast.TreeNode{
 					Type:      ast.Policyspace,
 					Path:      "acme",
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.Policyspace,
@@ -197,7 +197,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 						&ast.TreeNode{
 							Type:      ast.Policyspace,
 							Path:      "acme/frontend",
-							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 						},
 					},
 				},
@@ -213,7 +213,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.ObjectSets(
 						vt.Helper.AdminRoleBinding(),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 				},
 			},
 			ExpectOutput: &ast.Context{
@@ -223,7 +223,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.ObjectSets(
 						vt.Helper.AdminRoleBinding(),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 				},
 			},
 		},
@@ -236,7 +236,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.ObjectSets(
 						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), "prod"),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &simpleSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 				},
 			},
 			ExpectErr: true,
