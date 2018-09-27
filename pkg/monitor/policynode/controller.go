@@ -22,11 +22,11 @@ import (
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/monitor/args"
 	"github.com/google/nomos/pkg/monitor/state"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/eventhandlers"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -35,9 +35,8 @@ const (
 
 // Controller responds to changes to PolicyNodes by updating its ClusterState.
 type Controller struct {
-	lister    policyhierarchylister.PolicyNodeLister
-	hierarchy hierarchy.Interface
-	state     *state.ClusterState
+	lister policyhierarchylister.PolicyNodeLister
+	state  *state.ClusterState
 }
 
 // NewController creates a new controller.GenericController.
@@ -45,7 +44,6 @@ func NewController(injectArgs args.InjectArgs, state *state.ClusterState) *contr
 	informer := injectArgs.Informers.Nomos().V1().PolicyNodes()
 	pnController := &Controller{
 		informer.Lister(),
-		hierarchy.New(injectArgs.Informers.Nomos().V1().PolicyNodes()),
 		state,
 	}
 
@@ -67,18 +65,16 @@ func NewController(injectArgs args.InjectArgs, state *state.ClusterState) *contr
 
 func (c *Controller) reconcile(k types.ReconcileKey) error {
 	name := k.Name
-	ancestry, err := c.hierarchy.Ancestry(name)
+	node, err := c.lister.Get(name)
 	if err == nil {
-		return c.state.ProcessPolicyNode(ancestry)
+		return c.state.ProcessPolicyNode(node)
 	}
 	switch {
-	case hierarchy.IsNotFoundError(err):
+	case apierrors.IsNotFound(err):
 		c.state.DeletePolicy(name)
 		return nil
-	case hierarchy.IsConsistencyError(err):
-		glog.Warningf("Inconsistent ancestry for %q.", name)
 	default:
-		glog.Errorf("Failed to fetch ancestry for %q.", name)
+		glog.Errorf("Failed to fetch policy node for %q.", name)
 	}
 	return errors.Wrapf(err, "failed to look up policynode %s for monitoring", name)
 }

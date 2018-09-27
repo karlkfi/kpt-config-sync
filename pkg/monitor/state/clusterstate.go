@@ -21,7 +21,6 @@ import (
 	"time"
 
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/syncer/hierarchy"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -65,11 +64,10 @@ func (c *ClusterState) ProcessClusterPolicy(cp *policyhierarchyv1.ClusterPolicy)
 }
 
 // ProcessPolicyNode updates the ClusterState with the current status of the PolicyNode.
-func (c *ClusterState) ProcessPolicyNode(ancestry hierarchy.Ancestry) error {
+func (c *ClusterState) ProcessPolicyNode(pn *policyhierarchyv1.PolicyNode) error {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
-	pn := ancestry.Node()
 	c.updateTimes(pn.Spec.ImportTime, pn.Status.SyncTime)
 
 	if !pn.Spec.Type.IsNamespace() {
