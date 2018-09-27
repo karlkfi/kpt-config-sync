@@ -56,6 +56,37 @@ $ dep ensure -update -v [package path]
 $ ./scripts/fix-dep.sh  # clears out license related changes.
 ```
 
+## Updating license metadata
+
+Updating dependencies in the `vendor` directory may result in pulling in new
+dependencies that need licensing scrutiny.
+
+Before you begin, ensure that your local system has `licenselinter` installed:
+
+```console
+$ make install github.com/google/nomos/cmd/licenselinter
+```
+
+To check licenses (it is a part of the linter checks, using licenselinter), run:
+
+```console
+$ make lint
+```
+
+Below is a list of common errors and ways to resolve.
+
+### missing METADATA file, rerun with -generate-meta-file: /some/path/METADATA
+
+From the top level directory of the repo, run: 
+
+```console
+$ licenselinter --dir=$PWD --generate-meta-file
+```
+
+This will generate missing METADATA files for `vendor` dependencies that don't
+have them.  You can now commit the changes made by the licenselinter.
+
+
 ## Useful Git Tools
 
 git gui is useful for ammending commits
