@@ -23,6 +23,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"encoding/json"
+
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/pkg/errors"
@@ -46,6 +48,7 @@ Options:
 `
 
 var validate = flag.Bool("validate", true, "If true, use a schema to validate the input")
+var print = flag.Bool("print", false, "If true, print generated Nomos CRDs")
 
 func printErrAndDie(err error) {
 	// nolint: errcheck
@@ -81,7 +84,22 @@ func main() {
 		printErrAndDie(errors.Wrap(err, "Failed to create parser"))
 	}
 
-	if _, err := p.Parse(dir); err != nil {
+	policies, err := p.Parse(dir)
+	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Found issues"))
 	}
+	if *print {
+		err := prettyPrint(policies)
+		if err != nil {
+			printErrAndDie(errors.Wrap(err, "Failed to print generated CRDs"))
+		}
+	}
+}
+
+func prettyPrint(v interface{}) (err error) {
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err == nil {
+		fmt.Println(string(b))
+	}
+	return err
 }
