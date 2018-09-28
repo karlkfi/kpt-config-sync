@@ -5,7 +5,7 @@ RoleBindings are inherited hierarchically. This provides a powerful mechanism to
 apply policies to all Namespaces in a subtree. However, some organizations
 require the flexibility to apply policies to just a subset of the Namespaces
 based on label selection. This _cross-cutting_ functionality can be used instead
-of, or as a compliment, to hierarchical policy evaluation.
+of, or as a complement, to hierarchical policy evaluation.
 
 Let's take a look at the foo-corp example again:
 
