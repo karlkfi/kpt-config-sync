@@ -16,36 +16,69 @@ limitations under the License.
 package controller
 
 import (
-	"github.com/google/nomos/clientgen/apis"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"fmt"
 
+	"github.com/google/nomos/clientgen/apis"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
 )
 
 // RegisterGenericResources updates the scheme with resources declared in Syncs.
-func RegisterGenericResources(scheme *runtime.Scheme, clientSet *apis.Clientset) ([]schema.GroupVersionKind, error) {
-	var gvks []schema.GroupVersionKind
+func RegisterGenericResources(cfg *rest.Config, scheme *runtime.Scheme,
+	clientSet *apis.Clientset) ([]schema.GroupVersionKind, []schema.GroupVersionKind, error) {
+	namespaceScoped, err := resourceScopes(cfg)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not get resource scope information from discovery API")
+	}
 	syncInformer := clientSet.NomosV1alpha1().Syncs()
 	// TODO(115420897): We need to continuously check for added/removed Syncs and restart the Manager with new controllers for the
 	// generic resources we're syncing. We also need to update the scheme appropriately.
 	syncs, err := syncInformer.List(metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not list Syncs")
+		return nil, nil, errors.Wrap(err, "could not list Syncs")
 	}
-	gvks = extractGroupVersionKinds(syncs.Items...)
+	namespace, cluster := extractGroupVersionKinds(namespaceScoped, syncs.Items...)
 
-	addResourcesToScheme(scheme, gvks)
-	return gvks, nil
+	addResourcesToScheme(scheme, namespace...)
+	addResourcesToScheme(scheme, cluster...)
+	return namespace, cluster, nil
+}
+
+func resourceScopes(cfg *rest.Config) (map[schema.GroupVersionKind]bool, error) {
+	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create discoveryclient")
+	}
+	groups, err := dc.ServerResources()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get api groups")
+	}
+	namespaceScoped := make(map[schema.GroupVersionKind]bool)
+	for _, g := range groups {
+		gv, grpErr := schema.ParseGroupVersion(g.GroupVersion)
+		if grpErr != nil {
+			// This shouldn't happen because we get these values from the server.
+			return nil, fmt.Errorf("received invalid GroupVersion from server: %v", grpErr)
+		}
+		for _, apir := range g.APIResources {
+			if apir.Namespaced {
+				namespaceScoped[gv.WithKind(apir.Kind)] = true
+			}
+		}
+	}
+	return namespaceScoped, nil
 }
 
 // addsResourcesToScheme adds resources represented by GroupVersionKinds to the api scheme.
 // This is needed by the kubebuilder APIs in order to generate informers/listers for GenericResources defined in
 // PolicyNodes/ClusterPolicies.
-func addResourcesToScheme(scheme *runtime.Scheme, gvks []schema.GroupVersionKind) {
+func addResourcesToScheme(scheme *runtime.Scheme, gvks ...schema.GroupVersionKind) {
 	for _, gvk := range gvks {
 		if !scheme.Recognizes(gvk) {
 			scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
@@ -61,16 +94,22 @@ func addResourcesToScheme(scheme *runtime.Scheme, gvks []schema.GroupVersionKind
 	}
 }
 
-func extractGroupVersionKinds(syncDeclarations ...nomosv1alpha1.Sync) (gvks []schema.GroupVersionKind) {
-	for _, syncDeclaration := range syncDeclarations {
-		for _, group := range syncDeclaration.Spec.Groups {
-			kind := group.Kinds
-			for _, version := range kind.Versions {
-				gvks = append(gvks, schema.GroupVersionKind{
-					Group:   group.Group,
-					Version: version.Version,
-					Kind:    kind.Kind,
-				})
+func extractGroupVersionKinds(namespaceScoped map[schema.GroupVersionKind]bool,
+	syncs ...nomosv1alpha1.Sync) (namespace []schema.GroupVersionKind, cluster []schema.GroupVersionKind) {
+	for _, sync := range syncs {
+		for _, g := range sync.Spec.Groups {
+			k := g.Kinds
+			for _, v := range k.Versions {
+				gvk := schema.GroupVersionKind{
+					Group:   g.Group,
+					Version: v.Version,
+					Kind:    k.Kind,
+				}
+				if namespaceScoped[gvk] {
+					namespace = append(namespace, gvk)
+				} else {
+					cluster = append(cluster, gvk)
+				}
 			}
 		}
 	}

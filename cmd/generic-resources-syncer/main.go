@@ -48,7 +48,7 @@ func main() {
 	// Set up Scheme for generic resources.
 	clientSet := apis.NewForConfigOrDie(cfg)
 	scheme := mgr.GetScheme()
-	gvks, err := genericcontroller.RegisterGenericResources(scheme, clientSet)
+	namespace, cluster, err := genericcontroller.RegisterGenericResources(cfg, scheme, clientSet)
 	if err != nil {
 		glog.Fatalf("Could not register Generic Resources: %v", err)
 	}
@@ -57,10 +57,10 @@ func main() {
 	nomosapischeme.AddToScheme(scheme)
 
 	// Set up all Controllers.
-	if err := genericcontroller.AddPolicyNode(mgr, clientSet, gvks); err != nil {
+	if err := genericcontroller.AddPolicyNode(mgr, clientSet, namespace); err != nil {
 		glog.Fatalf("Could not create PolicyNode controllers: %v", err)
 	}
-	if err := genericcontroller.AddClusterPolicy(mgr, clientSet, gvks); err != nil {
+	if err := genericcontroller.AddClusterPolicy(mgr, clientSet, cluster); err != nil {
 		glog.Fatalf("Could not create ClusterPolicy controllers: %v", err)
 	}
 
