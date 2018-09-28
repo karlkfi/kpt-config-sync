@@ -3,8 +3,8 @@
 Before committing policy configuration in Git and pushing changes to Kubernetes
 clusters, it is important to validate them first.
 
-`nomosvet` is tool that validates a root policyspace directory against the
-[constraints](#constraints) listed above as well as validating resources using
+`nomosvet` is tool that validates a root policyspace directory against
+[these constraints](git_overview.md#constraints) as well as validating resources using
 their schema (Similar to `kubectl apply --dry-run`).
 
 To install nomosvet:
