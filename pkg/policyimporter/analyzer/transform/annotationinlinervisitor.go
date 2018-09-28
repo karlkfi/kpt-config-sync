@@ -70,10 +70,14 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 			v.errs.Add(errors.Errorf("NamespaceSelector must not be in namespace directories, found in %q", n.Path))
 			return n
 		}
+		if err := validateSelector(s); err != nil {
+			v.errs.Add(errors.Wrapf(err, "NamespaceSelector %q is not valid", s.Name))
+			continue
+		}
 		content, err := json.Marshal(s)
 		if err != nil {
 			// This should already be validated in parser.
-			v.errs.Add(errors.Wrapf(err, "failed to toJSON NamespaceSelector %q", s.Name))
+			v.errs.Add(errors.Wrapf(err, "failed to marshal NamespaceSelector %q", s.Name))
 			continue
 		}
 		m[k] = string(content)

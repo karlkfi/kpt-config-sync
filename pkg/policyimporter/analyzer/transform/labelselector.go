@@ -27,6 +27,13 @@ import (
 	labelpkg "k8s.io/apimachinery/pkg/labels"
 )
 
+var emptyMap = make(map[string]string)
+
+func validateSelector(namespaceSelector *policyhierarchyv1alpha1.NamespaceSelector) error {
+	_, err := isSelected(emptyMap, &namespaceSelector.Spec.Selector)
+	return err
+}
+
 func isSelected(labels map[string]string, labelselector *metav1.LabelSelector) (bool, error) {
 	selector, err := metav1.LabelSelectorAsSelector(labelselector)
 	if err != nil {
