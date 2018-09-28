@@ -36,3 +36,7 @@ const (
 	// ReservedAttribute means that these namespaces will not be managed by Nomos.
 	ReservedAttribute NamespaceAttribute = "reserved"
 )
+
+// SyncFinalizer is a finalizer handled by Syncer to ensure Sync deletions complete before Importer writes ClusterPolicy
+// and PolicyNode resources.
+const SyncFinalizer = "syncer.nomos.dev"

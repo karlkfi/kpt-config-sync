@@ -32,6 +32,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+// RestartableManager is a controller manager that can be restarted based on the resources it syncs.
+type RestartableManager interface {
+	// UpdateSyncResources checks if the resources in Syncs have changed since last time we checked.
+	// If they have, we stop the old manager and brings up a new one with controllers for sync-enabled resources.
+	UpdateSyncResources(syncs []*nomosv1alpha1.Sync, startErrCh chan error) error
+	// Clear clears out the set of resource types ResourceManger is managing, without restarting the manager.
+	Clear()
+}
+
+var _ RestartableManager = &GenericResourceManager{}
+
 // GenericResourceManager is the Manager that is responsible for PolicyNode and ClusterPolicy controllers.
 // Its controllers are responsible for reconciling declared state in sync-enabled resources with the
 // actual state of K8S in the cluster.
@@ -48,22 +59,20 @@ type GenericResourceManager struct {
 // NewGenericResourceManager returns a new GenericResourceManager for managing resources with sync enabled.
 func NewGenericResourceManager(mgr manager.Manager, cfg *rest.Config) *GenericResourceManager {
 	return &GenericResourceManager{
-		Manager: mgr,
-		baseCfg: cfg,
-		stopCh:  make(chan struct{}),
+		Manager:     mgr,
+		baseCfg:     cfg,
+		stopCh:      make(chan struct{}),
+		syncEnabled: make(map[schema.GroupVersionKind]bool),
 	}
 }
 
-// ResourcesChanged returns true if the resources in Syncs have changed since last time we checked.
-// When this happens we need to stop the Manager and create a new one for the current resources with sync enabled.
-func (r *GenericResourceManager) ResourcesChanged(syncs *nomosv1alpha1.SyncList) bool {
-	actual := groupVersionKinds(syncs)
-	return !reflect.DeepEqual(actual, r.syncEnabled)
-}
-
-// Restart stops the old manager and brings up a new one with controllers for sync-enabled resources.
-// This is called whenever the resources being synced in a cluster has changed.
-func (r *GenericResourceManager) Restart(syncs *nomosv1alpha1.SyncList, startErrCh chan error) error {
+// UpdateSyncResources implements RestartableManager.
+func (r *GenericResourceManager) UpdateSyncResources(syncs []*nomosv1alpha1.Sync, startErrCh chan error) error {
+	actual := GroupVersionKinds(syncs...)
+	if reflect.DeepEqual(actual, r.syncEnabled) {
+		// The set of sync-enabled resources hasn't changed. There is no need to restart.
+		return nil
+	}
 	close(r.stopCh)
 	r.stopCh = make(chan struct{})
 	glog.Info("Stopping GenericResourceManager")
@@ -77,18 +86,18 @@ func (r *GenericResourceManager) Restart(syncs *nomosv1alpha1.SyncList, startErr
 	return r.startControllers(startErrCh)
 }
 
-// Clear clears out the set of resource types ResourceManger is managing.
+// Clear implements RestartableManager.
 func (r *GenericResourceManager) Clear() {
-	r.syncEnabled = nil
+	r.syncEnabled = make(map[schema.GroupVersionKind]bool)
 }
 
 // register updates the scheme with resources declared in Syncs.
 // This is needed to generate informers/listers for resources that are sync enabled.
-func (r *GenericResourceManager) register(syncs *nomosv1alpha1.SyncList) {
+func (r *GenericResourceManager) register(syncs []*nomosv1alpha1.Sync) {
 	scheme := r.GetScheme()
 	nomosapischeme.AddToScheme(scheme)
 
-	r.syncEnabled = groupVersionKinds(syncs)
+	r.syncEnabled = GroupVersionKinds(syncs...)
 	for gvk := range r.syncEnabled {
 		if !scheme.Recognizes(gvk) {
 			scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
@@ -161,23 +170,4 @@ func (r *GenericResourceManager) resourceScopes() (namespace []schema.GroupVersi
 		}
 	}
 	return namespace, cluster, nil
-}
-
-// groupVersionKinds returns a set of GroupVersionKind represented by the SyncList.
-func groupVersionKinds(syncs *nomosv1alpha1.SyncList) map[schema.GroupVersionKind]bool {
-	gvks := make(map[schema.GroupVersionKind]bool)
-	for _, sync := range syncs.Items {
-		for _, g := range sync.Spec.Groups {
-			k := g.Kinds
-			for _, v := range k.Versions {
-				gvk := schema.GroupVersionKind{
-					Group:   g.Group,
-					Version: v.Version,
-					Kind:    k.Kind,
-				}
-				gvks[gvk] = true
-			}
-		}
-	}
-	return gvks
 }

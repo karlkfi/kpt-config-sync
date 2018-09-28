@@ -37,7 +37,7 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 
 	// Set up a meta controller that restarts GenericResource controllers when Syncs change.
 	startErrCh := make(chan error)
-	reconciler, err := NewMetaReconciler(mgr.GetCache(), mgr.GetConfig(), startErrCh)
+	reconciler, err := NewMetaReconciler(mgr.GetClient(), mgr.GetCache(), mgr.GetConfig(), startErrCh)
 	if err != nil {
 		return errors.Wrap(err, "could not create meta reconciler")
 	}
