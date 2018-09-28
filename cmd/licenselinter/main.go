@@ -276,9 +276,9 @@ func fixLicenseFiles(licenses []string) error {
 	}
 
 	if !*renameFiles {
-		return errors.New("need to fix license files. Did you update deps using " +
-			"`dep ensure`? Try running scripts/fix-dep.sh. Otherwise, you may need to rerun " +
-			"licenselinter with -rename-files.")
+		return fmt.Errorf("need to fix license files. Did you update deps using "+
+			"`dep ensure`? Try running scripts/fix-dep.sh. Otherwise, you may need to rerun "+
+			"licenselinter with -rename-files: %v", licenses)
 	}
 	var content []string
 	for _, l := range licenses {

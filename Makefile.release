@@ -164,6 +164,7 @@ upload-release:
 	gsutil -m cp -R \
 		$(STAGING_DIR)/installer.zip \
 		$(STAGING_DIR)/nomos-docs.zip  \
+		$(STAGING_DIR)/kubectl-oidc-plugin.zip  \
 	    $(BIN_DIR) \
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/$(VERSION)

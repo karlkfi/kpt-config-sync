@@ -48,6 +48,9 @@ DOCS_STAGING_DIR := $(STAGING_DIR)/docs
 # Directory used for staging scripts.
 SCRIPTS_STAGING_DIR := $(STAGING_DIR)/scripts
 
+# Directory used for staging kubectl plugin release.
+KUBECTL_PLUGIN_STAGING_DIR := $(STAGING_DIR)/kubectl-oidc
+
 # Directory used for installer output.
 INSTALLER_OUTPUT_DIR := $(STAGING_DIR)/installer_output
 
@@ -162,6 +165,7 @@ $(OUTPUT_DIR):
 		$(INSTALLER_OUTPUT_DIR) \
 		$(STAGING_DIR) \
 		$(SCRIPTS_STAGING_DIR) \
+		$(KUBECTL_PLUGIN_STAGING_DIR) \
 		$(DOCS_STAGING_DIR) \
 		$(GEN_YAML_DIR) \
 		$(TEMP_OUTPUT_DIR) \

@@ -1,6 +1,33 @@
 # Rules for building the installer
 
-installer-staging: push-to-gcr-nomos gen-yaml-all $(OUTPUT_DIR)
+OIDC_DIR := .kube/plugins/oidc
+
+$(KUBECTL_PLUGIN_STAGING_DIR)/$(OIDC_DIR):
+	@mkdir -p $(KUBECTL_PLUGIN_STAGING_DIR)/$(OIDC_DIR)
+
+# This target expects that the binaries have already been built.
+kubectl-plugin-staging: \
+		$(KUBECTL_PLUGIN_STAGING_DIR)/$(OIDC_DIR) \
+		$(TOP_DIR)/build/kubectl-oidc/kubectl-oidc \
+		$(TOP_DIR)/build/kubectl-oidc/plugin.yaml
+	@( \
+			cd $(GO_DIR); \
+			rsync --relative --quiet \
+			      `find bin -type f | grep kubectl-oidc` \
+			      $(KUBECTL_PLUGIN_STAGING_DIR)/.kube/plugins/oidc; \
+	)
+	@cp $(TOP_DIR)/build/kubectl-oidc/* \
+			$(KUBECTL_PLUGIN_STAGING_DIR)/$(OIDC_DIR)
+	@( \
+			cd $(KUBECTL_PLUGIN_STAGING_DIR); \
+	        zip -r kubectl-oidc-plugin.zip .; \
+	)
+
+installer-staging: \
+		push-to-gcr-nomos \
+		gen-yaml-all \
+		kubectl-plugin-staging \
+		$(OUTPUT_DIR)
 	@echo "+++ Creating installer staging directory"
 	@( \
 			cd $(GO_DIR); \
