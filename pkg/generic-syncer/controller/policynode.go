@@ -1,9 +1,23 @@
+/*
+Copyright 2018 The Nomos Authors.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package controller
 
 import (
 	"fmt"
 
-	"github.com/google/nomos/clientgen/apis"
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
 	"github.com/pkg/errors"
@@ -18,9 +32,9 @@ import (
 )
 
 // AddPolicyNode adds PolicyNode sync controllers to the Manager.
-func AddPolicyNode(mgr manager.Manager, clientSet *apis.Clientset, gvks []schema.GroupVersionKind) error {
+func AddPolicyNode(mgr manager.Manager, gvks []schema.GroupVersionKind) error {
 	pnc, err := controller.New("policynode-resources", mgr, controller.Options{
-		Reconciler: genericreconcile.NewPolicyNodeReconciler(clientSet, mgr.GetCache(), mgr.GetScheme()),
+		Reconciler: genericreconcile.NewPolicyNodeReconciler(mgr.GetClient(), mgr.GetCache(), mgr.GetScheme()),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not create policynode controller")
@@ -35,13 +49,12 @@ func AddPolicyNode(mgr manager.Manager, clientSet *apis.Clientset, gvks []schema
 
 	// Set up a watch on all namespace-scoped resources defined in Syncs.
 	// Look up the corresponding PolicyNode for the changed resources.
-	// TODO(116662413): Only watch namespace-scoped generic resources.
 	for _, gvk := range gvks {
 		t := &unstructured.Unstructured{}
 		t.SetGroupVersionKind(gvk)
 		name := fmt.Sprintf("policynode-resources-%s", gvk)
 		gc, err := controller.New(name, mgr, controller.Options{
-			Reconciler: genericreconcile.NewPolicyNodeReconciler(clientSet, mgr.GetCache(), mgr.GetScheme()),
+			Reconciler: genericreconcile.NewPolicyNodeReconciler(mgr.GetClient(), mgr.GetCache(), mgr.GetScheme()),
 		})
 		if err != nil {
 			return errors.Wrapf(err, "could not create %q controller", name)

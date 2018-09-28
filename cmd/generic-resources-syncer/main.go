@@ -19,10 +19,8 @@ import (
 	"flag"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/clientgen/apis"
-	nomosapischeme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/pkg/client/restconfig"
-	genericcontroller "github.com/google/nomos/pkg/generic-syncer/controller"
+	"github.com/google/nomos/pkg/generic-syncer/metasync"
 	"github.com/google/nomos/pkg/util/log"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -45,27 +43,14 @@ func main() {
 		glog.Fatalf("Failed to create manager: %v", err)
 	}
 
+	mgrStopChannel := signals.SetupSignalHandler()
 	// Set up Scheme for generic resources.
-	clientSet := apis.NewForConfigOrDie(cfg)
-	scheme := mgr.GetScheme()
-	namespace, cluster, err := genericcontroller.RegisterGenericResources(cfg, scheme, clientSet)
-	if err != nil {
-		glog.Fatalf("Could not register Generic Resources: %v", err)
+	if err := metasync.AddMetaController(mgr, mgrStopChannel); err != nil {
+		glog.Fatalf("Error adding Sync controller: %v", err)
 	}
 
-	// Set up Scheme for nomos resources.
-	nomosapischeme.AddToScheme(scheme)
-
-	// Set up all Controllers.
-	if err := genericcontroller.AddPolicyNode(mgr, clientSet, namespace); err != nil {
-		glog.Fatalf("Could not create PolicyNode controllers: %v", err)
-	}
-	if err := genericcontroller.AddClusterPolicy(mgr, clientSet, cluster); err != nil {
-		glog.Fatalf("Could not create ClusterPolicy controllers: %v", err)
-	}
-
-	// Start the Managers.
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	// Start the Manager.
+	if err := mgr.Start(mgrStopChannel); err != nil {
 		glog.Fatalf("Error starting controller: %v", err)
 	}
 }
