@@ -1,0 +1,12 @@
+name: "afero"
+description: "A FileSystem Abstraction System for Go"
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/spf13/afero"
+  }
+  version: "v1.1.2"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

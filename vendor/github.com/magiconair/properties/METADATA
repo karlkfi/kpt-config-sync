@@ -1,0 +1,12 @@
+name: "properties"
+description: "It supports reading from multiple files or URLs and Spring style recursive property expansion of expressions like `${key}` to their corresponding value. Value expressions can refer to other keys like in `${key}` or to environment variables like in `${USER}`.  Filenames can also contain environment variables like in `/home/${USER}/myapp.properties`."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/magiconair/properties"
+  }
+  version: "v1.8.0"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

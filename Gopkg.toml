@@ -78,6 +78,23 @@ required=[
   name = "github.com/golang/glog"
   branch = "master"
 
+# The last official release version="v2.6.2" is running behind our Kubernetes
+# deps, and doesn't have files that K8S needs.
+[[override]]
+  name = "github.com/docker/distribution"
+  revision = "d37f8164276c54f91c4ca7f64e3543f3cc6ecd29"
+
+# Releases after v9.9.0 are incompatible with Kubernetes v1.10.1.
+[[override]]
+  name = "github.com/Azure/go-autorest"
+  version = "v9.9.0"
+
+# We use prometheus.NewTimer which was introduced after last official release
+# "v0.9.1"
+[[override]]
+  name = "github.com/prometheus/client_golang"
+  version = "v0.9.0-pre1"
+
 [[constraint]]
   branch = "master"
   name = "k8s.io/gengo"
@@ -109,3 +126,8 @@ required=[
 [[constraint]]
   name = "github.com/json-iterator/go"
   version = "1.0.3"
+
+[[constraint]]
+  name = "github.com/filmil/k8s-oidc-helper"
+  branch = "oidc"
+
