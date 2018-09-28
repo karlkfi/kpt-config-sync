@@ -30,9 +30,14 @@ Try it out by following the [Quickstart Guide](docs/quickstart.md).
 *   [Concepts](docs/concepts.md)
 *   [System Overview](docs/system_overview.md)
 *   [Installation](docs/installation.md)
-*   User Guides
-    *   [Git User Guide](docs/git_user_guide.md)
-    *   [GCP User Guide](docs/gcp_user_guide.md)
+*   Using Git as source of truth
+    *   [Overview](docs/git_overview.md)
+    *   [Validation](docs/git_validation.md)
+    *   [Managing Existing Clusters](docs/git_namespaces.md)
+    *   [NamespaceSelectors](docs/git_namespaceselectors.md)
+    *   [System Guarantees](docs/git_guarantees.md)
+*   Using GCP as source of truth
+    *   [Overview](docs/gcp_overview.md)
 *   [Monitoring and Debugging](docs/monitoring_and_debugging.md)
 
 ## Contributing to GKE Policy Management

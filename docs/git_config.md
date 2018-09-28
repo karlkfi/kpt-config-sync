@@ -140,5 +140,5 @@ $ git clone git@github.com:your_github_username/foo-corp-example.git
 
 ## Next Steps
 
-Consult the [installation guide](installation.md) for instructions on how
-to apply the config.
+Consult the [installation guide](installation.md) for instructions on how to
+apply the config.

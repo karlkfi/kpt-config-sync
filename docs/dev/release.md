@@ -1,14 +1,15 @@
 # Releasing
 
-The release process promotes an already-built release candidate
-from the continuous deployment (CD) pipeline. It is mostly
-automated but requires a human to bless a release candidate at the very end.
+The release process promotes an already-built release candidate from the
+continuous deployment (CD) pipeline. It is mostly automated but requires a human
+to bless a release candidate at the very end.
 
 ## Setup
 
 Set up a nomos repo.
 
-Ensure that your remote is named `origin`. `make bless-autorelease` assumes that.
+Ensure that your remote is named `origin`. `make bless-autorelease` assumes
+that.
 
 ## Basic manual test
 
@@ -17,15 +18,16 @@ only covers the possibility that e2e tests are so badly broken that they fail to
 run at all but still report passing. It also tests that our documentation is
 accurate (which can't be automated).*
 
-Follow [installation instructions](../installation.md), but instead of `stable`, pick a fixed
-release from
+Follow [installation instructions](../installation.md), but instead of `stable`,
+pick a fixed release from
 [GCS nomos releases](https://console.cloud.google.com/storage/browser/nomos-release?project=nomos-release).
-Choose the highest versioned release. It must be a release candidate (rc), such as `v0.10.3-rc.39`.
+Choose the highest versioned release. It must be a release candidate (rc), such
+as `v0.10.3-rc.39`.
 
-Follow instructions for [Git config](../git_config.md). Use
-the sample YAML from those instructions, for the foo-corp repo. You will most
-likely have memorized these steps, but try to follow the documentation. This is our
-only regular review of the documentation.
+Follow instructions for [Git config](../git_config.md). Use the sample YAML from
+those instructions, for the foo-corp repo. You will most likely have memorized
+these steps, but try to follow the documentation. This is our only regular
+review of the documentation.
 
 After installation completes, check that the foo-corp namespaces are installed:
 
@@ -63,30 +65,31 @@ test, are sufficient.
 make -f Makefile.release bless-autorelease
 ```
 
-- The above command line launches an interactive prompt that shows the latest
-  release candidate ("rc") tags that correspond to last successfully tested release.
-  It prints the change log for inspection.
+-   The above command line launches an interactive prompt that shows the latest
+    release candidate ("rc") tags that correspond to last successfully tested
+    release. It prints the change log for inspection.
 
-- Release engineer checks the following:
+-   Release engineer checks the following:
 
-  - Is the previous release tag as expected?  Normally, the previous release tag
-    is the previous successful release.
+    -   Is the previous release tag as expected? Normally, the previous release
+        tag is the previous successful release.
 
-  - Is the release candidate tag as expected?  Normally, the release candidate
-	has a patch level one higher than the previous release.  Exceptionally, the
-	minor release number is incremented if there are backwards incompatible
-	changes. Also, be sure that it's the same rc you tested manually.
+    -   Is the release candidate tag as expected? Normally, the release
+        candidate has a patch level one higher than the previous release.
+        Exceptionally, the minor release number is incremented if there are
+        backwards incompatible changes. Also, be sure that it's the same rc you
+        tested manually.
 
-  - Is the proposed release tag as expected?
+    -   Is the proposed release tag as expected?
 
-- If the release tags proposed by the CD pipeline are as expected, the release
-  engineer can press "Enter" to accept defaults.
+-   If the release tags proposed by the CD pipeline are as expected, the release
+    engineer can press "Enter" to accept defaults.
 
-  - If the release tags proposed by the CD pipeline are not as expected, the
-    release engineer may (1) supply other tags or (2) stop the process.
+    -   If the release tags proposed by the CD pipeline are not as expected, the
+        release engineer may (1) supply other tags or (2) stop the process.
 
-- The blessing process will promote the release candidate `v1.2.3-rc.4` to the
-  release `v1.2.3`.
+-   The blessing process will promote the release candidate `v1.2.3-rc.4` to the
+    release `v1.2.3`.
 
 A sample session with `make bless-autorelease` is shown below.
 
@@ -130,9 +133,10 @@ c79426d4 Fri Sep 7 .. Filip Filmar            buildenv: upgrade buildenv to v0.1
 e15b4b28 Thu Sep 6 .. Erik Kitson             Fix broken links in documentation and add monitor pod.
 ```
 
-- Final step: send an email to nomos-team@google.com with subject `Nomos Release
-${RELEASE_VERSION}` (where `RELEASE_VERSION` is the tag you chose for the release). Copy the above
- changelog into the body. Copy using `Copy as HTML` to retain formatting.
+-   Final step: send an email to nomos-team@google.com with subject `Nomos
+    Release ${RELEASE_VERSION}` (where `RELEASE_VERSION` is the tag you chose
+    for the release). Copy the above changelog into the body. Copy using `Copy
+    as HTML` to retain formatting.
 
 ## Check the build artifacts (optional)
 
@@ -148,17 +152,19 @@ Publicly-accessible docs will be
 
 This is what the release process looks like:
 
-- Once a day, the CD pipeline adds a "release candidate" git tag to the
-  then-current head revision of the nomos `master` branch.  The tag is of the
-  form `v1.2.3-rc.4` which means "4th release candidate for a release `v1.2.3`".
+-   Once a day, the CD pipeline adds a "release candidate" git tag to the
+    then-current head revision of the nomos `master` branch. The tag is of the
+    form `v1.2.3-rc.4` which means "4th release candidate for a release
+    `v1.2.3`".
 
-- The CD pipeline runs unit and end-to-end tests based off of the candidate
-  release code.
+-   The CD pipeline runs unit and end-to-end tests based off of the candidate
+    release code.
 
-- If the release candidate fails the tests, the CD pipeline stops here.
+-   If the release candidate fails the tests, the CD pipeline stops here.
 
-- If the release candidate passes the tests, it is copied out to `nomos-release`
-  project and becomes available as an unblessed release `v1.2.3-rc.4`.
+-   If the release candidate passes the tests, it is copied out to
+    `nomos-release` project and becomes available as an unblessed release
+    `v1.2.3-rc.4`.
 
-- When the release engineer runs `make bless-autorelease`, it looks for the latest tag.
-
+-   When the release engineer runs `make bless-autorelease`, it looks for the
+    latest tag.

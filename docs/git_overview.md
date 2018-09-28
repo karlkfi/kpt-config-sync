@@ -1,4 +1,4 @@
-# Git User Guide
+# Git Overview
 
 GKE Policy Management supports using Git to centrally manage Namespaces and
 policies across Kubernetes clusters. This *Policy as Code* approach ensures
@@ -74,7 +74,7 @@ foo-corp
     `nomos-system` and `default` are a special class of namespaces called
     `Reserved Namespaces` that GKE Policy Management will not interact with.
     This topic is discussed in depth in the
-    [namespaces user guide](git_user_guide_namespaces.md)
+    [namespaces user guide](git_namespaces.md)
 
 There are no requirements on file names or how many resources are packed in a
 file. Any other file not explicitly mentioned above is ignored by GKE Policy
@@ -116,7 +116,7 @@ namespaces, but does not delete a namespace or workload resources.
 
 GKE Policy Management will not manage namespaces that already exist on a cluster
 at install time. For details on how to configure namespaces that already exist,
-please see the [namespaces user guide](git_user_guide_namespaces.md)
+please see the [namespaces user guide](git_namespaces.md)
 
 ## Policy Types
 
@@ -300,122 +300,3 @@ spec:
   volumes:
   - '*'
 ```
-
-## Validation
-
-Before committing policy configuration in Git and pushing changes to Kubernetes
-clusters, it is important to validate them first.
-
-`nomosvet` is tool that validates a root policyspace directory against the
-[constraints](#constraints) listed above as well as validating resources using
-their schema (Similar to `kubectl apply --dry-run`).
-
-To install nomosvet:
-
-```console
-$ curl -LO https://storage.googleapis.com/nomos-release/stable/linux_amd64/nomosvet
-$ chmod u+x nomosvet
-```
-
-You can replace `linux_amd64` in the URL with other supported platforms:
-
-*   `darwin_amd64`
-*   `windows_amd64`
-
-The following commands assume that you placed `nomosvet` in a directory
-mentioned in your `$PATH` environment variable.
-
-You can manually run nomosvet:
-
-```console
-$ nomosvet foo-corp
-```
-
-You can also automatically run nomosvet as a git
-[pre-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks). In
-the root of the repo, run:
-
-```console
-$ echo "nomosvet foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
-```
-
-You can also integrate this into your CI/CD setup, e.g. when using GitHub
-[required status check](https://help.github.com/articles/about-required-status-checks/).
-
-## Guarantees
-
-This section details the guarantees that GKE Policy Management makes based on
-the contents of the git repo and what exists on cluster.
-
-## Cluster Scoped Policies
-
-Policies in the cluster scope will be applied to the cluster exactly as they are
-specified in the git repo. Existing resources at the cluster level will not be
-managed unless a resource with the same name exists git.
-
-Declared in git | On Cluster         | GKE Policy Management Action
---------------- | ------------------ | ----------------------------
-true            | matches git repo   | no action
-true            | different than git | GKE Policy Management updates resource to match git
-true            | does not exist     | GKE Policy Management creates resource from git
-false           | exists             | no action
-false           | does not exist     | no action
-
-Examples:
-
-*   ClusterRole `pod-accountant` exists on the cluster, but does not exist in
-    git for [foo-corp](https://github.com/frankfarzan/foo-corp-example). GKE
-    Policy Management is installed for foo-corp. GKE Policy Management will not
-    delete or alter `pod-accountant`.
-*   ClusterRole `namespace-reader` exists on the cluster, and exists in git for
-    [foo-corp](https://github.com/frankfarzan/foo-corp-example). GKE Policy
-    Management is installed for foo-corp. GKE Policy Management will now update
-    `namespace-reader` to match the one declared in
-    [namespace-reader-clusterrole.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/namespace-reader-clusterrole.yaml).
-*   GKE Policy Management is installed for foo-corp. Someone adds a new
-    ClusterRole `quota-viewer` to git in
-    `foo-corp/quota-viewer-clusterrole.yaml`. GKE Policy Management will now
-    create the `quota-viewer` ClusterRole matching the one in git. Time passes.
-    Someone deletes the `quota-viewer-clusterrole.yaml` from git. GKE Policy
-    Management will now remove `quota-viewer` from the cluster.
-
-## Namespace Scoped Policies
-
-Namespace scoped policies will be applied to match the intent of the source of
-truth exactly as they are specified. This means that GKE Policy Management will
-overwrite or delete any existing policies that do not match the declarations in
-the source of truth.
-
-Declared in git | On Cluster         | GKE Policy Management Action
---------------- | ------------------ | ----------------------------
-true            | matches git        | no action
-true            | different than git | GKE Policy Management updates resource to match git
-true            | does not exist     | GKE Policy Management creates resource from git
-false           | resource exists    | GKE Policy Management deletes the resource
-false           | does not exist     | no action
-
-Examples:
-
-*   RoleBinding
-    [pod-creators](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/online/shipping-app-backend/pod-creator-rolebinding.yaml)
-    is in git for foo-corp. GKE Policy Management will ensure that all
-    `pod-creator` rolebindings in descendants of the `shipping-app-backend`
-    policyspace (`shipping-prod`, `shipping-staging`, `shipping-dev`) exactly
-    match the declared `pod-creator` RoleBinding. Time passes and someone
-    modifies the
-    [shipping-prod](https://github.com/frankfarzan/foo-corp-example/tree/master/foo-corp/online/shipping-app-backend/shipping-prod)
-    `pod-creator` RoleBinding. GKE Policy Management will notice the change and
-    update `pod-creator` to match the declaration in git. Time passes and
-    someone removes `pod-creator` from git. GKE Policy Management will now
-    remove the `pod-creator` resource from the descendant namespaces.
-*   Someone creates a `secret-admin` Role in `shipping-prod`. GKE Policy
-    Management will notice that the Role is not declared in `shipping-prod` or
-    any of its ancestors and delete the `secret-admin` Role from the namespace.
-*   Someone adds a `secret-admin` Role to git in `shipping-prod`. GKE Policy
-    Management will notice the updated declarations and create the
-    `secret-admin` role in the `shipping-prod` namespace.
-
-## Next Steps
-
-Consult the [installation guide](installation.md) for instructions on how to
-install GKE Policy Management.

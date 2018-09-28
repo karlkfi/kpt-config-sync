@@ -1,4 +1,4 @@
-# GCP User Guide
+# GCP Overview
 
 **NOTE: This is an Alpha release of Kubernetes Policy API and available to
 whitelisted customers.**

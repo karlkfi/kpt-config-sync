@@ -1,10 +1,9 @@
 # Building
 
-To build and deploy all GKE Policy Management binaries,
-first create a yaml configuration file, following either
-the [Git Configuration](../git_config.md) or
-[GCP Configuration](../gcp_config.md) instructions, according
-to your choice of source of truth. Then:
+To build and deploy all GKE Policy Management binaries, first create a yaml
+configuration file, following either the [Git Configuration](../git_config.md)
+or [GCP Configuration](../gcp_config.md) instructions, according to your choice
+of source of truth. Then:
 
 ```console
 $ make installer-staging

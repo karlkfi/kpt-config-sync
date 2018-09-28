@@ -1,4 +1,4 @@
-# Git Namespaces User Guide
+# Managing Existing Clusters
 
 ## Summary
 
