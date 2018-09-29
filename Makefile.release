@@ -90,12 +90,20 @@ BACKWARDS_INCOMPATIBLE_RC := $(shell \
 BACKWARDS_INCOMPATIBLE_RELEASE := $(shell \
 		git log $(LAST_RELEASE)..$(NEXT_RC) | grep 'BACKWARDS INCOMPATIBLE')
 
-# Finds the next minor release after the last release candidate.
-# v1.2.3-rc.4 -> v1.3.0
-# v1.2.3      -> v1.3.0
-NEXT_MINOR_RELEASE := $(shell \
+BUMP_LAST_RC := $(shell \
 		docker run --rm $(BUILDENV_IMAGE) sembump $(LAST_RC) | \
 		xargs docker run --rm $(BUILDENV_IMAGE) sembump --kind=minor)
+BUMP_LAST_RELEASE := $(shell \
+		docker run --rm $(BUILDENV_IMAGE) sembump --kind=minor $(LAST_RELEASE))
+# Finds the next minor version number that comes after both LAST_RELEASE and
+# LAST_RC.
+#
+# Example:
+#   LAST_RELEASE=v0.10.4, LAST_RC=v0.11.0-rc.2 => NEXT_MINOR_RELEASE=v0.11.0
+#   LAST_RELEASE=v0.10.4, LAST_RC=v0.10.3-rc.5 => NEXT_MINOR_RELEASE=v0.11.0
+NEXT_MINOR_RELEASE := \
+  $(shell echo "$(BUMP_LAST_RC) $(BUMP_LAST_RELEASE)" | \
+    docker run -i $(BUILDENV_IMAGE) semsort 2>&1 | head -n 1)
 
 # If a release candidate has backwards incompatible changes with respect to
 # last one built, then increment the minor version to denote that.
@@ -108,9 +116,27 @@ ifeq ($(HAS_BACKWARDS_INCOMPATIBLE),0)
   # v1.2.3      -> v1.2.3-rc.1
   NEXT_RC = $(shell docker run --rm $(BUILDENV_IMAGE) sembump -pre $(LAST_RC))
 else
-  # v1.2.3-rc.4 -> v1.3.0-rc.1
-  # v1.2.3      -> v1.3.0-rc.1
-  NEXT_RC = $(NEXT_MINOR_RELEASE)-rc.1
+  # What would be the next release candidate without an incompatible change?
+  # LAST_RC=v0.10.3-rc.2 => NEXT_RC_WITHOUT=v0.10.3-rc.3
+  NEXT_RC_WITHOUT = \
+    $(shell docker run --rm $(BUILDENV_IMAGE) sembump -pre $(LAST_RC))
+  # What would be the next release candidate if there *is* an incompatible
+  # change?  It's the first minor release that follows both the
+  # NEXT_MINOR_RELEASE and the last release candidate that would have been used
+  # if there were no incompatible changes.
+  #
+  # Example:
+  # (1)
+  #   NEXT_MINOR_RELEASE=v0.11.0
+  #   NEXT_RC_WITHOUT=v0.10.4
+  #   => NEXT_RC=v0.11.0-rc.1
+  # (2)
+  #   NEXT_MINOR_RELEASE=v0.11.0
+  #   NEXT_RC_WITHOUT=v0.11.0-rc.1
+  #   => NEXT_RC=v0.11.0-rc.2
+  NEXT_RC = \
+    $(shell echo "$(NEXT_MINOR_RELEASE)-rc.1 $(NEXT_RC_WITHOUT)" | \
+	 docker run -i $(BUILDENV_IMAGE) semsort | tail -n 1)
 endif
 
 ##### TARGETS #####
