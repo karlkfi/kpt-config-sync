@@ -4,8 +4,8 @@ Before committing policy configuration in Git and pushing changes to Kubernetes
 clusters, it is important to validate them first.
 
 `nomosvet` is tool that validates a root policyspace directory against
-[these constraints](git_overview.md#constraints) as well as validating resources using
-their schema (Similar to `kubectl apply --dry-run`).
+[these constraints](git_overview.md#constraints) as well as validating resources
+using their schema (Similar to `kubectl apply --dry-run`).
 
 To install nomosvet:
 
@@ -38,3 +38,15 @@ $ echo "nomosvet foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-comm
 
 You can also integrate this into your CI/CD setup, e.g. when using GitHub
 [required status check](https://help.github.com/articles/about-required-status-checks/).
+
+## Print CRDs
+
+As discussed in [System Overview](system_overview.md), contents of the Git repo
+are converted to ClusterPolicy and PolicyNode CRDs during the import process. To
+print the generated CRD resources in JSON:
+
+```console
+$ nomosvet -print foo-corp
+```
+
+This can be handy to preview the diff of a change before it is committed.
