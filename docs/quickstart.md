@@ -7,7 +7,7 @@ repository.
 ## Installation
 
 Follow the [Installation Guide](installation.md) to install GKE Policy
-Management on one or more Kuberentes clusters.
+Management on one or more Kubernetes clusters.
 
 ## Creating hierarchical policies
 
