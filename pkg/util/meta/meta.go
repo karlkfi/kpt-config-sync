@@ -151,7 +151,7 @@ func checkNomosPrefix(m map[string]string) error {
 			if k == v1.NamespaceSelectorAnnotationKey || k == v1.DeclarationPathAnnotationKey {
 				continue
 			}
-			return errors.Errorf("key %s contains nomos.dev/ prefix", k)
+			return errors.Errorf("unknown key has reserved 'nomos.dev' prefix: %s", k)
 		}
 	}
 	return nil
