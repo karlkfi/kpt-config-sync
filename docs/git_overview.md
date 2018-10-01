@@ -26,26 +26,26 @@ directory structure
 
 ```console
 foo-corp
-|-- audit
-|   `-- namespace.yaml
-|-- online
-|   `-- shipping-app-backend
-|       |-- shipping-dev
-|       |   |-- job-creator-rolebinding.yaml
-|       |   |-- job-creator-role.yaml
-|       |   |-- namespace.yaml
-|       |   `-- quota.yaml
-|       |-- shipping-prod
-|       |   `-- namespace.yaml
-|       |-- shipping-staging
-|       |   `-- namespace.yaml
-|       |-- pod-creator-rolebinding.yaml
-|       `-- quota.yaml
-|-- namespace-reader-clusterrolebinding.yaml
-|-- namespace-reader-clusterrole.yaml
-|-- pod-creator-clusterrole.yaml
-|-- pod-security-policy.yaml
-`-- viewers-rolebinding.yaml
+├── audit
+│   └── namespace.yaml
+├── online
+│   └── shipping-app-backend
+│       ├── shipping-dev
+│       │   ├── job-creator-rolebinding.yaml
+│       │   ├── job-creator-role.yaml
+│       │   ├── namespace.yaml
+│       │   └── quota.yaml
+│       ├── shipping-prod
+│       │   └── namespace.yaml
+│       ├── shipping-staging
+│       │   └── namespace.yaml
+│       ├── pod-creator-rolebinding.yaml
+│       └── quota.yaml
+├── namespace-reader-clusterrolebinding.yaml
+├── namespace-reader-clusterrole.yaml
+├── pod-creator-clusterrole.yaml
+├── pod-security-policy.yaml
+└── viewers-rolebinding.yaml
 ```
 
 ##### Definitions

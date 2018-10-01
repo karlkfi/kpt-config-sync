@@ -11,26 +11,26 @@ Let's take a look at the foo-corp example again:
 
 ```console
 foo-corp
-|-- audit
-|   `-- namespace.yaml
-|-- online
-|   `-- shipping-app-backend
-|       |-- shipping-dev
-|       |   |-- job-creator-rolebinding.yaml
-|       |   |-- job-creator-role.yaml
-|       |   |-- namespace.yaml
-|       |   `-- quota.yaml
-|       |-- shipping-prod
-|       |   `-- namespace.yaml
-|       |-- shipping-staging
-|       |   `-- namespace.yaml
-|       |-- pod-creator-rolebinding.yaml
-|       `-- quota.yaml
-|-- namespace-reader-clusterrolebinding.yaml
-|-- namespace-reader-clusterrole.yaml
-|-- pod-creator-clusterrole.yaml
-|-- pod-security-policy.yaml
-`-- viewers-rolebinding.yaml
+├── audit
+│   └── namespace.yaml
+├── online
+│   └── shipping-app-backend
+│       ├── shipping-dev
+│       │   ├── job-creator-rolebinding.yaml
+│       │   ├── job-creator-role.yaml
+│       │   ├── namespace.yaml
+│       │   └── quota.yaml
+│       ├── shipping-prod
+│       │   └── namespace.yaml
+│       ├── shipping-staging
+│       │   └── namespace.yaml
+│       ├── pod-creator-rolebinding.yaml
+│       └── quota.yaml
+├── namespace-reader-clusterrolebinding.yaml
+├── namespace-reader-clusterrole.yaml
+├── pod-creator-clusterrole.yaml
+├── pod-security-policy.yaml
+└── viewers-rolebinding.yaml
 ```
 
 `audit` and `shipping-prod` namespaces contain workloads that are deployed in
@@ -128,8 +128,8 @@ Note the following:
 
 *   Annotation `nomos.dev/namespace-selector` refers to the name of the
     `NamespaceSelector` object.
-*   `NamespaceSelector` object should be placed in the same directory where it
-    is referenced.
+*   `NamespaceSelector` object must be placed in the same directory where it is
+    referenced.
 
 Given the above set up, `sre-admin` Rolebindings will only be created in `audit`
 and `shipping-prod` namespaces.
