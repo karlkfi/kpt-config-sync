@@ -164,7 +164,7 @@ func (s *PolicyHieraryController) getPolicyNodeState(name string) (policyNodeSta
 		if apierrors.IsNotFound(err) {
 			return policyNodeStateNotFound, nil, nil
 		}
-		panic("Lister returned error other than not found, this should not happen")
+		glog.Fatalf("Lister returned error other than not found, this should not happen: %v", err)
 	}
 	s.hierarchyWarnings.Clear(name)
 
