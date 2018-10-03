@@ -21,7 +21,7 @@ import (
 )
 
 // DeclarationPathAnnotationKey is an annotation indicates the path in the source of truth where the
-// policy was originally declared.
+// policy was originally declared. Paths are slash-separated.
 const DeclarationPathAnnotationKey = "nomos.dev/declaration-path"
 
 // NamespaceSelectorAnnotationKey is the annotation key set on policy resources that refers to

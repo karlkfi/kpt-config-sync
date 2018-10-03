@@ -7,10 +7,10 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 load ../lib/loader
 
 @test "Namespace garbage collection" {
-  git::add ${YAML_DIR}/accounting-namespace.yaml acme/eng/accounting/namespace.yaml
+  git::add ${YAML_DIR}/accounting-namespace.yaml acme/tree/acme/eng/accounting/namespace.yaml
   git::commit
   wait::for kubectl get ns accounting
-  git::rm acme/eng/accounting/namespace.yaml
+  git::rm acme/tree/acme/eng/accounting/namespace.yaml
   git::commit
   wait::for -f -t 20 -- kubectl get ns accounting
   run kubectl get policynodes new-ns
@@ -19,8 +19,8 @@ load ../lib/loader
 }
 
 @test "Namespace to Policyspace conversion" {
-  git::rm acme/rnd/newer-prj/namespace.yaml
-  git::add ${YAML_DIR}/accounting-namespace.yaml acme/rnd/newer-prj/accounting/namespace.yaml
+  git::rm acme/tree/acme/rnd/newer-prj/namespace.yaml
+  git::add ${YAML_DIR}/accounting-namespace.yaml acme/tree/acme/rnd/newer-prj/accounting/namespace.yaml
   git::commit
 
   wait::for kubectl get ns accounting
@@ -33,7 +33,7 @@ load ../lib/loader
   run kubectl get rolebindings -n backend bob-rolebinding -o yaml
   assert::contains "acme-admin"
 
-  git::update ${YAML_DIR}/robert-rolebinding.yaml acme/eng/backend/bob-rolebinding.yaml
+  git::update ${YAML_DIR}/robert-rolebinding.yaml acme/tree/acme/eng/backend/bob-rolebinding.yaml
   git::commit
   wait::for -f -- kubectl get rolebindings -n backend bob-rolebinding
 

@@ -14,7 +14,7 @@ function check_cluster_scoped_resource() {
   local resext="${5:-}"
 
   local resname=e2e-test-${res}
-  local respath=acme/e2e-${res}.yaml
+  local respath=acme/cluster/e2e-${res}.yaml
 
   [ -n "$res" ]
   [ -n "$jsonpath" ]

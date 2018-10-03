@@ -173,8 +173,8 @@ function local_teardown() {
 
   namespace::declare dst/$nsp
   namespace::declare dst/$nsf
-  git::rm acme/src/$nsp/namespace.yaml
-  git::rm acme/src/$nsf/namespace.yaml
+  git::rm acme/tree/acme/src/$nsp/namespace.yaml
+  git::rm acme/tree/acme/src/$nsf/namespace.yaml
   git::commit
 
   # barrier, wait for syncer to update labels

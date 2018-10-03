@@ -42,20 +42,24 @@ func NewDirectoryTree() *DirectoryTree {
 }
 
 // SetRootDir sets the given OS-specific path as the root path.
-func (t *DirectoryTree) SetRootDir(p string) *ast.TreeNode {
+// p is the filepath of the root directory.
+// typ denotes whether the root directory is a policyspace or a namespace.
+func (t *DirectoryTree) SetRootDir(p string, typ ast.TreeNodeType) *ast.TreeNode {
 	if t.root != nil {
 		panic("programmer error, cannot set root dir multiple times")
 	}
 	t.rootParent = filepath.Dir(p)
 	t.root = &ast.TreeNode{
 		Path: path.Base(filepath.ToSlash(p)),
-		Type: ast.Policyspace,
+		Type: typ,
 	}
 	t.nodes[t.root.Path] = t.root
 	return t.root
 }
 
 // AddDir adds the given node at the the given OS-specific path.
+// p is the filepath of the directory.
+// typ denotes whether the directory is a policyspace or a namespace.
 func (t *DirectoryTree) AddDir(p string, typ ast.TreeNodeType) *ast.TreeNode {
 	if t.root == nil {
 		panic("programmer error, cannot add dir without root")

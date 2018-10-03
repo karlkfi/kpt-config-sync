@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 TEST_REPO_DIR=${BATS_TMPDIR}
 

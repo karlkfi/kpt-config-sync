@@ -28,8 +28,9 @@ import (
 // Context represents a set of declared policies, configuration for how those policies will be
 // interpreted, and information regarding where those policies came from.
 type Context struct {
-	ImportToken string    // Import token for context
-	LoadTime    time.Time // Time at which the context was generated
+	ImportToken string                // Import token for context
+	LoadTime    time.Time             // Time at which the context was generated
+	Config      *v1alpha1.NomosConfig // NomosConfig
 
 	ReservedNamespaces *ReservedNamespaces // Reserved namespaces
 	Cluster            *Cluster            // Cluster scoped info

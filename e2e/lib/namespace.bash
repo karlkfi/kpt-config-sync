@@ -26,7 +26,7 @@ function namespace::create() {
 #
 function namespace::declare_policyspace() {
   local path="$1"
-  local dst="acme/${path}/OWNERS"
+  local dst="acme/tree/acme/${path}/OWNERS"
   local abs_dst="${TEST_REPO}/${dst}"
   mkdir -p "$(dirname "${abs_dst}")"
   touch "${abs_dst}"
@@ -37,7 +37,7 @@ function namespace::declare_policyspace() {
 # required based on the path they will be implicitly created as well.
 #
 # Arguments
-#   path: The path to the namesapce directory under acme with the last portion being the namesapce name.
+#   path: The path to the namespace directory under acme with the last portion being the namespace name.
 # Parameters
 #   -l [label] a label for the namespace (repeated)
 #   -a [annotation] an annotation for the namespace (repeated)
@@ -67,7 +67,7 @@ function namespace::declare() {
 
   local name
   name="$(basename "${path}")"
-  local dst="acme/${path}/namespace.yaml"
+  local dst="acme/tree/acme/${path}/namespace.yaml"
   local abs_dst="${TEST_REPO}/${dst}"
   genyaml_args+=("${name}" "${abs_dst}")
   namespace::__genyaml "${genyaml_args[@]}"
@@ -85,7 +85,7 @@ function namespace::declare() {
 #
 function namespace::declare_reserved() {
   local name=$1
-  local dst=acme/nomos-reserved-namespaces.yaml
+  local dst=acme/system/nomos-reserved-namespaces.yaml
 
   cat > "${TEST_REPO}/${dst}" <<- EOM
 apiVersion: v1
