@@ -82,6 +82,16 @@ func (v *InheritanceVisitor) VisitCluster(c *ast.Cluster) ast.Node {
 	return c
 }
 
+// VisitClusterObjectList implements Visitor
+func (v *InheritanceVisitor) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
+	panic("should not be called")
+}
+
+// VisitClusterObject implements Visitor
+func (v *InheritanceVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+	panic("should not be called")
+}
+
 // VisitTreeNode implements Visitor
 func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	v.treeContext = append(v.treeContext, nodeContext{

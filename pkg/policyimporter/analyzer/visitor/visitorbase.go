@@ -68,6 +68,20 @@ func (vb *Base) VisitCluster(c *ast.Cluster) ast.Node {
 	return c
 }
 
+// VisitClusterObjectList implements Visitor
+func (vb *Base) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
+	for _, obj := range o {
+		obj.Accept(vb.impl)
+	}
+	return o
+}
+
+// VisitClusterObject implements Visitor
+func (vb *Base) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+	// leaf - noop
+	return o
+}
+
 // VisitTreeNode implements Visitor
 func (vb *Base) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	n.Objects.Accept(vb.impl)

@@ -46,7 +46,7 @@ func (c *Context) Accept(visitor Visitor) Node {
 
 // Cluster represents cluster scoped policies.
 type Cluster struct {
-	Objects ObjectList
+	Objects ClusterObjectList
 }
 
 // Accept implements Visitable
@@ -55,6 +55,42 @@ func (c *Cluster) Accept(visitor Visitor) Node {
 		return nil
 	}
 	return visitor.VisitCluster(c)
+}
+
+// ClusterObjectList represents a set of cluser scoped objects.
+type ClusterObjectList []*ClusterObject
+
+// Accept implements Visitable
+func (o ClusterObjectList) Accept(visitor Visitor) Node {
+	if o == nil {
+		return nil
+	}
+	return visitor.VisitClusterObjectList(o)
+}
+
+// ClusterObject extends runtime.Object to implement Visitable for cluster scoped objects.
+//
+// A ClusterObject represents a cluster scoped resource from the cluster directory.
+type ClusterObject struct {
+	runtime.Object
+}
+
+// ToMeta converts the underlying object to a metav1.Object
+func (o *ClusterObject) ToMeta() metav1.Object {
+	return o.Object.(metav1.Object)
+}
+
+// Accept implements Visitable
+func (o *ClusterObject) Accept(visitor Visitor) Node {
+	if o == nil {
+		return nil
+	}
+	return visitor.VisitClusterObject(o)
+}
+
+// DeepCopy creates a deep copy of the object
+func (o *ClusterObject) DeepCopy() *ClusterObject {
+	return &ClusterObject{o.DeepCopyObject()}
 }
 
 // TreeNodeType represents the type of the node.
@@ -96,7 +132,7 @@ func (n *TreeNode) Accept(visitor Visitor) Node {
 	return visitor.VisitTreeNode(n)
 }
 
-// ObjectList represents a set of objects.
+// ObjectList represents a set of namespace scoped objects.
 type ObjectList []*Object
 
 // Accept implements Visitable
@@ -107,7 +143,7 @@ func (o ObjectList) Accept(visitor Visitor) Node {
 	return visitor.VisitObjectList(o)
 }
 
-// Object extends runtime.Object to implement Visitable.
+// Object extends runtime.Object to implement Visitable for namespace scoped objects.
 //
 // An Object represents a resource found in a directory in the policy
 // hierarchy.

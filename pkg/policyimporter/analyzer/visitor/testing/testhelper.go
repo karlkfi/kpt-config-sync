@@ -36,6 +36,15 @@ func ObjectSets(runtimeObjs ...runtime.Object) ast.ObjectList {
 	return ast.ObjectList(astObjs)
 }
 
+// ClusterObjectSets constructs a list of ObjectSet from a list of runtime.Object.
+func ClusterObjectSets(runtimeObjs ...runtime.Object) ast.ClusterObjectList {
+	astObjs := make([]*ast.ClusterObject, len(runtimeObjs))
+	for idx := range runtimeObjs {
+		astObjs[idx] = &ast.ClusterObject{Object: runtimeObjs[idx]}
+	}
+	return ast.ClusterObjectList(astObjs)
+}
+
 // Helper provides a number of pre-built types for use in testcases.
 var Helper TestHelper
 
@@ -273,7 +282,7 @@ func (t *TestHelper) ReservedNamespaces() *ast.Context {
 // AcmeCluster returns the cluster info for Acme corp.
 func (t *TestHelper) AcmeCluster() *ast.Cluster {
 	return &ast.Cluster{
-		Objects: ObjectSets(
+		Objects: ClusterObjectSets(
 			t.NomosAdminClusterRole(),
 			t.NomosAdminClusterRoleBinding(),
 			t.NomosPodSecurityPolicy(),

@@ -148,6 +148,27 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	return nil
 }
 
+// VisitClusterObjectList implements Visitor
+func (v *OutputVisitor) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
+	return v.base.VisitClusterObjectList(o)
+}
+
+// VisitClusterObject implements Visitor
+func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+	spec := &v.allPolicies.ClusterPolicy.Spec
+	switch obj := o.Object.(type) {
+	case *rbacv1.ClusterRole:
+		spec.ClusterRolesV1 = append(spec.ClusterRolesV1, *obj)
+	case *rbacv1.ClusterRoleBinding:
+		spec.ClusterRoleBindingsV1 = append(spec.ClusterRoleBindingsV1, *obj)
+	case *extensionsv1beta1.PodSecurityPolicy:
+		spec.PodSecurityPoliciesV1Beta1 = append(spec.PodSecurityPoliciesV1Beta1, *obj)
+	default:
+		glog.Fatalf("programmer error: invalid type %v in context %q", obj, v.context)
+	}
+	return nil
+}
+
 // VisitObjectList implements Visitor
 func (v *OutputVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
 	return v.base.VisitObjectList(o)
@@ -155,33 +176,16 @@ func (v *OutputVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
 
 // VisitObject implements Visitor
 func (v *OutputVisitor) VisitObject(o *ast.Object) ast.Node {
-	switch v.context {
-	case contextCluster:
-		spec := &v.allPolicies.ClusterPolicy.Spec
-		switch obj := o.Object.(type) {
-		case *rbacv1.ClusterRole:
-			spec.ClusterRolesV1 = append(spec.ClusterRolesV1, *obj)
-		case *rbacv1.ClusterRoleBinding:
-			spec.ClusterRoleBindingsV1 = append(spec.ClusterRoleBindingsV1, *obj)
-		case *extensionsv1beta1.PodSecurityPolicy:
-			spec.PodSecurityPoliciesV1Beta1 = append(spec.PodSecurityPoliciesV1Beta1, *obj)
-		default:
-			glog.Fatalf("programmer error: invalid type %v in context %q", obj, v.context)
-		}
-	case contextNode:
-		spec := &v.policyNode[len(v.policyNode)-1].Spec
-		switch obj := o.Object.(type) {
-		case *rbacv1.Role:
-			spec.RolesV1 = append(spec.RolesV1, *obj)
-		case *rbacv1.RoleBinding:
-			spec.RoleBindingsV1 = append(spec.RoleBindingsV1, *obj)
-		case *corev1.ResourceQuota:
-			spec.ResourceQuotaV1 = obj
-		default:
-			glog.Fatalf("programmer error: invalid type %v in context %q", obj, v.context)
-		}
+	spec := &v.policyNode[len(v.policyNode)-1].Spec
+	switch obj := o.Object.(type) {
+	case *rbacv1.Role:
+		spec.RolesV1 = append(spec.RolesV1, *obj)
+	case *rbacv1.RoleBinding:
+		spec.RoleBindingsV1 = append(spec.RoleBindingsV1, *obj)
+	case *corev1.ResourceQuota:
+		spec.ResourceQuotaV1 = obj
 	default:
-		glog.Fatalf("programmer error: invalid context %q", v.context)
+		glog.Fatalf("programmer error: invalid type %v in context %q", obj, v.context)
 	}
 	return nil
 }

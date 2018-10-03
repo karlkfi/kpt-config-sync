@@ -18,6 +18,7 @@ package validation
 import (
 	"path"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
@@ -115,6 +116,33 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	return nil
 }
 
+// VisitClusterObjectList implements Visitor
+func (v *InputValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
+	return v.base.VisitClusterObjectList(o)
+}
+
+// VisitClusterObject implements Visitor
+func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+	if o.Object.GetObjectKind().GroupVersionKind() == corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
+		// TODO(b/113900647): ResourceQuota should be disallowed in cluster scope. Handle this when
+		// moving over ObjectDisallowedInContext.
+		glog.Warning("Found ResourceQuota defined at cluster scope.")
+	}
+
+	metaObj := o.ToMeta()
+	ns := metaObj.GetNamespace()
+	if ns != "" {
+		v.errs.Add(errors.Errorf(
+			"Cluster scoped objects must not be associated with a namespace. "+
+				"Remove the namespace field from object.  "+
+				"Object %s, Name=%q is declared with namespace %s",
+			o.Object.GetObjectKind().GroupVersionKind(),
+			metaObj.GetName(),
+			ns))
+	}
+	return nil
+}
+
 // VisitObjectList implements Visitor
 func (v *InputValidator) VisitObjectList(o ast.ObjectList) ast.Node {
 	return v.base.VisitObjectList(o)
@@ -123,39 +151,25 @@ func (v *InputValidator) VisitObjectList(o ast.ObjectList) ast.Node {
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 	v.checkSingleResourceQuota(o)
-
 	metaObj := o.ToMeta()
 	ns := metaObj.GetNamespace()
+	node := v.nodes[len(v.nodes)-1]
 	if ns != "" {
-		if len(v.nodes) == 0 {
+		if node.Type == ast.Policyspace {
 			v.errs.Add(errors.Errorf(
-				"Cluster scoped objects must not be associated with a namespace. "+
+				"Objects declared in policyspace directories must not have a namespace specified. "+
 					"Remove the namespace field from object.  "+
-					"Object %s, Name=%q is declared with namespace %s",
+					"Directory %q has declaration for %s, Name=%q with namespace %s",
+				node.Path,
 				o.Object.GetObjectKind().GroupVersionKind(),
 				metaObj.GetName(),
 				ns))
-		} else {
-			node := v.nodes[len(v.nodes)-1]
-			if node.Type == ast.Policyspace {
-				v.errs.Add(errors.Errorf(
-					"Objects declared in policyspace directories must not have a namespace specified. "+
-						"Remove the namespace field from object.  "+
-						"Directory %q has declaration for %s, Name=%q with namespace %s",
-					node.Path,
-					o.Object.GetObjectKind().GroupVersionKind(),
-					metaObj.GetName(),
-					ns))
-			}
 		}
 	}
-	if len(v.nodes) != 0 {
-		node := v.nodes[len(v.nodes)-1]
-		if nodeNS := path.Base(node.Path); nodeNS != ns && node.Type == ast.Namespace {
-			v.errs.Add(errors.Errorf("Object's Namespace must match the name of the namespace "+
-				"directory in which the object appears. Object Namespace is %s. Directory name is %s.",
-				ns, nodeNS))
-		}
+	if nodeNS := path.Base(node.Path); nodeNS != ns && node.Type == ast.Namespace {
+		v.errs.Add(errors.Errorf("Object's Namespace must match the name of the namespace "+
+			"directory in which the object appears. Object Namespace is %s. Directory name is %s.",
+			ns, nodeNS))
 	}
 	return nil
 }
@@ -166,14 +180,7 @@ func (v *InputValidator) checkSingleResourceQuota(o *ast.Object) {
 	if o.Object.GetObjectKind().GroupVersionKind() != corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
 		return
 	}
-	var path string
-	if len(v.nodes) == 0 {
-		return
-		// TODO(b/113900647): ResourceQuota should be disallowed in cluster scope. Handle this when
-		// moving over ObjectDisallowedInContext.
-	}
-	path = v.nodes[len(v.nodes)-1].Path
-
+	path := v.nodes[len(v.nodes)-1].Path
 	if _, found := v.seenResourceQuotas[path]; found {
 		v.errs.Add(errors.Errorf("Each directory must contain at most one ResourceQuota object. "+
 			"Object name: \"%s\", found at path \"%s\".", o.ToMeta().GetName(), path))

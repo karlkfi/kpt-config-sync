@@ -61,6 +61,16 @@ func (v *AnnotationInlinerVisitor) VisitCluster(c *ast.Cluster) ast.Node {
 	return c
 }
 
+// VisitClusterObjectList implements Visitor
+func (v *AnnotationInlinerVisitor) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
+	panic("should not be called")
+}
+
+// VisitClusterObject implements Visitor
+func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+	panic("should not be called")
+}
+
 // VisitTreeNode implements Visitor
 func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	m := valueMap{}

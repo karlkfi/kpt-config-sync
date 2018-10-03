@@ -299,13 +299,13 @@ func processRootDir(
 
 			// Cluster scope
 		case *rbacv1.ClusterRole:
-			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.Object{Object: o})
+			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{Object: o})
 		case *rbacv1.ClusterRoleBinding:
-			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.Object{Object: o})
+			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{Object: o})
 		case *corev1.Namespace:
 			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *extensionsv1beta1.PodSecurityPolicy:
-			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.Object{Object: o})
+			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{Object: o})
 
 			// Namespace Scope
 		case *corev1.ResourceQuota:

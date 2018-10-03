@@ -96,6 +96,16 @@ func (v *QuotaVisitor) VisitCluster(c *ast.Cluster) ast.Node {
 	return c
 }
 
+// VisitClusterObjectList implements Visitor
+func (v *QuotaVisitor) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
+	panic("should not be called")
+}
+
+// VisitClusterObject implements Visitor
+func (v *QuotaVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+	panic("should not be called")
+}
+
 // VisitReservedNamespaces implements Visitor
 func (v *QuotaVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
 	return r

@@ -67,8 +67,24 @@ func (v *Copying) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
 // VisitCluster implements Visitor
 func (v *Copying) VisitCluster(c *ast.Cluster) ast.Node {
 	nc := *c
-	nc.Objects, _ = c.Objects.Accept(v.impl).(ast.ObjectList)
+	nc.Objects, _ = c.Objects.Accept(v.impl).(ast.ClusterObjectList)
 	return &nc
+}
+
+// VisitClusterObjectList implements Visitor
+func (v *Copying) VisitClusterObjectList(objectList ast.ClusterObjectList) ast.Node {
+	var olc ast.ClusterObjectList
+	for _, object := range objectList {
+		if obj, ok := object.Accept(v.impl).(*ast.ClusterObject); ok {
+			olc = append(olc, obj)
+		}
+	}
+	return olc
+}
+
+// VisitClusterObject implements Visitor
+func (v *Copying) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+	return o.DeepCopy()
 }
 
 // VisitObjectList implements Visitor

@@ -35,6 +35,8 @@ type Visitor interface {
 	VisitContext(g *Context) Node
 	VisitReservedNamespaces(r *ReservedNamespaces) Node
 	VisitCluster(c *Cluster) Node
+	VisitClusterObjectList(o ClusterObjectList) Node
+	VisitClusterObject(o *ClusterObject) Node
 	VisitTreeNode(n *TreeNode) Node
 	VisitObjectList(o ObjectList) Node
 	VisitObject(o *Object) Node
