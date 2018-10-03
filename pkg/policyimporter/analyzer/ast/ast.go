@@ -30,6 +30,7 @@ import (
 type Context struct {
 	ImportToken string    // Import token for context
 	LoadTime    time.Time // Time at which the context was generated
+	Config      *v1alpha1.NomosConfig
 
 	ReservedNamespaces *ReservedNamespaces // Reserved namespaces
 	Cluster            *Cluster            // Cluster scoped info

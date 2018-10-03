@@ -20,9 +20,9 @@ package filesystem
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/blang/semver"
@@ -58,12 +58,11 @@ type Parser struct {
 const (
 	// systemDir is the name of the system directory
 	systemDir = "system"
-	// nomosYamlFilename is the name of the nomos.yaml file.
-	nomosYamlFilename = "nomos.yaml"
+	// treeDir is the name of the tree directory
+	treeDir = "tree"
+	// clusterDir is the name of the cluster directory
+	clusterDir = "cluster"
 )
-
-var newRepoFormat = flag.Bool("new-repo-format", false,
-	"Whether to expect the repo format described in go/nomos-generic-sync")
 
 // NewParser creates a new Parser.
 // clientConfig can be used to configure api server client. It should be set to nil when running in cluster.
@@ -77,53 +76,45 @@ func NewParser(config clientcmd.ClientConfig, validate bool) (*Parser, error) {
 	return &p, nil
 }
 
-// Parse recursively parses file tree rooted at root and builds policy CRDs from
-// supported Kubernetes policy resources.
+// Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
+// Resources are read from the following directories:
+//
+// * system/
+// * cluster/
+// * tree/ (recursively)
 func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
-	if *newRepoFormat {
-		glog.Warning("newRepoFormat is still in development. Use at your own risk.")
-		if _, err := p.processSystemDir(root); err != nil {
-			return nil, err
+	fsCtx := &ast.Context{Cluster: &ast.Cluster{}}
+	if _, err := os.Stat(filepath.Join(root, systemDir)); err == nil {
+		if err2 := p.processSystemDir(root, fsCtx); err2 != nil {
+			return nil, err2
 		}
-		return &policyhierarchyv1.AllPolicies{}, nil
+	} else if !os.IsNotExist(err) {
+		// IsNotExist is ok. We just won't read the directory.
+		return nil, errors.Wrapf(err, "while checking existence of system directory")
 	}
 
-	allDirsOrdered, err := allDirs(root)
+	treeDir := filepath.Join(root, treeDir)
+	treeDirsOrdered, err := allDirs(treeDir)
 	if err != nil {
 		return nil, err
 	}
-	if err = validateDirNames(allDirsOrdered); err != nil {
+	if err = validateDirNames(treeDirsOrdered); err != nil {
 		return nil, err
+	}
+	fileInfos, err := p.makeFileInfos(treeDir, true)
+	if err != nil {
+		return nil, errors.Wrapf(err, "while making FileInfos for tree")
 	}
 
-	// Walk the filesystem looking for resources. If there aren't any, skip builder, because builder
-	// treats that as an error.
-	visitors, err := resource.ExpandPathsToFileVisitors(
-		&resource.Mapper{}, root, true, resource.FileExtensions, kubevalidation.NullSchema{})
+	clusterDir := filepath.Join(root, clusterDir)
+	clusterInfos, err := p.makeFileInfos(clusterDir, false)
 	if err != nil {
-		return nil, err
-	}
-	var fileInfos []*resource.Info
-	if len(visitors) > 0 {
-		schema, err := p.factory.Validator(p.validate)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get schema")
-		}
-		result := p.factory.NewBuilder().
-			Unstructured().
-			Schema(schema).
-			ContinueOnError().
-			FilenameParam(false, &resource.FilenameOptions{Recursive: true, Filenames: []string{root}}).
-			Do()
-		fileInfos, err = result.Infos()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to read resources from %s", root)
-		}
+		return nil, errors.Wrapf(err, "while making FileInfos for cluster")
 	}
 
 	dirInfos := make(map[string][]*resource.Info)
 	// Value of all dirs is initially set to nil.
-	for _, d := range allDirsOrdered {
+	for _, d := range treeDirsOrdered {
 		dirInfos[d] = nil
 	}
 	// If a directory has resources, its value in the map
@@ -137,7 +128,7 @@ func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
 		return nil, err
 	}
 
-	return processDirs(dirInfos, allDirsOrdered)
+	return processDirs(dirInfos, clusterInfos, treeDirsOrdered, clusterDir, fsCtx)
 }
 
 // allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
@@ -180,6 +171,37 @@ func validateDirNames(dirs []string) error {
 	return nil
 }
 
+// makeFileInfos walks dir recursively, looking for resources, and builds FileInfos from them.
+func (p Parser) makeFileInfos(dir string, recursive bool) ([]*resource.Info, error) {
+	// If there aren't any resources, skip builder, because builder treats that as an error.
+	var fileInfos []*resource.Info
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return fileInfos, nil
+	}
+	visitors, err := resource.ExpandPathsToFileVisitors(
+		&resource.Mapper{}, dir, true, resource.FileExtensions, kubevalidation.NullSchema{})
+	if err != nil {
+		return nil, err
+	}
+	if len(visitors) > 0 {
+		schema, err := p.factory.Validator(p.validate)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get schema")
+		}
+		result := p.factory.NewBuilder().
+			Unstructured().
+			Schema(schema).
+			ContinueOnError().
+			FilenameParam(false, &resource.FilenameOptions{Recursive: recursive, Filenames: []string{dir}}).
+			Do()
+		fileInfos, err = result.Infos()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to read resources from %s", dir)
+		}
+	}
+	return fileInfos, nil
+}
+
 func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {
 	for _, infos := range dirInfos {
 		gvkNameMap := map[schema.GroupVersionKind]map[string]bool{}
@@ -199,28 +221,35 @@ func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {
 	return nil
 }
 
-// processDirs validates objects in directory tree and converts them into hierarchical policy objects.
-// There are 3 categories of directories:
-// 1. Root directory: Top-level directory given by root.
-// 2. Policyspace directory: Non-leaf directories at any depth within root directory.
-// 3. Namespace directory: Leaf directories at any depth within root directory.
-func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) (*policyhierarchyv1.AllPolicies, error) {
+// processDirs validates objects in directory trees and converts them into hierarchical policy objects.
+// It first processes the cluster directory and then the tree hierarchy.
+// cluster is a single, flat directory containing cluster-scoped resources.
+// tree is hierarchical, containing 2 categories of directories:
+// 1. Policyspace directory: Non-leaf directories at any depth within root directory.
+// 2. Namespace directory: Leaf directories at any depth within root directory.
+func processDirs(dirInfos map[string][]*resource.Info,
+	clusterInfos []*resource.Info,
+	treeDirsOrdered []string,
+	clusterDir string,
+	fsCtx *ast.Context) (*policyhierarchyv1.AllPolicies, error) {
 	namespaceDirs := make(map[string]bool)
 
-	root := allDirsOrdered[0]
-	rootInfos := dirInfos[root]
-
 	treeGenerator := NewDirectoryTree()
-	fsCtx, err := processRootDir(root, rootInfos, treeGenerator)
-	if err != nil {
-		return nil, errors.Wrapf(err, "root directory is invalid: %s", root)
+	if err := processClusterDir(clusterDir, clusterInfos, fsCtx); err != nil {
+		return nil, errors.Wrapf(err, "cluster directory is invalid: %s", clusterDir)
 	}
 
-	for _, d := range allDirsOrdered[1:] {
-		infos := dirInfos[d]
-		err2 := processNonRootDir(d, infos, namespaceDirs, treeGenerator)
-		if err2 != nil {
-			return nil, errors.Wrapf(err2, "directory is invalid: %s", d)
+	if len(treeDirsOrdered) > 0 {
+		rootDir := treeDirsOrdered[0]
+		infos := dirInfos[rootDir]
+		if err := processTreeDir(rootDir, infos, namespaceDirs, treeGenerator, true); err != nil {
+			return nil, errors.Wrapf(err, "directory is invalid: %s", rootDir)
+		}
+		for _, d := range treeDirsOrdered[1:] {
+			infos := dirInfos[d]
+			if err := processTreeDir(d, infos, namespaceDirs, treeGenerator, false); err != nil {
+				return nil, errors.Wrapf(err, "directory is invalid: %s", d)
+			}
 		}
 	}
 
@@ -265,6 +294,8 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 	return policies, nil
 }
 
+// applyPathAnnotation applies path annotation to o.
+// dir is a slash-separated path.
 func applyPathAnnotation(o runtime.Object, info *resource.Info, dir string) {
 	metaObj := o.(metav1.Object)
 	a := metaObj.GetAnnotations()
@@ -272,32 +303,23 @@ func applyPathAnnotation(o runtime.Object, info *resource.Info, dir string) {
 		a = map[string]string{}
 		metaObj.SetAnnotations(a)
 	}
-	a[policyhierarchyv1.DeclarationPathAnnotationKey] = filepath.Join(dir, filepath.Base(info.Source))
+	a[policyhierarchyv1.DeclarationPathAnnotationKey] = path.Join(dir, filepath.Base(info.Source))
 }
 
-func processRootDir(
+func processClusterDir(
 	dir string,
 	infos []*resource.Info,
-	treeGenerator *DirectoryTree) (*ast.Context, error) {
+	fsCtx *ast.Context) error {
 	v := newValidator()
-	fsCtx := &ast.Context{Cluster: &ast.Cluster{}}
-	rootNode := treeGenerator.SetRootDir(dir)
+	path := path.Base(filepath.ToSlash(dir))
 
 	for _, i := range infos {
 		o := i.AsVersioned()
-		applyPathAnnotation(o, i, rootNode.Path)
+		applyPathAnnotation(o, i, path)
 
 		// Types in scope then alphabetical order.
 		switch o := o.(type) {
-		// System scope
-		case *corev1.ConfigMap:
-			if o.Name == policyhierarchyv1.ReservedNamespacesConfigMapName {
-				fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
-			} else {
-				v.err = errors.Errorf("Invalid configmap in root dir %#v", o)
-			}
-
-			// Cluster scope
+		// Cluster scope
 		case *rbacv1.ClusterRole:
 			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{Object: o})
 		case *rbacv1.ClusterRoleBinding:
@@ -306,59 +328,55 @@ func processRootDir(
 			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case *extensionsv1beta1.PodSecurityPolicy:
 			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{Object: o})
-
-			// Namespace Scope
-		case *corev1.ResourceQuota:
-			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
-		case *rbacv1.Role:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case *rbacv1.RoleBinding:
-			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
-		case runtime.Unstructured:
-			switch o.GetObjectKind().GroupVersionKind() {
-			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
-				v.err = parseNamespaceSelector(o, rootNode)
-			default:
-				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
-			}
 		default:
-			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
+			v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
 		}
 
 		if v.err != nil {
-			return nil, v.err
+			return v.err
 		}
 	}
 
-	return fsCtx, nil
+	return nil
 }
 
-func processNonRootDir(
+func processTreeDir(
 	dir string,
 	infos []*resource.Info,
 	namespaceDirs map[string]bool,
-	treeGenerator *DirectoryTree) error {
+	treeGenerator *DirectoryTree,
+	root bool) error {
 	parent := filepath.Dir(dir)
 	// Since directories are processed in DFS order, it's guaranteed that parent was already processed.
 	if namespaceDirs[parent] {
 		return errors.Errorf("Namespace dir %s must not have children", parent)
 	}
+	var treeNode *ast.TreeNode
 	for _, i := range infos {
 		o := i.AsVersioned()
 
 		switch o.(type) {
 		case *corev1.Namespace:
 			namespaceDirs[dir] = true
-			return processNamespaceDir(dir, infos, treeGenerator)
+			if root {
+				treeNode = treeGenerator.SetRootDir(dir, ast.Namespace)
+			} else {
+				treeNode = treeGenerator.AddDir(dir, ast.Namespace)
+			}
+			return processNamespaceDir(dir, infos, treeNode)
 		}
 	}
 	// No namespace resource was found.
-	return processPolicyspaceDir(dir, infos, treeGenerator)
+	if root {
+		treeNode = treeGenerator.SetRootDir(dir, ast.Policyspace)
+	} else {
+		treeNode = treeGenerator.AddDir(dir, ast.Policyspace)
+	}
+	return processPolicyspaceDir(dir, infos, treeNode)
 }
 
-func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *DirectoryTree) error {
+func processPolicyspaceDir(dir string, infos []*resource.Info, treeNode *ast.TreeNode) error {
 	v := newValidator()
-	treeNode := treeGenerator.AddDir(dir, ast.Policyspace)
 
 	for _, i := range infos {
 		o := i.AsVersioned()
@@ -402,10 +420,9 @@ func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *Di
 	return nil
 }
 
-func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *DirectoryTree) error {
+func processNamespaceDir(dir string, infos []*resource.Info, treeNode *ast.TreeNode) error {
 	namespace := filepath.Base(dir)
 	v := newValidator()
-	treeNode := treeGenerator.AddDir(dir, ast.Namespace)
 
 	for _, i := range infos {
 		o := i.AsVersioned()
@@ -474,45 +491,54 @@ func parseNamespaceSelector(o runtime.Unstructured, node *ast.TreeNode) error {
 	return nil
 }
 
-// processSystemDir loads configs from the <root>/system directory. Currently, this only includes
-// the nomos.yaml file.
-func (p Parser) processSystemDir(root string) (*policyhierarchyv1alpha1.NomosConfig, error) {
-	nomosYamlPath := filepath.Join(root, systemDir, nomosYamlFilename)
+// processSystemDir loads configs from <root>/system/nomos.yaml.
+func (p Parser) processSystemDir(root string, fsCtx *ast.Context) error {
 	schema, err := p.factory.Validator(p.validate)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get schema")
+		return errors.Wrap(err, "failed to get schema")
 	}
 	result := p.factory.NewBuilder().
 		Unstructured().
 		Schema(schema).
 		ContinueOnError().
-		FilenameParam(false, &resource.FilenameOptions{Recursive: true, Filenames: []string{nomosYamlPath}}).
+		FilenameParam(false, &resource.FilenameOptions{Recursive: false, Filenames: []string{filepath.Join(root, systemDir)}}).
 		Do()
 	fileInfos, err := result.Infos()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read resources from %s", nomosYamlPath)
+		return errors.Wrapf(err, "failed to read resources from system dir")
 	}
+	v := newValidator()
 	for _, i := range fileInfos {
 		o := i.AsVersioned()
 
 		// Types in scope then alphabetical order.
 		switch o := o.(type) {
-		// System scope
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
 			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NomosConfig"):
-				nc, err := parseNomosConfig(o)
+				fsCtx.Config, err = parseNomosConfig(o)
 				if err != nil {
-					return nil, errors.Wrapf(err, "failed to parse NomosConfig in %s", i.Source)
+					v.err = errors.Wrapf(err, "failed to parse NomosConfig in %s", i.Source)
 				}
-				return nc, nil
+			}
+		case *corev1.ConfigMap:
+			if o.Name == policyhierarchyv1.ReservedNamespacesConfigMapName {
+				fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
+			} else {
+				v.err = errors.Errorf("Invalid configmap in system dir %#v", o)
 			}
 		default:
-			return nil, errors.Errorf("Ignoring unsupported object type %T in %s", o, i.Source)
+			v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
+		}
+		if v.err != nil {
+			return v.err
 		}
 	}
 
-	return nil, errors.Errorf("failed to find object of type NomosConfig in system/nomos.yaml")
+	if fsCtx.Config == nil {
+		return errors.Errorf("failed to find object of type NomosConfig in system dir")
+	}
+	return nil
 }
 
 func parseNomosConfig(o runtime.Unstructured) (*policyhierarchyv1alpha1.NomosConfig, error) {

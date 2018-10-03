@@ -38,7 +38,7 @@ type directoryTreeTestcase struct {
 
 func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	tg := NewDirectoryTree()
-	tg.SetRootDir(tc.inputs[0].path)
+	tg.SetRootDir(tc.inputs[0].path, ast.Policyspace)
 	for _, inp := range tc.inputs[1:] {
 		typ := inp.typ
 		if typ == "" {
