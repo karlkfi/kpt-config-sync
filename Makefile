@@ -202,11 +202,16 @@ goimports:
 	@echo "+++ Running goimports"
 	@goimports -w $(NOMOS_CODE_DIRS)
 
-lint: build lint-bash
+lint: lint-go lint-bash lint-license
+
+lint-go: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
 
 lint-bash:
 	@./scripts/lint-bash.sh
+
+lint-license: build
+	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-license.sh
 
 .PHONY: clientgen
 clientgen:
