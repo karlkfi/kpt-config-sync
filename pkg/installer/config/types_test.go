@@ -164,6 +164,44 @@ contexts:
 				},
 			},
 		},
+		{
+			name: "cluster_id",
+			input: `{
+		"contexts": [
+				"your_cluster"
+		],
+		"gcp": {
+				"ORG_ID": "1234",
+				"PRIVATE_KEY_FILENAME": "$HOME/privateKey",
+		},
+		"clusters": [
+		  {
+				"name": "other_cluster_1",
+				"context": "other_cluster_context_1"
+	      },
+		  {
+				"name": "other_cluster_2",
+				"context": "other_cluster_context_2"
+	      }
+		]
+			}`,
+			expected: Config{
+				Contexts: []string{"other_cluster_context_1", "other_cluster_context_2"},
+				GCP: GCPConfig{
+					OrgID:              "1234",
+					PrivateKeyFilename: "/home/user/privateKey",
+				},
+				Git: GitConfig{
+					UseSSH:          true,
+					SyncWaitSeconds: 15,
+					SyncBranch:      "master",
+				},
+				Clusters: []Cluster{
+					Cluster{Name: "other_cluster_1", Context: "other_cluster_context_1"},
+					Cluster{Name: "other_cluster_2", Context: "other_cluster_context_2"},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

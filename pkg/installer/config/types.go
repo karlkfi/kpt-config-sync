@@ -1,4 +1,30 @@
 // Package config contains the shared configuration for the installer script.
+//
+// The top level struct is Config.  It includes all other types defined in this
+// package.
+//
+// Deprecation notice:
+// The installer script will be replaced with an operator-based approach that
+// replaces custom installation logic with cluster-side installation operator
+// process and a static configuration file that can be applied using
+//
+//     kubectl -f apply ...
+//
+// All configuration fields that are not explicitly annotated with a version
+// should be assumed to be "v1alpha0" of this configuration.  All fields added
+// thereafter should be annotated with the current version like so:
+//
+//     type Config struct {
+//        // ... old fields
+//
+//        // NewField is new.
+//        // Since: v1alpha2
+//        NewField string
+//     }
+//
+// This is not full K8S style versioning approach, but should work for us given
+// the pending retirement of this code.  In case this proves inadequate, we can
+// retrofit versioning by instantiating proper external API objects.
 package config
 
 import (
@@ -12,11 +38,17 @@ import (
 	// https://github.com/ghodss/yaml/pull/27
 	"github.com/filmil/yaml"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
 	defaultSyncWaitTimeoutSeconds = 15
 	defaultSyncBranch             = "master"
+
+	// Version is the current version of the configuration.  This is specified
+	// informally since it's a bit of an overkill to declare the API
+	// specifically for the configuration that is pending retirement.
+	Version = "v1alpha1"
 )
 
 // GitConfig contains the configs needed by GitPolicyImporter.
@@ -89,16 +121,38 @@ func (g *GCPConfig) Empty() bool {
 	return g.OrgID == "" && g.PrivateKeyFilename == ""
 }
 
+// Cluster defines a mapping from a cluster context to an installation-wide
+// cluster name.
+//
+// Introduced since Config v1alpha1.
+type Cluster struct {
+	// ClusterName is the installation-wide cluster name.
+	Name string `json:"name"`
+
+	// Context is the name of the local kubectl context used for a cluster.
+	// This field has exactly the same semantics as the Config.Contexts entry.
+	Context string `json:"context"`
+}
+
 // Config contains the configuration for the installer.  The install process
 // is made based on this configuration.
+// At v1alpha1, we are adopting a versioning discipline.  Any fields that are
+// not annotated are assumed to come from v1alpha0.
 // +k8s:deepcopy-gen=true
 type Config struct {
+	// Allow optionally specifying type metadata.  While this is not strictly
+	// needed, let's adopt a versioning discipline until the installer is
+	// retired in favor of the nomos operator.
+	metav1.TypeMeta `json:",inline"`
+
 	// The user account that will drive the installation.  Required to insert
 	// cluster administration role bindings into GKE clusters.
 	User string `json:"user,omitempty"`
 
 	// Contexts contains the names of the cluster contexts to attempt to install
 	// into.
+	// This field is discarded if Clusters (below) is defined, and
+	// element-wise replaced with the content of Clusters.Context.
 	Contexts []string `json:"contexts,omitempty"`
 
 	// Git contains configuration specific to importing policies from a Git repo.
@@ -108,6 +162,11 @@ type Config struct {
 	// GCP contains configuration specific to importing policies from Google Cloud Platform.
 	// Git and GCP fields are mutually exclusive.
 	GCP GCPConfig `json:"gcp,omitempty"`
+
+	// Clusters is a list of name-context pairs used during installation.  It
+	// fully replaces the information from Contexts above if it is supplied.
+	// Since: v1alpha1
+	Clusters []Cluster `json:"clusters,omitempty"`
 }
 
 // NewDefaultConfig creates a new Config struct with default values set.
@@ -148,6 +207,14 @@ func Load(r io.Reader) (Config, error) {
 	c := NewDefaultConfig()
 	if err := yaml.Unmarshal(b, &c, yaml.DisallowUnknownFields); err != nil {
 		return Config{}, errors.Wrapf(err, "while loading configuration")
+	}
+	// Make the objects usable for v1alpha1.
+	if len(c.Clusters) > 0 {
+		// Trample over Contexts with the data extracted from c.Clusters
+		c.Contexts = []string{}
+		for _, cl := range c.Clusters {
+			c.Contexts = append(c.Contexts, cl.Context)
+		}
 	}
 	return c, nil
 }
