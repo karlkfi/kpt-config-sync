@@ -18,6 +18,10 @@ limitations under the License.
 
 package v1alpha1
 
+// ClusterSelectorListerExpansion allows custom methods to be added to
+// ClusterSelectorLister.
+type ClusterSelectorListerExpansion interface{}
+
 // NamespaceSelectorListerExpansion allows custom methods to be added to
 // NamespaceSelectorLister.
 type NamespaceSelectorListerExpansion interface{}

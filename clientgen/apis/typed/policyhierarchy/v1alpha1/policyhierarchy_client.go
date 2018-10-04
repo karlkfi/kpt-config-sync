@@ -25,6 +25,7 @@ import (
 
 type NomosV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ClusterSelectorsGetter
 	NamespaceSelectorsGetter
 	SyncsGetter
 }
@@ -32,6 +33,10 @@ type NomosV1alpha1Interface interface {
 // NomosV1alpha1Client is used to interact with features provided by the nomos.dev group.
 type NomosV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *NomosV1alpha1Client) ClusterSelectors() ClusterSelectorInterface {
+	return newClusterSelectors(c)
 }
 
 func (c *NomosV1alpha1Client) NamespaceSelectors() NamespaceSelectorInterface {

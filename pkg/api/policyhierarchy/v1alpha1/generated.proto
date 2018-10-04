@@ -29,6 +29,39 @@ import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "v1alpha1";
 
+// ClusterSelector specifies a LabelSelector applied to clusters that exist within a
+// cluster registry.
+// 
+// +protobuf=true
+message ClusterSelector {
+  // Standard object's metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // The actual object definition, per K8S object definition style.
+  optional ClusterSelectorSpec spec = 2;
+}
+
+// ClusterSelectorList holds a list of ClusterSelector resources.
+// +protobuf=true
+message ClusterSelectorList {
+  // Standard object's metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is a list of selectors.
+  repeated ClusterSelector items = 2;
+}
+
+// ClusterSelectorSpec contains spec fields for ClusterSelector.
+// +protobuf=true
+message ClusterSelectorSpec {
+  // Selects clusters.
+  // This field is NOT optional and follows standard label selector semantics. An empty selector
+  // matches all clusters.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 1;
+}
+
 // NamespaceSelector specifies a LabelSelector applied to namespaces that exist within a
 // PolicyNode hierarchy.
 // 
@@ -56,7 +89,9 @@ message NamespaceSelectorList {
 // NamespaceSelectorSpec contains spec fields for NamespaceSelector.
 // +protobuf=true
 message NamespaceSelectorSpec {
-  // label selector semantics. An empty selector matches all namespaces.
+  // Selects namespaces.
+  // This field is NOT optional and follows standard label selector semantics. An empty selector
+  // matches all namespaces.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 1;
 }
 

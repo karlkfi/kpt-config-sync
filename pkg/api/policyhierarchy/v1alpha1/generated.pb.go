@@ -25,6 +25,9 @@ limitations under the License.
 		github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/generated.proto
 
 	It has these top-level messages:
+		ClusterSelector
+		ClusterSelectorList
+		ClusterSelectorSpec
 		NamespaceSelector
 		NamespaceSelectorList
 		NamespaceSelectorSpec
@@ -51,24 +54,39 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
+func (m *ClusterSelector) Reset()                    { *m = ClusterSelector{} }
+func (*ClusterSelector) ProtoMessage()               {}
+func (*ClusterSelector) Descriptor() ([]byte, []int) { return fileDescriptorGenerated, []int{0} }
+
+func (m *ClusterSelectorList) Reset()                    { *m = ClusterSelectorList{} }
+func (*ClusterSelectorList) ProtoMessage()               {}
+func (*ClusterSelectorList) Descriptor() ([]byte, []int) { return fileDescriptorGenerated, []int{1} }
+
+func (m *ClusterSelectorSpec) Reset()                    { *m = ClusterSelectorSpec{} }
+func (*ClusterSelectorSpec) ProtoMessage()               {}
+func (*ClusterSelectorSpec) Descriptor() ([]byte, []int) { return fileDescriptorGenerated, []int{2} }
+
 func (m *NamespaceSelector) Reset()                    { *m = NamespaceSelector{} }
 func (*NamespaceSelector) ProtoMessage()               {}
-func (*NamespaceSelector) Descriptor() ([]byte, []int) { return fileDescriptorGenerated, []int{0} }
+func (*NamespaceSelector) Descriptor() ([]byte, []int) { return fileDescriptorGenerated, []int{3} }
 
 func (m *NamespaceSelectorList) Reset()                    { *m = NamespaceSelectorList{} }
 func (*NamespaceSelectorList) ProtoMessage()               {}
-func (*NamespaceSelectorList) Descriptor() ([]byte, []int) { return fileDescriptorGenerated, []int{1} }
+func (*NamespaceSelectorList) Descriptor() ([]byte, []int) { return fileDescriptorGenerated, []int{4} }
 
 func (m *NamespaceSelectorSpec) Reset()                    { *m = NamespaceSelectorSpec{} }
 func (*NamespaceSelectorSpec) ProtoMessage()               {}
-func (*NamespaceSelectorSpec) Descriptor() ([]byte, []int) { return fileDescriptorGenerated, []int{2} }
+func (*NamespaceSelectorSpec) Descriptor() ([]byte, []int) { return fileDescriptorGenerated, []int{5} }
 
 func init() {
+	proto.RegisterType((*ClusterSelector)(nil), "github.com.google.nomos.pkg.api.policyhierarchy.v1alpha1.ClusterSelector")
+	proto.RegisterType((*ClusterSelectorList)(nil), "github.com.google.nomos.pkg.api.policyhierarchy.v1alpha1.ClusterSelectorList")
+	proto.RegisterType((*ClusterSelectorSpec)(nil), "github.com.google.nomos.pkg.api.policyhierarchy.v1alpha1.ClusterSelectorSpec")
 	proto.RegisterType((*NamespaceSelector)(nil), "github.com.google.nomos.pkg.api.policyhierarchy.v1alpha1.NamespaceSelector")
 	proto.RegisterType((*NamespaceSelectorList)(nil), "github.com.google.nomos.pkg.api.policyhierarchy.v1alpha1.NamespaceSelectorList")
 	proto.RegisterType((*NamespaceSelectorSpec)(nil), "github.com.google.nomos.pkg.api.policyhierarchy.v1alpha1.NamespaceSelectorSpec")
 }
-func (m *NamespaceSelector) Marshal() (dAtA []byte, err error) {
+func (m *ClusterSelector) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -78,7 +96,7 @@ func (m *NamespaceSelector) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *NamespaceSelector) MarshalTo(dAtA []byte) (int, error) {
+func (m *ClusterSelector) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -102,6 +120,104 @@ func (m *NamespaceSelector) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *ClusterSelectorList) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ClusterSelectorList) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintGenerated(dAtA, i, uint64(m.ListMeta.Size()))
+	n3, err := m.ListMeta.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n3
+	if len(m.Items) > 0 {
+		for _, msg := range m.Items {
+			dAtA[i] = 0x12
+			i++
+			i = encodeVarintGenerated(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	return i, nil
+}
+
+func (m *ClusterSelectorSpec) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ClusterSelectorSpec) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintGenerated(dAtA, i, uint64(m.Selector.Size()))
+	n4, err := m.Selector.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n4
+	return i, nil
+}
+
+func (m *NamespaceSelector) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *NamespaceSelector) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintGenerated(dAtA, i, uint64(m.ObjectMeta.Size()))
+	n5, err := m.ObjectMeta.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n5
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintGenerated(dAtA, i, uint64(m.Spec.Size()))
+	n6, err := m.Spec.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n6
+	return i, nil
+}
+
 func (m *NamespaceSelectorList) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -120,11 +236,11 @@ func (m *NamespaceSelectorList) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintGenerated(dAtA, i, uint64(m.ListMeta.Size()))
-	n3, err := m.ListMeta.MarshalTo(dAtA[i:])
+	n7, err := m.ListMeta.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n3
+	i += n7
 	if len(m.Items) > 0 {
 		for _, msg := range m.Items {
 			dAtA[i] = 0x12
@@ -158,11 +274,11 @@ func (m *NamespaceSelectorSpec) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintGenerated(dAtA, i, uint64(m.Selector.Size()))
-	n4, err := m.Selector.MarshalTo(dAtA[i:])
+	n8, err := m.Selector.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n4
+	i += n8
 	return i, nil
 }
 
@@ -193,6 +309,38 @@ func encodeVarintGenerated(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
+func (m *ClusterSelector) Size() (n int) {
+	var l int
+	_ = l
+	l = m.ObjectMeta.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	l = m.Spec.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
+func (m *ClusterSelectorList) Size() (n int) {
+	var l int
+	_ = l
+	l = m.ListMeta.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	if len(m.Items) > 0 {
+		for _, e := range m.Items {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ClusterSelectorSpec) Size() (n int) {
+	var l int
+	_ = l
+	l = m.Selector.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
 func (m *NamespaceSelector) Size() (n int) {
 	var l int
 	_ = l
@@ -238,6 +386,38 @@ func sovGenerated(x uint64) (n int) {
 func sozGenerated(x uint64) (n int) {
 	return sovGenerated(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
+func (this *ClusterSelector) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ClusterSelector{`,
+		`ObjectMeta:` + strings.Replace(strings.Replace(this.ObjectMeta.String(), "ObjectMeta", "k8s_io_apimachinery_pkg_apis_meta_v1.ObjectMeta", 1), `&`, ``, 1) + `,`,
+		`Spec:` + strings.Replace(strings.Replace(this.Spec.String(), "ClusterSelectorSpec", "ClusterSelectorSpec", 1), `&`, ``, 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ClusterSelectorList) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ClusterSelectorList{`,
+		`ListMeta:` + strings.Replace(strings.Replace(this.ListMeta.String(), "ListMeta", "k8s_io_apimachinery_pkg_apis_meta_v1.ListMeta", 1), `&`, ``, 1) + `,`,
+		`Items:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.Items), "ClusterSelector", "ClusterSelector", 1), `&`, ``, 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ClusterSelectorSpec) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ClusterSelectorSpec{`,
+		`Selector:` + strings.Replace(strings.Replace(this.Selector.String(), "LabelSelector", "k8s_io_apimachinery_pkg_apis_meta_v1.LabelSelector", 1), `&`, ``, 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *NamespaceSelector) String() string {
 	if this == nil {
 		return "nil"
@@ -277,6 +457,307 @@ func valueToStringGenerated(v interface{}) string {
 	}
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
+}
+func (m *ClusterSelector) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ClusterSelector: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ClusterSelector: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectMeta", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ObjectMeta.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Spec", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Spec.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ClusterSelectorList) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ClusterSelectorList: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ClusterSelectorList: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ListMeta", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ListMeta.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Items", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Items = append(m.Items, ClusterSelector{})
+			if err := m.Items[len(m.Items)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ClusterSelectorSpec) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ClusterSelectorSpec: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ClusterSelectorSpec: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Selector", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Selector.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
 }
 func (m *NamespaceSelector) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -689,33 +1170,37 @@ func init() {
 }
 
 var fileDescriptorGenerated = []byte{
-	// 446 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x91, 0xbf, 0x6f, 0xd3, 0x40,
-	0x14, 0xc7, 0x7d, 0xa5, 0x95, 0x22, 0x17, 0x24, 0xb0, 0x84, 0x14, 0x65, 0xb8, 0x56, 0x99, 0xba,
-	0xf0, 0x8e, 0xb4, 0x08, 0x75, 0xce, 0x04, 0xe2, 0x47, 0xa5, 0x74, 0x43, 0x0c, 0xbc, 0x5c, 0x1f,
-	0xf6, 0x11, 0xdb, 0x77, 0xf8, 0x2e, 0x91, 0xc2, 0xc4, 0x9f, 0xc0, 0x9f, 0x95, 0xb1, 0x63, 0xa7,
-	0x8a, 0x98, 0x01, 0xfe, 0x0c, 0xe4, 0x8b, 0x9d, 0x96, 0x9a, 0x8a, 0x08, 0x75, 0xf3, 0x3b, 0xdd,
-	0xf7, 0xf3, 0x7d, 0x9f, 0x73, 0xf8, 0x22, 0x56, 0x2e, 0x99, 0x8e, 0x41, 0xea, 0x4c, 0xc4, 0x5a,
-	0xc7, 0x29, 0x89, 0x5c, 0x67, 0xda, 0x0a, 0x33, 0x89, 0x05, 0x1a, 0x25, 0x8c, 0x4e, 0x95, 0x9c,
-	0x27, 0x8a, 0x0a, 0x2c, 0x64, 0x32, 0x17, 0xb3, 0x01, 0xa6, 0x26, 0xc1, 0x81, 0x88, 0x29, 0xa7,
-	0x02, 0x1d, 0x9d, 0x81, 0x29, 0xb4, 0xd3, 0xd1, 0xf1, 0x15, 0x09, 0x56, 0x24, 0xf0, 0x24, 0x30,
-	0x93, 0x18, 0xd0, 0x28, 0xb8, 0x41, 0x82, 0x86, 0xd4, 0x7b, 0xf2, 0xc7, 0x0e, 0xb1, 0x16, 0x1e,
-	0x38, 0x9e, 0x7e, 0xf4, 0x93, 0x1f, 0xfc, 0xd7, 0xaa, 0xa8, 0xf7, 0x6c, 0x72, 0x6c, 0x41, 0xe9,
-	0x6a, 0xbb, 0x0c, 0x65, 0xa2, 0x72, 0x2a, 0xe6, 0xcd, 0xba, 0x56, 0x64, 0xe4, 0x50, 0xcc, 0x5a,
-	0xeb, 0xf5, 0xc4, 0x6d, 0xa9, 0x62, 0x9a, 0x3b, 0x95, 0x51, 0x2b, 0xf0, 0xfc, 0x5f, 0x01, 0x2b,
-	0x13, 0xca, 0xb0, 0x95, 0x3b, 0xba, 0x2d, 0x37, 0x75, 0x2a, 0x15, 0x2a, 0x77, 0xd6, 0x15, 0x37,
-	0x43, 0xfd, 0x5f, 0x2c, 0x7c, 0xf4, 0x16, 0x33, 0xb2, 0x06, 0x25, 0x9d, 0x52, 0x4a, 0xd2, 0xe9,
-	0x22, 0xfa, 0x10, 0x76, 0x2a, 0x9d, 0x33, 0x74, 0xd8, 0x65, 0xfb, 0xec, 0x60, 0xf7, 0xf0, 0x29,
-	0xac, 0xe8, 0x70, 0x9d, 0xde, 0xbc, 0xb0, 0x85, 0xea, 0x36, 0xcc, 0x06, 0x70, 0x32, 0xfe, 0x44,
-	0xd2, 0xbd, 0x21, 0x87, 0xc3, 0x68, 0x71, 0xb9, 0x17, 0x94, 0x97, 0x7b, 0xe1, 0xd5, 0xd9, 0x68,
-	0x4d, 0x8d, 0x3e, 0x87, 0xdb, 0xd6, 0x90, 0xec, 0x6e, 0x79, 0xfa, 0x09, 0xfc, 0xef, 0x3f, 0x84,
-	0xd6, 0xf2, 0xa7, 0x86, 0xe4, 0xf0, 0x7e, 0x5d, 0xbe, 0x5d, 0x4d, 0x23, 0x5f, 0xd5, 0xff, 0xc9,
-	0xc2, 0xc7, 0xad, 0xdb, 0xaf, 0x95, 0x75, 0xd1, 0xfb, 0x96, 0x2e, 0x6c, 0xa6, 0x5b, 0xa5, 0xbd,
-	0xec, 0xc3, 0xba, 0xaf, 0xd3, 0x9c, 0x5c, 0x53, 0x35, 0xe1, 0x8e, 0x72, 0x94, 0xd9, 0xee, 0xd6,
-	0xfe, 0xbd, 0x83, 0xdd, 0xc3, 0x57, 0x77, 0xe8, 0x3a, 0x7c, 0x50, 0xf7, 0xee, 0xbc, 0xac, 0x1a,
-	0x46, 0xab, 0xa2, 0xfe, 0x97, 0xbf, 0x88, 0x56, 0x0f, 0x11, 0x61, 0xd8, 0xb1, 0xf5, 0x5c, 0x8b,
-	0x1e, 0x6d, 0x28, 0x8a, 0x63, 0x4a, 0xd7, 0xad, 0x6b, 0xdb, 0xe6, 0x64, 0xb4, 0xc6, 0x0e, 0x61,
-	0xb1, 0xe4, 0xc1, 0xf9, 0x92, 0x07, 0x17, 0x4b, 0x1e, 0x7c, 0x2d, 0x39, 0x5b, 0x94, 0x9c, 0x9d,
-	0x97, 0x9c, 0x5d, 0x94, 0x9c, 0x7d, 0x2f, 0x39, 0xfb, 0xf6, 0x83, 0x07, 0xef, 0x3a, 0x8d, 0xd3,
-	0xef, 0x00, 0x00, 0x00, 0xff, 0xff, 0xac, 0x89, 0xa4, 0x54, 0x08, 0x04, 0x00, 0x00,
+	// 497 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x92, 0xc1, 0x6f, 0xd3, 0x30,
+	0x14, 0xc6, 0xe3, 0xb1, 0x49, 0x95, 0x07, 0x02, 0x82, 0x90, 0xaa, 0x1e, 0xb2, 0xa9, 0xa7, 0x5d,
+	0x78, 0xa6, 0x1b, 0x42, 0x3b, 0x97, 0x0b, 0x13, 0x8c, 0x49, 0xdd, 0x0d, 0x71, 0xc0, 0xf5, 0x1e,
+	0x89, 0x69, 0x12, 0x9b, 0xd8, 0xa9, 0x28, 0x27, 0xfe, 0x04, 0xfe, 0xac, 0x1e, 0x77, 0xdc, 0x69,
+	0xa2, 0x19, 0x12, 0xfc, 0x19, 0x28, 0x69, 0xd2, 0xad, 0x0d, 0x15, 0xd3, 0x54, 0xf5, 0x96, 0x67,
+	0xf9, 0xfb, 0xbe, 0xf7, 0x73, 0x3e, 0xfa, 0xda, 0x97, 0x36, 0x48, 0xfb, 0x20, 0x54, 0xc4, 0x7c,
+	0xa5, 0xfc, 0x10, 0x59, 0xac, 0x22, 0x65, 0x98, 0x1e, 0xf8, 0x8c, 0x6b, 0xc9, 0xb4, 0x0a, 0xa5,
+	0x18, 0x05, 0x12, 0x13, 0x9e, 0x88, 0x60, 0xc4, 0x86, 0x1d, 0x1e, 0xea, 0x80, 0x77, 0x98, 0x8f,
+	0x31, 0x26, 0xdc, 0xe2, 0x19, 0xe8, 0x44, 0x59, 0xe5, 0x1e, 0x5e, 0x3b, 0xc1, 0xd4, 0x09, 0x0a,
+	0x27, 0xd0, 0x03, 0x1f, 0xb8, 0x96, 0xb0, 0xe0, 0x04, 0x95, 0x53, 0xeb, 0xd9, 0xdc, 0x0e, 0xbe,
+	0x62, 0x85, 0x61, 0x3f, 0xfd, 0x54, 0x4c, 0xc5, 0x50, 0x7c, 0x4d, 0x83, 0x5a, 0x2f, 0x06, 0x87,
+	0x06, 0xa4, 0xca, 0xb7, 0x8b, 0xb8, 0x08, 0x64, 0x8c, 0xc9, 0xa8, 0x5a, 0xd7, 0xb0, 0x08, 0x2d,
+	0x67, 0xc3, 0xda, 0x7a, 0x2d, 0xb6, 0x4c, 0x95, 0xa4, 0xb1, 0x95, 0x11, 0xd6, 0x04, 0x2f, 0xff,
+	0x27, 0x30, 0x22, 0xc0, 0x88, 0xd7, 0x74, 0x07, 0xcb, 0x74, 0xa9, 0x95, 0x21, 0x93, 0xb1, 0x35,
+	0x36, 0x59, 0x14, 0xb5, 0x7f, 0x11, 0xfa, 0xf0, 0x55, 0x98, 0x1a, 0x8b, 0xc9, 0x29, 0x86, 0x28,
+	0xac, 0x4a, 0xdc, 0x8f, 0xb4, 0x91, 0xc3, 0x9c, 0x71, 0xcb, 0x9b, 0x64, 0x97, 0xec, 0x6d, 0xef,
+	0x3f, 0x87, 0xa9, 0x37, 0xdc, 0xf4, 0xae, 0xde, 0xd7, 0x40, 0x7e, 0x1b, 0x86, 0x1d, 0x38, 0xe9,
+	0x7f, 0x46, 0x61, 0x8f, 0xd1, 0xf2, 0xae, 0x3b, 0xbe, 0xdc, 0x71, 0xb2, 0xcb, 0x1d, 0x7a, 0x7d,
+	0xd6, 0x9b, 0xb9, 0xba, 0x8a, 0x6e, 0x1a, 0x8d, 0xa2, 0xb9, 0x51, 0xb8, 0x1f, 0xc3, 0x5d, 0xff,
+	0x20, 0x2c, 0xac, 0x7e, 0xaa, 0x51, 0x74, 0xef, 0x97, 0xd1, 0x9b, 0xf9, 0xd4, 0x2b, 0x82, 0xda,
+	0x57, 0x84, 0x3e, 0x59, 0xb8, 0xfb, 0x56, 0x1a, 0xeb, 0x7e, 0xa8, 0xa1, 0xc2, 0xed, 0x50, 0x73,
+	0x75, 0x01, 0xfa, 0xa8, 0x4c, 0x6b, 0x54, 0x27, 0x37, 0x30, 0x63, 0xba, 0x25, 0x2d, 0x46, 0xa6,
+	0xb9, 0xb1, 0x7b, 0x6f, 0x6f, 0x7b, 0xff, 0x68, 0x65, 0x9c, 0xdd, 0x07, 0x65, 0xea, 0xd6, 0x51,
+	0xee, 0xdf, 0x9b, 0xc6, 0xb4, 0xbf, 0xd6, 0x20, 0xf3, 0x27, 0x70, 0x39, 0x6d, 0x98, 0x72, 0x2e,
+	0x21, 0x0f, 0x6e, 0x09, 0xc9, 0xfb, 0x18, 0xce, 0x32, 0x67, 0xa4, 0xd5, 0x49, 0x6f, 0x66, 0xdb,
+	0xfe, 0x43, 0xe8, 0xe3, 0x77, 0x3c, 0x42, 0xa3, 0xb9, 0xc0, 0x35, 0x16, 0xe9, 0xcb, 0x5c, 0x91,
+	0x4e, 0xee, 0xfe, 0xc0, 0xb5, 0xe5, 0x97, 0x56, 0xe9, 0x37, 0xa1, 0x4f, 0x6b, 0xb7, 0xd7, 0x50,
+	0x26, 0x3d, 0x5f, 0xa6, 0x37, 0x2b, 0x64, 0x5d, 0x52, 0xa7, 0x6f, 0xff, 0x00, 0x5d, 0x53, 0xa1,
+	0xba, 0x30, 0x9e, 0x78, 0xce, 0xf9, 0xc4, 0x73, 0x2e, 0x26, 0x9e, 0xf3, 0x3d, 0xf3, 0xc8, 0x38,
+	0xf3, 0xc8, 0x79, 0xe6, 0x91, 0x8b, 0xcc, 0x23, 0x3f, 0x33, 0x8f, 0xfc, 0xb8, 0xf2, 0x9c, 0xf7,
+	0x8d, 0x8a, 0xe9, 0x6f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x3e, 0xc5, 0x0e, 0xcb, 0x4f, 0x06, 0x00,
+	0x00,
 }

@@ -24,6 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// ClusterSelectors returns a ClusterSelectorInformer.
+	ClusterSelectors() ClusterSelectorInformer
 	// NamespaceSelectors returns a NamespaceSelectorInformer.
 	NamespaceSelectors() NamespaceSelectorInformer
 	// Syncs returns a SyncInformer.
@@ -39,6 +41,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// ClusterSelectors returns a ClusterSelectorInformer.
+func (v *version) ClusterSelectors() ClusterSelectorInformer {
+	return &clusterSelectorInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // NamespaceSelectors returns a NamespaceSelectorInformer.

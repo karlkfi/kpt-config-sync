@@ -25,6 +25,49 @@ import (
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// ClusterSelector specifies a LabelSelector applied to clusters that exist within a
+// cluster registry.
+//
+// +protobuf=true
+type ClusterSelector struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+
+	// The actual object definition, per K8S object definition style.
+	Spec ClusterSelectorSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+}
+
+// ClusterSelectorSpec contains spec fields for ClusterSelector.
+// +protobuf=true
+type ClusterSelectorSpec struct {
+	// Selects clusters.
+	// This field is NOT optional and follows standard label selector semantics. An empty selector
+	// matches all clusters.
+	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,1,opt,name=selector"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ClusterSelectorList holds a list of ClusterSelector resources.
+// +protobuf=true
+type ClusterSelectorList struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Items is a list of selectors.
+	Items []ClusterSelector `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // NamespaceSelector specifies a LabelSelector applied to namespaces that exist within a
 // PolicyNode hierarchy.
 //
@@ -35,6 +78,7 @@ type NamespaceSelector struct {
 	// Standard object's metadata. The Name field of the policy node must match the namespace name.
 	// +optional
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+
 	// The actual object definition, per K8S object definition style.
 	Spec NamespaceSelectorSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 }
@@ -43,9 +87,8 @@ type NamespaceSelector struct {
 // +protobuf=true
 type NamespaceSelectorSpec struct {
 	// Selects namespaces.
-	// This field is NOT optional and follows standardgit status
-
-	// label selector semantics. An empty selector matches all namespaces.
+	// This field is NOT optional and follows standard label selector semantics. An empty selector
+	// matches all namespaces.
 	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,1,opt,name=selector"`
 }
 

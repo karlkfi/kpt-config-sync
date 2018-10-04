@@ -16,6 +16,8 @@ limitations under the License.
 
 package v1alpha1
 
+type ClusterSelectorExpansion interface{}
+
 type NamespaceSelectorExpansion interface{}
 
 type SyncExpansion interface{}

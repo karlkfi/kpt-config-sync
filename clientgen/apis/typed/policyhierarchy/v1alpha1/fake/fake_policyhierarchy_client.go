@@ -26,6 +26,10 @@ type FakeNomosV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeNomosV1alpha1) ClusterSelectors() v1alpha1.ClusterSelectorInterface {
+	return &FakeClusterSelectors{c}
+}
+
 func (c *FakeNomosV1alpha1) NamespaceSelectors() v1alpha1.NamespaceSelectorInterface {
 	return &FakeNamespaceSelectors{c}
 }
