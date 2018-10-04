@@ -32,6 +32,7 @@ import (
 	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
 	"k8s.io/api/rbac/v1"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -369,6 +370,28 @@ func (t *Context) DeleteClusterrole(name string) error {
 	return nil
 }
 
+// DeleteDeprecatedCRD deletes the named CRD if its version matches version.
+// This should be used specifically to remove CRDs whose version changed. Removing CRDs
+// in general is dangerous as it deletes all the resources of that CRD.
+// Kubernetes 1.13 has support for properly versioning CRDs at which point this function can
+// be deprecated.
+func (t *Context) DeleteDeprecatedCRD(name, version string) error {
+	crd, err := t.APIExtensions().ApiextensionsV1beta1().CustomResourceDefinitions().Get(name, metav1.GetOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	if err == nil && crd.Spec.Group == "nomos.dev" && crd.Spec.Version == version {
+		glog.Infof("Removing deprecated CRD version %s/%s", name, version)
+		err2 := t.APIExtensions().ApiextensionsV1beta1().CustomResourceDefinitions().Delete(name, &metav1.DeleteOptions{})
+		if err2 != nil {
+			return err2
+		}
+	}
+
+	return nil
+}
+
 // Kubernetes returns the underlying Kubernetes client.
 func (t *Context) Kubernetes() kubernetes.Interface {
 	return t.client.Kubernetes()
@@ -377,4 +400,9 @@ func (t *Context) Kubernetes() kubernetes.Interface {
 // PolicyHierarchy returns the policyhierarchy client interface
 func (t *Context) PolicyHierarchy() apis.Interface {
 	return t.client.PolicyHierarchy()
+}
+
+// APIExtensions returns the apiextensions client interface
+func (t *Context) APIExtensions() apiextensions.Interface {
+	return t.client.APIExtensions()
 }

@@ -11,6 +11,8 @@ import (
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/kubectl"
 
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -273,5 +275,32 @@ func TestInstaller_DeletePolicyNodes(t *testing.T) {
 	}
 	if len(pn.Items) != 0 {
 		t.Errorf("expected empty list but got %v", items)
+	}
+}
+
+func TestInstaller_DeleteDeprecatedCRDs(t *testing.T) {
+	client := fake.NewClient()
+
+	_, err := client.APIExtensions().ApiextensionsV1beta1().CustomResourceDefinitions().Create(&v1beta1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "namespaceselectors.nomos.dev",
+		},
+		Spec: v1beta1.CustomResourceDefinitionSpec{
+			Group:   "nomos.dev",
+			Version: "v1",
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	i := &Installer{k: kubectl.NewWithClient(context.Background(), client)}
+
+	i.deleteDeprecatedCRDs()
+
+	_, err = client.APIExtensions().ApiextensionsV1beta1().CustomResourceDefinitions().Get("namespaceselectors.nomos.dev", metav1.GetOptions{})
+
+	if !errors.IsNotFound(err) {
+		t.Errorf("Expected the deprecated CRD to be deleted, but it was not. Got err=%s", err)
 	}
 }

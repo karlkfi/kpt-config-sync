@@ -20,6 +20,7 @@ package meta
 import (
 	"github.com/google/nomos/clientgen/apis"
 	"github.com/pkg/errors"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -28,12 +29,14 @@ import (
 type Interface interface {
 	Kubernetes() kubernetes.Interface
 	PolicyHierarchy() apis.Interface
+	APIExtensions() apiextensions.Interface
 }
 
 // Client is a container for the kubernetes Clientset and the policyhierarchy clientset.
 type Client struct {
 	kubernetesClientset      *kubernetes.Clientset
 	policyHierarchyClientset *apis.Clientset
+	apiExtensionsClientset   *apiextensions.Clientset
 }
 
 var _ Interface = &Client{}
@@ -43,18 +46,25 @@ func (c *Client) Kubernetes() kubernetes.Interface {
 	return c.kubernetesClientset
 }
 
-// PolicyHierarchy returns the policyhierarchy clientse
+// PolicyHierarchy returns the policyhierarchy clientset
 func (c *Client) PolicyHierarchy() apis.Interface {
 	return c.policyHierarchyClientset
+}
+
+// APIExtensions returns the ApiExtensions clientset
+func (c *Client) APIExtensions() apiextensions.Interface {
+	return c.apiExtensionsClientset
 }
 
 // New creates a new Client directly from member client sets.
 func New(
 	kubernetesClientset *kubernetes.Clientset,
-	policyHierarchyClientset *apis.Clientset) *Client {
+	policyHierarchyClientset *apis.Clientset,
+	apiExtensionsClientset *apiextensions.Clientset) *Client {
 	return &Client{
 		kubernetesClientset:      kubernetesClientset,
 		policyHierarchyClientset: policyHierarchyClientset,
+		apiExtensionsClientset:   apiExtensionsClientset,
 	}
 }
 
@@ -70,7 +80,12 @@ func NewForConfig(cfg *rest.Config) (*Client, error) {
 		return nil, errors.Wrapf(err, "Failed to create policyhierarchy clientset")
 	}
 
-	return New(kubernetesClientset, policyHierarchyClientSet), nil
+	apiExtensionsClientset, err := apiextensions.NewForConfig(cfg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to create apiextensions clientset")
+	}
+
+	return New(kubernetesClientset, policyHierarchyClientSet, apiExtensionsClientset), nil
 }
 
 // NewForConfigOrDie creates a new Client from the given config and panics if there is an error.
@@ -78,5 +93,6 @@ func NewForConfigOrDie(cfg *rest.Config) *Client {
 	return &Client{
 		kubernetesClientset:      kubernetes.NewForConfigOrDie(cfg),
 		policyHierarchyClientset: apis.NewForConfigOrDie(cfg),
+		apiExtensionsClientset:   apiextensions.NewForConfigOrDie(cfg),
 	}
 }

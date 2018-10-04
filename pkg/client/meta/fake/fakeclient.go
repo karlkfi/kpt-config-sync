@@ -26,6 +26,8 @@ import (
 	phinformers "github.com/google/nomos/clientgen/informer"
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	fakeapiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -36,6 +38,7 @@ import (
 type Client struct {
 	KubernetesClientset      *fakekubernetes.Clientset
 	PolicyhierarchyClientset *fakepolicyhierarchy.Clientset
+	APIExtensionsClientset   *fakeapiextensions.Clientset
 
 	PolicyHierarchyInformers phinformers.SharedInformerFactory
 	KubernetesInformers      informers.SharedInformerFactory
@@ -78,9 +81,11 @@ func NewClientWithStorage(storage []runtime.Object) *Client {
 
 	kubernetesClientset := fakekubernetes.NewSimpleClientset(kubernetesStorage...)
 	policyhierarchyClientset := fakepolicyhierarchy.NewSimpleClientset(policyHierarchyStorage...)
+	apiExtensionsClientset := fakeapiextensions.NewSimpleClientset()
 	return &Client{
 		KubernetesClientset:      kubernetesClientset,
 		PolicyhierarchyClientset: policyhierarchyClientset,
+		APIExtensionsClientset:   apiExtensionsClientset,
 		KubernetesInformers:      informers.NewSharedInformerFactory(kubernetesClientset, time.Second*2),
 		PolicyHierarchyInformers: phinformers.NewSharedInformerFactory(policyhierarchyClientset, time.Second*2),
 	}
@@ -94,4 +99,9 @@ func (c *Client) Kubernetes() kubernetes.Interface {
 // PolicyHierarchy implements meta.Interface
 func (c *Client) PolicyHierarchy() apis.Interface {
 	return c.PolicyhierarchyClientset
+}
+
+// APIExtensions implements meta.Interface
+func (c *Client) APIExtensions() apiextensions.Interface {
+	return c.APIExtensionsClientset
 }

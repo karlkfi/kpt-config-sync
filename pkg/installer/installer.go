@@ -266,6 +266,9 @@ func (i *Installer) processCluster(cluster string) error {
 	if err = i.c.Validate(config.OsFileExists{}); err != nil {
 		return errors.Wrapf(err, "while validating the configuration")
 	}
+	if err = i.deleteDeprecatedCRDs(); err != nil {
+		return errors.Wrapf(err, "while cleaning up deprecated resources")
+	}
 	if err = i.k.Apply(filepath.Join(i.workDir, "manifests")); err != nil {
 		return errors.Wrapf(err, "while applying manifests")
 	}
@@ -393,6 +396,24 @@ func (i *Installer) DeleteClusterPolicies() error {
 		err = i.k.PolicyHierarchy().NomosV1().ClusterPolicies().Delete(p.Name, metav1.NewDeleteOptions(0))
 		if err != nil {
 			return errors.Wrapf(err, "error deleting clusterpolicy: %s", p.Name)
+		}
+	}
+	return nil
+}
+
+// deleteDeprecatedCRDs deletes a few CRDs whose version we changed.
+// The CRDs must be deleted since kubectl apply does not allow CRD.spec.version to be modified.
+// The version change happened before anyone used the CRDs, so this will not impact users, however
+// we did release the CRD spec itself, so some users may have the bad versions defined.
+func (i *Installer) deleteDeprecatedCRDs() error {
+	deprecated := [][]string{
+		{"namespaceselectors.nomos.dev", "v1"},
+		{"nomosconfigs.nomos.dev", "v1"},
+	}
+
+	for _, nameVersion := range deprecated {
+		if err := i.k.DeleteDeprecatedCRD(nameVersion[0], nameVersion[1]); err != nil {
+			return err
 		}
 	}
 	return nil
