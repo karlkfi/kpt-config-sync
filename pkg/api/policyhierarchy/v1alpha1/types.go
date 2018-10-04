@@ -175,7 +175,7 @@ type SyncGroupKindStatus struct {
 	Kind string `json:"kind"`
 	// Status indicates the state of the sync.  One of "syncing", or "error".  If "error" is specified
 	// then Error will be populated with a message regarding the error.
-	Status string `json:"status"`
+	Status SyncState `json:"status"`
 	// Message indicates a message associated with the status.
 	Message string `json:"error,omitempty"`
 }
