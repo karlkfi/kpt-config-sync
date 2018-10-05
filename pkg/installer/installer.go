@@ -27,6 +27,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
+	addons "github.com/google/nomos/pkg/installer/cluster-operators/nomos-operator/pkg/apis/addons/v1alpha1"
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/kubectl"
 	"github.com/pkg/errors"
@@ -79,6 +80,10 @@ var (
 	// mv is the minimum supported cluster version.  It is not possible to install
 	// on an earlier cluster due to missing features.
 	mv = semver.MustParse("1.9.0")
+
+	// Unused is a dummy import to verify that Nomos object can be imported.
+	// TODO(filmil): Delete this once imported "for real".
+	Unused addons.Nomos
 )
 
 // Installer is the process that runs the system installation.

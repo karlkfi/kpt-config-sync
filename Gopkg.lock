@@ -1488,7 +1488,7 @@
   revision = "cd34563cd63c2bd7c6fe88a73c4dcf34ed8a67cb"
 
 [[projects]]
-  digest = "1:687f64b29f27f68d193fe5779c7fec796c8d20fa6d328174cac15a39f7848fd1"
+  digest = "1:e92c85375be9d8de5410abf35e92d458eb804c5c1d7c1b365493a80da8b794ed"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1506,6 +1506,7 @@
     "pkg/recorder",
     "pkg/runtime/inject",
     "pkg/runtime/log",
+    "pkg/runtime/scheme",
     "pkg/source",
     "pkg/source/internal",
   ]
@@ -1644,6 +1645,7 @@
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
+    "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",
     "sigs.k8s.io/controller-runtime/pkg/source",
   ]
   solver-name = "gps-cdcl"
