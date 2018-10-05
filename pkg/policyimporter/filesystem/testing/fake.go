@@ -531,5 +531,19 @@ func testDynamicResources() []*discovery.APIGroupResources {
 				},
 			},
 		},
+		{
+			Group: metav1.APIGroup{
+				Name: "employees",
+				Versions: []metav1.GroupVersionForDiscovery{
+					{Version: "v1alpha1"},
+				},
+				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1alpha1"},
+			},
+			VersionedResources: map[string][]metav1.APIResource{
+				"v1alpha1": {
+					{Name: "engineers", Namespaced: true, Kind: "Engineer"},
+				},
+			},
+		},
 	}
 }

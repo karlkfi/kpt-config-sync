@@ -21,7 +21,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/golang/glog"
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
@@ -157,8 +156,6 @@ func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 		spec.ClusterRoleBindingsV1 = append(spec.ClusterRoleBindingsV1, *obj)
 	case *extensionsv1beta1.PodSecurityPolicy:
 		spec.PodSecurityPoliciesV1Beta1 = append(spec.PodSecurityPoliciesV1Beta1, *obj)
-	default:
-		glog.Fatalf("programmer error: invalid type %v in context %q", obj, v.context)
 	}
 	spec.Resources = appendResource(spec.Resources, o.Object)
 	return nil
@@ -174,8 +171,6 @@ func (v *OutputVisitor) VisitObject(o *ast.Object) ast.Node {
 		spec.RoleBindingsV1 = append(spec.RoleBindingsV1, *obj)
 	case *corev1.ResourceQuota:
 		spec.ResourceQuotaV1 = obj
-	default:
-		glog.Fatalf("programmer error: invalid type %v in context %q", obj, v.context)
 	}
 	spec.Resources = appendResource(spec.Resources, o.Object)
 	return nil

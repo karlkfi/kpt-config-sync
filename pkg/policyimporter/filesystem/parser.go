@@ -96,9 +96,10 @@ func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
 	fsCtx := &ast.Context{Cluster: &ast.Cluster{}}
 
 	// Special processing for <root>/system/*
+	var allowedGVKs map[schema.GroupVersionKind]struct{}
 	if _, err := os.Stat(filepath.Join(root, systemDir)); err == nil {
-		if err2 := p.processSystemDir(root, fsCtx); err2 != nil {
-			return nil, err2
+		if allowedGVKs, err = p.processSystemDir(root, fsCtx); err != nil {
+			return nil, err
 		}
 	} else if !os.IsNotExist(err) {
 		// IsNotExist is ok. We just won't read the directory.
@@ -158,10 +159,8 @@ func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
 		return nil, err
 	}
 
-	return processDirs(
-		p.resources,
-		dirInfos, clusterInfos, clusterregistryInfos,
-		treeDirsOrdered, clusterDir, fsCtx)
+	return processDirs(p.resources, dirInfos, clusterInfos, clusterregistryInfos, treeDirsOrdered,
+		clusterDir, fsCtx, allowedGVKs)
 }
 
 // allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
@@ -269,7 +268,8 @@ func processDirs(resources []*metav1.APIResourceList,
 	clusterregistryInfos []*resource.Info,
 	treeDirsOrdered []string,
 	clusterDir string,
-	fsCtx *ast.Context) (*policyhierarchyv1.AllPolicies, error) {
+	fsCtx *ast.Context,
+	allowedGVKs map[schema.GroupVersionKind]struct{}) (*policyhierarchyv1.AllPolicies, error) {
 	namespaceDirs := make(map[string]bool)
 
 	treeGenerator := NewDirectoryTree()
@@ -301,9 +301,9 @@ func processDirs(resources []*metav1.APIResourceList,
 	}
 	fsCtx.Tree = tree
 
-	inputValidator, err := validation.NewInputValidator(resources)
+	inputValidator, err := validation.NewInputValidator(resources, allowedGVKs)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed ot create input validator")
+		return nil, errors.Wrapf(err, "failed to create input validator")
 	}
 
 	visitors := []ast.CheckingVisitor{
@@ -490,22 +490,23 @@ func convertUnstructured(o runtime.Object, want interface{}, source string) erro
 }
 
 // processSystemDir loads configs from <root>/system/nomos.yaml.
-func (p Parser) processSystemDir(root string, fsCtx *ast.Context) error {
-	schema, err := p.factory.Validator(p.validate)
+func (p Parser) processSystemDir(root string, fsCtx *ast.Context) (map[schema.GroupVersionKind]struct{}, error) {
+	validator, err := p.factory.Validator(p.validate)
 	if err != nil {
-		return errors.Wrap(err, "failed to get schema")
+		return nil, errors.Wrap(err, "failed to get schema")
 	}
 	result := p.factory.NewBuilder().
 		Unstructured().
-		Schema(schema).
+		Schema(validator).
 		ContinueOnError().
 		FilenameParam(false, &resource.FilenameOptions{Recursive: false, Filenames: []string{filepath.Join(root, systemDir)}}).
 		Do()
 	fileInfos, err := result.Infos()
 	if err != nil {
-		return errors.Wrapf(err, "failed to read resources from system dir")
+		return nil, errors.Wrapf(err, "failed to read resources from system dir")
 	}
 	v := newValidator()
+	allowedGVKs := make(map[schema.GroupVersionKind]struct{})
 	for _, i := range fileInfos {
 		o := i.AsVersioned()
 
@@ -523,22 +524,38 @@ func (p Parser) processSystemDir(root string, fsCtx *ast.Context) error {
 			} else {
 				v.err = errors.Errorf("Invalid configmap in system dir %#v", o)
 			}
+		case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("Sync"):
+			var sync *policyhierarchyv1alpha1.Sync
+			if sync, err = parseSync(i.Object, i.Source); err != nil {
+				return nil, errors.Wrapf(err, "failed to parse Sync in %s", i.Source)
+			}
+			for _, sg := range sync.Spec.Groups {
+				for _, k := range sg.Kinds {
+					if k.Kind == "Namespace" && sg.Group == "" {
+						return nil, errors.Errorf("unsupported Sync in %s. Sync must not specify kind Namespace", i.Source)
+					}
+					for _, v := range k.Versions {
+						gvk := schema.GroupVersionKind{Group: sg.Group, Kind: k.Kind, Version: v.Version}
+						allowedGVKs[gvk] = struct{}{}
+					}
+				}
+			}
 		default:
 			v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
 		}
 		if v.err != nil {
-			return v.err
+			return nil, v.err
 		}
 	}
 
 	if fsCtx.Config == nil {
-		return errors.Errorf("failed to find object of type NomosConfig in system dir")
+		return nil, errors.Errorf("failed to find object of type NomosConfig in system dir")
 	}
-	return nil
+	return allowedGVKs, nil
 }
 
 // parseNomosConfig parses out a NomosConfig object from o, which must be a NomosConfig object.
-// source is the optional information regarding the provenance of object used for diagnostics.
+// source is the source file the object was read from.
 func parseNomosConfig(o runtime.Object, source string) (*policyhierarchyv1alpha1.NomosConfig, error) {
 	config := &policyhierarchyv1alpha1.NomosConfig{}
 	if err := convertUnstructured(o, config, source); err != nil {
@@ -552,4 +569,22 @@ func parseNomosConfig(o runtime.Object, source string) (*policyhierarchyv1alpha1
 	}
 
 	return config, nil
+}
+
+// parseSync parses a policyhierarchyv1alpha1.Sync from o, which must be a Sync object.
+// source is the source file the object was read from.
+func parseSync(o runtime.Object, source string) (*policyhierarchyv1alpha1.Sync, error) {
+	sync := &policyhierarchyv1alpha1.Sync{}
+	if err := convertUnstructured(o, sync, source); err != nil {
+		return nil, err
+	}
+	for _, group := range sync.Spec.Groups {
+		for _, kind := range group.Kinds {
+			if len(kind.Versions) > 1 {
+				return nil, errors.Errorf("Sync declaration %s in file %s contains multiple "+
+					"versions. Syncs must declare exactly one version.", o.(metav1.Object).GetName(), source)
+			}
+		}
+	}
+	return sync, nil
 }

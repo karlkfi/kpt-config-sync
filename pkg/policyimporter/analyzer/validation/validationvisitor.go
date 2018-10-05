@@ -42,13 +42,14 @@ type InputValidator struct {
 	nodes              []*ast.TreeNode
 	seenResourceQuotas map[string]struct{}
 	typeNamespaced     map[schema.GroupVersionKind]bool
+	allowedGVKs        map[schema.GroupVersionKind]struct{}
 }
 
 // InputValidator implements ast.Visitor
 var _ ast.Visitor = &InputValidator{}
 
 // NewInputValidator creates a new validator
-func NewInputValidator(resourceLists []*metav1.APIResourceList) (*InputValidator, error) {
+func NewInputValidator(resourceLists []*metav1.APIResourceList, allowedGVKs map[schema.GroupVersionKind]struct{}) (*InputValidator, error) {
 	typeNamespaced := map[schema.GroupVersionKind]bool{}
 	for _, resourceList := range resourceLists {
 		groupVersion, err := schema.ParseGroupVersion(resourceList.GroupVersion)
@@ -66,6 +67,7 @@ func NewInputValidator(resourceLists []*metav1.APIResourceList) (*InputValidator
 		reserved:           reserved.EmptyNamespaces(),
 		seenResourceQuotas: make(map[string]struct{}),
 		typeNamespaced:     typeNamespaced,
+		allowedGVKs:        allowedGVKs,
 	}
 	v.base.SetImpl(v)
 	return v, nil
@@ -156,8 +158,14 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 		v.errs.Add(errors.Errorf(
 			"Cannot declare namespaces in cluster directory.  Namespaces must be declared in a "+
 				"namespace directory in the hierarchy. "+
-				"Remove namespace %s in file %s from the cluser directory",
+				"Remove namespace %s in file %s from the cluster directory",
 			metaObj.GetName(),
+			v1alpha1.GetDeclarationPathAnnotationKey(metaObj)))
+	}
+
+	if _, found := v.allowedGVKs[gvk]; !found {
+		v.errs.Add(errors.Errorf("Sync for objects of type %#v is not enabled. Remove object "+
+			"%s in file %s, or add a Sync for that type.", gvk, metaObj.GetName(),
 			v1alpha1.GetDeclarationPathAnnotationKey(metaObj)))
 	}
 
@@ -192,6 +200,14 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 	metaObj := o.ToMeta()
 	ns := metaObj.GetNamespace()
 	node := v.nodes[len(v.nodes)-1]
+
+	gvk := o.GetObjectKind().GroupVersionKind()
+	if _, found := v.allowedGVKs[gvk]; !found {
+		v.errs.Add(errors.Errorf("Sync for objects of type %#v is not enabled. Remove object "+
+			"%s in file %s, or add a Sync for that type.", gvk, metaObj.GetName(),
+			v1alpha1.GetDeclarationPathAnnotationKey(metaObj)))
+	}
+
 	if ns != "" {
 		if node.Type == ast.Policyspace {
 			v.errs.Add(errors.Errorf(
@@ -211,7 +227,6 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 			ns, nodeNS, o.Object))
 	}
 
-	gvk := o.GetObjectKind().GroupVersionKind()
 	if node.Type == ast.Policyspace {
 		switch gvk {
 		case rbacv1.SchemeGroupVersion.WithKind("RoleBinding"):
