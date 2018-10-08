@@ -174,7 +174,7 @@ setup::git::initialize() {
   git add acme/README.md
   git commit -a -m "initial commit"
 
-  cp -r /opt/testing/e2e/acme ./
+  cp -r /opt/testing/e2e/examples/acme ./
   git add -A
   git commit -m "setUp commit"
   git push origin master:master -f

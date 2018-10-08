@@ -13,13 +13,13 @@ set -e
 
 TEST_REPO=${BATS_TMPDIR}/repo
 
-# Create a new file in the sot directory.
+# Create a new file or directory in the sot directory.
 #
 # Usage:
-# git::add SOURCE_FILE DEST_LOC
+# git::add SOURCE DEST
 #
-# SOURCE_FILE is the location of the source yaml to copy
-# DEST_LOC is the path within the sot directory to copy to
+# SOURCE is the path of the source file/directory
+# DEST is the path within the sot directory to copy to
 #
 # Directories that don't exist in the DEST_LOC path will be created.
 # If both params are not provided and non-empty, or if the destination
@@ -33,10 +33,10 @@ function git::add() {
 
   [ ! -z "$src" ] || (echo "source not provided to git::add" && false)
   [ ! -z "$dst" ] || (echo "destination not provided to git::add" && false)
-  [ ! -f "$dst" ] || (echo "$dst already exists but should not" && false)
+  [ ! -e "$dst" ] || (echo "$dst already exists but should not" && false)
 
   mkdir -p "$(dirname "$dst")"
-  cp "$src" "./$dst"
+  cp -r "$src" "./$dst"
   echo "git: add $dst"
   git add "$dst"
 
@@ -71,7 +71,7 @@ function git::update() {
   cd -
 }
 
-# Delete a file in the sot directory.
+# Delete a file or directory in the sot directory.
 #
 # Usage:
 # git::rm FILEPATH
@@ -87,10 +87,10 @@ function git::rm() {
   cd "${TEST_REPO}"
 
   [ ! -z "$path" ] || (echo "filename not provided to git::rm" && false)
-  [ -f "$path" ] || (echo "$path does not already exist but should" && false)
+  [ -e "$path" ] || (echo "$path does not already exist but should" && false)
 
-  echo "git: rm $path"
-  git rm "$path"
+  echo "git: rm -r $path"
+  git rm -r "$path"
 
   cd -
 }

@@ -35,6 +35,7 @@ function check_metrics_pages() {
 
   resource::check_count -r namespace -l nomos.dev/namespace-management -c ${#ACME_NAMESPACES[@]}
 
+  # Cluster-scoped resources
   namespace::check_exists analytics \
     -l "nomos.dev/parent-name=eng" \
     -l "nomos.dev/namespace-management=full"
@@ -50,23 +51,21 @@ function check_metrics_pages() {
   namespace::check_exists newer-prj \
     -l "nomos.dev/parent-name=rnd" \
     -l "nomos.dev/namespace-management=full"
-
   resource::check_count -r validatingwebhookconfigurations -c 2
   resource::check validatingwebhookconfigurations policy.nomos.dev
   resource::check validatingwebhookconfigurations resource-quota.nomos.dev
-
   resource::check_count -l "nomos.dev/managed=full" -r clusterrole -c 3
   resource::check clusterrole acme-admin -l "nomos.dev/managed=full"
   resource::check clusterrole namespace-viewer -l "nomos.dev/managed=full"
   resource::check clusterrole rbac-viewer -l "nomos.dev/managed=full"
-
   resource::check_count -l "nomos.dev/managed=full" -r clusterrolebinding -c 2
   resource::check clusterrolebinding namespace-viewers -l "nomos.dev/managed=full"
   resource::check clusterrolebinding rbac-viewers -l "nomos.dev/managed=full"
-
   resource::check_count -r podsecuritypolicy -c 1
   resource::check podsecuritypolicy example -l "nomos.dev/managed=full"
 
+  # Namespace-scoped resources
+  # analytics
   resource::check_count -n analytics -r role -c 0
   resource::check_count -n analytics -r rolebinding -c 2
   resource::check -n analytics rolebinding mike-rolebinding -l "nomos.dev/managed=full"
@@ -74,6 +73,7 @@ function check_metrics_pages() {
   resource::check_count -n analytics -r resourcequota -c 1
   resource::check -n analytics resourcequota nomos-resource-quota -l "nomos.dev/managed=full"
 
+  # backend
   resource::check_count -n backend -r role -c 0
   resource::check_count -n backend -r rolebinding -c 2
   resource::check -n backend rolebinding bob-rolebinding -l "nomos.dev/managed=full"
@@ -83,6 +83,7 @@ function check_metrics_pages() {
   run kubectl get quota -n backend -o yaml
   assert::contains 'pods: "1"'
 
+  # frontend
   namespace::check_exists frontend -l "env=prod" -a "audit=true"
   resource::check_count -n frontend -r role -c 0
   resource::check_count -n frontend -r rolebinding -c 2
@@ -91,12 +92,14 @@ function check_metrics_pages() {
   resource::check_count -n frontend -r resourcequota -c 1
   resource::check -n frontend resourcequota nomos-resource-quota -l "nomos.dev/managed=full"
 
+  # new-prj
   resource::check_count -n new-prj -r role -c 1
   resource::check -n new-prj role acme-admin -l "nomos.dev/managed=full"
   resource::check_count -n new-prj -r rolebinding -c 0
   resource::check_count -n new-prj -r resourcequota -c 1
   resource::check -n new-prj resourcequota nomos-resource-quota -l "nomos.dev/managed=full"
 
+  # newer-prj
   resource::check_count -n newer-prj -r role -c 0
   resource::check_count -n newer-prj -r rolebinding -c 0
   resource::check_count -n newer-prj -r resourcequota -c 1
