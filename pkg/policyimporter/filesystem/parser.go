@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
@@ -317,7 +318,7 @@ func processRootDir(
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
 			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
-				v.err = parseNamespaceSelector(o, rootNode)
+				v.err = parseNamespaceSelector(i.Source, o, rootNode)
 			default:
 				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
 			}
@@ -386,7 +387,7 @@ func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *Di
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
 			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
-				v.err = parseNamespaceSelector(o, treeNode)
+				v.err = parseNamespaceSelector(i.Source, o, treeNode)
 			default:
 				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
 			}
@@ -456,21 +457,33 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 	return nil
 }
 
-func parseNamespaceSelector(o runtime.Unstructured, node *ast.TreeNode) error {
-	j, err := json.Marshal(o.UnstructuredContent())
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal object in %s to NamespaceSelector")
-	}
+func parseNamespaceSelector(src string, o runtime.Unstructured, node *ast.TreeNode) error {
 	ns := &policyhierarchyv1alpha1.NamespaceSelector{}
-	err = json.Unmarshal(j, ns)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal NamespaceSelector")
+	if err := convertUnstructured(src, o, ns); err != nil {
+		return err
 	}
 
 	if node.Selectors == nil {
 		node.Selectors = make(map[string]*policyhierarchyv1alpha1.NamespaceSelector)
 	}
 	node.Selectors[ns.Name] = ns
+	return nil
+}
+
+// convertUnstructured converts a runtime.Unstructured to a specifc type.  The hope is that we can
+// eventually replace the call to json.Marshal/Unmarshal with some form of oficially supported
+// APIMachinery code.
+func convertUnstructured(src string, o runtime.Unstructured, want interface{}) error {
+	wantType := reflect.TypeOf(want)
+	wantKindName := wantType.Elem().Kind().String()
+	j, err := json.Marshal(o.UnstructuredContent())
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal object in %s to %s", src, wantKindName)
+	}
+	err = json.Unmarshal(j, want)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal %s", wantKindName)
+	}
 	return nil
 }
 
