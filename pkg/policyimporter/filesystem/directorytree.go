@@ -42,14 +42,14 @@ func NewDirectoryTree() *DirectoryTree {
 }
 
 // SetRootDir sets the given OS-specific path as the root path.
-func (t *DirectoryTree) SetRootDir(p string, tnt ast.TreeNodeType) *ast.TreeNode {
+func (t *DirectoryTree) SetRootDir(p string) *ast.TreeNode {
 	if t.root != nil {
 		panic("programmer error, cannot set root dir multiple times")
 	}
 	t.rootParent = filepath.Dir(p)
 	t.root = &ast.TreeNode{
 		Path: path.Base(filepath.ToSlash(p)),
-		Type: tnt,
+		Type: ast.Policyspace,
 	}
 	t.nodes[t.root.Path] = t.root
 	return t.root
