@@ -19,7 +19,7 @@ package filesystem
 import (
 	"testing"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"github.com/google/nomos/pkg/util/meta"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
 )
 
@@ -29,19 +29,18 @@ type validatorsTestCase struct {
 	expectedError bool
 }
 
-var namespaceType = schema.GroupVersionKind{Version: "v1", Kind: "Namespace"}
-
 var testCases = []validatorsTestCase{
 	{"HasName valid", newValidator().HasName(&resource.Info{Name: "foo"}, "foo"), false},
 	{"HasName invalid", newValidator().HasName(&resource.Info{Name: "foo"}, "bar"), true},
 	{"HasNamespace valid", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "foo"), false},
 	{"HasNamespace invalid", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "bar"), true},
 	{"Keep first error", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "bar").HasName(&resource.Info{Name: "foo"}, "foo"), true},
-	{"HaveSeen valid", newValidator().MarkSeen(namespaceType).HaveSeen(namespaceType), false},
-	{"HaveSeen invalid", newValidator().HaveSeen(namespaceType), true},
-	{"HaveNotSeen valid", newValidator().HaveNotSeen(namespaceType), false},
-	{"HaveNotSeen invalid", newValidator().MarkSeen(namespaceType).HaveNotSeen(namespaceType), true},
-	{"ObjectDisallowedInContext", newValidator().ObjectDisallowedInContext(&resource.Info{Source: "some/source"}, namespaceType), true},
+	{"HaveSeen valid", newValidator().MarkSeen(meta.Namespace).HaveSeen(meta.Namespace), false},
+	{"HaveSeen invalid", newValidator().HaveSeen(meta.Namespace), true},
+	{"HaveNotSeen valid", newValidator().HaveNotSeen(meta.Namespace), false},
+	{"HaveNotSeen invalid", newValidator().MarkSeen(meta.Namespace).HaveNotSeen(meta.Namespace), true},
+	{"ObjectDisallowedInContext", newValidator().ObjectDisallowedInContext(&resource.Info{Source: "some/source"}, meta.Namespace),
+		true},
 }
 
 func TestValidator(t *testing.T) {

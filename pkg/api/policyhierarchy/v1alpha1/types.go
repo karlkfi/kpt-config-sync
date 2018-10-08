@@ -143,7 +143,7 @@ type SyncGroup struct {
 
 // SyncKind represents the spec for a Kind of object we are syncing.
 type SyncKind struct {
-	// Kind is the string that represents the Kind for the object as given in TypeMeta, for exmple
+	// Kind is the string that represents the Kind for the object as given in TypeMeta, for example
 	// ClusterRole, Namespace or Deployment.
 	Kind string `json:"kind"`
 	// Versions indicates the versions that will be handled for the object of Group and Kind.
@@ -155,9 +155,11 @@ type SyncVersion struct {
 	// Version indicates the version used for the API Group, for example v1, v1beta1, v1alpha1.
 	Version string `json:"version"`
 
-	// CompareFields is an optional list of fields to compare against.  This will default to ["spec"]
-	// which should be sufficient for most obejcts, however, there are exceptions (RBAC) so these need
-	// to be declared.
+	// CompareFields is an optional list of top-level fields to compare against.  This will default to
+	// ["spec"] which should be sufficient for most objects, however, there are exceptions (RBAC) so
+	// these need to be declared.
+	// In addition to "spec" or the the fields declared here, we also compare annotations and labels.
+	// Anything else stored in metadata is ignored for comparison purposes.
 	CompareFields []string `json:"compareFields,omitempty"`
 }
 
