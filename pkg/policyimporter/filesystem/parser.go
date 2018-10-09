@@ -430,8 +430,6 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		case *rbacv1.RoleBinding:
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
-		case *corev1.ConfigMap:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
 			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):

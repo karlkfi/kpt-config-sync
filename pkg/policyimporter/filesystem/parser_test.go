@@ -666,15 +666,6 @@ var parserTestCases = []parserTestCase{
 		expectedError: true,
 	},
 	{
-		testName: "Namespace dir with ConfigMap",
-		root:     "foo",
-		testFiles: fileContentMap{
-			"bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-			"bar/cm.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchyv1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
-		},
-		expectedError: true,
-	},
-	{
 		testName: "Policyspace dir with ignored file",
 		root:     "foo",
 		testFiles: fileContentMap{
