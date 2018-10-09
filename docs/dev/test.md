@@ -17,6 +17,16 @@ from your current context, and then verify functionality through Git commits:
 make test-e2e-all
 ```
 
+## Local nomosvet tests
+
+To run nomosvet locally on example repos, run:
+
+```console
+make test-nomosvet-local
+```
+
+This requires a Nomos cluster configured and in your kubeconfig context.
+
 ## E2E prober tests
 
 Prober tests verify the GCP functionality on a predefined test cluster, using
