@@ -33,12 +33,12 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
+	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -215,7 +215,7 @@ func processDirs(resources []*metav1.APIResourceList, dirInfos map[string][]*res
 	rootInfos := dirInfos[root]
 
 	treeGenerator := NewDirectoryTree()
-	fsCtx, err := processRootDir(root, rootInfos, treeGenerator)
+	fsCtx, err := processRootDir(resources, root, rootInfos, treeGenerator)
 	if err != nil {
 		return nil, errors.Wrapf(err, "root directory is invalid: %s", root)
 	}
@@ -285,6 +285,7 @@ func applyPathAnnotation(o runtime.Object, info *resource.Info, dir string) {
 }
 
 func processRootDir(
+	resources []*metav1.APIResourceList,
 	dir string,
 	infos []*resource.Info,
 	treeGenerator *DirectoryTree) (*ast.Context, error) {
@@ -292,50 +293,41 @@ func processRootDir(
 	fsCtx := &ast.Context{Cluster: &ast.Cluster{}}
 	rootNode := treeGenerator.SetRootDir(dir)
 
+	apiInfo, err := meta.NewAPIInfo(resources)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create APIInfo from discovery")
+	}
+
 	for _, i := range infos {
 		o := i.AsVersioned()
 		applyPathAnnotation(o, i, rootNode.Path)
 
-		// Types in scope then alphabetical order.
-		switch o := o.(type) {
-		// System scope
-		case *corev1.ConfigMap:
-			if o.Name == policyhierarchyv1alpha1.ReservedNamespacesConfigMapName {
-				fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
-			} else {
-				v.err = errors.Errorf("Invalid configmap in root dir %#v", o)
-			}
+		gvk := o.GetObjectKind().GroupVersionKind()
 
-			// Cluster scope
-		case *rbacv1.ClusterRole:
-			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{Object: o})
-		case *rbacv1.ClusterRoleBinding:
-			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{Object: o})
-		case *corev1.Namespace:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case *extensionsv1beta1.PodSecurityPolicy:
-			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{Object: o})
-
-			// Namespace Scope
-		case *corev1.ResourceQuota:
-			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
-		case *rbacv1.Role:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case *rbacv1.RoleBinding:
-			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
-		case runtime.Unstructured:
-			switch o.GetObjectKind().GroupVersionKind() {
-			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
-				v.err = parseNamespaceSelector(i.Source, o, rootNode)
-			default:
-				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
+		if gvk == corev1.SchemeGroupVersion.WithKind("ConfigMap") {
+			configMap := o.(*corev1.ConfigMap)
+			if configMap.Name == policyhierarchyv1alpha1.ReservedNamespacesConfigMapName {
+				fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *configMap}
+				continue
 			}
-		default:
-			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
+		}
+		if gvk == policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector") {
+			obj, err := i.Unstructured()
+			if err != nil {
+				return nil, errors.Errorf("failed to get unstructured from NamespaceSelector in file %q", i.Source)
+			}
+			v.err = parseNamespaceSelector(i.Source, obj, rootNode)
+			continue
 		}
 
-		if v.err != nil {
-			return nil, v.err
+		switch apiInfo.GetScope(gvk) {
+		case meta.Cluster:
+			fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{Object: o})
+		case meta.Namespace:
+			rootNode.Objects = append(rootNode.Objects, &ast.Object{Object: o})
+		case meta.NotFound:
+			panic(errors.Errorf("programmer error: we should not have been able to read an object that does not "+
+				"exist on the API server: %#v", i))
 		}
 	}
 

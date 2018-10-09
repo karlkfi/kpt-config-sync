@@ -18,7 +18,6 @@ package validation
 import (
 	"path"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -140,11 +139,6 @@ func (v *InputValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.Nod
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	gvk := o.Object.GetObjectKind().GroupVersionKind()
-	if gvk == corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
-		// TODO(b/113900647): ResourceQuota should be disallowed in cluster scope. Handle this when
-		// moving over ObjectDisallowedInContext.
-		glog.Warning("Found ResourceQuota defined at cluster scope.")
-	}
 
 	metaObj := o.ToMeta()
 	ns := metaObj.GetNamespace()
@@ -156,6 +150,15 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 			gvk,
 			metaObj.GetName(),
 			ns))
+	}
+
+	if gvk == corev1.SchemeGroupVersion.WithKind("Namespace") {
+		v.errs.Add(errors.Errorf(
+			"Cannot declare namespaces in cluster directory.  Namespaces must be declared in a "+
+				"namespace directory in the hierarchy. "+
+				"Remove namespace %s in file %s from the cluser directory",
+			metaObj.GetName(),
+			v1alpha1.GetDeclarationPathAnnotationKey(metaObj)))
 	}
 
 	namespaceScoped, found := v.typeNamespaced[gvk]
