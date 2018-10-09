@@ -136,7 +136,7 @@ else
   #   => NEXT_RC=v0.11.0-rc.2
   NEXT_RC = \
     $(shell echo "$(NEXT_MINOR_RELEASE)-rc.1 $(NEXT_RC_WITHOUT)" | \
-	 docker run -i $(BUILDENV_IMAGE) semsort | tail -n 1)
+	 docker run -i $(BUILDENV_IMAGE) semsort 2>&1 | tail -n 1)
 endif
 
 ##### TARGETS #####
