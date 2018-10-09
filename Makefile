@@ -107,6 +107,9 @@ ALL_K8S_DEPLOYMENTS := syncer \
 # Nomos docker images containing all binaries.
 NOMOS_IMAGE := nomos
 
+# nomosvet binary for local run.
+NOMOSVET_LOCAL := $(BIN_DIR)/linux_amd64/nomosvet
+
 # Git server used in e2e tests.
 GIT_SERVER_SRC := https://github.com/jkarlosb/git-server-docker.git
 
@@ -218,3 +221,4 @@ clientgen:
 	@echo "+++ Generating clientgen directory"
 	$(TOP_DIR)/scripts/generate-clientset.sh
 	$(TOP_DIR)/scripts/generate-watcher.sh
+

@@ -88,5 +88,12 @@ test-e2e-dev-%: e2e-staging
 		GCP_PROJECT=$(GCP_PROJECT) \
 		IMAGE_TAG=test-e2e-latest
 
+
+# Runs nomosvet locally for example repos.
+# Requires kubeconfig set up properly with Nomos cluster.
+test-nomosvet-local: build
+	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/acme
+	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/foo-corp-example/foo-corp
+
 include Makefile.e2e.ci
 include Makefile.e2e.prober
