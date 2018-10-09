@@ -21,7 +21,6 @@ package filesystem
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -358,45 +357,23 @@ func processNonRootDir(
 }
 
 func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *DirectoryTree) error {
-	v := newValidator()
 	treeNode := treeGenerator.AddDir(dir, ast.Policyspace)
 
 	for _, i := range infos {
 		o := i.AsVersioned()
 		applyPathAnnotation(o, i, treeNode.Path)
 
-		// Types in alphabetical order.
-		switch o := o.(type) {
-		case *rbacv1.ClusterRole:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case *rbacv1.ClusterRoleBinding:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case *corev1.Namespace:
-			// Should not be reachable.
-			panic(fmt.Sprintf("%s processed as policyspace but contains a namespace resource", dir))
-		case *extensionsv1beta1.PodSecurityPolicy:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case *corev1.ResourceQuota:
-			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
-		case *rbacv1.Role:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case *rbacv1.RoleBinding:
-			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
-		case *corev1.ConfigMap:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case runtime.Unstructured:
-			switch o.GetObjectKind().GroupVersionKind() {
-			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
-				v.err = parseNamespaceSelector(i.Source, o, treeNode)
-			default:
-				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
+		switch o.GetObjectKind().GroupVersionKind() {
+		case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
+			obj, err := i.Unstructured()
+			if err != nil {
+				return errors.Wrapf(err, "failed to convert NamespaceSelector to unstructured")
+			}
+			if err2 := parseNamespaceSelector(i.Source, obj, treeNode); err2 != nil {
+				return err2
 			}
 		default:
-			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
-		}
-
-		if v.err != nil {
-			return v.err
+			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 		}
 	}
 

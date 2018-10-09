@@ -16,6 +16,7 @@ limitations under the License.
 package validation
 
 import (
+	"fmt"
 	"path"
 
 	"github.com/golang/glog"
@@ -25,6 +26,7 @@ import (
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 // InputValidator checks various filesystem constraints after loading into the tree format.
@@ -99,7 +101,6 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 				"Adjust one of the directory names.",
 			n.Type, other.Type, n.Path, other.Path))
 	}
-
 	if len(v.nodes) != 0 {
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == ast.Namespace {
 			v.errs.Add(errors.Errorf(
@@ -123,7 +124,8 @@ func (v *InputValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.Nod
 
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
-	if o.Object.GetObjectKind().GroupVersionKind() == corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
+	gvk := o.Object.GetObjectKind().GroupVersionKind()
+	if gvk == corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
 		// TODO(b/113900647): ResourceQuota should be disallowed in cluster scope. Handle this when
 		// moving over ObjectDisallowedInContext.
 		glog.Warning("Found ResourceQuota defined at cluster scope.")
@@ -136,7 +138,7 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 			"Cluster scoped objects must not be associated with a namespace. "+
 				"Remove the namespace field from object.  "+
 				"Object %s, Name=%q is declared with namespace %s",
-			o.Object.GetObjectKind().GroupVersionKind(),
+			gvk,
 			metaObj.GetName(),
 			ns))
 	}
@@ -171,6 +173,24 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 			"directory in which the object appears. Object Namespace is %s. Directory name is %s.",
 			ns, nodeNS))
 	}
+
+	gvk := o.GetObjectKind().GroupVersionKind()
+	fmt.Printf("Got visit object %s\n", gvk)
+	if node.Type == ast.Policyspace {
+		switch gvk {
+		case rbacv1.SchemeGroupVersion.WithKind("RoleBinding"):
+		case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
+		default:
+			fmt.Printf("Got default path\n")
+			v.errs.Add(errors.Errorf(
+				"Objects of type %s are not allowed in policyspace directories.  Move %q to a namespace "+
+					"directory",
+				gvk,
+				metaObj.GetName(),
+			))
+		}
+	}
+
 	return nil
 }
 
