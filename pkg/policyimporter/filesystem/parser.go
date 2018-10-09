@@ -300,7 +300,7 @@ func processRootDir(
 		switch o := o.(type) {
 		// System scope
 		case *corev1.ConfigMap:
-			if o.Name == policyhierarchyv1.ReservedNamespacesConfigMapName {
+			if o.Name == policyhierarchyv1alpha1.ReservedNamespacesConfigMapName {
 				fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
 			} else {
 				v.err = errors.Errorf("Invalid configmap in root dir %#v", o)

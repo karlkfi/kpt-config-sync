@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-test/deep"
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -596,7 +597,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with non-conflicting reserved Namespace specified",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"reserved.yaml": templateData{Namespace: "baz", Attribute: string(policyhierarchyv1.ReservedAttribute), Name: policyhierarchyv1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"reserved.yaml": templateData{Namespace: "baz", Attribute: string(policyhierarchyv1alpha1.ReservedAttribute), Name: policyhierarchyv1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 			"bar/ns.yaml":   templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -610,7 +611,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with non-conflicting reserved Namespace, but invalid attribute specified",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"reserved.yaml": templateData{Namespace: "foo", Attribute: "invalid-attribute", Name: policyhierarchyv1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"reserved.yaml": templateData{Namespace: "foo", Attribute: "invalid-attribute", Name: policyhierarchyv1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 			"bar/ns.yaml":   templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -619,7 +620,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with conflicting reserved Namespace specified",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"reserved.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchyv1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"reserved.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchyv1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 			"foo/ns.yaml":   templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -752,7 +753,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ConfigMap",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"bar/cm.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchyv1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"bar/cm.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchyv1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 		},
 		expectedError: true,
 	},

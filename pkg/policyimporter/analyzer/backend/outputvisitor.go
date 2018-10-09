@@ -23,6 +23,7 @@ import (
 
 	"github.com/golang/glog"
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
@@ -91,7 +92,7 @@ func (v *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.N
 	if err != nil {
 		panic(fmt.Sprintf("programmer error: input should have been validated %v", err))
 	}
-	for _, namespace := range rns.List(policyhierarchyv1.ReservedAttribute) {
+	for _, namespace := range rns.List(v1alpha1.ReservedAttribute) {
 		v.allPolicies.PolicyNodes[namespace] = policyhierarchyv1.PolicyNode{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),

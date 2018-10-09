@@ -24,17 +24,6 @@ const NoParentNamespace = ""
 // ClusterPolicyName is the name of the singleton ClusterPolicy resource.
 const ClusterPolicyName = "nomos-cluster-policy"
 
-// ReservedNamespacesConfigMapName is the name of the ConfigMap specifying reserved namespaces.
-const ReservedNamespacesConfigMapName = "nomos-reserved-namespaces"
-
-// NamespaceAttribute is an attribute defining how Nomos reacts to reserved namespaces.
-type NamespaceAttribute string
-
-const (
-	// ReservedAttribute means that these namespaces will not be managed by Nomos.
-	ReservedAttribute NamespaceAttribute = "reserved"
-)
-
 // PolicyNodeType represents the types of policynodes that can exist.
 type PolicyNodeType string
 

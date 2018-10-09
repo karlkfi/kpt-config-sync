@@ -17,7 +17,7 @@ limitations under the License.
 package reserved
 
 import (
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/pkg/errors"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -46,15 +46,15 @@ type Namespaces struct {
 
 // validate validates that reserved namespaces are well formed.
 func (n *Namespaces) validate() error {
-	if n.configMap.Name != policyhierarchyv1.ReservedNamespacesConfigMapName {
+	if n.configMap.Name != v1alpha1.ReservedNamespacesConfigMapName {
 		return errors.Errorf("reserved namespace configmap name %q is invalid, it must be %q", n.configMap.Name,
-			policyhierarchyv1.ReservedNamespacesConfigMapName)
+			v1alpha1.ReservedNamespacesConfigMapName)
 	}
 	for name, attribute := range n.configMap.Data {
 		if errorStrings := validation.IsQualifiedName(name); len(errorStrings) > 0 {
 			return errors.Errorf("reserved namespace %q is invalid: %v", name, errorStrings)
 		}
-		if policyhierarchyv1.NamespaceAttribute(attribute) != policyhierarchyv1.ReservedAttribute {
+		if v1alpha1.NamespaceAttribute(attribute) != v1alpha1.ReservedAttribute {
 			return errors.Errorf("reserved namespace %q attribute %q is invalid", name, attribute)
 		}
 	}
@@ -65,14 +65,14 @@ func (n *Namespaces) validate() error {
 // namespaces.
 func (n *Namespaces) IsReserved(namespaceName string) bool {
 	attribute, ok := n.configMap.Data[namespaceName]
-	return ok && policyhierarchyv1.NamespaceAttribute(attribute) == policyhierarchyv1.ReservedAttribute
+	return ok && v1alpha1.NamespaceAttribute(attribute) == v1alpha1.ReservedAttribute
 }
 
 // List returns the names of namespaces with the specified attribute.
-func (n *Namespaces) List(wantAttribute policyhierarchyv1.NamespaceAttribute) []string {
+func (n *Namespaces) List(wantAttribute v1alpha1.NamespaceAttribute) []string {
 	var namespaces []string
 	for namespace, attribute := range n.configMap.Data {
-		if policyhierarchyv1.NamespaceAttribute(attribute) == wantAttribute {
+		if v1alpha1.NamespaceAttribute(attribute) == wantAttribute {
 			namespaces = append(namespaces, namespace)
 		}
 	}

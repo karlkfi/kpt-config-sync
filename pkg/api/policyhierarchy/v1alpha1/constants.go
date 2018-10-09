@@ -25,3 +25,14 @@ const (
 	// Error means errors were encountered while attempting to enable syncing for these resources.
 	Error SyncState = "error"
 )
+
+// ReservedNamespacesConfigMapName is the name of the ConfigMap specifying reserved namespaces.
+const ReservedNamespacesConfigMapName = "nomos-reserved-namespaces"
+
+// NamespaceAttribute is an attribute defining how Nomos reacts to reserved namespaces.
+type NamespaceAttribute string
+
+const (
+	// ReservedAttribute means that these namespaces will not be managed by Nomos.
+	ReservedAttribute NamespaceAttribute = "reserved"
+)
