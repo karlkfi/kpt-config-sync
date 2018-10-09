@@ -464,3 +464,43 @@ func TestAddRemoveClusterAdmin(t *testing.T) {
 		}
 	}
 }
+
+func TestNomosLifecycle(t *testing.T) {
+	tests := []struct {
+		clusterName string
+		wantErr     bool
+	}{
+		{clusterName: "cluster-1"},
+		{clusterName: "cluster-2"},
+		{clusterName: "", wantErr: true},
+	}
+	for _, test := range tests {
+		t.Run(test.clusterName, func(t *testing.T) {
+			client := fake.NewClient()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			kc := NewWithClient(ctx, client)
+			err := kc.CreateClusterName(test.clusterName)
+			if err != nil {
+				if !IsNomosEmptyName(err) {
+					t.Errorf("CreateNomos(%q): unexpected error: %v", test.clusterName, err)
+				}
+				return
+			}
+			n, err := kc.GetClusterName()
+			if err != nil {
+				if !test.wantErr {
+					t.Errorf("GetNomos(): error: %v", err)
+				}
+				return
+			}
+			if n != test.clusterName {
+				t.Errorf("clusterName: want %v, got %v", test.clusterName, n)
+			}
+			if err := kc.DeleteClusterName(); err != nil {
+				t.Errorf("DeleteNomos(%q): unexpected error: %v", test.clusterName, err)
+			}
+
+		})
+	}
+}

@@ -49,6 +49,10 @@ const (
 	// informally since it's a bit of an overkill to declare the API
 	// specifically for the configuration that is pending retirement.
 	Version = "v1alpha1"
+
+	// APIGroup is a group marker for the installer configuration.  This is not
+	// used, except for documentation.
+	APIGroup = "installer.nomos.dev"
 )
 
 // GitConfig contains the configs needed by GitPolicyImporter.

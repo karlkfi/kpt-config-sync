@@ -304,3 +304,63 @@ func TestInstaller_DeleteDeprecatedCRDs(t *testing.T) {
 		t.Errorf("Expected the deprecated CRD to be deleted, but it was not. Got err=%s", err)
 	}
 }
+
+func TestInstaller_InstallNomos(t *testing.T) {
+	client := fake.NewClient()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	i := &Installer{
+		k: kubectl.NewWithClient(ctx, client),
+		c: config.Config{
+			Clusters: []config.Cluster{
+				{
+					Name:    "cluster-name",
+					Context: "cluster-context",
+				},
+			},
+		},
+	}
+	if err := i.installNomos("cluster-context"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	n, err := i.k.GetClusterName()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if n != "cluster-name" {
+		t.Errorf("ClusterName==%v, want: %v", n, "cluster-name")
+	}
+}
+
+func TestInstaller_UninstallNomos(t *testing.T) {
+	client := fake.NewClient()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	i := &Installer{
+		k: kubectl.NewWithClient(ctx, client),
+		c: config.Config{
+			Clusters: []config.Cluster{
+				{
+					Name:    "cluster-name",
+					Context: "cluster-context",
+				},
+			},
+		},
+	}
+
+	if err := i.k.CreateClusterName("cluster-name"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if err := i.deleteNomos(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := i.k.GetClusterName(); err != nil {
+		if !errors.IsNotFound(err) {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	} else {
+		t.Fatalf("expected error, got nil")
+	}
+}

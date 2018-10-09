@@ -27,7 +27,6 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
-	addons "github.com/google/nomos/pkg/installer/cluster-operators/nomos-operator/pkg/apis/addons/v1alpha1"
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/kubectl"
 	"github.com/pkg/errors"
@@ -80,10 +79,6 @@ var (
 	// mv is the minimum supported cluster version.  It is not possible to install
 	// on an earlier cluster due to missing features.
 	mv = semver.MustParse("1.9.0")
-
-	// Unused is a dummy import to verify that Nomos object can be imported.
-	// TODO(filmil): Delete this once imported "for real".
-	Unused addons.Nomos
 )
 
 // Installer is the process that runs the system installation.
@@ -239,11 +234,40 @@ func (i *Installer) checkContexts(cl kubectl.ClusterList, useCurrent bool) error
 	if len(i.c.Contexts) == 0 {
 		if useCurrent && cl.Current != "" {
 			i.c.Contexts = []string{cl.Current}
+			i.c.Clusters = append(i.c.Clusters,
+				config.Cluster{
+					Name:    "cluster-from-current",
+					Context: cl.Current,
+				},
+			)
 		} else {
 			return errors.Errorf("no clusters requested")
 		}
 	}
 	return nil
+}
+
+// clusterName finds a nomos-wide cluster name of the cluster with the supplied
+// local context.
+func (i *Installer) clusterName(context string) string {
+	for _, cc := range i.c.Clusters {
+		if cc.Context == context {
+			return cc.Name
+		}
+	}
+	return ""
+}
+
+// installNomos adds the Nomos custom resource if one was specified in the configuration.
+func (i *Installer) installNomos(context string) error {
+	glog.V(5).Infof("installNomos(%q): enter", context)
+	var err error
+	if clusterName := i.clusterName(context); clusterName != "" {
+		if err = i.k.CreateClusterName(clusterName); err != nil {
+			return errors.Wrapf(err, "while creating cluster name: %q", clusterName)
+		}
+	}
+	return err
 }
 
 // processCluster installs the necessary files on the currently active cluster.
@@ -274,10 +298,17 @@ func (i *Installer) processCluster(cluster string) error {
 	if err = i.deleteDeprecatedCRDs(); err != nil {
 		return errors.Wrapf(err, "while cleaning up deprecated resources")
 	}
+
+	// Apply all manifests, creates CRD objects.  From here on, we can start
+	// creating custom resources.
 	if err = i.k.Apply(filepath.Join(i.workDir, "manifests")); err != nil {
 		return errors.Wrapf(err, "while applying manifests")
 	}
 
+	// Install the Nomos custom resource if one was specified in the configuration.
+	if err = i.installNomos(cluster); err != nil {
+		return err
+	}
 	var importerDeployment, importerConfigMapName, importerSecretName string
 	var importerConfigMapContent, importerSecretContent []string
 	if !i.c.Git.Empty() {
@@ -414,6 +445,7 @@ func (i *Installer) deleteDeprecatedCRDs() error {
 	deprecated := [][]string{
 		{"namespaceselectors.nomos.dev", "v1"},
 		{"nomosconfigs.nomos.dev", "v1"},
+		{"nomos.addons.sigs.k8s.io", "v1alpha1"},
 	}
 
 	for _, nameVersion := range deprecated {
@@ -444,6 +476,10 @@ func names(crbl *v1.ClusterRoleBindingList, crl *v1.ClusterRoleList) []string {
 		names = append(names, k)
 	}
 	return names
+}
+
+func (i *Installer) deleteNomos() error {
+	return i.k.DeleteClusterName()
 }
 
 // uninstallCluster is supposed to do all the legwork in order to start from
@@ -493,6 +529,10 @@ func (i *Installer) uninstallCluster() error {
 		return err
 	}
 	if err = i.DeleteClusterPolicies(); err != nil {
+		return err
+	}
+	// Delete the Nomos singleton object, ignoring not found.
+	if err = i.deleteNomos(); err != nil {
 		return err
 	}
 	return nil

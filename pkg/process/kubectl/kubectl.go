@@ -31,6 +31,7 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/process/exec"
 	"github.com/pkg/errors"
+	core "k8s.io/api/core/v1"
 	"k8s.io/api/rbac/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,6 +39,16 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+)
+
+const (
+	// nomosClusterNameConfigMap is the name of the configmap that contains
+	// the name of the nomos cluster.
+	nomosClusterNameConfigMap = "cluster-name"
+
+	// nomosClusterNameKey is the name of the key in the above configmap that
+	// contains the cluster name.
+	nomosClusterNameKey = "CLUSTER_NAME"
 )
 
 var (
@@ -104,9 +115,24 @@ func (t *Context) DeleteSecret(name, namespace string) error {
 	return nil
 }
 
-// DeleteConfigMap deletes a configmap from Kubernetes.
+// CreateConfigMap creates a config map based on the passed-in values.
+func (t *Context) CreateConfigMap(name, namespace string, data map[string]string) error {
+	var cfg core.ConfigMap
+	cfg.Data = data
+	cfg.ObjectMeta.Name = name
+	_, err := t.Kubernetes().CoreV1().ConfigMaps(namespace).Create(&cfg)
+	return err
+}
+
+// DeleteConfigMap deletes a configmap from Kubernetes.  Fails if the configmap is not found,
+// but returns error that can be tested with errors.IsNotFound(...).
 func (t *Context) DeleteConfigMap(name, namespace string) error {
-	if err := t.Kubernetes().CoreV1().ConfigMaps(namespace).Delete(name, &metav1.DeleteOptions{}); err != nil {
+	err := t.Kubernetes().CoreV1().ConfigMaps(namespace).Delete(name, &metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		// Preserve the "is not foundness" of the error.
+		return err
+	}
+	if err != nil {
 		return errors.Wrapf(err, "delete configmap name=%q, namespace=%q", name, namespace)
 	}
 	return nil
@@ -390,6 +416,63 @@ func (t *Context) DeleteDeprecatedCRD(name, version string) error {
 	}
 
 	return nil
+}
+
+type nomosError struct {
+	emptyName bool
+}
+
+// Error implements error.
+func (ne nomosError) Error() string {
+	switch {
+	case ne.emptyName:
+		return "empty name"
+	default:
+		return "unknown nomos error"
+
+	}
+}
+
+// IsNomosEmptyName returns true if the error is due to the empty name.
+func IsNomosEmptyName(err error) bool {
+	ne, ok := err.(nomosError)
+	if !ok {
+		return false
+	}
+	return ne.emptyName
+}
+
+// CreateClusterName creates a Nomos object for the specified clusterName.
+func (t *Context) CreateClusterName(clusterName string) error {
+	if clusterName == "" {
+		return nomosError{emptyName: true}
+	}
+	data := map[string]string{nomosClusterNameKey: clusterName}
+	if err := t.CreateConfigMap(nomosClusterNameConfigMap, "nomos-system", data); err != nil {
+		return errors.Wrapf(err, "while creating Nomos for cluster %q", clusterName)
+	}
+	return nil
+}
+
+// GetClusterName gets the nomos cluster name.
+func (t *Context) GetClusterName() (string, error) {
+	c, err := t.Kubernetes().CoreV1().ConfigMaps("nomos-system").Get(nomosClusterNameConfigMap, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	fmt.Printf("GetClusterName: %v", c)
+
+	return c.Data["CLUSTER_NAME"], err
+}
+
+// DeleteClusterName deletes the cluster name object.  If the object does not
+// already exist, no change is made.
+func (t *Context) DeleteClusterName() error {
+	err := t.DeleteConfigMap(nomosClusterNameConfigMap, "nomos-system")
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
 // Kubernetes returns the underlying Kubernetes client.
