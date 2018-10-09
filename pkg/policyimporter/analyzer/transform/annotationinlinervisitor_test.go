@@ -21,7 +21,6 @@ import (
 
 	"encoding/json"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
@@ -35,7 +34,7 @@ func withSelectorAnnotation(o runtime.Object, annotation string) runtime.Object 
 	if a == nil {
 		a = make(map[string]string)
 	}
-	a[v1.NamespaceSelectorAnnotationKey] = annotation
+	a[v1alpha1.NamespaceSelectorAnnotationKey] = annotation
 	m.SetAnnotations(a)
 	return o
 }

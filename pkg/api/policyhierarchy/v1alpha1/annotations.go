@@ -14,7 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package v1alpha1
+
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // DeclarationPathAnnotationKey is an annotation indicates the path in the source of truth where the
 // policy was originally declared.
@@ -23,3 +27,13 @@ const DeclarationPathAnnotationKey = "nomos.dev/declaration-path"
 // NamespaceSelectorAnnotationKey is the annotation key set on policy resources that refers to
 // name of NamespaceSelector resource.
 const NamespaceSelectorAnnotationKey = "nomos.dev/namespace-selector"
+
+// GetDeclarationPathAnnotationKey returns the DeclarationPathAnnotationKey annotation value from
+// an object.
+func GetDeclarationPathAnnotationKey(obj metav1.Object) string {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		return ""
+	}
+	return annotations[DeclarationPathAnnotationKey]
+}

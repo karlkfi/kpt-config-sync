@@ -973,17 +973,21 @@ func TestParser(t *testing.T) {
 				}
 			}()
 
-			p := Parser{f, true}
+			p := Parser{f, fstesting.TestAPIResourceList(), true}
 
 			actualPolicies, err := p.Parse(d.rootDir)
 			if tc.expectedError {
 				if err != nil {
 					return
 				}
-				t.Errorf("Expected error but got none")
+				t.Fatalf("Expected error but got none")
 			}
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
+			}
+
+			if actualPolicies == nil {
+				t.Fatalf("actualPolicies is nil")
 			}
 
 			if len(tc.expectedNumPolicies) > 0 {
@@ -1031,7 +1035,7 @@ func TestParser_NewFormat(t *testing.T) {
 	f := fstesting.NewTestFactory()
 	defer f.Cleanup()
 
-	p := Parser{f, true}
+	p := Parser{f, fstesting.TestAPIResourceList(), true}
 
 	if _, err := p.Parse(d.rootDir); err != nil {
 		t.Fatal("unexpected error:", err)

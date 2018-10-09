@@ -334,6 +334,26 @@ func (f *TestFactory) LogsForObject(object, options runtime.Object, timeout time
 	}
 }
 
+// TestAPIResourceList returns the API ResourceList as would be returned by the DisoveryClient ServerResources
+// call which represents resources that are returned by the API server during discovery.
+func TestAPIResourceList() []*metav1.APIResourceList {
+	var apiResources []*metav1.APIResourceList
+	dynamicResources := testDynamicResources()
+	for _, item := range dynamicResources {
+		for version, resources := range item.VersionedResources {
+			apiResources = append(apiResources, &metav1.APIResourceList{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: metav1.SchemeGroupVersion.String(),
+					Kind:       "APIResourceList",
+				},
+				GroupVersion: schema.GroupVersion{Group: item.Group.Name, Version: version}.String(),
+				APIResources: resources,
+			})
+		}
+	}
+	return apiResources
+}
+
 func testDynamicResources() []*discovery.APIGroupResources {
 	return []*discovery.APIGroupResources{
 		{
@@ -370,6 +390,7 @@ func testDynamicResources() []*discovery.APIGroupResources {
 				"v1beta1": {
 					{Name: "deployments", Namespaced: true, Kind: "Deployment"},
 					{Name: "replicasets", Namespaced: true, Kind: "ReplicaSet"},
+					{Name: "podsecuritypolicyies", Namespaced: false, Kind: "PodSecurityPolicy"},
 				},
 			},
 		},
@@ -445,7 +466,10 @@ func testDynamicResources() []*discovery.APIGroupResources {
 			},
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1": {
+					{Name: "roles", Namespaced: true, Kind: "Role"},
+					{Name: "rolebindings", Namespaced: true, Kind: "RoleBinding"},
 					{Name: "clusterroles", Namespaced: false, Kind: "ClusterRole"},
+					{Name: "clusterrolebindings", Namespaced: false, Kind: "ClusterRoleBinding"},
 				},
 				"v1beta1": {
 					{Name: "clusterrolebindings", Namespaced: false, Kind: "ClusterRoleBinding"},

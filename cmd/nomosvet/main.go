@@ -28,6 +28,7 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes"
 )
 
 const usage = `Nomosvet is a tool for validating a policy directory tree.
@@ -79,7 +80,23 @@ func main() {
 	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Failed to get kubectl config"))
 	}
-	p, err := filesystem.NewParser(clientConfig, *validate)
+
+	restConfig, err := clientConfig.ClientConfig()
+	if err != nil {
+		printErrAndDie(errors.Wrap(err, "Failed to get rest.Config"))
+	}
+
+	client, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		printErrAndDie(errors.Wrap(err, "Failed to create client"))
+	}
+
+	resources, err := client.Discovery().ServerResources()
+	if err != nil {
+		printErrAndDie(errors.Wrap(err, "Failed to get server resources"))
+	}
+
+	p, err := filesystem.NewParser(clientConfig, resources, *validate)
 	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Failed to create parser"))
 	}

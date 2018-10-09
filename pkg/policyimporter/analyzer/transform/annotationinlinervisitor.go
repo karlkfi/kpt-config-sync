@@ -3,7 +3,7 @@ package transform
 import (
 	"encoding/json"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -93,7 +93,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 		m[k] = string(content)
 	}
 	v.transformer = annotationTransformer{}
-	v.transformer.addMappingForKey(v1.NamespaceSelectorAnnotationKey, m)
+	v.transformer.addMappingForKey(v1alpha1.NamespaceSelectorAnnotationKey, m)
 	return v.cv.VisitTreeNode(n).(*ast.TreeNode)
 }
 

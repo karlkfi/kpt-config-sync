@@ -21,8 +21,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -99,7 +98,7 @@ func createPolicy(s *v1alpha1.NamespaceSelector) metav1.Object {
 		if err != nil {
 			panic(err)
 		}
-		rb.SetAnnotations(map[string]string{v1.NamespaceSelectorAnnotationKey: string(j)})
+		rb.SetAnnotations(map[string]string{v1alpha1.NamespaceSelectorAnnotationKey: string(j)})
 	}
 	o, err := meta.Accessor(rb)
 	if err != nil {

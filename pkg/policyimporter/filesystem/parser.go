@@ -51,8 +51,9 @@ import (
 
 // Parser reads files on disk and builds Nomos CRDs.
 type Parser struct {
-	factory  cmdutil.Factory
-	validate bool
+	factory   cmdutil.Factory
+	resources []*metav1.APIResourceList
+	validate  bool
 }
 
 const (
@@ -67,11 +68,14 @@ var newRepoFormat = flag.Bool("new-repo-format", false,
 
 // NewParser creates a new Parser.
 // clientConfig can be used to configure api server client. It should be set to nil when running in cluster.
+// resources is the list returned by the DisoveryClient ServerResources call which represents resources
+// 		that are returned by the API server during discovery.
 // validate determines whether to validate schema using OpenAPI spec.
-func NewParser(config clientcmd.ClientConfig, validate bool) (*Parser, error) {
+func NewParser(config clientcmd.ClientConfig, resources []*metav1.APIResourceList, validate bool) (*Parser, error) {
 	p := Parser{
-		factory:  cmdutil.NewFactory(config),
-		validate: validate,
+		factory:   cmdutil.NewFactory(config),
+		resources: resources,
+		validate:  validate,
 	}
 
 	return &p, nil
@@ -137,7 +141,7 @@ func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
 		return nil, err
 	}
 
-	return processDirs(dirInfos, allDirsOrdered)
+	return processDirs(p.resources, dirInfos, allDirsOrdered)
 }
 
 // allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
@@ -204,7 +208,7 @@ func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {
 // 1. Root directory: Top-level directory given by root.
 // 2. Policyspace directory: Non-leaf directories at any depth within root directory.
 // 3. Namespace directory: Leaf directories at any depth within root directory.
-func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) (*policyhierarchyv1.AllPolicies, error) {
+func processDirs(resources []*metav1.APIResourceList, dirInfos map[string][]*resource.Info, allDirsOrdered []string) (*policyhierarchyv1.AllPolicies, error) {
 	namespaceDirs := make(map[string]bool)
 
 	root := allDirsOrdered[0]
@@ -230,8 +234,13 @@ func processDirs(dirInfos map[string][]*resource.Info, allDirsOrdered []string) 
 	}
 	fsCtx.Tree = tree
 
+	inputValidator, err := validation.NewInputValidator(resources)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed ot create input validator")
+	}
+
 	visitors := []ast.CheckingVisitor{
-		validation.NewInputValidator(),
+		inputValidator,
 		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(
 			[]transform.InheritanceSpec{
@@ -272,7 +281,7 @@ func applyPathAnnotation(o runtime.Object, info *resource.Info, dir string) {
 		a = map[string]string{}
 		metaObj.SetAnnotations(a)
 	}
-	a[policyhierarchyv1.DeclarationPathAnnotationKey] = filepath.Join(dir, filepath.Base(info.Source))
+	a[policyhierarchyv1alpha1.DeclarationPathAnnotationKey] = filepath.Join(dir, filepath.Base(info.Source))
 }
 
 func processRootDir(
@@ -389,39 +398,24 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 		o := i.AsVersioned()
 		applyPathAnnotation(o, i, treeNode.Path)
 
-		// Types in alphabetical order.
-		switch o := o.(type) {
-		case *rbacv1.ClusterRole:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case *rbacv1.ClusterRoleBinding:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case *corev1.Namespace:
-			v.HasName(i, namespace).HaveNotSeen(o.GroupVersionKind()).MarkSeen(o.GroupVersionKind())
-			treeNode.Labels = o.Labels
-			treeNode.Annotations = o.Annotations
-		case *extensionsv1beta1.PodSecurityPolicy:
-			v.ObjectDisallowedInContext(i, o.GroupVersionKind())
-		case *corev1.ResourceQuota:
-			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
-		case *rbacv1.Role:
-			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
-		case *rbacv1.RoleBinding:
-			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
-		case runtime.Unstructured:
-			switch o.GetObjectKind().GroupVersionKind() {
-			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
-				v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
-			default:
-				glog.Warningf("Ignoring unsupported unstructured object %q in %s", o.GetObjectKind().GroupVersionKind(), i.Source)
-			}
-		default:
-			glog.Warningf("Ignoring unsupported object type %T in %s", o, i.Source)
+		gvk := o.GetObjectKind().GroupVersionKind()
+		if gvk == corev1.SchemeGroupVersion.WithKind("Namespace") {
+			// TODO: Move this out.
+			metaObj := o.(metav1.Object)
+			treeNode.Labels = metaObj.GetLabels()
+			treeNode.Annotations = metaObj.GetAnnotations()
+			v.HasName(i, namespace).HaveNotSeen(gvk).MarkSeen(gvk)
 			continue
 		}
 
+		if o.GetObjectKind().GroupVersionKind() == policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector") {
+			v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
+		}
 		if v.err != nil {
 			return v.err
 		}
+
+		treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
 	}
 
 	v.HaveSeen(schema.GroupVersionKind{Version: "v1", Kind: "Namespace"})

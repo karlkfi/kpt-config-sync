@@ -16,10 +16,10 @@ limitations under the License.
 package validation
 
 import (
-	"fmt"
 	"path"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
@@ -27,6 +27,8 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // InputValidator checks various filesystem constraints after loading into the tree format.
@@ -40,21 +42,34 @@ type InputValidator struct {
 	names              map[string]*ast.TreeNode
 	nodes              []*ast.TreeNode
 	seenResourceQuotas map[string]struct{}
+	typeNamespaced     map[schema.GroupVersionKind]bool
 }
 
 // InputValidator implements ast.Visitor
 var _ ast.Visitor = &InputValidator{}
 
 // NewInputValidator creates a new validator
-func NewInputValidator() *InputValidator {
+func NewInputValidator(resourceLists []*metav1.APIResourceList) (*InputValidator, error) {
+	typeNamespaced := map[schema.GroupVersionKind]bool{}
+	for _, resourceList := range resourceLists {
+		groupVersion, err := schema.ParseGroupVersion(resourceList.GroupVersion)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse discovery APIResourceList")
+		}
+		for _, resource := range resourceList.APIResources {
+			typeNamespaced[groupVersion.WithKind(resource.Kind)] = resource.Namespaced
+		}
+	}
+
 	v := &InputValidator{
 		base:               visitor.NewBase(),
 		errs:               multierror.NewBuilder(),
 		reserved:           reserved.EmptyNamespaces(),
 		seenResourceQuotas: make(map[string]struct{}),
+		typeNamespaced:     typeNamespaced,
 	}
 	v.base.SetImpl(v)
-	return v
+	return v, nil
 }
 
 // Result returns any errors encountered during processing
@@ -142,6 +157,24 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 			metaObj.GetName(),
 			ns))
 	}
+
+	namespaceScoped, found := v.typeNamespaced[gvk]
+	if found {
+		if namespaceScoped {
+			v.errs.Add(errors.Errorf(
+				"Namespace scoped object %s %q in %q cannot be declared in cluster directory.  Move "+
+					"declaration to the appropriate policyspace or namespace directory.",
+				gvk,
+				metaObj.GetName(),
+				v1alpha1.GetDeclarationPathAnnotationKey(metaObj),
+			))
+		}
+	} else {
+		panic(errors.Errorf(
+			"programmer error: unknown object %s should not have been added to tree", gvk,
+		))
+	}
+
 	return nil
 }
 
@@ -170,18 +203,17 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 	}
 	if nodeNS := path.Base(node.Path); nodeNS != ns && node.Type == ast.Namespace {
 		v.errs.Add(errors.Errorf("Object's Namespace must match the name of the namespace "+
-			"directory in which the object appears. Object Namespace is %s. Directory name is %s.",
-			ns, nodeNS))
+			"directory in which the object appears. Object Namespace is %s. Directory name is %s. "+
+			"object: %#v",
+			ns, nodeNS, o.Object))
 	}
 
 	gvk := o.GetObjectKind().GroupVersionKind()
-	fmt.Printf("Got visit object %s\n", gvk)
 	if node.Type == ast.Policyspace {
 		switch gvk {
 		case rbacv1.SchemeGroupVersion.WithKind("RoleBinding"):
 		case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
 		default:
-			fmt.Printf("Got default path\n")
 			v.errs.Add(errors.Errorf(
 				"Objects of type %s are not allowed in policyspace directories.  Move %q to a namespace "+
 					"directory",
@@ -189,6 +221,23 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 				metaObj.GetName(),
 			))
 		}
+	}
+
+	namespaceScoped, found := v.typeNamespaced[gvk]
+	if found {
+		if !namespaceScoped {
+			v.errs.Add(errors.Errorf(
+				"Cluster scoped object %s with name %q cannot be declared in a %s directory.  Move "+
+					"declaration to the cluster directory.",
+				node.Type,
+				gvk,
+				metaObj.GetName(),
+			))
+		}
+	} else {
+		panic(errors.Errorf(
+			"programmer error: unknown object %s should not have been added to tree", gvk,
+		))
 	}
 
 	return nil

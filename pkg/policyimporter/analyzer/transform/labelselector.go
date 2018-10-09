@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +49,7 @@ func isSelected(labels map[string]string, labelselector *metav1.LabelSelector) (
 // matches the given labels on a namespace.
 // The policy is applicable if it has no such annotation.
 func isPolicyApplicableToNamespace(namespaceLabels map[string]string, policy metav1.Object) bool {
-	ls, exists := policy.GetAnnotations()[policyhierarchyv1.NamespaceSelectorAnnotationKey]
+	ls, exists := policy.GetAnnotations()[policyhierarchyv1alpha1.NamespaceSelectorAnnotationKey]
 	if !exists {
 		return true
 	}
