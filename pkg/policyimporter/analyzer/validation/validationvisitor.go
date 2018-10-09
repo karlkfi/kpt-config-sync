@@ -26,7 +26,6 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -41,7 +40,6 @@ type InputValidator struct {
 	names              map[string]*ast.TreeNode
 	nodes              []*ast.TreeNode
 	seenResourceQuotas map[string]struct{}
-	typeNamespaced     map[schema.GroupVersionKind]bool
 	allowedGVKs        map[schema.GroupVersionKind]struct{}
 }
 
@@ -49,28 +47,16 @@ type InputValidator struct {
 var _ ast.Visitor = &InputValidator{}
 
 // NewInputValidator creates a new validator
-func NewInputValidator(resourceLists []*metav1.APIResourceList, allowedGVKs map[schema.GroupVersionKind]struct{}) (*InputValidator, error) {
-	typeNamespaced := map[schema.GroupVersionKind]bool{}
-	for _, resourceList := range resourceLists {
-		groupVersion, err := schema.ParseGroupVersion(resourceList.GroupVersion)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse discovery APIResourceList")
-		}
-		for _, resource := range resourceList.APIResources {
-			typeNamespaced[groupVersion.WithKind(resource.Kind)] = resource.Namespaced
-		}
-	}
-
+func NewInputValidator(allowedGVKs map[schema.GroupVersionKind]struct{}) *InputValidator {
 	v := &InputValidator{
 		base:               visitor.NewBase(),
 		errs:               multierror.NewBuilder(),
 		reserved:           reserved.EmptyNamespaces(),
 		seenResourceQuotas: make(map[string]struct{}),
-		typeNamespaced:     typeNamespaced,
 		allowedGVKs:        allowedGVKs,
 	}
 	v.base.SetImpl(v)
-	return v, nil
+	return v
 }
 
 // Error returns any errors encountered during processing
@@ -169,23 +155,6 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 			v1alpha1.GetDeclarationPathAnnotationKey(metaObj)))
 	}
 
-	namespaceScoped, found := v.typeNamespaced[gvk]
-	if found {
-		if namespaceScoped {
-			v.errs.Add(errors.Errorf(
-				"Namespace scoped object %s %q in %q cannot be declared in cluster directory.  Move "+
-					"declaration to the appropriate policyspace or namespace directory.",
-				gvk,
-				metaObj.GetName(),
-				v1alpha1.GetDeclarationPathAnnotationKey(metaObj),
-			))
-		}
-	} else {
-		panic(errors.Errorf(
-			"programmer error: unknown object %s should not have been added to tree", gvk,
-		))
-	}
-
 	return nil
 }
 
@@ -239,23 +208,6 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 				metaObj.GetName(),
 			))
 		}
-	}
-
-	namespaceScoped, found := v.typeNamespaced[gvk]
-	if found {
-		if !namespaceScoped {
-			v.errs.Add(errors.Errorf(
-				"Cluster scoped object %s with name %q cannot be declared in a %s directory.  Move "+
-					"declaration to the cluster directory.",
-				node.Type,
-				gvk,
-				metaObj.GetName(),
-			))
-		}
-	} else {
-		panic(errors.Errorf(
-			"programmer error: unknown object %s should not have been added to tree", gvk,
-		))
 	}
 
 	return nil

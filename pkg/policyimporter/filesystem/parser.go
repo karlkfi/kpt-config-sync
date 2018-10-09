@@ -301,13 +301,14 @@ func processDirs(resources []*metav1.APIResourceList,
 	}
 	fsCtx.Tree = tree
 
-	inputValidator, err := validation.NewInputValidator(resources, allowedGVKs)
+	scopeValidator, err := validation.NewScope(resources)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create input validator")
+		return nil, errors.Wrapf(err, "failed to create scope validator")
 	}
 
 	visitors := []ast.CheckingVisitor{
-		inputValidator,
+		validation.NewInputValidator(allowedGVKs),
+		scopeValidator,
 		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(
 			[]transform.InheritanceSpec{
