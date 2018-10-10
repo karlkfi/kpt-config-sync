@@ -1281,6 +1281,14 @@
   version = "kubernetes-1.10.1"
 
 [[projects]]
+  digest = "1:32ca2277a43f85873aa2a3928dfa122af636ea91eee4265f0e6dc8baf472aad5"
+  name = "k8s.io/cluster-registry"
+  packages = ["pkg/apis/clusterregistry/v1alpha1"]
+  pruneopts = "UT"
+  revision = "423735c7f10cbbc83ccee14d62b266ddcf9709dd"
+  version = "v0.0.6"
+
+[[projects]]
   branch = "master"
   digest = "1:edf4300e30f4124da1ce0adc6189136a1c955acaad88cc07b87e6637bf9128c7"
   name = "k8s.io/gengo"
@@ -1591,6 +1599,7 @@
     "k8s.io/apimachinery/pkg/runtime/serializer",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/json",
+    "k8s.io/apimachinery/pkg/util/sets",
     "k8s.io/apimachinery/pkg/util/validation",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/apimachinery/pkg/version",
@@ -1620,6 +1629,7 @@
     "k8s.io/client-go/util/cert",
     "k8s.io/client-go/util/flowcontrol",
     "k8s.io/client-go/util/workqueue",
+    "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1",
     "k8s.io/gengo/namer",
     "k8s.io/gengo/types",
     "k8s.io/kubernetes/pkg/api/legacyscheme",
