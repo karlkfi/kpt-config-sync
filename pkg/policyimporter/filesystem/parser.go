@@ -289,7 +289,6 @@ func processRootDir(
 	dir string,
 	infos []*resource.Info,
 	treeGenerator *DirectoryTree) (*ast.Context, error) {
-	v := newValidator()
 	fsCtx := &ast.Context{Cluster: &ast.Cluster{}}
 	rootNode := treeGenerator.SetRootDir(dir)
 
@@ -312,11 +311,9 @@ func processRootDir(
 			}
 		}
 		if gvk == policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector") {
-			obj, err := i.Unstructured()
-			if err != nil {
-				return nil, errors.Errorf("failed to get unstructured from NamespaceSelector in file %q", i.Source)
+			if err := parseNamespaceSelector(i, rootNode); err != nil {
+				return nil, err
 			}
-			v.err = parseNamespaceSelector(i.Source, obj, rootNode)
 			continue
 		}
 
@@ -366,12 +363,8 @@ func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *Di
 
 		switch o.GetObjectKind().GroupVersionKind() {
 		case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
-			obj, err := i.Unstructured()
-			if err != nil {
-				return errors.Wrapf(err, "failed to convert NamespaceSelector to unstructured")
-			}
-			if err2 := parseNamespaceSelector(i.Source, obj, treeNode); err2 != nil {
-				return err2
+			if err := parseNamespaceSelector(i, treeNode); err != nil {
+				return err
 			}
 		default:
 			treeNode.Objects = append(treeNode.Objects, &ast.Object{Object: o})
@@ -418,9 +411,9 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 	return nil
 }
 
-func parseNamespaceSelector(src string, o runtime.Unstructured, node *ast.TreeNode) error {
+func parseNamespaceSelector(info *resource.Info, node *ast.TreeNode) error {
 	ns := &policyhierarchyv1alpha1.NamespaceSelector{}
-	if err := convertUnstructured(src, o, ns); err != nil {
+	if err := convertUnstructured(info, ns); err != nil {
 		return err
 	}
 
@@ -434,16 +427,15 @@ func parseNamespaceSelector(src string, o runtime.Unstructured, node *ast.TreeNo
 // convertUnstructured converts a runtime.Unstructured to a specifc type.  The hope is that we can
 // eventually replace the call to json.Marshal/Unmarshal with some form of oficially supported
 // APIMachinery code.
-func convertUnstructured(src string, o runtime.Unstructured, want interface{}) error {
-	wantType := reflect.TypeOf(want)
-	wantKindName := wantType.Elem().Kind().String()
-	j, err := json.Marshal(o.UnstructuredContent())
+func convertUnstructured(info *resource.Info, want interface{}) error {
+	wantKind := reflect.TypeOf(want).Elem().Kind().String()
+	j, err := json.Marshal(info.Object)
 	if err != nil {
-		return errors.Wrapf(err, "failed to marshal object in %s to %s", src, wantKindName)
+		return errors.Wrapf(err, "failed to marshal object in %s to %s", info.Source, wantKind)
 	}
 	err = json.Unmarshal(j, want)
 	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal %s", wantKindName)
+		return errors.Wrapf(err, "failed to unmarshal %s", wantKind)
 	}
 	return nil
 }
@@ -475,7 +467,7 @@ func (p Parser) processSystemDir(root string) (*policyhierarchyv1alpha1.NomosCon
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
 			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NomosConfig"):
-				nc, err := parseNomosConfig(o)
+				nc, err := parseNomosConfig(i)
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed to parse NomosConfig in %s", i.Source)
 				}
@@ -489,18 +481,13 @@ func (p Parser) processSystemDir(root string) (*policyhierarchyv1alpha1.NomosCon
 	return nil, errors.Errorf("failed to find object of type NomosConfig in system/nomos.yaml")
 }
 
-func parseNomosConfig(o runtime.Unstructured) (*policyhierarchyv1alpha1.NomosConfig, error) {
-	j, err := json.Marshal(o.UnstructuredContent())
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to marshal object in %s", j)
-	}
+func parseNomosConfig(info *resource.Info) (*policyhierarchyv1alpha1.NomosConfig, error) {
 	config := &policyhierarchyv1alpha1.NomosConfig{}
-	err = json.Unmarshal(j, config)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal NomosConfig")
+	if err := convertUnstructured(info, config); err != nil {
+		return nil, err
 	}
 
-	if _, err = semver.Parse(config.Spec.RepoVersion); err != nil {
+	if _, err := semver.Parse(config.Spec.RepoVersion); err != nil {
 		return nil, errors.Wrapf(err, "invalid semantic version %s. "+
 			"NomosConfig.Spec.RepoVersion must follow semantic versioning rules at http://semver.org",
 			config.Spec.RepoVersion)
