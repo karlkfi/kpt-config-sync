@@ -125,6 +125,8 @@ func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
 		}
 	}
 
+	// TODO(filmil): dirInfos could just be map[string]runtime.Object, it seems.  Let's wait
+	// until the new repo format commit lands, and change it then.
 	dirInfos := make(map[string][]*resource.Info)
 	// Value of all dirs is initially set to nil.
 	for _, d := range allDirsOrdered {
@@ -311,7 +313,7 @@ func processRootDir(
 			}
 		}
 		if gvk == policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector") {
-			if err := parseNamespaceSelector(i, rootNode); err != nil {
+			if err := parseNamespaceSelector(i.Object, rootNode, i.Source); err != nil {
 				return nil, err
 			}
 			continue
@@ -363,7 +365,7 @@ func processPolicyspaceDir(dir string, infos []*resource.Info, treeGenerator *Di
 
 		switch o.GetObjectKind().GroupVersionKind() {
 		case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
-			if err := parseNamespaceSelector(i, treeNode); err != nil {
+			if err := parseNamespaceSelector(i.Object, treeNode, i.Source); err != nil {
 				return err
 			}
 		default:
@@ -411,9 +413,13 @@ func processNamespaceDir(dir string, infos []*resource.Info, treeGenerator *Dire
 	return nil
 }
 
-func parseNamespaceSelector(info *resource.Info, node *ast.TreeNode) error {
+// parseNamespaceSelector converts adds a NamespaceSelector into the provided
+// node.  o must be known to be a NamespaceSelector.  source is the source file
+// the object was read from, for error diagnostics only and may be set to "" if
+// unknown.
+func parseNamespaceSelector(o runtime.Object, node *ast.TreeNode, source string) error {
 	ns := &policyhierarchyv1alpha1.NamespaceSelector{}
-	if err := convertUnstructured(info, ns); err != nil {
+	if err := convertUnstructured(o, ns, source); err != nil {
 		return err
 	}
 
@@ -427,11 +433,11 @@ func parseNamespaceSelector(info *resource.Info, node *ast.TreeNode) error {
 // convertUnstructured converts a runtime.Unstructured to a specifc type.  The hope is that we can
 // eventually replace the call to json.Marshal/Unmarshal with some form of oficially supported
 // APIMachinery code.
-func convertUnstructured(info *resource.Info, want interface{}) error {
+func convertUnstructured(o runtime.Object, want interface{}, source string) error {
 	wantKind := reflect.TypeOf(want).Elem().Kind().String()
-	j, err := json.Marshal(info.Object)
+	j, err := json.Marshal(o)
 	if err != nil {
-		return errors.Wrapf(err, "failed to marshal object in %s to %s", info.Source, wantKind)
+		return errors.Wrapf(err, "failed to marshal object in %s to %s", source, wantKind)
 	}
 	err = json.Unmarshal(j, want)
 	if err != nil {
@@ -467,7 +473,7 @@ func (p Parser) processSystemDir(root string) (*policyhierarchyv1alpha1.NomosCon
 		case runtime.Unstructured:
 			switch o.GetObjectKind().GroupVersionKind() {
 			case policyhierarchyv1alpha1.SchemeGroupVersion.WithKind("NomosConfig"):
-				nc, err := parseNomosConfig(i)
+				nc, err := parseNomosConfig(o, i.Source)
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed to parse NomosConfig in %s", i.Source)
 				}
@@ -481,9 +487,11 @@ func (p Parser) processSystemDir(root string) (*policyhierarchyv1alpha1.NomosCon
 	return nil, errors.Errorf("failed to find object of type NomosConfig in system/nomos.yaml")
 }
 
-func parseNomosConfig(info *resource.Info) (*policyhierarchyv1alpha1.NomosConfig, error) {
+// parseNomosConfig parses out a NomosConfig object from o, which must be a NomosConfig object.
+// source is the optional information regarding the provenance of object used for diagnostics.
+func parseNomosConfig(o runtime.Object, source string) (*policyhierarchyv1alpha1.NomosConfig, error) {
 	config := &policyhierarchyv1alpha1.NomosConfig{}
-	if err := convertUnstructured(info, config); err != nil {
+	if err := convertUnstructured(o, config, source); err != nil {
 		return nil, err
 	}
 
