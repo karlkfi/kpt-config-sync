@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright 2018 The Nomos Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package testing contains fake implementation of the API discovery mechanisms,
+// seeded with the types used in Nomos.  Use NewTestFactory first to create
+// a new instance and work from there.
 package testing
 
 import (
@@ -315,6 +318,27 @@ func (f *TestFactory) Object() (meta.RESTMapper, runtime.ObjectTyper) {
 	return expander, typer
 }
 
+// ResourceInfo returns a fake resource.Info corresponding to the given object o.
+//
+// resource.Info knows the object content and also has the infrastructure needed
+// to discover the type information about the object that may have been omitted
+// from o when it was declared.  The returned value is never nil.  Note that the
+// HTTP client in resource.Info is not initialized, so if you end up needing to
+// call this method with a working HTTP client,consider changing it to match.
+func (f *TestFactory) ResourceInfo(o runtime.Object) *resource.Info {
+	m, _ := f.Object()
+	gvk := o.GetObjectKind().GroupVersionKind()
+	mapping, err := m.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		panic(fmt.Sprintf("Should never happen for registered group-version-kinds: %v", err))
+	}
+	r := resource.Info{
+		Mapping: mapping,
+		Object:  o,
+	}
+	return &r
+}
+
 // LogsForObject returns request logs for the provided object.
 func (f *TestFactory) LogsForObject(object, options runtime.Object, timeout time.Duration) (*restclient.Request, error) {
 	c, err := f.ClientSet()
@@ -486,9 +510,24 @@ func testDynamicResources() []*discovery.APIGroupResources {
 			},
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1alpha1": {
+					{Name: "clusterselectors", Namespaced: false, Kind: "ClusterSelector"},
 					{Name: "namespaceselectors", Namespaced: false, Kind: "NamespaceSelector"},
 					{Name: "nomosconfigs", Namespaced: false, Kind: "NomosConfig"},
 					{Name: "syncs", Namespaced: false, Kind: "Sync"},
+				},
+			},
+		},
+		{
+			Group: metav1.APIGroup{
+				Name: "clusterregistry.k8s.io",
+				Versions: []metav1.GroupVersionForDiscovery{
+					{Version: "v1alpha1"},
+				},
+				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1alpha1"},
+			},
+			VersionedResources: map[string][]metav1.APIResource{
+				"v1alpha1": {
+					{Name: "clusters", Namespaced: false, Kind: "Cluster"},
 				},
 			},
 		},

@@ -55,12 +55,19 @@ type Parser struct {
 }
 
 const (
-	// systemDir is the name of the system directory
+	// Directory names with special meaning in Nomos
+
+	// systemDir is the name of the directory containing Nomos system configuration files.
 	systemDir = "system"
-	// treeDir is the name of the tree directory
+	// treeDir is the name of the directory containin hierarchical resource
+	// policies.
 	treeDir = "tree"
-	// clusterDir is the name of the cluster directory
+	// clusterDir is the name of the directory where cluster scoped resources
+	// are stored.
 	clusterDir = "cluster"
+	// clusterregistryDir is the relative path name to the directory containing
+	// cluster registry information and cluster selectors.
+	clusterregistryDir = "clusterregistry"
 )
 
 // NewParser creates a new Parser.
@@ -81,11 +88,14 @@ func NewParser(config clientcmd.ClientConfig, resources []*metav1.APIResourceLis
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
 // Resources are read from the following directories:
 //
-// * system/
+// * system/ (may be absent)
 // * cluster/
+// * clusterregistry/ (may be absent)
 // * tree/ (recursively)
 func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
 	fsCtx := &ast.Context{Cluster: &ast.Cluster{}}
+
+	// Special processing for <root>/system/*
 	if _, err := os.Stat(filepath.Join(root, systemDir)); err == nil {
 		if err2 := p.processSystemDir(root, fsCtx); err2 != nil {
 			return nil, err2
@@ -95,6 +105,28 @@ func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
 		return nil, errors.Wrapf(err, "while checking existence of system directory")
 	}
 
+	// Special processing for <root>/cluster/*
+	clusterDir := filepath.Join(root, clusterDir)
+	clusterInfos, err := p.makeFileInfos(clusterDir, false)
+	if err != nil {
+		return nil, errors.Wrapf(err, "while making FileInfos for cluster")
+	}
+
+	// Special processing for <root>/clusterregistry/*
+	var clusterregistryInfos []*resource.Info
+	clusterregistryPath := filepath.Join(root, clusterregistryDir)
+	if _, err = os.Stat(clusterregistryPath); err == nil {
+		clusterregistryInfos, err = p.makeFileInfos(clusterregistryPath, false)
+		if err != nil {
+			return nil, errors.Wrapf(err, "while making FileInfos for clusterregistry")
+		}
+	} else if !os.IsNotExist(err) {
+		// It's OK not to define the clusterregistry directory, you just won't get
+		// the PCA features.
+		return nil, errors.Wrapf(err, "while checking existence of clusterregistry directory")
+	}
+
+	// Regular recursive processing for <root>/tree/**/*
 	treeDir := filepath.Join(root, treeDir)
 	treeDirsOrdered, err := allDirs(treeDir)
 	if err != nil {
@@ -106,12 +138,6 @@ func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
 	fileInfos, err := p.makeFileInfos(treeDir, true)
 	if err != nil {
 		return nil, errors.Wrapf(err, "while making FileInfos for tree")
-	}
-
-	clusterDir := filepath.Join(root, clusterDir)
-	clusterInfos, err := p.makeFileInfos(clusterDir, false)
-	if err != nil {
-		return nil, errors.Wrapf(err, "while making FileInfos for cluster")
 	}
 
 	// TODO(filmil): dirInfos could just be map[string]runtime.Object, it seems.  Let's wait
@@ -132,7 +158,10 @@ func (p Parser) Parse(root string) (*policyhierarchyv1.AllPolicies, error) {
 		return nil, err
 	}
 
-	return processDirs(p.resources, dirInfos, clusterInfos, treeDirsOrdered, clusterDir, fsCtx)
+	return processDirs(
+		p.resources,
+		dirInfos, clusterInfos, clusterregistryInfos,
+		treeDirsOrdered, clusterDir, fsCtx)
 }
 
 // allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
@@ -226,6 +255,9 @@ func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {
 }
 
 // processDirs validates objects in directory trees and converts them into hierarchical policy objects.
+//
+// clusterregistryInfos is the set of resources found in the directory <root>/clusterregistry.
+//
 // It first processes the cluster directory and then the tree hierarchy.
 // cluster is a single, flat directory containing cluster-scoped resources.
 // tree is hierarchical, containing 2 categories of directories:
@@ -234,6 +266,7 @@ func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {
 func processDirs(resources []*metav1.APIResourceList,
 	dirInfos map[string][]*resource.Info,
 	clusterInfos []*resource.Info,
+	clusterregistryInfos []*resource.Info,
 	treeDirsOrdered []string,
 	clusterDir string,
 	fsCtx *ast.Context) (*policyhierarchyv1.AllPolicies, error) {
@@ -242,6 +275,10 @@ func processDirs(resources []*metav1.APIResourceList,
 	treeGenerator := NewDirectoryTree()
 	if err := processClusterDir(clusterDir, clusterInfos, fsCtx); err != nil {
 		return nil, errors.Wrapf(err, "cluster directory is invalid: %s", clusterDir)
+	}
+	// TODO(filmil): Tie the processed results into a visitor.
+	if _, _, err := processClusterRegistryDir(clusterregistryDir, clusterregistryInfos); err != nil {
+		return nil, errors.Wrapf(err, "clusterregistry directory is invalid: %s", clusterDir)
 	}
 
 	if len(treeDirsOrdered) > 0 {
