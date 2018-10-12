@@ -18,36 +18,15 @@ package transform
 
 import (
 	"encoding/json"
-	"fmt"
 
 	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labelpkg "k8s.io/apimachinery/pkg/labels"
 )
 
-var emptyMap = make(map[string]string)
-
-func validateSelector(namespaceSelector *policyhierarchyv1alpha1.NamespaceSelector) error {
-	_, err := isSelected(emptyMap, &namespaceSelector.Spec.Selector)
-	return err
-}
-
-func isSelected(labels map[string]string, labelselector *metav1.LabelSelector) (bool, error) {
-	selector, err := metav1.LabelSelectorAsSelector(labelselector)
-	if err != nil {
-		return false, fmt.Errorf("invalid label selector: %v", err)
-	}
-	if selector.Empty() {
-		return false, fmt.Errorf("empty label selector")
-	}
-
-	return selector.Matches(labelpkg.Set(labels)), nil
-}
-
-// isPolicyApplicableToNamespace returns whether the NamespaceSelector annotation on the given policy object
-// matches the given labels on a namespace.
-// The policy is applicable if it has no such annotation.
+// isPolicyApplicableToNamespace returns whether the NamespaceSelector
+// annotation on the given policy object matches the given labels on a
+// namespace.  The policy is applicable if it has no such annotation.
 func isPolicyApplicableToNamespace(namespaceLabels map[string]string, policy metav1.Object) bool {
 	ls, exists := policy.GetAnnotations()[policyhierarchyv1alpha1.NamespaceSelectorAnnotationKey]
 	if !exists {
@@ -57,9 +36,9 @@ func isPolicyApplicableToNamespace(namespaceLabels map[string]string, policy met
 	if err := json.Unmarshal([]byte(ls), &ns); err != nil {
 		panic(errors.Wrapf(err, "failed to unmarshal NamespaceSelector in object %q", policy.GetName()))
 	}
-	selected, err := isSelected(namespaceLabels, &ns.Spec.Selector)
+	selector, err := asPopulatedSelector(&ns.Spec.Selector)
 	if err != nil {
-		panic(errors.Wrapf(err, "failed to evaluate LabelSelector in object %q", policy.GetName()))
+		panic(errors.Wrapf(err, "for label selector %q", ns.ObjectMeta.Name))
 	}
-	return selected
+	return isSelected(namespaceLabels, selector)
 }

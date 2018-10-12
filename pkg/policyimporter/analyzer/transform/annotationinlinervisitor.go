@@ -80,7 +80,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 			v.errs.Add(errors.Errorf("NamespaceSelector must not be in namespace directories, found in %q", n.Path))
 			return n
 		}
-		if err := validateSelector(s); err != nil {
+		if _, err := asPopulatedSelector(&s.Spec.Selector); err != nil {
 			v.errs.Add(errors.Wrapf(err, "NamespaceSelector %q is not valid", s.Name))
 			continue
 		}
