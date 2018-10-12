@@ -68,7 +68,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	if found {
 		if namespaceScoped {
 			p.errs.Add(errors.Errorf(
-				"Namespace scoped object %s with Name %q in file %q cannot be declared in cluster "+
+				"Namespace scoped object %s with NameValidator %q in file %q cannot be declared in cluster "+
 					"directory.  Move declaration to the appropriate tree directory.",
 				gvk,
 				metaObj.GetName(),
@@ -91,7 +91,7 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) ast.Node {
 	if found {
 		if !namespaceScoped {
 			p.errs.Add(errors.Errorf(
-				"Cluster scoped object %s with Name %q from file %s cannot be declared inside "+
+				"Cluster scoped object %s with NameValidator %q from file %s cannot be declared inside "+
 					"tree directory.  Move declaration to the cluster directory.",
 				gvk,
 				metaObj.GetName(),

@@ -46,13 +46,21 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{.Name}}
+{{if .Labels}}  labels:
+{{range $k,$v := .Labels}}    {{$k}}: {{$v}}
+{{end}}
+{{end}}
+{{if .Annotations}}  annotations:
+{{range $k,$v := .Annotations}}    {{$k}}: {{$v}}
+{{end}}
+{{end}}
 `
 
-	aNamespaceWithLabelsAndAnnotations = `
+	aNamespaceWithLabelsAndAnnotationsTemplate = `
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: bar
+  name: {{.Name}}
   labels:
     env: prod
   annotations:
@@ -108,6 +116,24 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 `
 
+	aLBPRoleBindingTemplate = `
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: job-creators{{.ID}}
+  namespace: {{.Namespace}}
+  annotations:
+    nomos.dev/namespace-selector: {{.LBPName}}
+subjects:
+- kind: Group
+  name: bob@acme.com
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: job-creator
+  apiGroup: rbac.authorization.k8s.io
+`
+
 	aClusterRoleTemplate = `
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -119,6 +145,7 @@ rules:
   verbs:
    - "*"
 `
+
 	aClusterRoleBindingTemplate = `
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -134,6 +161,7 @@ roleRef:
   name: job-creator
   apiGroup: rbac.authorization.k8s.io
 `
+
 	aPodSecurityPolicyTemplate = `
 apiVersion: extensions/v1beta1
 kind: PodSecurityPolicy
@@ -223,23 +251,26 @@ metadata:
 )
 
 var (
-	aNamespace          = template.Must(template.New("aNamespace").Parse(aNamespaceTemplate))
-	aNamespaceJSON      = template.Must(template.New("aNamespaceJSON").Parse(aNamespaceJSONTemplate))
-	aQuota              = template.Must(template.New("aQuota").Parse(aQuotaTemplate))
-	aRole               = template.Must(template.New("aRole").Parse(aRoleTemplate))
-	aRoleBinding        = template.Must(template.New("aRoleBinding").Parse(aRoleBindingTemplate))
-	aClusterRole        = template.Must(template.New("aClusterRole").Parse(aClusterRoleTemplate))
-	aClusterRoleBinding = template.Must(template.New("aClusterRoleBinding").Parse(aClusterRoleBindingTemplate))
-	aPodSecurityPolicy  = template.Must(template.New("aPodSecurityPolicyTemplate").Parse(aPodSecurityPolicyTemplate))
-	aConfigMap          = template.Must(template.New("aConfigMap").Parse(aConfigMapTemplate))
-	aDeployment         = template.Must(template.New("aDeployment").Parse(aDeploymentTemplate))
-	aSync               = template.Must(template.New("aSync").Parse(aSyncTemplate))
-	aPhilo              = template.Must(template.New("aPhilo").Parse(aPhiloTemplate))
-	aNode               = template.Must(template.New("aNode").Parse(aNodeTemplate))
+	aNamespace                         = template.Must(template.New("aNamespace").Parse(aNamespaceTemplate))
+	aNamespaceWithLabelsAndAnnotations = template.Must(template.New("aNamespace").Parse(aNamespaceWithLabelsAndAnnotationsTemplate))
+	aNamespaceJSON                     = template.Must(template.New("aNamespaceJSON").Parse(aNamespaceJSONTemplate))
+	aQuota                             = template.Must(template.New("aQuota").Parse(aQuotaTemplate))
+	aRole                              = template.Must(template.New("aRole").Parse(aRoleTemplate))
+	aRoleBinding                       = template.Must(template.New("aRoleBinding").Parse(aRoleBindingTemplate))
+	aLBPRoleBinding                    = template.Must(template.New("aLBPRoleBinding").Parse(aLBPRoleBindingTemplate))
+	aClusterRole                       = template.Must(template.New("aClusterRole").Parse(aClusterRoleTemplate))
+	aClusterRoleBinding                = template.Must(template.New("aClusterRoleBinding").Parse(aClusterRoleBindingTemplate))
+	aPodSecurityPolicy                 = template.Must(template.New("aPodSecurityPolicyTemplate").Parse(aPodSecurityPolicyTemplate))
+	aConfigMap                         = template.Must(template.New("aConfigMap").Parse(aConfigMapTemplate))
+	aDeployment                        = template.Must(template.New("aDeployment").Parse(aDeploymentTemplate))
+	aSync                              = template.Must(template.New("aSync").Parse(aSyncTemplate))
+	aPhilo                             = template.Must(template.New("aPhilo").Parse(aPhiloTemplate))
+	aNode                              = template.Must(template.New("aNode").Parse(aNodeTemplate))
 )
 
 type templateData struct {
-	ID, Name, Namespace, Attribute, Group, Version, Kind string
+	ID, Name, Namespace, Attribute, Group, Version, Kind, LBPName string
+	Labels, Annotations                                           map[string]string
 }
 
 func (d templateData) apply(t *template.Template) string {
@@ -471,7 +502,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with Namespace with labels/annotations",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ns.yaml": aNamespaceWithLabelsAndAnnotations,
+			"tree/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespaceWithLabelsAndAnnotations),
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
@@ -944,6 +975,19 @@ var parserTestCases = []parserTestCase{
 			"tree/bar/ns-selector.yaml": aNamespaceSelectorTemplate,
 		},
 		expectedNumPolicies: map[string]int{"tree": 0, "bar": 0},
+	},
+	{
+		testName: "Policyspace dir with NamespaceSelector CRD and object",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"system/nomos.yaml":         aNomosConfig,
+			"system/crb.yaml":           templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"tree/bar/ns-selector.yaml": aNamespaceSelectorTemplate,
+			"tree/bar/rb.yaml":          templateData{ID: "1", LBPName: "sre-supported"}.apply(aLBPRoleBinding),
+			"tree/bar/prod-ns/ns.yaml":  templateData{Name: "prod-ns", Labels: map[string]string{"environment": "prod"}}.apply(aNamespace),
+			"tree/bar/test-ns/ns.yaml":  templateData{Name: "test-ns"}.apply(aNamespace),
+		},
+		expectedNumPolicies: map[string]int{"tree": 0, "bar": 0, "prod-ns": 1, "test-ns": 0},
 	},
 	{
 		testName: "Policyspace and Namespace dir have duplicate rolebindings",

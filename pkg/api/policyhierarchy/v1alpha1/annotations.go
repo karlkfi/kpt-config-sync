@@ -23,3 +23,9 @@ const SourcePathAnnotationKey = "nomos.dev/source-path"
 // NamespaceSelectorAnnotationKey is the annotation key set on policy resources that refers to
 // name of NamespaceSelector resource.
 const NamespaceSelectorAnnotationKey = "nomos.dev/namespace-selector"
+
+// InputAnnotations is a map of annotations that are valid to exist on objects when imported from
+// the filesystemn.
+var InputAnnotations = map[string]struct{}{
+	NamespaceSelectorAnnotationKey: {},
+}

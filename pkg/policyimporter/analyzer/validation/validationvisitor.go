@@ -16,8 +16,12 @@ limitations under the License.
 package validation
 
 import (
+	"fmt"
 	"path"
+	"strings"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
@@ -25,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -154,6 +159,8 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 			o.Source))
 	}
 
+	v.checkAnnotationsAndLabels(metaObj, o.Source)
+
 	return nil
 }
 
@@ -181,7 +188,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 			v.errs.Add(errors.Errorf(
 				"Objects declared in policyspace directories must not have a namespace specified. "+
 					"Remove the namespace field from object.  "+
-					"Directory %q has declaration for %s, Name=%q with namespace %s",
+					"Directory %q has declaration for %s, NameValidator=%q with namespace %s",
 				node.Path,
 				o.FileObject.GetObjectKind().GroupVersionKind(),
 				metaObj.GetName(),
@@ -209,6 +216,8 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 		}
 	}
 
+	v.checkAnnotationsAndLabels(metaObj, o.Source)
+
 	return nil
 }
 
@@ -225,4 +234,57 @@ func (v *InputValidator) checkSingleResourceQuota(o *ast.NamespaceObject) {
 	} else {
 		v.seenResourceQuotas[path] = struct{}{}
 	}
+}
+
+func (v *InputValidator) checkAnnotationsAndLabels(o metav1.Object, source string) {
+	if err := v.checkAnnotations(o, source); err != nil {
+		v.errs.Add(err)
+	}
+	if err := v.checkLabels(o, source); err != nil {
+		v.errs.Add(err)
+	}
+}
+
+func (v *InputValidator) checkAnnotations(o metav1.Object, source string) error {
+	return checkNomosPrefix(
+		o.GetAnnotations(),
+		v1alpha1.InputAnnotations,
+		"Objects are not allowed to define unsupported annotations starting with \"nomos.dev/\". "+
+			"Object %s defined in %q has offending annotations: %s",
+		o,
+		source,
+	)
+}
+
+var ignoreNone = map[string]struct{}{}
+
+func (v *InputValidator) checkLabels(o metav1.Object, source string) error {
+	return checkNomosPrefix(
+		o.GetLabels(),
+		ignoreNone,
+		"Objects are not allowed to define labels starting with \"nomos.dev/\". "+
+			"Object %s defined in %q has %s",
+		o,
+		source,
+	)
+}
+
+func checkNomosPrefix(m map[string]string, ignore map[string]struct{}, errFmt string, o metav1.Object, source string) error {
+	var found []string
+	for k, v := range m {
+		if _, found := ignore[k]; found {
+			continue
+		}
+		if strings.HasPrefix(k, policyhierarchy.GroupName+"/") {
+			found = append(found, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+	if len(found) == 0 {
+		return nil
+	}
+	return errors.Errorf(
+		errFmt,
+		o.GetName(),
+		source,
+		strings.Join(found, ", "))
 }
