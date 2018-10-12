@@ -20,8 +20,8 @@ import (
 
 	"github.com/golang/glog"
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -32,16 +32,14 @@ var _ reconcile.Reconciler = &PolicyNodeReconciler{}
 // PolicyNodeReconciler reconciles a PolicyNode object.
 type PolicyNodeReconciler struct {
 	client client.Client
-	cache  cache.Cache
-	scheme *runtime.Scheme
+	cache  *syncercache.GenericCache
 }
 
 // NewPolicyNodeReconciler returns a new PolicyNodeReconciler.
-func NewPolicyNodeReconciler(client client.Client, cache cache.Cache, scheme *runtime.Scheme) *PolicyNodeReconciler {
+func NewPolicyNodeReconciler(client client.Client, cache cache.Cache) *PolicyNodeReconciler {
 	return &PolicyNodeReconciler{
 		client: client,
-		cache:  cache,
-		scheme: scheme,
+		cache:  syncercache.NewGenericCache(cache),
 	}
 }
 

@@ -34,7 +34,7 @@ import (
 // AddPolicyNode adds PolicyNode sync controllers to the Manager.
 func AddPolicyNode(mgr manager.Manager, gvks []schema.GroupVersionKind) error {
 	pnc, err := controller.New("policynode-resources", mgr, controller.Options{
-		Reconciler: genericreconcile.NewPolicyNodeReconciler(mgr.GetClient(), mgr.GetCache(), mgr.GetScheme()),
+		Reconciler: genericreconcile.NewPolicyNodeReconciler(mgr.GetClient(), mgr.GetCache()),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not create policynode controller")
@@ -54,7 +54,7 @@ func AddPolicyNode(mgr manager.Manager, gvks []schema.GroupVersionKind) error {
 		t.SetGroupVersionKind(gvk)
 		name := fmt.Sprintf("policynode-resources-%s", gvk)
 		gc, err := controller.New(name, mgr, controller.Options{
-			Reconciler: genericreconcile.NewPolicyNodeReconciler(mgr.GetClient(), mgr.GetCache(), mgr.GetScheme()),
+			Reconciler: genericreconcile.NewPolicyNodeReconciler(mgr.GetClient(), mgr.GetCache()),
 		})
 		if err != nil {
 			return errors.Wrapf(err, "could not create %q controller", name)
