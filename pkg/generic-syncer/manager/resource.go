@@ -23,6 +23,7 @@ import (
 	nomosapischeme "github.com/google/nomos/clientgen/apis/scheme"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/controller"
+	"github.com/google/nomos/pkg/generic-syncer/decode"
 	"github.com/google/nomos/pkg/generic-syncer/differ"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/pkg/errors"
@@ -121,12 +122,13 @@ func (r *GenericResourceManager) startControllers(syncs []*nomosv1alpha1.Sync, s
 		return errors.Wrap(err, "could not get resource scope information from discovery API")
 	}
 
+	decoder := decode.NewGenericResourceDecoder(r.GetScheme())
 	comparator := differ.NewComparator(syncs, labeling.ResourceManagementKey)
-	if err := controller.AddPolicyNode(r, comparator, namespace); err != nil {
-		return errors.Wrap(err, "could not create PolicyNode controllers")
+	if err := controller.AddPolicyNode(r, decoder, comparator, namespace); err != nil {
+		return errors.Wrap(err, "could not create PolicyNode controller")
 	}
-	if err := controller.AddClusterPolicy(r, cluster); err != nil {
-		return errors.Wrap(err, "could not create ClusterPolicy controllers")
+	if err := controller.AddClusterPolicy(r, decoder, comparator, cluster); err != nil {
+		return errors.Wrap(err, "could not create ClusterPolicy controller")
 	}
 
 	go func() {
@@ -139,7 +141,7 @@ func (r *GenericResourceManager) startControllers(syncs []*nomosv1alpha1.Sync, s
 	return nil
 }
 
-// resourceScopes returns two slices representing the namespaced and cluster scoped resource types with sync enabled.
+// resourceScopes returns two slices representing the namespace and cluster scoped resource types with sync enabled.
 func (r *GenericResourceManager) resourceScopes() (namespace []schema.GroupVersionKind, cluster []schema.GroupVersionKind,
 	err error) {
 	dc, err := discovery.NewDiscoveryClientForConfig(r.GetConfig())

@@ -16,10 +16,10 @@ limitations under the License.
 package controller
 
 import (
-	"fmt"
-
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
+	"github.com/google/nomos/pkg/generic-syncer/decode"
+	"github.com/google/nomos/pkg/generic-syncer/differ"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -32,37 +32,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const clusterPolicyControllerName = "clusterpolicy-resources"
+
 // AddClusterPolicy adds ClusterPolicy sync controllers to the Manager.
-func AddClusterPolicy(mgr manager.Manager, gvks []schema.GroupVersionKind) error {
-	genericCache := syncercache.NewGenericResourceCache(mgr.GetCache())
-	pnc, err := controller.New("clusterpolicy-resources", mgr, controller.Options{
-		Reconciler: genericreconcile.NewClusterPolicyReconciler(mgr.GetClient(), genericCache),
+func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder, comparator *differ.Comparator,
+	gvks []schema.GroupVersionKind) error {
+	cpc, err := controller.New(clusterPolicyControllerName, mgr, controller.Options{
+		Reconciler: genericreconcile.NewClusterPolicyReconciler(
+			mgr.GetClient(),
+			syncercache.NewGenericResourceCache(mgr.GetCache()),
+			mgr.GetRecorder(clusterPolicyControllerName),
+			decoder,
+			comparator,
+			gvks,
+		),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not create ClusterPolicy controller")
 	}
-	if err = pnc.Watch(&source.Kind{Type: &nomosv1.ClusterPolicy{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = cpc.Watch(&source.Kind{Type: &nomosv1.ClusterPolicy{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return errors.Wrap(err, "could not watch ClusterPolicies in the controller")
 	}
 
 	mapToClusterPolicy := &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(genericResourceToClusterPolicy),
 	}
-
 	// Set up a watch on all cluster-scoped resources defined in Syncs.
 	// Look up the corresponding ClusterPolicy for the changed resources.
 	for _, gvk := range gvks {
 		t := &unstructured.Unstructured{}
 		t.SetGroupVersionKind(gvk)
-		name := fmt.Sprintf("clusterpolicy-resources-%s", gvk)
-		gc, err := controller.New(name, mgr, controller.Options{
-			Reconciler: genericreconcile.NewClusterPolicyReconciler(mgr.GetClient(), genericCache),
-		})
-		if err != nil {
-			return errors.Wrapf(err, "could not create %q controller", name)
-		}
 
-		if err := gc.Watch(&source.Kind{Type: t}, mapToClusterPolicy); err != nil {
+		if err := cpc.Watch(&source.Kind{Type: t}, mapToClusterPolicy); err != nil {
 			return errors.Wrapf(err, "could not watch %q in the generic controller", gvk)
 		}
 	}

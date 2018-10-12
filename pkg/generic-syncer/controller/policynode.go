@@ -32,17 +32,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const controllerName = "policynode-resources"
+const policyNodeControllerName = "policynode-resources"
 
 // AddPolicyNode adds PolicyNode sync controllers to the Manager.
-func AddPolicyNode(mgr manager.Manager, comparator *differ.Comparator, gvks []schema.GroupVersionKind) error {
-	mgr.GetRecorder(controllerName)
-	decoder := decode.NewGenericResourceDecoder(mgr.GetScheme())
-	pnc, err := controller.New(controllerName, mgr, controller.Options{
+func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *differ.Comparator, gvks []schema.GroupVersionKind) error {
+	pnc, err := controller.New(policyNodeControllerName, mgr, controller.Options{
 		Reconciler: genericreconcile.NewPolicyNodeReconciler(
 			mgr.GetClient(),
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
-			mgr.GetRecorder(controllerName),
+			mgr.GetRecorder(policyNodeControllerName),
 			decoder,
 			comparator,
 			gvks,

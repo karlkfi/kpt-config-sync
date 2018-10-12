@@ -392,7 +392,7 @@ func asNamespace(policyNode *nomosv1.PolicyNode) *corev1.Namespace {
 	}
 }
 
-// TODO(sbochins): Add back monitoring that was part of ReflectiveActions.
+// TODO(sbochins): Add back monitoring/retries that was part of ReflectiveActions.
 
 func (r *PolicyNodeReconciler) createNamespace(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
 	if err := r.client.Create(ctx, asNamespace(policyNode)); err != nil {
