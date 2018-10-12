@@ -16,8 +16,11 @@ limitations under the License.
 package validation
 
 import (
+	"fmt"
 	"path"
+	"strings"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
@@ -25,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -154,6 +158,16 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 			o.Source))
 	}
 
+	if msg := v.checkAnnotationsAndLabels(metaObj); msg != "" {
+		v.errs.Add(errors.Errorf(
+			"Objects are not allowed to define labels or annotations starting with \"nomos.dev/\". "+
+				"Object %s defined in %q has %s",
+			metaObj.GetName(),
+			o.Source,
+			msg,
+		))
+	}
+
 	return nil
 }
 
@@ -181,7 +195,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 			v.errs.Add(errors.Errorf(
 				"Objects declared in policyspace directories must not have a namespace specified. "+
 					"Remove the namespace field from object.  "+
-					"Directory %q has declaration for %s, Name=%q with namespace %s",
+					"Directory %q has declaration for %s, NameValidator=%q with namespace %s",
 				node.Path,
 				o.FileObject.GetObjectKind().GroupVersionKind(),
 				metaObj.GetName(),
@@ -209,6 +223,16 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 		}
 	}
 
+	if msg := v.checkAnnotationsAndLabels(metaObj); msg != "" {
+		v.errs.Add(errors.Errorf(
+			"Objects are not allowed to define labels or annotations starting with \"nomos.dev/\". "+
+				"Object %s defined in %q has %s",
+			metaObj.GetName(),
+			o.Source,
+			msg,
+		))
+	}
+
 	return nil
 }
 
@@ -225,4 +249,27 @@ func (v *InputValidator) checkSingleResourceQuota(o *ast.NamespaceObject) {
 	} else {
 		v.seenResourceQuotas[path] = struct{}{}
 	}
+}
+
+func (v *InputValidator) checkAnnotationsAndLabels(o metav1.Object) string {
+	var msg []string
+	if annotations := hasNomosPrefix(o.GetAnnotations()); len(annotations) != 0 {
+		msg = append(msg, fmt.Sprintf(
+			"offending annotations %s", strings.Join(annotations, " ")))
+	}
+	if labels := hasNomosPrefix(o.GetLabels()); len(labels) != 0 {
+		msg = append(msg, fmt.Sprintf(
+			"offending labels %s", strings.Join(labels, " ")))
+	}
+	return strings.Join(msg, ", ")
+}
+
+func hasNomosPrefix(m map[string]string) []string {
+	var found []string
+	for k, v := range m {
+		if strings.HasPrefix(k, policyhierarchy.GroupName+"/") {
+			found = append(found, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+	return found
 }

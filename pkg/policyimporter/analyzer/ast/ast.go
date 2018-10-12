@@ -32,6 +32,11 @@ type FileObject struct {
 	Source string
 }
 
+// ToMeta converts the underlying object to a metav1.Object
+func (o *FileObject) ToMeta() metav1.Object {
+	return o.Object.(metav1.Object)
+}
+
 // Root represents a set of declared policies, configuration for how those policies will be
 // interpreted, and information regarding where those policies came from.
 type Root struct {
@@ -81,11 +86,6 @@ func (o ClusterObjectList) Accept(visitor Visitor) Node {
 // A ClusterObject represents a cluster scoped resource from the cluster directory.
 type ClusterObject struct {
 	FileObject
-}
-
-// ToMeta converts the underlying object to a metav1.NamespaceObject
-func (o *ClusterObject) ToMeta() metav1.Object {
-	return o.FileObject.Object.(metav1.Object)
 }
 
 // Accept implements Visitable
@@ -179,11 +179,6 @@ func (o ObjectList) Accept(visitor Visitor) Node {
 // hierarchy.
 type NamespaceObject struct {
 	FileObject
-}
-
-// ToMeta converts the underlying object to a metav1.Object
-func (o *NamespaceObject) ToMeta() metav1.Object {
-	return o.FileObject.Object.(metav1.Object)
 }
 
 // Accept implements Visitable

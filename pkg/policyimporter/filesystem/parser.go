@@ -265,8 +265,8 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	}
 
 	visitors := []ast.CheckingVisitor{
-		transform.NewPathAnnotationVisitor(),
 		validation.NewInputValidator(allowedGVKs),
+		transform.NewPathAnnotationVisitor(),
 		scopeValidator,
 		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(
@@ -277,6 +277,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 			},
 		),
 		transform.NewQuotaVisitor(),
+		validation.NewNameValidator(),
 	}
 
 	for _, visitor := range visitors {
