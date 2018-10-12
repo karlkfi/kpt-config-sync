@@ -143,7 +143,7 @@ func TestDecodeResources(t *testing.T) {
 			for w := range tc.want {
 				scheme.AddKnownTypeWithName(w, &unstructured.Unstructured{})
 			}
-			d := NewDecoder(scheme)
+			d := NewGenericResourceDecoder(scheme)
 			got, err := d.DecodeResources(tc.genericResource...)
 			if err != nil {
 				t.Errorf("Could not decode: %v", err)

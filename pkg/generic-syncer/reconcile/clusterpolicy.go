@@ -22,7 +22,6 @@ import (
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -36,10 +35,10 @@ type ClusterPolicyReconciler struct {
 }
 
 // NewClusterPolicyReconciler returns a new ClusterPolicyReconciler.
-func NewClusterPolicyReconciler(client client.Client, cache cache.Cache) *ClusterPolicyReconciler {
+func NewClusterPolicyReconciler(client client.Client, cache syncercache.GenericCache) *ClusterPolicyReconciler {
 	return &ClusterPolicyReconciler{
 		client: client,
-		cache:  syncercache.GenericCache{Cache: cache},
+		cache:  cache,
 	}
 }
 

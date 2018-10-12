@@ -30,21 +30,29 @@ import (
 
 // Decoder decodes GenericResources from PolicyNodes / ClusterPolicies to
 // Unstructured structs.
-type Decoder struct {
+type Decoder interface {
+	// DecodeResources reads the bytes in the RawExtensions representing k8s
+	// resources and returns a slice of all the resources grouped by their
+	// respective GroupVersionKind.
+	DecodeResources(genericResources ...nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error)
+}
+
+var _ Decoder = &GenericResourceDecoder{}
+
+// GenericResourceDecoder implements Decoder.
+type GenericResourceDecoder struct {
 	decoder runtime.Decoder
 }
 
-// NewDecoder returns a new Decoder.
-func NewDecoder(scheme *runtime.Scheme) *Decoder {
-	return &Decoder{
+// NewGenericResourceDecoder returns a new GenericResourceDecoder.
+func NewGenericResourceDecoder(scheme *runtime.Scheme) *GenericResourceDecoder {
+	return &GenericResourceDecoder{
 		decoder: serializer.NewCodecFactory(scheme).UniversalDeserializer(),
 	}
 }
 
-// DecodeResources reads the bytes in the RawExtensions representing k8s
-// resources and returns a slice of all the resources grouped by their
-// respective GroupVersionKind.
-func (d *Decoder) DecodeResources(genericResources ...nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
+// DecodeResources implements Decoder.
+func (d *GenericResourceDecoder) DecodeResources(genericResources ...nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
 	us := make(map[schema.GroupVersionKind][]*unstructured.Unstructured)
 	for _, gr := range genericResources {
 		for _, v := range gr.Versions {

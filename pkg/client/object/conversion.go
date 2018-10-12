@@ -21,6 +21,7 @@ package object
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -29,6 +30,15 @@ func RuntimeToMeta(runtimeObjs []runtime.Object) []metav1.Object {
 	metaObjs := make([]metav1.Object, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		metaObjs[idx] = runtimeObjs[idx].(metav1.Object)
+	}
+	return metaObjs
+}
+
+// UnstructuredToMeta converts a list of runtime.Object to a list of metav1.Object
+func UnstructuredToMeta(unsObjs []*unstructured.Unstructured) []metav1.Object {
+	metaObjs := make([]metav1.Object, len(unsObjs))
+	for idx := range unsObjs {
+		metaObjs[idx] = metav1.Object(unsObjs[idx])
 	}
 	return metaObjs
 }

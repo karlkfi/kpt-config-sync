@@ -26,21 +26,28 @@ import (
 )
 
 // GenericCache extends Cache to better handle fetching objects as Unstructured types.
-type GenericCache struct {
+type GenericCache interface {
+	cache.Cache
+	// UnstructuredList returns all the resources in the cluster of the given GroupVersionKind.
+	// This is needed because cache.Cache's List method requires knowing the type
+	// of the resource you wanted to list. We always want to return Unstructureds
+	// when listing resources on the cluster, whether it's a native or custom
+	// resource.
+	UnstructuredList(gvk schema.GroupVersionKind) ([]*unstructured.Unstructured, error)
+}
+
+// GenericResourceCache implements GenericCache.
+type GenericResourceCache struct {
 	cache.Cache
 }
 
-// NewGenericCache returns a new GenericCache.
-func NewGenericCache(cache cache.Cache) *GenericCache {
-	return &GenericCache{Cache: cache}
+// NewGenericResourceCache returns a new GenericResourceCache.
+func NewGenericResourceCache(cache cache.Cache) *GenericResourceCache {
+	return &GenericResourceCache{Cache: cache}
 }
 
-// List returns all the resources in the cluster of the given GroupVersionKind.
-// This is needed because cache.Cache's List method requires knowing the type
-// of the resource you wanted to list. We always want to return Unstructureds
-// when listing resources on the cluster, whether it's a native or custom
-// resource.
-func (c *GenericCache) List(gvk schema.GroupVersionKind) ([]*unstructured.Unstructured, error) {
+// UnstructuredList implements GenericCache.
+func (c *GenericResourceCache) UnstructuredList(gvk schema.GroupVersionKind) ([]*unstructured.Unstructured, error) {
 	informer, err := c.GetInformerForKind(gvk)
 	if err != nil {
 		return nil, errors.Wrapf(err, "no informer for %s in the cache", gvk)

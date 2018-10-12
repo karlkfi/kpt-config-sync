@@ -16,9 +16,10 @@ limitations under the License.
 package controller
 
 import (
-	"fmt"
-
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
+	"github.com/google/nomos/pkg/generic-syncer/decode"
+	"github.com/google/nomos/pkg/generic-syncer/differ"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -31,10 +32,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const controllerName = "policynode-resources"
+
 // AddPolicyNode adds PolicyNode sync controllers to the Manager.
-func AddPolicyNode(mgr manager.Manager, gvks []schema.GroupVersionKind) error {
-	pnc, err := controller.New("policynode-resources", mgr, controller.Options{
-		Reconciler: genericreconcile.NewPolicyNodeReconciler(mgr.GetClient(), mgr.GetCache()),
+func AddPolicyNode(mgr manager.Manager, comparator *differ.Comparator, gvks []schema.GroupVersionKind) error {
+	mgr.GetRecorder(controllerName)
+	decoder := decode.NewGenericResourceDecoder(mgr.GetScheme())
+	pnc, err := controller.New(controllerName, mgr, controller.Options{
+		Reconciler: genericreconcile.NewPolicyNodeReconciler(
+			mgr.GetClient(),
+			syncercache.NewGenericResourceCache(mgr.GetCache()),
+			mgr.GetRecorder(controllerName),
+			decoder,
+			comparator,
+			gvks,
+		),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not create policynode controller")
@@ -46,21 +58,13 @@ func AddPolicyNode(mgr manager.Manager, gvks []schema.GroupVersionKind) error {
 	maptoPolicyNode := &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(genericResourceToPolicyNode),
 	}
-
 	// Set up a watch on all namespace-scoped resources defined in Syncs.
 	// Look up the corresponding PolicyNode for the changed resources.
 	for _, gvk := range gvks {
 		t := &unstructured.Unstructured{}
 		t.SetGroupVersionKind(gvk)
-		name := fmt.Sprintf("policynode-resources-%s", gvk)
-		gc, err := controller.New(name, mgr, controller.Options{
-			Reconciler: genericreconcile.NewPolicyNodeReconciler(mgr.GetClient(), mgr.GetCache()),
-		})
-		if err != nil {
-			return errors.Wrapf(err, "could not create %q controller", name)
-		}
 
-		if err := gc.Watch(&source.Kind{Type: t}, maptoPolicyNode); err != nil {
+		if err := pnc.Watch(&source.Kind{Type: t}, maptoPolicyNode); err != nil {
 			return errors.Wrapf(err, "could not watch %q in the generic controller", gvk)
 		}
 	}

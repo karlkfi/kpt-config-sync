@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Nomos Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package differ
 
 import (
@@ -16,7 +32,7 @@ import (
 func TestDiff(t *testing.T) {
 	testCases := []struct {
 		name      string
-		sync      v1alpha1.Sync
+		sync      *v1alpha1.Sync
 		lhs       runtime.Object
 		rhs       runtime.Object
 		wantEqual bool
@@ -24,7 +40,7 @@ func TestDiff(t *testing.T) {
 	}{
 		{
 			name: "resources with specified comparisons fields match",
-			sync: v1alpha1.Sync{
+			sync: &v1alpha1.Sync{
 				Spec: v1alpha1.SyncSpec{
 					Groups: []v1alpha1.SyncGroup{
 						{
@@ -80,7 +96,7 @@ func TestDiff(t *testing.T) {
 		},
 		{
 			name: "resources with specified field comparisons don't match",
-			sync: v1alpha1.Sync{
+			sync: &v1alpha1.Sync{
 				Spec: v1alpha1.SyncSpec{
 					Groups: []v1alpha1.SyncGroup{
 						{
@@ -128,7 +144,7 @@ func TestDiff(t *testing.T) {
 		},
 		{
 			name: "resource with spec fields matching",
-			sync: v1alpha1.Sync{
+			sync: &v1alpha1.Sync{
 				Spec: v1alpha1.SyncSpec{
 					Groups: []v1alpha1.SyncGroup{
 						{
@@ -173,7 +189,7 @@ func TestDiff(t *testing.T) {
 		},
 		{
 			name: "resource with spec fields not matching",
-			sync: v1alpha1.Sync{
+			sync: &v1alpha1.Sync{
 				Spec: v1alpha1.SyncSpec{
 					Groups: []v1alpha1.SyncGroup{
 						{
@@ -218,7 +234,7 @@ func TestDiff(t *testing.T) {
 		},
 		{
 			name: "resources with matching labels",
-			sync: v1alpha1.Sync{
+			sync: &v1alpha1.Sync{
 				Spec: v1alpha1.SyncSpec{
 					Groups: []v1alpha1.SyncGroup{
 						{
@@ -276,7 +292,7 @@ func TestDiff(t *testing.T) {
 		},
 		{
 			name: "ignore management label when comparing",
-			sync: v1alpha1.Sync{
+			sync: &v1alpha1.Sync{
 				Spec: v1alpha1.SyncSpec{
 					Groups: []v1alpha1.SyncGroup{
 						{
@@ -335,7 +351,7 @@ func TestDiff(t *testing.T) {
 		},
 		{
 			name: "resources with annotations matching",
-			sync: v1alpha1.Sync{
+			sync: &v1alpha1.Sync{
 				Spec: v1alpha1.SyncSpec{
 					Groups: []v1alpha1.SyncGroup{
 						{
@@ -393,7 +409,7 @@ func TestDiff(t *testing.T) {
 		},
 		{
 			name: "resources with annotations not matching",
-			sync: v1alpha1.Sync{
+			sync: &v1alpha1.Sync{
 				Spec: v1alpha1.SyncSpec{
 					Groups: []v1alpha1.SyncGroup{
 						{
@@ -663,7 +679,11 @@ func TestDiff(t *testing.T) {
 				}
 			}()
 
-			differ := NewDiffer([]v1alpha1.Sync{tc.sync}, labeling.ResourceManagementKey)
+			var syncs []*v1alpha1.Sync
+			if s := tc.sync; s != nil {
+				syncs = append(syncs, s)
+			}
+			differ := NewComparator(syncs, labeling.ResourceManagementKey)
 			lhu, err := converter.ToUnstructured(tc.lhs)
 			if err != nil {
 				t.Fatalf("could not convert %v to unstructured type", tc.lhs)

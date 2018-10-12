@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,8 +34,9 @@ import (
 
 // AddClusterPolicy adds ClusterPolicy sync controllers to the Manager.
 func AddClusterPolicy(mgr manager.Manager, gvks []schema.GroupVersionKind) error {
+	genericCache := syncercache.NewGenericResourceCache(mgr.GetCache())
 	pnc, err := controller.New("clusterpolicy-resources", mgr, controller.Options{
-		Reconciler: genericreconcile.NewClusterPolicyReconciler(mgr.GetClient(), mgr.GetCache()),
+		Reconciler: genericreconcile.NewClusterPolicyReconciler(mgr.GetClient(), genericCache),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not create ClusterPolicy controller")
@@ -54,7 +56,7 @@ func AddClusterPolicy(mgr manager.Manager, gvks []schema.GroupVersionKind) error
 		t.SetGroupVersionKind(gvk)
 		name := fmt.Sprintf("clusterpolicy-resources-%s", gvk)
 		gc, err := controller.New(name, mgr, controller.Options{
-			Reconciler: genericreconcile.NewClusterPolicyReconciler(mgr.GetClient(), mgr.GetCache()),
+			Reconciler: genericreconcile.NewClusterPolicyReconciler(mgr.GetClient(), genericCache),
 		})
 		if err != nil {
 			return errors.Wrapf(err, "could not create %q controller", name)

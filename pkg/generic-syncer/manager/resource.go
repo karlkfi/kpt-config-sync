@@ -23,6 +23,8 @@ import (
 	nomosapischeme "github.com/google/nomos/clientgen/apis/scheme"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/controller"
+	"github.com/google/nomos/pkg/generic-syncer/differ"
+	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -83,7 +85,7 @@ func (r *GenericResourceManager) UpdateSyncResources(syncs []*nomosv1alpha1.Sync
 		return errors.Wrap(err, "could not start GenericResourceManager")
 	}
 	r.register(syncs)
-	return r.startControllers(startErrCh)
+	return r.startControllers(syncs, startErrCh)
 }
 
 // Clear implements RestartableManager.
@@ -101,7 +103,6 @@ func (r *GenericResourceManager) register(syncs []*nomosv1alpha1.Sync) {
 	for gvk := range r.syncEnabled {
 		if !scheme.Recognizes(gvk) {
 			scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
-			// TODO: see if we can avoid akwardly creating a list Kind.
 			gvkList := schema.GroupVersionKind{
 				Group:   gvk.Group,
 				Version: gvk.Version,
@@ -114,13 +115,14 @@ func (r *GenericResourceManager) register(syncs []*nomosv1alpha1.Sync) {
 }
 
 // startControllers starts all the controllers watching sync-enabled resources.
-func (r *GenericResourceManager) startControllers(startErrCh chan error) error {
+func (r *GenericResourceManager) startControllers(syncs []*nomosv1alpha1.Sync, startErrCh chan error) error {
 	namespace, cluster, err := r.resourceScopes()
 	if err != nil {
 		return errors.Wrap(err, "could not get resource scope information from discovery API")
 	}
 
-	if err := controller.AddPolicyNode(r, namespace); err != nil {
+	comparator := differ.NewComparator(syncs, labeling.ResourceManagementKey)
+	if err := controller.AddPolicyNode(r, comparator, namespace); err != nil {
 		return errors.Wrap(err, "could not create PolicyNode controllers")
 	}
 	if err := controller.AddClusterPolicy(r, cluster); err != nil {

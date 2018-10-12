@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package differ contains code for comparing sync-enabled resources, not
-// necessarily known at compile time.
 package differ
 
 import (
@@ -32,16 +30,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// Differ compares sync-enabled resources.
-type Differ struct {
+// Comparator compares sync-enabled resources.
+type Comparator struct {
 	// compareFields contains a list of fields to compare for the corresponding GroupVersionKind.
 	compareFields map[schema.GroupVersionKind][]string
 	// ignoreLabels is a list of labels to ignore when comparing resources.
 	ignoreLabels []string
 }
 
-// NewDiffer returns a new Differ.
-func NewDiffer(syncs []v1alpha1.Sync, ignoreLabels ...string) *Differ {
+// NewComparator returns a new Comparator.
+func NewComparator(syncs []*v1alpha1.Sync, ignoreLabels ...string) *Comparator {
 	compareFields := make(map[schema.GroupVersionKind][]string)
 	for _, s := range syncs {
 		for _, g := range s.Spec.Groups {
@@ -58,7 +56,7 @@ func NewDiffer(syncs []v1alpha1.Sync, ignoreLabels ...string) *Differ {
 		}
 	}
 
-	return &Differ{
+	return &Comparator{
 		compareFields: compareFields,
 		ignoreLabels:  ignoreLabels,
 	}
@@ -66,7 +64,7 @@ func NewDiffer(syncs []v1alpha1.Sync, ignoreLabels ...string) *Differ {
 
 // Equal returns true if the two resources are equivalent according the fields specified in the corresponding Sync,
 // their labels and their annotations.
-func (d *Differ) Equal(lhs *unstructured.Unstructured, rhs *unstructured.Unstructured) bool {
+func (d *Comparator) Equal(lhs *unstructured.Unstructured, rhs *unstructured.Unstructured) bool {
 	gvk := lhs.GroupVersionKind()
 	if rgvk := rhs.GroupVersionKind(); gvk != rgvk {
 		panic(fmt.Errorf("programmatic error: comparing two resources of different group, version, kinds: %s vs %s",
@@ -102,7 +100,7 @@ func (d *Differ) Equal(lhs *unstructured.Unstructured, rhs *unstructured.Unstruc
 }
 
 // copyWithoutIgnoredLabels returns a copy of the object without the Nomos management label.
-func (d *Differ) copyWithoutIgnoredLabels(obj *unstructured.Unstructured) *unstructured.Unstructured {
+func (d *Comparator) copyWithoutIgnoredLabels(obj *unstructured.Unstructured) *unstructured.Unstructured {
 	objCopy := obj.DeepCopy()
 	labels := objCopy.GetLabels()
 	for _, l := range d.ignoreLabels {
