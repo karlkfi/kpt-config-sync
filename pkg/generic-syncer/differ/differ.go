@@ -45,13 +45,14 @@ func NewDiffer(syncs []v1alpha1.Sync, ignoreLabels ...string) *Differ {
 	compareFields := make(map[schema.GroupVersionKind][]string)
 	for _, s := range syncs {
 		for _, g := range s.Spec.Groups {
-			k := g.Kinds
-			for _, v := range k.Versions {
-				gvk := schema.GroupVersionKind{Group: g.Group, Version: v.Version, Kind: k.Kind}
-				if len(v.CompareFields) == 0 {
-					compareFields[gvk] = []string{"spec"}
-				} else {
-					compareFields[gvk] = v.CompareFields
+			for _, k := range g.Kinds {
+				for _, v := range k.Versions {
+					gvk := schema.GroupVersionKind{Group: g.Group, Version: v.Version, Kind: k.Kind}
+					if len(v.CompareFields) == 0 {
+						compareFields[gvk] = []string{"spec"}
+					} else {
+						compareFields[gvk] = v.CompareFields
+					}
 				}
 			}
 		}

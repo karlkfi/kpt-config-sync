@@ -10,14 +10,15 @@ func GroupVersionKinds(syncs ...*nomosv1alpha1.Sync) map[schema.GroupVersionKind
 	gvks := make(map[schema.GroupVersionKind]bool)
 	for _, sync := range syncs {
 		for _, g := range sync.Spec.Groups {
-			k := g.Kinds
-			for _, v := range k.Versions {
-				gvk := schema.GroupVersionKind{
-					Group:   g.Group,
-					Version: v.Version,
-					Kind:    k.Kind,
+			for _, k := range g.Kinds {
+				for _, v := range k.Versions {
+					gvk := schema.GroupVersionKind{
+						Group:   g.Group,
+						Version: v.Version,
+						Kind:    k.Kind,
+					}
+					gvks[gvk] = true
 				}
-				gvks[gvk] = true
 			}
 		}
 	}

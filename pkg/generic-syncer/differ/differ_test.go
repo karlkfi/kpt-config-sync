@@ -29,12 +29,14 @@ func TestDiff(t *testing.T) {
 					Groups: []v1alpha1.SyncGroup{
 						{
 							Group: "rbac.authorization.k8s.io",
-							Kinds: v1alpha1.SyncKind{
-								Kind: "Role",
-								Versions: []v1alpha1.SyncVersion{
-									{
-										Version:       "v1",
-										CompareFields: []string{"rules"},
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
 									},
 								},
 							},
@@ -83,12 +85,14 @@ func TestDiff(t *testing.T) {
 					Groups: []v1alpha1.SyncGroup{
 						{
 							Group: "rbac.authorization.k8s.io",
-							Kinds: v1alpha1.SyncKind{
-								Kind: "Role",
-								Versions: []v1alpha1.SyncVersion{
-									{
-										Version:       "v1",
-										CompareFields: []string{"rules"},
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
 									},
 								},
 							},
@@ -129,11 +133,13 @@ func TestDiff(t *testing.T) {
 					Groups: []v1alpha1.SyncGroup{
 						{
 							Group: "apps",
-							Kinds: v1alpha1.SyncKind{
-								Kind: "Deployment",
-								Versions: []v1alpha1.SyncVersion{
-									{
-										Version: "v1",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Deployment",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version: "v1",
+										},
 									},
 								},
 							},
@@ -172,11 +178,13 @@ func TestDiff(t *testing.T) {
 					Groups: []v1alpha1.SyncGroup{
 						{
 							Group: "apps",
-							Kinds: v1alpha1.SyncKind{
-								Kind: "Deployment",
-								Versions: []v1alpha1.SyncVersion{
-									{
-										Version: "v1",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Deployment",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version: "v1",
+										},
 									},
 								},
 							},
@@ -215,12 +223,14 @@ func TestDiff(t *testing.T) {
 					Groups: []v1alpha1.SyncGroup{
 						{
 							Group: "rbac.authorization.k8s.io",
-							Kinds: v1alpha1.SyncKind{
-								Kind: "Role",
-								Versions: []v1alpha1.SyncVersion{
-									{
-										Version:       "v1",
-										CompareFields: []string{"rules"},
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
 									},
 								},
 							},
@@ -271,12 +281,14 @@ func TestDiff(t *testing.T) {
 					Groups: []v1alpha1.SyncGroup{
 						{
 							Group: "rbac.authorization.k8s.io",
-							Kinds: v1alpha1.SyncKind{
-								Kind: "Role",
-								Versions: []v1alpha1.SyncVersion{
-									{
-										Version:       "v1",
-										CompareFields: []string{"rules"},
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
 									},
 								},
 							},
@@ -328,12 +340,14 @@ func TestDiff(t *testing.T) {
 					Groups: []v1alpha1.SyncGroup{
 						{
 							Group: "rbac.authorization.k8s.io",
-							Kinds: v1alpha1.SyncKind{
-								Kind: "Role",
-								Versions: []v1alpha1.SyncVersion{
-									{
-										Version:       "v1",
-										CompareFields: []string{"rules"},
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
 									},
 								},
 							},
@@ -384,12 +398,14 @@ func TestDiff(t *testing.T) {
 					Groups: []v1alpha1.SyncGroup{
 						{
 							Group: "rbac.authorization.k8s.io",
-							Kinds: v1alpha1.SyncKind{
-								Kind: "Role",
-								Versions: []v1alpha1.SyncVersion{
-									{
-										Version:       "v1",
-										CompareFields: []string{"rules"},
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
 									},
 								},
 							},

@@ -138,7 +138,7 @@ type SyncGroup struct {
 	// Group is the group, for example nomos.dev or rbac.authorization.k8s.io
 	Group string `json:"group"` // group, eg nomos.dev
 	// Kinds represents kinds from the Group.
-	Kinds SyncKind `json:"kinds"`
+	Kinds []SyncKind `json:"kinds"`
 }
 
 // SyncKind represents the spec for a Kind of object we are syncing.

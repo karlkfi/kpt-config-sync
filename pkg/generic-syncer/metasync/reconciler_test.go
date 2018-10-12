@@ -55,33 +55,39 @@ func TestReconcile(t *testing.T) {
 							Groups: []nomosv1alpha1.SyncGroup{
 								{
 									Group: "",
-									Kinds: nomosv1alpha1.SyncKind{
-										Kind: "ConfigMap",
-										Versions: []nomosv1alpha1.SyncVersion{
-											{
-												Version: "v1",
+									Kinds: []nomosv1alpha1.SyncKind{
+										{
+											Kind: "ConfigMap",
+											Versions: []nomosv1alpha1.SyncVersion{
+												{
+													Version: "v1",
+												},
 											},
 										},
 									},
 								},
 								{
 									Group: "",
-									Kinds: nomosv1alpha1.SyncKind{
-										Kind: "Deployment",
-										Versions: []nomosv1alpha1.SyncVersion{
-											{
-												Version: "v1",
+									Kinds: []nomosv1alpha1.SyncKind{
+										{
+											Kind: "Deployment",
+											Versions: []nomosv1alpha1.SyncVersion{
+												{
+													Version: "v1",
+												},
 											},
 										},
 									},
 								},
 								{
 									Group: "rbac.authorization.k8s.io",
-									Kinds: nomosv1alpha1.SyncKind{
-										Kind: "Role",
-										Versions: []nomosv1alpha1.SyncVersion{
-											{
-												Version: "v1",
+									Kinds: []nomosv1alpha1.SyncKind{
+										{
+											Kind: "Role",
+											Versions: []nomosv1alpha1.SyncVersion{
+												{
+													Version: "v1",
+												},
 											},
 										},
 									},
@@ -100,33 +106,39 @@ func TestReconcile(t *testing.T) {
 						Groups: []nomosv1alpha1.SyncGroup{
 							{
 								Group: "",
-								Kinds: nomosv1alpha1.SyncKind{
-									Kind: "ConfigMap",
-									Versions: []nomosv1alpha1.SyncVersion{
-										{
-											Version: "v1",
+								Kinds: []nomosv1alpha1.SyncKind{
+									{
+										Kind: "ConfigMap",
+										Versions: []nomosv1alpha1.SyncVersion{
+											{
+												Version: "v1",
+											},
 										},
 									},
 								},
 							},
 							{
 								Group: "",
-								Kinds: nomosv1alpha1.SyncKind{
-									Kind: "Deployment",
-									Versions: []nomosv1alpha1.SyncVersion{
-										{
-											Version: "v1",
+								Kinds: []nomosv1alpha1.SyncKind{
+									{
+										Kind: "Deployment",
+										Versions: []nomosv1alpha1.SyncVersion{
+											{
+												Version: "v1",
+											},
 										},
 									},
 								},
 							},
 							{
 								Group: "rbac.authorization.k8s.io",
-								Kinds: nomosv1alpha1.SyncKind{
-									Kind: "Role",
-									Versions: []nomosv1alpha1.SyncVersion{
-										{
-											Version: "v1",
+								Kinds: []nomosv1alpha1.SyncKind{
+									{
+										Kind: "Role",
+										Versions: []nomosv1alpha1.SyncVersion{
+											{
+												Version: "v1",
+											},
 										},
 									},
 								},
@@ -175,33 +187,39 @@ func TestReconcile(t *testing.T) {
 							Groups: []nomosv1alpha1.SyncGroup{
 								{
 									Group: "",
-									Kinds: nomosv1alpha1.SyncKind{
-										Kind: "ConfigMap",
-										Versions: []nomosv1alpha1.SyncVersion{
-											{
-												Version: "v1",
+									Kinds: []nomosv1alpha1.SyncKind{
+										{
+											Kind: "ConfigMap",
+											Versions: []nomosv1alpha1.SyncVersion{
+												{
+													Version: "v1",
+												},
 											},
 										},
 									},
 								},
 								{
 									Group: "",
-									Kinds: nomosv1alpha1.SyncKind{
-										Kind: "Deployment",
-										Versions: []nomosv1alpha1.SyncVersion{
-											{
-												Version: "v1",
+									Kinds: []nomosv1alpha1.SyncKind{
+										{
+											Kind: "Deployment",
+											Versions: []nomosv1alpha1.SyncVersion{
+												{
+													Version: "v1",
+												},
 											},
 										},
 									},
 								},
 								{
 									Group: "rbac.authorization.k8s.io",
-									Kinds: nomosv1alpha1.SyncKind{
-										Kind: "Role",
-										Versions: []nomosv1alpha1.SyncVersion{
-											{
-												Version: "v1",
+									Kinds: []nomosv1alpha1.SyncKind{
+										{
+											Kind: "Role",
+											Versions: []nomosv1alpha1.SyncVersion{
+												{
+													Version: "v1",
+												},
 											},
 										},
 									},
@@ -298,11 +316,13 @@ func sync(group, version, kind string, state nomosv1alpha1.SyncState) nomosv1alp
 			Groups: []nomosv1alpha1.SyncGroup{
 				{
 					Group: group,
-					Kinds: nomosv1alpha1.SyncKind{
-						Kind: kind,
-						Versions: []nomosv1alpha1.SyncVersion{
-							{
-								Version: version,
+					Kinds: []nomosv1alpha1.SyncKind{
+						{
+							Kind: kind,
+							Versions: []nomosv1alpha1.SyncVersion{
+								{
+									Version: version,
+								},
 							},
 						},
 					},
