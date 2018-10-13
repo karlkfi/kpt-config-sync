@@ -29,22 +29,15 @@ import (
 )
 
 func withNamespaceSelector(o runtime.Object, selector string) runtime.Object {
-	return annotate(o, v1alpha1.NamespaceSelectorAnnotationKey, selector)
+	return annotate(o.(metav1.Object), v1alpha1.NamespaceSelectorAnnotationKey, selector).(runtime.Object)
 }
 
 func withClusterSelector(o runtime.Object, selector string) runtime.Object {
-	return annotate(o, v1alpha1.ClusterSelectorAnnotationKey, selector)
+	return annotate(o.(metav1.Object), v1alpha1.ClusterSelectorAnnotationKey, selector).(runtime.Object)
 }
 
-func annotate(o runtime.Object, key, annotation string) runtime.Object {
-	m := o.(metav1.Object)
-	a := m.GetAnnotations()
-	if a == nil {
-		a = make(map[string]string)
-	}
-	a[key] = annotation
-	m.SetAnnotations(a)
-	return o
+func withClusterName(o runtime.Object, name string) runtime.Object {
+	return annotate(o.(metav1.Object), v1alpha1.ClusterNameAnnotationKey, name).(runtime.Object)
 }
 
 func toJSON(s interface{}) string {
@@ -78,11 +71,14 @@ var selectors = []v1alpha1.ClusterSelector{
 }
 var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.CheckingVisitor {
-		cs, err := NewClusterSelectors(clusters, selectors)
+		return NewAnnotationInlinerVisitor()
+	},
+	InitRoot: func(r *ast.Root) {
+		cs, err := NewClusterSelectors(clusters, selectors, "")
 		if err != nil {
 			panic(err)
 		}
-		return NewAnnotationInlinerVisitor(cs)
+		SetClusterSelector(cs, r)
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
@@ -143,33 +139,6 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 						"prod":      &prodNamespaceSelector,
 						"sensitive": &sensitiveNamespaceSelector,
 					},
-				},
-			},
-		},
-		{
-			Name: "inline multiple objects (cluster selector)",
-			Input: &ast.Root{
-				Tree: &ast.TreeNode{
-					Type: ast.AbstractNamespace,
-					Path: "namespaces",
-					Objects: vt.ObjectSets(
-						withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-1"),
-						withClusterSelector(vt.Helper.PodReaderRole(), "sel-1"),
-						withClusterSelector(vt.Helper.AcmeResourceQuota(), "sel-2"),
-					),
-				},
-			},
-			ExpectOutput: &ast.Root{
-				Tree: &ast.TreeNode{
-					Type: ast.AbstractNamespace,
-					Path: "namespaces",
-					Objects: vt.ObjectSets(
-						withClusterSelector(
-							vt.Helper.AdminRoleBinding(), toJSON(selectors[0])),
-						withClusterSelector(
-							vt.Helper.PodReaderRole(), toJSON(selectors[0])),
-						withClusterSelector(vt.Helper.AcmeResourceQuota(), toJSON(selectors[1])),
-					),
 				},
 			},
 		},
@@ -316,15 +285,18 @@ func TestNamespaceSelectorAnnotationInlinerVisitor(t *testing.T) {
 func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 	tests := vt.MutatingVisitorTestcases{
 		VisitorCtor: func() ast.CheckingVisitor {
-			cs, err := NewClusterSelectors(clusters, selectors)
+			return NewAnnotationInlinerVisitor()
+		},
+		InitRoot: func(r *ast.Root) {
+			cs, err := NewClusterSelectors(clusters, selectors, "cluster-1")
 			if err != nil {
 				panic(err)
 			}
-			return NewAnnotationInlinerVisitor(cs)
+			SetClusterSelector(cs, r)
 		},
 		Testcases: []vt.MutatingVisitorTestcase{
 			{
-				Name: "inline namespace annotations",
+				Name: "inline cluster selector annotation",
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: ast.AbstractNamespace,
@@ -340,6 +312,7 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 						Path: "namespaces",
 						Annotations: map[string]string{
 							v1alpha1.ClusterSelectorAnnotationKey: toJSON(selectors[0]),
+							v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
 						},
 					},
 				},
@@ -353,6 +326,9 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 						Objects: vt.ObjectSets(
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-1"),
 						),
+						Annotations: map[string]string{
+							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+						},
 					},
 				},
 				ExpectOutput: &ast.Root{
@@ -360,8 +336,16 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 						Type: ast.AbstractNamespace,
 						Path: "namespaces",
 						Objects: vt.ObjectSets(
-							withClusterSelector(vt.Helper.AdminRoleBinding(), toJSON(selectors[0])),
+							withClusterName(
+								withClusterSelector(
+									vt.Helper.AdminRoleBinding(),
+									toJSON(selectors[0])),
+								"cluster-1"),
 						),
+						Annotations: map[string]string{
+							v1alpha1.ClusterSelectorAnnotationKey: toJSON(selectors[0]),
+							v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+						},
 					},
 				},
 			},
@@ -374,8 +358,10 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 						Objects: vt.ObjectSets(
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-1"),
 							withClusterSelector(vt.Helper.PodReaderRole(), "sel-1"),
-							withClusterSelector(vt.Helper.AcmeResourceQuota(), "sel-2"),
 						),
+						Annotations: map[string]string{
+							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+						},
 					},
 				},
 				ExpectOutput: &ast.Root{
@@ -383,12 +369,15 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 						Type: ast.AbstractNamespace,
 						Path: "namespaces",
 						Objects: vt.ObjectSets(
-							withClusterSelector(
-								vt.Helper.AdminRoleBinding(), toJSON(selectors[0])),
-							withClusterSelector(
-								vt.Helper.PodReaderRole(), toJSON(selectors[0])),
-							withClusterSelector(vt.Helper.AcmeResourceQuota(), toJSON(selectors[1])),
+							withClusterName(withClusterSelector(
+								vt.Helper.AdminRoleBinding(), toJSON(selectors[0])), "cluster-1"),
+							withClusterName(withClusterSelector(
+								vt.Helper.PodReaderRole(), toJSON(selectors[0])), "cluster-1"),
 						),
+						Annotations: map[string]string{
+							v1alpha1.ClusterSelectorAnnotationKey: toJSON(selectors[0]),
+							v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+						},
 					},
 				},
 			},

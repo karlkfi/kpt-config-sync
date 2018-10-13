@@ -19,6 +19,7 @@ package transform
 import (
 	"encoding/json"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -34,7 +35,10 @@ import (
 // - nomos.dev/namespace-selector: sre-supported
 // - nomos.dev/cluster-selector: production
 //
-// Sample inlining replaces
+// nomos.dev/namespace-selector: sre-supported
+//
+// Would be inlined to:
+//
 // nomos.dev/namespace-selector: {\"kind\": \"NamespaceSelector\",..}
 // where the replacement is the NamespaceSelector named "sre-supported", in
 // JSON format.
@@ -48,18 +52,33 @@ type AnnotationInlinerVisitor struct {
 	errs multierror.Builder
 	// Used to inline cluster selector annotations.  It is created anew for each traversal.
 	clusterSelectorTransformer annotationTransformer
+	// selectors contains the cluster selection data.
+	selectors *ClusterSelectors
 }
 
 var _ ast.Visitor = &AnnotationInlinerVisitor{}
 
 // NewAnnotationInlinerVisitor returns a new AnnotationInlinerVisitor. cs is the
 // cluster selector to use for inlining.
-func NewAnnotationInlinerVisitor(cs *ClusterSelectors) *AnnotationInlinerVisitor {
+func NewAnnotationInlinerVisitor() *AnnotationInlinerVisitor {
 	v := &AnnotationInlinerVisitor{
 		Copying: visitor.NewCopying(),
 	}
 	v.SetImpl(v)
+	return v
+}
 
+// Error implements CheckingVisitor
+func (v *AnnotationInlinerVisitor) Error() error {
+	return v.errs.Build()
+}
+
+// VisitRoot implements ast.Visitor.
+func (v *AnnotationInlinerVisitor) VisitRoot(r *ast.Root) ast.Node {
+	glog.V(5).Infof("VisitRoot(): ENTER")
+	defer glog.V(6).Infof("VisitRoot(): EXIT")
+	cs := GetClusterSelectors(r)
+	v.selectors = cs
 	// Add inliner map for cluster annotations.
 	t := annotationTransformer{}
 	m := valueMap{}
@@ -74,26 +93,13 @@ func NewAnnotationInlinerVisitor(cs *ClusterSelectors) *AnnotationInlinerVisitor
 	})
 	t.addMappingForKey(v1alpha1.ClusterSelectorAnnotationKey, m)
 	v.clusterSelectorTransformer = t
-	return v
-}
-
-// Error implements CheckingVisitor
-func (v *AnnotationInlinerVisitor) Error() error {
-	return v.errs.Build()
-}
-
-// VisitReservedNamespaces implements Visitor
-func (v *AnnotationInlinerVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
-	return r
-}
-
-// VisitCluster implements Visitor
-func (v *AnnotationInlinerVisitor) VisitCluster(c *ast.Cluster) ast.Node {
-	return c
+	return v.Copying.VisitRoot(r)
 }
 
 // VisitTreeNode implements Visitor
 func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
+	glog.V(5).Infof("VisitTreeNode(): ENTER")
+	defer glog.V(6).Infof("VisitTreeNode(): EXIT")
 	n = n.PartialCopy()
 	m := valueMap{}
 	for k, s := range n.Selectors {
@@ -117,13 +123,16 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	v.nsTransformer = annotationTransformer{}
 	v.nsTransformer.addMappingForKey(v1alpha1.NamespaceSelectorAnnotationKey, m)
 	if err := v.clusterSelectorTransformer.transform(n); err != nil {
-		v.errs.Add(errors.Errorf("failed to inline ClusterSelector for node %q", n.Path))
+		v.errs.Add(errors.Wrapf(err, "failed to inline ClusterSelector for node %q", n.Path))
 	}
-	return v.Copying.VisitTreeNode(n).(*ast.TreeNode)
+	annotatePopulated(n, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
+	return v.Copying.VisitTreeNode(n)
 }
 
 // VisitObject implements Visitor
 func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
+	glog.V(5).Infof("VisitObject(): ENTER")
+	defer glog.V(6).Infof("VisitObject(): EXIT")
 	newObject := v.Copying.VisitObject(o).(*ast.NamespaceObject)
 	m := newObject.ToMeta()
 	if err := v.nsTransformer.transform(m); err != nil {
@@ -132,5 +141,19 @@ func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) ast.Node 
 	if err := v.clusterSelectorTransformer.transform(m); err != nil {
 		v.errs.Add(errors.Wrapf(err, "failed to inline cluster selector annotations for object %q", m.GetName()))
 	}
+	annotatePopulated(m, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
+	return newObject
+}
+
+// VisitClusterObject implements Visitor
+func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+	glog.V(5).Infof("VisitClusterObject(): ENTER")
+	defer glog.V(6).Infof("VisitClusterObject(): EXIT")
+	newObject := o.DeepCopy()
+	m := newObject.ToMeta()
+	if err := v.clusterSelectorTransformer.transform(m); err != nil {
+		v.errs.Add(errors.Wrapf(err, "failed to inline cluster selector annotations for object %q", m.GetName()))
+	}
+	annotatePopulated(m, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject
 }

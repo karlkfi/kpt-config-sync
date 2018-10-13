@@ -27,6 +27,9 @@ const (
 
 	// ClusterSelectorAnnotationKey is the annotation key set on policy resources that refers to the name of the ClusterSelector resource.
 	ClusterSelectorAnnotationKey = "nomos.dev/cluster-selector"
+
+	// ClusterNameAnnotationKey is the annotation key set on policy resources that refers to the name of the cluster that the selectors are applied for.
+	ClusterNameAnnotationKey = "nomos.dev/cluster-name"
 )
 
 // InputAnnotations is a map of annotations that are valid to exist on objects when imported from
@@ -34,4 +37,16 @@ const (
 var InputAnnotations = map[string]struct{}{
 	NamespaceSelectorAnnotationKey: {},
 	ClusterSelectorAnnotationKey:   {},
+}
+
+var nomosAnnotations = map[string]bool{
+	NamespaceSelectorAnnotationKey: true,
+	SourcePathAnnotationKey:        true,
+	ClusterSelectorAnnotationKey:   true,
+	ClusterNameAnnotationKey:       true,
+}
+
+// IsAnnotation returns true if the annotation is a nomos system annotation.
+func IsAnnotation(a string) bool {
+	return nomosAnnotations[a]
 }

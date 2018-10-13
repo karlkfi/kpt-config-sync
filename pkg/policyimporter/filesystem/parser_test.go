@@ -24,7 +24,7 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
@@ -38,6 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
 const (
@@ -46,14 +47,18 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{.Name}}
-{{if .Labels}}  labels:
-{{range $k,$v := .Labels}}    {{$k}}: {{$v}}
-{{end}}
-{{end}}
-{{if .Annotations}}  annotations:
-{{range $k,$v := .Annotations}}    {{$k}}: {{$v}}
-{{end}}
-{{end}}
+{{- if .Annotations}}
+  annotations:
+  {{range $k, $v := .Annotations}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{- end}}
+{{- if .Labels}}
+  labels:
+  {{- range $k, $v := .Labels}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{- end}}
 `
 
 	aNamespaceWithLabelsAndAnnotationsTemplate = `
@@ -98,6 +103,18 @@ rules:
   resources: ["jobs"]
   verbs:
    - "*"
+{{- if .Annotations}}
+  annotations:
+  {{range $k, $v := .Annotations}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{end}}
+{{- if .Labels}}
+  labels:
+  {{range $k, $v := .Labels}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{- end}}
 `
 
 	aRoleBindingTemplate = `
@@ -106,6 +123,18 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creators{{.ID}}
   namespace: {{.Namespace}}
+{{- if .Annotations}}
+  annotations:
+  {{- range $k, $v := .Annotations}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{- end}}
+{{- if .Labels}}
+  labels:
+  {{range $k, $v := .Labels}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{- end}}
 subjects:
 - kind: Group
   name: bob@acme.com
@@ -139,6 +168,18 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creator{{.ID}}
+{{- if .Annotations}}
+  annotations:
+  {{range $k, $v := .Annotations}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{end}}
+{{- if .Labels}}
+  labels:
+  {{range $k, $v := .Labels}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{end}}
 rules:
 - apiGroups: ["batch/v1"]
   resources: ["jobs"]
@@ -152,6 +193,18 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creators{{.ID}}
   namespace: {{.Namespace}}
+{{- if .Annotations}}
+  annotations:
+  {{- range $k, $v := .Annotations}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{- end}}
+{{- if .Labels}}
+  labels:
+  {{range $k, $v := .Labels}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{- end}}
 subjects:
 - kind: Group
   name: bob@acme.com
@@ -248,6 +301,30 @@ kind: Node
 metadata:
   name: gke-1234
 `
+
+	aClusterRegistryClusterTemplate = `
+apiVersion: clusterregistry.k8s.io/v1alpha1
+kind: Cluster
+metadata:
+  name: {{.Name}}
+{{- if .Labels}}
+  labels:
+  {{- range $k, $v := .Labels}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{- end -}}
+`
+
+	aClusterSelectorTemplate = `
+apiVersion: nomos.dev/v1alpha1
+kind: ClusterSelector
+metadata:
+  name: {{.Name}}
+spec:
+  selector:
+    matchLabels:
+      environment: prod
+`
 )
 
 var (
@@ -266,8 +343,12 @@ var (
 	aSync                              = template.Must(template.New("aSync").Parse(aSyncTemplate))
 	aPhilo                             = template.Must(template.New("aPhilo").Parse(aPhiloTemplate))
 	aNode                              = template.Must(template.New("aNode").Parse(aNodeTemplate))
+	aClusterRegistryCluster            = template.Must(template.New("aClusterRegistryCluster").Parse(aClusterRegistryClusterTemplate))
+	aClusterSelector                   = template.Must(template.New("aClusterSelector").Parse(aClusterSelectorTemplate))
 )
 
+// templateData can be used to format any of the below values into templates to create
+// a repository file set.
 type templateData struct {
 	ID, Name, Namespace, Attribute, Group, Version, Kind, LBPName string
 	Labels, Annotations                                           map[string]string
@@ -311,6 +392,63 @@ func (d testDir) createTestFile(path, contents string) {
 	if err := ioutil.WriteFile(path, []byte(contents), 0644); err != nil {
 		d.Fatalf("error creating test file %s: %v", path, err)
 	}
+}
+
+// Functions below produce typed K8S objects based on values in templateData.
+
+func decoder() runtime.Decoder {
+	scheme := runtime.NewScheme()
+	// Ensure that all API versions we care about are added here.
+	corev1.AddToScheme(scheme)
+	rbacv1.AddToScheme(scheme)
+	v1.AddToScheme(scheme)
+	v1alpha1.AddToScheme(scheme)
+
+	cf := serializer.NewCodecFactory(scheme)
+	return cf.UniversalDeserializer()
+}
+
+// mustParse parses a serialized YAML string.
+func mustParse(s string, o runtime.Object) {
+	if _, _, err := decoder().Decode([]byte(s), nil, o); err != nil {
+		panic(errors.Wrapf(err, "while unmarshalling: %q into: %T", s, o))
+	}
+}
+
+// rb creates a typed role binding from a template.
+func rb(d templateData) rbacv1.RoleBinding {
+	s := d.apply(aRoleBinding)
+	var o rbacv1.RoleBinding
+	mustParse(s, &o)
+	return o
+}
+
+func rbs(ds ...templateData) []rbacv1.RoleBinding {
+	var o []rbacv1.RoleBinding
+	for _, d := range ds {
+		o = append(o, rb(d))
+	}
+	return o
+}
+
+func crb(d templateData) rbacv1.ClusterRoleBinding {
+	cp := crbPtr(d)
+	return *cp
+}
+
+func crbPtr(d templateData) *rbacv1.ClusterRoleBinding {
+	s := d.apply(aClusterRoleBinding)
+	var o rbacv1.ClusterRoleBinding
+	mustParse(s, &o)
+	return &o
+}
+
+func crbs(ds ...templateData) []rbacv1.ClusterRoleBinding {
+	var o []rbacv1.ClusterRoleBinding
+	for _, d := range ds {
+		o = append(o, crb(d))
+	}
+	return o
 }
 
 type Policies struct {
@@ -429,6 +567,13 @@ func createRootPN(
 	return pn
 }
 
+func createAnnotatedRootPN(policies *Policies, annotations map[string]string) v1.PolicyNode {
+	pn := createPolicyNode(v1.RootPolicyNodeName, v1.NoParentNamespace, v1.Policyspace, policies)
+	pn.Annotations = annotations
+	pn.Annotations[v1alpha1.SourcePathAnnotationKey] = "namespaces"
+	return pn
+}
+
 func createClusterPolicy() *v1.ClusterPolicy {
 	return policynode.NewClusterPolicy(v1.ClusterPolicyName,
 		&v1.ClusterPolicySpec{})
@@ -533,6 +678,8 @@ type parserTestCase struct {
 	expectedNumClusterPolicies *int
 	expectedSyncs              map[string]v1alpha1.Sync
 	expectedError              bool
+	// Installation side cluster name.
+	clusterName string
 }
 
 var parserTestCases = []parserTestCase{
@@ -781,9 +928,16 @@ var parserTestCases = []parserTestCase{
 								Objects: []runtime.RawExtension{
 									{
 										Object: runtime.Object(&appsv1.Deployment{
+											TypeMeta: metav1.TypeMeta{
+												Kind:       "Deployment",
+												APIVersion: "apps/v1",
+											},
 											ObjectMeta: metav1.ObjectMeta{
 												Name:      "nginx-deployment",
 												Namespace: "bar",
+												Annotations: map[string]string{
+													v1alpha1.SourcePathAnnotationKey: "namespaces/bar/deployment.yaml",
+												},
 											},
 											Spec: appsv1.DeploymentSpec{
 												Replicas: toInt32Pointer(3),
@@ -1369,80 +1523,707 @@ spec:
 	},
 }
 
+func (tc *parserTestCase) Run(t *testing.T) {
+	d := newTestDir(t, tc.root)
+	defer d.remove()
+
+	// Used in per-cluster addressing tests.  If undefined should mean
+	// the behavior does not change with respect to "regular" state.
+	os.Setenv("CLUSTER_NAME", tc.clusterName)
+	defer os.Unsetenv("CLUSTER_NAME")
+
+	for k, v := range tc.testFiles {
+		d.createTestFile(k, v)
+	}
+
+	f := fstesting.NewTestFactory()
+	defer func() {
+		if err := f.Cleanup(); err != nil {
+			t.Fatal(errors.Wrap(err, "could not clean up"))
+		}
+	}()
+
+	p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestDynamicResources()), true, d.rootDir}
+
+	actualPolicies, err := p.Parse(d.rootDir)
+	if tc.expectedError {
+		if err != nil {
+			return
+		}
+		t.Fatalf("Expected error but got none")
+	}
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if actualPolicies == nil {
+		t.Fatalf("actualPolicies is nil")
+	}
+
+	if len(tc.expectedNumPolicies) > 0 {
+		n := make(map[string]int)
+		for k, v := range actualPolicies.PolicyNodes {
+			n[k] = 0
+			for _, res := range v.Spec.Resources {
+				for _, version := range res.Versions {
+					n[k] += len(version.Objects)
+				}
+			}
+		}
+		if !cmp.Equal(n, tc.expectedNumPolicies, Options()...) {
+			t.Errorf("Actual and expected number of policy nodes didn't match: %v", cmp.Diff(n, tc.expectedNumPolicies, Options()...))
+		}
+	}
+
+	if tc.expectedNumClusterPolicies != nil {
+		p := actualPolicies.ClusterPolicy.Spec
+		n := 0
+		for _, res := range p.Resources {
+			for _, version := range res.Versions {
+				n += len(version.Objects)
+			}
+		}
+		if !cmp.Equal(n, *tc.expectedNumClusterPolicies, Options()...) {
+			t.Errorf("Actual and expected number of cluster policies didn't match: %v", cmp.Diff(n, *tc.expectedNumClusterPolicies, Options()...))
+		}
+
+		if tc.expectedPolicyNodes != nil || tc.expectedClusterPolicy != nil || tc.expectedSyncs != nil {
+			expectedPolicies := &v1.AllPolicies{
+				PolicyNodes:   tc.expectedPolicyNodes,
+				ClusterPolicy: tc.expectedClusterPolicy,
+				Syncs:         tc.expectedSyncs,
+			}
+			if !cmp.Equal(actualPolicies, expectedPolicies, Options()...) {
+				t.Errorf("Actual and expected policies didn't match: diff\n%v", cmp.Diff(actualPolicies, expectedPolicies, Options()...))
+			}
+		}
+	}
+}
+
 func TestParser(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(tc.testName, func(t *testing.T) {
-			d := newTestDir(t, tc.root)
-			defer d.remove()
+		t.Run(tc.testName, tc.Run)
+	}
+}
 
-			for k, v := range tc.testFiles {
-				d.createTestFile(k, v)
-			}
+// TestParserPerClusterAddressing contains tests cases that use the per-cluster
+// addressing feature.  These test cases have been factored out into a separate
+// test function since the baseline setup is a bit long, and it gets stenciled
+// several times over.
+func TestParserPerClusterAddressing(t *testing.T) {
+	tests := []parserTestCase{
+		{
+			// Baseline test case: the selector matches the cluster labels, and
+			// all resources are targeted to that selector.  This should yield
+			// a set of policy documents that are all present and all fully
+			// annotated as appropriate.
+			testName:    "Cluster filter, all resources selected",
+			root:        "foo",
+			clusterName: "cluster-1",
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/nomos.yaml":              aNomosConfig,
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 
-			f := fstesting.NewTestFactory()
-			defer func() {
-				if err := f.Cleanup(); err != nil {
-					t.Fatal(errors.Wrap(err, "could not clean up"))
-				}
-			}()
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name: "sel-1",
+				}.apply(aClusterSelector),
 
-			p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestDynamicResources()), true, d.rootDir}
+				// Tree dir
+				"namespaces/bar/bar.yaml": templateData{
+					Name: "bar",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aNamespace),
+				"namespaces/bar/rolebinding.yaml": templateData{
+					Name:      "role",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aRoleBinding),
 
-			actualPolicies, err := p.Parse(d.rootDir)
-			if tc.expectedError {
-				if err != nil {
-					return
-				}
-				t.Fatalf("Expected error but got none")
-			}
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
+				// Cluster dir (cluster scoped objects).
+				"cluster/crb1.yaml": templateData{
+					ID: "1",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aClusterRoleBinding),
+			},
+			expectedClusterPolicy: policynode.NewClusterPolicy(
+				v1.ClusterPolicyName,
+				&v1.ClusterPolicySpec{
+					ClusterRoleBindingsV1: []rbacv1.ClusterRoleBinding{
+						{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: "rbac.authorization.k8s.io/v1",
+								Kind:       "ClusterRoleBinding",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "job-creators1",
+								Annotations: map[string]string{
+									v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+									v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
+									v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+								},
+							},
+							Subjects: []rbacv1.Subject{{
+								Kind:     "Group",
+								APIGroup: "rbac.authorization.k8s.io",
+								Name:     "bob@acme.com",
+							},
+							},
+							RoleRef: rbacv1.RoleRef{
+								Kind:     "ClusterRole",
+								APIGroup: "rbac.authorization.k8s.io",
+								Name:     "job-creator",
+							},
+						},
+					},
+					Resources: []v1.GenericResources{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kind:  "ClusterRoleBinding",
+							Versions: []v1.GenericVersionResources{
+								{
+									Version: "v1",
+									Objects: []runtime.RawExtension{
+										{
+											Object: runtime.Object(
+												&rbacv1.ClusterRoleBinding{
+													TypeMeta: metav1.TypeMeta{
+														APIVersion: "rbac.authorization.k8s.io/v1",
+														Kind:       "ClusterRoleBinding",
+													},
+													ObjectMeta: metav1.ObjectMeta{
+														Name: "job-creators1",
+														Annotations: map[string]string{
+															v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+															v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
+															v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+														},
+													},
+													Subjects: []rbacv1.Subject{{
+														Kind:     "Group",
+														APIGroup: "rbac.authorization.k8s.io",
+														Name:     "bob@acme.com",
+													},
+													},
+													RoleRef: rbacv1.RoleRef{
+														Kind:     "ClusterRole",
+														APIGroup: "rbac.authorization.k8s.io",
+														Name:     "job-creator",
+													},
+												},
+											),
+										},
+									},
+								},
+							},
+						},
+					},
+				}),
+			expectedPolicyNodes: map[string]v1.PolicyNode{
+				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+					}),
+				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
+					&Policies{
+						RoleBindingsV1: []rbacv1.RoleBinding{
+							{
+								TypeMeta: metav1.TypeMeta{
+									APIVersion: "rbac.authorization.k8s.io/v1",
+									Kind:       "RoleBinding",
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "job-creators",
+									Namespace: "bar",
+									Annotations: map[string]string{
+										v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+										v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+										v1alpha1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
+									},
+								},
+								Subjects: []rbacv1.Subject{{
+									Kind:     "Group",
+									APIGroup: "rbac.authorization.k8s.io",
+									Name:     "bob@acme.com",
+								},
+								},
+								RoleRef: rbacv1.RoleRef{
+									Kind:     "Role",
+									APIGroup: "rbac.authorization.k8s.io",
+									Name:     "job-creator",
+								},
+							},
+						},
+					},
+					/* Labels */
+					nil,
+					/* Annotations */
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+					}),
+			},
+		},
+		{
+			// When cluster selector doesn't match, nothing (except for top-level dir) is created.
+			testName: "Cluster filter, no resources selected",
+			root:     "foo",
+			// Note that cluster-2 is not part of the selector.
+			clusterName: "cluster-2",
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/nomos.yaml":              aNomosConfig,
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 
-			if actualPolicies == nil {
-				t.Fatalf("actualPolicies is nil")
-			}
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name: "sel-1",
+				}.apply(aClusterSelector),
 
-			if len(tc.expectedNumPolicies) > 0 {
-				n := make(map[string]int)
-				for k, v := range actualPolicies.PolicyNodes {
-					n[k] = 0
-					for _, res := range v.Spec.Resources {
-						for _, version := range res.Versions {
-							n[k] += len(version.Objects)
-						}
-					}
-				}
-				if diff := deep.Equal(n, tc.expectedNumPolicies); diff != nil {
-					t.Errorf("Actual and expected number of policy nodes didn't match: %v", diff)
-				}
-			}
+				// Tree dir
+				"namespaces/bar/bar.yaml": templateData{
+					Name: "bar",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aNamespace),
+				"namespaces/bar/rolebinding.yaml": templateData{
+					Name:      "role",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aRoleBinding),
 
-			if tc.expectedNumClusterPolicies != nil {
-				p := actualPolicies.ClusterPolicy.Spec
-				n := 0
-				for _, res := range p.Resources {
-					for _, version := range res.Versions {
-						n += len(version.Objects)
-					}
-				}
-				if diff := deep.Equal(n, *tc.expectedNumClusterPolicies); diff != nil {
-					t.Errorf("Actual and expected number of cluster policies didn't match: %v", diff)
-				}
-			}
+				// Cluster dir (cluster scoped objects).
+				"cluster/crb1.yaml": templateData{
+					ID: "1",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aClusterRoleBinding),
+			},
+			expectedClusterPolicy: policynode.NewClusterPolicy(
+				v1.ClusterPolicyName,
+				&v1.ClusterPolicySpec{}),
+			expectedPolicyNodes: map[string]v1.PolicyNode{
+				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-2",
+					}),
+			},
+		},
+		{
+			// This shows how a namespace scoped resource doesn't get synced if
+			// its selector does not match.
+			testName:    "Namespace resource selector does not match",
+			root:        "foo",
+			clusterName: "cluster-1",
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/nomos.yaml":              aNomosConfig,
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 
-			if tc.expectedPolicyNodes != nil || tc.expectedClusterPolicy != nil || tc.expectedSyncs != nil {
-				expectedPolicies := &v1.AllPolicies{
-					PolicyNodes:   tc.expectedPolicyNodes,
-					ClusterPolicy: tc.expectedClusterPolicy,
-					Syncs:         tc.expectedSyncs,
-				}
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name: "sel-1",
+				}.apply(aClusterSelector),
 
-				if diff := deep.Equal(actualPolicies, expectedPolicies); diff != nil {
-					t.Errorf("Actual and expected policies didn't match: %v", diff)
-				}
-			}
-		})
+				// Tree dir
+				"namespaces/bar/bar.yaml": templateData{
+					Name: "bar",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aNamespace),
+				// This role binding is targeted to a different selector.
+				"namespaces/bar/rolebinding.yaml": templateData{
+					Name:      "role",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-2",
+					},
+				}.apply(aRoleBinding),
+
+				// Cluster dir (cluster scoped objects).
+				"cluster/crb1.yaml": templateData{
+					ID: "1",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aClusterRoleBinding),
+			},
+			expectedClusterPolicy: policynode.NewClusterPolicy(
+				v1.ClusterPolicyName,
+				&v1.ClusterPolicySpec{
+					ClusterRoleBindingsV1: crbs(
+						templateData{
+							Name: "1",
+							Annotations: map[string]string{
+								v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+								v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
+								v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+							},
+						},
+					),
+					Resources: []v1.GenericResources{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kind:  "ClusterRoleBinding",
+							Versions: []v1.GenericVersionResources{
+								{
+									Version: "v1",
+									Objects: []runtime.RawExtension{
+										{
+											Object: runtime.Object(
+												crbPtr(templateData{
+													Name: "1",
+													Annotations: map[string]string{
+														v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+														v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
+														v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+													},
+												}),
+											),
+										},
+									},
+								},
+							},
+						},
+					},
+				}),
+			expectedPolicyNodes: map[string]v1.PolicyNode{
+				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+					}),
+				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
+					&Policies{},
+					/* Labels */
+					nil,
+					/* Annotations */
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+					}),
+			},
+		},
+		{
+			testName:    "If namespace is not selected, its resources are not selected either.",
+			root:        "foo",
+			clusterName: "cluster-1",
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/nomos.yaml":              aNomosConfig,
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name: "sel-1",
+				}.apply(aClusterSelector),
+
+				// Tree dir
+				// Note the whole namespace won't match selector "sel-2".
+				"namespaces/bar/bar.yaml": templateData{
+					Name: "bar",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-2",
+					},
+				}.apply(aNamespace),
+				"namespaces/bar/rolebinding.yaml": templateData{
+					Name:      "role",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aRoleBinding),
+
+				// Cluster dir (cluster scoped objects).
+				"cluster/crb1.yaml": templateData{
+					ID: "1",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aClusterRoleBinding),
+			},
+			expectedClusterPolicy: policynode.NewClusterPolicy(
+				v1.ClusterPolicyName,
+				&v1.ClusterPolicySpec{
+					ClusterRoleBindingsV1: []rbacv1.ClusterRoleBinding{
+						{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: "rbac.authorization.k8s.io/v1",
+								Kind:       "ClusterRoleBinding",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "job-creators1",
+								Annotations: map[string]string{
+									v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+									v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
+									v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+								},
+							},
+							Subjects: []rbacv1.Subject{{
+								Kind:     "Group",
+								APIGroup: "rbac.authorization.k8s.io",
+								Name:     "bob@acme.com",
+							},
+							},
+							RoleRef: rbacv1.RoleRef{
+								Kind:     "ClusterRole",
+								APIGroup: "rbac.authorization.k8s.io",
+								Name:     "job-creator",
+							},
+						},
+					},
+					Resources: []v1.GenericResources{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kind:  "ClusterRoleBinding",
+							Versions: []v1.GenericVersionResources{
+								{
+									Version: "v1",
+									Objects: []runtime.RawExtension{
+										{
+											Object: runtime.Object(
+												crbPtr(templateData{
+													Name: "1",
+													Annotations: map[string]string{
+														v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+														v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
+														v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+													},
+												}),
+											),
+										},
+									},
+								},
+							},
+						},
+					},
+				}),
+			expectedPolicyNodes: map[string]v1.PolicyNode{
+				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+					}),
+			},
+		},
+		{
+			testName:    "Cluster resources not matching selector",
+			root:        "foo",
+			clusterName: "cluster-1",
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/nomos.yaml":              aNomosConfig,
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name: "sel-1",
+				}.apply(aClusterSelector),
+
+				// Tree dir
+				"namespaces/bar/bar.yaml": templateData{
+					Name: "bar",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aNamespace),
+				"namespaces/bar/rolebinding.yaml": templateData{
+					Name:      "role",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aRoleBinding),
+
+				// Cluster dir (cluster scoped objects).
+				"cluster/crb1.yaml": templateData{
+					ID: "1",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-2",
+					},
+				}.apply(aClusterRoleBinding),
+			},
+			expectedClusterPolicy: policynode.NewClusterPolicy(
+				v1.ClusterPolicyName,
+				// The cluster-scoped policy with mismatching selector was filtered out.
+				&v1.ClusterPolicySpec{}),
+			expectedPolicyNodes: map[string]v1.PolicyNode{
+				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+					}),
+				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
+					&Policies{
+						RoleBindingsV1: rbs(
+							templateData{
+								Name:      "job-creators",
+								Namespace: "bar",
+								Annotations: map[string]string{
+									v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+									v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+									v1alpha1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
+								},
+							}),
+					},
+					/* Labels */
+					nil,
+					/* Annotations */
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+					}),
+			},
+		},
+		{
+			testName:    "Resources without cluster selectors are never filtered out",
+			root:        "foo",
+			clusterName: "cluster-1",
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/nomos.yaml":              aNomosConfig,
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name: "sel-1",
+				}.apply(aClusterSelector),
+
+				// Tree dir
+				"namespaces/bar/bar.yaml":         templateData{Name: "bar"}.apply(aNamespace),
+				"namespaces/bar/rolebinding.yaml": templateData{Name: "role", Namespace: "bar"}.apply(aRoleBinding),
+
+				// Cluster dir (cluster scoped objects).
+				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
+			},
+			expectedClusterPolicy: policynode.NewClusterPolicy(
+				v1.ClusterPolicyName,
+				&v1.ClusterPolicySpec{
+					ClusterRoleBindingsV1: crbs(
+						templateData{
+							Name: "1",
+							Annotations: map[string]string{
+								v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+								v1alpha1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
+							},
+						}),
+					Resources: []v1.GenericResources{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kind:  "ClusterRoleBinding",
+							Versions: []v1.GenericVersionResources{
+								{
+									Version: "v1",
+									Objects: []runtime.RawExtension{
+										{
+											Object: runtime.Object(
+												crbPtr(templateData{
+													Name: "1",
+													Annotations: map[string]string{
+														v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+														v1alpha1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
+													},
+												}),
+											),
+										},
+									},
+								},
+							},
+						},
+					},
+				}),
+			expectedPolicyNodes: map[string]v1.PolicyNode{
+				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+					}),
+				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
+					&Policies{
+						RoleBindingsV1: rbs(
+							templateData{Name: "job-creators", Namespace: "bar",
+								Annotations: map[string]string{
+									v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+									v1alpha1.SourcePathAnnotationKey:  "namespaces/bar/rolebinding.yaml",
+								},
+							}),
+					},
+					/* Labels */
+					nil,
+					/* Annotations */
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+					}),
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.testName, test.Run)
+	}
+}
+
+// Options provides comparison options for equality testing.
+func Options() []cmp.Option {
+	return []cmp.Option{
+		cmp.Comparer(func(a, b resource.Quantity) bool {
+			return a.Cmp(b) == 0
+		}),
 	}
 }
 
@@ -1477,8 +2258,8 @@ func TestEmptyDirectories(t *testing.T) {
 				ClusterPolicy: createClusterPolicy(),
 				Syncs:         map[string]v1alpha1.Sync{},
 			}
-			if diff := deep.Equal(actualPolicies, expectedPolicies); diff != nil {
-				t.Errorf("actual and expected AllPolicies didn't match: %#v", diff)
+			if !cmp.Equal(actualPolicies, expectedPolicies, Options()...) {
+				t.Errorf("actual and expected AllPolicies didn't match: %#v", cmp.Diff(actualPolicies, expectedPolicies, Options()...))
 			}
 		})
 	}

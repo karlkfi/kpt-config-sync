@@ -17,54 +17,38 @@ limitations under the License.
 package transform
 
 import (
+	"github.com/golang/glog"
 	policyhierarchy "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
-type clusterSet = map[string]bool
-
 // ClusterSelectors contains all information needed to deliberate on whether a cluster
 // matches a selector or not.
 type ClusterSelectors struct {
-	// Map from cluster name to the cluster definition.
-	clusters map[string]clusterregistry.Cluster
-	// Map from selector name to selector content.
+	// The cluster registry object corresponding to this cluster.
+	cluster clusterregistry.Cluster
+	// A set of selectors matching this cluster
 	selectors map[string]policyhierarchy.ClusterSelector
-	// Map of selector name to clusters matching that selector.
-	selectorToClusters map[string]clusterSet
+	// The name of the current cluster, if a name is known.
+	clusterName string
 }
 
-// HasCluster returns true if the supplied cluster name is a member of the clusters
-// matching supplied selector.
-func (stc *ClusterSelectors) HasCluster(selector, cluster string) bool {
-	sel := stc.selectorToClusters[selector]
-	if sel == nil {
-		return false
-	}
-	return sel[cluster]
+type clusterSelectorKeyType struct{}
+
+var csKey = clusterSelectorKeyType{}
+
+// SetClusterSelector extends root with the cluster selector.  Use
+// GetClusterSelectors() to get it back.
+func SetClusterSelector(stc *ClusterSelectors, root *ast.Root) {
+	root.Data = root.Data.Add(csKey, stc)
 }
 
-// addCluster adds the supplied cluster to the set of clusters matched by selector.
-func (stc *ClusterSelectors) addCluster(selector, cluster string) {
-	m := stc.selectorToClusters[selector]
-	if m == nil {
-		m = make(clusterSet)
-		stc.selectorToClusters[selector] = m
-	}
-	m[cluster] = true
-}
-
-// Cluster returns the registry record of the cluster with the given name.
-func (stc *ClusterSelectors) Cluster(name string) (clusterregistry.Cluster, bool) {
-	e, ok := stc.clusters[name]
-	return e, ok
-}
-
-//ClusterSelector returns the cluster selector definition for the selector with the given name.
-func (stc *ClusterSelectors) ClusterSelector(name string) (policyhierarchy.ClusterSelector, bool) {
-	e, ok := stc.selectors[name]
-	return e, ok
+// GetClusterSelectors gets the cluster selectors object from the root.  Panics
+// if not found.
+func GetClusterSelectors(root *ast.Root) *ClusterSelectors {
+	return root.Data.Get(csKey).(*ClusterSelectors)
 }
 
 // ForEachSelector runs f on each name and selector pair in this collection of
@@ -79,26 +63,54 @@ func (stc *ClusterSelectors) ForEachSelector(f func(name string, selector policy
 func NewClusterSelectors(
 	clusters []clusterregistry.Cluster,
 	selectors []policyhierarchy.ClusterSelector,
+	clusterName string,
 ) (*ClusterSelectors, error) {
 	cc := &ClusterSelectors{
-		clusters:           map[string]clusterregistry.Cluster{},
-		selectors:          map[string]policyhierarchy.ClusterSelector{},
-		selectorToClusters: map[string]clusterSet{},
+		selectors:   make(map[string]policyhierarchy.ClusterSelector),
+		clusterName: clusterName,
 	}
-	// Populate the internal mappings:
+	for _, cl := range clusters {
+		if clusterName == cl.ObjectMeta.Name {
+			cc.cluster = cl
+			break
+		}
+	}
 	for _, cs := range selectors {
 		name := cs.ObjectMeta.Name
-		cc.selectors[name] = cs
 		s, err := AsPopulatedSelector(&cs.Spec.Selector)
 		if err != nil {
 			return nil, errors.Wrapf(err, "while populating cluster selector: %q", name)
 		}
-		for _, cl := range clusters {
-			cc.clusters[cl.ObjectMeta.Name] = cl
-			if IsSelected(cl.Labels, s) {
-				cc.addCluster(name, cl.ObjectMeta.Name)
-			}
+		if IsSelected(cc.cluster.ObjectMeta.Labels, s) {
+			cc.selectors[name] = cs
 		}
 	}
 	return cc, nil
+}
+
+// ClusterName returns the current cluster's name if known, or "" otherwise.
+func (stc *ClusterSelectors) ClusterName() string {
+	return stc.clusterName
+}
+
+// Matches checks if the supplied annotated object matches the selector.
+func (stc *ClusterSelectors) Matches(o ast.Annotated) bool {
+	a := o.GetAnnotations()
+	if glog.V(7) {
+		glog.Infof("annotations: %+v", a)
+	}
+	selector, ok := a[policyhierarchy.ClusterSelectorAnnotationKey]
+	if !ok {
+		// An object that is not annotated always matches.
+		return true
+	}
+	clusterSelector, ok := stc.selectors[selector]
+	if !ok {
+		// No selector that matches this cluster also matches the selector name.
+		return false
+	}
+	if glog.V(6) {
+		glog.Infof("clusterSelector: %+v, clusterName: %+v", clusterSelector, stc.clusterName)
+	}
+	return true
 }

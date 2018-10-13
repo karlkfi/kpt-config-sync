@@ -50,7 +50,6 @@ type Root struct {
 	Cluster *Cluster
 	// Tree represents the directory hierarchy containing namespace scoped resources.
 	Tree *TreeNode
-	// Extension holds visitor specific data.
 	Data *Extension
 }
 
@@ -177,6 +176,7 @@ func copyMapInto(from map[string]string, to *map[string]string) {
 // implement parts of metav1.Object that don't deal with annotations.
 type Annotated interface {
 	GetAnnotations() map[string]string
+	SetAnnotations(map[string]string)
 }
 
 var _ Annotated = (*TreeNode)(nil)
@@ -184,6 +184,11 @@ var _ Annotated = (*TreeNode)(nil)
 // GetAnnotations returns the annotations from n.  They are mutable if not nil.
 func (n *TreeNode) GetAnnotations() map[string]string {
 	return n.Annotations
+}
+
+// SetAnnotations replaces the annotations on the tree node with the supplied ones.
+func (n *TreeNode) SetAnnotations(a map[string]string) {
+	n.Annotations = a
 }
 
 // ObjectList represents a set of namespace scoped objects.

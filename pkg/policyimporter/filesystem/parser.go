@@ -224,10 +224,11 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	if err != nil {
 		return nil, errors.Wrapf(err, "clusterregistry directory is invalid: %s", clusterDir)
 	}
-	cs, err := transform.NewClusterSelectors(clusters, selectors)
+	cs, err := transform.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not create cluster selectors")
 	}
+	transform.SetClusterSelector(cs, fsCtx)
 
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]
@@ -258,7 +259,8 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 		validation.NewInputValidator(toAllowedGVKs(syncs)),
 		transform.NewPathAnnotationVisitor(),
 		scopeValidator,
-		transform.NewAnnotationInlinerVisitor(cs),
+		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
+		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(
 			[]transform.InheritanceSpec{
 				{
