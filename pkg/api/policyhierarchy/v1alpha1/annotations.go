@@ -16,16 +16,22 @@ limitations under the License.
 
 package v1alpha1
 
-// SourcePathAnnotationKey is an annotation indicates the path in the source of truth where the
-// policy was originally declared. Paths are slash-separated and OS-agnostic.
-const SourcePathAnnotationKey = "nomos.dev/source-path"
+const (
+	// SourcePathAnnotationKey is an annotation indicates the path in the source of truth where the
+	// policy was originally declared. Paths are slash-separated and OS-agnostic.
+	SourcePathAnnotationKey = "nomos.dev/source-path"
 
-// NamespaceSelectorAnnotationKey is the annotation key set on policy resources that refers to
-// name of NamespaceSelector resource.
-const NamespaceSelectorAnnotationKey = "nomos.dev/namespace-selector"
+	// NamespaceSelectorAnnotationKey is the annotation key set on policy resources that refers to
+	// name of NamespaceSelector resource.
+	NamespaceSelectorAnnotationKey = "nomos.dev/namespace-selector"
+
+	// ClusterSelectorAnnotationKey is the annotation key set on policy resources that refers to the name of the ClusterSelector resource.
+	ClusterSelectorAnnotationKey = "nomos.dev/cluster-selector"
+)
 
 // InputAnnotations is a map of annotations that are valid to exist on objects when imported from
-// the filesystemn.
+// the filesystem.
 var InputAnnotations = map[string]struct{}{
 	NamespaceSelectorAnnotationKey: {},
+	ClusterSelectorAnnotationKey:   {},
 }

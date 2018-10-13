@@ -234,20 +234,24 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	if err := p.processClusterDir(clusterDir, clusterInfos, fsCtx); err != nil {
 		return nil, errors.Wrapf(err, "cluster directory is invalid: %s", clusterDir)
 	}
-	// TODO(filmil): Tie the processed results into a visitor.
-	if _, _, err := p.processClusterRegistryDir(clusterregistryDir, clusterregistryInfos); err != nil {
+	clusters, selectors, err := p.processClusterRegistryDir(clusterregistryDir, clusterregistryInfos)
+	if err != nil {
 		return nil, errors.Wrapf(err, "clusterregistry directory is invalid: %s", clusterDir)
+	}
+	cs, err := transform.NewClusterSelectors(clusters, selectors)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not create cluster selectors")
 	}
 
 	if len(treeDirsOrdered) > 0 {
 		rootDir := treeDirsOrdered[0]
 		infos := dirInfos[rootDir]
-		if err := p.processTreeDir(rootDir, infos, namespaceDirs, treeGenerator, true); err != nil {
+		if err = p.processTreeDir(rootDir, infos, namespaceDirs, treeGenerator, true); err != nil {
 			return nil, errors.Wrapf(err, "directory is invalid: %s", rootDir)
 		}
 		for _, d := range treeDirsOrdered[1:] {
 			infos := dirInfos[d]
-			if err := p.processTreeDir(d, infos, namespaceDirs, treeGenerator, false); err != nil {
+			if err = p.processTreeDir(d, infos, namespaceDirs, treeGenerator, false); err != nil {
 				return nil, errors.Wrapf(err, "directory is invalid: %s", d)
 			}
 		}
@@ -268,7 +272,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 		validation.NewInputValidator(allowedGVKs),
 		transform.NewPathAnnotationVisitor(),
 		scopeValidator,
-		transform.NewAnnotationInlinerVisitor(),
+		transform.NewAnnotationInlinerVisitor(cs),
 		transform.NewInheritanceVisitor(
 			[]transform.InheritanceSpec{
 				{

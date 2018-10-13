@@ -18,17 +18,17 @@ package transform
 import (
 	"fmt"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 
 type valueMap map[string]string
 
 // annotationTransformer is a map of annotation keys to a map of old values to new values.
-// Example usage:
 //
-// t := annotationTransformer{}
-// t.addMappingForKey("myannotation", valueMap{"oldval": "newval"})
-// err := t.transform(object)
+// Example:
+//    t := annotationTransformer{}
+//    t.addMappingForKey("myannotation", valueMap{"oldval": "newval"})
+//    err := t.transform(object)
 //
 type annotationTransformer map[string]valueMap
 
@@ -36,7 +36,7 @@ func (t annotationTransformer) addMappingForKey(key string, mapping valueMap) {
 	t[key] = mapping
 }
 
-func (t annotationTransformer) transform(o metav1.Object) error {
+func (t annotationTransformer) transform(o ast.Annotated) error {
 	a := o.GetAnnotations()
 	for k, vOldToNew := range t {
 		vOld, ok := a[k]

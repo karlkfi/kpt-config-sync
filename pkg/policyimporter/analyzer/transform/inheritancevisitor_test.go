@@ -103,7 +103,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.Policyspace,
 					Path: "acme",
 					Objects: vt.ObjectSets(
-						withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
+						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
 					),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
@@ -129,7 +129,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 							Path:   "acme/frontend",
 							Labels: map[string]string{"env": "prod"},
 							Objects: vt.ObjectSets(
-								withSelectorAnnotation(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
+								withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
 							),
 						},
 						&ast.TreeNode{

@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Nomos Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package transform
 
 import (
@@ -10,33 +26,55 @@ import (
 	"github.com/pkg/errors"
 )
 
-// AnnotationInlinerVisitor inlines annotation values.
+// AnnotationInlinerVisitor inlines annotation values. Inlining replaces the
+// annotation value with the verbatim JSON-formatted content of a Selector that
+// matches the annotation value.
 //
-// For example, the following annotation:
+// Replaces the following annotations:
+// - nomos.dev/namespace-selector: sre-supported
+// - nomos.dev/cluster-selector: production
 //
-// nomos.dev/namespace-selector: sre-supported
-//
-// Would be inlined to:
-//
+// Sample inlining replaces
 // nomos.dev/namespace-selector: {\"kind\": \"NamespaceSelector\",..}
+// where the replacement is the NamespaceSelector named "sre-supported", in
+// JSON format.
 type AnnotationInlinerVisitor struct {
 	// Copying is used for copying parts of the ast.Root tree and continuing underlying visitor iteration.
 	*visitor.Copying
-	// transformer is created and set for each TreeNode
-	transformer annotationTransformer
+	// nsTransformer is used to inline namespace selector annotations. It is
+	// created anew for each TreeNode.
+	nsTransformer annotationTransformer
 	// cumulative errors encountered by the visitor
 	errs *multierror.Builder
+	// Used to inline cluster selector annotations.  It is created anew for each traversal.
+	clusterSelectorTransformer annotationTransformer
 }
 
 var _ ast.Visitor = &AnnotationInlinerVisitor{}
 
-// NewAnnotationInlinerVisitor returns a new AnnotationInlinerVisitor
-func NewAnnotationInlinerVisitor() *AnnotationInlinerVisitor {
+// NewAnnotationInlinerVisitor returns a new AnnotationInlinerVisitor. cs is the
+// cluster selector to use for inlining.
+func NewAnnotationInlinerVisitor(cs *ClusterSelectors) *AnnotationInlinerVisitor {
 	v := &AnnotationInlinerVisitor{
 		Copying: visitor.NewCopying(),
 		errs:    multierror.NewBuilder(),
 	}
 	v.SetImpl(v)
+
+	// Add inliner map for cluster annotations.
+	t := annotationTransformer{}
+	m := valueMap{}
+	cs.ForEachSelector(func(name string, annotation v1alpha1.ClusterSelector) {
+		content, err := json.Marshal(annotation)
+		if err != nil {
+			// This should already be validated in parser.
+			v.errs.Add(errors.Wrapf(err, "failed to marshal ClusterSelector %q", name))
+			return
+		}
+		m[name] = string(content)
+	})
+	t.addMappingForKey(v1alpha1.ClusterSelectorAnnotationKey, m)
+	v.clusterSelectorTransformer = t
 	return v
 }
 
@@ -57,6 +95,7 @@ func (v *AnnotationInlinerVisitor) VisitCluster(c *ast.Cluster) ast.Node {
 
 // VisitTreeNode implements Visitor
 func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
+	n = n.PartialCopy()
 	m := valueMap{}
 	for k, s := range n.Selectors {
 		if n.Type == ast.Namespace {
@@ -64,7 +103,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 			v.errs.Add(errors.Errorf("NamespaceSelector must not be in namespace directories, found in %q", n.Path))
 			return n
 		}
-		if _, err := asPopulatedSelector(&s.Spec.Selector); err != nil {
+		if _, err := AsPopulatedSelector(&s.Spec.Selector); err != nil {
 			v.errs.Add(errors.Wrapf(err, "NamespaceSelector %q is not valid", s.Name))
 			continue
 		}
@@ -76,16 +115,23 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 		}
 		m[k] = string(content)
 	}
-	v.transformer = annotationTransformer{}
-	v.transformer.addMappingForKey(v1alpha1.NamespaceSelectorAnnotationKey, m)
+	v.nsTransformer = annotationTransformer{}
+	v.nsTransformer.addMappingForKey(v1alpha1.NamespaceSelectorAnnotationKey, m)
+	if err := v.clusterSelectorTransformer.transform(n); err != nil {
+		v.errs.Add(errors.Errorf("failed to inline ClusterSelector for node %q", n.Path))
+	}
 	return v.Copying.VisitTreeNode(n).(*ast.TreeNode)
 }
 
 // VisitObject implements Visitor
 func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 	newObject := v.Copying.VisitObject(o).(*ast.NamespaceObject)
-	if err := v.transformer.transform(newObject.ToMeta()); err != nil {
-		v.errs.Add(errors.Wrapf(err, "failed to inline annotation for object %q", newObject.ToMeta().GetName()))
+	m := newObject.ToMeta()
+	if err := v.nsTransformer.transform(m); err != nil {
+		v.errs.Add(errors.Wrapf(err, "failed to inline annotation for object %q", m.GetName()))
+	}
+	if err := v.clusterSelectorTransformer.transform(m); err != nil {
+		v.errs.Add(errors.Wrapf(err, "failed to inline cluster selector annotations for object %q", m.GetName()))
 	}
 	return newObject
 }

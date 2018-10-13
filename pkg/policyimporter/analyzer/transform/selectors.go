@@ -9,8 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// asPopulatedSelector returns a known valid and nonempty label selector.
-func asPopulatedSelector(labelselector *metav1.LabelSelector) (labels.Selector, error) {
+// AsPopulatedSelector returns a known valid and nonempty label selector.
+func AsPopulatedSelector(labelselector *metav1.LabelSelector) (labels.Selector, error) {
 	selector, err := metav1.LabelSelectorAsSelector(labelselector)
 	if err != nil {
 		return nil, fmt.Errorf("invalid label selector: %v", err)
@@ -21,7 +21,7 @@ func asPopulatedSelector(labelselector *metav1.LabelSelector) (labels.Selector, 
 	return selector, nil
 }
 
-// isSelected returns true if the labels match the selector.
-func isSelected(l map[string]string, selector labels.Selector) bool {
+// IsSelected returns true if the labels match the selector.
+func IsSelected(l map[string]string, selector labels.Selector) bool {
 	return selector.Matches(labels.Set(l))
 }
