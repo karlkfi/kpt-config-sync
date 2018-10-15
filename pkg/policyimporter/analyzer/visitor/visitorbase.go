@@ -39,7 +39,7 @@ import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 //
 //      func NewMyVisitor() myVisitor {
 //        v := &myVisitor{Base: visitor.NewBase()}
-//        v.base.SetImpl(v)
+//        v.SetImpl(v)
 //        return v
 //      }
 //

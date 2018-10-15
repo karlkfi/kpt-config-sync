@@ -36,8 +36,8 @@ type InheritanceSpec struct {
 
 // InheritanceVisitor aggregates hierarchical quota.
 type InheritanceVisitor struct {
-	// cv is used for copying parts of the ast.Context tree and continuing underlying visitor iteration.
-	cv *visitor.Copying
+	// Copying is used for copying parts of the ast.Context tree and continuing underlying visitor iteration.
+	*visitor.Copying
 	// groupKinds contains the set of GroupKind that will be targeted during the inheritance transform.
 	inheritanceSpecs map[schema.GroupVersionKind]*InheritanceSpec
 	// treeContext is a stack that tracks ancestry and inherited objects during the tree traversal.
@@ -53,23 +53,17 @@ func NewInheritanceVisitor(resources []InheritanceSpec) *InheritanceVisitor {
 		r := &resources[idx]
 		resourceMap[r.GroupVersionKind] = r
 	}
-	cv := visitor.NewCopying()
 	iv := &InheritanceVisitor{
-		cv:               cv,
+		Copying:          visitor.NewCopying(),
 		inheritanceSpecs: resourceMap,
 	}
-	cv.SetImpl(iv)
+	iv.SetImpl(iv)
 	return iv
 }
 
 // Error implements CheckingVisitor
 func (v *InheritanceVisitor) Error() error {
 	return nil
-}
-
-// VisitContext implements Visitor
-func (v *InheritanceVisitor) VisitContext(g *ast.Context) ast.Node {
-	return v.cv.VisitContext(g)
 }
 
 // VisitReservedNamespaces implements Visitor
@@ -82,23 +76,13 @@ func (v *InheritanceVisitor) VisitCluster(c *ast.Cluster) ast.Node {
 	return c
 }
 
-// VisitClusterObjectList implements Visitor
-func (v *InheritanceVisitor) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
-	panic("should not be called")
-}
-
-// VisitClusterObject implements Visitor
-func (v *InheritanceVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
-	panic("should not be called")
-}
-
 // VisitTreeNode implements Visitor
 func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	v.treeContext = append(v.treeContext, nodeContext{
 		nodeType: n.Type,
 		nodePath: n.Path,
 	})
-	newNode := v.cv.VisitTreeNode(n).(*ast.TreeNode)
+	newNode := v.Copying.VisitTreeNode(n).(*ast.TreeNode)
 	v.treeContext = v.treeContext[:len(v.treeContext)-1]
 	if n.Type == ast.Namespace {
 		for _, ctx := range v.treeContext {
@@ -110,11 +94,6 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 		}
 	}
 	return newNode
-}
-
-// VisitObjectList implements Visitor
-func (v *InheritanceVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
-	return v.cv.VisitObjectList(o)
 }
 
 // VisitObject implements Visitor

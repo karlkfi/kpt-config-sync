@@ -21,6 +21,10 @@ import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 // Copying is a Visitor implementation that creates and returns a copy of the
 // tree.  Member functions can be overridden in order to facilitate other transforms.
 //
+// If you implement a Visitor based on Copying, you can use it as a base
+// implementation for methods from ast.Visitor, similarly to how this was done
+// in visitor.Base.  See docs for visitor.Base on how to do so.
+//
 // The order of traversal:
 //
 // 1. Context

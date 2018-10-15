@@ -29,8 +29,8 @@ import (
 // of all defined quotas along the ancestry.  If a conflict between quotas is encountered, for
 // example, two nodes define CPU quota, the lower value is used.
 type QuotaVisitor struct {
-	cv  *visitor.Copying // The copying base class
-	ctx *quotaContext    // The context list for the hierarchy
+	*visitor.Copying               // The copying base class
+	ctx              *quotaContext // The context list for the hierarchy
 }
 
 var _ ast.Visitor = &QuotaVisitor{}
@@ -74,9 +74,8 @@ func (qc *quotaContext) aggregated() *corev1.ResourceQuota {
 
 // NewQuotaVisitor creates a new hierarchical aggregating visitor for quota.
 func NewQuotaVisitor() *QuotaVisitor {
-	cv := visitor.NewCopying()
-	qv := &QuotaVisitor{cv: cv}
-	cv.SetImpl(qv)
+	qv := &QuotaVisitor{Copying: visitor.NewCopying()}
+	qv.SetImpl(qv)
 	return qv
 }
 
@@ -85,25 +84,10 @@ func (v *QuotaVisitor) Error() error {
 	return nil
 }
 
-// VisitContext implements Visitor
-func (v *QuotaVisitor) VisitContext(g *ast.Context) ast.Node {
-	return v.cv.VisitContext(g)
-}
-
 // VisitCluster implements Visitor
 func (v *QuotaVisitor) VisitCluster(c *ast.Cluster) ast.Node {
 	// Avoid copying/visiting cluster
 	return c
-}
-
-// VisitClusterObjectList implements Visitor
-func (v *QuotaVisitor) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
-	panic("should not be called")
-}
-
-// VisitClusterObject implements Visitor
-func (v *QuotaVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
-	panic("should not be called")
 }
 
 // VisitReservedNamespaces implements Visitor
@@ -118,7 +102,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 		prev: v.ctx,
 	}
 	v.ctx = context
-	newNode := v.cv.VisitTreeNode(n).(*ast.TreeNode)
+	newNode := v.Copying.VisitTreeNode(n).(*ast.TreeNode)
 
 	if (n.Type == ast.Policyspace && context.quota != nil) || (n.Type == ast.Namespace) {
 		if quota := context.aggregated(); quota != nil {
@@ -133,11 +117,6 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 
 	v.ctx = context.prev
 	return newNode
-}
-
-// VisitObjectList implements Visitor
-func (v *QuotaVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
-	return v.cv.VisitObjectList(o)
 }
 
 // VisitObject implements Visitor, this should only be visited if the objectset

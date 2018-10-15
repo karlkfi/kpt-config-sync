@@ -20,8 +20,8 @@ import (
 //
 // nomos.dev/namespace-selector: {\"kind\": \"NamespaceSelector\",..}
 type AnnotationInlinerVisitor struct {
-	// cv is used for copying parts of the ast.Context tree and continuing underlying visitor iteration.
-	cv *visitor.Copying
+	// Copying is used for copying parts of the ast.Context tree and continuing underlying visitor iteration.
+	*visitor.Copying
 	// transformer is created and set for each TreeNode
 	transformer annotationTransformer
 	// cumulative errors encountered by the visitor
@@ -32,23 +32,17 @@ var _ ast.Visitor = &AnnotationInlinerVisitor{}
 
 // NewAnnotationInlinerVisitor returns a new AnnotationInlinerVisitor
 func NewAnnotationInlinerVisitor() *AnnotationInlinerVisitor {
-	cv := visitor.NewCopying()
 	v := &AnnotationInlinerVisitor{
-		cv:   cv,
-		errs: multierror.NewBuilder(),
+		Copying: visitor.NewCopying(),
+		errs:    multierror.NewBuilder(),
 	}
-	cv.SetImpl(v)
+	v.SetImpl(v)
 	return v
 }
 
 // Error implements CheckingVisitor
 func (v *AnnotationInlinerVisitor) Error() error {
 	return v.errs.Build()
-}
-
-// VisitContext implements Visitor
-func (v *AnnotationInlinerVisitor) VisitContext(g *ast.Context) ast.Node {
-	return v.cv.VisitContext(g)
 }
 
 // VisitReservedNamespaces implements Visitor
@@ -59,16 +53,6 @@ func (v *AnnotationInlinerVisitor) VisitReservedNamespaces(r *ast.ReservedNamesp
 // VisitCluster implements Visitor
 func (v *AnnotationInlinerVisitor) VisitCluster(c *ast.Cluster) ast.Node {
 	return c
-}
-
-// VisitClusterObjectList implements Visitor
-func (v *AnnotationInlinerVisitor) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
-	panic("should not be called")
-}
-
-// VisitClusterObject implements Visitor
-func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
-	panic("should not be called")
 }
 
 // VisitTreeNode implements Visitor
@@ -94,17 +78,12 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	}
 	v.transformer = annotationTransformer{}
 	v.transformer.addMappingForKey(v1alpha1.NamespaceSelectorAnnotationKey, m)
-	return v.cv.VisitTreeNode(n).(*ast.TreeNode)
-}
-
-// VisitObjectList implements Visitor
-func (v *AnnotationInlinerVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
-	return v.cv.VisitObjectList(o)
+	return v.Copying.VisitTreeNode(n).(*ast.TreeNode)
 }
 
 // VisitObject implements Visitor
 func (v *AnnotationInlinerVisitor) VisitObject(o *ast.Object) ast.Node {
-	newObject := v.cv.VisitObject(o).(*ast.Object)
+	newObject := v.Copying.VisitObject(o).(*ast.Object)
 	if err := v.transformer.transform(newObject.ToMeta()); err != nil {
 		v.errs.Add(errors.Wrapf(err, "failed to inline annotation for object %q", newObject.ToMeta().GetName()))
 	}
