@@ -71,8 +71,8 @@ func NewInputValidator(resourceLists []*metav1.APIResourceList) (*InputValidator
 	return v, nil
 }
 
-// Result returns any errors encountered during processing
-func (v *InputValidator) Result() error {
+// Error returns any errors encountered during processing
+func (v *InputValidator) Error() error {
 	return v.errs.Build()
 }
 

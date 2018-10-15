@@ -256,7 +256,7 @@ func processDirs(resources []*metav1.APIResourceList, dirInfos map[string][]*res
 
 	for _, visitor := range visitors {
 		fsCtx = fsCtx.Accept(visitor).(*ast.Context)
-		if err := visitor.Result(); err != nil {
+		if err := visitor.Error(); err != nil {
 			return nil, err
 		}
 	}

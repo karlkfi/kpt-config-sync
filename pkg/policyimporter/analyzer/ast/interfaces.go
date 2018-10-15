@@ -48,6 +48,6 @@ type Visitor interface {
 type CheckingVisitor interface {
 	Visitor
 
-	// Result allows the visitor to emit errors that may have occured while operating.
-	Result() error
+	// Error allows the visitor to emit errors that may have occured while operating.
+	Error() error
 }

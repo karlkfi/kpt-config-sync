@@ -62,8 +62,8 @@ func NewInheritanceVisitor(resources []InheritanceSpec) *InheritanceVisitor {
 	return iv
 }
 
-// Result implements MutatingVisitor
-func (v *InheritanceVisitor) Result() error {
+// Error implements CheckingVisitor
+func (v *InheritanceVisitor) Error() error {
 	return nil
 }
 

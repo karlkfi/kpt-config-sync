@@ -45,8 +45,8 @@ func (v *Copying) SetImpl(impl ast.Visitor) {
 	v.impl = impl
 }
 
-// Result implements Visitor
-func (v *Copying) Result() error {
+// Error implements CheckingVisitor
+func (v *Copying) Error() error {
 	return nil
 }
 

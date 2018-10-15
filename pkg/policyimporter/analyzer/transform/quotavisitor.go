@@ -80,8 +80,8 @@ func NewQuotaVisitor() *QuotaVisitor {
 	return qv
 }
 
-// Result implements MutatingVisitor
-func (v *QuotaVisitor) Result() error {
+// Error implements CheckingVisitor
+func (v *QuotaVisitor) Error() error {
 	return nil
 }
 

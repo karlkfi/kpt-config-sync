@@ -48,7 +48,7 @@ func (tc *MutatingVisitorTestcase) Runf(visitor ast.CheckingVisitor) func(t *tes
 		if !ok {
 			t.Fatalf("Wrong type returned %#v", output)
 		}
-		err := visitor.Result()
+		err := visitor.Error()
 		if (err != nil) != tc.ExpectErr {
 			if tc.ExpectErr {
 				t.Fatalf("expected error, got nil")

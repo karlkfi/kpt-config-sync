@@ -41,8 +41,8 @@ func NewAnnotationInlinerVisitor() *AnnotationInlinerVisitor {
 	return v
 }
 
-// Result implements MutatingVisitor
-func (v *AnnotationInlinerVisitor) Result() error {
+// Error implements CheckingVisitor
+func (v *AnnotationInlinerVisitor) Error() error {
 	return v.errs.Build()
 }
 
