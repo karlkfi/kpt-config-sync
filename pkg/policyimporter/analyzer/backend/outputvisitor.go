@@ -41,8 +41,7 @@ const (
 
 // OutputVisitor converts the AST into PolicyNode and ClusterPolicy objects.
 type OutputVisitor struct {
-	base *visitor.Base
-
+	*visitor.Base
 	commitHash  string
 	loadTime    time.Time
 	allPolicies *policyhierarchyv1.AllPolicies
@@ -54,10 +53,8 @@ var _ ast.Visitor = &OutputVisitor{}
 
 // NewOutputVisitor creates a new output visitor.
 func NewOutputVisitor() *OutputVisitor {
-	v := &OutputVisitor{
-		base: visitor.NewBase(),
-	}
-	v.base.SetImpl(v)
+	v := &OutputVisitor{Base: visitor.NewBase()}
+	v.SetImpl(v)
 	return v
 }
 
@@ -82,7 +79,7 @@ func (v *OutputVisitor) VisitContext(g *ast.Context) ast.Node {
 	}
 	v.commitHash = g.ImportToken
 	v.loadTime = g.LoadTime
-	v.base.VisitContext(g)
+	v.Base.VisitContext(g)
 	return nil
 }
 
@@ -112,7 +109,7 @@ func (v *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.N
 // VisitCluster implements Visitor
 func (v *OutputVisitor) VisitCluster(c *ast.Cluster) ast.Node {
 	v.context = contextCluster
-	v.base.VisitCluster(c)
+	v.Base.VisitCluster(c)
 	return nil
 }
 
@@ -144,15 +141,10 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 		pn.Spec.Type = policyhierarchyv1.Policyspace
 	}
 	v.policyNode = append(v.policyNode, pn)
-	v.base.VisitTreeNode(n)
+	v.Base.VisitTreeNode(n)
 	v.policyNode = v.policyNode[:origLen]
 	v.allPolicies.PolicyNodes[pn.Name] = *pn
 	return nil
-}
-
-// VisitClusterObjectList implements Visitor
-func (v *OutputVisitor) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
-	return v.base.VisitClusterObjectList(o)
 }
 
 // VisitClusterObject implements Visitor
@@ -170,11 +162,6 @@ func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	}
 	spec.Resources = appendResource(spec.Resources, o.Object)
 	return nil
-}
-
-// VisitObjectList implements Visitor
-func (v *OutputVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
-	return v.base.VisitObjectList(o)
 }
 
 // VisitObject implements Visitor
