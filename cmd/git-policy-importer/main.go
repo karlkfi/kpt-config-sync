@@ -33,13 +33,15 @@ import (
 	"github.com/google/nomos/pkg/util/log"
 )
 
-var gitDir = flag.String("git-dir", "/repo/rev",
-	"Absolute path to the git repo")
-var policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"),
-	"Relative path of root policy directory in the repo")
-var pollPeriod = flag.Duration("poll-period", time.Second*5,
-	"Poll period for checking if --git-dir target directly has changed")
+// nolint:deadcode
+var (
+	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
+	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
+	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directly has changed")
+	enableBespin      = flag.Bool("bespin", false, "Enable Bespin functionality")
+)
 
+// nolint:deadcode
 func main() {
 	flag.Parse()
 	log.Setup()
