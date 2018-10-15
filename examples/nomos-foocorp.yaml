@@ -1,0 +1,13 @@
+apiVersion: addons.sigs.k8s.io/v1alpha1
+kind: Nomos
+metadata:
+  name: nomos
+  namespace: nomos-system
+spec:
+  user: "alice@example.com"
+  git:
+    syncRepo: git@github.com:brycecr/foo-corp-example.git
+    syncBranch: master
+    syncWait: 1
+    secretType: ssh
+    policyDir: foo-corp
