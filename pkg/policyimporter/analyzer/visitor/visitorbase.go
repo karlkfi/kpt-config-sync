@@ -20,7 +20,8 @@ import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 
 // Base implements visiting all children for a visitor (like a base class).
 // Derived children need to have a Base and invoke base.VisitX(x) to continue
-// visiting children (like calling a base class method).
+// visiting children (like calling a base class method).  This removes the need
+// for every new visitor to implement all methods in ast.Visitor.
 //
 // The order of traversal:
 //
@@ -28,6 +29,27 @@ import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 // 2. Cluster
 // 3. ReservedNamespaces
 // 4. Pre-order traversal of TreeNode(s)
+//
+// Example:
+//      type myVisitor {
+//        // Base supplies default implementations of all Visitor methods.
+//        // No need to implement methods that you don't need a custom implementation for.
+//        *visitor.Base
+//      }
+//
+//      func NewMyVisitor() myVisitor {
+//        v := &myVisitor{Base: visitor.NewBase()}
+//        v.base.SetImpl(v)
+//        return v
+//      }
+//
+//      func (v *myVisitor) VisitContext(ctx *ast.Context) ast.Node {
+//        // Do whatever you need to do in this Visitor that needs to happen before
+//        // traversing children.
+//        // Then call the matching continuation method from Base, in this case it is
+//        // VisitContext.
+//        return v.Base.VisitContext(ctx)
+//      }
 type Base struct {
 	// impl handles the upper most implementation for the visitor.  This allows VisitorBase
 	// to return control to the top object in the visitor chain.

@@ -26,6 +26,10 @@ type Node interface {
 
 // Visitor allows for writing transforms on the GitContext.  The various visit methods
 // will visit each type.  The return values for each Visit[Type] function are implementation dependant.
+//
+// When writing a new Visitor, see documentation for visitor.Base on how to
+// avoid needing to implement parts of Visitor that you don't need.
+//
 // For visitors that are transforming the tree (based on Copying), the function should return one of
 // the following:
 //   Unmodified Subtree: the visitor may return the value passed to the Visit[Type] function.
