@@ -14,18 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package visitor
+package visitor_test
 
 import (
 	"testing"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 )
 
 var copyingVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.CheckingVisitor {
-		return NewCopying()
+		return visitor.NewCopying()
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{

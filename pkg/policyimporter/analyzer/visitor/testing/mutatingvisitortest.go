@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -43,7 +44,15 @@ func ResourceVersionCmp() cmp.Option {
 // Runf returns a function that runs the testcase.
 func (tc *MutatingVisitorTestcase) Runf(visitor ast.CheckingVisitor) func(t *testing.T) {
 	return func(t *testing.T) {
+		copier := visitorpkg.NewCopying()
+		copier.SetImpl(copier)
+		inputCopy := tc.Input.Accept(copier)
+
 		output := tc.Input.Accept(visitor)
+		if !cmp.Equal(tc.Input, inputCopy, ResourceVersionCmp()) {
+			t.Errorf("Input mutated while running visitor: %s", cmp.Diff(inputCopy, tc.Input, ResourceVersionCmp()))
+		}
+
 		actual, ok := output.(*ast.Context)
 		if !ok {
 			t.Fatalf("Wrong type returned %#v", output)
