@@ -81,6 +81,12 @@ GID := $(shell id -g)
 # GCP project that owns container registry for local dev build.
 GCP_PROJECT ?= stolos-dev
 
+# Prefix at which to store images in GCR. For using dev-local builds, the
+# operator requires that the prefix of the image be unique to the build,
+# and pulling of new versions is forced by setting a timestamp (DATE) in the
+# image path.
+GCR_PREFIX ?= $(GCP_PROJECT)/$(USER)/$(DATE)
+
 # Docker image used for build and test. This image does not support CGO.
 # NOTE: nomos-public is fully accessible publicly, do not use for anything
 # other than buildenv
@@ -133,7 +139,7 @@ GCLOUD_QUIET := --quiet
 
 # Developer focused docker image tag.
 DATE := $(shell date +'%s')
-IMAGE_TAG ?= $(VERSION)-$(USER)-$(DATE)
+IMAGE_TAG ?= $(USER)-dev-latest
 
 DOCKER_RUN_ARGS := \
 	$(DOCKER_INTERACTIVE)                                              \

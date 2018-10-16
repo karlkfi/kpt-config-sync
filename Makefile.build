@@ -37,7 +37,7 @@ image-nomos: build
 	@cp -r $(TOP_DIR)/build/$(NOMOS_IMAGE) $(STAGING_DIR)
 	@cp $(BIN_DIR)/linux_amd64/* $(STAGING_DIR)/$(NOMOS_IMAGE)
 	@docker build $(DOCKER_BUILD_QUIET) \
-			-t gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG) $(STAGING_DIR)/$(NOMOS_IMAGE)
+		-t gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) $(STAGING_DIR)/$(NOMOS_IMAGE)
 
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-%: image-%
@@ -45,7 +45,7 @@ push-to-gcr-%: image-%
 	@echo "+++ Using account:"
 	gcloud config get-value account
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
-	@docker push gcr.io/$(GCP_PROJECT)/$*:$(IMAGE_TAG)
+	@docker push gcr.io/$(GCR_PREFIX)/$*:$(IMAGE_TAG)
 
 ###################################
 # YAML generation
@@ -58,7 +58,7 @@ gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_DEPLOYMENTS))
 # Generates the podspec yaml for the component specified.
 gen-yaml-%:
 	@echo "+++ Generating yaml $*"
-	@sed -e 's|IMAGE_NAME|gcr.io/$(GCP_PROJECT)/$(NOMOS_IMAGE):$(IMAGE_TAG)|' < \
+	@sed -e 's|IMAGE_NAME|gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG)|' < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
 ###################################

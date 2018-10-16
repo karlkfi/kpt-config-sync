@@ -37,6 +37,9 @@ PLATFORMS ?= linux-amd64 darwin-amd64 windows-amd64
 # GCP project that owns container registry for official releases.
 GCP_PROJECT ?= nomos-release
 
+# GCR prefix to locate containers. For release it is just the GCP Project name.
+GCR_PREFIX ?= $(GCP_PROJECT)
+
 # The GCS bucket containing official releases.
 RELEASE_BUCKET ?= gs://nomos-release
 
@@ -169,8 +172,8 @@ upload-release:
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/$(VERSION)
 	gcloud container images add-tag --quiet \
-		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
-		gcr.io/$(GCP_PROJECT)/nomos:latest
+		gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG) \
+		gcr.io/$(GCR_PREFIX)/nomos:latest
 	gsutil -m rsync -r -d -p \
 			$(RELEASE_BUCKET)/$(VERSION) \
 			$(RELEASE_BUCKET)/latest
@@ -190,8 +193,8 @@ release: \
 bless-release: check-dirty
 	@echo "+++ Marking release $(IMAGE_TAG) as 'stable'"
 	gcloud container images add-tag --quiet \
-		gcr.io/$(GCP_PROJECT)/nomos:$(IMAGE_TAG) \
-		gcr.io/$(GCP_PROJECT)/nomos:stable
+		gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG) \
+		gcr.io/$(GCR_PREFIX)/nomos:stable
 	gsutil -m rsync -r -d -p \
 		$(RELEASE_BUCKET)/$(VERSION) \
 		$(RELEASE_BUCKET)/stable
@@ -315,11 +318,11 @@ bless-autorelease:
 			git tag -a $${chosen_release} $${chosen_rc}                                    \
 			   -m "Blessed release $${chosen_release}" ;                                   \
 			gcloud container images add-tag --quiet                                        \
-			   gcr.io/$(GCP_PROJECT)/nomos:$${chosen_rc}                                   \
-			   gcr.io/$(GCP_PROJECT)/nomos:$${chosen_release} ;                            \
+			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_rc}                                   \
+			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_release} ;                            \
 			gcloud container images add-tag --quiet                                        \
-			   gcr.io/$(GCP_PROJECT)/nomos:$${chosen_release}                              \
-			   gcr.io/$(GCP_PROJECT)/nomos:stable ;                                        \
+			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_release}                              \
+			   gcr.io/$(GCR_PREFIX)/nomos:stable ;                                        \
 			gsutil -m rsync -r -d -p                                                       \
 			   $(RELEASE_BUCKET)/$${chosen_rc}                                             \
 			   $(RELEASE_BUCKET)/$${chosen_release} ;                                      \
