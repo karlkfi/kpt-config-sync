@@ -1,0 +1,57 @@
+# DO NOT EDIT: These are copied from team/alphabetcloud/bespin and should be edited there, then copied here.
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: organizations.bespin.dev
+spec:
+  group: bespin.dev
+  names:
+    kind: Organization
+    plural: organizations
+  scope: Cluster
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            id:
+              format: int64
+              minimum: 1
+              type: integer
+            importDetails:
+              properties:
+                time:
+                  format: date-time
+                  type: string
+                token:
+                  pattern: ^\w{40}$
+                  type: string
+              required:
+              - token
+              - time
+              type: object
+          required:
+          - id
+          - importDetails
+          type: object
+        status:
+          type: object
+      required:
+      - spec
+      type: object
+  version: v1
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null

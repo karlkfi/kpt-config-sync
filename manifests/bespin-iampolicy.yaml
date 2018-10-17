@@ -1,0 +1,94 @@
+# DO NOT EDIT: These are copied from team/alphabetcloud/bespin and should be edited there, then copied here.
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: iampolicies.bespin.dev
+spec:
+  group: bespin.dev
+  names:
+    kind: IAMPolicy
+    plural: iampolicies
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            bindings:
+              items:
+                properties:
+                  members:
+                    items:
+                      pattern: ^(user|serviceAccount|group|domain):.+$
+                      type: string
+                    pattern: ^(user|serviceAccount|group|domain):.+$
+                    type: array
+                  role:
+                    pattern: ^roles/[\w\.]+$
+                    type: string
+                required:
+                - members
+                - role
+                type: object
+              type: array
+            importDetails:
+              properties:
+                time:
+                  format: date-time
+                  type: string
+                token:
+                  pattern: ^\w{40}$
+                  type: string
+              required:
+              - token
+              - time
+              type: object
+            resourceReference:
+              properties:
+                kind:
+                  pattern: ^(Organization|Folder|Project)$
+                  type: string
+                name:
+                  type: string
+              required:
+              - kind
+              - name
+              type: object
+          required:
+          - resourceReference
+          - bindings
+          - importDetails
+          type: object
+        status:
+          properties:
+            syncDetails:
+              properties:
+                error:
+                  type: string
+                time:
+                  format: date-time
+                  type: string
+                token:
+                  pattern: ^\w{40}$
+                  type: string
+              type: object
+          type: object
+      required:
+      - spec
+      type: object
+  version: v1
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
