@@ -23,7 +23,7 @@ import (
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -36,7 +36,8 @@ import (
 const policyNodeControllerName = "policynode-resources"
 
 // AddPolicyNode adds PolicyNode sync controllers to the Manager.
-func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *differ.Comparator, gvks []schema.GroupVersionKind) error {
+func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *differ.Comparator,
+	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
 	pnc, err := controller.New(policyNodeControllerName, mgr, controller.Options{
 		Reconciler: genericreconcile.NewPolicyNodeReconciler(
 			mgr.GetClient(),
@@ -44,7 +45,7 @@ func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *diff
 			mgr.GetRecorder(policyNodeControllerName),
 			decoder,
 			comparator,
-			gvks,
+			extractGVKs(resourceTypes),
 		),
 	})
 	if err != nil {
@@ -64,10 +65,7 @@ func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *diff
 	}
 	// Set up a watch on all namespace-scoped resources defined in Syncs.
 	// Look up the corresponding PolicyNode for the changed resources.
-	for _, gvk := range gvks {
-		t := &unstructured.Unstructured{}
-		t.SetGroupVersionKind(gvk)
-
+	for gvk, t := range resourceTypes {
 		if err := pnc.Watch(&source.Kind{Type: t}, maptoPolicyNode); err != nil {
 			return errors.Wrapf(err, "could not watch %q in the generic controller", gvk)
 		}

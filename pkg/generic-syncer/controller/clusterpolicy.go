@@ -22,7 +22,7 @@ import (
 	"github.com/google/nomos/pkg/generic-syncer/differ"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -36,7 +36,7 @@ const clusterPolicyControllerName = "clusterpolicy-resources"
 
 // AddClusterPolicy adds ClusterPolicy sync controllers to the Manager.
 func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder, comparator *differ.Comparator,
-	gvks []schema.GroupVersionKind) error {
+	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
 	cpc, err := controller.New(clusterPolicyControllerName, mgr, controller.Options{
 		Reconciler: genericreconcile.NewClusterPolicyReconciler(
 			mgr.GetClient(),
@@ -44,7 +44,7 @@ func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder, comparator *d
 			mgr.GetRecorder(clusterPolicyControllerName),
 			decoder,
 			comparator,
-			gvks,
+			extractGVKs(resourceTypes),
 		),
 	})
 	if err != nil {
@@ -59,10 +59,7 @@ func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder, comparator *d
 	}
 	// Set up a watch on all cluster-scoped resources defined in Syncs.
 	// Look up the corresponding ClusterPolicy for the changed resources.
-	for _, gvk := range gvks {
-		t := &unstructured.Unstructured{}
-		t.SetGroupVersionKind(gvk)
-
+	for gvk, t := range resourceTypes {
 		if err := cpc.Watch(&source.Kind{Type: t}, mapToClusterPolicy); err != nil {
 			return errors.Wrapf(err, "could not watch %q in the generic controller", gvk)
 		}

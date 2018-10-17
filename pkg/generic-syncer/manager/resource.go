@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
@@ -142,8 +143,8 @@ func (r *GenericResourceManager) startControllers(syncs []*nomosv1alpha1.Sync, s
 }
 
 // resourceScopes returns two slices representing the namespace and cluster scoped resource types with sync enabled.
-func (r *GenericResourceManager) resourceScopes() (namespace []schema.GroupVersionKind, cluster []schema.GroupVersionKind,
-	err error) {
+func (r *GenericResourceManager) resourceScopes() (map[schema.GroupVersionKind]runtime.Object,
+	map[schema.GroupVersionKind]runtime.Object, error) {
 	dc, err := discovery.NewDiscoveryClientForConfig(r.GetConfig())
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to create discoveryclient")
@@ -166,12 +167,41 @@ func (r *GenericResourceManager) resourceScopes() (namespace []schema.GroupVersi
 		}
 	}
 
-	for gvk := range r.syncEnabled {
+	rts, err := r.resourceTypes()
+	if err != nil {
+		return nil, nil, err
+	}
+	namespace := make(map[schema.GroupVersionKind]runtime.Object)
+	cluster := make(map[schema.GroupVersionKind]runtime.Object)
+	for gvk, obj := range rts {
 		if namespaceScoped[gvk] {
-			namespace = append(namespace, gvk)
+			namespace[gvk] = obj
 		} else {
-			cluster = append(cluster, gvk)
+			cluster[gvk] = obj
 		}
 	}
 	return namespace, cluster, nil
+}
+
+// resourceTypes returns all the sync enabled resources and the corresponding type stored in the scheme.
+func (r *GenericResourceManager) resourceTypes() (map[schema.GroupVersionKind]runtime.Object, error) {
+	knownGVKs := r.GetScheme().AllKnownTypes()
+	m := make(map[schema.GroupVersionKind]runtime.Object)
+	for gvk := range r.syncEnabled {
+		rt, ok := knownGVKs[gvk]
+		if !ok {
+			return nil, errors.Errorf("trying to sync %q, which hasn't been registered in the scheme", gvk)
+		}
+
+		// If it's a resource with an unknown type at compile time, we need to specifically set the GroupVersionKind for it
+		// when enabling the watch.
+		if rt.AssignableTo(reflect.TypeOf(unstructured.Unstructured{})) {
+			u := &unstructured.Unstructured{}
+			u.SetGroupVersionKind(gvk)
+			m[gvk] = u
+		} else {
+			m[gvk] = reflect.New(rt).Interface().(runtime.Object)
+		}
+	}
+	return m, nil
 }
