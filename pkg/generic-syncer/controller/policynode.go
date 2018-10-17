@@ -22,6 +22,7 @@ import (
 	"github.com/google/nomos/pkg/generic-syncer/differ"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,8 +50,13 @@ func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *diff
 	if err != nil {
 		return errors.Wrap(err, "could not create policynode controller")
 	}
+
 	if err = pnc.Watch(&source.Kind{Type: &nomosv1.PolicyNode{}}, &handler.EnqueueRequestForObject{}); err != nil {
-		return errors.Wrap(err, "could not watch PolicyNodes in the controller")
+		return errors.Wrap(err, "could not watch PolicyNodes in the policy node controller")
+	}
+	// Namespaces have the same name as their corresponding PolicyNode, so we can also use EnqueueRequestForObject.
+	if err = pnc.Watch(&source.Kind{Type: &corev1.Namespace{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return errors.Wrap(err, "could not watch Namespaces in the policy node controller")
 	}
 
 	maptoPolicyNode := &handler.EnqueueRequestsFromMapFunc{
