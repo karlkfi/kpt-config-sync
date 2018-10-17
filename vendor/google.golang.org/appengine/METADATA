@@ -1,12 +1,12 @@
 name: "appengine"
-description: "This repository supports the Go runtime on App Engine, including both the standard App Engine and the "App Engine flexible environment" (formerly known as "Managed VMs"). It provides APIs for interacting with App Engine services. Its canonical import path is `google.golang.org/appengine`."
+description: "This repository supports the Go runtime on *App Engine standard*. It provides APIs for interacting with App Engine services. Its canonical import path is `google.golang.org/appengine`."
 
 third_party {
   url {
     type: GIT
     value: "https://github.com/golang/appengine"
   }
-  version: "v1.0.0"
+  version: "v1.2.0"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

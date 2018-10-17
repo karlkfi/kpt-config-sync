@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/looplab/tarjan"
   }
-  version: "9cc6d6cebfb53dbdb1376b597384e92465f6fcd4"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/prometheus/common"
   }
-  version: "2e54d0b93cba2fd133edc32211dcc32c06ef72ca"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

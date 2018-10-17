@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/square/go-jose"
   }
-  version: "v2.1.6"
+  version: "v2.1.9"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

@@ -1,5 +1,5 @@
 name: "semver"
-description: "Semantic Versioning (semver) library written in golang"
+description: "Usage ----- ```bash $ go get github.com/blang/semver ``` Note: Always vendor your dependencies or fix on a specific version tag."
 
 third_party {
   url {

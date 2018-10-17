@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/howeyc/gopass"
   }
-  version: "bf9dde6d0d2c004a008c27aaee91170c786f6db8"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

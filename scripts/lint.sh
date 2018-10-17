@@ -39,6 +39,7 @@ if ! OUT="$(
     --enable=vetshadow \
     --exclude=generated\.pb\.go \
     --exclude=generated\.go \
+		--exclude=zz_generated\.*\.go \
     "$@" \
     )"; then
   echo "${OUT}"

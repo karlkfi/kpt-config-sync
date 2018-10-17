@@ -1,0 +1,12 @@
+name: "tail"
+description: "A Go package striving to emulate the features of the BSD `tail` program."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/hpcloud/tail"
+  }
+  version: "v1.0.0"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

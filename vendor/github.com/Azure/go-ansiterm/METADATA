@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/Azure/go-ansiterm"
   }
-  version: "d6e3b3328b783f23731bc4d058875b0371ff8109"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

@@ -1,6 +1,5 @@
-name: "moby"
-description: "Moby is an open-source project created by Docker to enable and
-accelerate software containerization."
+name: "docker"
+description: "The Moby Project ================"
 
 third_party {
   url {

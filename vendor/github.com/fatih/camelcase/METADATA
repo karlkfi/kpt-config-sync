@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/fatih/camelcase"
   }
-  version: "44e46d280b43ec1531bb25252440e34f1b800b65"
+  version: "v1.0.0"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

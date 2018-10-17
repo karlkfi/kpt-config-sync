@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://go.googlesource.com/oauth2"
   }
-  version: "9a379c6b3e95a790ffc43293c2a78dee0d7b6e20"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

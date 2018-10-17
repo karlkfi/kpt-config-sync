@@ -508,6 +508,20 @@
   revision = "bf9dde6d0d2c004a008c27aaee91170c786f6db8"
 
 [[projects]]
+  digest = "1:a1038ef593beb4771c8f0f9c26e8b00410acd800af5c6864651d9bf160ea1813"
+  name = "github.com/hpcloud/tail"
+  packages = [
+    ".",
+    "ratelimiter",
+    "util",
+    "watch",
+    "winfile",
+  ]
+  pruneopts = "UT"
+  revision = "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:8eb1de8112c9924d59bf1d3e5c26f5eaa2bfc2a5fcbb92dc1c2e4546d695f277"
   name = "github.com/imdario/mergo"
   packages = ["."]
@@ -611,6 +625,56 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "0ad87eef1443f64d3d8c50da647e2b1552851124"
+
+[[projects]]
+  digest = "1:42e29deef12327a69123b9cb2cb45fee4af5c12c2a23c6e477338279a052703f"
+  name = "github.com/onsi/ginkgo"
+  packages = [
+    ".",
+    "config",
+    "internal/codelocation",
+    "internal/containernode",
+    "internal/failer",
+    "internal/leafnodes",
+    "internal/remote",
+    "internal/spec",
+    "internal/spec_iterator",
+    "internal/specrunner",
+    "internal/suite",
+    "internal/testingtproxy",
+    "internal/writer",
+    "reporters",
+    "reporters/stenographer",
+    "reporters/stenographer/support/go-colorable",
+    "reporters/stenographer/support/go-isatty",
+    "types",
+  ]
+  pruneopts = "UT"
+  revision = "3774a09d95489ccaa16032e0770d08ea77ba6184"
+  version = "v1.6.0"
+
+[[projects]]
+  digest = "1:d6d3014e71a3504f7fda993889cfdc09ef5b70b46b00dd6bd078943585944352"
+  name = "github.com/onsi/gomega"
+  packages = [
+    ".",
+    "format",
+    "gbytes",
+    "gexec",
+    "internal/assertion",
+    "internal/asyncassertion",
+    "internal/oraclematcher",
+    "internal/testingtsupport",
+    "matchers",
+    "matchers/support/goraph/bipartitegraph",
+    "matchers/support/goraph/edge",
+    "matchers/support/goraph/node",
+    "matchers/support/goraph/util",
+    "types",
+  ]
+  pruneopts = "UT"
+  revision = "7615b9433f86a8bdf29709bf288bc4fd0636a369"
+  version = "v1.4.2"
 
 [[projects]]
   digest = "1:ee4d4af67d93cc7644157882329023ce9a7bcfce956a079069a9405521c7cc8d"
@@ -782,11 +846,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1c14517b2f106c61d75006199b46a46576058661d469658cb0f90739919641d2"
+  digest = "1:6bc1cd2e7e05cd9016a3d9cfdc72ba962762b7f774fb98ef4c37183f9331fd6d"
   name = "golang.org/x/net"
   packages = [
     "context",
     "context/ctxhttp",
+    "html",
+    "html/atom",
+    "html/charset",
     "http/httpguts",
     "http2",
     "http2/hpack",
@@ -831,14 +898,20 @@
   revision = "b09afc3d579e346c4a7e4705953acaf6f9e551bd"
 
 [[projects]]
-  digest = "1:28756bf526c1af662d24519f2fa7abca7237bebb06e3e02941b2b6e5b6ceb7b9"
+  digest = "1:bb8277a2ca2bcad6ff7f413b939375924099be908cedd1314baa21ecd08df477"
   name = "golang.org/x/text"
   packages = [
     "collate",
     "collate/build",
     "encoding",
+    "encoding/charmap",
+    "encoding/htmlindex",
     "encoding/internal",
     "encoding/internal/identifier",
+    "encoding/japanese",
+    "encoding/korean",
+    "encoding/simplifiedchinese",
+    "encoding/traditionalchinese",
     "encoding/unicode",
     "internal/colltab",
     "internal/gen",
@@ -932,6 +1005,15 @@
   version = "v1.15.0"
 
 [[projects]]
+  digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
+  name = "gopkg.in/fsnotify.v1"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  source = "https://github.com/fsnotify/fsnotify.git"
+  version = "v1.4.7"
+
+[[projects]]
   digest = "1:2d1fbdc6777e5408cabeb02bf336305e724b925ff4546ded0fa8715a7267922a"
   name = "gopkg.in/inf.v0"
   packages = ["."]
@@ -951,6 +1033,14 @@
   pruneopts = "UT"
   revision = "ef984e69dd356202fd4e4910d4d9c24468bdf0b8"
   version = "v2.1.9"
+
+[[projects]]
+  branch = "v1"
+  digest = "1:0caa92e17bc0b65a98c63e5bc76a9e844cd5e56493f8fdbb28fad101a16254d9"
+  name = "gopkg.in/tomb.v1"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
 
 [[projects]]
   digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
@@ -1496,7 +1586,7 @@
   revision = "cd34563cd63c2bd7c6fe88a73c4dcf34ed8a67cb"
 
 [[projects]]
-  digest = "1:687f64b29f27f68d193fe5779c7fec796c8d20fa6d328174cac15a39f7848fd1"
+  digest = "1:6529c1f36afd539dcd83bc7b185f19a088d4f0ebd06fdce1163b3e0633a3b7d5"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1504,6 +1594,7 @@
     "pkg/client",
     "pkg/client/apiutil",
     "pkg/controller",
+    "pkg/envtest",
     "pkg/event",
     "pkg/handler",
     "pkg/internal/controller",
@@ -1514,12 +1605,24 @@
     "pkg/recorder",
     "pkg/runtime/inject",
     "pkg/runtime/log",
+    "pkg/runtime/scheme",
     "pkg/source",
     "pkg/source/internal",
   ]
   pruneopts = "UT"
   revision = "67e28744a963c78a34108c3b52aadbc5e02f4384"
   version = "v0.1.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:fcda4907e877328a34cafaa567073836809d79f43027d6ed9a036758affdcb6c"
+  name = "sigs.k8s.io/testing_frameworks"
+  packages = [
+    "integration",
+    "integration/internal",
+  ]
+  pruneopts = "UT"
+  revision = "5818a3a284a11812aaed11d5ca0bcadec2c50e83"
 
 [[projects]]
   branch = "master"
@@ -1563,6 +1666,7 @@
     "github.com/kubernetes-sigs/kubebuilder/pkg/inject/run",
     "github.com/kubernetes-sigs/kubebuilder/pkg/signals",
     "github.com/looplab/tarjan",
+    "github.com/onsi/gomega",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
@@ -1650,10 +1754,12 @@
     "sigs.k8s.io/controller-runtime/pkg/cache",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/controller",
+    "sigs.k8s.io/controller-runtime/pkg/envtest",
     "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
+    "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",
     "sigs.k8s.io/controller-runtime/pkg/source",
   ]
   solver-name = "gps-cdcl"

@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/docker/distribution"
   }
-  version: "3800056b8832cf6075e78b282ac010131d8687bc"
+  version: "d37f8164276c54f91c4ca7f64e3543f3cc6ecd29"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/mailru/easyjson"
   }
-  version: "2a92e673c9a6302dd05c3a691ae1f24aef46457d"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

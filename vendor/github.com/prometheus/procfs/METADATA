@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/prometheus/procfs"
   }
-  version: "b15cd069a83443be3154b719d0cc9fe8117f09fb"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

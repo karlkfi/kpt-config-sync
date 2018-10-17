@@ -1,12 +1,12 @@
 name: "yaml.v2"
-description: "YAML support for the Go language."
+description: "Introduction ------------"
 
 third_party {
   url {
     type: GIT
     value: "https://github.com/go-yaml/yaml"
   }
-  version: "eb3733d160e74a9c7e442f435eb3bea458e1d19f"
+  version: "v2.2.1"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

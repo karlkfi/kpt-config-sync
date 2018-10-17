@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/Azure/go-autorest"
   }
-  version: "f81f475e6d928a1f988ccbcdd166f06f8f820c97"
+  version: "v9.10.0"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

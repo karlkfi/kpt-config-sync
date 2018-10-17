@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://go.googlesource.com/text"
   }
-  version: "6eab0e8f74e86c598ec3b6fad4888e0c11482d48"
+  version: "v0.3.0"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

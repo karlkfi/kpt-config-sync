@@ -1,12 +1,12 @@
 name: "kubebuilder"
-description: "Kubebuilder is a framework for building Kubernetes APIs."
+description: "Kubebuilder is a framework for building Kubernetes APIs using [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions)."
 
 third_party {
   url {
     type: GIT
     value: "https://github.com/kubernetes-sigs/kubebuilder"
   }
-  version: "02e01e3ed93e1f5d528d8310d6725e445ebfb79d"
+  version: "v1.0.4"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

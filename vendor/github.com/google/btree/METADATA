@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/google/btree"
   }
-  version: "316fb6d3f031ae8f4d457c6c5186b9e3ded70435"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

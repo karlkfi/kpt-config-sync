@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/kubernetes/gengo"
   }
-  version: "01a732e01d00cb9a81bb0ca050d3e6d2b947927b"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

@@ -1,7 +1,5 @@
 name: "deep"
-description: "This package provides a single function: `deep.Equal`. It's like
-[reflect.DeepEqual](http://golang.org/pkg/reflect/#DeepEqual) but much
-friendlier to humans (or any sentient being)."
+description: "This package provides a single function: `deep.Equal`. It's like [reflect.DeepEqual](http://golang.org/pkg/reflect/#DeepEqual) but much friendlier to humans (or any sentient being) for two reason:"
 
 third_party {
   url {

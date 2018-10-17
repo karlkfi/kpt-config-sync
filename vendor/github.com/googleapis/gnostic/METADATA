@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/googleapis/gnostic"
   }
-  version: "3df79aa8f7cf7754d53f8290c4a8898646a40ca9"
+  version: "v0.2.0"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

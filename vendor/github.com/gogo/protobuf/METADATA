@@ -1,12 +1,12 @@
 name: "protobuf"
-description: "GoGoProtobuf http://github.com/gogo/protobuf extends  GoProtobuf http://github.com/golang/protobuf"
+description: "Protocol Buffers for Go with Gadgets"
 
 third_party {
   url {
     type: GIT
     value: "https://github.com/gogo/protobuf"
   }
-  version: "117892bf1866fbaa2318c03e50e40564c8845457"
+  version: "v1.1.1"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

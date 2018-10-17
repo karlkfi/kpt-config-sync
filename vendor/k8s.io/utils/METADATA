@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/kubernetes/utils"
   }
-  version: "258e2a2fa64568210fbd6267cf1d8fd87c3cb86e"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

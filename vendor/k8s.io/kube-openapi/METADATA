@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/kubernetes/kube-openapi"
   }
-  version: "275e2ce91dec4c05a4094a7b1daee5560b555ac9"
+  version: "master"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

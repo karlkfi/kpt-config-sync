@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/PuerkitoBio/purell"
   }
-  version: "fd18e053af8a4ff11039269006e8037ff374ce0e"
+  version: "v1.1.0"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

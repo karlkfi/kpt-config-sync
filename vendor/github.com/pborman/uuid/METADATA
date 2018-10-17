@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/pborman/uuid"
   }
-  version: "v1.1"
+  version: "v1.2"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }
