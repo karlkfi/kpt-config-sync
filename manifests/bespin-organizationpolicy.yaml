@@ -12,7 +12,7 @@ spec:
   names:
     kind: OrganizationPolicy
     plural: organizationpolicies
-  scope: Cluster
+  scope: Namespaced
   validation:
     openAPIV3Schema:
       properties:
