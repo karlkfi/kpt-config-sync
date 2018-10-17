@@ -17,201 +17,688 @@ limitations under the License.
 package differ
 
 import (
-	"fmt"
-	"reflect"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
-	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/syncer/labeling"
+	appsv1 "k8s.io/api/apps/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var converter = runtime.DefaultUnstructuredConverter
-
-func testEqualsFn(t *testing.T) func(*unstructured.Unstructured, *unstructured.Unstructured) bool {
-	return func(lhsObj *unstructured.Unstructured, rhsObj *unstructured.Unstructured) bool {
-		lhs := &nomosv1.ClusterPolicy{}
-		rhs := &nomosv1.ClusterPolicy{}
-		if err := converter.FromUnstructured(lhsObj.UnstructuredContent(), lhs); err != nil {
-			t.Fatal(err)
-		}
-		if err := converter.FromUnstructured(rhsObj.UnstructuredContent(), rhs); err != nil {
-			t.Fatal(err)
-		}
-		return lhs.Spec.ImportToken == rhs.Spec.ImportToken
+func TestDiff(t *testing.T) {
+	testCases := []struct {
+		name      string
+		sync      *v1alpha1.Sync
+		lhs       runtime.Object
+		rhs       runtime.Object
+		wantEqual bool
+		wantPanic bool
+	}{
+		{
+			name: "resources with specified comparisons fields match",
+			sync: &v1alpha1.Sync{
+				Spec: v1alpha1.SyncSpec{
+					Groups: []v1alpha1.SyncGroup{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			lhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+					{
+						Resources: []string{"namespaces"},
+						Verbs:     []string{"get"},
+					},
+				},
+			},
+			rhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+					{
+						Resources: []string{"namespaces"},
+						Verbs:     []string{"get"},
+					},
+				},
+			},
+			wantEqual: true,
+		},
+		{
+			name: "resources with specified field comparisons don't match",
+			sync: &v1alpha1.Sync{
+				Spec: v1alpha1.SyncSpec{
+					Groups: []v1alpha1.SyncGroup{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			lhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+				},
+			},
+			rhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"list"},
+					},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "resource with spec fields matching",
+			sync: &v1alpha1.Sync{
+				Spec: v1alpha1.SyncSpec{
+					Groups: []v1alpha1.SyncGroup{
+						{
+							Group: "apps",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Deployment",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version: "v1",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			lhs: &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Deployment",
+					APIVersion: "apps/v1",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: appsv1.RecreateDeploymentStrategyType,
+					},
+				},
+			},
+			rhs: &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Deployment",
+					APIVersion: "apps/v1",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: appsv1.RecreateDeploymentStrategyType,
+					},
+				},
+			},
+			wantEqual: true,
+		},
+		{
+			name: "resource with spec fields not matching",
+			sync: &v1alpha1.Sync{
+				Spec: v1alpha1.SyncSpec{
+					Groups: []v1alpha1.SyncGroup{
+						{
+							Group: "apps",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Deployment",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version: "v1",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			lhs: &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Deployment",
+					APIVersion: "apps/v1",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: appsv1.RecreateDeploymentStrategyType,
+					},
+				},
+			},
+			rhs: &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Deployment",
+					APIVersion: "apps/v1",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: appsv1.RollingUpdateDeploymentStrategyType,
+					},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "resources with matching labels",
+			sync: &v1alpha1.Sync{
+				Spec: v1alpha1.SyncSpec{
+					Groups: []v1alpha1.SyncGroup{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			lhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+				},
+			},
+			rhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+				},
+			},
+			wantEqual: true,
+		},
+		{
+			name: "ignore management label when comparing",
+			sync: &v1alpha1.Sync{
+				Spec: v1alpha1.SyncSpec{
+					Groups: []v1alpha1.SyncGroup{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			lhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						labeling.ResourceManagementKey: labeling.NomosSystemValue,
+						"foo":                          "bar",
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+				},
+			},
+			rhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+				},
+			},
+			wantEqual: true,
+		},
+		{
+			name: "resources with annotations matching",
+			sync: &v1alpha1.Sync{
+				Spec: v1alpha1.SyncSpec{
+					Groups: []v1alpha1.SyncGroup{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			lhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"foo": "bar",
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+				},
+			},
+			rhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"foo": "bar",
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+				},
+			},
+			wantEqual: true,
+		},
+		{
+			name: "resources with annotations not matching",
+			sync: &v1alpha1.Sync{
+				Spec: v1alpha1.SyncSpec{
+					Groups: []v1alpha1.SyncGroup{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "Role",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version:       "v1",
+											CompareFields: []string{"rules"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			lhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"foo": "bar",
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+				},
+			},
+			rhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"baz": "qux",
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Resources: []string{"pods"},
+						Verbs:     []string{"*"},
+					},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "clusterroles with different rules",
+			lhs: &rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "admin",
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Verbs:     []string{"*"},
+						APIGroups: []string{"*"},
+						Resources: []string{"*"},
+					},
+				},
+			},
+			rhs: &rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "readonly",
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Verbs:     []string{"get list"},
+						APIGroups: []string{"*"},
+						Resources: []string{"*"},
+					},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "clusterroles with different aggregation rules",
+			lhs: &rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "admin",
+				},
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
+						{
+							MatchLabels: map[string]string{
+								"rbac.authorization.k8s.io/aggregate-to-edit": "true",
+							},
+						},
+					},
+				},
+			},
+			rhs: &rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "admin",
+				},
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
+						{
+							MatchLabels: map[string]string{
+								"rbac.authorization.k8s.io/aggregate-to-view": "true",
+							},
+						},
+					},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "clusterroles with different aggregation rules, same rules",
+			lhs: &rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "admin",
+				},
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
+						{
+							MatchLabels: map[string]string{
+								"rbac.authorization.k8s.io/aggregate-to-edit": "true",
+							},
+						},
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Verbs:     []string{"get list"},
+						APIGroups: []string{"*"},
+						Resources: []string{"*"},
+					},
+				},
+			},
+			rhs: &rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "admin",
+				},
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
+						{
+							MatchLabels: map[string]string{
+								"rbac.authorization.k8s.io/aggregate-to-view": "true",
+							},
+						},
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Verbs:     []string{"get list"},
+						APIGroups: []string{"*"},
+						Resources: []string{"*"},
+					},
+				},
+			},
+			wantEqual: false,
+		},
+		{
+			name: "clusterroles with same aggregation rules, same rules",
+			lhs: &rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "admin",
+				},
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
+						{
+							MatchLabels: map[string]string{
+								"rbac.authorization.k8s.io/aggregate-to-view": "true",
+							},
+						},
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Verbs:     []string{"get list"},
+						APIGroups: []string{"*"},
+						Resources: []string{"*"},
+					},
+				},
+			},
+			rhs: &rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "admin",
+				},
+				AggregationRule: &rbacv1.AggregationRule{
+					ClusterRoleSelectors: []metav1.LabelSelector{
+						{
+							MatchLabels: map[string]string{
+								"rbac.authorization.k8s.io/aggregate-to-view": "true",
+							},
+						},
+					},
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						Verbs:     []string{"get list"},
+						APIGroups: []string{"*"},
+						Resources: []string{"*"},
+					},
+				},
+			},
+			wantEqual: true,
+		},
+		{
+			name: "resources with different group, version, kinds",
+			lhs: &rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+			},
+			rhs: &rbacv1.Role{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+			},
+			wantPanic: true,
+		},
 	}
-}
 
-type TestItem struct {
-	name        string
-	value       string
-	labels      map[string]string
-	annotations map[string]string
-}
-
-func (ti TestItem) Object(t *testing.T) *unstructured.Unstructured {
-	obj := &nomosv1.ClusterPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        ti.name,
-			Labels:      ti.labels,
-			Annotations: ti.annotations,
-		},
-		Spec: nomosv1.ClusterPolicySpec{
-			ImportToken: ti.value,
-		},
-	}
-	u, err := converter.ToUnstructured(obj)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &unstructured.Unstructured{Object: u}
-}
-
-type TestItems []TestItem
-
-func (ti TestItems) Objects(t *testing.T) []*unstructured.Unstructured {
-	ret := make([]*unstructured.Unstructured, len(ti))
-	for idx, item := range ti {
-		ret[idx] = item.Object(t)
-	}
-	return ret
-}
-
-type TestCase struct {
-	name        string
-	decls       TestItems
-	actuals     TestItems
-	expect      []*Diff
-	expectPanic bool
-}
-
-func TestComparator(t *testing.T) {
-	testcases := []TestCase{
-		{
-			name: "Empty sets",
-		},
-		{
-			name: "Only declared",
-			decls: TestItems{
-				TestItem{name: "foo", value: "1"},
-			},
-			expect: []*Diff{
-				{
-					Name:     "foo",
-					Type:     Add,
-					Declared: TestItem{name: "foo", value: "1"}.Object(t),
-					Actual:   nil,
-				},
-			},
-		},
-		{
-			name: "Only actual",
-			actuals: TestItems{
-				TestItem{name: "foo", value: "2"},
-			},
-			expect: []*Diff{
-				{
-					Name:     "foo",
-					Type:     Delete,
-					Declared: nil,
-					Actual:   TestItem{name: "foo", value: "2"}.Object(t),
-				},
-			},
-		},
-		{
-			name: "Differing element value",
-			decls: TestItems{
-				TestItem{name: "foo", value: "1"},
-			},
-			actuals: TestItems{
-				TestItem{name: "foo", value: "2"},
-			},
-			expect: []*Diff{
-				{
-					Name:     "foo",
-					Type:     Update,
-					Declared: TestItem{name: "foo", value: "1"}.Object(t),
-					Actual:   TestItem{name: "foo", value: "2"}.Object(t),
-				},
-			},
-		},
-		{
-			name: "Mixture",
-			decls: TestItems{
-				TestItem{name: "foo", value: "1"},
-				TestItem{name: "bar", value: "2"},
-				TestItem{name: "baz", value: "3"},
-			},
-			actuals: TestItems{
-				TestItem{name: "foo", value: "2"},
-				TestItem{name: "bar", value: "2"},
-				TestItem{name: "buffalo", value: "4"},
-			},
-			expect: []*Diff{
-				{
-					Name:     "foo",
-					Type:     Update,
-					Declared: TestItem{name: "foo", value: "1"}.Object(t),
-					Actual:   TestItem{name: "foo", value: "2"}.Object(t),
-				},
-				{
-					Name:     "baz",
-					Type:     Add,
-					Declared: TestItem{name: "baz", value: "3"}.Object(t),
-					Actual:   nil,
-				},
-				{
-					Name:     "buffalo",
-					Type:     Delete,
-					Declared: nil,
-					Actual:   TestItem{name: "buffalo", value: "4"}.Object(t),
-				},
-			},
-		},
-		{
-			name: "panic on duplicate decl names",
-			decls: TestItems{
-				TestItem{name: "pod-creator", value: "2"},
-				TestItem{name: "pod-creator", value: "2"},
-			},
-			actuals: TestItems{
-				TestItem{name: "pod-creator", value: "2"},
-			},
-			expectPanic: true,
-		},
-	}
-	for _, testcase := range testcases {
-		t.Run(testcase.name, func(t *testing.T) {
+	converter := runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if x := recover(); x != nil {
-					if _, ok := x.(invalidInput); ok && testcase.expectPanic {
+					if tc.wantPanic {
 						return
 					}
 					panic(x)
 				}
 			}()
 
-			declared := testcase.decls.Objects(t)
-			actuals := testcase.actuals.Objects(t)
-
-			diff := Diffs(testEqualsFn(t), declared, actuals)
-
-			for _, expect := range testcase.expect {
-				var found bool
-				for _, actual := range diff {
-					if reflect.DeepEqual(expect, actual) {
-						found = true
-					}
-				}
-				if !found {
-					t.Errorf("expected diff %#v missing from actual", spew.Sdump(expect))
-					fmt.Printf("expect:\n%s\ndiff:\n%s\n", spew.Sdump(expect), spew.Sdump(diff))
-				}
+			var syncs []*v1alpha1.Sync
+			if s := tc.sync; s != nil {
+				syncs = append(syncs, s)
 			}
-			if len(diff) != len(testcase.expect) {
-				t.Errorf("Expected was different length than actual")
+			differ := NewComparator(syncs, labeling.ResourceManagementKey)
+			lhu, err := converter.ToUnstructured(tc.lhs)
+			if err != nil {
+				t.Fatalf("could not convert %v to unstructured type", tc.lhs)
+			}
+			rhu, err := converter.ToUnstructured(tc.rhs)
+			if err != nil {
+				t.Fatalf("could not convert %v to unstructured type", tc.rhs)
+			}
+
+			eq := differ.Equal(&unstructured.Unstructured{Object: lhu}, &unstructured.Unstructured{Object: rhu})
+			if tc.wantPanic {
+				t.Fatal("want panic, got none")
+			}
+			if eq != tc.wantEqual {
+				t.Errorf("want Equal=%t, got %t", tc.wantEqual, eq)
 			}
 		})
 	}
