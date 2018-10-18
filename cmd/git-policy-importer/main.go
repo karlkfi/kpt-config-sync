@@ -59,12 +59,7 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	resources, err := client.Kubernetes().Discovery().ServerResources()
-	if err != nil {
-		glog.Fatalf("Failed to get server resources: %v", err)
-	}
-
-	parser, err := filesystem.NewParser(nil, resources, true)
+	parser, err := filesystem.NewParser(nil, client.Kubernetes().Discovery(), true)
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %v", err)
 	}

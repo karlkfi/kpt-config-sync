@@ -33,6 +33,7 @@ import (
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -44,6 +45,7 @@ type Controller struct {
 	pollPeriod          time.Duration
 	parser              *Parser
 	differ              *actions.Differ
+	discoveryClient     discovery.ServerResourcesInterface
 	informerFactory     informer.SharedInformerFactory
 	policyNodeLister    listersv1.PolicyNodeLister
 	clusterPolicyLister listersv1.ClusterPolicyLister
@@ -67,6 +69,7 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		pollPeriod:          pollPeriod,
 		parser:              parser,
 		differ:              differ,
+		discoveryClient:     client.Kubernetes().Discovery(),
 		informerFactory:     informerFactory,
 		policyNodeLister:    informerFactory.Nomos().V1().PolicyNodes().Lister(),
 		clusterPolicyLister: informerFactory.Nomos().V1().ClusterPolicies().Lister(),

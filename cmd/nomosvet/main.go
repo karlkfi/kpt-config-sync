@@ -91,12 +91,7 @@ func main() {
 		printErrAndDie(errors.Wrap(err, "Failed to create client"))
 	}
 
-	resources, err := client.Discovery().ServerResources()
-	if err != nil {
-		printErrAndDie(errors.Wrap(err, "Failed to get server resources"))
-	}
-
-	p, err := filesystem.NewParser(clientConfig, resources, *validate)
+	p, err := filesystem.NewParser(clientConfig, client.Discovery(), *validate)
 	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Failed to create parser"))
 	}

@@ -40,6 +40,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/clientcmd"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
@@ -49,9 +50,9 @@ import (
 
 // Parser reads files on disk and builds Nomos CRDs.
 type Parser struct {
-	factory   cmdutil.Factory
-	resources []*metav1.APIResourceList
-	validate  bool
+	factory         cmdutil.Factory
+	discoveryClient discovery.ServerResourcesInterface
+	validate        bool
 	// OS-specific path to root.
 	root string
 }
@@ -77,11 +78,11 @@ const (
 // resources is the list returned by the DisoveryClient ServerResources call which represents resources
 // 		that are returned by the API server during discovery.
 // validate determines whether to validate schema using OpenAPI spec.
-func NewParser(config clientcmd.ClientConfig, resources []*metav1.APIResourceList, validate bool) (*Parser, error) {
+func NewParser(config clientcmd.ClientConfig, discoveryClient discovery.ServerResourcesInterface, validate bool) (*Parser, error) {
 	p := Parser{
-		factory:   cmdutil.NewFactory(config),
-		resources: resources,
-		validate:  validate,
+		factory:         cmdutil.NewFactory(config),
+		discoveryClient: discoveryClient,
+		validate:        validate,
 	}
 
 	return &p, nil
@@ -162,7 +163,12 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 		return nil, err
 	}
 
-	return p.processDirs(p.resources, dirInfos, clusterInfos, clusterregistryInfos, treeDirsOrdered,
+	resources, discoveryErr := p.discoveryClient.ServerResources()
+	if discoveryErr != nil {
+		return nil, errors.Wrap(discoveryErr, "failed to get server resources")
+	}
+
+	return p.processDirs(resources, dirInfos, clusterInfos, clusterregistryInfos, treeDirsOrdered,
 		clusterDir, fsCtx, allowedGVKs)
 }
 

@@ -58,6 +58,11 @@ type fakeCachedDiscoveryClient struct {
 	discovery.DiscoveryInterface
 }
 
+// NewFakeCachedDiscoveryClient returns a DiscoveryClient with stubbed API Resources.
+func NewFakeCachedDiscoveryClient() discovery.DiscoveryInterface {
+	return &fakeCachedDiscoveryClient{}
+}
+
 // Fresh always returns that the client is fresh.
 func (d *fakeCachedDiscoveryClient) Fresh() bool {
 	return true
@@ -67,9 +72,9 @@ func (d *fakeCachedDiscoveryClient) Fresh() bool {
 func (d *fakeCachedDiscoveryClient) Invalidate() {
 }
 
-// ServerResources returns the list of available resources.
+// ServerResources returns the stubbed list of available resources.
 func (d *fakeCachedDiscoveryClient) ServerResources() ([]*metav1.APIResourceList, error) {
-	return []*metav1.APIResourceList{}, nil
+	return TestAPIResourceList(), nil
 }
 
 // TestFactory is a cmdutil.Factory that can be used in tests to avoid requiring talking
@@ -358,7 +363,7 @@ func (f *TestFactory) LogsForObject(object, options runtime.Object, timeout time
 	}
 }
 
-// TestAPIResourceList returns the API ResourceList as would be returned by the DisoveryClient ServerResources
+// TestAPIResourceList returns the API ResourceList as would be returned by the DiscoveryClient ServerResources
 // call which represents resources that are returned by the API server during discovery.
 func TestAPIResourceList() []*metav1.APIResourceList {
 	var apiResources []*metav1.APIResourceList

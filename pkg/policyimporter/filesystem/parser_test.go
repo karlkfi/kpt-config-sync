@@ -1229,7 +1229,7 @@ func TestParser(t *testing.T) {
 				}
 			}()
 
-			p := Parser{f, fstesting.TestAPIResourceList(), true, d.rootDir}
+			p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(), true, d.rootDir}
 
 			actualPolicies, err := p.Parse(d.rootDir)
 			if tc.expectedError {
