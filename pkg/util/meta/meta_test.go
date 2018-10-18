@@ -49,10 +49,6 @@ func genName(len int) string {
 	return strings.Join(name, "")
 }
 
-func subdomainMaxLen(namespace string) int {
-	return 253 - len(namespace) - 1
-}
-
 type fakeAPIObject struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
@@ -71,7 +67,6 @@ func newFakeAPIObject(m metav1.ObjectMeta) *fakeAPIObject {
 var metaValidationTestCases = []struct {
 	name      string
 	obj       metav1.Object
-	flattened bool
 	namespace string
 	wantErr   bool
 }{
@@ -165,28 +160,6 @@ var metaValidationTestCases = []struct {
 		wantErr: true,
 	},
 	{
-		name: "valid hierarchical name len (=253)",
-		obj: newFakeAPIObject(metav1.ObjectMeta{
-			Name:        genName(subdomainMaxLen("foo-corp")),
-			Labels:      map[string]string{},
-			Annotations: map[string]string{},
-		}),
-		flattened: true,
-		namespace: "foo-corp",
-		wantErr:   false,
-	},
-	{
-		name: "valid hierarchical name len (>253)",
-		obj: newFakeAPIObject(metav1.ObjectMeta{
-			Name:        genName(subdomainMaxLen("foo-corp") + 1),
-			Labels:      map[string]string{},
-			Annotations: map[string]string{},
-		}),
-		flattened: true,
-		namespace: "foo-corp",
-		wantErr:   true,
-	},
-	{
 		name: "rbac Role",
 		obj: &v1.Role{
 			TypeMeta: metav1.TypeMeta{
@@ -199,7 +172,6 @@ var metaValidationTestCases = []struct {
 				Annotations: map[string]string{},
 			},
 		},
-		flattened: true,
 		namespace: "foo-corp",
 		wantErr:   false,
 	},
@@ -216,7 +188,6 @@ var metaValidationTestCases = []struct {
 				Annotations: map[string]string{},
 			},
 		},
-		flattened: true,
 		namespace: "foo-corp",
 		wantErr:   false,
 	},
@@ -233,8 +204,7 @@ var metaValidationTestCases = []struct {
 				Annotations: map[string]string{},
 			},
 		},
-		flattened: true,
-		wantErr:   false,
+		wantErr: false,
 	},
 	{
 		name: "rbac ClusterRoleBinding",
@@ -249,8 +219,7 @@ var metaValidationTestCases = []struct {
 				Annotations: map[string]string{},
 			},
 		},
-		flattened: true,
-		wantErr:   false,
+		wantErr: false,
 	},
 }
 
@@ -270,9 +239,8 @@ func TestValidateObject(t *testing.T) {
 	for _, tt := range metaValidationTestCases {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewValidator()
-			validator.Flattened = tt.flattened
 
-			err := validator.ValidateObject(tt.namespace, tt.obj)
+			err := validator.ValidateObject(tt.obj)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Expected error, got nil")
@@ -291,14 +259,13 @@ func TestValidateMetaChecks(t *testing.T) {
 	for _, tt := range metaValidationTestCases {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewValidator()
-			validator.Flattened = tt.flattened
 			obj, ok := tt.obj.(*fakeAPIObject)
 			if !ok {
 				return
 			}
 
 			objValueList := []fakeAPIObject{*obj}
-			err := validator.Validate(tt.namespace, objValueList)
+			err := validator.Validate(objValueList)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Expected error, got nil")
@@ -310,7 +277,7 @@ func TestValidateMetaChecks(t *testing.T) {
 			}
 
 			objPtrList := []*fakeAPIObject{obj}
-			err = validator.Validate(tt.namespace, objPtrList)
+			err = validator.Validate(objPtrList)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Expected error, got nil")
@@ -384,7 +351,7 @@ func TestValidateUniqueNames(t *testing.T) {
 				})
 			}
 
-			err := v.Validate("foo-corp", fakeAPIObjects)
+			err := v.Validate(fakeAPIObjects)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Expected error, got nil")
@@ -400,7 +367,7 @@ func TestValidateUniqueNames(t *testing.T) {
 	t.Run("check nil list", func(t *testing.T) {
 		v := NewValidator()
 		var nilResList []fakeAPIObject
-		err := v.Validate("foo-corp", nilResList)
+		err := v.Validate(nilResList)
 		if err != nil {
 			t.Errorf("Expected nil, got error: %s", err)
 		}

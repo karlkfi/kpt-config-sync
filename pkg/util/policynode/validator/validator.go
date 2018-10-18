@@ -203,16 +203,12 @@ func (s *Validator) checkParents() error {
 
 // checkMetadata checks that the resource's metadata is allowed by nomos.
 func (s *Validator) checkResourceMetadata() error {
-	roleBindingValidator := meta.NewValidator()
-	roleBindingValidator.Flattened = true
 	validator := meta.NewValidator()
-
-	for nodeName, node := range s.policyNodes {
-		if err := roleBindingValidator.Validate(nodeName, node.Spec.RoleBindingsV1); err != nil {
+	for _, node := range s.policyNodes {
+		if err := validator.Validate(node.Spec.RoleBindingsV1); err != nil {
 			return err
 		}
-
-		if err := validator.Validate(nodeName, node.Spec.RolesV1); err != nil {
+		if err := validator.Validate(node.Spec.RolesV1); err != nil {
 			return err
 		}
 	}

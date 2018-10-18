@@ -40,8 +40,6 @@ type apiObject interface {
 
 // Validator checks the ObjectMeta (metadata) field of a kubernetes API object for sanity.
 type Validator struct {
-	// Flattened indicates that this resource will be flattened.
-	Flattened bool
 }
 
 // NewValidator creates a new validator.
@@ -55,15 +53,8 @@ func makeValidator(f func(string, bool) []string) func(string) []string {
 	}
 }
 
-func (v *Validator) getEffectiveName(namespace string, obj apiObject) string {
-	if v.Flattened {
-		return fmt.Sprintf("%s.%s", namespace, obj.GetName())
-	}
-	return obj.GetName()
-}
-
-func (v *Validator) validateName(namespace string, obj apiObject) error {
-	name := v.getEffectiveName(namespace, obj)
+func (v *Validator) validateName(obj apiObject) error {
+	name := obj.GetName()
 
 	var validator func(string) []string
 	switch obj.(type) {
@@ -106,7 +97,7 @@ func toAPIObjectList(resourceList interface{}) []apiObject {
 }
 
 // Validate will return true if a list of resources is valid
-func (v *Validator) Validate(namespace string, resourceList interface{}) error {
+func (v *Validator) Validate(resourceList interface{}) error {
 	apiObjects := toAPIObjectList(resourceList)
 
 	names := map[string]bool{}
@@ -116,7 +107,7 @@ func (v *Validator) Validate(namespace string, resourceList interface{}) error {
 			return errors.Errorf("duplicate name %s for object %s", name, objID(obj))
 		}
 
-		if err := v.validateObject(namespace, obj); err != nil {
+		if err := v.validateObject(obj); err != nil {
 			return err
 		}
 		names[name] = true
@@ -125,12 +116,12 @@ func (v *Validator) Validate(namespace string, resourceList interface{}) error {
 }
 
 // ValidateObject will return true if the object metadata for a resource is valid
-func (v *Validator) ValidateObject(namespace string, obj metav1.Object) error {
-	return v.validateObject(namespace, obj.(apiObject))
+func (v *Validator) ValidateObject(obj metav1.Object) error {
+	return v.validateObject(obj.(apiObject))
 }
 
-func (v *Validator) validateObject(namespace string, obj apiObject) error {
-	if err := v.validateName(namespace, obj); err != nil {
+func (v *Validator) validateObject(obj apiObject) error {
+	if err := v.validateName(obj); err != nil {
 		return errors.Wrapf(err, "invalid name on object %s", objID(obj))
 	}
 

@@ -18,7 +18,7 @@ func Validate(clusterPolicy *policyhierarchyv1.ClusterPolicy) error {
 		clusterPolicy.Spec.ClusterRoleBindingsV1,
 		clusterPolicy.Spec.PodSecurityPoliciesV1Beta1,
 	} {
-		if err := validator.Validate("", resList); err != nil {
+		if err := validator.Validate(resList); err != nil {
 			return err
 		}
 	}
