@@ -140,6 +140,28 @@ func (n *TreeNode) Accept(visitor Visitor) Node {
 	return visitor.VisitTreeNode(n)
 }
 
+// PartialCopy makes an almost shallow copy of n.  An "almost shallow" copy of
+// TreeNode make shallow copies of Children and members that are likely
+// immutable.  A  deep copy is made of mutable members like Labels and
+// Annotations.
+func (n *TreeNode) PartialCopy() *TreeNode {
+	nn := *n
+	copyMapInto(n.Annotations, &nn.Annotations)
+	copyMapInto(n.Labels, &nn.Labels)
+	// Not sure if Selectors should be copied the same way.
+	return &nn
+}
+
+func copyMapInto(from map[string]string, to *map[string]string) {
+	if from == nil {
+		return
+	}
+	(*to) = make(map[string]string)
+	for k, v := range from {
+		(*to)[k] = v
+	}
+}
+
 // ObjectList represents a set of namespace scoped objects.
 type ObjectList []*NamespaceObject
 

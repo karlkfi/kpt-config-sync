@@ -104,7 +104,8 @@ func (v *Copying) VisitObjectList(objectList ast.ObjectList) ast.Node {
 
 // VisitTreeNode implements Visitor
 func (v *Copying) VisitTreeNode(n *ast.TreeNode) ast.Node {
-	nn := *n
+	// Almost-shallow copy of n, check PartialCopy to see if this is enough.
+	nn := n.PartialCopy()
 	nn.Objects, _ = n.Objects.Accept(v.impl).(ast.ObjectList)
 	nn.Children = nil
 	for _, child := range n.Children {
@@ -112,7 +113,7 @@ func (v *Copying) VisitTreeNode(n *ast.TreeNode) ast.Node {
 			nn.Children = append(nn.Children, ch)
 		}
 	}
-	return &nn
+	return nn
 }
 
 // VisitObject implements Visitor
