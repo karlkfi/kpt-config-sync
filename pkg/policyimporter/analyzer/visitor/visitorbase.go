@@ -122,7 +122,7 @@ func (vb *Base) VisitObjectList(o ast.ObjectList) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (vb *Base) VisitObject(o *ast.Object) ast.Node {
+func (vb *Base) VisitObject(o *ast.NamespaceObject) ast.Node {
 	// leaf - noop
 	return o
 }

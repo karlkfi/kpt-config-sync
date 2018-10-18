@@ -148,7 +148,7 @@ func (v *Validator) validateObject(namespace string, obj apiObject) error {
 func checkNomosPrefix(m map[string]string) error {
 	for k := range m {
 		if strings.HasPrefix(k, "nomos.dev/") {
-			if k == v1alpha1.NamespaceSelectorAnnotationKey || k == v1alpha1.DeclarationPathAnnotationKey {
+			if k == v1alpha1.NamespaceSelectorAnnotationKey || k == v1alpha1.SourcePathAnnotationKey {
 				continue
 			}
 			return errors.Errorf("unknown key has reserved 'nomos.dev' prefix: %s", k)

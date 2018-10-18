@@ -18,7 +18,6 @@ package validation
 import (
 	"path"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
@@ -126,7 +125,7 @@ func (v *InputValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.Nod
 
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
-	gvk := o.Object.GetObjectKind().GroupVersionKind()
+	gvk := o.FileObject.GetObjectKind().GroupVersionKind()
 
 	metaObj := o.ToMeta()
 	ns := metaObj.GetNamespace()
@@ -146,13 +145,13 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 				"namespace directory in the hierarchy. "+
 				"Remove namespace %s in file %s from the cluster directory",
 			metaObj.GetName(),
-			v1alpha1.GetDeclarationPathAnnotationKey(metaObj)))
+			o.Source))
 	}
 
 	if _, found := v.allowedGVKs[gvk]; !found {
 		v.errs.Add(errors.Errorf("Sync for objects of type %#v is not enabled. Remove object "+
 			"%s in file %s, or add a Sync for that type.", gvk, metaObj.GetName(),
-			v1alpha1.GetDeclarationPathAnnotationKey(metaObj)))
+			o.Source))
 	}
 
 	return nil
@@ -164,7 +163,7 @@ func (v *InputValidator) VisitObjectList(o ast.ObjectList) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
+func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 	v.checkSingleResourceQuota(o)
 	metaObj := o.ToMeta()
 	ns := metaObj.GetNamespace()
@@ -174,7 +173,7 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 	if _, found := v.allowedGVKs[gvk]; !found {
 		v.errs.Add(errors.Errorf("Sync for objects of type %#v is not enabled. Remove object "+
 			"%s in file %s, or add a Sync for that type.", gvk, metaObj.GetName(),
-			v1alpha1.GetDeclarationPathAnnotationKey(metaObj)))
+			o.Source))
 	}
 
 	if ns != "" {
@@ -184,7 +183,7 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 					"Remove the namespace field from object.  "+
 					"Directory %q has declaration for %s, Name=%q with namespace %s",
 				node.Path,
-				o.Object.GetObjectKind().GroupVersionKind(),
+				o.FileObject.GetObjectKind().GroupVersionKind(),
 				metaObj.GetName(),
 				ns))
 		}
@@ -193,7 +192,7 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 		v.errs.Add(errors.Errorf("Object's Namespace must match the name of the namespace "+
 			"directory in which the object appears. Object Namespace is %s. Directory name is %s. "+
 			"object: %#v",
-			ns, nodeNS, o.Object))
+			ns, nodeNS, o.FileObject))
 	}
 
 	if node.Type == ast.Policyspace {
@@ -215,8 +214,8 @@ func (v *InputValidator) VisitObject(o *ast.Object) ast.Node {
 
 // checkSingleResourceQuota ensures that at most one ResourceQuota object is present in each
 // directory.
-func (v *InputValidator) checkSingleResourceQuota(o *ast.Object) {
-	if o.Object.GetObjectKind().GroupVersionKind() != corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
+func (v *InputValidator) checkSingleResourceQuota(o *ast.NamespaceObject) {
+	if o.FileObject.GetObjectKind().GroupVersionKind() != corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
 		return
 	}
 	path := v.nodes[len(v.nodes)-1].Path

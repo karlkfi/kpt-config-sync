@@ -111,7 +111,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 				labeledQuota.Labels = resourcequota.NewNomosQuotaLabels()
 				quota = &labeledQuota
 			}
-			newNode.Objects = append(newNode.Objects, &ast.Object{Object: quota})
+			newNode.Objects = append(newNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: quota}})
 		}
 	}
 
@@ -121,10 +121,10 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 
 // VisitObject implements Visitor, this should only be visited if the objectset
 // is of type ResourceQuota.
-func (v *QuotaVisitor) VisitObject(o *ast.Object) ast.Node {
+func (v *QuotaVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 	gvk := o.GetObjectKind().GroupVersionKind()
 	if gvk.Group == "" && gvk.Kind == "ResourceQuota" {
-		quota := *o.Object.(*corev1.ResourceQuota)
+		quota := *o.FileObject.Object.(*corev1.ResourceQuota)
 		quota.Name = resourcequota.ResourceQuotaObjectName
 		v.ctx.quota = &quota
 		return nil

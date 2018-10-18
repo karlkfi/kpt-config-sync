@@ -82,8 +82,8 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (v *AnnotationInlinerVisitor) VisitObject(o *ast.Object) ast.Node {
-	newObject := v.Copying.VisitObject(o).(*ast.Object)
+func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
+	newObject := v.Copying.VisitObject(o).(*ast.NamespaceObject)
 	if err := v.transformer.transform(newObject.ToMeta()); err != nil {
 		v.errs.Add(errors.Wrapf(err, "failed to inline annotation for object %q", newObject.ToMeta().GetName()))
 	}

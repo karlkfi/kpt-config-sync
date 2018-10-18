@@ -149,7 +149,7 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 // VisitClusterObject implements Visitor
 func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	spec := &v.allPolicies.ClusterPolicy.Spec
-	switch obj := o.Object.(type) {
+	switch obj := o.FileObject.Object.(type) {
 	case *rbacv1.ClusterRole:
 		spec.ClusterRolesV1 = append(spec.ClusterRolesV1, *obj)
 	case *rbacv1.ClusterRoleBinding:
@@ -157,14 +157,14 @@ func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	case *extensionsv1beta1.PodSecurityPolicy:
 		spec.PodSecurityPoliciesV1Beta1 = append(spec.PodSecurityPoliciesV1Beta1, *obj)
 	}
-	spec.Resources = appendResource(spec.Resources, o.Object)
+	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }
 
 // VisitObject implements Visitor
-func (v *OutputVisitor) VisitObject(o *ast.Object) ast.Node {
+func (v *OutputVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 	spec := &v.policyNode[len(v.policyNode)-1].Spec
-	switch obj := o.Object.(type) {
+	switch obj := o.FileObject.Object.(type) {
 	case *rbacv1.Role:
 		spec.RolesV1 = append(spec.RolesV1, *obj)
 	case *rbacv1.RoleBinding:
@@ -172,7 +172,7 @@ func (v *OutputVisitor) VisitObject(o *ast.Object) ast.Node {
 	case *corev1.ResourceQuota:
 		spec.ResourceQuotaV1 = obj
 	}
-	spec.Resources = appendResource(spec.Resources, o.Object)
+	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }
 

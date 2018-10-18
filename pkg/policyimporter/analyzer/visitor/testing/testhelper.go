@@ -29,18 +29,27 @@ import (
 
 // ObjectSets constructs a list of ObjectSet from a list of runtime.Object.
 func ObjectSets(runtimeObjs ...runtime.Object) ast.ObjectList {
-	astObjs := make([]*ast.Object, len(runtimeObjs))
+	astObjs := make([]*ast.NamespaceObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
-		astObjs[idx] = &ast.Object{Object: runtimeObjs[idx]}
+		astObjs[idx] = &ast.NamespaceObject{FileObject: ast.FileObject{Object: runtimeObjs[idx]}}
 	}
 	return ast.ObjectList(astObjs)
 }
 
-// ClusterObjectSets constructs a list of ObjectSet from a list of runtime.Object.
+// FileObjectSets constructs a list of ObjectSet from a list of ast.FileObject
+func FileObjectSets(runtimeObjs ...ast.FileObject) ast.ObjectList {
+	astObjs := make([]*ast.NamespaceObject, len(runtimeObjs))
+	for idx := range runtimeObjs {
+		astObjs[idx] = &ast.NamespaceObject{FileObject: runtimeObjs[idx]}
+	}
+	return ast.ObjectList(astObjs)
+}
+
+// ClusterObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
 func ClusterObjectSets(runtimeObjs ...runtime.Object) ast.ClusterObjectList {
 	astObjs := make([]*ast.ClusterObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
-		astObjs[idx] = &ast.ClusterObject{Object: runtimeObjs[idx]}
+		astObjs[idx] = &ast.ClusterObject{FileObject: ast.FileObject{Object: runtimeObjs[idx]}}
 	}
 	return ast.ClusterObjectList(astObjs)
 }

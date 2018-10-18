@@ -16,7 +16,6 @@ limitations under the License.
 package validation
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -73,7 +72,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 					"directory.  Move declaration to the appropriate tree directory.",
 				gvk,
 				metaObj.GetName(),
-				v1alpha1.GetDeclarationPathAnnotationKey(metaObj),
+				o.Source,
 			))
 		}
 	} else {
@@ -85,7 +84,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (p *Scope) VisitObject(o *ast.Object) ast.Node {
+func (p *Scope) VisitObject(o *ast.NamespaceObject) ast.Node {
 	gvk := o.Object.GetObjectKind().GroupVersionKind()
 	metaObj := o.ToMeta()
 	namespaceScoped, found := p.typeNamespaced[gvk]
@@ -96,7 +95,7 @@ func (p *Scope) VisitObject(o *ast.Object) ast.Node {
 					"tree directory.  Move declaration to the cluster directory.",
 				gvk,
 				metaObj.GetName(),
-				v1alpha1.GetDeclarationPathAnnotationKey(metaObj),
+				o.Source,
 			))
 		}
 	} else {

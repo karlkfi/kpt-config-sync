@@ -95,7 +95,7 @@ func (v *Copying) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 func (v *Copying) VisitObjectList(objectList ast.ObjectList) ast.Node {
 	var olc ast.ObjectList
 	for _, object := range objectList {
-		if obj, ok := object.Accept(v.impl).(*ast.Object); ok {
+		if obj, ok := object.Accept(v.impl).(*ast.NamespaceObject); ok {
 			olc = append(olc, obj)
 		}
 	}
@@ -116,6 +116,6 @@ func (v *Copying) VisitTreeNode(n *ast.TreeNode) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (v *Copying) VisitObject(o *ast.Object) ast.Node {
+func (v *Copying) VisitObject(o *ast.NamespaceObject) ast.Node {
 	return o.DeepCopy()
 }

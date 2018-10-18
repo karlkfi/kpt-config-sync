@@ -43,7 +43,7 @@ type Visitor interface {
 	VisitClusterObject(o *ClusterObject) Node
 	VisitTreeNode(n *TreeNode) Node
 	VisitObjectList(o ObjectList) Node
-	VisitObject(o *Object) Node
+	VisitObject(o *NamespaceObject) Node
 }
 
 // CheckingVisitor is an interface for writing a visitor that processes the tree in some manner

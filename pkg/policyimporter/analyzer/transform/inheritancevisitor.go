@@ -24,9 +24,9 @@ import (
 
 // nodeContext keeps track of objects during the tree traversal for purposes of inheriting values.
 type nodeContext struct {
-	nodeType  ast.TreeNodeType // the type of node being processed
-	nodePath  string           // the node's path, used for annotating inherited objects
-	inherited []*ast.Object    // the objects that are inherited from the node.
+	nodeType  ast.TreeNodeType       // the type of node being processed
+	nodePath  string                 // the node's path, used for annotating inherited objects
+	inherited []*ast.NamespaceObject // the objects that are inherited from the node.
 }
 
 // InheritanceSpec defines the spec for inherited resources.
@@ -97,7 +97,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (v *InheritanceVisitor) VisitObject(o *ast.Object) ast.Node {
+func (v *InheritanceVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 	context := &v.treeContext[len(v.treeContext)-1]
 	gvk := o.GetObjectKind().GroupVersionKind()
 	if _, found := v.inheritanceSpecs[gvk]; context.nodeType == ast.Policyspace && found {

@@ -361,30 +361,31 @@ func createNamespacePN(
 	path string,
 	parent string,
 	policies *Policies) policyhierarchyv1.PolicyNode {
-	return createNamespacePNWithLabelsAndAnnotations(path, parent, policies, nil, nil)
+	return createPNWithMeta(path, parent, policyhierarchyv1.Namespace, policies, nil, nil)
 }
 
-func createNamespacePNWithLabelsAndAnnotations(
+func createPolicyspacePN(
 	path string,
 	parent string,
+	policies *Policies) policyhierarchyv1.PolicyNode {
+	return createPNWithMeta(path, parent, policyhierarchyv1.Policyspace, policies, nil, nil)
+}
+
+func createPNWithMeta(
+	path string,
+	parent string,
+	t policyhierarchyv1.PolicyNodeType,
 	policies *Policies,
 	labels, annotations map[string]string,
 ) policyhierarchyv1.PolicyNode {
 	if annotations == nil {
 		annotations = map[string]string{}
 	}
-	annotations["nomos.dev/declaration-path"] = path
-	pn := createPolicyNode(filepath.Base(filepath.Dir(path)), parent, policyhierarchyv1.Namespace, policies)
+	annotations["nomos.dev/source-path"] = path
+	pn := createPolicyNode(filepath.Base(path), parent, t, policies)
 	pn.Labels = labels
 	pn.Annotations = annotations
 	return pn
-}
-
-func createPolicyspacePN(
-	name string,
-	parent string,
-	policies *Policies) policyhierarchyv1.PolicyNode {
-	return createPolicyNode(name, parent, policyhierarchyv1.Policyspace, policies)
 }
 
 func createReservedPN(
@@ -415,7 +416,7 @@ func createResourceQuota(path, name, namespace string, labels map[string]string)
 		},
 	}
 	if path != "" {
-		rq.ObjectMeta.Annotations = map[string]string{"nomos.dev/declaration-path": path}
+		rq.ObjectMeta.Annotations = map[string]string{"nomos.dev/source-path": path}
 	}
 	return rq
 }
@@ -450,7 +451,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar":  createNamespacePN("tree/bar/ns.yaml", "tree", nil),
+			"bar":  createNamespacePN("tree/bar", "tree", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -462,7 +463,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar":  createNamespacePN("tree/bar/ns.json", "tree", nil),
+			"bar":  createNamespacePN("tree/bar", "tree", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -474,7 +475,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createNamespacePNWithLabelsAndAnnotations("tree/bar/ns.yaml", "tree", nil,
+			"bar": createPNWithMeta("tree/bar", "tree", policyhierarchyv1.Namespace, nil,
 				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -488,7 +489,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar":  createNamespacePN("tree/bar/ns.yaml", "tree", nil),
+			"bar":  createNamespacePN("tree/bar", "tree", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -502,7 +503,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar":  createNamespacePN("tree/bar/ns.yaml", "tree", nil),
+			"bar":  createNamespacePN("tree/bar", "tree", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -551,7 +552,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createNamespacePN("tree/bar/ns.yaml", "tree",
+			"bar": createNamespacePN("tree/bar", "tree",
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
 						"tree/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
@@ -570,7 +571,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createNamespacePN("tree/bar/ns.yaml", "tree",
+			"bar": createNamespacePN("tree/bar", "tree",
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
 						"tree/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
@@ -589,7 +590,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createNamespacePN("tree/bar/combo.yaml", "tree",
+			"bar": createNamespacePN("tree/bar", "tree",
 				&Policies{ResourceQuotaV1: createResourceQuota(
 					"tree/bar/combo.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
 				},
@@ -655,7 +656,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createNamespacePN("tree/bar/ns.yaml", "tree",
+			"bar": createNamespacePN("tree/bar", "tree",
 				&Policies{Resources: []policyhierarchyv1.GenericResources{
 					{
 						Group: "apps",
@@ -756,7 +757,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
 			"baz":  createReservedPN("baz", "", nil),
-			"bar":  createNamespacePN("tree/bar/ns.yaml", "tree", nil),
+			"bar":  createNamespacePN("tree/bar", "tree", nil),
 		},
 	},
 	{
@@ -835,7 +836,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar":  createPolicyspacePN("bar", "tree", nil),
+			"bar":  createPolicyspacePN("tree/bar", "tree", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -849,7 +850,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
 			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createPolicyspacePN("bar", "tree",
+			"bar": createPolicyspacePN("tree/bar", "tree",
 				&Policies{ResourceQuotaV1: createResourceQuota("tree/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -1040,9 +1041,9 @@ spec:
 			"tree/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyNode("tree", "", policyhierarchyv1.Policyspace,
+			"tree": createPolicyspacePN("tree", "",
 				&Policies{ResourceQuotaV1: createResourceQuota("tree/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
-			"bar": createNamespacePN("tree/bar/ns.yaml", "tree",
+			"bar": createNamespacePN("tree/bar", "tree",
 				&Policies{ResourceQuotaV1: createResourceQuota(
 					"tree/rq.yaml", resourcequota.ResourceQuotaObjectName, "", resourcequota.NewNomosQuotaLabels()),
 				}),
@@ -1228,7 +1229,7 @@ func TestParser(t *testing.T) {
 				}
 			}()
 
-			p := Parser{f, fstesting.TestAPIResourceList(), true}
+			p := Parser{f, fstesting.TestAPIResourceList(), true, d.rootDir}
 
 			actualPolicies, err := p.Parse(d.rootDir)
 			if tc.expectedError {

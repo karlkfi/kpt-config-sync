@@ -25,6 +25,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// FileObject extends runtime.FileObject to include the path to the file in the repo.
+type FileObject struct {
+	runtime.Object
+	// Source is the OS-agnostic slash-separated path to the source file from the root.
+	Source string
+}
+
 // Context represents a set of declared policies, configuration for how those policies will be
 // interpreted, and information regarding where those policies came from.
 type Context struct {
@@ -69,16 +76,16 @@ func (o ClusterObjectList) Accept(visitor Visitor) Node {
 	return visitor.VisitClusterObjectList(o)
 }
 
-// ClusterObject extends runtime.Object to implement Visitable for cluster scoped objects.
+// ClusterObject extends FileObject to implement Visitable for cluster scoped objects.
 //
 // A ClusterObject represents a cluster scoped resource from the cluster directory.
 type ClusterObject struct {
-	runtime.Object
+	FileObject
 }
 
-// ToMeta converts the underlying object to a metav1.Object
+// ToMeta converts the underlying object to a metav1.NamespaceObject
 func (o *ClusterObject) ToMeta() metav1.Object {
-	return o.Object.(metav1.Object)
+	return o.FileObject.Object.(metav1.Object)
 }
 
 // Accept implements Visitable
@@ -91,7 +98,7 @@ func (o *ClusterObject) Accept(visitor Visitor) Node {
 
 // DeepCopy creates a deep copy of the object
 func (o *ClusterObject) DeepCopy() *ClusterObject {
-	return &ClusterObject{o.DeepCopyObject()}
+	return &ClusterObject{FileObject{o.DeepCopyObject(), o.Source}}
 }
 
 // TreeNodeType represents the type of the node.
@@ -134,7 +141,7 @@ func (n *TreeNode) Accept(visitor Visitor) Node {
 }
 
 // ObjectList represents a set of namespace scoped objects.
-type ObjectList []*Object
+type ObjectList []*NamespaceObject
 
 // Accept implements Visitable
 func (o ObjectList) Accept(visitor Visitor) Node {
@@ -144,21 +151,21 @@ func (o ObjectList) Accept(visitor Visitor) Node {
 	return visitor.VisitObjectList(o)
 }
 
-// Object extends runtime.Object to implement Visitable for namespace scoped objects.
+// NamespaceObject extends FileObject to implement Visitable for namespace scoped objects.
 //
-// An Object represents a resource found in a directory in the policy
+// An NamespaceObject represents a resource found in a directory in the policy
 // hierarchy.
-type Object struct {
-	runtime.Object
+type NamespaceObject struct {
+	FileObject
 }
 
 // ToMeta converts the underlying object to a metav1.Object
-func (o *Object) ToMeta() metav1.Object {
-	return o.Object.(metav1.Object)
+func (o *NamespaceObject) ToMeta() metav1.Object {
+	return o.FileObject.Object.(metav1.Object)
 }
 
 // Accept implements Visitable
-func (o *Object) Accept(visitor Visitor) Node {
+func (o *NamespaceObject) Accept(visitor Visitor) Node {
 	if o == nil {
 		return nil
 	}
@@ -166,8 +173,8 @@ func (o *Object) Accept(visitor Visitor) Node {
 }
 
 // DeepCopy creates a deep copy of the object
-func (o *Object) DeepCopy() *Object {
-	return &Object{o.DeepCopyObject()}
+func (o *NamespaceObject) DeepCopy() *NamespaceObject {
+	return &NamespaceObject{FileObject{o.DeepCopyObject(), o.Source}}
 }
 
 // ReservedNamespaces represents the reserved namespaces object
