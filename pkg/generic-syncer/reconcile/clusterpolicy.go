@@ -92,6 +92,8 @@ func (r *ClusterPolicyReconciler) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, r.setClusterPolicyStatus(ctx, clusterPolicy, NewClusterPolicySyncError(name, clusterPolicy.GroupVersionKind(), err))
 	}
 
+	// TODO(sbochins): Make use of reconcile.Result.RequeueAfter when we don't want exponential backoff for retries when
+	// using newer version of controller-runtime.
 	return reconcile.Result{}, r.managePolicies(ctx, clusterPolicy)
 }
 

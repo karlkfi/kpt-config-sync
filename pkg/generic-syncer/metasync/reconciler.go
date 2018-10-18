@@ -19,6 +19,7 @@ import (
 	"context"
 	"reflect"
 	"sort"
+	"time"
 
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	syncermanager "github.com/google/nomos/pkg/generic-syncer/manager"
@@ -31,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+const reconcileTimeout = time.Minute * 5
 
 var _ reconcile.Reconciler = &MetaReconciler{}
 
@@ -68,8 +71,9 @@ func NewMetaReconciler(client client.Client, cache cache.Cache, cfg *rest.Config
 // It looks at all Syncs in the cluster and restarts the GenericResourceManager if its internal state doesn't match the cluster
 // state.
 func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// TODO: pass in a valid context
-	ctx := context.TODO()
+	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	defer cancel()
+
 	syncs := &nomosv1alpha1.SyncList{}
 	err := r.cache.List(ctx, &client.ListOptions{}, syncs)
 	if err != nil {
