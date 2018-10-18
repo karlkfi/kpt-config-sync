@@ -21,6 +21,7 @@ import (
 	"github.com/golang/glog"
 	nomosapischeme "github.com/google/nomos/clientgen/apis/scheme"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -37,7 +38,7 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 
 	// Set up a meta controller that restarts GenericResource controllers when Syncs change.
 	startErrCh := make(chan error)
-	reconciler, err := NewMetaReconciler(mgr.GetClient(), mgr.GetCache(), mgr.GetConfig(), startErrCh)
+	reconciler, err := NewMetaReconciler(client.New(mgr.GetClient()), mgr.GetCache(), mgr.GetConfig(), startErrCh)
 	if err != nil {
 		return errors.Wrap(err, "could not create meta reconciler")
 	}
@@ -59,7 +60,7 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 	if injectErr := managerRestartSource.InjectStopChannel(stopCh); injectErr != nil {
 		return errors.Wrap(injectErr, "could not inject stop channel into genericResourceManager restart source")
 	}
-	// Create a watch for errors when starting the genericResourceManager and issues a reconciliation.
+	// Create a watch for errors when starting the genericResourceManager and force a reconciliation.
 	if err = c.Watch(managerRestartSource, &handler.EnqueueRequestForObject{}); err != nil {
 		return errors.Wrap(err, "could not watch manager initialization errors in the meta controller")
 	}

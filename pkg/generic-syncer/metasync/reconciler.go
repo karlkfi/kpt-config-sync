@@ -22,9 +22,11 @@ import (
 	"time"
 
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	syncerclient "github.com/google/nomos/pkg/generic-syncer/client"
 	syncermanager "github.com/google/nomos/pkg/generic-syncer/manager"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -41,7 +43,7 @@ var _ reconcile.Reconciler = &MetaReconciler{}
 // controllers based on the resources that are presently sync-enabled.
 type MetaReconciler struct {
 	// client is used to update Sync status fields and finalize Syncs.
-	client client.Client
+	client *syncerclient.Client
 	// cache is a shared cache that is populated by informers in the scheme and used by all controllers / reconcilers in the
 	// manager.
 	cache cache.Cache
@@ -52,7 +54,7 @@ type MetaReconciler struct {
 }
 
 // NewMetaReconciler returns a new MetaReconciler that reconciles changes in Syncs.
-func NewMetaReconciler(client client.Client, cache cache.Cache, cfg *rest.Config, errCh chan error) (*MetaReconciler,
+func NewMetaReconciler(client *syncerclient.Client, cache cache.Cache, cfg *rest.Config, errCh chan error) (*MetaReconciler,
 	error) {
 	mgr, err := manager.New(cfg, manager.Options{})
 	if err != nil {
@@ -93,7 +95,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 			}
 		} else {
 			// Anything not pending delete should be enabled in GenericResourceManager.
-			enabled = append(enabled, &s)
+			enabled = append(enabled, s.DeepCopy())
 		}
 	}
 
@@ -107,7 +109,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	errBuilder := multierror.NewBuilder()
 	// Finalize Syncs that have not already been finalized.
 	for _, tf := range toFinalize {
-		if err := r.client.Update(ctx, tf); err != nil {
+		if err := r.client.Upsert(ctx, tf); err != nil {
 			errBuilder.Add(errors.Wrap(err, "could not finalize sync pending delete"))
 		}
 	}
@@ -133,9 +135,13 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 		})
 		// Check if status changed before updating.
 		if !reflect.DeepEqual(sync.Status, status) {
-			sync.Status = status
-			if err := r.client.Update(ctx, sync); err != nil {
-				errBuilder.Add(errors.Wrap(err, "could update sync status"))
+			updateFn := func(obj runtime.Object) (runtime.Object, error) {
+				s := obj.(*nomosv1alpha1.Sync)
+				s.Status = status
+				return s, nil
+			}
+			if _, err := r.client.Update(ctx, sync, updateFn); err != nil {
+				errBuilder.Add(errors.Wrap(err, "could not update sync status"))
 			}
 		}
 	}

@@ -21,6 +21,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/generic-syncer/client"
 	syncertesting "github.com/google/nomos/pkg/generic-syncer/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -253,6 +254,7 @@ func TestReconcile(t *testing.T) {
 			name: "only update syncs with state change",
 			actualSyncs: nomosv1alpha1.SyncList{
 				Items: []nomosv1alpha1.Sync{
+					sync("", "v1", "Secret", nomosv1alpha1.Syncing),
 					sync("", "v1", "Service", nomosv1alpha1.Syncing),
 					sync("", "v1", "Deployment", ""),
 				},
@@ -284,7 +286,7 @@ func TestReconcile(t *testing.T) {
 			mockManager := syncertesting.NewMockRestartableManager(mockCtrl)
 
 			testReconciler := &MetaReconciler{
-				client:                 mockClient,
+				client:                 client.New(mockClient),
 				cache:                  mockCache,
 				genericResourceManager: mockManager,
 			}
@@ -295,6 +297,9 @@ func TestReconcile(t *testing.T) {
 
 			mockManager.EXPECT().UpdateSyncResources(gomock.Any(), gomock.Any())
 			for _, wantUpdate := range tc.wantUpdates {
+				// Updates involve first getting the resource from API Server.
+				mockClient.EXPECT().
+					Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockClient.EXPECT().
 					Update(gomock.Any(), gomock.Eq(&wantUpdate))
 			}

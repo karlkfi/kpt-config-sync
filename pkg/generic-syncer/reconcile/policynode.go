@@ -22,7 +22,8 @@ import (
 
 	"github.com/golang/glog"
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
+	"github.com/google/nomos/pkg/generic-syncer/cache"
+	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
 	"github.com/google/nomos/pkg/generic-syncer/differ"
 	"github.com/google/nomos/pkg/syncer/labeling"
@@ -35,10 +36,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -48,8 +49,8 @@ var _ reconcile.Reconciler = &PolicyNodeReconciler{}
 
 // PolicyNodeReconciler reconciles a PolicyNode object.
 type PolicyNodeReconciler struct {
-	client     client.Client
-	cache      syncercache.GenericCache
+	client     *client.Client
+	cache      cache.GenericCache
 	recorder   record.EventRecorder
 	decoder    decode.Decoder
 	comparator *differ.Comparator
@@ -57,7 +58,7 @@ type PolicyNodeReconciler struct {
 }
 
 // NewPolicyNodeReconciler returns a new PolicyNodeReconciler.
-func NewPolicyNodeReconciler(client client.Client, cache syncercache.GenericCache, recorder record.EventRecorder,
+func NewPolicyNodeReconciler(client *client.Client, cache cache.GenericCache, recorder record.EventRecorder,
 	decoder decode.Decoder, comparator *differ.Comparator, toSync []schema.GroupVersionKind) *PolicyNodeReconciler {
 	return &PolicyNodeReconciler{
 		client:     client,
@@ -327,17 +328,22 @@ func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *no
 		glog.Infof("Status for PolicyNode %q is already up-to-date.", node.Name)
 		return nil
 	}
-	newPN := node.DeepCopy()
-	newPN.Status.SyncTokens = map[string]string{node.Name: node.Spec.ImportToken}
-	newPN.Status.SyncTime = metav1.Now()
-	newPN.Status.SyncErrors = errs
-	if len(errs) > 0 {
-		newPN.Status.SyncState = nomosv1.StateError
-	} else {
-		newPN.Status.SyncState = nomosv1.StateSynced
+
+	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+		newPN := obj.(*nomosv1.PolicyNode)
+		newPN.Status.SyncTokens = map[string]string{node.Name: node.Spec.ImportToken}
+		newPN.Status.SyncTime = metav1.Now()
+		newPN.Status.SyncErrors = errs
+		if len(errs) > 0 {
+			newPN.Status.SyncState = nomosv1.StateError
+		} else {
+			newPN.Status.SyncState = nomosv1.StateSynced
+		}
+		return newPN, nil
 	}
 	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
-	return r.client.Update(ctx, newPN)
+	_, err := r.client.Update(ctx, node, updateFn)
+	return err
 }
 
 // NewSyncError returns a PolicyNodeSyncError corresponding to the given error and action
@@ -363,7 +369,8 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 			r.warnNoLabelResource(diff.Declared)
 			return false, nil
 		}
-		if err := r.client.Update(ctx, diff.Declared); err != nil {
+
+		if err := r.client.Upsert(ctx, diff.Declared); err != nil {
 			return false, errors.Wrapf(err, "could not update resource %q", diff.Name)
 		}
 	case differ.Delete:
@@ -381,18 +388,17 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 }
 
 func asNamespace(policyNode *nomosv1.PolicyNode) *corev1.Namespace {
-	labels := labeling.ManageAll.AddDeepCopy(policyNode.Labels)
-	labels[nomosv1.ParentLabelKey] = policyNode.Spec.Parent
-	return &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        policyNode.Name,
-			Labels:      labels,
-			Annotations: policyNode.Annotations,
-		},
-	}
+	return withPolicyNodeMeta(&corev1.Namespace{}, policyNode)
 }
 
-// TODO(sbochins): Add back monitoring/retries that was part of ReflectiveActions.
+func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *nomosv1.PolicyNode) *corev1.Namespace {
+	labels := labeling.ManageAll.AddDeepCopy(policyNode.Labels)
+	labels[nomosv1.ParentLabelKey] = policyNode.Spec.Parent
+	namespace.Labels = labels
+	namespace.Annotations = policyNode.Annotations
+	namespace.Name = policyNode.Name
+	return namespace
+}
 
 func (r *PolicyNodeReconciler) createNamespace(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
 	if err := r.client.Create(ctx, asNamespace(policyNode)); err != nil {
@@ -405,7 +411,12 @@ func (r *PolicyNodeReconciler) createNamespace(ctx context.Context, policyNode *
 
 func (r *PolicyNodeReconciler) updateNamespace(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
 	glog.V(1).Infof("Namespace %q declared in a policy node, updating", policyNode.Name)
-	if err := r.client.Update(ctx, asNamespace(policyNode)); err != nil {
+
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: policyNode.Name}}
+	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+		return withPolicyNodeMeta(obj.(*corev1.Namespace), policyNode), nil
+	}
+	if _, err := r.client.Update(ctx, namespace, updateFn); err != nil {
 		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceUpdateFailed",
 			"failed to update matching namespace for policyspace: %q", err)
 		return errors.Wrapf(err, "failed to update namespace %q", policyNode.Name)
@@ -418,27 +429,22 @@ func (r *PolicyNodeReconciler) updateNamespace(ctx context.Context, policyNode *
 func (r *PolicyNodeReconciler) updateNamespaceLabels(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
 	labels := map[string]string{nomosv1.ParentLabelKey: policyNode.Spec.Parent}
 
-	namespace := &corev1.Namespace{}
-	if err := r.client.Get(ctx, apitypes.NamespacedName{Name: policyNode.Name}, namespace); err != nil {
-		return errors.Wrapf(err, "could not retrieve existing namespace %q", policyNode.Name)
-	}
-
-	requiresUpdate := false
-	for key, value := range labels {
-		if oldValue, found := namespace.Labels[key]; !found || oldValue != value {
-			requiresUpdate = true
-			namespace.Labels[key] = value
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: policyNode.Name}}
+	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+		ns := obj.(*corev1.Namespace)
+		for key, value := range labels {
+			if oldValue, found := ns.Labels[key]; !found || oldValue != value {
+				ns.Labels[key] = value
+			}
 		}
+		return ns, nil
 	}
-	if !requiresUpdate {
-		return nil
-	}
-
-	if err := r.client.Update(ctx, namespace); err != nil {
+	if _, err := r.client.Update(ctx, namespace, updateFn); err != nil {
 		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceUpdateFailed",
 			"failed to update matching namespace for policyspace: %v", err)
 		return errors.Wrapf(err, "failed to execute update action for %q", namespace.Name)
 	}
+
 	return nil
 }
 

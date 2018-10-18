@@ -281,7 +281,8 @@ func NewReflectiveCreateAction(
 	}
 }
 
-// Update is a function that updates the state of an API object.
+// Update is a function that updates the state of an API object. The argument is expected to be a copy of the object,
+// so no there is no need to worry about mutating the argument when implementing an Update function.
 type Update func(runtime.Object) (runtime.Object, error)
 
 // ReflectiveUpdateAction implements an update action for all generated client stubs.
@@ -325,7 +326,7 @@ func (s *ReflectiveUpdateAction) doUpdate() error {
 			return err
 		}
 
-		newObj, err = s.update(obj)
+		newObj, err = s.update(obj.DeepCopyObject())
 		if err != nil {
 			if IsNoUpdateNeeded(err) {
 				return nil

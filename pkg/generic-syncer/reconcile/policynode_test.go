@@ -21,6 +21,7 @@ import (
 	"github.com/golang/mock/gomock"
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/generic-syncer/client"
 	syncerdiffer "github.com/google/nomos/pkg/generic-syncer/differ"
 	syncertesting "github.com/google/nomos/pkg/generic-syncer/testing"
 	"github.com/google/nomos/pkg/syncer/labeling"
@@ -481,7 +482,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			mockRecorder := syncertesting.NewMockEventRecorder(mockCtrl)
 			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, tc.declared))
 
-			testReconciler := NewPolicyNodeReconciler(mockClient, mockCache, mockRecorder, fakeDecoder, comparator, toSync)
+			testReconciler := NewPolicyNodeReconciler(
+				client.New(mockClient), mockCache, mockRecorder, fakeDecoder, comparator, toSync)
 
 			// Get PolicyNode from cache.
 			mockCache.EXPECT().
@@ -494,6 +496,9 @@ func TestPolicyNodeReconcile(t *testing.T) {
 
 			// Optionally, update namespace.
 			if ns := tc.wantNamespaceUpdate; ns != nil {
+				// Updates involve first getting the resource from API Server.
+				mockClient.EXPECT().
+					Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockClient.EXPECT().
 					Update(gomock.Any(), gomock.Eq(ns))
 			}
@@ -511,6 +516,9 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Create(gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantCreate)))
 			}
 			for _, wantUpdate := range tc.wantUpdates {
+				// Updates involve first getting the resource from API Server.
+				mockClient.EXPECT().
+					Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockClient.EXPECT().
 					Update(gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantUpdate)))
 			}

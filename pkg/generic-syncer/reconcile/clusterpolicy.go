@@ -21,7 +21,8 @@ import (
 
 	"github.com/golang/glog"
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
+	"github.com/google/nomos/pkg/generic-syncer/cache"
+	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
 	"github.com/google/nomos/pkg/generic-syncer/differ"
 	"github.com/google/nomos/pkg/syncer/labeling"
@@ -32,9 +33,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -45,8 +46,8 @@ var now = metav1.Now
 
 // ClusterPolicyReconciler reconciles a ClusterPolicy object.
 type ClusterPolicyReconciler struct {
-	client     client.Client
-	cache      syncercache.GenericCache
+	client     *client.Client
+	cache      cache.GenericCache
 	recorder   record.EventRecorder
 	decoder    decode.Decoder
 	comparator *differ.Comparator
@@ -54,7 +55,7 @@ type ClusterPolicyReconciler struct {
 }
 
 // NewClusterPolicyReconciler returns a new ClusterPolicyReconciler.
-func NewClusterPolicyReconciler(client client.Client, cache syncercache.GenericCache, recorder record.EventRecorder,
+func NewClusterPolicyReconciler(client *client.Client, cache cache.GenericCache, recorder record.EventRecorder,
 	decoder decode.Decoder, comparator *differ.Comparator, toSync []schema.GroupVersionKind) *ClusterPolicyReconciler {
 	return &ClusterPolicyReconciler{
 		client:     client,
@@ -160,18 +161,22 @@ func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, po
 		glog.Infof("Status for ClusterPolicy %q is already up-to-date.", policy.Name)
 		return nil
 	}
-	newPolicy := policy.DeepCopy()
-	newPolicy.Status.SyncToken = policy.Spec.ImportToken
-	newPolicy.Status.SyncTime = now()
-	newPolicy.Status.SyncErrors = errs
-	if len(errs) > 0 {
-		newPolicy.Status.SyncState = nomosv1.StateError
-	} else {
-		newPolicy.Status.SyncState = nomosv1.StateSynced
-	}
 
+	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+		newPolicy := obj.(*nomosv1.ClusterPolicy)
+		newPolicy.Status.SyncToken = policy.Spec.ImportToken
+		newPolicy.Status.SyncTime = now()
+		newPolicy.Status.SyncErrors = errs
+		if len(errs) > 0 {
+			newPolicy.Status.SyncState = nomosv1.StateError
+		} else {
+			newPolicy.Status.SyncState = nomosv1.StateSynced
+		}
+		return newPolicy, nil
+	}
 	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
-	return r.client.Update(ctx, newPolicy)
+	_, err := r.client.Update(ctx, policy, updateFn)
+	return err
 }
 
 // NewClusterPolicySyncError returns a ClusterPolicySyncError corresponding to the given error and GroupVersionKind.
@@ -183,8 +188,6 @@ func NewClusterPolicySyncError(name string, gvk schema.GroupVersionKind, err err
 		ErrorMessage: err.Error(),
 	}
 }
-
-// TODO(sbochins): Add back monitoring/retries that was part of ReflectiveActions.
 
 // handleDiff updates the API Server according to changes reflected in the diff.
 // It returns whether or not an update occurred and the error encountered.
@@ -199,7 +202,8 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 			r.warnNoLabelResource(diff.Declared)
 			return false, nil
 		}
-		if err := r.client.Update(ctx, diff.Declared); err != nil {
+
+		if err := r.client.Upsert(ctx, diff.Declared); err != nil {
 			return false, errors.Wrapf(err, "could not update resource %q", diff.Name)
 		}
 	case differ.Delete:

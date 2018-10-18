@@ -18,6 +18,7 @@ package controller
 import (
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
+	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
 	"github.com/google/nomos/pkg/generic-syncer/differ"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
@@ -39,7 +40,7 @@ func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder, comparator *d
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
 	cpc, err := controller.New(clusterPolicyControllerName, mgr, controller.Options{
 		Reconciler: genericreconcile.NewClusterPolicyReconciler(
-			mgr.GetClient(),
+			client.New(mgr.GetClient()),
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
 			mgr.GetRecorder(clusterPolicyControllerName),
 			decoder,

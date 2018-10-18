@@ -18,6 +18,7 @@ package controller
 import (
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
+	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
 	"github.com/google/nomos/pkg/generic-syncer/differ"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
@@ -40,7 +41,7 @@ func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *diff
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
 	pnc, err := controller.New(policyNodeControllerName, mgr, controller.Options{
 		Reconciler: genericreconcile.NewPolicyNodeReconciler(
-			mgr.GetClient(),
+			client.New(mgr.GetClient()),
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
 			mgr.GetRecorder(policyNodeControllerName),
 			decoder,
