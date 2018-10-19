@@ -123,14 +123,14 @@ func (t *TestHelper) NomosPodSecurityPolicy() *extensionsv1beta1.PodSecurityPoli
 	}
 }
 
-// EmptyContext returns an empty git context.
-func (t *TestHelper) EmptyContext() *ast.Context {
-	return &ast.Context{}
+// EmptyRoot returns an empty Root.
+func (t *TestHelper) EmptyRoot() *ast.Root {
+	return &ast.Root{}
 }
 
-// ClusterPolicies returns a GitContext with only cluster policies.
-func (t *TestHelper) ClusterPolicies() *ast.Context {
-	return &ast.Context{Cluster: t.AcmeCluster()}
+// ClusterPolicies returns a Root with only cluster policies.
+func (t *TestHelper) ClusterPolicies() *ast.Root {
+	return &ast.Root{Cluster: t.AcmeCluster()}
 }
 
 // AdminRoleBinding returns the role binding for the admin role.
@@ -280,9 +280,9 @@ func (t *TestHelper) FrontendResourceQuota() *corev1.ResourceQuota {
 	}
 }
 
-// ReservedNamespaces returns a GitContext with only reserved namespaces.
-func (t *TestHelper) ReservedNamespaces() *ast.Context {
-	return &ast.Context{
+// ReservedNamespaces returns a Root with only reserved namespaces.
+func (t *TestHelper) ReservedNamespaces() *ast.Root {
+	return &ast.Root{
 		Cluster:            &ast.Cluster{},
 		ReservedNamespaces: t.AcmeReserved(),
 	}
@@ -349,17 +349,17 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 	}
 }
 
-// NamespacePolicies returns a GitContext with an example hierarchy.
-func (t *TestHelper) NamespacePolicies() *ast.Context {
-	return &ast.Context{
+// NamespacePolicies returns a Root with an example hierarchy.
+func (t *TestHelper) NamespacePolicies() *ast.Root {
+	return &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree:    t.acmeTree(),
 	}
 }
 
-// AcmeContext returns a GitContext with an example hierarchy.
-func (t *TestHelper) AcmeContext() *ast.Context {
-	return &ast.Context{
+// AcmeRoot returns a Root with an example hierarchy.
+func (t *TestHelper) AcmeRoot() *ast.Root {
+	return &ast.Root{
 		Cluster:            t.AcmeCluster(),
 		ReservedNamespaces: t.AcmeReserved(),
 		Tree:               t.acmeTree(),

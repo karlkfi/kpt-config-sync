@@ -31,8 +31,8 @@ var copyingVisitorTestcases = vt.MutatingVisitorTestcases{
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
 			Name:         "empty",
-			Input:        vt.Helper.EmptyContext(),
-			ExpectOutput: vt.Helper.EmptyContext(),
+			Input:        vt.Helper.EmptyRoot(),
+			ExpectOutput: vt.Helper.EmptyRoot(),
 		},
 		{
 			Name:         "cluster policies",
@@ -46,8 +46,8 @@ var copyingVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name:         "acme",
-			Input:        vt.Helper.AcmeContext(),
-			ExpectOutput: vt.Helper.AcmeContext(),
+			Input:        vt.Helper.AcmeRoot(),
+			ExpectOutput: vt.Helper.AcmeRoot(),
 		},
 	},
 }

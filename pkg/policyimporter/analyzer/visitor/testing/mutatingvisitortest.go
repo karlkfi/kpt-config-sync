@@ -29,8 +29,8 @@ import (
 // MutatingVisitor types.
 type MutatingVisitorTestcase struct {
 	Name         string
-	Input        *ast.Context
-	ExpectOutput *ast.Context
+	Input        *ast.Root
+	ExpectOutput *ast.Root
 	ExpectErr    bool
 }
 
@@ -53,7 +53,7 @@ func (tc *MutatingVisitorTestcase) Runf(visitor ast.CheckingVisitor) func(t *tes
 			t.Errorf("Input mutated while running visitor: %s", cmp.Diff(inputCopy, tc.Input, ResourceVersionCmp()))
 		}
 
-		actual, ok := output.(*ast.Context)
+		actual, ok := output.(*ast.Root)
 		if !ok {
 			t.Fatalf("Wrong type returned %#v", output)
 		}

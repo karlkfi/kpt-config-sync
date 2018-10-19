@@ -36,7 +36,7 @@ type InheritanceSpec struct {
 
 // InheritanceVisitor aggregates hierarchical quota.
 type InheritanceVisitor struct {
-	// Copying is used for copying parts of the ast.Context tree and continuing underlying visitor iteration.
+	// Copying is used for copying parts of the ast.Root tree and continuing underlying visitor iteration.
 	*visitor.Copying
 	// groupKinds contains the set of GroupKind that will be targeted during the inheritance transform.
 	inheritanceSpecs map[schema.GroupVersionKind]*InheritanceSpec

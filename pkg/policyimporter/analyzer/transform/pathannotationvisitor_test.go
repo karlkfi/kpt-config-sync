@@ -51,13 +51,13 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
 			Name: "annotate policyspace",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:        ast.Policyspace,
 					Path:        "acme",
@@ -67,13 +67,13 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "annotate namespace",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Namespace,
 					Path: "acme",
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:        ast.Namespace,
 					Path:        "acme",
@@ -83,7 +83,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "annotate RoleBinding in policyspace",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -92,7 +92,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					),
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -105,7 +105,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "annotate RoleBinding in namespace",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Namespace,
 					Path: "acme",
@@ -114,7 +114,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					),
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Namespace,
 					Path: "acme",
@@ -127,7 +127,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "preserve annotations",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:        ast.Namespace,
 					Path:        "acme",
@@ -137,7 +137,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					),
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:        ast.Namespace,
 					Path:        "acme",

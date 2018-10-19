@@ -36,7 +36,7 @@ type Node interface {
 //   Modified Subtree: the visitor must return a new copy of the object.
 //   Deleted: the visitor should return nil to indicate deleted.
 type Visitor interface {
-	VisitContext(g *Context) Node
+	VisitRoot(g *Root) Node
 	VisitReservedNamespaces(r *ReservedNamespaces) Node
 	VisitCluster(c *Cluster) Node
 	VisitClusterObjectList(o ClusterObjectList) Node

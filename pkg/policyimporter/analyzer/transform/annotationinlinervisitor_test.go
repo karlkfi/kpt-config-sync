@@ -54,12 +54,12 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
 			Name:         "preserve acme",
-			Input:        vt.Helper.AcmeContext(),
-			ExpectOutput: vt.Helper.AcmeContext(),
+			Input:        vt.Helper.AcmeRoot(),
+			ExpectOutput: vt.Helper.AcmeRoot(),
 		},
 		{
 			Name: "inline single object",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -69,7 +69,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -82,7 +82,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "inline multiple objects",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -94,7 +94,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector, "sensitive": &sensitiveNamespaceSelector},
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -109,7 +109,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "multiple policyspaces",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -129,7 +129,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					},
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -152,7 +152,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "NamespaceSelector missing",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -165,7 +165,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "NamespaceSelector scoped to same directory 1",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:      ast.Policyspace,
 					Path:      "acme",
@@ -185,7 +185,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "NamespaceSelector scoped to same directory 2",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -205,7 +205,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "NamespaceSelector unused",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -215,7 +215,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -228,7 +228,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "NamespaceSelector in namespace",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Namespace,
 					Path: "acme",

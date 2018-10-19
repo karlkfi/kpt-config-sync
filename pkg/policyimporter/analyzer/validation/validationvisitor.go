@@ -63,9 +63,9 @@ func (v *InputValidator) Error() error {
 	return v.errs.Build()
 }
 
-// VisitContext implements Visitor
-func (v *InputValidator) VisitContext(g *ast.Context) ast.Node {
-	v.base.VisitContext(g)
+// VisitRoot implements Visitor
+func (v *InputValidator) VisitRoot(g *ast.Root) ast.Node {
+	v.base.VisitRoot(g)
 	return g
 }
 

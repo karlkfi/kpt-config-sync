@@ -51,8 +51,8 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name:  "acme",
-			Input: vt.Helper.AcmeContext(),
-			ExpectOutput: &ast.Context{
+			Input: vt.Helper.AcmeRoot(),
+			ExpectOutput: &ast.Root{
 				Cluster:            vt.Helper.AcmeCluster(),
 				ReservedNamespaces: vt.Helper.AcmeReserved(),
 				Tree: &ast.TreeNode{
@@ -110,7 +110,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "skip policyspace",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:    ast.Policyspace,
 					Path:    "acme",
@@ -132,7 +132,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					},
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
 					Path: "acme",
@@ -172,7 +172,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name: "no quota",
-			Input: &ast.Context{
+			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:    ast.Policyspace,
 					Path:    "acme",
@@ -191,7 +191,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					},
 				},
 			},
-			ExpectOutput: &ast.Context{
+			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:    ast.Policyspace,
 					Path:    "acme",

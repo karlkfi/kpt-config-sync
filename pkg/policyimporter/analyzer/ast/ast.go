@@ -32,9 +32,9 @@ type FileObject struct {
 	Source string
 }
 
-// Context represents a set of declared policies, configuration for how those policies will be
+// Root represents a set of declared policies, configuration for how those policies will be
 // interpreted, and information regarding where those policies came from.
-type Context struct {
+type Root struct {
 	ImportToken string                // Import token for context
 	LoadTime    time.Time             // Time at which the context was generated
 	Config      *v1alpha1.NomosConfig // NomosConfig
@@ -45,11 +45,11 @@ type Context struct {
 }
 
 // Accept implements Visitable
-func (c *Context) Accept(visitor Visitor) Node {
+func (c *Root) Accept(visitor Visitor) Node {
 	if c == nil {
 		return nil
 	}
-	return visitor.VisitContext(c)
+	return visitor.VisitRoot(c)
 }
 
 // Cluster represents cluster scoped policies.

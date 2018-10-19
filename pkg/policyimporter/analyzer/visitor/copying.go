@@ -27,7 +27,7 @@ import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 //
 // The order of traversal:
 //
-// 1. Context
+// 1. Root
 // 2. Cluster
 // 3. ReservedNamespaces
 // 4. Pre-order traversal of TreeNode(s)
@@ -54,8 +54,8 @@ func (v *Copying) Error() error {
 	return nil
 }
 
-// VisitContext implements Visitor
-func (v *Copying) VisitContext(c *ast.Context) ast.Node {
+// VisitRoot implements Visitor
+func (v *Copying) VisitRoot(c *ast.Root) ast.Node {
 	nc := *c
 	nc.Cluster, _ = c.Cluster.Accept(v.impl).(*ast.Cluster)
 	nc.ReservedNamespaces, _ = c.ReservedNamespaces.Accept(v.impl).(*ast.ReservedNamespaces)

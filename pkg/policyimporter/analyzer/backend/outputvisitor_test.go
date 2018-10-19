@@ -42,7 +42,7 @@ func allPolicies(cp policyhierarchyv1.ClusterPolicy, pns []policyhierarchyv1.Pol
 
 type OutputVisitorTestcase struct {
 	name   string
-	input  *ast.Context
+	input  *ast.Root
 	expect *policyhierarchyv1.AllPolicies
 }
 
@@ -59,7 +59,7 @@ func (tc *OutputVisitorTestcase) Run(t *testing.T) {
 var outputVisitorTestCases = []OutputVisitorTestcase{
 	{
 		name:  "empty",
-		input: vt.Helper.EmptyContext(),
+		input: vt.Helper.EmptyRoot(),
 		expect: allPolicies(
 			policyhierarchyv1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
@@ -75,7 +75,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 	},
 	{
 		name:  "emtpy cluster policies",
-		input: &ast.Context{Cluster: &ast.Cluster{}},
+		input: &ast.Root{Cluster: &ast.Cluster{}},
 		expect: allPolicies(
 			policyhierarchyv1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{

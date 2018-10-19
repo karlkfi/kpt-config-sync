@@ -62,8 +62,8 @@ func (v *OutputVisitor) AllPolicies() *policyhierarchyv1.AllPolicies {
 	return v.allPolicies
 }
 
-// VisitContext implements Visitor
-func (v *OutputVisitor) VisitContext(g *ast.Context) ast.Node {
+// VisitRoot implements Visitor
+func (v *OutputVisitor) VisitRoot(g *ast.Root) ast.Node {
 	v.allPolicies = &policyhierarchyv1.AllPolicies{
 		PolicyNodes: map[string]policyhierarchyv1.PolicyNode{},
 		ClusterPolicy: &policyhierarchyv1.ClusterPolicy{
@@ -78,7 +78,7 @@ func (v *OutputVisitor) VisitContext(g *ast.Context) ast.Node {
 	}
 	v.commitHash = g.ImportToken
 	v.loadTime = g.LoadTime
-	v.Base.VisitContext(g)
+	v.Base.VisitRoot(g)
 	return nil
 }
 

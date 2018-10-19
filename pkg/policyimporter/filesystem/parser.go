@@ -96,7 +96,7 @@ func NewParser(config clientcmd.ClientConfig, resources []*metav1.APIResourceLis
 // * tree/ (recursively)
 func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	p.root = root
-	fsCtx := &ast.Context{Cluster: &ast.Cluster{}}
+	fsCtx := &ast.Root{Cluster: &ast.Cluster{}}
 
 	// Special processing for <root>/system/*
 	var allowedGVKs map[schema.GroupVersionKind]struct{}
@@ -220,7 +220,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	clusterregistryInfos []*resource.Info,
 	treeDirsOrdered []string,
 	clusterDir string,
-	fsCtx *ast.Context,
+	fsCtx *ast.Root,
 	allowedGVKs map[schema.GroupVersionKind]struct{}) (*v1.AllPolicies, error) {
 	namespaceDirs := make(map[string]bool)
 
@@ -274,7 +274,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	}
 
 	for _, visitor := range visitors {
-		fsCtx = fsCtx.Accept(visitor).(*ast.Context)
+		fsCtx = fsCtx.Accept(visitor).(*ast.Root)
 		if err := visitor.Error(); err != nil {
 			return nil, err
 		}
@@ -298,7 +298,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 func (p *Parser) processClusterDir(
 	dir string,
 	infos []*resource.Info,
-	fsCtx *ast.Context) error {
+	fsCtx *ast.Root) error {
 	for _, i := range infos {
 		o := i.AsVersioned()
 		fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
@@ -393,7 +393,7 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 }
 
 // processSystemDir loads configs from <root>/system/nomos.yaml.
-func (p *Parser) processSystemDir(root string, fsCtx *ast.Context) (map[schema.GroupVersionKind]struct{}, error) {
+func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) (map[schema.GroupVersionKind]struct{}, error) {
 	validator, err := p.factory.Validator(p.validate)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get schema")

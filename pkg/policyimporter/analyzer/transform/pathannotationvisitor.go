@@ -9,7 +9,7 @@ import (
 
 // PathAnnotationVisitor sets "nomos.dev/source-path" annotation on CRDs and native objects.
 type PathAnnotationVisitor struct {
-	// Copying is used for copying parts of the ast.Context tree and continuing underlying visitor iteration.
+	// Copying is used for copying parts of the ast.Root tree and continuing underlying visitor iteration.
 	*visitor.Copying
 }
 

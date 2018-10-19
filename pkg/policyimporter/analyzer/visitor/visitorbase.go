@@ -25,7 +25,7 @@ import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 //
 // The order of traversal:
 //
-// 1. Context
+// 1. Root
 // 2. Cluster
 // 3. ReservedNamespaces
 // 4. Pre-order traversal of TreeNode(s)
@@ -43,12 +43,12 @@ import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 //        return v
 //      }
 //
-//      func (v *myVisitor) VisitContext(ctx *ast.Context) ast.Node {
+//      func (v *myVisitor) VisitRoot(ctx *ast.Root) ast.Node {
 //        // Do whatever you need to do in this Visitor that needs to happen before
 //        // traversing children.
 //        // Then call the matching continuation method from Base, in this case it is
-//        // VisitContext.
-//        return v.Base.VisitContext(ctx)
+//        // VisitRoot.
+//        return v.Base.VisitRoot(ctx)
 //      }
 type Base struct {
 	// impl handles the upper most implementation for the visitor.  This allows VisitorBase
@@ -70,8 +70,8 @@ func (vb *Base) SetImpl(impl ast.Visitor) {
 	vb.impl = impl
 }
 
-// VisitContext implements Visitor
-func (vb *Base) VisitContext(g *ast.Context) ast.Node {
+// VisitRoot implements Visitor
+func (vb *Base) VisitRoot(g *ast.Root) ast.Node {
 	g.Cluster.Accept(vb.impl)
 	g.ReservedNamespaces.Accept(vb.impl)
 	g.Tree.Accept(vb.impl)
