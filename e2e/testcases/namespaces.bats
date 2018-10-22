@@ -139,57 +139,6 @@ function local_teardown() {
   namespace::check_warning $ns
 }
 
-@test "Namespace declared, has policies label, update parent" {
-  local nsp=move-decl-policies
-  local nsf=move-decl-full
-
-  # Create policy managed namespace
-  namespace::create ${nsp} -l "nomos.dev/namespace-management=policies"
-  local nsp_ver
-  nsp_ver=$(resource::resource_version ns ${nsp})
-
-  namespace::declare_policyspace src
-  namespace::declare_policyspace dst
-  namespace::declare src/$nsp
-  namespace::declare src/$nsf
-  git::commit
-
-  # barrier, wait for syncer to update labels
-  resource::wait_for_update ns ${nsp} ${nsp_ver}
-
-  # check labels on both namespaces
-  namespace::check_exists $nsf \
-    -l "nomos.dev/namespace-management=full" \
-    -l "nomos.dev/parent-name=src"
-  namespace::check_exists $nsp \
-    -l "nomos.dev/namespace-management=policies" \
-    -l "nomos.dev/parent-name=src"
-
-  # get resource versions
-  local nsp_ver
-  local nsf_ver
-  nsp_ver=$(resource::resource_version ns ${nsp})
-  nsf_ver=$(resource::resource_version ns ${nsf})
-
-  namespace::declare dst/$nsp
-  namespace::declare dst/$nsf
-  git::rm acme/tree/acme/src/$nsp/namespace.yaml
-  git::rm acme/tree/acme/src/$nsf/namespace.yaml
-  git::commit
-
-  # barrier, wait for syncer to update labels
-  resource::wait_for_update ns ${nsp} ${nsp_ver}
-  resource::wait_for_update ns ${nsf} ${nsf_ver}
-
-  # check new parent label
-  namespace::check_exists $nsp \
-    -l "nomos.dev/namespace-management=policies" \
-    -l "nomos.dev/parent-name=dst"
-  namespace::check_exists $nsf \
-    -l "nomos.dev/namespace-management=full" \
-    -l "nomos.dev/parent-name=dst"
-}
-
 @test "Namespace warn on invalid management label" {
   local ns=decl-invalid-label
   namespace::create $ns -l "nomos.dev/namespace-management=a-garbage-label"

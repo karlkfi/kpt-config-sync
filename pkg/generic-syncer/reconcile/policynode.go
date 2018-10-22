@@ -393,7 +393,6 @@ func asNamespace(policyNode *nomosv1.PolicyNode) *corev1.Namespace {
 
 func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *nomosv1.PolicyNode) *corev1.Namespace {
 	labels := labeling.ManageAll.AddDeepCopy(policyNode.Labels)
-	labels[nomosv1.ParentLabelKey] = policyNode.Spec.Parent
 	namespace.Labels = labels
 	namespace.Annotations = policyNode.Annotations
 	namespace.Name = policyNode.Name
@@ -427,7 +426,7 @@ func (r *PolicyNodeReconciler) updateNamespace(ctx context.Context, policyNode *
 // updateNamespaceLabels is used for updating the parent label on a namespace where we manage policy values
 // This is used since we can't update all the labels on the namespace.
 func (r *PolicyNodeReconciler) updateNamespaceLabels(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
-	labels := map[string]string{nomosv1.ParentLabelKey: policyNode.Spec.Parent}
+	labels := map[string]string{}
 
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: policyNode.Name}}
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {

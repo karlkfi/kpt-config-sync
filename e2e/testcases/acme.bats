@@ -37,19 +37,14 @@ function check_metrics_pages() {
 
   # Cluster-scoped resources
   namespace::check_exists analytics \
-    -l "nomos.dev/parent-name=eng" \
     -l "nomos.dev/namespace-management=full"
   namespace::check_exists backend \
-    -l "nomos.dev/parent-name=eng" \
     -l "nomos.dev/namespace-management=full"
   namespace::check_exists frontend \
-    -l "nomos.dev/parent-name=eng" \
     -l "nomos.dev/namespace-management=full"
   namespace::check_exists new-prj \
-    -l "nomos.dev/parent-name=rnd" \
     -l "nomos.dev/namespace-management=full"
   namespace::check_exists newer-prj \
-    -l "nomos.dev/parent-name=rnd" \
     -l "nomos.dev/namespace-management=full"
   resource::check_count -r validatingwebhookconfigurations -c 2
   resource::check validatingwebhookconfigurations policy.nomos.dev

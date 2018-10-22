@@ -463,7 +463,6 @@ func (s *PolicyHieraryController) handleDiff(namespace string, module Module, di
 
 func (s *PolicyHieraryController) namespaceValue(policyNode *policyhierarchyv1.PolicyNode) *corev1.Namespace {
 	labels := labeling.ManageAll.AddDeepCopy(policyNode.Labels)
-	labels[policyhierarchyv1.ParentLabelKey] = policyNode.Spec.Parent
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        policyNode.Name,
@@ -503,7 +502,7 @@ func (s *PolicyHieraryController) upsertNamespace(policyNode *policyhierarchyv1.
 // updateNamespace is used for updating the parent label on a namespace where we manage policy values
 // This is used since we can't update all the labels on the namespace.
 func (s *PolicyHieraryController) updateNamespace(policyNode *policyhierarchyv1.PolicyNode) error {
-	labels := map[string]string{policyhierarchyv1.ParentLabelKey: policyNode.Spec.Parent}
+	labels := map[string]string{}
 	act := actions.NewNamespaceUpdateAction(
 		policyNode.Name,
 		actions.SetNamespaceLabelsFunc(labels),

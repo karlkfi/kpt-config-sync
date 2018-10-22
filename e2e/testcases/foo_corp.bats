@@ -19,16 +19,12 @@ load ../lib/loader
 
   # Cluster-scoped resources
   namespace::check_exists audit \
-    -l "nomos.dev/parent-name=foo-corp" \
     -l "nomos.dev/namespace-management=full"
   namespace::check_exists shipping-dev \
-    -l "nomos.dev/parent-name=shipping-app-backend" \
     -l "nomos.dev/namespace-management=full"
   namespace::check_exists shipping-staging \
-    -l "nomos.dev/parent-name=shipping-app-backend" \
     -l "nomos.dev/namespace-management=full"
   namespace::check_exists shipping-prod \
-    -l "nomos.dev/parent-name=shipping-app-backend" \
     -l "nomos.dev/namespace-management=full"
   resource::check_count -r namespace -l nomos.dev/namespace-management -c 4
   resource::check_count -l "nomos.dev/managed=full" -r clusterrole -c 2

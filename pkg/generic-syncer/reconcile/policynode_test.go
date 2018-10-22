@@ -113,7 +113,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
-						nomosv1.ParentLabelKey: "",
 						labeling.ManagementKey: labeling.Full,
 					},
 				},
@@ -201,7 +200,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
-						nomosv1.ParentLabelKey: "",
 						labeling.ManagementKey: labeling.Full,
 					},
 				},
@@ -263,7 +261,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
-						nomosv1.ParentLabelKey: "",
 						labeling.ManagementKey: labeling.Full,
 					},
 				},
@@ -316,7 +313,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
-						nomosv1.ParentLabelKey: "",
 						labeling.ManagementKey: labeling.Full,
 					},
 				},
@@ -389,7 +385,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
-						nomosv1.ParentLabelKey: "",
 						labeling.ManagementKey: labeling.Full,
 					},
 				},
