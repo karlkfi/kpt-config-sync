@@ -1,6 +1,6 @@
 // Reviewed by sunilarora
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,11 +18,15 @@ package actions
 
 import (
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
+	typedv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
+	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/policynode"
+	"github.com/google/nomos/pkg/util/sync"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -30,12 +34,17 @@ import (
 type Factories struct {
 	PolicyNodeAction    policyNodeActionFactory
 	ClusterPolicyAction clusterPolicyActionFactory
+	SyncAction          syncActionFactory
 }
 
 // NewFactories creates a new Factories.
 func NewFactories(
-	client typedv1.NomosV1Interface, pnLister listersv1.PolicyNodeLister, cpLister listersv1.ClusterPolicyLister) Factories {
-	return Factories{newPolicyNodeActionFactory(client, pnLister), newClusterPolicyActionFactory(client, cpLister)}
+	v1client typedv1.NomosV1Interface, v1alpha1client typedv1alpha1.NomosV1alpha1Interface,
+	pnLister listersv1.PolicyNodeLister, cpLister listersv1.ClusterPolicyLister,
+	syncLister listersv1alpha1.SyncLister) Factories {
+	return Factories{newPolicyNodeActionFactory(v1client, pnLister),
+		newClusterPolicyActionFactory(v1client, cpLister),
+		newSyncActionFactory(v1alpha1client, syncLister)}
 }
 
 type policyNodeActionFactory struct {
@@ -111,4 +120,32 @@ func (f clusterPolicyActionFactory) NewUpdate(clusterPolicy *policyhierarchyv1.C
 func (f clusterPolicyActionFactory) NewDelete(
 	clusterPolicyName string) action.Interface {
 	return action.NewReflectiveDeleteAction("", clusterPolicyName, f.ReflectiveActionSpec)
+}
+
+type syncActionFactory struct {
+	*action.ReflectiveActionSpec
+}
+
+func newSyncActionFactory(
+	client typedv1alpha1.NomosV1alpha1Interface,
+	lister listersv1alpha1.SyncLister) syncActionFactory {
+	return syncActionFactory{sync.NewActionSpec(client, lister)}
+}
+
+func (f syncActionFactory) NewCreate(sync policyhierarchyv1alpha1.Sync) action.Interface {
+	return action.NewReflectiveCreateAction("", sync.Name, &sync, f.ReflectiveActionSpec)
+}
+
+func (f syncActionFactory) NewUpdate(sync policyhierarchyv1alpha1.Sync) action.Interface {
+	updateSync := func(old runtime.Object) (runtime.Object, error) {
+		newSync := sync.DeepCopy()
+		oldSync := old.(*policyhierarchyv1alpha1.Sync)
+		newSync.ResourceVersion = oldSync.ResourceVersion
+		return newSync, nil
+	}
+	return action.NewReflectiveUpdateAction("", sync.Name, updateSync, f.ReflectiveActionSpec)
+}
+
+func (f syncActionFactory) NewDelete(syncName string) action.Interface {
+	return action.NewReflectiveDeleteAction("", syncName, f.ReflectiveActionSpec)
 }

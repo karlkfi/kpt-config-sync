@@ -88,9 +88,10 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	p.root = root
 	fsCtx := &ast.Root{Cluster: &ast.Cluster{}}
 
-	var allowedGVKs map[schema.GroupVersionKind]struct{}
+	// Special processing for <root>/system/*
+	var syncs []*v1alpha1.Sync
 	if _, err := os.Stat(filepath.Join(root, repo.SystemDir)); err == nil {
-		if allowedGVKs, err = p.processSystemDir(root, fsCtx); err != nil {
+		if syncs, err = p.processSystemDir(root, fsCtx); err != nil {
 			return nil, err
 		}
 	} else if !os.IsNotExist(err) {
@@ -154,7 +155,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	}
 
 	return p.processDirs(resources, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered,
-		clusterDir, fsCtx, allowedGVKs)
+		clusterDir, fsCtx, syncs)
 }
 
 func (p *Parser) relativePath(source string) string {
@@ -212,7 +213,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	nsDirsOrdered []string,
 	clusterDir string,
 	fsCtx *ast.Root,
-	allowedGVKs map[schema.GroupVersionKind]struct{}) (*v1.AllPolicies, error) {
+	syncs []*v1alpha1.Sync) (*v1.AllPolicies, error) {
 	namespaceDirs := make(map[string]bool)
 
 	treeGenerator := NewDirectoryTree()
@@ -254,7 +255,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	}
 
 	visitors := []ast.CheckingVisitor{
-		validation.NewInputValidator(allowedGVKs),
+		validation.NewInputValidator(toAllowedGVKs(syncs)),
 		transform.NewPathAnnotationVisitor(),
 		scopeValidator,
 		transform.NewAnnotationInlinerVisitor(cs),
@@ -276,7 +277,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 		}
 	}
 
-	outputVisitor := backend.NewOutputVisitor()
+	outputVisitor := backend.NewOutputVisitor(syncs)
 	fsCtx.Accept(outputVisitor)
 	policies := outputVisitor.AllPolicies()
 
@@ -289,6 +290,21 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	}
 
 	return policies, nil
+}
+
+func toAllowedGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]struct{} {
+	allowedGVKs := make(map[schema.GroupVersionKind]struct{})
+	for _, sync := range syncs {
+		for _, sg := range sync.Spec.Groups {
+			for _, k := range sg.Kinds {
+				for _, v := range k.Versions {
+					gvk := schema.GroupVersionKind{Group: sg.Group, Kind: k.Kind, Version: v.Version}
+					allowedGVKs[gvk] = struct{}{}
+				}
+			}
+		}
+	}
+	return allowedGVKs
 }
 
 func (p *Parser) processClusterDir(
@@ -385,7 +401,7 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 }
 
 // processSystemDir loads configs from <root>/system/nomos.yaml.
-func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) (map[schema.GroupVersionKind]struct{}, error) {
+func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) ([]*v1alpha1.Sync, error) {
 	validator, err := p.factory.Validator(p.validate)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get schema")
@@ -401,7 +417,7 @@ func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) (map[schema.Grou
 		return nil, errors.Wrapf(err, "failed to read resources from system dir")
 	}
 	v := newValidator()
-	allowedGVKs := make(map[schema.GroupVersionKind]struct{})
+	var syncs []*v1alpha1.Sync
 	for _, i := range fileInfos {
 		o := i.AsVersioned()
 
@@ -429,12 +445,9 @@ func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) (map[schema.Grou
 					if k.Kind == "Namespace" && sg.Group == "" {
 						return nil, errors.Errorf("unsupported Sync in %s. Sync must not specify kind Namespace", i.Source)
 					}
-					for _, v := range k.Versions {
-						gvk := schema.GroupVersionKind{Group: sg.Group, Kind: k.Kind, Version: v.Version}
-						allowedGVKs[gvk] = struct{}{}
-					}
 				}
 			}
+			syncs = append(syncs, sync)
 		default:
 			v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
 		}
@@ -446,7 +459,7 @@ func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) (map[schema.Grou
 	if fsCtx.Config == nil {
 		return nil, errors.Errorf("failed to find object of type NomosConfig in system dir")
 	}
-	return allowedGVKs, nil
+	return syncs, nil
 }
 
 // processClusterRegistryDir looks at all files in <root>/clusterregistry and

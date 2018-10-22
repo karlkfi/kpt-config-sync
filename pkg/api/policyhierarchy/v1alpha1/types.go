@@ -168,13 +168,15 @@ type SyncVersion struct {
 
 // SyncStatus represents the status for a sync declaration
 type SyncStatus struct {
-	GroupKinds []SyncGroupKindStatus `json:"groupKinds,omitempty"`
+	GroupVersionKinds []SyncGroupVersionKindStatus `json:"groupVersionKinds,omitempty"`
 }
 
-// SyncGroupKindStatus is a per Group, Kind status for the sync state of a resource.
-type SyncGroupKindStatus struct {
+// SyncGroupVersionKindStatus is a per Group, Kind status for the sync state of a resource.
+type SyncGroupVersionKindStatus struct {
 	// Group is the group, for example nomos.dev or rbac.authorization.k8s.io
 	Group string `json:"group"`
+	// Version is the version.
+	Version string `json:"version"`
 	// Kind is the string that represents the Kind for the object as given in TypeMeta, for exmple
 	// ClusterRole, Namespace or Deployment.
 	Kind string `json:"kind"`

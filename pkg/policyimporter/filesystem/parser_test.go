@@ -468,6 +468,68 @@ func toInt32Pointer(i int32) *int32 {
 	return &i
 }
 
+func makeSync(group, version, kind string) v1alpha1.Sync {
+	return v1alpha1.Sync{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "nomos.dev/v1alpha1",
+			Kind:       "Sync",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       kind,
+			Finalizers: []string{v1alpha1.SyncFinalizer},
+		},
+		Spec: v1alpha1.SyncSpec{
+			Groups: []v1alpha1.SyncGroup{
+				{
+					Group: group,
+					Kinds: []v1alpha1.SyncKind{
+						{
+							Kind: kind,
+							Versions: []v1alpha1.SyncVersion{
+								{
+									Version: version,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func mapOfSingleSync(name, group, kind string, versions ...string) map[string]v1alpha1.Sync {
+	var sv []v1alpha1.SyncVersion
+	for _, v := range versions {
+		sv = append(sv, v1alpha1.SyncVersion{Version: v})
+	}
+	return map[string]v1alpha1.Sync{
+		name: {
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "nomos.dev/v1alpha1",
+				Kind:       "Sync",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       name,
+				Finalizers: []string{v1alpha1.SyncFinalizer},
+			},
+			Spec: v1alpha1.SyncSpec{
+				Groups: []v1alpha1.SyncGroup{
+					{
+						Group: group,
+						Kinds: []v1alpha1.SyncKind{
+							{
+								Kind:     kind,
+								Versions: sv,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 type parserTestCase struct {
 	testName                   string
 	root                       string
@@ -476,6 +538,7 @@ type parserTestCase struct {
 	expectedNumPolicies        map[string]int
 	expectedClusterPolicy      *v1.ClusterPolicy
 	expectedNumClusterPolicies *int
+	expectedSyncs              map[string]v1alpha1.Sync
 	expectedError              bool
 }
 
@@ -491,6 +554,7 @@ var parserTestCases = []parserTestCase{
 			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with JSON Namespace",
@@ -503,6 +567,7 @@ var parserTestCases = []parserTestCase{
 			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with Namespace with labels/annotations",
@@ -516,6 +581,7 @@ var parserTestCases = []parserTestCase{
 				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with ignored files",
@@ -529,6 +595,7 @@ var parserTestCases = []parserTestCase{
 			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with 2 ignored files",
@@ -543,6 +610,7 @@ var parserTestCases = []parserTestCase{
 			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces",
@@ -597,6 +665,7 @@ var parserTestCases = []parserTestCase{
 			),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "ResourceQuota without declared Sync",
@@ -634,6 +703,7 @@ var parserTestCases = []parserTestCase{
 			),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Namespace dir with multiple ResourceQuota",
@@ -721,6 +791,7 @@ var parserTestCases = []parserTestCase{
 				}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("Deployment", "apps", "Deployment", "v1"),
 	},
 	{
 		testName: "Namespace dir with CRD",
@@ -796,6 +867,7 @@ var parserTestCases = []parserTestCase{
 			"baz":                 createReservedPN("baz", "", nil),
 			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
+		expectedSyncs: map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with non-conflicting reserved Namespace, but invalid attribute specified",
@@ -876,6 +948,7 @@ var parserTestCases = []parserTestCase{
 			"bar":                 createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota",
@@ -891,6 +964,7 @@ var parserTestCases = []parserTestCase{
 				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota namespace set",
@@ -1014,6 +1088,7 @@ var parserTestCases = []parserTestCase{
 			v1.RootPolicyNodeName: createRootPN(&Policies{}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Empty namespaces and valid Sync",
@@ -1026,6 +1101,24 @@ var parserTestCases = []parserTestCase{
 			v1.RootPolicyNodeName: createRootPN(&Policies{}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
+	},
+	{
+		testName: "Multiple Syncs",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml": aNomosConfig,
+			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"system/role.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+		},
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(&Policies{}),
+		},
+		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs: map[string]v1alpha1.Sync{
+			"ResourceQuota": makeSync("", "v1", "ResourceQuota"),
+			"Role":          makeSync("rbac.authorization.k8s.io", "v1", "Role"),
+		},
 	},
 	{
 		testName: "Sync declares multiple versions",
@@ -1058,6 +1151,7 @@ spec:
 			v1.RootPolicyNodeName: createRootPN(&Policies{}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespaces dir with Namespace",
@@ -1080,13 +1174,14 @@ spec:
 				ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Namespaces dir with ResourceQuota and namespace dir",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
-			"system/role.yaml":       templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -1099,6 +1194,7 @@ spec:
 				}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Namespaces dir with Roles",
@@ -1334,10 +1430,11 @@ func TestParser(t *testing.T) {
 				}
 			}
 
-			if tc.expectedPolicyNodes != nil || tc.expectedClusterPolicy != nil {
+			if tc.expectedPolicyNodes != nil || tc.expectedClusterPolicy != nil || tc.expectedSyncs != nil {
 				expectedPolicies := &v1.AllPolicies{
 					PolicyNodes:   tc.expectedPolicyNodes,
 					ClusterPolicy: tc.expectedClusterPolicy,
+					Syncs:         tc.expectedSyncs,
 				}
 
 				if diff := deep.Equal(actualPolicies, expectedPolicies); diff != nil {

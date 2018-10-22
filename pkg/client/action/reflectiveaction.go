@@ -346,7 +346,7 @@ func (s *ReflectiveUpdateAction) doUpdate() error {
 			return err
 		}
 	}
-	return errors.Errorf("max update tries exceeded %s", s)
+	return errors.Wrapf(err, "max update tries exceeded in %s", s)
 }
 
 // UpdatedResource returns a preview of what the updated resource will look like.

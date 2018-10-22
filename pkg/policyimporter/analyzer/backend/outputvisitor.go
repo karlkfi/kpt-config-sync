@@ -22,7 +22,7 @@ import (
 	"time"
 
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
@@ -46,20 +46,33 @@ type OutputVisitor struct {
 	allPolicies *policyhierarchyv1.AllPolicies
 	context     string
 	policyNode  []*policyhierarchyv1.PolicyNode
+	syncs       []*policyhierarchyv1alpha1.Sync
 }
 
 var _ ast.Visitor = &OutputVisitor{}
 
 // NewOutputVisitor creates a new output visitor.
-func NewOutputVisitor() *OutputVisitor {
-	v := &OutputVisitor{Base: visitor.NewBase()}
+func NewOutputVisitor(syncs []*policyhierarchyv1alpha1.Sync) *OutputVisitor {
+	v := &OutputVisitor{Base: visitor.NewBase(), syncs: syncs}
 	v.SetImpl(v)
 	return v
 }
 
 // AllPolicies returns the AllPolicies object created by the visitor.
 func (v *OutputVisitor) AllPolicies() *policyhierarchyv1.AllPolicies {
+	for _, s := range v.syncs {
+		s.SetFinalizers([]string{policyhierarchyv1alpha1.SyncFinalizer})
+	}
+	v.allPolicies.Syncs = mapByName(v.syncs)
 	return v.allPolicies
+}
+
+func mapByName(syncs []*policyhierarchyv1alpha1.Sync) map[string]policyhierarchyv1alpha1.Sync {
+	m := make(map[string]policyhierarchyv1alpha1.Sync)
+	for _, sync := range syncs {
+		m[sync.Name] = *sync
+	}
+	return m
 }
 
 // VisitRoot implements Visitor
@@ -88,7 +101,7 @@ func (v *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.N
 	if err != nil {
 		panic(fmt.Sprintf("programmer error: input should have been validated %v", err))
 	}
-	for _, namespace := range rns.List(v1alpha1.ReservedAttribute) {
+	for _, namespace := range rns.List(policyhierarchyv1alpha1.ReservedAttribute) {
 		v.allPolicies.PolicyNodes[namespace] = policyhierarchyv1.PolicyNode{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
