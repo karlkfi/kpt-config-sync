@@ -468,12 +468,10 @@ func toInt32Pointer(i int32) *int32 {
 	return &i
 }
 
-type fileContentMap map[string]string
-
 type parserTestCase struct {
 	testName                   string
 	root                       string
-	testFiles                  fileContentMap
+	testFiles                  fstesting.FileContentMap
 	expectedPolicyNodes        map[string]v1.PolicyNode
 	expectedNumPolicies        map[string]int
 	expectedClusterPolicy      *v1.ClusterPolicy
@@ -485,7 +483,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with YAML Namespace",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -497,7 +495,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with JSON Namespace",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.json": templateData{Name: "bar"}.apply(aNamespaceJSON),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -509,7 +507,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with Namespace with labels/annotations",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespaceWithLabelsAndAnnotations),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -522,7 +520,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with ignored files",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 		},
@@ -535,7 +533,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with 2 ignored files",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 			"namespaces/bar/ignore2": "blah blah blah",
@@ -549,7 +547,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with multiple Namespaces",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -558,7 +556,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir without Namespace multiple",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ignore":  "",
 			"namespaces/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
@@ -567,7 +565,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with namespace mismatch",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -575,7 +573,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with invalid name",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/baR/ns.yaml": templateData{Name: "baR"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -583,7 +581,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with single ResourceQuota",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
@@ -603,7 +601,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "ResourceQuota without declared Sync",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{Namespace: "bar"}.apply(aQuota),
@@ -622,7 +620,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with single ResourceQuota single file",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":         aNomosConfig,
 			"system/rq.yaml":            templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/combo.yaml": templateData{Name: "bar"}.apply(aNamespace) + "\n---\n" + templateData{Namespace: "bar"}.apply(aQuota),
@@ -640,7 +638,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with multiple ResourceQuota",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":       aNomosConfig,
 			"system/rq.yaml":          templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
@@ -652,7 +650,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with multiple ResourceQuota",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":          aNomosConfig,
 			"system/rq.yaml":             templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/rq.yaml":     templateData{ID: "1"}.apply(aQuota),
@@ -664,7 +662,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with ResourceQuota namespace mismatch",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
@@ -675,7 +673,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with multiple Roles",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":         aNomosConfig,
 			"system/role.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
@@ -687,7 +685,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with deployment",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":              aNomosConfig,
 			"system/depl.yaml":               templateData{Group: "apps", Version: "v1", Kind: "Deployment"}.apply(aSync),
 			"namespaces/bar/ns.yaml":         templateData{Name: "bar"}.apply(aNamespace),
@@ -727,7 +725,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with CRD",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":         aNomosConfig,
 			"system/eng.yaml":           templateData{Group: "employees", Version: "v1alpha1", Kind: "Engineer"}.apply(aSync),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
@@ -738,7 +736,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with duplicate Roles",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":         aNomosConfig,
 			"system/role.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
@@ -750,7 +748,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with multiple Rolebindings",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
@@ -762,7 +760,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with duplicate Rolebindings",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
@@ -774,7 +772,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with duplicate Rolebindings",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":          aNomosConfig,
 			"system/rb.yaml":             templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns.yaml":     templateData{Name: "bar"}.apply(aNamespace),
@@ -787,7 +785,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with non-conflicting reserved Namespace specified",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/reserved.yaml":   templateData{Namespace: "baz", Attribute: string(v1alpha1.ReservedAttribute), Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
@@ -802,7 +800,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with non-conflicting reserved Namespace, but invalid attribute specified",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/reserved.yaml":   templateData{Namespace: "foo", Attribute: "invalid-attribute", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
@@ -812,7 +810,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with conflicting reserved Namespace specified",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/reserved.yaml":   templateData{Namespace: "foo", Attribute: "reserved", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 			"namespaces/foo/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
@@ -822,7 +820,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "reserved namespace ConfigMap with invalid name",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":    aNomosConfig,
 			"system/reserved.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: "random-name"}.apply(aConfigMap),
 		},
@@ -831,7 +829,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with ClusterRole",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/cr.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
 			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
@@ -841,7 +839,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with ClusterRoleBinding",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":       aNomosConfig,
 			"system/crb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
@@ -851,7 +849,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with PodSecurityPolicy",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":       aNomosConfig,
 			"system/psp.yaml":         templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
 			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
@@ -861,7 +859,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with policyspace child",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml":    templateData{Name: "baz"}.apply(aNamespace),
 			"namespaces/bar/baz/ignore": "",
 		},
@@ -870,7 +868,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with ignored file",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ignore": "",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -882,7 +880,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with ResourceQuota",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
@@ -897,7 +895,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with ResourceQuota namespace set",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/rq.yaml": templateData{Namespace: "qux"}.apply(aQuota),
@@ -907,7 +905,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with Namespace",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":          aNomosConfig,
 			"system/rq.yaml":             templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/rq.yaml":     templateData{Namespace: "bar"}.apply(aQuota),
@@ -918,7 +916,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with Roles",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":        aNomosConfig,
 			"system/role.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/bar/role.yaml": templateData{}.apply(aRole),
@@ -928,7 +926,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with multiple Rolebindings",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":       aNomosConfig,
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
@@ -939,7 +937,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with ClusterRole",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/cr.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
 			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
@@ -949,7 +947,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with ClusterRoleBinding",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":       aNomosConfig,
 			"system/crb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
@@ -959,7 +957,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with PodSecurityPolicy",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":       aNomosConfig,
 			"system/psp.yaml":         templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
 			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
@@ -969,7 +967,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with ConfigMap",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/cm.yaml":         templateData{Version: "v1", Kind: "ConfigMap"}.apply(aSync),
 			"namespaces/bar/cm.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
@@ -979,7 +977,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with NamespaceSelector CRD",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns-selector.yaml": aNamespaceSelectorTemplate,
 		},
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
@@ -987,7 +985,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace dir with NamespaceSelector CRD and object",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":               aNomosConfig,
 			"system/crb.yaml":                 templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns-selector.yaml": aNamespaceSelectorTemplate,
@@ -1000,7 +998,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Policyspace and Namespace dir have duplicate rolebindings",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":           aNomosConfig,
 			"system/rb.yaml":              templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/rb1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
@@ -1020,7 +1018,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Empty namespaces and valid Sync",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 		},
@@ -1032,7 +1030,7 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Sync declares multiple versions",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/rq.yaml": `
 kind: Sync
@@ -1053,7 +1051,7 @@ spec:
 	{
 		testName: "Namespaces dir with ignore file",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/ignore": "",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -1064,7 +1062,7 @@ spec:
 	{
 		testName: "Namespaces dir with Namespace",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -1072,7 +1070,7 @@ spec:
 	{
 		testName: "Namespaces dir with ResourceQuota",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":  aNomosConfig,
 			"system/rq.yaml":     templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/rq.yaml": templateData{}.apply(aQuota),
@@ -1086,7 +1084,7 @@ spec:
 	{
 		testName: "Namespaces dir with ResourceQuota and namespace dir",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/role.yaml":       templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
@@ -1105,7 +1103,7 @@ spec:
 	{
 		testName: "Namespaces dir with Roles",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":    aNomosConfig,
 			"system/role.yaml":     templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/role.yaml": templateData{}.apply(aRole),
@@ -1115,7 +1113,7 @@ spec:
 	{
 		testName: "Namespaces dir with multiple Rolebindings",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":  aNomosConfig,
 			"system/rb.yaml":     templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
@@ -1126,7 +1124,7 @@ spec:
 	{
 		testName: "Namespaces dir with multiple inherited Rolebindings",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aNomosConfig,
 			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/r1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
@@ -1138,7 +1136,7 @@ spec:
 	{
 		testName: "Cluster dir with multiple ClusterRoles",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/cr.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
 			"cluster/cr1.yaml":  templateData{ID: "1"}.apply(aClusterRole),
@@ -1149,7 +1147,7 @@ spec:
 	{
 		testName: "Cluster dir with multiple ClusterRoleBindings",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/crb.yaml":   templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
@@ -1160,7 +1158,7 @@ spec:
 	{
 		testName: "Cluster dir with multiple PodSecurityPolicies",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/psp.yaml":   templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
@@ -1171,7 +1169,7 @@ spec:
 	{
 		testName: "Cluster dir with deployment",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/node.yaml":  templateData{Version: "v1", Kind: "Node"}.apply(aSync),
 			"cluster/node.yaml": templateData{}.apply(aNode),
@@ -1181,7 +1179,7 @@ spec:
 	{
 		testName: "Cluster dir with duplicate ClusterRole names",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/cr.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
 			"cluster/cr1.yaml":  templateData{ID: "1"}.apply(aClusterRole),
@@ -1192,7 +1190,7 @@ spec:
 	{
 		testName: "Cluster dir with duplicate ClusterRoleBinding names",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/crb.yaml":   templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
@@ -1203,7 +1201,7 @@ spec:
 	{
 		testName: "Cluster dir with duplicate PodSecurityPolicy names",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/psp.yaml":   templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
@@ -1214,7 +1212,7 @@ spec:
 	{
 		testName: "Dir name not unique 1",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/baz/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/qux/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -1223,7 +1221,7 @@ spec:
 	{
 		testName: "Dir name not unique 2",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -1231,7 +1229,7 @@ spec:
 	{
 		testName: "Dir name not unique 3",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			// Two policyspace dirs with same name.
 			"namespaces/bar/baz/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
 			"namespaces/qux/baz/waldo/ns.yaml": templateData{Name: "waldo"}.apply(aNamespace),
@@ -1241,7 +1239,7 @@ spec:
 	{
 		testName: "Dir name reserved",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/kube-system/ns.yaml": templateData{Name: "kube-system"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -1249,7 +1247,7 @@ spec:
 	{
 		testName: "Dir name invalid",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/foo bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -1257,7 +1255,7 @@ spec:
 	{
 		testName: "Dir name invalid",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 		},
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0},
@@ -1265,7 +1263,7 @@ spec:
 	{
 		testName: "Namespace with NamespaceSelector label is invalid",
 		root:     "foo",
-		testFiles: fileContentMap{
+		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar", Annotations: map[string]string{
 				v1alpha1.NamespaceSelectorAnnotationKey: "prod"},
 			}.apply(aNamespace),
@@ -1291,7 +1289,7 @@ func TestParser(t *testing.T) {
 				}
 			}()
 
-			p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(), true, d.rootDir}
+			p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestDynamicResources()), true, d.rootDir}
 
 			actualPolicies, err := p.Parse(d.rootDir)
 			if tc.expectedError {

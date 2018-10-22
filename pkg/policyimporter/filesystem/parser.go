@@ -64,13 +64,17 @@ type Parser struct {
 // 		that are returned by the API server during discovery.
 // validate determines whether to validate schema using OpenAPI spec.
 func NewParser(config clientcmd.ClientConfig, discoveryClient discovery.ServerResourcesInterface, validate bool) (*Parser, error) {
-	p := Parser{
-		factory:         cmdutil.NewFactory(config),
-		discoveryClient: discoveryClient,
-		validate:        validate,
-	}
+	return NewParserWithFactory(cmdutil.NewFactory(config), discoveryClient, validate)
+}
 
-	return &p, nil
+// NewParserWithFactory creates a new Parser using the specified factory.
+// NewParser is the more common constructor, but this is useful for testing.
+func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterface, validate bool) (*Parser, error) {
+	return &Parser{
+		factory:         f,
+		discoveryClient: dc,
+		validate:        validate,
+	}, nil
 }
 
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.

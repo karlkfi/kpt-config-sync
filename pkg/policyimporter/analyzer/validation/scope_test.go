@@ -25,7 +25,7 @@ import (
 
 var scopeTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.CheckingVisitor {
-		v, err := NewScope(ft.TestAPIResourceList())
+		v, err := NewScope(ft.TestAPIResourceList(ft.TestDynamicResources()))
 		if err != nil {
 			panic("testdata error")
 		}

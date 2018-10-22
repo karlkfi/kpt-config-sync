@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -54,32 +53,34 @@ import (
 	"k8s.io/kubernetes/pkg/printers"
 )
 
-type fakeCachedDiscoveryClient struct {
+// FakeCachedDiscoveryClient is a DiscoveryClient with stubbed API Resources.
+type FakeCachedDiscoveryClient struct {
 	discovery.DiscoveryInterface
+	APIGroupResources []*discovery.APIGroupResources
 }
 
 // NewFakeCachedDiscoveryClient returns a DiscoveryClient with stubbed API Resources.
-func NewFakeCachedDiscoveryClient() discovery.DiscoveryInterface {
-	return &fakeCachedDiscoveryClient{}
+func NewFakeCachedDiscoveryClient(res []*discovery.APIGroupResources) discovery.DiscoveryInterface {
+	return &FakeCachedDiscoveryClient{APIGroupResources: res}
 }
 
 // Fresh always returns that the client is fresh.
-func (d *fakeCachedDiscoveryClient) Fresh() bool {
+func (d *FakeCachedDiscoveryClient) Fresh() bool {
 	return true
 }
 
 // Invalidate is a no-op for the fake.
-func (d *fakeCachedDiscoveryClient) Invalidate() {
+func (d *FakeCachedDiscoveryClient) Invalidate() {
 }
 
 // ServerResources returns the stubbed list of available resources.
-func (d *fakeCachedDiscoveryClient) ServerResources() ([]*metav1.APIResourceList, error) {
-	return TestAPIResourceList(), nil
+func (d *FakeCachedDiscoveryClient) ServerResources() ([]*metav1.APIResourceList, error) {
+	return TestAPIResourceList(d.APIGroupResources), nil
 }
 
 // TestFactory is a cmdutil.Factory that can be used in tests to avoid requiring talking
 // to the API server for Discovery (need for RESTMapping) and downloading OpenAPI spec.
-// Additional resources can be added to testDynamicTypes (e.g. kinds in nomos.dev group).
+// Additional resources can be added to TestDynamicTypes (e.g. kinds in nomos.dev group).
 type TestFactory struct {
 	cmdutil.Factory
 
@@ -94,6 +95,8 @@ type TestFactory struct {
 
 	UnstructuredClientForMappingFunc func(mapping *meta.RESTMapping) (resource.RESTClient, error)
 	OpenAPISchemaFunc                func() (openapi.Resources, error)
+
+	APIResourceList []*discovery.APIGroupResources
 }
 
 // NewTestFactory returns a new test factory.
@@ -102,8 +105,9 @@ func NewTestFactory() *TestFactory {
 	// to avoid polluting an existing user config.
 	config, configFile := defaultFakeClientConfig()
 	return &TestFactory{
-		Factory:        cmdutil.NewFactory(config),
-		tempConfigFile: configFile,
+		Factory:         cmdutil.NewFactory(config),
+		tempConfigFile:  configFile,
+		APIResourceList: TestDynamicResources(),
 	}
 }
 
@@ -296,7 +300,7 @@ func (f *TestFactory) ClientSetForVersion(requiredVersion *schema.GroupVersion) 
 
 // Object returns a resource mapper and an unstructured object converter.
 func (f *TestFactory) Object() (meta.RESTMapper, runtime.ObjectTyper) {
-	groupResources := testDynamicResources()
+	groupResources := f.APIResourceList
 	mapper := discovery.NewRESTMapper(
 		groupResources,
 		meta.InterfacesForUnstructuredConversion(func(version schema.GroupVersion) (*meta.VersionInterfaces, error) {
@@ -318,7 +322,7 @@ func (f *TestFactory) Object() (meta.RESTMapper, runtime.ObjectTyper) {
 
 	// TODO(frankf): should probably be the external scheme
 	typer := discovery.NewUnstructuredObjectTyper(groupResources, legacyscheme.Scheme)
-	fakeDs := &fakeCachedDiscoveryClient{}
+	fakeDs := &FakeCachedDiscoveryClient{}
 	expander := cmdutil.NewShortcutExpander(mapper, fakeDs)
 	return expander, typer
 }
@@ -365,10 +369,9 @@ func (f *TestFactory) LogsForObject(object, options runtime.Object, timeout time
 
 // TestAPIResourceList returns the API ResourceList as would be returned by the DiscoveryClient ServerResources
 // call which represents resources that are returned by the API server during discovery.
-func TestAPIResourceList() []*metav1.APIResourceList {
+func TestAPIResourceList(rs []*discovery.APIGroupResources) []*metav1.APIResourceList {
 	var apiResources []*metav1.APIResourceList
-	dynamicResources := testDynamicResources()
-	for _, item := range dynamicResources {
+	for _, item := range rs {
 		for version, resources := range item.VersionedResources {
 			apiResources = append(apiResources, &metav1.APIResourceList{
 				TypeMeta: metav1.TypeMeta{
@@ -383,7 +386,7 @@ func TestAPIResourceList() []*metav1.APIResourceList {
 	return apiResources
 }
 
-func testDynamicResources() []*discovery.APIGroupResources {
+func testK8SResources() []*discovery.APIGroupResources {
 	return []*discovery.APIGroupResources{
 		{
 			Group: metav1.APIGroup{
@@ -505,6 +508,14 @@ func testDynamicResources() []*discovery.APIGroupResources {
 				},
 			},
 		},
+	}
+}
+
+// TestDynamicResources returns API Resources for both standard K8S resources
+// and Nomos resources.
+func TestDynamicResources() []*discovery.APIGroupResources {
+	r := testK8SResources()
+	return append(r, []*discovery.APIGroupResources{
 		{
 			Group: metav1.APIGroup{
 				Name: "nomos.dev",
@@ -550,5 +561,5 @@ func testDynamicResources() []*discovery.APIGroupResources {
 				},
 			},
 		},
-	}
+	}...)
 }
