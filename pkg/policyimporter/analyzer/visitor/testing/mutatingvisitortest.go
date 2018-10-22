@@ -32,7 +32,6 @@ type MutatingVisitorTestcase struct {
 	Input        *ast.Root
 	ExpectOutput *ast.Root
 	ExpectErr    bool
-	ExpectNoop   bool // Output is expected to the exact tree as input (same pointer, not mutated)
 }
 
 // ResourceVersionCmp provides a comparer option for resource.Quantity
@@ -47,11 +46,7 @@ func (tc *MutatingVisitorTestcase) Runf(visitor ast.CheckingVisitor) func(t *tes
 	return func(t *testing.T) {
 		copier := visitorpkg.NewCopying()
 		copier.SetImpl(copier)
-		inputCopy, ok := tc.Input.Accept(copier).(*ast.Root)
-		if !ok {
-			t.Fatalf(
-				"framework error: return value from copying visitor needs to be of type *ast.Root, got: %#v", inputCopy)
-		}
+		inputCopy := tc.Input.Accept(copier)
 
 		output := tc.Input.Accept(visitor)
 		if !cmp.Equal(tc.Input, inputCopy, ResourceVersionCmp()) {
@@ -74,14 +69,7 @@ func (tc *MutatingVisitorTestcase) Runf(visitor ast.CheckingVisitor) func(t *tes
 		if tc.ExpectErr {
 			return
 		}
-
-		if tc.ExpectNoop {
-			if tc.Input != actual {
-				t.Fatalf("expected noop, mismatch on expected vs actual: %s", cmp.Diff(tc.ExpectOutput, actual, ResourceVersionCmp()))
-			}
-			tc.ExpectOutput = inputCopy
-		}
-		if !cmp.Equal(tc.ExpectOutput, actual, ResourceVersionCmp()) {
+		if !cmp.Equal(actual, tc.ExpectOutput, ResourceVersionCmp()) {
 			t.Fatalf("mismatch on expected vs actual: %s", cmp.Diff(tc.ExpectOutput, actual, ResourceVersionCmp()))
 		}
 	}
