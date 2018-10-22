@@ -20,3 +20,88 @@ spec:
     kind: PolicyNode
     shortNames:
     - pn
+    validation:
+        openAPIV3Schema:
+          properties:
+            spec:
+              # PolicyNodeSpec
+              type: object
+              required:
+              - type
+              properties:
+                type:
+                  type: string
+                  enum:
+                  - "namespace"
+                  - "policyspace"
+                  - "reservedNamespace"
+                parent:
+                  type: string
+                importToken:
+                  type: string
+                importTime:
+                  type: object # metav1.Time
+                resources:
+                  type: array
+                  items:
+                    # GenericResources
+                    type: object
+                    required:
+                    - kind
+                    - versions
+                    properties:
+                      group:
+                        type: string
+                      kind:
+                        type: string
+                      versions:
+                        type: array
+                        items:
+                          # GenericVersionResources
+                          type: object
+                          required:
+                          - objects
+                          - version
+                          properties:
+                            objects:
+                              type: array
+                              items:
+                                type: object # runtime.RawExtension
+                            version:
+                              type: string
+                          # /GenericVersionResources
+                    # /GenericResources
+              # /PolicyNodeSpec
+            status:
+              # PolicyNodeStatus
+              type: object
+              properties:
+                syncTokens:
+                  type: object # map[string]string
+                syncErrors:
+                  type: array
+                  items:
+                    # PolicyNodeSyncError
+                    type: object
+                    properties:
+                      sourceName:
+                        type: string
+                      resourceName:
+                        type: string
+                      resourceKind:
+                        type: string
+                      resourceAPI:
+                        type: string
+                      errorMessage:
+                        type: string
+                    # /PolicyNodeSyncError
+                syncTime:
+                  type: object # metav1.Time
+                syncState:
+                  type: string
+                  enum:
+                  - ""
+                  - "synced"
+                  - "stale"
+                  - "error"
+              # /PolicyNodeStatus
