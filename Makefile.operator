@@ -14,8 +14,9 @@ DEV_BUCKET := gs://${GCP_PROJECT}
 OPERATOR_STAGING_DIR := ${OUTPUT_DIR}/staging/operator
 
 .PHONY: deploy-operator
-deploy-operator:
-	mkdir -p ${OPERATOR_STAGING_DIR}
-	gsutil cp ${DEV_BUCKET}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
-	kubectl apply -f ${OPERATOR_STAGING_DIR}/operator-bundle.yaml
+deploy-operator: push-to-gcr-nomos
+	@mkdir -p ${OPERATOR_STAGING_DIR}
+	@gsutil cp ${DEV_BUCKET}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
+	@PROJECT_NAME=${GCP_PROJECT} PRIVATE_REGISTRY=${GCR_PREFIX} envsubst < \
+		${OPERATOR_STAGING_DIR}/operator-bundle.yaml | kubectl apply -f -
 
