@@ -171,9 +171,10 @@ func (i *Installer) gcpConfigMapContent() []string {
 }
 
 // syncerConfigMapContent returns a list of listerals defining the ConfigMap for the syncer
-func (i *Installer) syncerConfigMapContent() []string {
+func (i *Installer) syncerConfigMapContent(genericResourcesSyncer bool) []string {
 	return []string{
 		fmt.Sprintf("gcp.mode=%v", !i.c.GCP.Empty()),
+		fmt.Sprintf("generic.resources=%t", genericResourcesSyncer),
 	}
 }
 
@@ -272,7 +273,7 @@ func (i *Installer) installNomos(context string) error {
 
 // processCluster installs the necessary files on the currently active cluster.
 // In addition the current cluster context is passed in.
-func (i *Installer) processCluster(cluster string) error {
+func (i *Installer) processCluster(cluster string, genericResourcesSyncer bool) error {
 	var err error
 	glog.V(5).Info("processCluster: enter")
 
@@ -324,7 +325,7 @@ func (i *Installer) processCluster(cluster string) error {
 		importerSecretName = gcpPolicyImporterCreds
 		importerSecretContent = i.gcpSecretContent()
 	}
-	syncerConfigMapContent := i.syncerConfigMapContent()
+	syncerConfigMapContent := i.syncerConfigMapContent(genericResourcesSyncer)
 
 	// Delete the importer deployment.  This is important because a
 	// change in the secret should also be reflected in the importer.
@@ -365,7 +366,7 @@ func (i *Installer) processCluster(cluster string) error {
 // Run starts the installer process, and reports error at the process end, if any.
 // if useCurrent is set, and the list of clusters to install is empty, it will
 // use the current context to install.
-func (i *Installer) Run(useCurrent bool) error {
+func (i *Installer) Run(useCurrent, genericResourcesSyncer bool) error {
 	cl, err := kubectl.LocalClusters()
 	defer func() {
 		if err2 := i.k.SetContext(cl.Current); err2 != nil {
@@ -389,7 +390,7 @@ func (i *Installer) Run(useCurrent bool) error {
 			return errors.Wrapf(err, "while setting context: %q", cluster)
 		}
 		// The processed cluster is set through the context use.
-		err = i.processCluster(cluster)
+		err = i.processCluster(cluster, genericResourcesSyncer)
 		if err != nil {
 			return errors.Wrapf(err, "while processing cluster: %q", cluster)
 		}

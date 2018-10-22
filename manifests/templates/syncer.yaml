@@ -49,3 +49,8 @@ spec:
             configMapKeyRef:
               name: syncer
               key: gcp.mode
+        - name: GENERIC_RESOURCES
+          valueFrom:
+            configMapKeyRef:
+              name: syncer
+              key: generic.resources

@@ -30,11 +30,16 @@ import (
 )
 
 var (
-	workDir       = flag.String("work_dir", "", "The working directory for the installer.  If not set, defaults to the directory where the installer is run.")
+	workDir = flag.String("work_dir", "", "The working directory for the installer.  If not set, "+
+		"defaults to the directory where the installer is run.")
 	suggestedUser = flag.String("suggested_user", "", "The user to run the installation as.")
 	configFile    = flag.String("config", "", "The file name containing the installer configuration.")
 	uninstall     = flag.String("uninstall", "", "If set, the supplied clusters will be uninstalled.")
-	useCurrent    = flag.Bool("use_current_context", false, "If set, and if the list of clusters in the install config is empty, use current context to install into.")
+	useCurrent    = flag.Bool("use_current_context", false, "If set, and if the list of clusters in "+
+		"the install config is empty, use current context to install into.")
+	// TODO(118189026): Remove flag, when unused.
+	genericResourcesSyncer = flag.Bool("generic_resources_syncer", false, "If set, the syncer that "+
+		"syncs generic resources will be used.")
 )
 
 // nolint:deadcode
@@ -92,7 +97,7 @@ func main() {
 		glog.Infof("Uninstall successful!")
 		return
 	}
-	if err := i.Run(*useCurrent); err != nil {
+	if err := i.Run(*useCurrent, *genericResourcesSyncer); err != nil {
 		glog.Exit(errors.Wrapf(err, "installation failed"))
 	}
 	glog.Infof("Install successful!")
