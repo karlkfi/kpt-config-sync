@@ -118,16 +118,17 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	for _, sync := range enabled {
 		var status nomosv1alpha1.SyncStatus
 		for gvk := range syncermanager.GroupVersionKinds(sync) {
-			statusGroupKind := nomosv1alpha1.SyncGroupKindStatus{
-				Group:  gvk.Group,
-				Kind:   gvk.Kind,
-				Status: nomosv1alpha1.Syncing,
+			statusGroupKind := nomosv1alpha1.SyncGroupVersionKindStatus{
+				Group:   gvk.Group,
+				Version: gvk.Version,
+				Kind:    gvk.Kind,
+				Status:  nomosv1alpha1.Syncing,
 			}
-			status.GroupKinds = append(status.GroupKinds, statusGroupKind)
+			status.GroupVersionKinds = append(status.GroupVersionKinds, statusGroupKind)
 		}
 		// Sort the status fields, so we can compare statuses.
-		sort.Slice(status.GroupKinds, func(i, j int) bool {
-			lgk, rgk := status.GroupKinds[i], status.GroupKinds[j]
+		sort.Slice(status.GroupVersionKinds, func(i, j int) bool {
+			lgk, rgk := status.GroupVersionKinds[i], status.GroupVersionKinds[j]
 			if lgk.Group < rgk.Group {
 				return true
 			}

@@ -58,7 +58,6 @@ spec:
                             type: object
                             required:
                             - version
-                            - compareFields
                             properties:
                               version:
                                 type: string
@@ -73,21 +72,22 @@ spec:
         status:
           # SyncStatus
           type: object
-          required:
-          - groupKinds
           properties:
-            groupKinds:
+            groupVersionKinds:
               type: array
               items:
-                # SyncGroupKindStatus
+                # SyncGroupVersionKindStatus
                 type: object
                 required:
                 - group
+                - version
                 - kind
                 - status
                 - message
                 properties:
                   group:
+                    type: string
+                  version:
                     type: string
                   kind:
                     type: string
@@ -98,5 +98,5 @@ spec:
                     - "error"
                   message:
                     type: string
-                # /SyncGroupKindStatus
+                # /SyncGroupVersionKindStatus
           # /SyncStatus
