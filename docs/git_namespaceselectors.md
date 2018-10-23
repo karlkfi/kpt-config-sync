@@ -11,26 +11,36 @@ Let's take a look at the foo-corp example again:
 
 ```console
 foo-corp
-├── audit
-│   └── namespace.yaml
-├── online
-│   └── shipping-app-backend
-│       ├── shipping-dev
-│       │   ├── job-creator-rolebinding.yaml
-│       │   ├── job-creator-role.yaml
-│       │   ├── namespace.yaml
-│       │   └── quota.yaml
-│       ├── shipping-prod
-│       │   └── namespace.yaml
-│       ├── shipping-staging
-│       │   └── namespace.yaml
-│       ├── pod-creator-rolebinding.yaml
-│       └── quota.yaml
-├── namespace-reader-clusterrolebinding.yaml
-├── namespace-reader-clusterrole.yaml
-├── pod-creator-clusterrole.yaml
-├── pod-security-policy.yaml
-└── viewers-rolebinding.yaml
+├── cluster
+│   ├── namespace-reader-clusterrolebinding.yaml
+│   ├── namespace-reader-clusterrole.yaml
+│   ├── pod-creator-clusterrole.yaml
+│   └── pod-security-policy.yaml
+├── namespaces
+│   ├── foo-corp
+│   │   ├── audit
+│   │   │   └── namespace.yaml
+│   │   ├── online
+│   │   │   └── shipping-app-backend
+│   │   │       ├── pod-creator-rolebinding.yaml
+│   │   │       ├── quota.yaml
+│   │   │       ├── shipping-dev
+│   │   │       │   ├── job-creator-rolebinding.yaml
+│   │   │       │   ├── job-creator-role.yaml
+│   │   │       │   ├── namespace.yaml
+│   │   │       │   └── quota.yaml
+│   │   │       ├── shipping-prod
+│   │   │       │   └── namespace.yaml
+│   │   │       └── shipping-staging
+│   │   │           └── namespace.yaml
+│   │   └── viewers-rolebinding.yaml
+│   ├── sre-rolebinding.yaml
+│   └── sre-supported-selector.yaml
+└── system
+    ├── nomos.yaml
+    ├── podsecuritypolicy.yaml
+    ├── rbac.yaml
+    └── resourcequota.yaml
 ```
 
 `audit` and `shipping-prod` namespaces contain workloads that are deployed in
@@ -41,7 +51,7 @@ these steps:
 ##### 1. Add labels to Namespace objects
 
 ```console
-$ cat foo-corp/audit/namespace.yaml
+$ cat namespaces/audit/namespace.yaml
 ```
 
 ```yaml
@@ -54,7 +64,7 @@ metadata:
 ```
 
 ```console
-$ cat foo-corp/online/shipping-app-backend/shipping-prod/namespace.yaml
+$ cat namespaces/online/shipping-app-backend/shipping-prod/namespace.yaml
 ```
 
 ```yaml
@@ -69,7 +79,7 @@ metadata:
 ##### 2. Add NamespaceSelector object
 
 ```console
-$ cat foo-corp/sre-supported-selector.yaml
+$ cat namespaces/sre-supported-selector.yaml
 ```
 
 ```yaml
@@ -104,7 +114,7 @@ spec:
 ##### 3. Add a RoleBinding with corresponding annotation
 
 ```console
-$ cat foo-corp/sre-rolebinding.yaml
+$ cat namespaces/sre-rolebinding.yaml
 ```
 
 ```yaml
@@ -131,7 +141,7 @@ Note the following:
 *   `NamespaceSelector` object must be placed in the same directory where it is
     referenced.
 
-Given the above set up, `sre-admin` Rolebindings will only be created in `audit`
+Given the above set up, `sre-admin` RoleBindings will only be created in `audit`
 and `shipping-prod` namespaces.
 
 [1]: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels

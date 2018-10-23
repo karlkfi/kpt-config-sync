@@ -60,9 +60,10 @@ load ../lib/loader
 
   # shipping-prod
   resource::check_count -n shipping-prod -r role -c 0
-  resource::check_count -n shipping-prod -r rolebinding -c 2
+  resource::check_count -n shipping-prod -r rolebinding -c 3
   resource::check -n shipping-prod rolebinding viewers -l "nomos.dev/managed=full"
   resource::check -n shipping-prod rolebinding pod-creators -l "nomos.dev/managed=full"
+  resource::check -n shipping-prod rolebinding sre-admin -l "nomos.dev/managed=full"
   resource::check_count -n shipping-prod -r resourcequota -c 1
   resource::check -n shipping-prod resourcequota nomos-resource-quota -l "nomos.dev/managed=full"
 }

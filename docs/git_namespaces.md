@@ -66,7 +66,7 @@ declarations. Note that 'default', 'kube-system', 'kube-public' and
 'nomos-system' do not need to be added to this list.
 
 ```console
-$ cat foo-corp/nomos-reserved-namespaces.yaml
+$ cat system/nomos-reserved-namespaces.yaml
 ```
 
 ```yaml

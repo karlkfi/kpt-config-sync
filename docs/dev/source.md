@@ -77,15 +77,14 @@ Below is a list of common errors and ways to resolve.
 
 ### missing METADATA file, rerun with -generate-meta-file: /some/path/METADATA
 
-From the top level directory of the repo, run: 
+From the top level directory of the repo, run:
 
 ```console
 $ licenselinter --dir=$PWD --generate-meta-file
 ```
 
 This will generate missing METADATA files for `vendor` dependencies that don't
-have them.  You can now commit the changes made by the licenselinter.
-
+have them. You can now commit the changes made by the licenselinter.
 
 ## Useful Git Tools
 

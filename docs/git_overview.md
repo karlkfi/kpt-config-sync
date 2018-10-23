@@ -26,46 +26,85 @@ directory structure
 
 ```console
 foo-corp
-├── audit
-│   └── namespace.yaml
-├── online
-│   └── shipping-app-backend
-│       ├── shipping-dev
-│       │   ├── job-creator-rolebinding.yaml
-│       │   ├── job-creator-role.yaml
-│       │   ├── namespace.yaml
-│       │   └── quota.yaml
-│       ├── shipping-prod
-│       │   └── namespace.yaml
-│       ├── shipping-staging
-│       │   └── namespace.yaml
-│       ├── pod-creator-rolebinding.yaml
-│       └── quota.yaml
-├── namespace-reader-clusterrolebinding.yaml
-├── namespace-reader-clusterrole.yaml
-├── pod-creator-clusterrole.yaml
-├── pod-security-policy.yaml
-└── viewers-rolebinding.yaml
+├── cluster
+│   ├── namespace-reader-clusterrolebinding.yaml
+│   ├── namespace-reader-clusterrole.yaml
+│   ├── pod-creator-clusterrole.yaml
+│   └── pod-security-policy.yaml
+├── namespaces
+│   ├── foo-corp
+│   │   ├── audit
+│   │   │   └── namespace.yaml
+│   │   ├── online
+│   │   │   └── shipping-app-backend
+│   │   │       ├── pod-creator-rolebinding.yaml
+│   │   │       ├── quota.yaml
+│   │   │       ├── shipping-dev
+│   │   │       │   ├── job-creator-rolebinding.yaml
+│   │   │       │   ├── job-creator-role.yaml
+│   │   │       │   ├── namespace.yaml
+│   │   │       │   └── quota.yaml
+│   │   │       ├── shipping-prod
+│   │   │       │   └── namespace.yaml
+│   │   │       └── shipping-staging
+│   │   │           └── namespace.yaml
+│   │   └── viewers-rolebinding.yaml
+│   ├── sre-rolebinding.yaml
+│   └── sre-supported-selector.yaml
+└── system
+    ├── nomos.yaml
+    ├── podsecuritypolicy.yaml
+    ├── rbac.yaml
+    └── resourcequota.yaml
 ```
 
-##### Definitions
+#### Directories and files
+
+1.  **cluster** contains cluster-scoped resources
+1.  **namespaces** is the root of the namespace hierarchy. Namespace and
+    namespace-scoped resources are declared within this directory and its
+    subdirectories.
+1.  **system** contains configuration related to syncing, the repo and reserved
+    namespaces.
+
+#### Definitions
+
+The following definitions are regarding directories within the 'namespaces'
+directory.
 
 1.  A namespace directory is one that contains a Namespace resource.
 1.  Any other directory is a policyspace.
 
-##### Constraints
+#### Constraints
 
-1.  A namespace directory must be a leaf directory (i.e., it must not have any
-    children).
-1.  A namespace directory can contain any number of uniquely named Role and
-    Rolebinding resources, and a single ResourceQuota resource.
-1.  A namespace directory name must match the namespace name in all resources in
-    that directory.
-1.  A policyspace directory can contain any number of uniquely named Rolebinding
-    resources and a single ResourceQuota resource but must not contain Roles.
-    These resources must not specify a namespace.
-1.  The root policyspace directory can also contain any number of uniquely named
-    ClusterRole, ClusterRolebinding, and PodSecurityPolicy resources.
+##### cluster directory
+
+1.  The cluster directory can contain any number of uniquely named cluster
+    scoped resources. Any namespace-scoped resources in this directory will be
+    treated as an error.
+1.  Users may not place namespace-scoped resources in this directory. These are
+    placed in the namespaces hierarchy.
+1.  Users may not place nomos.dev/v1alpha1 {Sync,Nomos} objects in this
+    directory
+
+##### namespaces directory
+
+The namespace hierarchy exists within the namespaces directory. This is composed
+of directories that represent namespaces that will be created on the cluster and
+intermediate policyspace directories which represent common policy attach points
+for descendant namespaces.
+
+1.  A Namespace object must only exist in leaf directories (i.e., it must not
+    have any children)
+    1.  A directory with a Namespace object is a namespace directory
+    1.  If a Namespace object exists, its name must match the directory name.
+    1.  A namespace directory can contain any number of uniquely named
+        resources, but only a single ResourceQuota resource.
+    1.  All resources declared in a namespace directory must specify a namespace
+        name that matches the name of the Namespace resource in the directory.
+1.  A policyspace directory can contain any number of hierarchical resources but
+    only a single ResourceQuota resource. These resources must not specify a
+    namespace.
 1.  Both policyspace and namespace directory names must be valid Kubernetes
     namespace names (i.e.
     [DNS Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md))
@@ -76,13 +115,21 @@ foo-corp
     This topic is discussed in depth in the
     [namespaces user guide](git_namespaces.md)
 
+##### system directory
+
+1.  The system directory must only contain the nomos.dev objects Nomos and Sync,
+    and an optional ConfigMap (core v1) that contains the reserved namespace
+    mapping.
+
+##### File Naming
+
 There are no requirements on file names or how many resources are packed in a
 file. Any other file not explicitly mentioned above is ignored by GKE Policy
 Management in this release (e.g. OWNERS files).
 
-When a valid tree is committed to Git and synced, GKE Policy Management
-controllers automatically create namespaces and corresponding policy resources
-to enforce hierarchical policy. In this example, GKE Policy Management
+When a valid namespace hierarchy is committed to Git and synced, GKE Policy
+Management controllers automatically create namespaces and corresponding policy
+resources to enforce hierarchical policy. In this example, GKE Policy Management
 automatically creates `shipping-dev`, `shipping-staging`, and `shipping-prod`
 namespaces. We discuss specific policy types and their enforcement in later
 sections.
@@ -118,29 +165,106 @@ GKE Policy Management will not manage namespaces that already exist on a cluster
 at install time. For details on how to configure namespaces that already exist,
 please see the [namespaces user guide](git_namespaces.md)
 
+## Configuring Nomos
+
+Exactly one Nomos resource must be declared in the system directory. For
+purposes of the example we have placed this object in nomos.yaml, however,
+matching the file name is not a requirement. At the moment, the repoVersion must
+match 1.0.0. If the semantics or format of the repo changes over time, this file
+will be the mechanism used to determine compatibility and automate upgrade.
+
+```console
+$ cat system/nomos.yaml
+```
+
+```yaml
+kind: NomosConfig
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: config
+spec:
+  repoVersion: "1.0.0"
+```
+
+## Configuring Kubernetes Resource Sync
+
+Nomos allows for syncing arbitrary kubernetes types from Git to a Kubernetes
+cluster. Sync is configured by placing a Sync resource in the **system**
+directory. The following example configures syncing RBAC types with "inherit"
+mode (addressed later) for RoleBindings.
+
+```console
+$ cat system/rbac.yaml
+```
+
+```yaml
+kind: Sync
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: rbac
+spec:
+  groups:
+  - group: rbac.authorization.k8s.io
+    kinds:
+    - kind: ClusterRole
+      versions:
+      - version: v1
+    - kind: ClusterRoleBinding
+      versions:
+      - version: v1
+    - kind: Role
+      versions:
+      - version: v1
+    - kind: RoleBinding
+      mode: inherit
+      versions:
+      - version: v1
+```
+
+ResourceQuota has special handling (as described below), however, the Sync
+configuration is not affected by this. The following shows an example of
+configuring sync on ResourceQuota.
+
+```console
+$ cat system/resourcequota.yaml
+```
+
+```yaml
+kind: Sync
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: resourcequotas
+spec:
+  groups:
+  - kinds:
+    - kind: ResourceQuota
+      versions:
+      - version: v1
+```
+
 ## Policy Types
 
 ### Namespace-level Policies
 
-##### Role/Rolebinding
+#### Standard mode
 
-GKE Policy Management enables RBAC policies to be applied hierarchically
-following these properties:
+#### Inherited Mode
 
-1.  A RoleBinding specified in a policyspace is inherited by all descendant
-    namespaces
-1.  A Role cannot be specified in a policyspace. If multiple namespaces need to
-    refer to the same role, use a ClusterRole.
-1.  A RoleBinding can be specified in a namespace (Existing K8S behavior)
-1.  A Role can be specified in a namespace (Existing K8S behavior).
+Nomos enables "inherited" policies to be applied hierarchically following these
+properties:
 
-For example, we can create a RoleBinding in `shipping-app-backend` policyspace
-such that anyone belonging to `shipping-app-backend-team` group is able to
-create pods in all namespace descendants (i.e. `shipping-dev`,
-`shipping-staging`, `shipping-prod`):
+1.  An "inherit" mode policy specified in a policyspace is inherited by all
+    descendant namespaces
+1.  An "inherit" mode policy can be specified in a namespace (Existing K8S
+    behavior)
+
+For example, we can set the Sync mode for RoleBinding to inherit and create a
+RoleBinding in the `shipping-app-backend` policyspace such that anyone belonging
+to `shipping-app-backend-team` group is able to create pods in all namespace
+descendants (i.e. `shipping-dev`, `shipping-staging`, `shipping-prod`):
 
 ```console
-$ cat foo-corp/online/shipping-app-backend/pod-creator-rolebinding.yaml
+$ cat namespaces/online/shipping-app-backend/pod-creator-rolebinding.yaml
 ```
 
 ```yaml
@@ -162,20 +286,18 @@ This is done by automatically creating inherited RoleBindings in a namespace:
 
 ```console
 $ kubectl get rolebinding --namespace shipping-dev -o name
-shipping-dev.job-creators
-shipping-app-backend.pod-creators
-foo-corp.viewers
+job-creators
+pod-creators
+viewers
 ```
 
 Inheritance is implemented by flattening resources in namespaces. In
 `shipping-dev` namespace, `pod-creators` is inherited and `job-creators` is
-created directly in the namespace. While inheriting, the rolebindinding
-resources have the directory name prepended with a dot separator. This is to
-allow a rolebinding to be created at any level without naming conflicts.
+created directly in the namespace.
 
-Note that policies are themselves resources which means a user may be able to
-edit policies outside of GKE Policy Management (e.g. using kubectl) or create
-rolebindings subject to
+Note that Nomos is intended to be non-destructive to resources that are created
+outside of the system which means a user may be able to edit resources outside
+of Nomos (e.g. using kubectl) or create rolebindings subject to
 [privilege escalation prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping)
 in Kubernetes.
 
@@ -202,7 +324,7 @@ Here we add hard quota limit on number of pods across all namespaces having
 `shipping-app-backend` as an ancestor:
 
 ```console
-$ cat foo-corp/online/shipping-app-backend/quota.yaml
+$ cat namespaces/online/shipping-app-backend/quota.yaml
 ```
 
 ```yaml
@@ -233,12 +355,12 @@ Cluster-level policies must be placed immediately within the root policyspace
 directory. Since cluster-level policies have far-reaching effect, they should
 only be editable by cluster admins.
 
-##### ClusterRole/ClusterRoleBinding
+##### ClusterRole/ClusterRoleBinding Example
 
 For example, we can create namespace-reader ClusterRole:
 
 ```console
-$ cat foo-corp/namespace-viewer-role.yaml
+$ cat cluster/namespace-viewer-role.yaml
 ```
 
 ```yaml
@@ -255,7 +377,7 @@ rules:
 And a ClusterRoleBinding referencing this Role:
 
 ```console
-$ cat foo-corp/namespace-viewer-rolebinding.yaml
+$ cat cluster/namespace-viewer-rolebinding.yaml
 ```
 
 ```yaml
@@ -273,13 +395,13 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-##### PodSecurityPolicy
+##### PodSecurityPolicy Example
 
 PodSecurityPolicies are created in the same manner as other cluster level
 resources:
 
 ```console
-$ cat foo-corp/pod-security-policy.yaml
+$ cat cluster/pod-security-policy.yaml
 ```
 
 ```yaml
