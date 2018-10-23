@@ -40,3 +40,16 @@ const (
 // SyncFinalizer is a finalizer handled by Syncer to ensure Sync deletions complete before Importer writes ClusterPolicy
 // and PolicyNode resources.
 const SyncFinalizer = "syncer.nomos.dev"
+
+// SyncMode indicates how the resource will be synced.  Empty string indicates it will be synced
+// only from namespace or the cluster directory depending on the scope of the object.
+type SyncMode string
+
+const (
+	// SyncModeInherit indicates that the resource should be inherited on the hierarchy such that a
+	// declaration in a directory will be inherited to all Namespaces contained within the directory.
+	// For example, if an inherited resource is declared at the root, all namespaces will then inherit
+	// that resource.  Note that this mode only applies to resources at the namespace scope.  Applying
+	// this to a cluster scoped object will result in an error.
+	SyncModeInherit = "inherit"
+)

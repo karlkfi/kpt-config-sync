@@ -16,5 +16,6 @@ spec:
       versions:
       - version: v1
     - kind: RoleBinding
+      mode: inherit
       versions:
       - version: v1

@@ -146,6 +146,9 @@ type SyncKind struct {
 	// Kind is the string that represents the Kind for the object as given in TypeMeta, for example
 	// ClusterRole, Namespace or Deployment.
 	Kind string `json:"kind"`
+	// Mode indicates the sync mode for the object.
+	// +optional
+	Mode SyncMode `json:"mode,omitempty"`
 	// Versions indicates the versions that will be handled for the object of Group and Kind.
 	Versions []SyncVersion `json:"versions"`
 }
