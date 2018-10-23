@@ -16,3 +16,87 @@ spec:
     plural: syncs
     singular: sync
     kind: Sync
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          # SyncSpec
+          type: object
+          required:
+          - groups
+          properties:
+            groups:
+              type: array
+              items:
+                # SyncGroup
+                type: object
+                required:
+                - group
+                - kinds
+                properties:
+                  group:
+                    type: string
+                  kinds:
+                    type: array
+                    items:
+                      # SyncKind
+                      type: object
+                      required:
+                      - kind
+                      - versions
+                      properties:
+                        kind:
+                          type: string
+                        mode:
+                          type: string
+                          enum:
+                          - "inherit"
+                        versions:
+                          type: array
+                          items:
+                            # SyncVersion
+                            type: object
+                            required:
+                            - version
+                            - compareFields
+                            properties:
+                              version:
+                                type: string
+                              compareFields:
+                                type: array
+                                items:
+                                  type: string
+                            # /SyncVersion
+                      # /SyncKind
+                # /SyncGroup
+          # /SyncSpec
+        status:
+          # SyncStatus
+          type: object
+          required:
+          - groupKinds
+          properties:
+            groupKinds:
+              type: array
+              items:
+                # SyncGroupKindStatus
+                type: object
+                required:
+                - group
+                - kind
+                - status
+                - message
+                properties:
+                  group:
+                    type: string
+                  kind:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                    - "syncing"
+                    - "error"
+                  message:
+                    type: string
+                # /SyncGroupKindStatus
+          # /SyncStatus
