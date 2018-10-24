@@ -327,10 +327,10 @@ type Policies struct {
 
 // createPolicyNode constructs a PolicyNode based on a Policies struct.
 func createPolicyNode(
-		name string,
-		parent string,
-		nodeType v1.PolicyNodeType,
-		policies *Policies) v1.PolicyNode {
+	name string,
+	parent string,
+	nodeType v1.PolicyNodeType,
+	policies *Policies) v1.PolicyNode {
 	pn := policynode.NewPolicyNode(name,
 		&v1.PolicyNodeSpec{
 			Type:   nodeType,
@@ -390,25 +390,25 @@ func resourcesFromObjects(objects []runtime.Object, gv schema.GroupVersion, kind
 }
 
 func createNamespacePN(
-		path string,
-		parent string,
-		policies *Policies) v1.PolicyNode {
+	path string,
+	parent string,
+	policies *Policies) v1.PolicyNode {
 	return createPNWithMeta(path, parent, v1.Namespace, policies, nil, nil)
 }
 
 func createPolicyspacePN(
-		path string,
-		parent string,
-		policies *Policies) v1.PolicyNode {
+	path string,
+	parent string,
+	policies *Policies) v1.PolicyNode {
 	return createPNWithMeta(path, parent, v1.Policyspace, policies, nil, nil)
 }
 
 func createPNWithMeta(
-		path string,
-		parent string,
-		t v1.PolicyNodeType,
-		policies *Policies,
-		labels, annotations map[string]string,
+	path string,
+	parent string,
+	t v1.PolicyNodeType,
+	policies *Policies,
+	labels, annotations map[string]string,
 ) v1.PolicyNode {
 	if annotations == nil {
 		annotations = map[string]string{}
@@ -421,14 +421,14 @@ func createPNWithMeta(
 }
 
 func createReservedPN(
-		name string,
-		parent string,
-		policies *Policies) v1.PolicyNode {
+	name string,
+	parent string,
+	policies *Policies) v1.PolicyNode {
 	return createPolicyNode(name, parent, v1.ReservedNamespace, policies)
 }
 
 func createRootPN(
-		policies *Policies) v1.PolicyNode {
+	policies *Policies) v1.PolicyNode {
 	pn := createPolicyNode(v1.RootPolicyNodeName, v1.NoParentNamespace, v1.Policyspace, policies)
 	pn.Annotations = map[string]string{"nomos.dev/source-path": "namespaces"}
 	return pn
@@ -1261,6 +1261,16 @@ spec:
 			"system/nomos.yaml": aNomosConfig,
 		},
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0},
+	},
+	{
+		testName: "Namespace with NamespaceSelector label is invalid",
+		root:     "foo",
+		testFiles: fileContentMap{
+			"namespaces/bar/ns.yaml": templateData{Name: "bar", Annotations: map[string]string{
+				v1alpha1.NamespaceSelectorAnnotationKey: "prod"},
+			}.apply(aNamespace),
+		},
+		expectedError: true,
 	},
 }
 

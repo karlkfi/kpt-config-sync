@@ -117,6 +117,13 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 				parent.Path, n.Path, path.Base(n.Path)))
 		}
 	}
+	if n.Type == ast.Namespace {
+		if _, ok := n.Annotations[v1alpha1.NamespaceSelectorAnnotationKey]; ok {
+			v.errs.Add(errors.Errorf("namespaces cannot have a namespace selector annotation. "+
+				"Namespace %q defined in %s has %s",
+				name, n.Path, v1alpha1.NamespaceSelectorAnnotationKey))
+		}
+	}
 
 	v.nodes = append(v.nodes, n)
 	v.base.VisitTreeNode(n)
