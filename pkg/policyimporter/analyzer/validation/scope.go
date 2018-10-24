@@ -70,7 +70,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 		if namespaceScoped {
 			p.errs.Add(errors.Errorf(
 				"Namespace scoped object %s with Name %q in file %q cannot be declared in %q "+
-						"directory.  Move declaration to the appropriate %q directory.",
+					"directory.  Move declaration to the appropriate %q directory.",
 				gvk,
 				metaObj.GetName(),
 				o.Source,
@@ -95,7 +95,7 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) ast.Node {
 		if !namespaceScoped {
 			p.errs.Add(errors.Errorf(
 				"Cluster scoped object %s with Name %q from file %s cannot be declared inside "+
-						"%q directory.  Move declaration to the %q directory.",
+					"%q directory.  Move declaration to the %q directory.",
 				gvk,
 				metaObj.GetName(),
 				o.Source,

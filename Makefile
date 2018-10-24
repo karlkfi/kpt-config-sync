@@ -209,8 +209,7 @@ test: test-unit lint lint-bash
 test-all: test test-e2e-all
 
 goimports:
-	@echo "+++ Running goimports"
-	@goimports -w $(NOMOS_CODE_DIRS)
+	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
 
 lint: lint-go lint-bash lint-license
 

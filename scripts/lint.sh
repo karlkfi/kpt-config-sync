@@ -28,6 +28,7 @@ if ! OUT="$(
   gometalinter.v2 \
     --deadline="${linter_deadline}" \
     --disable-all \
+    --enable=goimports \
     --enable=deadcode \
     --enable=errcheck \
     --enable=golint \

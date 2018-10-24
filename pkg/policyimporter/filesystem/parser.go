@@ -202,13 +202,13 @@ func (p *Parser) readResources(dir string, recursive bool) ([]*resource.Info, er
 // 1. Policyspace directory: Non-leaf directories at any depth within root directory.
 // 2. Namespace directory: Leaf directories at any depth within root directory.
 func (p *Parser) processDirs(resources []*metav1.APIResourceList,
-		dirInfos map[string][]*resource.Info,
-		clusterInfos []*resource.Info,
-		clusterregistryInfos []*resource.Info,
-		nsDirsOrdered []string,
-		clusterDir string,
-		fsCtx *ast.Root,
-		allowedGVKs map[schema.GroupVersionKind]struct{}) (*v1.AllPolicies, error) {
+	dirInfos map[string][]*resource.Info,
+	clusterInfos []*resource.Info,
+	clusterregistryInfos []*resource.Info,
+	nsDirsOrdered []string,
+	clusterDir string,
+	fsCtx *ast.Root,
+	allowedGVKs map[schema.GroupVersionKind]struct{}) (*v1.AllPolicies, error) {
 	namespaceDirs := make(map[string]bool)
 
 	treeGenerator := NewDirectoryTree()
@@ -288,9 +288,9 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 }
 
 func (p *Parser) processClusterDir(
-		dir string,
-		infos []*resource.Info,
-		fsCtx *ast.Root) error {
+	dir string,
+	infos []*resource.Info,
+	fsCtx *ast.Root) error {
 	for _, i := range infos {
 		o := i.AsVersioned()
 		fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
@@ -300,11 +300,11 @@ func (p *Parser) processClusterDir(
 }
 
 func (p *Parser) processNamespacesDir(
-		dir string,
-		infos []*resource.Info,
-		namespaceDirs map[string]bool,
-		treeGenerator *DirectoryTree,
-		root bool) error {
+	dir string,
+	infos []*resource.Info,
+	namespaceDirs map[string]bool,
+	treeGenerator *DirectoryTree,
+	root bool) error {
 	parent := filepath.Dir(dir)
 	// Since directories are processed in DFS order, it's guaranteed that parent was already processed.
 	if namespaceDirs[parent] {
@@ -581,7 +581,7 @@ func parseNomosConfig(o runtime.Object, source string) (*v1alpha1.NomosConfig, e
 
 	if _, err := semver.Parse(config.Spec.RepoVersion); err != nil {
 		return nil, errors.Wrapf(err, "invalid semantic version %s. "+
-				"NomosConfig.Spec.RepoVersion must follow semantic versioning rules at http://semver.org",
+			"NomosConfig.Spec.RepoVersion must follow semantic versioning rules at http://semver.org",
 			config.Spec.RepoVersion)
 	}
 
@@ -599,7 +599,7 @@ func parseSync(o runtime.Object, source string) (*v1alpha1.Sync, error) {
 		for _, kind := range group.Kinds {
 			if len(kind.Versions) > 1 {
 				return nil, errors.Errorf("Sync declaration %s in file %s contains multiple "+
-						"versions. Syncs must declare exactly one version.", o.(metav1.Object).GetName(), source)
+					"versions. Syncs must declare exactly one version.", o.(metav1.Object).GetName(), source)
 			}
 		}
 	}
