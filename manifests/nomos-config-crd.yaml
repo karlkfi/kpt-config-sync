@@ -22,5 +22,11 @@ spec:
       # - spec
       properties:
         spec:
+          # NomosConfigSpec
+          type: object
           required:
           - repoVersion
+          properties:
+            repoVersion:
+              type: string
+          # /NomosConfigSpec

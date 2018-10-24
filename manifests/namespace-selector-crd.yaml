@@ -22,5 +22,11 @@ spec:
       # - spec
       properties:
         spec:
+          # NamespaceSelectorSpec
+          type: object
           required:
           - selector
+          properties:
+            selector:
+              type: object # metav1.LabelSelector
+          # /NamespaceSelectorSpec
