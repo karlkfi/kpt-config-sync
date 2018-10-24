@@ -17,9 +17,8 @@ limitations under the License.
 package transform
 
 import (
-	"testing"
-
 	"encoding/json"
+	"testing"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	rbacv1 "k8s.io/api/rbac/v1"

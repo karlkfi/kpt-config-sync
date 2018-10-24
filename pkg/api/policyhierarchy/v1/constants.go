@@ -24,6 +24,9 @@ const NoParentNamespace = ""
 // ClusterPolicyName is the name of the singleton ClusterPolicy resource.
 const ClusterPolicyName = "nomos-cluster-policy"
 
+// RootPolicyNodeName is the name of the root PolicyNode object.
+const RootPolicyNodeName = "nomos-root-node"
+
 // PolicyNodeType represents the types of policynodes that can exist.
 type PolicyNodeType string
 

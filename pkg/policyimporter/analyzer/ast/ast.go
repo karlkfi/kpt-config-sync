@@ -118,7 +118,8 @@ const (
 
 // TreeNode is analogous to a directory in the policy hierarchy.
 type TreeNode struct {
-	// Path is the OS-agnostic slash-separated path to the current node from the root of the tree.
+	// Path is the OS-agnostic slash-separated path to the current node from POLICY_DIR directory.
+	// The root node is set to repo.NamespacesDir.
 	Path string
 
 	// The type of the HierarchyNode

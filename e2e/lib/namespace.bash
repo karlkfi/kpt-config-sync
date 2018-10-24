@@ -26,7 +26,7 @@ function namespace::create() {
 #
 function namespace::declare_policyspace() {
   local path="$1"
-  local dst="acme/tree/acme/${path}/OWNERS"
+  local dst="acme/namespaces/acme/${path}/OWNERS"
   local abs_dst="${TEST_REPO}/${dst}"
   mkdir -p "$(dirname "${abs_dst}")"
   touch "${abs_dst}"
@@ -67,7 +67,7 @@ function namespace::declare() {
 
   local name
   name="$(basename "${path}")"
-  local dst="acme/tree/acme/${path}/namespace.yaml"
+  local dst="acme/namespaces/acme/${path}/namespace.yaml"
   local abs_dst="${TEST_REPO}/${dst}"
   genyaml_args+=("${name}" "${abs_dst}")
   namespace::__genyaml "${genyaml_args[@]}"

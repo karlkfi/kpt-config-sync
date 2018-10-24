@@ -203,7 +203,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Kind:       "PolicyNode",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "acme",
+						Name: policyhierarchyv1.RootPolicyNodeName,
 					},
 					Spec: policyhierarchyv1.PolicyNodeSpec{
 						Type:            policyhierarchyv1.Policyspace,
@@ -246,7 +246,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					},
 					Spec: policyhierarchyv1.PolicyNodeSpec{
 						Type:            policyhierarchyv1.Namespace,
-						Parent:          "acme",
+						Parent:          policyhierarchyv1.RootPolicyNodeName,
 						RoleBindingsV1:  []rbacv1.RoleBinding{*vt.Helper.PodReaderRoleBinding()},
 						RolesV1:         []rbacv1.Role{*vt.Helper.PodReaderRole()},
 						ResourceQuotaV1: vt.Helper.FrontendResourceQuota(),
@@ -296,7 +296,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					},
 					Spec: policyhierarchyv1.PolicyNodeSpec{
 						Type:           policyhierarchyv1.Namespace,
-						Parent:         "acme",
+						Parent:         policyhierarchyv1.RootPolicyNodeName,
 						RoleBindingsV1: []rbacv1.RoleBinding{*vt.Helper.DeploymentReaderRoleBinding()},
 						RolesV1:        []rbacv1.Role{*vt.Helper.DeploymentReaderRole()},
 						Resources: []policyhierarchyv1.GenericResources{

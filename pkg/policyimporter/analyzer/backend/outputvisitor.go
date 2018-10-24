@@ -116,17 +116,28 @@ func (v *OutputVisitor) VisitCluster(c *ast.Cluster) ast.Node {
 func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	v.context = contextNode
 	origLen := len(v.policyNode)
-	var parent string
-	if 0 < origLen {
+	var name, parent string
+
+	switch origLen {
+	case 0:
+		// root
+		name = policyhierarchyv1.RootPolicyNodeName
+		parent = policyhierarchyv1.NoParentNamespace
+	case 1:
+		name = path.Base(n.Path)
+		parent = policyhierarchyv1.RootPolicyNodeName
+	default:
+		name = path.Base(n.Path)
 		parent = v.policyNode[origLen-1].Name
 	}
+
 	pn := &policyhierarchyv1.PolicyNode{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
 			Kind:       "PolicyNode",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        path.Base(n.Path),
+			Name:        name,
 			Annotations: n.Annotations,
 			Labels:      n.Labels,
 		},

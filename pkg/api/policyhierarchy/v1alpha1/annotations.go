@@ -17,8 +17,8 @@ limitations under the License.
 package v1alpha1
 
 const (
-	// SourcePathAnnotationKey is an annotation indicates the path in the source of truth where the
-	// policy was originally declared. Paths are slash-separated and OS-agnostic.
+	// SourcePathAnnotationKey is the annotation key representing the relative path from POLICY_DIR
+	// where the object was originally declared. Paths are slash-separated and OS-agnostic.
 	SourcePathAnnotationKey = "nomos.dev/source-path"
 
 	// NamespaceSelectorAnnotationKey is the annotation key set on policy resources that refers to

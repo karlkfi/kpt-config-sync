@@ -16,6 +16,7 @@ limitations under the License.
 package validation
 
 import (
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -68,16 +69,18 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	if found {
 		if namespaceScoped {
 			p.errs.Add(errors.Errorf(
-				"Namespace scoped object %s with NameValidator %q in file %q cannot be declared in cluster "+
-					"directory.  Move declaration to the appropriate tree directory.",
+				"Namespace scoped object %s with Name %q in file %q cannot be declared in %q "+
+						"directory.  Move declaration to the appropriate %q directory.",
 				gvk,
 				metaObj.GetName(),
 				o.Source,
+				repo.ClusterDir,
+				repo.NamespacesDir,
 			))
 		}
 	} else {
 		panic(errors.Errorf(
-			"programmer error: unknown object %s should not have been added to cluster", gvk,
+			"programmer error: unknown object %s should not have been added to 'cluster' directory", gvk,
 		))
 	}
 	return o
@@ -91,16 +94,18 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) ast.Node {
 	if found {
 		if !namespaceScoped {
 			p.errs.Add(errors.Errorf(
-				"Cluster scoped object %s with NameValidator %q from file %s cannot be declared inside "+
-					"tree directory.  Move declaration to the cluster directory.",
+				"Cluster scoped object %s with Name %q from file %s cannot be declared inside "+
+						"%q directory.  Move declaration to the %q directory.",
 				gvk,
 				metaObj.GetName(),
 				o.Source,
+				repo.NamespacesDir,
+				repo.ClusterDir,
 			))
 		}
 	} else {
 		panic(errors.Errorf(
-			"programmer error: unknown object %s should not have been added to tree", gvk,
+			"programmer error: unknown object %s should not have been added to 'namespaces' directory", gvk,
 		))
 	}
 	return o

@@ -57,7 +57,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				ReservedNamespaces: vt.Helper.AcmeReserved(),
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
-					Path: "acme",
+					Path: "namespaces",
 					Objects: vt.ObjectSets(
 						vt.Helper.AdminRoleBinding(),
 						modQuota(
@@ -71,7 +71,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type:        ast.Namespace,
-							Path:        "acme/frontend",
+							Path:        "namespaces/frontend",
 							Labels:      map[string]string{"environment": "prod"},
 							Annotations: map[string]string{"has-waffles": "true"},
 							Objects: vt.ObjectSets(
@@ -89,7 +89,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						},
 						&ast.TreeNode{
 							Type:        ast.Namespace,
-							Path:        "acme/frontend-test",
+							Path:        "namespaces/frontend-test",
 							Labels:      map[string]string{"environment": "test"},
 							Annotations: map[string]string{"has-waffles": "false"},
 							Objects: vt.ObjectSets(
@@ -113,16 +113,16 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:    ast.Policyspace,
-					Path:    "acme",
+					Path:    "namespaces",
 					Objects: vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.Policyspace,
-							Path: "acme/eng",
+							Path: "namespaces/eng",
 							Children: []*ast.TreeNode{
 								&ast.TreeNode{
 									Type: ast.Namespace,
-									Path: "acme/eng/frontend",
+									Path: "namespaces/eng/frontend",
 									Objects: vt.ObjectSets(
 										vt.Helper.FrontendResourceQuota(),
 									),
@@ -135,7 +135,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
-					Path: "acme",
+					Path: "namespaces",
 					Objects: vt.ObjectSets(
 						modQuota(
 							vt.Helper.AcmeResourceQuota(),
@@ -148,11 +148,11 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.Policyspace,
-							Path: "acme/eng",
+							Path: "namespaces/eng",
 							Children: []*ast.TreeNode{
 								&ast.TreeNode{
 									Type: ast.Namespace,
-									Path: "acme/eng/frontend",
+									Path: "namespaces/eng/frontend",
 									Objects: vt.ObjectSets(
 										modQuota(
 											vt.Helper.AcmeResourceQuota(),
@@ -175,17 +175,17 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:    ast.Policyspace,
-					Path:    "acme",
+					Path:    "namespaces",
 					Objects: vt.ObjectSets(vt.Helper.AdminRoleBinding()),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type:    ast.Namespace,
-							Path:    "acme/frontend",
+							Path:    "namespaces/frontend",
 							Objects: vt.ObjectSets(vt.Helper.PodReaderRoleBinding(), vt.Helper.PodReaderRole()),
 						},
 						&ast.TreeNode{
 							Type:    ast.Namespace,
-							Path:    "acme/frontend-test",
+							Path:    "namespaces/frontend-test",
 							Objects: vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
 						},
 					},
@@ -194,17 +194,17 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:    ast.Policyspace,
-					Path:    "acme",
+					Path:    "namespaces",
 					Objects: vt.ObjectSets(vt.Helper.AdminRoleBinding()),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type:    ast.Namespace,
-							Path:    "acme/frontend",
+							Path:    "namespaces/frontend",
 							Objects: vt.ObjectSets(vt.Helper.PodReaderRoleBinding(), vt.Helper.PodReaderRole()),
 						},
 						&ast.TreeNode{
 							Type:    ast.Namespace,
-							Path:    "acme/frontend-test",
+							Path:    "namespaces/frontend-test",
 							Objects: vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
 						},
 					},

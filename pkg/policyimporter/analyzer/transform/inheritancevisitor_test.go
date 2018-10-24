@@ -65,11 +65,11 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 				ReservedNamespaces: vt.Helper.AcmeReserved(),
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
-					Path: "acme",
+					Path: "namespaces",
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type:        ast.Namespace,
-							Path:        "acme/frontend",
+							Path:        "namespaces/frontend",
 							Labels:      map[string]string{"environment": "prod"},
 							Annotations: map[string]string{"has-waffles": "true"},
 							Objects: vt.ObjectSets(
@@ -82,7 +82,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 						},
 						&ast.TreeNode{
 							Type:        ast.Namespace,
-							Path:        "acme/frontend-test",
+							Path:        "namespaces/frontend-test",
 							Labels:      map[string]string{"environment": "test"},
 							Annotations: map[string]string{"has-waffles": "false"},
 							Objects: vt.ObjectSets(
@@ -101,19 +101,18 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
-					Path: "acme",
 					Objects: vt.ObjectSets(
 						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
 					),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type:   ast.Namespace,
-							Path:   "acme/frontend",
+							Path:   "namespaces/frontend",
 							Labels: map[string]string{"env": "prod"},
 						},
 						&ast.TreeNode{
 							Type:   ast.Namespace,
-							Path:   "acme/frontend-test",
+							Path:   "namespaces/frontend-test",
 							Labels: map[string]string{"env": "test"},
 						},
 					},
@@ -122,11 +121,10 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type: ast.Policyspace,
-					Path: "acme",
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type:   ast.Namespace,
-							Path:   "acme/frontend",
+							Path:   "namespaces/frontend",
 							Labels: map[string]string{"env": "prod"},
 							Objects: vt.ObjectSets(
 								withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
@@ -134,7 +132,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 						},
 						&ast.TreeNode{
 							Type:   ast.Namespace,
-							Path:   "acme/frontend-test",
+							Path:   "namespaces/frontend-test",
 							Labels: map[string]string{"env": "test"},
 						},
 					},

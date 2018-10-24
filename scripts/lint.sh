@@ -30,7 +30,6 @@ if ! OUT="$(
     --disable-all \
     --enable=deadcode \
     --enable=errcheck \
-    --enable=goimports \
     --enable=golint \
     --enable=ineffassign \
     --enable=megacheck \

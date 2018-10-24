@@ -317,7 +317,7 @@ func (t *TestHelper) AcmeReserved() *ast.ReservedNamespaces {
 func (t *TestHelper) acmeTree() *ast.TreeNode {
 	return &ast.TreeNode{
 		Type: ast.Policyspace,
-		Path: "acme",
+		Path: "namespaces",
 		Objects: ObjectSets(
 			// TODO: remove RoleBinding once flattening transform is written.
 			t.AdminRoleBinding(),
@@ -326,7 +326,7 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 		Children: []*ast.TreeNode{
 			&ast.TreeNode{
 				Type:        ast.Namespace,
-				Path:        "acme/frontend",
+				Path:        "namespaces/frontend",
 				Labels:      map[string]string{"environment": "prod"},
 				Annotations: map[string]string{"has-waffles": "true"},
 				Objects: ObjectSets(
@@ -337,7 +337,7 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 			},
 			&ast.TreeNode{
 				Type:        ast.Namespace,
-				Path:        "acme/frontend-test",
+				Path:        "namespaces/frontend-test",
 				Labels:      map[string]string{"environment": "test"},
 				Annotations: map[string]string{"has-waffles": "false"},
 				Objects: ObjectSets(

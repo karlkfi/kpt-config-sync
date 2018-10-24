@@ -25,8 +25,9 @@ import (
 	"text/template"
 
 	"github.com/go-test/deep"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -35,7 +36,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -296,9 +297,9 @@ func newTestDir(t *testing.T, root string) *testDir {
 	if err = os.Mkdir(root, 0750); err != nil {
 		t.Fatalf("Failed to create test dir %v", err)
 	}
-	tree := filepath.Join(root, "tree")
-	if err = os.Mkdir(tree, 0750); err != nil {
-		t.Fatalf("Failed to create tree dir %v", err)
+	namespaces := filepath.Join(root, repo.NamespacesDir)
+	if err = os.Mkdir(namespaces, 0750); err != nil {
+		t.Fatalf("Failed to create namespaces dir %v", err)
 	}
 	return &testDir{tmp, root, t}
 }
@@ -321,17 +322,17 @@ type Policies struct {
 	RolesV1         []rbacv1.Role
 	RoleBindingsV1  []rbacv1.RoleBinding
 	ResourceQuotaV1 *corev1.ResourceQuota
-	Resources       []policyhierarchyv1.GenericResources
+	Resources       []v1.GenericResources
 }
 
 // createPolicyNode constructs a PolicyNode based on a Policies struct.
 func createPolicyNode(
-	name string,
-	parent string,
-	nodeType policyhierarchyv1.PolicyNodeType,
-	policies *Policies) policyhierarchyv1.PolicyNode {
+		name string,
+		parent string,
+		nodeType v1.PolicyNodeType,
+		policies *Policies) v1.PolicyNode {
 	pn := policynode.NewPolicyNode(name,
-		&policyhierarchyv1.PolicyNodeSpec{
+		&v1.PolicyNodeSpec{
 			Type:   nodeType,
 			Parent: parent,
 		})
@@ -367,48 +368,48 @@ func createPolicyNode(
 	return *pn
 }
 
-func resourcesFromObjects(objects []runtime.Object, gv schema.GroupVersion, kind string) []policyhierarchyv1.GenericResources {
+func resourcesFromObjects(objects []runtime.Object, gv schema.GroupVersion, kind string) []v1.GenericResources {
 	raws := []runtime.RawExtension{}
 	for _, o := range objects {
 		raws = append(raws, runtime.RawExtension{Object: o})
 	}
 	if len(raws) > 0 {
-		res := policyhierarchyv1.GenericResources{
+		res := v1.GenericResources{
 			Group: gv.Group,
 			Kind:  kind,
-			Versions: []policyhierarchyv1.GenericVersionResources{
+			Versions: []v1.GenericVersionResources{
 				{
 					Version: gv.Version,
 					Objects: raws,
 				},
 			},
 		}
-		return []policyhierarchyv1.GenericResources{res}
+		return []v1.GenericResources{res}
 	}
-	return []policyhierarchyv1.GenericResources{}
+	return []v1.GenericResources{}
 }
 
 func createNamespacePN(
-	path string,
-	parent string,
-	policies *Policies) policyhierarchyv1.PolicyNode {
-	return createPNWithMeta(path, parent, policyhierarchyv1.Namespace, policies, nil, nil)
+		path string,
+		parent string,
+		policies *Policies) v1.PolicyNode {
+	return createPNWithMeta(path, parent, v1.Namespace, policies, nil, nil)
 }
 
 func createPolicyspacePN(
-	path string,
-	parent string,
-	policies *Policies) policyhierarchyv1.PolicyNode {
-	return createPNWithMeta(path, parent, policyhierarchyv1.Policyspace, policies, nil, nil)
+		path string,
+		parent string,
+		policies *Policies) v1.PolicyNode {
+	return createPNWithMeta(path, parent, v1.Policyspace, policies, nil, nil)
 }
 
 func createPNWithMeta(
-	path string,
-	parent string,
-	t policyhierarchyv1.PolicyNodeType,
-	policies *Policies,
-	labels, annotations map[string]string,
-) policyhierarchyv1.PolicyNode {
+		path string,
+		parent string,
+		t v1.PolicyNodeType,
+		policies *Policies,
+		labels, annotations map[string]string,
+) v1.PolicyNode {
 	if annotations == nil {
 		annotations = map[string]string{}
 	}
@@ -420,24 +421,31 @@ func createPNWithMeta(
 }
 
 func createReservedPN(
-	name string,
-	parent string,
-	policies *Policies) policyhierarchyv1.PolicyNode {
-	return createPolicyNode(name, parent, policyhierarchyv1.ReservedNamespace, policies)
+		name string,
+		parent string,
+		policies *Policies) v1.PolicyNode {
+	return createPolicyNode(name, parent, v1.ReservedNamespace, policies)
 }
 
-func createClusterPolicy() *policyhierarchyv1.ClusterPolicy {
-	return policynode.NewClusterPolicy(policyhierarchyv1.ClusterPolicyName,
-		&policyhierarchyv1.ClusterPolicySpec{})
+func createRootPN(
+		policies *Policies) v1.PolicyNode {
+	pn := createPolicyNode(v1.RootPolicyNodeName, v1.NoParentNamespace, v1.Policyspace, policies)
+	pn.Annotations = map[string]string{"nomos.dev/source-path": "namespaces"}
+	return pn
+}
+
+func createClusterPolicy() *v1.ClusterPolicy {
+	return policynode.NewClusterPolicy(v1.ClusterPolicyName,
+		&v1.ClusterPolicySpec{})
 }
 
 func createResourceQuota(path, name, namespace string, labels map[string]string) *corev1.ResourceQuota {
 	rq := &corev1.ResourceQuota{
-		TypeMeta: v1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ResourceQuota",
 		},
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 			Labels:    labels,
@@ -466,9 +474,9 @@ type parserTestCase struct {
 	testName                   string
 	root                       string
 	testFiles                  fileContentMap
-	expectedPolicyNodes        map[string]policyhierarchyv1.PolicyNode
+	expectedPolicyNodes        map[string]v1.PolicyNode
 	expectedNumPolicies        map[string]int
-	expectedClusterPolicy      *policyhierarchyv1.ClusterPolicy
+	expectedClusterPolicy      *v1.ClusterPolicy
 	expectedNumClusterPolicies *int
 	expectedError              bool
 }
@@ -478,11 +486,11 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with YAML Namespace",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar":  createNamespacePN("tree/bar", "tree", nil),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -490,11 +498,11 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with JSON Namespace",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ns.json": templateData{Name: "bar"}.apply(aNamespaceJSON),
+			"namespaces/bar/ns.json": templateData{Name: "bar"}.apply(aNamespaceJSON),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar":  createNamespacePN("tree/bar", "tree", nil),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -502,11 +510,11 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with Namespace with labels/annotations",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespaceWithLabelsAndAnnotations),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespaceWithLabelsAndAnnotations),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createPNWithMeta("tree/bar", "tree", policyhierarchyv1.Namespace, nil,
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace, nil,
 				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -515,12 +523,12 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with ignored files",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/ignore":  "",
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/ignore":  "",
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar":  createNamespacePN("tree/bar", "tree", nil),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -528,13 +536,13 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with 2 ignored files",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/ignore":  "",
-			"tree/bar/ignore2": "blah blah blah",
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/ignore":  "",
+			"namespaces/bar/ignore2": "blah blah blah",
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar":  createNamespacePN("tree/bar", "tree", nil),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -542,8 +550,8 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with multiple Namespaces",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/ns2.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/ns2.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -551,8 +559,8 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir without Namespace multiple",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ignore":  "",
-			"tree/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
+			"namespaces/bar/ignore":  "",
+			"namespaces/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -560,7 +568,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with namespace mismatch",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
+			"namespaces/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -568,7 +576,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with invalid name",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/baR/ns.yaml": templateData{Name: "baR"}.apply(aNamespace),
+			"namespaces/baR/ns.yaml": templateData{Name: "baR"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -576,17 +584,17 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with single ResourceQuota",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"tree/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/rq.yaml":  templateData{Namespace: "bar"}.apply(aQuota),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/rq.yaml": templateData{Namespace: "bar"}.apply(aQuota),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createNamespacePN("tree/bar", "tree",
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
-						"tree/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
+						"namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
 				},
 			),
 		},
@@ -596,16 +604,16 @@ var parserTestCases = []parserTestCase{
 		testName: "ResourceQuota without declared Sync",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"tree/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/rq.yaml":  templateData{Namespace: "bar"}.apply(aQuota),
+			"system/nomos.yaml":      aNomosConfig,
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/rq.yaml": templateData{Namespace: "bar"}.apply(aQuota),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createNamespacePN("tree/bar", "tree",
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
-						"tree/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
+						"namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
 				},
 			),
 		},
@@ -615,15 +623,15 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with single ResourceQuota single file",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":   aNomosConfig,
-			"system/rq.yaml":      templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"tree/bar/combo.yaml": templateData{Name: "bar"}.apply(aNamespace) + "\n---\n" + templateData{Namespace: "bar"}.apply(aQuota),
+			"system/nomos.yaml":         aNomosConfig,
+			"system/rq.yaml":            templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/bar/combo.yaml": templateData{Name: "bar"}.apply(aNamespace) + "\n---\n" + templateData{Namespace: "bar"}.apply(aQuota),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createNamespacePN("tree/bar", "tree",
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{ResourceQuotaV1: createResourceQuota(
-					"tree/bar/combo.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
+					"namespaces/bar/combo.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
 				},
 			),
 		},
@@ -633,11 +641,11 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with multiple ResourceQuota",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"tree/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/rq.yaml":  templateData{ID: "1", Namespace: "bar"}.apply(aQuota),
-			"tree/bar/rq2.yaml": templateData{ID: "2", Namespace: "bar"}.apply(aQuota),
+			"system/nomos.yaml":       aNomosConfig,
+			"system/rq.yaml":          templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/rq.yaml":  templateData{ID: "1", Namespace: "bar"}.apply(aQuota),
+			"namespaces/bar/rq2.yaml": templateData{ID: "2", Namespace: "bar"}.apply(aQuota),
 		},
 		expectedError: true,
 	},
@@ -645,11 +653,11 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with multiple ResourceQuota",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":    aNomosConfig,
-			"system/rq.yaml":       templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"tree/bar/rq.yaml":     templateData{ID: "1"}.apply(aQuota),
-			"tree/bar/rq2.yaml":    templateData{ID: "2"}.apply(aQuota),
-			"tree/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
+			"system/nomos.yaml":          aNomosConfig,
+			"system/rq.yaml":             templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/bar/rq.yaml":     templateData{ID: "1"}.apply(aQuota),
+			"namespaces/bar/rq2.yaml":    templateData{ID: "2"}.apply(aQuota),
+			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -657,10 +665,10 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with ResourceQuota namespace mismatch",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"tree/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/rq.yaml":  templateData{Namespace: "baz"}.apply(aQuota),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/rq.yaml": templateData{Namespace: "baz"}.apply(aQuota),
 		},
 		expectedError: true,
 	},
@@ -668,37 +676,37 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with multiple Roles",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":   aNomosConfig,
-			"system/role.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
-			"tree/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/role1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRole),
-			"tree/bar/role2.yaml": templateData{ID: "2", Namespace: "bar"}.apply(aRole),
+			"system/nomos.yaml":         aNomosConfig,
+			"system/role.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/role1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRole),
+			"namespaces/bar/role2.yaml": templateData{ID: "2", Namespace: "bar"}.apply(aRole),
 		},
-		expectedNumPolicies: map[string]int{"tree": 0, "bar": 2},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 2},
 	},
 	{
 		testName: "Namespace dir with deployment",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":        aNomosConfig,
-			"system/depl.yaml":         templateData{Group: "apps", Version: "v1", Kind: "Deployment"}.apply(aSync),
-			"tree/bar/ns.yaml":         templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/deployment.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aDeployment),
+			"system/nomos.yaml":              aNomosConfig,
+			"system/depl.yaml":               templateData{Group: "apps", Version: "v1", Kind: "Deployment"}.apply(aSync),
+			"namespaces/bar/ns.yaml":         templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/deployment.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aDeployment),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createNamespacePN("tree/bar", "tree",
-				&Policies{Resources: []policyhierarchyv1.GenericResources{
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
+				&Policies{Resources: []v1.GenericResources{
 					{
 						Group: "apps",
 						Kind:  "Deployment",
-						Versions: []policyhierarchyv1.GenericVersionResources{
+						Versions: []v1.GenericVersionResources{
 							{
 								Version: "v1",
 								Objects: []runtime.RawExtension{
 									{
 										Object: runtime.Object(&appsv1.Deployment{
-											ObjectMeta: v1.ObjectMeta{
+											ObjectMeta: metav1.ObjectMeta{
 												Name:      "nginx-deployment",
 												Namespace: "bar",
 											},
@@ -720,22 +728,22 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with CRD",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":   aNomosConfig,
-			"system/eng.yaml":     templateData{Group: "employees", Version: "v1alpha1", Kind: "Engineer"}.apply(aSync),
-			"tree/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/philo.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aPhilo),
+			"system/nomos.yaml":         aNomosConfig,
+			"system/eng.yaml":           templateData{Group: "employees", Version: "v1alpha1", Kind: "Engineer"}.apply(aSync),
+			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/philo.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aPhilo),
 		},
-		expectedNumPolicies: map[string]int{"tree": 0, "bar": 1},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 1},
 	},
 	{
 		testName: "Namespace dir with duplicate Roles",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":   aNomosConfig,
-			"system/role.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
-			"tree/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/role1.yaml": templateData{Namespace: "bar"}.apply(aRole),
-			"tree/bar/role2.yaml": templateData{Namespace: "bar"}.apply(aRole),
+			"system/nomos.yaml":         aNomosConfig,
+			"system/role.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/role1.yaml": templateData{Namespace: "bar"}.apply(aRole),
+			"namespaces/bar/role2.yaml": templateData{Namespace: "bar"}.apply(aRole),
 		},
 		expectedError: true,
 	},
@@ -743,23 +751,23 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with multiple Rolebindings",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rb.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"tree/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/r1.yaml":  templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
-			"tree/bar/r2.yaml":  templateData{ID: "2", Namespace: "bar"}.apply(aRoleBinding),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/r1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"namespaces/bar/r2.yaml": templateData{ID: "2", Namespace: "bar"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{"tree": 0, "bar": 2},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 2},
 	},
 	{
 		testName: "Namespace dir with duplicate Rolebindings",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rb.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"tree/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/r1.yaml":  templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
-			"tree/bar/r2.yaml":  templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/r1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"namespaces/bar/r2.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
 		},
 		expectedError: true,
 	},
@@ -767,12 +775,12 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with duplicate Rolebindings",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":    aNomosConfig,
-			"system/rb.yaml":       templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"tree/bar/ns.yaml":     templateData{Name: "bar"}.apply(aNamespace),
-			"tree/bar/r1.yaml":     templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
-			"tree/bar/r2.yaml":     templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
-			"tree/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
+			"system/nomos.yaml":          aNomosConfig,
+			"system/rb.yaml":             templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/bar/ns.yaml":     templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/r1.yaml":     templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"namespaces/bar/r2.yaml":     templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -780,24 +788,24 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with non-conflicting reserved Namespace specified",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":    aNomosConfig,
-			"system/reserved.yaml": templateData{Namespace: "baz", Attribute: string(policyhierarchyv1alpha1.ReservedAttribute), Name: policyhierarchyv1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
-			"tree/bar/ns.yaml":     templateData{Name: "bar"}.apply(aNamespace),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/reserved.yaml":   templateData{Namespace: "baz", Attribute: string(v1alpha1.ReservedAttribute), Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"baz":  createReservedPN("baz", "", nil),
-			"bar":  createNamespacePN("tree/bar", "tree", nil),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"baz":                 createReservedPN("baz", "", nil),
+			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 	},
 	{
 		testName: "Namespace dir with non-conflicting reserved Namespace, but invalid attribute specified",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":    aNomosConfig,
-			"system/reserved.yaml": templateData{Namespace: "foo", Attribute: "invalid-attribute", Name: policyhierarchyv1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
-			"tree/bar/ns.yaml":     templateData{Name: "bar"}.apply(aNamespace),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/reserved.yaml":   templateData{Namespace: "foo", Attribute: "invalid-attribute", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -805,9 +813,9 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with conflicting reserved Namespace specified",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":    aNomosConfig,
-			"system/reserved.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchyv1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
-			"tree/foo/ns.yaml":     templateData{Name: "foo"}.apply(aNamespace),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/reserved.yaml":   templateData{Namespace: "foo", Attribute: "reserved", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"namespaces/foo/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -824,9 +832,9 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with ClusterRole",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/cr.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
-			"tree/bar/cr.yaml":  templateData{}.apply(aClusterRole),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/cr.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
+			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
 		},
 		expectedError: true,
 	},
@@ -834,9 +842,9 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with ClusterRoleBinding",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/crb.yaml":   templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
-			"tree/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
+			"system/nomos.yaml":       aNomosConfig,
+			"system/crb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
 		},
 		expectedError: true,
 	},
@@ -844,9 +852,9 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with PodSecurityPolicy",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/psp.yaml":   templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
-			"tree/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
+			"system/nomos.yaml":       aNomosConfig,
+			"system/psp.yaml":         templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
+			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
 		expectedError: true,
 	},
@@ -854,8 +862,8 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with policyspace child",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ns.yaml":    templateData{Name: "baz"}.apply(aNamespace),
-			"tree/bar/baz/ignore": "",
+			"namespaces/bar/ns.yaml":    templateData{Name: "baz"}.apply(aNamespace),
+			"namespaces/bar/baz/ignore": "",
 		},
 		expectedError: true,
 	},
@@ -863,11 +871,11 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ignored file",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ignore": "",
+			"namespaces/bar/ignore": "",
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar":  createPolicyspacePN("tree/bar", "tree", nil),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar":                 createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -875,14 +883,14 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ResourceQuota",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"tree/bar/rq.yaml":  templateData{}.apply(aQuota),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", nil),
-			"bar": createPolicyspacePN("tree/bar", "tree",
-				&Policies{ResourceQuotaV1: createResourceQuota("tree/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -890,9 +898,9 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ResourceQuota namespace set",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"tree/bar/rq.yaml":  templateData{Namespace: "qux"}.apply(aQuota),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/bar/rq.yaml": templateData{Namespace: "qux"}.apply(aQuota),
 		},
 		expectedError: true,
 	},
@@ -900,10 +908,10 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with Namespace",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":    aNomosConfig,
-			"system/rq.yaml":       templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"tree/bar/rq.yaml":     templateData{Namespace: "bar"}.apply(aQuota),
-			"tree/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
+			"system/nomos.yaml":          aNomosConfig,
+			"system/rq.yaml":             templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/bar/rq.yaml":     templateData{Namespace: "bar"}.apply(aQuota),
+			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -911,9 +919,9 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with Roles",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":  aNomosConfig,
-			"system/role.yaml":   templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
-			"tree/bar/role.yaml": templateData{}.apply(aRole),
+			"system/nomos.yaml":        aNomosConfig,
+			"system/role.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+			"namespaces/bar/role.yaml": templateData{}.apply(aRole),
 		},
 		expectedError: true,
 	},
@@ -921,20 +929,20 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with multiple Rolebindings",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rb.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"tree/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
-			"tree/bar/rb2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
+			"system/nomos.yaml":       aNomosConfig,
+			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+			"namespaces/bar/rb2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{"tree": 0, "bar": 0},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
 	},
 	{
 		testName: "Policyspace dir with ClusterRole",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/cr.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
-			"tree/bar/cr.yaml":  templateData{}.apply(aClusterRole),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/cr.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
+			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
 		},
 		expectedError: true,
 	},
@@ -942,9 +950,9 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ClusterRoleBinding",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/crb.yaml":   templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
-			"tree/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
+			"system/nomos.yaml":       aNomosConfig,
+			"system/crb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
 		},
 		expectedError: true,
 	},
@@ -952,9 +960,9 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with PodSecurityPolicy",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/psp.yaml":   templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
-			"tree/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
+			"system/nomos.yaml":       aNomosConfig,
+			"system/psp.yaml":         templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
+			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
 		expectedError: true,
 	},
@@ -962,9 +970,9 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ConfigMap",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/cm.yaml":    templateData{Version: "v1", Kind: "ConfigMap"}.apply(aSync),
-			"tree/bar/cm.yaml":  templateData{Namespace: "foo", Attribute: "reserved", Name: policyhierarchyv1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/cm.yaml":         templateData{Version: "v1", Kind: "ConfigMap"}.apply(aSync),
+			"namespaces/bar/cm.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 		},
 		expectedError: true,
 	},
@@ -972,52 +980,52 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with NamespaceSelector CRD",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/bar/ns-selector.yaml": aNamespaceSelectorTemplate,
+			"namespaces/bar/ns-selector.yaml": aNamespaceSelectorTemplate,
 		},
-		expectedNumPolicies: map[string]int{"tree": 0, "bar": 0},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
 	},
 	{
 		testName: "Policyspace dir with NamespaceSelector CRD and object",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":         aNomosConfig,
-			"system/crb.yaml":           templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"tree/bar/ns-selector.yaml": aNamespaceSelectorTemplate,
-			"tree/bar/rb.yaml":          templateData{ID: "1", LBPName: "sre-supported"}.apply(aLBPRoleBinding),
-			"tree/bar/prod-ns/ns.yaml":  templateData{Name: "prod-ns", Labels: map[string]string{"environment": "prod"}}.apply(aNamespace),
-			"tree/bar/test-ns/ns.yaml":  templateData{Name: "test-ns"}.apply(aNamespace),
+			"system/nomos.yaml":               aNomosConfig,
+			"system/crb.yaml":                 templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/bar/ns-selector.yaml": aNamespaceSelectorTemplate,
+			"namespaces/bar/rb.yaml":          templateData{ID: "1", LBPName: "sre-supported"}.apply(aLBPRoleBinding),
+			"namespaces/bar/prod-ns/ns.yaml":  templateData{Name: "prod-ns", Labels: map[string]string{"environment": "prod"}}.apply(aNamespace),
+			"namespaces/bar/test-ns/ns.yaml":  templateData{Name: "test-ns"}.apply(aNamespace),
 		},
-		expectedNumPolicies: map[string]int{"tree": 0, "bar": 0, "prod-ns": 1, "test-ns": 0},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0, "prod-ns": 1, "test-ns": 0},
 	},
 	{
 		testName: "Policyspace and Namespace dir have duplicate rolebindings",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml":     aNomosConfig,
-			"system/rb.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"tree/bar/rb1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
-			"tree/bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
-			"tree/bar/baz/rb1.yaml": templateData{ID: "1", Namespace: "baz"}.apply(aRoleBinding),
+			"system/nomos.yaml":           aNomosConfig,
+			"system/rb.yaml":              templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/bar/rb1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
+			"namespaces/bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
+			"namespaces/bar/baz/rb1.yaml": templateData{ID: "1", Namespace: "baz"}.apply(aRoleBinding),
 		},
 		expectedError: true,
 	},
 	{
-		testName: "Tree dir empty",
+		testName: "Namespaces dir empty",
 		root:     "foo",
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", &Policies{}),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(&Policies{}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
-		testName: "Empty tree and valid Sync",
+		testName: "Empty namespaces and valid Sync",
 		root:     "foo",
 		testFiles: fileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", &Policies{}),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(&Policies{}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -1043,89 +1051,89 @@ spec:
 		expectedError: true,
 	},
 	{
-		testName: "Tree dir with ignore file",
+		testName: "Namespaces dir with ignore file",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/ignore": "",
+			"namespaces/ignore": "",
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", &Policies{}),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(&Policies{}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
-		testName: "Tree dir with Namespace",
+		testName: "Namespaces dir with Namespace",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
+			"namespaces/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
 	{
-		testName: "Tree dir with ResourceQuota",
+		testName: "Namespaces dir with ResourceQuota",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"tree/rq.yaml":      templateData{}.apply(aQuota),
+			"system/nomos.yaml":  aNomosConfig,
+			"system/rq.yaml":     templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/rq.yaml": templateData{}.apply(aQuota),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "", &Policies{
-				ResourceQuotaV1: createResourceQuota("tree/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(&Policies{
+				ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
-		testName: "Tree dir with ResourceQuota and namespace dir",
+		testName: "Namespaces dir with ResourceQuota and namespace dir",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/role.yaml":  templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"tree/rq.yaml":      templateData{}.apply(aQuota),
-			"tree/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/role.yaml":       templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedPolicyNodes: map[string]policyhierarchyv1.PolicyNode{
-			"tree": createPolicyspacePN("tree", "",
-				&Policies{ResourceQuotaV1: createResourceQuota("tree/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
-			"bar": createNamespacePN("tree/bar", "tree",
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{ResourceQuotaV1: createResourceQuota(
-					"tree/rq.yaml", resourcequota.ResourceQuotaObjectName, "", resourcequota.NewNomosQuotaLabels()),
+					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, "", resourcequota.NewNomosQuotaLabels()),
 				}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
-		testName: "Tree dir with Roles",
+		testName: "Namespaces dir with Roles",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/role.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
-			"tree/role.yaml":    templateData{}.apply(aRole),
+			"system/nomos.yaml":    aNomosConfig,
+			"system/role.yaml":     templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+			"namespaces/role.yaml": templateData{}.apply(aRole),
 		},
 		expectedError: true,
 	},
 	{
-		testName: "Tree dir with multiple Rolebindings",
+		testName: "Namespaces dir with multiple Rolebindings",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rb.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"tree/r1.yaml":      templateData{ID: "1"}.apply(aRoleBinding),
-			"tree/r2.yaml":      templateData{ID: "2"}.apply(aRoleBinding),
+			"system/nomos.yaml":  aNomosConfig,
+			"system/rb.yaml":     templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+			"namespaces/r2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{"tree": 0},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0},
 	},
 	{
-		testName: "Tree dir with multiple inherited Rolebindings",
+		testName: "Namespaces dir with multiple inherited Rolebindings",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"system/nomos.yaml": aNomosConfig,
-			"system/rb.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"tree/r1.yaml":      templateData{ID: "1"}.apply(aRoleBinding),
-			"tree/r2.yaml":      templateData{ID: "2"}.apply(aRoleBinding),
-			"tree/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
+			"system/nomos.yaml":      aNomosConfig,
+			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/r1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
+			"namespaces/r2.yaml":     templateData{ID: "2"}.apply(aRoleBinding),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedNumPolicies: map[string]int{"tree": 0, "bar": 2},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 2},
 	},
 	{
 		testName: "Cluster dir with multiple ClusterRoles",
@@ -1207,8 +1215,8 @@ spec:
 		testName: "Dir name not unique 1",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/baz/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-			"tree/qux/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/baz/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/qux/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -1216,7 +1224,7 @@ spec:
 		testName: "Dir name not unique 2",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
+			"namespaces/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -1225,8 +1233,8 @@ spec:
 		root:     "foo",
 		testFiles: fileContentMap{
 			// Two policyspace dirs with same name.
-			"tree/bar/baz/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
-			"tree/qux/baz/waldo/ns.yaml": templateData{Name: "waldo"}.apply(aNamespace),
+			"namespaces/bar/baz/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
+			"namespaces/qux/baz/waldo/ns.yaml": templateData{Name: "waldo"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -1234,7 +1242,7 @@ spec:
 		testName: "Dir name reserved",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/kube-system/ns.yaml": templateData{Name: "kube-system"}.apply(aNamespace),
+			"namespaces/kube-system/ns.yaml": templateData{Name: "kube-system"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -1242,7 +1250,7 @@ spec:
 		testName: "Dir name invalid",
 		root:     "foo",
 		testFiles: fileContentMap{
-			"tree/foo bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/foo bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},
@@ -1252,7 +1260,7 @@ spec:
 		testFiles: fileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 		},
-		expectedNumPolicies: map[string]int{"tree": 0},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0},
 	},
 }
 
@@ -1319,7 +1327,7 @@ func TestParser(t *testing.T) {
 			}
 
 			if tc.expectedPolicyNodes != nil || tc.expectedClusterPolicy != nil {
-				expectedPolicies := &policyhierarchyv1.AllPolicies{
+				expectedPolicies := &v1.AllPolicies{
 					PolicyNodes:   tc.expectedPolicyNodes,
 					ClusterPolicy: tc.expectedClusterPolicy,
 				}

@@ -27,6 +27,7 @@ import (
 	"github.com/blang/semver"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
@@ -57,22 +58,6 @@ type Parser struct {
 	root string
 }
 
-const (
-	// Directory names with special meaning in Nomos
-
-	// systemDir is the name of the directory containing Nomos system configuration files.
-	systemDir = "system"
-	// treeDir is the name of the directory containin hierarchical resource
-	// policies.
-	treeDir = "tree"
-	// clusterDir is the name of the directory where cluster scoped resources
-	// are stored.
-	clusterDir = "cluster"
-	// clusterregistryDir is the relative path name to the directory containing
-	// cluster registry information and cluster selectors.
-	clusterregistryDir = "clusterregistry"
-)
-
 // NewParser creates a new Parser.
 // clientConfig can be used to configure api server client. It should be set to nil when running in cluster.
 // resources is the list returned by the DisoveryClient ServerResources call which represents resources
@@ -99,9 +84,8 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	p.root = root
 	fsCtx := &ast.Root{Cluster: &ast.Cluster{}}
 
-	// Special processing for <root>/system/*
 	var allowedGVKs map[schema.GroupVersionKind]struct{}
-	if _, err := os.Stat(filepath.Join(root, systemDir)); err == nil {
+	if _, err := os.Stat(filepath.Join(root, repo.SystemDir)); err == nil {
 		if allowedGVKs, err = p.processSystemDir(root, fsCtx); err != nil {
 			return nil, err
 		}
@@ -110,20 +94,18 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 		return nil, errors.Wrapf(err, "while checking existence of system directory")
 	}
 
-	// Special processing for <root>/cluster/*
-	clusterDir := filepath.Join(root, clusterDir)
-	clusterInfos, err := p.makeFileInfos(clusterDir, false)
+	clusterDir := filepath.Join(root, repo.ClusterDir)
+	clusterInfos, err := p.readResources(clusterDir, false)
 	if err != nil {
-		return nil, errors.Wrapf(err, "while making FileInfos for cluster")
+		return nil, err
 	}
 
-	// Special processing for <root>/clusterregistry/*
 	var clusterregistryInfos []*resource.Info
-	clusterregistryPath := filepath.Join(root, clusterregistryDir)
+	clusterregistryPath := filepath.Join(root, repo.ClusterRegistryDir)
 	if _, err = os.Stat(clusterregistryPath); err == nil {
-		clusterregistryInfos, err = p.makeFileInfos(clusterregistryPath, false)
+		clusterregistryInfos, err = p.readResources(clusterregistryPath, false)
 		if err != nil {
-			return nil, errors.Wrapf(err, "while making FileInfos for clusterregistry")
+			return nil, err
 		}
 	} else if !os.IsNotExist(err) {
 		// It's OK not to define the clusterregistry directory, you just won't get
@@ -131,25 +113,24 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 		return nil, errors.Wrapf(err, "while checking existence of clusterregistry directory")
 	}
 
-	// Regular recursive processing for <root>/tree/**/*
-	treeDir := filepath.Join(root, treeDir)
-	treeDirsOrdered, err := allDirs(treeDir)
+	nsDir := filepath.Join(root, repo.NamespacesDir)
+	nsDirsOrdered, err := allDirs(nsDir)
 	if err != nil {
 		return nil, err
 	}
-	if err = validateDirNames(treeDirsOrdered); err != nil {
+	if err = validateDirNames(nsDirsOrdered); err != nil {
 		return nil, err
 	}
-	fileInfos, err := p.makeFileInfos(treeDir, true)
+	fileInfos, err := p.readResources(nsDir, true)
 	if err != nil {
-		return nil, errors.Wrapf(err, "while making FileInfos for tree")
+		return nil, err
 	}
 
 	// TODO(filmil): dirInfos could just be map[string]runtime.Object, it seems.  Let's wait
 	// until the new repo format commit lands, and change it then.
 	dirInfos := make(map[string][]*resource.Info)
 	// Value of all dirs is initially set to nil.
-	for _, d := range treeDirsOrdered {
+	for _, d := range nsDirsOrdered {
 		dirInfos[d] = nil
 	}
 	// If a directory has resources, its value in the map
@@ -168,7 +149,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 		return nil, errors.Wrap(discoveryErr, "failed to get server resources")
 	}
 
-	return p.processDirs(resources, dirInfos, clusterInfos, clusterregistryInfos, treeDirsOrdered,
+	return p.processDirs(resources, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered,
 		clusterDir, fsCtx, allowedGVKs)
 }
 
@@ -180,8 +161,8 @@ func (p *Parser) relativePath(source string) string {
 	return r
 }
 
-// makeFileInfos walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) makeFileInfos(dir string, recursive bool) ([]*resource.Info, error) {
+// readResources walks dir recursively, looking for resources, and builds FileInfos from them.
+func (p *Parser) readResources(dir string, recursive bool) ([]*resource.Info, error) {
 	// If there aren't any resources, skip builder, because builder treats that as an error.
 	var fileInfos []*resource.Info
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -205,7 +186,7 @@ func (p *Parser) makeFileInfos(dir string, recursive bool) ([]*resource.Info, er
 			Do()
 		fileInfos, err = result.Infos()
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to read resources from %s", dir)
+			return nil, errors.Wrapf(err, "failed to read resources from directory: %s", dir)
 		}
 	}
 	return fileInfos, nil
@@ -221,20 +202,20 @@ func (p *Parser) makeFileInfos(dir string, recursive bool) ([]*resource.Info, er
 // 1. Policyspace directory: Non-leaf directories at any depth within root directory.
 // 2. Namespace directory: Leaf directories at any depth within root directory.
 func (p *Parser) processDirs(resources []*metav1.APIResourceList,
-	dirInfos map[string][]*resource.Info,
-	clusterInfos []*resource.Info,
-	clusterregistryInfos []*resource.Info,
-	treeDirsOrdered []string,
-	clusterDir string,
-	fsCtx *ast.Root,
-	allowedGVKs map[schema.GroupVersionKind]struct{}) (*v1.AllPolicies, error) {
+		dirInfos map[string][]*resource.Info,
+		clusterInfos []*resource.Info,
+		clusterregistryInfos []*resource.Info,
+		nsDirsOrdered []string,
+		clusterDir string,
+		fsCtx *ast.Root,
+		allowedGVKs map[schema.GroupVersionKind]struct{}) (*v1.AllPolicies, error) {
 	namespaceDirs := make(map[string]bool)
 
 	treeGenerator := NewDirectoryTree()
 	if err := p.processClusterDir(clusterDir, clusterInfos, fsCtx); err != nil {
 		return nil, errors.Wrapf(err, "cluster directory is invalid: %s", clusterDir)
 	}
-	clusters, selectors, err := p.processClusterRegistryDir(clusterregistryDir, clusterregistryInfos)
+	clusters, selectors, err := p.processClusterRegistryDir(repo.ClusterRegistryDir, clusterregistryInfos)
 	if err != nil {
 		return nil, errors.Wrapf(err, "clusterregistry directory is invalid: %s", clusterDir)
 	}
@@ -243,15 +224,15 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 		return nil, errors.Wrapf(err, "could not create cluster selectors")
 	}
 
-	if len(treeDirsOrdered) > 0 {
-		rootDir := treeDirsOrdered[0]
+	if len(nsDirsOrdered) > 0 {
+		rootDir := nsDirsOrdered[0]
 		infos := dirInfos[rootDir]
-		if err = p.processTreeDir(rootDir, infos, namespaceDirs, treeGenerator, true); err != nil {
+		if err = p.processNamespacesDir(rootDir, infos, namespaceDirs, treeGenerator, true); err != nil {
 			return nil, errors.Wrapf(err, "directory is invalid: %s", rootDir)
 		}
-		for _, d := range treeDirsOrdered[1:] {
+		for _, d := range nsDirsOrdered[1:] {
 			infos := dirInfos[d]
-			if err = p.processTreeDir(d, infos, namespaceDirs, treeGenerator, false); err != nil {
+			if err = p.processNamespacesDir(d, infos, namespaceDirs, treeGenerator, false); err != nil {
 				return nil, errors.Wrapf(err, "directory is invalid: %s", d)
 			}
 		}
@@ -307,9 +288,9 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 }
 
 func (p *Parser) processClusterDir(
-	dir string,
-	infos []*resource.Info,
-	fsCtx *ast.Root) error {
+		dir string,
+		infos []*resource.Info,
+		fsCtx *ast.Root) error {
 	for _, i := range infos {
 		o := i.AsVersioned()
 		fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
@@ -318,12 +299,12 @@ func (p *Parser) processClusterDir(
 	return nil
 }
 
-func (p *Parser) processTreeDir(
-	dir string,
-	infos []*resource.Info,
-	namespaceDirs map[string]bool,
-	treeGenerator *DirectoryTree,
-	root bool) error {
+func (p *Parser) processNamespacesDir(
+		dir string,
+		infos []*resource.Info,
+		namespaceDirs map[string]bool,
+		treeGenerator *DirectoryTree,
+		root bool) error {
 	parent := filepath.Dir(dir)
 	// Since directories are processed in DFS order, it's guaranteed that parent was already processed.
 	if namespaceDirs[parent] {
@@ -350,10 +331,7 @@ func (p *Parser) processTreeDir(
 	} else {
 		treeNode = treeGenerator.AddDir(dir, ast.Policyspace)
 	}
-	return p.processPolicyspaceDir(infos, treeNode)
-}
 
-func (p *Parser) processPolicyspaceDir(infos []*resource.Info, treeNode *ast.TreeNode) error {
 	for _, i := range infos {
 		o := i.AsVersioned()
 		switch o.GetObjectKind().GroupVersionKind() {
@@ -365,7 +343,6 @@ func (p *Parser) processPolicyspaceDir(infos []*resource.Info, treeNode *ast.Tre
 			treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
 		}
 	}
-
 	return nil
 }
 
@@ -413,7 +390,7 @@ func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) (map[schema.Grou
 		Unstructured().
 		Schema(validator).
 		ContinueOnError().
-		FilenameParam(false, &resource.FilenameOptions{Recursive: false, Filenames: []string{filepath.Join(root, systemDir)}}).
+		FilenameParam(false, &resource.FilenameOptions{Recursive: false, Filenames: []string{filepath.Join(root, repo.SystemDir)}}).
 		Do()
 	fileInfos, err := result.Infos()
 	if err != nil {
@@ -604,7 +581,7 @@ func parseNomosConfig(o runtime.Object, source string) (*v1alpha1.NomosConfig, e
 
 	if _, err := semver.Parse(config.Spec.RepoVersion); err != nil {
 		return nil, errors.Wrapf(err, "invalid semantic version %s. "+
-			"NomosConfig.Spec.RepoVersion must follow semantic versioning rules at http://semver.org",
+				"NomosConfig.Spec.RepoVersion must follow semantic versioning rules at http://semver.org",
 			config.Spec.RepoVersion)
 	}
 
@@ -622,7 +599,7 @@ func parseSync(o runtime.Object, source string) (*v1alpha1.Sync, error) {
 		for _, kind := range group.Kinds {
 			if len(kind.Versions) > 1 {
 				return nil, errors.Errorf("Sync declaration %s in file %s contains multiple "+
-					"versions. Syncs must declare exactly one version.", o.(metav1.Object).GetName(), source)
+						"versions. Syncs must declare exactly one version.", o.(metav1.Object).GetName(), source)
 			}
 		}
 	}
