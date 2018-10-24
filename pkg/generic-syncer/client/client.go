@@ -66,6 +66,7 @@ func (c *Client) Create(ctx context.Context, obj runtime.Object) error {
 func (c *Client) Delete(ctx context.Context, obj runtime.Object) error {
 	description, resource := resourceInfo(obj)
 	operation := string(action.DeleteOperation)
+	action.Actions.WithLabelValues(resource, operation).Inc()
 	action.APICalls.WithLabelValues(resource, operation).Inc()
 	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(resource, operation))
 	defer timer.ObserveDuration()
@@ -89,6 +90,7 @@ func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn action
 	workingObj := obj.DeepCopyObject()
 	description, resource := resourceInfo(workingObj)
 	operation := string(action.UpdateOperation)
+	action.Actions.WithLabelValues(resource, operation).Inc()
 	_, namespacedName := metaNamespacedName(workingObj)
 	for tryNum := 0; tryNum < c.MaxTries; tryNum++ {
 		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
@@ -132,6 +134,7 @@ func (c *Client) Upsert(ctx context.Context, obj runtime.Object) error {
 	}
 
 	operation := string(action.UpdateOperation)
+	action.Actions.WithLabelValues(resource, operation).Inc()
 	action.APICalls.WithLabelValues(resource, operation).Inc()
 	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(resource, operation))
 	defer timer.ObserveDuration()
