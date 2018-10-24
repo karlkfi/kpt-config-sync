@@ -18,6 +18,7 @@ package gcp
 import (
 	"context"
 	"io"
+	"sort"
 	"testing"
 	"time"
 
@@ -372,7 +373,7 @@ func init() {
 			},
 		},
 		{
-			testName: "Incremental atomic group not in tree invariant order",
+			testName: "Incremental atomic group",
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
 				{Element: "PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: orgPNProto},
@@ -581,6 +582,8 @@ func TestGen(t *testing.T) {
 				t.Errorf("Resume marker is %v, wanted %v", resumeMarker, tc.expectedResumeMarker)
 			}
 
+			sort.Strings(actualActions)
+			sort.Strings(tc.expectedActions)
 			if diff := cmp.Diff(actualActions, tc.expectedActions); diff != "" {
 				t.Errorf("Actual and expected actions don't match: %v\n%v\n%v", diff, actualActions, tc.expectedActions)
 			}

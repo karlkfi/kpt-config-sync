@@ -28,9 +28,8 @@ of 2 containers:
 
 GKE Policy Management defines three custom resources:
 
-*   `PolicyNode`: A resource that stores hierarchical policy information. This
-    includes Roles, RoleBindings and ResourceQuota. PolicyNodes form a tree,
-    where leaf nodes represent Namespaces.
+*   `PolicyNode`: A resource that stores namespaces-level resources such as
+    Roles and ResourceQuota.
 *   `ClusterPolicy`: A resource that stores cluster-level resources such as
     ClusterRoles and PodSecurityPolicies. There is only one ClusterPolicy per
     cluster.

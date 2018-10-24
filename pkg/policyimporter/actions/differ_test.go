@@ -16,6 +16,7 @@ limitations under the License.
 package actions
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -360,28 +361,34 @@ func TestDiffer(t *testing.T) {
 			g := NewDiffer(NewFactories(nil, nil, nil, nil, nil))
 			g.SortDiff = true
 
-			actual := g.Diff(
+			gotActions := g.Diff(
 				allPolicies(test.oldNodes, test.oldClusterPolicy, test.oldSyncs),
 				allPolicies(test.newNodes, test.newClusterPolicy, test.newSyncs))
 
-			if len(actual) != len(test.expected) {
+			if len(gotActions) != len(test.expected) {
 				t.Fatalf("Actual number of actions was %d but expected %d",
-					len(actual), len(test.expected))
+					len(gotActions), len(test.expected))
+			}
+
+			actual := []string{}
+			for _, a := range gotActions {
+				actual = append(actual, a.String())
+			}
+			sort.Strings(test.expected)
+			sort.Strings(actual)
+			if !cmp.Equal(test.expected, actual) {
+				t.Fatalf("Exepcted and actual actions differ: %s", cmp.Diff(test.expected, actual))
 			}
 
 			policyNodes := make(map[string]v1.PolicyNode)
 			for _, pn := range test.oldNodes {
 				policyNodes[pn.Name] = pn
 			}
-			for aIdx, action := range actual {
-				if action.String() != test.expected[aIdx] {
-					t.Fatalf("Actual action at index %d was %q but expected %q",
-						aIdx, action.String(), test.expected[aIdx])
-				}
+			for _, action := range gotActions {
 				executeAction(t, action, policyNodes)
-				if err := validate(policyNodes); err != nil {
-					t.Errorf("Policy hierarchy state became invalid after executing action, %s: %v", action.String(), err)
-				}
+			}
+			if err := validate(policyNodes); err != nil {
+				t.Errorf("Policy hierarchy state became invalid after executing actions")
 			}
 		})
 	}

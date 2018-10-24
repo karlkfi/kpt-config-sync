@@ -16,8 +16,6 @@ limitations under the License.
 package actions
 
 import (
-	"sort"
-
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
@@ -57,42 +55,31 @@ func (d *Differ) Diff(current, desired v1.AllPolicies) []action.Interface {
 }
 
 func (d *Differ) policyNodeActions(current, desired v1.AllPolicies) []action.Interface {
-	creates := d.nodeCreates(current, desired)
-	updates := d.nodeUpdates(current, desired)
-	deletes := d.nodeDeletes(current, desired)
-	glog.Infof("PolicyNode operations: create %d, update %d, delete %d", len(creates), len(updates), len(deletes))
-	policyimporter.Metrics.Operations.WithLabelValues("create").Add(float64(len(creates)))
-	policyimporter.Metrics.Operations.WithLabelValues("update").Add(float64(len(updates)))
-	policyimporter.Metrics.Operations.WithLabelValues("delete").Add(float64(len(deletes)))
-
-	desiredByDepth := d.nodesByDepth(desired.PolicyNodes)
-	currentByDepth := d.nodesByDepth(current.PolicyNodes)
-
-	// Sort nodeCreates and nodeUpdates by depth
-	sort.Slice(creates, func(i, j int) bool {
-		return desiredByDepth[creates[i]] < desiredByDepth[creates[j]]
-	})
-	sort.Slice(updates, func(i, j int) bool {
-		return desiredByDepth[updates[i]] < desiredByDepth[updates[j]]
-	})
-	// Sort nodeDeletes by reverse depth in current tree
-	sort.Slice(deletes, func(i, j int) bool {
-		return currentByDepth[deletes[i]] > currentByDepth[deletes[j]]
-	})
-
 	var actions []action.Interface
-	for _, name := range creates {
-		node := desired.PolicyNodes[name]
-		actions = append(actions, d.factories.PolicyNodeAction.NewCreate(&node))
+	var deletes, creates, updates int
+	for name := range desired.PolicyNodes {
+		intent := desired.PolicyNodes[name]
+		if actual, found := current.PolicyNodes[name]; found {
+			if !d.factories.PolicyNodeAction.Equal(&intent, &actual) {
+				actions = append(actions, d.factories.PolicyNodeAction.NewUpdate(&intent))
+				updates++
+			}
+		} else {
+			actions = append(actions, d.factories.PolicyNodeAction.NewCreate(&intent))
+			creates++
+		}
 	}
-	for _, name := range updates {
-		node := desired.PolicyNodes[name]
-		actions = append(actions, d.factories.PolicyNodeAction.NewUpdate(&node))
+	for name := range current.PolicyNodes {
+		if _, found := desired.PolicyNodes[name]; !found {
+			actions = append(actions, d.factories.PolicyNodeAction.NewDelete(name))
+			deletes++
+		}
 	}
-	for _, name := range deletes {
-		node := current.PolicyNodes[name]
-		actions = append(actions, d.factories.PolicyNodeAction.NewDelete(node.Name))
-	}
+
+	glog.Infof("PolicyNode operations: create %d, update %d, delete %d", creates, updates, deletes)
+	policyimporter.Metrics.Operations.WithLabelValues("create").Add(float64(creates))
+	policyimporter.Metrics.Operations.WithLabelValues("update").Add(float64(updates))
+	policyimporter.Metrics.Operations.WithLabelValues("delete").Add(float64(deletes))
 	return actions
 }
 
@@ -271,90 +258,4 @@ func (d *Differ) reduce(current, desired v1alpha1.Sync) *v1alpha1.Sync {
 	// they may have different CompareFields, or the ordering of GVKs could be different.) Or, desired
 	// could be a superset of current.
 	return nil
-}
-
-func (d *Differ) nodeCreates(current, desired v1.AllPolicies) []string {
-	var creates []string
-
-	for _, nodeName := range d.nodeNames(desired.PolicyNodes) {
-		if _, exists := current.PolicyNodes[nodeName]; !exists {
-			creates = append(creates, nodeName)
-		}
-	}
-	return creates
-}
-
-func (d *Differ) nodeUpdates(current, desired v1.AllPolicies) []string {
-	var updates []string
-
-	for _, nodeName := range d.nodeNames(desired.PolicyNodes) {
-		newNode := desired.PolicyNodes[nodeName]
-		if oldNode, exists := current.PolicyNodes[nodeName]; exists {
-			if !d.factories.PolicyNodeAction.Equal(&newNode, &oldNode) {
-				updates = append(updates, nodeName)
-			}
-		}
-	}
-	return updates
-}
-
-func (d *Differ) nodeDeletes(current, desired v1.AllPolicies) []string {
-	var deletes []string
-
-	for _, nodeName := range d.nodeNames(current.PolicyNodes) {
-		if _, exists := desired.PolicyNodes[nodeName]; !exists {
-			deletes = append(deletes, nodeName)
-		}
-	}
-	return deletes
-}
-
-// Returns map of nodes to their depth, with root being at depth 0.
-func (d *Differ) nodesByDepth(nodes map[string]v1.PolicyNode) map[string]int {
-	// Create a tree of the nodes, by mapping each node to a list of its children
-	childrenByParent := map[string][]string{}
-
-	for _, nodeName := range d.nodeNames(nodes) {
-		node := nodes[nodeName]
-		if children, exists := childrenByParent[node.Spec.Parent]; exists {
-			childrenByParent[node.Spec.Parent] = append(children, nodeName)
-		} else {
-			childrenByParent[node.Spec.Parent] = []string{nodeName}
-		}
-	}
-
-	// Traverse the tree by starting from the root (child of NoParentNamespace)
-	// and assigning depth to each layer of children. (Basically BFS)
-	var nodesAtNextDepth []string
-	nodesByDepth := map[string]int{}
-	nodesAtDepth := childrenByParent[v1.NoParentNamespace]
-	depth := 0
-
-	for len(nodesAtDepth) != 0 {
-		for _, node := range nodesAtDepth {
-			nodesByDepth[node] = depth
-			nodesAtNextDepth = append(nodesAtNextDepth, childrenByParent[node]...)
-		}
-
-		depth++
-		nodesAtDepth = nodesAtNextDepth
-		nodesAtNextDepth = []string{}
-	}
-
-	return nodesByDepth
-}
-
-// nodeNames returns the policy node names from the map. When the results of a
-// diff should be deterministic, we sort the nodeNames returned in order to
-// bypass randomness associated with iterating over maps.
-func (d *Differ) nodeNames(nodes map[string]v1.PolicyNode) []string {
-	var nodeNames []string
-	for nodeName := range nodes {
-		nodeNames = append(nodeNames, nodeName)
-	}
-	if !d.SortDiff {
-		return nodeNames
-	}
-	sort.Strings(nodeNames)
-	return nodeNames
 }
