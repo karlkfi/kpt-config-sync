@@ -78,9 +78,6 @@ func (t *DirectoryTree) AddDir(p string, typ ast.TreeNodeType) *ast.TreeNode {
 
 // Build takes all the created nodes and produces a tree.
 func (t *DirectoryTree) Build() (*ast.TreeNode, error) {
-	if t.root == nil {
-		return nil, errors.Errorf("Missing root node")
-	}
 	for path, node := range t.nodes {
 		parent := filepath.Dir(path)
 		if parent != "." {

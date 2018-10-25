@@ -509,7 +509,7 @@ func allDirs(root string) ([]string, error) {
 		return nil
 	})
 
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return nil, errors.Wrapf(err, "failed to walk directory: %s", root)
 	}
 	return paths, nil

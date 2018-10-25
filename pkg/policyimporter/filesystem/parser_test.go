@@ -27,7 +27,6 @@ import (
 	"github.com/go-test/deep"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -296,10 +295,6 @@ func newTestDir(t *testing.T, root string) *testDir {
 	root = filepath.Join(tmp, root)
 	if err = os.Mkdir(root, 0750); err != nil {
 		t.Fatalf("Failed to create test dir %v", err)
-	}
-	namespaces := filepath.Join(root, repo.NamespacesDir)
-	if err = os.Mkdir(namespaces, 0750); err != nil {
-		t.Fatalf("Failed to create namespaces dir %v", err)
 	}
 	return &testDir{tmp, root, t}
 }
@@ -604,6 +599,20 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 			"namespaces/bar/ignore2": "blah blah blah",
+		},
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+		},
+		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         map[string]v1alpha1.Sync{},
+	},
+	{
+		testName: "Empty namespace dir",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/ignore":  "",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
@@ -1082,24 +1091,20 @@ var parserTestCases = []parserTestCase{
 		expectedError: true,
 	},
 	{
-		testName: "Namespaces dir empty",
-		root:     "foo",
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(&Policies{}),
-		},
+		testName:              "Empty repo",
+		root:                  "foo",
+		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
-		testName: "Empty namespaces and valid Sync",
+		testName: "Only system dir with valid sync",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(&Policies{}),
-		},
+		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
@@ -1111,9 +1116,7 @@ var parserTestCases = []parserTestCase{
 			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"system/role.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(&Policies{}),
-		},
+		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs: map[string]v1alpha1.Sync{
 			"ResourceQuota": makeSync("", "v1", "ResourceQuota"),
@@ -1354,7 +1357,7 @@ spec:
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aNomosConfig,
 		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0},
+		expectedNumPolicies: map[string]int{},
 	},
 	{
 		testName: "Namespace with NamespaceSelector label is invalid",
@@ -1440,6 +1443,44 @@ func TestParser(t *testing.T) {
 				if diff := deep.Equal(actualPolicies, expectedPolicies); diff != nil {
 					t.Errorf("Actual and expected policies didn't match: %v", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestEmptyDirectories(t *testing.T) {
+	d := newTestDir(t, "foo")
+	defer d.remove()
+
+	for _, path := range []string{
+		"foo/namespaces",
+		"foo/cluster",
+		"foo/system",
+	} {
+		t.Run(path, func(t *testing.T) {
+			if err := os.MkdirAll(path, 0750); err != nil {
+				d.Fatalf("error creating test dir %s: %v", path, err)
+			}
+			f := fstesting.NewTestFactory()
+			defer func() {
+				if err := f.Cleanup(); err != nil {
+					t.Fatal(errors.Wrap(err, "could not clean up"))
+				}
+			}()
+
+			p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestDynamicResources()), true, d.rootDir}
+
+			actualPolicies, err := p.Parse(d.rootDir)
+			if err != nil {
+				t.Fatalf("unexpected error: %#v", err)
+			}
+			expectedPolicies := &v1.AllPolicies{
+				PolicyNodes:   map[string]v1.PolicyNode{},
+				ClusterPolicy: createClusterPolicy(),
+				Syncs:         map[string]v1alpha1.Sync{},
+			}
+			if diff := deep.Equal(actualPolicies, expectedPolicies); diff != nil {
+				t.Errorf("actual and expected AllPolicies didn't match: %#v", diff)
 			}
 		})
 	}
