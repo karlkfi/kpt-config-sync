@@ -251,6 +251,16 @@ spec:
       - version: {{.Version}}
 `
 
+	aRepoWithHierarchy = `
+kind: Repo
+apiVersion: nomos.dev/v1alpha1
+spec:
+  experimentalInheritance: true
+  version: "0.1.0"
+metadata:
+  name: repo
+`
+
 	aSyncTemplate = `
 kind: Sync
 apiVersion: nomos.dev/v1alpha1
@@ -265,7 +275,31 @@ spec:
       - version: {{.Version}}
 `
 
+	aHierarchicalSyncTemplate = `
+kind: Sync
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: {{.Kind}}
+spec:
+  groups:
+  - group: {{.Group}}
+    kinds:
+    - kind: {{.Kind}}
+      hierarchyMode: {{.HierarchyMode}}
+      versions:
+      - version: {{.Version}}
+`
+
 	aDeploymentTemplate = `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+`
+
+	anAbstractDeploymentTemplate = `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -352,7 +386,9 @@ var (
 	aPodSecurityPolicy                 = tpl("aPodSecurityPolicyTemplate", aPodSecurityPolicyTemplate)
 	aConfigMap                         = tpl("aConfigMap", aConfigMapTemplate)
 	aDeployment                        = tpl("aDeployment", aDeploymentTemplate)
+	anAbstractDeployment               = tpl("aDeployment", anAbstractDeploymentTemplate)
 	aSync                              = tpl("aSync", aSyncTemplate)
+	aHierarchicalSync                  = tpl("aHierarchicalSync", aHierarchicalSyncTemplate)
 	aPhilo                             = tpl("aPhilo", aPhiloTemplate)
 	aNode                              = tpl("aNode", aNodeTemplate)
 	aClusterRegistryCluster            = tpl("aClusterRegistryCluster", aClusterRegistryClusterTemplate)
@@ -366,8 +402,8 @@ var (
 // templateData can be used to format any of the below values into templates to create
 // a repository file set.
 type templateData struct {
-	ID, Name, Namespace, Attribute, Group, Version, Kind, LBPName string
-	Labels, Annotations                                           map[string]string
+	ID, Name, Namespace, Attribute, Group, Version, Kind, LBPName, HierarchyMode string
+	Labels, Annotations                                                          map[string]string
 }
 
 func (d templateData) apply(t *template.Template) string {
@@ -613,6 +649,41 @@ func createResourceQuota(path, name, namespace string, labels map[string]string)
 		rq.ObjectMeta.Annotations = map[string]string{"nomos.dev/source-path": path}
 	}
 	return rq
+}
+
+func createDeployment(ns string) v1.GenericResources {
+	deployment := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "nginx-deployment",
+			Annotations: map[string]string{
+				v1alpha1.SourcePathAnnotationKey: "namespaces/bar/deployment.yaml",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: toInt32Pointer(3),
+		},
+	}
+	if ns != "" {
+		deployment.ObjectMeta.Namespace = ns
+	}
+	return v1.GenericResources{
+		Group: "apps",
+		Kind:  "Deployment",
+		Versions: []v1.GenericVersionResources{
+			{
+				Version: "v1",
+				Objects: []runtime.RawExtension{
+					{
+						Object: runtime.Object(deployment),
+					},
+				},
+			},
+		},
+	}
 }
 
 func toIntPointer(i int) *int {
@@ -946,34 +1017,7 @@ var parserTestCases = []parserTestCase{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{Resources: []v1.GenericResources{
-					{
-						Group: "apps",
-						Kind:  "Deployment",
-						Versions: []v1.GenericVersionResources{
-							{
-								Version: "v1",
-								Objects: []runtime.RawExtension{
-									{
-										Object: runtime.Object(&appsv1.Deployment{
-											TypeMeta: metav1.TypeMeta{
-												Kind:       "Deployment",
-												APIVersion: "apps/v1",
-											},
-											ObjectMeta: metav1.ObjectMeta{
-												Name: "nginx-deployment",
-												Annotations: map[string]string{
-													v1alpha1.SourcePathAnnotationKey: "namespaces/bar/deployment.yaml",
-												},
-											},
-											Spec: appsv1.DeploymentSpec{
-												Replicas: toInt32Pointer(3),
-											},
-										}),
-									},
-								},
-							},
-						},
-					},
+					createDeployment("bar"),
 				},
 				}),
 		},
@@ -1004,7 +1048,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
 	{
-		testName: "Namespace dir with multiple Rolebindings",
+		testName: "Namespace dir with multiple RoleBindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aRepo,
@@ -1016,7 +1060,7 @@ var parserTestCases = []parserTestCase{
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 2},
 	},
 	{
-		testName: "Namespace dir with duplicate Rolebindings",
+		testName: "Namespace dir with duplicate RoleBindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aRepo,
@@ -1028,7 +1072,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
 	{
-		testName: "Policyspace dir with duplicate Rolebindings",
+		testName: "Policyspace dir with duplicate RoleBindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":          aRepo,
@@ -1143,7 +1187,93 @@ var parserTestCases = []parserTestCase{
 		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
-		testName: "Policyspace dir with ResourceQuota",
+		testName: "Policyspace dir with RoleBinding, flag off, default",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":       aRepo,
+			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+		},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
+	},
+	{
+		testName: "Policyspace dir with RoleBinding, flag off, hierarchicalQuota specified",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":       aRepo,
+			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchicalSync),
+			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+		},
+		expectedErrorCode: validation.IllegalHierarchyModeErrorCode,
+	},
+	{
+		testName: "Policyspace dir with RoleBinding, flag off, inheritance off",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":       aRepo,
+			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "none"}.apply(aHierarchicalSync),
+			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+		},
+		expectedErrorCode: validation.IllegalHierarchyModeErrorCode,
+	},
+	{
+		testName: "Policyspace dir with RoleBinding, flag off, inherit specified",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":       aRepo,
+			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "inherit"}.apply(aHierarchicalSync),
+			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+		},
+		expectedErrorCode: validation.IllegalHierarchyModeErrorCode,
+	},
+	{
+		testName: "Policyspace dir with RoleBinding, flag on, default",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":       aRepoWithHierarchy,
+			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+		},
+		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
+	},
+	{
+		testName: "Policyspace dir with RoleBinding, flag on, hierarchicalQuota specified",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":       aRepoWithHierarchy,
+			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchicalSync),
+			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+		},
+		expectedErrorCode: validation.IllegalHierarchyModeErrorCode,
+	},
+	{
+		testName: "Policyspace dir with RoleBinding, flag on, inheritance off",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":       aRepoWithHierarchy,
+			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "none"}.apply(aHierarchicalSync),
+			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+		},
+		expectedErrorCode: validation.IllegalAbstractNamespaceObjectKindErrorCode,
+	},
+	{
+		testName: "Policyspace dir with RoleBinding, flag on, inherit specified",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepoWithHierarchy,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "inherit"}.apply(aHierarchicalSync),
+			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+		},
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+		},
+		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
+	},
+	{
+		testName: "Policyspace dir with ResourceQuota, flag off, default",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aRepo,
@@ -1159,14 +1289,92 @@ var parserTestCases = []parserTestCase{
 		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
 	{
-		testName: "Policyspace dir with Roles",
+		testName: "Policyspace dir with ResourceQuota, flag off, hierarchicalQuota specified",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":        aRepo,
-			"system/role.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
-			"namespaces/bar/role.yaml": templateData{}.apply(aRole),
+			"system/nomos.yaml":      aRepo,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchicalSync),
+			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+		},
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+		},
+		expectedErrorCode: validation.IllegalHierarchyModeErrorCode,
+	},
+	{
+		testName: "Policyspace dir with ResourceQuota, flag off, inheritance off",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "none"}.apply(aHierarchicalSync),
+			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+		},
+		expectedErrorCode: validation.IllegalHierarchyModeErrorCode,
+	},
+	{
+		testName: "Policyspace dir with ResourceQuota, flag off, inherit specified",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "inherit"}.apply(aHierarchicalSync),
+			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+		},
+		expectedErrorCode: validation.IllegalHierarchyModeErrorCode,
+	},
+	{
+		testName: "Policyspace dir with ResourceQuota, flag on, default",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepoWithHierarchy,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+		},
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+		},
+		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
+	},
+	{
+		testName: "Policyspace dir with ResourceQuota, flag on, hierarchicalQuota specified",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepoWithHierarchy,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchicalSync),
+			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+		},
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+		},
+		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
+	},
+	{
+		testName: "Policyspace dir with ResourceQuota, flag on, inheritance off",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepoWithHierarchy,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "none"}.apply(aHierarchicalSync),
+			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
 		expectedErrorCode: validation.IllegalAbstractNamespaceObjectKindErrorCode,
+	},
+	{
+		testName: "Policyspace dir with ResourceQuota, flag on, inherit specified",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepoWithHierarchy,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "inherit"}.apply(aHierarchicalSync),
+			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+		},
+		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Policyspace dir with multiple Rolebindings",
@@ -1178,6 +1386,22 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rb2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
 		},
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
+	},
+	{
+		testName: "Policyspace dir with deployment",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":              aRepoWithHierarchy,
+			"system/depl.yaml":               templateData{Group: "apps", Version: "v1", Kind: "Deployment", HierarchyMode: "inherit"}.apply(aHierarchicalSync),
+			"namespaces/bar/deployment.yaml": templateData{ID: "1"}.apply(anAbstractDeployment),
+		},
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			v1.RootPolicyNodeName: createRootPN(nil),
+			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
+				&Policies{Resources: []v1.GenericResources{createDeployment("")}}),
+		},
+		expectedClusterPolicy: createClusterPolicy(),
+		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Policyspace dir with ClusterRole",

@@ -41,15 +41,26 @@ const (
 // and PolicyNode resources.
 const SyncFinalizer = "syncer.nomos.dev"
 
-// SyncMode indicates how the resource will be synced.  Empty string indicates it will be synced
-// only from namespace or the cluster directory depending on the scope of the object.
-type SyncMode string
+// HierarchyModeType defines hierarchical behavior for namespaced objects.
+type HierarchyModeType string
 
 const (
-	// SyncModeInherit indicates that the resource should be inherited on the hierarchy such that a
-	// declaration in a directory will be inherited to all Namespaces contained within the directory.
-	// For example, if an inherited resource is declared at the root, all namespaces will then inherit
-	// that resource.  Note that this mode only applies to resources at the namespace scope.  Applying
-	// this to a cluster scoped object will result in an error.
-	SyncModeInherit = "inherit"
+	// HierarchyModeHierarchicalQuota indicates special aggregation behavior for ResourceQuota. With
+	// this option, the policy is copied to namespaces, but it is also left in the abstract namespace.
+	// There, the ResourceQuotaAdmissionController uses the value to enforce the ResourceQuota in
+	// aggregate for all descendent namespaces.
+	//
+	// This mode can only be used for ResourceQuota.
+	HierarchyModeHierarchicalQuota = "hierarchicalQuota"
+	// HierarchyModeInherit indicates that the resource can appear in abstract namespace directories
+	// and will be inherited by any descendent namespaces. Without this value on the Sync, resources
+	// must not appear in abstract namespaces.
+	HierarchyModeInherit = "inherit"
+	// HierarchyModeNone indicates that the resource cannot appear in abstract namespace directories.
+	// For most resource types, this is the same as default, and it's not necessary to specify this
+	// value. But RoleBinding and ResourceQuota have different default behaviors, and this value is
+	// used to disable inheritance behaviors for those types.
+	HierarchyModeNone = "none"
+	// HierarchyModeDefault is the default value. Default behavior is type-specific.
+	HierarchyModeDefault = ""
 )

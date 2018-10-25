@@ -23,12 +23,11 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
 	"github.com/google/nomos/pkg/util/multierror"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -97,11 +96,12 @@ func (c ClusterCoverage) ValidateObject(o metav1.Object, errs *multierror.Builde
 // and what is required to fix it.
 type InputValidator struct {
 	*visitor.Base
-	errs        multierror.Builder
-	reserved    *reserved.Namespaces
-	nodes       []*ast.TreeNode
-	allowedGVKs map[schema.GroupVersionKind]bool
-	coverage    *ClusterCoverage
+	errs             multierror.Builder
+	reserved         *reserved.Namespaces
+	nodes            []*ast.TreeNode
+	allowedGVKs      map[schema.GroupVersionKind]bool
+	coverage         *ClusterCoverage
+	inheritanceSpecs map[schema.GroupKind]*transform.InheritanceSpec
 }
 
 // InputValidator implements ast.Visitor
@@ -114,14 +114,16 @@ var _ ast.Visitor = &InputValidator{}
 // of selectors.  vet turns on "vetting mode", a mode of stricter control for use
 // in nomos vet.
 func NewInputValidator(
-	allowedGVKs map[schema.GroupVersionKind]bool,
+	syncs []*v1alpha1.Sync,
+	specs map[schema.GroupKind]*transform.InheritanceSpec,
 	clusters []clusterregistry.Cluster,
 	cs []v1alpha1.ClusterSelector,
 	vet bool) *InputValidator {
 	v := &InputValidator{
-		Base:        visitor.NewBase(),
-		reserved:    reserved.EmptyNamespaces(),
-		allowedGVKs: allowedGVKs,
+		Base:             visitor.NewBase(),
+		reserved:         reserved.EmptyNamespaces(),
+		allowedGVKs:      toAllowedGVKs(syncs),
+		inheritanceSpecs: specs,
 	}
 	v.Base.SetImpl(v)
 
@@ -129,6 +131,21 @@ func NewInputValidator(
 		v.coverage = newClusterCoverage(clusters, cs, &v.errs)
 	}
 	return v
+}
+
+func toAllowedGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
+	allowedGVKs := make(map[schema.GroupVersionKind]bool)
+	for _, sync := range syncs {
+		for _, sg := range sync.Spec.Groups {
+			for _, k := range sg.Kinds {
+				for _, v := range k.Versions {
+					gvk := schema.GroupVersionKind{Group: sg.Group, Kind: k.Kind, Version: v.Version}
+					allowedGVKs[gvk] = true
+				}
+			}
+		}
+	}
+	return allowedGVKs
 }
 
 // Error returns any errors encountered during processing
@@ -237,10 +254,8 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 
 	node := v.nodes[len(v.nodes)-1]
 	if node.Type == ast.AbstractNamespace {
-		switch o.GroupVersionKind() {
-		case rbacv1.SchemeGroupVersion.WithKind("RoleBinding"):
-		case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
-		default:
+		spec, found := v.inheritanceSpecs[o.GroupVersionKind().GroupKind()]
+		if !found || spec.Mode == v1alpha1.HierarchyModeNone {
 			v.errs.Add(IllegalAbstractNamespaceObjectKindError{o})
 		}
 	}

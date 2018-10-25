@@ -23,7 +23,7 @@ spec:
         compareFields:
         - rules
     - kind: RoleBinding
-      mode: inherit
+      hierarchyMode: inherit
       versions:
       - version: v1
         compareFields:

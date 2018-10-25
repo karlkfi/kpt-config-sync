@@ -26,6 +26,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func withName(o runtime.Object, name string) runtime.Object {
@@ -37,12 +38,12 @@ func withName(o runtime.Object, name string) runtime.Object {
 var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.CheckingVisitor {
 		return NewInheritanceVisitor(
-			[]InheritanceSpec{
-				InheritanceSpec{
-					GroupVersionKind: rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
+			map[schema.GroupKind]*InheritanceSpec{
+				rbacv1.SchemeGroupVersion.WithKind("RoleBinding").GroupKind(): {
+					Mode: "inherit",
 				},
-				InheritanceSpec{
-					GroupVersionKind: corev1.SchemeGroupVersion.WithKind("ResourceQuota"),
+				corev1.SchemeGroupVersion.WithKind("ResourceQuota").GroupKind(): {
+					Mode: "inherit",
 				},
 			},
 		)
@@ -68,7 +69,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.AbstractNamespace,
 					Path: "namespaces",
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:        ast.Namespace,
 							Path:        "namespaces/frontend",
 							Labels:      map[string]string{"environment": "prod"},
@@ -81,7 +82,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 								vt.Helper.AcmeResourceQuota(),
 							),
 						},
-						&ast.TreeNode{
+						{
 							Type:        ast.Namespace,
 							Path:        "namespaces/frontend-test",
 							Labels:      map[string]string{"environment": "test"},
@@ -106,12 +107,12 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 					),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:   ast.Namespace,
 							Path:   "namespaces/frontend",
 							Labels: map[string]string{"env": "prod"},
 						},
-						&ast.TreeNode{
+						{
 							Type:   ast.Namespace,
 							Path:   "namespaces/frontend-test",
 							Labels: map[string]string{"env": "test"},
@@ -123,7 +124,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 				Tree: &ast.TreeNode{
 					Type: ast.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:   ast.Namespace,
 							Path:   "namespaces/frontend",
 							Labels: map[string]string{"env": "prod"},
@@ -131,7 +132,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 								withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 							),
 						},
-						&ast.TreeNode{
+						{
 							Type:   ast.Namespace,
 							Path:   "namespaces/frontend-test",
 							Labels: map[string]string{"env": "test"},

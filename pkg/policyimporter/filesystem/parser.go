@@ -309,7 +309,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	}
 	fsCtx.Tree = tree
 
-	visitors, err := buildVisitors(apiInfo, toAllowedGVKs(syncs), clusters, selectors, p.opts)
+	visitors, err := buildVisitors(apiInfo, syncs, clusters, selectors, p.opts)
 	if err != nil {
 		errorBuilder.Add(err)
 		return nil, errorBuilder.Build()
@@ -344,7 +344,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 }
 
 func buildVisitors(apiInfo *meta.APIInfo,
-	allowedGVKs map[schema.GroupVersionKind]bool,
+	syncs []*v1alpha1.Sync,
 	clusters []clusterregistry.Cluster,
 	selectors []v1alpha1.ClusterSelector,
 	opts ParserOpt) ([]ast.CheckingVisitor, error) {
@@ -360,37 +360,48 @@ func buildVisitors(apiInfo *meta.APIInfo,
 		}, nil
 	}
 
-	return []ast.CheckingVisitor{
-		validation.NewInputValidator(allowedGVKs, clusters, selectors, opts.Vet),
+	specs := toInheritanceSpecs(syncs)
+	visitors := []ast.CheckingVisitor{
+		validation.NewInputValidator(syncs, specs, clusters, selectors, opts.Vet),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(apiInfo),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
 		transform.NewAnnotationInlinerVisitor(),
-		transform.NewInheritanceVisitor(
-			[]transform.InheritanceSpec{
-				{
-					GroupVersionKind: rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
-				},
-			},
-		),
-		transform.NewQuotaVisitor(),
-		validation.NewNameValidator(),
-	}, nil
+		transform.NewInheritanceVisitor(specs),
+	}
+	if spec, found := specs[corev1.SchemeGroupVersion.WithKind("ResourceQuota").GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
+		visitors = append(visitors, transform.NewQuotaVisitor())
+	}
+	visitors = append(visitors, validation.NewNameValidator())
+
+	return visitors, nil
 }
 
-func toAllowedGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
-	allowedGVKs := make(map[schema.GroupVersionKind]bool)
+// toInheritanceSpecs converts Syncs to InheritanceSpecs. It also evaluates defaults so that later
+// code doesn't have to.
+func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.InheritanceSpec {
+	specs := map[schema.GroupKind]*transform.InheritanceSpec{}
 	for _, sync := range syncs {
 		for _, sg := range sync.Spec.Groups {
 			for _, k := range sg.Kinds {
-				for _, v := range k.Versions {
-					gvk := schema.GroupVersionKind{Group: sg.Group, Kind: k.Kind, Version: v.Version}
-					allowedGVKs[gvk] = true
+				var effectiveMode v1alpha1.HierarchyModeType
+				gk := schema.GroupKind{Group: sg.Group, Kind: k.Kind}
+				if k.HierarchyMode == v1alpha1.HierarchyModeDefault {
+					if gk == rbacv1.SchemeGroupVersion.WithKind("RoleBinding").GroupKind() {
+						effectiveMode = v1alpha1.HierarchyModeInherit
+					} else if gk == corev1.SchemeGroupVersion.WithKind("ResourceQuota").GroupKind() {
+						effectiveMode = v1alpha1.HierarchyModeHierarchicalQuota
+					} else {
+						effectiveMode = v1alpha1.HierarchyModeNone
+					}
+				} else {
+					effectiveMode = k.HierarchyMode
 				}
+				specs[gk] = &transform.InheritanceSpec{Mode: effectiveMode}
 			}
 		}
 	}
-	return allowedGVKs
+	return specs
 }
 
 func (p *Parser) processClusterDir(
@@ -488,7 +499,7 @@ func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root,
 	fileInfos := p.readRequiredResources(systemDir, false, errorBuilder)
 	p.validateDuplicateNames(toDirInfoMap(fileInfos), errorBuilder)
 
-	var syncs []*v1alpha1.Sync
+	syncMap := make(map[string]*v1alpha1.Sync)
 	repos := make(map[*v1alpha1.Repo]string)         // holds all Repo definitions
 	configMaps := make(map[*corev1.ConfigMap]string) // holds all ConfigMap definitions
 	for _, info := range fileInfos {
@@ -507,40 +518,7 @@ func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root,
 			fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
 
 		case *v1alpha1.Sync:
-			sync := o
-
-			// We only support one version per synced type
-			for _, group := range sync.Spec.Groups {
-				for _, kind := range group.Kinds {
-					if len(kind.Versions) > 1 {
-						errorBuilder.Add(validation.MultipleVersionForSameSyncedTypeError{Source: info.Source, Group: group, Kind: kind})
-					}
-					if kind.Kind == string(ast.Namespace) && group.Group == "" {
-						// Require that Group is the empty string since that is the core Namespace object
-						// A different group could validly define a Kind called "Namespace"
-						errorBuilder.Add(validation.IllegalNamespaceSyncDeclarationError{Source: info.Source})
-					}
-					syncGVK := schema.GroupVersionKind{
-						Group:   group.Group,
-						Version: kind.Versions[0].Version,
-						Kind:    kind.Kind,
-					}
-
-					if unsupportedSyncResources[syncGVK] || syncGVK.Group == policyhierarchy.GroupName {
-						errorBuilder.Add(validation.UnsupportedResourceInSyncError{
-							SyncPath:     p.relativePath(info.Source),
-							ResourceType: syncGVK,
-						})
-					} else if !apiInfo.Exists(syncGVK) {
-						errorBuilder.Add(validation.UnknownResourceInSyncError{
-							SyncPath:     p.relativePath(info.Source),
-							ResourceType: syncGVK,
-						})
-					}
-				}
-			}
-
-			syncs = append(syncs, sync)
+			syncMap[info.Source] = o
 		default:
 			errorBuilder.Add(validation.IllegalSystemObjectDefinitionInSystemError{Source: info.Source, GroupVersionKind: o.GetObjectKind().GroupVersionKind()})
 		}
@@ -548,15 +526,87 @@ func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root,
 
 	if len(repos) == 0 {
 		errorBuilder.Add(validation.MissingRepoError{})
+		return nil
 	} else if len(repos) >= 2 {
 		errorBuilder.Add(validation.MultipleRepoDefinitionsError{Repos: repos})
+		return nil
 	}
 
 	if len(configMaps) >= 2 {
 		errorBuilder.Add(validation.MultipleConfigMapsError{ConfigMaps: configMaps})
 	}
 
+	for source, sync := range syncMap {
+		for _, group := range sync.Spec.Groups {
+			for k := range group.Kinds {
+				p.validateSyncKind(sync.Name, &group.Kinds[k], group.Group, fsCtx.Repo.Spec.ExperimentalInheritance, source, apiInfo, errorBuilder)
+			}
+		}
+	}
+
+	var syncs []*v1alpha1.Sync
+	for _, sync := range syncMap {
+		syncs = append(syncs, sync)
+	}
 	return syncs
+}
+
+// validateSyncKind validates a SyncKind.
+// - name is the Sync name
+// - kind is the SyncKind to be validated
+// - group is the group of the enclosing SyncGroup
+// - inheritance is the value of the experimentalInheritance flag in Repo.
+// - source is the source file of the Sync, used for error messages.
+func (p *Parser) validateSyncKind(name string, kind *v1alpha1.SyncKind, group string, inheritance bool,
+	source string, apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) {
+	if len(kind.Versions) > 1 {
+		errorBuilder.Add(validation.MultipleVersionForSameSyncedTypeError{Source: source, Kind: *kind})
+	}
+	if kind.Kind == string(ast.Namespace) && group == "" {
+		// Require that Group is the empty string since that is the core Namespace object
+		// A different group could validly define a Kind called "Namespace"
+		errorBuilder.Add(validation.IllegalNamespaceSyncDeclarationError{Source: source})
+	}
+	syncGVK := schema.GroupVersionKind{
+		Group:   group,
+		Version: kind.Versions[0].Version,
+		Kind:    kind.Kind,
+	}
+	if unsupportedSyncResources[syncGVK] || syncGVK.Group == policyhierarchy.GroupName {
+		errorBuilder.Add(validation.UnsupportedResourceInSyncError{
+			SyncPath:     p.relativePath(source),
+			ResourceType: syncGVK,
+		})
+	} else if !apiInfo.Exists(syncGVK) {
+		errorBuilder.Add(validation.UnknownResourceInSyncError{
+			SyncPath:     p.relativePath(source),
+			ResourceType: syncGVK,
+		})
+	}
+	if inheritance {
+		if kind.Kind == "ResourceQuota" && group == "" {
+			checkModeAllowed([]v1alpha1.HierarchyModeType{v1alpha1.HierarchyModeDefault, v1alpha1.HierarchyModeHierarchicalQuota, v1alpha1.HierarchyModeInherit, v1alpha1.HierarchyModeNone}, kind.HierarchyMode, name, errorBuilder)
+		} else {
+			checkModeAllowed([]v1alpha1.HierarchyModeType{v1alpha1.HierarchyModeDefault, v1alpha1.HierarchyModeInherit, v1alpha1.HierarchyModeNone}, kind.HierarchyMode, name, errorBuilder)
+		}
+	} else {
+		checkModeAllowed([]v1alpha1.HierarchyModeType{v1alpha1.HierarchyModeDefault}, kind.HierarchyMode, name, errorBuilder)
+	}
+}
+
+func checkModeAllowed(allowed []v1alpha1.HierarchyModeType, actual v1alpha1.HierarchyModeType, name string, eb *multierror.Builder) {
+	if !containsMode(allowed, actual) {
+		eb.Add(validation.IllegalHierarchyModeError{Name: name, Mode: actual, Allowed: allowed})
+	}
+}
+
+func containsMode(haystack []v1alpha1.HierarchyModeType, needle v1alpha1.HierarchyModeType) bool {
+	for _, h := range haystack {
+		if h == needle {
+			return true
+		}
+	}
+	return false
 }
 
 // processClusterRegistryDir looks at all files in <root>/clusterregistry and

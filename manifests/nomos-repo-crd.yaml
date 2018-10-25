@@ -27,6 +27,8 @@ spec:
           required:
           - version
           properties:
+            experimentalHierarchy:
+              type: boolean
             version:
               type: string
           # /RepoSpec

@@ -146,9 +146,11 @@ type SyncKind struct {
 	// Kind is the string that represents the Kind for the object as given in TypeMeta, for example
 	// ClusterRole, Namespace or Deployment.
 	Kind string `json:"kind"`
-	// Mode indicates the sync mode for the object.
+	// HierarchyMode specifies how the object is treated when it appears in an abstract namespace.
+	// The default is off, meaning objects cannot appear in an abstract namespace. For RoleBinding,
+	// the default is "inherit". For ResourceQuota, the default is "hierarchicalQuota".
 	// +optional
-	Mode SyncMode `json:"mode,omitempty"`
+	HierarchyMode HierarchyModeType `json:"hierarchyMode,omitempty"`
 	// Versions indicates the versions that will be handled for the object of Group and Kind.
 	Versions []SyncVersion `json:"versions"`
 }
@@ -179,7 +181,7 @@ type SyncGroupVersionKindStatus struct {
 	Group string `json:"group"`
 	// Version is the version.
 	Version string `json:"version"`
-	// Kind is the string that represents the Kind for the object as given in TypeMeta, for exmple
+	// Kind is the string that represents the Kind for the object as given in TypeMeta, for example
 	// ClusterRole, Namespace or Deployment.
 	Kind string `json:"kind"`
 	// Status indicates the state of the sync.  One of "syncing", or "error".  If "error" is specified
@@ -227,6 +229,10 @@ type RepoSpec struct {
 	// Repo version string, corresponds to how policy importer should handle the
 	// directory structure (implicit assumptions).
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
+	// ExperimentalInheritance controls whether inheritance behavior is user-configurable via Sync's
+	// HierarchyMode setting. If false, hierarchy is generally disallowed, except for certain defaults
+	// as described on the HierarchyMode field.
+	ExperimentalInheritance bool `json:"experimentalInheritance" protobuf:"bytes,2,opt,name=experimentalInheritance"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

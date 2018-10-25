@@ -69,6 +69,7 @@ const (
 	UnknownResourceInSyncErrorCode                 = "1032"
 	IllegalSystemResourcePlacementErrorCode        = "1033"
 	UnsupportedResourceInSyncErrorCode             = "1034"
+	IllegalHierarchyModeErrorCode                  = "1035"
 	UndefinedErrorCode                             = "????"
 )
 
@@ -144,6 +145,8 @@ func Code(e error) string {
 		return IllegalSystemResourcePlacementErrorCode
 	case UnsupportedResourceInSyncError:
 		return UnsupportedResourceInSyncErrorCode
+	case IllegalHierarchyModeError:
+		return IllegalHierarchyModeErrorCode
 	default:
 		return UndefinedErrorCode // Undefined
 	}
@@ -726,4 +729,22 @@ func (e UnsupportedResourceInSyncError) Error() string {
 			"source: %[1]s\n"+
 			"%[2]s",
 		e.SyncPath, groupVersionKind(e.ResourceType))
+}
+
+// IllegalHierarchyModeError reports that a Sync is defined with a disallowed hierarchyMode.
+type IllegalHierarchyModeError struct {
+	Mode    v1alpha1.HierarchyModeType
+	Name    string
+	Allowed []v1alpha1.HierarchyModeType
+}
+
+// Error implements error
+func (e IllegalHierarchyModeError) Error() string {
+	var allowedStr []string
+	for _, a := range e.Allowed {
+		allowedStr = append(allowedStr, string(a))
+	}
+	return format(e,
+		"HierarchyMode %[1]s is not a valid value for Sync %[2]s. Allowed values are [%[3]s].",
+		e.Mode, e.Name, strings.Join(allowedStr, ","))
 }

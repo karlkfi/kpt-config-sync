@@ -17,6 +17,7 @@ limitations under the License.
 package transform
 
 import (
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -32,7 +33,7 @@ type nodeContext struct {
 
 // InheritanceSpec defines the spec for inherited resources.
 type InheritanceSpec struct {
-	GroupVersionKind schema.GroupVersionKind
+	Mode v1alpha1.HierarchyModeType
 }
 
 // InheritanceVisitor aggregates hierarchical quota.
@@ -40,7 +41,7 @@ type InheritanceVisitor struct {
 	// Copying is used for copying parts of the ast.Root tree and continuing underlying visitor iteration.
 	*visitor.Copying
 	// groupKinds contains the set of GroupKind that will be targeted during the inheritance transform.
-	inheritanceSpecs map[schema.GroupVersionKind]*InheritanceSpec
+	inheritanceSpecs map[schema.GroupKind]*InheritanceSpec
 	// treeContext is a stack that tracks ancestry and inherited objects during the tree traversal.
 	treeContext []nodeContext
 }
@@ -48,15 +49,10 @@ type InheritanceVisitor struct {
 var _ ast.Visitor = &InheritanceVisitor{}
 
 // NewInheritanceVisitor returns a new InheritanceVisitor for the given GroupKind
-func NewInheritanceVisitor(resources []InheritanceSpec) *InheritanceVisitor {
-	resourceMap := map[schema.GroupVersionKind]*InheritanceSpec{}
-	for idx := range resources {
-		r := &resources[idx]
-		resourceMap[r.GroupVersionKind] = r
-	}
+func NewInheritanceVisitor(specs map[schema.GroupKind]*InheritanceSpec) *InheritanceVisitor {
 	iv := &InheritanceVisitor{
 		Copying:          visitor.NewCopying(),
-		inheritanceSpecs: resourceMap,
+		inheritanceSpecs: specs,
 	}
 	iv.SetImpl(iv)
 	return iv
@@ -100,10 +96,13 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 // VisitObject implements Visitor
 func (v *InheritanceVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 	context := &v.treeContext[len(v.treeContext)-1]
-	gvk := o.GetObjectKind().GroupVersionKind()
-	if _, found := v.inheritanceSpecs[gvk]; context.nodeType == ast.AbstractNamespace && found {
-		context.inherited = append(context.inherited, o)
-		return nil
+	gk := o.GetObjectKind().GroupVersionKind().GroupKind()
+	if context.nodeType == ast.AbstractNamespace {
+		spec, found := v.inheritanceSpecs[gk]
+		if found && spec.Mode == v1alpha1.HierarchyModeInherit {
+			context.inherited = append(context.inherited, o)
+			return nil
+		}
 	}
 	return o
 }

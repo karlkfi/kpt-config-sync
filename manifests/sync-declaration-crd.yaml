@@ -47,10 +47,13 @@ spec:
                       properties:
                         kind:
                           type: string
-                        mode:
+                        hierarchyMode:
                           type: string
                           enum:
+                          - ""
+                          - "hierarchicalQuota"
                           - "inherit"
+                          - "none"
                         versions:
                           type: array
                           items:
