@@ -368,7 +368,7 @@ func (s *PolicyHieraryController) hardReconcile(name string) error {
 
 func (s *PolicyHieraryController) managePolicies(name string, node *policyhierarchyv1.PolicyNode) error {
 	var syncErrs []policyhierarchyv1.PolicyNodeSyncError
-	errBuilder := multierror.NewBuilder()
+	var errBuilder multierror.Builder
 	reconcileCount := 0
 	for _, module := range s.modules {
 		declaredInstances := module.Instances(node)

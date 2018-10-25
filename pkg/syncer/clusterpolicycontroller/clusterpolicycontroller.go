@@ -141,7 +141,7 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 
 func (s *ClusterPolicyController) managePolicies(cp *policyhierarchyv1.ClusterPolicy) error {
 	var syncErrs []policyhierarchyv1.ClusterPolicySyncError
-	errBuilder := multierror.NewBuilder()
+	var errBuilder multierror.Builder
 	reconcileCount := 0
 	for _, module := range s.modules {
 		declaredInstances := module.Extract(cp)

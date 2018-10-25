@@ -115,7 +115,7 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *no
 
 	name := policy.GetName()
 	var syncErrs []nomosv1.ClusterPolicySyncError
-	errBuilder := multierror.NewBuilder()
+	var errBuilder multierror.Builder
 	reconcileCount := 0
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]

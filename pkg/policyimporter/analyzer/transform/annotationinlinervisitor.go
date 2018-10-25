@@ -45,7 +45,7 @@ type AnnotationInlinerVisitor struct {
 	// created anew for each TreeNode.
 	nsTransformer annotationTransformer
 	// cumulative errors encountered by the visitor
-	errs *multierror.Builder
+	errs multierror.Builder
 	// Used to inline cluster selector annotations.  It is created anew for each traversal.
 	clusterSelectorTransformer annotationTransformer
 }
@@ -57,7 +57,6 @@ var _ ast.Visitor = &AnnotationInlinerVisitor{}
 func NewAnnotationInlinerVisitor(cs *ClusterSelectors) *AnnotationInlinerVisitor {
 	v := &AnnotationInlinerVisitor{
 		Copying: visitor.NewCopying(),
-		errs:    multierror.NewBuilder(),
 	}
 	v.SetImpl(v)
 

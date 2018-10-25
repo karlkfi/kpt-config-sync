@@ -26,7 +26,7 @@ import (
 // NameValidator is a validator that checks for resource name uniqueness.
 type NameValidator struct {
 	*visitor.Base
-	errs        *multierror.Builder
+	errs        multierror.Builder
 	nameChecker nameChecker
 }
 
@@ -37,7 +37,6 @@ var _ ast.CheckingVisitor = &NameValidator{}
 func NewNameValidator() *NameValidator {
 	n := &NameValidator{
 		Base: visitor.NewBase(),
-		errs: multierror.NewBuilder(),
 	}
 	n.SetImpl(n)
 	return n

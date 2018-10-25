@@ -106,7 +106,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	errBuilder := multierror.NewBuilder()
+	var errBuilder multierror.Builder
 	// Finalize Syncs that have not already been finalized.
 	for _, tf := range toFinalize {
 		if err := r.client.Upsert(ctx, tf); err != nil {

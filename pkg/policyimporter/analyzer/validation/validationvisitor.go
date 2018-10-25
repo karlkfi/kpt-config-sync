@@ -40,7 +40,7 @@ import (
 // and what is required to fix it.
 type InputValidator struct {
 	base               *visitor.Base
-	errs               *multierror.Builder
+	errs               multierror.Builder
 	reserved           *reserved.Namespaces
 	names              map[string]*ast.TreeNode
 	nodes              []*ast.TreeNode
@@ -55,7 +55,6 @@ var _ ast.Visitor = &InputValidator{}
 func NewInputValidator(allowedGVKs map[schema.GroupVersionKind]struct{}) *InputValidator {
 	v := &InputValidator{
 		base:               visitor.NewBase(),
-		errs:               multierror.NewBuilder(),
 		reserved:           reserved.EmptyNamespaces(),
 		seenResourceQuotas: make(map[string]struct{}),
 		allowedGVKs:        allowedGVKs,

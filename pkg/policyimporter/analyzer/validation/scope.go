@@ -29,7 +29,7 @@ import (
 // the tree meets various conditions before we set it on the API server.
 type Scope struct {
 	*visitor.Base
-	errs           *multierror.Builder
+	errs           multierror.Builder
 	typeNamespaced map[schema.GroupVersionKind]bool
 }
 
@@ -49,7 +49,6 @@ func NewScope(resourceLists []*metav1.APIResourceList) (*Scope, error) {
 	}
 	pv := &Scope{
 		Base:           visitor.NewBase(),
-		errs:           multierror.NewBuilder(),
 		typeNamespaced: typeNamespaced,
 	}
 	pv.SetImpl(pv)

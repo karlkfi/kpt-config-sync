@@ -22,7 +22,9 @@ import (
 	"strings"
 )
 
-// Builder builds MultiErrors
+// Builder builds MultiErrors. Instantiate directly as:
+//
+//     b := &multierror.Builder{}
 type Builder struct {
 	errs []error
 }
@@ -43,11 +45,6 @@ func (b *Builder) Build() error {
 // Len returns the number of errors in the builder.
 func (b *Builder) Len() int {
 	return len(b.errs)
-}
-
-// NewBuilder returns a MultiError builder.
-func NewBuilder() *Builder {
-	return &Builder{}
 }
 
 // MultiError is an error that contains multiple errors.

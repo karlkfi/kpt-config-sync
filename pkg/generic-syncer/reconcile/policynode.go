@@ -277,7 +277,7 @@ func (r *PolicyNodeReconciler) warnNoLabelResource(u *unstructured.Unstructured)
 
 func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, node *nomosv1.PolicyNode) error {
 	var syncErrs []nomosv1.PolicyNodeSyncError
-	errBuilder := multierror.NewBuilder()
+	var errBuilder multierror.Builder
 	reconcileCount := 0
 	grs, err := r.decoder.DecodeResources(node.Spec.Resources...)
 	if err != nil {
