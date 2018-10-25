@@ -51,7 +51,9 @@ type InputValidator struct {
 // InputValidator implements ast.Visitor
 var _ ast.Visitor = &InputValidator{}
 
-// NewInputValidator creates a new validator
+// NewInputValidator creates a new validator.  allowedGVKs represents the set
+// of valid group-version-kinds for objects in the namespaces and cluster
+// directories.  Objects of other types will be treated as an error.
 func NewInputValidator(allowedGVKs map[schema.GroupVersionKind]struct{}) *InputValidator {
 	v := &InputValidator{
 		base:               visitor.NewBase(),
