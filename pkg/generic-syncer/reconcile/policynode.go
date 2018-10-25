@@ -323,7 +323,7 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 
 func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *nomosv1.PolicyNode,
 	errs []nomosv1.PolicyNodeSyncError) error {
-	freshSyncToken := node.Status.SyncTokens[node.Name] == node.Spec.ImportToken
+	freshSyncToken := node.Status.SyncToken == node.Spec.ImportToken
 	if node.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for PolicyNode %q is already up-to-date.", node.Name)
 		return nil
@@ -331,7 +331,7 @@ func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *no
 
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
 		newPN := obj.(*nomosv1.PolicyNode)
-		newPN.Status.SyncTokens = map[string]string{node.Name: node.Spec.ImportToken}
+		newPN.Status.SyncToken = node.Spec.ImportToken
 		newPN.Status.SyncTime = metav1.Now()
 		newPN.Status.SyncErrors = errs
 		if len(errs) > 0 {

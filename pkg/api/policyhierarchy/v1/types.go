@@ -192,11 +192,9 @@ type PolicyNodeSpec struct {
 // will never be populated for PolicySpaces since they are flattened down to child Namespaces.
 // +protobuf=true
 type PolicyNodeStatus struct {
-	// SyncTokens is a map of policy name to token indicating the version of that policy that the
-	// Syncer last attempted to update from. There will always be one entry for the PolicyNode itself
-	// as well as one entry for each PolicyNode up its hierarchy.
+	// SyncToken indicates the version of that policy that the Syncer last attempted to update from.
 	// +optional
-	SyncTokens map[string]string `json:"syncTokens,omitempty" protobuf:"bytes,1,rep,name=syncTokens"`
+	SyncToken string `json:"syncToken,omitempty" protobuf:"bytes,1,rep,name=syncToken"`
 
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
 	// resources from the PolicyNode specs. This field will be empty on success.

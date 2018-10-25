@@ -218,11 +218,9 @@ message PolicyNodeSpec {
 // will never be populated for PolicySpaces since they are flattened down to child Namespaces.
 // +protobuf=true
 message PolicyNodeStatus {
-  // SyncTokens is a map of policy name to token indicating the version of that policy that the
-  // Syncer last attempted to update from. There will always be one entry for the PolicyNode itself
-  // as well as one entry for each PolicyNode up its hierarchy.
+  // SyncToken indicates the version of that policy that the Syncer last attempted to update from.
   // +optional
-  map<string, string> syncTokens = 1;
+  optional string syncToken = 1;
 
   // SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
   // resources from the PolicyNode specs. This field will be empty on success.

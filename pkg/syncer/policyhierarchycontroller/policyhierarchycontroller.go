@@ -418,7 +418,7 @@ func (s *PolicyHieraryController) setPolicyNodeStatus(node *policyhierarchyv1.Po
 	updateCB := func(old runtime.Object) (runtime.Object, error) {
 		oldPN := old.(*policyhierarchyv1.PolicyNode)
 		newPN := oldPN.DeepCopy()
-		newPN.Status.SyncTokens = map[string]string{node.Name: node.Spec.ImportToken}
+		newPN.Status.SyncToken = node.Spec.ImportToken
 		newPN.Status.SyncTime = metav1.Now()
 		newPN.Status.SyncErrors = errs
 		if len(errs) > 0 {
