@@ -400,7 +400,10 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 	return nil
 }
 
-// processSystemDir loads configs from <root>/system/nomos.yaml.
+// processSystemDir processes resources in system dir including:
+// - Nomos Config
+// - Reserved Namespaces
+// - Syncs
 func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) ([]*v1alpha1.Sync, error) {
 	validator, err := p.factory.Validator(p.validate)
 	if err != nil {
