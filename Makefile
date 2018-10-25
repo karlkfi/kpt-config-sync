@@ -139,7 +139,7 @@ GCLOUD_QUIET := --quiet
 
 # Developer focused docker image tag.
 DATE := $(shell date +'%s')
-IMAGE_TAG ?= $(USER)-dev-latest
+IMAGE_TAG ?= latest
 
 DOCKER_RUN_ARGS := \
 	$(DOCKER_INTERACTIVE)                                              \

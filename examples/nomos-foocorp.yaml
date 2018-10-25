@@ -6,8 +6,9 @@ metadata:
 spec:
   user: "alice@example.com"
   git:
-    syncRepo: git@github.com:brycecr/foo-corp-example.git
-    syncBranch: master
+    syncRepo: git@github.com:frankfarzan/foo-corp-example.git
+    syncBranch: dev
     syncWait: 1
     secretType: ssh
     policyDir: foo-corp
+  channel: dev
