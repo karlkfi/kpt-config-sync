@@ -147,24 +147,21 @@ func TestReconcile(t *testing.T) {
 						},
 					},
 					Status: nomosv1alpha1.SyncStatus{
-						GroupVersionKinds: []nomosv1alpha1.SyncGroupVersionKindStatus{
+						GroupKinds: []nomosv1alpha1.SyncGroupKindStatus{
 							{
-								Group:   "",
-								Version: "v1",
-								Kind:    "ConfigMap",
-								Status:  nomosv1alpha1.Syncing,
+								Group:  "",
+								Kind:   "ConfigMap",
+								Status: nomosv1alpha1.Syncing,
 							},
 							{
-								Group:   "",
-								Version: "v1",
-								Kind:    "Deployment",
-								Status:  nomosv1alpha1.Syncing,
+								Group:  "",
+								Kind:   "Deployment",
+								Status: nomosv1alpha1.Syncing,
 							},
 							{
-								Group:   "rbac.authorization.k8s.io",
-								Version: "v1",
-								Kind:    "Role",
-								Status:  nomosv1alpha1.Syncing,
+								Group:  "rbac.authorization.k8s.io",
+								Kind:   "Role",
+								Status: nomosv1alpha1.Syncing,
 							},
 						},
 					},
@@ -231,24 +228,21 @@ func TestReconcile(t *testing.T) {
 							},
 						},
 						Status: nomosv1alpha1.SyncStatus{
-							GroupVersionKinds: []nomosv1alpha1.SyncGroupVersionKindStatus{
+							GroupKinds: []nomosv1alpha1.SyncGroupKindStatus{
 								{
-									Group:   "",
-									Version: "v1",
-									Kind:    "ConfigMap",
-									Status:  nomosv1alpha1.Syncing,
+									Group:  "",
+									Kind:   "ConfigMap",
+									Status: nomosv1alpha1.Syncing,
 								},
 								{
-									Group:   "",
-									Version: "v1",
-									Kind:    "Deployment",
-									Status:  nomosv1alpha1.Syncing,
+									Group:  "",
+									Kind:   "Deployment",
+									Status: nomosv1alpha1.Syncing,
 								},
 								{
-									Group:   "rbac.authorization.k8s.io",
-									Version: "v1",
-									Kind:    "Role",
-									Status:  nomosv1alpha1.Syncing,
+									Group:  "rbac.authorization.k8s.io",
+									Kind:   "Role",
+									Status: nomosv1alpha1.Syncing,
 								},
 							},
 						},
@@ -343,12 +337,11 @@ func sync(group, version, kind string, state nomosv1alpha1.SyncState) nomosv1alp
 	}
 	if state != "" {
 		s.Status = nomosv1alpha1.SyncStatus{
-			GroupVersionKinds: []nomosv1alpha1.SyncGroupVersionKindStatus{
+			GroupKinds: []nomosv1alpha1.SyncGroupKindStatus{
 				{
-					Group:   group,
-					Version: version,
-					Kind:    kind,
-					Status:  state,
+					Group:  group,
+					Kind:   kind,
+					Status: state,
 				},
 			},
 		}

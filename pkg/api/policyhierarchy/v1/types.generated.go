@@ -21,7 +21,6 @@ limitations under the License.
 package v1
 
 import (
-	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	core_v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/extensions/v1beta1"
 	rbac_v1 "k8s.io/api/rbac/v1"
@@ -47,15 +46,6 @@ func (in *AllPolicies) DeepCopyInto(out *AllPolicies) {
 		} else {
 			*out = new(ClusterPolicy)
 			(*in).DeepCopyInto(*out)
-		}
-	}
-	if in.Syncs != nil {
-		in, out := &in.Syncs, &out.Syncs
-		*out = make(map[string]v1alpha1.Sync, len(*in))
-		for key, val := range *in {
-			newVal := new(v1alpha1.Sync)
-			val.DeepCopyInto(newVal)
-			(*out)[key] = *newVal
 		}
 	}
 	return

@@ -20,9 +20,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-
-	"github.com/go-test/deep"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	"k8s.io/api/extensions/v1beta1"
@@ -33,7 +30,6 @@ type testCase struct {
 	testName                           string
 	oldNodes, newNodes                 []v1.PolicyNode
 	oldClusterPolicy, newClusterPolicy *v1.ClusterPolicy
-	oldSyncs, newSyncs                 []v1alpha1.Sync
 	// String representation of expected actions
 	expected []string
 }
@@ -311,60 +307,14 @@ func TestDiffer(t *testing.T) {
 				"nomos.dev/v1/ClusterPolicies/foo/create",
 			},
 		},
-		{
-			testName: "Empty Syncs",
-			oldSyncs: []v1alpha1.Sync{},
-			newSyncs: []v1alpha1.Sync{},
-			expected: []string{},
-		},
-		{
-			testName: "Sync create",
-			oldSyncs: []v1alpha1.Sync{},
-			newSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
-			},
-			expected: []string{
-				"nomos.dev/v1alpha1/Syncs/ResourceQuota/create",
-			},
-		},
-		{
-			testName: "Sync update",
-			oldSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
-			},
-			newSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v2"),
-			},
-			expected: []string{
-				"nomos.dev/v1alpha1/Syncs/ResourceQuota/update",
-			},
-		},
-		{
-			testName: "Sync update no change",
-			oldSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
-			},
-			newSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
-			},
-			expected: []string{},
-		},
-		{
-			testName: "Sync delete",
-			oldSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
-			},
-			newSyncs: []v1alpha1.Sync{},
-			expected: []string{}, // deletes are exposed through SyncDeletes method, not Diff.
-		},
 	} {
 		t.Run(test.testName, func(t *testing.T) {
-			g := NewDiffer(NewFactories(nil, nil, nil, nil, nil))
+			g := NewDiffer(NewFactories(nil, nil, nil))
 			g.SortDiff = true
 
 			actual := g.Diff(
-				allPolicies(test.oldNodes, test.oldClusterPolicy, test.oldSyncs),
-				allPolicies(test.newNodes, test.newClusterPolicy, test.newSyncs))
+				allPolicies(test.oldNodes, test.oldClusterPolicy),
+				allPolicies(test.newNodes, test.newClusterPolicy))
 
 			if len(actual) != len(test.expected) {
 				t.Fatalf("Actual number of actions was %d but expected %d",
@@ -384,218 +334,6 @@ func TestDiffer(t *testing.T) {
 				if err := validate(policyNodes); err != nil {
 					t.Errorf("Policy hierarchy state became invalid after executing action, %s: %v", action.String(), err)
 				}
-			}
-		})
-	}
-}
-
-func TestSyncDeletes(t *testing.T) {
-	g := NewDiffer(NewFactories(nil, nil, nil, nil, nil))
-	g.SortDiff = true
-
-	actual := g.SyncDeletes(
-		map[string]v1alpha1.Sync{
-			"ResourceQuota": makeSync("", "ResourceQuota", "v1"),
-		},
-		map[string]v1alpha1.Sync{})
-	expected := []string{"ResourceQuota"}
-	if diff := deep.Equal(actual, expected); diff != nil {
-		t.Errorf("Actual and expected deletes didn't match: %#v", diff)
-	}
-}
-
-type reducerTestCase struct {
-	testName         string
-	current, desired map[string]v1alpha1.Sync
-	expected         []v1alpha1.Sync
-}
-
-func TestSyncReductions(t *testing.T) {
-	g := NewDiffer(NewFactories(nil, nil, nil, nil, nil))
-	g.SortDiff = true
-
-	for _, test := range []reducerTestCase{
-		{
-			testName: "Empty set",
-			current:  map[string]v1alpha1.Sync{},
-			desired:  map[string]v1alpha1.Sync{},
-			expected: nil,
-		},
-		{
-			testName: "One version, no change",
-			current: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSync("", "ResourceQuota", "v1"),
-			},
-			desired: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSync("", "ResourceQuota", "v1"),
-			},
-			expected: nil,
-		},
-		{
-			testName: "Delete one version",
-			current: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSync("", "ResourceQuota", "v1", "v2"),
-			},
-			desired: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSync("", "ResourceQuota", "v1"),
-			},
-			expected: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
-			},
-		},
-		{
-			testName: "Delete one version, add one version",
-			current: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSync("", "ResourceQuota", "v1", "v2"),
-			},
-			desired: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSync("", "ResourceQuota", "v1", "v3"),
-			},
-			expected: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
-			},
-		},
-		{
-			testName: "Add one version",
-			current: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSync("", "ResourceQuota", "v1"),
-			},
-			desired: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSync("", "ResourceQuota", "v1", "v3"),
-			},
-			expected: nil,
-		},
-		{
-			testName: "Only ordering changes",
-			current: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSync("", "ResourceQuota", "v1", "v2"),
-			},
-			desired: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSync("", "ResourceQuota", "v2", "v1"),
-			},
-			expected: nil,
-		},
-		{
-			testName: "Only CompareFields change",
-			current: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSyncWithCompareField("", "ResourceQuota", "foo", "v1"),
-			},
-			desired: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSyncWithCompareField("", "ResourceQuota", "bar", "v1"),
-			},
-			expected: nil,
-		},
-		{
-			testName: "Reduction keeps original CompareFields",
-			current: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSyncWithCompareField("", "ResourceQuota", "foo", "v1", "v2"),
-			},
-			desired: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSyncWithCompareField("", "ResourceQuota", "bar", "v1"),
-			},
-			expected: []v1alpha1.Sync{
-				makeSyncWithCompareField("", "ResourceQuota", "foo", "v1"),
-			},
-		},
-		{
-			testName: "Delete one kind",
-			current: map[string]v1alpha1.Sync{
-				"Role": {
-					TypeMeta: meta.TypeMeta{
-						APIVersion: "nomos.dev/v1alpha1",
-						Kind:       "Sync",
-					},
-					ObjectMeta: meta.ObjectMeta{
-						Name: "Role",
-					},
-					Spec: v1alpha1.SyncSpec{
-						Groups: []v1alpha1.SyncGroup{
-							{
-								Group: "rbac.authorization.k8s.io",
-								Kinds: []v1alpha1.SyncKind{
-									{
-										Kind: "Role",
-										Versions: []v1alpha1.SyncVersion{
-											{
-												Version: "v1",
-											},
-										},
-									},
-									{
-										Kind: "RoleBinding",
-										Versions: []v1alpha1.SyncVersion{
-											{
-												Version: "v2",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			desired: map[string]v1alpha1.Sync{
-				"Role": makeSync("rbac.authorization.k8s.io", "Role", "v1"),
-			},
-			expected: []v1alpha1.Sync{
-				makeSync("rbac.authorization.k8s.io", "Role", "v1"),
-			},
-		},
-		{
-			testName: "Delete one group",
-			current: map[string]v1alpha1.Sync{
-				"Role": {
-					TypeMeta: meta.TypeMeta{
-						APIVersion: "nomos.dev/v1alpha1",
-						Kind:       "Sync",
-					},
-					ObjectMeta: meta.ObjectMeta{
-						Name: "Role",
-					},
-					Spec: v1alpha1.SyncSpec{
-						Groups: []v1alpha1.SyncGroup{
-							{
-								Group: "rbac.authorization.k8s.io",
-								Kinds: []v1alpha1.SyncKind{
-									{
-										Kind: "Role",
-										Versions: []v1alpha1.SyncVersion{
-											{
-												Version: "v1",
-											},
-										},
-									},
-								},
-							},
-							{
-								Kinds: []v1alpha1.SyncKind{
-									{
-										Kind: "ResourceQuota",
-										Versions: []v1alpha1.SyncVersion{
-											{
-												Version: "v2",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			desired: map[string]v1alpha1.Sync{
-				"Role": makeSync("rbac.authorization.k8s.io", "Role", "v1"),
-			},
-			expected: []v1alpha1.Sync{
-				makeSync("rbac.authorization.k8s.io", "Role", "v1"),
-			},
-		},
-	} {
-		t.Run(test.testName, func(t *testing.T) {
-			actual := g.SyncReductions(test.current, test.desired)
-			if diff := deep.Equal(actual, test.expected); diff != nil {
-				t.Errorf("Actual and expected reductions didn't match: %#v", diff)
 			}
 		})
 	}
@@ -667,49 +405,7 @@ func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
 	}
 }
 
-func makeSync(group, kind string, versions ...string) v1alpha1.Sync {
-	return makeSyncHelper(group, kind, nil, versions...)
-}
-
-func makeSyncWithCompareField(group, kind, cf string, version ...string) v1alpha1.Sync {
-	return makeSyncHelper(group, kind, &cf, version...)
-}
-
-// Makes a sync with a single CompareField, for tests that want to populate that field.
-func makeSyncHelper(group, kind string, cf *string, versions ...string) v1alpha1.Sync {
-	var svs []v1alpha1.SyncVersion
-	for _, version := range versions {
-		sv := v1alpha1.SyncVersion{Version: version}
-		if cf != nil {
-			sv.CompareFields = []string{*cf}
-		}
-		svs = append(svs, sv)
-	}
-	return v1alpha1.Sync{
-		TypeMeta: meta.TypeMeta{
-			APIVersion: "nomos.dev/v1alpha1",
-			Kind:       "Sync",
-		},
-		ObjectMeta: meta.ObjectMeta{
-			Name: kind,
-		},
-		Spec: v1alpha1.SyncSpec{
-			Groups: []v1alpha1.SyncGroup{
-				{
-					Group: group,
-					Kinds: []v1alpha1.SyncKind{
-						{
-							Kind:     kind,
-							Versions: svs,
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy, syncs []v1alpha1.Sync) v1.AllPolicies {
+func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy) v1.AllPolicies {
 	policies := v1.AllPolicies{
 		ClusterPolicy: clusterPolicy,
 	}
@@ -719,13 +415,6 @@ func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy, syncs [
 			policies.PolicyNodes = make(map[string]v1.PolicyNode)
 		}
 		policies.PolicyNodes[n.Name] = n
-	}
-
-	if len(syncs) > 0 {
-		policies.Syncs = make(map[string]v1alpha1.Sync)
-	}
-	for _, s := range syncs {
-		policies.Syncs[s.Name] = s
 	}
 
 	return policies

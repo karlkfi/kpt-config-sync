@@ -21,7 +21,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -34,7 +33,6 @@ func allPolicies(cp policyhierarchyv1.ClusterPolicy, pns []policyhierarchyv1.Pol
 	ap := &policyhierarchyv1.AllPolicies{
 		ClusterPolicy: &cp,
 		PolicyNodes:   map[string]policyhierarchyv1.PolicyNode{},
-		Syncs:         map[string]policyhierarchyv1alpha1.Sync{},
 	}
 	for _, pn := range pns {
 		ap.PolicyNodes[pn.Name] = pn
@@ -49,7 +47,7 @@ type OutputVisitorTestcase struct {
 }
 
 func (tc *OutputVisitorTestcase) Run(t *testing.T) {
-	ov := NewOutputVisitor([]*policyhierarchyv1alpha1.Sync{})
+	ov := NewOutputVisitor()
 	tc.input.Accept(ov)
 	actual := ov.AllPolicies()
 	if !cmp.Equal(actual, tc.expect, vt.ResourceVersionCmp()) {
@@ -76,7 +74,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		),
 	},
 	{
-		name:  "empty cluster policies",
+		name:  "emtpy cluster policies",
 		input: &ast.Root{Cluster: &ast.Cluster{}},
 		expect: allPolicies(
 			policyhierarchyv1.ClusterPolicy{

@@ -27,7 +27,6 @@ import (
 	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	clientaction "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
@@ -64,7 +63,6 @@ type Controller struct {
 	informerFactory     informer.SharedInformerFactory
 	policyNodeLister    listersv1.PolicyNodeLister
 	clusterPolicyLister listersv1.ClusterPolicyLister
-	syncLister          listersv1alpha1.SyncLister
 	stopChan            chan struct{}
 	nameMap             ToK8SNameMap
 }
@@ -77,10 +75,8 @@ func NewController(org, watcherAddr, credsFile, caFile string, client meta.Inter
 		client.PolicyHierarchy(), informerResync)
 	f := actions.NewFactories(
 		client.PolicyHierarchy().NomosV1(),
-		client.PolicyHierarchy().NomosV1alpha1(),
 		informerFactory.Nomos().V1().PolicyNodes().Lister(),
-		informerFactory.Nomos().V1().ClusterPolicies().Lister(),
-		informerFactory.Nomos().V1alpha1().Syncs().Lister())
+		informerFactory.Nomos().V1().ClusterPolicies().Lister())
 
 	return &Controller{
 		org:                 org,
@@ -177,7 +173,7 @@ func (c *Controller) watchLoop() error {
 func (c *Controller) watchIteration(ctx context.Context, resumeMarker []byte) ([]byte, error) {
 	glog.Infof("Starting watch")
 
-	currentPolicies, listErr := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
+	currentPolicies, listErr := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister)
 	if listErr != nil {
 		return nil, errors.Wrapf(listErr, "failed to list current policies")
 	}

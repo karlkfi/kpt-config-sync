@@ -22,9 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
 	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -73,9 +71,7 @@ func GetResourceVersion(node *policyhierarchyv1.PolicyNode) (int64, error) {
 }
 
 // ListPolicies returns all policies from API server.
-func ListPolicies(policyNodeLister listersv1.PolicyNodeLister,
-	clusterPolicyLister listersv1.ClusterPolicyLister,
-	syncLister listersv1alpha1.SyncLister) (*policyhierarchyv1.AllPolicies, error) {
+func ListPolicies(policyNodeLister listersv1.PolicyNodeLister, clusterPolicyLister listersv1.ClusterPolicyLister) (*policyhierarchyv1.AllPolicies, error) {
 	policies := policyhierarchyv1.AllPolicies{
 		PolicyNodes: make(map[string]policyhierarchyv1.PolicyNode),
 	}
@@ -105,17 +101,6 @@ func ListPolicies(policyNodeLister listersv1.PolicyNodeLister,
 			return nil, errors.Errorf("expected ClusterPolicy with name %q instead found %q", policyhierarchyv1.ClusterPolicyName, cp[0].Name)
 		}
 		policies.ClusterPolicy = cp[0].DeepCopy()
-	}
-
-	syncs, err := syncLister.List(labels.Everything())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list Syncs")
-	}
-	if len(syncs) > 0 {
-		policies.Syncs = make(map[string]policyhierarchyv1alpha1.Sync)
-	}
-	for _, s := range syncs {
-		policies.Syncs[s.Name] = *s.DeepCopy()
 	}
 
 	return &policies, nil
