@@ -38,11 +38,11 @@ type directoryTreeTestcase struct {
 
 func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	tg := NewDirectoryTree()
-	tg.SetRootDir(tc.inputs[0].path, ast.Policyspace)
+	tg.SetRootDir(tc.inputs[0].path, ast.AbstractNamespace)
 	for _, inp := range tc.inputs[1:] {
 		typ := inp.typ
 		if typ == "" {
-			typ = ast.Policyspace
+			typ = ast.AbstractNamespace
 		}
 		n := tg.AddDir(inp.path, typ)
 		if n == nil {
@@ -70,7 +70,7 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 		inputs: []directoryTreeInput{
 			{path: "/a/b/c"},
 		},
-		expect: &ast.TreeNode{Path: "c", Type: ast.TreeNodeType("policyspace")},
+		expect: &ast.TreeNode{Path: "c", Type: ast.AbstractNamespace},
 	},
 	{
 		name: "small tree",
@@ -81,15 +81,15 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 		},
 		expect: &ast.TreeNode{
 			Path: "c",
-			Type: ast.TreeNodeType("policyspace"),
+			Type: ast.AbstractNamespace,
 			Children: []*ast.TreeNode{
 				&ast.TreeNode{
 					Path: "c/d",
-					Type: ast.TreeNodeType("policyspace"),
+					Type: ast.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Path: "c/d/e",
-							Type: ast.TreeNodeType("namespace"),
+							Type: ast.Namespace,
 						},
 					},
 				},

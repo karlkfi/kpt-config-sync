@@ -104,7 +104,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	v.ctx = context
 	newNode := v.Copying.VisitTreeNode(n).(*ast.TreeNode)
 
-	if (n.Type == ast.Policyspace && context.quota != nil) || (n.Type == ast.Namespace) {
+	if (n.Type == ast.AbstractNamespace && context.quota != nil) || (n.Type == ast.Namespace) {
 		if quota := context.aggregated(); quota != nil {
 			if n.Type == ast.Namespace {
 				labeledQuota := *quota

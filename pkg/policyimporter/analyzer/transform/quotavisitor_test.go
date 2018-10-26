@@ -56,7 +56,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				Cluster:            vt.Helper.AcmeCluster(),
 				ReservedNamespaces: vt.Helper.AcmeReserved(),
 				Tree: &ast.TreeNode{
-					Type: ast.Policyspace,
+					Type: ast.AbstractNamespace,
 					Path: "namespaces",
 					Objects: vt.ObjectSets(
 						vt.Helper.AdminRoleBinding(),
@@ -112,12 +112,12 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "skip policyspace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:    ast.Policyspace,
+					Type:    ast.AbstractNamespace,
 					Path:    "namespaces",
 					Objects: vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
-							Type: ast.Policyspace,
+							Type: ast.AbstractNamespace,
 							Path: "namespaces/eng",
 							Children: []*ast.TreeNode{
 								&ast.TreeNode{
@@ -134,7 +134,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: ast.Policyspace,
+					Type: ast.AbstractNamespace,
 					Path: "namespaces",
 					Objects: vt.ObjectSets(
 						modQuota(
@@ -147,7 +147,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
-							Type: ast.Policyspace,
+							Type: ast.AbstractNamespace,
 							Path: "namespaces/eng",
 							Children: []*ast.TreeNode{
 								&ast.TreeNode{
@@ -174,7 +174,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "no quota",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:    ast.Policyspace,
+					Type:    ast.AbstractNamespace,
 					Path:    "namespaces",
 					Objects: vt.ObjectSets(vt.Helper.AdminRoleBinding()),
 					Children: []*ast.TreeNode{
@@ -193,7 +193,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:    ast.Policyspace,
+					Type:    ast.AbstractNamespace,
 					Path:    "namespaces",
 					Objects: vt.ObjectSets(vt.Helper.AdminRoleBinding()),
 					Children: []*ast.TreeNode{

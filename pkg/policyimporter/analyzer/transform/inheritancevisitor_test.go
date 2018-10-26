@@ -64,7 +64,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 				Cluster:            vt.Helper.AcmeCluster(),
 				ReservedNamespaces: vt.Helper.AcmeReserved(),
 				Tree: &ast.TreeNode{
-					Type: ast.Policyspace,
+					Type: ast.AbstractNamespace,
 					Path: "namespaces",
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
@@ -100,7 +100,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "inherit filtered by NamespaceSelector",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: ast.Policyspace,
+					Type: ast.AbstractNamespace,
 					Objects: vt.ObjectSets(
 						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
 					),
@@ -120,7 +120,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: ast.Policyspace,
+					Type: ast.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type:   ast.Namespace,

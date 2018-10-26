@@ -195,7 +195,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 	}
 
 	if ns != "" {
-		if node.Type == ast.Policyspace {
+		if node.Type == ast.AbstractNamespace {
 			v.errs.Add(errors.Errorf(
 				"Objects declared in abstract namespaces directories must not have a namespace specified. "+
 					"Remove the namespace field from object.  "+
@@ -213,7 +213,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 			ns, nodeNS, o.FileObject))
 	}
 
-	if node.Type == ast.Policyspace {
+	if node.Type == ast.AbstractNamespace {
 		switch gvk {
 		case rbacv1.SchemeGroupVersion.WithKind("RoleBinding"):
 		case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):

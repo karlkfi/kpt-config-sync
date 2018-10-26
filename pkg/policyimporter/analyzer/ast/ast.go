@@ -110,10 +110,10 @@ func (o *ClusterObject) DeepCopy() *ClusterObject {
 type TreeNodeType string
 
 const (
-	// Namespace represents a kubernetes namespace
-	Namespace = TreeNodeType("namespace")
-	// Policyspace represents a nomos policy space
-	Policyspace = TreeNodeType("policyspace")
+	// Namespace represents a leaf node in the hierarchy which are materialized as kubernetes Namespace.
+	Namespace = TreeNodeType("Namespace")
+	// AbstractNamespace represents a non-leaf node in the hierarchy.
+	AbstractNamespace = TreeNodeType("Abstract Namespace")
 )
 
 // TreeNode is analogous to a directory in the policy hierarchy.

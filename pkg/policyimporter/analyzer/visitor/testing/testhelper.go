@@ -316,7 +316,7 @@ func (t *TestHelper) AcmeReserved() *ast.ReservedNamespaces {
 
 func (t *TestHelper) acmeTree() *ast.TreeNode {
 	return &ast.TreeNode{
-		Type: ast.Policyspace,
+		Type: ast.AbstractNamespace,
 		Path: "namespaces",
 		Objects: ObjectSets(
 			// TODO: remove RoleBinding once flattening transform is written.

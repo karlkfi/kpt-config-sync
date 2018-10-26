@@ -100,7 +100,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 func (v *InheritanceVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 	context := &v.treeContext[len(v.treeContext)-1]
 	gvk := o.GetObjectKind().GroupVersionKind()
-	if _, found := v.inheritanceSpecs[gvk]; context.nodeType == ast.Policyspace && found {
+	if _, found := v.inheritanceSpecs[gvk]; context.nodeType == ast.AbstractNamespace && found {
 		context.inherited = append(context.inherited, o)
 		return nil
 	}

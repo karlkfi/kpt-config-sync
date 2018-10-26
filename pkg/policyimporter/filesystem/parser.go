@@ -204,7 +204,7 @@ func (p *Parser) readResources(dir string, recursive bool) ([]*resource.Info, er
 // It first processes the cluster directory and then the tree hierarchy.
 // cluster is a single, flat directory containing cluster-scoped resources.
 // tree is hierarchical, containing 2 categories of directories:
-// 1. Policyspace directory: Non-leaf directories at any depth within root directory.
+// 1. AbstractNamespace directory: Non-leaf directories at any depth within root directory.
 // 2. Namespace directory: Leaf directories at any depth within root directory.
 func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	dirInfos map[string][]*resource.Info,
@@ -347,9 +347,9 @@ func (p *Parser) processNamespacesDir(
 	}
 	// No namespace resource was found.
 	if root {
-		treeNode = treeGenerator.SetRootDir(dir, ast.Policyspace)
+		treeNode = treeGenerator.SetRootDir(dir, ast.AbstractNamespace)
 	} else {
-		treeNode = treeGenerator.AddDir(dir, ast.Policyspace)
+		treeNode = treeGenerator.AddDir(dir, ast.AbstractNamespace)
 	}
 
 	for _, i := range infos {
