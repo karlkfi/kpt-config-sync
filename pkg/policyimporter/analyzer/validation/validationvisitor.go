@@ -36,7 +36,7 @@ import (
 
 // InputValidator checks various filesystem constraints after loading into the tree format.
 // Error messages emitted from the validator should be formatted to first print the constraint
-// that is being violated, then print a useful error message on what is voilating the constraint
+// that is being violated, then print a useful error message on what is violating the constraint
 // and what is required to fix it.
 type InputValidator struct {
 	base               *visitor.Base
@@ -77,12 +77,12 @@ func (v *InputValidator) VisitRoot(g *ast.Root) ast.Node {
 }
 
 // VisitReservedNamespaces implements Visitor
-func (v *InputValidator) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
-	reserved, err := reserved.From(&r.ConfigMap)
+func (v *InputValidator) VisitReservedNamespaces(rs *ast.ReservedNamespaces) ast.Node {
+	r, err := reserved.From(&rs.ConfigMap)
 	if err != nil {
 		v.errs.Add(err)
 	} else {
-		v.reserved = reserved
+		v.reserved = r
 	}
 	return nil
 }
@@ -92,37 +92,61 @@ func (v *InputValidator) VisitCluster(c *ast.Cluster) ast.Node {
 	return v.base.VisitCluster(c)
 }
 
+// An error factory for this treeNode.
+type treeNodeError struct {
+	ast.TreeNode
+}
+
+func (n treeNodeError) hasReservedName() error {
+	return errors.Errorf("Reserved names may not be used. "+
+		"Rename the below directory or remove %[1]q from %[3]s in the root directory:\n"+
+		"%[2]s",
+		n.Name(), n, v1alpha1.ReservedNamespacesConfigMapName)
+}
+
+func (n treeNodeError) duplicates(other *ast.TreeNode) error {
+	return errors.Errorf("Directory names must be unique. "+
+		"The two directories below share the same name. Rename one:"+
+		"%[1]s\n"+
+		"%[2]s",
+		n, other)
+}
+
+func (n treeNodeError) hasParent(parent *ast.TreeNode) error {
+	return errors.Errorf("A %[1]s directory may not have children. "+
+		"Restructure the below directory so that it does not have the child %[2]s:"+
+		"%[3]s",
+		ast.Namespace, n.Name(), parent)
+}
+
+func (n treeNodeError) usesNamespaceSelectorAnnotation() error {
+	return errors.Errorf("A %[3]s may not use the %[2]s annotation. "+
+		"Remove the %[2]s annotation from \"%[1]s/%[3]s.yaml\".",
+		n.Path, v1alpha1.NamespaceSelectorAnnotationKey, ast.Namespace)
+}
+
 // VisitTreeNode implements Visitor
 func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	name := path.Base(n.Path)
+	nodeError := treeNodeError{*n}
 	if v.reserved.IsReserved(name) {
-		v.errs.Add(errors.Errorf(
-			"Reserved namespaces must not be used for %s names.  "+
-				"Directory %q declares a %s which conflicts with a reserved namespace name. "+
-				"Adjust the directory name for %q or remove %s from the reserved namespace config.",
-			n.Type, n.Path, n.Type, n.Path, path.Base(n.Path)))
+		// The namespace's name must not be a reserved namespace name.
+		v.errs.Add(nodeError.hasReservedName())
 	}
 	if other, found := v.names[name]; found {
-		v.errs.Add(errors.Errorf(
-			"Names for %s must not match names for other %ss.  "+
-				"Declaration in directory %q duplicates name from declaration in %q. "+
-				"Adjust one of the directory names.",
-			n.Type, other.Type, n.Path, other.Path))
+		// The namespace must not duplicate the name of another namespace.
+		v.errs.Add(nodeError.duplicates(other))
 	}
 	if len(v.nodes) != 0 {
+		// Namespaces may not have children.
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == ast.Namespace {
-			v.errs.Add(errors.Errorf(
-				"Namespaces must not contain children.  "+
-					"Namespace declared in directory %q cannot have child declared in subdirectory %q. "+
-					"Restructure directories so namespace %q does not have children.",
-				parent.Path, n.Path, path.Base(n.Path)))
+			v.errs.Add(nodeError.hasParent(parent))
 		}
 	}
 	if n.Type == ast.Namespace {
-		if _, ok := n.Annotations[v1alpha1.NamespaceSelectorAnnotationKey]; ok {
-			v.errs.Add(errors.Errorf("namespaces cannot have a namespace selector annotation. "+
-				"Namespace %q defined in %s has %s",
-				name, n.Path, v1alpha1.NamespaceSelectorAnnotationKey))
+		if _, found := n.Annotations[v1alpha1.NamespaceSelectorAnnotationKey]; found {
+			// Namespaces may not use the selector annotation.
+			v.errs.Add(nodeError.usesNamespaceSelectorAnnotation())
 		}
 	}
 
@@ -137,40 +161,59 @@ func (v *InputValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.Nod
 	return v.base.VisitClusterObjectList(o)
 }
 
+// An error factory for this ClusterObject.
+type clusterObjectError ast.ClusterObject
+
+func (o clusterObjectError) hasNamespace(namespace string) error {
+	return errors.Errorf(
+		"Cluster scoped resources may not declare metadata.namespace. "+
+			"Remove metadata.namespace from the below resources or move it to a namespace:\n"+
+			"%[1]s",
+		o)
+}
+
+func (o clusterObjectError) isNamespace() error {
+	return errors.Errorf(
+		"A %[1]s may not be declared in a %[2]s directory. "+
+			"Move the below resource to a %[3]s directory:\n"+
+			"%[4]s",
+		ast.Namespace, repo.ClusterDir, repo.NamespacesDir, o)
+}
+
+func isNotSyncable(o ast.FileObject) error {
+	return errors.Errorf(
+		"The below resource is not syncable. Enable sync for resources of type %[1]q.\n"+
+			"%[2]s",
+		o.GroupVersionKind(), o)
+}
+
+func (v *InputValidator) checkAnnotationsAndLabels(o ast.FileObject) {
+	if err := v.checkAnnotations(o); err != nil {
+		v.errs.Add(err)
+	}
+	if err := v.checkLabels(o); err != nil {
+		v.errs.Add(err)
+	}
+}
+
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
-	gvk := o.FileObject.GetObjectKind().GroupVersionKind()
+	objectError := clusterObjectError(*o)
 
-	metaObj := o.ToMeta()
-	ns := metaObj.GetNamespace()
-	if ns != "" {
-		v.errs.Add(errors.Errorf(
-			"Cluster scoped objects must not be associated with a namespace. "+
-				"Remove the namespace field from object.  "+
-				"Object %s, Name=%q is declared with namespace %s",
-			gvk,
-			metaObj.GetName(),
-			ns))
+	if namespace := objectError.ToMeta().GetNamespace(); namespace != "" {
+		v.errs.Add(objectError.hasNamespace(namespace))
 	}
 
-	if gvk == corev1.SchemeGroupVersion.WithKind("Namespace") {
-		v.errs.Add(errors.Errorf(
-			"Cannot declare namespaces in %q directory.  Namespaces must be declared in a "+
-				"%q directory in the hierarchy. "+
-				"Remove namespace %s in file %s",
-			repo.ClusterDir,
-			repo.NamespacesDir,
-			metaObj.GetName(),
-			o.Source))
+	gvk := o.GroupVersionKind()
+	if gvk == corev1.SchemeGroupVersion.WithKind(repo.NamespacesDir) {
+		v.errs.Add(objectError.isNamespace())
 	}
 
 	if _, found := v.allowedGVKs[gvk]; !found {
-		v.errs.Add(errors.Errorf("Sync for objects of type %#v is not enabled. Remove object "+
-			"%s in file %s, or add a Sync for that type.", gvk, metaObj.GetName(),
-			o.Source))
+		v.errs.Add(isNotSyncable(o.FileObject))
 	}
 
-	v.checkAnnotationsAndLabels(metaObj, o.Source)
+	v.checkAnnotationsAndLabels(o.FileObject)
 
 	return nil
 }
@@ -180,103 +223,103 @@ func (v *InputValidator) VisitObjectList(o ast.ObjectList) ast.Node {
 	return v.base.VisitObjectList(o)
 }
 
+// An error factory for this NamespaceObject
+type namespaceObjectErrorFactory ast.NamespaceObject
+
+func (o namespaceObjectErrorFactory) hasMultipleResourceQuotas() error {
+	return errors.Errorf(
+		"A directory may contain at most one ResourceQuota resource. "+
+			"The %[1]q directory contains multiple ResourceQuota resource definitions, including the below:\n"+
+			"%[2]s",
+		path.Dir(o.Source), o)
+}
+
+func (o namespaceObjectErrorFactory) hasNamespace() error {
+	return errors.Errorf(
+		"%[1]s scoped resources may not declare metadata.namespace. Remove the metadata.namespace field from:\n"+
+			"%[2]s",
+		ast.AbstractNamespace, o)
+}
+
+func (o namespaceObjectErrorFactory) hasWrongNamespace(namespace string) error {
+	return errors.Errorf(
+		"%[1]s scoped resources must declare a metadata.%[1]s identical to the directory in which they are defined. "+
+			"Modify either the below resource's metadata.%[1]s or its directory so they match:\n"+
+			"%[2]s",
+		ast.Namespace, o, namespace, path.Base(path.Dir(o.Source)))
+}
+
+func (o namespaceObjectErrorFactory) hasIllegalType() error {
+	return errors.Errorf(
+		"Resorces of type %[1]q are not allowed in %[2]s directories. "+
+			"Move the below resource to a %[3]s directory:\n"+
+			"%[4]s",
+		o.GroupVersionKind(), ast.AbstractNamespace, ast.Namespace, o)
+}
+
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
-	v.checkSingleResourceQuota(o)
-	metaObj := o.ToMeta()
-	ns := metaObj.GetNamespace()
-	node := v.nodes[len(v.nodes)-1]
+	nodeError := namespaceObjectErrorFactory(*o)
 
-	gvk := o.GetObjectKind().GroupVersionKind()
-	if _, found := v.allowedGVKs[gvk]; !found {
-		v.errs.Add(errors.Errorf("Sync for objects of type %#v is not enabled. Remove object "+
-			"%s in file %s, or add a Sync for that type.", gvk, metaObj.GetName(),
-			o.Source))
-	}
-
-	if ns != "" {
-		if node.Type == ast.AbstractNamespace {
-			v.errs.Add(errors.Errorf(
-				"Objects declared in abstract namespaces directories must not have a namespace specified. "+
-					"Remove the namespace field from object.  "+
-					"Directory %q has declaration for %s, name %q with namespace %s",
-				node.Path,
-				o.FileObject.GetObjectKind().GroupVersionKind(),
-				metaObj.GetName(),
-				ns))
+	// checkSingleResourceQuota ensures that at most one ResourceQuota resource is present in each
+	// directory.
+	if o.GroupVersionKind() == corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
+		curPath := v.nodes[len(v.nodes)-1].Path
+		if _, found := v.seenResourceQuotas[curPath]; found {
+			v.errs.Add(nodeError.hasMultipleResourceQuotas())
+		} else {
+			v.seenResourceQuotas[curPath] = struct{}{}
 		}
 	}
-	if nodeNS := path.Base(node.Path); nodeNS != ns && node.Type == ast.Namespace {
-		v.errs.Add(errors.Errorf("Object's Namespace must match the name of the namespace "+
-			"directory in which the object appears. Object Namespace is %s. Directory name is %s. "+
-			"object: %#v",
-			ns, nodeNS, o.FileObject))
+
+	if _, found := v.allowedGVKs[o.GroupVersionKind()]; !found {
+		v.errs.Add(isNotSyncable(o.FileObject))
+	}
+
+	namespace := o.ToMeta().GetNamespace()
+	node := v.nodes[len(v.nodes)-1]
+	if namespace != "" && node.Type == ast.AbstractNamespace {
+		v.errs.Add(nodeError.hasNamespace())
+	}
+	if nodeNS := path.Base(node.Path); nodeNS != namespace && node.Type == ast.Namespace {
+		v.errs.Add(nodeError.hasWrongNamespace(namespace))
 	}
 
 	if node.Type == ast.AbstractNamespace {
-		switch gvk {
+		switch o.GroupVersionKind() {
 		case rbacv1.SchemeGroupVersion.WithKind("RoleBinding"):
 		case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
 		default:
-			v.errs.Add(errors.Errorf(
-				"Objects of type %s are not allowed in abstract namespace directories.  Move %q to a namespace "+
-					"directory",
-				gvk,
-				metaObj.GetName(),
-			))
+			v.errs.Add(nodeError.hasIllegalType())
 		}
 	}
 
-	v.checkAnnotationsAndLabels(metaObj, o.Source)
+	v.checkAnnotationsAndLabels(o.FileObject)
 
 	return nil
 }
 
-// checkSingleResourceQuota ensures that at most one ResourceQuota object is present in each
-// directory.
-func (v *InputValidator) checkSingleResourceQuota(o *ast.NamespaceObject) {
-	if o.FileObject.GetObjectKind().GroupVersionKind() != corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
-		return
-	}
-	path := v.nodes[len(v.nodes)-1].Path
-	if _, found := v.seenResourceQuotas[path]; found {
-		v.errs.Add(errors.Errorf("Each directory must contain at most one ResourceQuota object. "+
-			"Object name: \"%s\", found at path \"%s\".", o.ToMeta().GetName(), path))
-	} else {
-		v.seenResourceQuotas[path] = struct{}{}
-	}
-}
+var ignoreNone = map[string]struct{}{}
 
-func (v *InputValidator) checkAnnotationsAndLabels(o metav1.Object, source string) {
-	if err := v.checkAnnotations(o, source); err != nil {
-		v.errs.Add(err)
-	}
-	if err := v.checkLabels(o, source); err != nil {
-		v.errs.Add(err)
-	}
-}
-
-func (v *InputValidator) checkAnnotations(o metav1.Object, source string) error {
+func (v *InputValidator) checkAnnotations(o ast.FileObject) error {
 	return checkNomosPrefix(
-		o.GetAnnotations(),
+		o.ToMeta().GetAnnotations(),
 		v1alpha1.InputAnnotations,
 		"Objects are not allowed to define unsupported annotations starting with \"nomos.dev/\". "+
 			"Object %s defined in %q has offending annotations: %s",
-		o,
-		source,
+		o.ToMeta(),
+		o.Source,
 	)
 }
 
-var ignoreNone = map[string]struct{}{}
-
-func (v *InputValidator) checkLabels(o metav1.Object, source string) error {
+func (v *InputValidator) checkLabels(o ast.FileObject) error {
 	return checkNomosPrefix(
-		o.GetLabels(),
+		o.ToMeta().GetLabels(),
 		ignoreNone,
 		"Objects are not allowed to define labels starting with \"nomos.dev/\". "+
 			"Object %s defined in %q has %s",
-		o,
-		source,
+		o.ToMeta(),
+		o.Source,
 	)
 }
 

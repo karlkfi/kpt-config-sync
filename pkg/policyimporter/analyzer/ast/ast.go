@@ -17,12 +17,15 @@ limitations under the License.
 package ast
 
 import (
+	"fmt"
+	"path"
 	"time"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // FileObject extends runtime.FileObject to include the path to the file in the repo.
@@ -35,6 +38,27 @@ type FileObject struct {
 // ToMeta converts the underlying object to a metav1.Object
 func (o *FileObject) ToMeta() metav1.Object {
 	return o.Object.(metav1.Object)
+}
+
+// GroupVersionKind unambiguously defines the kind of object.
+func (o *FileObject) GroupVersionKind() schema.GroupVersionKind {
+	return o.GetObjectKind().GroupVersionKind()
+}
+
+// Name returns the user-defined name of the object.
+func (o *FileObject) Name() string {
+	return o.ToMeta().GetName()
+}
+
+// PrettyPrint returns a convenient representation of a FileObject for error messages.
+func (o *FileObject) String() string {
+	gvk := o.GroupVersionKind()
+	return fmt.Sprintf("source: %[1]s\n"+
+		"metadata.name: %[2]s\n"+
+		"group: %[3]s\n"+
+		"apiVersion: %[4]s\n"+
+		"kind: %[5]s\n",
+		o.Source, o.Name(), gvk.Group, gvk.Version, gvk.Kind)
 }
 
 // Root represents a set of declared policies, configuration for how those policies will be
@@ -158,6 +182,18 @@ func (n *TreeNode) PartialCopy() *TreeNode {
 	copyMapInto(n.Labels, &nn.Labels)
 	// Not sure if Selectors should be copied the same way.
 	return &nn
+}
+
+// Name returns the name of the lowest-level directory in this node's path.
+func (n *TreeNode) Name() string {
+	return path.Base(n.Path)
+}
+
+// PrettyPrint returns a convenient representation of a TreeNode for error messages.
+func (n *TreeNode) String() string {
+	return fmt.Sprintf("path: %[1]s\n"+
+		"name: %[2]s\n",
+		n.Path, n.Name())
 }
 
 func copyMapInto(from map[string]string, to *map[string]string) {
