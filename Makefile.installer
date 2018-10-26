@@ -23,12 +23,14 @@ kubectl-plugin-staging: \
 	        zip -r kubectl-oidc-plugin.zip .; \
 	)
 
+.PHONY: installer-staging
 installer-staging: \
 		push-to-gcr-nomos \
 		gen-yaml-all \
 		kubectl-plugin-staging \
 		$(OUTPUT_DIR)
 	@echo "+++ Creating installer staging directory"
+	@rm -rf $(STAGING_DIR)/installer
 	@( \
 			cd $(GO_DIR); \
 			rsync --relative --quiet \

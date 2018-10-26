@@ -9,11 +9,13 @@ E2E_PARAMS := \
 
 # Note that it is basically a copy of the staging directory for the installer
 # plus a few extras for e2e.
+.PHONY: e2e-staging
 e2e-staging: \
 		$(OUTPUT_DIR) \
 		$(TEST_GEN_YAML_DIR)/git-server.yaml \
 		$(wildcard $(TOP_DIR)/e2e/*)
 	@echo "+++ Creating staging directory for building e2e docker image"
+	@rm -rf $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
 	@mkdir -p $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
 	@cp -r $(TOP_DIR)/build/e2e-tests/* $(STAGING_DIR)/e2e-tests
 	@cp -r $(TOP_DIR)/third_party/bats-core $(OUTPUT_DIR)/e2e/bats
