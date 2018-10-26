@@ -49,7 +49,7 @@ load ../lib/loader
   wait::event ReconcileComplete
 
   # verify that syncToken has been updated as well
-  run kubectl get policynode backend -ojsonpath='{.status.syncTokens.backend}'
+  run kubectl get policynode backend -ojsonpath='{.status.syncToken}'
   assert::equals "$itoken"
 }
 
