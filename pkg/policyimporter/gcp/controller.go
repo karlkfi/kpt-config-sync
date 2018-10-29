@@ -93,6 +93,7 @@ func NewController(org, watcherAddr, credsFile, caFile string, client meta.Inter
 		informerFactory:     informerFactory,
 		policyNodeLister:    informerFactory.Nomos().V1().PolicyNodes().Lister(),
 		clusterPolicyLister: informerFactory.Nomos().V1().ClusterPolicies().Lister(),
+		syncLister:          informerFactory.Nomos().V1alpha1().Syncs().Lister(),
 		stopChan:            stopChan,
 		nameMap:             ToK8SNameMap(map[string]string{}),
 	}

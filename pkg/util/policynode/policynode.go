@@ -88,7 +88,8 @@ func ListPolicies(policyNodeLister listersv1.PolicyNodeLister,
 		policies.PolicyNodes[n.Name] = *n.DeepCopy()
 	}
 
-	cp, err := clusterPolicyLister.List(labels.Everything())
+	ls := labels.Everything()
+	cp, err := clusterPolicyLister.List(ls)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list ClusterPolicies")
 	}
