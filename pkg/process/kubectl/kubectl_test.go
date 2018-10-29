@@ -467,12 +467,14 @@ func TestAddRemoveClusterAdmin(t *testing.T) {
 
 func TestNomosLifecycle(t *testing.T) {
 	tests := []struct {
-		clusterName string
-		wantErr     bool
+		existingClusterName string
+		clusterName         string
+		wantErr             bool
 	}{
 		{clusterName: "cluster-1"},
 		{clusterName: "cluster-2"},
 		{clusterName: "", wantErr: true},
+		{existingClusterName: "some-cluster", clusterName: "cluster-3"},
 	}
 	for _, test := range tests {
 		t.Run(test.clusterName, func(t *testing.T) {
@@ -480,6 +482,18 @@ func TestNomosLifecycle(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			kc := NewWithClient(ctx, client)
+			// Conditionally insert an already existing cluster name before testing
+			// the lifecycle, to ensure that the lifecycle succeeds even if there are
+			// remnants of old cluster name setup.
+			if test.existingClusterName != "" {
+				err := kc.CreateClusterName(test.existingClusterName)
+				if err != nil {
+					if !IsNomosEmptyName(err) {
+						t.Errorf("CreateNomos(%q): unexpected error: %v", test.existingClusterName, err)
+					}
+					return
+				}
+			}
 			err := kc.CreateClusterName(test.clusterName)
 			if err != nil {
 				if !IsNomosEmptyName(err) {

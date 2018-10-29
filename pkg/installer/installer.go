@@ -263,13 +263,12 @@ func (i *Installer) clusterName(context string) string {
 // installNomos adds the Nomos custom resource if one was specified in the configuration.
 func (i *Installer) installNomos(context string) error {
 	glog.V(5).Infof("installNomos(%q): enter", context)
-	var err error
 	if clusterName := i.clusterName(context); clusterName != "" {
-		if err = i.k.CreateClusterName(clusterName); err != nil {
+		if err := i.k.CreateClusterName(clusterName); err != nil {
 			return errors.Wrapf(err, "while creating cluster name: %q", clusterName)
 		}
 	}
-	return err
+	return nil
 }
 
 // processCluster installs the necessary files on the currently active cluster.

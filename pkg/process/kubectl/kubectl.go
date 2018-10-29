@@ -49,6 +49,9 @@ const (
 	// nomosClusterNameKey is the name of the key in the above configmap that
 	// contains the cluster name.
 	nomosClusterNameKey = "CLUSTER_NAME"
+
+	// nomosNamespace is the namespace in which Nomos runs by default.
+	nomosNamespace = "nomos-system"
 )
 
 var (
@@ -442,13 +445,20 @@ func IsNomosEmptyName(err error) bool {
 	return ne.emptyName
 }
 
-// CreateClusterName creates a Nomos object for the specified clusterName.
+// CreateClusterName creates a Nomos object for the specified clusterName.  An already existing
+// cluster name is overwritten with a new one.
 func (t *Context) CreateClusterName(clusterName string) error {
+	glog.V(6).Infof("CreateClusterName(%q): ENTER", clusterName)
+	defer glog.V(6).Infof("CreateClusterName(%q): EXIT", clusterName)
+	// Delete cluster name regardless of whether cluster is now named or not.
+	if err := t.DeleteClusterName(); err != nil {
+		return errors.Wrapf(err, "while removing cluster name: %q", clusterName)
+	}
 	if clusterName == "" {
 		return nomosError{emptyName: true}
 	}
 	data := map[string]string{nomosClusterNameKey: clusterName}
-	if err := t.CreateConfigMap(nomosClusterNameConfigMap, "nomos-system", data); err != nil {
+	if err := t.CreateConfigMap(nomosClusterNameConfigMap, nomosNamespace, data); err != nil {
 		return errors.Wrapf(err, "while creating Nomos for cluster %q", clusterName)
 	}
 	return nil
@@ -456,7 +466,7 @@ func (t *Context) CreateClusterName(clusterName string) error {
 
 // GetClusterName gets the nomos cluster name.
 func (t *Context) GetClusterName() (string, error) {
-	c, err := t.Kubernetes().CoreV1().ConfigMaps("nomos-system").Get(nomosClusterNameConfigMap, metav1.GetOptions{})
+	c, err := t.Kubernetes().CoreV1().ConfigMaps(nomosNamespace).Get(nomosClusterNameConfigMap, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -468,7 +478,7 @@ func (t *Context) GetClusterName() (string, error) {
 // DeleteClusterName deletes the cluster name object.  If the object does not
 // already exist, no change is made.
 func (t *Context) DeleteClusterName() error {
-	err := t.DeleteConfigMap(nomosClusterNameConfigMap, "nomos-system")
+	err := t.DeleteConfigMap(nomosClusterNameConfigMap, nomosNamespace)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
