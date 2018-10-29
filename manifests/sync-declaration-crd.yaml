@@ -83,7 +83,6 @@ spec:
                 - version
                 - kind
                 - status
-                - message
                 properties:
                   group:
                     type: string

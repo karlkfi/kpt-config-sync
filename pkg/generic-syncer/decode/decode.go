@@ -41,13 +41,15 @@ var _ Decoder = &GenericResourceDecoder{}
 
 // GenericResourceDecoder implements Decoder.
 type GenericResourceDecoder struct {
-	decoder runtime.Decoder
+	decoder               runtime.Decoder
+	unstructuredConverter runtime.UnstructuredConverter
 }
 
 // NewGenericResourceDecoder returns a new GenericResourceDecoder.
 func NewGenericResourceDecoder(scheme *runtime.Scheme) *GenericResourceDecoder {
 	return &GenericResourceDecoder{
-		decoder: serializer.NewCodecFactory(scheme).UniversalDeserializer(),
+		decoder:               serializer.NewCodecFactory(scheme).UniversalDeserializer(),
+		unstructuredConverter: runtime.DefaultUnstructuredConverter,
 	}
 }
 
@@ -65,7 +67,12 @@ func (d *GenericResourceDecoder) DecodeResources(genericResources ...nomosv1.Gen
 				}
 				au, ok := o.(*unstructured.Unstructured)
 				if !ok {
-					return nil, fmt.Errorf("could not treat GenericResource object %q as an unstructured.Unstructured", gvk)
+					m, err := d.unstructuredConverter.ToUnstructured(o)
+					if err != nil {
+						return nil, fmt.Errorf("could not treat GenericResource object %q as an unstructured.Unstructured", gvk)
+					}
+					au = &unstructured.Unstructured{Object: m}
+					au.SetGroupVersionKind(gvk)
 				}
 				us[gvk] = append(us[gvk], au)
 			}

@@ -81,7 +81,11 @@ func (r *PolicyNodeReconciler) Reconcile(request reconcile.Request) (reconcile.R
 	defer cancel()
 	// TODO(sbochins): Make use of reconcile.Result.RequeueAfter when we don't want exponential backoff for retries when
 	// using newer version of controller-runtime.
-	return reconcile.Result{}, r.reconcilePolicyNode(ctx, request.Name)
+	err := r.reconcilePolicyNode(ctx, request.Name)
+	if err != nil {
+		glog.Errorf("Could not reconcile policynode %q: %v", request.Name, err)
+	}
+	return reconcile.Result{}, err
 }
 
 // policyNodeState enumerates possible states for PolicyNodes
@@ -160,7 +164,7 @@ func (r *PolicyNodeReconciler) getNamespaceState(ctx context.Context, name strin
 	r.recorder.Eventf(
 		ns,
 		corev1.EventTypeWarning,
-		"InvalidManagmentLabel",
+		"InvalidManagementLabel",
 		"Namespace %q has invalid management label %q",
 		name, value,
 	)
@@ -190,7 +194,7 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(ctx context.Context, name str
 		case namespaceStateManagePolicies:
 			r.warnUndeclaredNamespace(ns)
 		case namespaceStateManageFull:
-			return r.deleteNamespace(ctx, asNamespace(node))
+			return r.deleteNamespace(ctx, ns)
 		}
 
 	case policyNodeStateNamespace:
@@ -366,7 +370,7 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 		}
 	case differ.Update:
 		if !diff.ActualResourceIsManaged() {
-			r.warnNoLabelResource(diff.Declared)
+			r.warnNoLabelResource(diff.Actual)
 			return false, nil
 		}
 
@@ -375,7 +379,7 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 		}
 	case differ.Delete:
 		if !diff.ActualResourceIsManaged() {
-			r.warnNoLabelResource(diff.Declared)
+			r.warnNoLabelResource(diff.Actual)
 			return false, nil
 		}
 		if err := r.client.Delete(ctx, diff.Actual); err != nil {

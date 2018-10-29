@@ -186,7 +186,8 @@ type SyncGroupVersionKindStatus struct {
 	// then Error will be populated with a message regarding the error.
 	Status SyncState `json:"status"`
 	// Message indicates a message associated with the status.
-	Message string `json:"error,omitempty"`
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

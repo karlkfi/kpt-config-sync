@@ -79,7 +79,9 @@ func (r *ClusterPolicyReconciler) Reconcile(request reconcile.Request) (reconcil
 	clusterPolicy := &nomosv1.ClusterPolicy{}
 	err := r.cache.Get(ctx, request.NamespacedName, clusterPolicy)
 	if err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "could not retrieve clusterpolicy %q", request.Name)
+		err = errors.Wrapf(err, "could not retrieve clusterpolicy %q", request.Name)
+		glog.Error(err)
+		return reconcile.Result{}, err
 	}
 
 	name := request.Name
@@ -95,7 +97,11 @@ func (r *ClusterPolicyReconciler) Reconcile(request reconcile.Request) (reconcil
 
 	// TODO(sbochins): Make use of reconcile.Result.RequeueAfter when we don't want exponential backoff for retries when
 	// using newer version of controller-runtime.
-	return reconcile.Result{}, r.managePolicies(ctx, clusterPolicy)
+	rErr := r.managePolicies(ctx, clusterPolicy)
+	if rErr != nil {
+		glog.Errorf("Could not reconcile clusterpolicy: %v", rErr)
+	}
+	return reconcile.Result{}, rErr
 }
 
 func (r *ClusterPolicyReconciler) warnNoLabelResource(u *unstructured.Unstructured) {
@@ -199,7 +205,7 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 		}
 	case differ.Update:
 		if !diff.ActualResourceIsManaged() {
-			r.warnNoLabelResource(diff.Declared)
+			r.warnNoLabelResource(diff.Actual)
 			return false, nil
 		}
 
@@ -208,7 +214,7 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 		}
 	case differ.Delete:
 		if !diff.ActualResourceIsManaged() {
-			r.warnNoLabelResource(diff.Declared)
+			r.warnNoLabelResource(diff.Actual)
 			return false, nil
 		}
 		if err := r.client.Delete(ctx, diff.Actual); err != nil {

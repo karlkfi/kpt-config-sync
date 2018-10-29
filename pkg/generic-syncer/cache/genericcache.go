@@ -66,7 +66,9 @@ func (c *GenericResourceCache) UnstructuredList(gvk schema.GroupVersionKind) ([]
 			// All resources the Syncer syncs need to be convertible to Unstructured.
 			panic(errors.Wrapf(err, "cannot convert %s to Unstructured object", gvk))
 		}
-		us = append(us, &unstructured.Unstructured{Object: content})
+		u := &unstructured.Unstructured{Object: content}
+		u.SetGroupVersionKind(gvk)
+		us = append(us, u)
 	}
 	return us, nil
 }

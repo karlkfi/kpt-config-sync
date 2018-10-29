@@ -21,6 +21,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/golang/glog"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	syncerclient "github.com/google/nomos/pkg/generic-syncer/client"
 	syncermanager "github.com/google/nomos/pkg/generic-syncer/manager"
@@ -147,5 +148,10 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
-	return reconcile.Result{}, errBuilder.Build()
+	bErr := errBuilder.Build()
+	if bErr != nil {
+		glog.Errorf("Could not reconcile syncs: %v", bErr)
+	}
+
+	return reconcile.Result{}, bErr
 }
