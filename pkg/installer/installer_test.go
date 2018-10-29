@@ -18,9 +18,10 @@ import (
 
 func TestImporterConfigMap(t *testing.T) {
 	testCases := []struct {
-		name   string
-		config config.Config
-		want   []string
+		name                   string
+		config                 config.Config
+		enableGenericResources bool
+		want                   []string
 	}{
 		{
 			name: "git ssh",
@@ -43,6 +44,32 @@ func TestImporterConfigMap(t *testing.T) {
 				"GIT_KNOWN_HOSTS=true",
 				"GIT_COOKIE_FILE=false",
 				"POLICY_DIR=foo-corp",
+				"GENERIC_RESOURCES=false",
+			},
+		},
+		{
+			name: "git generic resources",
+			config: config.Config{
+				Git: config.GitConfig{
+					SyncRepo:           "git@github.com:user/foo-corp.git",
+					UseSSH:             true,
+					PrivateKeyFilename: "/some/path/id_rsa",
+					KnownHostsFilename: "/some/path/known_hosts",
+					SyncBranch:         "master",
+					RootPolicyDir:      "foo-corp",
+					SyncWaitSeconds:    60,
+				},
+			},
+			enableGenericResources: true,
+			want: []string{
+				"GIT_SYNC_SSH=true",
+				"GIT_SYNC_REPO=git@github.com:user/foo-corp.git",
+				"GIT_SYNC_BRANCH=master",
+				"GIT_SYNC_WAIT=60",
+				"GIT_KNOWN_HOSTS=true",
+				"GIT_COOKIE_FILE=false",
+				"POLICY_DIR=foo-corp",
+				"GENERIC_RESOURCES=true",
 			},
 		},
 		{
@@ -65,6 +92,7 @@ func TestImporterConfigMap(t *testing.T) {
 				"GIT_KNOWN_HOSTS=false",
 				"GIT_COOKIE_FILE=false",
 				"POLICY_DIR=foo-corp",
+				"GENERIC_RESOURCES=false",
 			},
 		},
 		{
@@ -87,6 +115,7 @@ func TestImporterConfigMap(t *testing.T) {
 				"GIT_KNOWN_HOSTS=false",
 				"GIT_COOKIE_FILE=true",
 				"POLICY_DIR=foo-corp",
+				"GENERIC_RESOURCES=false",
 			},
 		},
 		{
@@ -122,7 +151,7 @@ func TestImporterConfigMap(t *testing.T) {
 			i := &Installer{c: tt.config}
 			var got []string
 			if strings.Contains(tt.name, "git") {
-				got = i.gitConfigMapContent()
+				got = i.gitConfigMapContent(tt.enableGenericResources)
 			} else if strings.Contains(tt.name, "gcp") {
 				got = i.gcpConfigMapContent()
 			} else {

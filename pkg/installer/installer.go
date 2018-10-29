@@ -148,7 +148,7 @@ func (i *Installer) deployConfigMap(name string, content []string) error {
 	return nil
 }
 
-func (i *Installer) gitConfigMapContent() []string {
+func (i *Installer) gitConfigMapContent(genericResourcesSyncer bool) []string {
 	return []string{
 		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Git.UseSSH),
 		fmt.Sprintf("GIT_SYNC_REPO=%v", i.c.Git.SyncRepo),
@@ -157,6 +157,7 @@ func (i *Installer) gitConfigMapContent() []string {
 		fmt.Sprintf("GIT_KNOWN_HOSTS=%v", i.c.Git.KnownHostsFilename != ""),
 		fmt.Sprintf("GIT_COOKIE_FILE=%v", i.c.Git.CookieFilename != ""),
 		fmt.Sprintf("POLICY_DIR=%v", i.c.Git.RootPolicyDir),
+		fmt.Sprintf("GENERIC_RESOURCES=%t", genericResourcesSyncer),
 	}
 }
 
@@ -170,7 +171,7 @@ func (i *Installer) gcpConfigMapContent() []string {
 	return c
 }
 
-// syncerConfigMapContent returns a list of listerals defining the ConfigMap for the syncer
+// syncerConfigMapContent returns a list of literals defining the ConfigMap for the syncer
 func (i *Installer) syncerConfigMapContent(genericResourcesSyncer bool) []string {
 	return []string{
 		fmt.Sprintf("gcp.mode=%v", !i.c.GCP.Empty()),
@@ -315,7 +316,7 @@ func (i *Installer) processCluster(cluster string, genericResourcesSyncer bool) 
 	if !i.c.Git.Empty() {
 		importerDeployment = gitPolicyImporterDeployment
 		importerConfigMapName = gitPolicyImporterConfigMap
-		importerConfigMapContent = i.gitConfigMapContent()
+		importerConfigMapContent = i.gitConfigMapContent(genericResourcesSyncer)
 		importerSecretName = gitPolicyImporterCreds
 		importerSecretContent = i.gitSecretContent()
 	} else {

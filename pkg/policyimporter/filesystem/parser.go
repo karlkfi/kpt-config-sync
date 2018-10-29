@@ -51,9 +51,10 @@ import (
 
 // Parser reads files on disk and builds Nomos CRDs.
 type Parser struct {
-	factory         cmdutil.Factory
-	discoveryClient discovery.ServerResourcesInterface
-	validate        bool
+	factory          cmdutil.Factory
+	discoveryClient  discovery.ServerResourcesInterface
+	validate         bool
+	genericResources bool
 	// OS-specific path to root.
 	root string
 }
@@ -63,17 +64,19 @@ type Parser struct {
 // resources is the list returned by the DisoveryClient ServerResources call which represents resources
 // 		that are returned by the API server during discovery.
 // validate determines whether to validate schema using OpenAPI spec.
-func NewParser(config clientcmd.ClientConfig, discoveryClient discovery.ServerResourcesInterface, validate bool) (*Parser, error) {
-	return NewParserWithFactory(cmdutil.NewFactory(config), discoveryClient, validate)
+// genericResources determines whether generic resource support is enabled.
+func NewParser(config clientcmd.ClientConfig, discoveryClient discovery.ServerResourcesInterface, validate bool, genericResources bool) (*Parser, error) {
+	return NewParserWithFactory(cmdutil.NewFactory(config), discoveryClient, validate, genericResources)
 }
 
 // NewParserWithFactory creates a new Parser using the specified factory.
 // NewParser is the more common constructor, but this is useful for testing.
-func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterface, validate bool) (*Parser, error) {
+func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterface, validate bool, genericResources bool) (*Parser, error) {
 	return &Parser{
-		factory:         f,
-		discoveryClient: dc,
-		validate:        validate,
+		factory:          f,
+		discoveryClient:  dc,
+		validate:         validate,
+		genericResources: genericResources,
 	}, nil
 }
 
@@ -279,7 +282,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 		}
 	}
 
-	outputVisitor := backend.NewOutputVisitor(syncs)
+	outputVisitor := backend.NewOutputVisitor(syncs, p.genericResources)
 	fsCtx.Accept(outputVisitor)
 	policies := outputVisitor.AllPolicies()
 

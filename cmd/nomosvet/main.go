@@ -91,7 +91,7 @@ func main() {
 		printErrAndDie(errors.Wrap(err, "Failed to create client"))
 	}
 
-	p, err := filesystem.NewParser(clientConfig, client.Discovery(), *validate)
+	p, err := filesystem.NewParser(clientConfig, client.Discovery(), *validate, false)
 	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Failed to create parser"))
 	}

@@ -49,7 +49,7 @@ type OutputVisitorTestcase struct {
 }
 
 func (tc *OutputVisitorTestcase) Run(t *testing.T) {
-	ov := NewOutputVisitor([]*policyhierarchyv1alpha1.Sync{})
+	ov := NewOutputVisitor([]*policyhierarchyv1alpha1.Sync{}, false)
 	tc.input.Accept(ov)
 	actual := ov.AllPolicies()
 	if !cmp.Equal(actual, tc.expect, vt.ResourceVersionCmp()) {

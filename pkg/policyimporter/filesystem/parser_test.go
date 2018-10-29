@@ -615,7 +615,8 @@ func makeSync(group, version, kind string) v1alpha1.Sync {
 			Kind:       "Sync",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kind,
+			Name:       kind,
+			Finalizers: []string{v1alpha1.SyncFinalizer},
 		},
 		Spec: v1alpha1.SyncSpec{
 			Groups: []v1alpha1.SyncGroup{
@@ -649,7 +650,8 @@ func mapOfSingleSync(name, group, kind string, versions ...string) map[string]v1
 				Kind:       "Sync",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
+				Name:       name,
+				Finalizers: []string{v1alpha1.SyncFinalizer},
 			},
 			Spec: v1alpha1.SyncSpec{
 				Groups: []v1alpha1.SyncGroup{
@@ -1542,8 +1544,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			t.Fatal(errors.Wrap(err, "could not clean up"))
 		}
 	}()
-
-	p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestDynamicResources()), true, d.rootDir}
+	p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestDynamicResources()), true, true, d.rootDir}
 
 	actualPolicies, err := p.Parse(d.rootDir)
 	if tc.expectedError {
@@ -2247,7 +2248,7 @@ func TestEmptyDirectories(t *testing.T) {
 				}
 			}()
 
-			p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestDynamicResources()), true, d.rootDir}
+			p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestDynamicResources()), true, true, d.rootDir}
 
 			actualPolicies, err := p.Parse(d.rootDir)
 			if err != nil {

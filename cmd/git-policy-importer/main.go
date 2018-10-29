@@ -59,7 +59,10 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	parser, err := filesystem.NewParser(nil, client.Kubernetes().Discovery(), true)
+	// TODO(118189026): Remove flag, when unused.
+	genericResources := os.Getenv("GENERIC_RESOURCES") == "true"
+
+	parser, err := filesystem.NewParser(nil, client.Kubernetes().Discovery(), true, genericResources)
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %v", err)
 	}
@@ -67,6 +70,7 @@ func main() {
 	go service.ServeMetrics()
 
 	stopChan := make(chan struct{})
+
 	c := filesystem.NewController(policyDir, *pollPeriod, parser, client, stopChan)
 	go service.WaitForShutdownSignalCb(stopChan)
 	if err := c.Run(); err != nil {
