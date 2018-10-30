@@ -17,25 +17,24 @@ foo-corp
 │   ├── pod-creator-clusterrole.yaml
 │   └── pod-security-policy.yaml
 ├── namespaces
-│   ├── foo-corp
-│   │   ├── audit
-│   │   │   └── namespace.yaml
-│   │   ├── online
-│   │   │   └── shipping-app-backend
-│   │   │       ├── pod-creator-rolebinding.yaml
-│   │   │       ├── quota.yaml
-│   │   │       ├── shipping-dev
-│   │   │       │   ├── job-creator-rolebinding.yaml
-│   │   │       │   ├── job-creator-role.yaml
-│   │   │       │   ├── namespace.yaml
-│   │   │       │   └── quota.yaml
-│   │   │       ├── shipping-prod
-│   │   │       │   └── namespace.yaml
-│   │   │       └── shipping-staging
-│   │   │           └── namespace.yaml
-│   │   └── viewers-rolebinding.yaml
+│   ├── audit
+│   │   └── namespace.yaml
+│   ├── online
+│   │   └── shipping-app-backend
+│   │       ├── shipping-dev
+│   │       │   ├── job-creator-rolebinding.yaml
+│   │       │   ├── job-creator-role.yaml
+│   │       │   ├── namespace.yaml
+│   │       │   └── quota.yaml
+│   │       ├── shipping-prod
+│   │       │   └── namespace.yaml
+│   │       ├── shipping-staging
+│   │       │   └── namespace.yaml
+│   │       ├── pod-creator-rolebinding.yaml
+│   │       └── quota.yaml
 │   ├── sre-rolebinding.yaml
-│   └── sre-supported-selector.yaml
+│   ├── sre-supported-selector.yaml
+│   └── viewers-rolebinding.yaml
 └── system
     ├── nomos.yaml
     ├── podsecuritypolicy.yaml
