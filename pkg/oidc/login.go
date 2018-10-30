@@ -72,8 +72,8 @@ func loginCheck(_ *cobra.Command, _ []string) error {
 // loginFlow absorbs all errors encountered while running its multiple
 // methods.
 type loginFlow struct {
-	// Stores last seen error.
-	err error
+	// Err stores last seen error.
+	Err error
 }
 
 // login implements the "kubectl plugin oidc login" command.
@@ -81,6 +81,12 @@ func login(cmd *cobra.Command, _ []string) {
 	var l loginFlow
 
 	result, cid := l.LoadKubeConfig(clusterConfig)
+	if l.Err != nil {
+		// Without result and cid, there is no point in continuing from here.
+		glog.Errorf("could not load file: %q", clusterConfig)
+		os.Exit(2)
+		return
+	}
 	clusterName := l.FirstCluster(result.Clusters)
 
 	// Run the OIDC flow.
@@ -102,8 +108,8 @@ func login(cmd *cobra.Command, _ []string) {
 	// Write the result out.
 	l.MergeKubeConfigs(result)
 
-	if l.err != nil {
-		glog.Errorf("%s", l.err)
+	if l.Err != nil {
+		glog.Errorf("%s", l.Err)
 		os.Exit(1)
 	}
 }
@@ -111,7 +117,7 @@ func login(cmd *cobra.Command, _ []string) {
 // LoadKubeConfig loads an extended configuration file from 'clusterConfig'.  Returns the
 // full content of the configuration, and separately the client ID setting.
 func (l *loginFlow) LoadKubeConfig(clusterConfig string) (*api.Config, *oidcconfig.ClientID) {
-	if l.err != nil {
+	if l.Err != nil {
 		return nil, nil
 	}
 	r := l.Open(clusterConfig)
@@ -124,7 +130,7 @@ func (l *loginFlow) LoadKubeConfig(clusterConfig string) (*api.Config, *oidcconf
 // MergeKubeConfigs merges configuration 'result' with the current content of
 // the user's kube config file.
 func (l *loginFlow) MergeKubeConfigs(result *api.Config) {
-	if l.err != nil {
+	if l.Err != nil {
 		return
 	}
 	tempKubeConfig := l.TempFile()
@@ -146,7 +152,7 @@ func (l *loginFlow) MergeKubeConfigs(result *api.Config) {
 // Context returns a new Context that joins the named cluster and user auth information.
 // No checks are made, it is assumed that both supplied names are valid.
 func (l *loginFlow) Context(clusterName, authInfoName string) *api.Context {
-	if l.err != nil {
+	if l.Err != nil {
 		return nil
 	}
 	c := api.Context{
@@ -158,42 +164,42 @@ func (l *loginFlow) Context(clusterName, authInfoName string) *api.Context {
 
 // FirstCluster returns the first cluster name from the supplied cluster map.
 func (l *loginFlow) FirstCluster(cc map[string]*api.Cluster) string {
-	if l.err != nil {
+	if l.Err != nil {
 		return ""
 	}
 	for name := range cc {
 		return name
 	}
-	l.err = fmt.Errorf("no clusters found in the config, expected exactly one")
+	l.Err = fmt.Errorf("no clusters found in the config, expected exactly one")
 	return ""
 }
 
 // WriteToFile writes the API configuration robustly into filename.
 func (l *loginFlow) WriteToFile(result *api.Config, filename string) {
-	if l.err != nil {
+	if l.Err != nil {
 		return
 	}
 	if result == nil {
-		l.err = fmt.Errorf("no config to write")
+		l.Err = fmt.Errorf("no config to write")
 		return
 	}
 	if glog.V(4) {
 		glog.Infof("api.Config: %v", spew.Sdump(result))
 	}
 	if err := clientcmd.WriteToFile(*result, filename); err != nil {
-		l.err = fmt.Errorf("while writing file: %q: %v", filename, err)
+		l.Err = fmt.Errorf("while writing file: %q: %v", filename, err)
 		return
 	}
 }
 
 // Open opens the given file robustly.
 func (l *loginFlow) Open(clusterConfig string) io.Reader {
-	if l.err != nil {
+	if l.Err != nil {
 		return nil
 	}
 	r, err := os.Open(clusterConfig)
 	if err != nil {
-		l.err = fmt.Errorf("while opening %q: %v", clusterConfig, err)
+		l.Err = fmt.Errorf("while opening %q: %v", clusterConfig, err)
 		return nil
 	}
 	return r
@@ -201,12 +207,12 @@ func (l *loginFlow) Open(clusterConfig string) io.Reader {
 
 // ReadAll loads the cluster configuration bytes.
 func (l *loginFlow) ReadAll(r io.Reader) []byte {
-	if l.err != nil {
+	if l.Err != nil {
 		return nil
 	}
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
-		l.err = fmt.Errorf("could not read %q: %v", clusterConfig, err)
+		l.Err = fmt.Errorf("could not read %q: %v", clusterConfig, err)
 		return nil
 	}
 	return b
@@ -214,12 +220,12 @@ func (l *loginFlow) ReadAll(r io.Reader) []byte {
 
 // ReadJSON turns the YAML in b into JSON.
 func (l *loginFlow) ReadJSON(b []byte) []byte {
-	if l.err != nil {
+	if l.Err != nil {
 		return nil
 	}
 	json, err := yaml.YAMLToJSON(b)
 	if err != nil {
-		l.err = fmt.Errorf("could not read as YAML: %v", err)
+		l.Err = fmt.Errorf("could not read as YAML: %v", err)
 		return nil
 	}
 	if glog.V(7) {
@@ -230,12 +236,12 @@ func (l *loginFlow) ReadJSON(b []byte) []byte {
 
 // Decode decodes a JSON byte array into Kubernetes configuration.
 func (l *loginFlow) Decode(json []byte) *api.Config {
-	if l.err != nil {
+	if l.Err != nil {
 		return nil
 	}
 	result := api.NewConfig()
 	if err := runtime.DecodeInto(clientcmdlatest.Codec, json, result); err != nil {
-		l.err = fmt.Errorf("could not decode config %v", err)
+		l.Err = fmt.Errorf("could not decode config %v", err)
 		return nil
 	}
 	if glog.V(7) {
@@ -248,7 +254,7 @@ func (l *loginFlow) Decode(json []byte) *api.Config {
 // into ClientID.  It seems as if this bit could be automatic, but that never
 // really happens, and I haven't found examples of how to do it.
 func (l *loginFlow) Reparse(result *api.Config) (*api.Config, *oidcconfig.ClientID) {
-	if l.err != nil {
+	if l.Err != nil {
 		return nil, nil
 	}
 	raw := result.Extensions[NomosOIDCExtensionKey].(*runtime.Unknown)
@@ -258,7 +264,7 @@ func (l *loginFlow) Reparse(result *api.Config) (*api.Config, *oidcconfig.Client
 	cid := oidcconfig.ClientID{}
 	gvk := oidcconfig.SchemeGroupVersion.WithKind("ClientID")
 	if _, _, err := clientcmdlatest.Codec.Decode(raw.Raw, &gvk, &cid); err != nil {
-		l.err = fmt.Errorf("could not decode: %v", err)
+		l.Err = fmt.Errorf("could not decode: %v", err)
 		return nil, nil
 	}
 	cid.TypeMeta.Kind = "ClientID"
@@ -273,19 +279,19 @@ func (l *loginFlow) Reparse(result *api.Config) (*api.Config, *oidcconfig.Client
 // Run invokes the browser-based OIDC login flow.  Returns the authinfo obtained for
 // the user.
 func (l *loginFlow) Run(cfg oidc.Config, urlValues oidc.UrlValues, endpoints helper.Endpoints) string {
-	if l.err != nil {
+	if l.Err != nil {
 		return ""
 	}
 	authInfoName, err := oidc.Run(cfg, urlValues, endpoints)
 	if err != nil {
-		l.err = fmt.Errorf("%s", err)
+		l.Err = fmt.Errorf("%s", err)
 		return ""
 	}
 	return authInfoName
 }
 
 func (l *loginFlow) mergeWithKubeConfig(file string) *api.Config {
-	if l.err != nil {
+	if l.Err != nil {
 		return nil
 	}
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
@@ -299,24 +305,24 @@ func (l *loginFlow) mergeWithKubeConfig(file string) *api.Config {
 }
 
 func (l *loginFlow) TempFile() *os.File {
-	if l.err != nil {
+	if l.Err != nil {
 		return nil
 	}
 	f, err := ioutil.TempFile("", "")
 	if err != nil {
-		l.err = fmt.Errorf("%s", err)
+		l.Err = fmt.Errorf("%s", err)
 		return nil
 	}
 	return f
 }
 
 func (l *loginFlow) kubeConfigName() string {
-	if l.err != nil {
+	if l.Err != nil {
 		return ""
 	}
 	usr, err := user.Current()
 	if err != nil {
-		l.err = fmt.Errorf("can't find current user: %v", err)
+		l.Err = fmt.Errorf("can't find current user: %v", err)
 		return ""
 	}
 	return filepath.Join(usr.HomeDir, ".kube", "config")
