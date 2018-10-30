@@ -63,7 +63,7 @@ func NewOutputVisitor(syncs []*v1alpha1.Sync, genericResources bool) *OutputVisi
 func (v *OutputVisitor) AllPolicies() *v1.AllPolicies {
 	if v.genericResources {
 		for _, s := range v.syncs {
-			s.SetFinalizers([]string{v1alpha1.SyncFinalizer})
+			s.SetFinalizers(append(s.GetFinalizers(), v1alpha1.SyncFinalizer))
 		}
 	}
 	v.allPolicies.Syncs = mapByName(v.syncs)
