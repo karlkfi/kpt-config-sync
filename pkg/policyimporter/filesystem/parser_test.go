@@ -1513,7 +1513,9 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			t.Fatal(errors.Wrap(err, "could not clean up"))
 		}
 	}()
-	p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestDynamicResources()), true, true, d.rootDir}
+	p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
+		true, true,
+		d.rootDir}
 
 	actualPolicies, err := p.Parse(d.rootDir)
 	if tc.expectedError {
@@ -2217,7 +2219,8 @@ func TestEmptyDirectories(t *testing.T) {
 				}
 			}()
 
-			p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestDynamicResources()), true, true, d.rootDir}
+			p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestAPIResourceList(fstesting.TestDynamicResources())), true, true,
+				d.rootDir}
 
 			actualPolicies, err := p.Parse(d.rootDir)
 			if err != nil {

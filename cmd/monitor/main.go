@@ -23,8 +23,8 @@ import (
 	"github.com/google/nomos/pkg/monitor"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
 
 func main() {

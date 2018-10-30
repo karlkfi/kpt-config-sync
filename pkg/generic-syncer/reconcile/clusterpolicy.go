@@ -139,7 +139,7 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *no
 			decl.SetAnnotations(a)
 		}
 
-		actualInstances, err := r.cache.UnstructuredList(gvk)
+		actualInstances, err := r.cache.UnstructuredList(gvk, "")
 		if err != nil {
 			errBuilder.Add(errors.Wrapf(err, "failed to list from policy controller for %q", gvk))
 			syncErrs = append(syncErrs, NewClusterPolicySyncError(name, gvk, err))

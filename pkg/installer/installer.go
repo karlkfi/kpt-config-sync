@@ -172,10 +172,9 @@ func (i *Installer) gcpConfigMapContent() []string {
 }
 
 // syncerConfigMapContent returns a list of literals defining the ConfigMap for the syncer
-func (i *Installer) syncerConfigMapContent(genericResourcesSyncer bool) []string {
+func (i *Installer) syncerConfigMapContent() []string {
 	return []string{
 		fmt.Sprintf("gcp.mode=%v", !i.c.GCP.Empty()),
-		fmt.Sprintf("generic.resources=%t", genericResourcesSyncer),
 	}
 }
 
@@ -325,7 +324,7 @@ func (i *Installer) processCluster(cluster string, genericResourcesSyncer bool) 
 		importerSecretName = gcpPolicyImporterCreds
 		importerSecretContent = i.gcpSecretContent()
 	}
-	syncerConfigMapContent := i.syncerConfigMapContent(genericResourcesSyncer)
+	syncerConfigMapContent := i.syncerConfigMapContent()
 
 	// Delete the importer deployment.  This is important because a
 	// change in the secret should also be reflected in the importer.

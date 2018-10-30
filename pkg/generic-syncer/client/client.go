@@ -63,14 +63,14 @@ func (c *Client) Create(ctx context.Context, obj runtime.Object) error {
 }
 
 // Delete deletes the given obj from Kubernetes cluster and records prometheus metrics.
-func (c *Client) Delete(ctx context.Context, obj runtime.Object) error {
+func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
 	description, resource := resourceInfo(obj)
 	operation := string(action.DeleteOperation)
 	action.Actions.WithLabelValues(resource, operation).Inc()
 	action.APICalls.WithLabelValues(resource, operation).Inc()
 	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(resource, operation))
 	defer timer.ObserveDuration()
-	if err := c.Client.Delete(ctx, obj); err != nil {
+	if err := c.Client.Delete(ctx, obj, opts...); err != nil {
 		if apierrors.IsNotFound(err) {
 			glog.V(5).Infof("not found during delete %s", description)
 			return nil

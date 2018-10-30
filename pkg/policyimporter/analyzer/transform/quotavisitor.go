@@ -20,7 +20,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/resourcequota"
-	"github.com/google/nomos/pkg/syncer/modules"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -59,7 +58,7 @@ func merge(lhs, rhs *corev1.ResourceQuota) *corev1.ResourceQuota {
 			Name: resourcequota.ResourceQuotaObjectName,
 		},
 		Spec: corev1.ResourceQuotaSpec{
-			Hard: modules.MergeLimits(lhs.Spec.Hard, rhs.Spec.Hard),
+			Hard: MergeLimits(lhs.Spec.Hard, rhs.Spec.Hard),
 		},
 	}
 }
@@ -130,4 +129,19 @@ func (v *QuotaVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 		return nil
 	}
 	return o
+}
+
+// MergeLimits takes two ResourceList objects and performs the union on all specified limits.   Conflicting
+// limits will be resolved by taking the lower of the two.
+func MergeLimits(lhs, rhs corev1.ResourceList) corev1.ResourceList {
+	merged := corev1.ResourceList{}
+	for k, v := range lhs {
+		merged[k] = v
+	}
+	for k, v := range rhs {
+		if limit, exists := merged[k]; !exists || (v.Cmp(limit) < 0) {
+			merged[k] = v
+		}
+	}
+	return merged
 }

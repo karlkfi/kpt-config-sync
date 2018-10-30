@@ -1,0 +1,12 @@
+name: "jsonpatch"
+description: "As per http://jsonpatch.com/ JSON Patch is specified in RFC 6902 from the IETF."
+
+third_party {
+  url {
+    type: GIT
+    value: "https://github.com/mattbaird/jsonpatch"
+  }
+  version: "master"
+  last_upgrade_date { year: 2018 month: 4 day: 25 }
+  license_type: NOTICE
+}

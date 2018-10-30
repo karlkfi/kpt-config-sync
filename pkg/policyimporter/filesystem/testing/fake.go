@@ -21,46 +21,66 @@ package testing
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/kubernetes"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/kubernetes/pkg/api/legacyscheme"
-	api "k8s.io/kubernetes/pkg/apis/core"
-	"k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 	"k8s.io/kubernetes/pkg/kubectl"
-	"k8s.io/kubernetes/pkg/kubectl/categories"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
 	openapitesting "k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi/testing"
-	"k8s.io/kubernetes/pkg/kubectl/resource"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource"
 	"k8s.io/kubernetes/pkg/kubectl/validation"
 	"k8s.io/kubernetes/pkg/printers"
 )
 
+// FakeRESTClientGetter implements RESTClientGetter.
+type FakeRESTClientGetter struct {
+	Config          clientcmd.ClientConfig
+	DiscoveryClient discovery.CachedDiscoveryInterface
+	RestMapper      meta.RESTMapper
+}
+
+// ToRESTConfig returns restconfig
+func (g *FakeRESTClientGetter) ToRESTConfig() (*restclient.Config, error) {
+	return g.Config.ClientConfig()
+}
+
+// ToDiscoveryClient returns discovery client
+func (g *FakeRESTClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
+	return g.DiscoveryClient, nil
+}
+
+// ToRESTMapper returns a restmapper
+func (g *FakeRESTClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
+	return g.RestMapper, nil
+}
+
+// ToRawKubeConfigLoader return kubeconfig loader as-is
+func (g *FakeRESTClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
+	return g.Config
+}
+
 // FakeCachedDiscoveryClient is a DiscoveryClient with stubbed API Resources.
 type FakeCachedDiscoveryClient struct {
 	discovery.DiscoveryInterface
-	APIGroupResources []*discovery.APIGroupResources
+	APIGroupResources []*metav1.APIResourceList
 }
 
 // NewFakeCachedDiscoveryClient returns a DiscoveryClient with stubbed API Resources.
-func NewFakeCachedDiscoveryClient(res []*discovery.APIGroupResources) discovery.DiscoveryInterface {
+func NewFakeCachedDiscoveryClient(res []*metav1.APIResourceList) discovery.DiscoveryInterface {
 	return &FakeCachedDiscoveryClient{APIGroupResources: res}
 }
 
@@ -75,7 +95,7 @@ func (d *FakeCachedDiscoveryClient) Invalidate() {
 
 // ServerResources returns the stubbed list of available resources.
 func (d *FakeCachedDiscoveryClient) ServerResources() ([]*metav1.APIResourceList, error) {
-	return TestAPIResourceList(d.APIGroupResources), nil
+	return d.APIGroupResources, nil
 }
 
 // TestFactory is a cmdutil.Factory that can be used in tests to avoid requiring talking
@@ -95,19 +115,19 @@ type TestFactory struct {
 
 	UnstructuredClientForMappingFunc func(mapping *meta.RESTMapping) (resource.RESTClient, error)
 	OpenAPISchemaFunc                func() (openapi.Resources, error)
-
-	APIResourceList []*discovery.APIGroupResources
 }
 
 // NewTestFactory returns a new test factory.
 func NewTestFactory() *TestFactory {
 	// specify an optionalClientConfig to explicitly use in testing
-	// to avoid polluting an existing user config.
+	// to avoid polluting an existing user Config.
 	config, configFile := defaultFakeClientConfig()
+	rConfig, _ := config.ClientConfig()
 	return &TestFactory{
-		Factory:         cmdutil.NewFactory(config),
+		Factory:         cmdutil.NewFactory(&FakeRESTClientGetter{Config: config}),
+		Client:          &fake.RESTClient{},
 		tempConfigFile:  configFile,
-		APIResourceList: TestDynamicResources(),
+		ClientConfigVal: rConfig,
 	}
 }
 
@@ -123,7 +143,7 @@ func (f *TestFactory) Cleanup() error {
 func defaultFakeClientConfig() (clientcmd.ClientConfig, *os.File) {
 	loadingRules, tmpFile, err := newDefaultFakeClientConfigLoadingRules()
 	if err != nil {
-		panic(fmt.Sprintf("unable to create a fake client config: %v", err))
+		panic(fmt.Sprintf("unable to create a fake client Config: %v", err))
 	}
 
 	overrides := &clientcmd.ConfigOverrides{ClusterDefaults: clientcmdapi.Cluster{Server: "http://localhost:8080"}}
@@ -145,21 +165,6 @@ func newDefaultFakeClientConfigLoadingRules() (*clientcmd.ClientConfigLoadingRul
 	}, tmpFile, nil
 }
 
-// CategoryExpander returns the category expander.
-func (f *TestFactory) CategoryExpander() categories.CategoryExpander {
-	return categories.LegacyCategoryExpander
-}
-
-// ClientConfig returns the client configuration.
-func (f *TestFactory) ClientConfig() (*restclient.Config, error) {
-	return f.ClientConfigVal, nil
-}
-
-// BareClientConfig returns the rest client configuration.
-func (f *TestFactory) BareClientConfig() (*restclient.Config, error) {
-	return f.ClientConfigVal, nil
-}
-
 // ClientForMapping returns the structured client for a given mapping.
 func (f *TestFactory) ClientForMapping(mapping *meta.RESTMapping) (resource.RESTClient, error) {
 	return f.Client, nil
@@ -173,19 +178,9 @@ func (f *TestFactory) UnstructuredClientForMapping(mapping *meta.RESTMapping) (r
 	return f.UnstructuredClient, nil
 }
 
-// Describer returns the faked describer.
-func (f *TestFactory) Describer(*meta.RESTMapping) (printers.Describer, error) {
-	return f.DescriberVal, nil
-}
-
 // Validator returns a null validation schema.
 func (f *TestFactory) Validator(validate bool) (validation.Schema, error) {
 	return validation.NullSchema{}, nil
-}
-
-// DefaultNamespace returns the faked namespace.
-func (f *TestFactory) DefaultNamespace() (string, bool, error) {
-	return f.Namespace, false, nil
 }
 
 // OpenAPISchema returns the OpenAPI Schema.
@@ -196,79 +191,14 @@ func (f *TestFactory) OpenAPISchema() (openapi.Resources, error) {
 	return openapitesting.EmptyResources{}, nil
 }
 
-// Command returns the faked command.
-func (f *TestFactory) Command(*cobra.Command, bool) string {
-	return f.CommandVal
-}
-
 // NewBuilder returns a new resource builder.
 func (f *TestFactory) NewBuilder() *resource.Builder {
-	mapper, typer := f.Object()
-
-	return resource.NewBuilder(
-		&resource.Mapper{
-			RESTMapper:   mapper,
-			ObjectTyper:  typer,
-			ClientMapper: resource.ClientMapperFunc(f.ClientForMapping),
-			Decoder:      cmdutil.InternalVersionDecoder(),
-		},
-		&resource.Mapper{
-			RESTMapper:   mapper,
-			ObjectTyper:  typer,
-			ClientMapper: resource.ClientMapperFunc(f.UnstructuredClientForMapping),
-			Decoder:      unstructured.UnstructuredJSONScheme,
-		},
-		f.CategoryExpander(),
-	)
-}
-
-// KubernetesClientSet returns a kubernetes ClientSet.
-func (f *TestFactory) KubernetesClientSet() (*kubernetes.Clientset, error) {
-	fakeClient := f.Client.(*fake.RESTClient)
-	clientset := kubernetes.NewForConfigOrDie(f.ClientConfigVal)
-
-	clientset.CoreV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.AuthorizationV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.AuthorizationV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.AuthorizationV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.AuthorizationV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.AutoscalingV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.AutoscalingV2beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.BatchV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.BatchV2alpha1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.CertificatesV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.ExtensionsV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.RbacV1alpha1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.RbacV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.StorageV1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.StorageV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.AppsV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.AppsV1beta2().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.PolicyV1beta1().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.DiscoveryClient.RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-
-	return clientset, nil
-}
-
-// ClientSet returns a faked ClientSet.
-func (f *TestFactory) ClientSet() (internalclientset.Interface, error) {
-	// Swap the HTTP client out of the REST client with the fake
-	// version.
-	fakeClient := f.Client.(*fake.RESTClient)
-	clientset := internalclientset.NewForConfigOrDie(f.ClientConfigVal)
-	clientset.Core().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.Authentication().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.Authorization().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.Autoscaling().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.Batch().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.Certificates().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.Extensions().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.Rbac().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.Storage().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.Apps().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.Policy().RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	clientset.DiscoveryClient.RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
-	return clientset, nil
+	fn := func(version schema.GroupVersion) (resource.RESTClient, error) {
+		return f.ClientForMapping(nil)
+	}
+	mapper := f.RestMapper()
+	dc := &fakediscovery.FakeDiscovery{}
+	return resource.NewFakeBuilder(fn, mapper, restmapper.NewDiscoveryCategoryExpander(dc))
 }
 
 // RESTClient returns a rest client.
@@ -290,86 +220,17 @@ func (f *TestFactory) DiscoveryClient() (discovery.CachedDiscoveryInterface, err
 	discoveryClient.RESTClient().(*restclient.RESTClient).Client = fakeClient.Client
 
 	cacheDir := filepath.Join("", ".kube", "cache", "discovery")
-	return cmdutil.NewCachedDiscoveryClient(discoveryClient, cacheDir, 10*time.Minute), nil
+	return discovery.NewCachedDiscoveryClientForConfig(f.ClientConfigVal, cacheDir, cacheDir, 10*time.Minute)
 }
 
-// ClientSetForVersion returns the client for the provided group/version tuple.
-func (f *TestFactory) ClientSetForVersion(requiredVersion *schema.GroupVersion) (internalclientset.Interface, error) {
-	return f.ClientSet()
-}
-
-// Object returns a resource mapper and an unstructured object converter.
-func (f *TestFactory) Object() (meta.RESTMapper, runtime.ObjectTyper) {
-	groupResources := f.APIResourceList
-	mapper := discovery.NewRESTMapper(
-		groupResources,
-		meta.InterfacesForUnstructuredConversion(func(version schema.GroupVersion) (*meta.VersionInterfaces, error) {
-			switch version {
-			// provide typed objects for test objects here
-			default:
-				return legacyscheme.Registry.InterfacesFor(version)
-			}
-		}),
-	)
-	// for backwards compatibility with existing tests, allow rest mappings from the scheme to show up
-	// TODO(frankf): make this opt-in?
-	mapper = meta.FirstHitRESTMapper{
-		MultiRESTMapper: meta.MultiRESTMapper{
-			mapper,
-			legacyscheme.Registry.RESTMapper(),
-		},
-	}
-
-	// TODO(frankf): should probably be the external scheme
-	typer := discovery.NewUnstructuredObjectTyper(groupResources, legacyscheme.Scheme)
-	fakeDs := &FakeCachedDiscoveryClient{}
-	expander := cmdutil.NewShortcutExpander(mapper, fakeDs)
-	return expander, typer
-}
-
-// ResourceInfo returns a fake resource.Info corresponding to the given object o.
-//
-// resource.Info knows the object content and also has the infrastructure needed
-// to discover the type information about the object that may have been omitted
-// from o when it was declared.  The returned value is never nil.  Note that the
-// HTTP client in resource.Info is not initialized, so if you end up needing to
-// call this method with a working HTTP client,consider changing it to match.
-func (f *TestFactory) ResourceInfo(o runtime.Object) *resource.Info {
-	m, _ := f.Object()
-	gvk := o.GetObjectKind().GroupVersionKind()
-	mapping, err := m.RESTMapping(gvk.GroupKind(), gvk.Version)
-	if err != nil {
-		panic(fmt.Sprintf("Should never happen for registered group-version-kinds: %v", err))
-	}
-	r := resource.Info{
-		Mapping: mapping,
-		Object:  o,
-	}
-	return &r
-}
-
-// LogsForObject returns request logs for the provided object.
-func (f *TestFactory) LogsForObject(object, options runtime.Object, timeout time.Duration) (*restclient.Request, error) {
-	c, err := f.ClientSet()
-	if err != nil {
-		panic(err)
-	}
-
-	switch t := object.(type) {
-	case *api.Pod:
-		opts, ok := options.(*api.PodLogOptions)
-		if !ok {
-			return nil, errors.New("provided options object is not a PodLogOptions")
-		}
-		return c.Core().Pods(f.Namespace).GetLogs(t.Name, opts), nil
-	default:
-		return nil, fmt.Errorf("cannot get the logs from %T", object)
-	}
+// RestMapper returns a RESTMapper.
+func (f *TestFactory) RestMapper() meta.RESTMapper {
+	return restmapper.NewDiscoveryRESTMapper(TestDynamicResources())
 }
 
 // TestAPIResourceList returns the API ResourceList as would be returned by the DiscoveryClient ServerResources
 // call which represents resources that are returned by the API server during discovery.
-func TestAPIResourceList(rs []*discovery.APIGroupResources) []*metav1.APIResourceList {
+func TestAPIResourceList(rs []*restmapper.APIGroupResources) []*metav1.APIResourceList {
 	var apiResources []*metav1.APIResourceList
 	for _, item := range rs {
 		for version, resources := range item.VersionedResources {
@@ -386,8 +247,8 @@ func TestAPIResourceList(rs []*discovery.APIGroupResources) []*metav1.APIResourc
 	return apiResources
 }
 
-func testK8SResources() []*discovery.APIGroupResources {
-	return []*discovery.APIGroupResources{
+func testK8SResources() []*restmapper.APIGroupResources {
+	return []*restmapper.APIGroupResources{
 		{
 			Group: metav1.APIGroup{
 				Versions: []metav1.GroupVersionForDiscovery{
@@ -513,9 +374,9 @@ func testK8SResources() []*discovery.APIGroupResources {
 
 // TestDynamicResources returns API Resources for both standard K8S resources
 // and Nomos resources.
-func TestDynamicResources() []*discovery.APIGroupResources {
+func TestDynamicResources() []*restmapper.APIGroupResources {
 	r := testK8SResources()
-	return append(r, []*discovery.APIGroupResources{
+	return append(r, []*restmapper.APIGroupResources{
 		{
 			Group: metav1.APIGroup{
 				Name: "nomos.dev",
@@ -558,6 +419,18 @@ func TestDynamicResources() []*discovery.APIGroupResources {
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1alpha1": {
 					{Name: "engineers", Namespaced: true, Kind: "Engineer"},
+				},
+			},
+		},
+		{
+			Group: metav1.APIGroup{
+				Name:             "bespin.dev",
+				Versions:         []metav1.GroupVersionForDiscovery{{Version: "v1"}},
+				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1"},
+			},
+			VersionedResources: map[string][]metav1.APIResource{
+				"v1": {
+					{Name: "projects", Namespaced: true, Kind: "Project"},
 				},
 			},
 		},

@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/json-iterator/go"
   }
-  version: "1.0.5"
+  version: "v1.1.5"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

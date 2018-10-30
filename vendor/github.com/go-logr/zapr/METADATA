@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/go-logr/zapr"
   }
-  version: "master"
+  version: "v0.1.0"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

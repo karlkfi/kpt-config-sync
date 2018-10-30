@@ -23,7 +23,7 @@ import (
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/restmapper"
 )
 
 const (
@@ -63,7 +63,7 @@ spec:
 
 // dynamicResources is the set of standard K8S resources, Nomos resources and
 // Bespin resources. These are all required for the test to function.
-var dynamicResources = append(fstesting.TestDynamicResources(), []*discovery.APIGroupResources{
+var dynamicResources = append(fstesting.TestDynamicResources(), []*restmapper.APIGroupResources{
 	{
 		Group: metav1.APIGroup{
 			Name:             "bespin.dev",
@@ -114,10 +114,8 @@ func TestBespinParser(t *testing.T) {
 				}
 			}()
 
-			f.APIResourceList = dynamicResources
-
 			dc := &fstesting.FakeCachedDiscoveryClient{
-				APIGroupResources: dynamicResources,
+				APIGroupResources: fstesting.TestAPIResourceList(dynamicResources),
 			}
 			p, err := NewParserWithFactory(f, dc, Validate(true))
 			if err != nil {

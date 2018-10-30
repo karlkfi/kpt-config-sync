@@ -19,3 +19,4 @@ git status | grep -E "vendor/.*(LICENSE|license)\\.{0,1}[a-z]*$" | xargs rm
 
 # Not needed
 rm -rf vendor/github.com/kubernetes-sigs/kubebuilder/docs/
+rm -rf vendor/k8s.io/cluster-registry/docs/

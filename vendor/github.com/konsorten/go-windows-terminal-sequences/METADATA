@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/konsorten/go-windows-terminal-sequences"
   }
-  version: "master"
+  version: "v1.0.1"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

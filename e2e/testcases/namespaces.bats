@@ -147,7 +147,7 @@ function local_teardown() {
 
   wait::event \
     -n default \
-    InvalidManagmentLabel
+    InvalidManagementLabel
   namespace::check_exists $ns -l "nomos.dev/namespace-management=a-garbage-label"
   namespace::check_warning $ns
 }

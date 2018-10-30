@@ -6,7 +6,7 @@ third_party {
     type: GIT
     value: "https://github.com/grpc/grpc-go"
   }
-  version: "v1.15.0"
+  version: "v1.16.0"
   last_upgrade_date { year: 2018 month: 4 day: 25 }
   license_type: NOTICE
 }

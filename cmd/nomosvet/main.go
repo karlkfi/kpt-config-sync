@@ -18,17 +18,21 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"encoding/json"
+	"time"
 
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/util/homedir"
 )
 
 const usage = `Nomosvet is a tool for validating a policy directory tree.
@@ -91,8 +95,16 @@ func main() {
 		printErrAndDie(errors.Wrap(err, "Failed to create client"))
 	}
 
+	cacheDir := filepath.Join(homedir.HomeDir(), ".kube", "http-cache")
+	dc, _ := discovery.NewCachedDiscoveryClientForConfig(restConfig, cacheDir, cacheDir, 10*time.Minute)
+	// TODO(118884760): We should be using ConfigFlags and not plumbing in the discovery client, etc. ourselves.
+	g := &testing.FakeRESTClientGetter{
+		Config:          clientConfig,
+		DiscoveryClient: dc,
+		RestMapper:      restmapper.NewDeferredDiscoveryRESTMapper(dc),
+	}
 	p, err := filesystem.NewParser(
-		clientConfig, client.Discovery(), filesystem.Validate(*validate))
+		g, client.Discovery(), filesystem.Validate(*validate))
 	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Failed to create parser"))
 	}

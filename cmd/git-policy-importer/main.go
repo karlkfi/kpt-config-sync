@@ -31,6 +31,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 )
 
 // nolint:deadcode
@@ -62,7 +63,7 @@ func main() {
 	// TODO(118189026): Remove flag, when unused.
 	genericResources := os.Getenv("GENERIC_RESOURCES") == "true"
 
-	parser, err := filesystem.NewParser(nil, client.Kubernetes().Discovery(), filesystem.Validate(true), filesystem.GenericResources(genericResources))
+	parser, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, client.Kubernetes().Discovery(), filesystem.Validate(true), filesystem.GenericResources(genericResources))
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %v", err)
 	}

@@ -167,10 +167,9 @@ func TestImporterConfigMap(t *testing.T) {
 
 func TestSyncerConfigMap(t *testing.T) {
 	testCases := []struct {
-		name                   string
-		config                 config.Config
-		enableGenericResources bool
-		want                   []string
+		name   string
+		config config.Config
+		want   []string
 	}{
 		{
 			name: "git ssh, no known hosts",
@@ -181,20 +180,6 @@ func TestSyncerConfigMap(t *testing.T) {
 			},
 			want: []string{
 				"gcp.mode=false",
-				"generic.resources=false",
-			},
-		},
-		{
-			name: "git ssh, no known hosts / enable generic resources syncer",
-			config: config.Config{
-				Git: config.GitConfig{
-					SyncRepo: "git@github.com:user/foo-corp.git",
-				},
-			},
-			enableGenericResources: true,
-			want: []string{
-				"gcp.mode=false",
-				"generic.resources=true",
 			},
 		},
 		{
@@ -207,7 +192,6 @@ func TestSyncerConfigMap(t *testing.T) {
 			},
 			want: []string{
 				"gcp.mode=true",
-				"generic.resources=false",
 			},
 		},
 	}
@@ -215,7 +199,7 @@ func TestSyncerConfigMap(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Installer{c: tt.config}
-			got := i.syncerConfigMapContent(tt.enableGenericResources)
+			got := i.syncerConfigMapContent()
 			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Errorf("expected %v got %v\ndiff %v", tt.want, got, diff)
 			}

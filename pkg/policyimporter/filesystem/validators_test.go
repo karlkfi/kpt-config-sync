@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/util/meta"
-	"k8s.io/kubernetes/pkg/kubectl/resource"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource"
 )
 
 type validatorsTestCase struct {

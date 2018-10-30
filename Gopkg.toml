@@ -23,16 +23,11 @@
 #   non-go = false
 #   go-tests = true
 #   unused-packages = true
-
 required=[
 # Required for generating Watcher API proto cilent.
   "github.com/gogo/protobuf/gogoproto",
   "github.com/gogo/protobuf/protoc-gen-gogo",
   "github.com/gogo/googleapis/google/api",
-
-# There's a unit test in here that's symlinked to by another
-# package.  This breaks gomvpkg.
-  "github.com/json-iterator/go/skip_tests/number",
 ]
 
 [[constraint]]
@@ -45,38 +40,33 @@ required=[
 
 [[constraint]]
   name = "k8s.io/api"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.2"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.2"
 
 [[constraint]]
   name = "k8s.io/apiserver"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.2"
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.11.2"
 
 [[constraint]]
   name = "k8s.io/kubernetes"
-  version = "v1.10.1"
+  version = "v1.11.2"
+
+# This version uses kubernetes-1.11.2
+[[constraint]]
+  name = "sigs.k8s.io/controller-runtime"
+  version = "v0.1.7"
 
 # Markdown processor
 [[override]]
   name = "github.com/russross/blackfriday"
   version = "v1.4-2-g300106c"
-
-# Required for vendoring github.com/kubernetes-sigs/kubebuilder
-[[constraint]]
-  name = "github.com/kubernetes-sigs/kubebuilder"
-  version = "v1.0.0"
-
-# Required for vendoring github.com/kubernetes-sigs/kubebuilder
-[[override]]
-  name = "github.com/golang/glog"
-  branch = "master"
 
 # The last official release version="v2.6.2" is running behind our Kubernetes
 # deps, and doesn't have files that K8S needs.
@@ -84,10 +74,9 @@ required=[
   name = "github.com/docker/distribution"
   revision = "d37f8164276c54f91c4ca7f64e3543f3cc6ecd29"
 
-# Releases after v9.9.0 are incompatible with Kubernetes v1.10.1.
 [[override]]
   name = "github.com/Azure/go-autorest"
-  version = "v9.9.0"
+  version = "v10.15.4"
 
 # We use prometheus.NewTimer which was introduced after last official release
 # "v0.8.0"
@@ -113,7 +102,7 @@ required=[
   # which causes gomvpkg to not work.
   [[prune.project]]
     name = "github.com/json-iterator/go"
-	go-tests = false
+  go-tests = false
 
 [[constraint]]
   name = "google.golang.org/grpc"
@@ -123,9 +112,10 @@ required=[
   revision = "97aa668b73e764ccdd786bc3ccd2edffe621150e"
   name = "github.com/google/go-cmp"
 
-[[constraint]]
+# Required for vendoring apimachinery
+[[override]]
   name = "github.com/json-iterator/go"
-  version = "1.0.3"
+  version = "1.1.5"
 
 [[constraint]]
   name = "github.com/filmil/k8s-oidc-helper"

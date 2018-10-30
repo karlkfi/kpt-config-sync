@@ -43,10 +43,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/tools/clientcmd"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
-	"k8s.io/kubernetes/pkg/kubectl/resource"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource"
 	kubevalidation "k8s.io/kubernetes/pkg/kubectl/validation"
 )
 
@@ -82,8 +82,9 @@ func GenericResources(v bool) ParserOpt {
 // resources is the list returned by the DisoveryClient ServerResources call which represents resources
 // 		that are returned by the API server during discovery.
 // opts turns on options for the parser.
-func NewParser(config clientcmd.ClientConfig, discoveryClient discovery.ServerResourcesInterface, opts ...ParserOpt) (*Parser, error) {
-	return NewParserWithFactory(cmdutil.NewFactory(config), discoveryClient, opts...)
+// TODO(118887045): Don't pass in a discoveryClient. Just use the one in from RestClientGetter.ToDiscoveryClient().
+func NewParser(clientGetter genericclioptions.RESTClientGetter, discoveryClient discovery.ServerResourcesInterface, opts ...ParserOpt) (*Parser, error) {
+	return NewParserWithFactory(cmdutil.NewFactory(clientGetter), discoveryClient, opts...)
 }
 
 // NewParserWithFactory creates a new Parser using the specified factory.
@@ -196,7 +197,7 @@ func (p *Parser) readResources(dir string, recursive bool) ([]*resource.Info, er
 		return fileInfos, nil
 	}
 	visitors, err := resource.ExpandPathsToFileVisitors(
-		&resource.Mapper{}, dir, true, resource.FileExtensions, kubevalidation.NullSchema{})
+		nil, dir, true, resource.FileExtensions, kubevalidation.NullSchema{})
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +337,7 @@ func (p *Parser) processClusterDir(
 	infos []*resource.Info,
 	fsCtx *ast.Root) error {
 	for _, i := range infos {
-		o := i.AsVersioned()
+		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
 		fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
 	}
 
@@ -351,7 +352,7 @@ func (p *Parser) processNamespacesDir(
 	root bool) error {
 	var treeNode *ast.TreeNode
 	for _, i := range infos {
-		o := i.AsVersioned()
+		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
 
 		switch o.(type) {
 		case *corev1.Namespace:
@@ -372,10 +373,10 @@ func (p *Parser) processNamespacesDir(
 	}
 
 	for _, i := range infos {
-		o := i.AsVersioned()
+		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
 		switch o.GetObjectKind().GroupVersionKind() {
 		case v1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
-			if err := parseNamespaceSelector(i.Object, treeNode, i.Source); err != nil {
+			if err := parseNamespaceSelector(o, treeNode, i.Source); err != nil {
 				return err
 			}
 		default:
@@ -390,7 +391,7 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 	v := newValidator()
 
 	for _, i := range infos {
-		o := i.AsVersioned()
+		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
 		gvk := o.GetObjectKind().GroupVersionKind()
 		if gvk == corev1.SchemeGroupVersion.WithKind("Namespace") {
 			// TODO: Move this out.
@@ -441,9 +442,10 @@ func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) ([]*v1alpha1.Syn
 	v := newValidator()
 	var syncs []*v1alpha1.Sync
 	for _, i := range fileInfos {
-		o := i.AsVersioned()
+		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
 
 		// Types in scope then alphabetical order.
+		// TODO(sbochins): can just do this by type (not gvk) like we do elsewhere, since they are all registered in the scheme.
 		switch gvk := o.GetObjectKind().GroupVersionKind(); gvk {
 		case v1alpha1.SchemeGroupVersion.WithKind("Repo"):
 			fsCtx.Repo, err = parseRepo(o, i.Source)
@@ -493,7 +495,7 @@ func (p *Parser) processClusterRegistryDir(dirname string, infos []*resource.Inf
 	var crc []clusterregistry.Cluster
 	var css []v1alpha1.ClusterSelector
 	for _, i := range infos {
-		o := i.AsVersioned()
+		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
 		// Cluster and ClusterSelector types are allowed in this directory, and
 		// nothing else.
 		gvk := o.GetObjectKind().GroupVersionKind()

@@ -82,6 +82,7 @@ func (r *PolicyNodeReconciler) Reconcile(request reconcile.Request) (reconcile.R
 	defer cancel()
 	// TODO(sbochins): Make use of reconcile.Result.RequeueAfter when we don't want exponential backoff for retries when
 	// using newer version of controller-runtime.
+	glog.Infof("Reconciling Policy Node: %s", request.Name)
 	err := r.reconcilePolicyNode(ctx, request.Name)
 	if err != nil {
 		glog.Errorf("Could not reconcile policynode %q: %v", request.Name, err)
@@ -304,7 +305,7 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 			decl.SetAnnotations(a)
 		}
 
-		actualInstances, err := r.cache.UnstructuredList(gvk)
+		actualInstances, err := r.cache.UnstructuredList(gvk, name)
 		if err != nil {
 			errBuilder.Add(errors.Wrapf(err, "failed to list from policy controller for %q", gvk))
 			syncErrs = append(syncErrs, NewSyncError(name, gvk, err))

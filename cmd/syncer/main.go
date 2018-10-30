@@ -19,18 +19,14 @@ package main
 
 import (
 	"flag"
-	"os"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/generic-syncer/metasync"
 	"github.com/google/nomos/pkg/service"
-	"github.com/google/nomos/pkg/syncer/args"
-	"github.com/google/nomos/pkg/syncer/syncercontroller"
 	"github.com/google/nomos/pkg/util/log"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/run"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
 
 func main() {
@@ -38,36 +34,6 @@ func main() {
 	log.Setup()
 
 	go service.ServeMetrics()
-
-	// TODO(118189026): Remove flag, when unused.
-	genericResources := os.Getenv("GENERIC_RESOURCES")
-	if genericResources == "true" {
-		genericResourcesSyncerMain()
-	} else {
-		syncerMain()
-	}
-}
-
-func syncerMain() {
-	restConfig, err := restconfig.NewRestConfig()
-	if err != nil {
-		glog.Fatalf("failed to create rest config: %v", err)
-	}
-
-	injectArgs := args.CreateInjectArgs(restConfig)
-	syncerController := syncercontroller.New(injectArgs)
-
-	runArgs := run.RunArguments{Stop: signals.SetupSignalHandler()}
-	err = syncerController.Start(runArgs)
-	if err != nil {
-		glog.Fatalf("failed to start controller: %v", err)
-	}
-
-	<-runArgs.Stop
-}
-
-func genericResourcesSyncerMain() {
-	glog.Info("Running generic resources syncer")
 
 	// Get a config to talk to the apiserver.
 	cfg, err := restconfig.NewRestConfig()

@@ -419,7 +419,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 			// List actual resources on the cluster.
 			if tc.actual != nil {
 				mockCache.EXPECT().
-					UnstructuredList(gomock.Any()).
+					UnstructuredList(gomock.Any(), gomock.Eq("")).
 					Return(toUnstructureds(t, converter, tc.actual), nil)
 			}
 
