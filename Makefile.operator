@@ -18,8 +18,8 @@ deploy-operator: push-to-gcr-nomos
 	@mkdir -p ${OPERATOR_STAGING_DIR}
 	@gsutil cp ${DEV_BUCKET}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
 	@docker tag gcr.io/nomos-release/git-sync-amd64:v2.0.6-15-g2e46b74 \
-		gcr.io/${GCR_PREFIX}/git-sync-amd64:latest
-	@docker push gcr.io/${GCR_PREFIX}/git-sync-amd64:latest
+		gcr.io/${GCR_PREFIX}/git-sync-amd64:v2.0.6-15-g2e46b74
+	@docker push gcr.io/${GCR_PREFIX}/git-sync-amd64:v2.0.6-15-g2e46b74
 	@PROJECT_NAME=${GCP_PROJECT} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml | kubectl apply -f -
 
