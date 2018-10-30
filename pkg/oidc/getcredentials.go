@@ -21,9 +21,20 @@ import (
 const NomosOIDCExtensionKey = "oidc.nomos.dev"
 
 var getCredentialsCmd = &cobra.Command{
-	Use:   "get-credentials",
-	Short: "Gets the OIDC credentials for a cluster",
-	Run:   getCreds,
+	Use:     "get-credentials",
+	Short:   "Gets the OIDC credentials for a cluster",
+	Run:     getCreds,
+	PreRunE: getCredsCheck,
+}
+
+func getCredsCheck(cmd *cobra.Command, _ []string) error {
+	if cluster == "" {
+		return fmt.Errorf("value for flag --cluster=... is required")
+	}
+	if clientID == "" {
+		return fmt.Errorf("value for flag --client-file=... is required")
+	}
+	return nil
 }
 
 var (
