@@ -138,11 +138,11 @@ func (v *Validator) validateObject(obj apiObject) error {
 
 func checkNomosPrefix(m map[string]string) error {
 	for k := range m {
-		if strings.HasPrefix(k, "nomos.dev/") {
+		if strings.HasPrefix(k, v1alpha1.NomosPrefix) {
 			if v1alpha1.IsAnnotation(k) {
 				continue
 			}
-			return errors.Errorf("unknown key has reserved 'nomos.dev' prefix: %s", k)
+			return errors.Errorf("unknown key has reserved '%s' prefix: %s", v1alpha1.NomosPrefix, k)
 		}
 	}
 	return nil

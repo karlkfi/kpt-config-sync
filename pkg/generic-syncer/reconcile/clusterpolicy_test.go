@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/client"
 	syncerdiffer "github.com/google/nomos/pkg/generic-syncer/differ"
 	syncertesting "github.com/google/nomos/pkg/generic-syncer/testing"
@@ -42,23 +42,26 @@ func TestClusterPolicyReconcile(t *testing.T) {
 	}
 	testCases := []struct {
 		name             string
-		clusterPolicy    *nomosv1.ClusterPolicy
+		clusterPolicy    *v1.ClusterPolicy
 		declared         []runtime.Object
 		actual           []runtime.Object
 		wantCreates      []runtime.Object
 		wantUpdates      []runtime.Object
 		wantDeletes      []runtime.Object
-		wantStatusUpdate *nomosv1.ClusterPolicy
+		wantStatusUpdate *v1.ClusterPolicy
 		wantEvents       []event
 	}{
 		{
 			name: "update actual resource to declared state",
-			clusterPolicy: &nomosv1.ClusterPolicy{
+			clusterPolicy: &v1.ClusterPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: nomosv1.ClusterPolicyName,
+					Name: v1.ClusterPolicyName,
 				},
-				Status: nomosv1.ClusterPolicyStatus{
-					SyncState: nomosv1.StateSynced,
+				Spec: v1.ClusterPolicySpec{
+					ImportToken: "abc123",
+				},
+				Status: v1.ClusterPolicyStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			declared: []runtime.Object{
@@ -99,10 +102,26 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:   "my-persistentvolume",
 						Labels: labeling.ManageResource.New(),
+						Annotations: map[string]string{
+							v1alpha1.SyncTokenAnnotationKey: "abc123",
+						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
 						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
 					},
+				},
+			},
+			wantStatusUpdate: &v1.ClusterPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.ClusterPolicyName,
+				},
+				Spec: v1.ClusterPolicySpec{
+					ImportToken: "abc123",
+				},
+				Status: v1.ClusterPolicyStatus{
+					SyncState: v1.StateSynced,
+					SyncTime:  now(),
+					SyncToken: "abc123",
 				},
 			},
 			wantEvents: []event{
@@ -115,12 +134,15 @@ func TestClusterPolicyReconcile(t *testing.T) {
 		},
 		{
 			name: "actual resource already matches declared state",
-			clusterPolicy: &nomosv1.ClusterPolicy{
+			clusterPolicy: &v1.ClusterPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: nomosv1.ClusterPolicyName,
+					Name: v1.ClusterPolicyName,
 				},
-				Status: nomosv1.ClusterPolicyStatus{
-					SyncState: nomosv1.StateSynced,
+				Spec: v1.ClusterPolicySpec{
+					ImportToken: "abc123",
+				},
+				Status: v1.ClusterPolicyStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			declared: []runtime.Object{
@@ -146,21 +168,37 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:   "my-persistentvolume",
 						Labels: labeling.ManageResource.New(),
+						Annotations: map[string]string{
+							v1alpha1.SyncTokenAnnotationKey: "abc123",
+						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
 						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
 					},
 				},
 			},
+			wantStatusUpdate: &v1.ClusterPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.ClusterPolicyName,
+				},
+				Spec: v1.ClusterPolicySpec{
+					ImportToken: "abc123",
+				},
+				Status: v1.ClusterPolicyStatus{
+					SyncState: v1.StateSynced,
+					SyncTime:  now(),
+					SyncToken: "abc123",
+				},
+			},
 		},
 		{
 			name: "un-managed resource cannot be synced",
-			clusterPolicy: &nomosv1.ClusterPolicy{
+			clusterPolicy: &v1.ClusterPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: nomosv1.ClusterPolicyName,
+					Name: v1.ClusterPolicyName,
 				},
-				Status: nomosv1.ClusterPolicyStatus{
-					SyncState: nomosv1.StateSynced,
+				Status: v1.ClusterPolicyStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			declared: []runtime.Object{
@@ -201,12 +239,15 @@ func TestClusterPolicyReconcile(t *testing.T) {
 		},
 		{
 			name: "create resource from declared state",
-			clusterPolicy: &nomosv1.ClusterPolicy{
+			clusterPolicy: &v1.ClusterPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: nomosv1.ClusterPolicyName,
+					Name: v1.ClusterPolicyName,
 				},
-				Status: nomosv1.ClusterPolicyStatus{
-					SyncState: nomosv1.StateSynced,
+				Spec: v1.ClusterPolicySpec{
+					ImportToken: "abc123",
+				},
+				Status: v1.ClusterPolicyStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			declared: []runtime.Object{
@@ -233,10 +274,26 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:   "my-persistentvolume",
 						Labels: labeling.ManageResource.New(),
+						Annotations: map[string]string{
+							v1alpha1.SyncTokenAnnotationKey: "abc123",
+						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
 						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
 					},
+				},
+			},
+			wantStatusUpdate: &v1.ClusterPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.ClusterPolicyName,
+				},
+				Spec: v1.ClusterPolicySpec{
+					ImportToken: "abc123",
+				},
+				Status: v1.ClusterPolicyStatus{
+					SyncState: v1.StateSynced,
+					SyncTime:  now(),
+					SyncToken: "abc123",
 				},
 			},
 			wantEvents: []event{
@@ -249,12 +306,12 @@ func TestClusterPolicyReconcile(t *testing.T) {
 		},
 		{
 			name: "delete resource according to declared state",
-			clusterPolicy: &nomosv1.ClusterPolicy{
+			clusterPolicy: &v1.ClusterPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: nomosv1.ClusterPolicyName,
+					Name: v1.ClusterPolicyName,
 				},
-				Status: nomosv1.ClusterPolicyStatus{
-					SyncState: nomosv1.StateSynced,
+				Status: v1.ClusterPolicyStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			declared: []runtime.Object{},
@@ -298,23 +355,23 @@ func TestClusterPolicyReconcile(t *testing.T) {
 		},
 		{
 			name: "ignore clusterpolicy with invalid name",
-			clusterPolicy: &nomosv1.ClusterPolicy{
+			clusterPolicy: &v1.ClusterPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "some-incorrect-name",
 				},
-				Status: nomosv1.ClusterPolicyStatus{
-					SyncState: nomosv1.StateSynced,
+				Status: v1.ClusterPolicyStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			declared: []runtime.Object{},
-			wantStatusUpdate: &nomosv1.ClusterPolicy{
+			wantStatusUpdate: &v1.ClusterPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "some-incorrect-name",
 				},
-				Status: nomosv1.ClusterPolicyStatus{
-					SyncState: nomosv1.StateError,
+				Status: v1.ClusterPolicyStatus{
+					SyncState: v1.StateError,
 					SyncTime:  now(),
-					SyncErrors: []nomosv1.ClusterPolicySyncError{
+					SyncErrors: []v1.ClusterPolicySyncError{
 						{
 							ResourceName: "some-incorrect-name",
 							ErrorMessage: `ClusterPolicy resource has invalid name "some-incorrect-name"`,
@@ -338,7 +395,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 		Version: "v1",
 		Kind:    "PersistentVolume",
 	}
-	comparator := syncerdiffer.NewComparator([]*nomosv1alpha1.Sync{sync(gvk)}, labeling.ResourceManagementKey)
+	comparator := syncerdiffer.NewComparator([]*v1alpha1.Sync{sync(gvk)}, labeling.ResourceManagementKey)
 	toSync := []schema.GroupVersionKind{gvk}
 
 	for _, tc := range testCases {

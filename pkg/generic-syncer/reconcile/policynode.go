@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/glog"
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/cache"
 	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
@@ -72,7 +73,7 @@ func NewPolicyNodeReconciler(client *client.Client, cache cache.GenericCache, re
 
 // Reconcile is the Reconcile callback for PolicyNodeReconciler.
 func (r *PolicyNodeReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	metrics.EventTimes.WithLabelValues("reconcilePolicyNode").Set(float64(time.Now().Unix()))
+	metrics.EventTimes.WithLabelValues("reconcilePolicyNode").Set(float64(now().Unix()))
 	reconcileTimer := prometheus.NewTimer(
 		metrics.HierarchicalReconcileDuration.WithLabelValues(request.Name))
 	defer reconcileTimer.ObserveDuration()
@@ -291,7 +292,16 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
 			decl.SetNamespace(name)
+			// Label the resource as Nomos managed.
 			decl.SetLabels(labeling.ManageResource.AddDeepCopy(decl.GetLabels()))
+			// Annotate the resource with the current version token.
+			a := decl.GetAnnotations()
+			if a == nil {
+				a = map[string]string{v1alpha1.SyncTokenAnnotationKey: node.Spec.ImportToken}
+			} else {
+				a[v1alpha1.SyncTokenAnnotationKey] = node.Spec.ImportToken
+			}
+			decl.SetAnnotations(a)
 		}
 
 		actualInstances, err := r.cache.UnstructuredList(gvk)
@@ -336,7 +346,7 @@ func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *no
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
 		newPN := obj.(*nomosv1.PolicyNode)
 		newPN.Status.SyncToken = node.Spec.ImportToken
-		newPN.Status.SyncTime = metav1.Now()
+		newPN.Status.SyncTime = now()
 		newPN.Status.SyncErrors = errs
 		if len(errs) > 0 {
 			newPN.Status.SyncState = nomosv1.StateError

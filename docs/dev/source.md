@@ -7,6 +7,27 @@ We follow the following guides:
 1.  [K8S Coding Conventions](https://github.com/kubernetes/kubernetes/blob/release-1.1/docs/devel/coding-conventions.md)
 1.  [Naming](https://talks.golang.org/2014/names.slide#1)
 
+### Importing versioned packages
+
+Many kubernetes packages are versioned, so we alias their import statements for clarity:
+
+```go
+import (
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+)
+```
+
+Although Nomos packages are also versioned, we do not alias them as it is implied that we are
+referring to our own types:
+
+```go
+import (
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+)
+```
+
 ## Commit Message
 
 Convention for commit messages:

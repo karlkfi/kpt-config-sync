@@ -21,6 +21,7 @@ import (
 
 	"github.com/golang/glog"
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/cache"
 	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
@@ -126,7 +127,16 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *no
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
+			// Label the resource as Nomos managed.
 			decl.SetLabels(labeling.ManageResource.AddDeepCopy(decl.GetLabels()))
+			// Annotate the resource with the current version token.
+			a := decl.GetAnnotations()
+			if a == nil {
+				a = map[string]string{v1alpha1.SyncTokenAnnotationKey: policy.Spec.ImportToken}
+			} else {
+				a[v1alpha1.SyncTokenAnnotationKey] = policy.Spec.ImportToken
+			}
+			decl.SetAnnotations(a)
 		}
 
 		actualInstances, err := r.cache.UnstructuredList(gvk)

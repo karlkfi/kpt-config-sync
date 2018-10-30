@@ -16,20 +16,31 @@ limitations under the License.
 
 package v1alpha1
 
+import "github.com/google/nomos/pkg/api/policyhierarchy"
+
 const (
+	// NomosPrefix is the prefix for all Nomos annotations.
+	NomosPrefix = policyhierarchy.GroupName + "/"
+
+	// ClusterNameAnnotationKey is the annotation key set on Nomos-managed resources that refers to
+	// the name of the cluster that the selectors are applied for.
+	ClusterNameAnnotationKey = NomosPrefix + "cluster-name"
+
+	// ClusterSelectorAnnotationKey is the annotation key set on Nomos-managed resources that refers
+	// to the name of the ClusterSelector resource.
+	ClusterSelectorAnnotationKey = NomosPrefix + "cluster-selector"
+
+	// NamespaceSelectorAnnotationKey is the annotation key set on Nomos-managed resources that refers
+	// to name of NamespaceSelector resource.
+	NamespaceSelectorAnnotationKey = NomosPrefix + "namespace-selector"
+
 	// SourcePathAnnotationKey is the annotation key representing the relative path from POLICY_DIR
 	// where the object was originally declared. Paths are slash-separated and OS-agnostic.
-	SourcePathAnnotationKey = "nomos.dev/source-path"
+	SourcePathAnnotationKey = NomosPrefix + "source-path"
 
-	// NamespaceSelectorAnnotationKey is the annotation key set on policy resources that refers to
-	// name of NamespaceSelector resource.
-	NamespaceSelectorAnnotationKey = "nomos.dev/namespace-selector"
-
-	// ClusterSelectorAnnotationKey is the annotation key set on policy resources that refers to the name of the ClusterSelector resource.
-	ClusterSelectorAnnotationKey = "nomos.dev/cluster-selector"
-
-	// ClusterNameAnnotationKey is the annotation key set on policy resources that refers to the name of the cluster that the selectors are applied for.
-	ClusterNameAnnotationKey = "nomos.dev/cluster-name"
+	// SyncTokenAnnotationKey is the annotation key representing the last version token that a Nomos-
+	// managed resource was successfully synced from.
+	SyncTokenAnnotationKey = NomosPrefix + "sync-token"
 )
 
 // InputAnnotations is a map of annotations that are valid to exist on objects when imported from
@@ -40,10 +51,11 @@ var InputAnnotations = map[string]struct{}{
 }
 
 var nomosAnnotations = map[string]bool{
+	ClusterNameAnnotationKey:       true,
+	ClusterSelectorAnnotationKey:   true,
 	NamespaceSelectorAnnotationKey: true,
 	SourcePathAnnotationKey:        true,
-	ClusterSelectorAnnotationKey:   true,
-	ClusterNameAnnotationKey:       true,
+	SyncTokenAnnotationKey:         true,
 }
 
 // IsAnnotation returns true if the annotation is a nomos system annotation.

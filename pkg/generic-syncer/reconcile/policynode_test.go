@@ -17,10 +17,11 @@ package reconcile
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
-	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/client"
 	syncerdiffer "github.com/google/nomos/pkg/generic-syncer/differ"
 	syncertesting "github.com/google/nomos/pkg/generic-syncer/testing"
@@ -44,9 +45,12 @@ type event struct {
 }
 
 func TestPolicyNodeReconcile(t *testing.T) {
+	now = func() metav1.Time {
+		return metav1.Time{Time: time.Unix(0, 0)}
+	}
 	testCases := []struct {
 		name                string
-		policyNode          *nomosv1.PolicyNode
+		policyNode          *v1.PolicyNode
 		namespace           *corev1.Namespace
 		declared            []runtime.Object
 		actual              []runtime.Object
@@ -54,19 +58,21 @@ func TestPolicyNodeReconcile(t *testing.T) {
 		wantCreates         []runtime.Object
 		wantUpdates         []runtime.Object
 		wantDeletes         []runtime.Object
+		wantStatusUpdate    *v1.PolicyNode
 		wantEvents          []event
 	}{
 		{
 			name: "update actual resource to declared state",
-			policyNode: &nomosv1.PolicyNode{
+			policyNode: &v1.PolicyNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
-				Spec: nomosv1.PolicyNodeSpec{
-					Type: nomosv1.Namespace,
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "abc123",
 				},
-				Status: nomosv1.PolicyNodeStatus{
-					SyncState: nomosv1.StateSynced,
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			namespace: &corev1.Namespace{
@@ -127,12 +133,29 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Name:      "my-deployment",
 						Namespace: "eng",
 						Labels:    labeling.ManageResource.New(),
+						Annotations: map[string]string{
+							v1alpha1.SyncTokenAnnotationKey: "abc123",
+						},
 					},
 					Spec: appsv1.DeploymentSpec{
 						Strategy: appsv1.DeploymentStrategy{
 							Type: appsv1.RollingUpdateDeploymentStrategyType,
 						},
 					},
+				},
+			},
+			wantStatusUpdate: &v1.PolicyNode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eng",
+				},
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "abc123",
+				},
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
+					SyncTime:  now(),
+					SyncToken: "abc123",
 				},
 			},
 			wantEvents: []event{
@@ -145,15 +168,17 @@ func TestPolicyNodeReconcile(t *testing.T) {
 		},
 		{
 			name: "actual resource already matches declared state",
-			policyNode: &nomosv1.PolicyNode{
+			policyNode: &v1.PolicyNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
-				Spec: nomosv1.PolicyNodeSpec{
-					Type: nomosv1.Namespace,
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "abc123",
 				},
-				Status: nomosv1.PolicyNodeStatus{
-					SyncState: nomosv1.StateSynced,
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
+					SyncToken: "abc123",
 				},
 			},
 			namespace: &corev1.Namespace{
@@ -188,6 +213,9 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Name:      "my-deployment",
 						Namespace: "eng",
 						Labels:    labeling.ManageResource.New(),
+						Annotations: map[string]string{
+							v1alpha1.SyncTokenAnnotationKey: "abc123",
+						},
 					},
 					Spec: appsv1.DeploymentSpec{
 						Strategy: appsv1.DeploymentStrategy{
@@ -207,15 +235,16 @@ func TestPolicyNodeReconcile(t *testing.T) {
 		},
 		{
 			name: "un-managed resource cannot be synced",
-			policyNode: &nomosv1.PolicyNode{
+			policyNode: &v1.PolicyNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
-				Spec: nomosv1.PolicyNodeSpec{
-					Type: nomosv1.Namespace,
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "abc123",
 				},
-				Status: nomosv1.PolicyNodeStatus{
-					SyncState: nomosv1.StateSynced,
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			namespace: &corev1.Namespace{
@@ -265,6 +294,20 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					},
 				},
 			},
+			wantStatusUpdate: &v1.PolicyNode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eng",
+				},
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "abc123",
+				},
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
+					SyncTime:  now(),
+					SyncToken: "abc123",
+				},
+			},
 			wantEvents: []event{
 				{
 					kind:    corev1.EventTypeWarning,
@@ -275,15 +318,16 @@ func TestPolicyNodeReconcile(t *testing.T) {
 		},
 		{
 			name: "create resource from declared state",
-			policyNode: &nomosv1.PolicyNode{
+			policyNode: &v1.PolicyNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
-				Spec: nomosv1.PolicyNodeSpec{
-					Type: nomosv1.Namespace,
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "abc123",
 				},
-				Status: nomosv1.PolicyNodeStatus{
-					SyncState: nomosv1.StateSynced,
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			namespace: &corev1.Namespace{
@@ -327,12 +371,29 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Name:      "my-deployment",
 						Namespace: "eng",
 						Labels:    labeling.ManageResource.New(),
+						Annotations: map[string]string{
+							v1alpha1.SyncTokenAnnotationKey: "abc123",
+						},
 					},
 					Spec: appsv1.DeploymentSpec{
 						Strategy: appsv1.DeploymentStrategy{
 							Type: appsv1.RollingUpdateDeploymentStrategyType,
 						},
 					},
+				},
+			},
+			wantStatusUpdate: &v1.PolicyNode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eng",
+				},
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "abc123",
+				},
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
+					SyncTime:  now(),
+					SyncToken: "abc123",
 				},
 			},
 			wantEvents: []event{
@@ -345,15 +406,16 @@ func TestPolicyNodeReconcile(t *testing.T) {
 		},
 		{
 			name: "delete resource according to declared state",
-			policyNode: &nomosv1.PolicyNode{
+			policyNode: &v1.PolicyNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
-				Spec: nomosv1.PolicyNodeSpec{
-					Type: nomosv1.Namespace,
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "abc123",
 				},
-				Status: nomosv1.PolicyNodeStatus{
-					SyncState: nomosv1.StateSynced,
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			namespace: &corev1.Namespace{
@@ -407,6 +469,20 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					},
 				},
 			},
+			wantStatusUpdate: &v1.PolicyNode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eng",
+				},
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "abc123",
+				},
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
+					SyncTime:  now(),
+					SyncToken: "abc123",
+				},
+			},
 			wantEvents: []event{
 				{
 					kind:    corev1.EventTypeNormal,
@@ -417,15 +493,16 @@ func TestPolicyNodeReconcile(t *testing.T) {
 		},
 		{
 			name: "un-managed namespace cannot have its resources synced",
-			policyNode: &nomosv1.PolicyNode{
+			policyNode: &v1.PolicyNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
-				Spec: nomosv1.PolicyNodeSpec{
-					Type: nomosv1.Namespace,
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "abc123",
 				},
-				Status: nomosv1.PolicyNodeStatus{
-					SyncState: nomosv1.StateSynced,
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
 				},
 			},
 			namespace: &corev1.Namespace{
@@ -464,7 +541,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 		Version: "v1",
 		Kind:    "Deployment",
 	}
-	comparator := syncerdiffer.NewComparator([]*nomosv1alpha1.Sync{sync(gvk)}, labeling.ResourceManagementKey)
+	comparator := syncerdiffer.NewComparator([]*v1alpha1.Sync{sync(gvk)}, labeling.ResourceManagementKey)
 	toSync := []schema.GroupVersionKind{gvk}
 
 	for _, tc := range testCases {
@@ -522,6 +599,14 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Delete(gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantDelete)))
 			}
 
+			if tc.wantStatusUpdate != nil {
+				// Updates involve first getting the resource from API Server.
+				mockClient.EXPECT().
+					Get(gomock.Any(), gomock.Any(), gomock.Any())
+				mockClient.EXPECT().
+					Update(gomock.Any(), gomock.Eq(tc.wantStatusUpdate))
+			}
+
 			// Check for events with warning or status.
 			for _, wantEvent := range tc.wantEvents {
 				if wantEvent.varargs {
@@ -562,19 +647,19 @@ func toUnstructureds(t *testing.T, converter runtime.UnstructuredConverter,
 	return
 }
 
-func sync(gvk schema.GroupVersionKind) *nomosv1alpha1.Sync {
-	return &nomosv1alpha1.Sync{
+func sync(gvk schema.GroupVersionKind) *v1alpha1.Sync {
+	return &v1alpha1.Sync{
 		ObjectMeta: metav1.ObjectMeta{
 			Finalizers: []string{},
 		},
-		Spec: nomosv1alpha1.SyncSpec{
-			Groups: []nomosv1alpha1.SyncGroup{
+		Spec: v1alpha1.SyncSpec{
+			Groups: []v1alpha1.SyncGroup{
 				{
 					Group: gvk.Group,
-					Kinds: []nomosv1alpha1.SyncKind{
+					Kinds: []v1alpha1.SyncKind{
 						{
 							Kind: gvk.Kind,
-							Versions: []nomosv1alpha1.SyncVersion{
+							Versions: []v1alpha1.SyncVersion{
 								{
 									Version: gvk.Version,
 								},
