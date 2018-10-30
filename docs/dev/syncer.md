@@ -149,7 +149,7 @@ the reconciliation for each and every event.
 1.  Ancestry is fecthed for the PolicyNode, if the ancestry is not complete this
     results in returning an error to kubebuilder. If the node does not exist, we
     explicitly delete the namespace which corresponds to the PolicyNode. If the
-    node itself is a policyspace, no reconciliation occurs.
+    node itself is a Abstract Namespace, no reconciliation occurs.
 1.  The namespace for the PolicyNode is created if it does not yet exist.
 1.  Each module generates the computed policy from the PolicyNode Ancestry for
     the controlled resource in the Namespace corresponding to the PolicyNode.

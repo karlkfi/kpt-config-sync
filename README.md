@@ -27,16 +27,16 @@ Try it out by following the [Quickstart Guide](docs/quickstart.md).
 
 ## Using GKE Policy Management
 
-*   [Concepts](docs/concepts.md)
 *   [System Overview](docs/system_overview.md)
 *   [Installation](docs/installation.md)
-*   Using Git as source of truth
+*   Importing from Git:
     *   [Overview](docs/git_overview.md)
     *   [Validation](docs/git_validation.md)
-    *   [Managing Existing Clusters](docs/git_namespaces.md)
+    *   [ResourceQuota](docs/rq.md)
     *   [NamespaceSelectors](docs/git_namespaceselectors.md)
+    *   [Managing Existing Clusters](docs/git_namespaces.md)
     *   [System Guarantees](docs/git_guarantees.md)
-*   Using GCP as source of truth
+*   Importing from GCP:
     *   [Overview](docs/gcp_overview.md)
 *   [Monitoring and Debugging](docs/monitoring_and_debugging.md)
 

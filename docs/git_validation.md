@@ -1,11 +1,14 @@
 # Validation
 
-Before committing policy configuration in Git and pushing changes to Kubernetes
-clusters, it is important to validate them first.
+Before committing changes to Git and pushing changes to Kubernetes clusters, it
+is critical to validate them first.
 
-`nomosvet` is tool that validates a root policyspace directory against
-[these constraints](git_overview.md#constraints) as well as validating resources
-using their schema (Similar to `kubectl apply --dry-run`).
+`nomosvet` is tool that validates a GKE Policy Management directory by:
+
+1.  Enforcing
+    [GKE Policy Management Filesystem Standard](git_overview.md#filesystem-standard).
+2.  Validating resources using the Kubernetes API machinery discovery mechanism
+    and OpenAPI spec (Similar to `kubectl apply --dry-run`).
 
 To install nomosvet:
 

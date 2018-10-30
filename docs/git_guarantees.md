@@ -56,9 +56,9 @@ Examples:
     [pod-creators](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/online/shipping-app-backend/pod-creator-rolebinding.yaml)
     is in git for foo-corp. GKE Policy Management will ensure that all
     `pod-creator` rolebindings in descendants of the `shipping-app-backend`
-    policyspace (`shipping-prod`, `shipping-staging`, `shipping-dev`) exactly
-    match the declared `pod-creator` RoleBinding. Time passes and someone
-    modifies the
+    Abstract Namespace (`shipping-prod`, `shipping-staging`, `shipping-dev`)
+    exactly match the declared `pod-creator` RoleBinding. Time passes and
+    someone modifies the
     [shipping-prod](https://github.com/frankfarzan/foo-corp-example/tree/master/foo-corp/online/shipping-app-backend/shipping-prod)
     `pod-creator` RoleBinding. GKE Policy Management will notice the change and
     update `pod-creator` to match the declaration in git. Time passes and

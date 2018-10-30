@@ -24,11 +24,9 @@ nomos.dev/namespace-management=full     | Manage policies and lifecycle of the n
 There's three categories of namespaces: Managed, Reserved, and Legacy
 Namepsaces:
 
-1.  **Reserved Namespaces** are the default namespaces that are installed on the
-    kubernetes cluster (`kube-system`, `kube-public`, `default`) as well as the
-    `nomos-system` namespace. These namespaces are exceptions and will not be
-    managed by GKE Policy Management. Additionally, in order to be future proof,
-    we also treat all `kube-` prefixed namespaces as `Reserved Namespaces`.
+1.  **Reserved Namespaces** are namespaces that are either pre-installed on the
+    kubernetes cluster (`kube-*`, `nomos-system`, `default`) or
+    [designated as reserved](system_config.md#reserved-namespaces) by the user.
 1.  **Managed Namesapces** are namespaces on the cluster that are fully managed
     by GKE Policy Management. They all have the management label
     nomos.dev/namespace-management=full and exist in the Git source of truth as
@@ -50,35 +48,6 @@ Examples:
     will result in creation of the shipping-prod namespace with ancestry
     [`shipping-app-backend`, `online`, `foo-corp`]. Deleting this namespace.yaml
     will result in deleting the `shipping-prod` namespace.
-
-### Configuring Reserved Namespaces
-
-Reserved namespaces are namespaces that GKE Policy Management will not manage.
-This is here to indicate to GKE Policy Management should not allow another
-namespace of the same name to be created via a namespace directory as well as
-suppressing alerts of an unknown namespace.
-
-A ConfigMap defined in the root named "nomos-reserved-namespaces" defines the
-reserved namespaces. For example, the following declares the namespaces
-'test-sandbox', 'billing', and 'database' as reserved and as such they will be
-ignored and not trigger warnings for namespaces that are not in the
-declarations. Note that 'default', 'kube-system', 'kube-public' and
-'nomos-system' do not need to be added to this list.
-
-```console
-$ cat system/nomos-reserved-namespaces.yaml
-```
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nomos-reserved-namespaces
-data:
-  test-sandbox: reserved
-  billing: reserved
-  database: reserved
-```
 
 ### Namespace evaluation
 
