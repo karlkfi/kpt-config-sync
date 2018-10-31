@@ -159,7 +159,7 @@ DOCKER_RUN_ARGS := \
 
 ##### SETUP #####
 
-.DEFAULT_GOAL := test
+.DEFAULT_GOAL := test-local
 
 .PHONY: $(OUTPUT_DIR)
 $(OUTPUT_DIR):
@@ -204,6 +204,9 @@ test-unit: $(OUTPUT_DIR) pull-buildenv
 
 # Runs unit tests and linter.
 test: test-unit lint lint-bash
+
+# Runs tests and local nomosvet tests.
+test-local: test test-nomosvet-local
 
 # Runs all tests.
 test-all: test test-e2e-all
