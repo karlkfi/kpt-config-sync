@@ -21,7 +21,12 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/go-test/deep"
+	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/gogo/status"
 	"github.com/golang/mock/gomock"
@@ -34,6 +39,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -532,6 +538,214 @@ func TestGen(t *testing.T) {
 
 			if diff := deep.Equal(actualActions, tc.expectedActions); diff != nil {
 				t.Fatalf("Actual and expected actions don't match: %v\n%v\n%v", diff, actualActions, tc.expectedActions)
+			}
+		})
+	}
+}
+
+type atomicGroupTestCase struct {
+	name     string
+	changes  map[string]*watcher.Change
+	expected *v1.AllPolicies
+}
+
+func marshalOrFail(t *testing.T, pb proto.Message) *ptypes.Any {
+	any, err := ptypes.MarshalAny(pb)
+	if err != nil {
+		t.Fatalf("failed to marshal proto %#v: %v", pb, err)
+	}
+	return any
+}
+
+func toResources(gvk schema.GroupVersionKind, o runtime.Object) []v1.GenericResources {
+	return []v1.GenericResources{
+		{
+			Group: gvk.Group,
+			Kind:  gvk.Kind,
+			Versions: []v1.GenericVersionResources{
+				{
+					Version: gvk.Version,
+					Objects: []runtime.RawExtension{
+						{
+							Object: o,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// TestAtomicGroup tests the private processAtomicGroup method to more easily test the AllPolicies
+// object generated from the Watcher changes. Without this, it would be necessary to dig through the
+// reflective actions.
+func TestProcessAtomicGroup(t *testing.T) {
+	testCases := []atomicGroupTestCase{
+		{
+			name: "RoleBinding",
+			changes: map[string]*watcher.Change{
+				"": {},
+				"PolicyNode": {
+					Element: "PolicyNode",
+					State:   watcher.Change_EXISTS,
+					Data: marshalOrFail(t, policynode.NewPolicyNode("foo", &v1.PolicyNodeSpec{
+						Type: v1.Policyspace,
+						RoleBindingsV1: []rbacv1.RoleBinding{{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "myrb",
+							},
+						}},
+					})),
+				},
+			},
+			expected: &v1.AllPolicies{
+				PolicyNodes: map[string]v1.PolicyNode{
+					"foo": {
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "foo",
+						},
+						Spec: v1.PolicyNodeSpec{
+							Type: v1.Policyspace,
+							RoleBindingsV1: []rbacv1.RoleBinding{{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "myrb",
+								}}},
+							Resources: toResources(rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
+								runtime.Object(&rbacv1.RoleBinding{
+									ObjectMeta: metav1.ObjectMeta{
+										Name: "myrb",
+									}})),
+						}},
+				},
+			},
+		},
+		{
+			name: "ResourceQuota",
+			changes: map[string]*watcher.Change{
+				"": {},
+				"PolicyNode": {
+					Element: "PolicyNode",
+					State:   watcher.Change_EXISTS,
+					Data: marshalOrFail(t, policynode.NewPolicyNode("foo", &v1.PolicyNodeSpec{
+						Type: v1.Policyspace,
+						ResourceQuotaV1: &corev1.ResourceQuota{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "myrq",
+							},
+						},
+					})),
+				},
+			},
+			expected: &v1.AllPolicies{
+				PolicyNodes: map[string]v1.PolicyNode{
+					"foo": {
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "foo",
+						},
+						Spec: v1.PolicyNodeSpec{
+							Type: v1.Policyspace,
+							ResourceQuotaV1: &corev1.ResourceQuota{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "myrq",
+								},
+							},
+							Resources: toResources(corev1.SchemeGroupVersion.WithKind("ResourceQuota"),
+								runtime.Object(&corev1.ResourceQuota{
+									ObjectMeta: metav1.ObjectMeta{
+										Name: "myrq",
+									}})),
+						}},
+				},
+			},
+		},
+		{
+			name: "ClusterRole",
+			changes: map[string]*watcher.Change{
+				"": {},
+				"ClusterPolicy": {
+					Element: "ClusterPolicy",
+					State:   watcher.Change_EXISTS,
+					Data: marshalOrFail(t, policynode.NewClusterPolicy("nomos-cluster-policy",
+						&v1.ClusterPolicySpec{
+							ClusterRolesV1: []rbacv1.ClusterRole{{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "mycr",
+								},
+							}},
+						})),
+				},
+			},
+			expected: &v1.AllPolicies{
+				ClusterPolicy: &v1.ClusterPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "nomos-cluster-policy",
+					},
+					Spec: v1.ClusterPolicySpec{
+						ClusterRolesV1: []rbacv1.ClusterRole{{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "mycr",
+							},
+						}},
+						Resources: toResources(rbacv1.SchemeGroupVersion.WithKind("ClusterRole"),
+							runtime.Object(&rbacv1.ClusterRole{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "mycr",
+								},
+							})),
+					}},
+				PolicyNodes: map[string]v1.PolicyNode{},
+			},
+		},
+		{
+			name: "ClusterRoleBinding",
+			changes: map[string]*watcher.Change{
+				"": {},
+				"ClusterPolicy": {
+					Element: "ClusterPolicy",
+					State:   watcher.Change_EXISTS,
+					Data: marshalOrFail(t, policynode.NewClusterPolicy("nomos-cluster-policy",
+						&v1.ClusterPolicySpec{
+							ClusterRoleBindingsV1: []rbacv1.ClusterRoleBinding{{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "mycrb",
+								},
+							}},
+						})),
+				},
+			},
+			expected: &v1.AllPolicies{
+				ClusterPolicy: &v1.ClusterPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "nomos-cluster-policy",
+					},
+					Spec: v1.ClusterPolicySpec{
+						ClusterRoleBindingsV1: []rbacv1.ClusterRoleBinding{{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "mycrb",
+							},
+						}},
+						Resources: toResources(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"),
+							runtime.Object(&rbacv1.ClusterRoleBinding{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "mycrb",
+								},
+							})),
+					}},
+				PolicyNodes: map[string]v1.PolicyNode{},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := watchProcessor{
+				gcpToK8SName: ToK8SNameMap{},
+			}
+			actual, err := p.processAtomicGroup(tc.changes)
+			if err != nil {
+				t.Errorf("processAtomicGroup failed: %v", err)
+			}
+			if diff := deep.Equal(actual, tc.expected); diff != nil {
+				t.Errorf("actual and expected policies don't match: %#v", diff)
 			}
 		})
 	}
