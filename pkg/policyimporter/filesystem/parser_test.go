@@ -886,17 +886,6 @@ var parserTestCases = []parserTestCase{
 		expectedError: true,
 	},
 	{
-		testName: "Namespace dir with ResourceQuota namespace mismatch",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
-			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/rq.yaml": templateData{Namespace: "baz"}.apply(aQuota),
-		},
-		expectedError: true,
-	},
-	{
 		testName: "Namespace dir with multiple Roles",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
@@ -1128,27 +1117,6 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
-	},
-	{
-		testName: "Policyspace dir with ResourceQuota namespace set",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
-			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"namespaces/bar/rq.yaml": templateData{Namespace: "qux"}.apply(aQuota),
-		},
-		expectedError: true,
-	},
-	{
-		testName: "Policyspace dir with Namespace",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":          aNomosConfig,
-			"system/rq.yaml":             templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"namespaces/bar/rq.yaml":     templateData{Namespace: "bar"}.apply(aQuota),
-			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
-		},
-		expectedError: true,
 	},
 	{
 		testName: "Policyspace dir with Roles",
