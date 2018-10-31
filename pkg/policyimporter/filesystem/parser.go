@@ -31,6 +31,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
+	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/namespaceutil"
@@ -227,11 +228,11 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	if err != nil {
 		return nil, errors.Wrapf(err, "clusterregistry directory is invalid: %s", clusterDir)
 	}
-	cs, err := transform.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
+	cs, err := sel.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not create cluster selectors")
 	}
-	transform.SetClusterSelector(cs, fsCtx)
+	sel.SetClusterSelector(cs, fsCtx)
 
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]

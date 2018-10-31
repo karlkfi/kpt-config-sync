@@ -14,28 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package transform
+package selectors
 
 import (
 	"encoding/json"
 	"testing"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-var prodNamespaceSelector = v1alpha1.NamespaceSelector{
-	Spec: v1alpha1.NamespaceSelectorSpec{
-		Selector: metav1.LabelSelector{
-			MatchLabels: map[string]string{"env": "prod"}}}}
-
-var sensitiveNamespaceSelector = v1alpha1.NamespaceSelector{
-	Spec: v1alpha1.NamespaceSelectorSpec{
-		Selector: metav1.LabelSelector{
-			MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "privacy", Operator: metav1.LabelSelectorOpIn, Values: []string{"sensitive", "restricted"}}},
-			MatchLabels:      map[string]string{"env": "prod"}}}}
 
 type testCase struct {
 	testName           string
@@ -54,25 +44,25 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 		},
 		{
 			testName:           "Simple selector",
-			policy:             createPolicy(&prodNamespaceSelector),
+			policy:             createPolicy(&seltest.ProdNamespaceSelector),
 			nsLabels:           map[string]string{"env": "prod"},
 			expectedApplicable: true,
 		},
 		{
 			testName:           "Complex selector",
-			policy:             createPolicy(&sensitiveNamespaceSelector),
+			policy:             createPolicy(&seltest.SensitiveNamespaceSelector),
 			nsLabels:           map[string]string{"env": "prod", "privacy": "sensitive"},
 			expectedApplicable: true,
 		},
 		{
 			testName:           "No match",
-			policy:             createPolicy(&sensitiveNamespaceSelector),
+			policy:             createPolicy(&seltest.SensitiveNamespaceSelector),
 			nsLabels:           map[string]string{"env": "prod", "privacy": "open"},
 			expectedApplicable: false,
 		},
 		{
 			testName:           "No labels",
-			policy:             createPolicy(&prodNamespaceSelector),
+			policy:             createPolicy(&seltest.ProdNamespaceSelector),
 			expectedApplicable: false,
 		},
 	}
@@ -80,7 +70,7 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
 
-			applicable := isPolicyApplicableToNamespace(tc.nsLabels, tc.policy)
+			applicable := IsPolicyApplicableToNamespace(tc.nsLabels, tc.policy)
 			if tc.expectedApplicable != applicable {
 				t.Fatalf("Result didn't match, expected=%t, actual=%t", tc.expectedApplicable, applicable)
 			}

@@ -22,6 +22,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
@@ -53,7 +54,7 @@ type AnnotationInlinerVisitor struct {
 	// Used to inline cluster selector annotations.  It is created anew for each traversal.
 	clusterSelectorTransformer annotationTransformer
 	// selectors contains the cluster selection data.
-	selectors *ClusterSelectors
+	selectors *sel.ClusterSelectors
 }
 
 var _ ast.Visitor = &AnnotationInlinerVisitor{}
@@ -77,7 +78,7 @@ func (v *AnnotationInlinerVisitor) Error() error {
 func (v *AnnotationInlinerVisitor) VisitRoot(r *ast.Root) ast.Node {
 	glog.V(5).Infof("VisitRoot(): ENTER")
 	defer glog.V(6).Infof("VisitRoot(): EXIT")
-	cs := GetClusterSelectors(r)
+	cs := sel.GetClusterSelectors(r)
 	v.selectors = cs
 	// Add inliner map for cluster annotations.
 	t := annotationTransformer{}
@@ -108,7 +109,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 			v.errs.Add(errors.Errorf("NamespaceSelector must not be in namespace directories, found in %q", n.Path))
 			return n
 		}
-		if _, err := AsPopulatedSelector(&s.Spec.Selector); err != nil {
+		if _, err := sel.AsPopulatedSelector(&s.Spec.Selector); err != nil {
 			v.errs.Add(errors.Wrapf(err, "NamespaceSelector %q is not valid", s.Name))
 			continue
 		}

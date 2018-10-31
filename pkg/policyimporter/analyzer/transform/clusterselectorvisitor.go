@@ -3,6 +3,7 @@ package transform
 import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 )
 
@@ -11,7 +12,7 @@ import (
 type ClusterSelectorVisitor struct {
 	*visitor.Copying
 	// Unset until VisitRoot returns.
-	selectors *ClusterSelectors
+	selectors *sel.ClusterSelectors
 }
 
 var _ ast.Visitor = (*ClusterSelectorVisitor)(nil)
@@ -28,7 +29,7 @@ func NewClusterSelectorVisitor() *ClusterSelectorVisitor {
 
 // VisitRoot implements ast.Visitor.
 func (v *ClusterSelectorVisitor) VisitRoot(r *ast.Root) ast.Node {
-	v.selectors = GetClusterSelectors(r)
+	v.selectors = sel.GetClusterSelectors(r)
 	return v.Copying.VisitRoot(r)
 }
 

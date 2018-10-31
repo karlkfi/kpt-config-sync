@@ -19,8 +19,12 @@ package transform
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -28,20 +32,20 @@ import (
 
 func TestClusterSelectorVisitor(t *testing.T) {
 	clusters := []clusterregistry.Cluster{
-		cluster("cluster-1", map[string]string{
+		seltest.Cluster("cluster-1", map[string]string{
 			"env": "prod",
 		}),
 	}
 	selectors := []v1alpha1.ClusterSelector{
 		// Matches the cluster.
-		selector("sel-1",
+		seltest.Selector("sel-1",
 			metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"env": "prod",
 				},
 			}),
 		// Does not match the cluster.
-		selector("sel-2",
+		seltest.Selector("sel-2",
 			metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"env": "test",
@@ -53,11 +57,16 @@ func TestClusterSelectorVisitor(t *testing.T) {
 			return NewClusterSelectorVisitor()
 		},
 		InitRoot: func(r *ast.Root) {
-			cs, err := NewClusterSelectors(clusters, selectors, "cluster-1")
+			cs, err := sel.NewClusterSelectors(clusters, selectors, "cluster-1")
 			if err != nil {
 				panic(err)
 			}
-			SetClusterSelector(cs, r)
+			sel.SetClusterSelector(cs, r)
+		},
+		Options: func() []cmp.Option {
+			return []cmp.Option{
+				cmpopts.IgnoreFields(ast.Root{}, "Data"),
+			}
 		},
 		Testcases: []vt.MutatingVisitorTestcase{
 			{

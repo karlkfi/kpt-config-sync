@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package transform
+package selectors
 
 import (
 	"testing"
@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	policyhierarchy "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -82,7 +83,7 @@ func TestVisitor(t *testing.T) {
 			},
 			expectedMatches: []ast.Annotated{
 				// An un-annotated thing matches always.
-				annotated(map[string]string{}),
+				seltest.Annotated(map[string]string{}),
 			},
 		},
 		{
@@ -93,18 +94,18 @@ func TestVisitor(t *testing.T) {
 				selectors:   map[string]policyhierarchy.ClusterSelector{},
 			},
 			expectedMatches: []ast.Annotated{
-				annotated(map[string]string{}),
+				seltest.Annotated(map[string]string{}),
 			},
 		},
 		{
 			name: "Basic",
 			clusters: []clusterregistry.Cluster{
-				cluster("cluster-1", map[string]string{
+				seltest.Cluster("cluster-1", map[string]string{
 					"env": "prod",
 				}),
 			},
 			selectors: []policyhierarchy.ClusterSelector{
-				selector("sel-1",
+				seltest.Selector("sel-1",
 					metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"env": "prod",
@@ -114,25 +115,25 @@ func TestVisitor(t *testing.T) {
 			expectedMapping: ClusterSelectors{
 				clusterName: "cluster-1",
 				selectors: map[string]policyhierarchy.ClusterSelector{
-					"sel-1": selector("sel-1",
+					"sel-1": seltest.Selector("sel-1",
 						metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"env": "prod",
 							},
 						}),
 				},
-				cluster: cluster("cluster-1", map[string]string{
+				cluster: seltest.Cluster("cluster-1", map[string]string{
 					"env": "prod",
 				}),
 			},
 			expectedMatches: []ast.Annotated{
-				annotated(map[string]string{}),
-				annotated(map[string]string{
+				seltest.Annotated(map[string]string{}),
+				seltest.Annotated(map[string]string{
 					policyhierarchy.ClusterSelectorAnnotationKey: "sel-1",
 				}),
 			},
 			expectedMismatches: []ast.Annotated{
-				annotated(map[string]string{
+				seltest.Annotated(map[string]string{
 					policyhierarchy.ClusterSelectorAnnotationKey: "sel-2",
 				}),
 			},
@@ -140,12 +141,12 @@ func TestVisitor(t *testing.T) {
 		{
 			name: "Mismatching labels",
 			clusters: []clusterregistry.Cluster{
-				cluster("cluster-1", map[string]string{
+				seltest.Cluster("cluster-1", map[string]string{
 					"env": "prod",
 				}),
 			},
 			selectors: []policyhierarchy.ClusterSelector{
-				selector("sel-1",
+				seltest.Selector("sel-1",
 					metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"env": "test",
@@ -154,22 +155,22 @@ func TestVisitor(t *testing.T) {
 			},
 			expectedMapping: ClusterSelectors{
 				clusterName: "cluster-1",
-				cluster: cluster("cluster-1", map[string]string{
+				cluster: seltest.Cluster("cluster-1", map[string]string{
 					"env": "prod",
 				}),
 				selectors: map[string]policyhierarchy.ClusterSelector{},
 			},
 			expectedMatches: []ast.Annotated{
-				annotated(map[string]string{}),
+				seltest.Annotated(map[string]string{}),
 			},
 			expectedMismatches: []ast.Annotated{
-				annotated(map[string]string{
+				seltest.Annotated(map[string]string{
 					policyhierarchy.ClusterSelectorAnnotationKey: "sel-1",
 				}),
-				annotated(map[string]string{
+				seltest.Annotated(map[string]string{
 					policyhierarchy.ClusterSelectorAnnotationKey: "sel-2",
 				}),
-				annotated(map[string]string{
+				seltest.Annotated(map[string]string{
 					policyhierarchy.ClusterSelectorAnnotationKey: "unknown-selector",
 				}),
 			},
@@ -177,10 +178,10 @@ func TestVisitor(t *testing.T) {
 		{
 			name: "Unlabeled cluster matches any selector",
 			clusters: []clusterregistry.Cluster{
-				cluster("cluster-1", map[string]string{}),
+				seltest.Cluster("cluster-1", map[string]string{}),
 			},
 			selectors: []policyhierarchy.ClusterSelector{
-				selector("sel-1",
+				seltest.Selector("sel-1",
 					metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"env": "test",
@@ -189,11 +190,11 @@ func TestVisitor(t *testing.T) {
 			},
 			expectedMapping: ClusterSelectors{
 				clusterName: "cluster-1",
-				cluster:     cluster("cluster-1", map[string]string{}),
+				cluster:     seltest.Cluster("cluster-1", map[string]string{}),
 				selectors:   map[string]policyhierarchy.ClusterSelector{},
 			},
 			expectedForEach: map[string]policyhierarchy.ClusterSelector{
-				"sel-1": selector("sel-1",
+				"sel-1": seltest.Selector("sel-1",
 					metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"env": "test",
@@ -204,32 +205,5 @@ func TestVisitor(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, test.run)
-	}
-}
-
-func cluster(name string, labels map[string]string) clusterregistry.Cluster {
-	return clusterregistry.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: labels,
-		},
-	}
-}
-
-func selector(name string, selector metav1.LabelSelector) policyhierarchy.ClusterSelector {
-	return policyhierarchy.ClusterSelector{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: policyhierarchy.ClusterSelectorSpec{
-			Selector: selector,
-		},
-	}
-}
-
-func annotated(a map[string]string) *metav1.ObjectMeta {
-	return &metav1.ObjectMeta{
-		Name:        "obj",
-		Annotations: a,
 	}
 }

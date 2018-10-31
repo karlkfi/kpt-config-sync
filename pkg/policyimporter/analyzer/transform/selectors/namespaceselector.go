@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package transform
+package selectors
 
 import (
 	"encoding/json"
@@ -24,10 +24,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// isPolicyApplicableToNamespace returns whether the NamespaceSelector
+// IsPolicyApplicableToNamespace returns whether the NamespaceSelector
 // annotation on the given policy object matches the given labels on a
 // namespace.  The policy is applicable if it has no such annotation.
-func isPolicyApplicableToNamespace(namespaceLabels map[string]string, policy metav1.Object) bool {
+func IsPolicyApplicableToNamespace(namespaceLabels map[string]string, policy metav1.Object) bool {
 	ls, exists := policy.GetAnnotations()[v1alpha1.NamespaceSelectorAnnotationKey]
 	if !exists {
 		return true

@@ -22,6 +22,8 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,20 +51,20 @@ func toJSON(s interface{}) string {
 }
 
 var clusters = []clusterregistry.Cluster{
-	cluster("cluster-1", map[string]string{
+	seltest.Cluster("cluster-1", map[string]string{
 		"env": "prod",
 	}),
 }
 var selectors = []v1alpha1.ClusterSelector{
 	// Matches the cluster.
-	selector("sel-1",
+	seltest.Selector("sel-1",
 		metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"env": "prod",
 			},
 		}),
 	// Does not match the cluster.
-	selector("sel-2",
+	seltest.Selector("sel-2",
 		metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"env": "test",
@@ -74,11 +76,11 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 		return NewAnnotationInlinerVisitor()
 	},
 	InitRoot: func(r *ast.Root) {
-		cs, err := NewClusterSelectors(clusters, selectors, "")
+		cs, err := sel.NewClusterSelectors(clusters, selectors, "")
 		if err != nil {
 			panic(err)
 		}
-		SetClusterSelector(cs, r)
+		sel.SetClusterSelector(cs, r)
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
@@ -95,7 +97,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.ObjectSets(
 						withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 				},
 			},
 			ExpectOutput: &ast.Root{
@@ -103,9 +105,9 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.AbstractNamespace,
 					Path: "namespaces",
 					Objects: vt.ObjectSets(
-						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
+						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 				},
 			},
 		},
@@ -121,8 +123,8 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 						withNamespaceSelector(vt.Helper.AcmeResourceQuota(), "sensitive"),
 					),
 					Selectors: map[string]*v1alpha1.NamespaceSelector{
-						"prod":      &prodNamespaceSelector,
-						"sensitive": &sensitiveNamespaceSelector,
+						"prod":      &seltest.ProdNamespaceSelector,
+						"sensitive": &seltest.SensitiveNamespaceSelector,
 					},
 				},
 			},
@@ -131,13 +133,13 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.AbstractNamespace,
 					Path: "namespaces",
 					Objects: vt.ObjectSets(
-						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
-						withNamespaceSelector(vt.Helper.PodReaderRole(), toJSON(prodNamespaceSelector)),
-						withNamespaceSelector(vt.Helper.AcmeResourceQuota(), toJSON(sensitiveNamespaceSelector)),
+						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
+						withNamespaceSelector(vt.Helper.PodReaderRole(), toJSON(seltest.ProdNamespaceSelector)),
+						withNamespaceSelector(vt.Helper.AcmeResourceQuota(), toJSON(seltest.SensitiveNamespaceSelector)),
 					),
 					Selectors: map[string]*v1alpha1.NamespaceSelector{
-						"prod":      &prodNamespaceSelector,
-						"sensitive": &sensitiveNamespaceSelector,
+						"prod":      &seltest.ProdNamespaceSelector,
+						"sensitive": &seltest.SensitiveNamespaceSelector,
 					},
 				},
 			},
@@ -151,7 +153,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.ObjectSets(
 						withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
@@ -159,7 +161,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 							Objects: vt.ObjectSets(
 								withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 							),
-							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 						},
 					},
 				},
@@ -169,17 +171,17 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.AbstractNamespace,
 					Path: "namespaces",
 					Objects: vt.ObjectSets(
-						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
+						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
 							Path: "namespaces/frontend",
 							Objects: vt.ObjectSets(
-								withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
+								withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 							),
-							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 						},
 					},
 				},
@@ -204,7 +206,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 				Tree: &ast.TreeNode{
 					Type:      ast.AbstractNamespace,
 					Path:      "namespaces",
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
@@ -231,7 +233,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 						&ast.TreeNode{
 							Type:      ast.AbstractNamespace,
 							Path:      "namespaces/frontend",
-							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+							Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 						},
 					},
 				},
@@ -247,7 +249,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.ObjectSets(
 						vt.Helper.AdminRoleBinding(),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 				},
 			},
 			ExpectOutput: &ast.Root{
@@ -257,7 +259,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.ObjectSets(
 						vt.Helper.AdminRoleBinding(),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 				},
 			},
 		},
@@ -270,7 +272,7 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.ObjectSets(
 						withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 					),
-					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &prodNamespaceSelector},
+					Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 				},
 			},
 			ExpectErr: true,
@@ -288,11 +290,11 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 			return NewAnnotationInlinerVisitor()
 		},
 		InitRoot: func(r *ast.Root) {
-			cs, err := NewClusterSelectors(clusters, selectors, "cluster-1")
+			cs, err := sel.NewClusterSelectors(clusters, selectors, "cluster-1")
 			if err != nil {
 				panic(err)
 			}
-			SetClusterSelector(cs, r)
+			sel.SetClusterSelector(cs, r)
 		},
 		Testcases: []vt.MutatingVisitorTestcase{
 			{

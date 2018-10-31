@@ -18,6 +18,7 @@ package transform
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -87,7 +88,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	if n.Type == ast.Namespace {
 		for _, ctx := range v.treeContext {
 			for _, inherited := range ctx.inherited {
-				if isPolicyApplicableToNamespace(n.Labels, inherited.ToMeta()) {
+				if sel.IsPolicyApplicableToNamespace(n.Labels, inherited.ToMeta()) {
 					newNode.Objects = append(newNode.Objects, inherited)
 				}
 			}

@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -102,7 +103,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 				Tree: &ast.TreeNode{
 					Type: ast.AbstractNamespace,
 					Objects: vt.ObjectSets(
-						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
+						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 					),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
@@ -127,7 +128,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 							Path:   "namespaces/frontend",
 							Labels: map[string]string{"env": "prod"},
 							Objects: vt.ObjectSets(
-								withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(prodNamespaceSelector)),
+								withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 							),
 						},
 						&ast.TreeNode{
