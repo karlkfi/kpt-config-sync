@@ -261,7 +261,7 @@ func (s *ReflectiveCreateAction) Execute() error {
 	timer := prometheus.NewTimer(APICallDuration.WithLabelValues(s.Resource(), string(s.Operation())))
 	defer timer.ObserveDuration()
 	if _, err := s.create(); err != nil {
-		return errors.Wrapf(err, "failed to create namespace %q", s.name)
+		return errors.Wrapf(err, "failed to execute %s", s)
 	}
 	return nil
 }
