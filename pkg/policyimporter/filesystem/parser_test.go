@@ -44,11 +44,7 @@ import (
 )
 
 const (
-	aNamespaceTemplate = `
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {{.Name}}
+	objectMetaTemplate = `
 {{- if .Annotations}}
   annotations:
   {{range $k, $v := .Annotations}}
@@ -60,7 +56,14 @@ metadata:
   {{- range $k, $v := .Labels}}
     {{$k}}: '{{$v}}'
   {{- end}}
-{{- end}}
+{{- end}}`
+
+	aNamespaceTemplate = `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{.Name}}
+{{template "objectmetatemplate" .}}
 `
 
 	aNamespaceWithLabelsAndAnnotationsTemplate = `
@@ -105,18 +108,7 @@ rules:
   resources: ["jobs"]
   verbs:
    - "*"
-{{- if .Annotations}}
-  annotations:
-  {{range $k, $v := .Annotations}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{end}}
-{{- if .Labels}}
-  labels:
-  {{range $k, $v := .Labels}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{- end}}
+{{template "objectmetatemplate" .}}
 `
 
 	aRoleBindingTemplate = `
@@ -125,18 +117,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creators{{.ID}}
   namespace: {{.Namespace}}
-{{- if .Annotations}}
-  annotations:
-  {{- range $k, $v := .Annotations}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{- end}}
-{{- if .Labels}}
-  labels:
-  {{range $k, $v := .Labels}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{- end}}
+{{template "objectmetatemplate" .}}
 subjects:
 - kind: Group
   name: bob@acme.com
@@ -170,18 +151,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creator{{.ID}}
-{{- if .Annotations}}
-  annotations:
-  {{range $k, $v := .Annotations}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{end}}
-{{- if .Labels}}
-  labels:
-  {{range $k, $v := .Labels}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{end}}
+{{template "objectmetatemplate" .}}
 rules:
 - apiGroups: ["batch/v1"]
   resources: ["jobs"]
@@ -196,18 +166,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creators{{.ID}}
   namespace: {{.Namespace}}
-{{- if .Annotations}}
-  annotations:
-  {{- range $k, $v := .Annotations}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{- end}}
-{{- if .Labels}}
-  labels:
-  {{range $k, $v := .Labels}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{- end}}
+{{template "objectmetatemplate" .}}
 subjects:
 - kind: Group
   name: bob@acme.com
@@ -254,18 +213,7 @@ metadata:
 {{- if .Namespace}}
   namespace: {{.Namespace}}
 {{- end}}
-{{- if .Annotations}}
-  annotations:
-  {{- range $k, $v := .Annotations}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{- end}}
-{{- if .Labels}}
-  labels:
-  {{range $k, $v := .Labels}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{- end}}
+{{template "objectmetatemplate" .}}
 spec:
   selector:
     matchLabels:
@@ -325,12 +273,7 @@ apiVersion: clusterregistry.k8s.io/v1alpha1
 kind: Cluster
 metadata:
   name: {{.Name}}
-{{- if .Labels}}
-  labels:
-  {{- range $k, $v := .Labels}}
-    {{$k}}: '{{$v}}'
-  {{- end}}
-{{- end -}}
+{{template "objectmetatemplate" .}}
 `
 
 	aClusterSelectorTemplate = `
@@ -345,25 +288,47 @@ spec:
 `
 )
 
+func tpl(name, content string) *template.Template {
+	// Injects "objectmetatemplate" as a library into the existing template to
+	// remove repetition in meta declarations.  There does not seem to be a
+	// better way to do this starting from a bunch of strings.
+	var b bytes.Buffer
+	tpl := template.Must(template.New("lib").Parse(`
+{{"{{"}}- define "objectmetatemplate" {{"}}"}}
+{{- .ObjectMetaTemplate}}
+{{"{{"}}- end{{"}}"}}
+{{.Content}}`))
+	err := tpl.Execute(&b, struct {
+		ObjectMetaTemplate, Content string
+	}{
+		ObjectMetaTemplate: objectMetaTemplate,
+		Content:            content,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return template.Must(template.New(name).Parse(b.String()))
+}
+
 var (
-	aNamespace                         = template.Must(template.New("aNamespace").Parse(aNamespaceTemplate))
-	aNamespaceWithLabelsAndAnnotations = template.Must(template.New("aNamespace").Parse(aNamespaceWithLabelsAndAnnotationsTemplate))
-	aNamespaceJSON                     = template.Must(template.New("aNamespaceJSON").Parse(aNamespaceJSONTemplate))
-	aQuota                             = template.Must(template.New("aQuota").Parse(aQuotaTemplate))
-	aRole                              = template.Must(template.New("aRole").Parse(aRoleTemplate))
-	aRoleBinding                       = template.Must(template.New("aRoleBinding").Parse(aRoleBindingTemplate))
-	aLBPRoleBinding                    = template.Must(template.New("aLBPRoleBinding").Parse(aLBPRoleBindingTemplate))
-	aClusterRole                       = template.Must(template.New("aClusterRole").Parse(aClusterRoleTemplate))
-	aClusterRoleBinding                = template.Must(template.New("aClusterRoleBinding").Parse(aClusterRoleBindingTemplate))
-	aPodSecurityPolicy                 = template.Must(template.New("aPodSecurityPolicyTemplate").Parse(aPodSecurityPolicyTemplate))
-	aConfigMap                         = template.Must(template.New("aConfigMap").Parse(aConfigMapTemplate))
-	aDeployment                        = template.Must(template.New("aDeployment").Parse(aDeploymentTemplate))
-	aSync                              = template.Must(template.New("aSync").Parse(aSyncTemplate))
-	aPhilo                             = template.Must(template.New("aPhilo").Parse(aPhiloTemplate))
-	aNode                              = template.Must(template.New("aNode").Parse(aNodeTemplate))
-	aClusterRegistryCluster            = template.Must(template.New("aClusterRegistryCluster").Parse(aClusterRegistryClusterTemplate))
-	aClusterSelector                   = template.Must(template.New("aClusterSelector").Parse(aClusterSelectorTemplate))
-	aNamespaceSelector                 = template.Must(template.New("aNamespaceSelectorTemplate").Parse(aNamespaceSelectorTemplate))
+	aNamespace                         = tpl("aNamespace", aNamespaceTemplate)
+	aNamespaceWithLabelsAndAnnotations = tpl("aNamespaceWithLabelsAndAnnotations", aNamespaceWithLabelsAndAnnotationsTemplate)
+	aNamespaceJSON                     = tpl("aNamespaceJSON", aNamespaceJSONTemplate)
+	aQuota                             = tpl("aQuota", aQuotaTemplate)
+	aRole                              = tpl("aRole", aRoleTemplate)
+	aRoleBinding                       = tpl("aRoleBinding", aRoleBindingTemplate)
+	aLBPRoleBinding                    = tpl("aLBPRoleBinding", aLBPRoleBindingTemplate)
+	aClusterRole                       = tpl("aClusterRole", aClusterRoleTemplate)
+	aClusterRoleBinding                = tpl("aClusterRoleBinding", aClusterRoleBindingTemplate)
+	aPodSecurityPolicy                 = tpl("aPodSecurityPolicyTemplate", aPodSecurityPolicyTemplate)
+	aConfigMap                         = tpl("aConfigMap", aConfigMapTemplate)
+	aDeployment                        = tpl("aDeployment", aDeploymentTemplate)
+	aSync                              = tpl("aSync", aSyncTemplate)
+	aPhilo                             = tpl("aPhilo", aPhiloTemplate)
+	aNode                              = tpl("aNode", aNodeTemplate)
+	aClusterRegistryCluster            = tpl("aClusterRegistryCluster", aClusterRegistryClusterTemplate)
+	aClusterSelector                   = tpl("aClusterSelector", aClusterSelectorTemplate)
+	aNamespaceSelector                 = tpl("aNamespaceSelectorTemplate", aNamespaceSelectorTemplate)
 )
 
 // templateData can be used to format any of the below values into templates to create
