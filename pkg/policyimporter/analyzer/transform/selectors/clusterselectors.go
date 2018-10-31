@@ -17,6 +17,8 @@ limitations under the License.
 package selectors
 
 import (
+	"reflect"
+
 	"github.com/golang/glog"
 	policyhierarchy "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
@@ -35,14 +37,31 @@ type ClusterSelectors struct {
 	clusterName string
 }
 
+// Equal returns true if c and other are exactly equal.
+func (stc *ClusterSelectors) Equal(other *ClusterSelectors) bool {
+	if stc == nil && other != nil {
+		return false
+	}
+	if stc != nil && other == nil {
+		return false
+	}
+	if stc == nil && other == nil {
+		return true
+	}
+	return reflect.DeepEqual(stc.cluster, other.cluster) &&
+		reflect.DeepEqual(stc.selectors, other.selectors) &&
+		reflect.DeepEqual(stc.clusterName, other.clusterName)
+}
+
 type clusterSelectorKeyType struct{}
 
 var csKey = clusterSelectorKeyType{}
 
 // SetClusterSelector extends root with the cluster selector.  Use
 // GetClusterSelectors() to get it back.
-func SetClusterSelector(stc *ClusterSelectors, root *ast.Root) {
+func SetClusterSelector(stc *ClusterSelectors, root *ast.Root) *ast.Root {
 	root.Data = root.Data.Add(csKey, stc)
+	return root
 }
 
 // GetClusterSelectors gets the cluster selectors object from the root.  Panics

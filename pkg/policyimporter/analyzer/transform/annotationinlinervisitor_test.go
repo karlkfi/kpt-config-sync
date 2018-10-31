@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
@@ -81,6 +83,11 @@ var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
 			panic(err)
 		}
 		sel.SetClusterSelector(cs, r)
+	},
+	Options: func() []cmp.Option {
+		return []cmp.Option{
+			cmpopts.IgnoreFields(ast.Root{}, "Data"),
+		}
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
@@ -295,6 +302,11 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 				panic(err)
 			}
 			sel.SetClusterSelector(cs, r)
+		},
+		Options: func() []cmp.Option {
+			return []cmp.Option{
+				cmpopts.IgnoreFields(ast.Root{}, "Data"),
+			}
 		},
 		Testcases: []vt.MutatingVisitorTestcase{
 			{

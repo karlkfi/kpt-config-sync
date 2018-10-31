@@ -17,6 +17,8 @@ limitations under the License.
 package ast
 
 import (
+	"reflect"
+
 	"github.com/pkg/errors"
 )
 
@@ -54,6 +56,21 @@ func newExtension() *Extension {
 	return &Extension{
 		items: map[interface{}]interface{}{},
 	}
+}
+
+// Equal returns true if e and other are exactly equal.  Used in the "cmp" test
+// comparisons.
+func (d *Extension) Equal(other *Extension) bool {
+	if d == nil && other != nil {
+		return false
+	}
+	if d != nil && other == nil {
+		return false
+	}
+	if d == nil && other == nil {
+		return true
+	}
+	return reflect.DeepEqual(d.items, other.items)
 }
 
 // Copy creates a copy of Extension.  If data is nil, it will return nil.

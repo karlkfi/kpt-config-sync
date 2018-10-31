@@ -21,7 +21,6 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -37,11 +36,9 @@ type MutatingVisitorTestcase struct {
 	ExpectNoop   bool // Output is expected to the exact tree as input (same pointer, not mutated)
 }
 
-// Options is the set of custom comparison options.
-func Options() []cmp.Option {
+// Defaults is the set of default comparison options.
+func Defaults() []cmp.Option {
 	return []cmp.Option{
-		// TODO(filmil): Figure out how to compare the unexported fields.
-		cmpopts.IgnoreFields(ast.Root{}, "Data"),
 		ResourceVersionCmp(),
 	}
 }
@@ -56,7 +53,13 @@ func ResourceVersionCmp() cmp.Option {
 // Runf returns a function that runs the testcase. visitor is the visitor to use
 // in the test case, and initRoot optionally initializes the root of the tree before traversal.
 func (tc *MutatingVisitorTestcase) Runf(
-	visitor ast.CheckingVisitor, initRoot func(*ast.Root)) func(t *testing.T) {
+	visitor ast.CheckingVisitor,
+	initRoot func(*ast.Root),
+	options func() []cmp.Option) func(t *testing.T) {
+	opts := Defaults()
+	if options != nil {
+		opts = append(opts, options()...)
+	}
 	return func(t *testing.T) {
 		copier := visitorpkg.NewCopying()
 		copier.SetImpl(copier)
@@ -70,8 +73,8 @@ func (tc *MutatingVisitorTestcase) Runf(
 		}
 
 		output := tc.Input.Accept(visitor)
-		if !cmp.Equal(tc.Input, inputCopy, Options()...) {
-			t.Errorf("Input mutated while running visitor: %s", cmp.Diff(inputCopy, tc.Input, Options()...))
+		if !cmp.Equal(tc.Input, inputCopy, opts...) {
+			t.Errorf("Input mutated while running visitor: %s", cmp.Diff(inputCopy, tc.Input, opts...))
 		}
 
 		actual, ok := output.(*ast.Root)
@@ -92,13 +95,13 @@ func (tc *MutatingVisitorTestcase) Runf(
 		}
 		if tc.ExpectNoop {
 			if tc.Input != actual {
-				t.Fatalf("expected noop, mismatch on expected vs actual: %s", cmp.Diff(tc.ExpectOutput, actual, Options()...))
+				t.Fatalf("expected noop, mismatch on expected vs actual: %s", cmp.Diff(tc.ExpectOutput, actual, opts...))
 			}
 			tc.ExpectOutput = inputCopy
 		}
-		if !cmp.Equal(tc.ExpectOutput, actual, Options()...) {
+		if !cmp.Equal(tc.ExpectOutput, actual, opts...) {
 			t.Fatalf("mismatch on expected vs actual:\ndiff:\n%s\nexpected:\n%v\nactual:\n%v",
-				cmp.Diff(tc.ExpectOutput, actual, Options()...),
+				cmp.Diff(tc.ExpectOutput, actual, Defaults()...),
 				spew.Sdump(tc.ExpectOutput), spew.Sdump(actual))
 		}
 	}
@@ -109,13 +112,15 @@ type MutatingVisitorTestcases struct {
 	// VisitorCtor returns a created visitor.
 	VisitorCtor func() ast.CheckingVisitor
 	// InitRoot initializes the root before tree traversal.  Skipped if nil.
-	InitRoot  func(r *ast.Root)
+	InitRoot func(r *ast.Root)
+	// Options is the list of options to apply when comparing trees.  Using default if nil
+	Options   func() []cmp.Option
 	Testcases []MutatingVisitorTestcase
 }
 
 // Run runs all testcases.
 func (tcs *MutatingVisitorTestcases) Run(t *testing.T) {
 	for _, testcase := range tcs.Testcases {
-		t.Run(testcase.Name, testcase.Runf(tcs.VisitorCtor(), tcs.InitRoot))
+		t.Run(testcase.Name, testcase.Runf(tcs.VisitorCtor(), tcs.InitRoot, tcs.Options))
 	}
 }
