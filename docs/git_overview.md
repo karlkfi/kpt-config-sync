@@ -84,7 +84,7 @@ There are two types of sub-directories in `namespaces`:
 *   __Namespace directory:__ A directory containing a Namespace resource. A
     Namespace directory is a one-to-one mapping to a Kubernetes [Namespace][1].
 *   __Abstract Namespace directory:__ Any other directory. Conceptually, an
-    Abstract Namespace directory represents intermediate nodes in the hierarchy.
+    Abstract Namespace directory represents an intermediate node in the namespace hierarchy.
 
 As an example of how `shipping-prod` Namespace is declared:
 
@@ -118,14 +118,13 @@ The following constraints apply to `namespaces` directory and are enforced
 during [validation](git_validation.md):
 
 1.  A Namespace directory MUST be a leaf directory.
-1.  A Namespace directory's name MUST match the name of the contained Namespace
+1.  A Namespace directory's name MUST match `metadata.name` field of the contained Namespace
     resource.
 1.  A Namespace directory MAY contain any number of uniquely named
     namespace-scoped resources.
-1.  A resources in a Namespace directory MUST have a namespace matching the the
-    directory name.
 1.  An Abstract Namespace directory MAY contain any number of hierarchical
     resources.
+1.  Resources MUST NOT specify `metadata.namespace` field as it is inferred automatically.
 1.  All directory names MUST be valid Kubernetes namespace names (i.e.
     [DNS Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md)).
     In addition a name MUST NOT be `default`, `nomos-system`, or have `kube-`
@@ -143,8 +142,7 @@ The following constraints apply to `cluster` directory and are enforced during
 
 1.  The cluster directory MAY contain any number of uniquely named
     cluster-scoped resources.
-1.  The cluster directory MUST NOT contain namespace-scoped resources. These are
-    placed in the namespaces hierarchy.
+1.  The cluster directory MUST NOT contain namespace-scoped resources.
 
 ### system/
 
@@ -186,11 +184,11 @@ Renaming a Namespace directory (which requires renaming Namespace name as well)
 is destructive since it **deletes that namespace and creates a new namespace in
 Kubernetes**.
 
-Renaming a Abstract Namespace directory has no externally visible effect.
+Renaming an Abstract Namespace directory has no externally visible effect.
 
 ### Move
 
-Moving a Namespace or Abstract Namespace directory can lead to policy changes in
+Moving a Namespace or an Abstract Namespace directory can lead to policy changes in
 namespaces, but does not delete a namespace or workload resources.
 
 [1]: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
