@@ -28,9 +28,6 @@ var rootCmd = &cobra.Command{
 			}
 			kubeConfig = filepath.Join(user.HomeDir, ".kube", "config")
 		}
-		if _, err := os.Stat(kubeConfig); err != nil {
-			return fmt.Errorf("could not find config file: %q", kubeConfig)
-		}
 		return nil
 	},
 }
