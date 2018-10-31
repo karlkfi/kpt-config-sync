@@ -51,7 +51,7 @@ func (o *FileObject) Name() string {
 }
 
 // PrettyPrint returns a convenient representation of a FileObject for error messages.
-func (o *FileObject) String() string {
+func (o FileObject) String() string {
 	gvk := o.GroupVersionKind()
 	return fmt.Sprintf("source: %[1]s\n"+
 		"metadata.name: %[2]s\n"+
@@ -190,9 +190,9 @@ func (n *TreeNode) Name() string {
 }
 
 // PrettyPrint returns a convenient representation of a TreeNode for error messages.
-func (n *TreeNode) String() string {
+func (n TreeNode) String() string {
 	return fmt.Sprintf("path: %[1]s\n"+
-		"name: %[2]s\n",
+		"name: %[2]s",
 		n.Path, n.Name())
 }
 

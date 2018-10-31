@@ -1,0 +1,12 @@
+kind: Sync
+apiVersion: nomos.dev/v1alpha1
+spec:
+  groups:
+  - group: rbac.authorization.k8s.io
+    kinds:
+    - kind: ClusterRole
+      versions:
+      - version: v1
+    - kind: RoleBinding
+      versions:
+      - version: v1

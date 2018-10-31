@@ -182,13 +182,13 @@ func (p *Parser) readResources(dir string, recursive bool) ([]*resource.Info, er
 		return nil, err
 	}
 	if len(visitors) > 0 {
-		schema, err := p.factory.Validator(p.validate)
+		s, err := p.factory.Validator(p.validate)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get schema")
 		}
 		result := p.factory.NewBuilder().
 			Unstructured().
-			Schema(schema).
+			Schema(s).
 			ContinueOnError().
 			FilenameParam(false, &resource.FilenameOptions{Recursive: recursive, Filenames: []string{dir}}).
 			Do()
@@ -330,11 +330,6 @@ func (p *Parser) processNamespacesDir(
 	namespaceDirs map[string]bool,
 	treeGenerator *DirectoryTree,
 	root bool) error {
-	parent := filepath.Dir(dir)
-	// Since directories are processed in DFS order, it's guaranteed that parent was already processed.
-	if namespaceDirs[parent] {
-		return errors.Errorf("Namespace dir %s must not have children", parent)
-	}
 	var treeNode *ast.TreeNode
 	for _, i := range infos {
 		o := i.AsVersioned()
@@ -524,17 +519,13 @@ func allDirs(root string) ([]string, error) {
 }
 
 // validateDirNames validates that:
-// 1. No two directories (including root) in the tree have the same name.
-// 2. Directory name is not reserved by the system.
-// 3. Directory name is a valid namespace name:
+// 1. Directory name is not reserved by the system.
+// 2. Directory name is a valid namespace name:
 // https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md
 func validateDirNames(dirs []string) error {
 	dirNames := make(map[string]bool)
 	for _, d := range dirs {
 		n := filepath.Base(d)
-		if _, ok := dirNames[n]; ok {
-			return errors.Errorf("directory name %q is not unique: %s", n, d)
-		}
 		if err := namespaceutil.IsReservedOrInvalidNamespace(n); err != nil {
 			return errors.Wrapf(err, "invalid directory: %s", d)
 		}

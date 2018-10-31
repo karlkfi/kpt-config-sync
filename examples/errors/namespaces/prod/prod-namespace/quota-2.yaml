@@ -1,0 +1,9 @@
+# Can't exist with quota-1.yaml
+kind: ResourceQuota
+apiVersion: v1
+metadata:
+  name: pod-quota-2
+  namespace: prod-namespace
+spec:
+  hard:
+    pods: "1"

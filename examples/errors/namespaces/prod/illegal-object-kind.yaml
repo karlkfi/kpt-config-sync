@@ -1,0 +1,14 @@
+kind: ClusterRole # kind not allowed
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: illegal-clusterrole
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["*"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings"]
+  verbs: ["get", "list"]

@@ -30,7 +30,6 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -42,7 +41,7 @@ type InputValidator struct {
 	base               *visitor.Base
 	errs               multierror.Builder
 	reserved           *reserved.Namespaces
-	names              map[string]*ast.TreeNode
+	dirNames           map[string]*ast.TreeNode
 	nodes              []*ast.TreeNode
 	seenResourceQuotas map[string]struct{}
 	allowedGVKs        map[schema.GroupVersionKind]struct{}
@@ -58,6 +57,7 @@ func NewInputValidator(allowedGVKs map[schema.GroupVersionKind]struct{}) *InputV
 	v := &InputValidator{
 		base:               visitor.NewBase(),
 		reserved:           reserved.EmptyNamespaces(),
+		dirNames:           make(map[string]*ast.TreeNode),
 		seenResourceQuotas: make(map[string]struct{}),
 		allowedGVKs:        allowedGVKs,
 	}
@@ -98,31 +98,32 @@ type treeNodeError struct {
 }
 
 func (n treeNodeError) hasReservedName() error {
-	return errors.Errorf("Reserved names may not be used. "+
-		"Rename the below directory or remove %[1]q from %[3]s in the root directory:\n"+
+	return errors.Errorf("Directories may not have reserved namespace names. "+
+		"Rename the below directory or remove %[1]q from %[4]s/%[3]s:\n"+
 		"%[2]s",
-		n.Name(), n, v1alpha1.ReservedNamespacesConfigMapName)
+		n.Name(), n, v1alpha1.ReservedNamespacesConfigMapName, repo.SystemDir)
 }
 
 func (n treeNodeError) duplicates(other *ast.TreeNode) error {
 	return errors.Errorf("Directory names must be unique. "+
-		"The two directories below share the same name. Rename one:"+
-		"%[1]s\n"+
+		"The two directories below share the same name. Rename one:\n"+
+		"%[1]s\n\n"+
 		"%[2]s",
 		n, other)
 }
 
 func (n treeNodeError) hasParent(parent *ast.TreeNode) error {
 	return errors.Errorf("A %[1]s directory may not have children. "+
-		"Restructure the below directory so that it does not have the child %[2]s:"+
+		"Restructure %[4]s so that it does not have the child %[2]q:\n"+
 		"%[3]s",
-		ast.Namespace, n.Name(), parent)
+		ast.Namespace, n.Name(), n, parent.Name())
 }
 
 func (n treeNodeError) usesNamespaceSelectorAnnotation() error {
-	return errors.Errorf("A %[3]s may not use the %[2]s annotation. "+
-		"Remove the %[2]s annotation from \"%[1]s/%[3]s.yaml\".",
-		n.Path, v1alpha1.NamespaceSelectorAnnotationKey, ast.Namespace)
+	return errors.Errorf("A %[3]s may not use the annotation %[2]s. "+
+		"Remove metadata.annotations.%[2]s from:\n"+
+		"%[1]s",
+		n, v1alpha1.NamespaceSelectorAnnotationKey, ast.Namespace)
 }
 
 // VisitTreeNode implements Visitor
@@ -133,9 +134,11 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 		// The namespace's name must not be a reserved namespace name.
 		v.errs.Add(nodeError.hasReservedName())
 	}
-	if other, found := v.names[name]; found {
+	if other, found := v.dirNames[name]; found {
 		// The namespace must not duplicate the name of another namespace.
 		v.errs.Add(nodeError.duplicates(other))
+	} else {
+		v.dirNames[name] = n
 	}
 	if len(v.nodes) != 0 {
 		// Namespaces may not have children.
@@ -161,25 +164,6 @@ func (v *InputValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.Nod
 	return v.base.VisitClusterObjectList(o)
 }
 
-// An error factory for this ClusterObject.
-type clusterObjectError ast.ClusterObject
-
-func (o clusterObjectError) hasNamespace(namespace string) error {
-	return errors.Errorf(
-		"Cluster scoped resources may not declare metadata.namespace. "+
-			"Remove metadata.namespace from the below resources or move it to a namespace:\n"+
-			"%[1]s",
-		o)
-}
-
-func (o clusterObjectError) isNamespace() error {
-	return errors.Errorf(
-		"A %[1]s may not be declared in a %[2]s directory. "+
-			"Move the below resource to a %[3]s directory:\n"+
-			"%[4]s",
-		ast.Namespace, repo.ClusterDir, repo.NamespacesDir, o)
-}
-
 func isNotSyncable(o ast.FileObject) error {
 	return errors.Errorf(
 		"The below resource is not syncable. Enable sync for resources of type %[1]q.\n"+
@@ -198,17 +182,7 @@ func (v *InputValidator) checkAnnotationsAndLabels(o ast.FileObject) {
 
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
-	objectError := clusterObjectError(*o)
-
-	if namespace := objectError.ToMeta().GetNamespace(); namespace != "" {
-		v.errs.Add(objectError.hasNamespace(namespace))
-	}
-
 	gvk := o.GroupVersionKind()
-	if gvk == corev1.SchemeGroupVersion.WithKind(repo.NamespacesDir) {
-		v.errs.Add(objectError.isNamespace())
-	}
-
 	if _, found := v.allowedGVKs[gvk]; !found {
 		v.errs.Add(isNotSyncable(o.FileObject))
 	}
@@ -243,9 +217,10 @@ func (o namespaceObjectErrorFactory) hasNamespace() error {
 
 func (o namespaceObjectErrorFactory) hasWrongNamespace(namespace string) error {
 	return errors.Errorf(
-		"%[1]s scoped resources must declare a metadata.%[1]s identical to the directory in which they are defined. "+
-			"Modify either the below resource's metadata.%[1]s or its directory so they match:\n"+
-			"%[2]s",
+		"%[1]s scoped resources must declare a metadata.namespace identical to the directory in which they are defined.\n"+
+			"Expected Namespace: %[3]s\n"+
+			"Actual Namespace:   %[4]s\n"+
+			"\n%[2]s",
 		ast.Namespace, o, namespace, path.Base(path.Dir(o.Source)))
 }
 
@@ -306,10 +281,8 @@ func (v *InputValidator) checkAnnotations(o ast.FileObject) error {
 		o.ToMeta().GetAnnotations(),
 		v1alpha1.InputAnnotations,
 		"Objects are not allowed to define unsupported annotations starting with \"nomos.dev/\". "+
-			"Object %s defined in %q has offending annotations: %s",
-		o.ToMeta(),
-		o.Source,
-	)
+			"The below object has offending annotations: %s\n%s",
+		o)
 }
 
 func (v *InputValidator) checkLabels(o ast.FileObject) error {
@@ -317,20 +290,18 @@ func (v *InputValidator) checkLabels(o ast.FileObject) error {
 		o.ToMeta().GetLabels(),
 		ignoreNone,
 		"Objects are not allowed to define labels starting with \"nomos.dev/\". "+
-			"Object %s defined in %q has %s",
-		o.ToMeta(),
-		o.Source,
-	)
+			"The below object has offending labels: %s\n%s",
+		o)
 }
 
-func checkNomosPrefix(m map[string]string, ignore map[string]struct{}, errFmt string, o metav1.Object, source string) error {
+func checkNomosPrefix(m map[string]string, ignore map[string]struct{}, errFmt string, o ast.FileObject) error {
 	var found []string
-	for k, v := range m {
+	for k := range m {
 		if _, found := ignore[k]; found {
 			continue
 		}
 		if strings.HasPrefix(k, policyhierarchy.GroupName+"/") {
-			found = append(found, fmt.Sprintf("%s=%s", k, v))
+			found = append(found, fmt.Sprintf("%q", k))
 		}
 	}
 	if len(found) == 0 {
@@ -338,7 +309,6 @@ func checkNomosPrefix(m map[string]string, ignore map[string]struct{}, errFmt st
 	}
 	return errors.Errorf(
 		errFmt,
-		o.GetName(),
-		source,
-		strings.Join(found, ", "))
+		strings.Join(found, ", "),
+		o)
 }
