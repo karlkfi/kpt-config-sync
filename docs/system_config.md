@@ -30,7 +30,7 @@ a Kubernetes cluster. Sync is configured by placing a Sync resource in the
 "inherit" mode (addressed later) for RoleBindings.
 
 ```console
-$ cat system/rbac.yaml
+$ cat system/rbac-sync.yaml
 ```
 
 ```yaml
@@ -62,7 +62,7 @@ configuration is not affected by this. The following shows an example of
 configuring sync on ResourceQuota.
 
 ```console
-$ cat system/resourcequota.yaml
+$ cat system/resourcequota-sync.yaml
 ```
 
 ```yaml

@@ -63,9 +63,9 @@ foo-corp
 │   └── viewers-rolebinding.yaml
 └── system
     ├── nomos.yaml
-    ├── podsecuritypolicy.yaml
-    ├── rbac.yaml
-    └── resourcequota.yaml
+    ├── podsecuritypolicy-sync.yaml
+    ├── rbac-sync.yaml
+    └── resourcequota-sync.yaml
 ```
 
 We define the semantics of each directory below:

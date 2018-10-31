@@ -37,9 +37,9 @@ foo-corp
 │   └── viewers-rolebinding.yaml
 └── system
     ├── nomos.yaml
-    ├── podsecuritypolicy.yaml
-    ├── rbac.yaml
-    └── resourcequota.yaml
+    ├── podsecuritypolicy-sync.yaml
+    ├── rbac-sync.yaml
+    └── resourcequota-sync.yaml
 ```
 
 `audit` and `shipping-prod` namespaces contain workloads that are deployed in
