@@ -182,7 +182,7 @@ upload-release:
 # the artifacts to a GCS release bucket with version name "latest".
 release: \
 		clean \
-		test-all \
+		test-all-local \
 		$(STAGING_DIR)/installer.zip \
 		docs-package \
 		upload-release

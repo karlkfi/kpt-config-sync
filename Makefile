@@ -209,7 +209,8 @@ test: test-unit lint lint-bash
 test-local: test test-nomosvet-local
 
 # Runs all tests.
-test-all: test test-e2e-all
+# This only runs on local dev environment not CI environment.
+test-all-local: test test-nomosvet-local test-e2e-all
 
 goimports:
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
