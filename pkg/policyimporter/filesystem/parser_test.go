@@ -24,6 +24,8 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
@@ -187,6 +189,7 @@ rules:
    - "*"
 `
 
+	// TODO(filmil): factor annotations pipeline out of all objects that use it.
 	aClusterRoleBindingTemplate = `
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -248,6 +251,21 @@ kind: NamespaceSelector
 apiVersion: nomos.dev/v1alpha1
 metadata:
   name: sre-supported
+{{- if .Namespace}}
+  namespace: {{.Namespace}}
+{{- end}}
+{{- if .Annotations}}
+  annotations:
+  {{- range $k, $v := .Annotations}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{- end}}
+{{- if .Labels}}
+  labels:
+  {{range $k, $v := .Labels}}
+    {{$k}}: '{{$v}}'
+  {{- end}}
+{{- end}}
 spec:
   selector:
     matchLabels:
@@ -345,6 +363,7 @@ var (
 	aNode                              = template.Must(template.New("aNode").Parse(aNodeTemplate))
 	aClusterRegistryCluster            = template.Must(template.New("aClusterRegistryCluster").Parse(aClusterRegistryClusterTemplate))
 	aClusterSelector                   = template.Must(template.New("aClusterSelector").Parse(aClusterSelectorTemplate))
+	aNamespaceSelector                 = template.Must(template.New("aNamespaceSelectorTemplate").Parse(aNamespaceSelectorTemplate))
 )
 
 // templateData can be used to format any of the below values into templates to create
@@ -1183,7 +1202,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with NamespaceSelector CRD",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"namespaces/bar/ns-selector.yaml": aNamespaceSelectorTemplate,
+			"namespaces/bar/ns-selector.yaml": templateData{}.apply(aNamespaceSelector),
 		},
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
 	},
@@ -1193,7 +1212,7 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":               aNomosConfig,
 			"system/crb.yaml":                 templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"namespaces/bar/ns-selector.yaml": aNamespaceSelectorTemplate,
+			"namespaces/bar/ns-selector.yaml": templateData{}.apply(aNamespaceSelector),
 			"namespaces/bar/rb.yaml":          templateData{ID: "1", LBPName: "sre-supported"}.apply(aLBPRoleBinding),
 			"namespaces/bar/prod-ns/ns.yaml":  templateData{Name: "prod-ns", Labels: map[string]string{"environment": "prod"}}.apply(aNamespace),
 			"namespaces/bar/test-ns/ns.yaml":  templateData{Name: "test-ns"}.apply(aNamespace),
@@ -1491,6 +1510,19 @@ spec:
 		},
 		expectedError: true,
 	},
+	{
+		testName: "NamespaceSelector may not have ClusterSelector annotations",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"namespaces/bar/ns-selector.yaml": templateData{
+				Namespace: "bar",
+				Annotations: map[string]string{
+					v1alpha1.ClusterSelectorAnnotationKey: "something",
+				},
+			}.apply(aNamespaceSelector),
+		},
+		expectedError: true,
+	},
 }
 
 func (tc *parserTestCase) Run(t *testing.T) {
@@ -1501,6 +1533,10 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	// the behavior does not change with respect to "regular" state.
 	os.Setenv("CLUSTER_NAME", tc.clusterName)
 	defer os.Unsetenv("CLUSTER_NAME")
+
+	if glog.V(6) {
+		glog.Infof("Testcase: %+v", spew.Sdump(tc))
+	}
 
 	for k, v := range tc.testFiles {
 		d.createTestFile(k, v)

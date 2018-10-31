@@ -16,7 +16,11 @@ limitations under the License.
 
 package visitor
 
-import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+import (
+	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+)
 
 // Base implements visiting all children for a visitor (like a base class).
 // Derived children need to have a Base and invoke base.VisitX(x) to continue
@@ -72,6 +76,10 @@ func (vb *Base) SetImpl(impl ast.Visitor) {
 
 // VisitRoot implements Visitor
 func (vb *Base) VisitRoot(g *ast.Root) ast.Node {
+	if glog.V(5) {
+		glog.Infof("VisitRoot(): ENTER: %v", spew.Sdump(g))
+	}
+	defer glog.V(6).Infof("VisitRoot(): EXIT")
 	g.Cluster.Accept(vb.impl)
 	g.ReservedNamespaces.Accept(vb.impl)
 	g.Tree.Accept(vb.impl)
@@ -106,6 +114,10 @@ func (vb *Base) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 
 // VisitTreeNode implements Visitor
 func (vb *Base) VisitTreeNode(n *ast.TreeNode) ast.Node {
+	if glog.V(5) {
+		glog.Infof("VisitTreeNode(): ENTER: %v", spew.Sdump(n))
+	}
+	defer glog.V(6).Infof("VisitTreeNode(): EXIT")
 	n.Objects.Accept(vb.impl)
 	for _, child := range n.Children {
 		child.Accept(vb.impl)
@@ -115,6 +127,10 @@ func (vb *Base) VisitTreeNode(n *ast.TreeNode) ast.Node {
 
 // VisitObjectList implements Visitor
 func (vb *Base) VisitObjectList(o ast.ObjectList) ast.Node {
+	if glog.V(5) {
+		glog.Infof("VisitObjectList(): ENTER: %+v", spew.Sdump(o))
+	}
+	defer glog.V(6).Infof("VisitObjectList(): EXIT")
 	for _, obj := range o {
 		obj.Accept(vb.impl)
 	}
@@ -123,6 +139,9 @@ func (vb *Base) VisitObjectList(o ast.ObjectList) ast.Node {
 
 // VisitObject implements Visitor
 func (vb *Base) VisitObject(o *ast.NamespaceObject) ast.Node {
+	if glog.V(5) {
+		glog.Infof("VisitObject(): ENTER: %+v", spew.Sdump(o))
+	}
 	// leaf - noop
 	return o
 }

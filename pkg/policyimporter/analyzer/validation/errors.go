@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.
@@ -169,4 +170,15 @@ func (e IllegalLabelDefinitionError) Error() string {
 		"KNV1011: Objects MUST NOT define labels starting with %[3]q. "+
 			"Object  %[3]s has these offending labels: %[1]s\n%[2]s",
 		l, e.object, policyhierarchy.GroupName, e.object.Name())
+}
+
+// NamespaceSelectorMayNotHaveAnnotation reports that a namespace selector has
+// an annotation that is not allowed.
+type NamespaceSelectorMayNotHaveAnnotation struct {
+	o metav1.Object
+}
+
+// Error implements error.
+func (e NamespaceSelectorMayNotHaveAnnotation) Error() string {
+	return fmt.Sprintf("KNV1012: The NamespaceSelector object %q in namespace %q must not have ClusterSelector annotation", e.o.GetName(), e.o.GetNamespace())
 }

@@ -36,7 +36,7 @@ import (
 // that is being violated, then print a useful error message on what is violating the constraint
 // and what is required to fix it.
 type InputValidator struct {
-	base               *visitor.Base
+	*visitor.Base
 	errs               multierror.Builder
 	reserved           *reserved.Namespaces
 	dirNames           map[string]*ast.TreeNode
@@ -53,25 +53,19 @@ var _ ast.Visitor = &InputValidator{}
 // directories.  Objects of other types will be treated as an error.
 func NewInputValidator(allowedGVKs map[schema.GroupVersionKind]struct{}) *InputValidator {
 	v := &InputValidator{
-		base:               visitor.NewBase(),
+		Base:               visitor.NewBase(),
 		reserved:           reserved.EmptyNamespaces(),
 		dirNames:           make(map[string]*ast.TreeNode),
 		seenResourceQuotas: make(map[string]struct{}),
 		allowedGVKs:        allowedGVKs,
 	}
-	v.base.SetImpl(v)
+	v.Base.SetImpl(v)
 	return v
 }
 
 // Error returns any errors encountered during processing
 func (v *InputValidator) Error() error {
 	return v.errs.Build()
-}
-
-// VisitRoot implements Visitor
-func (v *InputValidator) VisitRoot(g *ast.Root) ast.Node {
-	v.base.VisitRoot(g)
-	return g
 }
 
 // VisitReservedNamespaces implements Visitor
@@ -86,7 +80,7 @@ func (v *InputValidator) VisitReservedNamespaces(rs *ast.ReservedNamespaces) ast
 
 // VisitCluster implements Visitor
 func (v *InputValidator) VisitCluster(c *ast.Cluster) ast.Node {
-	return v.base.VisitCluster(c)
+	return v.Base.VisitCluster(c)
 }
 
 // VisitTreeNode implements Visitor
@@ -114,16 +108,35 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 			v.errs.Add(IllegalNamespaceSelectorAnnotationError{n})
 		}
 	}
+	for _, s := range n.Selectors {
+		if err := v.checkNamespaceSelectorAnnotations(s); err != nil {
+			v.errs.Add(err)
+		}
+	}
 
 	v.nodes = append(v.nodes, n)
-	v.base.VisitTreeNode(n)
+	o := v.Base.VisitTreeNode(n)
 	v.nodes = v.nodes[:len(v.nodes)-1]
-	return nil
+	// Must return non-nil so that visiting may continue to cluster objects.
+	return o
 }
 
 // VisitClusterObjectList implements Visitor
 func (v *InputValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
-	return v.base.VisitClusterObjectList(o)
+	return v.Base.VisitClusterObjectList(o)
+}
+
+// checkNamespaceSelectorAnnotations ensures that a NamespaceSelector object has no
+// ClusterSelector annotation on it.
+func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.NamespaceSelector) error {
+	a := s.GetAnnotations()
+	if a == nil {
+		return nil
+	}
+	if _, ok := a[v1alpha1.ClusterSelectorAnnotationKey]; ok {
+		return NamespaceSelectorMayNotHaveAnnotation{s}
+	}
+	return nil
 }
 
 func (v *InputValidator) checkAnnotationsAndLabels(o ast.FileObject) {
@@ -142,13 +155,7 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 		v.errs.Add(UnsyncableClusterObjectError{o})
 	}
 	v.checkAnnotationsAndLabels(o.FileObject)
-
-	return nil
-}
-
-// VisitObjectList implements Visitor
-func (v *InputValidator) VisitObjectList(o ast.ObjectList) ast.Node {
-	return v.base.VisitObjectList(o)
+	return v.Base.VisitClusterObject(o)
 }
 
 // VisitObject implements Visitor
@@ -181,7 +188,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 
 	v.checkAnnotationsAndLabels(o.FileObject)
 
-	return nil
+	return v.Base.VisitObject(o)
 }
 
 func invalids(m map[string]string, allowed map[string]struct{}) []string {
