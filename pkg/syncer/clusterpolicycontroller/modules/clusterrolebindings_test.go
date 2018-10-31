@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
@@ -31,7 +31,7 @@ type UnpackTest struct {
 }
 
 func (u *UnpackTest) Run(t *testing.T) {
-	cp := &policyhierarchyv1.ClusterPolicy{}
+	cp := &v1.ClusterPolicy{}
 	cpsVal := reflect.ValueOf(&cp.Spec).Elem()
 	listVal := cpsVal.FieldByName(u.field)
 	newListVal := reflect.New(listVal.Type()).Elem()

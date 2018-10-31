@@ -19,7 +19,7 @@ package transform
 import (
 	"encoding/json"
 
-	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,11 +28,11 @@ import (
 // annotation on the given policy object matches the given labels on a
 // namespace.  The policy is applicable if it has no such annotation.
 func isPolicyApplicableToNamespace(namespaceLabels map[string]string, policy metav1.Object) bool {
-	ls, exists := policy.GetAnnotations()[policyhierarchyv1alpha1.NamespaceSelectorAnnotationKey]
+	ls, exists := policy.GetAnnotations()[v1alpha1.NamespaceSelectorAnnotationKey]
 	if !exists {
 		return true
 	}
-	var ns policyhierarchyv1alpha1.NamespaceSelector
+	var ns v1alpha1.NamespaceSelector
 	if err := json.Unmarshal([]byte(ls), &ns); err != nil {
 		panic(errors.Wrapf(err, "failed to unmarshal NamespaceSelector in object %q", policy.GetName()))
 	}

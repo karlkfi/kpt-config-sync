@@ -19,7 +19,7 @@ package policynode
 import (
 	"github.com/golang/glog"
 	policyhierarchylister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/monitor/args"
 	"github.com/google/nomos/pkg/monitor/state"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
@@ -52,7 +52,7 @@ func NewController(injectArgs args.InjectArgs, state *state.ClusterState) *contr
 		InformerRegistry: injectArgs.ControllerManager,
 		Reconcile:        pnController.reconcile,
 	}
-	pn := &policyhierarchyv1.PolicyNode{}
+	pn := &v1.PolicyNode{}
 
 	if err := injectArgs.ControllerManager.AddInformerProvider(pn, informer); err != nil {
 		panic(errors.Wrap(err, "programmer error while adding informer to controller manager"))

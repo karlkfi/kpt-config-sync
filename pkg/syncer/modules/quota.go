@@ -18,7 +18,7 @@ limitations under the License.
 package modules
 
 import (
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
@@ -81,7 +81,7 @@ func (s *ResourceQuota) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) 
 }
 
 // Instances implements policyhierarchycontroller.Module
-func (s *ResourceQuota) Instances(policyNode *policyhierarchyv1.PolicyNode) []metav1.Object {
+func (s *ResourceQuota) Instances(policyNode *v1.PolicyNode) []metav1.Object {
 	if policyNode.Spec.ResourceQuotaV1 != nil {
 		return []metav1.Object{policyNode.Spec.ResourceQuotaV1}
 	}

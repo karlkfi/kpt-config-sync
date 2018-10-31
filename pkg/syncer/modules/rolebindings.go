@@ -20,7 +20,7 @@ package modules
 import (
 	"reflect"
 
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/syncer/policyhierarchycontroller"
 	controllerinformers "github.com/kubernetes-sigs/kubebuilder/pkg/controller/informers"
@@ -73,7 +73,7 @@ func (s *RoleBinding) equalSpec(lhsObj runtime.Object, rhsObj runtime.Object) bo
 }
 
 // Instances implements policyhierarchycontroller.Module
-func (s *RoleBinding) Instances(policyNode *policyhierarchyv1.PolicyNode) []metav1.Object {
+func (s *RoleBinding) Instances(policyNode *v1.PolicyNode) []metav1.Object {
 	var rbs []metav1.Object
 	for _, o := range policyNode.Spec.RoleBindingsV1 {
 		rbs = append(rbs, o.DeepCopy())

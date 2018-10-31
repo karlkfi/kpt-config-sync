@@ -17,7 +17,7 @@ limitations under the License.
 package policyhierarchycontroller
 
 import (
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,5 +28,5 @@ type Module interface {
 	syncer.Module
 
 	// Instances returns the module specific instances from the policy node.
-	Instances(policyNode *policyhierarchyv1.PolicyNode) []metav1.Object
+	Instances(policyNode *v1.PolicyNode) []metav1.Object
 }

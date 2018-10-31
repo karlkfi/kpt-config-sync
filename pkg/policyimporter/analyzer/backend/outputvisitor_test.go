@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -30,11 +30,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func allPolicies(cp policyhierarchyv1.ClusterPolicy, pns []policyhierarchyv1.PolicyNode) *policyhierarchyv1.AllPolicies {
-	ap := &policyhierarchyv1.AllPolicies{
+func allPolicies(cp v1.ClusterPolicy, pns []v1.PolicyNode) *v1.AllPolicies {
+	ap := &v1.AllPolicies{
 		ClusterPolicy: &cp,
-		PolicyNodes:   map[string]policyhierarchyv1.PolicyNode{},
-		Syncs:         map[string]policyhierarchyv1alpha1.Sync{},
+		PolicyNodes:   map[string]v1.PolicyNode{},
+		Syncs:         map[string]v1alpha1.Sync{},
 	}
 	for _, pn := range pns {
 		ap.PolicyNodes[pn.Name] = pn
@@ -45,11 +45,11 @@ func allPolicies(cp policyhierarchyv1.ClusterPolicy, pns []policyhierarchyv1.Pol
 type OutputVisitorTestcase struct {
 	name   string
 	input  *ast.Root
-	expect *policyhierarchyv1.AllPolicies
+	expect *v1.AllPolicies
 }
 
 func (tc *OutputVisitorTestcase) Run(t *testing.T) {
-	ov := NewOutputVisitor([]*policyhierarchyv1alpha1.Sync{}, false)
+	ov := NewOutputVisitor([]*v1alpha1.Sync{}, false)
 	tc.input.Accept(ov)
 	actual := ov.AllPolicies()
 	if !cmp.Equal(actual, tc.expect, vt.ResourceVersionCmp()) {
@@ -63,55 +63,55 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		name:  "empty",
 		input: vt.Helper.EmptyRoot(),
 		expect: allPolicies(
-			policyhierarchyv1.ClusterPolicy{
+			v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+					APIVersion: v1.SchemeGroupVersion.String(),
 					Kind:       "ClusterPolicy",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: policyhierarchyv1.ClusterPolicyName,
+					Name: v1.ClusterPolicyName,
 				},
 			},
-			[]policyhierarchyv1.PolicyNode{},
+			[]v1.PolicyNode{},
 		),
 	},
 	{
 		name:  "empty cluster policies",
 		input: &ast.Root{Cluster: &ast.Cluster{}},
 		expect: allPolicies(
-			policyhierarchyv1.ClusterPolicy{
+			v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+					APIVersion: v1.SchemeGroupVersion.String(),
 					Kind:       "ClusterPolicy",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: policyhierarchyv1.ClusterPolicyName,
+					Name: v1.ClusterPolicyName,
 				},
 			},
-			[]policyhierarchyv1.PolicyNode{},
+			[]v1.PolicyNode{},
 		),
 	},
 	{
 		name:  "cluster policies",
 		input: vt.Helper.ClusterPolicies(),
 		expect: allPolicies(
-			policyhierarchyv1.ClusterPolicy{
+			v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+					APIVersion: v1.SchemeGroupVersion.String(),
 					Kind:       "ClusterPolicy",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: policyhierarchyv1.ClusterPolicyName,
+					Name: v1.ClusterPolicyName,
 				},
-				Spec: policyhierarchyv1.ClusterPolicySpec{
+				Spec: v1.ClusterPolicySpec{
 					ClusterRolesV1:             []rbacv1.ClusterRole{*vt.Helper.NomosAdminClusterRole()},
 					ClusterRoleBindingsV1:      []rbacv1.ClusterRoleBinding{*vt.Helper.NomosAdminClusterRoleBinding()},
 					PodSecurityPoliciesV1Beta1: []extensionsv1beta1.PodSecurityPolicy{*vt.Helper.NomosPodSecurityPolicy()},
-					Resources: []policyhierarchyv1.GenericResources{
+					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
 							Kind:  "ClusterRole",
-							Versions: []policyhierarchyv1.GenericVersionResources{
+							Versions: []v1.GenericVersionResources{
 								{
 									Version: "v1",
 									Objects: []runtime.RawExtension{{Object: vt.Helper.NomosAdminClusterRole()}},
@@ -121,7 +121,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						{
 							Group: "rbac.authorization.k8s.io",
 							Kind:  "ClusterRoleBinding",
-							Versions: []policyhierarchyv1.GenericVersionResources{
+							Versions: []v1.GenericVersionResources{
 								{
 									Version: "v1",
 									Objects: []runtime.RawExtension{{Object: vt.Helper.NomosAdminClusterRoleBinding()}},
@@ -131,7 +131,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						{
 							Group: "extensions",
 							Kind:  "PodSecurityPolicy",
-							Versions: []policyhierarchyv1.GenericVersionResources{
+							Versions: []v1.GenericVersionResources{
 								{
 									Version: "v1beta1",
 									Objects: []runtime.RawExtension{{Object: vt.Helper.NomosPodSecurityPolicy()}},
@@ -141,45 +141,45 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					},
 				},
 			},
-			[]policyhierarchyv1.PolicyNode{},
+			[]v1.PolicyNode{},
 		),
 	},
 	{
 		name:  "reserved namespaces",
 		input: vt.Helper.ReservedNamespaces(),
 		expect: allPolicies(
-			policyhierarchyv1.ClusterPolicy{
+			v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+					APIVersion: v1.SchemeGroupVersion.String(),
 					Kind:       "ClusterPolicy",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: policyhierarchyv1.ClusterPolicyName,
+					Name: v1.ClusterPolicyName,
 				},
 			},
-			[]policyhierarchyv1.PolicyNode{
+			[]v1.PolicyNode{
 				{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+						APIVersion: v1.SchemeGroupVersion.String(),
 						Kind:       "PolicyNode",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "testing",
 					},
-					Spec: policyhierarchyv1.PolicyNodeSpec{
-						Type: policyhierarchyv1.ReservedNamespace,
+					Spec: v1.PolicyNodeSpec{
+						Type: v1.ReservedNamespace,
 					},
 				},
 				{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+						APIVersion: v1.SchemeGroupVersion.String(),
 						Kind:       "PolicyNode",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "more-testing",
 					},
-					Spec: policyhierarchyv1.PolicyNodeSpec{
-						Type: policyhierarchyv1.ReservedNamespace,
+					Spec: v1.PolicyNodeSpec{
+						Type: v1.ReservedNamespace,
 					},
 				},
 			},
@@ -189,34 +189,34 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		name:  "namespace policies",
 		input: vt.Helper.NamespacePolicies(),
 		expect: allPolicies(
-			policyhierarchyv1.ClusterPolicy{
+			v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+					APIVersion: v1.SchemeGroupVersion.String(),
 					Kind:       "ClusterPolicy",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: policyhierarchyv1.ClusterPolicyName,
+					Name: v1.ClusterPolicyName,
 				},
 			},
-			[]policyhierarchyv1.PolicyNode{
+			[]v1.PolicyNode{
 				{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+						APIVersion: v1.SchemeGroupVersion.String(),
 						Kind:       "PolicyNode",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: policyhierarchyv1.RootPolicyNodeName,
+						Name: v1.RootPolicyNodeName,
 					},
-					Spec: policyhierarchyv1.PolicyNodeSpec{
-						Type:            policyhierarchyv1.Policyspace,
+					Spec: v1.PolicyNodeSpec{
+						Type:            v1.Policyspace,
 						Parent:          "",
 						RoleBindingsV1:  []rbacv1.RoleBinding{*vt.Helper.AdminRoleBinding()},
 						ResourceQuotaV1: vt.Helper.AcmeResourceQuota(),
-						Resources: []policyhierarchyv1.GenericResources{
+						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",
 								Kind:  "RoleBinding",
-								Versions: []policyhierarchyv1.GenericVersionResources{
+								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
 										Objects: []runtime.RawExtension{{Object: vt.Helper.AdminRoleBinding()}},
@@ -226,7 +226,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 							{
 								Group: "",
 								Kind:  "ResourceQuota",
-								Versions: []policyhierarchyv1.GenericVersionResources{
+								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
 										Objects: []runtime.RawExtension{{Object: vt.Helper.AcmeResourceQuota()}},
@@ -238,7 +238,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 				{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+						APIVersion: v1.SchemeGroupVersion.String(),
 						Kind:       "PolicyNode",
 					},
 					ObjectMeta: metav1.ObjectMeta{
@@ -246,17 +246,17 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Labels:      map[string]string{"environment": "prod"},
 						Annotations: map[string]string{"has-waffles": "true"},
 					},
-					Spec: policyhierarchyv1.PolicyNodeSpec{
-						Type:            policyhierarchyv1.Namespace,
-						Parent:          policyhierarchyv1.RootPolicyNodeName,
+					Spec: v1.PolicyNodeSpec{
+						Type:            v1.Namespace,
+						Parent:          v1.RootPolicyNodeName,
 						RoleBindingsV1:  []rbacv1.RoleBinding{*vt.Helper.PodReaderRoleBinding()},
 						RolesV1:         []rbacv1.Role{*vt.Helper.PodReaderRole()},
 						ResourceQuotaV1: vt.Helper.FrontendResourceQuota(),
-						Resources: []policyhierarchyv1.GenericResources{
+						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",
 								Kind:  "RoleBinding",
-								Versions: []policyhierarchyv1.GenericVersionResources{
+								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
 										Objects: []runtime.RawExtension{{Object: vt.Helper.PodReaderRoleBinding()}},
@@ -266,7 +266,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 							{
 								Group: "rbac.authorization.k8s.io",
 								Kind:  "Role",
-								Versions: []policyhierarchyv1.GenericVersionResources{
+								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
 										Objects: []runtime.RawExtension{{Object: vt.Helper.PodReaderRole()}},
@@ -276,7 +276,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 							{
 								Group: "",
 								Kind:  "ResourceQuota",
-								Versions: []policyhierarchyv1.GenericVersionResources{
+								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
 										Objects: []runtime.RawExtension{{Object: vt.Helper.FrontendResourceQuota()}},
@@ -288,7 +288,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 				{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+						APIVersion: v1.SchemeGroupVersion.String(),
 						Kind:       "PolicyNode",
 					},
 					ObjectMeta: metav1.ObjectMeta{
@@ -296,16 +296,16 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Labels:      map[string]string{"environment": "test"},
 						Annotations: map[string]string{"has-waffles": "false"},
 					},
-					Spec: policyhierarchyv1.PolicyNodeSpec{
-						Type:           policyhierarchyv1.Namespace,
-						Parent:         policyhierarchyv1.RootPolicyNodeName,
+					Spec: v1.PolicyNodeSpec{
+						Type:           v1.Namespace,
+						Parent:         v1.RootPolicyNodeName,
 						RoleBindingsV1: []rbacv1.RoleBinding{*vt.Helper.DeploymentReaderRoleBinding()},
 						RolesV1:        []rbacv1.Role{*vt.Helper.DeploymentReaderRole()},
-						Resources: []policyhierarchyv1.GenericResources{
+						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",
 								Kind:  "RoleBinding",
-								Versions: []policyhierarchyv1.GenericVersionResources{
+								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
 										Objects: []runtime.RawExtension{{Object: vt.Helper.DeploymentReaderRoleBinding()}},
@@ -315,7 +315,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 							{
 								Group: "rbac.authorization.k8s.io",
 								Kind:  "Role",
-								Versions: []policyhierarchyv1.GenericVersionResources{
+								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
 										Objects: []runtime.RawExtension{{Object: vt.Helper.DeploymentReaderRole()}},

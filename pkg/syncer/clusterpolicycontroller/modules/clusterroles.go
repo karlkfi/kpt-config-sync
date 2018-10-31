@@ -17,7 +17,7 @@ package modules
 import (
 	"reflect"
 
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/object"
 	"github.com/google/nomos/pkg/syncer/clusterpolicycontroller"
@@ -84,7 +84,7 @@ func (s *ClusterRoles) Instance() metav1.Object {
 }
 
 // Extract implements clusterpolicycontroller.Module
-func (s *ClusterRoles) Extract(clusterPolicy *policyhierarchyv1.ClusterPolicy) []metav1.Object {
+func (s *ClusterRoles) Extract(clusterPolicy *v1.ClusterPolicy) []metav1.Object {
 	var roles []runtime.Object
 	for _, r := range clusterPolicy.Spec.ClusterRolesV1 {
 		roles = append(roles, r.DeepCopy())

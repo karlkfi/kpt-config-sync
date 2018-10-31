@@ -26,7 +26,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/google/nomos/clientgen/informer"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta/fake"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -547,7 +547,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterPolicyNodeX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*policyhierarchyv1.PolicyNode).DeepCopy()
+			policyNode := obj.(*v1.PolicyNode).DeepCopy()
 			policyNode.ObjectMeta.Labels["foo"] = "bar"
 			return policyNode
 		},
@@ -557,7 +557,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterPolicyNodeX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*policyhierarchyv1.PolicyNode).DeepCopy()
+			policyNode := obj.(*v1.PolicyNode).DeepCopy()
 			policyNode.ObjectMeta.Annotations["foo"] = "bar"
 			return policyNode
 		},
@@ -567,7 +567,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterPolicyNodeX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*policyhierarchyv1.PolicyNode).DeepCopy()
+			policyNode := obj.(*v1.PolicyNode).DeepCopy()
 			policyNode.Spec.Parent = "some-other-node"
 			return policyNode
 		},
@@ -595,8 +595,8 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 }
 
 func PolicyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lPn := lhs.(*policyhierarchyv1.PolicyNode)
-	rPn := rhs.(*policyhierarchyv1.PolicyNode)
+	lPn := lhs.(*v1.PolicyNode)
+	rPn := rhs.(*v1.PolicyNode)
 	return reflect.DeepEqual(lPn.Spec, rPn.Spec)
 }
 
@@ -604,17 +604,17 @@ func ClusterPolicyNodeGetter(client *fake.Client, _, name string) (runtime.Objec
 	return client.PolicyHierarchy().NomosV1().PolicyNodes().Get(name, metav1.GetOptions{})
 }
 
-var clusterPolicyNodeBaseTestObject = &policyhierarchyv1.PolicyNode{
+var clusterPolicyNodeBaseTestObject = &v1.PolicyNode{
 	TypeMeta: metav1.TypeMeta{
 		Kind:       "PolicyNode",
-		APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+		APIVersion: v1.SchemeGroupVersion.String(),
 	},
 	ObjectMeta: metav1.ObjectMeta{
 		Labels:      map[string]string{"fuzzy": "true"},
 		Annotations: map[string]string{"api.foo.future/deny": "*"},
 	},
-	Spec: policyhierarchyv1.PolicyNodeSpec{
-		Type:   policyhierarchyv1.Policyspace,
+	Spec: v1.PolicyNodeSpec{
+		Type:   v1.Policyspace,
 		Parent: "does-not-exist",
 	},
 }

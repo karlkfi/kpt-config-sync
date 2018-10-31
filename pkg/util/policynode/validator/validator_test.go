@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -30,35 +30,35 @@ func checkErr(t *testing.T, err error) {
 	}
 }
 
-func newNode(name string, parent string, policyspace bool) *policyhierarchyv1.PolicyNode {
-	pnt := policyhierarchyv1.Namespace
+func newNode(name string, parent string, policyspace bool) *v1.PolicyNode {
+	pnt := v1.Namespace
 	if policyspace {
-		pnt = policyhierarchyv1.Policyspace
+		pnt = v1.Policyspace
 	}
-	return &policyhierarchyv1.PolicyNode{
+	return &v1.PolicyNode{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: policyhierarchyv1.PolicyNodeSpec{
+		Spec: v1.PolicyNodeSpec{
 			Type:   pnt,
 			Parent: parent,
 		},
 	}
 }
 
-func newReservedNode(name string) *policyhierarchyv1.PolicyNode {
-	return &policyhierarchyv1.PolicyNode{
+func newReservedNode(name string) *v1.PolicyNode {
+	return &v1.PolicyNode{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: policyhierarchyv1.PolicyNodeSpec{
-			Type:   policyhierarchyv1.ReservedNamespace,
-			Parent: policyhierarchyv1.NoParentNamespace,
+		Spec: v1.PolicyNodeSpec{
+			Type:   v1.ReservedNamespace,
+			Parent: v1.NoParentNamespace,
 		},
 	}
 }
 
-func setResources(pn *policyhierarchyv1.PolicyNode, roleNames, roleBindingNames []string) {
+func setResources(pn *v1.PolicyNode, roleNames, roleBindingNames []string) {
 	var roles []rbacv1.Role
 	for _, rn := range roleNames {
 		role := rbacv1.Role{
@@ -237,7 +237,7 @@ func TestWorkingNamespace(t *testing.T) {
 		t.Errorf("Working namespace state should be OK %s %s", err, spew.Sdump(v))
 	}
 
-	child2.Spec.Type = policyhierarchyv1.Policyspace
+	child2.Spec.Type = v1.Policyspace
 	v = New()
 	checkErr(t, v.Add(root))
 	checkErr(t, v.Add(child1))
@@ -259,7 +259,7 @@ func TestRootWorkingNamespace(t *testing.T) {
 	}
 
 	v = New()
-	root.Spec.Type = policyhierarchyv1.Namespace
+	root.Spec.Type = v1.Namespace
 	checkErr(t, v.Add(root))
 	if err := v.checkRoots(); err == nil {
 		t.Errorf("Should have detected leaf node working namespace error")
@@ -369,7 +369,7 @@ func TestRemoveParents(t *testing.T) {
 }
 
 func TestRemoveRemainingRoot(t *testing.T) {
-	nodes := []*policyhierarchyv1.PolicyNode{
+	nodes := []*v1.PolicyNode{
 		newNode("root", "", true),
 		newNode("child1", "root", true),
 		newNode("child2", "child1", false),
@@ -403,7 +403,7 @@ func TestDuplicateResourcesInNode(t *testing.T) {
 	setResources(child, []string{"role", "otherrole"}, []string{"rolebinding", "otherrolebinding"})
 
 	v := New()
-	for _, pn := range []*policyhierarchyv1.PolicyNode{root, child} {
+	for _, pn := range []*v1.PolicyNode{root, child} {
 		if err := v.Add(pn); err != nil {
 			t.Errorf("Should not have errored when adding %q node: %v", pn.Name, err)
 		}

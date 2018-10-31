@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 )
 
 // Factory returns a types.HandleFnProvider that will create a PolicyNodeEventProcessor with the
@@ -50,16 +50,16 @@ type PolicyNodeEventProcessor struct {
 
 // OnAdd implements cache.ResourceEventHandler.
 func (p *PolicyNodeEventProcessor) OnAdd(obj interface{}) {
-	p.subtreeEvents(obj.(*policyhierarchyv1.PolicyNode))
+	p.subtreeEvents(obj.(*v1.PolicyNode))
 }
 
 // OnUpdate implements cache.ResourceEventHandler.
 func (p *PolicyNodeEventProcessor) OnUpdate(oldObj, newObj interface{}) {
-	p.subtreeEvents(newObj.(*policyhierarchyv1.PolicyNode))
+	p.subtreeEvents(newObj.(*v1.PolicyNode))
 }
 
 // subtreeEvents handles generating all events for a subtree.
-func (p *PolicyNodeEventProcessor) subtreeEvents(policyNode *policyhierarchyv1.PolicyNode) {
+func (p *PolicyNodeEventProcessor) subtreeEvents(policyNode *v1.PolicyNode) {
 	_, err := p.nodeLister.Get(policyNode.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -75,6 +75,6 @@ func (p *PolicyNodeEventProcessor) subtreeEvents(policyNode *policyhierarchyv1.P
 
 // OnDelete implements cache.ResourceEventHandler.
 func (p *PolicyNodeEventProcessor) OnDelete(obj interface{}) {
-	policyNode := obj.(*policyhierarchyv1.PolicyNode)
+	policyNode := obj.(*v1.PolicyNode)
 	p.queue.Add(policyNode.Name)
 }

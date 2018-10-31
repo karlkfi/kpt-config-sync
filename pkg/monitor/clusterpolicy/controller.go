@@ -19,7 +19,7 @@ package clusterpolicy
 import (
 	"github.com/golang/glog"
 	policyhierarchylister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/monitor/args"
 	"github.com/google/nomos/pkg/monitor/state"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
@@ -49,7 +49,7 @@ func NewController(injectArgs args.InjectArgs, state *state.ClusterState) *contr
 		InformerRegistry: injectArgs.ControllerManager,
 		Reconcile:        cpController.reconcile,
 	}
-	cp := &policyhierarchyv1.ClusterPolicy{}
+	cp := &v1.ClusterPolicy{}
 
 	if err := injectArgs.ControllerManager.AddInformerProvider(cp, informer); err != nil {
 		panic(errors.Wrap(err, "programmer error while adding informer to controller manager"))
@@ -70,7 +70,7 @@ func (c *Controller) reconcile(k types.ReconcileKey) error {
 		}
 		return errors.Wrapf(err, "failed to look up clusterpolicy %s for monitoring", name)
 	}
-	if name != policyhierarchyv1.ClusterPolicyName {
+	if name != v1.ClusterPolicyName {
 		glog.Errorf("clusterpolicy resource has invalid name %q", name)
 		// Return nil since we don't want kubebuilder to queue a retry.
 		return nil

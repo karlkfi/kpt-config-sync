@@ -21,8 +21,8 @@ import (
 	"path"
 	"time"
 
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
@@ -43,35 +43,35 @@ type OutputVisitor struct {
 	*visitor.Base
 	commitHash       string
 	loadTime         time.Time
-	allPolicies      *policyhierarchyv1.AllPolicies
+	allPolicies      *v1.AllPolicies
 	context          string
-	policyNode       []*policyhierarchyv1.PolicyNode
-	syncs            []*policyhierarchyv1alpha1.Sync
+	policyNode       []*v1.PolicyNode
+	syncs            []*v1alpha1.Sync
 	genericResources bool
 }
 
 var _ ast.Visitor = &OutputVisitor{}
 
 // NewOutputVisitor creates a new output visitor.
-func NewOutputVisitor(syncs []*policyhierarchyv1alpha1.Sync, genericResources bool) *OutputVisitor {
+func NewOutputVisitor(syncs []*v1alpha1.Sync, genericResources bool) *OutputVisitor {
 	v := &OutputVisitor{Base: visitor.NewBase(), syncs: syncs, genericResources: genericResources}
 	v.SetImpl(v)
 	return v
 }
 
 // AllPolicies returns the AllPolicies object created by the visitor.
-func (v *OutputVisitor) AllPolicies() *policyhierarchyv1.AllPolicies {
+func (v *OutputVisitor) AllPolicies() *v1.AllPolicies {
 	if v.genericResources {
 		for _, s := range v.syncs {
-			s.SetFinalizers([]string{policyhierarchyv1alpha1.SyncFinalizer})
+			s.SetFinalizers([]string{v1alpha1.SyncFinalizer})
 		}
 	}
 	v.allPolicies.Syncs = mapByName(v.syncs)
 	return v.allPolicies
 }
 
-func mapByName(syncs []*policyhierarchyv1alpha1.Sync) map[string]policyhierarchyv1alpha1.Sync {
-	m := make(map[string]policyhierarchyv1alpha1.Sync)
+func mapByName(syncs []*v1alpha1.Sync) map[string]v1alpha1.Sync {
+	m := make(map[string]v1alpha1.Sync)
 	for _, sync := range syncs {
 		m[sync.Name] = *sync
 	}
@@ -80,15 +80,15 @@ func mapByName(syncs []*policyhierarchyv1alpha1.Sync) map[string]policyhierarchy
 
 // VisitRoot implements Visitor
 func (v *OutputVisitor) VisitRoot(g *ast.Root) ast.Node {
-	v.allPolicies = &policyhierarchyv1.AllPolicies{
-		PolicyNodes: map[string]policyhierarchyv1.PolicyNode{},
-		ClusterPolicy: &policyhierarchyv1.ClusterPolicy{
+	v.allPolicies = &v1.AllPolicies{
+		PolicyNodes: map[string]v1.PolicyNode{},
+		ClusterPolicy: &v1.ClusterPolicy{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+				APIVersion: v1.SchemeGroupVersion.String(),
 				Kind:       "ClusterPolicy",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: policyhierarchyv1.ClusterPolicyName,
+				Name: v1.ClusterPolicyName,
 			},
 		},
 	}
@@ -104,17 +104,17 @@ func (v *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.N
 	if err != nil {
 		panic(fmt.Sprintf("programmer error: input should have been validated %v", err))
 	}
-	for _, namespace := range rns.List(policyhierarchyv1alpha1.ReservedAttribute) {
-		v.allPolicies.PolicyNodes[namespace] = policyhierarchyv1.PolicyNode{
+	for _, namespace := range rns.List(v1alpha1.ReservedAttribute) {
+		v.allPolicies.PolicyNodes[namespace] = v1.PolicyNode{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+				APIVersion: v1.SchemeGroupVersion.String(),
 				Kind:       "PolicyNode",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: namespace,
 			},
-			Spec: policyhierarchyv1.PolicyNodeSpec{
-				Type: policyhierarchyv1.ReservedNamespace,
+			Spec: v1.PolicyNodeSpec{
+				Type: v1.ReservedNamespace,
 			},
 		}
 	}
@@ -137,19 +137,19 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	switch origLen {
 	case 0:
 		// root
-		name = policyhierarchyv1.RootPolicyNodeName
-		parent = policyhierarchyv1.NoParentNamespace
+		name = v1.RootPolicyNodeName
+		parent = v1.NoParentNamespace
 	case 1:
 		name = path.Base(n.Path)
-		parent = policyhierarchyv1.RootPolicyNodeName
+		parent = v1.RootPolicyNodeName
 	default:
 		name = path.Base(n.Path)
 		parent = v.policyNode[origLen-1].Name
 	}
 
-	pn := &policyhierarchyv1.PolicyNode{
+	pn := &v1.PolicyNode{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+			APIVersion: v1.SchemeGroupVersion.String(),
 			Kind:       "PolicyNode",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -157,14 +157,14 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 			Annotations: n.Annotations,
 			Labels:      n.Labels,
 		},
-		Spec: policyhierarchyv1.PolicyNodeSpec{
+		Spec: v1.PolicyNodeSpec{
 			Parent: parent,
 		},
 	}
 	if n.Type == ast.Namespace {
-		pn.Spec.Type = policyhierarchyv1.Namespace
+		pn.Spec.Type = v1.Namespace
 	} else {
-		pn.Spec.Type = policyhierarchyv1.Policyspace
+		pn.Spec.Type = v1.Policyspace
 	}
 	v.policyNode = append(v.policyNode, pn)
 	v.Base.VisitTreeNode(n)
@@ -206,9 +206,9 @@ func (v *OutputVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 // appendResource adds Object o to resources.
 // GenericResources is grouped first by kind and then by version, and this method takes care of
 // adding any required groupings for the new object, or adding to existing groupings if present.
-func appendResource(resources []policyhierarchyv1.GenericResources, o runtime.Object) []policyhierarchyv1.GenericResources {
+func appendResource(resources []v1.GenericResources, o runtime.Object) []v1.GenericResources {
 	gvk := o.GetObjectKind().GroupVersionKind()
-	var gr *policyhierarchyv1.GenericResources
+	var gr *v1.GenericResources
 	for i := range resources {
 		if resources[i].Group == gvk.Group && resources[i].Kind == gvk.Kind {
 			gr = &resources[i]
@@ -216,13 +216,13 @@ func appendResource(resources []policyhierarchyv1.GenericResources, o runtime.Ob
 		}
 	}
 	if gr == nil {
-		resources = append(resources, policyhierarchyv1.GenericResources{
+		resources = append(resources, v1.GenericResources{
 			Group: gvk.Group,
 			Kind:  gvk.Kind,
 		})
 		gr = &resources[len(resources)-1]
 	}
-	var gvr *policyhierarchyv1.GenericVersionResources
+	var gvr *v1.GenericVersionResources
 	for i := range gr.Versions {
 		if gr.Versions[i].Version == gvk.Version {
 			gvr = &gr.Versions[i]
@@ -230,7 +230,7 @@ func appendResource(resources []policyhierarchyv1.GenericResources, o runtime.Ob
 		}
 	}
 	if gvr == nil {
-		gr.Versions = append(gr.Versions, policyhierarchyv1.GenericVersionResources{
+		gr.Versions = append(gr.Versions, v1.GenericVersionResources{
 			Version: gvk.Version,
 		})
 		gvr = &gr.Versions[len(gr.Versions)-1]

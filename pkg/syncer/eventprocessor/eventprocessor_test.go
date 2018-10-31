@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -31,21 +31,21 @@ import (
 
 type FakeLister struct {
 	queriedName string
-	get         *policyhierarchyv1.PolicyNode
+	get         *v1.PolicyNode
 	getErr      error
 }
 
-func (l *FakeLister) Get(name string) (*policyhierarchyv1.PolicyNode, error) {
+func (l *FakeLister) Get(name string) (*v1.PolicyNode, error) {
 	l.queriedName = name
 	return l.get, l.getErr
 }
 
-func (l *FakeLister) List(selector labels.Selector) ([]*policyhierarchyv1.PolicyNode, error) {
+func (l *FakeLister) List(selector labels.Selector) ([]*v1.PolicyNode, error) {
 	return nil, nil
 }
 
 func setup(name string, err error) (*FakeLister, *PolicyNodeEventProcessor) {
-	pn := &policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	pn := &v1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	if name == "" {
 		pn = nil
 	}
@@ -78,7 +78,7 @@ func TestAdd(t *testing.T) {
 	name := "foobar"
 	fl, ep := setup(name, nil)
 
-	ep.OnAdd(&policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
+	ep.OnAdd(&v1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
 
 	if name != fl.queriedName {
 		t.Errorf("Expected lookup for name %s got %s", name, fl.queriedName)
@@ -94,8 +94,8 @@ func TestUpdate(t *testing.T) {
 	name := "foobar"
 	fl, ep := setup(name, nil)
 
-	oldNode := &policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
-	newNode := &policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	oldNode := &v1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	newNode := &v1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	ep.OnUpdate(oldNode, newNode)
 	if name != fl.queriedName {
 		t.Errorf("Expected lookup for name %s got %s", name, fl.queriedName)
@@ -111,7 +111,7 @@ func TestError(t *testing.T) {
 	name := "foobar"
 	fl, ep := setup("", apierrors.NewNotFound(schema.GroupResource{}, "not found"))
 
-	ep.OnAdd(&policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
+	ep.OnAdd(&v1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
 	if name != fl.queriedName {
 		t.Errorf("Expected lookup for name %s got %s", name, fl.queriedName)
 	}
@@ -125,7 +125,7 @@ func TestDelete(t *testing.T) {
 	name := "foobar"
 	_, ep := setup(name, nil)
 
-	ep.OnDelete(&policyhierarchyv1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
+	ep.OnDelete(&v1.PolicyNode{ObjectMeta: metav1.ObjectMeta{Name: name}})
 	expect := []string{name}
 	elts := getQueueElements(ep.queue)
 	if !reflect.DeepEqual(expect, elts) {

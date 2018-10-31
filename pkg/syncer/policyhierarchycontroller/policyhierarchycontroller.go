@@ -27,7 +27,7 @@ import (
 	"github.com/golang/glog"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
 	policyhierarchylister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/object"
 	"github.com/google/nomos/pkg/syncer/actions"
@@ -111,7 +111,7 @@ func NewController(
 	}
 
 	informerProviders := []informerProvider{
-		{&policyhierarchyv1.PolicyNode{}, injectArgs.Informers.Nomos().V1().PolicyNodes()},
+		{&v1.PolicyNode{}, injectArgs.Informers.Nomos().V1().PolicyNodes()},
 		{&corev1.Namespace{}, injectArgs.KubernetesInformers.Core().V1().Namespaces()},
 	}
 	for _, module := range modules {
@@ -127,7 +127,7 @@ func NewController(
 		}
 	}
 
-	err = genericController.WatchEvents(&policyhierarchyv1.PolicyNode{}, eventprocessor.Factory(
+	err = genericController.WatchEvents(&v1.PolicyNode{}, eventprocessor.Factory(
 		injectArgs.Informers.Nomos().V1().PolicyNodes().Lister()))
 	if err != nil {
 		panic(errors.Wrapf(err, "programmer error while adding WatchEvents for policynode"))
@@ -158,7 +158,7 @@ const (
 )
 
 // getPolicyNodeState normalizes the state of the policy node and returns the node.
-func (s *PolicyHieraryController) getPolicyNodeState(name string) (policyNodeState, *policyhierarchyv1.PolicyNode, error) {
+func (s *PolicyHieraryController) getPolicyNodeState(name string) (policyNodeState, *v1.PolicyNode, error) {
 	node, err := s.nodeLister.Get(name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -173,11 +173,11 @@ func (s *PolicyHieraryController) getPolicyNodeState(name string) (policyNodeSta
 	}
 
 	switch node.Spec.Type {
-	case policyhierarchyv1.Policyspace:
+	case v1.Policyspace:
 		return policyNodeStatePolicyspace, node, nil
-	case policyhierarchyv1.Namespace:
+	case v1.Namespace:
 		return policyNodeStateNamespace, node, nil
-	case policyhierarchyv1.ReservedNamespace:
+	case v1.ReservedNamespace:
 		return policyNodeStateReserved, node, nil
 	default:
 		return policyNodeStateNotFound, nil, errors.Errorf("Invalid node type %q", node.Spec.Type)
@@ -353,9 +353,9 @@ func (s *PolicyHieraryController) hardReconcile(name string) error {
 	}
 
 	switch node.Spec.Type {
-	case policyhierarchyv1.Policyspace:
+	case v1.Policyspace:
 		return s.handlePolicyspace(node)
-	case policyhierarchyv1.ReservedNamespace:
+	case v1.ReservedNamespace:
 		return nil
 	}
 
@@ -366,8 +366,8 @@ func (s *PolicyHieraryController) hardReconcile(name string) error {
 	return s.managePolicies(name, node)
 }
 
-func (s *PolicyHieraryController) managePolicies(name string, node *policyhierarchyv1.PolicyNode) error {
-	var syncErrs []policyhierarchyv1.PolicyNodeSyncError
+func (s *PolicyHieraryController) managePolicies(name string, node *v1.PolicyNode) error {
+	var syncErrs []v1.PolicyNodeSyncError
 	var errBuilder multierror.Builder
 	reconcileCount := 0
 	for _, module := range s.modules {
@@ -409,22 +409,22 @@ func (s *PolicyHieraryController) managePolicies(name string, node *policyhierar
 	return errBuilder.Build()
 }
 
-func (s *PolicyHieraryController) setPolicyNodeStatus(node *policyhierarchyv1.PolicyNode, errs []policyhierarchyv1.PolicyNodeSyncError) error {
+func (s *PolicyHieraryController) setPolicyNodeStatus(node *v1.PolicyNode, errs []v1.PolicyNodeSyncError) error {
 	if node.Status.SyncState.IsSynced() && len(errs) == 0 {
 		glog.Infof("Status for PolicyNode %s is already up-to-date.", node.Name)
 		return nil
 	}
 	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
 	updateCB := func(old runtime.Object) (runtime.Object, error) {
-		oldPN := old.(*policyhierarchyv1.PolicyNode)
+		oldPN := old.(*v1.PolicyNode)
 		newPN := oldPN.DeepCopy()
 		newPN.Status.SyncToken = node.Spec.ImportToken
 		newPN.Status.SyncTime = metav1.Now()
 		newPN.Status.SyncErrors = errs
 		if len(errs) > 0 {
-			newPN.Status.SyncState = policyhierarchyv1.StateError
+			newPN.Status.SyncState = v1.StateError
 		} else {
-			newPN.Status.SyncState = policyhierarchyv1.StateSynced
+			newPN.Status.SyncState = v1.StateSynced
 		}
 		return newPN, nil
 	}
@@ -434,8 +434,8 @@ func (s *PolicyHieraryController) setPolicyNodeStatus(node *policyhierarchyv1.Po
 }
 
 // NewSyncError returns a PolicyNodeSyncError corresponding to the given error and action
-func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchyv1.PolicyNodeSyncError {
-	return policyhierarchyv1.PolicyNodeSyncError{
+func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) v1.PolicyNodeSyncError {
+	return v1.PolicyNodeSyncError{
 		SourceName:   name,
 		ResourceKind: spec.Resource,
 		ResourceAPI:  spec.GroupVersion.String(),
@@ -461,7 +461,7 @@ func (s *PolicyHieraryController) handleDiff(namespace string, module Module, di
 	return nil
 }
 
-func (s *PolicyHieraryController) namespaceValue(policyNode *policyhierarchyv1.PolicyNode) *corev1.Namespace {
+func (s *PolicyHieraryController) namespaceValue(policyNode *v1.PolicyNode) *corev1.Namespace {
 	labels := labeling.ManageAll.AddDeepCopy(policyNode.Labels)
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -472,7 +472,7 @@ func (s *PolicyHieraryController) namespaceValue(policyNode *policyhierarchyv1.P
 	}
 }
 
-func (s *PolicyHieraryController) createNamespace(policyNode *policyhierarchyv1.PolicyNode) error {
+func (s *PolicyHieraryController) createNamespace(policyNode *v1.PolicyNode) error {
 	act := actions.NewNamespaceCreateAction(
 		s.namespaceValue(policyNode),
 		s.injectArgs.KubernetesClientSet,
@@ -485,7 +485,7 @@ func (s *PolicyHieraryController) createNamespace(policyNode *policyhierarchyv1.
 	return nil
 }
 
-func (s *PolicyHieraryController) upsertNamespace(policyNode *policyhierarchyv1.PolicyNode) error {
+func (s *PolicyHieraryController) upsertNamespace(policyNode *v1.PolicyNode) error {
 	glog.V(1).Infof("Namespace %s declared in a policy node, upserting", policyNode.Name)
 	act := actions.NewNamespaceUpsertAction(
 		s.namespaceValue(policyNode),
@@ -501,7 +501,7 @@ func (s *PolicyHieraryController) upsertNamespace(policyNode *policyhierarchyv1.
 
 // updateNamespace is used for updating the parent label on a namespace where we manage policy values
 // This is used since we can't update all the labels on the namespace.
-func (s *PolicyHieraryController) updateNamespace(policyNode *policyhierarchyv1.PolicyNode) error {
+func (s *PolicyHieraryController) updateNamespace(policyNode *v1.PolicyNode) error {
 	labels := map[string]string{}
 	act := actions.NewNamespaceUpdateAction(
 		policyNode.Name,
@@ -525,7 +525,7 @@ func (s *PolicyHieraryController) deleteNamespace(name string) error {
 	return nil
 }
 
-func (s *PolicyHieraryController) handlePolicyspace(policyNode *policyhierarchyv1.PolicyNode) error {
+func (s *PolicyHieraryController) handlePolicyspace(policyNode *v1.PolicyNode) error {
 	act := actions.NewNamespaceDeleteAction(policyNode.Name, s.injectArgs.KubernetesClientSet, s.namespaceLister)
 	if err := act.Execute(); err != nil {
 		s.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceDeleteFailed",

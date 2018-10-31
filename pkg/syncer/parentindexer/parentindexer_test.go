@@ -24,22 +24,22 @@ import (
 
 	"github.com/google/nomos/clientgen/apis/fake"
 	"github.com/google/nomos/clientgen/informer"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 )
 
-func newPolicyNode(name, parent string) *policyhierarchyv1.PolicyNode {
-	return &policyhierarchyv1.PolicyNode{
+func newPolicyNode(name, parent string) *v1.PolicyNode {
+	return &v1.PolicyNode{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       reflect.TypeOf(policyhierarchyv1.PolicyNode{}).Name(),
-			APIVersion: policyhierarchyv1.SchemeGroupVersion.String(),
+			Kind:       reflect.TypeOf(v1.PolicyNode{}).Name(),
+			APIVersion: v1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: policyhierarchyv1.PolicyNodeSpec{
+		Spec: v1.PolicyNodeSpec{
 			Parent: parent,
 		},
 	}
@@ -50,13 +50,13 @@ type Spec struct {
 	parent string
 }
 
-func (s *Spec) node() *policyhierarchyv1.PolicyNode {
+func (s *Spec) node() *v1.PolicyNode {
 	return newPolicyNode(s.name, s.parent)
 }
 
 type Specs []Spec
 
-func (s Specs) nodes() (nodes []*policyhierarchyv1.PolicyNode) {
+func (s Specs) nodes() (nodes []*v1.PolicyNode) {
 	for _, spec := range s {
 		nodes = append(nodes, spec.node())
 	}

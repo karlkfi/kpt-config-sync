@@ -21,8 +21,8 @@ import (
 	typedv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	policyhierarchyv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -56,17 +56,17 @@ func newPolicyNodeActionFactory(client typedv1.NomosV1Interface, lister listersv
 }
 
 // NewCreate returns an action for creating PolicyNodes.
-func (f policyNodeActionFactory) NewCreate(policyNode *policyhierarchyv1.PolicyNode) action.Interface {
+func (f policyNodeActionFactory) NewCreate(policyNode *v1.PolicyNode) action.Interface {
 	return action.NewReflectiveCreateAction("", policyNode.Name, policyNode, f.ReflectiveActionSpec)
 }
 
 // NewUpdate returns an action for updating PolicyNodes. This action ignores the ResourceVersion of
 // the new PolicyNode as well as most of the Status. If Status.SyncState has been set then that will
 // be copied over.
-func (f policyNodeActionFactory) NewUpdate(policyNode *policyhierarchyv1.PolicyNode) action.Interface {
+func (f policyNodeActionFactory) NewUpdate(policyNode *v1.PolicyNode) action.Interface {
 	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
 		newPN := policyNode.DeepCopy()
-		oldPN := old.(*policyhierarchyv1.PolicyNode)
+		oldPN := old.(*v1.PolicyNode)
 		newPN.ResourceVersion = oldPN.ResourceVersion
 		newSyncState := newPN.Status.SyncState
 		oldPN.Status.DeepCopyInto(&newPN.Status)
@@ -94,17 +94,17 @@ func newClusterPolicyActionFactory(
 }
 
 // NewCreate returns an action for creating ClusterPolicies.
-func (f clusterPolicyActionFactory) NewCreate(clusterPolicy *policyhierarchyv1.ClusterPolicy) action.Interface {
+func (f clusterPolicyActionFactory) NewCreate(clusterPolicy *v1.ClusterPolicy) action.Interface {
 	return action.NewReflectiveCreateAction("", clusterPolicy.Name, clusterPolicy, f.ReflectiveActionSpec)
 }
 
 // NewUpdate returns an action for updating ClusterPolicies. This action ignores the ResourceVersion
 // of the new ClusterPolicy as well as most of the Status. If Status.SyncState has been set then
 // that will be copied over.
-func (f clusterPolicyActionFactory) NewUpdate(clusterPolicy *policyhierarchyv1.ClusterPolicy) action.Interface {
+func (f clusterPolicyActionFactory) NewUpdate(clusterPolicy *v1.ClusterPolicy) action.Interface {
 	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
 		newCP := clusterPolicy.DeepCopy()
-		oldCP := old.(*policyhierarchyv1.ClusterPolicy)
+		oldCP := old.(*v1.ClusterPolicy)
 		newCP.ResourceVersion = oldCP.ResourceVersion
 		newSyncState := newCP.Status.SyncState
 		oldCP.Status.DeepCopyInto(&newCP.Status)
@@ -132,14 +132,14 @@ func newSyncActionFactory(
 	return syncActionFactory{sync.NewActionSpec(client, lister)}
 }
 
-func (f syncActionFactory) NewCreate(sync policyhierarchyv1alpha1.Sync) action.Interface {
+func (f syncActionFactory) NewCreate(sync v1alpha1.Sync) action.Interface {
 	return action.NewReflectiveCreateAction("", sync.Name, &sync, f.ReflectiveActionSpec)
 }
 
-func (f syncActionFactory) NewUpdate(sync policyhierarchyv1alpha1.Sync) action.Interface {
+func (f syncActionFactory) NewUpdate(sync v1alpha1.Sync) action.Interface {
 	updateSync := func(old runtime.Object) (runtime.Object, error) {
 		newSync := sync.DeepCopy()
-		oldSync := old.(*policyhierarchyv1alpha1.Sync)
+		oldSync := old.(*v1alpha1.Sync)
 		newSync.ResourceVersion = oldSync.ResourceVersion
 		return newSync, nil
 	}

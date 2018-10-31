@@ -29,7 +29,7 @@ import (
 	"github.com/google/nomos/clientgen/informer"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
@@ -164,12 +164,12 @@ func (c *Controller) pollDir() error {
 				pn := desiredPolicies.PolicyNodes[n]
 				pn.Spec.ImportToken = token
 				pn.Spec.ImportTime = now
-				pn.Status.SyncState = policyhierarchyv1.StateStale
+				pn.Status.SyncState = v1.StateStale
 				desiredPolicies.PolicyNodes[n] = pn
 			}
 			desiredPolicies.ClusterPolicy.Spec.ImportToken = token
 			desiredPolicies.ClusterPolicy.Spec.ImportTime = now
-			desiredPolicies.ClusterPolicy.Status.SyncState = policyhierarchyv1.StateStale
+			desiredPolicies.ClusterPolicy.Status.SyncState = v1.StateStale
 
 			if err := c.updatePolicies(currentPolicies, desiredPolicies); err != nil {
 				glog.Warningf("Failed to apply actions: %v", err)
@@ -205,7 +205,7 @@ func (c *Controller) pollDir() error {
 //
 // If the same resource and Sync are added again in a subsequent commit, the ordering ensures that
 // the resource is restored in policy before the Syncer starts managing that type.
-func (c *Controller) updatePolicies(current, desired *policyhierarchyv1.AllPolicies) error {
+func (c *Controller) updatePolicies(current, desired *v1.AllPolicies) error {
 	if err := c.syncDeletes(current, desired); err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func (c *Controller) updatePolicies(current, desired *policyhierarchyv1.AllPolic
 // resources of the Sync's specified type. In that case, some resources actions might apply before
 // the Sync is deleted, and some after. Once the Sync is gone, Syncer will stop watching resources
 // of that type. So by not waiting, Syncer's response to those actions would be non-deterministic.
-func (c *Controller) syncDeletes(current, desired *policyhierarchyv1.AllPolicies) error {
+func (c *Controller) syncDeletes(current, desired *v1.AllPolicies) error {
 	syncDeletes := c.differ.SyncDeletes(current.Syncs, desired.Syncs)
 	for _, sd := range syncDeletes {
 		if err := c.client.PolicyHierarchy().NomosV1alpha1().Syncs().Delete(sd, &metav1.DeleteOptions{}); err != nil {
@@ -255,7 +255,7 @@ func (c *Controller) syncDeletes(current, desired *policyhierarchyv1.AllPolicies
 }
 
 // syncReductions gets a list of Syncs to be updated during the Delete Syncs phase
-func (c *Controller) syncReductions(current, desired *policyhierarchyv1.AllPolicies) error {
+func (c *Controller) syncReductions(current, desired *v1.AllPolicies) error {
 	toReduce := c.differ.SyncReductions(current.Syncs, desired.Syncs)
 	for _, sr := range toReduce {
 		if _, err := c.client.PolicyHierarchy().NomosV1alpha1().Syncs().Update(&sr); err != nil {

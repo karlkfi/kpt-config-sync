@@ -25,7 +25,7 @@ import (
 	"github.com/golang/glog"
 	policyinformer "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/admissioncontroller"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -49,7 +49,7 @@ var _ admissioncontroller.Admitter = (*Admitter)(nil)
 func NewAdmitter(policyNodeInformer policyinformer.PolicyNodeInformer) admissioncontroller.Admitter {
 	// Decoder. Right now, only v1 types are needed as they are the only ones being monitored
 	scheme := runtime.NewScheme()
-	if err := policyhierarchyv1.AddToScheme(scheme); err != nil {
+	if err := v1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 
@@ -99,21 +99,21 @@ func (p *Admitter) internalAdmit(
 func (p *Admitter) clusterPolicyAdmit(request admissionv1beta1.AdmissionRequest) *admissionv1beta1.AdmissionResponse {
 	attributes := admissioncontroller.GetAttributes(p.decoder, request)
 
-	var clusterPolicy *policyhierarchyv1.ClusterPolicy
+	var clusterPolicy *v1.ClusterPolicy
 	if obj := attributes.GetObject(); obj == nil {
 		if attributes.GetName() == "" {
 			// This should never happen. The request does not have an object and does not have the name of an object.
 			glog.Warningf("Request with no object or name used in policy admission controller: %v", request)
 			return nil
 		}
-		clusterPolicy = &policyhierarchyv1.ClusterPolicy{
+		clusterPolicy = &v1.ClusterPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: attributes.GetName(),
 			},
 		}
 	} else {
 		var ok bool
-		clusterPolicy, ok = obj.(*policyhierarchyv1.ClusterPolicy)
+		clusterPolicy, ok = obj.(*v1.ClusterPolicy)
 		if !ok {
 			// This should never happen. The Kind of the resource is PolicyNode, but the object isn't a PolicyNode.
 			glog.Warningf("Request specifies Kind ClusterPolicy, but a non ClusterPolicy object was included: %v", request)
@@ -144,21 +144,21 @@ func (p *Admitter) clusterPolicyAdmit(request admissionv1beta1.AdmissionRequest)
 func (p *Admitter) policyNodeAdmit(request admissionv1beta1.AdmissionRequest) *admissionv1beta1.AdmissionResponse {
 	attributes := admissioncontroller.GetAttributes(p.decoder, request)
 
-	var policyNode *policyhierarchyv1.PolicyNode
+	var policyNode *v1.PolicyNode
 	if obj := attributes.GetObject(); obj == nil {
 		if attributes.GetName() == "" {
 			// This should never happen. The request does not have an object and does not have the name of an object.
 			glog.Warningf("Request with no object or name used in policy admission controller: %v", request)
 			return nil
 		}
-		policyNode = &policyhierarchyv1.PolicyNode{
+		policyNode = &v1.PolicyNode{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: attributes.GetName(),
 			},
 		}
 	} else {
 		var ok bool
-		policyNode, ok = obj.(*policyhierarchyv1.PolicyNode)
+		policyNode, ok = obj.(*v1.PolicyNode)
 		if !ok {
 			// This should never happen. The Kind of the resource is PolicyNode, but the object isn't a PolicyNode.
 			glog.Warningf("Request specifies Kind PolicyNode, but a non PolicyNode object was included: %v", request)

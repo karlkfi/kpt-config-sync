@@ -23,7 +23,7 @@ import (
 	"github.com/golang/glog"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
 	policyhierarchylister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/object"
 	"github.com/google/nomos/pkg/syncer/args"
@@ -84,7 +84,7 @@ func NewController(
 	}
 
 	informerProviders := []informerProvider{
-		{&policyhierarchyv1.ClusterPolicy{}, informer},
+		{&v1.ClusterPolicy{}, informer},
 	}
 
 	for _, m := range modules {
@@ -101,7 +101,7 @@ func NewController(
 		}
 	}
 
-	err := genericController.WatchTransformationOf(&policyhierarchyv1.ClusterPolicy{}, eventhandlers.MapToSelf)
+	err := genericController.WatchTransformationOf(&v1.ClusterPolicy{}, eventhandlers.MapToSelf)
 	if err != nil {
 		panic(errors.Wrap(err, "programmer error while adding WatchInstanceOf for ClusterPolicies"))
 	}
@@ -129,7 +129,7 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 		return errors.Wrapf(err, "failed to look up clusterpolicy, %s, for reconciliation", name)
 	}
 
-	if name != policyhierarchyv1.ClusterPolicyName {
+	if name != v1.ClusterPolicyName {
 		s.recorder.Eventf(cp, corev1.EventTypeWarning, "InvalidClusterPolicy",
 			"ClusterPolicy resource has invalid name %s", name)
 		glog.Warningf("ClusterPolicy resource has invalid name %s", name)
@@ -139,8 +139,8 @@ func (s *ClusterPolicyController) reconcile(k types.ReconcileKey) error {
 	return s.managePolicies(cp)
 }
 
-func (s *ClusterPolicyController) managePolicies(cp *policyhierarchyv1.ClusterPolicy) error {
-	var syncErrs []policyhierarchyv1.ClusterPolicySyncError
+func (s *ClusterPolicyController) managePolicies(cp *v1.ClusterPolicy) error {
+	var syncErrs []v1.ClusterPolicySyncError
 	var errBuilder multierror.Builder
 	reconcileCount := 0
 	for _, module := range s.modules {
@@ -152,7 +152,7 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchyv1.ClusterPo
 			controller := true
 			declaredInstances[idx].SetOwnerReferences([]metav1.OwnerReference{
 				{
-					APIVersion:         policyhierarchyv1.SchemeGroupVersion.String(),
+					APIVersion:         v1.SchemeGroupVersion.String(),
 					Kind:               "ClusterPolicy",
 					Name:               cp.Name,
 					UID:                cp.UID,
@@ -195,22 +195,22 @@ func (s *ClusterPolicyController) managePolicies(cp *policyhierarchyv1.ClusterPo
 	return errBuilder.Build()
 }
 
-func (s *ClusterPolicyController) setClusterPolicyStatus(cp *policyhierarchyv1.ClusterPolicy, errs []policyhierarchyv1.ClusterPolicySyncError) error {
+func (s *ClusterPolicyController) setClusterPolicyStatus(cp *v1.ClusterPolicy, errs []v1.ClusterPolicySyncError) error {
 	if cp.Status.SyncState.IsSynced() && len(errs) == 0 {
 		glog.Infof("Status for ClusterPolicy %s is already up-to-date.", cp.Name)
 		return nil
 	}
 	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
 	updateCB := func(old runtime.Object) (runtime.Object, error) {
-		oldCP := old.(*policyhierarchyv1.ClusterPolicy)
+		oldCP := old.(*v1.ClusterPolicy)
 		newCP := oldCP.DeepCopy()
 		newCP.Status.SyncToken = cp.Spec.ImportToken
 		newCP.Status.SyncTime = metav1.Now()
 		newCP.Status.SyncErrors = errs
 		if len(errs) > 0 {
-			newCP.Status.SyncState = policyhierarchyv1.StateError
+			newCP.Status.SyncState = v1.StateError
 		} else {
-			newCP.Status.SyncState = policyhierarchyv1.StateSynced
+			newCP.Status.SyncState = v1.StateSynced
 		}
 		return newCP, nil
 	}
@@ -220,8 +220,8 @@ func (s *ClusterPolicyController) setClusterPolicyStatus(cp *policyhierarchyv1.C
 }
 
 // NewSyncError returns a ClusterPolicySyncError for the specified error and action.
-func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) policyhierarchyv1.ClusterPolicySyncError {
-	return policyhierarchyv1.ClusterPolicySyncError{
+func NewSyncError(name string, spec *action.ReflectiveActionSpec, err error) v1.ClusterPolicySyncError {
+	return v1.ClusterPolicySyncError{
 		ResourceName: name,
 		ResourceKind: spec.Resource,
 		ResourceAPI:  spec.GroupVersion.String(),
@@ -249,5 +249,5 @@ func execute(diff *comparator.Diff, spec *action.ReflectiveActionSpec) error {
 }
 
 func mapToClusterPolicy(obj interface{}) string {
-	return policyhierarchyv1.ClusterPolicyName
+	return v1.ClusterPolicyName
 }

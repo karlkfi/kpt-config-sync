@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	policyhierarchyv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
@@ -27,12 +27,12 @@ func (s *pluralTestCase) Run(t *testing.T) {
 
 var pluralTestCases = []pluralTestCase{
 	pluralTestCase{
-		input:       policyhierarchyv1.PolicyNode{},
+		input:       v1.PolicyNode{},
 		output:      "PolicyNodes",
 		outputLower: "policynodes",
 	},
 	pluralTestCase{
-		input:       policyhierarchyv1.ClusterPolicy{},
+		input:       v1.ClusterPolicy{},
 		output:      "ClusterPolicies",
 		outputLower: "clusterpolicies",
 	},
