@@ -17,32 +17,23 @@ limitations under the License.
 package monitor
 
 import (
-	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
-	"github.com/google/nomos/pkg/monitor/args"
+	"github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/pkg/monitor/clusterpolicy"
 	"github.com/google/nomos/pkg/monitor/policynode"
 	"github.com/google/nomos/pkg/monitor/state"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/run"
-	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// Controller is controller for watching Nomos CRDs and exporting metrics about them.
-type Controller struct {
-	injectArgs   args.InjectArgs
-	clusterState *state.ClusterState
-}
+// AddToManager adds all Controllers to the Manager
+func AddToManager(mgr manager.Manager) error {
+	scheme.AddToScheme(mgr.GetScheme())
+	cs := state.NewClusterState()
 
-// NewController returns a new Controller.
-func NewController(injectArgs args.InjectArgs) *Controller {
-	return &Controller{injectArgs, state.NewClusterState()}
-}
-
-// Start registers sub controllers and starts them along with their informers.
-func (c *Controller) Start(runArgs run.RunArguments) {
-	policyhierarchyscheme.AddToScheme(scheme.Scheme)
-
-	c.injectArgs.ControllerManager.AddController(clusterpolicy.NewController(c.injectArgs, c.clusterState))
-	c.injectArgs.ControllerManager.AddController(policynode.NewController(c.injectArgs, c.clusterState))
-
-	c.injectArgs.ControllerManager.RunInformersAndControllers(runArgs)
+	if err := clusterpolicy.AddController(mgr, cs); err != nil {
+		return err
+	}
+	if err := policynode.AddController(mgr, cs); err != nil {
+		return err
+	}
+	return nil
 }

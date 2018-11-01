@@ -17,67 +17,74 @@ limitations under the License.
 package clusterpolicy
 
 import (
+	"context"
+	"time"
+
 	"github.com/golang/glog"
-	policyhierarchylister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/monitor/args"
 	"github.com/google/nomos/pkg/monitor/state"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/eventhandlers"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
-	"github.com/pkg/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
-	controllerName = "nomos-monitor-clusterpolicy-controller"
+	controllerName   = "nomos-monitor-clusterpolicy-controller"
+	reconcileTimeout = time.Minute * 5
 )
 
-// Controller responds to changes to ClusterPolicies by updating its ClusterState.
-type Controller struct {
-	lister policyhierarchylister.ClusterPolicyLister
-	state  *state.ClusterState
+var _ reconcile.Reconciler = &Reconciler{}
+
+// Reconciler responds to changes to ClusterPolicies by updating its ClusterState.
+type Reconciler struct {
+	cache cache.Cache
+	state *state.ClusterState
 }
 
-// NewController creates a new controller.GenericController.
-func NewController(injectArgs args.InjectArgs, state *state.ClusterState) *controller.GenericController {
-	informer := injectArgs.Informers.Nomos().V1().ClusterPolicies()
-	cpController := &Controller{informer.Lister(), state}
-
-	genericController := &controller.GenericController{
-		Name:             controllerName,
-		InformerRegistry: injectArgs.ControllerManager,
-		Reconcile:        cpController.reconcile,
+// Reconcile is the callback for Reconciler.
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	if request.Name != v1.ClusterPolicyName {
+		glog.Errorf("Cluster policy has invalid name %q", request.Name)
+		// Return nil since we don't want to queue a retry.
+		return reconcile.Result{}, nil
 	}
 	cp := &v1.ClusterPolicy{}
+	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	defer cancel()
 
-	if err := injectArgs.ControllerManager.AddInformerProvider(cp, informer); err != nil {
-		panic(errors.Wrap(err, "programmer error while adding informer to controller manager"))
+	err := r.cache.Get(ctx, types.NamespacedName{Name: request.Name}, cp)
+	switch {
+	case err == nil:
+		err = r.state.ProcessClusterPolicy(cp)
+	case errors.IsNotFound(err):
+		r.state.DeletePolicy(request.Name)
+		err = nil
+	default:
+		glog.Errorf("Failed to fetch cluster policy for %q.", request.Name)
 	}
-	if err := genericController.WatchTransformationOf(cp, eventhandlers.MapToSelf); err != nil {
-		panic(errors.Wrap(err, "programmer error while adding WatchInstanceOf for clusterpolicies"))
+	if err != nil {
+		glog.Errorf("Could not reconcile cluster policy %q: %v", request.Name, err)
 	}
-	return genericController
+	return reconcile.Result{}, err
 }
 
-func (c *Controller) reconcile(k types.ReconcileKey) error {
-	name := k.Name
-	cp, err := c.lister.Get(name)
+// AddController adds a controller to the given manager which reconciles monitoring data for cluster
+// policies.
+func AddController(mgr manager.Manager, cs *state.ClusterState) error {
+	// Create a new controller
+	c, err := controller.New(controllerName, mgr, controller.Options{
+		Reconciler: &Reconciler{
+			cache: mgr.GetCache(),
+			state: cs,
+		},
+	})
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			c.state.DeletePolicy(name)
-			return nil
-		}
-		return errors.Wrapf(err, "failed to look up clusterpolicy %s for monitoring", name)
+		return err
 	}
-	if name != v1.ClusterPolicyName {
-		glog.Errorf("clusterpolicy resource has invalid name %q", name)
-		// Return nil since we don't want kubebuilder to queue a retry.
-		return nil
-	}
-	err = c.state.ProcessClusterPolicy(cp)
-	if err != nil {
-		glog.Error(err)
-	}
-	return nil
+	return c.Watch(&source.Kind{Type: &v1.ClusterPolicy{}}, &handler.EnqueueRequestForObject{})
 }

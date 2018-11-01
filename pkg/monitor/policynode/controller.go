@@ -17,64 +17,69 @@ limitations under the License.
 package policynode
 
 import (
+	"context"
+	"time"
+
 	"github.com/golang/glog"
-	policyhierarchylister "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/monitor/args"
 	"github.com/google/nomos/pkg/monitor/state"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/eventhandlers"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
-	"github.com/pkg/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
-	controllerName = "nomos-monitor-policynode-controller"
+	controllerName   = "nomos-monitor-policynode-controller"
+	reconcileTimeout = time.Minute * 5
 )
 
-// Controller responds to changes to PolicyNodes by updating its ClusterState.
-type Controller struct {
-	lister policyhierarchylister.PolicyNodeLister
-	state  *state.ClusterState
+var _ reconcile.Reconciler = &Reconciler{}
+
+// Reconciler responds to changes to PolicyNodes by updating its ClusterState.
+type Reconciler struct {
+	cache cache.Cache
+	state *state.ClusterState
 }
 
-// NewController creates a new controller.GenericController.
-func NewController(injectArgs args.InjectArgs, state *state.ClusterState) *controller.GenericController {
-	informer := injectArgs.Informers.Nomos().V1().PolicyNodes()
-	pnController := &Controller{
-		informer.Lister(),
-		state,
-	}
+// Reconcile is the callback for Reconciler.
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	node := &v1.PolicyNode{}
+	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	defer cancel()
 
-	genericController := &controller.GenericController{
-		Name:             controllerName,
-		InformerRegistry: injectArgs.ControllerManager,
-		Reconcile:        pnController.reconcile,
-	}
-	pn := &v1.PolicyNode{}
-
-	if err := injectArgs.ControllerManager.AddInformerProvider(pn, informer); err != nil {
-		panic(errors.Wrap(err, "programmer error while adding informer to controller manager"))
-	}
-	if err := genericController.WatchTransformationOf(pn, eventhandlers.MapToSelf); err != nil {
-		panic(errors.Wrap(err, "programmer error while adding WatchInstanceOf for policynodes"))
-	}
-	return genericController
-}
-
-func (c *Controller) reconcile(k types.ReconcileKey) error {
-	name := k.Name
-	node, err := c.lister.Get(name)
-	if err == nil {
-		return c.state.ProcessPolicyNode(node)
-	}
+	err := r.cache.Get(ctx, types.NamespacedName{Name: request.Name}, node)
 	switch {
-	case apierrors.IsNotFound(err):
-		c.state.DeletePolicy(name)
-		return nil
+	case err == nil:
+		err = r.state.ProcessPolicyNode(node)
+	case errors.IsNotFound(err):
+		r.state.DeletePolicy(request.Name)
+		err = nil
 	default:
-		glog.Errorf("Failed to fetch policy node for %q.", name)
+		glog.Errorf("Failed to fetch policy node for %q.", request.Name)
 	}
-	return errors.Wrapf(err, "failed to look up policynode %s for monitoring", name)
+	if err != nil {
+		glog.Errorf("Could not reconcile policy node %q: %v", request.Name, err)
+	}
+	return reconcile.Result{}, err
+}
+
+// AddController adds a controller to the given manager which reconciles monitoring data for policy
+// nodes.
+func AddController(mgr manager.Manager, cs *state.ClusterState) error {
+	// Create a new controller
+	c, err := controller.New(controllerName, mgr, controller.Options{
+		Reconciler: &Reconciler{
+			cache: mgr.GetCache(),
+			state: cs,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	return c.Watch(&source.Kind{Type: &v1.PolicyNode{}}, &handler.EnqueueRequestForObject{})
 }
