@@ -22,14 +22,13 @@ import (
 	"path"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/gogo/googleapis/google/rpc"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/gogo/status"
 	"github.com/golang/glog"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	clientaction "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
@@ -41,6 +40,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
@@ -123,6 +123,7 @@ func (p *watchProcessor) process() ([]byte, error) {
 					policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
 					return resumeMarker, errors.Wrapf(err, "failed in processing atomic group")
 				}
+				addSyncs(updatedPolicies)
 				// Update the import times for all policy nodes and cluster policy.
 				time := metav1.Now()
 				for n, pn := range updatedPolicies.PolicyNodes {
@@ -313,6 +314,63 @@ func unmarshalPolicyNode(change *watcher.Change) (*v1.PolicyNode, error) {
 	}
 
 	return pn, nil
+}
+
+// addSyncs adds a canned set of Syncs to ap. This Sync set includes just the fixed set of types
+// supported by GCP: Role, RoleBinding, ClusterRole, and ClusterRoleBinding.
+func addSyncs(ap *v1.AllPolicies) {
+	ap.Syncs = map[string]v1alpha1.Sync{
+		"rbac": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "rbac",
+			},
+			Spec: v1alpha1.SyncSpec{
+				Groups: []v1alpha1.SyncGroup{
+					{
+						Group: "rbac.authorization.k8s.io",
+						Kinds: []v1alpha1.SyncKind{
+							{
+								Kind: "Role",
+								Versions: []v1alpha1.SyncVersion{
+									{
+										Version:       "v1",
+										CompareFields: []string{"rules"},
+									},
+								},
+							},
+							{
+								Kind: "RoleBinding",
+								Versions: []v1alpha1.SyncVersion{
+									{
+										Version:       "v1",
+										CompareFields: []string{"subjects", "roleRef"},
+									},
+								},
+							},
+							{
+								Kind: "ClusterRole",
+								Versions: []v1alpha1.SyncVersion{
+									{
+										Version:       "v1",
+										CompareFields: []string{"rules"},
+									},
+								},
+							},
+							{
+								Kind: "ClusterRoleBinding",
+								Versions: []v1alpha1.SyncVersion{
+									{
+										Version:       "v1",
+										CompareFields: []string{"subjects", "roleRef"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func addGVR(grs []v1.GenericResources, gvk schema.GroupVersionKind) []v1.GenericResources {

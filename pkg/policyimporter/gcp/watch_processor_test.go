@@ -21,10 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"k8s.io/apimachinery/pkg/runtime"
-
 	"github.com/go-test/deep"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -42,6 +38,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var (
@@ -101,6 +99,9 @@ func init() {
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto},
 			},
+			expectedActions: []string{
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
+			},
 		},
 		{
 			testName: "Initial state org with error",
@@ -124,6 +125,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -134,6 +136,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -146,6 +149,7 @@ func init() {
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
 				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -157,6 +161,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -164,12 +169,18 @@ func init() {
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_DOES_NOT_EXIST, Continued: false, Data: emptyProto},
 			},
+			expectedActions: []string{
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
+			},
 		},
 		{
 			testName: "Initial state with non-existent resource",
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_EXISTS, Continued: true, Data: emptyProto},
 				{Element: "PolicyNode", State: watcher.Change_DOES_NOT_EXIST, Continued: false, Data: emptyProto},
+			},
+			expectedActions: []string{
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -184,6 +195,7 @@ func init() {
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/create",
 				"nomos.dev/v1/PolicyNodes/backend/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -200,6 +212,7 @@ func init() {
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/folder-456/create",
 				"nomos.dev/v1/PolicyNodes/backend/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -214,6 +227,7 @@ func init() {
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -226,6 +240,7 @@ func init() {
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -278,6 +293,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/create",
 				"nomos.dev/v1/PolicyNodes/backend/create",
 			},
@@ -294,6 +310,7 @@ func init() {
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/delete",
 				"nomos.dev/v1/PolicyNodes/organization-123/delete",
 			},
@@ -310,6 +327,7 @@ func init() {
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/delete",
 			},
 		},
@@ -326,6 +344,7 @@ func init() {
 			}},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/folder-456/delete",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -337,6 +356,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 				"nomos.dev/v1/ClusterPolicies/nomos-cluster-policy/delete",
 			},
 		},
@@ -345,6 +365,9 @@ func init() {
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto},
 				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto},
+			},
+			expectedActions: []string{
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -357,6 +380,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/create",
 				"nomos.dev/v1/PolicyNodes/backend/create",
 			},
@@ -366,6 +390,9 @@ func init() {
 			batch1: []*watcher.Change{
 				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto},
 				{Element: "folders/456/PolicyNode", State: watcher.Change_EXISTS, Continued: false, Data: folderPNProto},
+			},
+			expectedActions: []string{
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 			expectedError: true,
 		},
@@ -378,6 +405,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 				"nomos.dev/v1/PolicyNodes/organization-123/update",
 			},
 		},
@@ -390,6 +418,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 				"nomos.dev/v1/PolicyNodes/organization-123/update",
 			},
 		},
@@ -402,6 +431,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -414,6 +444,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/create",
 			},
 		},
@@ -427,6 +458,7 @@ func init() {
 			},
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/organization-123/create",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 				"nomos.dev/v1/PolicyNodes/folder-456/create",
 				"nomos.dev/v1/PolicyNodes/backend/create",
 			},
@@ -437,6 +469,9 @@ func init() {
 				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto, ResumeMarker: []byte("token")},
 			},
 			expectedResumeMarker: []byte("token"),
+			expectedActions: []string{
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
+			},
 		},
 		{
 			testName: "Resume marker not clobbered by null",
@@ -447,6 +482,9 @@ func init() {
 				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto},
 			},
 			expectedResumeMarker: []byte("token"),
+			expectedActions: []string{
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
+			},
 		},
 		{
 			testName: "Resume marker clobbered by new marker",
@@ -457,6 +495,9 @@ func init() {
 				{Element: "", State: watcher.Change_EXISTS, Continued: false, Data: emptyProto, ResumeMarker: []byte("token2")},
 			},
 			expectedResumeMarker: []byte("token2"),
+			expectedActions: []string{
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
+			},
 		},
 		{
 			testName: "Initial policies wiped without resume token",
@@ -470,6 +511,7 @@ func init() {
 			expectedActions: []string{
 				"nomos.dev/v1/PolicyNodes/folder-456/delete",
 				"nomos.dev/v1/PolicyNodes/organization-123/delete",
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
 			},
 		},
 		{
@@ -483,7 +525,9 @@ func init() {
 				"folder-456":       *folderPN,
 			}},
 			resumeMarker: []byte("hello"),
-			// No actions expected
+			expectedActions: []string{
+				"nomos.dev/v1alpha1/Syncs/rbac/create",
+			},
 		},
 	}
 }
