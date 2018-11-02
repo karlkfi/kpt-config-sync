@@ -23,16 +23,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/pkg/errors"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/restmapper"
-	"k8s.io/client-go/util/homedir"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 )
 
 const usage = `Nomosvet is a tool for validating a policy directory tree.
@@ -95,16 +93,10 @@ func main() {
 		printErrAndDie(errors.Wrap(err, "Failed to create client"))
 	}
 
-	cacheDir := filepath.Join(homedir.HomeDir(), ".kube", "http-cache")
-	dc, _ := discovery.NewCachedDiscoveryClientForConfig(restConfig, cacheDir, cacheDir, 10*time.Minute)
-	// TODO(118884760): We should be using ConfigFlags and not plumbing in the discovery client, etc. ourselves.
-	g := &testing.FakeRESTClientGetter{
-		Config:          clientConfig,
-		DiscoveryClient: dc,
-		RestMapper:      restmapper.NewDeferredDiscoveryRESTMapper(dc),
-	}
+	// TODO(119066037): Override the host in a way that doesn't involve overwriting defaults set internally in client-go.
+	clientcmd.ClusterDefaults = clientcmdapi.Cluster{Server: restConfig.Host}
 	p, err := filesystem.NewParser(
-		g, client.Discovery(), filesystem.Validate(*validate), filesystem.Vet())
+		&genericclioptions.ConfigFlags{}, client.Discovery(), filesystem.Validate(*validate), filesystem.Vet())
 	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Failed to create parser"))
 	}
