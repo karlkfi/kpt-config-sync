@@ -62,3 +62,10 @@ var nomosAnnotations = map[string]bool{
 func IsAnnotation(a string) bool {
 	return nomosAnnotations[a]
 }
+
+// GetClusterSelectorAnnotation returns the value of the cluster selector annotation
+// among the given annotations.  If the annotation is not there, "" is returned.
+func GetClusterSelectorAnnotation(a map[string]string) string {
+	// Looking up in a nil map will also return "".
+	return a[ClusterSelectorAnnotationKey]
+}

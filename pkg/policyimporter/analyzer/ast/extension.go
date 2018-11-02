@@ -136,6 +136,19 @@ func (d *Extension) Get(key interface{}) interface{} {
 	return value
 }
 
+// Has checks whether the extension has data under the supplied key.  It returns
+// that data if it does, and nil otherwise.
+func (d *Extension) Has(key interface{}) interface{} {
+	if d == nil {
+		return nil
+	}
+	value, found := d.items[key]
+	if !found {
+		return nil
+	}
+	return value
+}
+
 // Remove removes the data from the object, returns an updated copy and returns a boolean to indicate
 // if the value existed.  If the value did not exist in the map, Remove will panic.  If the last
 // item is deleted from Extension, then nil will be returned.

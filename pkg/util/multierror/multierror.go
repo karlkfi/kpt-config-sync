@@ -29,7 +29,7 @@ type Builder struct {
 	errs []error
 }
 
-// Add adds an error to the builder
+// Add adds error to the builder
 func (b *Builder) Add(err error) {
 	b.errs = append(b.errs, err)
 }

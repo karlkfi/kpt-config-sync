@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -51,6 +52,12 @@ func code(e error) string {
 		return "1010"
 	case IllegalLabelDefinitionError:
 		return "1011"
+	case NamespaceSelectorMayNotHaveAnnotation:
+		return "1012"
+	case ObjectHasUnknownClusterSelector:
+		return "1013"
+	case InvalidSelector:
+		return "1014"
 	default:
 		panic("Unknown Nomosvet Error Type") // Undefined
 	}
@@ -229,5 +236,27 @@ type NamespaceSelectorMayNotHaveAnnotation struct {
 
 // Error implements error.
 func (e NamespaceSelectorMayNotHaveAnnotation) Error() string {
-	return fmt.Sprintf("KNV1012: The NamespaceSelector object %q in namespace %q must not have ClusterSelector annotation", e.o.GetName(), e.o.GetNamespace())
+	return format(e, "The NamespaceSelector object %q in namespace %q MUST NOT have ClusterSelector annotation", e.o.GetName(), e.o.GetNamespace())
+}
+
+// ObjectHasUnknownClusterSelector is an error denoting an object that has an unknown annotation.
+type ObjectHasUnknownClusterSelector struct {
+	o metav1.Object
+	a string // The annotation that the object used.
+}
+
+// Error implements error.
+func (e ObjectHasUnknownClusterSelector) Error() string {
+	return format(e, "The object %q in namespace %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no defined ClusterSelector", e.o.GetName(), e.o.GetNamespace(), v1alpha1.ClusterSelectorAnnotationKey, e.a)
+}
+
+// InvalidSelector is a validation error.
+type InvalidSelector struct {
+	name  string
+	cause error
+}
+
+// Error implements error.
+func (e InvalidSelector) Error() string {
+	return format(e, errors.Wrapf(e.cause, "ClusterSelector %q has validation errors that must be corrected", e.name).Error())
 }

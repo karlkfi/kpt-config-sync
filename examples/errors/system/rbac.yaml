@@ -7,6 +7,9 @@ spec:
     - kind: ClusterRole
       versions:
       - version: v1
+    - kind: Role
+      versions:
+      - version: v1
     - kind: RoleBinding
       versions:
       - version: v1

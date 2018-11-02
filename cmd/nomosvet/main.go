@@ -104,7 +104,7 @@ func main() {
 		RestMapper:      restmapper.NewDeferredDiscoveryRESTMapper(dc),
 	}
 	p, err := filesystem.NewParser(
-		g, client.Discovery(), filesystem.Validate(*validate))
+		g, client.Discovery(), filesystem.Validate(*validate), filesystem.Vet())
 	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Failed to create parser"))
 	}

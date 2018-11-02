@@ -23,13 +23,73 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
 	"github.com/google/nomos/pkg/util/multierror"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
+
+// ClusterCoverage contains information about which clusters are covered by which cluster
+// selectors.
+type ClusterCoverage struct {
+	clusterNames     map[string]bool
+	coveredClusters  map[string]bool
+	selectorNames    map[string]bool
+	coveredSelectors map[string]bool
+}
+
+func newClusterCoverage(
+	clusters []clusterregistry.Cluster,
+	selectors []v1alpha1.ClusterSelector,
+	errs *multierror.Builder,
+) *ClusterCoverage {
+	cov := ClusterCoverage{
+		clusterNames:     map[string]bool{},
+		coveredClusters:  map[string]bool{},
+		selectorNames:    map[string]bool{},
+		coveredSelectors: map[string]bool{},
+	}
+	for _, c := range clusters {
+		cov.clusterNames[c.ObjectMeta.Name] = true
+	}
+	for _, s := range selectors {
+		cov.selectorNames[s.ObjectMeta.Name] = true
+	}
+	for _, s := range selectors {
+		sn := s.ObjectMeta.Name
+		selector, err := sels.AsPopulatedSelector(&s.Spec.Selector)
+		if err != nil {
+			errs.Add(InvalidSelector{sn, err})
+			continue
+		}
+		for _, c := range clusters {
+			cn := c.ObjectMeta.Name
+			if sels.IsSelected(c.ObjectMeta.Labels, selector) {
+				cov.coveredClusters[cn] = true
+				cov.coveredSelectors[sn] = true
+			}
+		}
+	}
+	return &cov
+}
+
+// ValidateObject validates the coverage of the object with clusters and selectors. An object
+// may not have an annotation, but if it does, it has to map to a valid selector.  Also if an
+// object has a selector in the annotation, that annotation must refer to a valid selector.
+func (c ClusterCoverage) ValidateObject(o metav1.Object, errs *multierror.Builder) {
+	a := v1alpha1.GetClusterSelectorAnnotation(o.GetAnnotations())
+	if a == "" {
+		return
+	}
+	if !c.selectorNames[a] {
+		errs.Add(ObjectHasUnknownClusterSelector{o, a})
+	}
+}
 
 // InputValidator checks various filesystem constraints after loading into the tree format.
 // Error messages emitted from the validator should be formatted to first print the constraint
@@ -43,6 +103,7 @@ type InputValidator struct {
 	nodes              []*ast.TreeNode
 	seenResourceQuotas map[string]struct{}
 	allowedGVKs        map[schema.GroupVersionKind]struct{}
+	coverage           *ClusterCoverage
 }
 
 // InputValidator implements ast.Visitor
@@ -50,8 +111,15 @@ var _ ast.Visitor = &InputValidator{}
 
 // NewInputValidator creates a new validator.  allowedGVKs represents the set
 // of valid group-version-kinds for objects in the namespaces and cluster
-// directories.  Objects of other types will be treated as an error.
-func NewInputValidator(allowedGVKs map[schema.GroupVersionKind]struct{}) *InputValidator {
+// directories.  Objects of other types will be treated as an error. clusters
+// is the list of clusters defined in the source of truth, and cs is the list
+// of selectors.  vet turns on "vetting mode", a mode of stricter control for use
+// in nomosvet.
+func NewInputValidator(
+	allowedGVKs map[schema.GroupVersionKind]struct{},
+	clusters []clusterregistry.Cluster,
+	cs []v1alpha1.ClusterSelector,
+	vet bool) *InputValidator {
 	v := &InputValidator{
 		Base:               visitor.NewBase(),
 		reserved:           reserved.EmptyNamespaces(),
@@ -60,6 +128,11 @@ func NewInputValidator(allowedGVKs map[schema.GroupVersionKind]struct{}) *InputV
 		allowedGVKs:        allowedGVKs,
 	}
 	v.Base.SetImpl(v)
+
+	if vet {
+		v.coverage = newClusterCoverage(clusters, cs, &v.errs)
+		//		v.coverage.ValidateCoverage(&v.errs)
+	}
 	return v
 }
 
@@ -76,11 +149,6 @@ func (v *InputValidator) VisitReservedNamespaces(rs *ast.ReservedNamespaces) ast
 		v.reserved = r
 	}
 	return nil
-}
-
-// VisitCluster implements Visitor
-func (v *InputValidator) VisitCluster(c *ast.Cluster) ast.Node {
-	return v.Base.VisitCluster(c)
 }
 
 // VisitTreeNode implements Visitor
@@ -121,11 +189,6 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	return o
 }
 
-// VisitClusterObjectList implements Visitor
-func (v *InputValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
-	return v.Base.VisitClusterObjectList(o)
-}
-
 // checkNamespaceSelectorAnnotations ensures that a NamespaceSelector object has no
 // ClusterSelector annotation on it.
 func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.NamespaceSelector) error {
@@ -155,6 +218,9 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 		v.errs.Add(UnsyncableClusterObjectError{o})
 	}
 	v.checkAnnotationsAndLabels(o.FileObject)
+	if v.coverage != nil {
+		v.coverage.ValidateObject(o.ToMeta(), &v.errs)
+	}
 	return v.Base.VisitClusterObject(o)
 }
 
@@ -187,6 +253,9 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 	}
 
 	v.checkAnnotationsAndLabels(o.FileObject)
+	if v.coverage != nil {
+		v.coverage.ValidateObject(o.ToMeta(), &v.errs)
+	}
 
 	return v.Base.VisitObject(o)
 }

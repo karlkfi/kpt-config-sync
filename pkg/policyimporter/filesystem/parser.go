@@ -54,6 +54,7 @@ import (
 type Parser struct {
 	factory          cmdutil.Factory
 	discoveryClient  discovery.ServerResourcesInterface
+	vet              bool
 	validate         bool
 	genericResources bool
 	// OS-specific path to root.
@@ -67,6 +68,15 @@ type ParserOpt func(p *Parser)
 func Validate(v bool) ParserOpt {
 	return func(p *Parser) {
 		p.validate = v
+	}
+}
+
+// Vet is a parser option that turns on vetting mode.  Some errors are not errors
+// if observed in a cluster, but are errors if observed in a validator run over the entire
+// repository.
+func Vet() ParserOpt {
+	return func(p *Parser) {
+		p.vet = true
 	}
 }
 
@@ -279,7 +289,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	}
 
 	visitors := []ast.CheckingVisitor{
-		validation.NewInputValidator(toAllowedGVKs(syncs)),
+		validation.NewInputValidator(toAllowedGVKs(syncs), clusters, selectors, p.vet),
 		transform.NewPathAnnotationVisitor(),
 		scopeValidator,
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree

@@ -658,6 +658,7 @@ type parserTestCase struct {
 	testName                   string
 	root                       string
 	testFiles                  fstesting.FileContentMap
+	vet                        bool
 	expectedPolicyNodes        map[string]v1.PolicyNode
 	expectedNumPolicies        map[string]int
 	expectedClusterPolicy      *v1.ClusterPolicy
@@ -1513,9 +1514,15 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			t.Fatal(errors.Wrap(err, "could not clean up"))
 		}
 	}()
-	p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
-		true, true,
-		d.rootDir}
+	p := Parser{
+		factory: f,
+		discoveryClient: fstesting.NewFakeCachedDiscoveryClient(
+			fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
+		vet:              tc.vet,
+		validate:         true,
+		genericResources: true,
+		root:             d.rootDir,
+	}
 
 	actualPolicies, err := p.Parse(d.rootDir)
 	if tc.expectedError {
@@ -2190,6 +2197,92 @@ func TestParserPerClusterAddressing(t *testing.T) {
 	}
 }
 
+// TestParserPerClusterAddressingVet tests nomosvet validation errors.
+func TestParserPerClusterAddressingVet(t *testing.T) {
+	tests := []parserTestCase{
+		{
+			testName:    "An object that has a cluster selector annotation for nonexistent cluster is an error",
+			root:        "foo",
+			clusterName: "cluster-1",
+			vet:         true,
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/nomos.yaml":              aRepo,
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name: "sel-1",
+				}.apply(aClusterSelector),
+
+				// Tree dir
+				"namespaces/bar/bar.yaml": templateData{Name: "bar"}.apply(aNamespace),
+				"namespaces/bar/rolebinding.yaml": templateData{
+					Name:      "role",
+					Namespace: "bar",
+					Annotations: map[string]string{
+						v1alpha1.ClusterSelectorAnnotationKey: "unknown-selector",
+					},
+				}.apply(aRoleBinding),
+
+				// Cluster dir (cluster scoped objects).
+				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
+			},
+			expectedError: true,
+		},
+		{
+			testName:    "A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
+			root:        "foo",
+			clusterName: "cluster-1",
+			vet:         true,
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/nomos.yaml":              aRepo,
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name: "sel-1",
+				}.apply(aClusterSelector),
+
+				// Tree dir
+				"namespaces/bar/bar.yaml": templateData{Name: "bar"}.apply(aNamespace),
+				"namespaces/bar/rolebinding.yaml": templateData{
+					Name:      "role",
+					Namespace: "bar",
+				}.apply(aRoleBinding),
+
+				// Cluster dir (cluster scoped objects).
+				"cluster/crb1.yaml": templateData{ID: "1",
+					Annotations: map[string]string{
+						v1alpha1.ClusterSelectorAnnotationKey: "unknown-selector",
+					},
+				}.apply(aClusterRoleBinding),
+			},
+			expectedError: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.testName, test.Run)
+	}
+}
+
 // Options provides comparison options for equality testing.
 func Options() []cmp.Option {
 	return []cmp.Option{
@@ -2219,8 +2312,15 @@ func TestEmptyDirectories(t *testing.T) {
 				}
 			}()
 
-			p := Parser{f, fstesting.NewFakeCachedDiscoveryClient(fstesting.TestAPIResourceList(fstesting.TestDynamicResources())), true, true,
-				d.rootDir}
+			p := Parser{
+				factory: f,
+				discoveryClient: fstesting.NewFakeCachedDiscoveryClient(
+					fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
+				vet:              false,
+				validate:         true,
+				genericResources: true,
+				root:             d.rootDir,
+			}
 
 			actualPolicies, err := p.Parse(d.rootDir)
 			if err != nil {
