@@ -438,6 +438,26 @@ func (i *Installer) DeleteClusterPolicies() error {
 	return nil
 }
 
+// DeleteSyncs deletes all syncs in the cluster.  If an error is encountered while listing or
+// deleting a sync, we terminate immediately.
+func (i *Installer) DeleteSyncs() error {
+	cp, err := i.k.PolicyHierarchy().NomosV1alpha1().Syncs().List(metav1.ListOptions{
+		IncludeUninitialized: true,
+	})
+
+	if err != nil {
+		return errors.Wrapf(err, "error listing syncs")
+	}
+
+	for _, p := range cp.Items {
+		err = i.k.PolicyHierarchy().NomosV1alpha1().Syncs().Delete(p.Name, metav1.NewDeleteOptions(0))
+		if err != nil {
+			return errors.Wrapf(err, "error deleting syncs: %s", p.Name)
+		}
+	}
+	return nil
+}
+
 // deleteDeprecatedCRDs deletes a few CRDs whose version we changed.
 // The CRDs must be deleted since kubectl apply does not allow CRD.spec.version to be modified.
 // The version change happened before anyone used the CRDs, so this will not impact users, however
@@ -530,6 +550,9 @@ func (i *Installer) uninstallCluster() error {
 		return err
 	}
 	if err = i.DeleteClusterPolicies(); err != nil {
+		return err
+	}
+	if err = i.DeleteSyncs(); err != nil {
 		return err
 	}
 	// Delete the Nomos singleton object, ignoring not found.

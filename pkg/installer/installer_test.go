@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta/fake"
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/kubectl"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -317,6 +318,56 @@ func TestInstaller_DeletePolicyNodes(t *testing.T) {
 	pn, err = client.PolicyHierarchy().NomosV1().PolicyNodes().List(metav1.ListOptions{})
 	if err != nil {
 		t.Errorf("error listing policy nodes: %v", err)
+	}
+	if len(pn.Items) != 0 {
+		t.Errorf("expected empty list but got %v", items)
+	}
+}
+
+func TestInstaller_DeleteSyncs(t *testing.T) {
+	const s1name = "rbac"
+	const s2name = "quota"
+
+	var err error
+	client := fake.NewClient()
+
+	_, err = client.PolicyHierarchy().NomosV1alpha1().Syncs().Create(&v1alpha1.Sync{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: s1name,
+		}})
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+	_, err = client.PolicyHierarchy().NomosV1alpha1().Syncs().Create(&v1alpha1.Sync{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: s2name,
+		}})
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	pn, err := client.PolicyHierarchy().NomosV1alpha1().Syncs().List(metav1.ListOptions{
+		IncludeUninitialized: true,
+	})
+	if err != nil {
+		t.Errorf("error listing syncs: %v", err)
+	}
+
+	items := pn.Items
+	if len(items) != 2 || items[0].Name != s1name || items[1].Name != s2name {
+		t.Errorf("unexpected syncs list. "+
+			"Wanted [ %s, %s], got: %v", s1name, s2name, items)
+	}
+
+	i := &Installer{k: kubectl.NewWithClient(context.Background(), client)}
+	err = i.DeleteSyncs()
+	if err != nil {
+		t.Error(err)
+	}
+
+	pn, err = client.PolicyHierarchy().NomosV1alpha1().Syncs().List(metav1.ListOptions{})
+	if err != nil {
+		t.Errorf("error listing syncs: %v", err)
 	}
 	if len(pn.Items) != 0 {
 		t.Errorf("expected empty list but got %v", items)
