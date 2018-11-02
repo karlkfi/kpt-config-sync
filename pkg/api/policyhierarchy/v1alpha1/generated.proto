@@ -95,3 +95,33 @@ message NamespaceSelectorSpec {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 1;
 }
 
+// Repo holds configuration and status about the Nomos source of truth.
+// +protobuf=true
+message Repo {
+  // Standard object's metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // +optional
+  optional RepoSpec spec = 2;
+}
+
+// RepoList holds a list of Repo resources.
+// +protobuf=true
+message RepoList {
+  // Standard object's metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is a list of Repo declarations.
+  repeated Repo items = 2;
+}
+
+// RepoSpec contains spec fields for Repo.
+// +protobuf=true
+message RepoSpec {
+  // Repo version string, corresponds to how policy importer should handle the
+  // directory structure (implicit assumptions).
+  optional string version = 1;
+}
+

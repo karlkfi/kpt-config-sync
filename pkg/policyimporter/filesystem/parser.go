@@ -420,7 +420,7 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 }
 
 // processSystemDir processes resources in system dir including:
-// - Nomos Config
+// - Nomos Repo
 // - Reserved Namespaces
 // - Syncs
 func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) ([]*v1alpha1.Sync, error) {
@@ -445,10 +445,10 @@ func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) ([]*v1alpha1.Syn
 
 		// Types in scope then alphabetical order.
 		switch gvk := o.GetObjectKind().GroupVersionKind(); gvk {
-		case v1alpha1.SchemeGroupVersion.WithKind("NomosConfig"):
-			fsCtx.Config, err = parseNomosConfig(o, i.Source)
+		case v1alpha1.SchemeGroupVersion.WithKind("Repo"):
+			fsCtx.Repo, err = parseRepo(o, i.Source)
 			if err != nil {
-				v.err = errors.Wrapf(err, "failed to parse NomosConfig in %s", i.Source)
+				v.err = errors.Wrapf(err, "failed to parse Repo in %s", i.Source)
 			}
 		case corev1.SchemeGroupVersion.WithKind("ConfigMap"):
 			cm := o.(*corev1.ConfigMap)
@@ -478,8 +478,8 @@ func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) ([]*v1alpha1.Syn
 		}
 	}
 
-	if fsCtx.Config == nil {
-		return nil, errors.Errorf("failed to find object of type NomosConfig in system dir")
+	if fsCtx.Repo == nil {
+		return nil, errors.Errorf("failed to find object of type Repo in system dir")
 	}
 	return syncs, nil
 }
@@ -606,21 +606,21 @@ func convertUnstructured(o runtime.Object, want interface{}, source string) erro
 	return nil
 }
 
-// parseNomosConfig parses out a NomosConfig object from o, which must be a NomosConfig object.
+// parseRepo parses out a Repo object from o, which must be a Repo object.
 // source is the source file the object was read from.
-func parseNomosConfig(o runtime.Object, source string) (*v1alpha1.NomosConfig, error) {
-	config := &v1alpha1.NomosConfig{}
-	if err := convertUnstructured(o, config, source); err != nil {
+func parseRepo(o runtime.Object, source string) (*v1alpha1.Repo, error) {
+	repo := &v1alpha1.Repo{}
+	if err := convertUnstructured(o, repo, source); err != nil {
 		return nil, err
 	}
 
-	if _, err := semver.Parse(config.Spec.RepoVersion); err != nil {
+	if _, err := semver.Parse(repo.Spec.Version); err != nil {
 		return nil, errors.Wrapf(err, "invalid semantic version %s. "+
-			"NomosConfig.Spec.RepoVersion must follow semantic versioning rules at http://semver.org",
-			config.Spec.RepoVersion)
+			"Repo.Spec.Version must follow semantic versioning rules at http://semver.org",
+			repo.Spec.Version)
 	}
 
-	return config, nil
+	return repo, nil
 }
 
 // parseSync parses a v1alpha1.Sync from o, which must be a Sync object.

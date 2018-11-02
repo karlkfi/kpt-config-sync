@@ -48,9 +48,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ClusterSelector{},
 		&NamespaceSelector{},
 		&NamespaceSelectorList{},
+		&Repo{},
+		&RepoList{},
 		&Sync{},
 		&SyncList{},
-		&NomosConfig{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

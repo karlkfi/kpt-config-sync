@@ -465,7 +465,7 @@ func (i *Installer) DeleteSyncs() error {
 func (i *Installer) deleteDeprecatedCRDs() error {
 	deprecated := [][]string{
 		{"namespaceselectors.nomos.dev", "v1"},
-		{"nomosconfigs.nomos.dev", "v1"},
+		{"repos.nomos.dev", "v1"},
 		{"nomos.addons.sigs.k8s.io", "v1alpha1"},
 	}
 

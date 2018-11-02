@@ -1,6 +1,6 @@
-kind: NomosConfig
+kind: Repo
 apiVersion: nomos.dev/v1alpha1
 metadata:
-  name: config
+  name: repo
 spec:
-  repoVersion: "0.1.0"
+  version: "0.1.0"

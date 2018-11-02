@@ -220,11 +220,11 @@ spec:
       environment: prod
 `
 
-	aNomosConfig = `
-kind: NomosConfig
+	aRepo = `
+kind: Repo
 apiVersion: nomos.dev/v1alpha1
 spec:
-  repoVersion: "1.0.0"
+  version: "1.0.0"
 `
 
 	aSyncTemplate = `
@@ -790,7 +790,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with single ResourceQuota",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{Namespace: "bar"}.apply(aQuota),
@@ -811,7 +811,7 @@ var parserTestCases = []parserTestCase{
 		testName: "ResourceQuota without declared Sync",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{Namespace: "bar"}.apply(aQuota),
 		},
@@ -830,7 +830,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with single ResourceQuota single file",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":         aNomosConfig,
+			"system/nomos.yaml":         aRepo,
 			"system/rq.yaml":            templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/combo.yaml": templateData{Name: "bar"}.apply(aNamespace) + "\n---\n" + templateData{Namespace: "bar"}.apply(aQuota),
 		},
@@ -849,7 +849,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with multiple ResourceQuota",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":       aNomosConfig,
+			"system/nomos.yaml":       aRepo,
 			"system/rq.yaml":          templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml":  templateData{ID: "1", Namespace: "bar"}.apply(aQuota),
@@ -861,7 +861,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with multiple ResourceQuota",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":          aNomosConfig,
+			"system/nomos.yaml":          aRepo,
 			"system/rq.yaml":             templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/rq.yaml":     templateData{ID: "1"}.apply(aQuota),
 			"namespaces/bar/rq2.yaml":    templateData{ID: "2"}.apply(aQuota),
@@ -873,7 +873,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with multiple Roles",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":         aNomosConfig,
+			"system/nomos.yaml":         aRepo,
 			"system/role.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/role1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRole),
@@ -885,7 +885,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with deployment",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":              aNomosConfig,
+			"system/nomos.yaml":              aRepo,
 			"system/depl.yaml":               templateData{Group: "apps", Version: "v1", Kind: "Deployment"}.apply(aSync),
 			"namespaces/bar/ns.yaml":         templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/deployment.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aDeployment),
@@ -933,7 +933,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with CRD",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":         aNomosConfig,
+			"system/nomos.yaml":         aRepo,
 			"system/eng.yaml":           templateData{Group: "employees", Version: "v1alpha1", Kind: "Engineer"}.apply(aSync),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/philo.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aPhilo),
@@ -944,7 +944,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with duplicate Roles",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":         aNomosConfig,
+			"system/nomos.yaml":         aRepo,
 			"system/role.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/role1.yaml": templateData{Namespace: "bar"}.apply(aRole),
@@ -956,7 +956,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with multiple Rolebindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/r1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
@@ -968,7 +968,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with duplicate Rolebindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/r1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
@@ -980,7 +980,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with duplicate Rolebindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":          aNomosConfig,
+			"system/nomos.yaml":          aRepo,
 			"system/rb.yaml":             templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns.yaml":     templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/r1.yaml":     templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
@@ -993,7 +993,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with non-conflicting reserved Namespace specified",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/reserved.yaml":   templateData{Namespace: "baz", Attribute: string(v1alpha1.ReservedAttribute), Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -1009,7 +1009,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with non-conflicting reserved Namespace, but invalid attribute specified",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/reserved.yaml":   templateData{Namespace: "foo", Attribute: "invalid-attribute", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -1019,7 +1019,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with conflicting reserved Namespace specified",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/reserved.yaml":   templateData{Namespace: "foo", Attribute: "reserved", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 			"namespaces/foo/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
 		},
@@ -1029,7 +1029,7 @@ var parserTestCases = []parserTestCase{
 		testName: "reserved namespace ConfigMap with invalid name",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":    aNomosConfig,
+			"system/nomos.yaml":    aRepo,
 			"system/reserved.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: "random-name"}.apply(aConfigMap),
 		},
 		expectedError: true,
@@ -1038,7 +1038,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with ClusterRole",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/cr.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
 			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
 		},
@@ -1048,7 +1048,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with ClusterRoleBinding",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":       aNomosConfig,
+			"system/nomos.yaml":       aRepo,
 			"system/crb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
 		},
@@ -1058,7 +1058,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with PodSecurityPolicy",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":       aNomosConfig,
+			"system/nomos.yaml":       aRepo,
 			"system/psp.yaml":         templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
 			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
@@ -1090,7 +1090,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ResourceQuota",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
@@ -1106,7 +1106,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with Roles",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":        aNomosConfig,
+			"system/nomos.yaml":        aRepo,
 			"system/role.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/bar/role.yaml": templateData{}.apply(aRole),
 		},
@@ -1116,7 +1116,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with multiple Rolebindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":       aNomosConfig,
+			"system/nomos.yaml":       aRepo,
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/rb2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
@@ -1127,7 +1127,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ClusterRole",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/cr.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
 			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
 		},
@@ -1137,7 +1137,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ClusterRoleBinding",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":       aNomosConfig,
+			"system/nomos.yaml":       aRepo,
 			"system/crb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
 		},
@@ -1147,7 +1147,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with PodSecurityPolicy",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":       aNomosConfig,
+			"system/nomos.yaml":       aRepo,
 			"system/psp.yaml":         templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
 			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
@@ -1157,7 +1157,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ConfigMap",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/cm.yaml":         templateData{Version: "v1", Kind: "ConfigMap"}.apply(aSync),
 			"namespaces/bar/cm.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 		},
@@ -1175,7 +1175,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with NamespaceSelector CRD and object",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":               aNomosConfig,
+			"system/nomos.yaml":               aRepo,
 			"system/crb.yaml":                 templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns-selector.yaml": templateData{}.apply(aNamespaceSelector),
 			"namespaces/bar/rb.yaml":          templateData{ID: "1", LBPName: "sre-supported"}.apply(aLBPRoleBinding),
@@ -1188,7 +1188,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace and Namespace dir have duplicate rolebindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":           aNomosConfig,
+			"system/nomos.yaml":           aRepo,
 			"system/rb.yaml":              templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/rb1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
@@ -1207,7 +1207,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Only system dir with valid sync",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 		},
 		expectedPolicyNodes:   map[string]v1.PolicyNode{},
@@ -1218,7 +1218,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Multiple Syncs",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"system/role.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 		},
@@ -1233,7 +1233,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Sync declares multiple versions",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 			"system/rq.yaml": `
 kind: Sync
 apiVersion: nomos.dev/v1alpha1
@@ -1274,7 +1274,7 @@ spec:
 		testName: "Namespaces dir with ResourceQuota",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":  aNomosConfig,
+			"system/nomos.yaml":  aRepo,
 			"system/rq.yaml":     templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/rq.yaml": templateData{}.apply(aQuota),
 		},
@@ -1289,7 +1289,7 @@ spec:
 		testName: "Namespaces dir with ResourceQuota and namespace dir",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
@@ -1309,7 +1309,7 @@ spec:
 		testName: "Namespaces dir with Roles",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":    aNomosConfig,
+			"system/nomos.yaml":    aRepo,
 			"system/role.yaml":     templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/role.yaml": templateData{}.apply(aRole),
 		},
@@ -1319,7 +1319,7 @@ spec:
 		testName: "Namespaces dir with multiple Rolebindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":  aNomosConfig,
+			"system/nomos.yaml":  aRepo,
 			"system/rb.yaml":     templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/r2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
@@ -1330,7 +1330,7 @@ spec:
 		testName: "Namespaces dir with multiple inherited Rolebindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aNomosConfig,
+			"system/nomos.yaml":      aRepo,
 			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/r1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/r2.yaml":     templateData{ID: "2"}.apply(aRoleBinding),
@@ -1342,7 +1342,7 @@ spec:
 		testName: "Cluster dir with multiple ClusterRoles",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 			"system/cr.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
 			"cluster/cr1.yaml":  templateData{ID: "1"}.apply(aClusterRole),
 			"cluster/cr2.yaml":  templateData{ID: "2"}.apply(aClusterRole),
@@ -1353,7 +1353,7 @@ spec:
 		testName: "Cluster dir with multiple ClusterRoleBindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 			"system/crb.yaml":   templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			"cluster/crb2.yaml": templateData{ID: "2"}.apply(aClusterRoleBinding),
@@ -1364,7 +1364,7 @@ spec:
 		testName: "Cluster dir with multiple PodSecurityPolicies",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 			"system/psp.yaml":   templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "2"}.apply(aPodSecurityPolicy),
@@ -1375,7 +1375,7 @@ spec:
 		testName: "Cluster dir with deployment",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 			"system/node.yaml":  templateData{Version: "v1", Kind: "Node"}.apply(aSync),
 			"cluster/node.yaml": templateData{}.apply(aNode),
 		},
@@ -1385,7 +1385,7 @@ spec:
 		testName: "Cluster dir with duplicate ClusterRole names",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 			"system/cr.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
 			"cluster/cr1.yaml":  templateData{ID: "1"}.apply(aClusterRole),
 			"cluster/cr2.yaml":  templateData{ID: "1"}.apply(aClusterRole),
@@ -1396,7 +1396,7 @@ spec:
 		testName: "Cluster dir with duplicate ClusterRoleBinding names",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 			"system/crb.yaml":   templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			"cluster/crb2.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
@@ -1407,7 +1407,7 @@ spec:
 		testName: "Cluster dir with duplicate PodSecurityPolicy names",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 			"system/psp.yaml":   templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
@@ -1461,7 +1461,7 @@ spec:
 		testName: "Dir name invalid",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aNomosConfig,
+			"system/nomos.yaml": aRepo,
 		},
 		expectedNumPolicies: map[string]int{},
 	},
@@ -1592,7 +1592,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
 				// System dir
-				"system/nomos.yaml":              aNomosConfig,
+				"system/nomos.yaml":              aRepo,
 				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
@@ -1757,7 +1757,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			clusterName: "cluster-2",
 			testFiles: fstesting.FileContentMap{
 				// System dir
-				"system/nomos.yaml":              aNomosConfig,
+				"system/nomos.yaml":              aRepo,
 				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
@@ -1814,7 +1814,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
 				// System dir
-				"system/nomos.yaml":              aNomosConfig,
+				"system/nomos.yaml":              aRepo,
 				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
@@ -1915,7 +1915,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
 				// System dir
-				"system/nomos.yaml":              aNomosConfig,
+				"system/nomos.yaml":              aRepo,
 				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
@@ -2024,7 +2024,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
 				// System dir
-				"system/nomos.yaml":              aNomosConfig,
+				"system/nomos.yaml":              aRepo,
 				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
@@ -2100,7 +2100,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
 				// System dir
-				"system/nomos.yaml":              aNomosConfig,
+				"system/nomos.yaml":              aRepo,
 				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),

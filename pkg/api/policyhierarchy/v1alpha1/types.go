@@ -205,21 +205,41 @@ type SyncList struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +genclient
+// +genclient:nonNamespaced
 
-// NomosConfig holds configuration for Nomos itself.
-type NomosConfig struct {
+// Repo holds configuration and status about the Nomos source of truth.
+// +protobuf=true
+type Repo struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// Standard object's metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Spec NomosConfigSpec `json:"spec,omitempty"`
+	// +optional
+	Spec RepoSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
-// NomosConfigSpec contains spec fields for NomosConfig.
-type NomosConfigSpec struct {
+// RepoSpec contains spec fields for Repo.
+// +protobuf=true
+type RepoSpec struct {
 	// Repo version string, corresponds to how policy importer should handle the
 	// directory structure (implicit assumptions).
-	RepoVersion string `json:"repoVersion"`
+	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// RepoList holds a list of Repo resources.
+// +protobuf=true
+type RepoList struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Items is a list of Repo declarations.
+	Items []Repo `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

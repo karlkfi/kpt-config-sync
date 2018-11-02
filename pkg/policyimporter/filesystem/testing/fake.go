@@ -528,7 +528,7 @@ func TestDynamicResources() []*discovery.APIGroupResources {
 				"v1alpha1": {
 					{Name: "clusterselectors", Namespaced: false, Kind: "ClusterSelector"},
 					{Name: "namespaceselectors", Namespaced: false, Kind: "NamespaceSelector"},
-					{Name: "nomosconfigs", Namespaced: false, Kind: "NomosConfig"},
+					{Name: "repos", Namespaced: false, Kind: "Repo"},
 					{Name: "syncs", Namespaced: false, Kind: "Sync"},
 				},
 			},

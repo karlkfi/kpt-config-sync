@@ -20,4 +20,6 @@ type ClusterSelectorExpansion interface{}
 
 type NamespaceSelectorExpansion interface{}
 
+type RepoExpansion interface{}
+
 type SyncExpansion interface{}

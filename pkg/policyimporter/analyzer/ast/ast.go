@@ -64,9 +64,9 @@ func (o FileObject) String() string {
 // Root represents a set of declared policies, configuration for how those policies will be
 // interpreted, and information regarding where those policies came from.
 type Root struct {
-	ImportToken string                // Import token for context
-	LoadTime    time.Time             // Time at which the context was generated
-	Config      *v1alpha1.NomosConfig // NomosConfig
+	ImportToken string         // Import token for context
+	LoadTime    time.Time      // Time at which the context was generated
+	Repo        *v1alpha1.Repo // Nomos repo
 
 	// ReservedNamespaces corresponds to the reserved namespaces declared in the system dir.
 	ReservedNamespaces *ReservedNamespaces // Reserved namespaces

@@ -89,7 +89,7 @@ func TestBespinParser(t *testing.T) {
 			name: "Project",
 			root: "foo",
 			files: fstesting.FileContentMap{
-				"system/nomos.yaml":           aNomosConfig,
+				"system/nomos.yaml":           aRepo,
 				"system/project.yaml":         aProjectSync,
 				"namespaces/bar/ns.yaml":      aNamespaceConfig,
 				"namespaces/bar/project.yaml": aProjectConfig,

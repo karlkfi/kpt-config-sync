@@ -27,6 +27,7 @@ type NomosV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ClusterSelectorsGetter
 	NamespaceSelectorsGetter
+	ReposGetter
 	SyncsGetter
 }
 
@@ -41,6 +42,10 @@ func (c *NomosV1alpha1Client) ClusterSelectors() ClusterSelectorInterface {
 
 func (c *NomosV1alpha1Client) NamespaceSelectors() NamespaceSelectorInterface {
 	return newNamespaceSelectors(c)
+}
+
+func (c *NomosV1alpha1Client) Repos() RepoInterface {
+	return newRepos(c)
 }
 
 func (c *NomosV1alpha1Client) Syncs() SyncInterface {

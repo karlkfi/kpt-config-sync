@@ -34,6 +34,10 @@ func (c *FakeNomosV1alpha1) NamespaceSelectors() v1alpha1.NamespaceSelectorInter
 	return &FakeNamespaceSelectors{c}
 }
 
+func (c *FakeNomosV1alpha1) Repos() v1alpha1.RepoInterface {
+	return &FakeRepos{c}
+}
+
 func (c *FakeNomosV1alpha1) Syncs() v1alpha1.SyncInterface {
 	return &FakeSyncs{c}
 }
