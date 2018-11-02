@@ -62,7 +62,7 @@ func main() {
 	// TODO(118189026): Remove flag, when unused.
 	genericResources := os.Getenv("GENERIC_RESOURCES") == "true"
 
-	parser, err := filesystem.NewParser(nil, client.Kubernetes().Discovery(), true, genericResources)
+	parser, err := filesystem.NewParser(nil, client.Kubernetes().Discovery(), filesystem.Validate(true), filesystem.GenericResources(genericResources))
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %v", err)
 	}

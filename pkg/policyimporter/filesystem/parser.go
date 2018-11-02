@@ -60,25 +60,43 @@ type Parser struct {
 	root string
 }
 
+// ParserOpt is a function that sets an option to the parser.
+type ParserOpt func(p *Parser)
+
+// Validate is a parser option that controls the validation for the parser.
+func Validate(v bool) ParserOpt {
+	return func(p *Parser) {
+		p.validate = v
+	}
+}
+
+// GenericResources is a parser option that turns on generic resources support.
+func GenericResources(v bool) ParserOpt {
+	return func(p *Parser) {
+		p.genericResources = v
+	}
+}
+
 // NewParser creates a new Parser.
 // clientConfig can be used to configure api server client. It should be set to nil when running in cluster.
 // resources is the list returned by the DisoveryClient ServerResources call which represents resources
 // 		that are returned by the API server during discovery.
-// validate determines whether to validate schema using OpenAPI spec.
-// genericResources determines whether generic resource support is enabled.
-func NewParser(config clientcmd.ClientConfig, discoveryClient discovery.ServerResourcesInterface, validate bool, genericResources bool) (*Parser, error) {
-	return NewParserWithFactory(cmdutil.NewFactory(config), discoveryClient, validate, genericResources)
+// opts turns on options for the parser.
+func NewParser(config clientcmd.ClientConfig, discoveryClient discovery.ServerResourcesInterface, opts ...ParserOpt) (*Parser, error) {
+	return NewParserWithFactory(cmdutil.NewFactory(config), discoveryClient, opts...)
 }
 
 // NewParserWithFactory creates a new Parser using the specified factory.
 // NewParser is the more common constructor, but this is useful for testing.
-func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterface, validate bool, genericResources bool) (*Parser, error) {
-	return &Parser{
-		factory:          f,
-		discoveryClient:  dc,
-		validate:         validate,
-		genericResources: genericResources,
-	}, nil
+func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterface, opts ...ParserOpt) (*Parser, error) {
+	p := &Parser{
+		factory:         f,
+		discoveryClient: dc,
+	}
+	for _, o := range opts {
+		o(p)
+	}
+	return p, nil
 }
 
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.

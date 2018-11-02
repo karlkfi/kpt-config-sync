@@ -119,7 +119,7 @@ func TestBespinParser(t *testing.T) {
 			dc := &fstesting.FakeCachedDiscoveryClient{
 				APIGroupResources: dynamicResources,
 			}
-			p, err := NewParserWithFactory(f, dc, true, false)
+			p, err := NewParserWithFactory(f, dc, Validate(true))
 			if err != nil {
 				t.Fatal(err)
 			}
