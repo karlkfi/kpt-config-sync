@@ -22,8 +22,6 @@ import (
 	"reflect"
 	"time"
 
-	errors2 "k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/golang/glog"
 	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
@@ -38,6 +36,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/git"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -45,7 +44,7 @@ import (
 
 const resync = time.Minute * 15
 
-var syncDeleteMaxWait = flag.Duration("sync_delete_max_wait", 5*time.Second,
+var syncDeleteMaxWait = flag.Duration("sync_delete_max_wait", 15*time.Second,
 	"Number of seconds to wait for Syncer to acknowledge Sync deletion")
 
 // Controller is controller for managing Nomos CRDs by importing policies from a filesystem tree.
@@ -118,13 +117,6 @@ func (c *Controller) Run() error {
 }
 
 func (c *Controller) pollDir() error {
-	glog.Infof("Polling policy dir: %s", c.policyDir)
-
-	currentPolicies, err := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
-	if err != nil {
-		return errors.Wrapf(err, "failed to list current policies")
-	}
-
 	currentDir := ""
 	ticker := time.NewTicker(c.pollPeriod)
 
@@ -140,7 +132,12 @@ func (c *Controller) pollDir() error {
 				// No new commits, nothing to do.
 				continue
 			}
-			glog.Infof("Resolved policy dir: %s", newDir)
+			glog.Infof("Resolved policy dir: %s. Polling policy dir: %s", newDir, c.policyDir)
+
+			currentPolicies, err := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
+			if err != nil {
+				return errors.Wrapf(err, "failed to list current policies")
+			}
 
 			// Parse filesystem tree into in-memory PolicyNode and ClusterPolicy objects.
 			desiredPolicies, err := c.parser.Parse(newDir)
@@ -178,8 +175,6 @@ func (c *Controller) pollDir() error {
 			}
 
 			currentDir = newDir
-			// TODO: what if someone else changes currentPolicies?
-			currentPolicies = desiredPolicies
 			policyimporter.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
 			policyimporter.Metrics.Nodes.Set(float64(len(desiredPolicies.PolicyNodes)))
 
@@ -240,14 +235,15 @@ func (c *Controller) syncDeletes(current, desired *v1.AllPolicies) error {
 			}
 
 			glog.V(1).Infof("Polling for deleted Sync %s", sd)
-			sync, err := c.client.PolicyHierarchy().NomosV1alpha1().Syncs().Get(sd, metav1.GetOptions{})
-			if err != nil && !errors2.IsNotFound(err) {
-				return errors.Wrapf(err, "while polling for deleted Sync %s: ", sd)
-			}
-
-			exists = sync != nil
-			if exists {
+			_, err := c.client.PolicyHierarchy().NomosV1alpha1().Syncs().Get(sd, metav1.GetOptions{})
+			if err == nil {
 				time.Sleep(500 * time.Millisecond)
+			} else {
+				if apierrors.IsNotFound(err) {
+					exists = false
+				} else {
+					return errors.Wrapf(err, "while polling for deleted Sync %s: ", sd)
+				}
 			}
 		}
 	}
