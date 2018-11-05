@@ -17,3 +17,8 @@ the installation guide).
 
 The `deploy-operator` target assembles and applies a bundle that will deploy
 images pushed from your local tree.
+
+If you work in a project shared with other developers and you wish to test with
+a build of the operator other than the project-shared version `deploy-operator`
+uses, check out the operator source and run `make release-user` there, then run
+`make deploy-operator-user` in this repo.
