@@ -3,7 +3,7 @@ package ast
 import (
 	"testing"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestPartialCopy(t *testing.T) {
@@ -15,12 +15,12 @@ func TestPartialCopy(t *testing.T) {
 	// Original TreeNode should not change if labels or annotations are modified
 	// on the copy.
 	copy.Labels["foo"] = "baz"
-	if diff := deep.Equal(orig.Labels, map[string]string{"foo": "bar"}); diff != nil {
+	if diff := cmp.Diff(orig.Labels, map[string]string{"foo": "bar"}); diff != "" {
 		t.Errorf("Actual and expected annotations didn't match: %v", diff)
 	}
 
 	copy.Annotations["foo"] = "hux"
-	if diff := deep.Equal(orig.Annotations, map[string]string{"foo": "bar"}); diff != nil {
+	if diff := cmp.Diff(orig.Annotations, map[string]string{"foo": "bar"}); diff != "" {
 		t.Errorf("Actual and expected annotations didn't match: %v", diff)
 	}
 }

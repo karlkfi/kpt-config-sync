@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/gogo/status"
@@ -862,7 +861,7 @@ func TestRecvErr(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected error")
 	}
-	if diff := deep.Equal(errors.Cause(err), expectedErr); diff != nil {
+	if diff := cmp.Diff(errors.Cause(err).Error(), expectedErr.Error()); diff != "" {
 		t.Errorf("Actual and expected errors don't match: %v", diff)
 	}
 }

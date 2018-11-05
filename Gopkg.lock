@@ -298,14 +298,6 @@
   version = "v0.17.2"
 
 [[projects]]
-  digest = "1:7f89e0c888fb99c61055c646f5678aae645b0b0a1443d9b2dcd9964d850827ce"
-  name = "github.com/go-test/deep"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "6592d9cc0a499ad2d5f574fde80a2b5c5cc3b4f5"
-  version = "v1.0.1"
-
-[[projects]]
   digest = "1:b6866b08184222995bf9347b648e11dc252317b809ee9f72c8724c07a016b303"
   name = "github.com/gogo/googleapis"
   packages = [

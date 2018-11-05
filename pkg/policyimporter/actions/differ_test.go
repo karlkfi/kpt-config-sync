@@ -19,10 +19,9 @@ package actions
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-
-	"github.com/go-test/deep"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	"k8s.io/api/extensions/v1beta1"
@@ -399,7 +398,7 @@ func TestSyncDeletes(t *testing.T) {
 		},
 		map[string]v1alpha1.Sync{})
 	expected := []string{"ResourceQuota"}
-	if diff := deep.Equal(actual, expected); diff != nil {
+	if diff := cmp.Diff(actual, expected); diff != "" {
 		t.Errorf("Actual and expected deletes didn't match: %#v", diff)
 	}
 }
@@ -594,7 +593,7 @@ func TestSyncReductions(t *testing.T) {
 	} {
 		t.Run(test.testName, func(t *testing.T) {
 			actual := g.SyncReductions(test.current, test.desired)
-			if diff := deep.Equal(actual, test.expected); diff != nil {
+			if diff := cmp.Diff(actual, test.expected); diff != "" {
 				t.Errorf("Actual and expected reductions didn't match: %#v", diff)
 			}
 		})

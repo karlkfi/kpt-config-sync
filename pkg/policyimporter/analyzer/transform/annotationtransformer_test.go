@@ -18,7 +18,7 @@ package transform
 import (
 	"testing"
 
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
@@ -90,8 +90,8 @@ func TestTransformer(t *testing.T) {
 
 			actual := rb.GetAnnotations()
 
-			if diff := deep.Equal(actual, tc.expectedAnnotations); diff != nil {
-				t.Fatalf("Actual and expected annotations didn't match: %v", diff)
+			if diff := cmp.Diff(actual, tc.expectedAnnotations); diff != "" {
+				t.Errorf("Actual and expected annotations didn't match: %v", diff)
 			}
 
 		})
