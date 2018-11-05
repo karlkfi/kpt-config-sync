@@ -26,6 +26,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/gogo/status"
 	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
 	mock "github.com/google/nomos/clientgen/watcher/v1/testing"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
@@ -576,12 +577,12 @@ func TestGen(t *testing.T) {
 				t.Fatalf("Err state is %v, wanted %v. Actual error: %s", !tc.expectedError, tc.expectedError, err)
 			}
 
-			if diff := deep.Equal(resumeMarker, tc.expectedResumeMarker); diff != nil {
-				t.Fatalf("Resume marker is %v, wanted %v", resumeMarker, tc.expectedResumeMarker)
+			if diff := cmp.Diff(resumeMarker, tc.expectedResumeMarker); diff != "" {
+				t.Errorf("Resume marker is %v, wanted %v", resumeMarker, tc.expectedResumeMarker)
 			}
 
-			if diff := deep.Equal(actualActions, tc.expectedActions); diff != nil {
-				t.Fatalf("Actual and expected actions don't match: %v\n%v\n%v", diff, actualActions, tc.expectedActions)
+			if diff := cmp.Diff(actualActions, tc.expectedActions); diff != "" {
+				t.Errorf("Actual and expected actions don't match: %v\n%v\n%v", diff, actualActions, tc.expectedActions)
 			}
 		})
 	}
@@ -601,23 +602,23 @@ func marshalOrFail(t *testing.T, pb proto.Message) *ptypes.Any {
 	return any
 }
 
-func toResources(gvk schema.GroupVersionKind, o runtime.Object) []v1.GenericResources {
-	return []v1.GenericResources{
+func toResources(gvk schema.GroupVersionKind, os ...runtime.Object) []v1.GenericResources {
+	grs := []v1.GenericResources{
 		{
 			Group: gvk.Group,
 			Kind:  gvk.Kind,
 			Versions: []v1.GenericVersionResources{
 				{
 					Version: gvk.Version,
-					Objects: []runtime.RawExtension{
-						{
-							Object: o,
-						},
-					},
+					Objects: []runtime.RawExtension{},
 				},
 			},
 		},
 	}
+	for _, o := range os {
+		grs[0].Versions[0].Objects = append(grs[0].Versions[0].Objects, runtime.RawExtension{Object: o})
+	}
+	return grs
 }
 
 // TestAtomicGroup tests the private processAtomicGroup method to more easily test the AllPolicies
@@ -650,15 +651,53 @@ func TestProcessAtomicGroup(t *testing.T) {
 						},
 						Spec: v1.PolicyNodeSpec{
 							Type: v1.Policyspace,
-							RoleBindingsV1: []rbacv1.RoleBinding{{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: "myrb",
-								}}},
+							RoleBindingsV1: []rbacv1.RoleBinding{
+								{ObjectMeta: metav1.ObjectMeta{Name: "myrb"}},
+							},
 							Resources: toResources(rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
 								runtime.Object(&rbacv1.RoleBinding{
 									ObjectMeta: metav1.ObjectMeta{
 										Name: "myrb",
 									}})),
+						}},
+				},
+			},
+		},
+		{
+			name: "Two RoleBindings",
+			changes: map[string]*watcher.Change{
+				"": {},
+				"PolicyNode": {
+					Element: "PolicyNode",
+					State:   watcher.Change_EXISTS,
+					Data: marshalOrFail(t, policynode.NewPolicyNode("foo", &v1.PolicyNodeSpec{
+						Type: v1.Policyspace,
+						RoleBindingsV1: []rbacv1.RoleBinding{
+							{ObjectMeta: metav1.ObjectMeta{Name: "myrb1"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "myrb2"}},
+						},
+					})),
+				},
+			},
+			expected: &v1.AllPolicies{
+				PolicyNodes: map[string]v1.PolicyNode{
+					"foo": {
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "foo",
+						},
+						Spec: v1.PolicyNodeSpec{
+							Type: v1.Policyspace,
+							RoleBindingsV1: []rbacv1.RoleBinding{
+								{ObjectMeta: metav1.ObjectMeta{Name: "myrb1"}},
+								{ObjectMeta: metav1.ObjectMeta{Name: "myrb2"}},
+							},
+							Resources: toResources(rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
+								runtime.Object(&rbacv1.RoleBinding{
+									ObjectMeta: metav1.ObjectMeta{Name: "myrb1"},
+								}),
+								runtime.Object(&rbacv1.RoleBinding{
+									ObjectMeta: metav1.ObjectMeta{Name: "myrb2"},
+								})),
 						}},
 				},
 			},
@@ -788,8 +827,8 @@ func TestProcessAtomicGroup(t *testing.T) {
 			if err != nil {
 				t.Errorf("processAtomicGroup failed: %v", err)
 			}
-			if diff := deep.Equal(actual, tc.expected); diff != nil {
-				t.Errorf("actual and expected policies don't match: %#v", diff)
+			if diff := cmp.Diff(actual, tc.expected); diff != "" {
+				t.Errorf("actual and expected policies don't match:\n%s", cmp.Diff(actual, tc.expected))
 			}
 		})
 	}
@@ -824,7 +863,7 @@ func TestRecvErr(t *testing.T) {
 		t.Fatalf("Expected error")
 	}
 	if diff := deep.Equal(errors.Cause(err), expectedErr); diff != nil {
-		t.Fatalf("Actual and expected errors don't match: %v", diff)
+		t.Errorf("Actual and expected errors don't match: %v", diff)
 	}
 }
 
@@ -972,8 +1011,8 @@ func TestPolicyResourceType(t *testing.T) {
 				}
 			}
 
-			if diff := deep.Equal(output, tc.expectedOutput); diff != nil {
-				t.Fatalf("Actual and expected output don't match: %v", diff)
+			if diff := cmp.Diff(output, tc.expectedOutput); diff != "" {
+				t.Errorf("Actual and expected output don't match: %v", diff)
 			}
 		})
 	}

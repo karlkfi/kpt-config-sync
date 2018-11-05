@@ -248,27 +248,27 @@ func unmarshalClusterPolicy(change *watcher.Change) (*v1.ClusterPolicy, error) {
 	if len(cp.Spec.ClusterRolesV1) > 0 {
 		cp.Spec.Resources = addGVR(cp.Spec.Resources, rbacv1.SchemeGroupVersion.WithKind("ClusterRole"))
 		crgvr := &cp.Spec.Resources[len(cp.Spec.Resources)-1].Versions[0]
-		for _, cr := range cp.Spec.ClusterRolesV1 {
+		for i := range cp.Spec.ClusterRolesV1 {
 			crgvr.Objects = append(crgvr.Objects, runtime.RawExtension{
-				Object: runtime.Object(&cr),
+				Object: runtime.Object(&cp.Spec.ClusterRolesV1[i]),
 			})
 		}
 	}
 	if len(cp.Spec.ClusterRoleBindingsV1) > 0 {
 		cp.Spec.Resources = addGVR(cp.Spec.Resources, rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"))
 		crbgvr := &cp.Spec.Resources[len(cp.Spec.Resources)-1].Versions[0]
-		for _, crb := range cp.Spec.ClusterRoleBindingsV1 {
+		for i := range cp.Spec.ClusterRoleBindingsV1 {
 			crbgvr.Objects = append(crbgvr.Objects, runtime.RawExtension{
-				Object: runtime.Object(&crb),
+				Object: runtime.Object(&cp.Spec.ClusterRoleBindingsV1[i]),
 			})
 		}
 	}
 	if len(cp.Spec.PodSecurityPoliciesV1Beta1) > 0 {
 		cp.Spec.Resources = addGVR(cp.Spec.Resources, policyv1beta1.SchemeGroupVersion.WithKind("PodSecurityPolicy"))
 		pspgvr := &cp.Spec.Resources[len(cp.Spec.Resources)-1].Versions[0]
-		for _, psp := range cp.Spec.PodSecurityPoliciesV1Beta1 {
+		for i := range cp.Spec.PodSecurityPoliciesV1Beta1 {
 			pspgvr.Objects = append(pspgvr.Objects, runtime.RawExtension{
-				Object: runtime.Object(&psp),
+				Object: runtime.Object(&cp.Spec.PodSecurityPoliciesV1Beta1[i]),
 			})
 		}
 	}
@@ -288,18 +288,18 @@ func unmarshalPolicyNode(change *watcher.Change) (*v1.PolicyNode, error) {
 	if len(pn.Spec.RolesV1) > 0 {
 		pn.Spec.Resources = addGVR(pn.Spec.Resources, rbacv1.SchemeGroupVersion.WithKind("Role"))
 		rolegvr := &pn.Spec.Resources[len(pn.Spec.Resources)-1].Versions[0]
-		for _, r := range pn.Spec.RolesV1 {
+		for i := range pn.Spec.RolesV1 {
 			rolegvr.Objects = append(rolegvr.Objects, runtime.RawExtension{
-				Object: runtime.Object(&r),
+				Object: runtime.Object(&pn.Spec.RolesV1[i]),
 			})
 		}
 	}
 	if len(pn.Spec.RoleBindingsV1) > 0 {
 		pn.Spec.Resources = addGVR(pn.Spec.Resources, rbacv1.SchemeGroupVersion.WithKind("RoleBinding"))
 		rbgvr := &pn.Spec.Resources[len(pn.Spec.Resources)-1].Versions[0]
-		for _, rb := range pn.Spec.RoleBindingsV1 {
+		for i := range pn.Spec.RoleBindingsV1 {
 			rbgvr.Objects = append(rbgvr.Objects, runtime.RawExtension{
-				Object: runtime.Object(&rb),
+				Object: runtime.Object(&pn.Spec.RoleBindingsV1[i]),
 			})
 		}
 	}
