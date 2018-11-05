@@ -69,7 +69,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 				Spec: v1.PolicyNodeSpec{
 					Type:        v1.Namespace,
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
 					SyncState: v1.StateSynced,
@@ -134,7 +134,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Namespace: "eng",
 						Labels:    labeling.ManageResource.New(),
 						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "abc123",
+							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -150,12 +150,12 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 				Spec: v1.PolicyNodeSpec{
 					Type:        v1.Namespace,
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
 					SyncState: v1.StateSynced,
 					SyncTime:  now(),
-					SyncToken: "abc123",
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 			},
 			wantEvents: []event{
@@ -174,11 +174,11 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 				Spec: v1.PolicyNodeSpec{
 					Type:        v1.Namespace,
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
 					SyncState: v1.StateSynced,
-					SyncToken: "abc123",
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 			},
 			namespace: &corev1.Namespace{
@@ -214,7 +214,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Namespace: "eng",
 						Labels:    labeling.ManageResource.New(),
 						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "abc123",
+							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -241,7 +241,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 				Spec: v1.PolicyNodeSpec{
 					Type:        v1.Namespace,
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
 					SyncState: v1.StateSynced,
@@ -300,12 +300,12 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 				Spec: v1.PolicyNodeSpec{
 					Type:        v1.Namespace,
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
 					SyncState: v1.StateSynced,
 					SyncTime:  now(),
-					SyncToken: "abc123",
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 			},
 			wantEvents: []event{
@@ -324,7 +324,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 				Spec: v1.PolicyNodeSpec{
 					Type:        v1.Namespace,
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
 					SyncState: v1.StateSynced,
@@ -372,7 +372,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Namespace: "eng",
 						Labels:    labeling.ManageResource.New(),
 						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "abc123",
+							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -388,12 +388,12 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 				Spec: v1.PolicyNodeSpec{
 					Type:        v1.Namespace,
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
 					SyncState: v1.StateSynced,
 					SyncTime:  now(),
-					SyncToken: "abc123",
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 			},
 			wantEvents: []event{
@@ -412,7 +412,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 				Spec: v1.PolicyNodeSpec{
 					Type:        v1.Namespace,
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
 					SyncState: v1.StateSynced,
@@ -475,12 +475,12 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 				Spec: v1.PolicyNodeSpec{
 					Type:        v1.Namespace,
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
 					SyncState: v1.StateSynced,
 					SyncTime:  now(),
-					SyncToken: "abc123",
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 			},
 			wantEvents: []event{
@@ -499,7 +499,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 				Spec: v1.PolicyNodeSpec{
 					Type:        v1.Namespace,
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
 					SyncState: v1.StateSynced,

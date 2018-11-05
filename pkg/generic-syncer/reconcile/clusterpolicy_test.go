@@ -58,7 +58,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					Name: v1.ClusterPolicyName,
 				},
 				Spec: v1.ClusterPolicySpec{
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.ClusterPolicyStatus{
 					SyncState: v1.StateSynced,
@@ -103,7 +103,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						Name:   "my-persistentvolume",
 						Labels: labeling.ManageResource.New(),
 						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "abc123",
+							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
@@ -116,12 +116,12 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					Name: v1.ClusterPolicyName,
 				},
 				Spec: v1.ClusterPolicySpec{
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.ClusterPolicyStatus{
 					SyncState: v1.StateSynced,
 					SyncTime:  now(),
-					SyncToken: "abc123",
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 			},
 			wantEvents: []event{
@@ -139,7 +139,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					Name: v1.ClusterPolicyName,
 				},
 				Spec: v1.ClusterPolicySpec{
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.ClusterPolicyStatus{
 					SyncState: v1.StateSynced,
@@ -169,7 +169,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						Name:   "my-persistentvolume",
 						Labels: labeling.ManageResource.New(),
 						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "abc123",
+							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
@@ -182,12 +182,12 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					Name: v1.ClusterPolicyName,
 				},
 				Spec: v1.ClusterPolicySpec{
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.ClusterPolicyStatus{
 					SyncState: v1.StateSynced,
 					SyncTime:  now(),
-					SyncToken: "abc123",
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 			},
 		},
@@ -244,7 +244,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					Name: v1.ClusterPolicyName,
 				},
 				Spec: v1.ClusterPolicySpec{
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.ClusterPolicyStatus{
 					SyncState: v1.StateSynced,
@@ -275,7 +275,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						Name:   "my-persistentvolume",
 						Labels: labeling.ManageResource.New(),
 						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "abc123",
+							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
@@ -288,12 +288,12 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					Name: v1.ClusterPolicyName,
 				},
 				Spec: v1.ClusterPolicySpec{
-					ImportToken: "abc123",
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.ClusterPolicyStatus{
 					SyncState: v1.StateSynced,
 					SyncTime:  now(),
-					SyncToken: "abc123",
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 			},
 			wantEvents: []event{
