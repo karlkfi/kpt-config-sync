@@ -1,0 +1,14 @@
+kind: Sync
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: acme
+spec:
+  groups:
+  - group: acme.com
+    kinds:
+    - kind: Anvil
+      versions:
+      - version: v1
+    - kind: ClusterAnvil
+      versions:
+      - version: v1

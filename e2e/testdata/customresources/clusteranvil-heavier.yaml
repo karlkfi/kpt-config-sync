@@ -1,0 +1,6 @@
+kind: ClusterAnvil
+apiVersion: acme.com/v1
+metadata:
+  name: e2e-test-clusteranvil
+spec:
+  lbs: 100
