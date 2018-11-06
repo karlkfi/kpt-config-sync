@@ -2,7 +2,8 @@
 
 ## Unit Tests
 
-During iterative development, you want to run unit tests, linters, and nomosvet tests using:
+During iterative development, you want to run unit tests, linters, and nomosvet
+tests using:
 
 ```console
 make
