@@ -26,13 +26,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
-	"text/template"
 
 	"github.com/golang/dep"
 	"github.com/pkg/errors"
@@ -40,30 +37,17 @@ import (
 
 var dir = flag.String("dir", "", "Directory containing dep lock file")
 var printDeps = flag.Bool("print-deps", false, "Print vendored deps")
-var renameFiles = flag.Bool("rename-files", false, "Rename/merge LICENSE files")
 var noRestrictedLicense = flag.Bool("no-restricted-license", true, "Disallow restricted licenses")
-var generateMetaFile = flag.Bool("generate-meta-file", false, "Generate METADATA file")
 
 const (
-	metadataTxt = `name: "{{.Name}}"
-description: "{{.Description}}"
-
-third_party {
-  url {
-    type: GIT
-    value: "{{.URL}}"
-  }
-  version: "{{.Version}}"
-  last_upgrade_date { year: 2018 month: 4 day: 25 }
-  license_type: {{.License}}
-}
-`
 	sep = "\n\n-----------------------------------------------------------------------\n\n"
 
 	// MIT license.
 	MIT = "Permission is hereby granted, free of charge, to any person"
 	// BSD3clause matches BSD 3-clause licence.
 	BSD3clause = "Redistribution and use in source and binary forms, with or without"
+	// CCBySA40 matches CreativeCommons Attribution-ShareAlike 4.0 license.
+	CCBySA40 = "Attribution-ShareAlike 4.0 International"
 )
 
 const (
@@ -80,11 +64,8 @@ var (
 		"ISC License":            notice,
 		"Mozilla Public License": reciprocal,
 		"LGPLv3":                 restricted,
+		CCBySA40:                 restricted,
 	}
-
-	descRe = regexp.MustCompile(`(?m)^([A-Z](.+\n?)+)[.]?\s`)
-
-	metadataTemplate = template.Must(template.New("metadata").Parse(metadataTxt))
 )
 
 type licenseType int
@@ -112,58 +93,6 @@ type metadata struct {
 
 func (m *metadata) String() string {
 	return fmt.Sprintf("%s%s%sVersion:%s\nLicense:%s\nDescription:%q", sep, m.Root, sep, m.Version, m.License, m.Description)
-}
-
-func (m *metadata) populateDescription() error {
-	content, p, err := getREADME(m)
-	if err != nil {
-		fmt.Println(errors.Wrapf(err, "Error getting README for %s\n", m.Root))
-		return nil
-	}
-	d := descRe.Find(content)
-	if d == nil {
-		return errors.Errorf("No snippet found in %s %s\n", p, m.URL)
-	}
-	m.Description = strings.Replace(strings.TrimSpace(string(d[:])), "\n", " ", -1)
-	return nil
-}
-
-func getREADME(m *metadata) ([]byte, string, error) {
-	// Search local filesystem
-	matches, err := filepath.Glob(path.Join(m.AbsPath, "/README*"))
-	if err != nil {
-		return nil, "", err
-	}
-	if len(matches) > 0 {
-		content, err2 := ioutil.ReadFile(matches[0])
-		if err != nil {
-			return nil, "", err2
-		}
-		return content, matches[0], nil
-	}
-
-	// Sometimes dep doesn't pull README files, so try to download it
-	url := strings.Replace(m.URL, "code.googlesource.com/gocloud", "github.com/GoogleCloudPlatform/google-cloud-go", 1)
-	url = strings.Replace(url, "go.googlesource.com", "github.com/golang", 1)
-	if !strings.Contains(url, "github.com") {
-		return nil, "", errors.Errorf("No README found in %s", url)
-	}
-	url = fmt.Sprintf("https://raw.githubusercontent.com/%s/master/README.md", strings.SplitAfterN(url, "/", 4)[3])
-	resp, err := http.Get(url)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		url = strings.Replace(url, "README.md", "README", 1)
-		resp, err = http.Get(url)
-		if err != nil || resp.StatusCode != http.StatusOK {
-			return nil, "", errors.Errorf("fail to GET README[.md] at %s", url)
-		}
-	}
-	// nolint:errcheck
-	defer resp.Body.Close()
-	content, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, "", err
-	}
-	return content, url, nil
 }
 
 type linter struct {
@@ -210,7 +139,7 @@ func (l *linter) readDepLock() error {
 
 func (l *linter) detectLicenseType() error {
 	for _, m := range l.metas {
-		matches, err := filepath.Glob(path.Join(m.AbsPath, "/LICENSE*"))
+		matches, err := codeLicenses(m.AbsPath)
 		if err != nil {
 			return err
 		}
@@ -233,65 +162,37 @@ func (l *linter) detectLicenseType() error {
 			return errors.Errorf("Licence type %q not allowed in %s", resultType, m.AbsPath)
 		}
 		m.License = resultType.String()
-		if err := fixLicenseFiles(matches); err != nil {
-			return err
-		}
 	}
-	return nil
-}
 
-func (l *linter) generateMetaFile() error {
 	for _, m := range l.metas {
-		p := path.Join(m.AbsPath, "METADATA")
-		_, err := os.Stat(p)
-		if err == nil {
-			continue
-		}
-		if !os.IsNotExist(err) {
-			return err
-		}
-		if !*generateMetaFile {
-			return errors.Errorf("missing METADATA file, rerun with -generate-meta-file: %s", p)
-		}
-		if err = m.populateDescription(); err != nil {
-			return err
-		}
-		f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE, 0644)
+		docMatches, err := filepath.Glob(path.Join(m.AbsPath, "LICENSE.docs"))
 		if err != nil {
 			return err
 		}
-		// nolint:errcheck
-		defer f.Close()
-		if err := metadataTemplate.Execute(f, m); err != nil {
-			return err
+		for _, f := range docMatches {
+			if _, err := classifyLicense(f); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func fixLicenseFiles(licenses []string) error {
-	correctPath := path.Join(path.Dir(licenses[0]), "LICENSE")
-	if len(licenses) == 1 && licenses[0] == correctPath {
-		return nil
+// codeLicenses gets a list of files in absPath whose names are LICENSE*, but not LICENSE.doc. The
+// idea is to get licenses referring to code, not to docs. Docs licenses are uncommon, but they do
+// exist.
+func codeLicenses(absPath string) ([]string, error) {
+	matches, err := filepath.Glob(path.Join(absPath, "LICENSE*"))
+	if err != nil {
+		return nil, err
 	}
-
-	if !*renameFiles {
-		return fmt.Errorf("need to fix license files. Did you update deps using "+
-			"`dep ensure`? Try running scripts/fix-dep.sh. Otherwise, you may need to rerun "+
-			"licenselinter with -rename-files: %v", licenses)
-	}
-	var content []string
-	for _, l := range licenses {
-		c, err := ioutil.ReadFile(l)
-		if err != nil {
-			return err
-		}
-		content = append(content, string(c[:]))
-		if err := os.Remove(l); err != nil {
-			return err
+	var codeMatches []string
+	for _, m := range matches {
+		if !strings.HasSuffix(m, "LICENSE.docs") {
+			codeMatches = append(codeMatches, m)
 		}
 	}
-	return ioutil.WriteFile(correctPath, []byte(strings.Join(content, sep)), 0644)
+	return codeMatches, nil
 }
 
 func classifyLicense(f string) (licenseType, error) {
@@ -316,9 +217,6 @@ func main() {
 		log.Fatal(err)
 	}
 	if err := l.detectLicenseType(); err != nil {
-		log.Fatal(err)
-	}
-	if err := l.generateMetaFile(); err != nil {
 		log.Fatal(err)
 	}
 
