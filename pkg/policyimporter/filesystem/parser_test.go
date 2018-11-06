@@ -24,6 +24,8 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
@@ -674,6 +676,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with YAML Namespace",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -687,6 +690,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with JSON Namespace",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ns.json": templateData{Name: "bar"}.apply(aNamespaceJSON),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -700,6 +704,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with Namespace with labels/annotations",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespaceWithLabelsAndAnnotations),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -714,6 +719,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with ignored files",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 		},
@@ -728,6 +734,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with 2 ignored files",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 			"namespaces/bar/ignore2": "blah blah blah",
@@ -743,6 +750,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Empty namespace dir",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 		},
@@ -757,6 +765,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with multiple Namespaces",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":       aRepo,
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -766,6 +775,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir without Namespace multiple",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ignore":  "",
 			"namespaces/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
@@ -775,6 +785,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with namespace mismatch",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -783,6 +794,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with invalid name",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepo,
 			"namespaces/baR/ns.yaml": templateData{Name: "baR"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -1078,6 +1090,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with ignored file",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":     aRepo,
 			"namespaces/bar/ignore": "",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -1168,6 +1181,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Policyspace dir with NamespaceSelector CRD",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":               aRepo,
 			"namespaces/bar/ns-selector.yaml": templateData{}.apply(aNamespaceSelector),
 		},
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
@@ -1198,8 +1212,11 @@ var parserTestCases = []parserTestCase{
 		expectedError: true,
 	},
 	{
-		testName:              "Empty repo",
-		root:                  "foo",
+		testName: "Minimal repo",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml": aRepo,
+		},
 		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         map[string]v1alpha1.Sync{},
@@ -1255,6 +1272,7 @@ spec:
 		testName: "Namespaces dir with ignore file",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml": aRepo,
 			"namespaces/ignore": "",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -1267,6 +1285,7 @@ spec:
 		testName: "Namespaces dir with Namespace",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":  aRepo,
 			"namespaces/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -1419,6 +1438,7 @@ spec:
 		testName: "Dir name not unique 1",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":          aRepo,
 			"namespaces/baz/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/qux/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -1428,6 +1448,7 @@ spec:
 		testName: "Dir name not unique 2",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":  aRepo,
 			"namespaces/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -1437,6 +1458,7 @@ spec:
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			// Two policyspace dirs with same name.
+			"system/nomos.yaml":                aRepo,
 			"namespaces/bar/baz/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
 			"namespaces/qux/baz/waldo/ns.yaml": templateData{Name: "waldo"}.apply(aNamespace),
 		},
@@ -1446,6 +1468,7 @@ spec:
 		testName: "Dir name reserved",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":              aRepo,
 			"namespaces/kube-system/ns.yaml": templateData{Name: "kube-system"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -1454,6 +1477,7 @@ spec:
 		testName: "Dir name invalid",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":          aRepo,
 			"namespaces/foo bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedError: true,
@@ -2279,6 +2303,24 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		{
+			testName:      "A dir with no system directory is an error",
+			root:          "foo",
+			clusterName:   "cluster-1",
+			vet:           true,
+			testFiles:     fstesting.FileContentMap{},
+			expectedError: true,
+		},
+		{
+			testName:    "A dir a system directory defining no Repo object is an error",
+			root:        "foo",
+			clusterName: "cluster-1",
+			vet:         true,
+			testFiles: fstesting.FileContentMap{
+				"system/nomos.yaml": "",
+			},
+			expectedError: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, test.Run)
@@ -2298,10 +2340,12 @@ func TestEmptyDirectories(t *testing.T) {
 	d := newTestDir(t, "foo")
 	defer d.remove()
 
+	// Create required repo definition.
+	d.createTestFile(filepath.Join(repo.SystemDir, "nomos.yaml"), aRepo)
+
 	for _, path := range []string{
-		"foo/namespaces",
-		"foo/cluster",
-		"foo/system",
+		filepath.Join(d.rootDir, repo.NamespacesDir),
+		filepath.Join(d.rootDir, repo.ClusterDir),
 	} {
 		t.Run(path, func(t *testing.T) {
 			if err := os.MkdirAll(path, 0750); err != nil {
@@ -2331,12 +2375,14 @@ func TestEmptyDirectories(t *testing.T) {
 				t.Fatalf("unexpected error: %#v", err)
 			}
 			expectedPolicies := &v1.AllPolicies{
-				PolicyNodes:   map[string]v1.PolicyNode{},
+				PolicyNodes: map[string]v1.PolicyNode{
+					v1.RootPolicyNodeName: createRootPN(nil),
+				},
 				ClusterPolicy: createClusterPolicy(),
 				Syncs:         map[string]v1alpha1.Sync{},
 			}
 			if !cmp.Equal(actualPolicies, expectedPolicies, Options()...) {
-				t.Errorf("actual and expected AllPolicies didn't match: %#v", cmp.Diff(actualPolicies, expectedPolicies, Options()...))
+				t.Errorf("actual and expected AllPolicies didn't match: %v", cmp.Diff(actualPolicies, expectedPolicies, Options()...))
 			}
 		})
 	}

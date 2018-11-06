@@ -18,6 +18,7 @@ package validation
 import (
 	"fmt"
 	"path"
+	"reflect"
 	"strings"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy"
@@ -32,6 +33,8 @@ import (
 // Only ever (1) add to this method or (2) deprecate ids. Do not reuse.
 func code(e error) string {
 	switch e.(type) {
+	case ReservedDirectoryNameError:
+		return "1001"
 	case DuplicateDirectoryNameError:
 		return "1002"
 	case IllegalNamespaceChildDirectoryError:
@@ -58,8 +61,14 @@ func code(e error) string {
 		return "1013"
 	case InvalidSelector:
 		return "1014"
+	case MissingSystemDirectoryError:
+		return "1015"
+	case EmptySystemDirectoryError:
+		return "1016"
+	case MissingRepoError:
+		return "1017"
 	default:
-		panic("Unknown Nomosvet Error Type") // Undefined
+		panic(fmt.Sprintf("Unknown Nomosvet Error Type: %T", reflect.TypeOf(e))) // Undefined
 	}
 }
 
@@ -224,7 +233,7 @@ func (e IllegalLabelDefinitionError) Error() string {
 	l := strings.Join(e.labels, ", ")
 	return format(e,
 		"Objects MUST NOT define labels starting with %[3]q. "+
-			"Object  %[3]s has these offending labels: %[1]s\n%[2]s",
+			"Object %[3]s has these offending labels: %[1]s\n%[2]s",
 		l, e.object, policyhierarchy.GroupName, e.object.Name())
 }
 
@@ -259,4 +268,31 @@ type InvalidSelector struct {
 // Error implements error.
 func (e InvalidSelector) Error() string {
 	return format(e, errors.Wrapf(e.cause, "ClusterSelector %q has validation errors that must be corrected", e.name).Error())
+}
+
+// MissingSystemDirectoryError reports that the required system/ directory is missing.
+type MissingSystemDirectoryError struct{}
+
+// Error implements error.
+func (e MissingSystemDirectoryError) Error() string {
+	return format(e,
+		"The required %s/ directory is missing.", repo.SystemDir)
+}
+
+// EmptySystemDirectoryError reports that the system/ directory is empty.
+type EmptySystemDirectoryError struct{}
+
+// Error implements error.
+func (e EmptySystemDirectoryError) Error() string {
+	return format(e,
+		"The %s/ directory must have at least one file, defining a Repo object.", repo.SystemDir)
+}
+
+// MissingRepoError reports that there is no Repo definition in system/
+type MissingRepoError struct{}
+
+// Error implements error
+func (e MissingRepoError) Error() string {
+	return format(e,
+		"The %s/ directory must define an object of type Repo.", repo.SystemDir)
 }

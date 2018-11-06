@@ -20,6 +20,7 @@ package filesystem
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -103,12 +104,19 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 	// Special processing for <root>/system/*
 	var syncs []*v1alpha1.Sync
-	if _, err := os.Stat(filepath.Join(root, repo.SystemDir)); err == nil {
-		if syncs, err = p.processSystemDir(root, fsCtx); err != nil {
-			return nil, err
+	systemDir := filepath.Join(root, repo.SystemDir)
+	if files, err := ioutil.ReadDir(systemDir); err == nil {
+		if len(files) > 0 {
+			// The system directory must at least have one file, defining the Repo object.
+			if syncs, err = p.processSystemDir(root, fsCtx); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, validation.EmptySystemDirectoryError{}
 		}
-	} else if !os.IsNotExist(err) {
-		// IsNotExist is ok. We just won't read the directory.
+	} else if os.IsNotExist(err) {
+		return nil, validation.MissingSystemDirectoryError{}
+	} else {
 		return nil, errors.Wrapf(err, "while checking existence of system directory")
 	}
 
@@ -471,7 +479,7 @@ func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) ([]*v1alpha1.Syn
 	}
 
 	if fsCtx.Repo == nil {
-		return nil, errors.Errorf("failed to find object of type Repo in system dir")
+		return nil, validation.MissingRepoError{}
 	}
 	return syncs, nil
 }
