@@ -96,7 +96,7 @@ func main() {
 	// TODO(119066037): Override the host in a way that doesn't involve overwriting defaults set internally in client-go.
 	clientcmd.ClusterDefaults = clientcmdapi.Cluster{Server: restConfig.Host}
 	p, err := filesystem.NewParser(
-		&genericclioptions.ConfigFlags{}, client.Discovery(), filesystem.Validate(*validate), filesystem.Vet())
+		&genericclioptions.ConfigFlags{}, client.Discovery(), filesystem.ParserOpt{Validate: *validate, Vet: true})
 	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Failed to create parser"))
 	}

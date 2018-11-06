@@ -52,39 +52,21 @@ import (
 
 // Parser reads files on disk and builds Nomos CRDs.
 type Parser struct {
-	factory          cmdutil.Factory
-	discoveryClient  discovery.ServerResourcesInterface
-	vet              bool
-	validate         bool
-	genericResources bool
+	opts            ParserOpt
+	factory         cmdutil.Factory
+	discoveryClient discovery.ServerResourcesInterface
 	// OS-specific path to root.
 	root string
 }
 
-// ParserOpt is a function that sets an option to the parser.
-type ParserOpt func(p *Parser)
-
-// Validate is a parser option that controls the validation for the parser.
-func Validate(v bool) ParserOpt {
-	return func(p *Parser) {
-		p.validate = v
-	}
-}
-
-// Vet is a parser option that turns on vetting mode.  Some errors are not errors
-// if observed in a cluster, but are errors if observed in a validator run over the entire
-// repository.
-func Vet() ParserOpt {
-	return func(p *Parser) {
-		p.vet = true
-	}
-}
-
-// GenericResources is a parser option that turns on generic resources support.
-func GenericResources(v bool) ParserOpt {
-	return func(p *Parser) {
-		p.genericResources = v
-	}
+// ParserOpt has often customized parser options. Use for example in NewParser.
+type ParserOpt struct {
+	// Vet turns on vetting mode, which catches a wider range of cross-cluster errors.
+	Vet bool
+	// Validate will raise validation errors if set.
+	Validate bool
+	// GenericResources turns on support for generic resources if set.
+	GenericResources bool
 }
 
 // NewParser creates a new Parser.
@@ -93,19 +75,17 @@ func GenericResources(v bool) ParserOpt {
 // 		that are returned by the API server during discovery.
 // opts turns on options for the parser.
 // TODO(118887045): Don't pass in a discoveryClient. Just use the one in from RestClientGetter.ToDiscoveryClient().
-func NewParser(clientGetter genericclioptions.RESTClientGetter, discoveryClient discovery.ServerResourcesInterface, opts ...ParserOpt) (*Parser, error) {
-	return NewParserWithFactory(cmdutil.NewFactory(clientGetter), discoveryClient, opts...)
+func NewParser(clientGetter genericclioptions.RESTClientGetter, discoveryClient discovery.ServerResourcesInterface, opts ParserOpt) (*Parser, error) {
+	return NewParserWithFactory(cmdutil.NewFactory(clientGetter), discoveryClient, opts)
 }
 
 // NewParserWithFactory creates a new Parser using the specified factory.
 // NewParser is the more common constructor, but this is useful for testing.
-func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterface, opts ...ParserOpt) (*Parser, error) {
+func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterface, opts ParserOpt) (*Parser, error) {
 	p := &Parser{
+		opts:            opts,
 		factory:         f,
 		discoveryClient: dc,
-	}
-	for _, o := range opts {
-		o(p)
 	}
 	return p, nil
 }
@@ -212,7 +192,7 @@ func (p *Parser) readResources(dir string, recursive bool) ([]*resource.Info, er
 		return nil, err
 	}
 	if len(visitors) > 0 {
-		s, err := p.factory.Validator(p.validate)
+		s, err := p.factory.Validator(p.opts.Validate)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get schema")
 		}
@@ -289,7 +269,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	}
 
 	visitors := []ast.CheckingVisitor{
-		validation.NewInputValidator(toAllowedGVKs(syncs), clusters, selectors, p.vet),
+		validation.NewInputValidator(toAllowedGVKs(syncs), clusters, selectors, p.opts.Vet),
 		transform.NewPathAnnotationVisitor(),
 		scopeValidator,
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
@@ -312,7 +292,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 		}
 	}
 
-	outputVisitor := backend.NewOutputVisitor(syncs, p.genericResources)
+	outputVisitor := backend.NewOutputVisitor(syncs, p.opts.GenericResources)
 	fsCtx.Accept(outputVisitor)
 	policies := outputVisitor.AllPolicies()
 
@@ -435,7 +415,7 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 // - Reserved Namespaces
 // - Syncs
 func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) ([]*v1alpha1.Sync, error) {
-	validator, err := p.factory.Validator(p.validate)
+	validator, err := p.factory.Validator(p.opts.Validate)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get schema")
 	}
