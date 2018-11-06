@@ -56,7 +56,7 @@ spec:
             - "--ca-cert=/etc/nomos/secrets/resourcequota-admission-controller/ca/tls.crt"
             - "--v=2"
           ports:
-            - containerPort: 8000
+            - containerPort: 443
               name: https-port
             - containerPort: 8675
               name: metrics-port

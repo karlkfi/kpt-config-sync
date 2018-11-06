@@ -29,6 +29,6 @@ COPY resourcequota-admission-controller resourcequota-admission-controller
 COPY syncer syncer
 
 # Required by admission controllers.
-EXPOSE 8000
+EXPOSE 443
 
 CMD echo -e "Need to specify a Nomos binary:\n\n$(ls .)" && exit 1
