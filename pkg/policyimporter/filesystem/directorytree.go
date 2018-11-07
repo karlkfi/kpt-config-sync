@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
 )
@@ -50,8 +51,9 @@ func (t *DirectoryTree) SetRootDir(p string, typ ast.TreeNodeType) *ast.TreeNode
 	}
 	t.rootParent = filepath.Dir(p)
 	t.root = &ast.TreeNode{
-		Path: path.Base(filepath.ToSlash(p)),
-		Type: typ,
+		Path:      path.Base(filepath.ToSlash(p)),
+		Type:      typ,
+		Selectors: map[string]*v1alpha1.NamespaceSelector{},
 	}
 	t.nodes[t.root.Path] = t.root
 	return t.root
@@ -69,8 +71,9 @@ func (t *DirectoryTree) AddDir(p string, typ ast.TreeNodeType) *ast.TreeNode {
 		panic(fmt.Sprintf("programmer error, should not be non-relative path here: %s", err))
 	}
 	n := &ast.TreeNode{
-		Path: filepath.ToSlash(relPath),
-		Type: typ,
+		Path:      filepath.ToSlash(relPath),
+		Type:      typ,
+		Selectors: map[string]*v1alpha1.NamespaceSelector{},
 	}
 	t.nodes[relPath] = n
 	return n

@@ -19,11 +19,9 @@ limitations under the License.
 package filesystem
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 
 	"github.com/blang/semver"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
@@ -41,15 +39,24 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
+	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource"
 	kubevalidation "k8s.io/kubernetes/pkg/kubectl/validation"
 )
+
+func init() {
+	// Add Nomos and Bespin types to the Scheme used by util.AsDefaultVersionedOrOriginal for
+	// converting Unstructured to specific types.
+	runtime.Must(v1.AddToScheme(legacyscheme.Scheme))
+	runtime.Must(v1alpha1.AddToScheme(legacyscheme.Scheme))
+	runtime.Must(clusterregistry.AddToScheme(legacyscheme.Scheme))
+}
 
 // Parser reads files on disk and builds Nomos CRDs.
 type Parser struct {
@@ -371,12 +378,10 @@ func (p *Parser) processNamespacesDir(
 	}
 
 	for _, i := range infos {
-		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
-		switch o.GetObjectKind().GroupVersionKind() {
-		case v1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector"):
-			if err := parseNamespaceSelector(o, treeNode, i.Source); err != nil {
-				return err
-			}
+		obj := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
+		switch o := obj.(type) {
+		case *v1alpha1.NamespaceSelector:
+			treeNode.Selectors[o.Name] = o
 		default:
 			treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
 		}
@@ -440,28 +445,35 @@ func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) ([]*v1alpha1.Syn
 	v := newValidator()
 	var syncs []*v1alpha1.Sync
 	for _, i := range fileInfos {
-		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
+		obj := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
 
 		// Types in scope then alphabetical order.
-		// TODO(sbochins): can just do this by type (not gvk) like we do elsewhere, since they are all registered in the scheme.
-		switch gvk := o.GetObjectKind().GroupVersionKind(); gvk {
-		case v1alpha1.SchemeGroupVersion.WithKind("Repo"):
-			fsCtx.Repo, err = parseRepo(o, i.Source)
-			if err != nil {
-				v.err = errors.Wrapf(err, "failed to parse Repo in %s", i.Source)
+		switch o := obj.(type) {
+		case *v1alpha1.Repo:
+			if _, err := semver.Parse(o.Spec.Version); err != nil {
+				return nil, errors.Wrapf(err, "invalid semantic version %s. "+
+					"Repo.Spec.Version must follow semantic versioning rules at http://semver.org",
+					o.Spec.Version)
 			}
-		case corev1.SchemeGroupVersion.WithKind("ConfigMap"):
-			cm := o.(*corev1.ConfigMap)
-			if cm.Name == v1alpha1.ReservedNamespacesConfigMapName {
-				fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *cm}
-			} else {
-				v.err = errors.Errorf("invalid configmap in system dir %#v", o)
+			fsCtx.Repo = o
+
+		case *corev1.ConfigMap:
+			if o.Name != v1alpha1.ReservedNamespacesConfigMapName {
+				return nil, errors.Errorf("invalid configmap in system dir %#v", o)
 			}
-		case v1alpha1.SchemeGroupVersion.WithKind("Sync"):
-			var sync *v1alpha1.Sync
-			if sync, err = parseSync(i.Object, i.Source); err != nil {
-				return nil, errors.Wrapf(err, "failed to parse Sync in %s", i.Source)
+			fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
+		case *v1alpha1.Sync:
+			sync := o
+			// We only support one version at the moment.
+			for _, group := range sync.Spec.Groups {
+				for _, kind := range group.Kinds {
+					if len(kind.Versions) > 1 {
+						return nil, errors.Errorf("Sync declaration %s in file %s contains multiple "+
+							"versions. Syncs must declare exactly one version.", sync.Name, i.Source)
+					}
+				}
 			}
+			// Disallow Sync for namespace type.
 			for _, sg := range sync.Spec.Groups {
 				for _, k := range sg.Kinds {
 					if k.Kind == "Namespace" && sg.Group == "" {
@@ -493,23 +505,12 @@ func (p *Parser) processClusterRegistryDir(dirname string, infos []*resource.Inf
 	var crc []clusterregistry.Cluster
 	var css []v1alpha1.ClusterSelector
 	for _, i := range infos {
-		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
-		// Cluster and ClusterSelector types are allowed in this directory, and
-		// nothing else.
-		gvk := o.GetObjectKind().GroupVersionKind()
-		switch gvk {
-		case v1alpha1.SchemeGroupVersion.WithKind("ClusterSelector"):
-			var cs v1alpha1.ClusterSelector
-			if err := convertUnstructured(o, &cs, i.Source); err != nil {
-				return nil, nil, err
-			}
-			css = append(css, cs)
-		case clusterregistry.SchemeGroupVersion.WithKind("Cluster"):
-			var c clusterregistry.Cluster
-			if err := convertUnstructured(o, &c, i.Source); err != nil {
-				return nil, nil, err
-			}
-			crc = append(crc, c)
+		obj := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
+		switch o := obj.(type) {
+		case *v1alpha1.ClusterSelector:
+			css = append(css, *o)
+		case *clusterregistry.Cluster:
+			crc = append(crc, *o)
 		default:
 			// No other objects are allowed in the clusterregistry directory.
 			v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
@@ -571,72 +572,4 @@ func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {
 		}
 	}
 	return nil
-}
-
-// parseNamespaceSelector converts adds a NamespaceSelector into the provided
-// node.  o must be known to be a NamespaceSelector.  source is the source file
-// the object was read from, for error diagnostics only and may be set to "" if
-// unknown.
-func parseNamespaceSelector(o runtime.Object, node *ast.TreeNode, source string) error {
-	ns := &v1alpha1.NamespaceSelector{}
-	if err := convertUnstructured(o, ns, source); err != nil {
-		return err
-	}
-
-	if node.Selectors == nil {
-		node.Selectors = make(map[string]*v1alpha1.NamespaceSelector)
-	}
-	node.Selectors[ns.Name] = ns
-	return nil
-}
-
-// convertUnstructured converts a runtime.Unstructured to a specifc type.  The hope is that we can
-// eventually replace the call to json.Marshal/Unmarshal with some form of officially supported
-// APIMachinery code.
-func convertUnstructured(o runtime.Object, want interface{}, source string) error {
-	wantKind := reflect.TypeOf(want).Elem().Kind().String()
-	j, err := json.Marshal(o)
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal object in %s to %s", source, wantKind)
-	}
-	err = json.Unmarshal(j, want)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal %s", wantKind)
-	}
-	return nil
-}
-
-// parseRepo parses out a Repo object from o, which must be a Repo object.
-// source is the source file the object was read from.
-func parseRepo(o runtime.Object, source string) (*v1alpha1.Repo, error) {
-	repo := &v1alpha1.Repo{}
-	if err := convertUnstructured(o, repo, source); err != nil {
-		return nil, err
-	}
-
-	if _, err := semver.Parse(repo.Spec.Version); err != nil {
-		return nil, errors.Wrapf(err, "invalid semantic version %s. "+
-			"Repo.Spec.Version must follow semantic versioning rules at http://semver.org",
-			repo.Spec.Version)
-	}
-
-	return repo, nil
-}
-
-// parseSync parses a v1alpha1.Sync from o, which must be a Sync object.
-// source is the source file the object was read from.
-func parseSync(o runtime.Object, source string) (*v1alpha1.Sync, error) {
-	sync := &v1alpha1.Sync{}
-	if err := convertUnstructured(o, sync, source); err != nil {
-		return nil, err
-	}
-	for _, group := range sync.Spec.Groups {
-		for _, kind := range group.Kinds {
-			if len(kind.Versions) > 1 {
-				return nil, errors.Errorf("Sync declaration %s in file %s contains multiple "+
-					"versions. Syncs must declare exactly one version.", o.(metav1.Object).GetName(), source)
-			}
-		}
-	}
-	return sync, nil
 }

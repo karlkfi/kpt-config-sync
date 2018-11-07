@@ -21,6 +21,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 
@@ -70,7 +71,11 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 		inputs: []directoryTreeInput{
 			{path: "/a/b/c"},
 		},
-		expect: &ast.TreeNode{Path: "c", Type: ast.AbstractNamespace},
+		expect: &ast.TreeNode{
+			Path:      "c",
+			Type:      ast.AbstractNamespace,
+			Selectors: map[string]*v1alpha1.NamespaceSelector{},
+		},
 	},
 	{
 		name: "small tree",
@@ -80,16 +85,19 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 			{path: "/a/b/c/d"},
 		},
 		expect: &ast.TreeNode{
-			Path: "c",
-			Type: ast.AbstractNamespace,
+			Path:      "c",
+			Type:      ast.AbstractNamespace,
+			Selectors: map[string]*v1alpha1.NamespaceSelector{},
 			Children: []*ast.TreeNode{
-				&ast.TreeNode{
-					Path: "c/d",
-					Type: ast.AbstractNamespace,
+				{
+					Path:      "c/d",
+					Type:      ast.AbstractNamespace,
+					Selectors: map[string]*v1alpha1.NamespaceSelector{},
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
-							Path: "c/d/e",
-							Type: ast.Namespace,
+						{
+							Path:      "c/d/e",
+							Type:      ast.Namespace,
+							Selectors: map[string]*v1alpha1.NamespaceSelector{},
 						},
 					},
 				},
