@@ -55,16 +55,25 @@ type MultiError struct {
 
 // Error implements error
 func (m *MultiError) Error() string {
-	allErrors := []string{
-		fmt.Sprintf("%d error(s)\n", len(m.errs)),
-	}
 
 	// sort errors alphabetically by their message.
 	sort.Slice(m.errs, func(i, j int) bool {
 		return m.errs[i].Error() < m.errs[j].Error()
 	})
 
+	// Since errors are sorted by message we can eliminate duplicates by comparing the current
+	// error message with the previous.
+	var uniqueErrors = make([]error, 0)
 	for idx, err := range m.errs {
+		if idx == 0 || m.errs[idx-1].Error() != err.Error() {
+			uniqueErrors = append(uniqueErrors, err)
+		}
+	}
+
+	allErrors := []string{
+		fmt.Sprintf("%d error(s)\n", len(uniqueErrors)),
+	}
+	for idx, err := range uniqueErrors {
 		allErrors = append(allErrors, fmt.Sprintf("[%d] %v\n", idx+1, err))
 	}
 	return strings.Join(allErrors, "\n")

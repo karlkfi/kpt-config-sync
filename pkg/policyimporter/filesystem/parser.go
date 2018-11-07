@@ -126,7 +126,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	}
 
 	clusterDir := filepath.Join(root, repo.ClusterDir)
-	clusterInfos, err := p.readResources(clusterDir, false)
+	clusterInfos, err := p.readResources(clusterDir, true)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +242,6 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	syncs []*v1alpha1.Sync) (*v1.AllPolicies, error) {
 	namespaceDirs := make(map[string]bool)
 
-	treeGenerator := NewDirectoryTree()
 	if err := p.processClusterDir(clusterDir, clusterInfos, fsCtx); err != nil {
 		return nil, errors.Wrapf(err, "cluster directory is invalid: %s", clusterDir)
 	}
@@ -256,6 +255,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	}
 	sel.SetClusterSelector(cs, fsCtx)
 
+	treeGenerator := NewDirectoryTree()
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]
 		infos := dirInfos[rootDir]

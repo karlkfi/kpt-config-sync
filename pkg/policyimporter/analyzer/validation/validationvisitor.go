@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -167,7 +168,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	if len(v.nodes) != 0 {
 		// Namespaces may not have children.
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == ast.Namespace {
-			v.errs.Add(IllegalNamespaceChildDirectoryError{child: n, parent: parent})
+			v.errs.Add(IllegalNamespaceSubdirectoryError{child: n, parent: parent})
 		}
 	}
 	if n.Type == ast.Namespace {
@@ -216,6 +217,11 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	gvk := o.GroupVersionKind()
 	if _, found := v.allowedGVKs[gvk]; !found {
 		v.errs.Add(UnsyncableClusterObjectError{o})
+	}
+	// The cluster/ directory may not have children.
+	if dir := path.Dir(o.Source); dir != repo.ClusterDir {
+		// As implemented, only prints a message if an offending directory defines an object.
+		v.errs.Add(IllegalClusterSubdirectoryError{dir})
 	}
 	v.checkAnnotationsAndLabels(o.FileObject)
 	if v.coverage != nil {

@@ -38,7 +38,7 @@ func code(e error) string {
 		return "1001"
 	case DuplicateDirectoryNameError:
 		return "1002"
-	case IllegalNamespaceChildDirectoryError:
+	case IllegalNamespaceSubdirectoryError:
 		return "1003"
 	case IllegalNamespaceSelectorAnnotationError:
 		return "1004"
@@ -68,6 +68,8 @@ func code(e error) string {
 		return "1016"
 	case MissingRepoError:
 		return "1017"
+	case IllegalClusterSubdirectoryError:
+		return "1018"
 	default:
 		panic(fmt.Sprintf("Unknown Nomosvet Error Type: %T", reflect.TypeOf(e))) // Undefined
 	}
@@ -115,14 +117,14 @@ func (e DuplicateDirectoryNameError) Error() string {
 		first, second)
 }
 
-// IllegalNamespaceChildDirectoryError represents an illegal child directory of a namespace directory.
-type IllegalNamespaceChildDirectoryError struct {
+// IllegalNamespaceSubdirectoryError represents an illegal child directory of a namespace directory.
+type IllegalNamespaceSubdirectoryError struct {
 	child  *ast.TreeNode
 	parent *ast.TreeNode
 }
 
 // Error implements error.
-func (e IllegalNamespaceChildDirectoryError) Error() string {
+func (e IllegalNamespaceSubdirectoryError) Error() string {
 	return format(e,
 		"A %[1]s directory MUST NOT have subdirectories. "+
 			"Restructure %[4]q so that it does not have subdirectory %[2]q:\n\n"+
@@ -286,7 +288,7 @@ type MissingSystemDirectoryError struct{}
 // Error implements error.
 func (e MissingSystemDirectoryError) Error() string {
 	return format(e,
-		"The required %s/ directory is missing.", repo.SystemDir)
+		"Required %s/ directory is missing.", repo.SystemDir)
 }
 
 // EmptySystemDirectoryError reports that the system/ directory is empty.
@@ -295,7 +297,7 @@ type EmptySystemDirectoryError struct{}
 // Error implements error.
 func (e EmptySystemDirectoryError) Error() string {
 	return format(e,
-		"The %s/ directory must have at least one file, defining a Repo object.", repo.SystemDir)
+		"%s/ directory must have at least one file, defining a Repo object.", repo.SystemDir)
 }
 
 // MissingRepoError reports that there is no Repo definition in system/
@@ -304,5 +306,16 @@ type MissingRepoError struct{}
 // Error implements error
 func (e MissingRepoError) Error() string {
 	return format(e,
-		"The %s/ directory must define an object of type Repo.", repo.SystemDir)
+		"%s/ directory must define an object of type Repo.", repo.SystemDir)
+}
+
+// IllegalClusterSubdirectoryError reports that the cluster/ directory has an illegal subdirectory.
+type IllegalClusterSubdirectoryError struct {
+	subdirectory string
+}
+
+// Error implements error
+func (e IllegalClusterSubdirectoryError) Error() string {
+	return format(e,
+		"%s/ directory MUST NOT have subdirectories.\n\npath: %[2]s", repo.ClusterDir, e.subdirectory)
 }
