@@ -1,0 +1,8 @@
+kind: Cluster
+apiVersion: clusterregistry.k8s.io/v1alpha1
+metadata:
+  # This cluster name is fixed in the test fixture.
+  name: test-cluster
+  labels:
+    environment: prod
+
