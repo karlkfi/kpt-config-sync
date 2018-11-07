@@ -1,15 +1,15 @@
 # ClusterSelectors
 
 In the [Overview](git_overview.md) section, we described how the resources
-specified in the `namespaces/` and `cluster/` directories get distributed to
-all enrolled clusters.  This provides a way to address any Kubernetes resource
-to an entire fleet of clusters.  Sometimes it is necessary to address
-Kubernetes resources to specific clusters only.  This can be achieved using
+specified in the `namespaces/` and `cluster/` directories get distributed to all
+enrolled clusters. This provides a way to address any Kubernetes resource to an
+entire fleet of clusters. Sometimes it is necessary to address Kubernetes
+resources to specific clusters only. This can be achieved using
 `ClusterSelectors`.
 
-Let's take a look at a `foo-corp` example that uses this option.  The example
-is similar to the one used for [NamespaceSelectors](git_namespaceselectors.md).
-A new directory is introduced, called `clusterregistry/`.
+Let's take a look at a `foo-corp` example that uses this option. The example is
+similar to the one used for [NamespaceSelectors](git_namespaceselectors.md). A
+new directory is introduced, called `clusterregistry/`.
 
 ```console
 foo-corp
@@ -55,7 +55,7 @@ steps:
 ##### 1. At install time, give Nomos-wide names to your clusters
 
 To use `ClusterSelectors`, clusters must be named at
-[installation](installation.md) time.  These names become Nomos-wide cluster
+[installation](installation.md) time. These names become Nomos-wide cluster
 names.
 
 ```yaml
@@ -101,7 +101,7 @@ metadata:
 
 ##### 3. Group your clusters using `ClusterSelector`
 
-Clusters are grouped so they can be treated as a unit.  Each `ClusterSelector`
+Clusters are grouped so they can be treated as a unit. Each `ClusterSelector`
 may match zero or more clusters.
 
 ```console
@@ -133,7 +133,6 @@ spec:
     matchLabels:
       environment: dev
 ```
-
 
 ##### 4. Annotate the object that you want to target with the selector
 
@@ -202,4 +201,3 @@ spec:
   volumes:
   - '*'
 ```
-

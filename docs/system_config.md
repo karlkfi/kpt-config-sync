@@ -1,5 +1,10 @@
 # GKE Policy Management System Configuration
 
+## Overview
+
+The System directory contains resources used to configure the GKE Policy
+Management system.
+
 ## Repo
 
 Exactly one Repo resource must be declared in the system directory.
@@ -29,6 +34,17 @@ a Kubernetes cluster. Sync is configured by placing a Sync resource in the
 **system** directory. The following example configures syncing RBAC types with
 "inherit" mode (addressed later) for RoleBindings.
 
+When syncing resources from Git and comparing them with the current cluster, we
+need some criteria to determine if a resource in Git matches what is on the
+cluster. The way we do this is by checking if the labels and annotations match
+and if the contents of a set of field(s) in the resources match. The set of
+field(s) to compare against can be set by the user and are defined in Sync
+resources. By default, comparison is done against the `spec` field, which most
+resource have
+[by convention](https://github.com/eBay/Kubernetes/blob/master/docs/devel/api-conventions.md#spec-and-status).
+Since the RBAC resources specified below do not have `spec` fields, we are
+specifying the relevant comparison fields below.
+
 ```console
 $ cat system/rbac-sync.yaml
 ```
@@ -45,19 +61,29 @@ spec:
     - kind: ClusterRole
       versions:
       - version: v1
+        compareFields:
+        - rules
     - kind: ClusterRoleBinding
       versions:
       - version: v1
+        compareFields:
+        - subjects
+        - roleRef
     - kind: Role
       versions:
       - version: v1
+        compareFields:
+        - rules
     - kind: RoleBinding
       mode: inherit
       versions:
       - version: v1
+        compareFields:
+        - subjects
+        - roleRef
 ```
 
-ResourceQuota has special handling (as described below), however, the Sync
+ResourceQuota has special handling (as described below). However, the Sync
 configuration is not affected by this. The following shows an example of
 configuring sync on ResourceQuota.
 
@@ -89,8 +115,8 @@ following these properties:
 
 1.  An "inherit" mode policy specified in a Abstract Namespace directory is
     inherited by all descendant namespaces
-1.  An "inherit" mode policy can be specified in a namespace (Existing K8S
-    behavior)
+1.  An "inherit" mode policy can be specified in a Namespace directory (Existing
+    K8S behavior)
 
 For example, we can set the Sync mode for RoleBinding to inherit and create a
 RoleBinding in the `shipping-app-backend` Abstract Namespace such that anyone
@@ -137,13 +163,84 @@ rolebindings subject to
 [privilege escalation prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping)
 in Kubernetes.
 
+#### Custom Resources
+
+GKE Policy Management does not handle syncing
+[CustomResourceDefinitions (CRDS)](https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/).
+However, it does handle syncing the corresponding Custom Resources. This means
+that the CRDs themselves need to be added to the cluster out of band. Deleting a
+CRD will also delete all the Custom Resources on the cluster and GKE Policy
+Management never deletes resources that it does not explicitly manage.
+
+So we first need to add the CRD to the cluster.
+
+```console
+$ cat <<EOF | kubectl apply -f -
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: bar.foo-corp.com
+spec:
+  group: foo-corp.com
+  version: v1
+  scope: Namespaced
+  names:
+    plural: bars
+    singular: bar
+    kind: Bar
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          type: object
+          required:
+          - bar
+          properties:
+            bar:
+              type: string
+EOF
+```
+
+Then we add a corresponding Sync in the system directory.
+
+```console
+$ cat <<EOF > system/bar-sync.yaml
+kind: Sync
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: bars
+spec:
+  groups:
+  - group: foo-corp.com
+    kinds:
+    - kind: Bar
+      versions:
+      - version: v1
+EOF
+```
+
+Since this is a namespaced-scoped resource, we add resources to a directory
+under the Namespace directory. If it were cluster scoped, we would just add the
+resources to the clusters directory.
+
+```console
+$ cat <<EOF > namespaces/online/shipping-app-backend/shipping-dev/bar.yaml
+apiVersion: foo-corp.com/v1
+kind: Bar
+metadata:
+  name: example-bar
+spec:
+  bar: baz
+EOF
+```
+
 ## Reserved Namespaces
 
 See [Managing Existing Clusters](git_namespaces.md).
 
 Reserved namespaces are namespaces that GKE Policy Management will not manage.
 This is here to indicates to GKE Policy Management should not allow another
-namespace of the same name to be created via a namespace directory as well as
+namespace of the same name to be created via a Namespace directory as well as
 suppresses alerts of an unknown namespace.
 
 A ConfigMap defined in the root named "nomos-reserved-namespaces" defines the

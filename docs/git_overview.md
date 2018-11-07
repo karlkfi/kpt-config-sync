@@ -1,8 +1,8 @@
 # Overview
 
 GKE Policy Management supports using Git to centrally manage Namespaces and
-policies across Kubernetes clusters. This *Policy as Code* approach ensures
-policy configurations are:
+Kubernetes resources across Kubernetes clusters. This *Policy as Code* approach
+ensures policy configurations are:
 
 *   __Immutable:__ A Git commit is an exact declaration of the desired state of
     policies.
@@ -110,7 +110,7 @@ In foo-corp, our hierarchy looks like this:
 By modeling the hierarchy like this, we enable the Shipping App Backend team to
 manage three different namespaces while only have to maintain one authorization
 policy for team members. Each of their namespaces is isolated by environment,
-allowing identically-named objects in the three envionments' instantiations of
+allowing identically-named objects in the three environments' instantiations of
 the backend stack, as well as providing tighter security, e.g. allowing one
 namespace to have additional authorized users but not the others, and allocating
 private quota to each namespace.
@@ -131,7 +131,7 @@ during [validation](git_validation.md):
     [DNS Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md)).
     In addition a name MUST NOT be `default`, `nomos-system`, or have `kube-`
     prefix. This topic is discussed in depth in the
-    [namespaces user guide](git_namespaces.md).
+    [Managing Existing Clusters](git_namespaces.md).
 1.  All directory names MUST be unique in the hierarchy.
 
 ### cluster/
@@ -160,17 +160,17 @@ optional ConfigMap (core v1) that contains the reserved namespace mapping. See
 ### Creation
 
 When a valid namespace hierarchy is committed to Git and synced, GKE Policy
-Management controllers automatically creates namespaces and corresponding policy
-resources to enforce hierarchical policy. In the foo-corp example, GKE Policy
-Management automatically creates `audit`, `shipping-dev`, `shipping-staging`,
-and `shipping-prod` namespaces. We discuss specific policy types and their
-enforcement in later sections.
+Management controllers automatically create namespaces and corresponding
+Kubernetes resources to enforce hierarchical resource syncing. In the foo-corp
+example, GKE Policy Management automatically creates `audit`, `shipping-dev`,
+`shipping-staging` and `shipping-prod` namespaces.
 
 Note that when using Git as source of truth, it is up to the repo owners to set
 proper access control mechanism (e.g. using OWNERS or CODEOWNER files) to ensure
-right people can approve/review/commit policy changes. It is recommended to use
-a hierarchical access control mechanism such as OWNERS file in order to delegate
-policy changes instead of requiring a central authority to approve all changes.
+right people can approve/review/commit Kubernetes resource changes. It is
+recommended to use a hierarchical access control mechanism such as OWNERS file
+in order to delegate Kubernetes resource changes instead of requiring a central
+authority to approve all changes.
 
 ### Deletion
 
@@ -189,7 +189,8 @@ Renaming an Abstract Namespace directory has no externally visible effect.
 
 ### Move
 
-Moving a Namespace or an Abstract Namespace directory can lead to policy changes
-in namespaces, but does not delete a namespace or workload resources.
+Moving a Namespace or an Abstract Namespace directory can lead to operations on
+Kubernetes resource in namespaces, but does not delete a namespace or workload
+resources.
 
 [1]: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/

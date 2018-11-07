@@ -1,8 +1,12 @@
 # Installing GKE Policy Management (Operator Install)
 
-The Nomos Operator is a controller that manages an installation of GKE Policy Management in a Kubernetes cluster. It consumes a Custom Resource Definition (CRD) called Nomos, which specifies the paramaters of an installation of GKE Policy Management.
+The Nomos Operator is a controller that manages an installation of GKE Policy
+Management in a Kubernetes cluster. It consumes a Custom Resource Definition
+(CRD) called Nomos, which specifies the paramaters of an installation of GKE
+Policy Management.
 
-Follow these instructions to install GKE Policy Management into your cluster using the Nomos Operator.
+Follow these instructions to install GKE Policy Management into your cluster
+using the Nomos Operator.
 
 This setup takes about 30 minutes.
 
@@ -65,6 +69,7 @@ and make sure to select version 1.9+ when creating the cluster.
 ## Installing
 
 ### Create Cluster-Admin ClusterRoleBinding
+
 Ensure that the current user has cluster-admin in the cluster
 
 ```$bash
@@ -72,6 +77,7 @@ $ kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-
 ```
 
 ### Download Operator Manifest Bundle
+
 Download the operator bundle directly to your machine
 
 ```$bash
@@ -79,30 +85,31 @@ $ curl -LO https://storage.googleapis.com/nomos-release/operator-latest/nomos-op
 ```
 
 ### Deploy the Operator
-Apply the operator bundle in order to create the Nomos Operator and nomos-system namespace into your cluster.
+
+Apply the operator bundle in order to create the Nomos Operator and nomos-system
+namespace into your cluster.
 
 ```$bash
 $ kubectl apply -f nomos-operator.yaml
 ```
 
-You can verify that the Nomos Operator was deployed correctly
-```$bash
-$ kubectl -n kube-system get pods | grep nomos
-nomos-operator-6f988f5fdd-4r7tr       1/1       Running   0          26s
-```
+You can verify that the Nomos Operator was deployed correctly `$bash $ kubectl
+-n kube-system get pods | grep nomos nomos-operator-6f988f5fdd-4r7tr 1/1 Running
+0 26s`
 
-and that the nomos-system namespace was created
-```$bash
-$ kubectl get ns | grep nomos
-nomos-system   Active    1m
-```
+and that the nomos-system namespace was created `$bash $ kubectl get ns | grep
+nomos nomos-system Active 1m`
 
 ### Prepare Nomos Resource and Secret File
-Follow the [Operator Config Guide](nomos_config.md) to write a Nomos resource specifying the parameters of your desired installation and create the secret file for your installation.
+
+Follow the [Operator Config Guide](nomos_config.md) to write a Nomos resource
+specifying the parameters of your desired installation and create the secret
+file for your installation.
 
 ### Create the git-creds Secret
 
-Use the same secret you configured in the previous step to create the `git-creds` secret in your cluster.
+Use the same secret you configured in the previous step to create the
+`git-creds` secret in your cluster.
 
 For example, create the ssh secret with:
 
@@ -118,11 +125,13 @@ $ kubectl create secret generic git-creds -n=nomos-system \
     --from-file=cookie-file=~/.gitcookie
 ```
 
-Note that these secrets are deployed into the nomos-system namespace, so it is necessary to have that namespace created before creating the secret
+Note that these secrets are deployed into the nomos-system namespace, so it is
+necessary to have that namespace created before creating the secret
 
 ### Create the Nomos Resource
 
-Use the Nomos Resource yaml you created in the previous step to create the Resource in the cluster.
+Use the Nomos Resource yaml you created in the previous step to create the
+Resource in the cluster.
 
 ```$bash
 kubectl create -f nomos.yaml
@@ -156,7 +165,8 @@ kubectl -n=nomos-system delete nomos --all
 
 The affected components are:
 
-*   Everything inside namespace `nomos-system`, with the exception of the created `git-creds` secret.
+*   Everything inside namespace `nomos-system`, with the exception of the
+    created `git-creds` secret.
 *   Any cluster level roles and role bindings installed by GKE Policy
     Management.
 *   Any admission controller configurations installed by GKE Policy Management.

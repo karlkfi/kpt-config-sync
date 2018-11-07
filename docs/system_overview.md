@@ -17,7 +17,7 @@ implementation which should not be directly consumed by users.
 
 ## CustomResourceDefinitions
 
-GKE Policy Management defines two custom resources:
+GKE Policy Management defines three custom resources:
 
 *   PolicyNode: A resource that stores hierarchical policy information. This
     includes Roles, RoleBindings and ResourceQuota. PolicyNodes form a tree,
@@ -25,13 +25,14 @@ GKE Policy Management defines two custom resources:
 *   ClusterPolicy: A resource that stores cluster-level resources such as
     ClusterRoles and PodSecurityPolicies. There is only one ClusterPolicy per
     cluster.
+*   Sync: A resource that stores the resource types that GKE Policy Management
+    will sync from the source of truth.
 
 ## Syncer
 
 A set of controllers (currently packaged as a single binary) that consume the
 canonical representation of the hierarchy produced by PolicyImporter and perform
-CRUD on namespaces and native K8S policy resources such as Role/Rolebinding,
-ResourceQuota, etc.
+CRUD on namespaces and [sync-enabled](system_config.md#Sync) resources.
 
 ## ResourceQuotaAdmissionController
 
