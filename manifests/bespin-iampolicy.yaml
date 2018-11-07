@@ -31,12 +31,12 @@ spec:
                 #properties:
                   #members:
                     #items:
-                      #pattern: ^(user|serviceAccount|group|domain):.+$
+                      #pattern: ^((user|serviceAccount|group|domain):.+)|allAuthenticatedUsers|allUsers$
                       #type: string
-                    #pattern: ^(user|serviceAccount|group|domain):.+$
+                    #pattern: ^((user|serviceAccount|group|domain):.+)|allAuthenticatedUsers|allUsers$
                     #type: array
                   #role:
-                    #pattern: ^roles/[\w\.]+$
+                    #pattern: (^roles|^(projects|organizations)/.+/roles)/[\w\.]+$
                     #type: string
                 #required:
                 #- members

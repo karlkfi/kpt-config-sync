@@ -57,9 +57,15 @@ type ResourceReference struct {
 
 // IAMPolicyBinding is the Schema for Bindings in IAMPolicySpec
 type IAMPolicyBinding struct {
-	// +kubebuilder:validation:Pattern=^(user|serviceAccount|group|domain):.+$
+	// The validation pattern is based on https://cloud.google.com/iam/reference/rest/v1/Binding
+	// +kubebuilder:validation:Pattern=^((user|serviceAccount|group|domain):.+)|allAuthenticatedUsers|allUsers$
 	Members []string `json:"members"`
-	// +kubebuilder:validation:Pattern=^roles/[\w\.]+$
+	// The validation pattern is based on https://cloud.google.com/iam/reference/rest/v1/Binding
+	// Usually role looks like e.g. "roles/viewer", "roles/editor", or "roles/owner" etc.
+	// For custom role however, it supports project and organization level roles, see
+	// https://cloud.google.com/iam/docs/creating-custom-roles,
+	// e.g. "projects/project_id/roles/viewer" and "organizations/organization_id/roles/editor".
+	// +kubebuilder:validation:Pattern=(^roles|^(projects|organizations)/.+/roles)/[\w\.]+$
 	Role string `json:"role"`
 }
 
