@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy"
@@ -74,7 +75,7 @@ func code(e error) string {
 
 // withPrefix formats the start of error messages consistently.
 func format(err error, format string, a ...interface{}) string {
-	return fmt.Sprintf("Nomosvet Error KNV%s: ", code(err)) + fmt.Sprintf(format, a...)
+	return fmt.Sprintf("KNV%s: ", code(err)) + fmt.Sprintf(format, a...)
 }
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.
@@ -86,7 +87,7 @@ type ReservedDirectoryNameError struct {
 func (e ReservedDirectoryNameError) Error() string {
 	return format(e,
 		"Directories MUST NOT have reserved namespace names. "+
-			"Rename or remove directory %[1]q from %[4]s/%[3]s:\n"+
+			"Rename or remove directory %[1]q from %[4]s/%[3]s:\n\n"+
 			"%[2]s",
 		e.Name(), e.TreeNode, v1alpha1.ReservedNamespacesConfigMapName, repo.SystemDir)
 }
@@ -99,12 +100,19 @@ type DuplicateDirectoryNameError struct {
 
 // Error implements error.
 func (e DuplicateDirectoryNameError) Error() string {
+	// Ensure deterministic node printing order for n = 2
+	// For n >= 3, we can't be sure the canonical "first" directory will be one of the two presented
+	// to the user. So we can't guarantee determinism for n >= 3.
+	var first, second = e.this, e.other
+	if first.Path > second.Path {
+		first, second = e.other, e.this
+	}
 	return format(e,
 		"Directory names MUST be unique. "+
-			"Rename one of these two directories:\n"+
+			"Rename one of these two directories:\n\n"+
 			"%[1]s\n\n"+
 			"%[2]s",
-		e.this, e.other)
+		first, second)
 }
 
 // IllegalNamespaceChildDirectoryError represents an illegal child directory of a namespace directory.
@@ -116,8 +124,8 @@ type IllegalNamespaceChildDirectoryError struct {
 // Error implements error.
 func (e IllegalNamespaceChildDirectoryError) Error() string {
 	return format(e,
-		"A %[1]s directory MUST NOT have children. "+
-			"Restructure %[4]s so that it does not have child %[2]q:\n"+
+		"A %[1]s directory MUST NOT have subdirectories. "+
+			"Restructure %[4]q so that it does not have subdirectory %[2]q:\n\n"+
 			"%[3]s",
 		ast.Namespace, e.child.Name(), e.child, e.parent.Name())
 }
@@ -131,7 +139,7 @@ type IllegalNamespaceSelectorAnnotationError struct {
 func (e IllegalNamespaceSelectorAnnotationError) Error() string {
 	return format(e,
 		"A %[3]s MUST NOT use the annotation %[2]s. "+
-			"Remove metadata.annotations.%[2]s from:\n"+
+			"Remove metadata.annotations.%[2]s from:\n\n"+
 			"%[1]s",
 		e.TreeNode, v1alpha1.NamespaceSelectorAnnotationKey, ast.Namespace)
 }
@@ -144,10 +152,10 @@ type UnsyncableClusterObjectError struct {
 // Error implements error.
 func (e UnsyncableClusterObjectError) Error() string {
 	return format(e,
-		"Object %[4]q defined in %[1]s/ is not syncable. "+
-			"Enable sync for objects of kind %[2]s.\n"+
-			"%[3]s",
-		repo.ClusterDir, e.GroupVersionKind(), e.FileObject, e.Name())
+		"Unable to sync cluster object %[2]q. "+
+			"Enable sync for this object's kind.\n\n"+
+			"%[1]s",
+		e.FileObject, e.Name())
 }
 
 // UnsyncableNamespaceObjectError represents an illegal usage of a namespace object kind which has not been explicitly declared.
@@ -158,10 +166,10 @@ type UnsyncableNamespaceObjectError struct {
 // Error implements error.
 func (e UnsyncableNamespaceObjectError) Error() string {
 	return format(e,
-		"Object %[4]q is not syncable. "+
-			"Enable sync for objects of kind %[2]s.\n"+
-			"%[3]s",
-		repo.ClusterDir, e.GroupVersionKind(), e.FileObject, e.Name())
+		"Unable to sync namespace object %[2]q. "+
+			"Enable sync for this object's kind.\n\n"+
+			"%[1]s",
+		e.FileObject, e.Name())
 }
 
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
@@ -172,10 +180,10 @@ type IllegalAbstractNamespaceObjectKindError struct {
 // Error implements error.
 func (e IllegalAbstractNamespaceObjectKindError) Error() string {
 	return format(e,
-		"Objects of kind %[1]s MUST NOT be delcared in %[2]s directories. \n"+
-			"Move object %[5]q to a %[3]s directory:\n"+
-			"%[4]s",
-		e.GroupVersionKind(), ast.AbstractNamespace, ast.Namespace, e.FileObject, e.Name())
+		"Object %[4]q illegally declared in an %[1]s directory. "+
+			"Move this object to a %[2]s directory:\n\n"+
+			"%[3]s",
+		ast.AbstractNamespace, ast.Namespace, e.FileObject, e.Name())
 }
 
 // ConflictingResourceQuotaError represents multiple ResourceQuotas illegally presiding in the same directory.
@@ -187,7 +195,7 @@ type ConflictingResourceQuotaError struct {
 func (e ConflictingResourceQuotaError) Error() string {
 	return format(e,
 		"A directory MUST NOT contain more than one ResourceQuota object. "+
-			"Directory %[1]q contains multiple ResourceQuota object definitions, including:\n"+
+			"Directory %[1]q contains multiple ResourceQuota objects, including:\n\n"+
 			"%[2]s",
 		path.Dir(e.Source), e.FileObject)
 }
@@ -202,7 +210,7 @@ func (e IllegalNamespaceDeclarationError) Error() string {
 	// TODO(willbeason): Error unused until b/118715158
 	return format(e,
 		"Objects MUST NOT delcare metadata.namespace. "+
-			"Object %[2]q declares metadata.namespace:\n"+
+			"Object %[2]q declares metadata.namespace:\n\n"+
 			"%[1]s",
 		e.FileObject, e.Name())
 }
@@ -215,10 +223,11 @@ type IllegalAnnotationDefinitionError struct {
 
 // Error implements error.
 func (e IllegalAnnotationDefinitionError) Error() string {
+	sort.Strings(e.annotations) // ensure deterministic annotation order
 	a := strings.Join(e.annotations, ", ")
 	return format(e,
 		"Objects MUST NOT define unsupported annotations starting with %[3]q. "+
-			"Object %[4]q has offending annotations: %[1]s\n%[2]s",
+			"Object %[4]q has offending annotations: %[1]s\n\n%[2]s",
 		a, e.object, policyhierarchy.GroupName, e.object.Name())
 }
 
@@ -230,11 +239,12 @@ type IllegalLabelDefinitionError struct {
 
 // Error implements error.
 func (e IllegalLabelDefinitionError) Error() string {
+	sort.Strings(e.labels) // ensure deterministic label order
 	l := strings.Join(e.labels, ", ")
 	return format(e,
 		"Objects MUST NOT define labels starting with %[3]q. "+
-			"Object %[3]s has these offending labels: %[1]s\n%[2]s",
-		l, e.object, policyhierarchy.GroupName, e.object.Name())
+			"Below object defines these offending labels: %[1]s\n\n%[2]s",
+		l, e.object, policyhierarchy.GroupName)
 }
 
 // NamespaceSelectorMayNotHaveAnnotation reports that a namespace selector has
@@ -256,7 +266,7 @@ type ObjectHasUnknownClusterSelector struct {
 
 // Error implements error.
 func (e ObjectHasUnknownClusterSelector) Error() string {
-	return format(e, "The object %q in namespace %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no defined ClusterSelector", e.o.GetName(), e.o.GetNamespace(), v1alpha1.ClusterSelectorAnnotationKey, e.a)
+	return format(e, "Object %q in namespace %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no defined ClusterSelector", e.o.GetName(), e.o.GetNamespace(), v1alpha1.ClusterSelectorAnnotationKey, e.a)
 }
 
 // InvalidSelector is a validation error.

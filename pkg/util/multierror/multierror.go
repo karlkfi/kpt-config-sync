@@ -19,6 +19,7 @@ package multierror
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -57,6 +58,12 @@ func (m *MultiError) Error() string {
 	allErrors := []string{
 		fmt.Sprintf("%d error(s)\n", len(m.errs)),
 	}
+
+	// sort errors alphabetically by their message.
+	sort.Slice(m.errs, func(i, j int) bool {
+		return m.errs[i].Error() < m.errs[j].Error()
+	})
+
 	for idx, err := range m.errs {
 		allErrors = append(allErrors, fmt.Sprintf("[%d] %v\n", idx+1, err))
 	}
