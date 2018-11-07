@@ -100,11 +100,28 @@ function git::rm() {
 # Usage:
 # git::commit
 #
+# Flags:
+# -m [message] - set a custom commit message instead of the default one
 function git::commit() {
+  local message="commit for test"
+  local args=()
+  while [[ $# -gt 0 ]]; do
+    local arg="${1:-}"
+    shift
+    case $arg in
+      -m)
+        message=${1:-}
+        shift
+        ;;
+      *)
+        args+=("$arg")
+        ;;
+    esac
+  done
   cd "${TEST_REPO}"
 
   echo "git: commit / push"
-  git commit -m "commit for test"
+  git commit -m "${message}"
   git push origin master
 
   cd -
@@ -120,3 +137,4 @@ function git::check_hash() {
   run git -C "${TEST_REPO}" log -n1 --format=%H
   assert::equals "$expected"
 }
+
