@@ -14,11 +14,10 @@ spec:
   user: "alice@example.com"
   git:
     syncRepo: git@github.com:frankfarzan/foo-corp-example.git
-    syncBranch: dev
+    syncBranch: master
     syncWait: 1
     secretType: ssh
     policyDir: foo-corp
-
 ```
 
 `spec` contains a top level field `git`, which is an object with the following properties:
