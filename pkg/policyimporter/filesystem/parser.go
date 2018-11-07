@@ -96,7 +96,7 @@ func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterfa
 // * system/ (may be absent)
 // * cluster/
 // * clusterregistry/ (may be absent)
-// * tree/ (recursively)
+// * namespaces/ (recursively)
 func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	p.root = root
 	fsCtx := &ast.Root{Cluster: &ast.Cluster{}}
