@@ -75,7 +75,7 @@ $ kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-
 Download the operator bundle directly to your machine
 
 ```$bash
-$ curl -LO https://storage.googleapis.com/nomos-release/latest/nomos-operator.yaml
+$ curl -LO https://storage.googleapis.com/nomos-release/operator-latest/nomos-operator.yaml
 ```
 
 ### Deploy the Operator
