@@ -34,6 +34,7 @@ Try it out by following the [Quickstart Guide](docs/quickstart.md).
     *   [Validation](docs/git_validation.md)
     *   [ResourceQuota](docs/rq.md)
     *   [NamespaceSelectors](docs/git_namespaceselectors.md)
+    *   [ClusterSelectors](docs/git_clusterselectors.md)
     *   [Managing Existing Clusters](docs/git_namespaces.md)
     *   [System Guarantees](docs/git_guarantees.md)
 *   Importing from GCP:
