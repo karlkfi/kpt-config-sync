@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM alpine
+FROM k8s.gcr.io/debian-base:0.4.0
 
 # https://github.com/GoogleCloudPlatform/google-cloud-go/issues/791#issuecomment-353689746
-RUN apk --no-cache --update add ca-certificates
+RUN apt-get update && apt-get install -y \
+  ca-certificates
 
 RUN mkdir -p /opt/nomos/bin
 ENV PATH="/opt/nomos/bin:${PATH}"
