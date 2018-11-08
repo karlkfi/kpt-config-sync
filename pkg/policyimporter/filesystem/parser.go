@@ -73,8 +73,6 @@ type ParserOpt struct {
 	Vet bool
 	// Validate will raise validation errors if set.
 	Validate bool
-	// GenericResources turns on support for generic resources if set.
-	GenericResources bool
 }
 
 // NewParser creates a new Parser.
@@ -307,7 +305,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 		}
 	}
 
-	outputVisitor := backend.NewOutputVisitor(syncs, p.opts.GenericResources)
+	outputVisitor := backend.NewOutputVisitor(syncs)
 	fsCtx.Accept(outputVisitor)
 	policies := outputVisitor.AllPolicies()
 

@@ -41,30 +41,27 @@ const (
 // OutputVisitor converts the AST into PolicyNode and ClusterPolicy objects.
 type OutputVisitor struct {
 	*visitor.Base
-	commitHash       string
-	loadTime         time.Time
-	allPolicies      *v1.AllPolicies
-	context          string
-	policyNode       []*v1.PolicyNode
-	syncs            []*v1alpha1.Sync
-	genericResources bool
+	commitHash  string
+	loadTime    time.Time
+	allPolicies *v1.AllPolicies
+	context     string
+	policyNode  []*v1.PolicyNode
+	syncs       []*v1alpha1.Sync
 }
 
 var _ ast.Visitor = &OutputVisitor{}
 
 // NewOutputVisitor creates a new output visitor.
-func NewOutputVisitor(syncs []*v1alpha1.Sync, genericResources bool) *OutputVisitor {
-	v := &OutputVisitor{Base: visitor.NewBase(), syncs: syncs, genericResources: genericResources}
+func NewOutputVisitor(syncs []*v1alpha1.Sync) *OutputVisitor {
+	v := &OutputVisitor{Base: visitor.NewBase(), syncs: syncs}
 	v.SetImpl(v)
 	return v
 }
 
 // AllPolicies returns the AllPolicies object created by the visitor.
 func (v *OutputVisitor) AllPolicies() *v1.AllPolicies {
-	if v.genericResources {
-		for _, s := range v.syncs {
-			s.SetFinalizers(append(s.GetFinalizers(), v1alpha1.SyncFinalizer))
-		}
+	for _, s := range v.syncs {
+		s.SetFinalizers(append(s.GetFinalizers(), v1alpha1.SyncFinalizer))
 	}
 	v.allPolicies.Syncs = mapByName(v.syncs)
 	return v.allPolicies

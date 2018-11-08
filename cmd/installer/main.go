@@ -37,9 +37,6 @@ var (
 	uninstall     = flag.String("uninstall", "", "If set, the supplied clusters will be uninstalled.")
 	useCurrent    = flag.Bool("use_current_context", false, "If set, and if the list of clusters in "+
 		"the install config is empty, use current context to install into.")
-	// TODO(118189026): Remove flag, when unused.
-	genericResourcesSyncer = flag.Bool("generic_resources_syncer", false, "If set, the syncer that "+
-		"syncs generic resources will be used.")
 )
 
 // nolint:deadcode
@@ -97,7 +94,7 @@ func main() {
 		glog.Infof("Uninstall successful!")
 		return
 	}
-	if err := i.Run(*useCurrent, *genericResourcesSyncer); err != nil {
+	if err := i.Run(*useCurrent); err != nil {
 		glog.Exit(errors.Wrapf(err, "installation failed"))
 	}
 	glog.Infof("Install successful!")

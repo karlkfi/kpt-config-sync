@@ -60,11 +60,8 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	// TODO(118189026): Remove flag, when unused.
-	genericResources := os.Getenv("GENERIC_RESOURCES") == "true"
-
 	parser, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, client.Kubernetes().Discovery(),
-		filesystem.ParserOpt{Validate: true, GenericResources: genericResources})
+		filesystem.ParserOpt{Validate: true})
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %v", err)
 	}

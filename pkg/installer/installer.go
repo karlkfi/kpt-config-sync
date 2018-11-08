@@ -148,7 +148,7 @@ func (i *Installer) deployConfigMap(name string, content []string) error {
 	return nil
 }
 
-func (i *Installer) gitConfigMapContent(genericResourcesSyncer bool) []string {
+func (i *Installer) gitConfigMapContent() []string {
 	return []string{
 		fmt.Sprintf("GIT_SYNC_SSH=%v", i.c.Git.UseSSH),
 		fmt.Sprintf("GIT_SYNC_REPO=%v", i.c.Git.SyncRepo),
@@ -157,7 +157,6 @@ func (i *Installer) gitConfigMapContent(genericResourcesSyncer bool) []string {
 		fmt.Sprintf("GIT_KNOWN_HOSTS=%v", i.c.Git.KnownHostsFilename != ""),
 		fmt.Sprintf("GIT_COOKIE_FILE=%v", i.c.Git.CookieFilename != ""),
 		fmt.Sprintf("POLICY_DIR=%v", i.c.Git.RootPolicyDir),
-		fmt.Sprintf("GENERIC_RESOURCES=%t", genericResourcesSyncer),
 	}
 }
 
@@ -272,7 +271,7 @@ func (i *Installer) installNomos(context string) error {
 
 // processCluster installs the necessary files on the currently active cluster.
 // In addition the current cluster context is passed in.
-func (i *Installer) processCluster(cluster string, genericResourcesSyncer bool) error {
+func (i *Installer) processCluster(cluster string) error {
 	var err error
 	glog.V(5).Info("processCluster: enter")
 
@@ -314,7 +313,7 @@ func (i *Installer) processCluster(cluster string, genericResourcesSyncer bool) 
 	if !i.c.Git.Empty() {
 		importerDeployment = gitPolicyImporterDeployment
 		importerConfigMapName = gitPolicyImporterConfigMap
-		importerConfigMapContent = i.gitConfigMapContent(genericResourcesSyncer)
+		importerConfigMapContent = i.gitConfigMapContent()
 		importerSecretName = gitPolicyImporterCreds
 		importerSecretContent = i.gitSecretContent()
 	} else {
@@ -365,7 +364,7 @@ func (i *Installer) processCluster(cluster string, genericResourcesSyncer bool) 
 // Run starts the installer process, and reports error at the process end, if any.
 // if useCurrent is set, and the list of clusters to install is empty, it will
 // use the current context to install.
-func (i *Installer) Run(useCurrent, genericResourcesSyncer bool) error {
+func (i *Installer) Run(useCurrent bool) error {
 	cl, err := kubectl.LocalClusters()
 	defer func() {
 		if err2 := i.k.SetContext(cl.Current); err2 != nil {
@@ -389,7 +388,7 @@ func (i *Installer) Run(useCurrent, genericResourcesSyncer bool) error {
 			return errors.Wrapf(err, "while setting context: %q", cluster)
 		}
 		// The processed cluster is set through the context use.
-		err = i.processCluster(cluster, genericResourcesSyncer)
+		err = i.processCluster(cluster)
 		if err != nil {
 			return errors.Wrapf(err, "while processing cluster: %q", cluster)
 		}

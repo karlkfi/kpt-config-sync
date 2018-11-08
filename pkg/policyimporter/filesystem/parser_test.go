@@ -1543,9 +1543,8 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		discoveryClient: fstesting.NewFakeCachedDiscoveryClient(
 			fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
 		opts: ParserOpt{
-			Vet:              tc.vet,
-			Validate:         true,
-			GenericResources: true,
+			Vet:      tc.vet,
+			Validate: true,
 		},
 		root: d.rootDir,
 	}
@@ -2364,9 +2363,8 @@ func TestEmptyDirectories(t *testing.T) {
 					fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
 				root: d.rootDir,
 				opts: ParserOpt{
-					Vet:              false,
-					Validate:         true,
-					GenericResources: true,
+					Vet:      false,
+					Validate: true,
 				},
 			}
 

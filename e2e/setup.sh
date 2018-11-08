@@ -17,7 +17,6 @@ function install() {
       "${run_installer}" \
         --config="${install_config}" \
         --work_dir="${PWD}" \
-        --generic_resources_syncer="${generic_resources_syncer}"
     )
   fi
 }
@@ -262,7 +261,6 @@ preclean=false
 run_tests=false
 setup=false
 tap=false
-generic_resources_syncer=false
 
 # If set, the tests will skip the installation.
 do_installation=true
@@ -346,10 +344,6 @@ while [[ $# -gt 0 ]]; do
     ;;
     --create-ssh-key)
       create_ssh_key=true
-    ;;
-    # TODO(118189026): Remove flag, when unused.
-    --generic_resources_syncer)
-      generic_resources_syncer=true
     ;;
     *)
       echo "setup.sh: unrecognized arg $arg"
