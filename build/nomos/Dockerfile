@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -p /opt/nomos/bin
 ENV PATH="/opt/nomos/bin:${PATH}"
 WORKDIR /opt/nomos/bin
+
+# Nomos binaries.
 COPY gcp-policy-importer gcp-policy-importer
 COPY git-policy-importer git-policy-importer
 COPY monitor monitor
@@ -28,6 +30,9 @@ COPY nomosvet nomosvet
 COPY policy-admission-controller policy-admission-controller
 COPY resourcequota-admission-controller resourcequota-admission-controller
 COPY syncer syncer
+
+# License file required for on-prem release.
+COPY LICENSE LICENSE
 
 # Required by admission controllers.
 EXPOSE 443
