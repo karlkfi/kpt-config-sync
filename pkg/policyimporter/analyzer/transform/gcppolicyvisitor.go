@@ -1,0 +1,129 @@
+/*
+Copyright 2018 The Nomos Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package transform
+
+import (
+	"fmt"
+
+	"github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+)
+
+// GCPPolicyVisitor is a visitor that handles GCP IAM and organization policies.
+// Specifically, it:
+// * Sets up the reference from GCP policy to their attachment points.
+// * Moves certain policies from namespace scope to cluster scope.
+// Precondition: GCPHierachyVisitor must run before GCPPolicyVisitor, or else
+// the required policy attachment points will be missing.
+type GCPPolicyVisitor struct {
+	*visitor.Copying
+	// For adding cluster scoped policies.
+	cluster *ast.Cluster
+	// Denotes the current TreeNode while visiting object list.
+	currentTreeNode *ast.TreeNode
+}
+
+var _ ast.Visitor = &GCPPolicyVisitor{}
+
+// NewGCPPolicyVisitor makes a new visitor.
+func NewGCPPolicyVisitor() *GCPPolicyVisitor {
+	v := &GCPPolicyVisitor{Copying: visitor.NewCopying()}
+	v.SetImpl(v)
+	return v
+}
+
+// Error implements CheckingVisitor.
+func (v *GCPPolicyVisitor) Error() error {
+	return nil
+}
+
+// VisitCluster implements Visitor.
+func (v *GCPPolicyVisitor) VisitCluster(c *ast.Cluster) ast.Node {
+	newC := v.Copying.VisitCluster(c).(*ast.Cluster)
+	v.cluster = newC
+	return newC
+}
+
+// VisitReservedNamespaces implements Visitor. Currently unused and always returns
+// the passed node.
+func (v *GCPPolicyVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
+	return r
+}
+
+// VisitTreeNode implements Visitor.
+func (v *GCPPolicyVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
+	v.currentTreeNode = n
+	return v.Copying.VisitTreeNode(n).(*ast.TreeNode)
+}
+
+// VisitObject implements Visitor. The precondition is that the poicy attachment
+// point has already been set up. It fills in the resource reference in the
+// policy spec. If the policy attachment point is cluster scoped (org or folder),
+// this method will transform the policy to the cluster scoped version and move
+// them over to the list of cluster objects.
+func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
+	gvk := o.GetObjectKind().GroupVersionKind()
+	if gvk.Group != v1.SchemeGroupVersion.Group {
+		return o
+	}
+	var attachmentPoint *v1.ResourceReference
+	if ap := v.currentTreeNode.Data.Get(gcpAttachmentPointKey); ap != nil {
+		attachmentPoint = ap.(*v1.ResourceReference)
+	}
+	switch gcpObj := o.FileObject.Object.(type) {
+	case *v1.IAMPolicy:
+		if attachmentPoint == nil {
+			panic(fmt.Sprintf("Missing attachment point for IAM policy %v", o))
+		}
+		if attachmentPoint.Kind == "Project" {
+			iamPolicy := gcpObj.DeepCopy()
+			iamPolicy.Spec.ResourceReference = *attachmentPoint
+			return &ast.NamespaceObject{
+				FileObject: ast.FileObject{
+					Object: iamPolicy,
+					Source: o.Source,
+				},
+			}
+		}
+		// TODO(b/119222263): Move to ClusterIAMPolicy.
+		return nil
+	case *v1.OrganizationPolicy:
+		if attachmentPoint == nil {
+			panic(fmt.Sprintf("Missing attachment point for org policy %v", o))
+		}
+		if attachmentPoint.Kind == "Project" {
+			orgPolicy := gcpObj.DeepCopy()
+			orgPolicy.Spec.ResourceReference = *attachmentPoint
+			return &ast.NamespaceObject{
+				FileObject: ast.FileObject{
+					Object: orgPolicy,
+					Source: o.Source,
+				},
+			}
+		}
+		// TODO(b/119222263): Move to ClusterOrganizationPolicy.
+		return nil
+	}
+
+	return o
+}
+
+// VisitObjectList implements Visitor.
+func (v *GCPPolicyVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
+	return v.Copying.VisitObjectList(o)
+}

@@ -210,6 +210,59 @@ func TestProject(t *testing.T) {
 	}
 }
 
+func TestAttachmentPoint(t *testing.T) {
+	org := vt.Helper.GCPOrg()
+	folder := vt.Helper.GCPFolder()
+	project := vt.Helper.GCPProject()
+
+	input := &ast.Root{
+		Cluster: &ast.Cluster{},
+		Tree: &ast.TreeNode{
+			Objects: vt.ObjectSets(org),
+			Children: []*ast.TreeNode{
+				&ast.TreeNode{
+					Type:    ast.AbstractNamespace,
+					Objects: vt.ObjectSets(folder),
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(project),
+						},
+					},
+				},
+			},
+		},
+	}
+	visitor := NewGCPHierarchyVisitor()
+	output := input.Accept(visitor).(*ast.Root)
+	wantOrgRef := &v1.ResourceReference{
+		Kind: org.TypeMeta.Kind,
+		Name: org.ObjectMeta.Name,
+	}
+	verifyAttachmentPoint(t, output.Tree, wantOrgRef)
+
+	wantFolderRef := &v1.ResourceReference{
+		Kind: folder.TypeMeta.Kind,
+		Name: folder.ObjectMeta.Name,
+	}
+	folderNode := output.Tree.Children[0]
+	verifyAttachmentPoint(t, folderNode, wantFolderRef)
+
+	wantProjectRef := &v1.ResourceReference{
+		Kind: project.TypeMeta.Kind,
+		Name: project.ObjectMeta.Name,
+	}
+	projectNode := folderNode.Children[0]
+	verifyAttachmentPoint(t, projectNode, wantProjectRef)
+}
+
+func verifyAttachmentPoint(t *testing.T, node *ast.TreeNode, wantRef *v1.ResourceReference) {
+	gotRef := node.Data.Get(gcpAttachmentPointKey)
+	if !cmp.Equal(gotRef, wantRef) {
+		t.Errorf("Got policy attachment point %v, want %v", gotRef, wantRef)
+	}
+}
+
 func TestHierarchyError(t *testing.T) {
 	project := vt.Helper.GCPProject()
 	project2 := vt.Helper.GCPProject()

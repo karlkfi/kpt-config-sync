@@ -29,6 +29,8 @@ import (
 // GCP resources. It does the following:
 // * Move organization and folder from namespace scope to cluster scope.
 // * Set up parent reference between project, folder, and organization.
+// * Store resource reference to the project/folder/organization as extension
+//   data in each TreeNode to be used by policy visitors.
 type GCPHierarchyVisitor struct {
 	*visitor.Copying
 	cluster *ast.Cluster
@@ -73,7 +75,15 @@ type gcpHierarchyContext struct {
 	// There should be at most 1 cluster level object per TreeNode.
 	// It can be either Organization or Folder.
 	clusterObj *ast.ClusterObject
+	// Policy attachment point associated with the current TreeNode.
+	policyAttachmentPoint *v1.ResourceReference
 }
+
+type gcpAttachmentPointKeyType struct{}
+
+// Extension key storing/retrieving the policy attachment point resource
+// reference. There is at most 1 policy attachment point in each TreeNode.
+var gcpAttachmentPointKey = gcpAttachmentPointKeyType{}
 
 // VisitTreeNode visits a tree node.
 // If the object is a folder or organization, it is added as a cluster level
@@ -91,8 +101,7 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 		glog.Infof("Moving %s to cluster scope", v.ctx.clusterObj)
 		v.cluster.Objects = append(v.cluster.Objects, v.ctx.clusterObj)
 	}
-
-	// TODO(b/117675963): Process {project, folder, org} <-> IAM binding parent refs.
+	newNode.Data = newNode.Data.Add(gcpAttachmentPointKey, v.ctx.policyAttachmentPoint)
 
 	v.ctx = ctx.prev
 	return newNode
@@ -107,6 +116,9 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 	}
 	switch gcpObj := o.FileObject.Object.(type) {
 	case *v1.Project:
+		if !v.setAttachmentPoint(o) {
+			return nil
+		}
 		pr := v.parentReference()
 		if pr == nil {
 			v.errs.Add(errors.Errorf("GCP project %v is missing its parent.", gcpObj.Name))
@@ -125,6 +137,9 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 			},
 		}
 	case *v1.Folder:
+		if !v.setAttachmentPoint(o) {
+			return nil
+		}
 		if v.ctx.clusterObj != nil {
 			v.errs.Add(errors.Errorf("Invalid hierarchy: %v and %v ", v.ctx.clusterObj, gcpObj))
 			return nil
@@ -154,6 +169,9 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 		}
 		return nil
 	case *v1.Organization:
+		if !v.setAttachmentPoint(o) {
+			return nil
+		}
 		if v.ctx.clusterObj != nil {
 			v.errs.Add(errors.Errorf("Invalid hierarchy: %v and %v ", v.ctx.clusterObj, gcpObj))
 			return nil
@@ -169,6 +187,20 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 	}
 
 	return o
+}
+
+// setAttachmentPoint set the attachment point in the current context to the
+// given namespace object. It returns true on success.
+func (v *GCPHierarchyVisitor) setAttachmentPoint(o *ast.NamespaceObject) bool {
+	if v.ctx.policyAttachmentPoint != nil {
+		v.errs.Add(errors.Errorf("Too many GCP policy attachment points: %v", v.ctx.policyAttachmentPoint))
+		return false
+	}
+	v.ctx.policyAttachmentPoint = &v1.ResourceReference{
+		Kind: o.GroupVersionKind().Kind,
+		Name: o.Name(),
+	}
+	return true
 }
 
 // parentReference returns the name and kind that point to the parent GCP
