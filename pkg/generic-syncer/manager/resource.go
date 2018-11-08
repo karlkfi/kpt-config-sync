@@ -25,7 +25,7 @@ import (
 	"github.com/google/nomos/pkg/generic-syncer/controller"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
 	"github.com/google/nomos/pkg/generic-syncer/differ"
-	"github.com/google/nomos/pkg/syncer/labeling"
+	"github.com/google/nomos/pkg/generic-syncer/labeling"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

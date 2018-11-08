@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/syncer/labeling"
+	"github.com/google/nomos/pkg/generic-syncer/labeling"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 

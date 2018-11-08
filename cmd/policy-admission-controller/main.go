@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This package runs the policy node validation admission controller
+// This package runs the policy validation admission controller
 package main
 
 import (
@@ -23,7 +23,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/admissioncontroller"
 	"github.com/google/nomos/pkg/admissioncontroller/policy"
-	"github.com/google/nomos/pkg/syncer/labeling"
+	"github.com/google/nomos/pkg/generic-syncer/labeling"
 
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"

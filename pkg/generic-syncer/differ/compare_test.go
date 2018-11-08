@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/syncer/labeling"
+	"github.com/google/nomos/pkg/generic-syncer/labeling"
 	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

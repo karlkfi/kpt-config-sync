@@ -14,11 +14,12 @@ limitations under the License.
 */
 // Reviewed by sunilarora
 
-// Command line util to sync the PolicyNode custom resource to the active namespaces.
+// Controllers responsible for syncing declared resources to the cluster.
 package main
 
 import (
 	"flag"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
@@ -27,6 +28,11 @@ import (
 	"github.com/google/nomos/pkg/util/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+)
+
+var (
+	resyncPeriod = flag.Duration(
+		"resync_period", time.Minute, "The resync period for the syncer system")
 )
 
 func main() {
@@ -42,7 +48,7 @@ func main() {
 	}
 
 	// Create a new Manager to provide shared dependencies and start components.
-	mgr, err := manager.New(cfg, manager.Options{})
+	mgr, err := manager.New(cfg, manager.Options{SyncPeriod: resyncPeriod})
 	if err != nil {
 		glog.Fatalf("Failed to create manager: %v", err)
 	}
