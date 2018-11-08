@@ -24,6 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// ClusterIAMPolicies returns a ClusterIAMPolicyInformer.
+	ClusterIAMPolicies() ClusterIAMPolicyInformer
 	// Folders returns a FolderInformer.
 	Folders() FolderInformer
 	// IAMPolicies returns a IAMPolicyInformer.
@@ -45,6 +47,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// ClusterIAMPolicies returns a ClusterIAMPolicyInformer.
+func (v *version) ClusterIAMPolicies() ClusterIAMPolicyInformer {
+	return &clusterIAMPolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Folders returns a FolderInformer.

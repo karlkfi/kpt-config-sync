@@ -27,6 +27,7 @@ import (
 
 type BespinV1Interface interface {
 	RESTClient() rest.Interface
+	ClusterIAMPoliciesGetter
 	FoldersGetter
 	IAMPoliciesGetter
 	OrganizationsGetter
@@ -37,6 +38,10 @@ type BespinV1Interface interface {
 // BespinV1Client is used to interact with features provided by the bespin.dev group.
 type BespinV1Client struct {
 	restClient rest.Interface
+}
+
+func (c *BespinV1Client) ClusterIAMPolicies() ClusterIAMPolicyInterface {
+	return newClusterIAMPolicies(c)
 }
 
 func (c *BespinV1Client) Folders() FolderInterface {

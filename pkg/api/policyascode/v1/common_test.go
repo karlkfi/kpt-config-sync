@@ -33,3 +33,14 @@ var fakeSyncDetails = SyncDetails{
 	Token: "0123456789012345678901234567890123456789",
 	Time:  metav1.Date(1998, time.May, 5, 5, 5, 5, 0, time.UTC),
 }
+
+var fakeBindings = []IAMPolicyBinding{
+	{
+		Members: []string{"user:foo", "serviceAccount:bar"},
+		Role:    "roles/foo",
+	},
+	{
+		Members: []string{"group:g", "domain:d"},
+		Role:    "roles/bar",
+	},
+}

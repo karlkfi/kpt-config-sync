@@ -22,26 +22,27 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +genclient:nonNamespaced
 
-// IAMPolicy is the Schema for the iampolicies API
+// ClusterIAMPolicy is the Schema for the clusteriampolicies API
 // +k8s:openapi-gen=true
-type IAMPolicy struct {
+type ClusterIAMPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IAMPolicySpec   `json:"spec"`
+	Spec   IAMPolicySpec   `json:"spec,omitempty"`
 	Status IAMPolicyStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// IAMPolicyList contains a list of IAMPolicy
-type IAMPolicyList struct {
+// ClusterIAMPolicyList contains a list of ClusterIAMPolicy
+type ClusterIAMPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []IAMPolicy `json:"items"`
+	Items           []ClusterIAMPolicy `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&IAMPolicy{}, &IAMPolicyList{})
+	SchemeBuilder.Register(&ClusterIAMPolicy{}, &ClusterIAMPolicyList{})
 }

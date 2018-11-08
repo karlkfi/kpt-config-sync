@@ -25,11 +25,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func TestStorageIAMPolicy(t *testing.T) {
-	key := types.NamespacedName{Name: "foo", Namespace: "default"}
-	testCases := []*IAMPolicy{
+func TestStorageClusterIAMPolicy(t *testing.T) {
+	key := types.NamespacedName{Name: "foo"}
+	testCases := []*ClusterIAMPolicy{
 		{
-			ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+			ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 			Spec: IAMPolicySpec{
 				ResourceReference: ResourceReference{Kind: "Organization", Name: "bar"},
 				Bindings:          fakeBindings,
@@ -40,7 +40,7 @@ func TestStorageIAMPolicy(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+			ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 			Spec: IAMPolicySpec{
 				ResourceReference: ResourceReference{Kind: "Folder", Name: "bar"},
 				Bindings:          fakeBindings,
@@ -50,23 +50,12 @@ func TestStorageIAMPolicy(t *testing.T) {
 				SyncDetails: fakeSyncDetails,
 			},
 		},
-		{
-			ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
-			Spec: IAMPolicySpec{
-				ResourceReference: ResourceReference{Kind: "Project", Name: "bar"},
-				Bindings:          fakeBindings,
-				ImportDetails:     fakeImportDetails,
-			},
-			Status: IAMPolicyStatus{
-				SyncDetails: fakeSyncDetails,
-			},
-		},
 	}
-	g := gomega.NewGomegaWithT(t)
 
+	g := gomega.NewGomegaWithT(t)
 	for _, created := range testCases {
 		// Test Create
-		fetched := &IAMPolicy{}
+		fetched := &ClusterIAMPolicy{}
 		g.Expect(c.Create(context.TODO(), created)).NotTo(gomega.HaveOccurred())
 
 		g.Expect(c.Get(context.TODO(), key, fetched)).NotTo(gomega.HaveOccurred())

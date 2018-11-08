@@ -28,6 +28,10 @@ type FakeBespinV1 struct {
 	*testing.Fake
 }
 
+func (c *FakeBespinV1) ClusterIAMPolicies() v1.ClusterIAMPolicyInterface {
+	return &FakeClusterIAMPolicies{c}
+}
+
 func (c *FakeBespinV1) Folders() v1.FolderInterface {
 	return &FakeFolders{c}
 }

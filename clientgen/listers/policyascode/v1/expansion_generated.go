@@ -18,6 +18,10 @@ limitations under the License.
 
 package v1
 
+// ClusterIAMPolicyListerExpansion allows custom methods to be added to
+// ClusterIAMPolicyLister.
+type ClusterIAMPolicyListerExpansion interface{}
+
 // FolderListerExpansion allows custom methods to be added to
 // FolderLister.
 type FolderListerExpansion interface{}

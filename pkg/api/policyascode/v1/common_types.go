@@ -54,3 +54,23 @@ type ResourceReference struct {
 	Kind string `json:"kind"`
 	Name string `json:"name"`
 }
+
+// IAMPolicyBinding is the Schema for Bindings in IAMPolicySpec
+type IAMPolicyBinding struct {
+	// +kubebuilder:validation:Pattern=^(user|serviceAccount|group|domain):.+$
+	Members []string `json:"members"`
+	// +kubebuilder:validation:Pattern=^roles/[\w\.]+$
+	Role string `json:"role"`
+}
+
+// IAMPolicySpec defines the desired state of IAMPolicy
+type IAMPolicySpec struct {
+	ResourceReference ResourceReference  `json:"resourceReference"`
+	Bindings          []IAMPolicyBinding `json:"bindings"`
+	ImportDetails     ImportDetails      `json:"importDetails"`
+}
+
+// IAMPolicyStatus defines the observed state of IAMPolicy
+type IAMPolicyStatus struct {
+	SyncDetails SyncDetails `json:"syncDetails,omitempty"`
+}

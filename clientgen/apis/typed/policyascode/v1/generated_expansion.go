@@ -18,6 +18,8 @@ limitations under the License.
 
 package v1
 
+type ClusterIAMPolicyExpansion interface{}
+
 type FolderExpansion interface{}
 
 type IAMPolicyExpansion interface{}
