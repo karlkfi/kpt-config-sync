@@ -11,7 +11,6 @@ metadata:
   name: nomos
   namespace: nomos-system
 spec:
-  user: "alice@example.com"
   git:
     syncRepo: git@github.com:frankfarzan/foo-corp-example.git
     syncBranch: master
