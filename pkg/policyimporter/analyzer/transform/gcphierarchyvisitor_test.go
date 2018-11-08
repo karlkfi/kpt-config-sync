@@ -25,65 +25,20 @@ import (
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-var (
-	project = &v1.Project{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1.SchemeGroupVersion.String(),
-			Kind:       "Project",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "project-sample",
-		},
-		Spec: v1.ProjectSpec{
-			Name: "project-sample-name",
-		},
-	}
-	folder = &v1.Folder{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1.SchemeGroupVersion.String(),
-			Kind:       "Folder",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "folder-sample",
-		},
-		Spec: v1.FolderSpec{
-			DisplayName: "folder-sample-name",
-		},
-	}
-	subFolder = &v1.Folder{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1.SchemeGroupVersion.String(),
-			Kind:       "Folder",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "subfolder-sample",
-		},
-		Spec: v1.FolderSpec{
-			DisplayName: "sub-folder-sample-name",
-		},
-	}
-	org = &v1.Organization{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1.SchemeGroupVersion.String(),
-			Kind:       "Organization",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "org-sample",
-		},
-	}
 )
 
 func TestFolderAndOrg(t *testing.T) {
-	folderUnderOrg := folder.DeepCopy()
+	org := vt.Helper.GCPOrg()
+	folder := vt.Helper.GCPFolder()
+	folderUnderOrg := vt.Helper.GCPFolder()
 	folderUnderOrg.Spec.ParentReference = v1.ParentReference{
 		Kind: org.TypeMeta.Kind,
 		Name: org.ObjectMeta.Name,
 	}
-	subFolderUnderFolder := subFolder.DeepCopy()
-	subFolderUnderFolder.Spec.ParentReference = v1.ParentReference{
+	subFolder := vt.Helper.GCPFolder()
+	subFolder.ObjectMeta.Name = "subfolder-sample"
+	subFolderWithParentRef := subFolder.DeepCopy()
+	subFolderWithParentRef.Spec.ParentReference = v1.ParentReference{
 		Kind: folder.TypeMeta.Kind,
 		Name: folder.ObjectMeta.Name,
 	}
@@ -144,7 +99,7 @@ func TestFolderAndOrg(t *testing.T) {
 					},
 				},
 			},
-			want: vt.ClusterObjectSets(subFolderUnderFolder, folder),
+			want: vt.ClusterObjectSets(subFolderWithParentRef, folder),
 		},
 	}
 
@@ -175,12 +130,15 @@ func TestFolderAndOrg(t *testing.T) {
 }
 
 func TestProject(t *testing.T) {
-	projectUnderOrg := project.DeepCopy()
+	org := vt.Helper.GCPOrg()
+	folder := vt.Helper.GCPFolder()
+	project := vt.Helper.GCPProject()
+	projectUnderOrg := vt.Helper.GCPProject()
 	projectUnderOrg.Spec.ParentReference = v1.ParentReference{
 		Kind: org.TypeMeta.Kind,
 		Name: org.ObjectMeta.Name,
 	}
-	projectUnderFolder := project.DeepCopy()
+	projectUnderFolder := vt.Helper.GCPProject()
 	projectUnderFolder.Spec.ParentReference = v1.ParentReference{
 		Kind: folder.TypeMeta.Kind,
 		Name: folder.ObjectMeta.Name,
@@ -253,8 +211,11 @@ func TestProject(t *testing.T) {
 }
 
 func TestHierarchyError(t *testing.T) {
-	project2 := project.DeepCopy()
+	project := vt.Helper.GCPProject()
+	project2 := vt.Helper.GCPProject()
 	project2.ObjectMeta.Name = "project2"
+	folder := vt.Helper.GCPFolder()
+	org := vt.Helper.GCPFolder()
 	var tests = []struct {
 		name  string
 		input *ast.Root

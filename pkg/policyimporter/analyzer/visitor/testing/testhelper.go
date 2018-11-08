@@ -17,6 +17,7 @@ limitations under the License.
 package testing
 
 import (
+	gcpv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	corev1 "k8s.io/api/core/v1"
@@ -363,5 +364,53 @@ func (t *TestHelper) AcmeRoot() *ast.Root {
 		Cluster:            t.AcmeCluster(),
 		ReservedNamespaces: t.AcmeReserved(),
 		Tree:               t.acmeTree(),
+	}
+}
+
+// GCPProject returns a new, sample GCP project object.
+func (t *TestHelper) GCPProject() *gcpv1.Project {
+	return &gcpv1.Project{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gcpv1.SchemeGroupVersion.String(),
+			Kind:       "Project",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "project-sample",
+		},
+		Spec: gcpv1.ProjectSpec{
+			Name: "project-sample-name",
+		},
+	}
+}
+
+// GCPFolder returns a new, sample GCP folder object.
+func (t *TestHelper) GCPFolder() *gcpv1.Folder {
+	return &gcpv1.Folder{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gcpv1.SchemeGroupVersion.String(),
+			Kind:       "Folder",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "folder-sample",
+		},
+		Spec: gcpv1.FolderSpec{
+			DisplayName: "folder-sample-name",
+		},
+	}
+}
+
+// GCPOrg returns a new, sample GCP organization object.
+func (t *TestHelper) GCPOrg() *gcpv1.Organization {
+	return &gcpv1.Organization{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gcpv1.SchemeGroupVersion.String(),
+			Kind:       "Organization",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "org-sample",
+		},
+		Spec: gcpv1.OrganizationSpec{
+			ID: 123456789,
+		},
 	}
 }
