@@ -27,7 +27,12 @@ REPO="github.com/google/nomos"
 
 # Comma separted list of APIs to generate for clientset.
 INPUT_BASE="${REPO}/pkg/api"
-INPUT_APIS="policyhierarchy/v1,policyhierarchy/v1alpha1"
+INPUT_APIS=$(
+  find "$NOMOS_ROOT/pkg/api" -mindepth 2 -maxdepth 2 -type d \
+  | sed -e "s|^$NOMOS_ROOT/pkg/api/||" \
+  | tr '\n' ',' \
+  | sed -e 's/,$//' \
+)
 
 # Nomos proto dependencies.
 K8S_APIS_PROTO=(
@@ -57,18 +62,23 @@ for tool in client-gen deepcopy-gen informer-gen lister-gen go-to-protobuf go-to
   tools+=("k8s.io/code-generator/cmd/${tool}")
 done
 
-branch=release-1.9
-echo "Checking out codegen branch ${branch}"
-checkout="git -C ${GOBASE}/src/k8s.io/code-generator \
-    checkout -B ${branch} origin/${branch}"
-if ! ${checkout} &> /dev/null; then
+# This should match the APIMachinery version that exists in the vendor
+# directory.
+tag=kubernetes-1.11.2
+echo "Checking out codegen at tag ${tag}"
+checkout=(
+  git
+  -C "${GOBASE}/src/k8s.io/code-generator"
+  checkout -B "${tag}" "refs/tags/${tag}"
+)
+if ! "${checkout[@]}" &> /dev/null; then
   echo "Fetching gen tools and checking out appropriate branch..."
   go get -d -u "${tools[@]}"
-  ${checkout}
+  "${checkout[@]}"
 fi
 
 echo "Building gen tools..."
-go install "${tools[@]}"
+  go install "${tools[@]}"
 
 if [[ -z "$(command -v protoc)" || "$(protoc --version)" != "libprotoc 3."* ]]; then
   echo "ERROR:"
@@ -83,6 +93,13 @@ fi
 
 echo "Using GOPATH base ${GOBASE}"
 echo "Using GOPATH work ${GOWORK}"
+
+for i in apis informer listers; do
+  rm -rf "${NOMOS_ROOT}/clientgen/$i"
+done
+for i in $(echo "${INPUT_APIS}" | tr ',' ' '); do
+  rm -rf "${NOMOS_ROOT}/pkg/api/$i/*generated*"
+done
 
 echo "Generating APIs"
 "${GOBASE}/bin/client-gen" \
@@ -146,7 +163,11 @@ done
 # go-to-protobuf changes generated proto given in K8S_APIS_PROTO
 # Revert these unneeded changes.
 find "${NOMOS_ROOT}/vendor" \
-  \( -name "generated.proto" -o -name "generated.pb.go" \) \
+  \( \
+     -name "generated.proto" \
+     -o -name "generated.pb.go" \
+     -o -name "types_swagger_doc_generated.go" \
+  \) \
   -exec git checkout {} \;
 
 echo "Generation Completed!"
