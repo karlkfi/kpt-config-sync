@@ -103,7 +103,15 @@ test-nomosvet-local: build
 		rm $(TOP_DIR)/.output/tmp/actual-errors.txt; \
 	fi
 	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/errors 2> $(TOP_DIR)/.output/tmp/actual-errs.txt || true
-	@diff $(TOP_DIR)/test/expected-errs.txt $(TOP_DIR)/.output/tmp/actual-errs.txt
+	@diff $(TOP_DIR)/examples/errors/expected-errs.txt $(TOP_DIR)/.output/tmp/actual-errs.txt
+
+# To update expected errors: nomosvet examples/parse-errors/invalid-yaml 2> examples/parse-errors/invalid-yaml/expected-errs.txt
+	@if [ -f $(TOP_DIR)/.output/tmp/actual-errors-2.txt ]; then \
+    rm $(TOP_DIR)/.output/tmp/actual-errors-2.txt; \
+  fi
+	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/parse-errors/invalid-yaml 2> $(TOP_DIR)/.output/tmp/actual-errs.txt || true
+	@grep -qF "2 error(s)" $(TOP_DIR)/.output/tmp/actual-errs.txt # there are two errors
+	@grep -cF "invalid object to validate" .output/tmp/actual-errs.txt | grep -qF 2 # they are invalid yaml
 
 include Makefile.e2e.ci
 include Makefile.e2e.prober

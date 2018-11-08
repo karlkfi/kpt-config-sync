@@ -2320,6 +2320,17 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		{
+			testName:    "Defining invalid yaml is an error.",
+			root:        "foo",
+			clusterName: "cluster-1",
+			vet:         true,
+			testFiles: fstesting.FileContentMap{
+				"system/nomos.yaml":       aRepo,
+				"namespaces/invalid.yaml": "This is not valid yaml.",
+			},
+			expectedError: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, test.Run)

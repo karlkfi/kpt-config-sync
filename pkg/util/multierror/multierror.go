@@ -30,6 +30,11 @@ type Builder struct {
 	errs []error
 }
 
+// From returns a MultiError with the array of errors.
+func From(errs []error) MultiError {
+	return MultiError{errs: errs}
+}
+
 // Add adds error to the builder
 func (b *Builder) Add(err error) {
 	b.errs = append(b.errs, err)
@@ -54,8 +59,7 @@ type MultiError struct {
 }
 
 // Error implements error
-func (m *MultiError) Error() string {
-
+func (m MultiError) Error() string {
 	// sort errors alphabetically by their message.
 	sort.Slice(m.errs, func(i, j int) bool {
 		return m.errs[i].Error() < m.errs[j].Error()

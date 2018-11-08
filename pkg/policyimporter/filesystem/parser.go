@@ -33,6 +33,7 @@ import (
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
+	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
@@ -40,6 +41,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -216,8 +218,11 @@ func (p *Parser) readResources(dir string, recursive bool) ([]*resource.Info, er
 			FilenameParam(false, &resource.FilenameOptions{Recursive: recursive, Filenames: []string{dir}}).
 			Do()
 		fileInfos, err = result.Infos()
+
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to read resources from directory: %s", dir)
+			errs := err.(utilerrors.Aggregate)
+			return nil, errors.Wrapf(multierror.From(errs.Errors()),
+				"failed to read resources from directory:\n%s", dir)
 		}
 	}
 	return fileInfos, nil
