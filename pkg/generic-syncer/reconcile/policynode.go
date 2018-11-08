@@ -75,7 +75,7 @@ func NewPolicyNodeReconciler(client *client.Client, cache cache.GenericCache, re
 func (r *PolicyNodeReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	metrics.EventTimes.WithLabelValues("reconcilePolicyNode").Set(float64(now().Unix()))
 	reconcileTimer := prometheus.NewTimer(
-		metrics.HierarchicalReconcileDuration.WithLabelValues(request.Name))
+		metrics.NamespaceReconcileDuration.WithLabelValues(request.Name))
 	defer reconcileTimer.ObserveDuration()
 
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
@@ -326,6 +326,7 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 	}
 	if err := r.setPolicyNodeStatus(ctx, node, syncErrs); err != nil {
 		errBuilder.Add(errors.Wrapf(err, "failed to set status for %q", name))
+		metrics.ErrTotal.WithLabelValues(node.GetName(), node.GetObjectKind().GroupVersionKind().Kind, "update").Inc()
 		r.recorder.Eventf(node, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update policy node status: %q", err)
 	}
@@ -376,7 +377,9 @@ func NewSyncError(name string, gvk schema.GroupVersionKind, err error) nomosv1.P
 func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff) (bool, error) {
 	switch t := diff.Type; t {
 	case differ.Add:
-		if err := r.client.Create(ctx, diff.Declared); err != nil {
+		toCreate := diff.Declared
+		if err := r.client.Create(ctx, toCreate); err != nil {
+			metrics.ErrTotal.WithLabelValues(toCreate.GetNamespace(), toCreate.GetKind(), "create").Inc()
 			return false, errors.Wrapf(err, "could not create resource %q", diff.Name)
 		}
 	case differ.Update:
@@ -385,7 +388,9 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 			return false, nil
 		}
 
-		if err := r.client.Upsert(ctx, diff.Declared); err != nil {
+		toUpdate := diff.Declared
+		if err := r.client.Upsert(ctx, toUpdate); err != nil {
+			metrics.ErrTotal.WithLabelValues(toUpdate.GetNamespace(), toUpdate.GetKind(), "update").Inc()
 			return false, errors.Wrapf(err, "could not update resource %q", diff.Name)
 		}
 	case differ.Delete:
@@ -393,7 +398,9 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 			r.warnNoLabelResource(diff.Actual)
 			return false, nil
 		}
-		if err := r.client.Delete(ctx, diff.Actual); err != nil {
+		toDelete := diff.Actual
+		if err := r.client.Delete(ctx, toDelete); err != nil {
+			metrics.ErrTotal.WithLabelValues(toDelete.GetNamespace(), toDelete.GetKind(), "delete").Inc()
 			return false, errors.Wrapf(err, "could not delete resource %q", diff.Name)
 		}
 	default:
@@ -411,11 +418,14 @@ func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *nomosv1.PolicyN
 	namespace.Labels = labels
 	namespace.Annotations = policyNode.Annotations
 	namespace.Name = policyNode.Name
+	namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
 	return namespace
 }
 
 func (r *PolicyNodeReconciler) createNamespace(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
-	if err := r.client.Create(ctx, asNamespace(policyNode)); err != nil {
+	namespace := asNamespace(policyNode)
+	if err := r.client.Create(ctx, namespace); err != nil {
+		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GetObjectKind().GroupVersionKind().Kind, "create").Inc()
 		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceCreateFailed",
 			"failed to create matching namespace for policyspace: %q", err)
 		return errors.Wrapf(err, "failed to create namespace %q", policyNode.Name)
@@ -431,6 +441,7 @@ func (r *PolicyNodeReconciler) updateNamespace(ctx context.Context, policyNode *
 		return withPolicyNodeMeta(obj.(*corev1.Namespace), policyNode), nil
 	}
 	if _, err := r.client.Update(ctx, namespace, updateFn); err != nil {
+		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GetObjectKind().GroupVersionKind().Kind, "update").Inc()
 		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceUpdateFailed",
 			"failed to update matching namespace for policyspace: %q", err)
 		return errors.Wrapf(err, "failed to update namespace %q", policyNode.Name)
@@ -454,6 +465,7 @@ func (r *PolicyNodeReconciler) updateNamespaceLabels(ctx context.Context, policy
 		return ns, nil
 	}
 	if _, err := r.client.Update(ctx, namespace, updateFn); err != nil {
+		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GetObjectKind().GroupVersionKind().Kind, "update").Inc()
 		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceUpdateFailed",
 			"failed to update matching namespace for policyspace: %v", err)
 		return errors.Wrapf(err, "failed to execute update action for %q", namespace.Name)
@@ -465,13 +477,16 @@ func (r *PolicyNodeReconciler) updateNamespaceLabels(ctx context.Context, policy
 func (r *PolicyNodeReconciler) deleteNamespace(ctx context.Context, namespace *corev1.Namespace) error {
 	glog.V(1).Infof("Namespace %q not declared in a policy node, removing", namespace.GetName())
 	if err := r.client.Delete(ctx, namespace); err != nil {
+		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GetObjectKind().GroupVersionKind().Kind, "delete").Inc()
 		return errors.Wrapf(err, "failed to delete namespace %q", namespace.GetName())
 	}
 	return nil
 }
 
 func (r *PolicyNodeReconciler) handlePolicyspace(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
-	if err := r.client.Delete(ctx, asNamespace(policyNode)); err != nil {
+	namespace := asNamespace(policyNode)
+	if err := r.client.Delete(ctx, namespace); err != nil {
+		metrics.ErrTotal.WithLabelValues("", namespace.GetObjectKind().GroupVersionKind().Kind, "delete").Inc()
 		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceDeleteFailed",
 			"failed to delete matching namespace for policyspace: %v", err)
 		return errors.Wrapf(err, "failed to delete policyspace %q", policyNode.Name)

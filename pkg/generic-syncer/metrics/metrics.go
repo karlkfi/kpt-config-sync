@@ -38,13 +38,6 @@ var (
 		},
 		[]string{"type"},
 	)
-	QueueSize = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Help:      "Current size of syncer action queue",
-			Namespace: "nomos",
-			Subsystem: "syncer",
-			Name:      "queue_size",
-		})
 	ClusterReconcileDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Help:      "Syncer cluster reconciliation duration distributions",
@@ -55,12 +48,12 @@ var (
 		},
 		nil,
 	)
-	HierarchicalReconcileDuration = prometheus.NewHistogramVec(
+	NamespaceReconcileDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Help:      "Syncer hierarchical reconcile duration distributions",
+			Help:      "Syncer namespace reconcile duration distributions",
 			Namespace: "nomos",
 			Subsystem: "syncer",
-			Name:      "hierarchical_reconcile_duration_seconds",
+			Name:      "namespace_reconcile_duration_seconds",
 			Buckets:   []float64{.001, .01, .1, 1, 10, 100},
 		},
 		[]string{"namespace"},
@@ -71,7 +64,7 @@ func init() {
 	prometheus.MustRegister(
 		ErrTotal,
 		EventTimes,
-		QueueSize,
-		HierarchicalReconcileDuration,
+		ClusterReconcileDuration,
+		NamespaceReconcileDuration,
 	)
 }

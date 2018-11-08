@@ -192,6 +192,9 @@ func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, po
 	}
 	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
 	_, err := r.client.Update(ctx, policy, updateFn)
+	if err != nil {
+		metrics.ErrTotal.WithLabelValues("", policy.GetObjectKind().GroupVersionKind().Kind, "update").Inc()
+	}
 	return err
 }
 
@@ -210,7 +213,9 @@ func NewClusterPolicySyncError(name string, gvk schema.GroupVersionKind, err err
 func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.Diff) (bool, error) {
 	switch t := diff.Type; t {
 	case differ.Add:
-		if err := r.client.Create(ctx, diff.Declared); err != nil {
+		toCreate := diff.Declared
+		if err := r.client.Create(ctx, toCreate); err != nil {
+			metrics.ErrTotal.WithLabelValues("", toCreate.GetObjectKind().GroupVersionKind().Kind, "create").Inc()
 			return false, errors.Wrapf(err, "could not create resource %q", diff.Name)
 		}
 	case differ.Update:
@@ -219,7 +224,9 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 			return false, nil
 		}
 
-		if err := r.client.Upsert(ctx, diff.Declared); err != nil {
+		toUpdate := diff.Declared
+		if err := r.client.Upsert(ctx, toUpdate); err != nil {
+			metrics.ErrTotal.WithLabelValues("", toUpdate.GetObjectKind().GroupVersionKind().Kind, "update").Inc()
 			return false, errors.Wrapf(err, "could not update resource %q", diff.Name)
 		}
 	case differ.Delete:
@@ -227,7 +234,9 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 			r.warnNoLabelResource(diff.Actual)
 			return false, nil
 		}
-		if err := r.client.Delete(ctx, diff.Actual); err != nil {
+		toDelete := diff.Actual
+		if err := r.client.Delete(ctx, toDelete); err != nil {
+			metrics.ErrTotal.WithLabelValues("", toDelete.GetObjectKind().GroupVersionKind().Kind, "delete").Inc()
 			return false, errors.Wrapf(err, "could not delete resource %q", diff.Name)
 		}
 	default:

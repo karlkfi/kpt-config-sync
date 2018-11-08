@@ -116,6 +116,10 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 			},
 			wantNamespaceUpdate: &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Namespace",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
@@ -225,6 +229,10 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 			},
 			wantNamespaceUpdate: &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Namespace",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
@@ -287,6 +295,10 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 			},
 			wantNamespaceUpdate: &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Namespace",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
@@ -354,6 +366,10 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			},
 			actual: []runtime.Object{},
 			wantNamespaceUpdate: &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Namespace",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
@@ -444,6 +460,10 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				},
 			},
 			wantNamespaceUpdate: &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Namespace",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
