@@ -27,7 +27,6 @@ COPY gcp-policy-importer gcp-policy-importer
 COPY git-policy-importer git-policy-importer
 COPY monitor monitor
 COPY nomosvet nomosvet
-COPY policy-admission-controller policy-admission-controller
 COPY resourcequota-admission-controller resourcequota-admission-controller
 COPY syncer syncer
 

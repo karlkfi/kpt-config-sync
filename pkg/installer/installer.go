@@ -67,7 +67,6 @@ var (
 	// commonDeployments are the common deployments managed by installer.
 	commonDeployments = []string{
 		"monitor",
-		"policy-admission-controller",
 		"syncer",
 	}
 
@@ -99,18 +98,11 @@ type Installer struct {
 
 // New returns a new Installer instance.
 func New(c config.Config, workDir string) *Installer {
-	policyNodesCertsInstaller := &certInstaller{
-		generateScript: "generate-policy-admission-controller-certs.sh",
-		deployScript:   "deploy-policy-admission-controller.sh",
-		subDir:         "policynodes",
-	}
 	ins := &Installer{
-		c:       c,
-		k:       kubectl.New(context.Background()),
-		workDir: workDir,
-		certInstallers: []*certInstaller{
-			policyNodesCertsInstaller,
-		},
+		c:              c,
+		k:              kubectl.New(context.Background()),
+		workDir:        workDir,
+		certInstallers: []*certInstaller{},
 	}
 	// we don't use resource quota control in GCP installs
 	if !c.Git.Empty() {

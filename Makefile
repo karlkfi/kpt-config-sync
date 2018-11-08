@@ -107,8 +107,7 @@ ALL_K8S_DEPLOYMENTS := syncer \
 	git-policy-importer \
 	gcp-policy-importer \
 	monitor \
-	resourcequota-admission-controller \
-	policy-admission-controller
+	resourcequota-admission-controller
 
 # Nomos docker images containing all binaries.
 NOMOS_IMAGE := nomos

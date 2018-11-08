@@ -46,8 +46,7 @@ function check_metrics_pages() {
     -l "nomos.dev/namespace-management=full"
   namespace::check_exists newer-prj \
     -l "nomos.dev/namespace-management=full"
-  resource::check_count -r validatingwebhookconfigurations -c 2
-  resource::check validatingwebhookconfigurations policy.nomos.dev
+  resource::check_count -r validatingwebhookconfigurations -c 1
   resource::check validatingwebhookconfigurations resource-quota.nomos.dev
   resource::check_count -l "nomos.dev/managed=full" -r clusterrole -c 3
   resource::check clusterrole acme-admin -l "nomos.dev/managed=full"
