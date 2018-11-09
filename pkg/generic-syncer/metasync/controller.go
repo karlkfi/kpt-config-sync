@@ -24,12 +24,20 @@ import (
 	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apimachinerytypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+var unaryHandler = &handler.EnqueueRequestsFromMapFunc{
+	ToRequests: handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
+		return []reconcile.Request{{NamespacedName: apimachinerytypes.NamespacedName{Name: "item"}}}
+	}),
+}
 
 // AddMetaController adds MetaController to the manager.
 func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
@@ -51,7 +59,7 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 	}
 
 	// Watch all changes to Syncs.
-	if err = c.Watch(&source.Kind{Type: &nomosv1alpha1.Sync{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = c.Watch(&source.Kind{Type: &nomosv1alpha1.Sync{}}, unaryHandler); err != nil {
 		return errors.Wrap(err, "could not watch Syncs in the controller")
 	}
 
@@ -61,7 +69,7 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 		return errors.Wrap(injectErr, "could not inject stop channel into genericResourceManager restart source")
 	}
 	// Create a watch for errors when starting the genericResourceManager and force a reconciliation.
-	if err = c.Watch(managerRestartSource, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = c.Watch(managerRestartSource, unaryHandler); err != nil {
 		return errors.Wrap(err, "could not watch manager initialization errors in the meta controller")
 	}
 
