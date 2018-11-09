@@ -28,6 +28,7 @@ import (
 type BespinV1Interface interface {
 	RESTClient() rest.Interface
 	ClusterIAMPoliciesGetter
+	ClusterOrganizationPoliciesGetter
 	FoldersGetter
 	IAMPoliciesGetter
 	OrganizationsGetter
@@ -42,6 +43,10 @@ type BespinV1Client struct {
 
 func (c *BespinV1Client) ClusterIAMPolicies() ClusterIAMPolicyInterface {
 	return newClusterIAMPolicies(c)
+}
+
+func (c *BespinV1Client) ClusterOrganizationPolicies() ClusterOrganizationPolicyInterface {
+	return newClusterOrganizationPolicies(c)
 }
 
 func (c *BespinV1Client) Folders() FolderInterface {

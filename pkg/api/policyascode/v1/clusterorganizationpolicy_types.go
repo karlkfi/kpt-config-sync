@@ -22,26 +22,27 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +genclient:nonNamespaced
 
-// OrganizationPolicy is the Schema for the organizationpolicies API
+// ClusterOrganizationPolicy is the Schema for the clusterorganizationpolicies API
 // +k8s:openapi-gen=true
-type OrganizationPolicy struct {
+type ClusterOrganizationPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OrganizationPolicySpec   `json:"spec"`
+	Spec   OrganizationPolicySpec   `json:"spec,omitempty"`
 	Status OrganizationPolicyStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// OrganizationPolicyList contains a list of OrganizationPolicy
-type OrganizationPolicyList struct {
+// ClusterOrganizationPolicyList contains a list of ClusterOrganizationPolicy
+type ClusterOrganizationPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []OrganizationPolicy `json:"items"`
+	Items           []ClusterOrganizationPolicy `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&OrganizationPolicy{}, &OrganizationPolicyList{})
+	SchemeBuilder.Register(&ClusterOrganizationPolicy{}, &ClusterOrganizationPolicyList{})
 }

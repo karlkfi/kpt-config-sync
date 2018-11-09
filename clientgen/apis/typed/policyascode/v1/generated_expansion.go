@@ -20,6 +20,8 @@ package v1
 
 type ClusterIAMPolicyExpansion interface{}
 
+type ClusterOrganizationPolicyExpansion interface{}
+
 type FolderExpansion interface{}
 
 type IAMPolicyExpansion interface{}

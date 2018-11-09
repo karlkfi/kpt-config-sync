@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// ClusterIAMPolicies returns a ClusterIAMPolicyInformer.
 	ClusterIAMPolicies() ClusterIAMPolicyInformer
+	// ClusterOrganizationPolicies returns a ClusterOrganizationPolicyInformer.
+	ClusterOrganizationPolicies() ClusterOrganizationPolicyInformer
 	// Folders returns a FolderInformer.
 	Folders() FolderInformer
 	// IAMPolicies returns a IAMPolicyInformer.
@@ -52,6 +54,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // ClusterIAMPolicies returns a ClusterIAMPolicyInformer.
 func (v *version) ClusterIAMPolicies() ClusterIAMPolicyInformer {
 	return &clusterIAMPolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ClusterOrganizationPolicies returns a ClusterOrganizationPolicyInformer.
+func (v *version) ClusterOrganizationPolicies() ClusterOrganizationPolicyInformer {
+	return &clusterOrganizationPolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Folders returns a FolderInformer.

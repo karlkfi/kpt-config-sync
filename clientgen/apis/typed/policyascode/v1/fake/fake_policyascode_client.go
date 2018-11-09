@@ -32,6 +32,10 @@ func (c *FakeBespinV1) ClusterIAMPolicies() v1.ClusterIAMPolicyInterface {
 	return &FakeClusterIAMPolicies{c}
 }
 
+func (c *FakeBespinV1) ClusterOrganizationPolicies() v1.ClusterOrganizationPolicyInterface {
+	return &FakeClusterOrganizationPolicies{c}
+}
+
 func (c *FakeBespinV1) Folders() v1.FolderInterface {
 	return &FakeFolders{c}
 }

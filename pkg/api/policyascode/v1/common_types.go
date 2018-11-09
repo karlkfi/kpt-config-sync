@@ -80,3 +80,38 @@ type IAMPolicySpec struct {
 type IAMPolicyStatus struct {
 	SyncDetails SyncDetails `json:"syncDetails,omitempty"`
 }
+
+// OrganizationPolicySpec defines the desired state of OrganizationPolicy
+type OrganizationPolicySpec struct {
+	Constraints       []OrganizationPolicyConstraint `json:"constraints"`
+	ResourceReference ResourceReference              `json:"resourceReference"`
+	ImportDetails     ImportDetails                  `json:"importDetails"`
+}
+
+// OrganizationPolicyStatus defines the observed state of OrganizationPolicy
+type OrganizationPolicyStatus struct {
+	SyncDetails SyncDetails `json:"syncDetails,omitempty"`
+}
+
+// OrganizationPolicyConstraint is the Schema for Constraints in OrganizationPolicySpec
+type OrganizationPolicyConstraint struct {
+	Constraint    string                          `json:"constraint"`
+	ListPolicy    OrganizationPolicyListPolicy    `json:"listPolicy,omitempty"`
+	BooleanPolicy OrganizationPolicyBooleanPolicy `json:"booleanPolicy,omitempty"`
+}
+
+// OrganizationPolicyListPolicy is the Schema for ListPolicy in OrganizationPolicyConstraint
+type OrganizationPolicyListPolicy struct {
+	// +kubebuilder:validation:Pattern=^((is|under):)?(organizations|folders|projects)/
+	AllowedValues []string `json:"allowedValues,omitempty"`
+	// +kubebuilder:validation:Pattern=^((is|under):)?(organizations|folders|projects)/
+	DisallowedValues []string `json:"disallowedValues,omitempty"`
+	// +kubebuilder:validation:Pattern=^(ALLOW|DENY)$
+	AllValues         string `json:"allValues,omitempty"`
+	InheritFromParent bool   `json:"inheritFromParent,omitempty"`
+}
+
+// OrganizationPolicyBooleanPolicy is the Schema for BooleanPolicy in OrganizationPolicyConstraint
+type OrganizationPolicyBooleanPolicy struct {
+	Enforced bool `json:"enforced"`
+}

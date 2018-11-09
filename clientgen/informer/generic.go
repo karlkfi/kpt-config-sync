@@ -57,6 +57,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=bespin.dev, Version=v1
 	case v1.SchemeGroupVersion.WithResource("clusteriampolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Bespin().V1().ClusterIAMPolicies().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("clusterorganizationpolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Bespin().V1().ClusterOrganizationPolicies().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("folders"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Bespin().V1().Folders().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("iampolicies"):

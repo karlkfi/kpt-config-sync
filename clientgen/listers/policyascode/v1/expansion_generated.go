@@ -22,6 +22,10 @@ package v1
 // ClusterIAMPolicyLister.
 type ClusterIAMPolicyListerExpansion interface{}
 
+// ClusterOrganizationPolicyListerExpansion allows custom methods to be added to
+// ClusterOrganizationPolicyLister.
+type ClusterOrganizationPolicyListerExpansion interface{}
+
 // FolderListerExpansion allows custom methods to be added to
 // FolderLister.
 type FolderListerExpansion interface{}
