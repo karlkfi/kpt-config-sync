@@ -70,11 +70,6 @@ func GetClusterSelectors(root *ast.Root) *ClusterSelectors {
 	return root.Data.Get(csKey).(*ClusterSelectors)
 }
 
-// HasClusterSelectors is similar to GetClusterSelectors, but returns nil if not found.
-func HasClusterSelectors(root *ast.Root) *ClusterSelectors {
-	return root.Data.Has(csKey).(*ClusterSelectors)
-}
-
 // ForEachSelector runs f on each name and selector pair in this collection of
 // selectors.
 func (stc *ClusterSelectors) ForEachSelector(f func(name string, selector policyhierarchy.ClusterSelector)) {
