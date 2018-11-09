@@ -134,7 +134,10 @@ function git::commit() {
 #
 function git::check_hash() {
   local expected=$1
-  run git -C "${TEST_REPO}" log -n1 --format=%H
-  assert::equals "$expected"
+  local cur_hash
+  cur_hash="$(git -C "${TEST_REPO}" log -n1 --format=%H)"
+  if [[ "${cur_hash}" != "${expected}" ]]; then
+    debug::error "Git hash mismatch, expected ${expected} got ${cur_hash}"
+  fi
 }
 
