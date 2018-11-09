@@ -117,6 +117,13 @@ func (c *Controller) Run() error {
 }
 
 func (c *Controller) pollDir() error {
+	glog.Infof("Polling policy dir: %s", c.policyDir)
+
+	currentPolicies, err := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
+	if err != nil {
+		return errors.Wrapf(err, "failed to list current policies")
+	}
+
 	currentDir := ""
 	ticker := time.NewTicker(c.pollPeriod)
 
@@ -132,12 +139,7 @@ func (c *Controller) pollDir() error {
 				// No new commits, nothing to do.
 				continue
 			}
-			glog.Infof("Resolved policy dir: %s. Polling policy dir: %s", newDir, c.policyDir)
-
-			currentPolicies, err := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
-			if err != nil {
-				return errors.Wrapf(err, "failed to list current policies")
-			}
+			glog.Infof("Resolved policy dir: %s", newDir)
 
 			// Parse filesystem tree into in-memory PolicyNode and ClusterPolicy objects.
 			desiredPolicies, err := c.parser.Parse(newDir)
@@ -175,6 +177,8 @@ func (c *Controller) pollDir() error {
 			}
 
 			currentDir = newDir
+			// TODO: what if someone else changes currentPolicies?
+			currentPolicies = desiredPolicies
 			policyimporter.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
 			policyimporter.Metrics.Nodes.Set(float64(len(desiredPolicies.PolicyNodes)))
 
@@ -237,7 +241,7 @@ func (c *Controller) syncDeletes(current, desired *v1.AllPolicies) error {
 			glog.V(1).Infof("Polling for deleted Sync %s", sd)
 			_, err := c.client.PolicyHierarchy().NomosV1alpha1().Syncs().Get(sd, metav1.GetOptions{})
 			if err == nil {
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(50 * time.Millisecond)
 			} else {
 				if apierrors.IsNotFound(err) {
 					exists = false
