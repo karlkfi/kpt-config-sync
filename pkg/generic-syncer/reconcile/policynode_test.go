@@ -611,8 +611,12 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any())
+				u := toUnstructured(t, converter, wantUpdate)
+				// Converting to unstructured removes empty fields. We always set the resource version for updates, so we need to set
+				// it explicitly here.
+				u.SetResourceVersion("")
 				mockClient.EXPECT().
-					Update(gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantUpdate)))
+					Update(gomock.Any(), gomock.Eq(u))
 			}
 			for _, wantDelete := range tc.wantDeletes {
 				mockClient.EXPECT().

@@ -430,6 +430,9 @@ func TestClusterPolicyReconcile(t *testing.T) {
 			}
 			for _, wantUpdate := range tc.wantUpdates {
 				u := toUnstructured(t, converter, wantUpdate)
+				// Converting to unstructured removes empty fields. We always set the resource version for updates, so we need to set
+				// it explicitly here.
+				u.SetResourceVersion("")
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any())

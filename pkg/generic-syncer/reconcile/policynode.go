@@ -389,6 +389,7 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 		}
 
 		toUpdate := diff.Declared
+		toUpdate.SetResourceVersion(diff.Actual.GetResourceVersion())
 		if err := r.client.Upsert(ctx, toUpdate); err != nil {
 			metrics.ErrTotal.WithLabelValues(toUpdate.GetNamespace(), toUpdate.GetKind(), "update").Inc()
 			return false, errors.Wrapf(err, "could not update resource %q", diff.Name)
