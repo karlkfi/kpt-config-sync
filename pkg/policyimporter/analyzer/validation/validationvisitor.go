@@ -156,31 +156,32 @@ func (v *InputValidator) VisitReservedNamespaces(rs *ast.ReservedNamespaces) ast
 func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	name := path.Base(n.Path)
 	if v.reserved.IsReserved(name) {
-		// The namespace's name must not be a reserved namespace name.
+		// The node's name must not be a reserved namespace name.
 		v.errs.Add(ReservedDirectoryNameError{n})
 	}
 	if other, found := v.dirNames[name]; found {
-		// The namespace must not duplicate the name of another namespace.
+		// The node must not duplicate the name of another node.
 		v.errs.Add(DuplicateDirectoryNameError{this: n, other: other})
 	} else {
 		v.dirNames[name] = n
 	}
-	if len(v.nodes) != 0 {
+	if len(v.nodes) > 1 {
 		// Namespaces may not have children.
+
+		// If len == 0, this is the top level and so it has no parent and cannot be a Namespace.
+		// If len == 1, this is a child of the top level, and so cannot validly be the child of a Namespace.
+		// We check for the two cases above elsewhere, so adding errors here adds noise and incorrect advice.
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == ast.Namespace {
 			v.errs.Add(IllegalNamespaceSubdirectoryError{child: n, parent: parent})
 		}
 	}
-	if n.Type == ast.Namespace {
-		if _, found := n.Annotations[v1alpha1.NamespaceSelectorAnnotationKey]; found {
-			// Namespaces may not use the selector annotation.
-			v.errs.Add(IllegalNamespaceSelectorAnnotationError{n})
-		}
-	}
 	for _, s := range n.Selectors {
-		if err := v.checkNamespaceSelectorAnnotations(s); err != nil {
-			v.errs.Add(err)
-		}
+		v.checkNamespaceSelectorAnnotations(s)
+	}
+
+	if n.Type == ast.Namespace {
+		// Namespace-specific validation
+		v.visitNamespaceNode(n)
 	}
 
 	v.nodes = append(v.nodes, n)
@@ -190,17 +191,35 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	return o
 }
 
+// MetadataNameKey keys an object's name in TreeNode.Data
+const MetadataNameKey string = "metadata.name"
+
+// NamespaceSourceKey keys the file defining the object
+const NamespaceSourceKey string = "source"
+
+func (v *InputValidator) visitNamespaceNode(n *ast.TreeNode) {
+	if _, found := n.Annotations[v1alpha1.NamespaceSelectorAnnotationKey]; found {
+		// Namespaces may not use the selector annotation.
+		v.errs.Add(IllegalNamespaceSelectorAnnotationError{n})
+	}
+
+	if len(v.nodes) == 0 {
+		// Cannot declare a Namespace in namespaces/, must use a subdirectory.
+		v.errs.Add(IllegalTopLevelNamespaceError{n})
+	} else if n.Data.Get(MetadataNameKey) != n.Name() {
+		// Must declare metadata.name to be equal to the directory's name.
+		v.errs.Add(InvalidNamespaceNameError{n})
+	}
+}
+
 // checkNamespaceSelectorAnnotations ensures that a NamespaceSelector object has no
 // ClusterSelector annotation on it.
-func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.NamespaceSelector) error {
-	a := s.GetAnnotations()
-	if a == nil {
-		return nil
+func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.NamespaceSelector) {
+	if a := s.GetAnnotations(); a != nil {
+		if _, ok := a[v1alpha1.ClusterSelectorAnnotationKey]; ok {
+			v.errs.Add(NamespaceSelectorMayNotHaveAnnotation{s})
+		}
 	}
-	if _, ok := a[v1alpha1.ClusterSelectorAnnotationKey]; ok {
-		return NamespaceSelectorMayNotHaveAnnotation{s}
-	}
-	return nil
 }
 
 func (v *InputValidator) checkAnnotationsAndLabels(o ast.FileObject) {

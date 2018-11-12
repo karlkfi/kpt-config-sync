@@ -98,7 +98,7 @@ test-nomosvet-local: build
 	@echo "Running test-nomosvet-local..."
 	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/acme
 	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/foo-corp-example/foo-corp
-# To update expected errors: nomosvet examples/errors 2> test/expected-errs.txt
+# To update expected errors: nomosvet examples/errors 2> examples/errors/expected-errs.txt
 	@if [ -f $(TOP_DIR)/.output/tmp/actual-errors.txt ]; then \
 		rm $(TOP_DIR)/.output/tmp/actual-errors.txt; \
 	fi

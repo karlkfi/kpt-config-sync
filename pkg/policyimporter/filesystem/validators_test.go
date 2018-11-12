@@ -30,11 +30,9 @@ type validatorsTestCase struct {
 }
 
 var testCases = []validatorsTestCase{
-	{"HasName valid", newValidator().HasName(&resource.Info{Name: "foo"}, "foo"), false},
-	{"HasName invalid", newValidator().HasName(&resource.Info{Name: "foo"}, "bar"), true},
 	{"HasNamespace valid", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "foo"), false},
 	{"HasNamespace invalid", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "bar"), true},
-	{"Keep first error", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "bar").HasName(&resource.Info{Name: "foo"}, "foo"), true},
+	{"Keep first error", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "bar").HasNamespace(&resource.Info{Namespace: "foo"}, "foo"), true},
 	{"HaveSeen valid", newValidator().MarkSeen(meta.Namespace).HaveSeen(meta.Namespace), false},
 	{"HaveSeen invalid", newValidator().HaveSeen(meta.Namespace), true},
 	{"HaveNotSeen valid", newValidator().HaveNotSeen(meta.Namespace), false},

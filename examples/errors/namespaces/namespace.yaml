@@ -1,0 +1,6 @@
+# There shouldn't be a Namespace object declared in namespaces/.
+# Namespaces must be declared in subdirectories.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name:

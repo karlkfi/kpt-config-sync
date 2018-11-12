@@ -393,7 +393,6 @@ func (p *Parser) processNamespacesDir(
 }
 
 func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNode *ast.TreeNode) error {
-	namespace := filepath.Base(dir)
 	v := newValidator()
 
 	for _, i := range infos {
@@ -404,7 +403,9 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 			metaObj := o.(metav1.Object)
 			treeNode.Labels = metaObj.GetLabels()
 			treeNode.Annotations = metaObj.GetAnnotations()
-			v.HasName(i, namespace).HaveNotSeen(gvk).MarkSeen(gvk)
+			treeNode.Data = treeNode.Data.Add(validation.MetadataNameKey, i.Name)
+			treeNode.Data = treeNode.Data.Add(validation.NamespaceSourceKey, p.relativePath(i.Source))
+			v.HaveNotSeen(gvk).MarkSeen(gvk)
 			continue
 		}
 

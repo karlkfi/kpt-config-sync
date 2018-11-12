@@ -45,17 +45,6 @@ func (v *validator) HasNamespace(info *resource.Info, namespace string) *validat
 	return v
 }
 
-// HasName validates that the object has the given name.
-func (v *validator) HasName(info *resource.Info, name string) *validator {
-	if v.err != nil {
-		return v
-	}
-	if info.Name != name {
-		v.err = errors.Errorf("metadata.name must be set to %q instead of %q in %s", name, info.Name, info.Source)
-	}
-	return v
-}
-
 // MarkSeen marks the given type as seen.
 func (v *validator) MarkSeen(t schema.GroupVersionKind) *validator {
 	v.seen[t] = true

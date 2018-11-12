@@ -1,4 +1,4 @@
-Found issues: 12 error(s)
+Found issues: 14 error(s)
 
 [1] KNV1001: Directories MUST NOT have reserved namespace names. Rename or remove directory "reserved-namespace" from system/nomos-reserved-namespaces:
 
@@ -82,4 +82,14 @@ kind: RoleBinding
 [12] KNV1018: cluster/ directory MUST NOT have subdirectories.
 
 path: cluster/illegal-cluster-subdir
+
+[13] KNV1019: Namespaces MUST be declared in subdirectories of namespaces/. Create a subdirectory for Namespace defined in:
+
+source: namespaces/namespace.yaml
+
+[14] KNV1020: Namespace MUST define metadata.name that matches the name of its directory.
+
+source: namespaces/dev/dev-namespace/namespace.yaml
+expected name: dev-namespace
+actual name: incorrect-name
 

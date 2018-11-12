@@ -70,6 +70,10 @@ func code(e error) string {
 		return "1017"
 	case IllegalClusterSubdirectoryError:
 		return "1018"
+	case IllegalTopLevelNamespaceError:
+		return "1019"
+	case InvalidNamespaceNameError:
+		return "1020"
 	default:
 		panic(fmt.Sprintf("Unknown Nomosvet Error Type: %T", reflect.TypeOf(e))) // Undefined
 	}
@@ -318,4 +322,29 @@ type IllegalClusterSubdirectoryError struct {
 func (e IllegalClusterSubdirectoryError) Error() string {
 	return format(e,
 		"%s/ directory MUST NOT have subdirectories.\n\npath: %[2]s", repo.ClusterDir, e.subdirectory)
+}
+
+// IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
+type IllegalTopLevelNamespaceError struct {
+	*ast.TreeNode
+}
+
+// Error implements error
+func (e IllegalTopLevelNamespaceError) Error() string {
+	return format(e,
+		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]s defined in:\n\n"+
+			"source: %[3]s",
+		repo.NamespacesDir, ast.Namespace, e.Data.Get(NamespaceSourceKey))
+}
+
+// InvalidNamespaceNameError reports that a Namespace has an invalid name.
+type InvalidNamespaceNameError struct {
+	*ast.TreeNode
+}
+
+// Error implements error
+func (e InvalidNamespaceNameError) Error() string {
+	return format(e,
+		"%[1]s MUST define %[2]s that matches the name of its directory.\n\nsource: %[3]s\nexpected name: %[4]s\nactual name: %[5]s",
+		ast.Namespace, MetadataNameKey, e.Data.Get(NamespaceSourceKey), e.Name(), e.Data.Get(MetadataNameKey))
 }
