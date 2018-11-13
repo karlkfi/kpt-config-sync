@@ -24,13 +24,12 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
-
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -288,6 +287,14 @@ spec:
     matchLabels:
       environment: prod
 `
+
+	anUndefinedResourceTemplate = `
+apiVersion: does.not.exist/v1
+kind: Nonexistent
+metadata:
+  name: nonexistentname
+  namespace: {{.Namespace}}
+`
 )
 
 func tpl(name, content string) *template.Template {
@@ -331,6 +338,7 @@ var (
 	aClusterRegistryCluster            = tpl("aClusterRegistryCluster", aClusterRegistryClusterTemplate)
 	aClusterSelector                   = tpl("aClusterSelector", aClusterSelectorTemplate)
 	aNamespaceSelector                 = tpl("aNamespaceSelectorTemplate", aNamespaceSelectorTemplate)
+	anUndefinedResource                = tpl("anUndefinedResourceTemplate", anUndefinedResourceTemplate)
 )
 
 // templateData can be used to format any of the below values into templates to create
@@ -1510,6 +1518,17 @@ spec:
 					v1alpha1.ClusterSelectorAnnotationKey: "something",
 				},
 			}.apply(aNamespaceSelector),
+		},
+		expectedError: true,
+	},
+	{
+		testName: "Custom Resource w/o a CRD applied in repo",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":             aRepo,
+			"system/unknown.yaml":           templateData{Group: "does.not.exist", Version: "v1", Kind: "Nonexistent"}.apply(aSync),
+			"namespaces/bar/undefined.yaml": templateData{Namespace: "bar"}.apply(anUndefinedResource),
+			"namespaces/bar/ns.yaml":        templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedError: true,
 	},

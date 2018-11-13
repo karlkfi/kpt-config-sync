@@ -78,9 +78,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 			))
 		}
 	} else {
-		panic(errors.Errorf(
-			"programmer error: unknown object %s should not have been added to 'cluster' directory", gvk,
-		))
+		p.errs.Add(UnknownObjectError{&o.FileObject})
 	}
 	return o
 }
@@ -103,9 +101,7 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) ast.Node {
 			))
 		}
 	} else {
-		panic(errors.Errorf(
-			"programmer error: unknown object %s should not have been added to 'namespaces' directory", gvk,
-		))
+		p.errs.Add(UnknownObjectError{&o.FileObject})
 	}
 	return o
 }

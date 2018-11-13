@@ -8,9 +8,6 @@ load ../lib/loader
 
 # This cleans up any CRDs that were created by a testcase
 function local_teardown() {
-  # TODO(119278434): Remove git stuff when importer is fixed.
-  git::rm acme/system/acme-sync.yaml
-  git::commit
   kubectl delete crd anvils.acme.com --ignore-not-found=true || true
   kubectl delete crd clusteranvils.acme.com --ignore-not-found=true || true
 }

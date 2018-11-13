@@ -74,6 +74,8 @@ func code(e error) string {
 		return "1019"
 	case InvalidNamespaceNameError:
 		return "1020"
+	case UnknownObjectError:
+		return "1021"
 	default:
 		panic(fmt.Sprintf("Unknown Nomosvet Error Type: %T", reflect.TypeOf(e))) // Undefined
 	}
@@ -347,4 +349,17 @@ func (e InvalidNamespaceNameError) Error() string {
 	return format(e,
 		"%[1]s MUST define %[2]s that matches the name of its directory.\n\nsource: %[3]s\nexpected name: %[4]s\nactual name: %[5]s",
 		ast.Namespace, MetadataNameKey, e.Data.Get(NamespaceSourceKey), e.Name(), e.Data.Get(MetadataNameKey))
+}
+
+// UnknownObjectError reports that an object declared in the repo does not have a definition in the cluster.
+type UnknownObjectError struct {
+	*ast.FileObject
+}
+
+// Error implements error
+func (e UnknownObjectError) Error() string {
+	return format(e,
+		"Transient Error: Object is declared, but has no definition on the cluster."+
+			"\nObject must be a native K8S objects or have an associated CustomResourceDefinition:\n\n%s",
+		e.FileObject)
 }
