@@ -117,13 +117,6 @@ func (c *Controller) Run() error {
 }
 
 func (c *Controller) pollDir() error {
-	glog.Infof("Polling policy dir: %s", c.policyDir)
-
-	currentPolicies, err := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
-	if err != nil {
-		return errors.Wrapf(err, "failed to list current policies")
-	}
-
 	currentDir := ""
 	ticker := time.NewTicker(c.pollPeriod)
 
@@ -139,7 +132,12 @@ func (c *Controller) pollDir() error {
 				// No new commits, nothing to do.
 				continue
 			}
-			glog.Infof("Resolved policy dir: %s", newDir)
+			glog.Infof("Resolved policy dir: %s. Polling policy dir: %s", newDir, c.policyDir)
+
+			currentPolicies, err := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
+			if err != nil {
+				return errors.Wrapf(err, "failed to list current policies")
+			}
 
 			// Parse filesystem tree into in-memory PolicyNode and ClusterPolicy objects.
 			desiredPolicies, err := c.parser.Parse(newDir)
@@ -177,8 +175,6 @@ func (c *Controller) pollDir() error {
 			}
 
 			currentDir = newDir
-			// TODO: what if someone else changes currentPolicies?
-			currentPolicies = desiredPolicies
 			policyimporter.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
 			policyimporter.Metrics.Nodes.Set(float64(len(desiredPolicies.PolicyNodes)))
 
