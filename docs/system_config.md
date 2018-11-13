@@ -83,9 +83,9 @@ spec:
         - roleRef
 ```
 
-ResourceQuota has special handling (as described below). However, the Sync
-configuration is not affected by this. The following shows an example of
-configuring sync on ResourceQuota.
+ResourceQuota has [special handling](rq.md). However, the Sync configuration is
+not affected by this. The following shows an example of configuring sync on
+ResourceQuota.
 
 ```console
 $ cat system/resourcequota-sync.yaml
@@ -106,7 +106,30 @@ spec:
 
 #### Standard mode
 
-???
+By default, policies have no inheritance and can only be set on a Namespace
+directory. Placing a non-inherited policy in an Abstract Namespace directory
+will cause an error.
+
+To demonstrate, we move a Role from a Namespace directory to an Abstract
+Namespace directory.
+
+```console
+$ mv rnd/new-prj/acme-admin-role.yaml rnd/
+```
+
+Now when we try to sync policies from our repo, we get the following error.
+
+```console
+Found issues: 1 error(s)
+
+[1] KNV1007: Object "acme-admin" illegally declared in an Abstract Namespace directory. Move this object to a Namespace directory:
+
+source: namespaces/rnd/acme-admin-role.yaml
+metadata.name: acme-admin
+group: rbac.authorization.k8s.io
+apiVersion: v1
+kind: Role
+```
 
 #### Inherited Mode
 
