@@ -1,5 +1,8 @@
 # Included by Makefile
 
+DOCS_GCS_PREVIEW ?= gs://stolos-dev/docs/$(USER)/$(DATE)/nomos-docs.zip
+DOCS_GCS_PREVIEW_DOWNLOAD = $(subst gs://,https://storage.cloud.google.com/,$(DOCS_GCS_PREVIEW))
+
 # Creates staging directory for generating docs.
 docs-staging: $(OUTPUT_DIR)
 	@echo "+++ Creating directory for generating docs: $(OUTPUT_DIR)"
@@ -31,3 +34,8 @@ docs-package: docs-generate
 
 docs-format:
 	@/google/data/ro/teams/g3doc/mdformat --in_place --compatibility $(shell find docs README.md -name '*.md')
+
+docs-preview: docs-format docs-package
+	@gsutil -m cp $(STAGING_DIR)/nomos-docs.zip $(DOCS_GCS_PREVIEW)
+	@echo "+++ Uploaded docs preview to $(DOCS_GCS_PREVIEW_DOWNLOAD)"
+
