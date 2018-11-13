@@ -25,41 +25,106 @@ import (
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func TestProjectPolicy(t *testing.T) {
+func TestIAMPolicies(t *testing.T) {
 	project := vt.Helper.GCPProject()
-	iamPolicy := &v1.IAMPolicy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1.SchemeGroupVersion.String(),
-			Kind:       "IAMPolicy",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "iam-policy",
-		},
-		Spec: v1.IAMPolicySpec{
-			Bindings: []v1.IAMPolicyBinding{},
+
+	var tests = []struct {
+		name   string
+		policy *v1.IAMPolicy
+		want   *v1.IAMPolicy
+	}{
+		{
+			name: "IAM policies should gain a project attachment point",
+			policy: &v1.IAMPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "IAMPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "iam-policy",
+				},
+				Spec: v1.IAMPolicySpec{
+					Bindings: []v1.IAMPolicyBinding{},
+				},
+			},
+			want: &v1.IAMPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "IAMPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "iam-policy",
+				},
+				Spec: v1.IAMPolicySpec{
+					Bindings: []v1.IAMPolicyBinding{},
+					ResourceReference: v1.ResourceReference{
+						Kind: project.TypeMeta.Kind,
+						Name: project.ObjectMeta.Name,
+					},
+				},
+			},
 		},
 	}
-	wantIAMPolicy := iamPolicy.DeepCopy()
-	wantIAMPolicy.Spec.ResourceReference = v1.ResourceReference{
-		Kind: project.TypeMeta.Kind,
-		Name: project.ObjectMeta.Name,
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			runAttachmentPointTest(t, project, tc.policy, tc.want)
+		})
 	}
-	orgPolicy := &v1.OrganizationPolicy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1.SchemeGroupVersion.String(),
-			Kind:       "OrganizationPolicy",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "org-policy",
-		},
-		Spec: v1.OrganizationPolicySpec{
-			Constraints: []v1.OrganizationPolicyConstraint{},
+}
+
+func TestOrgPolicies(t *testing.T) {
+	project := vt.Helper.GCPProject()
+
+	var tests = []struct {
+		name   string
+		policy *v1.OrganizationPolicy
+		want   *v1.OrganizationPolicy
+	}{
+		{
+			name: "Organization policies should gain a project attachment point",
+			policy: &v1.OrganizationPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "OrganizationPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "org-policy",
+				},
+				Spec: v1.OrganizationPolicySpec{
+					Constraints: []v1.OrganizationPolicyConstraint{},
+				},
+			},
+			want: &v1.OrganizationPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "OrganizationPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "org-policy",
+				},
+				Spec: v1.OrganizationPolicySpec{
+					Constraints: []v1.OrganizationPolicyConstraint{},
+					ResourceReference: v1.ResourceReference{
+						Kind: project.TypeMeta.Kind,
+						Name: project.ObjectMeta.Name,
+					},
+				},
+			},
 		},
 	}
-	wantOrgPolicy := orgPolicy.DeepCopy()
-	wantOrgPolicy.Spec.ResourceReference = wantIAMPolicy.Spec.ResourceReference
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			runAttachmentPointTest(t, project, tc.policy, tc.want)
+		})
+	}
+}
+
+func runAttachmentPointTest(t *testing.T, project *v1.Project, policy, want runtime.Object) {
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
@@ -67,21 +132,32 @@ func TestProjectPolicy(t *testing.T) {
 			Children: []*ast.TreeNode{
 				&ast.TreeNode{
 					Type:    ast.AbstractNamespace,
-					Objects: vt.ObjectSets(project, iamPolicy, orgPolicy),
+					Objects: vt.ObjectSets(project, policy),
 				},
 			},
 		},
 	}
+
 	input.Tree.Data = input.Tree.Data.Add(gcpAttachmentPointKey, nil)
 	projectNode := input.Tree.Children[0]
-	projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &wantIAMPolicy.Spec.ResourceReference)
+
+	// If you try and switch on a single case with both types, Go will keep the value
+	// as the generalized version as it doesn't know which one to use, hence the repeated
+	// code.
+	switch v := want.(type) {
+	case *v1.IAMPolicy:
+		projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &v.Spec.ResourceReference)
+	case *v1.OrganizationPolicy:
+		projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &v.Spec.ResourceReference)
+	default:
+		t.Fatalf("unknown policy type")
+	}
 
 	copier := visitorpkg.NewCopying()
 	copier.SetImpl(copier)
 	inputCopy, ok := input.Accept(copier).(*ast.Root)
 	if !ok {
-		t.Fatalf(
-			"framework error: return value from copying visitor needs to be of type *ast.Root, got: %#v", inputCopy)
+		t.Fatalf("framework error: return value from copying visitor needs to be of type *ast.Root, got: %#v", inputCopy)
 	}
 	visitor := NewGCPPolicyVisitor()
 	output := input.Accept(visitor).(*ast.Root)
@@ -93,7 +169,7 @@ func TestProjectPolicy(t *testing.T) {
 		t.Fatalf("unexpected output root: %+v", output)
 	}
 	projectNode = output.Tree.Children[0]
-	if diff := cmp.Diff(vt.ObjectSets(project, wantIAMPolicy, wantOrgPolicy), projectNode.Objects); diff != "" {
+	if diff := cmp.Diff(vt.ObjectSets(project, want), projectNode.Objects); diff != "" {
 		t.Errorf("got diff:\n%v", diff)
 	}
 }
