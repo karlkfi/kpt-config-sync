@@ -34,7 +34,7 @@ func TestIAMPolicies(t *testing.T) {
 	var tests = []struct {
 		name   string
 		policy *v1.IAMPolicy
-		want   *v1.IAMPolicy
+		want   v1.ResourceReference
 	}{
 		{
 			name: "IAM policies should gain a project attachment point",
@@ -50,27 +50,22 @@ func TestIAMPolicies(t *testing.T) {
 					Bindings: []v1.IAMPolicyBinding{},
 				},
 			},
-			want: &v1.IAMPolicy{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "IAMPolicy",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "iam-policy",
-				},
-				Spec: v1.IAMPolicySpec{
-					Bindings: []v1.IAMPolicyBinding{},
-					ResourceReference: v1.ResourceReference{
-						Kind: project.TypeMeta.Kind,
-						Name: project.ObjectMeta.Name,
-					},
-				},
+			want: v1.ResourceReference{
+				Kind: project.TypeMeta.Kind,
+				Name: project.ObjectMeta.Name,
 			},
+		},
+		// TODO(cflewis): Fill these in later.
+		{
+			name: "An IAM policy without an attachment point should fail",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.policy == nil {
+				t.Skip("test is stubbed")
+			}
 			runAttachmentPointTest(t, project, tc.policy, tc.want)
 		})
 	}
@@ -82,7 +77,7 @@ func TestOrgPolicies(t *testing.T) {
 	var tests = []struct {
 		name   string
 		policy *v1.OrganizationPolicy
-		want   *v1.OrganizationPolicy
+		want   v1.ResourceReference
 	}{
 		{
 			name: "Organization policies should gain a project attachment point",
@@ -98,21 +93,9 @@ func TestOrgPolicies(t *testing.T) {
 					Constraints: []v1.OrganizationPolicyConstraint{},
 				},
 			},
-			want: &v1.OrganizationPolicy{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "OrganizationPolicy",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "org-policy",
-				},
-				Spec: v1.OrganizationPolicySpec{
-					Constraints: []v1.OrganizationPolicyConstraint{},
-					ResourceReference: v1.ResourceReference{
-						Kind: project.TypeMeta.Kind,
-						Name: project.ObjectMeta.Name,
-					},
-				},
+			want: v1.ResourceReference{
+				Kind: project.TypeMeta.Kind,
+				Name: project.ObjectMeta.Name,
 			},
 		},
 	}
@@ -124,7 +107,7 @@ func TestOrgPolicies(t *testing.T) {
 	}
 }
 
-func runAttachmentPointTest(t *testing.T, project *v1.Project, policy, want runtime.Object) {
+func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Object, wantRef v1.ResourceReference) {
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
@@ -140,18 +123,110 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy, want runt
 
 	input.Tree.Data = input.Tree.Data.Add(gcpAttachmentPointKey, nil)
 	projectNode := input.Tree.Children[0]
+	projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &wantRef)
 
-	// If you try and switch on a single case with both types, Go will keep the value
-	// as the generalized version as it doesn't know which one to use, hence the repeated
-	// code.
+	copier := visitorpkg.NewCopying()
+	copier.SetImpl(copier)
+	inputCopy, ok := input.Accept(copier).(*ast.Root)
+	if !ok {
+		t.Fatalf("framework error: return value from copying visitor needs to be of type *ast.Root, got: %#v", inputCopy)
+	}
+
+	visitor := NewGCPPolicyVisitor()
+	output := input.Accept(visitor).(*ast.Root)
+	verifyInputUnmodified(t, input, inputCopy)
+	if err := visitor.Error(); err != nil {
+		t.Errorf("GCP hierarchy visitor resulted in error: %v", err)
+	}
+
+	if output.Tree == nil || len(output.Tree.Children) != 1 {
+		t.Fatalf("unexpected output root: %+v", output)
+	}
+
+	want := policy.DeepCopyObject()
+
+	// It's impossible to collapse these two type cases as Go won't convert v to a concrete type because
+	// it doesn't know which to pick. This means the code has to be repeated for each type case.
 	switch v := want.(type) {
 	case *v1.IAMPolicy:
-		projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &v.Spec.ResourceReference)
+		v.Spec.ResourceReference = wantRef
 	case *v1.OrganizationPolicy:
-		projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &v.Spec.ResourceReference)
+		v.Spec.ResourceReference = wantRef
 	default:
-		t.Fatalf("unknown policy type")
+		t.Fatal("unknown policy type")
 	}
+	projectNode = output.Tree.Children[0]
+	if diff := cmp.Diff(vt.ObjectSets(project, want), projectNode.Objects); diff != "" {
+		t.Errorf("got diff:\n%v", diff)
+	}
+}
+
+func TestIAMPolicyConversion(t *testing.T) {
+	org := vt.Helper.GCPOrg()
+	project := vt.Helper.GCPProject()
+
+	var tests = []struct {
+		name   string
+		policy *v1.IAMPolicy
+		want   *v1.ClusterIAMPolicy
+	}{
+		{
+			name: "A non-project attachment point should attach to a cluster instead",
+			policy: &v1.IAMPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "IAMPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "iam-policy",
+				},
+				Spec: v1.IAMPolicySpec{
+					Bindings: []v1.IAMPolicyBinding{},
+				},
+			},
+			want: &v1.ClusterIAMPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterIAMPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "iam-policy",
+				},
+				Spec: v1.IAMPolicySpec{
+					Bindings: []v1.IAMPolicyBinding{},
+					ResourceReference: v1.ResourceReference{
+						Kind: org.TypeMeta.Kind,
+						Name: org.ObjectMeta.Name,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			runClusterObjectsTest(t, org, project, tc.policy, tc.want)
+		})
+	}
+}
+
+func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Project, policy *v1.IAMPolicy, want *v1.ClusterIAMPolicy) {
+	input := &ast.Root{
+		Cluster: &ast.Cluster{},
+		Tree: &ast.TreeNode{
+			Objects: vt.ObjectSets(vt.Helper.GCPOrg()),
+			Children: []*ast.TreeNode{
+				&ast.TreeNode{
+					Type:    ast.AbstractNamespace,
+					Objects: vt.ObjectSets(project, policy),
+				},
+			},
+		},
+	}
+
+	input.Tree.Data = input.Tree.Data.Add(gcpAttachmentPointKey, nil)
+	projectNode := input.Tree.Children[0]
+	projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &want.Spec.ResourceReference)
 
 	copier := visitorpkg.NewCopying()
 	copier.SetImpl(copier)
@@ -165,11 +240,12 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy, want runt
 	if err := visitor.Error(); err != nil {
 		t.Errorf("GCP hierarchy visitor resulted in error: %v", err)
 	}
+
 	if output.Tree == nil || len(output.Tree.Children) != 1 {
 		t.Fatalf("unexpected output root: %+v", output)
 	}
-	projectNode = output.Tree.Children[0]
-	if diff := cmp.Diff(vt.ObjectSets(project, want), projectNode.Objects); diff != "" {
+
+	if diff := cmp.Diff(vt.ClusterObjectSets(want), output.Cluster.Objects); diff != "" {
 		t.Errorf("got diff:\n%v", diff)
 	}
 }

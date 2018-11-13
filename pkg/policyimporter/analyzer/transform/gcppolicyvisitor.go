@@ -22,6 +22,8 @@ import (
 	"github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // GCPPolicyVisitor is a visitor that handles GCP IAM and organization policies.
@@ -90,9 +92,9 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 		if attachmentPoint == nil {
 			panic(fmt.Sprintf("Missing attachment point for IAM policy %v", o))
 		}
+		iamPolicy := gcpObj.DeepCopy()
+		iamPolicy.Spec.ResourceReference = *attachmentPoint
 		if attachmentPoint.Kind == "Project" {
-			iamPolicy := gcpObj.DeepCopy()
-			iamPolicy.Spec.ResourceReference = *attachmentPoint
 			return &ast.NamespaceObject{
 				FileObject: ast.FileObject{
 					Object: iamPolicy,
@@ -100,7 +102,17 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 				},
 			}
 		}
-		// TODO(b/119222263): Move to ClusterIAMPolicy.
+
+		ciam := &v1.ClusterIAMPolicy{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1.SchemeGroupVersion.String(),
+				Kind:       "ClusterIAMPolicy",
+			},
+			ObjectMeta: iamPolicy.ObjectMeta,
+			Spec:       iamPolicy.Spec,
+			Status:     iamPolicy.Status,
+		}
+		v.addToClusterObjects(ciam, o.Source)
 		return nil
 	case *v1.OrganizationPolicy:
 		if attachmentPoint == nil {
@@ -126,4 +138,14 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 // VisitObjectList implements Visitor.
 func (v *GCPPolicyVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
 	return v.Copying.VisitObjectList(o)
+}
+
+func (v *GCPPolicyVisitor) addToClusterObjects(o runtime.Object, source string) {
+	co := &ast.ClusterObject{
+		FileObject: ast.FileObject{
+			Object: o,
+			Source: source,
+		},
+	}
+	v.cluster.Objects = append(v.cluster.Objects, co)
 }
