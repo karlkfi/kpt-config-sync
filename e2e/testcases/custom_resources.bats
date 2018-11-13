@@ -51,6 +51,7 @@ function local_teardown() {
 
   debug::log "Checking that custom resource moved to another namespace"
   wait::for -t 30 -- kubectl get anvil ${resname} -n new-prj
+  wait::for -f -t 30 -- kubectl get anvil ${resname} -n backend
   resource::check_count -n new-prj -r anvil -c 1
   resource::check -n new-prj anvil ${resname} -l "nomos.dev/managed=full"
 
@@ -61,7 +62,8 @@ function local_teardown() {
   git::commit
 
   debug::log "Checking that original resource remains on cluster"
-  wait::event -t 30 UnmanagedResource -n newer-prj
+  wait::for -t 10 -- policynode::sync_token_eq newer-prj "$(git::hash)"
+  debug::log "Anvil events: $(kubectl get events | grep "Anvil")"
   selection=$(kubectl get anvil ${resname} -n newer-prj -ojson | jq -c ".spec.lbs")
   [[ "${selection}" == "100" ]] || debug::error "unmanaged custom resource weight should be 100, not ${selection}"
 

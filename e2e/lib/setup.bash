@@ -190,6 +190,13 @@ setup::git::initialize() {
   wait::for kubectl get rolebindings bob-rolebinding -n backend
   wait::for kubectl get clusterrole acme-admin
 
+  local ns
+  local commit_hash
+  commit_hash="$(git::hash)"
+  for ns in "${ACME_NAMESPACES[@]}"; do
+    wait::for -- policynode::sync_token_eq "${ns}" "${commit_hash}"
+  done
+
   if type local_setup &> /dev/null; then
     echo "Running local_setup"
     local_setup

@@ -6,17 +6,6 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 load ../lib/loader
 
-function sync_token_eq() {
-  local namespace="${1:-}"
-  local expect="${2:-}"
-  local stoken
-  stoken="$(kubectl get policynode ${namespace} -ojsonpath='{.status.syncToken}')"
-  if [[ "$stoken" != "$expect" ]]; then
-    echo "syncToken is $stoken waiting for $expect"
-    return 1
-  fi
-}
-
 @test "Namespace garbage collection" {
   git::add ${YAML_DIR}/accounting-namespace.yaml acme/namespaces/eng/accounting/namespace.yaml
   git::commit
@@ -58,7 +47,7 @@ function sync_token_eq() {
   git::check_hash "$itoken"
 
   # verify that syncToken has been updated as well
-  wait::for -- sync_token_eq backend "$itoken"
+  wait::for -- policynode::sync_token_eq backend "$itoken"
 }
 
 @test "RoleBindings enforced" {
