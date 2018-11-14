@@ -22,13 +22,11 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -173,14 +171,6 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 // VisitClusterObject implements Visitor
 func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	spec := &v.allPolicies.ClusterPolicy.Spec
-	switch obj := o.FileObject.Object.(type) {
-	case *rbacv1.ClusterRole:
-		spec.ClusterRolesV1 = append(spec.ClusterRolesV1, *obj)
-	case *rbacv1.ClusterRoleBinding:
-		spec.ClusterRoleBindingsV1 = append(spec.ClusterRoleBindingsV1, *obj)
-	case *extensionsv1beta1.PodSecurityPolicy:
-		spec.PodSecurityPoliciesV1Beta1 = append(spec.PodSecurityPoliciesV1Beta1, *obj)
-	}
 	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }
@@ -189,10 +179,6 @@ func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 func (v *OutputVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 	spec := &v.policyNode[len(v.policyNode)-1].Spec
 	switch obj := o.FileObject.Object.(type) {
-	case *rbacv1.Role:
-		spec.RolesV1 = append(spec.RolesV1, *obj)
-	case *rbacv1.RoleBinding:
-		spec.RoleBindingsV1 = append(spec.RoleBindingsV1, *obj)
 	case *corev1.ResourceQuota:
 		spec.ResourceQuotaV1 = obj
 	}

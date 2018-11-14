@@ -24,8 +24,6 @@ import (
 	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -104,9 +102,6 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Name: v1.ClusterPolicyName,
 				},
 				Spec: v1.ClusterPolicySpec{
-					ClusterRolesV1:             []rbacv1.ClusterRole{*vt.Helper.NomosAdminClusterRole()},
-					ClusterRoleBindingsV1:      []rbacv1.ClusterRoleBinding{*vt.Helper.NomosAdminClusterRoleBinding()},
-					PodSecurityPoliciesV1Beta1: []extensionsv1beta1.PodSecurityPolicy{*vt.Helper.NomosPodSecurityPolicy()},
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -210,7 +205,6 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Spec: v1.PolicyNodeSpec{
 						Type:            v1.Policyspace,
 						Parent:          "",
-						RoleBindingsV1:  []rbacv1.RoleBinding{*vt.Helper.AdminRoleBinding()},
 						ResourceQuotaV1: vt.Helper.AcmeResourceQuota(),
 						Resources: []v1.GenericResources{
 							{
@@ -249,8 +243,6 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Spec: v1.PolicyNodeSpec{
 						Type:            v1.Namespace,
 						Parent:          v1.RootPolicyNodeName,
-						RoleBindingsV1:  []rbacv1.RoleBinding{*vt.Helper.PodReaderRoleBinding()},
-						RolesV1:         []rbacv1.Role{*vt.Helper.PodReaderRole()},
 						ResourceQuotaV1: vt.Helper.FrontendResourceQuota(),
 						Resources: []v1.GenericResources{
 							{
@@ -297,10 +289,8 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Annotations: map[string]string{"has-waffles": "false"},
 					},
 					Spec: v1.PolicyNodeSpec{
-						Type:           v1.Namespace,
-						Parent:         v1.RootPolicyNodeName,
-						RoleBindingsV1: []rbacv1.RoleBinding{*vt.Helper.DeploymentReaderRoleBinding()},
-						RolesV1:        []rbacv1.Role{*vt.Helper.DeploymentReaderRole()},
+						Type:   v1.Namespace,
+						Parent: v1.RootPolicyNodeName,
 						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",
