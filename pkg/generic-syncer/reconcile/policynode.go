@@ -208,6 +208,15 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(ctx context.Context, name str
 			return r.managePolicies(ctx, name, node)
 		case namespaceStateExists:
 			r.warnNoLabel(ns)
+			syncErrs := []nomosv1.PolicyNodeSyncError{
+				{
+					ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s={%s,%s})",
+						labeling.ManagementKey, labeling.Policies, labeling.Full),
+				},
+			}
+			if err := r.setPolicyNodeStatus(ctx, node, syncErrs); err != nil {
+				return err
+			}
 		case namespaceStateManagePolicies:
 			if err := r.updateNamespaceLabels(ctx, node); err != nil {
 				return err

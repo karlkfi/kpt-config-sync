@@ -145,9 +145,9 @@ function local_teardown() {
   namespace::declare $ns
   git::commit
 
-  wait::event \
-    -n default \
-    InvalidManagementLabel
+  wait::for -t 30 -- policynode::sync_token_eq "$ns" "$(git::hash)"
+  selection=$(kubectl get pn ${ns} -ojson | jq -c ".status.syncState")
+  [[ "${selection}" == "\"error\"" ]] || debug::error "policy node status should be error, not ${selection}"
   namespace::check_exists $ns -l "nomos.dev/namespace-management=a-garbage-label"
   namespace::check_warning $ns
 }

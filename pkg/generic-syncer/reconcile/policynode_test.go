@@ -16,6 +16,7 @@ limitations under the License.
 package reconcile
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -542,6 +543,26 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Spec: appsv1.DeploymentSpec{
 						Strategy: appsv1.DeploymentStrategy{
 							Type: appsv1.RecreateDeploymentStrategyType,
+						},
+					},
+				},
+			},
+			wantStatusUpdate: &v1.PolicyNode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eng",
+				},
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+				},
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateError,
+					SyncTime:  now(),
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+					SyncErrors: []v1.PolicyNodeSyncError{
+						{
+							ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s={%s,%s})",
+								labeling.ManagementKey, labeling.Policies, labeling.Full),
 						},
 					},
 				},
