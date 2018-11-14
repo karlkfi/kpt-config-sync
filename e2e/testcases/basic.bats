@@ -35,7 +35,7 @@ load ../lib/loader
 
   git::update ${YAML_DIR}/robert-rolebinding.yaml acme/namespaces/eng/backend/bob-rolebinding.yaml
   git::commit
-  wait::for -f -- kubectl get rolebindings -n backend bob-rolebinding
+  wait::for -t 30 -f -- kubectl get rolebindings -n backend bob-rolebinding
 
   run kubectl get rolebindings -n backend bob-rolebinding
   assert::contains "NotFound"
@@ -47,7 +47,7 @@ load ../lib/loader
   git::check_hash "$itoken"
 
   # verify that syncToken has been updated as well
-  wait::for -- policynode::sync_token_eq backend "$itoken"
+  wait::for -t 30 -- policynode::sync_token_eq backend "$itoken"
 }
 
 @test "RoleBindings enforced" {
