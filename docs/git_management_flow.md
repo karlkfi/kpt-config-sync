@@ -1,46 +1,11 @@
-# System Guarantees
+# Management Flow
 
-This section details the guarantees that GKE Policy Management makes based on
-the contents of the git repo and what exists on cluster.
+The following decision tree shows the expected operations taken by GKE Policy
+Management System based on the desired state in the Git repo and the current
+state of the cluster, including the
+[management labels](git_existing_clusters.md) applied by the user.
 
-## Management Actions Taken
-
-Based on what is specified in the git repo and what exists on the Kubernetes
-cluster, there are a variety of criteria that determine whether or not resources
-are created or existing resources are updated/deleted.
-
-These include:
-
-1.  **Sync Declared**: Whether a Sync was declared in the git repo for a given
-    resource.
-1.  **Resource Declared**: Whether a resource was declared in the git repo.
-1.  **On Cluster**: Whether a resource currently exists on the Kubernetes
-    cluster.
-1.  **Has Label**: Whether the resource on the Kubernetes cluster has a
-    `nomos.dev/managed` label applied.
-1.  **Resource Matches**: Whether the resource declared in git and the
-    Kubernetes resource both match according to the fields specified in the
-    declared Sync.
-
-A comprehensive table of actions taken depending on the git repo and the state
-of the cluster is listed below. The main takeaways are that GKE Policy
-Management will only delete or update existing Kubernetes resources that have a
-Sync declared in the git repo, have a corresponding resource in the git repo and
-the corresponding existing Kubernetes resource has a management label applied.
-It will only create new resources when a Sync is declared, a resource exists in
-the git repo and there is no existing matching resource on the Kubernetes
-cluster.
-
-Sync Declared | Resource Declared | On Cluster | Has Label | Resources Matches | GKE Policy Management Action
-------------- | ----------------- | ---------- | --------- | ----------------- | ----------------------------
-yes           | yes               | yes        | yes       | yes               | no action
-yes           | yes               | yes        | yes       | no                | GKE Policy Management updates resource to match git
-yes           | yes               | yes        | no        | N/A               | no action
-yes           | yes               | no         | N/A       | N/A               | GKE Policy Management creates resource to match git
-yes           | no                | yes        | yes       | N/A               | GKE Policy Management deletes resource to match git
-yes           | no                | yes        | no        | N/A               | no action
-yes           | no                | no         | N/A       | N/A               | no action
-no            | N/A               | N/A        | N/A       | N/A               | no action
+![drawing](img/system_flow.png)
 
 Examples:
 

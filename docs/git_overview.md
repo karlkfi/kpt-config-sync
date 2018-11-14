@@ -131,7 +131,7 @@ during [validation](git_validation.md):
     [DNS Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md)).
     In addition a name MUST NOT be `default`, `nomos-system`, or have `kube-`
     prefix. This topic is discussed in depth in the
-    [Managing Existing Clusters](git_namespaces.md).
+    [Managing Existing Clusters](git_existing_clusters.md).
 1.  All directory names MUST be unique in the hierarchy.
 
 ### cluster/

@@ -32,12 +32,12 @@ Try it out by following the [Quickstart Guide](docs/quickstart.md).
 *   Importing from Git:
     *   [Overview](docs/git_overview.md)
     *   [Validation](docs/git_validation.md)
-    *   [ResourceQuota](docs/rq.md)
+    *   [Management Flow](docs/git_management_flow.md)
     *   [NamespaceSelectors](docs/git_namespaceselectors.md)
     *   [ClusterSelectors](docs/git_clusterselectors.md)
-    *   [Managing Existing Clusters](docs/git_namespaces.md)
+    *   [Managing Existing Clusters](docs/git_existing_clusters.md)
     *   [System Configuration](docs/system_config.md)
-    *   [System Guarantees](docs/git_guarantees.md)
+    *   [ResourceQuota](docs/rq.md)
 *   Importing from GCP:
     *   [Overview](docs/gcp_overview.md)
 *   [Monitoring and Debugging](docs/monitoring_and_debugging.md)
