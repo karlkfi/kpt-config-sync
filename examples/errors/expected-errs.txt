@@ -1,17 +1,14 @@
 Found issues: 14 error(s)
 
-[1] KNV1001: Directories MUST NOT have reserved namespace names. Rename or remove directory "reserved-namespace" from system/nomos-reserved-namespaces:
+[1] KNV1001: Directories MUST NOT have reserved namespace names. Rename or remove directory:
 
 path: namespaces/prod/reserved-namespace
 name: reserved-namespace
 
-[2] KNV1002: Directory names MUST be unique. Rename one of these two directories:
+[2] KNV1002: Directory names MUST be unique. Rename one of these directories:
 
-path: namespaces/dev/duplicate-dir
-name: duplicate-dir
-
-path: namespaces/prod/duplicate-dir
-name: duplicate-dir
+namespaces/dev/duplicate-dir
+namespaces/prod/duplicate-dir
 
 [3] KNV1003: A Namespace directory MUST NOT have subdirectories. Restructure "dev-namespace" so that it does not have subdirectory "illegal-child":
 

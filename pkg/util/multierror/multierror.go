@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // Builder builds MultiErrors. Instantiate directly as:
@@ -35,9 +37,19 @@ func From(errs []error) MultiError {
 	return MultiError{errs: errs}
 }
 
-// Add adds error to the builder
+// Add adds error to the builder.
+// If the type is known to contain an array of error, adds all of the contained errors.
 func (b *Builder) Add(err error) {
-	b.errs = append(b.errs, err)
+	switch e := err.(type) {
+	case nil:
+		panic("Programmer error: Attempt to add nil error.")
+	case utilerrors.Aggregate:
+		b.errs = append(b.errs, e.Errors()...)
+	case *MultiError:
+		b.errs = append(b.errs, e.errs...)
+	default:
+		b.errs = append(b.errs, err)
+	}
 }
 
 // Build builds the error or returns nil if no errors were added
@@ -51,6 +63,11 @@ func (b *Builder) Build() error {
 // Len returns the number of errors in the builder.
 func (b *Builder) Len() int {
 	return len(b.errs)
+}
+
+// HasErrors returns true if there are errors in the builder.
+func (b *Builder) HasErrors() bool {
+	return b.Len() > 0
 }
 
 // MultiError is an error that contains multiple errors.
@@ -81,4 +98,9 @@ func (m MultiError) Error() string {
 		allErrors = append(allErrors, fmt.Sprintf("[%d] %v\n", idx+1, err))
 	}
 	return strings.Join(allErrors, "\n")
+}
+
+// Errors returns a list of the contained errors
+func (m MultiError) Errors() []error {
+	return m.errs
 }

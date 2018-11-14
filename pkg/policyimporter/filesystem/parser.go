@@ -19,11 +19,10 @@ limitations under the License.
 package filesystem
 
 import (
-	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 
-	"github.com/blang/semver"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
@@ -41,7 +40,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -108,56 +106,27 @@ func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterfa
 func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	p.root = root
 	fsCtx := &ast.Root{Cluster: &ast.Cluster{}}
+	errorBuilder := multierror.Builder{}
 
 	// Special processing for <root>/system/*
-	var syncs []*v1alpha1.Sync
-	systemDir := filepath.Join(root, repo.SystemDir)
-	if files, err := ioutil.ReadDir(systemDir); err == nil {
-		if len(files) > 0 {
-			// The system directory must at least have one file, defining the Repo object.
-			if syncs, err = p.processSystemDir(root, fsCtx); err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, validation.EmptySystemDirectoryError{}
-		}
-	} else if os.IsNotExist(err) {
-		return nil, validation.MissingSystemDirectoryError{}
-	} else {
-		return nil, errors.Wrapf(err, "while checking existence of system directory")
+	syncs := p.processSystemDir(filepath.Join(root, repo.SystemDir), fsCtx, &errorBuilder)
+	if errorBuilder.HasErrors() {
+		// Don't continue processing if any errors encountered processing system/
+		return nil, errorBuilder.Build()
 	}
 
 	clusterDir := filepath.Join(root, repo.ClusterDir)
-	clusterInfos, err := p.readResources(clusterDir, true)
-	if err != nil {
-		return nil, err
-	}
+	clusterInfos := p.readResources(clusterDir, false, &errorBuilder)
 
-	var clusterregistryInfos []*resource.Info
 	clusterregistryPath := filepath.Join(root, repo.ClusterRegistryDir)
-	if _, err = os.Stat(clusterregistryPath); err == nil {
-		clusterregistryInfos, err = p.readResources(clusterregistryPath, false)
-		if err != nil {
-			return nil, err
-		}
-	} else if !os.IsNotExist(err) {
-		// It's OK not to define the clusterregistry directory, you just won't get
-		// the PCA features.
-		return nil, errors.Wrapf(err, "while checking existence of clusterregistry directory")
-	}
+	clusterregistryInfos := p.readResources(clusterregistryPath, false, &errorBuilder)
 
 	nsDir := filepath.Join(root, repo.NamespacesDir)
-	nsDirsOrdered, err := allDirs(nsDir)
-	if err != nil {
-		return nil, err
-	}
-	if err = validateDirNames(nsDirsOrdered); err != nil {
-		return nil, err
-	}
-	fileInfos, err := p.readResources(nsDir, true)
-	if err != nil {
-		return nil, err
-	}
+	nsDirsOrdered := allDirs(nsDir, &errorBuilder)
+
+	p.validateDirNames(root, nsDirsOrdered, &errorBuilder)
+
+	fileInfos := p.readResources(nsDir, true, &errorBuilder)
 
 	// TODO(filmil): dirInfos could just be map[string]runtime.Object, it seems.  Let's wait
 	// until the new repo format commit lands, and change it then.
@@ -182,8 +151,16 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 		return nil, errors.Wrap(discoveryErr, "failed to get server resources")
 	}
 
-	return p.processDirs(resources, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered,
+	policies, err := p.processDirs(resources, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered,
 		clusterDir, fsCtx, syncs)
+	if err != nil {
+		errorBuilder.Add(err)
+	}
+
+	if errorBuilder.HasErrors() {
+		return nil, errorBuilder.Build()
+	}
+	return policies, nil
 }
 
 func (p *Parser) relativePath(source string) string {
@@ -194,38 +171,64 @@ func (p *Parser) relativePath(source string) string {
 	return r
 }
 
-// readResources walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) readResources(dir string, recursive bool) ([]*resource.Info, error) {
-	// If there aren't any resources, skip builder, because builder treats that as an error.
-	var fileInfos []*resource.Info
+// readRequiredResources walks dir recursively, looking for resources, and builds FileInfos from them.
+// Returns an error if the directory is missing.
+func (p *Parser) readRequiredResources(dir string, allowSubdirectories bool, errorBuilder *multierror.Builder) []*resource.Info {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return fileInfos, nil
+		errorBuilder.Add(validation.MissingDirectoryError{})
+		return nil
 	}
+	return p.readResources(dir, allowSubdirectories, errorBuilder)
+}
+
+// readResources walks dir recursively, looking for resources, and builds FileInfos from them.
+func (p *Parser) readResources(dir string, allowSubdirectories bool, errorBuilder *multierror.Builder) []*resource.Info {
+	// If there aren't any resources, skip builder, because builder treats that as an error.
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		// Return empty list if unable to read directory
+		return nil
+	} else if err != nil {
+		// If there was another error reading the directory, give up parsing the dir
+		errorBuilder.Add(err)
+		return nil
+	}
+
 	visitors, err := resource.ExpandPathsToFileVisitors(
 		nil, dir, true, resource.FileExtensions, kubevalidation.NullSchema{})
 	if err != nil {
-		return nil, err
+		errorBuilder.Add(err)
+		return nil
 	}
+
+	var fileInfos []*resource.Info
 	if len(visitors) > 0 {
 		s, err := p.factory.Validator(p.opts.Validate)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get schema")
+			errorBuilder.Add(errors.Wrap(err, "failed to get schema"))
+			return nil
 		}
+		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir}}
 		result := p.factory.NewBuilder().
 			Unstructured().
 			Schema(s).
 			ContinueOnError().
-			FilenameParam(false, &resource.FilenameOptions{Recursive: recursive, Filenames: []string{dir}}).
+			FilenameParam(false, options).
 			Do()
 		fileInfos, err = result.Infos()
-
 		if err != nil {
-			errs := err.(utilerrors.Aggregate)
-			return nil, errors.Wrapf(multierror.From(errs.Errors()),
-				"failed to read resources from directory:\n%s", dir)
+			errorBuilder.Add(err)
+		}
+
+		if !allowSubdirectories {
+			// If subdirectories are not allowed, return an error for each invalid subdirectory.
+			for _, info := range fileInfos {
+				if subDir := path.Dir(info.Source); subDir != dir {
+					errorBuilder.Add(validation.IllegalSubdirectoryError{Dir: dir, SubDir: subDir})
+				}
+			}
 		}
 	}
-	return fileInfos, nil
+	return fileInfos
 }
 
 // processDirs validates objects in directory trees and converts them into hierarchical policy objects.
@@ -245,18 +248,19 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	clusterDir string,
 	fsCtx *ast.Root,
 	syncs []*v1alpha1.Sync) (*v1.AllPolicies, error) {
+
+	errorBuilder := multierror.Builder{}
 	namespaceDirs := make(map[string]bool)
 
 	if err := p.processClusterDir(clusterDir, clusterInfos, fsCtx); err != nil {
-		return nil, errors.Wrapf(err, "cluster directory is invalid: %s", clusterDir)
+		errorBuilder.Add(errors.Wrapf(err, "cluster directory is invalid: %s", clusterDir))
+		return nil, errorBuilder.Build()
 	}
-	clusters, selectors, err := p.processClusterRegistryDir(repo.ClusterRegistryDir, clusterregistryInfos)
-	if err != nil {
-		return nil, errors.Wrapf(err, "clusterregistry directory is invalid: %s", clusterDir)
-	}
+	clusters, selectors := p.processClusterRegistryDir(repo.ClusterRegistryDir, clusterregistryInfos, &errorBuilder)
 	cs, err := sel.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not create cluster selectors")
+		errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
+		return nil, errorBuilder.Build()
 	}
 	sel.SetClusterSelector(cs, fsCtx)
 
@@ -265,25 +269,29 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 		rootDir := nsDirsOrdered[0]
 		infos := dirInfos[rootDir]
 		if err = p.processNamespacesDir(rootDir, infos, namespaceDirs, treeGenerator, true); err != nil {
-			return nil, errors.Wrapf(err, "directory is invalid: %s", rootDir)
+			errorBuilder.Add(errors.Wrapf(err, "directory is invalid: %s", rootDir))
+			return nil, errorBuilder.Build()
 		}
 		for _, d := range nsDirsOrdered[1:] {
 			infos := dirInfos[d]
 			if err = p.processNamespacesDir(d, infos, namespaceDirs, treeGenerator, false); err != nil {
-				return nil, errors.Wrapf(err, "directory is invalid: %s", d)
+				errorBuilder.Add(errors.Wrapf(err, "directory is invalid: %s", d))
+				return nil, errorBuilder.Build()
 			}
 		}
 	}
 
 	tree, err := treeGenerator.Build()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to treeify policy nodes")
+		errorBuilder.Add(errors.Wrapf(err, "failed to treeify policy nodes"))
+		return nil, errorBuilder.Build()
 	}
 	fsCtx.Tree = tree
 
 	scopeValidator, err := validation.NewScope(resources)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create scope validator")
+		errorBuilder.Add(errors.Wrapf(err, "failed to create scope validator"))
+		return nil, errorBuilder.Build()
 	}
 
 	visitors := []ast.CheckingVisitor{
@@ -306,7 +314,8 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	for _, visitor := range visitors {
 		fsCtx = fsCtx.Accept(visitor).(*ast.Root)
 		if err := visitor.Error(); err != nil {
-			return nil, err
+			errorBuilder.Add(err)
+			return nil, errorBuilder.Build()
 		}
 	}
 
@@ -315,13 +324,18 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	policies := outputVisitor.AllPolicies()
 
 	if err := clusterpolicy.Validate(policies.ClusterPolicy); err != nil {
-		return nil, err
+		errorBuilder.Add(err)
+		return nil, errorBuilder.Build()
 	}
 	v := policynodevalidator.FromMap(policies.PolicyNodes)
 	if err := v.Validate(); err != nil {
-		return nil, err
+		errorBuilder.Add(err)
+		return nil, errorBuilder.Build()
 	}
 
+	if errorBuilder.HasErrors() {
+		return nil, errorBuilder.Build()
+	}
 	return policies, nil
 }
 
@@ -431,80 +445,69 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 // - Nomos Repo
 // - Reserved Namespaces
 // - Syncs
-func (p *Parser) processSystemDir(root string, fsCtx *ast.Root) ([]*v1alpha1.Sync, error) {
-	validator, err := p.factory.Validator(p.opts.Validate)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get schema")
-	}
-	result := p.factory.NewBuilder().
-		Unstructured().
-		Schema(validator).
-		ContinueOnError().
-		FilenameParam(false, &resource.FilenameOptions{Recursive: false, Filenames: []string{filepath.Join(root, repo.SystemDir)}}).
-		Do()
-	fileInfos, err := result.Infos()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read resources from system dir")
-	}
-	v := newValidator()
-	var syncs []*v1alpha1.Sync
-	for _, i := range fileInfos {
-		obj := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
+func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root, errorBuilder *multierror.Builder) []*v1alpha1.Sync {
+	// Ignore individual file read errors for now and continue processing parsed files.
+	fileInfos := p.readRequiredResources(systemDir, false, errorBuilder)
 
-		// Types in scope then alphabetical order.
+	var syncs []*v1alpha1.Sync
+	repos := make(map[*v1alpha1.Repo]string)         // holds all Repo definitions
+	configMaps := make(map[*corev1.ConfigMap]string) // holds all ConfigMap definitions
+	for _, info := range fileInfos {
+		obj := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
+
 		switch o := obj.(type) {
 		case *v1alpha1.Repo:
-			if _, err := semver.Parse(o.Spec.Version); err != nil {
-				return nil, errors.Wrapf(err, "invalid semantic version %s. "+
-					"Repo.Spec.Version must follow semantic versioning rules at http://semver.org",
-					o.Spec.Version)
+			repos[o] = info.Source
+			if version := o.Spec.Version; version != "0.1.0" {
+				errorBuilder.Add(validation.UnsupportedRepoSpecVersion{Source: info.Source, Name: o.Name, Version: version})
 			}
 			fsCtx.Repo = o
 
 		case *corev1.ConfigMap:
-			if o.Name != v1alpha1.ReservedNamespacesConfigMapName {
-				return nil, errors.Errorf("invalid configmap in system dir %#v", o)
-			}
+			configMaps[o] = info.Source
 			fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
+
 		case *v1alpha1.Sync:
 			sync := o
-			// We only support one version at the moment.
+
+			// We only support one version per synced type
 			for _, group := range sync.Spec.Groups {
 				for _, kind := range group.Kinds {
 					if len(kind.Versions) > 1 {
-						return nil, errors.Errorf("Sync declaration %s in file %s contains multiple "+
-							"versions. Syncs must declare exactly one version.", sync.Name, i.Source)
+						errorBuilder.Add(validation.MultipleVersionForSameSyncedTypeError{Source: info.Source, Kind: kind})
+					}
+					if kind.Kind == string(ast.Namespace) && group.Group == "" {
+						// Require that Group is the empty string since that is the core Namespace object
+						// A different group could validly define a Kind called "Namespace"
+						errorBuilder.Add(validation.IllegalNamespaceSyncDeclarationError{Source: info.Source})
 					}
 				}
 			}
-			// Disallow Sync for namespace type.
-			for _, sg := range sync.Spec.Groups {
-				for _, k := range sg.Kinds {
-					if k.Kind == "Namespace" && sg.Group == "" {
-						return nil, errors.Errorf("unsupported Sync in %s. Sync must not specify kind Namespace", i.Source)
-					}
-				}
-			}
+
 			syncs = append(syncs, sync)
 		default:
-			v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
-		}
-		if v.err != nil {
-			return nil, v.err
+			errorBuilder.Add(validation.IllegalSystemObjectDefinitionInSystemError{Source: info.Source, GroupVersionKind: o.GetObjectKind().GroupVersionKind()})
 		}
 	}
 
-	if fsCtx.Repo == nil {
-		return nil, validation.MissingRepoError{}
+	if len(repos) == 0 {
+		errorBuilder.Add(validation.MissingRepoError{})
+	} else if len(repos) >= 2 {
+		errorBuilder.Add(validation.MultipleRepoDefinitionsError{Repos: repos})
 	}
-	return syncs, nil
+
+	if len(configMaps) >= 2 {
+		errorBuilder.Add(validation.MultipleConfigMapsError{ConfigMaps: configMaps})
+	}
+
+	return syncs
 }
 
 // processClusterRegistryDir looks at all files in <root>/clusterregistry and
 // extracts Cluster and ClusterSelector objects out. dirname is the directory
 // name relative to the root directory of the repository, and infos is the set
 // of resource data that were read from the directory.
-func (p *Parser) processClusterRegistryDir(dirname string, infos []*resource.Info) ([]clusterregistry.Cluster, []v1alpha1.ClusterSelector, error) {
+func (p *Parser) processClusterRegistryDir(dirname string, infos []*resource.Info, errorBuilder *multierror.Builder) ([]clusterregistry.Cluster, []v1alpha1.ClusterSelector) {
 	v := newValidator()
 	var crc []clusterregistry.Cluster
 	var css []v1alpha1.ClusterSelector
@@ -520,11 +523,15 @@ func (p *Parser) processClusterRegistryDir(dirname string, infos []*resource.Inf
 			v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
 		}
 	}
-	return crc, css, v.err
+
+	if v.err != nil {
+		errorBuilder.Add(errors.Wrapf(v.err, "clusterregistry directory is invalid: %s", dirname))
+	}
+	return crc, css
 }
 
 // allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
-func allDirs(root string) ([]string, error) {
+func allDirs(root string, errorBuilder *multierror.Builder) []string {
 	var paths []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -537,26 +544,39 @@ func allDirs(root string) ([]string, error) {
 	})
 
 	if err != nil && !os.IsNotExist(err) {
-		return nil, errors.Wrapf(err, "failed to walk directory: %s", root)
+		errorBuilder.Add(err)
+		return nil
 	}
-	return paths, nil
+	return paths
 }
 
 // validateDirNames validates that:
 // 1. Directory name is not reserved by the system.
 // 2. Directory name is a valid namespace name:
 // https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md
-func validateDirNames(dirs []string) error {
-	dirNames := make(map[string]bool)
+func (p *Parser) validateDirNames(root string, dirs []string, errorBuilder *multierror.Builder) {
+	dirNames := make(map[string][]string)
 	for _, d := range dirs {
 		n := filepath.Base(d)
-		if err := namespaceutil.IsReservedOrInvalidNamespace(n); err != nil {
-			return errors.Wrapf(err, "invalid directory: %s", d)
+		if namespaceutil.IsInvalid(n) {
+			errorBuilder.Add(validation.InvalidDirectoryNameError{Dir: d})
 		}
-		dirNames[n] = true
-
+		if namespaceutil.IsReserved(n) {
+			errorBuilder.Add(validation.ReservedDirectoryNameError{Dir: d})
+		}
+		relpath, _ := filepath.Rel(root, d)
+		if names, ok := dirNames[n]; ok {
+			dirNames[n] = append(names, relpath)
+		} else {
+			dirNames[n] = []string{relpath}
+		}
 	}
-	return nil
+
+	for _, duplicates := range dirNames {
+		if len(duplicates) > 1 {
+			errorBuilder.Add(validation.DuplicateDirectoryNameError{Duplicates: duplicates})
+		}
+	}
 }
 
 func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {

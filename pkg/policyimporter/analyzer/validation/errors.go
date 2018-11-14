@@ -18,7 +18,7 @@ package validation
 import (
 	"fmt"
 	"path"
-	"reflect"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -27,100 +27,148 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// code returns the unique code associated with the error type.
+// Codes for each Nomos error.
+const (
+	ReservedDirectoryNameErrorCode                 = "1001"
+	DuplicateDirectoryNameErrorCode                = "1002"
+	IllegalNamespaceSubdirectoryErrorCode          = "1003"
+	IllegalNamespaceSelectorAnnotationErrorCode    = "1004"
+	UnsyncableClusterObjectErrorCode               = "1005"
+	UnsyncableNamespaceObjectErrorCode             = "1006"
+	IllegalAbstractNamespaceObjectKindErrorCode    = "1007"
+	ConflictingResourceQuotaErrorCode              = "1008"
+	IllegalNamespaceDeclarationErrorCode           = "1009" // TODO(willbeason): Unused
+	IllegalAnnotationDefinitionErrorCode           = "1010"
+	IllegalLabelDefinitionErrorCode                = "1011"
+	NamespaceSelectorMayNotHaveAnnotationCode      = "1012"
+	ObjectHasUnknownClusterSelectorCode            = "1013"
+	InvalidSelectorCode                            = "1014" // TODO: Add tests in parser_test.go
+	MissingSystemDirectoryErrorCode                = "1015"
+	EmptySystemDirectoryErrorCode                  = "1016" // TODO(willbeason): Unused
+	MissingRepoErrorCode                           = "1017"
+	IllegalSubdirectoryErrorCode                   = "1018"
+	IllegalTopLevelNamespaceErrorCode              = "1019"
+	InvalidNamespaceNameErrorCode                  = "1020"
+	UnknownObjectErrorCode                         = "1021"
+	MultipleVersionForSameSyncedTypeErrorCode      = "1022"
+	IllegalNamespaceSyncDeclarationErrorCode       = "1023"
+	IllegalSystemObjectDefinitionInSystemErrorCode = "1024"
+	MultipleRepoDefinitionsErrorCode               = "1025"
+	MultipleConfigMapsErrorCode                    = "1026"
+	UnsupportedRepoSpecVersionCode                 = "1027"
+	InvalidDirectoryNameErrorCode                  = "1028"
+	UndefinedErrorCode                             = "????"
+)
+
+// Code returns the unique Code associated with the error type.
 // Only ever (1) add to this method or (2) deprecate ids. Do not reuse.
-func code(e error) string {
+func Code(e error) string {
 	switch e.(type) {
 	case ReservedDirectoryNameError:
-		return "1001"
+		return ReservedDirectoryNameErrorCode
 	case DuplicateDirectoryNameError:
-		return "1002"
+		return DuplicateDirectoryNameErrorCode
 	case IllegalNamespaceSubdirectoryError:
-		return "1003"
+		return IllegalNamespaceSubdirectoryErrorCode
 	case IllegalNamespaceSelectorAnnotationError:
-		return "1004"
+		return IllegalNamespaceSelectorAnnotationErrorCode
 	case UnsyncableClusterObjectError:
-		return "1005"
+		return UnsyncableClusterObjectErrorCode
 	case UnsyncableNamespaceObjectError:
-		return "1006"
+		return UnsyncableNamespaceObjectErrorCode
 	case IllegalAbstractNamespaceObjectKindError:
-		return "1007"
+		return IllegalAbstractNamespaceObjectKindErrorCode
 	case ConflictingResourceQuotaError:
-		return "1008"
+		return ConflictingResourceQuotaErrorCode
 	case IllegalNamespaceDeclarationError:
-		return "1009"
+		return IllegalNamespaceDeclarationErrorCode
 	case IllegalAnnotationDefinitionError:
-		return "1010"
+		return IllegalAnnotationDefinitionErrorCode
 	case IllegalLabelDefinitionError:
-		return "1011"
+		return IllegalLabelDefinitionErrorCode
 	case NamespaceSelectorMayNotHaveAnnotation:
-		return "1012"
+		return NamespaceSelectorMayNotHaveAnnotationCode
 	case ObjectHasUnknownClusterSelector:
-		return "1013"
+		return ObjectHasUnknownClusterSelectorCode
 	case InvalidSelector:
-		return "1014"
-	case MissingSystemDirectoryError:
-		return "1015"
+		return InvalidSelectorCode
+	case MissingDirectoryError:
+		return MissingSystemDirectoryErrorCode
 	case EmptySystemDirectoryError:
-		return "1016"
+		return EmptySystemDirectoryErrorCode
 	case MissingRepoError:
-		return "1017"
-	case IllegalClusterSubdirectoryError:
-		return "1018"
+		return MissingRepoErrorCode
+	case IllegalSubdirectoryError:
+		return IllegalSubdirectoryErrorCode
 	case IllegalTopLevelNamespaceError:
-		return "1019"
+		return IllegalTopLevelNamespaceErrorCode
 	case InvalidNamespaceNameError:
-		return "1020"
+		return InvalidNamespaceNameErrorCode
 	case UnknownObjectError:
-		return "1021"
+		return UnknownObjectErrorCode
+	case MultipleVersionForSameSyncedTypeError:
+		return MultipleVersionForSameSyncedTypeErrorCode
+	case IllegalNamespaceSyncDeclarationError:
+		return IllegalNamespaceSyncDeclarationErrorCode
+	case IllegalSystemObjectDefinitionInSystemError:
+		return IllegalSystemObjectDefinitionInSystemErrorCode
+	case MultipleRepoDefinitionsError:
+		return MultipleRepoDefinitionsErrorCode
+	case MultipleConfigMapsError:
+		return MultipleConfigMapsErrorCode
+	case UnsupportedRepoSpecVersion:
+		return UnsupportedRepoSpecVersionCode
+	case InvalidDirectoryNameError:
+		return InvalidDirectoryNameErrorCode
 	default:
-		panic(fmt.Sprintf("Unknown Nomosvet Error Type: %T", reflect.TypeOf(e))) // Undefined
+		return UndefinedErrorCode // Undefined
 	}
 }
 
 // withPrefix formats the start of error messages consistently.
 func format(err error, format string, a ...interface{}) string {
-	return fmt.Sprintf("KNV%s: ", code(err)) + fmt.Sprintf(format, a...)
+	code := Code(err)
+	if code == UndefinedErrorCode {
+		// Only reachable by programmer error. Requires calling format() on an error other than the ones
+		// defined in this file or not having an entry in Code() above.
+		panic(fmt.Sprintf("Unknown Nomosvet Error: %s", err.Error()))
+	}
+	return fmt.Sprintf("KNV%s: ", Code(err)) + fmt.Sprintf(format, a...)
 }
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.
 type ReservedDirectoryNameError struct {
-	*ast.TreeNode
+	Dir string
 }
 
 // Error implements error.
 func (e ReservedDirectoryNameError) Error() string {
 	return format(e,
-		"Directories MUST NOT have reserved namespace names. "+
-			"Rename or remove directory %[1]q from %[4]s/%[3]s:\n\n"+
-			"%[2]s",
-		e.Name(), e.TreeNode, v1alpha1.ReservedNamespacesConfigMapName, repo.SystemDir)
+		"Directories MUST NOT have reserved namespace names. Rename or remove directory:\n\n"+
+			"path: %[1]s\n"+
+			"name: %[2]s",
+		e.Dir, path.Base(e.Dir))
 }
 
 // DuplicateDirectoryNameError represents an illegal duplication of directory names.
 type DuplicateDirectoryNameError struct {
-	this  *ast.TreeNode
-	other *ast.TreeNode
+	Duplicates []string
 }
 
 // Error implements error.
 func (e DuplicateDirectoryNameError) Error() string {
-	// Ensure deterministic node printing order for n = 2
-	// For n >= 3, we can't be sure the canonical "first" directory will be one of the two presented
-	// to the user. So we can't guarantee determinism for n >= 3.
-	var first, second = e.this, e.other
-	if first.Path > second.Path {
-		first, second = e.other, e.this
-	}
+	// Ensure deterministic node printing order.
+	sort.Strings(e.Duplicates)
 	return format(e,
 		"Directory names MUST be unique. "+
-			"Rename one of these two directories:\n\n"+
-			"%[1]s\n\n"+
-			"%[2]s",
-		first, second)
+			"Rename one of these directories:\n\n"+
+			"%[1]s",
+		strings.Join(e.Duplicates, "\n"))
 }
 
 // IllegalNamespaceSubdirectoryError represents an illegal child directory of a namespace directory.
@@ -235,7 +283,8 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 	a := strings.Join(e.annotations, ", ")
 	return format(e,
 		"Objects MUST NOT define unsupported annotations starting with %[3]q. "+
-			"Object %[4]q has offending annotations: %[1]s\n\n%[2]s",
+			"Object %[4]q has offending annotations: %[1]s\n\n"+
+			"%[2]s",
 		a, e.object, policyhierarchy.GroupName, e.object.Name())
 }
 
@@ -251,7 +300,8 @@ func (e IllegalLabelDefinitionError) Error() string {
 	l := strings.Join(e.labels, ", ")
 	return format(e,
 		"Objects MUST NOT define labels starting with %[3]q. "+
-			"Below object defines these offending labels: %[1]s\n\n%[2]s",
+			"Below object defines these offending labels: %[1]s\n\n"+
+			"%[2]s",
 		l, e.object, policyhierarchy.GroupName)
 }
 
@@ -288,11 +338,11 @@ func (e InvalidSelector) Error() string {
 	return format(e, errors.Wrapf(e.cause, "ClusterSelector %q has validation errors that must be corrected", e.name).Error())
 }
 
-// MissingSystemDirectoryError reports that the required system/ directory is missing.
-type MissingSystemDirectoryError struct{}
+// MissingDirectoryError reports that a required directory is missing.
+type MissingDirectoryError struct{}
 
 // Error implements error.
-func (e MissingSystemDirectoryError) Error() string {
+func (e MissingDirectoryError) Error() string {
 	return format(e,
 		"Required %s/ directory is missing.", repo.SystemDir)
 }
@@ -315,15 +365,19 @@ func (e MissingRepoError) Error() string {
 		"%s/ directory must define an object of type Repo.", repo.SystemDir)
 }
 
-// IllegalClusterSubdirectoryError reports that the cluster/ directory has an illegal subdirectory.
-type IllegalClusterSubdirectoryError struct {
-	subdirectory string
+// IllegalSubdirectoryError reports that the directory has an illegal subdirectory.
+type IllegalSubdirectoryError struct {
+	Dir    string
+	SubDir string
 }
 
 // Error implements error
-func (e IllegalClusterSubdirectoryError) Error() string {
+func (e IllegalSubdirectoryError) Error() string {
+	dir := path.Base(e.Dir)
+	relpath, _ := filepath.Rel(e.Dir, e.SubDir)
 	return format(e,
-		"%s/ directory MUST NOT have subdirectories.\n\npath: %[2]s", repo.ClusterDir, e.subdirectory)
+		"%s/ directory MUST NOT have subdirectories.\n\n"+
+			"path: %[2]s", dir, path.Join(dir, relpath))
 }
 
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
@@ -347,7 +401,10 @@ type InvalidNamespaceNameError struct {
 // Error implements error
 func (e InvalidNamespaceNameError) Error() string {
 	return format(e,
-		"%[1]s MUST define %[2]s that matches the name of its directory.\n\nsource: %[3]s\nexpected name: %[4]s\nactual name: %[5]s",
+		"%[1]s MUST define %[2]s that matches the name of its directory.\n\n"+
+			"source: %[3]s\n"+
+			"expected name: %[4]s\n"+
+			"actual name: %[5]s",
 		ast.Namespace, MetadataNameKey, e.Data.Get(NamespaceSourceKey), e.Name(), e.Data.Get(MetadataNameKey))
 }
 
@@ -362,4 +419,119 @@ func (e UnknownObjectError) Error() string {
 		"Transient Error: Object is declared, but has no definition on the cluster."+
 			"\nObject must be a native K8S objects or have an associated CustomResourceDefinition:\n\n%s",
 		e.FileObject)
+}
+
+// MultipleVersionForSameSyncedTypeError reports that multiple versions were declared for the same synced kind
+type MultipleVersionForSameSyncedTypeError struct {
+	Source string
+	Kind   v1alpha1.SyncKind
+}
+
+// Error implements error
+func (e MultipleVersionForSameSyncedTypeError) Error() string {
+	return format(e,
+		"Kinds MUST declare exactly one version:\n\n"+
+			"source: %[1]s\n"+
+			"kind: %[2]s",
+		e.Source, e.Kind)
+}
+
+// IllegalNamespaceSyncDeclarationError reports that Namespace has incorrectly been declared as a Sync type
+type IllegalNamespaceSyncDeclarationError struct {
+	Source string
+}
+
+// Error implements error
+func (e IllegalNamespaceSyncDeclarationError) Error() string {
+	return format(e,
+		"Sync may not declare objects of type %[1]s\n\n"+
+			"source: %[2]s",
+		ast.Namespace, e.Source)
+}
+
+// IllegalSystemObjectDefinitionInSystemError reports that an object has been illegally defined in system/
+type IllegalSystemObjectDefinitionInSystemError struct {
+	Source           string
+	GroupVersionKind schema.GroupVersionKind
+}
+
+// Error implements error
+func (e IllegalSystemObjectDefinitionInSystemError) Error() string {
+	return format(e,
+		"Objects of kind %[1]s may not be declared in %[2]s/\n\n"+
+			"source: %[3]s\n"+
+			"kind: %[1]s",
+		e.GroupVersionKind.String(), repo.SystemDir, e.Source)
+}
+
+// MultipleRepoDefinitionsError reports that the system/ directory contains multiple Repo declarations.
+type MultipleRepoDefinitionsError struct {
+	Repos map[*v1alpha1.Repo]string
+}
+
+// Error implements error
+func (e MultipleRepoDefinitionsError) Error() string {
+	var repos []string
+	// Sort repos so that output is deterministic.
+	for r, source := range e.Repos {
+		repos = append(repos, fmt.Sprintf("source: %[1]s\n"+
+			"name: %[2]s", source, r.Name))
+	}
+	sort.Strings(repos)
+
+	return format(e,
+		"There MUST NOT be more than one Repo definition in %[1]s/\n\n"+
+			"%[2]s",
+		repo.SystemDir, strings.Join(repos, "\n\n"))
+}
+
+// MultipleConfigMapsError reports that system/ declares multiple ConfigMaps.
+type MultipleConfigMapsError struct {
+	ConfigMaps map[*corev1.ConfigMap]string
+}
+
+// Error implements error
+func (e MultipleConfigMapsError) Error() string {
+	var configMaps []string
+	// Sort repos so that output is deterministic.
+	for c, source := range e.ConfigMaps {
+		configMaps = append(configMaps, fmt.Sprintf("source: %[1]s\n"+
+			"name: %[2]s", source, c.Name))
+	}
+	sort.Strings(configMaps)
+
+	return format(e,
+		"There MUST NOT be more than one ConfigMap definition in %[1]s/\n\n"+
+			"%[2]s",
+		repo.SystemDir, strings.Join(configMaps, "\n\n"))
+}
+
+// UnsupportedRepoSpecVersion reports that the repo version is not supported.
+type UnsupportedRepoSpecVersion struct {
+	Source  string
+	Name    string
+	Version string
+}
+
+// Error implements error
+func (e UnsupportedRepoSpecVersion) Error() string {
+	return format(e,
+		"Unsupported Repo spec.version: %[3]q. Must use version \"0.1.0\"\n\n"+
+			"source: %[1]s\n"+
+			"name: %[2]s",
+		e.Source, e.Name, e.Version)
+}
+
+// InvalidDirectoryNameError represents an illegal usage of a reserved name.
+type InvalidDirectoryNameError struct {
+	Dir string
+}
+
+// Error implements error.
+func (e InvalidDirectoryNameError) Error() string {
+	return format(e,
+		"Directories MUST be a valid RFC1123 DNS label. Rename or remove directory:\n\n"+
+			"path: %[1]s\n"+
+			"name: %[2]s",
+		e.Dir, path.Base(e.Dir))
 }

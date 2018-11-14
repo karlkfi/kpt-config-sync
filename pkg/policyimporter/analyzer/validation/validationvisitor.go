@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -100,7 +99,6 @@ type InputValidator struct {
 	*visitor.Base
 	errs               multierror.Builder
 	reserved           *reserved.Namespaces
-	dirNames           map[string]*ast.TreeNode
 	nodes              []*ast.TreeNode
 	seenResourceQuotas map[string]struct{}
 	allowedGVKs        map[schema.GroupVersionKind]struct{}
@@ -124,7 +122,6 @@ func NewInputValidator(
 	v := &InputValidator{
 		Base:               visitor.NewBase(),
 		reserved:           reserved.EmptyNamespaces(),
-		dirNames:           make(map[string]*ast.TreeNode),
 		seenResourceQuotas: make(map[string]struct{}),
 		allowedGVKs:        allowedGVKs,
 	}
@@ -157,19 +154,14 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	name := path.Base(n.Path)
 	if v.reserved.IsReserved(name) {
 		// The node's name must not be a reserved namespace name.
-		v.errs.Add(ReservedDirectoryNameError{n})
+		v.errs.Add(ReservedDirectoryNameError{n.Path})
 	}
-	if other, found := v.dirNames[name]; found {
-		// The node must not duplicate the name of another node.
-		v.errs.Add(DuplicateDirectoryNameError{this: n, other: other})
-	} else {
-		v.dirNames[name] = n
-	}
-	if len(v.nodes) > 1 {
-		// Namespaces may not have children.
 
-		// If len == 0, this is the top level and so it has no parent and cannot be a Namespace.
-		// If len == 1, this is a child of the top level, and so cannot validly be the child of a Namespace.
+	// Namespaces may not have children.
+	if len(v.nodes) > 1 {
+		// Recall that v.nodes are this node's ancestors in the tree of directories.
+		// If len == 0, this node has no ancestors and so cannot be the child of a Namespace directory.
+		// If len == 1, this is a child of namespaces/ and so it cannot be the child of a Namespace directory.
 		// We check for the two cases above elsewhere, so adding errors here adds noise and incorrect advice.
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == ast.Namespace {
 			v.errs.Add(IllegalNamespaceSubdirectoryError{child: n, parent: parent})
@@ -236,11 +228,6 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	gvk := o.GroupVersionKind()
 	if _, found := v.allowedGVKs[gvk]; !found {
 		v.errs.Add(UnsyncableClusterObjectError{o})
-	}
-	// The cluster/ directory may not have children.
-	if dir := path.Dir(o.Source); dir != repo.ClusterDir {
-		// As implemented, only prints a message if an offending directory defines an object.
-		v.errs.Add(IllegalClusterSubdirectoryError{dir})
 	}
 	v.checkAnnotationsAndLabels(o.FileObject)
 	if v.coverage != nil {

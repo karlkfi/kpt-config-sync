@@ -19,32 +19,28 @@ import (
 	"testing"
 )
 
-type ReservedOrInvalidNamespaceTestcase struct {
-	Name  string
-	Error bool
+type reservedOrInvalidNamespaceTestcase struct {
+	name    string
+	invalid bool
 }
 
-func TestIsReservedOrInvalidNamespace(t *testing.T) {
-	for _, testcase := range []ReservedOrInvalidNamespaceTestcase{
-		{"foo-bar", false},
-		{"Foo-Bar", true},
-		{"Foo_Bar", true},
-		{"-Foo_Bar", true},
-		{"Foo_Bar-", true},
-		{"ALL-CAPS", true},
-		{"-foo-bar", true},
-		{"foo-bar-", true},
-		{"kube-foo", true},
-		{"default", true},
-		{"nomos-system", true},
+func TestIsInvalid(t *testing.T) {
+	for _, testcase := range []reservedOrInvalidNamespaceTestcase{
+		{"foo-bar", true},
+		{"Foo-Bar", false},
+		{"Foo_Bar", false},
+		{"-Foo_Bar", false},
+		{"Foo_Bar-", false},
+		{"ALL-CAPS", false},
+		{"-foo-bar", false},
+		{"foo-bar-", false},
 	} {
-		error := IsReservedOrInvalidNamespace(testcase.Name)
-		if error == nil && testcase.Error {
-			t.Errorf("Expected error but didn't get one, testing %q", testcase.Name)
+		if IsInvalid(testcase.name) && testcase.invalid {
+			t.Errorf("Expected error but didn't get one, testing %q", testcase.name)
 		}
 
-		if error != nil && !testcase.Error {
-			t.Errorf("Unexpected testing %q", testcase.Name)
+		if !IsInvalid(testcase.name) && !testcase.invalid {
+			t.Errorf("Unexpected testing %q", testcase.name)
 		}
 	}
 }

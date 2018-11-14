@@ -18,7 +18,6 @@ package namespaceutil
 import (
 	"strings"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -32,17 +31,11 @@ var (
 	reservedPrefix = "kube-"
 )
 
-// IsReservedOrInvalidNamespace returns an error if the namespace name is reserved by the system
+// IsInvalid returns an error if the namespace name is reserved by the system
 // or is not a valid RFC 1123 dns label.
-func IsReservedOrInvalidNamespace(name string) error {
-	if IsReserved(name) {
-		return errors.Errorf("namespace %q is reserved by the system", name)
-	}
-
-	if ve := validation.IsDNS1123Label(name); len(ve) != 0 {
-		return errors.New(ve[0])
-	}
-	return nil
+func IsInvalid(name string) bool {
+	ve := validation.IsDNS1123Label(name)
+	return len(ve) != 0
 }
 
 // IsReserved returns true if the namespace is reserved.

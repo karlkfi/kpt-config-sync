@@ -18,6 +18,7 @@ package reserved
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -65,7 +66,8 @@ func (n *Namespaces) validate() error {
 // namespaces.
 func (n *Namespaces) IsReserved(namespaceName string) bool {
 	attribute, ok := n.configMap.Data[namespaceName]
-	return ok && v1alpha1.NamespaceAttribute(attribute) == v1alpha1.ReservedAttribute
+	return (ok && v1alpha1.NamespaceAttribute(attribute) == v1alpha1.ReservedAttribute) ||
+		namespaceutil.IsReserved(namespaceName)
 }
 
 // List returns the names of namespaces with the specified attribute.

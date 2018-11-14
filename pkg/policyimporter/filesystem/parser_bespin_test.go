@@ -128,6 +128,10 @@ func TestBespinParser(t *testing.T) {
 			}
 
 			if len(tc.wantPolicyCount) > 0 {
+				if policies == nil {
+					t.Fatal(err)
+				}
+
 				n := make(map[string]int)
 				for k, v := range policies.PolicyNodes {
 					n[k] = 0
