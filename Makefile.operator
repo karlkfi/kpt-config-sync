@@ -13,6 +13,15 @@ endif
 DEV_BUCKET := gs://${GCP_PROJECT}
 DEV_BUCKET_USER ?= gs://${GCP_PROJECT}/${USER}
 OPERATOR_STAGING_DIR := ${OUTPUT_DIR}/staging/operator
+GIT_SYNC_TAG := v2.0.6-15-g2e46b74
+GIT_SYNC := git-sync-amd64:$(GIT_SYNC_TAG)
+GIT_SYNC_SRC := gcr.io/nomos-release/$(GIT_SYNC)
+
+.PHONY: pull-git-sync
+pull-git-sync:
+	@if ! docker image inspect $(GIT_SYNC_SRC) > /dev/null; then \
+	docker image pull $(GIT_SYNC_SRC); \
+	fi
 
 # deploy-operator builds and pushes the local tree, then retrieves the operator
 # manifest bundle from GCP_PROJECT and applies it, injecting PRIVATE_REGISTRY
@@ -21,12 +30,11 @@ OPERATOR_STAGING_DIR := ${OUTPUT_DIR}/staging/operator
 # is the same for all developers on the nomos cluster. To use a custom operator
 # build, use deploy-operator-user.
 .PHONY: deploy-operator
-deploy-operator: push-to-gcr-nomos
+deploy-operator: push-to-gcr-nomos pull-git-sync
 	@mkdir -p ${OPERATOR_STAGING_DIR}
 	@gsutil cp ${DEV_BUCKET}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
-	@docker tag gcr.io/nomos-release/git-sync-amd64:v2.0.6-15-g2e46b74 \
-		gcr.io/${GCR_PREFIX}/git-sync-amd64:v2.0.6-15-g2e46b74
-	@docker push gcr.io/${GCR_PREFIX}/git-sync-amd64:v2.0.6-15-g2e46b74
+	@docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
+	@docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	@PROJECT_NAME=${GCP_PROJECT} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml | kubectl apply -f -
 
@@ -38,11 +46,10 @@ deploy-operator: push-to-gcr-nomos
 # operator directory. If you have not created this for your user before, it does
 # not exist and must be created from the operator repository.
 .PHONY: deploy-operator-user
-deploy-operator-user: push-to-gcr-nomos
+deploy-operator-user: push-to-gcr-nomos pull-git-sync
 	@mkdir -p ${OPERATOR_STAGING_DIR}
 	@gsutil cp ${DEV_BUCKET_USER}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
-	@docker tag gcr.io/nomos-release/git-sync-amd64:v2.0.6-15-g2e46b74 \
-		gcr.io/${GCR_PREFIX}/git-sync-amd64:v2.0.6-15-g2e46b74
-	@docker push gcr.io/${GCR_PREFIX}/git-sync-amd64:v2.0.6-15-g2e46b74
+	@docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
+	@docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	@PROJECT_NAME=${GCP_PROJECT}/${USER} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml | kubectl apply -f -
