@@ -1,5 +1,7 @@
 kind: Sync
 apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: RbacSync
 spec:
   groups:
   - group: rbac.authorization.k8s.io

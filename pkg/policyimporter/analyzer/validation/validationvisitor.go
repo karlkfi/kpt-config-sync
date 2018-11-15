@@ -97,12 +97,11 @@ func (c ClusterCoverage) ValidateObject(o metav1.Object, errs *multierror.Builde
 // and what is required to fix it.
 type InputValidator struct {
 	*visitor.Base
-	errs               multierror.Builder
-	reserved           *reserved.Namespaces
-	nodes              []*ast.TreeNode
-	seenResourceQuotas map[string]struct{}
-	allowedGVKs        map[schema.GroupVersionKind]struct{}
-	coverage           *ClusterCoverage
+	errs        multierror.Builder
+	reserved    *reserved.Namespaces
+	nodes       []*ast.TreeNode
+	allowedGVKs map[schema.GroupVersionKind]struct{}
+	coverage    *ClusterCoverage
 }
 
 // InputValidator implements ast.Visitor
@@ -120,10 +119,9 @@ func NewInputValidator(
 	cs []v1alpha1.ClusterSelector,
 	vet bool) *InputValidator {
 	v := &InputValidator{
-		Base:               visitor.NewBase(),
-		reserved:           reserved.EmptyNamespaces(),
-		seenResourceQuotas: make(map[string]struct{}),
-		allowedGVKs:        allowedGVKs,
+		Base:        visitor.NewBase(),
+		reserved:    reserved.EmptyNamespaces(),
+		allowedGVKs: allowedGVKs,
 	}
 	v.Base.SetImpl(v)
 
@@ -173,7 +171,10 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 
 	if n.Type == ast.Namespace {
 		// Namespace-specific validation
-		v.visitNamespaceNode(n)
+		if _, found := n.Annotations[v1alpha1.NamespaceSelectorAnnotationKey]; found {
+			// Namespaces may not use the selector annotation.
+			v.errs.Add(IllegalNamespaceSelectorAnnotationError{n})
+		}
 	}
 
 	v.nodes = append(v.nodes, n)
@@ -181,27 +182,6 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	v.nodes = v.nodes[:len(v.nodes)-1]
 	// Must return non-nil so that visiting may continue to cluster objects.
 	return o
-}
-
-// MetadataNameKey keys an object's name in TreeNode.Data
-const MetadataNameKey string = "metadata.name"
-
-// NamespaceSourceKey keys the file defining the object
-const NamespaceSourceKey string = "source"
-
-func (v *InputValidator) visitNamespaceNode(n *ast.TreeNode) {
-	if _, found := n.Annotations[v1alpha1.NamespaceSelectorAnnotationKey]; found {
-		// Namespaces may not use the selector annotation.
-		v.errs.Add(IllegalNamespaceSelectorAnnotationError{n})
-	}
-
-	if len(v.nodes) == 0 {
-		// Cannot declare a Namespace in namespaces/, must use a subdirectory.
-		v.errs.Add(IllegalTopLevelNamespaceError{n})
-	} else if n.Data.Get(MetadataNameKey) != n.Name() {
-		// Must declare metadata.name to be equal to the directory's name.
-		v.errs.Add(InvalidNamespaceNameError{n})
-	}
 }
 
 // checkNamespaceSelectorAnnotations ensures that a NamespaceSelector object has no
@@ -238,18 +218,6 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
-
-	// checkSingleResourceQuota ensures that at most one ResourceQuota resource is present in each
-	// directory.
-	if o.GroupVersionKind() == corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
-		curPath := v.nodes[len(v.nodes)-1].Path
-		if _, found := v.seenResourceQuotas[curPath]; found {
-			v.errs.Add(ConflictingResourceQuotaError{o})
-		} else {
-			v.seenResourceQuotas[curPath] = struct{}{}
-		}
-	}
-
 	if _, found := v.allowedGVKs[o.GroupVersionKind()]; !found {
 		v.errs.Add(UnsyncableNamespaceObjectError{o})
 	}

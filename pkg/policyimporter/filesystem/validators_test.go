@@ -35,8 +35,6 @@ var testCases = []validatorsTestCase{
 	{"Keep first error", newValidator().HasNamespace(&resource.Info{Namespace: "foo"}, "bar").HasNamespace(&resource.Info{Namespace: "foo"}, "foo"), true},
 	{"HaveSeen valid", newValidator().MarkSeen(meta.Namespace).HaveSeen(meta.Namespace), false},
 	{"HaveSeen invalid", newValidator().HaveSeen(meta.Namespace), true},
-	{"HaveNotSeen valid", newValidator().HaveNotSeen(meta.Namespace), false},
-	{"HaveNotSeen invalid", newValidator().MarkSeen(meta.Namespace).HaveNotSeen(meta.Namespace), true},
 	{"ObjectDisallowedInContext", newValidator().ObjectDisallowedInContext(&resource.Info{Source: "some/source"}, meta.Namespace),
 		true},
 }

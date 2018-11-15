@@ -51,17 +51,6 @@ func (v *validator) MarkSeen(t schema.GroupVersionKind) *validator {
 	return v
 }
 
-// HaveNotSeen validates that the MarkSeen method is called at most once with the given type.
-func (v *validator) HaveNotSeen(t schema.GroupVersionKind) *validator {
-	if v.err != nil {
-		return v
-	}
-	if v.seen[t] {
-		v.err = errors.Errorf("cannot have multiple objects with type %#v", t)
-	}
-	return v
-}
-
 // HaveSeen validates that the MarkSeen method is called at least once with the given type.
 func (v *validator) HaveSeen(t schema.GroupVersionKind) *validator {
 	if v.err != nil {

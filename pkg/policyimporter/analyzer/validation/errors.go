@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource"
 )
 
 // Codes for each Nomos error.
@@ -62,6 +63,9 @@ const (
 	MultipleConfigMapsErrorCode                    = "1026"
 	UnsupportedRepoSpecVersionCode                 = "1027"
 	InvalidDirectoryNameErrorCode                  = "1028"
+	ObjectNameCollisionErrorCode                   = "1029"
+	MultipleNamespacesErrorCode                    = "1030"
+	MissingObjectNameErrorCode                     = "1031"
 	UndefinedErrorCode                             = "????"
 )
 
@@ -125,6 +129,12 @@ func Code(e error) string {
 		return UnsupportedRepoSpecVersionCode
 	case InvalidDirectoryNameError:
 		return InvalidDirectoryNameErrorCode
+	case ObjectNameCollisionError:
+		return ObjectNameCollisionErrorCode
+	case MultipleNamespacesError:
+		return MultipleNamespacesErrorCode
+	case MissingObjectNameError:
+		return MissingObjectNameErrorCode
 	default:
 		return UndefinedErrorCode // Undefined
 	}
@@ -139,6 +149,29 @@ func format(err error, format string, a ...interface{}) string {
 		panic(fmt.Sprintf("Unknown Nomosvet Error: %s", err.Error()))
 	}
 	return fmt.Sprintf("KNV%s: ", Code(err)) + fmt.Sprintf(format, a...)
+}
+
+type groupVersionKind schema.GroupVersionKind
+
+// String implements Stringer
+func (gvk groupVersionKind) String() string {
+	return fmt.Sprintf(
+		"group: %[1]s\n"+
+			"version: %[2]s\n"+
+			"kind: %[3]s",
+		gvk.Group, gvk.Version, gvk.Kind)
+}
+
+type fileObject struct {
+	ast.FileObject
+}
+
+// String implements Stringer
+func (o fileObject) String() string {
+	return fmt.Sprintf("source: %[1]s\n"+
+		"metadata.name: %[2]s\n"+
+		"%[3]s",
+		o.Source, o.Name(), groupVersionKind(o.GetObjectKind().GroupVersionKind()))
 }
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.
@@ -211,7 +244,7 @@ func (e UnsyncableClusterObjectError) Error() string {
 		"Unable to sync cluster object %[2]q. "+
 			"Enable sync for this object's kind.\n\n"+
 			"%[1]s",
-		e.FileObject, e.Name())
+		fileObject{e.FileObject}, e.Name())
 }
 
 // UnsyncableNamespaceObjectError represents an illegal usage of a namespace object kind which has not been explicitly declared.
@@ -225,7 +258,7 @@ func (e UnsyncableNamespaceObjectError) Error() string {
 		"Unable to sync namespace object %[2]q. "+
 			"Enable sync for this object's kind.\n\n"+
 			"%[1]s",
-		e.FileObject, e.Name())
+		fileObject{e.FileObject}, e.Name())
 }
 
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
@@ -239,21 +272,29 @@ func (e IllegalAbstractNamespaceObjectKindError) Error() string {
 		"Object %[4]q illegally declared in an %[1]s directory. "+
 			"Move this object to a %[2]s directory:\n\n"+
 			"%[3]s",
-		ast.AbstractNamespace, ast.Namespace, e.FileObject, e.Name())
+		ast.AbstractNamespace, ast.Namespace, fileObject{e.FileObject}, e.Name())
 }
 
 // ConflictingResourceQuotaError represents multiple ResourceQuotas illegally presiding in the same directory.
 type ConflictingResourceQuotaError struct {
-	*ast.NamespaceObject
+	Path       string
+	Duplicates []*resource.Info
 }
 
 // Error implements error.
 func (e ConflictingResourceQuotaError) Error() string {
+	strs := []string{}
+	for _, duplicate := range e.Duplicates {
+		strs = append(strs, fmt.Sprintf("source: %[1]s\nname: %[2]s",
+			path.Join(e.Path, path.Base(duplicate.Source)), duplicate.Name))
+	}
+	sort.Strings(strs)
+
 	return format(e,
 		"A directory MUST NOT contain more than one ResourceQuota object. "+
-			"Directory %[1]q contains multiple ResourceQuota objects, including:\n\n"+
+			"Directory %[1]q contains multiple ResourceQuota objects:\n\n"+
 			"%[2]s",
-		path.Dir(e.Source), e.FileObject)
+		e.Path, strings.Join(strs, "\n\n"))
 }
 
 // IllegalNamespaceDeclarationError represents illegally declaring metadata.namespace
@@ -285,7 +326,7 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 		"Objects MUST NOT define unsupported annotations starting with %[3]q. "+
 			"Object %[4]q has offending annotations: %[1]s\n\n"+
 			"%[2]s",
-		a, e.object, policyhierarchy.GroupName, e.object.Name())
+		a, fileObject{e.object}, policyhierarchy.GroupName, e.object.Name())
 }
 
 // IllegalLabelDefinitionError represent a set of illegal label definitions.
@@ -302,7 +343,7 @@ func (e IllegalLabelDefinitionError) Error() string {
 		"Objects MUST NOT define labels starting with %[3]q. "+
 			"Below object defines these offending labels: %[1]s\n\n"+
 			"%[2]s",
-		l, e.object, policyhierarchy.GroupName)
+		l, fileObject{e.object}, policyhierarchy.GroupName)
 }
 
 // NamespaceSelectorMayNotHaveAnnotation reports that a namespace selector has
@@ -382,30 +423,33 @@ func (e IllegalSubdirectoryError) Error() string {
 
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
 type IllegalTopLevelNamespaceError struct {
-	*ast.TreeNode
+	Source string
+	Info   *resource.Info
 }
 
 // Error implements error
 func (e IllegalTopLevelNamespaceError) Error() string {
 	return format(e,
-		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]s defined in:\n\n"+
+		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for namespaces in:\n\n"+
 			"source: %[3]s",
-		repo.NamespacesDir, ast.Namespace, e.Data.Get(NamespaceSourceKey))
+		repo.NamespacesDir, ast.Namespace, e.Source)
 }
 
 // InvalidNamespaceNameError reports that a Namespace has an invalid name.
 type InvalidNamespaceNameError struct {
-	*ast.TreeNode
+	Source   string
+	Expected string
+	Actual   string
 }
 
 // Error implements error
 func (e InvalidNamespaceNameError) Error() string {
 	return format(e,
-		"%[1]s MUST define %[2]s that matches the name of its directory.\n\n"+
-			"source: %[3]s\n"+
-			"expected name: %[4]s\n"+
-			"actual name: %[5]s",
-		ast.Namespace, MetadataNameKey, e.Data.Get(NamespaceSourceKey), e.Name(), e.Data.Get(MetadataNameKey))
+		"%[1]s MUST define metadata.name that matches the name of its directory.\n\n"+
+			"source: %[2]s\n"+
+			"expected name: %[3]s\n"+
+			"actual name: %[4]s",
+		ast.Namespace, e.Source, e.Expected, e.Actual)
 }
 
 // UnknownObjectError reports that an object declared in the repo does not have a definition in the cluster.
@@ -424,7 +468,15 @@ func (e UnknownObjectError) Error() string {
 // MultipleVersionForSameSyncedTypeError reports that multiple versions were declared for the same synced kind
 type MultipleVersionForSameSyncedTypeError struct {
 	Source string
+	Group  v1alpha1.SyncGroup
 	Kind   v1alpha1.SyncKind
+}
+
+// PrettyPrint returns a convenient representation of a list of SyncVersions for error messages.
+func PrettyPrint(versions []v1alpha1.SyncVersion) string {
+	result := make([]string, len(versions))
+
+	return "versions: [" + strings.Join(result, ", ") + "]"
 }
 
 // Error implements error
@@ -432,8 +484,10 @@ func (e MultipleVersionForSameSyncedTypeError) Error() string {
 	return format(e,
 		"Kinds MUST declare exactly one version:\n\n"+
 			"source: %[1]s\n"+
+			"group: %[3]s"+
+			"%[4]s\n"+
 			"kind: %[2]s",
-		e.Source, e.Kind)
+		e.Source, e.Kind.Kind, e.Group.Group, PrettyPrint(e.Kind.Versions))
 }
 
 // IllegalNamespaceSyncDeclarationError reports that Namespace has incorrectly been declared as a Sync type
@@ -460,8 +514,8 @@ func (e IllegalSystemObjectDefinitionInSystemError) Error() string {
 	return format(e,
 		"Objects of kind %[1]s may not be declared in %[2]s/\n\n"+
 			"source: %[3]s\n"+
-			"kind: %[1]s",
-		e.GroupVersionKind.String(), repo.SystemDir, e.Source)
+			"%[1]s",
+		groupVersionKind(e.GroupVersionKind), repo.SystemDir, e.Source)
 }
 
 // MultipleRepoDefinitionsError reports that the system/ directory contains multiple Repo declarations.
@@ -534,4 +588,78 @@ func (e InvalidDirectoryNameError) Error() string {
 			"path: %[1]s\n"+
 			"name: %[2]s",
 		e.Dir, path.Base(e.Dir))
+}
+
+func relPath(root string, path string) string {
+	relPath, err := filepath.Rel(root, path)
+	if err != nil {
+		panic(errors.Wrap(err, "Tried to process file not in repository."))
+	}
+	return relPath
+}
+
+// ObjectNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
+type ObjectNameCollisionError struct {
+	Name       string
+	RootPath   string
+	Duplicates []*resource.Info
+}
+
+// Error implements error
+func (e ObjectNameCollisionError) Error() string {
+	strs := []string{}
+	for _, duplicate := range e.Duplicates {
+		strs = append(strs, fmt.Sprintf(
+			"source: %[1]s\n"+
+				"%[2]s\n"+
+				"name: %[3]s",
+			relPath(e.RootPath, duplicate.Source), groupVersionKind(duplicate.Mapping.GroupVersionKind), duplicate.Name))
+	}
+	sort.Strings(strs)
+
+	return format(e,
+		"Objects of the same Kind MUST have unique names in the same %[1]s and their parent %[3]ss:\n\n"+
+			"%[2]s",
+		ast.Namespace, strings.Join(strs, "\n\n"), ast.AbstractNamespace)
+}
+
+// MultipleNamespacesError reports that multiple Namespaces are defined in the same directory.
+type MultipleNamespacesError struct {
+	Path       string
+	RootPath   string
+	Duplicates []*resource.Info
+}
+
+// Error implements error
+func (e MultipleNamespacesError) Error() string {
+	strs := []string{}
+	for _, duplicate := range e.Duplicates {
+		strs = append(strs, fmt.Sprintf(
+			"source: %[1]s\n"+
+				"%[2]s\n"+
+				"name: %[3]s",
+			relPath(e.RootPath, duplicate.Source), groupVersionKind(duplicate.Mapping.GroupVersionKind), duplicate.Name))
+	}
+	sort.Strings(strs)
+
+	return format(e,
+		"A directory may declare at most one %[1]s object:\n\n"+
+			"%[2]s",
+		ast.Namespace, strings.Join(strs, "\n\n"))
+}
+
+// MissingObjectNameError reports that an object has no name.
+type MissingObjectNameError struct {
+	Relpath string
+	*resource.Info
+}
+
+// Error implements error
+func (e MissingObjectNameError) Error() string {
+	return format(e,
+		"Objects must define metadata.name:\n\n"+
+			"source: %[1]s\n"+
+			"%[2]s\n"+
+			"name: %[3]s",
+		e.Relpath, groupVersionKind(e.Mapping.GroupVersionKind), e.Name)
 }

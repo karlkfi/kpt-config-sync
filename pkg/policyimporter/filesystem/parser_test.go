@@ -118,6 +118,13 @@ rules:
 {{template "objectmetatemplate" .}}
 `
 
+	aNamedRoleTemplate = `
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{.Name}}
+`
+
 	aRoleBindingTemplate = `
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -232,6 +239,22 @@ kind: Repo
 apiVersion: nomos.dev/v1alpha1
 spec:
   version: "0.1.0"
+metadata:
+  name: repo
+`
+
+	aNamedSyncTemplate = `
+kind: Sync
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: {{.Name}}
+spec:
+  groups:
+  - group: {{.Group}}
+    kinds:
+    - kind: {{.Kind}}
+      versions:
+      - version: {{.Version}}
 `
 
 	aSyncTemplate = `
@@ -345,6 +368,8 @@ var (
 	aClusterSelector                   = tpl("aClusterSelector", aClusterSelectorTemplate)
 	aNamespaceSelector                 = tpl("aNamespaceSelectorTemplate", aNamespaceSelectorTemplate)
 	anUndefinedResource                = tpl("anUndefinedResourceTemplate", anUndefinedResourceTemplate)
+	aNamedRole                         = tpl("aNamedRole", aNamedRoleTemplate)
+	aNamedSync                         = tpl("aNamedSync", aNamedSyncTemplate)
 )
 
 // templateData can be used to format any of the below values into templates to create
@@ -776,14 +801,24 @@ var parserTestCases = []parserTestCase{
 		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
-		testName: "Namespace dir with multiple Namespaces",
+		testName: "Namespace dir with multiple Namespaces with same name",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":       aRepo,
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCode: validation.UndefinedErrorCode,
+		expectedErrorCode: validation.MultipleNamespacesErrorCode,
+	},
+	{
+		testName: "Namespace dir with multiple Namespaces with different names",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":       aRepo,
+			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/ns2.yaml": templateData{Name: "baz"}.apply(aNamespace),
+		},
+		expectedErrorCode: validation.MultipleNamespacesErrorCode,
 	},
 	{
 		testName: "Namespace dir without Namespace multiple",
@@ -977,7 +1012,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/role1.yaml": templateData{Namespace: "bar"}.apply(aRole),
 			"namespaces/bar/role2.yaml": templateData{Namespace: "bar"}.apply(aRole),
 		},
-		expectedErrorCode: validation.UndefinedErrorCode,
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
 	{
 		testName: "Namespace dir with multiple Rolebindings",
@@ -1001,7 +1036,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
 		},
-		expectedErrorCode: validation.UndefinedErrorCode,
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
 	{
 		testName: "Policyspace dir with duplicate Rolebindings",
@@ -1014,7 +1049,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r2.yaml":     templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedErrorCode: validation.UndefinedErrorCode,
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
 	{
 		testName: "Namespace dir with non-conflicting reserved Namespace specified",
@@ -1227,7 +1262,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
 			"namespaces/bar/baz/rb1.yaml": templateData{ID: "1", Namespace: "baz"}.apply(aRoleBinding),
 		},
-		expectedErrorCode: validation.UndefinedErrorCode,
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
 	{
 		testName: "Minimal repo",
@@ -1428,7 +1463,7 @@ spec:
 			"cluster/cr1.yaml":  templateData{ID: "1"}.apply(aClusterRole),
 			"cluster/cr2.yaml":  templateData{ID: "1"}.apply(aClusterRole),
 		},
-		expectedErrorCode: validation.UndefinedErrorCode,
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
 	{
 		testName: "Cluster dir with duplicate ClusterRoleBinding names",
@@ -1439,7 +1474,28 @@ spec:
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			"cluster/crb2.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 		},
-		expectedErrorCode: validation.UndefinedErrorCode,
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
+	},
+	{
+		testName: "Clusterregistry dir with duplicate Cluster names",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml": aRepo,
+			"system/cr.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
+			"clusterregistry/cluster-1.yaml": templateData{
+				Name: "cluster",
+				Labels: map[string]string{
+					"environment": "prod",
+				},
+			}.apply(aClusterRegistryCluster),
+			"clusterregistry/cluster-2.yaml": templateData{
+				Name: "cluster",
+				Labels: map[string]string{
+					"environment": "prod",
+				},
+			}.apply(aClusterRegistryCluster),
+		},
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
 	{
 		testName: "Cluster dir with duplicate PodSecurityPolicy names",
@@ -1450,7 +1506,7 @@ spec:
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 		},
-		expectedErrorCode: validation.UndefinedErrorCode,
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
 	{
 		testName: "Dir name not unique 1",
@@ -1632,6 +1688,90 @@ spec:
 		},
 		expectedErrorCode: validation.UnknownObjectErrorCode,
 	},
+	{
+		testName: "Name collision in node",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":        aRepo,
+			"system/rb.yaml":           templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/foo/rb-1.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
+			"namespaces/foo/rb-2.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
+		},
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
+	},
+	{
+		testName: "No name collision if types different",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":        aRepo,
+			"system/rb.yaml":           templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"system/rq.yaml":           templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"namespaces/foo/rb-1.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
+			"namespaces/foo/rb-2.yaml": templateData{Name: "alice"}.apply(aQuota),
+		},
+	},
+	{
+		testName: "Name collision in child node",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":            aRepo,
+			"system/rb.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/foo/rb-1.yaml":     templateData{ID: "alice"}.apply(aRoleBinding),
+			"namespaces/foo/bar/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
+		},
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
+	},
+	{
+		testName: "Name collision in grandchild node",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":                aRepo,
+			"system/rb.yaml":                   templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/foo/rb-1.yaml":         templateData{ID: "alice"}.apply(aRoleBinding),
+			"namespaces/foo/bar/qux/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
+		},
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
+	},
+	{
+		testName: "No name collision in sibling nodes",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":                        aRepo,
+			"system/rb.yaml":                           templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/foo/bar/rb-1-stuff-stuff.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
+			"namespaces/foo/qux/rb-2-stuff-stuff.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
+		},
+	},
+	{
+		testName: "Empty string name is an error",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":            aRepo,
+			"system/rb.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+			"namespaces/foo/bar/rb-1.yaml": templateData{Name: ""}.apply(aNamedRole),
+		},
+		expectedErrorCode: validation.MissingObjectNameErrorCode,
+	},
+	{
+		testName: "No name is an error",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":            aRepo,
+			"system/rb.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+			"namespaces/foo/bar/rb-1.yaml": templateData{}.apply(aNamedRole),
+		},
+		expectedErrorCode: validation.MissingObjectNameErrorCode,
+	},
+	{
+		testName: "Name collision in system/ is an error",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml": aRepo,
+			"system/rb-1.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", Name: "Sync"}.apply(aNamedSync),
+			"system/rb-2.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role", Name: "Sync"}.apply(aNamedSync),
+		},
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
+	},
 }
 
 func (tc *parserTestCase) Run(t *testing.T) {
@@ -1648,6 +1788,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	}
 
 	for k, v := range tc.testFiles {
+		// stuff
 		d.createTestFile(k, v)
 	}
 
@@ -1671,31 +1812,32 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	actualPolicies, err := p.Parse(d.rootDir)
 
 	expectedCode := tc.expectedErrorCode
-	if expectedCode == "" {
-		if validation.Code(err) != validation.UndefinedErrorCode {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-	} else {
-		switch e := err.(type) {
-		case nil:
+
+	switch e := err.(type) {
+	case nil:
+		if expectedCode != "" {
 			t.Fatalf("Expected error with code %s but got no error.", expectedCode)
-		case *multierror.MultiError:
-			codes := make([]string, len(e.Errors()))
-			for i, er := range e.Errors() {
-				code := validation.Code(er)
-				codes[i] = code
-				if expectedCode == validation.Code(er) {
-					return
-				}
-			}
-			t.Fatalf("Expected error with code %s but got [%s]\n\n%s", expectedCode, strings.Join(codes, ","), e.Error())
-		default:
-			actualCode := validation.Code(e)
-			if expectedCode != actualCode {
-				t.Fatalf("Expected error with code %s but got [%s]\n\n%s", expectedCode, actualCode, e.Error())
-			}
-			return
 		}
+	case *multierror.MultiError:
+		codes := make([]string, len(e.Errors()))
+		for i, er := range e.Errors() {
+			code := validation.Code(er)
+			codes[i] = code
+			if expectedCode == validation.Code(er) {
+				return
+			}
+		}
+		if expectedCode == "" && len(codes) != 0 {
+			t.Fatalf("Expected no errors but got [%s]\n\n%s", strings.Join(codes, ","), e.Error())
+		} else {
+			t.Fatalf("Expected error with code %s but got [%s]\n\n%s", expectedCode, strings.Join(codes, ","), e.Error())
+		}
+	default:
+		actualCode := validation.Code(e)
+		if expectedCode != actualCode {
+			t.Fatalf("Expected error with code %s but got [%s]\n\n%s", expectedCode, actualCode, e.Error())
+		}
+		return
 	}
 
 	if actualPolicies == nil {
@@ -2371,9 +2513,9 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			testFiles: fstesting.FileContentMap{
 				// System dir
 				"system/nomos.yaml":              aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role", Name: "RoleSync"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", Name: "RoleBindingSync"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding", Name: "ClusterRoleBindingSync"}.apply(aSync),
 
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
@@ -2409,9 +2551,9 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			testFiles: fstesting.FileContentMap{
 				// System dir
 				"system/nomos.yaml":              aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role", Name: "RoleSync"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", Name: "RoleBindingSync"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding", Name: "ClusterRoleBindingSync"}.apply(aSync),
 
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{

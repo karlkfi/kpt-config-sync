@@ -50,17 +50,6 @@ func (o *FileObject) Name() string {
 	return o.ToMeta().GetName()
 }
 
-// PrettyPrint returns a convenient representation of a FileObject for error messages.
-func (o FileObject) String() string {
-	gvk := o.GroupVersionKind()
-	return fmt.Sprintf("source: %[1]s\n"+
-		"metadata.name: %[2]s\n"+
-		"group: %[3]s\n"+
-		"apiVersion: %[4]s\n"+
-		"kind: %[5]s\n",
-		o.Source, o.Name(), gvk.Group, gvk.Version, gvk.Kind)
-}
-
 // Root represents a set of declared policies, configuration for how those policies will be
 // interpreted, and information regarding where those policies came from.
 type Root struct {

@@ -22,6 +22,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
@@ -98,6 +100,18 @@ func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterfa
 	return p, nil
 }
 
+func toDirInfoMap(fileInfos []*resource.Info) map[string][]*resource.Info {
+	result := make(map[string][]*resource.Info)
+
+	// If a directory has resources, its value in the map will be non-nil.
+	for _, i := range fileInfos {
+		d := filepath.Dir(i.Source)
+		result[d] = append(result[d], i)
+	}
+
+	return result
+}
+
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
 // Resources are read from the following directories:
 //
@@ -119,9 +133,11 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 	clusterDir := filepath.Join(root, repo.ClusterDir)
 	clusterInfos := p.readResources(clusterDir, false, &errorBuilder)
+	p.validateDuplicateNames(toDirInfoMap(clusterInfos), &errorBuilder)
 
 	clusterregistryPath := filepath.Join(root, repo.ClusterRegistryDir)
 	clusterregistryInfos := p.readResources(clusterregistryPath, false, &errorBuilder)
+	p.validateDuplicateNames(toDirInfoMap(clusterregistryInfos), &errorBuilder)
 
 	nsDir := filepath.Join(root, repo.NamespacesDir)
 	nsDirsOrdered := allDirs(nsDir, &errorBuilder)
@@ -132,36 +148,24 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 	// TODO(filmil): dirInfos could just be map[string]runtime.Object, it seems.  Let's wait
 	// until the new repo format commit lands, and change it then.
-	dirInfos := make(map[string][]*resource.Info)
-	// Value of all dirs is initially set to nil.
-	for _, d := range nsDirsOrdered {
-		dirInfos[d] = nil
-	}
-	// If a directory has resources, its value in the map
-	// will be non-nil.
-	for _, i := range fileInfos {
-		d := filepath.Dir(i.Source)
-		dirInfos[d] = append(dirInfos[d], i)
-	}
-
-	if err := validateDuplicateNames(dirInfos); err != nil {
-		return nil, err
-	}
+	dirInfos := toDirInfoMap(fileInfos)
+	p.validateDuplicateNames(dirInfos, &errorBuilder)
 
 	resources, discoveryErr := p.discoveryClient.ServerResources()
 	if discoveryErr != nil {
-		return nil, errors.Wrap(discoveryErr, "failed to get server resources")
+		errorBuilder.Add(errors.Wrap(discoveryErr, "failed to get server resources"))
 	}
 
 	policies, err := p.processDirs(resources, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered,
 		clusterDir, fsCtx, syncs)
 	if err != nil {
 		errorBuilder.Add(err)
+		return nil, errorBuilder.Build()
 	}
-
 	if errorBuilder.HasErrors() {
 		return nil, errorBuilder.Build()
 	}
+
 	return policies, nil
 }
 
@@ -437,9 +441,7 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 			metaObj := o.(metav1.Object)
 			treeNode.Labels = metaObj.GetLabels()
 			treeNode.Annotations = metaObj.GetAnnotations()
-			treeNode.Data = treeNode.Data.Add(validation.MetadataNameKey, i.Name)
-			treeNode.Data = treeNode.Data.Add(validation.NamespaceSourceKey, p.relativePath(i.Source))
-			v.HaveNotSeen(gvk).MarkSeen(gvk)
+			v.MarkSeen(gvk)
 			continue
 		}
 
@@ -468,6 +470,7 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root, errorBuilder *multierror.Builder) []*v1alpha1.Sync {
 	// Ignore individual file read errors for now and continue processing parsed files.
 	fileInfos := p.readRequiredResources(systemDir, false, errorBuilder)
+	p.validateDuplicateNames(toDirInfoMap(fileInfos), errorBuilder)
 
 	var syncs []*v1alpha1.Sync
 	repos := make(map[*v1alpha1.Repo]string)         // holds all Repo definitions
@@ -494,7 +497,7 @@ func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root, errorBuilde
 			for _, group := range sync.Spec.Groups {
 				for _, kind := range group.Kinds {
 					if len(kind.Versions) > 1 {
-						errorBuilder.Add(validation.MultipleVersionForSameSyncedTypeError{Source: info.Source, Kind: kind})
+						errorBuilder.Add(validation.MultipleVersionForSameSyncedTypeError{Source: info.Source, Group: group, Kind: kind})
 					}
 					if kind.Kind == string(ast.Namespace) && group.Group == "" {
 						// Require that Group is the empty string since that is the core Namespace object
@@ -599,21 +602,107 @@ func (p *Parser) validateDirNames(root string, dirs []string, errorBuilder *mult
 	}
 }
 
-func validateDuplicateNames(dirInfos map[string][]*resource.Info) error {
-	for _, infos := range dirInfos {
-		gvkNameMap := map[schema.GroupVersionKind]map[string]bool{}
+func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, errorBuilder *multierror.Builder) {
+	seenObjectNames := make(map[schema.GroupVersionKind]map[string][]*resource.Info)
+	seenNamespaceDirs := make(map[string][]*resource.Info)
+	seenResourceQuotas := make(map[string][]*resource.Info)
+	seenDirs := make(map[string]map[string]struct{})
 
-		for d, i := range infos {
-			gvk := i.Mapping.GroupVersionKind
-			if gvkNameMap[gvk] == nil {
-				gvkNameMap[gvk] = map[string]bool{i.Name: true}
-			} else if _, exists := gvkNameMap[gvk][i.Name]; !exists {
-				gvkNameMap[gvk][i.Name] = true
+	for _, infos := range dirInfos {
+		for _, info := range infos {
+			gvk := info.Mapping.GroupVersionKind
+			if info.Name == "" {
+				errorBuilder.Add(validation.MissingObjectNameError{Relpath: p.relativePath(info.Source), Info: info})
+				continue
+			}
+
+			source := p.relativePath(info.Source)
+			dir := path.Dir(source)
+
+			if _, found := seenDirs[path.Base(dir)]; !found {
+				seenDirs[path.Base(dir)] = map[string]struct{}{dir: {}}
 			} else {
-				return errors.Errorf("detected duplicate object %q of type %#v in directory %q",
-					i.Name, gvk, d)
+				seenDirs[path.Base(dir)][dir] = struct{}{}
+			}
+
+			switch gvk {
+			case corev1.SchemeGroupVersion.WithKind("Namespace"):
+				if dir == repo.NamespacesDir {
+					errorBuilder.Add(validation.IllegalTopLevelNamespaceError{Source: source, Info: info})
+					continue
+				} else if path.Base(dir) != info.Name {
+					errorBuilder.Add(validation.InvalidNamespaceNameError{Source: source, Expected: path.Base(dir), Actual: info.Name})
+				}
+				seenNamespaceDirs[dir] = append(seenNamespaceDirs[dir], info)
+			case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
+				seenResourceQuotas[dir] = append(seenResourceQuotas[dir], info)
+			default:
+				if _, found := seenObjectNames[gvk]; !found {
+					seenObjectNames[gvk] = make(map[string][]*resource.Info)
+				}
+				seenObjectNames[gvk][info.Name] = append(seenObjectNames[gvk][info.Name], info)
 			}
 		}
 	}
-	return nil
+
+	// Check for namespace object collisions
+	for dir, namespaces := range seenNamespaceDirs {
+		if len(namespaces) > 1 {
+			errorBuilder.Add(validation.MultipleNamespacesError{Path: dir, RootPath: p.root, Duplicates: namespaces})
+		}
+	}
+
+	// Check for ResourceQuota collisions
+	for dir, quotas := range seenResourceQuotas {
+		if len(quotas) > 1 {
+			errorBuilder.Add(validation.ConflictingResourceQuotaError{Path: dir, Duplicates: quotas})
+		}
+	}
+
+	// Check for directory name collisions
+	for _, paths := range seenDirs {
+		if len(paths) > 1 {
+			duplicates := []string{}
+			for aPath := range paths {
+				duplicates = append(duplicates, aPath)
+			}
+			errorBuilder.Add(validation.DuplicateDirectoryNameError{Duplicates: duplicates})
+		}
+	}
+
+	// Check for object name collisions
+	for _, objectsByNames := range seenObjectNames {
+		// All objects have the same kind
+		for name, objects := range objectsByNames {
+			// All objects have the same name and kind
+			sort.Slice(objects, func(i, j int) bool {
+				// Sort by source file
+				return path.Dir(objects[i].Source) < path.Dir(objects[j].Source)
+			})
+
+			for i := 0; i < len(objects); {
+				dir := p.relativePath(path.Dir(objects[i].Source))
+				duplicates := []*resource.Info{objects[i]}
+
+				for j := i + 1; j < len(objects); j++ {
+					if strings.HasPrefix(p.relativePath(objects[j].Source), dir) {
+						// Pick up duplicates in the same directory and child directories.
+						duplicates = append(duplicates, objects[j])
+					} else {
+						// Since objects are sorted by paths, this guarantees that objects within a directory
+						// will be contiguous. We can exit at the first non-matching source path.
+						break
+					}
+				}
+
+				if len(duplicates) > 1 {
+					errorBuilder.Add(validation.ObjectNameCollisionError{Name: name, RootPath: p.root, Duplicates: duplicates})
+				}
+
+				// Recall that len(duplicates) is always at least 1.
+				// There's no need to have multiple errors when more than two objects collide.
+				i += len(duplicates)
+			}
+		}
+	}
 }

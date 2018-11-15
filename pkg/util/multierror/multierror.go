@@ -97,7 +97,7 @@ func (m MultiError) Error() string {
 	for idx, err := range uniqueErrors {
 		allErrors = append(allErrors, fmt.Sprintf("[%d] %v\n", idx+1, err))
 	}
-	return strings.Join(allErrors, "\n")
+	return strings.Join(allErrors, "\n\n")
 }
 
 // Errors returns a list of the contained errors
