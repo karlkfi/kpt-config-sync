@@ -107,7 +107,7 @@ func TestOrgPolicies(t *testing.T) {
 	}
 }
 
-func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Object, wantRef v1.ResourceReference) {
+func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Object, want v1.ResourceReference) {
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
@@ -123,7 +123,7 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Ob
 
 	input.Tree.Data = input.Tree.Data.Add(gcpAttachmentPointKey, nil)
 	projectNode := input.Tree.Children[0]
-	projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &wantRef)
+	projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &want)
 
 	copier := visitorpkg.NewCopying()
 	copier.SetImpl(copier)
@@ -143,20 +143,21 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Ob
 		t.Fatalf("unexpected output root: %+v", output)
 	}
 
-	want := policy.DeepCopyObject()
+	wantObj := policy.DeepCopyObject()
 
 	// It's impossible to collapse these two type cases as Go won't convert v to a concrete type because
 	// it doesn't know which to pick. This means the code has to be repeated for each type case.
-	switch v := want.(type) {
+	switch v := wantObj.(type) {
 	case *v1.IAMPolicy:
-		v.Spec.ResourceReference = wantRef
+		v.Spec.ResourceReference = want
 	case *v1.OrganizationPolicy:
-		v.Spec.ResourceReference = wantRef
+		v.Spec.ResourceReference = want
 	default:
 		t.Fatal("unknown policy type")
 	}
+
 	projectNode = output.Tree.Children[0]
-	if diff := cmp.Diff(vt.ObjectSets(project, want), projectNode.Objects); diff != "" {
+	if diff := cmp.Diff(vt.ObjectSets(project, wantObj), projectNode.Objects); diff != "" {
 		t.Errorf("got diff:\n%v", diff)
 	}
 }
@@ -210,7 +211,58 @@ func TestIAMPolicyConversion(t *testing.T) {
 	}
 }
 
-func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Project, policy *v1.IAMPolicy, want *v1.ClusterIAMPolicy) {
+func TestOrgPolicyConversion(t *testing.T) {
+	org := vt.Helper.GCPOrg()
+	project := vt.Helper.GCPProject()
+
+	var tests = []struct {
+		name   string
+		policy *v1.OrganizationPolicy
+		want   *v1.ClusterOrganizationPolicy
+	}{
+		{
+			name: "A non-project attachment point should attach to a cluster instead",
+			policy: &v1.OrganizationPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "OrganizationPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "org-policy",
+				},
+				Spec: v1.OrganizationPolicySpec{
+					ResourceReference: v1.ResourceReference{
+						Kind: org.TypeMeta.Kind,
+						Name: org.ObjectMeta.Name,
+					},
+				},
+			},
+			want: &v1.ClusterOrganizationPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterOrganizationPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "org-policy",
+				},
+				Spec: v1.OrganizationPolicySpec{
+					ResourceReference: v1.ResourceReference{
+						Kind: org.TypeMeta.Kind,
+						Name: org.ObjectMeta.Name,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			runClusterObjectsTest(t, org, project, tc.policy, tc.want)
+		})
+	}
+}
+
+func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Project, policy, want runtime.Object) {
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
@@ -226,7 +278,13 @@ func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Proje
 
 	input.Tree.Data = input.Tree.Data.Add(gcpAttachmentPointKey, nil)
 	projectNode := input.Tree.Children[0]
-	projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &want.Spec.ResourceReference)
+
+	switch v := want.(type) {
+	case *v1.ClusterIAMPolicy:
+		projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &v.Spec.ResourceReference)
+	case *v1.ClusterOrganizationPolicy:
+		projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &v.Spec.ResourceReference)
+	}
 
 	copier := visitorpkg.NewCopying()
 	copier.SetImpl(copier)

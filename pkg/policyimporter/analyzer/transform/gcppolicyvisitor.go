@@ -118,9 +118,10 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 		if attachmentPoint == nil {
 			panic(fmt.Sprintf("Missing attachment point for org policy %v", o))
 		}
+		orgPolicy := gcpObj.DeepCopy()
+		orgPolicy.Spec.ResourceReference = *attachmentPoint
+		// TODO(ttt): Is this enough attachment points? What about orgs/folders?
 		if attachmentPoint.Kind == "Project" {
-			orgPolicy := gcpObj.DeepCopy()
-			orgPolicy.Spec.ResourceReference = *attachmentPoint
 			return &ast.NamespaceObject{
 				FileObject: ast.FileObject{
 					Object: orgPolicy,
@@ -128,7 +129,17 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 				},
 			}
 		}
-		// TODO(b/119222263): Move to ClusterOrganizationPolicy.
+
+		corg := &v1.ClusterOrganizationPolicy{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1.SchemeGroupVersion.String(),
+				Kind:       "ClusterOrganizationPolicy",
+			},
+			ObjectMeta: orgPolicy.ObjectMeta,
+			Spec:       orgPolicy.Spec,
+			Status:     orgPolicy.Status,
+		}
+		v.addToClusterObjects(corg, o.Source)
 		return nil
 	}
 
