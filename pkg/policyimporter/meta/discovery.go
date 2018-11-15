@@ -64,3 +64,9 @@ func (a *APIInfo) GetScope(gvk schema.GroupVersionKind) ObjectScope {
 	}
 	return Cluster
 }
+
+// Exists returns true if the GroupVersionKind is in the APIResources.
+func (a *APIInfo) Exists(gvk schema.GroupVersionKind) bool {
+	_, exists := a.resources[gvk]
+	return exists
+}

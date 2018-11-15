@@ -100,7 +100,7 @@ type InputValidator struct {
 	errs        multierror.Builder
 	reserved    *reserved.Namespaces
 	nodes       []*ast.TreeNode
-	allowedGVKs map[schema.GroupVersionKind]struct{}
+	allowedGVKs map[schema.GroupVersionKind]bool
 	coverage    *ClusterCoverage
 }
 
@@ -114,7 +114,7 @@ var _ ast.Visitor = &InputValidator{}
 // of selectors.  vet turns on "vetting mode", a mode of stricter control for use
 // in nomosvet.
 func NewInputValidator(
-	allowedGVKs map[schema.GroupVersionKind]struct{},
+	allowedGVKs map[schema.GroupVersionKind]bool,
 	clusters []clusterregistry.Cluster,
 	cs []v1alpha1.ClusterSelector,
 	vet bool) *InputValidator {
@@ -127,7 +127,6 @@ func NewInputValidator(
 
 	if vet {
 		v.coverage = newClusterCoverage(clusters, cs, &v.errs)
-		//		v.coverage.ValidateCoverage(&v.errs)
 	}
 	return v
 }
@@ -206,7 +205,7 @@ func (v *InputValidator) checkAnnotationsAndLabels(o ast.FileObject) {
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	gvk := o.GroupVersionKind()
-	if _, found := v.allowedGVKs[gvk]; !found {
+	if !v.allowedGVKs[gvk] {
 		v.errs.Add(UnsyncableClusterObjectError{o})
 	}
 	v.checkAnnotationsAndLabels(o.FileObject)
@@ -218,7 +217,7 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
-	if _, found := v.allowedGVKs[o.GroupVersionKind()]; !found {
+	if !v.allowedGVKs[o.GroupVersionKind()] {
 		v.errs.Add(UnsyncableNamespaceObjectError{o})
 	}
 

@@ -25,7 +25,9 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // ObjectSets constructs a list of ObjectSet from a list of runtime.Object.
@@ -132,6 +134,17 @@ func (t *TestHelper) EmptyRoot() *ast.Root {
 // ClusterPolicies returns a Root with only cluster policies.
 func (t *TestHelper) ClusterPolicies() *ast.Root {
 	return &ast.Root{Cluster: t.AcmeCluster()}
+}
+
+// UnknownResource returns a custom resource without a corresponding CRD on the cluster.
+func (t *TestHelper) UnknownResource() *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "uknown.group",
+		Version: "v1",
+		Kind:    "Unknown",
+	})
+	return u
 }
 
 // AdminRoleBinding returns the role binding for the admin role.

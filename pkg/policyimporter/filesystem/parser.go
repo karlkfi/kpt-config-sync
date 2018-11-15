@@ -33,6 +33,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
+	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/google/nomos/pkg/util/namespaceutil"
@@ -124,8 +125,17 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	fsCtx := &ast.Root{Cluster: &ast.Cluster{}}
 	errorBuilder := multierror.Builder{}
 
+	resources, discoveryErr := p.discoveryClient.ServerResources()
+	if discoveryErr != nil {
+		return nil, errors.Wrap(discoveryErr, "failed to get server resources")
+	}
+	apiInfo, err := meta.NewAPIInfo(resources)
+	if err != nil {
+		return nil, err
+	}
+
 	// Special processing for <root>/system/*
-	syncs := p.processSystemDir(filepath.Join(root, repo.SystemDir), fsCtx, &errorBuilder)
+	syncs := p.processSystemDir(filepath.Join(root, repo.SystemDir), fsCtx, apiInfo, &errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
 		return nil, errorBuilder.Build()
@@ -151,12 +161,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	dirInfos := toDirInfoMap(fileInfos)
 	p.validateDuplicateNames(dirInfos, &errorBuilder)
 
-	resources, discoveryErr := p.discoveryClient.ServerResources()
-	if discoveryErr != nil {
-		errorBuilder.Add(errors.Wrap(discoveryErr, "failed to get server resources"))
-	}
-
-	policies, err := p.processDirs(resources, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered,
+	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered,
 		clusterDir, fsCtx, syncs)
 	if err != nil {
 		errorBuilder.Add(err)
@@ -246,7 +251,7 @@ func (p *Parser) readResources(dir string, allowSubdirectories bool, errorBuilde
 // tree is hierarchical, containing 2 categories of directories:
 // 1. AbstractNamespace directory: Non-leaf directories at any depth within root directory.
 // 2. Namespace directory: Leaf directories at any depth within root directory.
-func (p *Parser) processDirs(resources []*metav1.APIResourceList,
+func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	dirInfos map[string][]*resource.Info,
 	clusterInfos []*resource.Info,
 	clusterregistryInfos []*resource.Info,
@@ -294,7 +299,7 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	}
 	fsCtx.Tree = tree
 
-	visitors, err := buildVisitors(resources, toAllowedGVKs(syncs), clusters, selectors, p.opts)
+	visitors, err := buildVisitors(apiInfo, toAllowedGVKs(syncs), clusters, selectors, p.opts)
 	if err != nil {
 		errorBuilder.Add(err)
 		return nil, errorBuilder.Build()
@@ -328,20 +333,16 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	return policies, nil
 }
 
-func buildVisitors(resources []*metav1.APIResourceList,
-	allowedGVKs map[schema.GroupVersionKind]struct{},
+func buildVisitors(apiInfo *meta.APIInfo,
+	allowedGVKs map[schema.GroupVersionKind]bool,
 	clusters []clusterregistry.Cluster,
 	selectors []v1alpha1.ClusterSelector,
 	opts ParserOpt) ([]ast.CheckingVisitor, error) {
-	scopeValidator, err := validation.NewScope(resources)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create scope validator")
-	}
 
 	visitors := []ast.CheckingVisitor{
 		validation.NewInputValidator(allowedGVKs, clusters, selectors, opts.Vet),
 		transform.NewPathAnnotationVisitor(),
-		scopeValidator,
+		validation.NewScope(apiInfo),
 	}
 	if opts.Bespin {
 		visitors = append(visitors, transform.NewGCPHierarchyVisitor(), transform.NewGCPPolicyVisitor())
@@ -363,14 +364,14 @@ func buildVisitors(resources []*metav1.APIResourceList,
 	return visitors, nil
 }
 
-func toAllowedGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]struct{} {
-	allowedGVKs := make(map[schema.GroupVersionKind]struct{})
+func toAllowedGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
+	allowedGVKs := make(map[schema.GroupVersionKind]bool)
 	for _, sync := range syncs {
 		for _, sg := range sync.Spec.Groups {
 			for _, k := range sg.Kinds {
 				for _, v := range k.Versions {
 					gvk := schema.GroupVersionKind{Group: sg.Group, Kind: k.Kind, Version: v.Version}
-					allowedGVKs[gvk] = struct{}{}
+					allowedGVKs[gvk] = true
 				}
 			}
 		}
@@ -467,7 +468,8 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 // - Nomos Repo
 // - Reserved Namespaces
 // - Syncs
-func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root, errorBuilder *multierror.Builder) []*v1alpha1.Sync {
+func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root,
+	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) []*v1alpha1.Sync {
 	// Ignore individual file read errors for now and continue processing parsed files.
 	fileInfos := p.readRequiredResources(systemDir, false, errorBuilder)
 	p.validateDuplicateNames(toDirInfoMap(fileInfos), errorBuilder)
@@ -503,6 +505,17 @@ func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root, errorBuilde
 						// Require that Group is the empty string since that is the core Namespace object
 						// A different group could validly define a Kind called "Namespace"
 						errorBuilder.Add(validation.IllegalNamespaceSyncDeclarationError{Source: info.Source})
+					}
+					syncGVK := schema.GroupVersionKind{
+						Group:   group.Group,
+						Version: kind.Versions[0].Version,
+						Kind:    kind.Kind,
+					}
+					if !apiInfo.Exists(syncGVK) {
+						errorBuilder.Add(validation.UnknownResourceInSyncError{
+							SyncPath:     p.relativePath(info.Source),
+							ResourceType: syncGVK,
+						})
 					}
 				}
 			}

@@ -98,7 +98,7 @@ test-nomosvet-local: build
 	@echo "Running test-nomosvet-local..."
 	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/acme
 	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/foo-corp-example/foo-corp
-# To update expected errors: nomosvet examples/errors 2> examples/errors/expected-errs.txt
+    # To update expected errors: nomosvet examples/errors 2> examples/errors/expected-errs.txt
 	@if [ -f $(TOP_DIR)/.output/tmp/actual-errors.txt ]; then \
 		rm $(TOP_DIR)/.output/tmp/actual-errors.txt; \
 	fi
@@ -107,11 +107,13 @@ test-nomosvet-local: build
 	@grep -cF "source: /" .output/tmp/actual-errs.txt | grep -qF 0 # don't use paths beginning with root
 
 	@if [ -f $(TOP_DIR)/.output/tmp/actual-errors-2.txt ]; then \
-    rm $(TOP_DIR)/.output/tmp/actual-errors-2.txt; \
-  fi
+      rm $(TOP_DIR)/.output/tmp/actual-errors-2.txt; \
+    fi
 	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/parse-errors/invalid-yaml 2> $(TOP_DIR)/.output/tmp/actual-errs.txt || true
 	@grep -qF "2 error(s)" $(TOP_DIR)/.output/tmp/actual-errs.txt # there are two errors
 	@grep -cF "invalid object to validate" .output/tmp/actual-errs.txt | grep -qF 2 # they are invalid yaml
+	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/parse-errors/unknown-resource-sync 2> $(TOP_DIR)/.output/tmp/actual-errs.txt || true
+	@diff $(TOP_DIR)/examples/parse-errors/unknown-resource-sync/expected-errs.txt $(TOP_DIR)/.output/tmp/actual-errs.txt
 
 include Makefile.e2e.ci
 include Makefile.e2e.prober

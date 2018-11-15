@@ -225,19 +225,7 @@ func (f *TestFactory) DiscoveryClient() (discovery.CachedDiscoveryInterface, err
 
 // RestMapper returns a RESTMapper.
 func (f *TestFactory) RestMapper() meta.RESTMapper {
-	rs := append(TestDynamicResources(), &restmapper.APIGroupResources{
-		Group: metav1.APIGroup{
-			Name:             "does.not.exist",
-			Versions:         []metav1.GroupVersionForDiscovery{{Version: "v1"}},
-			PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1"},
-		},
-		VersionedResources: map[string][]metav1.APIResource{
-			"v1": {
-				{Name: "nonexistents", Namespaced: true, Kind: "Nonexistent"},
-			},
-		},
-	})
-	return restmapper.NewDiscoveryRESTMapper(rs)
+	return restmapper.NewDiscoveryRESTMapper(TestDynamicResources())
 }
 
 // TestAPIResourceList returns the API ResourceList as would be returned by the DiscoveryClient ServerResources

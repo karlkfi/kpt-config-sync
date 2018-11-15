@@ -1,0 +1,11 @@
+Found issues: 1 error(s)
+
+
+[1] KNV1032: Sync contains a resource type that does not exist on cluster.
+Either remove the resource type from the Sync or create a CustomResourceDefinition for the resource type on the cluster.
+
+source: system/unknown.yaml
+group: unknown.group.com
+version: v1
+kind: Unknown
+

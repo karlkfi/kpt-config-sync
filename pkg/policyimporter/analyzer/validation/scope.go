@@ -19,40 +19,29 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // Scope runs after all transforms have completed.  This will verify that the final state of
 // the tree meets various conditions before we set it on the API server.
 type Scope struct {
 	*visitor.Base
-	errs           multierror.Builder
-	typeNamespaced map[schema.GroupVersionKind]bool
+	errs    multierror.Builder
+	apiInfo *meta.APIInfo
 }
 
 // NewScope returns a validator that checks if objects are in the correct scope in terms of namespace
 // vs cluster.
 // resourceLists is the list of supported types from the discovery client.
-func NewScope(resourceLists []*metav1.APIResourceList) (*Scope, error) {
-	typeNamespaced := map[schema.GroupVersionKind]bool{}
-	for _, resourceList := range resourceLists {
-		groupVersion, err := schema.ParseGroupVersion(resourceList.GroupVersion)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse discovery APIResourceList")
-		}
-		for _, resource := range resourceList.APIResources {
-			typeNamespaced[groupVersion.WithKind(resource.Kind)] = resource.Namespaced
-		}
-	}
+func NewScope(apiInfo *meta.APIInfo) *Scope {
 	pv := &Scope{
-		Base:           visitor.NewBase(),
-		typeNamespaced: typeNamespaced,
+		Base:    visitor.NewBase(),
+		apiInfo: apiInfo,
 	}
 	pv.SetImpl(pv)
-	return pv, nil
+	return pv
 }
 
 // Error returns any errors encountered during processing
@@ -63,45 +52,43 @@ func (p *Scope) Error() error {
 // VisitClusterObject implements Visitor
 func (p *Scope) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	gvk := o.Object.GetObjectKind().GroupVersionKind()
-	metaObj := o.ToMeta()
-	namespaceScoped, found := p.typeNamespaced[gvk]
-	if found {
-		if namespaceScoped {
-			p.errs.Add(errors.Errorf(
-				"Namespace scoped object %s with Name %q in file %q cannot be declared in %q "+
-					"directory.  Move declaration to the appropriate %q directory.",
-				gvk,
-				metaObj.GetName(),
-				o.Source,
-				repo.ClusterDir,
-				repo.NamespacesDir,
-			))
-		}
-	} else {
+
+	switch p.apiInfo.GetScope(gvk) {
+	case meta.Namespace:
+		p.errs.Add(errors.Errorf(
+			"Namespace scoped object %s with Name %q in file %q cannot be declared in %q "+
+				"directory.  Move declaration to the appropriate %q directory.",
+			gvk,
+			o.ToMeta().GetName(),
+			o.Source,
+			repo.ClusterDir,
+			repo.NamespacesDir,
+		))
+	case meta.NotFound:
 		p.errs.Add(UnknownObjectError{&o.FileObject})
 	}
+
 	return o
 }
 
 // VisitObject implements Visitor
 func (p *Scope) VisitObject(o *ast.NamespaceObject) ast.Node {
 	gvk := o.Object.GetObjectKind().GroupVersionKind()
-	metaObj := o.ToMeta()
-	namespaceScoped, found := p.typeNamespaced[gvk]
-	if found {
-		if !namespaceScoped {
-			p.errs.Add(errors.Errorf(
-				"Cluster scoped object %s with Name %q from file %s cannot be declared inside "+
-					"%q directory.  Move declaration to the %q directory.",
-				gvk,
-				metaObj.GetName(),
-				o.Source,
-				repo.NamespacesDir,
-				repo.ClusterDir,
-			))
-		}
-	} else {
+
+	switch p.apiInfo.GetScope(gvk) {
+	case meta.Cluster:
+		p.errs.Add(errors.Errorf(
+			"Cluster scoped object %s with Name %q from file %s cannot be declared inside "+
+				"%q directory.  Move declaration to the %q directory.",
+			gvk,
+			o.ToMeta().GetName(),
+			o.Source,
+			repo.NamespacesDir,
+			repo.ClusterDir,
+		))
+	case meta.NotFound:
 		p.errs.Add(UnknownObjectError{&o.FileObject})
 	}
+
 	return o
 }

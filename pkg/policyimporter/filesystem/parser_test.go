@@ -316,14 +316,6 @@ spec:
     matchLabels:
       environment: prod
 `
-
-	anUndefinedResourceTemplate = `
-apiVersion: does.not.exist/v1
-kind: Nonexistent
-metadata:
-  name: nonexistentname
-  namespace: {{.Namespace}}
-`
 )
 
 func tpl(name, content string) *template.Template {
@@ -367,7 +359,6 @@ var (
 	aClusterRegistryCluster            = tpl("aClusterRegistryCluster", aClusterRegistryClusterTemplate)
 	aClusterSelector                   = tpl("aClusterSelector", aClusterSelectorTemplate)
 	aNamespaceSelector                 = tpl("aNamespaceSelectorTemplate", aNamespaceSelectorTemplate)
-	anUndefinedResource                = tpl("anUndefinedResourceTemplate", anUndefinedResourceTemplate)
 	aNamedRole                         = tpl("aNamedRole", aNamedRoleTemplate)
 	aNamedSync                         = tpl("aNamedSync", aNamedSyncTemplate)
 )
@@ -1678,15 +1669,13 @@ spec:
 		expectedErrorCode: validation.UnsupportedRepoSpecVersionCode,
 	},
 	{
-		testName: "Custom Resource w/o a CRD applied in repo",
+		testName: "Sync contains resource w/o a CRD applied",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":             aRepo,
-			"system/unknown.yaml":           templateData{Group: "does.not.exist", Version: "v1", Kind: "Nonexistent"}.apply(aSync),
-			"namespaces/bar/undefined.yaml": templateData{Namespace: "bar"}.apply(anUndefinedResource),
-			"namespaces/bar/ns.yaml":        templateData{Name: "bar"}.apply(aNamespace),
+			"system/nomos.yaml":   aRepo,
+			"system/unknown.yaml": templateData{Group: "no.crd", Version: "v1", Kind: "NoCRD"}.apply(aSync),
 		},
-		expectedErrorCode: validation.UnknownObjectErrorCode,
+		expectedErrorCode: validation.UnknownResourceInSyncErrorCode,
 	},
 	{
 		testName: "Name collision in node",

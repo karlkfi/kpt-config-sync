@@ -21,15 +21,17 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	ft "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
+	"github.com/google/nomos/pkg/policyimporter/meta"
 )
 
 var scopeTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.CheckingVisitor {
-		v, err := NewScope(ft.TestAPIResourceList(ft.TestDynamicResources()))
+		apiInfos, err := meta.NewAPIInfo(ft.TestAPIResourceList(ft.TestDynamicResources()))
 		if err != nil {
 			panic("testdata error")
 		}
-		return v
+
+		return NewScope(apiInfos)
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
@@ -56,6 +58,24 @@ var scopeTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Cluster: &ast.Cluster{
 					Objects: vt.ClusterObjectSets(vt.Helper.AdminRoleBinding()),
+				},
+			},
+			ExpectErr: true,
+		},
+		{
+			Name: "unknown namespace resource",
+			Input: &ast.Root{
+				Tree: &ast.TreeNode{
+					Objects: vt.ObjectSets(vt.Helper.UnknownResource()),
+				},
+			},
+			ExpectErr: true,
+		},
+		{
+			Name: "unknown cluster resource",
+			Input: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(vt.Helper.UnknownResource()),
 				},
 			},
 			ExpectErr: true,

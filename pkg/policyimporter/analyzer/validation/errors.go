@@ -66,10 +66,11 @@ const (
 	ObjectNameCollisionErrorCode                   = "1029"
 	MultipleNamespacesErrorCode                    = "1030"
 	MissingObjectNameErrorCode                     = "1031"
+	UnknownResourceInSyncErrorCode                 = "1032"
 	UndefinedErrorCode                             = "????"
 )
 
-// Code returns the unique Code associated with the error type.
+// Code returns the unique code associated with the error type.
 // Only ever (1) add to this method or (2) deprecate ids. Do not reuse.
 func Code(e error) string {
 	switch e.(type) {
@@ -135,6 +136,8 @@ func Code(e error) string {
 		return MultipleNamespacesErrorCode
 	case MissingObjectNameError:
 		return MissingObjectNameErrorCode
+	case UnknownResourceInSyncError:
+		return UnknownResourceInSyncErrorCode
 	default:
 		return UndefinedErrorCode // Undefined
 	}
@@ -662,4 +665,21 @@ func (e MissingObjectNameError) Error() string {
 			"%[2]s\n"+
 			"name: %[3]s",
 		e.Relpath, groupVersionKind(e.Mapping.GroupVersionKind), e.Name)
+}
+
+// UnknownResourceInSyncError reports that a resource defined on a sync does not have a definition in the cluster.
+type UnknownResourceInSyncError struct {
+	SyncPath     string
+	ResourceType schema.GroupVersionKind
+}
+
+// Error implements error
+func (e UnknownResourceInSyncError) Error() string {
+	return format(e,
+		"Sync contains a resource type that does not exist on cluster.\n"+
+			"Either remove the resource type from the Sync or create a CustomResourceDefinition for "+
+			"the resource type on the cluster.\n\n"+
+			"source: %[1]s\n"+
+			"%[2]s",
+		e.SyncPath, groupVersionKind(e.ResourceType))
 }
