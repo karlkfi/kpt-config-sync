@@ -73,6 +73,8 @@ type ParserOpt struct {
 	Vet bool
 	// Validate will raise validation errors if set.
 	Validate bool
+	// Bespin will enable the Bespin visitors.
+	Bespin bool
 }
 
 // NewParser creates a new Parser.
@@ -288,27 +290,10 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 	}
 	fsCtx.Tree = tree
 
-	scopeValidator, err := validation.NewScope(resources)
+	visitors, err := buildVisitors(resources, toAllowedGVKs(syncs), clusters, selectors, p.opts)
 	if err != nil {
-		errorBuilder.Add(errors.Wrapf(err, "failed to create scope validator"))
+		errorBuilder.Add(err)
 		return nil, errorBuilder.Build()
-	}
-
-	visitors := []ast.CheckingVisitor{
-		validation.NewInputValidator(toAllowedGVKs(syncs), clusters, selectors, p.opts.Vet),
-		transform.NewPathAnnotationVisitor(),
-		scopeValidator,
-		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
-		transform.NewAnnotationInlinerVisitor(),
-		transform.NewInheritanceVisitor(
-			[]transform.InheritanceSpec{
-				{
-					GroupVersionKind: rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
-				},
-			},
-		),
-		transform.NewQuotaVisitor(),
-		validation.NewNameValidator(),
 	}
 
 	for _, visitor := range visitors {
@@ -337,6 +322,41 @@ func (p *Parser) processDirs(resources []*metav1.APIResourceList,
 		return nil, errorBuilder.Build()
 	}
 	return policies, nil
+}
+
+func buildVisitors(resources []*metav1.APIResourceList,
+	allowedGVKs map[schema.GroupVersionKind]struct{},
+	clusters []clusterregistry.Cluster,
+	selectors []v1alpha1.ClusterSelector,
+	opts ParserOpt) ([]ast.CheckingVisitor, error) {
+	scopeValidator, err := validation.NewScope(resources)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create scope validator")
+	}
+
+	visitors := []ast.CheckingVisitor{
+		validation.NewInputValidator(allowedGVKs, clusters, selectors, opts.Vet),
+		transform.NewPathAnnotationVisitor(),
+		scopeValidator,
+	}
+	if opts.Bespin {
+		visitors = append(visitors, transform.NewGCPHierarchyVisitor(), transform.NewGCPPolicyVisitor())
+	}
+	visitors = append(visitors,
+		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
+		transform.NewAnnotationInlinerVisitor(),
+		transform.NewInheritanceVisitor(
+			[]transform.InheritanceSpec{
+				{
+					GroupVersionKind: rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
+				},
+			},
+		),
+		transform.NewQuotaVisitor(),
+		validation.NewNameValidator(),
+	)
+
+	return visitors, nil
 }
 
 func toAllowedGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]struct{} {

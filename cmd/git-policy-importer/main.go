@@ -61,7 +61,7 @@ func main() {
 	glog.Infof("Policy dir: %s", policyDir)
 
 	parser, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, client.Kubernetes().Discovery(),
-		filesystem.ParserOpt{Validate: true})
+		filesystem.ParserOpt{Validate: true, Bespin: *enableBespin})
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %v", err)
 	}
