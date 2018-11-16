@@ -59,7 +59,7 @@ function local_teardown() {
   git::commit
 
   debug::log "Checking that original resource remains on cluster"
-  wait::for -t 10 -- policynode::sync_token_eq newer-prj "$(git::hash)"
+  wait::for -t 30 -- policynode::sync_token_eq newer-prj "$(git::hash)"
   debug::log "Anvil events: $(kubectl get events | grep "Anvil")"
   selection=$(kubectl get anvil ${resname} -n newer-prj -ojson | jq -c ".spec.lbs")
   [[ "${selection}" == "100" ]] || debug::error "unmanaged custom resource weight should be 100, not ${selection}"
