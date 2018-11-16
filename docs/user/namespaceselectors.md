@@ -1,6 +1,6 @@
 # NamespaceSelectors
 
-In the [Overview](git_overview.md) section, we described how resources such as
+In the [Overview](overview.md) section, we described how resources such as
 RoleBindings are inherited hierarchically. This provides a powerful mechanism to
 apply policies to all Namespaces in a subtree. However, some organizations
 require the flexibility to apply policies to just a subset of the Namespaces
@@ -144,3 +144,5 @@ Given the above set up, `sre-admin` RoleBindings will only be created in `audit`
 and `shipping-prod` namespaces.
 
 [1]: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
+
+[< Back](../../README.md)

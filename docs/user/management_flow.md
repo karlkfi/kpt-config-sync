@@ -2,10 +2,10 @@
 
 The following decision tree shows the expected operations taken by GKE Policy
 Management System based on the desired state in the Git repo and the current
-state of the cluster, including the
-[management labels](git_existing_clusters.md) applied by the user.
+state of the cluster, including the [management labels](existing_clusters.md)
+applied by the user.
 
-![drawing](img/system_flow.png)
+![drawing](../img/system_flow.png)
 
 Examples:
 
@@ -56,3 +56,5 @@ Examples:
     declared for Role. Someone adds a `shipping-admin` Role to git in
     `shipping-prod`. GKE Policy Management will notice the updated declarations
     and create the `shipping-admin` role in the `shipping-prod` namespace.
+
+[< Back](../../README.md)

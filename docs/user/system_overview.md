@@ -1,6 +1,6 @@
 # System Overview
 
-![drawing](img/nomos_arch.png)
+![drawing](../img/nomos_arch.png)
 
 The above diagram is a simplified view of GKE Policy Management components
 running on a workload cluster. Each component is described below.
@@ -44,3 +44,5 @@ controller.
 
 A ValidatingAdmissionWebhook that ensures PolicyNode objects represent a valid
 [tree](https://en.wikipedia.org/wiki/Tree_\(data_structure\)#Definition).
+
+[< Back](../../README.md)

@@ -127,3 +127,5 @@ to diagnose other symptoms (such as an increase in the syncer queue size).
 ```console
 histogram_quantile(0.9, rate(nomos_syncer_action_duration_seconds_bucket[10m]))
 ```
+
+[< Back](../../README.md)

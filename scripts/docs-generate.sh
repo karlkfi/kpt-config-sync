@@ -41,9 +41,8 @@ fi
 # shellcheck disable=SC1117
 find "${DOCS_STAGING_DIR}" -name "*.html" \
   -exec sed -i -r "s:/__/grip/::g" {} \;  \
-  -exec sed -i -r "s:docs/(.*\.md):\1:g" {} \; \
   -exec sed -i -r "/http/b; s:\.md:\.html:g" {} \;
 
-# 4. Update path to asset dir for docs in dev/ subdir.
-find "${DOCS_STAGING_DIR}/dev" -name "*.html" \
-  -exec sed -i -r "s:\"asset/:\"../asset/:g" {} \;
+# 4. Update path to asset dir for docs in subdir.
+find "${DOCS_STAGING_DIR}/docs" -name "*.html" \
+  -exec sed -i -r "s:\"asset/:\"../../asset/:g" {} \;

@@ -6,9 +6,10 @@ DOCS_GCS_PREVIEW_DOWNLOAD = $(subst gs://,https://storage.cloud.google.com/,$(DO
 # Creates staging directory for generating docs.
 docs-staging: $(OUTPUT_DIR)
 	@echo "+++ Creating directory for generating docs: $(OUTPUT_DIR)"
-	@rm -rf $(DOCS_STAGING_DIR)/*.html $(DOCS_STAGING_DIR)/img
-	@cp -r $(TOP_DIR)/docs $(STAGING_DIR)
+	@rm -rf $(DOCS_STAGING_DIR)
+	@mkdir -p $(DOCS_STAGING_DIR)
 	@cp $(TOP_DIR)/README.md $(DOCS_STAGING_DIR)
+	@cp -r $(TOP_DIR)/docs $(DOCS_STAGING_DIR)
 
 docs-generate: $(OUTPUT_DIR) docs-staging
 	@echo "+++ Converting Markdown docs into HTML"

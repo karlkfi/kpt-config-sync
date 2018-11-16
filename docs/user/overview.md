@@ -105,7 +105,7 @@ metadata:
 
 In foo-corp, our hierarchy looks like this:
 
-![drawing](img/foo_corp_hierarchy.png)
+![drawing](../img/foo_corp_hierarchy.png)
 
 By modeling the hierarchy like this, we enable the Shipping App Backend team to
 manage three different namespaces while only have to maintain one authorization
@@ -116,7 +116,7 @@ namespace to have additional authorized users but not the others, and allocating
 private quota to each namespace.
 
 The following constraints apply to `namespaces` directory and are enforced
-during [validation](git_validation.md):
+during [validation](validation.md):
 
 1.  A Namespace directory MUST be a leaf directory.
 1.  A Namespace directory's name MUST match `metadata.name` field of the
@@ -131,7 +131,7 @@ during [validation](git_validation.md):
     [DNS Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md)).
     In addition a name MUST NOT be `default`, `nomos-system`, or have `kube-`
     prefix. This topic is discussed in depth in the
-    [Managing Existing Clusters](git_existing_clusters.md).
+    [Managing Existing Clusters](existing_clusters.md).
 1.  All directory names MUST be unique in the hierarchy.
 
 ### cluster/
@@ -140,7 +140,7 @@ during [validation](git_validation.md):
 ClusterRolebindings).
 
 The following constraints apply to `cluster` directory and are enforced during
-[validation](git_validation.md):
+[validation](validation.md):
 
 1.  The cluster directory MAY contain any number of uniquely named
     cluster-scoped resources.
@@ -194,3 +194,5 @@ Kubernetes resource in namespaces, but does not delete a namespace or workload
 resources.
 
 [1]: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+
+[< Back](../../README.md)

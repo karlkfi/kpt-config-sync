@@ -142,3 +142,5 @@ $ git clone git@github.com:your_github_username/foo-corp-example.git
 
 Consult the [installation guide](installation.md) for instructions on how to
 apply the config.
+
+[< Back](../../README.md)

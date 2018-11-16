@@ -6,7 +6,7 @@ is critical to validate them first.
 `nomosvet` is tool that validates a GKE Policy Management directory by:
 
 1.  Enforcing
-    [GKE Policy Management Filesystem Standard](git_overview.md#filesystem-standard).
+    [GKE Policy Management Filesystem Standard](overview.md#filesystem-standard).
 2.  Validating resources using the Kubernetes API machinery discovery mechanism
     and OpenAPI spec (Similar to `kubectl apply --dry-run`).
 
@@ -53,3 +53,5 @@ $ nomosvet -print foo-corp
 ```
 
 This can be handy to preview the diff of a change before it is committed.
+
+[< Back](../../README.md)

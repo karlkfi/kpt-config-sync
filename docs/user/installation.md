@@ -1,4 +1,4 @@
-# Installing GKE Policy Management (Operator Install)
+# Installing GKE Policy Management
 
 The Nomos Operator is a controller that manages an installation of GKE Policy
 Management in a Kubernetes cluster. It consumes a Custom Resource Definition
@@ -72,7 +72,7 @@ and make sure to select version 1.9+ when creating the cluster.
 
 Ensure that the current user has cluster-admin in the cluster
 
-```$bash
+```console
 $ kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user [CURRENT_USERNAME]
 ```
 
@@ -80,7 +80,7 @@ $ kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-
 
 Download the operator bundle directly to your machine
 
-```$bash
+```console
 $ curl -LO https://storage.googleapis.com/nomos-release/operator-latest/nomos-operator.yaml
 ```
 
@@ -89,7 +89,7 @@ $ curl -LO https://storage.googleapis.com/nomos-release/operator-latest/nomos-op
 Apply the operator bundle in order to create the Nomos Operator and nomos-system
 namespace into your cluster.
 
-```$bash
+```console
 $ kubectl apply -f nomos-operator.yaml
 ```
 
@@ -100,29 +100,86 @@ You can verify that the Nomos Operator was deployed correctly `$bash $ kubectl
 and that the nomos-system namespace was created `$bash $ kubectl get ns | grep
 nomos nomos-system Active 1m`
 
-### Prepare Nomos Resource and Secret File
+### Create the Nomos Config File
 
-Follow the [Operator Config Guide](nomos_config.md) to write a Nomos resource
-specifying the parameters of your desired installation and create the secret
-file for your installation.
+The Nomos resource is a Kubernetes Custom Resource Definition (CRD) that defines
+a Nomos installation. The `spec` field of a Nomos resources specifies the
+installation parameters for Nomos.
+
+An example config using a github repo with ssh access is below:
+
+```yaml
+apiVersion: addons.sigs.k8s.io/v1alpha1
+kind: Nomos
+metadata:
+  name: nomos
+  namespace: nomos-system
+spec:
+  git:
+    syncRepo: git@github.com:frankfarzan/foo-corp-example.git
+    syncBranch: master
+    syncWait: 1
+    secretType: ssh
+    policyDir: foo-corp
+```
+
+`spec` contains a top level field `git`, which is an object with the following
+properties:
+
+Key          | Description
+------------ | -----------
+`syncRepo`   | The URL of the Git repository to use as the source of truth. Required.
+`syncBranch` | The branch of the repository to sync from. Default: master.
+`policyDir`  | The path within the repository to the top of the policy hierarchy to sync. Default: the root directory of the repository.
+`syncWait`   | Period in seconds between consecutive syncs. Default: 15.
+`syncRev`    | Git revision (tag or hash) to check out. Default HEAD.
+`secretType` | The type of secret configured for access to the Git repository. One of "ssh" or "cookiefile". Required.
 
 ### Create the git-creds Secret
 
+#### Using SSH
+
+Follow this process when `secretType` is set to `ssh`.
+
+First, create a nomos-specific private/public key pair.
+
+```console
+$ ssh-keygen -t rsa -b 4096 -C "alice@example.com" -N '' -f $HOME/.ssh/id_rsa.nomos
+```
+
+Whether to use a different key per cluster is up to the needs of your system.
+
+Next, configure the server where your repository is hosted to recognize the
+newly created public key, `id_rsa.nomos.pub`. This process depends on how your
+repository is hosted. For an example: if your repository is hosted on Github,
+follow
+[this process](https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/)
+to add the public key to your Github account.
+
 Use the same secret you configured in the previous step to create the
 `git-creds` secret in your cluster.
-
-For example, create the ssh secret with:
 
 ```console
 $ kubectl create secret generic git-creds -n=nomos-system \
     --from-file=ssh=$HOME/.ssh/id_rsa.nomos
 ```
 
-or, create the git-cookies secret with:
+#### Using GitCookies
+
+Follow this process when `secretType` is set to `cookiefile`.
+
+The process for acquiring a gitcookie depends on the configuration of your git
+server your repository is on, but is commonly used as an authentication
+mechanism for some hosting services, such as Google Cloud Source Repositories
+and Gerrit. Git Cookies are usually stored in `~/.gitcookies` on the local
+machine.
+
+Use the same secret you configured in the previous step to create the
+`git-creds` secret in your cluster.
 
 ```console
 $ kubectl create secret generic git-creds -n=nomos-system \
-    --from-file=cookie-file=~/.gitcookie
+    --from-file=ssh=$HOME/.ssh/id_rsa.nomos
 ```
 
 Note that these secrets are deployed into the nomos-system namespace, so it is
@@ -133,7 +190,7 @@ necessary to have that namespace created before creating the secret
 Use the Nomos Resource yaml you created in the previous step to create the
 Resource in the cluster.
 
-```$bash
+```console
 kubectl create -f nomos.yaml
 ```
 
@@ -159,7 +216,7 @@ syncer-58545bc77d-l485n                               1/1       Running   0     
 
 To uninstall nomos from your cluster, delete the Nomos Resource
 
-```$bash
+```console
 kubectl -n=nomos-system delete nomos --all
 ```
 
@@ -170,3 +227,5 @@ The affected components are:
 *   Any cluster level roles and role bindings installed by GKE Policy
     Management.
 *   Any admission controller configurations installed by GKE Policy Management.
+
+[< Back](../../README.md)

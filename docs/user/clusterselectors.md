@@ -1,15 +1,14 @@
 # ClusterSelectors
 
-In the [Overview](git_overview.md) section, we described how the resources
-specified in the `namespaces/` and `cluster/` directories get distributed to all
-enrolled clusters. This provides a way to address any Kubernetes resource to an
-entire fleet of clusters. Sometimes it is necessary to address Kubernetes
-resources to specific clusters only. This can be achieved using
-`ClusterSelectors`.
+In the [Overview](overview.md) section, we described how the resources specified
+in the `namespaces/` and `cluster/` directories get distributed to all enrolled
+clusters. This provides a way to address any Kubernetes resource to an entire
+fleet of clusters. Sometimes it is necessary to address Kubernetes resources to
+specific clusters only. This can be achieved using `ClusterSelectors`.
 
 Let's take a look at a `foo-corp` example that uses this option. The example is
-similar to the one used for [NamespaceSelectors](git_namespaceselectors.md). A
-new directory is introduced, called `clusterregistry/`.
+similar to the one used for [NamespaceSelectors](namespaceselectors.md). A new
+directory is introduced, called `clusterregistry/`.
 
 ```console
 foo-corp
@@ -201,3 +200,5 @@ spec:
   volumes:
   - '*'
 ```
+
+[< Back](../../README.md)

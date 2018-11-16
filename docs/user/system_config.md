@@ -259,7 +259,7 @@ EOF
 
 ## Reserved Namespaces
 
-See [Managing Existing Clusters](git_existing_clusters.md).
+See [Managing Existing Clusters](existing_clusters.md).
 
 Reserved namespaces are namespaces that GKE Policy Management will not manage.
 This is here to indicates to GKE Policy Management should not allow another
@@ -287,3 +287,5 @@ data:
   billing: reserved
   database: reserved
 ```
+
+[< Back](../../README.md)

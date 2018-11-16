@@ -18,16 +18,16 @@ only covers the possibility that e2e tests are so badly broken that they fail to
 run at all but still report passing. It also tests that our documentation is
 accurate (which can't be automated).*
 
-Follow [installation instructions](../installation.md), but instead of `stable`,
-pick a fixed release from
+Follow [installation instructions](../user/installation.md), but instead of
+`stable`, pick a fixed release from
 [GCS nomos releases](https://console.cloud.google.com/storage/browser/nomos-release?project=nomos-release).
 Choose the highest versioned release. It must be a release candidate (rc), such
 as `v0.10.3-rc.39`.
 
-Follow instructions for [Git config](../git_config.md). Use the sample YAML from
-those instructions, for the foo-corp repo. You will most likely have memorized
-these steps, but try to follow the documentation. This is our only regular
-review of the documentation.
+Follow instructions for [Git config](../user/config.md). Use the sample YAML
+from those instructions, for the foo-corp repo. You will most likely have
+memorized these steps, but try to follow the documentation. This is our only
+regular review of the documentation.
 
 After installation completes, check that the foo-corp namespaces are installed:
 

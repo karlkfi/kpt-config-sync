@@ -63,3 +63,5 @@ true            | true              | nomos.dev/namespace-management=full     | 
 false           | true              | No label                                | none                           | Unknown namespace
 false           | true              | nomos.dev/namespace-management=policies | none                           | Unknown namespace
 false           | true              | nomos.dev/namespace-management=full     | deletes namespace from cluster | None
+
+[< Back](../../README.md)

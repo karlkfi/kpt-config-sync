@@ -23,24 +23,24 @@ Cloud Platform.
 
 Watch the [demo](https://storage.googleapis.com/nomos-release/demo.mp4).
 
-Try it out by following the [Quickstart Guide](docs/quickstart.md).
+Try it out by following the [Quickstart Guide](docs/user/quickstart.md).
+
+## Installing GKE Policy Management
+
+*   [System Overview](docs/user/system_overview.md)
+*   [Installation](docs/user/installation.md)
 
 ## Using GKE Policy Management
 
-*   [System Overview](docs/system_overview.md)
-*   [Installation](docs/installation.md)
-*   Importing from Git:
-    *   [Overview](docs/git_overview.md)
-    *   [Validation](docs/git_validation.md)
-    *   [Management Flow](docs/git_management_flow.md)
-    *   [NamespaceSelectors](docs/git_namespaceselectors.md)
-    *   [ClusterSelectors](docs/git_clusterselectors.md)
-    *   [Managing Existing Clusters](docs/git_existing_clusters.md)
-    *   [System Configuration](docs/system_config.md)
-    *   [ResourceQuota](docs/rq.md)
-*   Importing from GCP:
-    *   [Overview](docs/gcp_overview.md)
-*   [Monitoring and Debugging](docs/monitoring_and_debugging.md)
+*   [Overview](docs/user/overview.md)
+*   [Validation](docs/user/validation.md)
+*   [NamespaceSelectors](docs/user/namespaceselectors.md)
+*   [ClusterSelectors](docs/user/clusterselectors.md)
+*   [Management Flow](docs/user/management_flow.md)
+*   [Managing Existing Clusters](docs/user/existing_clusters.md)
+*   [System Configuration](docs/user/system_config.md)
+*   [ResourceQuota](docs/user/rq.md)
+*   [Monitoring and Debugging](docs/user/monitoring_and_debugging.md)
 
 ## Contributing to GKE Policy Management
 

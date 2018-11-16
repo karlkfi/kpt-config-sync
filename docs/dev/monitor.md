@@ -1,8 +1,8 @@
 # Monitoring
 
-Please refer to the [monitoring section](../monitoring_and_debugging.md) of the
-user guide for more details about the metrics that are available in GKE Policy
-Management.
+Please refer to the [monitoring section](../user/monitoring_and_debugging.md) of
+the user guide for more details about the metrics that are available in GKE
+Policy Management.
 
 ### Manually Inspecting Metrics
 

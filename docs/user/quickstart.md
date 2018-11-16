@@ -76,4 +76,6 @@ Try changing the cpu request from `2` to `200m`. This time it should succeed.
 
 ## What's next
 
-[GKE Policy Management User Guide](git_overview.md)
+[GKE Policy Management User Guide](overview.md)
+
+[< Back](../../README.md)
