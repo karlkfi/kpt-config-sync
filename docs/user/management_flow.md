@@ -58,4 +58,61 @@ Examples:
     `shipping-prod`. GKE Policy Management will notice the updated declarations
     and create the `shipping-admin` role in the `shipping-prod` namespace.
 
+#### Sync and Resource Precedence
+
+GKE Policy Management considers Sync changes to have higher precedence. This is
+because it leads to less destructive actions on the cluster.
+
+For example, removing a Sync and all the resources it manages will disable
+management for those resources. But, it will leave all existing managed
+resources on the cluster.
+
+```console
+$ git rm system/resourcequota-sync.yaml namespaces/eng/quota.yaml namespaces/backend/quota.yaml namespaces/rnd/quota.yaml
+$ git commit -am "remove quota"
+$ git push origin master
+$ kubectl get resourcequota --all-namespaces -l nomos.dev/managed
+NAMESPACE   NAME                   AGE
+analytics   nomos-resource-quota   26s
+backend     nomos-resource-quota   27s
+frontend    nomos-resource-quota   29s
+new-prj     nomos-resource-quota   26s
+newer-prj   nomos-resource-quota   25s
+```
+
+If instead we remove all the resources first and then remove the Sync in a
+separate commit, none of the managed resources will remain on the cluster.
+
+First we remove all the ResourceQuotas in the repo.
+
+```console
+$ git rm namespaces/eng/quota.yaml namespaces/backend/quota.yaml namespaces/rnd/quota.yaml
+$ git commit -am "remove quota resources"
+$ git push origin master
+```
+
+Wait for GKE Policy Management to remove all the ResourceQuotas.
+
+```console
+$ while (( $(kubectl get resourcequota --all-namespaces -l nomos.dev/managed 2> /dev/null | wc -l) != 0 )); do
+  sleep 1
+done
+```
+
+Disable policy management for ResourceQuotas.
+
+```console
+$ git rm system/resourcequota-sync.yaml
+$ git commit -am "remove quota management"
+$ git push origin master
+```
+
+We end up with no ResourceQuotas on the cluster and no policy management for
+ResourceQuotas.
+
+```console
+$ kubectl get resourcequota --all-namespaces -l nomos.dev/managed
+No resources found.
+```
+
 [< Back](../../README.md)

@@ -31,8 +31,8 @@ spec:
 
 GKE Policy Management allows for syncing arbitrary kubernetes types from Git to
 a Kubernetes cluster. Sync is configured by placing a Sync resource in the
-**system** directory. The following example configures syncing RBAC types with
-"inherit" mode (addressed later) for RoleBindings.
+`system/` directory. The following example configures syncing RBAC types with
+`inherit` mode (addressed later) for RoleBindings.
 
 When syncing resources from Git and comparing them with the current cluster, we
 need some criteria to determine if a resource in Git matches what is on the
@@ -131,7 +131,7 @@ apiVersion: v1
 kind: Role
 ```
 
-#### Inherited Mode
+#### Inherit Mode
 
 GKE Policy Management enables "inherited" policies to be applied hierarchically
 following these properties:
@@ -256,6 +256,16 @@ spec:
   bar: baz
 EOF
 ```
+
+#### Modifying Syncs and Resources Simultaneously
+
+It is discouraged to have a git commit that both alters Syncs and the
+corresponding resources. Since there is a dependency between Syncs and
+resources, the intent behind toggling resource management and altering resources
+is ambiguous in certain cases.
+
+An example illustrating this can be found
+[here](management_flow.md#sync-and-resource-precedence).
 
 ## Reserved Namespaces
 
