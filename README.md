@@ -21,8 +21,6 @@ Cloud Platform.
 
 ## First Steps
 
-Watch the [demo](https://storage.googleapis.com/nomos-release/demo.mp4).
-
 Try it out by following the [Quickstart Guide](docs/user/quickstart.md).
 
 ## Installing GKE Policy Management
@@ -35,7 +33,6 @@ Try it out by following the [Quickstart Guide](docs/user/quickstart.md).
 *   [Overview](docs/user/overview.md)
 *   [Validation](docs/user/validation.md)
 *   [NamespaceSelectors](docs/user/namespaceselectors.md)
-*   [ClusterSelectors](docs/user/clusterselectors.md)
 *   [Management Flow](docs/user/management_flow.md)
 *   [Managing Existing Clusters](docs/user/existing_clusters.md)
 *   [System Configuration](docs/user/system_config.md)

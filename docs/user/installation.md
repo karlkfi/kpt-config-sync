@@ -205,9 +205,8 @@ Check running components:
 ```console
 $ kubectl get pods -n=nomos-system
 NAME                                                  READY     STATUS    RESTARTS   AGE
-git-policy-importer-66bf6b9db4-pbsxn            2/2       Running   0          24m
+git-policy-importer-66bf6b9db4-pbsxn                  2/2       Running   0          24m
 monitor-6f968db9-mc2xp                                1/1       Running   0          24m
-policy-admission-controller-6746f96cbb-2h2sf          1/1       Running   0          24m
 resourcequota-admission-controller-64988d97f4-nxmsc*  1/1       Running   0          24m
 syncer-58545bc77d-l485n                               1/1       Running   0          24m
 ```
