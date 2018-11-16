@@ -11,7 +11,7 @@ PolicyImporter is an abstraction for a controller that consumes policy
 definitions from an external source of truth and builds a canonical
 representation of the hierarchy using cluster-level CRD(s) defined by GKE Policy
 Management. GKE Policy Management can be extended to support different sources
-of truth (e.g. Git, GCP, Active Directory) using different implementations of
+of truth (e.g. Git, GCS, Active Directory) using different implementations of
 this abstraction. Note that we treat this canonical representation as internal
 implementation which should not be directly consumed by users.
 
@@ -30,19 +30,15 @@ GKE Policy Management defines three custom resources:
 
 ## Syncer
 
-A set of controllers (currently packaged as a single binary) that consume the
-canonical representation of the hierarchy produced by PolicyImporter and perform
-CRUD on namespaces and [sync-enabled](system_config.md#Sync) resources.
+A controller (currently packaged as a single binary) that consumes the canonical
+representation of the hierarchy produced by PolicyImporter and performs CRUD on
+namespaces and [sync-enabled](system_config.md#Sync) resources.
 
 ## ResourceQuotaAdmissionController
 
 A ValidatingAdmissionWebhook that enforces hierarchical quota policies which
 provides hierarchical quota on top of the existing ResourceQuota admission
-controller.
-
-## PolicyNodesAdmissionController
-
-A ValidatingAdmissionWebhook that ensures PolicyNode objects represent a valid
-[tree](https://en.wikipedia.org/wiki/Tree_\(data_structure\)#Definition).
+controller. This is an optional component if the user chooses not to use
+[hierarchical Resource Quota feature](rq.md).
 
 [< Back](../../README.md)
