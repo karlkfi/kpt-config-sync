@@ -34,7 +34,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 )
 
-// nolint:deadcode
 var (
 	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
@@ -42,7 +41,6 @@ var (
 	enableBespin      = flag.Bool("bespin", false, "Enable Bespin functionality")
 )
 
-// nolint:deadcode
 func main() {
 	flag.Parse()
 	log.Setup()
