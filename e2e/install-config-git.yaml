@@ -11,4 +11,4 @@ contexts:
 user: USER
 clusters:
   - context: CONTEXT
-    name: test-cluster
+    name: e2e-test-cluster
