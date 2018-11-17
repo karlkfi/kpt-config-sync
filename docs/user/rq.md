@@ -1,4 +1,4 @@
-# ResourceQuota
+# Hierarchical ResourceQuota
 
 A ResourceQuota object in a Namespace directory behaves just like it does in
 native kubernetes, restricting the specified resources.

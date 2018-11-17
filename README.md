@@ -16,8 +16,7 @@ multi-cluster deployments, by reducing the load on cluster operators and
 reducing the surface area to secure.
 
 GKE Policy Management can be extended to support different sources of truth for
-centralized policy management. Currently, there is support for Git and Google
-Cloud Platform.
+centralized policy management. Currently, there is support for Git.
 
 ## First Steps
 
@@ -36,7 +35,7 @@ Try it out by following the [Quickstart Guide](docs/user/quickstart.md).
 *   [Management Flow](docs/user/management_flow.md)
 *   [Managing Existing Clusters](docs/user/existing_clusters.md)
 *   [System Configuration](docs/user/system_config.md)
-*   [ResourceQuota](docs/user/rq.md)
+*   [Hierarchical ResourceQuota](docs/user/rq.md)
 *   [Monitoring and Debugging](docs/user/monitoring_and_debugging.md)
 
 ## Contributing to GKE Policy Management

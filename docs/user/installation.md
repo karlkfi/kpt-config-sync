@@ -161,7 +161,7 @@ Use the same secret you configured in the previous step to create the
 
 ```console
 $ kubectl create secret generic git-creds -n=nomos-system \
-    --from-file=ssh=$HOME/.ssh/id_rsa.nomos
+    --from-file=ssh=~/.ssh/id_rsa.nomos
 ```
 
 #### Using GitCookies
@@ -179,7 +179,7 @@ Use the same secret you configured in the previous step to create the
 
 ```console
 $ kubectl create secret generic git-creds -n=nomos-system \
-    --from-file=ssh=$HOME/.ssh/id_rsa.nomos
+    --from-file=cookie-file=~/.gitcookies
 ```
 
 Note that these secrets are deployed into the nomos-system namespace, so it is

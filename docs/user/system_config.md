@@ -2,7 +2,7 @@
 
 ## Overview
 
-The System directory contains resources used to configure the GKE Policy
+The `system/` directory contains resources used to configure the GKE Policy
 Management system.
 
 ## Repo
