@@ -13,8 +13,6 @@ spec:
     kind: Anvil
   validation:
     openAPIV3Schema:
-      required:
-       - spec
       properties:
         spec:
           type: object
