@@ -627,14 +627,18 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 
 	for _, infos := range dirInfos {
 		for _, info := range infos {
-			gvk := info.Mapping.GroupVersionKind
-			if info.Name == "" {
-				errorBuilder.Add(validation.MissingObjectNameError{Relpath: p.relativePath(info.Source), Info: info})
-				continue
-			}
-
 			source := p.relativePath(info.Source)
 			dir := path.Dir(source)
+
+			if info.Namespace != "" {
+				errorBuilder.Add(validation.IllegalMetadataNamespaceDeclarationError{Root: p.root, Info: info})
+			}
+
+			gvk := info.Mapping.GroupVersionKind
+			if info.Name == "" {
+				errorBuilder.Add(validation.MissingObjectNameError{Source: source, Info: info})
+				continue
+			}
 
 			if _, found := seenDirs[path.Base(dir)]; !found {
 				seenDirs[path.Base(dir)] = map[string]struct{}{dir: {}}
@@ -663,9 +667,9 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 	}
 
 	// Check for namespace object collisions
-	for dir, namespaces := range seenNamespaceDirs {
+	for _, namespaces := range seenNamespaceDirs {
 		if len(namespaces) > 1 {
-			errorBuilder.Add(validation.MultipleNamespacesError{Path: dir, RootPath: p.root, Duplicates: namespaces})
+			errorBuilder.Add(validation.MultipleNamespacesError{Root: p.root, Duplicates: namespaces})
 		}
 	}
 
