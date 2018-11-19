@@ -1,4 +1,4 @@
-Found issues: 15 error(s)
+Found issues: 16 error(s)
 
 
 [1] KNV1001: Directories MUST NOT have reserved namespace names. Rename or remove directory:
@@ -55,7 +55,16 @@ source: namespaces/prod/prod-namespace/quota-2.yaml
 name: pod-quota-2
 
 
-[8] KNV1010: Objects MUST NOT define unsupported annotations starting with "nomos.dev". Object "kesim-rolebinding" has offending annotations: "nomos.dev/unsupported"
+[8] KNV1009: Objects MUST NOT delcare metadata.namespace:
+
+source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+group: rbac.authorization.k8s.io
+version: v1
+kind: RoleBinding
+name: kesim-rolebinding
+
+
+[9] KNV1010: Objects MUST NOT define unsupported annotations starting with "nomos.dev". Object "kesim-rolebinding" has offending annotations: "nomos.dev/unsupported"
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
 metadata.name: kesim-rolebinding
@@ -64,7 +73,7 @@ version: v1
 kind: RoleBinding
 
 
-[9] KNV1011: Objects MUST NOT define labels starting with "nomos.dev". Below object defines these offending labels: "nomos.dev/illegal-label", "nomos.dev/illegal-label-2"
+[10] KNV1011: Objects MUST NOT define labels starting with "nomos.dev". Below object defines these offending labels: "nomos.dev/illegal-label", "nomos.dev/illegal-label-2"
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
 metadata.name: kesim-rolebinding
@@ -73,27 +82,27 @@ version: v1
 kind: RoleBinding
 
 
-[10] KNV1013: Object "no-such-cluster-selector" in namespace "prod-namespace" MUST refer to an existing ClusterSelector, but has annotation nomos.dev/cluster-selector="nonexistent-selector" which maps to no defined ClusterSelector
+[11] KNV1013: Object "no-such-cluster-selector" in namespace "" MUST refer to an existing ClusterSelector, but has annotation nomos.dev/cluster-selector="nonexistent-selector" which maps to no defined ClusterSelector
 
 
-[11] KNV1018: cluster/ directory MUST NOT have subdirectories.
+[12] KNV1018: cluster/ directory MUST NOT have subdirectories.
 
 path: cluster/illegal-cluster-subdir
 
 
-[12] KNV1019: Namespaces MUST be declared in subdirectories of namespaces/. Create a subdirectory for namespaces in:
+[13] KNV1019: Namespaces MUST be declared in subdirectories of namespaces/. Create a subdirectory for namespaces in:
 
 source: namespaces/namespace.yaml
 
 
-[13] KNV1020: Namespace MUST define metadata.name that matches the name of its directory.
+[14] KNV1020: Namespace MUST define metadata.name that matches the name of its directory.
 
 source: namespaces/dev/dev-namespace/namespace.yaml
 expected name: dev-namespace
 actual name: incorrect-name
 
 
-[14] KNV1029: Objects of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
+[15] KNV1029: Objects of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
 
 source: namespaces/dev/alice-rolebinding.yaml
 group: rbac.authorization.k8s.io
@@ -108,7 +117,7 @@ kind: RoleBinding
 name: alice-rolebinding
 
 
-[15] KNV1030: A directory may declare at most one Namespace object:
+[16] KNV1030: A directory may declare at most one Namespace object:
 
 source: namespaces/prod/prod-namespace/namespace-1.yaml
 group: 

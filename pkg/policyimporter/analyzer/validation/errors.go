@@ -43,7 +43,7 @@ const (
 	UnsyncableNamespaceObjectErrorCode             = "1006"
 	IllegalAbstractNamespaceObjectKindErrorCode    = "1007"
 	ConflictingResourceQuotaErrorCode              = "1008"
-	IllegalNamespaceDeclarationErrorCode           = "1009" // TODO(willbeason): Unused
+	IllegalNamespaceDeclarationErrorCode           = "1009"
 	IllegalAnnotationDefinitionErrorCode           = "1010"
 	IllegalLabelDefinitionErrorCode                = "1011"
 	NamespaceSelectorMayNotHaveAnnotationCode      = "1012"
@@ -90,7 +90,7 @@ func Code(e error) string {
 		return IllegalAbstractNamespaceObjectKindErrorCode
 	case ConflictingResourceQuotaError:
 		return ConflictingResourceQuotaErrorCode
-	case IllegalNamespaceDeclarationError:
+	case IllegalMetadataNamespaceDeclarationError:
 		return IllegalNamespaceDeclarationErrorCode
 	case IllegalAnnotationDefinitionError:
 		return IllegalAnnotationDefinitionErrorCode
@@ -300,19 +300,19 @@ func (e ConflictingResourceQuotaError) Error() string {
 		e.Path, strings.Join(strs, "\n\n"))
 }
 
-// IllegalNamespaceDeclarationError represents illegally declaring metadata.namespace
-type IllegalNamespaceDeclarationError struct {
-	*ast.NamespaceObject
+// IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
+type IllegalMetadataNamespaceDeclarationError struct {
+	Root string
+	Info *resource.Info
 }
 
 // Error implements error.
-func (e IllegalNamespaceDeclarationError) Error() string {
+func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 	// TODO(willbeason): Error unused until b/118715158
 	return format(e,
-		"Objects MUST NOT delcare metadata.namespace. "+
-			"Object %[2]q declares metadata.namespace:\n\n"+
+		"Objects MUST NOT delcare metadata.namespace:\n\n"+
 			"%[1]s",
-		e.FileObject, e.Name())
+		resourceInfo{root: e.Root, info: e.Info})
 }
 
 // IllegalAnnotationDefinitionError represents a set of illegal annotation definitions.
@@ -626,10 +626,23 @@ func (e ObjectNameCollisionError) Error() string {
 		ast.Namespace, strings.Join(strs, "\n\n"), ast.AbstractNamespace)
 }
 
+type resourceInfo struct {
+	root string
+	info *resource.Info
+}
+
+// String implements Stringer
+func (i resourceInfo) String() string {
+	return fmt.Sprintf(
+		"source: %[1]s\n"+
+			"%[2]s\n"+
+			"name: %[3]s",
+		relPath(i.root, i.info.Source), groupVersionKind(i.info.Mapping.GroupVersionKind), i.info.Name)
+}
+
 // MultipleNamespacesError reports that multiple Namespaces are defined in the same directory.
 type MultipleNamespacesError struct {
-	Path       string
-	RootPath   string
+	Root       string
 	Duplicates []*resource.Info
 }
 
@@ -637,11 +650,7 @@ type MultipleNamespacesError struct {
 func (e MultipleNamespacesError) Error() string {
 	strs := []string{}
 	for _, duplicate := range e.Duplicates {
-		strs = append(strs, fmt.Sprintf(
-			"source: %[1]s\n"+
-				"%[2]s\n"+
-				"name: %[3]s",
-			relPath(e.RootPath, duplicate.Source), groupVersionKind(duplicate.Mapping.GroupVersionKind), duplicate.Name))
+		strs = append(strs, resourceInfo{root: e.Root, info: duplicate}.String())
 	}
 	sort.Strings(strs)
 
@@ -653,7 +662,7 @@ func (e MultipleNamespacesError) Error() string {
 
 // MissingObjectNameError reports that an object has no name.
 type MissingObjectNameError struct {
-	Relpath string
+	Source string
 	*resource.Info
 }
 
@@ -664,7 +673,7 @@ func (e MissingObjectNameError) Error() string {
 			"source: %[1]s\n"+
 			"%[2]s\n"+
 			"name: %[3]s",
-		e.Relpath, groupVersionKind(e.Mapping.GroupVersionKind), e.Name)
+		e.Source, groupVersionKind(e.Mapping.GroupVersionKind), e.Name)
 }
 
 // UnknownResourceInSyncError reports that a resource defined on a sync does not have a definition in the cluster.
