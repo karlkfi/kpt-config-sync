@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strings"
 
+	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
@@ -58,6 +59,7 @@ func init() {
 	// converting Unstructured to specific types.
 	runtime.Must(v1.AddToScheme(legacyscheme.Scheme))
 	runtime.Must(v1alpha1.AddToScheme(legacyscheme.Scheme))
+	runtime.Must(bespinv1.AddToScheme(legacyscheme.Scheme))
 	runtime.Must(clusterregistry.AddToScheme(legacyscheme.Scheme))
 }
 
@@ -339,15 +341,17 @@ func buildVisitors(apiInfo *meta.APIInfo,
 	selectors []v1alpha1.ClusterSelector,
 	opts ParserOpt) ([]ast.CheckingVisitor, error) {
 
-	visitors := []ast.CheckingVisitor{
-		validation.NewInputValidator(allowedGVKs, clusters, selectors, opts.Vet),
-		transform.NewPathAnnotationVisitor(),
-		validation.NewScope(apiInfo),
-	}
+	var visitors []ast.CheckingVisitor
+	// TODO(b/119825336): This visitor shouldn't come before the validator,
+	// but the validator isn't allowing this to go through.
 	if opts.Bespin {
 		visitors = append(visitors, transform.NewGCPHierarchyVisitor(), transform.NewGCPPolicyVisitor())
 	}
+
 	visitors = append(visitors,
+		validation.NewInputValidator(allowedGVKs, clusters, selectors, opts.Vet),
+		transform.NewPathAnnotationVisitor(),
+		validation.NewScope(apiInfo),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
 		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(

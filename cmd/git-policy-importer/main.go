@@ -34,11 +34,15 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 )
 
+const bespinEnv = "NOMOS_ENABLE_BESPIN"
+
 var (
 	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directly has changed")
-	enableBespin      = flag.Bool("bespin", false, "Enable Bespin functionality")
+	// Check for a set environment variable instead of using a flag so as not to expose
+	// this WIP externally.
+	_, bespin = os.LookupEnv(bespinEnv)
 )
 
 func main() {
@@ -59,7 +63,7 @@ func main() {
 	glog.Infof("Policy dir: %s", policyDir)
 
 	parser, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, client.Kubernetes().Discovery(),
-		filesystem.ParserOpt{Validate: true, Bespin: *enableBespin})
+		filesystem.ParserOpt{Validate: true, Bespin: bespin})
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %v", err)
 	}

@@ -50,8 +50,13 @@ Options:
 
 `
 
-var validate = flag.Bool("validate", true, "If true, use a schema to validate the input")
-var print = flag.Bool("print", false, "If true, print generated Nomos CRDs")
+var (
+	validate = flag.Bool("validate", true, "If true, use a schema to validate the input")
+	print    = flag.Bool("print", false, "If true, print generated Nomos CRDs")
+	// Check for a set environment variable instead of using a flag so as not to expose
+	// this WIP externally.
+	_, bespin = os.LookupEnv("NOMOS_ENABLE_BESPIN")
+)
 
 func printErrAndDie(err error) {
 	// nolint: errcheck
@@ -96,7 +101,7 @@ func main() {
 	// TODO(119066037): Override the host in a way that doesn't involve overwriting defaults set internally in client-go.
 	clientcmd.ClusterDefaults = clientcmdapi.Cluster{Server: restConfig.Host}
 	p, err := filesystem.NewParser(
-		&genericclioptions.ConfigFlags{}, client.Discovery(), filesystem.ParserOpt{Validate: *validate, Vet: true})
+		&genericclioptions.ConfigFlags{}, client.Discovery(), filesystem.ParserOpt{Validate: *validate, Vet: true, Bespin: bespin})
 	if err != nil {
 		printErrAndDie(errors.Wrap(err, "Failed to create parser"))
 	}

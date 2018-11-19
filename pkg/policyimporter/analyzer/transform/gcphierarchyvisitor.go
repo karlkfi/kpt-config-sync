@@ -98,7 +98,7 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 	newNode := v.Copying.VisitTreeNode(n).(*ast.TreeNode)
 
 	if v.ctx.clusterObj != nil {
-		glog.Infof("Moving %s to cluster scope", v.ctx.clusterObj)
+		glog.V(1).Infof("Moving %v to cluster scope", v.ctx.clusterObj.Source)
 		v.cluster.Objects = append(v.cluster.Objects, v.ctx.clusterObj)
 	}
 	newNode.Data = newNode.Data.Add(gcpAttachmentPointKey, v.ctx.policyAttachmentPoint)
