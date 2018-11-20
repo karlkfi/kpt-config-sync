@@ -94,6 +94,8 @@ function add_clusterregistry_data() {
 }
 
 @test "ClusterSelector: Object reacts to changing the selector" {
+  # skipped per b/119795668
+  skip
   add_clusterregistry_data
 
   debug::log "Adding a valid cluster selector annotation to a role binding"
