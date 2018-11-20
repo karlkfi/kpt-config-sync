@@ -98,7 +98,7 @@ test-nomos-vet-local: build
 	@echo "Running test-nomos-vet-local..."
 	$(NOMOS_LOCAL) vet --path=$(TOP_DIR)/examples/acme
 	$(NOMOS_LOCAL) vet --path=$(TOP_DIR)/examples/foo-corp-example/foo-corp
-    # To update expected errors: nomos vet examples/errors 2> examples/errors/expected-errs.txt
+    # To update expected errors: nomos vet --path=examples/errors 2> examples/errors/expected-errs.txt
 	@if [ -f $(TOP_DIR)/.output/tmp/actual-errors.txt ]; then \
 		rm $(TOP_DIR)/.output/tmp/actual-errors.txt; \
 	fi
@@ -112,6 +112,8 @@ test-nomos-vet-local: build
 	$(NOMOS_LOCAL) vet --path=$(TOP_DIR)/examples/parse-errors/invalid-yaml 2> $(TOP_DIR)/.output/tmp/actual-errs.txt || true
 	@grep -qF "2 error(s)" $(TOP_DIR)/.output/tmp/actual-errs.txt # there are two errors
 	@grep -cF "invalid object to validate" .output/tmp/actual-errs.txt | grep -qF 2 # they are invalid yaml
+
+	  # To update expected errors: nomos vet --path=parse-errors/invalid-resources-sync 2> examples/parse-errors/invalid-resources-sync/expected-errs.txt
 	$(NOMOS_LOCAL) vet --path=$(TOP_DIR)/examples/parse-errors/invalid-resources-sync 2> \
 		$(TOP_DIR)/.output/tmp/actual-errs.txt || true
 	@diff $(TOP_DIR)/examples/parse-errors/invalid-resources-sync/expected-errs.txt $(TOP_DIR)/.output/tmp/actual-errs.txt

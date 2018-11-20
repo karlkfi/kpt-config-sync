@@ -18,7 +18,6 @@ package validation
 import (
 	"fmt"
 	"path"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -311,7 +310,6 @@ func (e ConflictingResourceQuotaError) Error() string {
 
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
 type IllegalMetadataNamespaceDeclarationError struct {
-	Root string
 	Info *resource.Info
 }
 
@@ -321,7 +319,7 @@ func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 	return format(e,
 		"Objects MUST NOT delcare metadata.namespace:\n\n"+
 			"%[1]s",
-		resourceInfo{root: e.Root, info: e.Info})
+		resourceInfo{info: e.Info})
 }
 
 // IllegalAnnotationDefinitionError represents a set of illegal annotation definitions.
@@ -420,23 +418,20 @@ func (e MissingRepoError) Error() string {
 
 // IllegalSubdirectoryError reports that the directory has an illegal subdirectory.
 type IllegalSubdirectoryError struct {
-	Dir    string
-	SubDir string
+	BaseDir string
+	SubDir  string
 }
 
 // Error implements error
 func (e IllegalSubdirectoryError) Error() string {
-	dir := path.Base(e.Dir)
-	relpath, _ := filepath.Rel(e.Dir, e.SubDir)
 	return format(e,
 		"%s/ directory MUST NOT have subdirectories.\n\n"+
-			"path: %[2]s", dir, path.Join(dir, relpath))
+			"path: %[2]s", e.BaseDir, e.SubDir)
 }
 
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
 type IllegalTopLevelNamespaceError struct {
-	Source string
-	Info   *resource.Info
+	Info *resource.Info
 }
 
 // Error implements error
@@ -444,7 +439,7 @@ func (e IllegalTopLevelNamespaceError) Error() string {
 	return format(e,
 		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for namespaces in:\n\n"+
 			"source: %[3]s",
-		repo.NamespacesDir, ast.Namespace, e.Source)
+		repo.NamespacesDir, ast.Namespace, e.Info.Source)
 }
 
 // InvalidNamespaceNameError reports that a Namespace has an invalid name.
@@ -602,18 +597,9 @@ func (e InvalidDirectoryNameError) Error() string {
 		e.Dir, path.Base(e.Dir))
 }
 
-func relPath(root string, path string) string {
-	relPath, err := filepath.Rel(root, path)
-	if err != nil {
-		panic(errors.Wrap(err, "Tried to process file not in repository."))
-	}
-	return relPath
-}
-
 // ObjectNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
 type ObjectNameCollisionError struct {
 	Name       string
-	RootPath   string
 	Duplicates []*resource.Info
 }
 
@@ -625,7 +611,7 @@ func (e ObjectNameCollisionError) Error() string {
 			"source: %[1]s\n"+
 				"%[2]s\n"+
 				"name: %[3]s",
-			relPath(e.RootPath, duplicate.Source), groupVersionKind(duplicate.Mapping.GroupVersionKind), duplicate.Name))
+			duplicate.Source, groupVersionKind(duplicate.Mapping.GroupVersionKind), duplicate.Name))
 	}
 	sort.Strings(strs)
 
@@ -636,7 +622,6 @@ func (e ObjectNameCollisionError) Error() string {
 }
 
 type resourceInfo struct {
-	root string
 	info *resource.Info
 }
 
@@ -646,12 +631,11 @@ func (i resourceInfo) String() string {
 		"source: %[1]s\n"+
 			"%[2]s\n"+
 			"name: %[3]s",
-		relPath(i.root, i.info.Source), groupVersionKind(i.info.Mapping.GroupVersionKind), i.info.Name)
+		i.info.Source, groupVersionKind(i.info.Mapping.GroupVersionKind), i.info.Name)
 }
 
 // MultipleNamespacesError reports that multiple Namespaces are defined in the same directory.
 type MultipleNamespacesError struct {
-	Root       string
 	Duplicates []*resource.Info
 }
 
@@ -659,7 +643,7 @@ type MultipleNamespacesError struct {
 func (e MultipleNamespacesError) Error() string {
 	strs := []string{}
 	for _, duplicate := range e.Duplicates {
-		strs = append(strs, resourceInfo{root: e.Root, info: duplicate}.String())
+		strs = append(strs, resourceInfo{info: duplicate}.String())
 	}
 	sort.Strings(strs)
 
@@ -671,7 +655,6 @@ func (e MultipleNamespacesError) Error() string {
 
 // MissingObjectNameError reports that an object has no name.
 type MissingObjectNameError struct {
-	Source string
 	*resource.Info
 }
 
@@ -682,7 +665,7 @@ func (e MissingObjectNameError) Error() string {
 			"source: %[1]s\n"+
 			"%[2]s\n"+
 			"name: %[3]s",
-		e.Source, groupVersionKind(e.Mapping.GroupVersionKind), e.Name)
+		e.Info.Source, groupVersionKind(e.Mapping.GroupVersionKind), e.Name)
 }
 
 // UnknownResourceInSyncError reports that a resource defined in a Sync does not have a definition in the cluster.
@@ -704,7 +687,6 @@ func (e UnknownResourceInSyncError) Error() string {
 
 // IllegalSystemResourcePlacementError reports that a nomos.dev object has been defined outside of system/
 type IllegalSystemResourcePlacementError struct {
-	Root string
 	Info *resource.Info
 }
 
@@ -713,7 +695,7 @@ func (e IllegalSystemResourcePlacementError) Error() string {
 	return format(e,
 		"Objects of the below kind MUST NOT be defined outside %[1]s/:\n"+
 			"%[2]s",
-		repo.SystemDir, resourceInfo{e.Root, e.Info}.String())
+		repo.SystemDir, resourceInfo{e.Info}.String())
 }
 
 // UnsupportedResourceInSyncError reports that policy management is unsupported for a resource defined in a Sync.

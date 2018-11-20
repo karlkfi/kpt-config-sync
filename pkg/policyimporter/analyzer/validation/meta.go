@@ -14,9 +14,9 @@ import (
 
 // CheckAnnotationsAndLabels verifies that the passed object has no invalid annotations or labels.
 // If any exist, adds an error to the passed errorBuilder.
-func CheckAnnotationsAndLabels(info *resource.Info, source string, errorBuilder *multierror.Builder) {
+func CheckAnnotationsAndLabels(info *resource.Info, errorBuilder *multierror.Builder) {
 	object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
-	fileObject := ast.FileObject{Object: object, Source: source}
+	fileObject := ast.FileObject{Object: object, Source: info.Source}
 
 	checkAnnotations(fileObject, errorBuilder)
 	checkLabels(fileObject, errorBuilder)

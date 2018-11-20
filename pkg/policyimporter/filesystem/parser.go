@@ -222,9 +222,9 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	p.validateDuplicateNames(toDirInfoMap(clusterregistryInfos), &errorBuilder)
 
 	nsDir := filepath.Join(root, repo.NamespacesDir)
-	nsDirsOrdered := allDirs(nsDir, &errorBuilder)
+	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
 
-	p.validateDirNames(root, nsDirsOrdered, &errorBuilder)
+	p.validateDirNames(nsDirsOrdered, &errorBuilder)
 
 	fileInfos := p.readResources(nsDir, true, &errorBuilder)
 
@@ -299,12 +299,17 @@ func (p *Parser) readResources(dir string, allowSubdirectories bool, errorBuilde
 			Do()
 		fileInfos, err = result.Infos()
 		errorBuilder.Add(err)
+		for _, fileInfo := range fileInfos {
+			// Assign relative path since that's what we actually need.
+			fileInfo.Source = p.relativePath(fileInfo.Source)
+		}
 
 		if !allowSubdirectories {
 			// If subdirectories are not allowed, return an error for each invalid subdirectory.
 			for _, info := range fileInfos {
-				if subDir := path.Dir(info.Source); subDir != dir {
-					errorBuilder.Add(validation.IllegalSubdirectoryError{Dir: dir, SubDir: subDir})
+				baseDir := path.Base(dir)
+				if subDir := path.Dir(info.Source); subDir != baseDir {
+					errorBuilder.Add(validation.IllegalSubdirectoryError{BaseDir: baseDir, SubDir: subDir})
 				}
 			}
 		}
@@ -432,7 +437,7 @@ func (p *Parser) processClusterDir(
 	fsRoot *ast.Root) error {
 	for _, i := range infos {
 		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
-		fsRoot.Cluster.Objects = append(fsRoot.Cluster.Objects, &ast.ClusterObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
+		fsRoot.Cluster.Objects = append(fsRoot.Cluster.Objects, &ast.ClusterObject{FileObject: ast.FileObject{Object: o, Source: i.Source}})
 	}
 
 	return nil
@@ -472,7 +477,7 @@ func (p *Parser) processNamespacesDir(
 		case *v1alpha1.NamespaceSelector:
 			treeNode.Selectors[o.Name] = o
 		default:
-			treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
+			treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: o, Source: i.Source}})
 		}
 	}
 	return nil
@@ -500,7 +505,7 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 			return v.err
 		}
 
-		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
+		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: o, Source: i.Source}})
 	}
 
 	v.HaveSeen(schema.GroupVersionKind{Version: "v1", Kind: "Namespace"})
@@ -521,7 +526,7 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 	fileInfos := p.readRequiredResources(systemDir, false, errorBuilder)
 	p.validateDuplicateNames(toDirInfoMap(fileInfos), errorBuilder)
 
-	syncMap := make(map[string]*v1alpha1.Sync)
+	syncMap := make(map[string][]*v1alpha1.Sync)
 	repos := make(map[*v1alpha1.Repo]string)         // holds all Repo definitions
 	configMaps := make(map[*corev1.ConfigMap]string) // holds all ConfigMap definitions
 	for _, info := range fileInfos {
@@ -540,7 +545,7 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 			fsRoot.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
 
 		case *v1alpha1.Sync:
-			syncMap[info.Source] = o
+			syncMap[info.Source] = append(syncMap[info.Source], o)
 		default:
 			errorBuilder.Add(validation.IllegalSystemObjectDefinitionInSystemError{Source: info.Source, GroupVersionKind: o.GetObjectKind().GroupVersionKind()})
 		}
@@ -558,19 +563,22 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 		errorBuilder.Add(validation.MultipleConfigMapsError{ConfigMaps: configMaps})
 	}
 
-	for source, sync := range syncMap {
-		for _, group := range sync.Spec.Groups {
-			for k := range group.Kinds {
-				p.validateSyncKind(sync.Name, &group.Kinds[k], group.Group, fsRoot.Repo.Spec.ExperimentalInheritance, source, apiInfo, errorBuilder)
+	for source, syncs := range syncMap {
+		for _, sync := range syncs {
+			for _, group := range sync.Spec.Groups {
+				for k := range group.Kinds {
+					// TODO(willbeason) Ensure globally that Kinds with the same Group are not given multiple versions.
+					p.validateSyncKind(sync.Name, &group.Kinds[k], group.Group, fsRoot.Repo.Spec.ExperimentalInheritance, source, apiInfo, errorBuilder)
+				}
 			}
 		}
 	}
 
-	var syncs []*v1alpha1.Sync
-	for _, sync := range syncMap {
-		syncs = append(syncs, sync)
+	var allSyncs []*v1alpha1.Sync
+	for _, syncs := range syncMap {
+		allSyncs = append(allSyncs, syncs...)
 	}
-	return syncs
+	return allSyncs
 }
 
 // validateSyncKind validates a SyncKind.
@@ -596,12 +604,12 @@ func (p *Parser) validateSyncKind(name string, kind *v1alpha1.SyncKind, group st
 	}
 	if unsupportedSyncResources[syncGVK] || syncGVK.Group == policyhierarchy.GroupName {
 		errorBuilder.Add(validation.UnsupportedResourceInSyncError{
-			SyncPath:     p.relativePath(source),
+			SyncPath:     source,
 			ResourceType: syncGVK,
 		})
 	} else if !apiInfo.Exists(syncGVK) {
 		errorBuilder.Add(validation.UnknownResourceInSyncError{
-			SyncPath:     p.relativePath(source),
+			SyncPath:     source,
 			ResourceType: syncGVK,
 		})
 	}
@@ -657,14 +665,14 @@ func (p *Parser) processClusterRegistryDir(dirname string, infos []*resource.Inf
 }
 
 // allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
-func allDirs(root string, errorBuilder *multierror.Builder) []string {
+func (p *Parser) allDirs(nsDir string, errorBuilder *multierror.Builder) []string {
 	var paths []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(nsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() {
-			paths = append(paths, path)
+			paths = append(paths, p.relativePath(path))
 		}
 		return nil
 	})
@@ -680,7 +688,7 @@ func allDirs(root string, errorBuilder *multierror.Builder) []string {
 // 1. Directory name is not reserved by the system.
 // 2. Directory name is a valid namespace name:
 // https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md
-func (p *Parser) validateDirNames(root string, dirs []string, errorBuilder *multierror.Builder) {
+func (p *Parser) validateDirNames(dirs []string, errorBuilder *multierror.Builder) {
 	dirNames := make(map[string][]string)
 	for _, d := range dirs {
 		n := filepath.Base(d)
@@ -690,11 +698,10 @@ func (p *Parser) validateDirNames(root string, dirs []string, errorBuilder *mult
 		if namespaceutil.IsReserved(n) {
 			errorBuilder.Add(validation.ReservedDirectoryNameError{Dir: d})
 		}
-		relpath, _ := filepath.Rel(root, d)
 		if names, ok := dirNames[n]; ok {
-			dirNames[n] = append(names, relpath)
+			dirNames[n] = append(names, d)
 		} else {
-			dirNames[n] = []string{relpath}
+			dirNames[n] = []string{d}
 		}
 	}
 
@@ -713,16 +720,15 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 
 	for _, infos := range dirInfos {
 		for _, info := range infos {
-			source := p.relativePath(info.Source)
-			dir := path.Dir(source)
+			dir := path.Dir(info.Source)
 
 			if info.Namespace != "" {
-				errorBuilder.Add(validation.IllegalMetadataNamespaceDeclarationError{Root: p.root, Info: info})
+				errorBuilder.Add(validation.IllegalMetadataNamespaceDeclarationError{Info: info})
 			}
 
 			gvk := info.Mapping.GroupVersionKind
 			if info.Name == "" {
-				errorBuilder.Add(validation.MissingObjectNameError{Source: source, Info: info})
+				errorBuilder.Add(validation.MissingObjectNameError{Info: info})
 				continue
 			}
 
@@ -733,18 +739,18 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 			}
 
 			if validation.IsSystemOnly(gvk) && !strings.HasPrefix(dir, repo.SystemDir) {
-				errorBuilder.Add(validation.IllegalSystemResourcePlacementError{Root: p.root, Info: info})
+				errorBuilder.Add(validation.IllegalSystemResourcePlacementError{Info: info})
 			}
 
-			validation.CheckAnnotationsAndLabels(info, source, errorBuilder)
+			validation.CheckAnnotationsAndLabels(info, errorBuilder)
 
 			switch gvk {
 			case corev1.SchemeGroupVersion.WithKind("Namespace"):
 				if dir == repo.NamespacesDir {
-					errorBuilder.Add(validation.IllegalTopLevelNamespaceError{Source: source, Info: info})
+					errorBuilder.Add(validation.IllegalTopLevelNamespaceError{Info: info})
 					continue
 				} else if path.Base(dir) != info.Name {
-					errorBuilder.Add(validation.InvalidNamespaceNameError{Source: source, Expected: path.Base(dir), Actual: info.Name})
+					errorBuilder.Add(validation.InvalidNamespaceNameError{Source: info.Source, Expected: path.Base(dir), Actual: info.Name})
 				}
 				seenNamespaceDirs[dir] = append(seenNamespaceDirs[dir], info)
 			case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
@@ -761,7 +767,7 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 	// Check for namespace object collisions
 	for _, namespaces := range seenNamespaceDirs {
 		if len(namespaces) > 1 {
-			errorBuilder.Add(validation.MultipleNamespacesError{Root: p.root, Duplicates: namespaces})
+			errorBuilder.Add(validation.MultipleNamespacesError{Duplicates: namespaces})
 		}
 	}
 
@@ -775,7 +781,7 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 	// Check for directory name collisions
 	for _, paths := range seenDirs {
 		if len(paths) > 1 {
-			duplicates := []string{}
+			var duplicates []string
 			for aPath := range paths {
 				duplicates = append(duplicates, aPath)
 			}
@@ -794,11 +800,11 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 			})
 
 			for i := 0; i < len(objects); {
-				dir := p.relativePath(path.Dir(objects[i].Source))
+				dir := path.Dir(objects[i].Source)
 				duplicates := []*resource.Info{objects[i]}
 
 				for j := i + 1; j < len(objects); j++ {
-					if strings.HasPrefix(p.relativePath(objects[j].Source), dir) {
+					if strings.HasPrefix(objects[j].Source, dir) {
 						// Pick up duplicates in the same directory and child directories.
 						duplicates = append(duplicates, objects[j])
 					} else {
@@ -809,7 +815,7 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 				}
 
 				if len(duplicates) > 1 {
-					errorBuilder.Add(validation.ObjectNameCollisionError{Name: name, RootPath: p.root, Duplicates: duplicates})
+					errorBuilder.Add(validation.ObjectNameCollisionError{Name: name, Duplicates: duplicates})
 				}
 
 				// Recall that len(duplicates) is always at least 1.
