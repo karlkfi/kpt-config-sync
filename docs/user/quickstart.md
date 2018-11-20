@@ -13,7 +13,7 @@ Management on one or more Kubernetes clusters.
 
 Once GKE Policy Management components are deployed and running in a cluster,
 namespaces will be automatically created. For the
-[foo-corp example](https://github.com/frankfarzan/foo-corp-example):
+[foo-corp example](installation.md#create-the-nomos-config-file):
 
 ```console
 $ kubectl get namespaces -l nomos.dev/namespace-management

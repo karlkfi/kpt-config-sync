@@ -106,7 +106,9 @@ The Nomos resource is a Kubernetes Custom Resource Definition (CRD) that defines
 a Nomos installation. The `spec` field of a Nomos resources specifies the
 installation parameters for Nomos.
 
-An example config using a github repo with ssh access is below:
+An example config using
+[foo-corp GitHub repo](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0)
+with SSH authentication is shown below:
 
 ```yaml
 apiVersion: addons.sigs.k8s.io/v1alpha1
@@ -117,7 +119,7 @@ metadata:
 spec:
   git:
     syncRepo: git@github.com:frankfarzan/foo-corp-example.git
-    syncBranch: master
+    syncBranch: 0.1.0
     syncWait: 1
     secretType: ssh
     policyDir: foo-corp

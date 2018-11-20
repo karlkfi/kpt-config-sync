@@ -33,7 +33,7 @@ is a natural way to operate on hierarchical resources without requiring a
 complicated domain specific language.
 
 For example, we can have such a directory structure
-([Available on this GitHub repo](https://github.com/frankfarzan/foo-corp-example)):
+([Available on this GitHub repo](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0)):
 
 ```console
 foo-corp

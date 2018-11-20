@@ -38,17 +38,6 @@ Namepsaces:
     delete them. They can be converted to a managed namespace by following a
     migration process (Pending Docs / Tooling).
 
-Examples:
-
-*   [foo-corp/audit/namespace.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/audit/namespace.yaml)
-    will result in creation of the `audit` namespace with a parent `foo-corp`.
-    Removal of this namespace.yaml will result in GKE Policy Management deleting
-    the `audit` namespace.
-*   [foo-corp/online/shipping-app-backend/shipping-prod/namespace.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/online/shipping-app-backend/shipping-prod/namespace.yaml)
-    will result in creation of the shipping-prod namespace with ancestry
-    [`shipping-app-backend`, `online`, `foo-corp`]. Deleting this namespace.yaml
-    will result in deleting the `shipping-prod` namespace.
-
 ### Namespace evaluation
 
 The following table describes the action that GKE Policy Management will take

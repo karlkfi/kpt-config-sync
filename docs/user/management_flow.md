@@ -10,9 +10,10 @@ applied by the user.
 Examples:
 
 *   ClusterRole `pod-accountant` exists on the cluster, but does not exist in
-    git for [foo-corp](https://github.com/frankfarzan/foo-corp-example). GKE
+    git for
+    [foo-corp](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0). GKE
     Policy Management is installed for foo-corp and has a
-    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/system/rbac-sync.yaml)
+    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
     for ClusterRole. GKE Policy Management will not delete or alter
     `pod-accountant`.
 *   GKE Policy Management is installed for foo-corp. Someone adds a new
@@ -25,26 +26,26 @@ Examples:
     `nomos.dev/managed` label applied and exists in git for
     [foo-corp](https://github.com/frankfarzan/foo-corp-example). GKE Policy
     Management is installed for foo-corp and has a
-    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/system/rbac-sync.yaml)
+    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
     for Role. GKE Policy Management will now update `job-creator` to match the
     one declared in
-    [job-creator-role.yaml](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/job-creator-role.yaml).
+    [job-creator-role.yaml](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/job-creator-role.yaml).
 *   RoleBinding
-    [pod-creators](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/namespaces/online/shipping-app-backend/pod-creator-rolebinding.yaml)
+    [pod-creators](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/pod-creator-rolebinding.yaml)
     is in git for foo-corp and a
-    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/system/rbac-sync.yaml)
+    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
     has been declared Rolebinding. GKE Policy Management will ensure that all
     `pod-creator` rolebindings in descendants of the `shipping-app-backend`
     Abstract Namespace (`shipping-prod`, `shipping-staging`, `shipping-dev`)
     exactly match the declared `pod-creator` RoleBinding. Time passes and
     someone modifies the
-    [shipping-prod](https://github.com/frankfarzan/foo-corp-example/tree/master/foo-corp/namespaces/online/shipping-app-backend/shipping-prod)
+    [shipping-prod](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-prod)
     `pod-creator` RoleBinding. GKE Policy Management will notice the change and
     update `pod-creator` to match the declaration in git. Time passes and
     someone removes `pod-creator` from git. GKE Policy Management will now
     remove the `pod-creator` resource from the descendant namespaces.
 *   Foo-corp has a
-    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/system/rbac-sync.yaml)
+    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
     declared for Role. Someone creates a `secret-admin` Role in `shipping-prod`.
     GKE Policy Management will notice that the Role is not declared in
     `shipping-prod` or any of its ancestors, but will not delete it because it
@@ -52,7 +53,7 @@ Examples:
     `nomos.dev/managed` label is added ot it. GKE Policy Management will now
     delete the `secret-admin` Role from the namespace.
 *   Foo-corp has a
-    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/master/foo-corp/system/rbac-sync.yaml)
+    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
     declared for Role. Someone adds a `shipping-admin` Role to git in
     `shipping-prod`. GKE Policy Management will notice the updated declarations
     and create the `shipping-admin` role in the `shipping-prod` namespace.
