@@ -86,7 +86,9 @@ function set_up_env_minimal() {
 
 function clean_up_test_resources() {
   kubectl delete --ignore-not-found ns -l "nomos.dev/testdata=true"
-  kubectl delete --ignore-not-found ns -l "nomos.dev/namespace-management=full"
+  kubectl delete --ignore-not-found ns -l "nomos.dev/managed=enabled"
+  # TODO: delete this once everyone's e2e cluster has been cleaned up properly
+  kubectl delete --ignore-not-found ns -l "nomos.dev/namespace-management"
 
   if [[ "$importer" == "git" ]]; then
     echo "killing kubectl port forward..."
@@ -115,6 +117,7 @@ function clean_up() {
   uninstall
 
   clean_up_test_resources
+
 }
 
 function post_clean() {

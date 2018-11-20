@@ -132,14 +132,16 @@ func (r *PolicyNodeReconciler) getPolicyNodeState(ctx context.Context, name stri
 type namespaceState string
 
 const (
-	namespaceStateNotFound       = namespaceState("notFound")       // the namespace does not exist
-	namespaceStateExists         = namespaceState("exists")         // the namespace exists
-	namespaceStateManagePolicies = namespaceState("managePolicies") // the namespace is labeled for policy management
-	namespaceStateManageFull     = namespaceState("manageFull")     // the namespace is labeled for policy and lifecycle management
+	namespaceStateNotFound   = namespaceState("notFound")   // the namespace does not exist
+	namespaceStateExists     = namespaceState("exists")     // the namespace exists and we should manage policies
+	namespaceStateManageFull = namespaceState("manageFull") // the namespace is labeled for policy and lifecycle management
 )
 
 // getNamespaceState normalizes the state of the namespace and retrieves the current value.
-func (r *PolicyNodeReconciler) getNamespaceState(ctx context.Context, name string) (namespaceState, *corev1.Namespace,
+func (r *PolicyNodeReconciler) getNamespaceState(
+	ctx context.Context,
+	name string,
+	syncErrs *[]nomosv1.PolicyNodeSyncError) (namespaceState, *corev1.Namespace,
 	error) {
 	ns := &corev1.Namespace{}
 	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, ns)
@@ -150,15 +152,17 @@ func (r *PolicyNodeReconciler) getNamespaceState(ctx context.Context, name strin
 		return namespaceStateNotFound, nil, errors.Wrapf(err, "got unhandled lister error")
 	}
 
-	value, found := ns.Labels[labeling.ManagementKey]
+	value, found := ns.Labels[labeling.ResourceManagementKey]
 	if !found {
+		r.warnNoLabel(ns)
+		*syncErrs = append(*syncErrs, nomosv1.PolicyNodeSyncError{
+			ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s=%s)",
+				labeling.ResourceManagementKey, labeling.Enabled),
+		})
 		return namespaceStateExists, ns, nil
 	}
 
-	switch value {
-	case labeling.Policies:
-		return namespaceStateManagePolicies, ns, nil
-	case labeling.Full:
+	if value == labeling.Enabled {
 		return namespaceStateManageFull, ns, nil
 	}
 
@@ -170,16 +174,24 @@ func (r *PolicyNodeReconciler) getNamespaceState(ctx context.Context, name strin
 		"Namespace %q has invalid management label %q",
 		name, value,
 	)
+	*syncErrs = append(*syncErrs, nomosv1.PolicyNodeSyncError{
+		ErrorMessage: fmt.Sprintf("Namespace has invalid management label %s=%s should be %s=%s or unset",
+			labeling.ResourceManagementKey, value,
+			labeling.ResourceManagementKey, labeling.Enabled),
+	})
 	return namespaceStateExists, ns, nil
 }
 
-func (r *PolicyNodeReconciler) reconcilePolicyNode(ctx context.Context, name string) error {
+func (r *PolicyNodeReconciler) reconcilePolicyNode(
+	ctx context.Context,
+	name string) error {
+	var syncErrs []nomosv1.PolicyNodeSyncError
 	pnState, node, pnErr := r.getPolicyNodeState(ctx, name)
 	if pnErr != nil {
 		return pnErr
 	}
 
-	nsState, ns, nsErr := r.getNamespaceState(ctx, name)
+	nsState, ns, nsErr := r.getNamespaceState(ctx, name, &syncErrs)
 	if nsErr != nil {
 		return nsErr
 	}
@@ -193,8 +205,6 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(ctx context.Context, name str
 		case namespaceStateNotFound: // noop
 		case namespaceStateExists:
 			r.warnUndeclaredNamespace(ns)
-		case namespaceStateManagePolicies:
-			r.warnUndeclaredNamespace(ns)
 		case namespaceStateManageFull:
 			return r.deleteNamespace(ctx, ns)
 		}
@@ -203,38 +213,31 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(ctx context.Context, name str
 		switch nsState {
 		case namespaceStateNotFound:
 			if err := r.createNamespace(ctx, node); err != nil {
+				syncErrs = append(syncErrs, nomosv1.PolicyNodeSyncError{
+					ErrorMessage: fmt.Sprintf("Failed to create namespace: %s", err.Error()),
+				})
+				if err2 := r.setPolicyNodeStatus(ctx, node, syncErrs); err2 != nil {
+					glog.Warningf("failed to set status on policy node after ns creation error: %s", err2)
+				}
 				return err
 			}
-			return r.managePolicies(ctx, name, node)
+			return r.managePolicies(ctx, name, node, syncErrs)
 		case namespaceStateExists:
-			r.warnNoLabel(ns)
-			syncErrs := []nomosv1.PolicyNodeSyncError{
-				{
-					ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s={%s,%s})",
-						labeling.ManagementKey, labeling.Policies, labeling.Full),
-				},
-			}
-			if err := r.setPolicyNodeStatus(ctx, node, syncErrs); err != nil {
-				return err
-			}
-		case namespaceStateManagePolicies:
-			if err := r.updateNamespaceLabels(ctx, node); err != nil {
-				return err
-			}
-			return r.managePolicies(ctx, name, node)
+			return r.managePolicies(ctx, name, node, syncErrs)
 		case namespaceStateManageFull:
 			if err := r.updateNamespace(ctx, node); err != nil {
-				return err
+				syncErrs = append(syncErrs, nomosv1.PolicyNodeSyncError{
+					ErrorMessage: fmt.Sprintf("Failed to update namespace: %s", err.Error()),
+				})
 			}
-			return r.managePolicies(ctx, name, node)
+			return r.managePolicies(ctx, name, node, syncErrs)
+
 		}
 
 	case policyNodeStatePolicyspace:
 		switch nsState {
 		case namespaceStateNotFound: // noop
 		case namespaceStateExists:
-			r.warnPolicyspaceHasNamespace(ns)
-		case namespaceStateManagePolicies:
 			r.warnPolicyspaceHasNamespace(ns)
 		case namespaceStateManageFull:
 			return r.handlePolicyspace(ctx, node)
@@ -243,8 +246,7 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(ctx context.Context, name str
 	case policyNodeStateReserved:
 		switch nsState {
 		case namespaceStateNotFound: // noop
-		case namespaceStateExists: // noop
-		case namespaceStateManagePolicies:
+		case namespaceStateExists:
 			r.warnReservedLabel(ns)
 		case namespaceStateManageFull:
 			r.warnReservedLabel(ns)
@@ -290,8 +292,7 @@ func (r *PolicyNodeReconciler) warnNoLabelResource(u *unstructured.Unstructured)
 		"%q is declared in the source of truth but does not have a management label", gvk)
 }
 
-func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, node *nomosv1.PolicyNode) error {
-	var syncErrs []nomosv1.PolicyNodeSyncError
+func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, node *nomosv1.PolicyNode, syncErrs []nomosv1.PolicyNodeSyncError) error {
 	var errBuilder multierror.Builder
 	reconcileCount := 0
 	grs, err := r.decoder.DecodeResources(node.Spec.Resources...)
@@ -339,7 +340,7 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 		r.recorder.Eventf(node, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update policy node status: %q", err)
 	}
-	if errBuilder.Len() == 0 && reconcileCount > 0 {
+	if errBuilder.Len() == 0 && reconcileCount > 0 && len(syncErrs) == 0 {
 		r.recorder.Eventf(node, corev1.EventTypeNormal, "ReconcileComplete",
 			"policy node was successfully reconciled: %d changes", reconcileCount)
 	}
@@ -424,7 +425,7 @@ func asNamespace(policyNode *nomosv1.PolicyNode) *corev1.Namespace {
 }
 
 func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *nomosv1.PolicyNode) *corev1.Namespace {
-	labels := labeling.ManageAll.AddDeepCopy(policyNode.Labels)
+	labels := labeling.ManageResource.AddDeepCopy(policyNode.Labels)
 	namespace.Labels = labels
 	namespace.Annotations = policyNode.Annotations
 	namespace.Name = policyNode.Name
@@ -456,31 +457,6 @@ func (r *PolicyNodeReconciler) updateNamespace(ctx context.Context, policyNode *
 			"failed to update matching namespace for policyspace: %q", err)
 		return errors.Wrapf(err, "failed to update namespace %q", policyNode.Name)
 	}
-	return nil
-}
-
-// updateNamespaceLabels is used for updating the parent label on a namespace where we manage policy values
-// This is used since we can't update all the labels on the namespace.
-func (r *PolicyNodeReconciler) updateNamespaceLabels(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
-	labels := map[string]string{}
-
-	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: policyNode.Name}}
-	updateFn := func(obj runtime.Object) (runtime.Object, error) {
-		ns := obj.(*corev1.Namespace)
-		for key, value := range labels {
-			if oldValue, found := ns.Labels[key]; !found || oldValue != value {
-				ns.Labels[key] = value
-			}
-		}
-		return ns, nil
-	}
-	if _, err := r.client.Update(ctx, namespace, updateFn); err != nil {
-		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GetObjectKind().GroupVersionKind().Kind, "update").Inc()
-		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceUpdateFailed",
-			"failed to update matching namespace for policyspace: %v", err)
-		return errors.Wrapf(err, "failed to execute update action for %q", namespace.Name)
-	}
-
 	return nil
 }
 

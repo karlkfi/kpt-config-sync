@@ -79,7 +79,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "eng",
-					Labels: labeling.ManageAll.New(),
+					Labels: labeling.ManageResource.New(),
 				},
 			},
 			declared: []runtime.Object{
@@ -124,7 +124,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
-						labeling.ManagementKey: labeling.Full,
+						labeling.ResourceManagementKey: labeling.Enabled,
 					},
 				},
 			},
@@ -189,7 +189,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "eng",
-					Labels: labeling.ManageAll.New(),
+					Labels: labeling.ManageResource.New(),
 				},
 			},
 			declared: []runtime.Object{
@@ -237,7 +237,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
-						labeling.ManagementKey: labeling.Full,
+						labeling.ResourceManagementKey: labeling.Enabled,
 					},
 				},
 			},
@@ -259,7 +259,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "eng",
-					Labels: labeling.ManageAll.New(),
+					Labels: labeling.ManageResource.New(),
 				},
 			},
 			declared: []runtime.Object{
@@ -303,7 +303,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
-						labeling.ManagementKey: labeling.Full,
+						labeling.ResourceManagementKey: labeling.Enabled,
 					},
 				},
 			},
@@ -346,7 +346,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "eng",
-					Labels: labeling.ManageAll.New(),
+					Labels: labeling.ManageResource.New(),
 				},
 			},
 			declared: []runtime.Object{
@@ -374,7 +374,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
-						labeling.ManagementKey: labeling.Full,
+						labeling.ResourceManagementKey: labeling.Enabled,
 					},
 				},
 			},
@@ -438,7 +438,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "eng",
-					Labels: labeling.ManageAll.New(),
+					Labels: labeling.ManageResource.New(),
 				},
 			},
 			declared: []runtime.Object{},
@@ -468,7 +468,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 					Labels: map[string]string{
-						labeling.ManagementKey: labeling.Full,
+						labeling.ResourceManagementKey: labeling.Enabled,
 					},
 				},
 			},
@@ -513,7 +513,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "un-managed namespace cannot have its resources synced",
+			name: "unmanaged namespace has resources synced",
 			policyNode: &v1.PolicyNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
@@ -547,6 +547,24 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					},
 				},
 			},
+			actual: []runtime.Object{
+				&appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-deployment",
+						Namespace: "eng",
+						Labels:    labeling.ManageResource.New(),
+					},
+					Spec: appsv1.DeploymentSpec{
+						Strategy: appsv1.DeploymentStrategy{
+							Type: appsv1.RollingUpdateDeploymentStrategyType,
+						},
+					},
+				},
+			},
 			wantStatusUpdate: &v1.PolicyNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
@@ -561,8 +579,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 					SyncErrors: []v1.PolicyNodeSyncError{
 						{
-							ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s={%s,%s})",
-								labeling.ManagementKey, labeling.Policies, labeling.Full),
+							ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s=%s)",
+								labeling.ResourceManagementKey, labeling.Enabled),
 						},
 					},
 				},
@@ -571,6 +589,27 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				{
 					kind:   corev1.EventTypeWarning,
 					reason: "UnmanagedNamespace",
+				},
+			},
+			wantUpdates: []runtime.Object{
+				&appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-deployment",
+						Namespace: "eng",
+						Labels:    labeling.ManageResource.New(),
+						Annotations: map[string]string{
+							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+						},
+					},
+					Spec: appsv1.DeploymentSpec{
+						Strategy: appsv1.DeploymentStrategy{
+							Type: appsv1.RecreateDeploymentStrategyType,
+						},
+					},
 				},
 			},
 		},

@@ -9,13 +9,13 @@ function local_teardown() {
   kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found=true || true
 }
 
-@test "Namespace has full label and declared" {
-  local ns=decl-namespace-label-full
-  namespace::create $ns -l "nomos.dev/namespace-management=full"
+@test "Namespace has enabled label and declared" {
+  local ns=decl-namespace-label-enabled
+  namespace::create $ns -l "nomos.dev/managed=enabled"
   namespace::declare $ns
   git::commit
 
-  namespace::check_exists $ns -l "nomos.dev/namespace-management=full"
+  namespace::check_exists $ns -l "nomos.dev/managed=enabled"
   namespace::check_no_warning $ns
 }
 
@@ -34,23 +34,13 @@ function local_teardown() {
   namespace::declare $ns
   git::commit
 
-  namespace::check_exists $ns -l "nomos.dev/namespace-management=full"
+  namespace::check_exists $ns -l "nomos.dev/managed=enabled"
   namespace::check_no_warning $ns
 }
 
-@test "Namespace has policies label and declared" {
-  local ns=decl-namespace-label-policies
-  namespace::create $ns -l "nomos.dev/namespace-management=policies"
-  namespace::declare $ns
-  git::commit
-
-  namespace::check_exists $ns -l "nomos.dev/namespace-management=policies"
-  namespace::check_no_warning $ns
-}
-
-@test "Namespace has full label with no declarations" {
-  local ns=undeclared-label-full
-  namespace::create $ns -l "nomos.dev/namespace-management=full"
+@test "Namespace has enabled label with no declarations" {
+  local ns=undeclared-label-enabled
+  namespace::create $ns -l "nomos.dev/managed=enabled"
   namespace::check_not_found $ns
 }
 
@@ -60,15 +50,9 @@ function local_teardown() {
   namespace::check_warning $ns
 }
 
-@test "Namespace has policies label with no declaration" {
-  local ns=undeclared-label-policies
-  namespace::create $ns -l "nomos.dev/namespace-management=policies"
-  namespace::check_warning $ns
-}
-
-@test "Namespace has full label and declared as policyspace" {
-  local ns=decl-policyspace-label-full
-  namespace::create $ns -l "nomos.dev/namespace-management=full"
+@test "Namespace has enabled label and declared as policyspace" {
+  local ns=decl-policyspace-label-enabled
+  namespace::create $ns -l "nomos.dev/managed=enabled"
   namespace::declare_policyspace $ns
   git::commit
   wait::for kubectl get pn "$ns"
@@ -88,25 +72,13 @@ function local_teardown() {
   namespace::check_warning $ns
 }
 
-@test "Namespace has policies label and declared as policyspace" {
-  local ns=decl-policyspace-label-policies
-  namespace::create $ns -l "nomos.dev/namespace-management=policies"
-  namespace::declare_policyspace $ns
-  git::commit
-
-  wait::for kubectl get pn "$ns"
-
-  namespace::check_exists $ns -l "nomos.dev/namespace-management=policies"
-  namespace::check_warning $ns
-}
-
-@test "Namespace has full label and reserved" {
-  local ns=decl-reserved-label-full
-  namespace::create $ns -l "nomos.dev/namespace-management=full"
+@test "Namespace has enabled label and reserved" {
+  local ns=decl-reserved-label-enabled
+  namespace::create $ns -l "nomos.dev/managed=enabled"
   namespace::declare_reserved $ns
   git::commit
 
-  namespace::check_exists $ns -l "nomos.dev/namespace-management=full"
+  namespace::check_exists $ns -l "nomos.dev/managed=enabled"
   namespace::check_warning $ns
 }
 
@@ -125,18 +97,8 @@ function local_teardown() {
   namespace::declare_reserved $ns
   git::commit
 
-  namespace::check_not_found $ns full
+  namespace::check_not_found $ns enabled
   namespace::check_no_warning $ns
-}
-
-@test "Namespace has policies label and reserved" {
-  local ns=decl-reserved-label-policies
-  namespace::create ${ns} -l "nomos.dev/namespace-management=policies"
-  namespace::declare_reserved $ns
-  git::commit
-
-  namespace::check_exists $ns -l "nomos.dev/namespace-management=policies"
-  namespace::check_warning $ns
 }
 
 @test "Namespace warn on invalid management label" {

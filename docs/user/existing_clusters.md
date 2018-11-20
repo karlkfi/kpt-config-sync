@@ -13,11 +13,10 @@ resources are not accidentally deleted during the install.
 The following label values indicate the action that GKE Policy Management will
 take for managing a namespace.
 
-Label                                   | GKE Policy Management Action
---------------------------------------- | ----------------------------
-none                                    | No management
-nomos.dev/namespace-management=policies | Manage policies for the namespace
-nomos.dev/namespace-management=full     | Manage policies and lifecycle of the namespace
+Label                     | GKE Policy Management Action
+------------------------- | ----------------------------
+none                      | Manage resources in the namespace, but will never delete the namespace
+nomos.dev/managed=enabled | Manage resources in the namespace and lifecycle of the namespace
 
 ## Types of Namespaces
 
@@ -29,12 +28,12 @@ Namepsaces:
     [designated as reserved](system_config.md#reserved-namespaces) by the user.
 1.  **Managed Namesapces** are namespaces on the cluster that are fully managed
     by GKE Policy Management. They all have the management label
-    nomos.dev/namespace-management=full and exist in the Git source of truth as
-    well as on the cluster. They are created when added to Git, and deleted when
-    removed from Git.
+    nomos.dev/managed=enabled and exist in the Git source of truth as well as on
+    the cluster. They are created when added to Git, and deleted when removed
+    from Git.
 1.  **Legacy Namesapces** are namespaces on the cluster without the
-    nomos.dev/namespace-management=full label. They will cause alerts for being
-    in a non-ideal state, however, GKE Policy Management will neither manage nor
+    nomos.dev/managed=enabled label. They will cause alerts for being in a
+    non-ideal state, however, GKE Policy Management will neither manage nor
     delete them. They can be converted to a managed namespace by following a
     migration process (Pending Docs / Tooling).
 
@@ -43,14 +42,12 @@ Namepsaces:
 The following table describes the action that GKE Policy Management will take
 regarding a namespace on the cluster.
 
-Declared in Git | Exists on Cluster | Namespace Label                         | GKE Policy Management Action   | Alert Triggered
---------------- | ----------------- | --------------------------------------- | ------------------------------ | ---------------
-true            | false             | N/A                                     | create namespace               | None
-true            | true              | N/A                                     | none                           | Namespace declared but not managed
-true            | true              | nomos.dev/namespace-management=policies | manage policies                | Partially managed namespace
-true            | true              | nomos.dev/namespace-management=full     | manage policies                | None
-false           | true              | No label                                | none                           | Unknown namespace
-false           | true              | nomos.dev/namespace-management=policies | none                           | Unknown namespace
-false           | true              | nomos.dev/namespace-management=full     | deletes namespace from cluster | None
+Declared in Git | Exists on Cluster | Namespace Label           | GKE Policy Management Action   | Alert Triggered
+--------------- | ----------------- | ------------------------- | ------------------------------ | ---------------
+true            | false             | N/A                       | create namespace               | None
+true            | true              | N/A                       | manage policies                | Namespace declared but not managed
+true            | true              | nomos.dev/managed=enabled | manage policies                | None
+false           | true              | No label                  | none                           | Unknown namespace
+false           | true              | nomos.dev/managed=enabled | deletes namespace from cluster | None
 
 [< Back](../../README.md)

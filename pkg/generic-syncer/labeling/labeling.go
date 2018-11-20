@@ -27,24 +27,13 @@ const (
 	NomosSystemValue = "true"
 )
 
-// Labels that Nomos uses for determining how to manage namespaces.
+// Labels that Nomos uses for determining how to manage resources.
 const (
-	// ManagementKey is the key for a label that Nomos uses to track which namespaces are under Nomos
-	// management and what sort of management Nomos will perform.
-	ManagementKey = "nomos.dev/namespace-management"
-
-	// Policies indicates that Nomos will manage policies for the namespace.
-	Policies = "policies"
-
-	// All indicates that Nomos will manage policies and namespace lifecycle for the given namespace.
-	Full = "full"
-)
-
-// Labels that Nomos uses for determining how to manage resources other than namespaces.
-const (
-	// ResourceManagementKey indicates that Nomos manages the lifecycle for the resource (this label
-	// does not apply to namespaces.
+	// ResourceManagementKey indicates if Nomos will manage the content and lifecycle for the resource.
 	ResourceManagementKey = "nomos.dev/managed"
+
+	// Enabled indicates that Nomos will manage content and lifecycle for the given resource.
+	Enabled = "enabled"
 )
 
 // Label helps manage applying labels to objects.
@@ -82,22 +71,10 @@ func (l *Label) IsSet(object metav1.Object) bool {
 	return objectLabels[l.key] == l.value
 }
 
-// ManagePolicies is the label indicating that Nomos owns management of policies.
-var ManagePolicies = Label{
-	key:   ManagementKey,
-	value: Policies,
-}
-
-// ManageAll is the label indicating that Nomos owns management of both policy and namespace lifecycle.
-var ManageAll = Label{
-	key:   ManagementKey,
-	value: Full,
-}
-
 // ManageResource is the label indicating that Nomos manages the lifecycle for a resource.
 var ManageResource = Label{
 	key:   ResourceManagementKey,
-	value: Full,
+	value: Enabled,
 }
 
 // NomosSystem indicates that this resource is part of the nomos install.

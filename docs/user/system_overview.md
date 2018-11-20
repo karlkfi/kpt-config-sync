@@ -46,8 +46,8 @@ controller. This is an optional component if the user chooses not to use
 Monitor is a controller that watches the ClusterPolicy and all PolicyNodes as
 they get updated by the PolicyImporter and Syncer. It aggregates status such as
 how many policies are synced or stale and the latency between import and sync.
-All metrics are exported as Prometheus metrics and documented on the [Monitoring
-page](monitoring_and_debugging.md#gke-policy-management-metrics).
+All metrics are exported as Prometheus metrics and documented on the
+[Monitoring page](monitoring_and_debugging.md#gke-policy-management-metrics).
 
 ## NomosOperator
 

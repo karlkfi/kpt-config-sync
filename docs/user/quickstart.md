@@ -16,7 +16,7 @@ namespaces will be automatically created. For the
 [foo-corp example](installation.md#create-the-nomos-config-file):
 
 ```console
-$ kubectl get namespaces -l nomos.dev/namespace-management
+$ kubectl get namespaces -l nomos.dev/managed
 ```
 
 This should return 4 namespaces: `shipping-dev`,

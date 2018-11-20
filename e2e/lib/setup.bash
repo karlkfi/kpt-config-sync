@@ -270,7 +270,7 @@ function setup::check_stable() {
   fi
 
   local ns_count
-  ns_count=$(resource::count -r ns -l nomos.dev/namespace-management)
+  ns_count=$(resource::count -r ns -l nomos.dev/managed)
   if (( ns_count != ${#ACME_NAMESPACES[@]} )); then
     debug::log "count mismatch $ns_count != ${#ACME_NAMESPACES[@]}"
     return 1
