@@ -17,6 +17,8 @@ limitations under the License.
 package main
 
 import (
+	"flag"
+
 	"github.com/golang/glog"
 	apis "github.com/google/nomos/pkg/api/policyascode"
 	controller "github.com/google/nomos/pkg/bespin-controllers"
@@ -28,6 +30,8 @@ import (
 )
 
 func main() {
+	flag.Parse()
+
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {

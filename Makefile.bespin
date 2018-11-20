@@ -1,0 +1,74 @@
+# Included by Makefile.
+# Rules related to building bespin and docker images.
+
+###################################
+# Bespin config
+###################################
+
+# Bespin artifacts.
+BESPIN_OUTPUT_DIR := $(OUTPUT_DIR)/bespin
+
+# Bespin build binaries.
+BESPIN_BIN_DIR := $(BESPIN_OUTPUT_DIR)/bin
+
+# Bespin build related files.
+BESPIN_BUILD_DIR := $(TOP_DIR)/build/bespin
+
+# Bespin manifests.
+BESPIN_CONFIG_DIR := $(TOP_DIR)/manifests/bespin/config
+
+# Image URLs for bespin image targets
+# TODO(zhuzenglu): templatize the project and gcr path.
+BESPIN_CONTROLLERS_MANAGER_IMG ?= gcr.io/bespin-prototype/kubebuilder-images/bespin-controllers-manager:latest
+
+###################################
+# Bespin build rules
+###################################
+
+bespin-all: bespin-test bespin-controllers-manager
+
+# Run bespin related tests
+bespin-test:
+	go test -short ./pkg/bespin-controllers/...
+
+# Build bespin controllers manager binary
+# TODO(b/119874295): build in a container
+bespin-controllers-manager:
+	go build -o $(BESPIN_BIN_DIR)/bespin-controllers-manager ./cmd/bespin-controllers-manager/main.go
+
+# Run against the configured Kubernetes cluster in ~/.kube/config
+bespin-run-manager-local:
+	go run ./cmd/bespin-controllers-manager/main.go  --local_run=true
+
+# Install Bespin CRDs into a cluster
+bespin-install-crds:
+	kubectl apply -f ${BESPIN_CONFIG_DIR}/crds
+
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+bespin-deploy: bespin-install-crds
+	kubectl delete StatefulSet --all -n bespin-system
+	kustomize build $(BESPIN_CONFIG_DIR)/default | kubectl apply -f -
+
+# Build terraform binary
+bespin-terraform:
+	@echo "+++ Downloading latest terraform and building terraform bundle"
+	go get -d -v github.com/hashicorp/terraform
+	go install github.com/hashicorp/terraform/tools/terraform-bundle
+	cd $(BESPIN_OUTPUT_DIR); \
+	terraform-bundle package $(BESPIN_BUILD_DIR)/terraform-bundle.hcl && \
+	mkdir -p terraform-bundle && unzip -o -d terraform-bundle terraform_*.zip && \
+	rm -rf terraform_*.zip
+
+###################################
+# Docker images
+###################################
+
+# Build the docker image
+bespin-docker-build: bespin-controllers-manager bespin-terraform
+	docker build . -t ${BESPIN_CONTROLLERS_MANAGER_IMG} -f build/bespin/Dockerfile
+	@echo "updating kustomize image patch file for bespin controllers manager resource"
+	sed -i 's@image: .*@image: '"${BESPIN_CONTROLLERS_MANAGER_IMG}"'@' ${BESPIN_CONFIG_DIR}/default/manager_image_patch.yaml
+
+# Push the docker image
+bespin-docker-push: bespin-docker-build
+	docker push ${BESPIN_CONTROLLERS_MANAGER_IMG}
