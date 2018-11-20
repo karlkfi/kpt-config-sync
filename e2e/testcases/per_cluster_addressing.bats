@@ -21,7 +21,7 @@ function add_clusterregistry_data() {
   git::commit -m "Add cluster and cluster registry data"
 }
 
-@test "Object reacts to per-cluster annotations" {
+@test "ClusterSelector: Object reacts to per-cluster annotations" {
   add_clusterregistry_data
 
   debug::log "Adding a valid cluster selector annotation to a role binding"
@@ -52,7 +52,7 @@ function add_clusterregistry_data() {
   wait::for -- kubectl get rolebindings -n backend bob-rolebinding
 }
 
-@test "Namespace reacts to per-cluster annotations" {
+@test "ClusterSelector: Namespace reacts to per-cluster annotations" {
   add_clusterregistry_data
 
   debug::log "Adding a valid cluster selector annotation to a namespace"
@@ -89,7 +89,7 @@ function add_clusterregistry_data() {
   wait::for -- kubectl get rolebindings -n backend bob-rolebinding
 }
 
-@test "Object reacts to changing the selector" {
+@test "ClusterSelector: Object reacts to changing the selector" {
   add_clusterregistry_data
 
   debug::log "Adding a valid cluster selector annotation to a role binding"
