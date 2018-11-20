@@ -41,4 +41,18 @@ provides hierarchical quota on top of the existing ResourceQuota admission
 controller. This is an optional component if the user chooses not to use
 [hierarchical Resource Quota feature](rq.md).
 
+## Monitor
+
+Monitor is a controller that watches the ClusterPolicy and all PolicyNodes as
+they get updated by the PolicyImporter and Syncer. It aggregates status such as
+how many policies are synced or stale and the latency between import and sync.
+All metrics are exported as Prometheus metrics and documented on the [Monitoring
+page](monitoring_and_debugging.md#gke-policy-management-metrics).
+
+## NomosOperator
+
+NomosOperator is a [standard operator](https://coreos.com/operators/) which is
+used to install Nomos components on a cluster and update them as new versions
+become available.
+
 [< Back](../../README.md)
