@@ -9,10 +9,12 @@ endif
 ifndef OUTPUT_DIR
 $(error OUTPUT_DIR must be set, but is not)
 endif
+ifndef OPERATOR_STAGING_DIR
+$(error OPERATOR_STAGING_DIR must be set, but is not)
+endif
 
 DEV_BUCKET := gs://${GCP_PROJECT}
 DEV_BUCKET_USER ?= gs://${GCP_PROJECT}/${USER}
-OPERATOR_STAGING_DIR := ${OUTPUT_DIR}/staging/operator
 GIT_SYNC_TAG := v2.0.6-15-g2e46b74
 GIT_SYNC := git-sync-amd64:$(GIT_SYNC_TAG)
 GIT_SYNC_SRC := gcr.io/nomos-release/$(GIT_SYNC)
@@ -23,20 +25,27 @@ pull-git-sync:
 	docker image pull $(GIT_SYNC_SRC); \
 	fi
 
-# deploy-operator builds and pushes the local tree, then retrieves the operator
+# prepare-operator builds and pushes the local tree, then retrieves the operator
 # manifest bundle from GCP_PROJECT and applies it, injecting PRIVATE_REGISTRY
 # so that the operator deploys the nomos binary deployed by the operator reflects
 # the local tree. The version of the operator is the latest dev version, which
 # is the same for all developers on the nomos cluster. To use a custom operator
 # build, use deploy-operator-user.
-.PHONY: deploy-operator
-deploy-operator: push-to-gcr-nomos pull-git-sync
+.PHONY: prepare-operator
+prepare-operator: push-to-gcr-nomos pull-git-sync
+	@echo "+++ Preparing regular operator"
+	@rm -rf ${OPERATOR_STAGING_DIR}
 	@mkdir -p ${OPERATOR_STAGING_DIR}
 	@gsutil cp ${DEV_BUCKET}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
 	@docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	@docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	@PROJECT_NAME=${GCP_PROJECT} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
-		${OPERATOR_STAGING_DIR}/operator-bundle.yaml | kubectl apply -f -
+		${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+
+# deploy-operator installs the operator prepared with prepare-operator
+.PHONY: deploy-operator
+deploy-operator: prepare-operator
+	 kubectl apply -f ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
 
 # deploy-operator-user builds and pushes the local tree, then retrieves the operator
 # manifest bundle from GCP_PROJECT/USER and applies it, injecting PRIVATE_REGISTRY
@@ -45,11 +54,18 @@ deploy-operator: push-to-gcr-nomos pull-git-sync
 # GCP_PROJECT/USER in GCR, which was created by the release-user flow in the
 # operator directory. If you have not created this for your user before, it does
 # not exist and must be created from the operator repository.
-.PHONY: deploy-operator-user
-deploy-operator-user: push-to-gcr-nomos pull-git-sync
+.PHONY: prepare-operator-user
+prepare-operator-user: push-to-gcr-nomos pull-git-sync
+	@echo "+++ Preparing user-specific operator"
+	@rm -rf ${OPERATOR_STAGING_DIR}
 	@mkdir -p ${OPERATOR_STAGING_DIR}
 	@gsutil cp ${DEV_BUCKET_USER}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
 	@docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	@docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	@PROJECT_NAME=${GCP_PROJECT}/${USER} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
-		${OPERATOR_STAGING_DIR}/operator-bundle.yaml | kubectl apply -f -
+		${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+
+# deploy-operator-user installs the operator prepared with prepare-operator-user
+.PHONY: deploy-operator-user
+deploy-operator-user: push-to-gcr-nomos pull-git-sync
+	kubectl apply -f ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
