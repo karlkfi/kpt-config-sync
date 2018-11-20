@@ -6,7 +6,9 @@ readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 readonly FWD_SSH_PORT=2222
 
-source ./e2e/lib/wait.bash
+# linter does not recognize that lib/wait.bash is a linted source file
+# shellcheck disable=SC1091
+source ./lib/wait.bash
 
 NOMOS_REPO="${NOMOS_REPO:-.}"
 
