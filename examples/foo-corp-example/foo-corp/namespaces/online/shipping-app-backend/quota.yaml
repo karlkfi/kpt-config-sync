@@ -2,6 +2,7 @@ kind: ResourceQuota
 apiVersion: v1
 metadata:
   name: quota
+  namespace: 
 spec:
   hard:
     pods: "3"

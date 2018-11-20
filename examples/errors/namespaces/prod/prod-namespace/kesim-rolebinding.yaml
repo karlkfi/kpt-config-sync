@@ -2,7 +2,7 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: kesim-rolebinding
-  namespace: prod-namespace # illegal definition of metadata.namespace
+  namespace: incorrect-namespace # incorrect namespace name
   annotations:
     nomos.dev/unsupported: "true" # unsupported nomos.dev annotation
   labels:

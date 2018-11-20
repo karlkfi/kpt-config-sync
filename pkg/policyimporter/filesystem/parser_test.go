@@ -98,6 +98,7 @@ kind: ResourceQuota
 apiVersion: v1
 metadata:
   name: pod-quota{{.ID}}
+  namespace: {{.Namespace}}
 spec:
   hard:
     pods: "10"
@@ -108,6 +109,7 @@ kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creator{{.ID}}
+  namespace: {{.Namespace}}
 rules:
 - apiGroups: ["batch/v1"]
   resources: ["jobs"]
@@ -128,6 +130,7 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creators{{.ID}}
+  namespace: {{.Namespace}}
 {{template "objectmetatemplate" .}}
 subjects:
 - kind: Group
@@ -144,6 +147,7 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creators{{.ID}}
+  namespace: {{.Namespace}}
   annotations:
     nomos.dev/namespace-selector: {{.LBPName}}
 subjects:
@@ -175,6 +179,7 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creators{{.ID}}
+  namespace: {{.Namespace}}
 {{template "objectmetatemplate" .}}
 subjects:
 - kind: Group
@@ -220,6 +225,7 @@ apiVersion: nomos.dev/v1alpha1
 metadata:
   name: sre-supported
 {{- if .Namespace}}
+  namespace: {{.Namespace}}
 {{- end}}
 {{template "objectmetatemplate" .}}
 spec:
@@ -270,6 +276,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nginx-deployment
+  namespace: {{.Namespace}}
 spec:
   replicas: 3
 `
@@ -279,6 +286,7 @@ apiVersion: employees/v1alpha1
 kind: Engineer
 metadata:
   name: philo
+  namespace: {{.Namespace}}
 spec:
   cafePreference: 3
 `
@@ -307,13 +315,6 @@ spec:
   selector:
     matchLabels:
       environment: prod
-`
-
-	anUndefinedResourceTemplate = `
-apiVersion: does.not.exist/v1
-kind: Nonexistent
-metadata:
-  name: nonexistentname
 `
 )
 
@@ -360,7 +361,6 @@ var (
 	aNamespaceSelector                 = tpl("aNamespaceSelectorTemplate", aNamespaceSelectorTemplate)
 	aNamedRole                         = tpl("aNamedRole", aNamedRoleTemplate)
 	aNamedSync                         = tpl("aNamedSync", aNamedSyncTemplate)
-	anUndefinedResource                = tpl("AnUndefinedResource", anUndefinedResourceTemplate)
 )
 
 // templateData can be used to format any of the below values into templates to create
@@ -602,8 +602,9 @@ func createResourceQuota(path, name, namespace string, labels map[string]string)
 			Kind:       "ResourceQuota",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: labels,
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
 		},
 		Spec: corev1.ResourceQuotaSpec{
 			Hard: corev1.ResourceList{"pods": resource.MustParse("10")},
@@ -845,7 +846,7 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":      aRepo,
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+			"namespaces/bar/rq.yaml": templateData{Namespace: "bar"}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
@@ -865,7 +866,7 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+			"namespaces/bar/rq.yaml": templateData{Namespace: "bar"}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
@@ -884,7 +885,7 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":         aRepo,
 			"system/rq.yaml":            templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"namespaces/bar/combo.yaml": templateData{Name: "bar"}.apply(aNamespace) + "\n---\n" + templateData{}.apply(aQuota),
+			"namespaces/bar/combo.yaml": templateData{Name: "bar"}.apply(aNamespace) + "\n---\n" + templateData{Namespace: "bar"}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
@@ -904,8 +905,8 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":       aRepo,
 			"system/rq.yaml":          templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/rq.yaml":  templateData{ID: "1"}.apply(aQuota),
-			"namespaces/bar/rq2.yaml": templateData{ID: "2"}.apply(aQuota),
+			"namespaces/bar/rq.yaml":  templateData{ID: "1", Namespace: "bar"}.apply(aQuota),
+			"namespaces/bar/rq2.yaml": templateData{ID: "2", Namespace: "bar"}.apply(aQuota),
 		},
 		expectedErrorCode: validation.ConflictingResourceQuotaErrorCode,
 	},
@@ -928,8 +929,8 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":         aRepo,
 			"system/role.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/role1.yaml": templateData{ID: "1"}.apply(aRole),
-			"namespaces/bar/role2.yaml": templateData{ID: "2"}.apply(aRole),
+			"namespaces/bar/role1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRole),
+			"namespaces/bar/role2.yaml": templateData{ID: "2", Namespace: "bar"}.apply(aRole),
 		},
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 2},
 	},
@@ -940,7 +941,7 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":              aRepo,
 			"system/depl.yaml":               templateData{Group: "apps", Version: "v1", Kind: "Deployment"}.apply(aSync),
 			"namespaces/bar/ns.yaml":         templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/deployment.yaml": templateData{ID: "1"}.apply(aDeployment),
+			"namespaces/bar/deployment.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aDeployment),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
@@ -960,7 +961,8 @@ var parserTestCases = []parserTestCase{
 												APIVersion: "apps/v1",
 											},
 											ObjectMeta: metav1.ObjectMeta{
-												Name: "nginx-deployment",
+												Name:      "nginx-deployment",
+												Namespace: "bar",
 												Annotations: map[string]string{
 													v1alpha1.SourcePathAnnotationKey: "namespaces/bar/deployment.yaml",
 												},
@@ -987,7 +989,7 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":         aRepo,
 			"system/eng.yaml":           templateData{Group: "employees", Version: "v1alpha1", Kind: "Engineer"}.apply(aSync),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/philo.yaml": templateData{ID: "1"}.apply(aPhilo),
+			"namespaces/bar/philo.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aPhilo),
 		},
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 1},
 	},
@@ -998,8 +1000,8 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":         aRepo,
 			"system/role.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/role1.yaml": templateData{}.apply(aRole),
-			"namespaces/bar/role2.yaml": templateData{}.apply(aRole),
+			"namespaces/bar/role1.yaml": templateData{Namespace: "bar"}.apply(aRole),
+			"namespaces/bar/role2.yaml": templateData{Namespace: "bar"}.apply(aRole),
 		},
 		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
@@ -1010,8 +1012,8 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":      aRepo,
 			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
-			"namespaces/bar/r2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
+			"namespaces/bar/r1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"namespaces/bar/r2.yaml": templateData{ID: "2", Namespace: "bar"}.apply(aRoleBinding),
 		},
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 2},
 	},
@@ -1022,8 +1024,8 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":      aRepo,
 			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
-			"namespaces/bar/r2.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+			"namespaces/bar/r1.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"namespaces/bar/r2.yaml": templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
 		},
 		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
@@ -1034,8 +1036,8 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":          aRepo,
 			"system/rb.yaml":             templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/ns.yaml":     templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/r1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
-			"namespaces/bar/r2.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
+			"namespaces/bar/r1.yaml":     templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
+			"namespaces/bar/r2.yaml":     templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
@@ -1249,7 +1251,7 @@ var parserTestCases = []parserTestCase{
 			"system/rb.yaml":              templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/bar/rb1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
-			"namespaces/bar/baz/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+			"namespaces/bar/baz/rb1.yaml": templateData{ID: "1", Namespace: "baz"}.apply(aRoleBinding),
 		},
 		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
@@ -1571,6 +1573,7 @@ spec:
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aRepo,
 			"namespaces/bar/ns-selector.yaml": templateData{
+				Namespace: "bar",
 				Annotations: map[string]string{
 					v1alpha1.ClusterSelectorAnnotationKey: "something",
 				},
@@ -1583,7 +1586,7 @@ spec:
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aRepo,
-			"cluster/rb.yaml":   templateData{ID: "1"}.apply(aRoleBinding),
+			"cluster/rb.yaml":   templateData{ID: "1", Namespace: "bar"}.apply(aRoleBinding),
 		},
 		expectedErrorCode: validation.UnsyncableClusterObjectErrorCode,
 	},
@@ -1669,10 +1672,8 @@ spec:
 		testName: "Sync contains resource w/o a CRD applied",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":             aRepo,
-			"system/unknown.yaml":           templateData{Group: "does.not.exist", Version: "v1", Kind: "Nonexistent"}.apply(aSync),
-			"namespaces/bar/undefined.yaml": templateData{}.apply(anUndefinedResource),
-			"namespaces/bar/ns.yaml":        templateData{Name: "bar"}.apply(aNamespace),
+			"system/nomos.yaml":   aRepo,
+			"system/unknown.yaml": templateData{Group: "no.crd", Version: "v1", Kind: "NoCRD"}.apply(aSync),
 		},
 		expectedErrorCode: validation.UnknownResourceInSyncErrorCode,
 	},
@@ -1918,7 +1919,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
+					Name:      "role",
+					Namespace: "bar",
 					Annotations: map[string]string{
 						"nomos.dev/cluster-selector": "sel-1",
 					},
@@ -2019,7 +2021,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 									Kind:       "RoleBinding",
 								},
 								ObjectMeta: metav1.ObjectMeta{
-									Name: "job-creators",
+									Name:      "job-creators",
+									Namespace: "bar",
 									Annotations: map[string]string{
 										v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
 										v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
@@ -2081,7 +2084,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
+					Name:      "role",
+					Namespace: "bar",
 					Annotations: map[string]string{
 						"nomos.dev/cluster-selector": "sel-1",
 					},
@@ -2138,7 +2142,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				}.apply(aNamespace),
 				// This role binding is targeted to a different selector.
 				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
+					Name:      "role",
+					Namespace: "bar",
 					Annotations: map[string]string{
 						"nomos.dev/cluster-selector": "sel-2",
 					},
@@ -2238,7 +2243,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
+					Name:      "role",
+					Namespace: "bar",
 					Annotations: map[string]string{
 						"nomos.dev/cluster-selector": "sel-1",
 					},
@@ -2345,7 +2351,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
+					Name:      "role",
+					Namespace: "bar",
 					Annotations: map[string]string{
 						"nomos.dev/cluster-selector": "sel-1",
 					},
@@ -2372,7 +2379,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					&Policies{
 						RoleBindingsV1: rbs(
 							templateData{
-								Name: "job-creators",
+								Name:      "job-creators",
+								Namespace: "bar",
 								Annotations: map[string]string{
 									v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
 									v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
@@ -2413,7 +2421,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 
 				// Tree dir
 				"namespaces/bar/bar.yaml":         templateData{Name: "bar"}.apply(aNamespace),
-				"namespaces/bar/rolebinding.yaml": templateData{Name: "role"}.apply(aRoleBinding),
+				"namespaces/bar/rolebinding.yaml": templateData{Name: "role", Namespace: "bar"}.apply(aRoleBinding),
 
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
@@ -2462,7 +2470,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
 					&Policies{
 						RoleBindingsV1: rbs(
-							templateData{Name: "job-creators",
+							templateData{Name: "job-creators", Namespace: "bar",
 								Annotations: map[string]string{
 									v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 									v1alpha1.SourcePathAnnotationKey:  "namespaces/bar/rolebinding.yaml",
@@ -2512,7 +2520,8 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				// Tree dir
 				"namespaces/bar/bar.yaml": templateData{Name: "bar"}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
+					Name:      "role",
+					Namespace: "bar",
 					Annotations: map[string]string{
 						v1alpha1.ClusterSelectorAnnotationKey: "unknown-selector",
 					},
@@ -2549,7 +2558,8 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				// Tree dir
 				"namespaces/bar/bar.yaml": templateData{Name: "bar"}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
+					Name:      "role",
+					Namespace: "bar",
 				}.apply(aRoleBinding),
 
 				// Cluster dir (cluster scoped objects).

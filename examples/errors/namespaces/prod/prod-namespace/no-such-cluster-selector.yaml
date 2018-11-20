@@ -2,6 +2,7 @@ kind: Role # kind not allowed
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: no-such-cluster-selector
+  namespace: prod-namespace
   annotations:
     nomos.dev/cluster-selector: nonexistent-selector  # this selector does not exist.
 rules:

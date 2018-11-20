@@ -2,6 +2,8 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: alice-rolebinding
+  # can't declare namespace for abstract namespace scoped object
+  namespace: illegal-namespace-declaration
 subjects:
 - kind: User
   name: alice@acme.com

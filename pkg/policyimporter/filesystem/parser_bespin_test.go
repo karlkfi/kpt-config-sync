@@ -51,6 +51,7 @@ spec:
 apiVersion: bespin.dev/v1
 kind: Project
 metadata:
+  namespace: bar
   labels:
     controller-tools.k8s.io: "1.0"
   name: project-sample
