@@ -67,6 +67,7 @@ const (
 	MultipleNamespacesErrorCode                    = "1030"
 	MissingObjectNameErrorCode                     = "1031"
 	UnknownResourceInSyncErrorCode                 = "1032"
+	IllegalSystemResourcePlacementErrorCode        = "1033"
 	UndefinedErrorCode                             = "????"
 )
 
@@ -138,6 +139,8 @@ func Code(e error) string {
 		return MissingObjectNameErrorCode
 	case UnknownResourceInSyncError:
 		return UnknownResourceInSyncErrorCode
+	case IllegalSystemResourcePlacementError:
+		return IllegalSystemResourcePlacementErrorCode
 	default:
 		return UndefinedErrorCode // Undefined
 	}
@@ -149,7 +152,7 @@ func format(err error, format string, a ...interface{}) string {
 	if code == UndefinedErrorCode {
 		// Only reachable by programmer error. Requires calling format() on an error other than the ones
 		// defined in this file or not having an entry in Code() above.
-		panic(fmt.Sprintf("Unknown Nomosvet Error: %s", err.Error()))
+		panic(fmt.Sprintf("Unknown Nomosvet Error: %+v", err))
 	}
 	return fmt.Sprintf("KNV%s: ", Code(err)) + fmt.Sprintf(format, a...)
 }
@@ -368,7 +371,7 @@ type ObjectHasUnknownClusterSelector struct {
 
 // Error implements error.
 func (e ObjectHasUnknownClusterSelector) Error() string {
-	return format(e, "Object %q in namespace %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no defined ClusterSelector", e.o.GetName(), e.o.GetNamespace(), v1alpha1.ClusterSelectorAnnotationKey, e.a)
+	return format(e, "Object %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no defined ClusterSelector", e.o.GetName(), v1alpha1.ClusterSelectorAnnotationKey, e.a)
 }
 
 // InvalidSelector is a validation error.
@@ -691,4 +694,18 @@ func (e UnknownResourceInSyncError) Error() string {
 			"source: %[1]s\n"+
 			"%[2]s",
 		e.SyncPath, groupVersionKind(e.ResourceType))
+}
+
+// IllegalSystemResourcePlacementError reports that a nomos.dev object has been defined outside of system/
+type IllegalSystemResourcePlacementError struct {
+	Root string
+	Info *resource.Info
+}
+
+// Error implements error
+func (e IllegalSystemResourcePlacementError) Error() string {
+	return format(e,
+		"Objects of the below kind MUST NOT be defined outside %[1]s/:\n"+
+			"%[2]s",
+		repo.SystemDir, resourceInfo{e.Root, e.Info}.String())
 }

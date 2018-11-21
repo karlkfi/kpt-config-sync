@@ -1760,6 +1760,24 @@ spec:
 		},
 		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
+	{
+		testName: "Repo outside system/ is an error",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":         aRepo,
+			"namespaces/foo/nomos.yaml": aRepo,
+		},
+		expectedErrorCode: validation.IllegalSystemResourcePlacementErrorCode,
+	},
+	{
+		testName: "Sync outside system/ is an error",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":         aRepo,
+			"namespaces/foo/nomos.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+		},
+		expectedErrorCode: validation.IllegalSystemResourcePlacementErrorCode,
+	},
 }
 
 func (tc *parserTestCase) Run(t *testing.T) {

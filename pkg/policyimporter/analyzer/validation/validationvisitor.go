@@ -215,10 +215,24 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	return v.Base.VisitClusterObject(o)
 }
 
+// IsSystemOnly returns true if the object is only allowed in the system/ directory.
+func IsSystemOnly(gvk schema.GroupVersionKind) bool {
+	switch gvk {
+	case v1alpha1.SchemeGroupVersion.WithKind(policyhierarchy.RepoKind),
+		v1alpha1.SchemeGroupVersion.WithKind(policyhierarchy.SyncKind):
+		return true
+	default:
+		return false
+	}
+}
+
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 	if !v.allowedGVKs[o.GroupVersionKind()] {
-		v.errs.Add(UnsyncableNamespaceObjectError{o})
+		if !IsSystemOnly(o.GroupVersionKind()) {
+			// This is already checked elsewhere.
+			v.errs.Add(UnsyncableNamespaceObjectError{o})
+		}
 	}
 
 	node := v.nodes[len(v.nodes)-1]

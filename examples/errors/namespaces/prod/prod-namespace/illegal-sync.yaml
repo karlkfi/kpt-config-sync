@@ -1,0 +1,4 @@
+kind: Sync # should be in system/
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: illegal-sync

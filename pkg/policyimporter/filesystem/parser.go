@@ -646,6 +646,10 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 				seenDirs[path.Base(dir)][dir] = struct{}{}
 			}
 
+			if validation.IsSystemOnly(gvk) && !strings.HasPrefix(dir, repo.SystemDir) {
+				errorBuilder.Add(validation.IllegalSystemResourcePlacementError{Root: p.root, Info: info})
+			}
+
 			switch gvk {
 			case corev1.SchemeGroupVersion.WithKind("Namespace"):
 				if dir == repo.NamespacesDir {

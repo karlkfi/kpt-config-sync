@@ -1,4 +1,4 @@
-Found issues: 16 error(s)
+Found issues: 17 error(s)
 
 
 [1] KNV1001: Directories MUST NOT have reserved namespace names. Rename or remove directory:
@@ -82,7 +82,7 @@ version: v1
 kind: RoleBinding
 
 
-[11] KNV1013: Object "no-such-cluster-selector" in namespace "" MUST refer to an existing ClusterSelector, but has annotation nomos.dev/cluster-selector="nonexistent-selector" which maps to no defined ClusterSelector
+[11] KNV1013: Object "no-such-cluster-selector" MUST refer to an existing ClusterSelector, but has annotation nomos.dev/cluster-selector="nonexistent-selector" which maps to no defined ClusterSelector
 
 
 [12] KNV1018: cluster/ directory MUST NOT have subdirectories.
@@ -130,4 +130,12 @@ group:
 version: v1
 kind: Namespace
 name: prod-namespace
+
+
+[17] KNV1033: Objects of the below kind MUST NOT be defined outside system/:
+source: namespaces/prod/prod-namespace/illegal-sync.yaml
+group: nomos.dev
+version: v1alpha1
+kind: Sync
+name: illegal-sync
 
