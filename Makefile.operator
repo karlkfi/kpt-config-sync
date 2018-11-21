@@ -39,8 +39,12 @@ prepare-operator: push-to-gcr-nomos pull-git-sync
 	@gsutil cp ${DEV_BUCKET}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
 	@docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	@docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
-	@PROJECT_NAME=${GCP_PROJECT} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
-		${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+# TODO(b/119836195): Using sed here because the Prow test environment doesn't have the envsubst
+# command. Once it does, switch back
+	@cat ${OPERATOR_STAGING_DIR}/operator-bundle.yaml | sed 's|$${PROJECT_NAME}|$(GCP_PROJECT)|g' | \
+		sed 's|$${PRIVATE_REGISTRY}|gcr.io/$(GCR_PREFIX)|g' > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+# @PROJECT_NAME=${GCP_PROJECT} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
+#	 ${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
 
 # deploy-operator installs the operator prepared with prepare-operator
 .PHONY: deploy-operator

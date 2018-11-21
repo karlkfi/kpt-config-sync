@@ -25,11 +25,11 @@ function nomos_running() {
 }
 
 function nomos_uninstalled() {
-  if [ "$(kubectl get pods -n nomos-system | wc -l)" -eq 0 ]; then
+  if [ "$(kubectl get pods -n nomos-system | wc -l)" -ne 0 ]; then
     echo "Nomos pods not yet uninstalled"
-    return 0
+    return 1
   fi
-  return 1
+  return 0
 }
 
 # Runs the installer process to set up the cluster under test.
