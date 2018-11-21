@@ -341,14 +341,18 @@ func buildVisitors(apiInfo *meta.APIInfo,
 	selectors []v1alpha1.ClusterSelector,
 	opts ParserOpt) ([]ast.CheckingVisitor, error) {
 
-	var visitors []ast.CheckingVisitor
-	// TODO(b/119825336): This visitor shouldn't come before the validator,
-	// but the validator isn't allowing this to go through.
+	// TODO(b/119825336): Bespin and the InputValidator are having trouble playing
+	// nicely. For now, just return the visitors that Bespin needs.
 	if opts.Bespin {
-		visitors = append(visitors, transform.NewGCPHierarchyVisitor(), transform.NewGCPPolicyVisitor())
+		return []ast.CheckingVisitor{
+			transform.NewGCPHierarchyVisitor(),
+			transform.NewGCPPolicyVisitor(),
+			validation.NewScope(apiInfo),
+			validation.NewNameValidator(),
+		}, nil
 	}
 
-	visitors = append(visitors,
+	return []ast.CheckingVisitor{
 		validation.NewInputValidator(allowedGVKs, clusters, selectors, opts.Vet),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(apiInfo),
@@ -363,9 +367,7 @@ func buildVisitors(apiInfo *meta.APIInfo,
 		),
 		transform.NewQuotaVisitor(),
 		validation.NewNameValidator(),
-	)
-
-	return visitors, nil
+	}, nil
 }
 
 func toAllowedGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
