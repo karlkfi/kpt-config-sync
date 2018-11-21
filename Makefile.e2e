@@ -1,7 +1,5 @@
 # e2e related build rules
 
-OPERATOR_TARGET := prepare-operator
-
 E2E_PARAMS := \
 	IMAGE_TAG=$(IMAGE_TAG) \
 	GCP_PROJECT=$(GCP_PROJECT) \
@@ -13,7 +11,6 @@ E2E_PARAMS := \
 # plus a few extras for e2e.
 .PHONY: e2e-staging
 e2e-staging: \
-		$(OPERATOR_TARGET) \
 		$(OUTPUT_DIR) \
 		$(TEST_GEN_YAML_DIR)/git-server.yaml \
 		$(wildcard $(TOP_DIR)/e2e/*)
@@ -30,7 +27,6 @@ e2e-staging: \
 	@cp $(TOP_DIR)/scripts/init-git-server.sh $(OUTPUT_DIR)/e2e/
 	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(OUTPUT_DIR)/e2e/
 	@cp -r $(STAGING_DIR)/installer $(OUTPUT_DIR)/e2e/
-	@cp ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml $(OUTPUT_DIR)/e2e/
 	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
 
 # Builds the e2e docker image and depencencies.
@@ -85,9 +81,6 @@ test-e2e-%: e2e-image-all
 	$(MAKE) test-e2e-run-$* \
 		$(E2E_PARAMS) \
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)"
-
-test-e2e-%-user:
-	$(MAKE) OPERATOR_TARGET=prepare-operator-user test-e2e-$*
 
 test-e2e-dev-gcp:
 test-e2e-dev-git:

@@ -42,9 +42,6 @@ BIN_DIR := $(GO_DIR)/bin
 # Directory used for staging Docker contexts.
 STAGING_DIR := $(OUTPUT_DIR)/staging
 
-# Directory used for staging the operator primitives.
-OPERATOR_STAGING_DIR := ${OUTPUT_DIR}/staging/operator
-
 # Directory used for staging docs.
 DOCS_STAGING_DIR := $(STAGING_DIR)/docs
 

@@ -6,63 +6,17 @@ readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 readonly FWD_SSH_PORT=2222
 
-# linter does not recognize that lib/wait.bash is a linted source file
-# shellcheck disable=SC1091
-source ./lib/wait.bash
-
 NOMOS_REPO="${NOMOS_REPO:-.}"
-
-function nomos_running() {
-  if ! kubectl get pods -n nomos-system | grep git-policy-importer | grep Running; then
-    echo "Importer not yet running"
-    return 1
-  fi
-  if ! kubectl get pods -n nomos-system | grep syncer | grep Running; then
-    echo "Syncer not yet running"
-    return 1
-  fi
-  return 0
-}
-
-function nomos_uninstalled() {
-  if [ "$(kubectl get pods -n nomos-system | wc -l)" -ne 0 ]; then
-    echo "Nomos pods not yet uninstalled"
-    return 1
-  fi
-  return 0
-}
 
 # Runs the installer process to set up the cluster under test.
 function install() {
   if $do_installation; then
     echo "+++++ Installing..."
-    (
-       case ${importer} in
-        git)
-        # Linter says this is better than "cd -"
-        cd "${NOMOS_REPO}/.output/e2e"
-        # This will fail in subsequent runs, but is necessary for the first run
-        kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user "$(gcloud config get-value account)" || true
-        kubectl apply -f defined-operator-bundle.yaml
-        kubectl create secret generic git-creds -n=nomos-system --from-file=ssh="$HOME"/.ssh/id_rsa.nomos
-        kubectl create -f "${TEST_DIR}/operator-config-git.yaml"
-        wait::for -s -t 60 -- nomos_running
-        ;;
-
-        gcp)
-        # gcp is still using the old-style installer. This can be removed once this is not the case
-        # Linter says this is better than "cd -"
-        cd "${NOMOS_REPO}/.output/e2e/installer"
-        "${run_installer}" \
-          --config="${install_config}" \
-          --work_dir="${PWD}"
-        ;;
-
-        *)
-         echo "invalid importer value: ${importer}"
-         exit 1
-        ;;
-      esac
+    (  # Linter says this is better than "cd -"
+      cd "${NOMOS_REPO}/.output/e2e/installer"
+      "${run_installer}" \
+        --config="${install_config}" \
+        --work_dir="${PWD}" \
     )
   fi
 }
@@ -73,31 +27,11 @@ function uninstall() {
     # If we did the installation, then we should uninstall as well.
     echo "+++++ Uninstalling..."
     (
-      case ${importer} in
-        git)
-        # we do not care if part of the deletion fails, as the objects may not all exist
-        kubectl -n=nomos-system delete nomos --all || true
-        wait::for -s -t 60 -- nomos_uninstalled
-        kubectl delete -f defined-operator-bundle.yaml || true
-        ;;
-
-        gcp)
-        # gcp is still using the old-style installer. This can be removed once this is not the case
-        cd "${NOMOS_REPO}/.output/e2e/installer"
-        "${run_installer}" \
-          --config="${install_config}" \
-          --work_dir="${PWD}" \
-          --uninstall=deletedeletedelete
-        ;;
-
-        *)
-         echo "invalid importer value: ${importer}"
-         exit 1
-        ;;
-      esac
-      # make sure that nomos-system is no longer extant
-      kubectl delete ns nomos-system || true
-      echo clean
+      cd "${NOMOS_REPO}/.output/e2e/installer"
+      "${run_installer}" \
+        --config="${install_config}" \
+        --work_dir="${PWD}" \
+        --uninstall=deletedeletedelete
     )
   fi
 }
