@@ -29,3 +29,4 @@ git clone -b $REPO_VERSION git@github.com:frankfarzan/foo-corp-example.git $repo
 rsync -av --delete --exclude='.git' examples/foo-corp-example/ $repo
 git -C $repo add .
 git -C $repo commit -m "Synced from $version"
+git -C $repo push origin HEAD:$REPO_VERSION
