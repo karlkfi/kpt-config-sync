@@ -1778,6 +1778,42 @@ spec:
 		},
 		expectedErrorCode: validation.IllegalSystemResourcePlacementErrorCode,
 	},
+	{
+		testName: "Sync contains a CRD",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml": aRepo,
+			"system/sync.yaml":  templateData{Group: "extensions", Version: "v1beta1", Kind: "CustomResourceDefinition"}.apply(aSync),
+		},
+		expectedErrorCode: validation.UnsupportedResourceInSyncErrorCode,
+	},
+	{
+		testName: "Sync contains a Namespace",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml": aRepo,
+			"system/sync.yaml":  templateData{Version: "v1", Kind: "Namespace"}.apply(aSync),
+		},
+		expectedErrorCode: validation.UnsupportedResourceInSyncErrorCode,
+	},
+	{
+		testName: "Sync contains a PolicyNode",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml": aRepo,
+			"system/sync.yaml":  templateData{Group: "nomos.dev", Version: "v1", Kind: "PolicyNode"}.apply(aSync),
+		},
+		expectedErrorCode: validation.UnsupportedResourceInSyncErrorCode,
+	},
+	{
+		testName: "Sync contains a Sync",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml": aRepo,
+			"system/sync.yaml":  templateData{Group: "nomos.dev", Version: "v1alpha1", Kind: "Sync"}.apply(aSync),
+		},
+		expectedErrorCode: validation.UnsupportedResourceInSyncErrorCode,
+	},
 }
 
 func (tc *parserTestCase) Run(t *testing.T) {

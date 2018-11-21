@@ -284,6 +284,7 @@ func testK8SResources() []*restmapper.APIGroupResources {
 					{Name: "deployments", Namespaced: true, Kind: "Deployment"},
 					{Name: "replicasets", Namespaced: true, Kind: "ReplicaSet"},
 					{Name: "podsecuritypolicyies", Namespaced: false, Kind: "PodSecurityPolicy"},
+					{Name: "customresourcedefinitions", Namespaced: false, Kind: "CustomResourceDefinition"},
 				},
 			},
 		},

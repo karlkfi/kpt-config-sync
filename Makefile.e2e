@@ -112,8 +112,9 @@ test-nomosvet-local: build
 	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/parse-errors/invalid-yaml 2> $(TOP_DIR)/.output/tmp/actual-errs.txt || true
 	@grep -qF "2 error(s)" $(TOP_DIR)/.output/tmp/actual-errs.txt # there are two errors
 	@grep -cF "invalid object to validate" .output/tmp/actual-errs.txt | grep -qF 2 # they are invalid yaml
-	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/parse-errors/unknown-resource-sync 2> $(TOP_DIR)/.output/tmp/actual-errs.txt || true
-	@diff $(TOP_DIR)/examples/parse-errors/unknown-resource-sync/expected-errs.txt $(TOP_DIR)/.output/tmp/actual-errs.txt
+	$(NOMOSVET_LOCAL) $(TOP_DIR)/examples/parse-errors/invalid-resources-sync 2> \
+		$(TOP_DIR)/.output/tmp/actual-errs.txt || true
+	@diff $(TOP_DIR)/examples/parse-errors/invalid-resources-sync/expected-errs.txt $(TOP_DIR)/.output/tmp/actual-errs.txt
 
 include Makefile.e2e.ci
 include Makefile.e2e.prober

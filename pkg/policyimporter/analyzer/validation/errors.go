@@ -68,6 +68,7 @@ const (
 	MissingObjectNameErrorCode                     = "1031"
 	UnknownResourceInSyncErrorCode                 = "1032"
 	IllegalSystemResourcePlacementErrorCode        = "1033"
+	UnsupportedResourceInSyncErrorCode             = "1034"
 	UndefinedErrorCode                             = "????"
 )
 
@@ -141,6 +142,8 @@ func Code(e error) string {
 		return UnknownResourceInSyncErrorCode
 	case IllegalSystemResourcePlacementError:
 		return IllegalSystemResourcePlacementErrorCode
+	case UnsupportedResourceInSyncError:
+		return UnsupportedResourceInSyncErrorCode
 	default:
 		return UndefinedErrorCode // Undefined
 	}
@@ -679,7 +682,7 @@ func (e MissingObjectNameError) Error() string {
 		e.Source, groupVersionKind(e.Mapping.GroupVersionKind), e.Name)
 }
 
-// UnknownResourceInSyncError reports that a resource defined on a sync does not have a definition in the cluster.
+// UnknownResourceInSyncError reports that a resource defined in a Sync does not have a definition in the cluster.
 type UnknownResourceInSyncError struct {
 	SyncPath     string
 	ResourceType schema.GroupVersionKind
@@ -688,7 +691,7 @@ type UnknownResourceInSyncError struct {
 // Error implements error
 func (e UnknownResourceInSyncError) Error() string {
 	return format(e,
-		"Sync contains a resource type that does not exist on cluster.\n"+
+		"Sync contains a resource type that does not exist on cluster. "+
 			"Either remove the resource type from the Sync or create a CustomResourceDefinition for "+
 			"the resource type on the cluster.\n\n"+
 			"source: %[1]s\n"+
@@ -708,4 +711,19 @@ func (e IllegalSystemResourcePlacementError) Error() string {
 		"Objects of the below kind MUST NOT be defined outside %[1]s/:\n"+
 			"%[2]s",
 		repo.SystemDir, resourceInfo{e.Root, e.Info}.String())
+}
+
+// UnsupportedResourceInSyncError reports that policy management is unsupported for a resource defined in a Sync.
+type UnsupportedResourceInSyncError struct {
+	SyncPath     string
+	ResourceType schema.GroupVersionKind
+}
+
+// Error implements error
+func (e UnsupportedResourceInSyncError) Error() string {
+	return format(e,
+		"Sync contains a resource type that is not supported. Remove the resource type from the Sync.\n\n"+
+			"source: %[1]s\n"+
+			"%[2]s",
+		e.SyncPath, groupVersionKind(e.ResourceType))
 }

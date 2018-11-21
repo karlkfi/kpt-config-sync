@@ -1,0 +1,34 @@
+Found issues: 4 error(s)
+
+
+[1] KNV1032: Sync contains a resource type that does not exist on cluster. Either remove the resource type from the Sync or create a CustomResourceDefinition for the resource type on the cluster.
+
+source: system/invalid.yaml
+group: unknown.group.com
+version: v1
+kind: Unknown
+
+
+[2] KNV1034: Sync contains a resource type that is not supported. Remove the resource type from the Sync.
+
+source: system/invalid.yaml
+group: extensions
+version: v1beta1
+kind: CustomResourceDefinition
+
+
+[3] KNV1034: Sync contains a resource type that is not supported. Remove the resource type from the Sync.
+
+source: system/invalid.yaml
+group: nomos.dev
+version: v1
+kind: PolicyNode
+
+
+[4] KNV1034: Sync contains a resource type that is not supported. Remove the resource type from the Sync.
+
+source: system/invalid.yaml
+group: nomos.dev
+version: v1alpha1
+kind: Sync
+

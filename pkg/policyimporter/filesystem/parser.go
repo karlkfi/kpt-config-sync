@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
@@ -41,6 +42,7 @@ import (
 	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -53,6 +55,12 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource"
 	kubevalidation "k8s.io/kubernetes/pkg/kubectl/validation"
 )
+
+// unsupportedSyncResources is a set of GroupVersionKinds that are not allowed in Syncs.
+var unsupportedSyncResources = map[schema.GroupVersionKind]bool{
+	extensionsv1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition"): true,
+	corev1.SchemeGroupVersion.WithKind("Namespace"):                           true,
+}
 
 func init() {
 	// Add Nomos and Bespin types to the Scheme used by util.AsDefaultVersionedOrOriginal for
@@ -517,7 +525,13 @@ func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root,
 						Version: kind.Versions[0].Version,
 						Kind:    kind.Kind,
 					}
-					if !apiInfo.Exists(syncGVK) {
+
+					if unsupportedSyncResources[syncGVK] || syncGVK.Group == policyhierarchy.GroupName {
+						errorBuilder.Add(validation.UnsupportedResourceInSyncError{
+							SyncPath:     p.relativePath(info.Source),
+							ResourceType: syncGVK,
+						})
+					} else if !apiInfo.Exists(syncGVK) {
 						errorBuilder.Add(validation.UnknownResourceInSyncError{
 							SyncPath:     p.relativePath(info.Source),
 							ResourceType: syncGVK,
