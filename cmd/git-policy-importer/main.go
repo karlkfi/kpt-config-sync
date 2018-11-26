@@ -51,12 +51,12 @@ func main() {
 
 	config, err := restconfig.NewRestConfig()
 	if err != nil {
-		glog.Fatalf("Failed to create rest config: %v", err)
+		glog.Fatalf("Failed to create rest config: %+v", err)
 	}
 
 	client, err := meta.NewForConfig(config)
 	if err != nil {
-		glog.Fatalf("Failed to create client: %v", err)
+		glog.Fatalf("Failed to create client: %+v", err)
 	}
 
 	policyDir := path.Join(*gitDir, *policyDirRelative)
@@ -65,7 +65,7 @@ func main() {
 	parser, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, client.Kubernetes().Discovery(),
 		filesystem.ParserOpt{Validate: true, Bespin: bespin})
 	if err != nil {
-		glog.Fatalf("Failed to create parser: %v", err)
+		glog.Fatalf("Failed to create parser: %+v", err)
 	}
 
 	go service.ServeMetrics()
@@ -75,7 +75,7 @@ func main() {
 	c := filesystem.NewController(policyDir, *pollPeriod, parser, client, stopChan)
 	go service.WaitForShutdownSignalCb(stopChan)
 	if err := c.Run(); err != nil {
-		glog.Fatalf("Failure running controller: %v", err)
+		glog.Fatalf("Failure running controller: %+v", err)
 	}
 	glog.Info("Exiting")
 }

@@ -44,23 +44,23 @@ func main() {
 	// Get a config to talk to the apiserver.
 	cfg, err := restconfig.NewRestConfig()
 	if err != nil {
-		glog.Fatalf("failed to create rest config: %v", err)
+		glog.Fatalf("failed to create rest config: %+v", err)
 	}
 
 	// Create a new Manager to provide shared dependencies and start components.
 	mgr, err := manager.New(cfg, manager.Options{SyncPeriod: resyncPeriod})
 	if err != nil {
-		glog.Fatalf("Failed to create manager: %v", err)
+		glog.Fatalf("Failed to create manager: %+v", err)
 	}
 
 	mgrStopChannel := signals.SetupSignalHandler()
 	// Set up Scheme for generic resources.
 	if err := metasync.AddMetaController(mgr, mgrStopChannel); err != nil {
-		glog.Fatalf("Error adding Sync controller: %v", err)
+		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 
 	// Start the Manager.
 	if err := mgr.Start(mgrStopChannel); err != nil {
-		glog.Fatalf("Error starting controller: %v", err)
+		glog.Fatalf("Error starting controller: %+v", err)
 	}
 }

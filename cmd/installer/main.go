@@ -89,13 +89,13 @@ func main() {
 
 	if *uninstall != "" {
 		if err := i.Uninstall(*uninstall, *useCurrent); err != nil {
-			glog.Exit(errors.Wrapf(err, "uninstallation failed"))
+			glog.Exitf("uninstallation failed: %+v", err)
 		}
 		glog.Infof("Uninstall successful!")
 		return
 	}
 	if err := i.Run(*useCurrent); err != nil {
-		glog.Exit(errors.Wrapf(err, "installation failed"))
+		glog.Exitf("installation failed: %+v", err)
 	}
 	glog.Infof("Install successful!")
 }

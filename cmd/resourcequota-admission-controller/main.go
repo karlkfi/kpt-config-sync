@@ -127,26 +127,26 @@ func main() {
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		glog.Fatal("Failed to load in cluster config: ", err)
+		glog.Fatalf("Failed to load in cluster config: %+v", err)
 	}
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		glog.Fatal("Failed to create client set: ", err)
+		glog.Fatalf("Failed to create client set: %+v", err)
 	}
 	var clientCert []byte
 	if *enablemTLS {
 		clientCert, err = admissioncontroller.GetAPIServerCert(clientset)
 		if err != nil {
-			glog.Fatal("Failed to get client cert: ", err)
+			glog.Fatalf("Failed to get client cert: %+v", err)
 		}
 	}
 	policyNodeInformer, err := admissioncontroller.SetupPolicyNodeInformer(config)
 	if err != nil {
-		glog.Fatal("Failed setting up policyNode informer: ", err)
+		glog.Fatalf("Failed setting up policyNode informer: %+v", err)
 	}
 	resourceQuotaInformer, err := setupResourceQuotaInformer(config)
 	if err != nil {
-		glog.Fatal("Failed setting up resourceQuota informer: ", err)
+		glog.Fatalf("Failed setting up resourceQuota informer: %+v", err)
 	}
 	glog.Info("Waiting for informers to sync...")
 	if !cache.WaitForCacheSync(nil, policyNodeInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
@@ -163,7 +163,7 @@ func main() {
 	stopChannel := make(chan struct{})
 	listener, err := net.Listen("tcp", server.Addr)
 	if err != nil {
-		glog.Fatal("Failed to start https listener: ", err)
+		glog.Fatalf("Failed to start https listener: %+v", err)
 	}
 	// nolint: errcheck
 	defer listener.Close()
@@ -174,12 +174,12 @@ func main() {
 	err = admissioncontroller.WaitForEndpoint(
 		clientset, controllerName, controllerNamespace, admissioncontroller.EndpointRegistrationTimeout)
 	if err != nil {
-		glog.Fatal("Failed waiting for endpoint: ", err)
+		glog.Fatalf("Failed waiting for endpoint: %+v", err)
 	}
 
 	// Finally register the webhook to block admission according to quota policy
 	if err := selfRegister(clientset, *caBundleFile); err != nil {
-		glog.Fatal("Failed to register webhook: ", err)
+		glog.Fatalf("Failed to register webhook: %+v", err)
 	}
 
 	<-stopChannel
