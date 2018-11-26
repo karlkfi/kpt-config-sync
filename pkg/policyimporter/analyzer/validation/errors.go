@@ -155,7 +155,7 @@ func format(err error, format string, a ...interface{}) string {
 	if code == UndefinedErrorCode {
 		// Only reachable by programmer error. Requires calling format() on an error other than the ones
 		// defined in this file or not having an entry in Code() above.
-		panic(fmt.Sprintf("Unknown Nomosvet Error: %+v", err))
+		panic(fmt.Sprintf("Unknown Error: %+v", err))
 	}
 	return fmt.Sprintf("KNV%s: ", Code(err)) + fmt.Sprintf(format, a...)
 }

@@ -112,8 +112,8 @@ ALL_K8S_DEPLOYMENTS := syncer \
 # Nomos docker images containing all binaries.
 NOMOS_IMAGE := nomos
 
-# nomosvet binary for local run.
-NOMOSVET_LOCAL := $(BIN_DIR)/linux_amd64/nomosvet
+# nomos binary for local run.
+NOMOS_LOCAL := $(BIN_DIR)/linux_amd64/nomos
 
 # Git server used in e2e tests.
 GIT_SERVER_SRC := https://github.com/jkarlosb/git-server-docker.git
@@ -205,12 +205,12 @@ test-unit: $(OUTPUT_DIR) pull-buildenv
 # Runs unit tests and linter.
 test: test-unit lint lint-bash
 
-# Runs tests and local nomosvet tests.
-test-local: test test-nomosvet-local
+# Runs tests and local nomos vet tests.
+test-local: test test-nomos-vet-local
 
 # Runs all tests.
 # This only runs on local dev environment not CI environment.
-test-all-local: test test-nomosvet-local test-e2e-all
+test-all-local: test test-nomos-vet-local test-e2e-all
 
 goimports:
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)

@@ -2537,7 +2537,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 	}
 }
 
-// TestParserPerClusterAddressingVet tests nomosvet validation errors.
+// TestParserPerClusterAddressingVet tests nomos vet validation errors.
 func TestParserPerClusterAddressingVet(t *testing.T) {
 	tests := []parserTestCase{
 		{

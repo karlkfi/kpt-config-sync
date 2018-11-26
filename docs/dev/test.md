@@ -2,7 +2,7 @@
 
 ## Unit Tests
 
-During iterative development, you want to run unit tests, linters, and nomosvet
+During iterative development, you want to run unit tests, linters, and nomos vet
 tests using:
 
 ```console
@@ -18,12 +18,12 @@ from your current context, and then verify functionality through Git commits:
 make test-e2e-all
 ```
 
-## Local nomosvet tests
+## Local nomos vet tests
 
-To run nomosvet locally on example repos, run:
+To run nomos vet locally on example repos, run:
 
 ```console
-make test-nomosvet-local
+make test-nomos-vet-local
 ```
 
 This requires a Nomos cluster configured and in your kubeconfig context.

@@ -112,7 +112,7 @@ var _ ast.Visitor = &InputValidator{}
 // directories.  Objects of other types will be treated as an error. clusters
 // is the list of clusters defined in the source of truth, and cs is the list
 // of selectors.  vet turns on "vetting mode", a mode of stricter control for use
-// in nomosvet.
+// in nomos vet.
 func NewInputValidator(
 	allowedGVKs map[schema.GroupVersionKind]bool,
 	clusters []clusterregistry.Cluster,
