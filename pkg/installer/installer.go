@@ -27,12 +27,14 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/installer/config"
 	"github.com/google/nomos/pkg/process/kubectl"
 	"github.com/pkg/errors"
-
 	"k8s.io/api/rbac/v1"
+	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
@@ -536,20 +538,46 @@ func (i *Installer) uninstallCluster() error {
 			glog.Errorf("%v", errors.Wrapf(err, "while deleting cluster role"))
 		}
 	}
-	if err = i.DeletePolicyNodes(); err != nil {
-		return err
+	crds, err := i.k.APIExtensions().ApiextensionsV1beta1().CustomResourceDefinitions().List(metav1.ListOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "while listing CRDs")
 	}
-	if err = i.DeleteClusterPolicies(); err != nil {
-		return err
+	if crdListContains(crds, v1alpha1.SchemeGroupVersion.WithKind("PolicyNode")) {
+		if err = i.DeletePolicyNodes(); err != nil {
+			return err
+		}
 	}
-	if err = i.DeleteSyncs(); err != nil {
-		return err
+	if crdListContains(crds, v1alpha1.SchemeGroupVersion.WithKind("ClusterPolicy")) {
+		if err = i.DeleteClusterPolicies(); err != nil {
+			return err
+		}
+	}
+	if crdListContains(crds, v1alpha1.SchemeGroupVersion.WithKind("Sync")) {
+		if err = i.DeleteSyncs(); err != nil {
+			return err
+		}
 	}
 	// Delete the Nomos singleton object, ignoring not found.
 	if err = i.deleteNomos(); err != nil {
 		return err
 	}
 	return nil
+}
+
+// crdListContains evaluates whether crds contains a definition matching gvk.
+func crdListContains(crds *extv1beta1.CustomResourceDefinitionList, gvk schema.GroupVersionKind) bool {
+	for _, crd := range crds.Items {
+		if crd.Spec.Group != gvk.Group || crd.Spec.Names.Kind != gvk.Kind {
+			continue
+		}
+		for _, v := range crd.Spec.Versions {
+			if v.Name != gvk.Version {
+				continue
+			}
+			return true
+		}
+	}
+	return false
 }
 
 // Uninstall uninstalls the system from the cluster.  Uninstall is asynchronous,
