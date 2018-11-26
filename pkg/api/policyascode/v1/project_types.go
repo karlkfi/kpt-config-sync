@@ -34,24 +34,40 @@ type ProjectSpec struct {
 	ImportDetails   ImportDetails   `json:"importDetails"`
 }
 
-// TFString convert the ProjectSpec struct into terraform appliable string
-func (ps *ProjectSpec) TFString() (string, error) {
+// GetTFResourceConfig converts the Project's Spec struct into terraform config string.
+func (p *Project) GetTFResourceConfig() (string, error) {
 	parentReference := ""
-	if ps.ParentReference.Kind == "Organization" {
-		parentReference = fmt.Sprintf(`org_id = "%s"`, ps.ParentReference.Name)
-	} else if ps.ParentReference.Kind == "Folder" {
-		parentReference = fmt.Sprintf(`folder_id = "%s"`, ps.ParentReference.Name)
+	if p.Spec.ParentReference.Kind == "Organization" {
+		parentReference = fmt.Sprintf(`org_id = "%s"`, p.Spec.ParentReference.Name)
+	} else if p.Spec.ParentReference.Kind == "Folder" {
+		parentReference = fmt.Sprintf(`folder_id = "%s"`, p.Spec.ParentReference.Name)
 	} else {
-		return "", fmt.Errorf("error parent kind: %v", ps.ParentReference.Kind)
+		return "", fmt.Errorf("invalid parent reference kind: %v", p.Spec.ParentReference.Kind)
 	}
 
 	tfs := fmt.Sprintf(
-		`resource "google_project" "my_project" {
+		`resource "google_project" "bespin_project" {
 		   name = "%s"
 		   project_id = "%s"
 		   %s
-		}`, ps.Name, ps.ID, parentReference)
+		}`, p.Spec.Name, p.Spec.ID, parentReference)
 	return tfs, nil
+}
+
+// GetTFImportConfig returns an empty terraform project resource block used for terraform import.
+func (p *Project) GetTFImportConfig() string {
+	return `resource "google_project" "bespin_project" {}
+`
+}
+
+// GetTFResourceAddr returns the address of this project resource in terraform config.
+func (p *Project) GetTFResourceAddr() string {
+	return `google_project.bespin_project`
+}
+
+// GetID returns the project ID from underlying provider (e.g. GCP).
+func (p *Project) GetID() string {
+	return p.Spec.ID
 }
 
 // ProjectLabels defines a label dictionary for CRD resources

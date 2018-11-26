@@ -18,11 +18,12 @@ package project
 
 import (
 	"context"
+	"flag"
 	"time"
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
-	"github.com/google/nomos/pkg/bespin-controllers/util"
+	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +35,10 @@ import (
 )
 
 const reconcileTimeout = time.Minute * 5
+
+// Set to true if the bespin binary is running locally, otherwise
+// assume it's running inside a container.
+var bespinLocalRun = flag.Bool("local_run", false, "True if running bespin controller locally")
 
 // Add creates a new Project Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -57,7 +62,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to Project
 	err = c.Watch(&source.Kind{Type: &bespinv1.Project{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
-		glog.Errorf("project controller failed to watch instance: %v", err)
 		return errors.Wrap(err, "project controller error in adding instance to watch")
 	}
 
@@ -84,19 +88,53 @@ func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Resul
 	defer cancel()
 	err := r.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
-		glog.Errorf("project reconciler failed to get instance: %v", err)
+		glog.Errorf("project reconciler error in getting project instance: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "project reconciler error in getting project instance")
 	}
+	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
+	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
+	tfe, err := terraform.NewExecutor(instance, *bespinLocalRun)
+	if err != nil {
+		glog.Errorf("project reconciler failed to create new terraform executor: %v", err)
+		return reconcile.Result{}, errors.Wrap(err, "project reconciler failed to create new terraform executor")
+	}
+	defer func() {
+		// err = tfe.Close()
+		// if err != nil {
+		// 	glog.Errorf("project reconciler failed to close Terraform executor: %v", err)
+		// 	err = errors.Wrap(err, "project reconciler failed to close Terraform executor")
+		// }
+	}()
 
-	tfs, err := instance.Spec.TFString()
+	// It's safe to run terraform init multiple times.
+	err = tfe.RunInit()
 	if err != nil {
-		glog.Errorf("project controller failed to setup terraform config: %v", err)
-		return reconcile.Result{}, errors.Wrap(err, "project reconciler error in getting terraform config")
+		glog.Errorf("project reconciler failed to run terraform init: %v", err)
+		return reconcile.Result{}, errors.Wrap(err, "project reconciler failed to run terraform init")
 	}
-	err = util.RunTerraform(tfs)
+	// TODO(b/120279113): Ideally we should read the error from stdout/stderr and do something smarter here,
+	// but letting the operation fail further down is fine for now.
+	err = tfe.RunImport()
 	if err != nil {
-		glog.Errorf("project reconciler failed to run terraform: %v", err)
-		return reconcile.Result{}, errors.Wrap(err, "project reconciler error in running terraform")
+		glog.Warningf("project controller failed to run terraform import: %v", err)
 	}
+
+	err = tfe.RunInit()
+	if err != nil {
+		glog.Errorf("project reconciler failed to run terraform init: %v", err)
+		return reconcile.Result{}, errors.Wrap(err, "project reconciler failed to run terraform init")
+	}
+	err = tfe.RunPlan()
+	if err != nil {
+		glog.Errorf("project reconciler failed to run terraform plan: %v", err)
+		return reconcile.Result{}, errors.Wrap(err, "project reconciler failed to run terraform plan")
+	}
+
+	err = tfe.RunApply()
+	if err != nil {
+		glog.Errorf("project reconciler failed to run terraform apply: %v", err)
+		return reconcile.Result{}, errors.Wrap(err, "project reconciler failed to run terraform apply")
+	}
+
 	return reconcile.Result{}, nil
 }

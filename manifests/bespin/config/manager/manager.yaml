@@ -41,8 +41,11 @@ spec:
         controller-tools.k8s.io: "1.0"
     spec:
       containers:
-      - command:
-        - /bespin/bespin-controllers-manager
+      - command: [
+          "/bespin/bespin-controllers-manager",
+          "-alsologtostderr=true",
+          "-v=10",
+        ]
         image: controller:latest
         name: manager
         resources:

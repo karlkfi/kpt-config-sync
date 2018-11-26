@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/onsi/gomega"
@@ -62,4 +63,99 @@ func TestStorageProject(t *testing.T) {
 	// Test Delete
 	g.Expect(c.Delete(context.TODO(), fetched)).NotTo(gomega.HaveOccurred())
 	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
+}
+
+func TestGetTFResourceConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		p       *Project
+		want    string
+		wantErr error
+	}{
+		{
+			name: "Project with Organization as parent",
+			p: &Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: ProjectSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "bar",
+					},
+					Name:          "spec-bar",
+					ID:            "some-fake-project",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: ProjectStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: fmt.Sprintf(
+				`resource "google_project" "bespin_project" {
+						name = "spec-bar"
+						project_id = "some-fake-project"
+						Organization
+					}`),
+			wantErr: nil,
+		},
+		{
+			name: "Project with Folder as parent",
+			p: &Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: ProjectSpec{
+					ParentReference: ParentReference{
+						Kind: "Folder",
+						Name: "bar",
+					},
+					Name:          "spec-bar",
+					ID:            "some-fake-project",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: ProjectStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: fmt.Sprintf(
+				`resource "google_project" "bespin_project" {
+						name = "spec-bar"
+						project_id = "some-fake-project"
+						Folder
+					}`),
+			wantErr: nil,
+		},
+		{
+			name: "Project with invalid parentReference",
+			p: &Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: ProjectSpec{
+					ParentReference: ParentReference{
+						Kind: "invalid",
+						Name: "bar",
+					},
+					Name:          "spec-bar",
+					ID:            "some-fake-project",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: ProjectStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want:    "",
+			wantErr: fmt.Errorf("invalid parent reference kind: invalid"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.p.GetTFResourceConfig()
+			switch {
+			case tc.wantErr == nil && err != nil:
+				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
+			case tc.wantErr != nil && err == nil:
+				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
+			case got != tc.want:
+				t.Errorf("GetTFResourceConfig() got %s; want %s", got, tc.want)
+			}
+		})
+
+	}
 }
