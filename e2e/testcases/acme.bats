@@ -101,7 +101,6 @@ function check_metrics_pages() {
 
   local services=(
     git-policy-importer
-    policy-admission-controller
     resourcequota-admission-controller
     syncer
   )

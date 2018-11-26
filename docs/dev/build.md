@@ -69,34 +69,6 @@ This one will be blocked thereafter due to not enough quota.
 $ kubectl create configmap map2 --namespace new-prj
 ```
 
-## PolicyNodes Admission Controller Webhook
-
-List policy node objects:
-
-```console
-$ kubectl get --all-namespaces pn
-```
-
-See the controller logs:
-
-```console
-$ kubectl logs -l app=policy-admission-controller -n nomos-system
-```
-
-To test the policy node check, try removing policy nodes.
-
-Removing a child node should work:
-
-```console
-$ kubectl -n nomos-system delete pn new-prj
-```
-
-When you try and delete the root node, it should fail.
-
-```console
-$ kubectl -n nomos-system delete pn acme
-```
-
 ## GitPolicyImporter
 
 To see logs for policy-importer container:

@@ -49,10 +49,6 @@ installer-staging: \
 		$(STAGING_DIR)/installer/scripts
 	@cp $(TOP_DIR)/scripts/generate-resourcequota-admission-controller-certs.sh \
 		$(STAGING_DIR)/installer/scripts
-	@cp $(TOP_DIR)/scripts/deploy-policy-admission-controller.sh \
-		$(STAGING_DIR)/installer/scripts
-	@cp $(TOP_DIR)/scripts/generate-policy-admission-controller-certs.sh \
-		$(STAGING_DIR)/installer/scripts
 
 check-nomos-installer-config:
 	@echo "+++ Checking installer configuration"
