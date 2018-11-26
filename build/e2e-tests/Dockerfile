@@ -56,7 +56,7 @@ RUN bash -c '[ $UID == 0 ] || useradd -u $UID -G $GID $UNAME'
 RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
   && echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list \
   && apt-get update \
-  && apt-get install -y kubectl=1.11.1-00
+  && apt-get install -y kubectl=1.11.5-00
 
 # Copy installed gcloud into image
 COPY --from=gcloud-install /opt/gcloud/google-cloud-sdk /opt/gcloud/google-cloud-sdk
