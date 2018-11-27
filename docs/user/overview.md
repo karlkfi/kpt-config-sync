@@ -215,6 +215,14 @@ You can replace `linux_amd64` in the URL with other supported platforms:
 *   `darwin_amd64`
 *   `windows_amd64`
 
+For `nomos` to work properly, you need to have already
+[installed Nomos system](installation.md) on the cluster pointed to by current
+context configured through `kubectl`:
+
+```console
+$ kubectl config current-context
+```
+
 The following commands assume that you placed `nomos` in a directory mentioned
 in your `$PATH` environment variable.
 
