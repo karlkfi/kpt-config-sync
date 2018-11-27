@@ -14,7 +14,7 @@ func init() {
 }
 
 var vetCmd = &cobra.Command{
-	Use:   "vet DIRECTORY",
+	Use:   "vet",
 	Short: "Validate a GKE Policy Management directory",
 	Long: `Validate a GKE Policy Management directory
 
@@ -22,11 +22,12 @@ Checks for semantic and syntactic errors in a GKE Policy Management directory
 that will interfere with applying resources. Prints found errors to STDERR and
 returns a non-zero error code if any issues are found.
 `,
-	Example: `  nomos vet my/directory
-  nomos vet /path/to/my/directory`,
-	Args: cobra.ExactArgs(1),
+	Example: `  nomos vet
+  nomos vet --path=my/directory
+  nomos vet --path=/path/to/my/directory`,
+	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		dir, err := filepath.Abs(args[0])
+		dir, err := filepath.Abs(nomosPath.Path())
 		if err != nil {
 			printErrAndDie(errors.Wrap(err, "Failed to get absolute path"))
 		}

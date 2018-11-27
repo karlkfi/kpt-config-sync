@@ -16,7 +16,7 @@ func init() {
 }
 
 var printCmd = &cobra.Command{
-	Use:   "view DIRECTORY",
+	Use:   "view",
 	Short: "View compiled objects from a GKE Policy Management directory",
 	Long: `View compiled objects from a GKE Policy Management directory
 
@@ -25,11 +25,12 @@ objects it contains.
 
 If errors are encountered during parsing, prints those errors and returns a
 non-zero error code.`,
-	Example: `  nomos view my/directory
-  nomos view /path/to/my/directory`,
-	Args: cobra.ExactArgs(1),
+	Example: `  nomos view
+  nomos view --path=my/directory
+  nomos view --path=/path/to/my/directory`,
+	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		dir, err := filepath.Abs(args[0])
+		dir, err := filepath.Abs(nomosPath.Path())
 		if err != nil {
 			printErrAndDie(errors.Wrap(err, "Failed to get absolute path"))
 		}
