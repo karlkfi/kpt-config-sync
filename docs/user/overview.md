@@ -24,6 +24,9 @@ sophisticated pipelines for vetting and deploying at scale.
     1.  [Deletion](#deletion)
     1.  [Rename](#rename)
     1.  [Move](#move)
+1.  [Nomos CLI](#nomos-cli)
+    1.  [vet](#vet)
+    1.  [view](#view)
 
 ## Filesystem Standard
 
@@ -116,7 +119,7 @@ namespace to have additional authorized users but not the others, and allocating
 private quota to each namespace.
 
 The following constraints apply to `namespaces` directory and are enforced
-during [validation](nomos_cli.md):
+during [validation](#vet):
 
 1.  A Namespace directory MUST be a leaf directory.
 1.  A Namespace directory's name MUST match `metadata.name` field of the
@@ -140,7 +143,7 @@ during [validation](nomos_cli.md):
 ClusterRolebindings).
 
 The following constraints apply to `cluster` directory and are enforced during
-[validation](nomos_cli.md):
+[validation](#vet):
 
 1.  The cluster directory MAY contain any number of uniquely named
     cluster-scoped resources.
@@ -194,5 +197,72 @@ Kubernetes resource in namespaces, but does not delete a namespace or workload
 resources.
 
 [1]: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+
+## Nomos CLI
+
+The `nomos` CLI provides tools for creating and managing a GKE Policy Management
+directory.
+
+To install nomos:
+
+```console
+$ curl -LO https://storage.googleapis.com/nomos-release/stable/linux_amd64/nomos
+$ chmod u+x nomos
+```
+
+You can replace `linux_amd64` in the URL with other supported platforms:
+
+*   `darwin_amd64`
+*   `windows_amd64`
+
+The following commands assume that you placed `nomos` in a directory mentioned
+in your `$PATH` environment variable.
+
+To see usage:
+
+```console
+$ nomos --help
+```
+
+### vet
+
+Before committing changes to Git and pushing changes to Kubernetes clusters, it
+is critical to validate them first.
+
+`nomos vet` is tool that validates a GKE Policy Management directory by:
+
+1.  Enforcing
+    [GKE Policy Management Filesystem Standard](overview.md#filesystem-standard).
+2.  Validating resources using the Kubernetes API machinery discovery mechanism
+    and OpenAPI spec (Similar to `kubectl apply --dry-run`).
+
+You can manually run nomos:
+
+```console
+$ nomos vet foo-corp
+```
+
+You can also automatically run nomos vet as a git
+[pre-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks). In
+the root of the repo, run:
+
+```console
+$ echo "nomos vet foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
+```
+
+You can also integrate this into your CI/CD setup, e.g. when using GitHub
+[required status check](https://help.github.com/articles/about-required-status-checks/).
+
+### view
+
+As discussed in [System Overview](system_overview.md), contents of the Git repo
+are converted to ClusterPolicy and PolicyNode CRDs during the import process. To
+print the generated CRD resources in JSON:
+
+```console
+$ nomos view foo-corp
+```
+
+This can be handy to preview the diff of a change before it is committed.
 
 [< Back](../../README.md)

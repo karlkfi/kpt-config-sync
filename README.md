@@ -30,7 +30,6 @@ Try it out by following the [Quickstart Guide](docs/user/quickstart.md).
 ## Using GKE Policy Management
 
 *   [Overview](docs/user/overview.md)
-*   [Validation](docs/user/nomos_cli.md)
 *   [NamespaceSelectors](docs/user/namespaceselectors.md)
 *   [Management Flow](docs/user/management_flow.md)
 *   [Managing Existing Clusters](docs/user/existing_clusters.md)
@@ -46,4 +45,3 @@ Try it out by following the [Quickstart Guide](docs/user/quickstart.md).
 
 Questions or feedback? Get in touch with us at
 [nomos-support@google.com](mailto:nomos-support@google.com).
-
