@@ -116,7 +116,7 @@ namespace to have additional authorized users but not the others, and allocating
 private quota to each namespace.
 
 The following constraints apply to `namespaces` directory and are enforced
-during [validation](validation.md):
+during [validation](nomos_cli.md):
 
 1.  A Namespace directory MUST be a leaf directory.
 1.  A Namespace directory's name MUST match `metadata.name` field of the
@@ -140,7 +140,7 @@ during [validation](validation.md):
 ClusterRolebindings).
 
 The following constraints apply to `cluster` directory and are enforced during
-[validation](validation.md):
+[validation](nomos_cli.md):
 
 1.  The cluster directory MAY contain any number of uniquely named
     cluster-scoped resources.

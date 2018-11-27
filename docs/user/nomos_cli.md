@@ -1,14 +1,6 @@
-# Validation
+# Nomos CLI
 
-Before committing changes to Git and pushing changes to Kubernetes clusters, it
-is critical to validate them first.
-
-`nomos vet` is tool that validates a GKE Policy Management directory by:
-
-1.  Enforcing
-    [GKE Policy Management Filesystem Standard](overview.md#filesystem-standard).
-2.  Validating resources using the Kubernetes API machinery discovery mechanism
-    and OpenAPI spec (Similar to `kubectl apply --dry-run`).
+The `nomos` CLI provides tools for creating and managing a GKE Policy Management directory.
 
 To install nomos:
 
@@ -31,6 +23,19 @@ You can manually run nomos:
 $ nomos vet foo-corp
 ```
 
+## Validation
+
+Before committing changes to Git and pushing changes to Kubernetes clusters, it
+is critical to validate them first.
+
+`nomos vet` is tool that validates a GKE Policy Management directory by:
+
+1.  Enforcing
+    [GKE Policy Management Filesystem Standard](overview.md#filesystem-standard).
+2.  Validating resources using the Kubernetes API machinery discovery mechanism
+    and OpenAPI spec (Similar to `kubectl apply --dry-run`).
+
+
 You can also automatically run nomos vet as a git
 [pre-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks). In
 the root of the repo, run:
@@ -42,14 +47,14 @@ $ echo "nomos vet foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-com
 You can also integrate this into your CI/CD setup, e.g. when using GitHub
 [required status check](https://help.github.com/articles/about-required-status-checks/).
 
-## Print CRDs
+## View CRDs
 
 As discussed in [System Overview](system_overview.md), contents of the Git repo
 are converted to ClusterPolicy and PolicyNode CRDs during the import process. To
 print the generated CRD resources in JSON:
 
 ```console
-$ nomos vet -print foo-corp
+$ nomos view foo-corp
 ```
 
 This can be handy to preview the diff of a change before it is committed.

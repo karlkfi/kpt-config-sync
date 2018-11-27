@@ -30,7 +30,7 @@ Try it out by following the [Quickstart Guide](docs/user/quickstart.md).
 ## Using GKE Policy Management
 
 *   [Overview](docs/user/overview.md)
-*   [Validation](docs/user/validation.md)
+*   [Validation](docs/user/nomos_cli.md)
 *   [NamespaceSelectors](docs/user/namespaceselectors.md)
 *   [Management Flow](docs/user/management_flow.md)
 *   [Managing Existing Clusters](docs/user/existing_clusters.md)
