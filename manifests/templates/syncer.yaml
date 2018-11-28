@@ -43,9 +43,3 @@ spec:
         ports:
         - containerPort: 8675
           name: metrics-port
-        env:
-        - name: GCP_MODE
-          valueFrom:
-            configMapKeyRef:
-              name: syncer
-              key: gcp.mode

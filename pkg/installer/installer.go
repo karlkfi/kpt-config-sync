@@ -53,8 +53,6 @@ const (
 	// "Open sesame" for uninstallation.
 	confirmUninstall = "deletedeletedelete"
 
-	syncerConfigMapName = "syncer"
-
 	gitPolicyImporterDeployment = "git-policy-importer"
 	gcpPolicyImporterDeployment = "gcp-policy-importer"
 
@@ -162,13 +160,6 @@ func (i *Installer) gcpConfigMapContent() []string {
 		c = append(c, fmt.Sprintf("POLICY_API_ADDRESS=%v", i.c.GCP.PolicyAPIAddress))
 	}
 	return c
-}
-
-// syncerConfigMapContent returns a list of literals defining the ConfigMap for the syncer
-func (i *Installer) syncerConfigMapContent() []string {
-	return []string{
-		fmt.Sprintf("gcp.mode=%v", !i.c.GCP.Empty()),
-	}
 }
 
 func (i *Installer) deploySecret(name string, content []string) error {
@@ -317,7 +308,6 @@ func (i *Installer) processCluster(cluster string) error {
 		importerSecretName = gcpPolicyImporterCreds
 		importerSecretContent = i.gcpSecretContent()
 	}
-	syncerConfigMapContent := i.syncerConfigMapContent()
 
 	// Delete the importer deployment.  This is important because a
 	// change in the secret should also be reflected in the importer.
@@ -329,9 +319,6 @@ func (i *Installer) processCluster(cluster string) error {
 	}
 	if err = i.deploySecret(importerSecretName, importerSecretContent); err != nil {
 		return errors.Wrapf(err, "failed to create Secret: %v", importerSecretName)
-	}
-	if err = i.deployConfigMap(syncerConfigMapName, syncerConfigMapContent); err != nil {
-		return errors.Wrapf(err, "failed to create syncer ConfigMap: %v", syncerConfigMapContent)
 	}
 	for _, certInstaller := range i.certInstallers {
 		if err = certInstaller.deploySecrets(i.workDir); err != nil {

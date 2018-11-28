@@ -136,48 +136,6 @@ func TestImporterConfigMap(t *testing.T) {
 	}
 }
 
-func TestSyncerConfigMap(t *testing.T) {
-	testCases := []struct {
-		name   string
-		config config.Config
-		want   []string
-	}{
-		{
-			name: "git ssh, no known hosts",
-			config: config.Config{
-				Git: config.GitConfig{
-					SyncRepo: "git@github.com:user/foo-corp.git",
-				},
-			},
-			want: []string{
-				"gcp.mode=false",
-			},
-		},
-		{
-			name: "gcp",
-			config: config.Config{
-				GCP: config.GCPConfig{
-					OrgID:              "1234",
-					PrivateKeyFilename: "/some/file",
-				},
-			},
-			want: []string{
-				"gcp.mode=true",
-			},
-		},
-	}
-
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			i := &Installer{c: tt.config}
-			got := i.syncerConfigMapContent()
-			if diff := cmp.Diff(got, tt.want); diff != "" {
-				t.Errorf("expected %v got %v\ndiff %v", tt.want, got, diff)
-			}
-		})
-	}
-}
-
 func TestInstaller_DeleteClusterPolicies(t *testing.T) {
 	const p1name = "mostExcellentPolicy"
 	const p2name = "mostHeinousPolicy"
