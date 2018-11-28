@@ -32,7 +32,6 @@ Try it out by following the [Quickstart Guide](docs/user/quickstart.md).
 *   [Overview](docs/user/overview.md)
 *   [NamespaceSelectors](docs/user/namespaceselectors.md)
 *   [Management Flow](docs/user/management_flow.md)
-*   [Managing Existing Clusters](docs/user/existing_clusters.md)
 *   [System Configuration](docs/user/system_config.md)
 *   [Hierarchical ResourceQuota](docs/user/rq.md)
 *   [Monitoring and Debugging](docs/user/monitoring_and_debugging.md)

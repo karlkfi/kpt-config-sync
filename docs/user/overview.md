@@ -133,8 +133,8 @@ during [validation](#vet):
 1.  All directory names MUST be valid Kubernetes namespace names (i.e.
     [DNS Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md)).
     In addition a name MUST NOT be `default`, `nomos-system`, or have `kube-`
-    prefix. This topic is discussed in depth in the
-    [Managing Existing Clusters](existing_clusters.md).
+    prefix. This topic is discussed in depth in
+    [Managagement Flow](management_flow.md).
 1.  All directory names MUST be unique in the hierarchy.
 
 ### cluster/

@@ -2,63 +2,78 @@
 
 The following decision tree shows the expected operations taken by GKE Policy
 Management System based on the desired state in the Git repo and the current
-state of the cluster, including the [management labels](existing_clusters.md)
-applied by the user.
+state of the cluster, including the management labels applied by the user.
 
 ![drawing](../img/system_flow.png)
 
 Examples:
 
 *   ClusterRole `pod-accountant` exists on the cluster, but does not exist in
-    git for
+    Git for
     [foo-corp](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0). GKE
     Policy Management is installed for foo-corp and has a
     [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
     for ClusterRole. GKE Policy Management will not delete or alter
     `pod-accountant`.
 *   GKE Policy Management is installed for foo-corp. Someone adds a new
-    ClusterRole `quota-viewer` to git in
+    ClusterRole `quota-viewer` to Git in
     `foo-corp/cluster/quota-viewer-clusterrole.yaml`. GKE Policy Management will
-    now create the `quota-viewer` ClusterRole matching the one in git. Time
-    passes. Someone deletes the `quota-viewer-clusterrole.yaml` from git. GKE
+    now create the `quota-viewer` ClusterRole matching the one in Git. Time
+    passes. Someone deletes the `quota-viewer-clusterrole.yaml` from Git. GKE
     Policy Management will now remove `quota-viewer` from the cluster.
 *   Role `job-creator` exists on the cluster in shipping-dev namespace with a
-    `nomos.dev/managed` label applied and exists in git for
+    `nomos.dev/managed` label applied and exists in Git for
     [foo-corp](https://github.com/frankfarzan/foo-corp-example). GKE Policy
     Management is installed for foo-corp and has a
     [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
     for Role. GKE Policy Management will now update `job-creator` to match the
     one declared in
     [job-creator-role.yaml](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/job-creator-role.yaml).
-*   RoleBinding
+*   foo-corp has a RoleBinding
     [pod-creators](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/pod-creator-rolebinding.yaml)
-    is in git for foo-corp and a
+    in Git and a
     [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
-    has been declared Rolebinding. GKE Policy Management will ensure that all
-    `pod-creator` rolebindings in descendants of the `shipping-app-backend`
-    Abstract Namespace (`shipping-prod`, `shipping-staging`, `shipping-dev`)
-    exactly match the declared `pod-creator` RoleBinding. Time passes and
-    someone modifies the
+    for Rolebinding. GKE Policy Management will ensure that all `pod-creator`
+    rolebindings in descendants of the `shipping-app-backend` Abstract Namespace
+    (`shipping-prod`, `shipping-staging`, `shipping-dev`) exactly match the
+    declared `pod-creator` RoleBinding. Time passes and someone modifies the
     [shipping-prod](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-prod)
     `pod-creator` RoleBinding. GKE Policy Management will notice the change and
-    update `pod-creator` to match the declaration in git. Time passes and
-    someone removes `pod-creator` from git. GKE Policy Management will now
+    update `pod-creator` to match the declaration in Git. Time passes and
+    someone removes `pod-creator` from Git. GKE Policy Management will now
     remove the `pod-creator` resource from the descendant namespaces.
 *   Foo-corp has a
     [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
-    declared for Role. Someone creates a `secret-admin` Role in `shipping-prod`.
-    GKE Policy Management will notice that the Role is not declared in
+    for Role. Someone creates a `secret-admin` Role in `shipping-prod`. GKE
+    Policy Management will notice that the Role is not declared in
     `shipping-prod` or any of its ancestors, but will not delete it because it
     does not have a `nomos.dev/managed` label applied on it. Later on, the
     `nomos.dev/managed` label is added ot it. GKE Policy Management will now
     delete the `secret-admin` Role from the namespace.
-*   Foo-corp has a
+*   Namespace
+    [audit](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/audit/namespace.yaml)
+    is not on the cluster and is added to Git. GKE Policy Management will create
+    the `audit` Namespace with a `nomos.dev/managed` label even though there is
+    no Sync declared for namespaces because Namespace sync is always enabled.
+*   Namespace
+    [shipping-dev](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/namespace.yaml)
+    exists on the cluster with no management label and RoleBinding
+    [job-creators](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/job-creator-rolebinding.yaml)
+    exists in the `shipping-dev` namespace with the `nomos.dev/managed` label
+    and foo-corp has a
     [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
-    declared for Role. Someone adds a `shipping-admin` Role to git in
-    `shipping-prod`. GKE Policy Management will notice the updated declarations
-    and create the `shipping-admin` role in the `shipping-prod` namespace.
+    for RoleBinding. `job-creators` will not be managed at this time.
+    *   Someone adds `shipping-dev` to Git but does not add `job-creators` to
+        Git. The `shipping-dev` Namespace will remain untouched because it does
+        not have a `nomos.dev/managed` label, but `job-creators` will be deleted
+        because it has a `nomos.dev/managed` label and is not declared in Git.
+    *   Someone adds `shipping-dev` and `job-creators` to Git. The
+        `job-creators` resource will be updated to match the declaration in Git
+        because it has a `nomos.dev/managed` label, but the `shipping-dev`
+        Namespace will remain untouched because it does not have a
+        `nomos.dev/managed` label.
 
-#### Sync and Resource Precedence
+## Sync and Resource Precedence
 
 GKE Policy Management considers Sync changes to have higher precedence. This is
 because it leads to less destructive actions on the cluster.
@@ -114,5 +129,27 @@ ResourceQuotas.
 $ kubectl get resourcequota --all-namespaces -l nomos.dev/managed
 No resources found.
 ```
+
+## Namespaces
+
+Nomos handles Namespaces as a first-class notion with regard to lifecycle
+management. There are three categories of namespaces: Managed, Reserved, and
+Legacy Namespaces.
+
+1.  **Reserved Namespaces** are namespaces that are either pre-installed on the
+    kubernetes cluster (`kube-*`, `nomos-system`, `default`) or
+    [designated as reserved](system_config.md#reserved-namespaces) by the user.
+    Reserved namespaces and the resources within them **will not be managed**
+    even if the namespace and/or resource has a nomos.dev/managed=enabled label.
+1.  **Managed Namespaces** are namespaces on the cluster that GKE Policy
+    Management keeps in sync with the repo. The Namespace **MUST** have the
+    label nomos.dev/managed=enabled on cluster and exist in the Git source of
+    truth. They are created when added to Git, and deleted when removed from
+    Git.
+1.  **Legacy Namespaces** are namespaces on the cluster without the
+    nomos.dev/managed=enabled label. They will cause alerts for being in a
+    non-ideal state, however, GKE Policy Management will neither update nor
+    delete them. Resources inside of a Legacy Namespace will be managed
+    according to their labeling.
 
 [< Back](../../README.md)
