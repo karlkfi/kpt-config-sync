@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/google/nomos/cmd/nomos/repo"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +23,7 @@ func init() {
 }
 
 var validate bool
-var nomosPath = WorkingDirectoryPath
+var nomosPath = repo.WorkingDirectoryPath
 
 // Execute executes the root nomos command.
 func Execute() {

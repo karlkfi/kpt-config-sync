@@ -232,6 +232,20 @@ To see usage:
 $ nomos --help
 ```
 
+### init
+
+Use `nomos init` to begin a new GKE Policy Management directory. Given an empty
+directory, populates it with required files and a few commonly-needed objects to
+get you started.
+
+```console
+$ cd foo-corp
+$ git init
+$ nomos init
+```
+
+See `nomos init --help` for more.
+
 ### vet
 
 Before committing changes to Git and pushing changes to Kubernetes clusters, it
@@ -247,7 +261,8 @@ is critical to validate them first.
 You can manually run nomos:
 
 ```console
-$ nomos vet foo-corp
+$ cd foo-corp
+$ nomos vet
 ```
 
 You can also automatically run nomos vet as a git
@@ -255,7 +270,8 @@ You can also automatically run nomos vet as a git
 the root of the repo, run:
 
 ```console
-$ echo "nomos vet foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
+$ cd foo-corp
+$ echo "nomos vet" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
 ```
 
 You can also integrate this into your CI/CD setup, e.g. when using GitHub
@@ -268,7 +284,7 @@ are converted to ClusterPolicy and PolicyNode CRDs during the import process. To
 print the generated CRD resources in JSON:
 
 ```console
-$ nomos view foo-corp
+$ nomos view
 ```
 
 This can be handy to preview the diff of a change before it is committed.

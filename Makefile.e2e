@@ -116,5 +116,9 @@ test-nomos-vet-local: build
 		$(TOP_DIR)/.output/tmp/actual-errs.txt || true
 	@diff $(TOP_DIR)/examples/parse-errors/invalid-resources-sync/expected-errs.txt $(TOP_DIR)/.output/tmp/actual-errs.txt
 
+	@rm -rf $(TOP_DIR)/.output/tmp/empty
+	@mkdir $(TOP_DIR)/.output/tmp/empty
+	@cd $(TOP_DIR)/.output/tmp/empty && git init && $(NOMOS_LOCAL) init && $(NOMOS_LOCAL) vet
+
 include Makefile.e2e.ci
 include Makefile.e2e.prober
