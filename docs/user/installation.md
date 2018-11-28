@@ -93,12 +93,17 @@ namespace into your cluster.
 $ kubectl apply -f nomos-operator.yaml
 ```
 
-You can verify that the Nomos Operator was deployed correctly `$bash $ kubectl
--n kube-system get pods | grep nomos nomos-operator-6f988f5fdd-4r7tr 1/1 Running
-0 26s`
+You can verify that the Nomos Operator was deployed correctly
+```console
+$ kubectl -n kube-system get pods | grep nomos
+nomos-operator-6f988f5fdd-4r7tr 1/1 Running 0 26s
+```
 
-and that the nomos-system namespace was created `$bash $ kubectl get ns | grep
-nomos nomos-system Active 1m`
+and that the nomos-system namespace was created
+```console
+$ kubectl get ns | grep
+nomos nomos-system Active 1m
+```
 
 ### Create the Nomos Config File
 
@@ -162,7 +167,7 @@ Use the same secret you configured in the previous step to create the
 
 ```console
 $ kubectl create secret generic git-creds -n=nomos-system \
-    --from-file=ssh=~/.ssh/id_rsa.nomos
+    --from-file=ssh=$HOME/.ssh/id_rsa.nomos
 ```
 
 #### Using GitCookies
@@ -172,7 +177,7 @@ Follow this process when `secretType` is set to `cookiefile`.
 The process for acquiring a gitcookie depends on the configuration of your git
 server your repository is on, but is commonly used as an authentication
 mechanism for some hosting services, such as Google Cloud Source Repositories
-and Gerrit. Git Cookies are usually stored in `~/.gitcookies` on the local
+and Gerrit. Git Cookies are usually stored in `$HOME/.gitcookies` on the local
 machine.
 
 Use the same secret you configured in the previous step to create the
@@ -180,7 +185,7 @@ Use the same secret you configured in the previous step to create the
 
 ```console
 $ kubectl create secret generic git-creds -n=nomos-system \
-    --from-file=cookie-file=~/.gitcookies
+    --from-file=cookie-file=$HOME/.gitcookies
 ```
 
 Note that these secrets are deployed into the nomos-system namespace, so it is
@@ -192,7 +197,7 @@ Use the Nomos Resource yaml you created in the previous step to create the
 Resource in the cluster.
 
 ```console
-kubectl create -f nomos.yaml
+$ kubectl create -f nomos.yaml
 ```
 
 ### Verify Installation
@@ -208,7 +213,6 @@ $ kubectl get pods -n=nomos-system
 NAME                                                  READY     STATUS    RESTARTS   AGE
 git-policy-importer-66bf6b9db4-pbsxn                  2/2       Running   0          24m
 monitor-6f968db9-mc2xp                                1/1       Running   0          24m
-resourcequota-admission-controller-64988d97f4-nxmsc*  1/1       Running   0          24m
 syncer-58545bc77d-l485n                               1/1       Running   0          24m
 ```
 
@@ -217,7 +221,7 @@ syncer-58545bc77d-l485n                               1/1       Running   0     
 To uninstall nomos from your cluster, delete the Nomos Resource
 
 ```console
-kubectl -n=nomos-system delete nomos --all
+$ kubectl -n=nomos-system delete nomos --all
 ```
 
 The affected components are:
