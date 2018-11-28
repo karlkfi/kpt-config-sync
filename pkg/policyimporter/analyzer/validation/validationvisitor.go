@@ -16,9 +16,7 @@ limitations under the License.
 package validation
 
 import (
-	"fmt"
 	"path"
-	"strings"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
@@ -210,22 +208,12 @@ func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.Namespace
 	}
 }
 
-func (v *InputValidator) checkAnnotationsAndLabels(o ast.FileObject) {
-	if err := v.checkAnnotations(o); err != nil {
-		v.errs.Add(err)
-	}
-	if err := v.checkLabels(o); err != nil {
-		v.errs.Add(err)
-	}
-}
-
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 	gvk := o.GroupVersionKind()
 	if !v.allowedGVKs[gvk] {
 		v.errs.Add(UnsyncableClusterObjectError{o})
 	}
-	v.checkAnnotationsAndLabels(o.FileObject)
 	if v.coverage != nil {
 		v.coverage.ValidateObject(o.ToMeta(), &v.errs)
 	}
@@ -260,43 +248,9 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
 		}
 	}
 
-	v.checkAnnotationsAndLabels(o.FileObject)
 	if v.coverage != nil {
 		v.coverage.ValidateObject(o.ToMeta(), &v.errs)
 	}
 
 	return v.Base.VisitObject(o)
-}
-
-func invalids(m map[string]string, allowed map[string]struct{}) []string {
-	var found []string
-
-	for k := range m {
-		if _, found := allowed[k]; found {
-			continue
-		}
-		if strings.HasPrefix(k, policyhierarchy.GroupName+"/") {
-			found = append(found, fmt.Sprintf("%q", k))
-		}
-	}
-
-	return found
-}
-
-func (v *InputValidator) checkAnnotations(o ast.FileObject) error {
-	found := invalids(o.ToMeta().GetAnnotations(), v1alpha1.InputAnnotations)
-	if len(found) == 0 {
-		return nil
-	}
-	return IllegalAnnotationDefinitionError{o, found}
-}
-
-var noneAllowed = map[string]struct{}{}
-
-func (v *InputValidator) checkLabels(o ast.FileObject) error {
-	found := invalids(o.ToMeta().GetLabels(), noneAllowed)
-	if len(found) == 0 {
-		return nil
-	}
-	return IllegalLabelDefinitionError{o, found}
 }

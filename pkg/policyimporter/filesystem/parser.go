@@ -715,6 +715,8 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 				errorBuilder.Add(validation.IllegalSystemResourcePlacementError{Root: p.root, Info: info})
 			}
 
+			validation.CheckAnnotationsAndLabels(info, source, errorBuilder)
+
 			switch gvk {
 			case corev1.SchemeGroupVersion.WithKind("Namespace"):
 				if dir == repo.NamespacesDir {

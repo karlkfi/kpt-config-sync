@@ -2878,6 +2878,40 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			},
 			expectedErrorCode: validation.IllegalSubdirectoryErrorCode,
 		},
+		{
+			testName:    "Objects in non-namespaces/ with an invalid label is an error",
+			root:        "foo",
+			clusterName: "cluster-1",
+			testFiles: fstesting.FileContentMap{
+				"system/nomos.yaml": `
+kind: Repo
+apiVersion: nomos.dev/v1alpha1
+spec:
+  version: "0.1.0"
+metadata:
+  name: repo
+  labels:
+    nomos.dev/illegal-label: "true"`,
+			},
+			expectedErrorCode: validation.IllegalLabelDefinitionErrorCode,
+		},
+		{
+			testName:    "Objects in non-namespaces/ with an invalid annotation is an error",
+			root:        "foo",
+			clusterName: "cluster-1",
+			testFiles: fstesting.FileContentMap{
+				"system/nomos.yaml": `
+kind: Repo
+apiVersion: nomos.dev/v1alpha1
+spec:
+  version: "0.1.0"
+metadata:
+  name: repo
+  annotations:
+    nomos.dev/unsupported: "true"`,
+			},
+			expectedErrorCode: validation.IllegalAnnotationDefinitionErrorCode,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, test.Run)
