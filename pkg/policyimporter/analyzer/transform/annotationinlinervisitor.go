@@ -123,9 +123,8 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 	}
 	v.nsTransformer = annotationTransformer{}
 	v.nsTransformer.addMappingForKey(v1alpha1.NamespaceSelectorAnnotationKey, m)
-	if err := v.clusterSelectorTransformer.transform(n); err != nil {
-		v.errs.Add(errors.Wrapf(err, "failed to inline ClusterSelector for node %q", n.Path))
-	}
+
+	v.errs.Add(errors.Wrapf(v.clusterSelectorTransformer.transform(n), "failed to inline ClusterSelector for node %q", n.Path))
 	annotatePopulated(n, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return v.Copying.VisitTreeNode(n)
 }
@@ -136,12 +135,10 @@ func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) *ast.Name
 	defer glog.V(6).Infof("VisitObject(): EXIT")
 	newObject := v.Copying.VisitObject(o)
 	m := newObject.ToMeta()
-	if err := v.nsTransformer.transform(m); err != nil {
-		v.errs.Add(errors.Wrapf(err, "failed to inline annotation for object %q", m.GetName()))
-	}
-	if err := v.clusterSelectorTransformer.transform(m); err != nil {
-		v.errs.Add(errors.Wrapf(err, "failed to inline cluster selector annotations for object %q", m.GetName()))
-	}
+	v.errs.Add(errors.Wrapf(v.nsTransformer.transform(m),
+		"failed to inline annotation for object %q", m.GetName()))
+	v.errs.Add(errors.Wrapf(v.clusterSelectorTransformer.transform(m),
+		"failed to inline cluster selector annotations for object %q", m.GetName()))
 	annotatePopulated(m, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject
 }
@@ -152,9 +149,8 @@ func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) *ast
 	defer glog.V(6).Infof("VisitClusterObject(): EXIT")
 	newObject := o.DeepCopy()
 	m := newObject.ToMeta()
-	if err := v.clusterSelectorTransformer.transform(m); err != nil {
-		v.errs.Add(errors.Wrapf(err, "failed to inline cluster selector annotations for object %q", m.GetName()))
-	}
+	v.errs.Add(errors.Wrapf(v.clusterSelectorTransformer.transform(m),
+		"failed to inline cluster selector annotations for object %q", m.GetName()))
 	annotatePopulated(m, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject
 }

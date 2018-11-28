@@ -72,9 +72,7 @@ func (v *NameValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject
 }
 
 func (v *NameValidator) handleFileObject(scope string, o *ast.FileObject) {
-	if err := v.nameChecker.add(scope, o); err != nil {
-		v.errs.Add(err)
-	}
+	v.errs.Add(v.nameChecker.add(scope, o))
 }
 
 // nameChecker is a map of GroupKind to map of object name to ast.FileObject which helps facilitate

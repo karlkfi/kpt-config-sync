@@ -235,9 +235,7 @@ func (p *Parser) readResources(dir string, allowSubdirectories bool, errorBuilde
 			FilenameParam(false, options).
 			Do()
 		fileInfos, err = result.Infos()
-		if err != nil {
-			errorBuilder.Add(err)
-		}
+		errorBuilder.Add(err)
 
 		if !allowSubdirectories {
 			// If subdirectories are not allowed, return an error for each invalid subdirectory.
@@ -629,9 +627,7 @@ func (p *Parser) processClusterRegistryDir(dirname string, infos []*resource.Inf
 		}
 	}
 
-	if v.err != nil {
-		errorBuilder.Add(errors.Wrapf(v.err, "clusterregistry directory is invalid: %s", dirname))
-	}
+	errorBuilder.Add(errors.Wrapf(v.err, "clusterregistry directory is invalid: %s", dirname))
 	return crc, css
 }
 

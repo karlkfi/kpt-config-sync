@@ -37,10 +37,11 @@ func From(errs []error) MultiError {
 
 // Add adds error to the builder.
 // If the type is known to contain an array of error, adds all of the contained errors.
+// If the error is nil, do nothing.
 func (b *Builder) Add(err error) {
 	switch e := err.(type) {
 	case nil:
-		panic("Programmer error: Attempt to add nil error.")
+		// No error to add if nil.
 	case utilerrors.Aggregate:
 		b.errs = append(b.errs, e.Errors()...)
 	case *MultiError:

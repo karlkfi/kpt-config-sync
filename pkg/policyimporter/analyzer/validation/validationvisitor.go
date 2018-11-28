@@ -153,9 +153,9 @@ func (v *InputValidator) Error() error {
 
 // VisitReservedNamespaces implements Visitor
 func (v *InputValidator) VisitReservedNamespaces(rs *ast.ReservedNamespaces) *ast.ReservedNamespaces {
-	if r, err := reserved.From(&rs.ConfigMap); err != nil {
-		v.errs.Add(err)
-	} else {
+	r, err := reserved.From(&rs.ConfigMap)
+	v.errs.Add(err)
+	if err == nil {
 		v.reserved = r
 	}
 	return nil

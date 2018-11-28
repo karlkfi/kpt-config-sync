@@ -110,9 +110,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	var errBuilder multierror.Builder
 	// Finalize Syncs that have not already been finalized.
 	for _, tf := range toFinalize {
-		if err := r.client.Upsert(ctx, tf); err != nil {
-			errBuilder.Add(errors.Wrap(err, "could not finalize sync pending delete"))
-		}
+		errBuilder.Add(errors.Wrap(r.client.Upsert(ctx, tf), "could not finalize sync pending delete"))
 	}
 
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
@@ -142,9 +140,8 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 				s.Status = status
 				return s, nil
 			}
-			if _, err := r.client.Update(ctx, sync, updateFn); err != nil {
-				errBuilder.Add(errors.Wrap(err, "could not update sync status"))
-			}
+			_, err := r.client.Update(ctx, sync, updateFn)
+			errBuilder.Add(errors.Wrap(err, "could not update sync status"))
 		}
 	}
 
