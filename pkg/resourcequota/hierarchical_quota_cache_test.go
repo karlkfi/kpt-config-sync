@@ -1,4 +1,3 @@
-// Reviewed by sunilarora
 package resourcequota
 
 import (
