@@ -11,7 +11,7 @@ Exactly one Repo resource must be declared in the system directory.
 
 For purposes of the example we have placed this object in nomos.yaml, however,
 matching the file name is not a requirement. At the moment, the version must
-match 1.0.0. If the semantics or format of the repo changes over time, this file
+match 0.1.0. If the semantics or format of the repo changes over time, this file
 will be the mechanism used to determine compatibility and automate upgrade.
 
 ```console
@@ -24,7 +24,7 @@ apiVersion: nomos.dev/v1alpha1
 metadata:
   name: repo
 spec:
-  version: "1.0.0"
+  version: "0.1.0"
 ```
 
 ## Sync
