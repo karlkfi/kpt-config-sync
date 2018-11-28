@@ -16,6 +16,7 @@ limitations under the License.
 package filesystem
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -143,6 +144,36 @@ func TestBespinParser(t *testing.T) {
 				if diff := cmp.Diff(n, tc.wantPolicyCount); diff != "" {
 					t.Errorf("Actual and expected number of policy nodes didn't match: %v", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestBespinVisitorsAdded(t *testing.T) {
+	var tests = []struct {
+		name    string
+		enabled bool
+		want    reflect.Type
+	}{
+		{
+			name: "Bespin disabled should not add Bespin visitors",
+			want: reflect.TypeOf(nomosVisitorProvider{}),
+		},
+		{
+			name:    "Bespin enabled should add Bespin visitors",
+			enabled: true,
+			want:    reflect.TypeOf(bespinVisitorProvider{}),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := NewParserWithFactory(nil, nil, ParserOpt{Bespin: tc.enabled})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if vt := reflect.TypeOf(p.vp); vt != tc.want {
+				t.Errorf("got %v, want %v", vt, tc.want)
 			}
 		})
 	}

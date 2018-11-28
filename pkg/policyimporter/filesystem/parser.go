@@ -77,6 +77,8 @@ type Parser struct {
 	discoveryClient discovery.ServerResourcesInterface
 	// OS-specific path to root.
 	root string
+	// Visitor Provider for generating the list of visitors.
+	vp visitorProvider
 }
 
 // ParserOpt has often customized parser options. Use for example in NewParser.
@@ -87,6 +89,62 @@ type ParserOpt struct {
 	Validate bool
 	// Bespin will enable the Bespin visitors.
 	Bespin bool
+}
+
+// visitorProvider is an interface that abstracts out the source of visitors
+// that are used to walk the AST.
+type visitorProvider interface {
+	visitors(apiInfo *meta.APIInfo,
+		syncs []*v1alpha1.Sync,
+		clusters []clusterregistry.Cluster,
+		selectors []v1alpha1.ClusterSelector,
+		opts ParserOpt) []ast.CheckingVisitor
+}
+
+// nomosVisitorProvider is the default visitor provider.  It handles
+// plain vanilla nomos configs.
+type nomosVisitorProvider struct{}
+
+func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo,
+	syncs []*v1alpha1.Sync,
+	clusters []clusterregistry.Cluster,
+	selectors []v1alpha1.ClusterSelector,
+	opts ParserOpt) []ast.CheckingVisitor {
+
+	specs := toInheritanceSpecs(syncs)
+	visitors := []ast.CheckingVisitor{
+		validation.NewInputValidator(syncs, specs, clusters, selectors, opts.Vet),
+		transform.NewPathAnnotationVisitor(),
+		validation.NewScope(apiInfo),
+		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
+		transform.NewAnnotationInlinerVisitor(),
+		transform.NewInheritanceVisitor(specs),
+	}
+	if spec, found := specs[corev1.SchemeGroupVersion.WithKind("ResourceQuota").GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
+		visitors = append(visitors, transform.NewQuotaVisitor())
+	}
+	visitors = append(visitors, validation.NewNameValidator())
+
+	return visitors
+}
+
+// bespinVisitorProvider is used when bespin is enabled to handle the bespin specific
+// parts that won't pass the regular nomos checks.
+type bespinVisitorProvider struct{}
+
+func (b bespinVisitorProvider) visitors(apiInfo *meta.APIInfo,
+	syncs []*v1alpha1.Sync,
+	clusters []clusterregistry.Cluster,
+	selectors []v1alpha1.ClusterSelector,
+	opts ParserOpt) []ast.CheckingVisitor {
+	// TODO(b/119825336): Bespin and the InputValidator are having trouble playing
+	// nicely. For now, just return the visitors that Bespin needs.
+	return []ast.CheckingVisitor{
+		transform.NewGCPHierarchyVisitor(),
+		transform.NewGCPPolicyVisitor(),
+		validation.NewScope(apiInfo),
+		validation.NewNameValidator(),
+	}
 }
 
 // NewParser creates a new Parser.
@@ -102,10 +160,15 @@ func NewParser(clientGetter genericclioptions.RESTClientGetter, discoveryClient 
 // NewParserWithFactory creates a new Parser using the specified factory.
 // NewParser is the more common constructor, but this is useful for testing.
 func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterface, opts ParserOpt) (*Parser, error) {
+	var vp visitorProvider = nomosVisitorProvider{}
+	if opts.Bespin {
+		vp = bespinVisitorProvider{}
+	}
 	p := &Parser{
 		opts:            opts,
 		factory:         f,
 		discoveryClient: dc,
+		vp:              vp,
 	}
 	return p, nil
 }
@@ -306,11 +369,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	}
 	fsRoot.Tree = tree
 
-	visitors, err := buildVisitors(apiInfo, syncs, clusters, selectors, p.opts)
-	if err != nil {
-		errorBuilder.Add(err)
-		return nil, errorBuilder.Build()
-	}
+	visitors := p.vp.visitors(apiInfo, syncs, clusters, selectors, p.opts)
 
 	for _, visitor := range visitors {
 		fsRoot = fsRoot.Accept(visitor)
@@ -338,40 +397,6 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 		return nil, errorBuilder.Build()
 	}
 	return policies, nil
-}
-
-func buildVisitors(apiInfo *meta.APIInfo,
-	syncs []*v1alpha1.Sync,
-	clusters []clusterregistry.Cluster,
-	selectors []v1alpha1.ClusterSelector,
-	opts ParserOpt) ([]ast.CheckingVisitor, error) {
-
-	// TODO(b/119825336): Bespin and the InputValidator are having trouble playing
-	// nicely. For now, just return the visitors that Bespin needs.
-	if opts.Bespin {
-		return []ast.CheckingVisitor{
-			transform.NewGCPHierarchyVisitor(),
-			transform.NewGCPPolicyVisitor(),
-			validation.NewScope(apiInfo),
-			validation.NewNameValidator(),
-		}, nil
-	}
-
-	specs := toInheritanceSpecs(syncs)
-	visitors := []ast.CheckingVisitor{
-		validation.NewInputValidator(syncs, specs, clusters, selectors, opts.Vet),
-		transform.NewPathAnnotationVisitor(),
-		validation.NewScope(apiInfo),
-		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
-		transform.NewAnnotationInlinerVisitor(),
-		transform.NewInheritanceVisitor(specs),
-	}
-	if spec, found := specs[corev1.SchemeGroupVersion.WithKind("ResourceQuota").GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
-		visitors = append(visitors, transform.NewQuotaVisitor())
-	}
-	visitors = append(visitors, validation.NewNameValidator())
-
-	return visitors, nil
 }
 
 // toInheritanceSpecs converts Syncs to InheritanceSpecs. It also evaluates defaults so that later

@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 	"text/template"
@@ -31,8 +30,6 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
@@ -2063,15 +2060,17 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			t.Fatal(errors.Wrap(err, "could not clean up"))
 		}
 	}()
-	p := Parser{
-		factory: f,
-		discoveryClient: fstesting.NewFakeCachedDiscoveryClient(
+	p, err := NewParserWithFactory(
+		f,
+		fstesting.NewFakeCachedDiscoveryClient(
 			fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
-		opts: ParserOpt{
+		ParserOpt{
 			Vet:      tc.vet,
 			Validate: true,
 		},
-		root: d.rootDir,
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %#v", err)
 	}
 
 	actualPolicies, err := p.Parse(d.rootDir)
@@ -2949,15 +2948,17 @@ func TestEmptyDirectories(t *testing.T) {
 				}
 			}()
 
-			p := Parser{
-				factory: f,
-				discoveryClient: fstesting.NewFakeCachedDiscoveryClient(
+			p, err := NewParserWithFactory(
+				f,
+				fstesting.NewFakeCachedDiscoveryClient(
 					fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
-				root: d.rootDir,
-				opts: ParserOpt{
+				ParserOpt{
 					Vet:      false,
 					Validate: true,
 				},
+			)
+			if err != nil {
+				t.Fatalf("unexpected error: %#v", err)
 			}
 
 			actualPolicies, err := p.Parse(d.rootDir)
@@ -2973,57 +2974,6 @@ func TestEmptyDirectories(t *testing.T) {
 			}
 			if !cmp.Equal(actualPolicies, expectedPolicies, Options()...) {
 				t.Errorf("actual and expected AllPolicies didn't match: %v", cmp.Diff(actualPolicies, expectedPolicies, Options()...))
-			}
-		})
-	}
-}
-
-func TestBespinApplication(t *testing.T) {
-	if p, _ := NewParserWithFactory(nil, nil, ParserOpt{}); p.opts.Bespin {
-		t.Errorf("Bespin enabled when set to disabled")
-	}
-	if p, _ := NewParserWithFactory(nil, nil, ParserOpt{Bespin: true}); !p.opts.Bespin {
-		t.Errorf("Bespin disabled when set to enabled")
-	}
-}
-
-func TestBespinVisitorsAdded(t *testing.T) {
-	var tests = []struct {
-		name    string
-		enabled bool
-		want    int
-	}{
-		{
-			name: "Bespin disabled should not add Bespin visitors",
-		},
-		{
-			name:    "Bespin enabled should add Bespin visitors",
-			enabled: true,
-			want:    2,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			visitors, err := buildVisitors(nil, nil, nil, nil, ParserOpt{Bespin: tc.enabled})
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			// Check if the visitors are in the list by comparing their types.
-			var got int
-			for _, v := range visitors {
-				for _, w := range []ast.CheckingVisitor{
-					transform.NewGCPHierarchyVisitor(),
-					transform.NewGCPPolicyVisitor()} {
-					if reflect.TypeOf(v) == reflect.TypeOf(w) {
-						got++
-					}
-				}
-			}
-
-			if got != tc.want {
-				t.Errorf("got %v, want %v", got, tc.want)
 			}
 		})
 	}
