@@ -53,7 +53,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 			}),
 	}
 	tests := vt.MutatingVisitorTestcases{
-		VisitorCtor: func() ast.CheckingVisitor {
+		VisitorCtor: func() ast.Visitor {
 			return NewClusterSelectorVisitor()
 		},
 		InitRoot: func(r *ast.Root) {

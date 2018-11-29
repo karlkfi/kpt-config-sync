@@ -60,8 +60,6 @@ type Base struct {
 	impl ast.Visitor
 }
 
-var _ ast.Visitor = &Base{}
-
 // NewBase creates a new VisitorBase.
 func NewBase() *Base {
 	return &Base{}

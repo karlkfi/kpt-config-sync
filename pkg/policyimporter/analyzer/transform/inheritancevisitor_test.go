@@ -36,7 +36,7 @@ func withName(o runtime.Object, name string) runtime.Object {
 }
 
 var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
-	VisitorCtor: func() ast.CheckingVisitor {
+	VisitorCtor: func() ast.Visitor {
 		return NewInheritanceVisitor(
 			map[schema.GroupKind]*InheritanceSpec{
 				rbacv1.SchemeGroupVersion.WithKind("RoleBinding").GroupKind(): {

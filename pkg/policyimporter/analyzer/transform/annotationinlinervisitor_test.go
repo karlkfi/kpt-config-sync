@@ -74,7 +74,7 @@ var selectors = []v1alpha1.ClusterSelector{
 		}),
 }
 var annotationInlinerVisitorTestcases = vt.MutatingVisitorTestcases{
-	VisitorCtor: func() ast.CheckingVisitor {
+	VisitorCtor: func() ast.Visitor {
 		return NewAnnotationInlinerVisitor()
 	},
 	InitRoot: func(r *ast.Root) {
@@ -293,7 +293,7 @@ func TestNamespaceSelectorAnnotationInlinerVisitor(t *testing.T) {
 
 func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 	tests := vt.MutatingVisitorTestcases{
-		VisitorCtor: func() ast.CheckingVisitor {
+		VisitorCtor: func() ast.Visitor {
 			return NewAnnotationInlinerVisitor()
 		},
 		InitRoot: func(r *ast.Root) {

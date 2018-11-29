@@ -78,7 +78,7 @@ func NewQuotaVisitor() *QuotaVisitor {
 	return qv
 }
 
-// Error implements CheckingVisitor
+// Error implements Visitor
 func (v *QuotaVisitor) Error() error {
 	return nil
 }

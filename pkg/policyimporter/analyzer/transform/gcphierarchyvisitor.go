@@ -48,7 +48,7 @@ func NewGCPHierarchyVisitor() *GCPHierarchyVisitor {
 	return v
 }
 
-// Error implements CheckingVisitor.
+// Error implements Visitor.
 // The error checking in this visitor is rudimentary.
 // The expectation is that a thorough error checking is done by another
 // validation visitor.

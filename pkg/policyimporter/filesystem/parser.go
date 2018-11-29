@@ -98,7 +98,7 @@ type visitorProvider interface {
 		syncs []*v1alpha1.Sync,
 		clusters []clusterregistry.Cluster,
 		selectors []v1alpha1.ClusterSelector,
-		opts ParserOpt) []ast.CheckingVisitor
+		opts ParserOpt) []ast.Visitor
 }
 
 // nomosVisitorProvider is the default visitor provider.  It handles
@@ -109,10 +109,10 @@ func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo,
 	syncs []*v1alpha1.Sync,
 	clusters []clusterregistry.Cluster,
 	selectors []v1alpha1.ClusterSelector,
-	opts ParserOpt) []ast.CheckingVisitor {
+	opts ParserOpt) []ast.Visitor {
 
 	specs := toInheritanceSpecs(syncs)
-	visitors := []ast.CheckingVisitor{
+	visitors := []ast.Visitor{
 		validation.NewInputValidator(syncs, specs, clusters, selectors, opts.Vet),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(apiInfo),
@@ -136,10 +136,10 @@ func (b bespinVisitorProvider) visitors(apiInfo *meta.APIInfo,
 	syncs []*v1alpha1.Sync,
 	clusters []clusterregistry.Cluster,
 	selectors []v1alpha1.ClusterSelector,
-	opts ParserOpt) []ast.CheckingVisitor {
+	opts ParserOpt) []ast.Visitor {
 	// TODO(b/119825336): Bespin and the InputValidator are having trouble playing
 	// nicely. For now, just return the visitors that Bespin needs.
-	return []ast.CheckingVisitor{
+	return []ast.Visitor{
 		transform.NewGCPHierarchyVisitor(),
 		transform.NewGCPPolicyVisitor(),
 		validation.NewScope(apiInfo),

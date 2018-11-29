@@ -49,7 +49,7 @@ func NewGCPPolicyVisitor() *GCPPolicyVisitor {
 	return v
 }
 
-// Error implements CheckingVisitor.
+// Error implements Visitor.
 func (v *GCPPolicyVisitor) Error() error {
 	return nil
 }

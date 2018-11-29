@@ -49,7 +49,7 @@ func (v *Copying) SetImpl(impl ast.Visitor) {
 	v.impl = impl
 }
 
-// Error implements CheckingVisitor
+// Error implements Visitor
 func (v *Copying) Error() error {
 	return nil
 }

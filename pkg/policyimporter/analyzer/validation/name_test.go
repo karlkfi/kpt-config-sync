@@ -23,7 +23,7 @@ import (
 )
 
 var nameTestcases = vt.MutatingVisitorTestcases{
-	VisitorCtor: func() ast.CheckingVisitor {
+	VisitorCtor: func() ast.Visitor {
 		return NewNameValidator()
 	},
 	Testcases: []vt.MutatingVisitorTestcase{

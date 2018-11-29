@@ -30,8 +30,8 @@ type NameValidator struct {
 	nameChecker nameChecker
 }
 
-// NameValidator implements ast.CheckingVisitor
-var _ ast.CheckingVisitor = &NameValidator{}
+// NameValidator implements ast.Visitor
+var _ ast.Visitor = &NameValidator{}
 
 // NewNameValidator returns a new NameValidator validator.
 func NewNameValidator() *NameValidator {

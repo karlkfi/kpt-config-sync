@@ -69,7 +69,7 @@ func NewAnnotationInlinerVisitor() *AnnotationInlinerVisitor {
 	return v
 }
 
-// Error implements CheckingVisitor
+// Error implements Visitor
 func (v *AnnotationInlinerVisitor) Error() error {
 	return v.errs.Build()
 }

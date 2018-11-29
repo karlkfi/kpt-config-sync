@@ -30,7 +30,7 @@ Any Visitors mutating the tree MUST copy any node that has updates in its child 
 Validating Visitors
 Writing a validating visitor entails using Base to visit the tree and returning the original ast.Context
 from the VisitContext method (effectively an identity operation).  Pass / fail should be returned
-through the Result() method of the visitor to fulfill the CheckingVisitor contract.
+through the Result() method of the visitor to fulfill the Visitor contract.
 
 Mutating Visitors
 For visitors that want to mutate the tree they will need to treat the tree as immutable and update

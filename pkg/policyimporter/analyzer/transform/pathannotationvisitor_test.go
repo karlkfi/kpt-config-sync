@@ -45,7 +45,7 @@ func adminRoleBindingWithAnnotation() *rbacv1.RoleBinding {
 }
 
 var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
-	VisitorCtor: func() ast.CheckingVisitor {
+	VisitorCtor: func() ast.Visitor {
 		return NewPathAnnotationVisitor()
 	},
 	Testcases: []vt.MutatingVisitorTestcase{

@@ -221,3 +221,7 @@ func appendResource(resources []v1.GenericResources, o runtime.Object) []v1.Gene
 	gvr.Objects = append(gvr.Objects, runtime.RawExtension{Object: o})
 	return resources
 }
+
+func (v *OutputVisitor) Error() error {
+	return nil
+}

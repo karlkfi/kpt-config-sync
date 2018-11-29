@@ -53,7 +53,7 @@ func ResourceVersionCmp() cmp.Option {
 // Runf returns a function that runs the testcase. visitor is the visitor to use
 // in the test case, and initRoot optionally initializes the root of the tree before traversal.
 func (tc *MutatingVisitorTestcase) Runf(
-	visitor ast.CheckingVisitor,
+	visitor ast.Visitor,
 	initRoot func(*ast.Root),
 	options func() []cmp.Option) func(t *testing.T) {
 	opts := Defaults()
@@ -102,7 +102,7 @@ func (tc *MutatingVisitorTestcase) Runf(
 // MutatingVisitorTestcases specifies a list of testcases for the
 type MutatingVisitorTestcases struct {
 	// VisitorCtor returns a created visitor.
-	VisitorCtor func() ast.CheckingVisitor
+	VisitorCtor func() ast.Visitor
 	// InitRoot initializes the root before tree traversal.  Skipped if nil.
 	InitRoot func(r *ast.Root)
 	// Options is the list of options to apply when comparing trees.  Using default if nil

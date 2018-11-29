@@ -36,13 +36,6 @@ type Visitor interface {
 	VisitTreeNode(n *TreeNode) *TreeNode
 	VisitObjectList(o ObjectList) ObjectList
 	VisitObject(o *NamespaceObject) *NamespaceObject
-}
-
-// CheckingVisitor is an interface for writing a visitor that processes the tree in some manner
-// then optionally emits an error message.  This facilitates chaining visitors and stopping if one
-// encounters an error.
-type CheckingVisitor interface {
-	Visitor
 
 	// Error allows the visitor to emit errors that may have occurred while operating.
 	Error() error
