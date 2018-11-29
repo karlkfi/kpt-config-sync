@@ -88,9 +88,14 @@ nomos-system Active 1m
 
 ### Create the git-creds Secret
 
-#### Using SSH
+Note that these secrets are deployed into the nomos-system namespace, so it is
+necessary to have that namespace created before creating the secret.
 
-Follow this process when `secretType` is set to `ssh`.
+Choose the correct authentication method for your Git repository from the options below. The method chosen will determine the value you use for `secretType` when creating the `Nomos` resource in the next section.
+
+#### Using `ssh`
+
+Follow this process when `secretType` is set to `ssh`. This would be use when authenticating to a Git repo using ssh keys.
 
 First, create a nomos-specific private/public key pair.
 
@@ -115,11 +120,11 @@ $ kubectl create secret generic git-creds -n=nomos-system \
     --from-file=ssh=$HOME/.ssh/id_rsa.nomos
 ```
 
-#### Using GitCookies
+#### Using `cookiefile`
 
-Follow this process when `secretType` is set to `cookiefile`.
+Follow this process when `secretType` is set to `cookiefile`. This would be used when authenticating to a Git repo using Git cookies.
 
-The process for acquiring a gitcookie depends on the configuration of your git
+The process for acquiring a Git cookie depends on the configuration of your Git
 server your repository is on, but is commonly used as an authentication
 mechanism for some hosting services, such as Google Cloud Source Repositories
 and Gerrit. Git Cookies are usually stored in `$HOME/.gitcookies` on the local
@@ -133,8 +138,11 @@ $ kubectl create secret generic git-creds -n=nomos-system \
     --from-file=cookie_file=$HOME/.gitcookies
 ```
 
-Note that these secrets are deployed into the nomos-system namespace, so it is
-necessary to have that namespace created before creating the secret
+#### Using `none`
+
+No secret is needed when `secretType` is set to `none`. This would be used when accessing a repo
+via a public https:// target, which implies the repo is open to the public. __Such a configuration
+is not recommended.__
 
 ### Create the Nomos Resource
 
@@ -171,7 +179,7 @@ Key          | Description
 `policyDir`  | The path within the repository to the top of the policy hierarchy to sync. Default: the root directory of the repository.
 `syncWait`   | Period in seconds between consecutive syncs. Default: 15.
 `syncRev`    | Git revision (tag or hash) to check out. Default HEAD.
-`secretType` | The type of secret configured for access to the Git repository. One of `ssh` or `cookiefile`. Required.
+`secretType` | The type of secret configured for access to the Git repository. One of "ssh", "cookiefile" or "none". Required.
 
 In addition, the following top level properties can be specified:
 
