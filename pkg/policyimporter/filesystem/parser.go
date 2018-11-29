@@ -578,6 +578,9 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 	for _, syncs := range syncMap {
 		allSyncs = append(allSyncs, syncs...)
 	}
+	if p.opts.Bespin {
+		allSyncs = append(allSyncs, bespinv1.Syncs...)
+	}
 	return allSyncs
 }
 
