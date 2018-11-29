@@ -12,6 +12,10 @@ hierarchical fashion starting from the namespace, up the Abstract Namespace
 hierarchy - this means that a quota violation at any level will result in a
 Forbidden exception.
 
+To enable hierarchical ResourceQuota enforcement, set the
+`enableHierarchicalResourceQuota` flag to true during
+[installation](installation.md#create-the-nomos-config-file)
+
 A quota can be set to immediately be in violation. For example, when a workload
 namespace has 11 pods, we can still set quota to `pods: 10` in a parent Abstract
 Namespace, creating an overage. If a workload namespace is in violation, the

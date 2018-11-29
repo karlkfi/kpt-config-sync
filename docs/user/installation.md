@@ -27,32 +27,11 @@ GKE Policy Management on. You must be able to contact these clusters using
 In order to run GKE Policy Management components, the cluster has to meet these
 requirements:
 
-<table>
-  <tr>
-   <td><strong>Requirement</strong>
-   </td>
-   <td><strong>kube-apiserver flag</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>Enable RBAC
-   </td>
-   <td>Add <em>RBAC</em> to list passed to <em>--authorization-mode</em>
-   </td>
-  </tr>
-  <tr>
-   <td>Enable ResourceQuota admission controller
-   </td>
-   <td>Add <em>ResourceQuota</em> to list passed to <em>--admission-control</em>
-   </td>
-  </tr>
-  <tr>
-   <td>Enable ValidatingAdmissionWebhook
-   </td>
-   <td>Add <em>ValidatingAdmissionWebhook</em> to list passed to <em>--admission-control</em>
-   </td>
-  </tr>
-</table>
+Requirement                               | kube-apiserver flag
+------------------------------------------|--------------------------
+Enable RBAC                               | Add `RBAC` to list passed to `--authorization-mode`
+Enable ResourceQuota admission controller | Add `ResourceQuota` to list passed to `--admission-control`
+Enable ValidatingAdmissionWebhook         | Add `ValidatingAdmissionWebhook` to list passed to `--admission-control`
 
 Minimum required Kubernetes Server Version: **1.9**
 
@@ -129,6 +108,7 @@ spec:
     syncBranch: 0.1.0
     secretType: ssh
     policyDir: foo-corp
+  enableHierarchicalResourceQuota: true
 ```
 
 `spec` contains a top level field `git`, which is an object with the following
@@ -141,7 +121,16 @@ Key          | Description
 `policyDir`  | The path within the repository to the top of the policy hierarchy to sync. Default: the root directory of the repository.
 `syncWait`   | Period in seconds between consecutive syncs. Default: 15.
 `syncRev`    | Git revision (tag or hash) to check out. Default HEAD.
-`secretType` | The type of secret configured for access to the Git repository. One of "ssh" or "cookiefile". Required.
+`secretType` | The type of secret configured for access to the Git repository. One of `ssh` or `cookiefile`. Required.
+
+In addition, the following top level properties can be specified:
+
+Key                               | Description
+--------------------------------- | -----------
+`enableHierarchicalResourceQuota` | Enables the [Hierarchical Resource Quota Controller](rq.md) that enforces quota set on Abstract Namespaces. Default: false.
+
+Note that Hierarchical Resource Quota is currently unsupported on GKE On Prem
+Alpha and the flag should be set to false or ommitted.
 
 ### Create the git-creds Secret
 
@@ -216,7 +205,10 @@ NAME                                                  READY     STATUS    RESTAR
 git-policy-importer-66bf6b9db4-pbsxn                  2/2       Running   0          24m
 monitor-6f968db9-mc2xp                                1/1       Running   0          24m
 syncer-58545bc77d-l485n                               1/1       Running   0          24m
+resourcequota-admission-controller-75494dd8-5fqlt*    1/1       Running   0          24m
 ```
+Note that the ResourceQuota admission controller will only be running if enabled
+using the `enableHierarchicalResourceQuota` flag.
 
 ## Uninstalling
 
