@@ -66,21 +66,13 @@ func (tc *MutatingVisitorTestcase) Runf(
 		if initRoot != nil {
 			initRoot(tc.Input)
 		}
-		inputCopy, ok := tc.Input.Accept(copier).(*ast.Root)
-		if !ok {
-			t.Fatalf(
-				"framework error: return value from copying visitor needs to be of type *ast.Root, got: %#v", inputCopy)
-		}
+		inputCopy := tc.Input.Accept(copier)
 
-		output := tc.Input.Accept(visitor)
+		actual := tc.Input.Accept(visitor)
 		if !cmp.Equal(tc.Input, inputCopy, opts...) {
 			t.Errorf("Input mutated while running visitor: %s", cmp.Diff(inputCopy, tc.Input, opts...))
 		}
 
-		actual, ok := output.(*ast.Root)
-		if !ok {
-			t.Fatalf("Wrong type returned %#v", output)
-		}
 		err := visitor.Error()
 		if (err != nil) != tc.ExpectErr {
 			if tc.ExpectErr {

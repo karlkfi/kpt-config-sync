@@ -152,7 +152,7 @@ func (v *InputValidator) Error() error {
 }
 
 // VisitReservedNamespaces implements Visitor
-func (v *InputValidator) VisitReservedNamespaces(rs *ast.ReservedNamespaces) ast.Node {
+func (v *InputValidator) VisitReservedNamespaces(rs *ast.ReservedNamespaces) *ast.ReservedNamespaces {
 	if r, err := reserved.From(&rs.ConfigMap); err != nil {
 		v.errs.Add(err)
 	} else {
@@ -162,7 +162,7 @@ func (v *InputValidator) VisitReservedNamespaces(rs *ast.ReservedNamespaces) ast
 }
 
 // VisitTreeNode implements Visitor
-func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) ast.Node {
+func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	name := path.Base(n.Path)
 	if v.reserved.IsReserved(name) {
 		// The node's name must not be a reserved namespace name.
@@ -209,7 +209,7 @@ func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.Namespace
 }
 
 // VisitClusterObject implements Visitor
-func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	gvk := o.GroupVersionKind()
 	if !v.allowedGVKs[gvk] {
 		v.errs.Add(UnsyncableClusterObjectError{o})
@@ -232,7 +232,7 @@ func IsSystemOnly(gvk schema.GroupVersionKind) bool {
 }
 
 // VisitObject implements Visitor
-func (v *InputValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	if !v.allowedGVKs[o.GroupVersionKind()] {
 		if !IsSystemOnly(o.GroupVersionKind()) {
 			// This is already checked elsewhere.

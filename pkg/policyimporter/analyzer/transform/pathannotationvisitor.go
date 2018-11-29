@@ -25,8 +25,8 @@ func NewPathAnnotationVisitor() *PathAnnotationVisitor {
 }
 
 // VisitTreeNode implements Visitor
-func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
-	newNode := v.Copying.VisitTreeNode(n).(*ast.TreeNode)
+func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
+	newNode := v.Copying.VisitTreeNode(n)
 	if newNode.Annotations == nil {
 		newNode.Annotations = map[string]string{}
 	}
@@ -35,15 +35,15 @@ func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 }
 
 // VisitClusterObject implements Visitor
-func (v *PathAnnotationVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
-	newObject := v.Copying.VisitClusterObject(o).(*ast.ClusterObject)
+func (v *PathAnnotationVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
+	newObject := v.Copying.VisitClusterObject(o)
 	applyPathAnnotation(newObject.FileObject)
 	return newObject
 }
 
 // VisitObject implements Visitor
-func (v *PathAnnotationVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
-	newObject := v.Copying.VisitObject(o).(*ast.NamespaceObject)
+func (v *PathAnnotationVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
+	newObject := v.Copying.VisitObject(o)
 	applyPathAnnotation(newObject.FileObject)
 	return newObject
 }

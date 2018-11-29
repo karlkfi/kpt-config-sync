@@ -55,31 +55,31 @@ func (v *Copying) Error() error {
 }
 
 // VisitRoot implements Visitor
-func (v *Copying) VisitRoot(c *ast.Root) ast.Node {
+func (v *Copying) VisitRoot(c *ast.Root) *ast.Root {
 	nc := *c
-	nc.Cluster, _ = c.Cluster.Accept(v.impl).(*ast.Cluster)
-	nc.ReservedNamespaces, _ = c.ReservedNamespaces.Accept(v.impl).(*ast.ReservedNamespaces)
-	nc.Tree, _ = c.Tree.Accept(v.impl).(*ast.TreeNode)
+	nc.Cluster = c.Cluster.Accept(v.impl)
+	nc.ReservedNamespaces = c.ReservedNamespaces.Accept(v.impl)
+	nc.Tree = c.Tree.Accept(v.impl)
 	return &nc
 }
 
 // VisitReservedNamespaces implements Visitor
-func (v *Copying) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
+func (v *Copying) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
 	return r.DeepCopy()
 }
 
 // VisitCluster implements Visitor
-func (v *Copying) VisitCluster(c *ast.Cluster) ast.Node {
+func (v *Copying) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	nc := *c
-	nc.Objects, _ = c.Objects.Accept(v.impl).(ast.ClusterObjectList)
+	nc.Objects = c.Objects.Accept(v.impl)
 	return &nc
 }
 
 // VisitClusterObjectList implements Visitor
-func (v *Copying) VisitClusterObjectList(objectList ast.ClusterObjectList) ast.Node {
+func (v *Copying) VisitClusterObjectList(objectList ast.ClusterObjectList) ast.ClusterObjectList {
 	var olc ast.ClusterObjectList
 	for _, object := range objectList {
-		if obj, ok := object.Accept(v.impl).(*ast.ClusterObject); ok {
+		if obj := object.Accept(v.impl); obj != nil {
 			olc = append(olc, obj)
 		}
 	}
@@ -87,15 +87,15 @@ func (v *Copying) VisitClusterObjectList(objectList ast.ClusterObjectList) ast.N
 }
 
 // VisitClusterObject implements Visitor
-func (v *Copying) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+func (v *Copying) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	return o.DeepCopy()
 }
 
 // VisitObjectList implements Visitor
-func (v *Copying) VisitObjectList(objectList ast.ObjectList) ast.Node {
+func (v *Copying) VisitObjectList(objectList ast.ObjectList) ast.ObjectList {
 	var olc ast.ObjectList
 	for _, object := range objectList {
-		if obj, ok := object.Accept(v.impl).(*ast.NamespaceObject); ok {
+		if obj := object.Accept(v.impl); obj != nil {
 			olc = append(olc, obj)
 		}
 	}
@@ -103,13 +103,13 @@ func (v *Copying) VisitObjectList(objectList ast.ObjectList) ast.Node {
 }
 
 // VisitTreeNode implements Visitor
-func (v *Copying) VisitTreeNode(n *ast.TreeNode) ast.Node {
+func (v *Copying) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// Almost-shallow copy of n, check PartialCopy to see if this is enough.
 	nn := n.PartialCopy()
-	nn.Objects, _ = n.Objects.Accept(v.impl).(ast.ObjectList)
+	nn.Objects = n.Objects.Accept(v.impl)
 	nn.Children = nil
 	for _, child := range n.Children {
-		if ch, ok := child.Accept(v.impl).(*ast.TreeNode); ok {
+		if ch := child.Accept(v.impl); ch != nil {
 			nn.Children = append(nn.Children, ch)
 		}
 	}
@@ -117,6 +117,6 @@ func (v *Copying) VisitTreeNode(n *ast.TreeNode) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (v *Copying) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (v *Copying) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	return o.DeepCopy()
 }

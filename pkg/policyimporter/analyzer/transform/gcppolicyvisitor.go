@@ -55,22 +55,22 @@ func (v *GCPPolicyVisitor) Error() error {
 }
 
 // VisitCluster implements Visitor.
-func (v *GCPPolicyVisitor) VisitCluster(c *ast.Cluster) ast.Node {
-	newC := v.Copying.VisitCluster(c).(*ast.Cluster)
+func (v *GCPPolicyVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
+	newC := v.Copying.VisitCluster(c)
 	v.cluster = newC
 	return newC
 }
 
 // VisitReservedNamespaces implements Visitor. Currently unused and always returns
 // the passed node.
-func (v *GCPPolicyVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
+func (v *GCPPolicyVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
 	return r
 }
 
 // VisitTreeNode implements Visitor.
-func (v *GCPPolicyVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
+func (v *GCPPolicyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.currentTreeNode = n
-	return v.Copying.VisitTreeNode(n).(*ast.TreeNode)
+	return v.Copying.VisitTreeNode(n)
 }
 
 // VisitObject implements Visitor. The precondition is that the poicy attachment
@@ -78,7 +78,7 @@ func (v *GCPPolicyVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 // policy spec. If the policy attachment point is cluster scoped (org or folder),
 // this method will transform the policy to the cluster scoped version and move
 // them over to the list of cluster objects.
-func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	gvk := o.GetObjectKind().GroupVersionKind()
 	if gvk.Group != v1.SchemeGroupVersion.Group {
 		return o
@@ -147,7 +147,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 }
 
 // VisitObjectList implements Visitor.
-func (v *GCPPolicyVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
+func (v *GCPPolicyVisitor) VisitObjectList(o ast.ObjectList) ast.ObjectList {
 	return v.Copying.VisitObjectList(o)
 }
 

@@ -22,7 +22,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	"k8s.io/api/rbac/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -38,7 +38,7 @@ func withSourceAnnotation(o runtime.Object, annotation string) runtime.Object {
 	return o
 }
 
-func adminRoleBindingWithAnnotation() *v1.RoleBinding {
+func adminRoleBindingWithAnnotation() *rbacv1.RoleBinding {
 	rb := vt.Helper.AdminRoleBinding()
 	rb.Annotations = map[string]string{"color": "blue"}
 	return rb

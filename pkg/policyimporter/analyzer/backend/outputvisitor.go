@@ -74,7 +74,7 @@ func mapByName(syncs []*v1alpha1.Sync) map[string]v1alpha1.Sync {
 }
 
 // VisitRoot implements Visitor
-func (v *OutputVisitor) VisitRoot(g *ast.Root) ast.Node {
+func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 	v.allPolicies = &v1.AllPolicies{
 		PolicyNodes: map[string]v1.PolicyNode{},
 		ClusterPolicy: &v1.ClusterPolicy{
@@ -94,7 +94,7 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) ast.Node {
 }
 
 // VisitReservedNamespaces implements Visitor
-func (v *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
+func (v *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
 	rns, err := reserved.From(&r.ConfigMap)
 	if err != nil {
 		panic(fmt.Sprintf("programmer error: input should have been validated %v", err))
@@ -117,14 +117,14 @@ func (v *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.N
 }
 
 // VisitCluster implements Visitor
-func (v *OutputVisitor) VisitCluster(c *ast.Cluster) ast.Node {
+func (v *OutputVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	v.context = contextCluster
 	v.Base.VisitCluster(c)
 	return nil
 }
 
 // VisitTreeNode implements Visitor
-func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
+func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.context = contextNode
 	origLen := len(v.policyNode)
 	var name, parent string
@@ -169,14 +169,14 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 }
 
 // VisitClusterObject implements Visitor
-func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	spec := &v.allPolicies.ClusterPolicy.Spec
 	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }
 
 // VisitObject implements Visitor
-func (v *OutputVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (v *OutputVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	spec := &v.policyNode[len(v.policyNode)-1].Spec
 	switch obj := o.FileObject.Object.(type) {
 	case *corev1.ResourceQuota:

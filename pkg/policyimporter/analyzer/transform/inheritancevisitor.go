@@ -64,22 +64,22 @@ func (v *InheritanceVisitor) Error() error {
 }
 
 // VisitReservedNamespaces implements Visitor
-func (v *InheritanceVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
+func (v *InheritanceVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
 	return r
 }
 
 // VisitCluster implements Visitor
-func (v *InheritanceVisitor) VisitCluster(c *ast.Cluster) ast.Node {
+func (v *InheritanceVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	return c
 }
 
 // VisitTreeNode implements Visitor
-func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
+func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.treeContext = append(v.treeContext, nodeContext{
 		nodeType: n.Type,
 		nodePath: n.Path,
 	})
-	newNode := v.Copying.VisitTreeNode(n).(*ast.TreeNode)
+	newNode := v.Copying.VisitTreeNode(n)
 	v.treeContext = v.treeContext[:len(v.treeContext)-1]
 	if n.Type == ast.Namespace {
 		for _, ctx := range v.treeContext {
@@ -94,7 +94,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (v *InheritanceVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (v *InheritanceVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	context := &v.treeContext[len(v.treeContext)-1]
 	gk := o.GetObjectKind().GroupVersionKind().GroupKind()
 	if context.nodeType == ast.AbstractNamespace {

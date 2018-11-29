@@ -47,7 +47,7 @@ import (
 //        return v
 //      }
 //
-//      func (v *myVisitor) VisitRoot(ctx *ast.Root) ast.Node {
+//      func (v *myVisitor) VisitRoot(ctx *ast.Root) *ast.Root {
 //        // Do whatever you need to do in this Visitor that needs to happen before
 //        // traversing children.
 //        // Then call the matching continuation method from Base, in this case it is
@@ -75,7 +75,7 @@ func (vb *Base) SetImpl(impl ast.Visitor) {
 }
 
 // VisitRoot implements Visitor
-func (vb *Base) VisitRoot(g *ast.Root) ast.Node {
+func (vb *Base) VisitRoot(g *ast.Root) *ast.Root {
 	if glog.V(5) {
 		glog.Infof("VisitRoot(): ENTER: %v", spew.Sdump(g))
 	}
@@ -87,19 +87,19 @@ func (vb *Base) VisitRoot(g *ast.Root) ast.Node {
 }
 
 // VisitReservedNamespaces implements Visitor
-func (vb *Base) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
+func (vb *Base) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
 	// leaf - noop
 	return r
 }
 
 // VisitCluster implements Visitor
-func (vb *Base) VisitCluster(c *ast.Cluster) ast.Node {
+func (vb *Base) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	c.Objects.Accept(vb.impl)
 	return c
 }
 
 // VisitClusterObjectList implements Visitor
-func (vb *Base) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
+func (vb *Base) VisitClusterObjectList(o ast.ClusterObjectList) ast.ClusterObjectList {
 	for _, obj := range o {
 		obj.Accept(vb.impl)
 	}
@@ -107,13 +107,13 @@ func (vb *Base) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
 }
 
 // VisitClusterObject implements Visitor
-func (vb *Base) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+func (vb *Base) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	// leaf - noop
 	return o
 }
 
 // VisitTreeNode implements Visitor
-func (vb *Base) VisitTreeNode(n *ast.TreeNode) ast.Node {
+func (vb *Base) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	if glog.V(5) {
 		glog.Infof("VisitTreeNode(): ENTER: %v", spew.Sdump(n))
 	}
@@ -126,7 +126,7 @@ func (vb *Base) VisitTreeNode(n *ast.TreeNode) ast.Node {
 }
 
 // VisitObjectList implements Visitor
-func (vb *Base) VisitObjectList(o ast.ObjectList) ast.Node {
+func (vb *Base) VisitObjectList(o ast.ObjectList) ast.ObjectList {
 	if glog.V(5) {
 		glog.Infof("VisitObjectList(): ENTER: %+v", spew.Sdump(o))
 	}
@@ -138,7 +138,7 @@ func (vb *Base) VisitObjectList(o ast.ObjectList) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (vb *Base) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (vb *Base) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	if glog.V(5) {
 		glog.Infof("VisitObject(): ENTER: %+v", spew.Sdump(o))
 	}

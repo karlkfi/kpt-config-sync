@@ -28,14 +28,14 @@ func NewClusterSelectorVisitor() *ClusterSelectorVisitor {
 }
 
 // VisitRoot implements ast.Visitor.
-func (v *ClusterSelectorVisitor) VisitRoot(r *ast.Root) ast.Node {
+func (v *ClusterSelectorVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	v.selectors = sel.GetClusterSelectors(r)
 	return v.Copying.VisitRoot(r)
 }
 
 // VisitTreeNode prunes the tree node (and by extension all objects in and
 // nodes below it) if it doesn't match the active cluster selector.
-func (v *ClusterSelectorVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
+func (v *ClusterSelectorVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	glog.V(6).Infof("VisitTreeNode(%v): enter: %+v", n.Path, *n)
 	defer glog.V(6).Infof("VisitTreeNode(%v): exit", n.Path)
 	if !v.selectors.Matches(n) {
@@ -50,7 +50,7 @@ func (v *ClusterSelectorVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 // VisitObject prunes a namespace object if it doesn't match the active cluster selector.
 // If the containing tree node doesn't match, however, the object does won't ever be visited
 // and will be filtered out as result.
-func (v *ClusterSelectorVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (v *ClusterSelectorVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	glog.V(6).Infof("VisitObject(): enter")
 	defer glog.V(6).Infof("VisitObject(): exit")
 	if !v.selectors.Matches(o.ToMeta()) {
@@ -63,7 +63,7 @@ func (v *ClusterSelectorVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
 
 // VisitClusterObject prunes a cluster scoped object if it doesn't match the
 // active cluster selector.
-func (v *ClusterSelectorVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+func (v *ClusterSelectorVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	glog.V(6).Infof("VisitClusterObject(): enter")
 	defer glog.V(6).Infof("VisitClusterObject(): exit")
 	if !v.selectors.Matches(o.ToMeta()) {

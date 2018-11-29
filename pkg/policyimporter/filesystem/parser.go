@@ -266,13 +266,13 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	clusterregistryInfos []*resource.Info,
 	nsDirsOrdered []string,
 	clusterDir string,
-	fsCtx *ast.Root,
+	fsRoot *ast.Root,
 	syncs []*v1alpha1.Sync) (*v1.AllPolicies, error) {
 
 	errorBuilder := multierror.Builder{}
 	namespaceDirs := make(map[string]bool)
 
-	if err := p.processClusterDir(clusterDir, clusterInfos, fsCtx); err != nil {
+	if err := p.processClusterDir(clusterDir, clusterInfos, fsRoot); err != nil {
 		errorBuilder.Add(errors.Wrapf(err, "cluster directory is invalid: %s", clusterDir))
 		return nil, errorBuilder.Build()
 	}
@@ -282,7 +282,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 		errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
 		return nil, errorBuilder.Build()
 	}
-	sel.SetClusterSelector(cs, fsCtx)
+	sel.SetClusterSelector(cs, fsRoot)
 
 	treeGenerator := NewDirectoryTree()
 	if len(nsDirsOrdered) > 0 {
@@ -306,7 +306,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 		errorBuilder.Add(errors.Wrapf(err, "failed to treeify policy nodes"))
 		return nil, errorBuilder.Build()
 	}
-	fsCtx.Tree = tree
+	fsRoot.Tree = tree
 
 	visitors, err := buildVisitors(apiInfo, syncs, clusters, selectors, p.opts)
 	if err != nil {
@@ -315,7 +315,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	}
 
 	for _, visitor := range visitors {
-		fsCtx = fsCtx.Accept(visitor).(*ast.Root)
+		fsRoot = fsRoot.Accept(visitor)
 		if err := visitor.Error(); err != nil {
 			errorBuilder.Add(err)
 			return nil, errorBuilder.Build()
@@ -323,7 +323,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	}
 
 	outputVisitor := backend.NewOutputVisitor(syncs)
-	fsCtx.Accept(outputVisitor)
+	fsRoot.Accept(outputVisitor)
 	policies := outputVisitor.AllPolicies()
 
 	if err := clusterpolicy.Validate(policies.ClusterPolicy); err != nil {
@@ -406,10 +406,10 @@ func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.
 func (p *Parser) processClusterDir(
 	dir string,
 	infos []*resource.Info,
-	fsCtx *ast.Root) error {
+	fsRoot *ast.Root) error {
 	for _, i := range infos {
 		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
-		fsCtx.Cluster.Objects = append(fsCtx.Cluster.Objects, &ast.ClusterObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
+		fsRoot.Cluster.Objects = append(fsRoot.Cluster.Objects, &ast.ClusterObject{FileObject: ast.FileObject{Object: o, Source: p.relativePath(i.Source)}})
 	}
 
 	return nil
@@ -492,7 +492,7 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 // - Nomos Repo
 // - Reserved Namespaces
 // - Syncs
-func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root,
+func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) []*v1alpha1.Sync {
 	// Ignore individual file read errors for now and continue processing parsed files.
 	fileInfos := p.readRequiredResources(systemDir, false, errorBuilder)
@@ -510,11 +510,11 @@ func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root,
 			if version := o.Spec.Version; version != "0.1.0" {
 				errorBuilder.Add(validation.UnsupportedRepoSpecVersion{Source: info.Source, Name: o.Name, Version: version})
 			}
-			fsCtx.Repo = o
+			fsRoot.Repo = o
 
 		case *corev1.ConfigMap:
 			configMaps[o] = info.Source
-			fsCtx.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
+			fsRoot.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
 
 		case *v1alpha1.Sync:
 			syncMap[info.Source] = o
@@ -538,7 +538,7 @@ func (p *Parser) processSystemDir(systemDir string, fsCtx *ast.Root,
 	for source, sync := range syncMap {
 		for _, group := range sync.Spec.Groups {
 			for k := range group.Kinds {
-				p.validateSyncKind(sync.Name, &group.Kinds[k], group.Group, fsCtx.Repo.Spec.ExperimentalInheritance, source, apiInfo, errorBuilder)
+				p.validateSyncKind(sync.Name, &group.Kinds[k], group.Group, fsRoot.Repo.Spec.ExperimentalInheritance, source, apiInfo, errorBuilder)
 			}
 		}
 	}

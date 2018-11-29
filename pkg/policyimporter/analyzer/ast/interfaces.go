@@ -16,14 +16,6 @@ limitations under the License.
 
 package ast
 
-// Node is an interface for all the nodes in the tree.  Note that this represents all types
-// Visitor will visit via the Visit* methods.
-type Node interface {
-	// Accept is called on a visitable object to accept the visitor.  This method must call and return
-	// the result of the Visit[Type] method of the visitor passed to Accept.
-	Accept(v Visitor) Node
-}
-
 // Visitor allows for writing transforms on the GitContext.  The various visit methods
 // will visit each type.  The return values for each Visit[Type] function are implementation dependant.
 //
@@ -36,14 +28,14 @@ type Node interface {
 //   Modified Subtree: the visitor must return a new copy of the object.
 //   Deleted: the visitor should return nil to indicate deleted.
 type Visitor interface {
-	VisitRoot(g *Root) Node
-	VisitReservedNamespaces(r *ReservedNamespaces) Node
-	VisitCluster(c *Cluster) Node
-	VisitClusterObjectList(o ClusterObjectList) Node
-	VisitClusterObject(o *ClusterObject) Node
-	VisitTreeNode(n *TreeNode) Node
-	VisitObjectList(o ObjectList) Node
-	VisitObject(o *NamespaceObject) Node
+	VisitRoot(g *Root) *Root
+	VisitReservedNamespaces(r *ReservedNamespaces) *ReservedNamespaces
+	VisitCluster(c *Cluster) *Cluster
+	VisitClusterObjectList(o ClusterObjectList) ClusterObjectList
+	VisitClusterObject(o *ClusterObject) *ClusterObject
+	VisitTreeNode(n *TreeNode) *TreeNode
+	VisitObjectList(o ObjectList) ObjectList
+	VisitObject(o *NamespaceObject) *NamespaceObject
 }
 
 // CheckingVisitor is an interface for writing a visitor that processes the tree in some manner

@@ -66,8 +66,8 @@ type Root struct {
 	Data *Extension
 }
 
-// Accept implements Visitable
-func (c *Root) Accept(visitor Visitor) Node {
+// Accept invokes VisitRoot on the visitor.
+func (c *Root) Accept(visitor Visitor) *Root {
 	if c == nil {
 		return nil
 	}
@@ -79,8 +79,8 @@ type Cluster struct {
 	Objects ClusterObjectList
 }
 
-// Accept implements Visitable
-func (c *Cluster) Accept(visitor Visitor) Node {
+// Accept invokes VisitCluster on the visitor.
+func (c *Cluster) Accept(visitor Visitor) *Cluster {
 	if c == nil {
 		return nil
 	}
@@ -90,8 +90,8 @@ func (c *Cluster) Accept(visitor Visitor) Node {
 // ClusterObjectList represents a set of cluser scoped objects.
 type ClusterObjectList []*ClusterObject
 
-// Accept implements Visitable
-func (o ClusterObjectList) Accept(visitor Visitor) Node {
+// Accept invokes VisitClusterObjectList on the visitor.
+func (o ClusterObjectList) Accept(visitor Visitor) ClusterObjectList {
 	if o == nil {
 		return nil
 	}
@@ -105,8 +105,8 @@ type ClusterObject struct {
 	FileObject
 }
 
-// Accept implements Visitable
-func (o *ClusterObject) Accept(visitor Visitor) Node {
+// Accept invokes VisitClusterObject on the visitor.
+func (o *ClusterObject) Accept(visitor Visitor) *ClusterObject {
 	if o == nil {
 		return nil
 	}
@@ -153,8 +153,8 @@ type TreeNode struct {
 	Children []*TreeNode
 }
 
-// Accept implements Visitable
-func (n *TreeNode) Accept(visitor Visitor) Node {
+// Accept invokes VisitTreeNode on the visitor.
+func (n *TreeNode) Accept(visitor Visitor) *TreeNode {
 	if n == nil {
 		return nil
 	}
@@ -219,8 +219,8 @@ func (n *TreeNode) SetAnnotations(a map[string]string) {
 // ObjectList represents a set of namespace scoped objects.
 type ObjectList []*NamespaceObject
 
-// Accept implements Visitable
-func (o ObjectList) Accept(visitor Visitor) Node {
+// Accept invokes VisitObjectList on the visitor.
+func (o ObjectList) Accept(visitor Visitor) ObjectList {
 	if o == nil {
 		return nil
 	}
@@ -235,8 +235,8 @@ type NamespaceObject struct {
 	FileObject
 }
 
-// Accept implements Visitable
-func (o *NamespaceObject) Accept(visitor Visitor) Node {
+// Accept invokes VisitObject on the visitor.
+func (o *NamespaceObject) Accept(visitor Visitor) *NamespaceObject {
 	if o == nil {
 		return nil
 	}
@@ -253,8 +253,8 @@ type ReservedNamespaces struct {
 	corev1.ConfigMap
 }
 
-// Accept implements Visitable
-func (r *ReservedNamespaces) Accept(visitor Visitor) Node {
+// Accept invokes VisitReservedNamespaces on the visitor.
+func (r *ReservedNamespaces) Accept(visitor Visitor) *ReservedNamespaces {
 	if r == nil {
 		return nil
 	}

@@ -48,25 +48,25 @@ func (v *NameValidator) Error() error {
 }
 
 // VisitClusterObjectList implements Visitor
-func (v *NameValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.Node {
+func (v *NameValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.ClusterObjectList {
 	v.nameChecker = nameChecker{}
 	return v.Base.VisitClusterObjectList(o)
 }
 
 // VisitClusterObject implements Visitor
-func (v *NameValidator) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+func (v *NameValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	v.handleFileObject("Cluster", &o.FileObject)
 	return o
 }
 
 // VisitObjectList implements Visitor
-func (v *NameValidator) VisitObjectList(o ast.ObjectList) ast.Node {
+func (v *NameValidator) VisitObjectList(o ast.ObjectList) ast.ObjectList {
 	v.nameChecker = nameChecker{}
 	return v.Base.VisitObjectList(o)
 }
 
 // VisitObject implements Visitor
-func (v *NameValidator) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (v *NameValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	v.handleFileObject("Namespace", &o.FileObject)
 	return o
 }

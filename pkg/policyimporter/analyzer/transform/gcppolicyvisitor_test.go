@@ -127,13 +127,10 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Ob
 
 	copier := visitorpkg.NewCopying()
 	copier.SetImpl(copier)
-	inputCopy, ok := input.Accept(copier).(*ast.Root)
-	if !ok {
-		t.Fatalf("framework error: return value from copying visitor needs to be of type *ast.Root, got: %#v", inputCopy)
-	}
+	inputCopy := input.Accept(copier)
 
 	visitor := NewGCPPolicyVisitor()
-	output := input.Accept(visitor).(*ast.Root)
+	output := input.Accept(visitor)
 	verifyInputUnmodified(t, input, inputCopy)
 	if err := visitor.Error(); err != nil {
 		t.Errorf("GCP hierarchy visitor resulted in error: %v", err)
@@ -288,12 +285,9 @@ func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Proje
 
 	copier := visitorpkg.NewCopying()
 	copier.SetImpl(copier)
-	inputCopy, ok := input.Accept(copier).(*ast.Root)
-	if !ok {
-		t.Fatalf("framework error: return value from copying visitor needs to be of type *ast.Root, got: %#v", inputCopy)
-	}
+	inputCopy := input.Accept(copier)
 	visitor := NewGCPPolicyVisitor()
-	output := input.Accept(visitor).(*ast.Root)
+	output := input.Accept(visitor)
 	verifyInputUnmodified(t, input, inputCopy)
 	if err := visitor.Error(); err != nil {
 		t.Errorf("GCP hierarchy visitor resulted in error: %v", err)

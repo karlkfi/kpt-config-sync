@@ -50,7 +50,7 @@ func (p *Scope) Error() error {
 }
 
 // VisitClusterObject implements Visitor
-func (p *Scope) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	gvk := o.Object.GetObjectKind().GroupVersionKind()
 
 	switch p.apiInfo.GetScope(gvk) {
@@ -72,7 +72,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (p *Scope) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	gvk := o.Object.GetObjectKind().GroupVersionKind()
 
 	switch p.apiInfo.GetScope(gvk) {

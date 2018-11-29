@@ -84,24 +84,24 @@ func (v *QuotaVisitor) Error() error {
 }
 
 // VisitCluster implements Visitor
-func (v *QuotaVisitor) VisitCluster(c *ast.Cluster) ast.Node {
+func (v *QuotaVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	// Avoid copying/visiting cluster
 	return c
 }
 
 // VisitReservedNamespaces implements Visitor
-func (v *QuotaVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
+func (v *QuotaVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
 	return r
 }
 
 // VisitTreeNode implements Visitor
-func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
+func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// create/push context
 	context := &quotaContext{
 		prev: v.ctx,
 	}
 	v.ctx = context
-	newNode := v.Copying.VisitTreeNode(n).(*ast.TreeNode)
+	newNode := v.Copying.VisitTreeNode(n)
 
 	if (n.Type == ast.AbstractNamespace && context.quota != nil) || (n.Type == ast.Namespace) {
 		if quota := context.aggregated(); quota != nil {
@@ -120,7 +120,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 
 // VisitObject implements Visitor, this should only be visited if the objectset
 // is of type ResourceQuota.
-func (v *QuotaVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (v *QuotaVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	gvk := o.GetObjectKind().GroupVersionKind()
 	if gvk.Group == "" && gvk.Kind == "ResourceQuota" {
 		quota := *o.FileObject.Object.(*corev1.ResourceQuota)

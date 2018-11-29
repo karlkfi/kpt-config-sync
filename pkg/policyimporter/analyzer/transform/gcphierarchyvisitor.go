@@ -57,15 +57,15 @@ func (v *GCPHierarchyVisitor) Error() error {
 }
 
 // VisitCluster implements Visitor.
-func (v *GCPHierarchyVisitor) VisitCluster(c *ast.Cluster) ast.Node {
-	newC := v.Copying.VisitCluster(c).(*ast.Cluster)
+func (v *GCPHierarchyVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
+	newC := v.Copying.VisitCluster(c)
 	v.cluster = newC
 	return newC
 }
 
 // VisitReservedNamespaces implements Visitor. Currently unused and always returns
 // the passed node.
-func (v *GCPHierarchyVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) ast.Node {
+func (v *GCPHierarchyVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
 	return r
 }
 
@@ -88,14 +88,14 @@ var gcpAttachmentPointKey = gcpAttachmentPointKeyType{}
 // VisitTreeNode visits a tree node.
 // If the object is a folder or organization, it is added as a cluster level
 // resource instead.
-func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
+func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	ctx := &gcpHierarchyContext{
 		prev: v.ctx,
 	}
 	v.ctx = ctx
 
 	// Call c.Copying.VisitTreeNode to continue iteration.
-	newNode := v.Copying.VisitTreeNode(n).(*ast.TreeNode)
+	newNode := v.Copying.VisitTreeNode(n)
 
 	if v.ctx.clusterObj != nil {
 		glog.V(1).Infof("Moving %v to cluster scope", v.ctx.clusterObj.Source)
@@ -109,7 +109,7 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 
 // VisitObject sets up parent references and removes folder/organization from
 // namespace object list.
-func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	gvk := o.GetObjectKind().GroupVersionKind()
 	if gvk.Group != v1.SchemeGroupVersion.Group {
 		return o
@@ -217,6 +217,6 @@ func (v *GCPHierarchyVisitor) parentReference() *v1.ParentReference {
 }
 
 // VisitObjectList visits the object list.
-func (v *GCPHierarchyVisitor) VisitObjectList(o ast.ObjectList) ast.Node {
+func (v *GCPHierarchyVisitor) VisitObjectList(o ast.ObjectList) ast.ObjectList {
 	return v.Copying.VisitObjectList(o)
 }

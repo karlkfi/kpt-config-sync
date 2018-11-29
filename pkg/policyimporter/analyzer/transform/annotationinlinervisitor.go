@@ -75,7 +75,7 @@ func (v *AnnotationInlinerVisitor) Error() error {
 }
 
 // VisitRoot implements ast.Visitor.
-func (v *AnnotationInlinerVisitor) VisitRoot(r *ast.Root) ast.Node {
+func (v *AnnotationInlinerVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	glog.V(5).Infof("VisitRoot(): ENTER")
 	defer glog.V(6).Infof("VisitRoot(): EXIT")
 	cs := sel.GetClusterSelectors(r)
@@ -98,7 +98,7 @@ func (v *AnnotationInlinerVisitor) VisitRoot(r *ast.Root) ast.Node {
 }
 
 // VisitTreeNode implements Visitor
-func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
+func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	glog.V(5).Infof("VisitTreeNode(): ENTER")
 	defer glog.V(6).Infof("VisitTreeNode(): EXIT")
 	n = n.PartialCopy()
@@ -131,10 +131,10 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) ast.Node {
 }
 
 // VisitObject implements Visitor
-func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) ast.Node {
+func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	glog.V(5).Infof("VisitObject(): ENTER")
 	defer glog.V(6).Infof("VisitObject(): EXIT")
-	newObject := v.Copying.VisitObject(o).(*ast.NamespaceObject)
+	newObject := v.Copying.VisitObject(o)
 	m := newObject.ToMeta()
 	if err := v.nsTransformer.transform(m); err != nil {
 		v.errs.Add(errors.Wrapf(err, "failed to inline annotation for object %q", m.GetName()))
@@ -147,7 +147,7 @@ func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) ast.Node 
 }
 
 // VisitClusterObject implements Visitor
-func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) ast.Node {
+func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	glog.V(5).Infof("VisitClusterObject(): ENTER")
 	defer glog.V(6).Infof("VisitClusterObject(): EXIT")
 	newObject := o.DeepCopy()

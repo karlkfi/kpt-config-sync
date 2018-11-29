@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -76,7 +77,7 @@ func TestFolderAndOrg(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Objects: vt.ObjectSets(org),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    ast.AbstractNamespace,
 							Objects: vt.ObjectSets(folder),
 						},
@@ -92,7 +93,7 @@ func TestFolderAndOrg(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Objects: vt.ObjectSets(folder),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    ast.AbstractNamespace,
 							Objects: vt.ObjectSets(subFolder),
 						},
@@ -111,13 +112,9 @@ func TestFolderAndOrg(t *testing.T) {
 			// needs.
 			copier := visitorpkg.NewCopying()
 			copier.SetImpl(copier)
-			inputCopy, ok := tc.input.Accept(copier).(*ast.Root)
-			if !ok {
-				t.Fatalf(
-					"framework error: return value from copying visitor needs to be of type *ast.Root, got: %#v", inputCopy)
-			}
+			inputCopy := tc.input.Accept(copier)
 			visitor := NewGCPHierarchyVisitor()
-			output := tc.input.Accept(visitor).(*ast.Root)
+			output := tc.input.Accept(visitor)
 			verifyInputUnmodified(t, tc.input, inputCopy)
 			if err := visitor.Error(); err != nil {
 				t.Errorf("GCP hierarchy visitor resulted in error: %v", err)
@@ -156,7 +153,7 @@ func TestProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Objects: vt.ObjectSets(org),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    ast.AbstractNamespace,
 							Objects: vt.ObjectSets(project),
 						},
@@ -172,7 +169,7 @@ func TestProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Objects: vt.ObjectSets(folder),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    ast.AbstractNamespace,
 							Objects: vt.ObjectSets(project),
 						},
@@ -191,13 +188,9 @@ func TestProject(t *testing.T) {
 			// needs.
 			copier := visitorpkg.NewCopying()
 			copier.SetImpl(copier)
-			inputCopy, ok := tc.input.Accept(copier).(*ast.Root)
-			if !ok {
-				t.Fatalf(
-					"framework error: return value from copying visitor needs to be of type *ast.Root, got: %#v", inputCopy)
-			}
+			inputCopy := tc.input.Accept(copier)
 			visitor := NewGCPHierarchyVisitor()
-			output := tc.input.Accept(visitor).(*ast.Root)
+			output := tc.input.Accept(visitor)
 			verifyInputUnmodified(t, tc.input, inputCopy)
 			if output.Tree == nil || len(output.Tree.Children) != 1 {
 				t.Fatalf("unexpected output root: %+v", output)
@@ -234,7 +227,7 @@ func TestAttachmentPoint(t *testing.T) {
 		},
 	}
 	visitor := NewGCPHierarchyVisitor()
-	output := input.Accept(visitor).(*ast.Root)
+	output := input.Accept(visitor)
 	wantOrgRef := &v1.ResourceReference{
 		Kind: org.TypeMeta.Kind,
 		Name: org.ObjectMeta.Name,
@@ -375,7 +368,7 @@ func TestHierarchyError(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			visitor := NewGCPHierarchyVisitor()
-			_ = tc.input.Accept(visitor).(*ast.Root)
+			_ = tc.input.Accept(visitor)
 			if err := visitor.Error(); err == nil {
 				t.Fatal("expected error, got nil")
 			}
