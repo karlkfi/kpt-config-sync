@@ -94,15 +94,17 @@ $ kubectl apply -f nomos-operator.yaml
 ```
 
 You can verify that the Nomos Operator was deployed correctly
+
 ```console
 $ kubectl -n kube-system get pods | grep nomos
 nomos-operator-6f988f5fdd-4r7tr 1/1 Running 0 26s
 ```
 
 and that the nomos-system namespace was created
+
 ```console
-$ kubectl get ns | grep
-nomos nomos-system Active 1m
+$ kubectl get ns | grep nomos
+nomos-system Active 1m
 ```
 
 ### Create the Nomos Config File
