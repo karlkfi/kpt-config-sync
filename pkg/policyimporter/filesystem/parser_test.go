@@ -295,15 +295,6 @@ spec:
   replicas: 3
 `
 
-	anAbstractDeploymentTemplate = `
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx-deployment
-spec:
-  replicas: 3
-`
-
 	aPhiloTemplate = `
 apiVersion: employees/v1alpha1
 kind: Engineer
@@ -381,8 +372,6 @@ var (
 	aClusterRoleBinding                = tpl("aClusterRoleBinding", aClusterRoleBindingTemplate)
 	aPodSecurityPolicy                 = tpl("aPodSecurityPolicyTemplate", aPodSecurityPolicyTemplate)
 	aConfigMap                         = tpl("aConfigMap", aConfigMapTemplate)
-	aDeployment                        = tpl("aDeployment", aDeploymentTemplate)
-	anAbstractDeployment               = tpl("aDeployment", anAbstractDeploymentTemplate)
 	aSync                              = tpl("aSync", aSyncTemplate)
 	aHierarchicalSync                  = tpl("aHierarchicalSync", aHierarchicalSyncTemplate)
 	aPhilo                             = tpl("aPhilo", aPhiloTemplate)
@@ -1007,7 +996,7 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":              aRepo,
 			"system/depl.yaml":               templateData{Group: "apps", Version: "v1", Kind: "Deployment"}.apply(aSync),
 			"namespaces/bar/ns.yaml":         templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/deployment.yaml": templateData{ID: "1"}.apply(aDeployment),
+			"namespaces/bar/deployment.yaml": aDeploymentTemplate,
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
@@ -1073,7 +1062,6 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":          aRepo,
 			"system/rb.yaml":             templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"namespaces/bar/ns.yaml":     templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/r1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
@@ -1389,7 +1377,7 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":              aRepoWithHierarchy,
 			"system/depl.yaml":               templateData{Group: "apps", Version: "v1", Kind: "Deployment", HierarchyMode: "inherit"}.apply(aHierarchicalSync),
-			"namespaces/bar/deployment.yaml": templateData{ID: "1"}.apply(anAbstractDeployment),
+			"namespaces/bar/deployment.yaml": aDeploymentTemplate,
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
@@ -1462,7 +1450,7 @@ var parserTestCases = []parserTestCase{
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0, "prod-ns": 1, "test-ns": 0},
 	},
 	{
-		testName: "Policyspace and Namespace dir have duplicate rolebindings",
+		testName: "Policyspace and Namespace dir have duplicate RoleBindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":           aRepo,
@@ -1470,6 +1458,18 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rb1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
 			"namespaces/bar/baz/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+		},
+		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
+	},
+	{
+		testName: "Policyspace and Namespace dir have duplicate Deployments",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":         aRepoWithHierarchy,
+			"system/depl.yaml":          templateData{Group: "apps", Version: "v1", Kind: "Deployment"}.apply(aHierarchicalSync),
+			"namespaces/depl1.yaml":     aDeploymentTemplate,
+			"namespaces/bar/ns.yaml":    templateData{Name: "baz"}.apply(aNamespace),
+			"namespaces/bar/depl1.yaml": aDeploymentTemplate,
 		},
 		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},

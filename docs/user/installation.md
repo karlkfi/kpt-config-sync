@@ -28,7 +28,7 @@ In order to run GKE Policy Management components, the cluster has to meet these
 requirements:
 
 Requirement                               | kube-apiserver flag
-------------------------------------------|--------------------------
+----------------------------------------- | -------------------
 Enable RBAC                               | Add `RBAC` to list passed to `--authorization-mode`
 Enable ResourceQuota admission controller | Add `ResourceQuota` to list passed to `--admission-control`
 Enable ValidatingAdmissionWebhook         | Add `ValidatingAdmissionWebhook` to list passed to `--admission-control`
@@ -207,6 +207,7 @@ monitor-6f968db9-mc2xp                                1/1       Running   0     
 syncer-58545bc77d-l485n                               1/1       Running   0          24m
 resourcequota-admission-controller-75494dd8-5fqlt*    1/1       Running   0          24m
 ```
+
 Note that the ResourceQuota admission controller will only be running if enabled
 using the `enableHierarchicalResourceQuota` flag.
 

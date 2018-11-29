@@ -31,8 +31,7 @@ spec:
 
 GKE Policy Management allows for syncing arbitrary kubernetes types from Git to
 a Kubernetes cluster. Sync is configured by placing a Sync resource in the
-`system/` directory. The following example configures syncing RBAC types with
-`inherit` mode (addressed later) for RoleBindings.
+`system/` directory. The following example configures syncing RBAC types.
 
 When syncing resources from Git and comparing them with the current cluster, we
 need some criteria to determine if a resource in Git matches what is on the
@@ -75,7 +74,6 @@ spec:
         compareFields:
         - rules
     - kind: RoleBinding
-      mode: inherit
       versions:
       - version: v1
         compareFields:
@@ -83,69 +81,26 @@ spec:
         - roleRef
 ```
 
-ResourceQuota has [special handling](rq.md). However, the Sync configuration is
-not affected by this. The following shows an example of configuring sync on
-ResourceQuota.
+### Inheritance
 
-```console
-$ cat system/resourcequota-sync.yaml
-```
+GKE Policy Management allows `RoleBindings` and `ResourceQuota` to be placed in
+Abstract Namespace directories, and have those policies instantiated in
+descendant Namespaces.
 
-```yaml
-kind: Sync
-apiVersion: nomos.dev/v1alpha1
-metadata:
-  name: resourcequotas
-spec:
-  groups:
-  - kinds:
-    - kind: ResourceQuota
-      versions:
-      - version: v1
-```
+#### RoleBinding inheritance
 
-#### Standard mode
-
-By default, policies have no inheritance and can only be set on a Namespace
-directory. Placing a non-inherited policy in an Abstract Namespace directory
-will cause an error.
-
-To demonstrate, we move a Role from a Namespace directory to an Abstract
-Namespace directory.
-
-```console
-$ mv rnd/new-prj/acme-admin-role.yaml rnd/
-```
-
-Now when we try to sync policies from our repo, we get the following error.
-
-```console
-Found issues: 1 error(s)
-
-[1] KNV1007: Object "acme-admin" illegally declared in an Abstract Namespace directory. Move this object to a Namespace directory:
-
-source: namespaces/rnd/acme-admin-role.yaml
-metadata.name: acme-admin
-group: rbac.authorization.k8s.io
-apiVersion: v1
-kind: Role
-```
-
-#### Inherit Mode
-
-GKE Policy Management enables "inherited" policies to be applied hierarchically
+GKE Policy Management provides inheritance for `RoleBindings` specially,
 following these properties:
 
-1.  An "inherit" mode policy specified in a Abstract Namespace directory is
-    inherited by all descendant namespaces
-1.  An "inherit" mode policy can be specified in a Namespace directory (Existing
-    K8S behavior)
+1.  A `RoleBinding` specified in an Abstract Namespace directory is inherited by
+    all descendant namespaces.
+1.  A `RoleBinding` can be specified in a Namespace directory, just like any
+    other resource.
 
-For example, we can set the Sync mode for RoleBinding to inherit and create a
-RoleBinding in the `shipping-app-backend` Abstract Namespace such that anyone
-belonging to `shipping-app-backend-team` group is able to create pods in all
-namespace descendants (i.e. `shipping-dev`, `shipping-staging`,
-`shipping-prod`):
+For example, we can create a RoleBinding in the `shipping-app-backend` Abstract
+Namespace such that anyone belonging to `shipping-app-backend-team` group is
+able to create pods in all namespace descendants (i.e. `shipping-dev`,
+`shipping-staging`, `shipping-prod`):
 
 ```console
 $ cat namespaces/online/shipping-app-backend/pod-creator-rolebinding.yaml
@@ -166,7 +121,8 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-This is done by automatically creating inherited RoleBindings in a namespace:
+GKE Policy Management automatically creates inherited RoleBindings in the
+descendant Namespaces:
 
 ```console
 $ kubectl get rolebinding --namespace shipping-dev -o name
@@ -179,12 +135,24 @@ Inheritance is implemented by flattening resources in namespaces. In
 `shipping-dev` namespace, `pod-creators` is inherited and `job-creators` is
 created directly in the namespace.
 
+What happens if a hierarchy contains conflicting `RoleBindings` (i.e. multiple
+`RoleBindings` with the same name)? For simplicity, GKE Policy Management
+disallows that. I.e., it is an error for a `RoleBinding` to have the same name
+as another `RoleBinding` either in the same directory or in any ancestor
+Abstract Namespace.
+
 Note that GKE Policy Management is intended to be non-destructive to resources
 that are created outside of the system which means a user may be able to edit
 resources outside of GKE Policy Management (e.g. using kubectl) or create
-rolebindings subject to
+RoleBindings subject to
 [privilege escalation prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping)
 in Kubernetes.
+
+#### ResourceQuota inheritance
+
+Like `RoleBindings`, `ResourceQuotas` may also appear in Abstract Namespaces.
+`ResourceQuota` inheritance has some unique behaviors, described fully in
+[Hierarchical ResourceQuota](rq.md).
 
 #### Custom Resources
 
@@ -255,6 +223,32 @@ metadata:
 spec:
   bar: baz
 EOF
+```
+
+### Other Resource Types
+
+Only `RoleBindings` and `ResourceQuota` are allowed in Abstract Namespaces.
+Putting any other resource in an Abstract Namespace causes an error.
+
+To demonstrate, we move a Role from a Namespace directory to an Abstract
+Namespace directory:
+
+```console
+$ mv rnd/new-prj/acme-admin-role.yaml rnd/
+```
+
+Now when we try to sync policies from our repo, we get the following error.
+
+```console
+Found issues: 1 error(s)
+
+[1] KNV1007: Object "acme-admin" illegally declared in an Abstract Namespace directory. Move this object to a Namespace directory:
+
+source: namespaces/rnd/acme-admin-role.yaml
+metadata.name: acme-admin
+group: rbac.authorization.k8s.io
+apiVersion: v1
+kind: Role
 ```
 
 #### Modifying Syncs and Resources Simultaneously
