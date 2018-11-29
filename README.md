@@ -40,6 +40,10 @@ Try it out by following the [Quickstart Guide](docs/user/quickstart.md).
 
 [Developer Guide](docs/dev/guide.md)
 
+## Changelog
+
+[CHANGELOG](docs/CHANGELOG.md)
+
 ## Send feedback
 
 Questions or feedback? Get in touch with us at
