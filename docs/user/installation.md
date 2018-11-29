@@ -205,7 +205,6 @@ NAME                                                  READY     STATUS    RESTAR
 git-policy-importer-66bf6b9db4-pbsxn                  2/2       Running   0          24m
 monitor-6f968db9-mc2xp                                1/1       Running   0          24m
 syncer-58545bc77d-l485n                               1/1       Running   0          24m
-resourcequota-admission-controller-75494dd8-5fqlt*    1/1       Running   0          24m
 ```
 
 Note that the ResourceQuota admission controller will only be running if enabled
