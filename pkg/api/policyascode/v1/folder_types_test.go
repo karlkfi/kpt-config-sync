@@ -31,7 +31,7 @@ func TestStorageFolder(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 		Spec: FolderSpec{
 			ParentReference: ParentReference{
-				Kind: "Organization",
+				Kind: OrganizationKind,
 				Name: "bar",
 			},
 			DisplayName:   "spec-bar",

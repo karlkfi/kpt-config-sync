@@ -385,7 +385,7 @@ func (t *TestHelper) GCPProject() *gcpv1.Project {
 	return &gcpv1.Project{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gcpv1.SchemeGroupVersion.String(),
-			Kind:       "Project",
+			Kind:       gcpv1.ProjectKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "project-sample",
@@ -401,7 +401,7 @@ func (t *TestHelper) GCPFolder() *gcpv1.Folder {
 	return &gcpv1.Folder{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gcpv1.SchemeGroupVersion.String(),
-			Kind:       "Folder",
+			Kind:       gcpv1.FolderKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "folder-sample",
@@ -417,7 +417,7 @@ func (t *TestHelper) GCPOrg() *gcpv1.Organization {
 	return &gcpv1.Organization{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gcpv1.SchemeGroupVersion.String(),
-			Kind:       "Organization",
+			Kind:       gcpv1.OrganizationKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "org-sample",

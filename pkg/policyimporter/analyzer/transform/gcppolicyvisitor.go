@@ -106,7 +106,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		ciam := &v1.ClusterIAMPolicy{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       "ClusterIAMPolicy",
+				Kind:       v1.ClusterIAMPolicyKind,
 			},
 			ObjectMeta: iamPolicy.ObjectMeta,
 			Spec:       iamPolicy.Spec,
@@ -133,7 +133,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		corg := &v1.ClusterOrganizationPolicy{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       "ClusterOrganizationPolicy",
+				Kind:       v1.ClusterOrganizationPolicyKind,
 			},
 			ObjectMeta: orgPolicy.ObjectMeta,
 			Spec:       orgPolicy.Spec,

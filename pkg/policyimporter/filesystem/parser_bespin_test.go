@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	policyascode_v1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/pkg/errors"
@@ -72,7 +73,7 @@ var dynamicResources = append(fstesting.TestDynamicResources(), []*restmapper.AP
 		},
 		VersionedResources: map[string][]metav1.APIResource{
 			"v1": {
-				{Name: "projects", Namespaced: true, Kind: "Project"},
+				{Name: "projects", Namespaced: true, Kind: policyascode_v1.ProjectKind},
 			},
 		},
 	},
@@ -86,7 +87,7 @@ func TestBespinParser(t *testing.T) {
 		wantErr         bool
 	}{
 		{
-			name: "Project",
+			name: policyascode_v1.ProjectKind,
 			root: "foo",
 			files: fstesting.FileContentMap{
 				"system/nomos.yaml":           aRepo,

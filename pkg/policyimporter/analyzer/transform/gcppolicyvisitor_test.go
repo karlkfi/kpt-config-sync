@@ -41,7 +41,7 @@ func TestIAMPolicies(t *testing.T) {
 			policy: &v1.IAMPolicy{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "IAMPolicy",
+					Kind:       v1.IAMPolicyKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "iam-policy",
@@ -84,7 +84,7 @@ func TestOrgPolicies(t *testing.T) {
 			policy: &v1.OrganizationPolicy{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "OrganizationPolicy",
+					Kind:       v1.OrganizationPolicyKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "org-policy",
@@ -173,7 +173,7 @@ func TestIAMPolicyConversion(t *testing.T) {
 			policy: &v1.IAMPolicy{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "IAMPolicy",
+					Kind:       v1.IAMPolicyKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "iam-policy",
@@ -185,7 +185,7 @@ func TestIAMPolicyConversion(t *testing.T) {
 			want: &v1.ClusterIAMPolicy{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterIAMPolicy",
+					Kind:       v1.ClusterIAMPolicyKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "iam-policy",
@@ -222,7 +222,7 @@ func TestOrgPolicyConversion(t *testing.T) {
 			policy: &v1.OrganizationPolicy{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "OrganizationPolicy",
+					Kind:       v1.OrganizationPolicyKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "org-policy",
@@ -237,7 +237,7 @@ func TestOrgPolicyConversion(t *testing.T) {
 			want: &v1.ClusterOrganizationPolicy{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterOrganizationPolicy",
+					Kind:       v1.ClusterOrganizationPolicyKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "org-policy",

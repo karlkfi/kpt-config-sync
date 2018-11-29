@@ -30,7 +30,7 @@ func TestStorageClusterOrganizationPolicy(t *testing.T) {
 	created := &ClusterOrganizationPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 		Spec: OrganizationPolicySpec{
-			ResourceReference: ResourceReference{Kind: "Organization", Name: "bar"},
+			ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
 			Constraints: []OrganizationPolicyConstraint{
 				{
 					Constraint: "c1",

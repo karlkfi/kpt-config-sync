@@ -31,7 +31,7 @@ func TestStorageClusterIAMPolicy(t *testing.T) {
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 			Spec: IAMPolicySpec{
-				ResourceReference: ResourceReference{Kind: "Organization", Name: "bar"},
+				ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
 				Bindings:          fakeBindings,
 				ImportDetails:     fakeImportDetails,
 			},
@@ -42,7 +42,7 @@ func TestStorageClusterIAMPolicy(t *testing.T) {
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 			Spec: IAMPolicySpec{
-				ResourceReference: ResourceReference{Kind: "Folder", Name: "bar"},
+				ResourceReference: ResourceReference{Kind: FolderKind, Name: "bar"},
 				Bindings:          fakeBindings,
 				ImportDetails:     fakeImportDetails,
 			},
