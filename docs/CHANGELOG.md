@@ -6,15 +6,9 @@
 
 #### Action Required
 
-This is a major change from the previous version, and will require a full
-uninstall of the old GKE Policy Management on your cluster. To perform a full
-removal of the previous version, run the following commands:
-
-```console
-$ kubectl delete ValidatingWebhookConfiguration -l nomos.dev/system=true
-$ kubectl delete ns nomos-system
-$ kubectl delete customresourcedefinitions -l nomos.dev/system=true
-```
+This is a major change from the previous version, and will require installation
+on a clean cluster. An earlier installation of GKE Policy Management will
+interfere with an installation of v0.11.0.
 
 In addition, the format of the policy repository has changed. An example of the
 new repo format is provided at
