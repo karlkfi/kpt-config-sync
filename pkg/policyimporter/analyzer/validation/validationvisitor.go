@@ -61,7 +61,8 @@ func newClusterCoverage(
 		sn := s.ObjectMeta.Name
 		selector, err := sels.AsPopulatedSelector(&s.Spec.Selector)
 		if err != nil {
-			errs.Add(InvalidSelector{sn, err})
+			// TODO(b/120229144): Impossible to get here.
+			errs.Add(InvalidSelectorError{sn, err})
 			continue
 		}
 		for _, c := range clusters {

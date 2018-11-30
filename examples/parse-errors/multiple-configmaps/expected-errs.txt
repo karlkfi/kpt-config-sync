@@ -1,0 +1,11 @@
+Found issues: 1 error(s)
+
+
+[1] KNV1026: There MUST NOT be more than one ConfigMap declaration in system/
+
+source: system/configmap-1.yaml
+name: config-map-1
+
+source: system/configmap-2.yaml
+name: config-map-2
+

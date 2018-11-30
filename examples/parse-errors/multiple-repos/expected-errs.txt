@@ -1,0 +1,11 @@
+Found issues: 1 error(s)
+
+
+[1] KNV1025: There MUST NOT be more than one Repo declaration in system/
+
+source: system/repo-1.yaml
+name: repo-1
+
+source: system/repo-2.yaml
+name: repo-2
+

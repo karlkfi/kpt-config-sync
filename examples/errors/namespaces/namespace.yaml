@@ -1,6 +1,8 @@
-# There shouldn't be a Namespace object declared in namespaces/.
+# There shouldn't be a Namespace resource declared in namespaces/.
 # Namespaces must be declared in subdirectories.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: namespaces
+  annotations:
+    nomos.dev/namespace-selector: illegal-namespace-selector

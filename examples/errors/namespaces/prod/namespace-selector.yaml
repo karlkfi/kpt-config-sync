@@ -1,0 +1,6 @@
+kind: NamespaceSelector
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: sre-supported
+  annotations:
+    nomos.dev/cluster-selector: illegal-cluster-selector-annotation

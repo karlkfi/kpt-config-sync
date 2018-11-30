@@ -1,0 +1,12 @@
+kind: Sync
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: sync
+spec:
+  groups:
+  - group: rbac.authorization.k8s.io
+    kinds:
+    - kind: RoleBinding
+      hierarchyMode: inherit
+      versions:
+      - version: v1

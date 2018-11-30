@@ -9,7 +9,7 @@ version: v1
 kind: Unknown
 
 
-[2] KNV1034: Sync contains a resource type that is not supported. Remove the resource type from the Sync.
+[2] KNV1034: Sync contains an unsupported resource type:
 
 source: system/invalid.yaml
 group: extensions
@@ -17,7 +17,7 @@ version: v1beta1
 kind: CustomResourceDefinition
 
 
-[3] KNV1034: Sync contains a resource type that is not supported. Remove the resource type from the Sync.
+[3] KNV1034: Sync contains an unsupported resource type:
 
 source: system/invalid.yaml
 group: nomos.dev
@@ -25,7 +25,7 @@ version: v1
 kind: PolicyNode
 
 
-[4] KNV1034: Sync contains a resource type that is not supported. Remove the resource type from the Sync.
+[4] KNV1034: Sync contains an unsupported resource type:
 
 source: system/invalid.yaml
 group: nomos.dev

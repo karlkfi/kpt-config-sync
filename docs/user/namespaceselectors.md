@@ -47,7 +47,7 @@ production. As a result, we want to give the prod SRE team access to resources
 in these namespaces. We can do this using `NamespaceSelector` objects. Follow
 these steps:
 
-##### 1. Add labels to Namespace objects
+##### 1. Add labels to Namespace resources
 
 ```console
 $ cat namespaces/audit/namespace.yaml

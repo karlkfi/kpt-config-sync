@@ -348,6 +348,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	clusters, selectors := p.processClusterRegistryDir(repo.ClusterRegistryDir, clusterregistryInfos, &errorBuilder)
 	cs, err := sel.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
 	if err != nil {
+		// TODO(b/120229144): To be factored into KNV Error.
 		errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
 		return nil, errorBuilder.Build()
 	}

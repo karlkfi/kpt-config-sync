@@ -1,0 +1,10 @@
+Found issues: 1 error(s)
+
+
+[1] KNV1022: Kinds MUST declare exactly one version:
+
+source: system/resource-quota.yaml
+group: 
+versions: [, ]
+kind: ResourceQuota
+

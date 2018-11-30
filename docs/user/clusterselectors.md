@@ -156,7 +156,7 @@ spec:
     memory: 1Gi
 ```
 
-Adding the `ClusterSelector` annotation to a namespace object makes the
+Adding the `ClusterSelector` annotation to a Namespace resource makes the
 namespace and all included objects available only on clusters covered by the
 matching selector.
 
