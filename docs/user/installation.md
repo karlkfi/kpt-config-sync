@@ -86,52 +86,6 @@ $ kubectl get ns | grep nomos
 nomos-system Active 1m
 ```
 
-### Create the Nomos Config File
-
-The Nomos resource is a Kubernetes Custom Resource Definition (CRD) that defines
-a Nomos installation. The `spec` field of a Nomos resources specifies the
-installation parameters for Nomos.
-
-An example config using
-[foo-corp GitHub repo](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0)
-with SSH authentication is shown below:
-
-```yaml
-apiVersion: addons.sigs.k8s.io/v1alpha1
-kind: Nomos
-metadata:
-  name: nomos
-  namespace: nomos-system
-spec:
-  git:
-    syncRepo: git@github.com:frankfarzan/foo-corp-example.git
-    syncBranch: 0.1.0
-    secretType: ssh
-    policyDir: foo-corp
-  enableHierarchicalResourceQuota: true
-```
-
-`spec` contains a top level field `git`, which is an object with the following
-properties:
-
-Key          | Description
------------- | -----------
-`syncRepo`   | The URL of the Git repository to use as the source of truth. Required.
-`syncBranch` | The branch of the repository to sync from. Default: master.
-`policyDir`  | The path within the repository to the top of the policy hierarchy to sync. Default: the root directory of the repository.
-`syncWait`   | Period in seconds between consecutive syncs. Default: 15.
-`syncRev`    | Git revision (tag or hash) to check out. Default HEAD.
-`secretType` | The type of secret configured for access to the Git repository. One of `ssh` or `cookiefile`. Required.
-
-In addition, the following top level properties can be specified:
-
-Key                               | Description
---------------------------------- | -----------
-`enableHierarchicalResourceQuota` | Enables the [Hierarchical Resource Quota Controller](rq.md) that enforces quota set on Abstract Namespaces. Default: false.
-
-Note that Hierarchical Resource Quota is currently unsupported on GKE On Prem
-Alpha and the flag should be set to false or ommitted.
-
 ### Create the git-creds Secret
 
 #### Using SSH
@@ -184,8 +138,51 @@ necessary to have that namespace created before creating the secret
 
 ### Create the Nomos Resource
 
-Use the Nomos Resource yaml you created in the previous step to create the
-Resource in the cluster.
+The Nomos resource is a Kubernetes Custom Resource Definition (CRD) that defines
+a Nomos installation. The `spec` field of a Nomos resources specifies the
+installation parameters for Nomos.
+
+An example config using
+[foo-corp GitHub repo](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0)
+with SSH authentication is shown below:
+
+```yaml
+apiVersion: addons.sigs.k8s.io/v1alpha1
+kind: Nomos
+metadata:
+  name: nomos
+  namespace: nomos-system
+spec:
+  git:
+    syncRepo: git@github.com:frankfarzan/foo-corp-example.git
+    syncBranch: 0.1.0
+    secretType: ssh
+    policyDir: foo-corp
+  enableHierarchicalResourceQuota: true
+```
+
+`spec` contains a top level field `git`, which is an object with the following
+properties:
+
+Key          | Description
+------------ | -----------
+`syncRepo`   | The URL of the Git repository to use as the source of truth. Required.
+`syncBranch` | The branch of the repository to sync from. Default: master.
+`policyDir`  | The path within the repository to the top of the policy hierarchy to sync. Default: the root directory of the repository.
+`syncWait`   | Period in seconds between consecutive syncs. Default: 15.
+`syncRev`    | Git revision (tag or hash) to check out. Default HEAD.
+`secretType` | The type of secret configured for access to the Git repository. One of `ssh` or `cookiefile`. Required.
+
+In addition, the following top level properties can be specified:
+
+Key                               | Description
+--------------------------------- | -----------
+`enableHierarchicalResourceQuota` | Enables the [Hierarchical Resource Quota Controller](rq.md) that enforces quota set on Abstract Namespaces. Default: false.
+
+Note that Hierarchical Resource Quota is currently unsupported on GKE On Prem
+Alpha and the flag should be set to false or omitted.
+
+Once you have created your nomos.yaml file, apply it to the API server:
 
 ```console
 $ kubectl create -f nomos.yaml
