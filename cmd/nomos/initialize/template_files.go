@@ -1,7 +1,7 @@
 package initialize
 
 const (
-	repoFile     = "nomos.yaml"
+	repoFile     = "repo.yaml"
 	repoContents = `kind: Repo
 apiVersion: nomos.dev/v1alpha1
 metadata:
@@ -71,21 +71,20 @@ spec:
 
 This is the root directory for GKE Policy Management for your cluster.
 
-See [system/](system/README.md) for configuration settings.
-See [cluster/](cluster/README.md) for cluster-scoped resources.
-See [namespaces/](namespaces/README.md) for resources whose scope is limited to namespaces.
+* See [system/](system/README.md) for system configuration.
+* See [cluster/](cluster/README.md) for cluster-scoped resources.
+* See [namespaces/](namespaces/README.md) for namespace-scoped resources.
 `
 	systemReadmeContents = `# System
 
-This directory contains configuration settings about this GKE Policy Management directory such as
-the directory format version and what resource kinds are syncable.
+This directory contains system configs such as the repo version and how resources are synced.
 `
 	clusterReadmeContents = `# Cluster
 
-This directory contains cluster-scoped resources and configurations.
+This directory contains cluster-scoped resources.
 `
 	namespacesReadmeContents = `# Namespaces
 
-This directory contains namespace-scoped resources and configurations.
+This directory contains namespace-scoped resources.
 `
 )
