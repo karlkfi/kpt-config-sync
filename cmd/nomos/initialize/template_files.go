@@ -45,7 +45,7 @@ spec:
 	resourceQuotaSyncContents = `kind: Sync
 apiVersion: nomos.dev/v1alpha1
 metadata:
-  name: resourceQuota
+  name: resourcequota
 spec:
   groups:
   - kinds:
