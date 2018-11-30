@@ -69,6 +69,7 @@ const (
 	IllegalSystemResourcePlacementErrorCode        = "1033"
 	UnsupportedResourceInSyncErrorCode             = "1034"
 	IllegalHierarchyModeErrorCode                  = "1035"
+	InvalidMetadataNameErrorCode                   = "1036"
 	UndefinedErrorCode                             = "????"
 )
 
@@ -146,6 +147,8 @@ func Code(e error) string {
 		return UnsupportedResourceInSyncErrorCode
 	case IllegalHierarchyModeError:
 		return IllegalHierarchyModeErrorCode
+	case InvalidMetadataNameError:
+		return InvalidMetadataNameErrorCode
 	default:
 		return UndefinedErrorCode // Undefined
 	}
@@ -729,4 +732,17 @@ func (e IllegalHierarchyModeError) Error() string {
 	return format(e,
 		"HierarchyMode %[1]s is not a valid value for Sync %[2]s. Allowed values are [%[3]s].",
 		e.Mode, e.Name, strings.Join(allowedStr, ","))
+}
+
+// InvalidMetadataNameError represents the usage of a non-RFC1123 compliant metadata.name
+type InvalidMetadataNameError struct {
+	*resource.Info
+}
+
+// Error implements error.
+func (e InvalidMetadataNameError) Error() string {
+	return format(e,
+		"Resource MUST define a metadata.name which is a RFC1123 DNS label. Rename or remove the below:\n\n"+
+			"%[1]s",
+		resourceInfo{e.Info})
 }

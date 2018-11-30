@@ -39,7 +39,7 @@ metadata:
 kind: Sync
 apiVersion: nomos.dev/v1alpha1
 metadata:
-  name: Project
+  name: project
 spec:
   groups:
   - group: bespin.dev

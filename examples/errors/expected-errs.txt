@@ -1,4 +1,4 @@
-Found issues: 17 error(s)
+Found issues: 18 error(s)
 
 
 [1] KNV1001: Directories MUST NOT have reserved namespace names. Rename or remove directory:
@@ -104,7 +104,7 @@ actual name: incorrect-name
 
 [15] KNV1029: Objects of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
 
-source: namespaces/dev/alice-rolebinding.yaml
+source: namespaces/dev/alice-rolebinding-1.yaml
 group: rbac.authorization.k8s.io
 version: v1
 kind: RoleBinding
@@ -138,4 +138,13 @@ group: nomos.dev
 version: v1alpha1
 kind: Sync
 name: illegal-sync
+
+
+[18] KNV1036: Resource MUST define a metadata.name which is a RFC1123 DNS label. Rename or remove the below:
+
+source: namespaces/dev/dev-namespace/illegal-name.yaml
+group: rbac.authorization.k8s.io
+version: v1
+kind: RoleBinding
+name: illegalName
 

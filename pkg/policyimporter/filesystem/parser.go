@@ -46,6 +46,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/discovery"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
@@ -724,6 +725,10 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 	for _, infos := range dirInfos {
 		for _, info := range infos {
 			dir := path.Dir(info.Source)
+
+			if errs := utilvalidation.IsDNS1123Label(info.Name); len(errs) > 0 {
+				errorBuilder.Add(validation.InvalidMetadataNameError{Info: info})
+			}
 
 			if info.Namespace != "" {
 				errorBuilder.Add(validation.IllegalMetadataNamespaceDeclarationError{Info: info})
