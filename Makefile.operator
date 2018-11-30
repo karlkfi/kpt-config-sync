@@ -13,7 +13,7 @@ endif
 DEV_BUCKET := gs://${GCP_PROJECT}
 DEV_BUCKET_USER ?= gs://${GCP_PROJECT}/${USER}
 OPERATOR_STAGING_DIR := ${OUTPUT_DIR}/staging/operator
-GIT_SYNC_TAG := v2.0.6-15-g2e46b74
+GIT_SYNC_TAG := v2.0.6-gke.1
 GIT_SYNC := git-sync-amd64:$(GIT_SYNC_TAG)
 GIT_SYNC_SRC := gcr.io/nomos-release/$(GIT_SYNC)
 
