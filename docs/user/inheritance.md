@@ -44,24 +44,25 @@ spec:
         - rules
 ```
 
-To demonstrate the effect, we return to the acme example. In
+To demonstrate the effect, we return to the foo-corp example. In
 [System Configuration](system_config.md), we tried to move
-`acme-admin-role.yaml` to an Abstract Namespace, and that resulted in an error.
+`job-creator-role.yaml` to an Abstract Namespace, and that resulted in an error.
 We'll do it again, this time with inheritance enabled:
 
 ```console
-$ mv rnd/new-prj/acme-admin-role.yaml rnd/
+$ mv namespaces/online/shipping-app-backend/shipping-dev/job-creator-role.yaml namespaces/online/
 ```
 
 Once the above changes are committed, check the cluster:
 
 ```console
-$ kubectl get role --all-namespaces | grep acme-admin
-new-prj       acme-admin                                       1m
-newer-prj     acme-admin                                       1m
+$ kubectl get role --all-namespaces | grep job-creator
+shipping-dev       acme-admin                                  1m
+shipping-prod      acme-admin                                  1m
+shipping-staging   acme-admin                                  1m
 ```
 
-The role has been instantiated in both child namespaces.
+The role has been instantiated in all descendant namespaces.
 
 ## Modes
 

@@ -230,11 +230,11 @@ EOF
 Only `RoleBindings` and `ResourceQuota` are allowed in Abstract Namespaces.
 Putting any other resource in an Abstract Namespace causes an error.
 
-To demonstrate, we move a Role from a Namespace directory to an Abstract
-Namespace directory:
+To demonstrate, in foo-corp, we move a Role from a Namespace directory to an
+Abstract Namespace directory:
 
 ```console
-$ mv rnd/new-prj/acme-admin-role.yaml rnd/
+$ mv namespaces/online/shipping-app-backend/shipping-dev/job-creator-role.yaml namespaces/online/
 ```
 
 Now when we try to sync policies from our repo, we get the following error.
@@ -242,10 +242,10 @@ Now when we try to sync policies from our repo, we get the following error.
 ```console
 Found issues: 1 error(s)
 
-[1] KNV1007: Object "acme-admin" illegally declared in an Abstract Namespace directory. Move this object to a Namespace directory:
+[1] KNV1007: Object "job-creator" illegally declared in an Abstract Namespace directory. Move this object to a Namespace directory:
 
-source: namespaces/rnd/acme-admin-role.yaml
-metadata.name: acme-admin
+source: namespaces/online/job-creator-role.yaml
+metadata.name: job-creator
 group: rbac.authorization.k8s.io
 apiVersion: v1
 kind: Role
@@ -253,7 +253,7 @@ kind: Role
 
 #### Modifying Syncs and Resources Simultaneously
 
-It is discouraged to have a git commit that both alters Syncs and the
+It is discouraged to have a git commit that alters both Syncs and the
 corresponding resources. Since there is a dependency between Syncs and
 resources, the intent behind toggling resource management and altering resources
 is ambiguous in certain cases.
