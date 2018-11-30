@@ -5,7 +5,6 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/pkg/errors"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
@@ -24,15 +23,9 @@ func parse(dir string, parserOpt filesystem.ParserOpt) (*v1.AllPolicies, error) 
 		return nil, errors.Wrap(err, "Failed to get rest.Config")
 	}
 
-	client, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create client")
-	}
-
 	// TODO(119066037): Override the host in a way that doesn't involve overwriting defaults set internally in client-go.
 	clientcmd.ClusterDefaults = clientcmdapi.Cluster{Server: restConfig.Host}
-	p, err := filesystem.NewParser(
-		&genericclioptions.ConfigFlags{}, client.Discovery(), parserOpt)
+	p, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, parserOpt)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create parser")
 	}

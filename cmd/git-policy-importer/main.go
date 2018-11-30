@@ -61,8 +61,7 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	parser, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, client.Kubernetes().Discovery(),
-		filesystem.ParserOpt{Validate: true, Bespin: bespin})
+	parser, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, filesystem.ParserOpt{Validate: true, Bespin: bespin})
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %+v", err)
 	}

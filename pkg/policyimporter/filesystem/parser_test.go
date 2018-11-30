@@ -2066,8 +2066,6 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	}()
 	p, err := NewParserWithFactory(
 		f,
-		fstesting.NewFakeCachedDiscoveryClient(
-			fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
 		ParserOpt{
 			Vet:      tc.vet,
 			Validate: true,
@@ -2954,8 +2952,6 @@ func TestEmptyDirectories(t *testing.T) {
 
 			p, err := NewParserWithFactory(
 				f,
-				fstesting.NewFakeCachedDiscoveryClient(
-					fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
 				ParserOpt{
 					Vet:      false,
 					Validate: true,

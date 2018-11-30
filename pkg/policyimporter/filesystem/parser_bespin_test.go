@@ -24,8 +24,6 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/restmapper"
 )
 
 const (
@@ -61,23 +59,6 @@ spec:
   foo: bar
 `
 )
-
-// dynamicResources is the set of standard K8S resources, Nomos resources and
-// Bespin resources. These are all required for the test to function.
-var dynamicResources = append(fstesting.TestDynamicResources(), []*restmapper.APIGroupResources{
-	{
-		Group: metav1.APIGroup{
-			Name:             "bespin.dev",
-			Versions:         []metav1.GroupVersionForDiscovery{{Version: "v1"}},
-			PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1"},
-		},
-		VersionedResources: map[string][]metav1.APIResource{
-			"v1": {
-				{Name: "projects", Namespaced: true, Kind: policyascode_v1.ProjectKind},
-			},
-		},
-	},
-}...)
 
 func TestBespinParser(t *testing.T) {
 	var tests = []struct {
@@ -115,10 +96,7 @@ func TestBespinParser(t *testing.T) {
 				}
 			}()
 
-			dc := &fstesting.FakeCachedDiscoveryClient{
-				APIGroupResources: fstesting.TestAPIResourceList(dynamicResources),
-			}
-			p, err := NewParserWithFactory(f, dc, ParserOpt{Validate: true})
+			p, err := NewParserWithFactory(f, ParserOpt{Validate: true})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -169,7 +147,7 @@ func TestBespinVisitorsAdded(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p, err := NewParserWithFactory(nil, nil, ParserOpt{Bespin: tc.enabled})
+			p, err := NewParserWithFactory(fstesting.NewTestFactory(), ParserOpt{Bespin: tc.enabled})
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -81,7 +81,7 @@ type FakeCachedDiscoveryClient struct {
 }
 
 // NewFakeCachedDiscoveryClient returns a DiscoveryClient with stubbed API Resources.
-func NewFakeCachedDiscoveryClient(res []*metav1.APIResourceList) discovery.DiscoveryInterface {
+func NewFakeCachedDiscoveryClient(res []*metav1.APIResourceList) discovery.CachedDiscoveryInterface {
 	return &FakeCachedDiscoveryClient{APIGroupResources: res}
 }
 
@@ -125,7 +125,11 @@ func NewTestFactory() *TestFactory {
 	config, configFile := defaultFakeClientConfig()
 	rConfig, _ := config.ClientConfig()
 	return &TestFactory{
-		Factory:         cmdutil.NewFactory(&FakeRESTClientGetter{Config: config}),
+		Factory: cmdutil.NewFactory(
+			&FakeRESTClientGetter{
+				Config:          config,
+				DiscoveryClient: NewFakeCachedDiscoveryClient(TestAPIResourceList(TestDynamicResources())),
+			}),
 		Client:          &fake.RESTClient{},
 		tempConfigFile:  configFile,
 		ClientConfigVal: rConfig,

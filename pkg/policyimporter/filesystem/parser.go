@@ -153,14 +153,17 @@ func (b bespinVisitorProvider) visitors(apiInfo *meta.APIInfo,
 // resources is the list returned by the DisoveryClient ServerResources call which represents resources
 // 		that are returned by the API server during discovery.
 // opts turns on options for the parser.
-// TODO(118887045): Don't pass in a discoveryClient. Just use the one in from RestClientGetter.ToDiscoveryClient().
-func NewParser(clientGetter genericclioptions.RESTClientGetter, discoveryClient discovery.ServerResourcesInterface, opts ParserOpt) (*Parser, error) {
-	return NewParserWithFactory(cmdutil.NewFactory(clientGetter), discoveryClient, opts)
+func NewParser(clientGetter genericclioptions.RESTClientGetter, opts ParserOpt) (*Parser, error) {
+	return NewParserWithFactory(cmdutil.NewFactory(clientGetter), opts)
 }
 
 // NewParserWithFactory creates a new Parser using the specified factory.
 // NewParser is the more common constructor, but this is useful for testing.
-func NewParserWithFactory(f cmdutil.Factory, dc discovery.ServerResourcesInterface, opts ParserOpt) (*Parser, error) {
+func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
+	dc, err := f.ToDiscoveryClient()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get discovery client")
+	}
 	var vp visitorProvider = nomosVisitorProvider{}
 	if opts.Bespin {
 		vp = bespinVisitorProvider{}
