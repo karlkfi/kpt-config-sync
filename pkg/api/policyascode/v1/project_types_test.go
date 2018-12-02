@@ -65,7 +65,7 @@ func TestStorageProject(t *testing.T) {
 	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
 }
 
-func TestGetTFResourceConfig(t *testing.T) {
+func TestProjectGetTFResourceConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		p       *Project
@@ -89,12 +89,11 @@ func TestGetTFResourceConfig(t *testing.T) {
 					SyncDetails: fakeSyncDetails,
 				},
 			},
-			want: fmt.Sprintf(
-				`resource "google_project" "bespin_project" {
-						name = "spec-bar"
-						project_id = "some-fake-project"
-						Organization
-					}`),
+			want: `resource "google_project" "bespin_project" {
+name = "spec-bar"
+project_id = "some-fake-project"
+org_id = "bar"
+}`,
 			wantErr: nil,
 		},
 		{
@@ -114,12 +113,11 @@ func TestGetTFResourceConfig(t *testing.T) {
 					SyncDetails: fakeSyncDetails,
 				},
 			},
-			want: fmt.Sprintf(
-				`resource "google_project" "bespin_project" {
-						name = "spec-bar"
-						project_id = "some-fake-project"
-						Folder
-					}`),
+			want: `resource "google_project" "bespin_project" {
+name = "spec-bar"
+project_id = "some-fake-project"
+folder_id = "bar"
+}`,
 			wantErr: nil,
 		},
 		{

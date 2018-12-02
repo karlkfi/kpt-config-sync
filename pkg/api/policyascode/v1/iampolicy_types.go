@@ -17,8 +17,15 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func init() {
+	SchemeBuilder.Register(&IAMPolicy{}, &IAMPolicyList{})
+}
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -42,6 +49,67 @@ type IAMPolicyList struct {
 	Items           []IAMPolicy `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&IAMPolicy{}, &IAMPolicyList{})
+// GetTFResourceConfig converts the IAMPolicy's Spec struct into terraform config string.
+func (i *IAMPolicy) GetTFResourceConfig() (string, error) {
+	var tfs []string
+	switch i.Spec.ResourceReference.Kind {
+	case OrganizationKind:
+		tfs = append(tfs, `resource "google_organization_iam_policy" "organization_iam_policy" {`)
+		tfs = append(tfs, fmt.Sprintf(`org_id = "%s"`, i.Spec.ResourceReference.Name))
+	case FolderKind:
+		tfs = append(tfs, `resource "google_folder_iam_policy" "folder_iam_policy" {`)
+		tfs = append(tfs, fmt.Sprintf(`folder = "%s"`, i.Spec.ResourceReference.Name))
+	case ProjectKind:
+		tfs = append(tfs, `resource "google_project_iam_policy" "project_iam_policy" {`)
+		tfs = append(tfs, fmt.Sprintf(`project = "%s"`, i.Spec.ResourceReference.Name))
+	default:
+		return "", fmt.Errorf("invalid resource reference kind: %v", i.Spec.ResourceReference.Kind)
+	}
+	tfs = append(tfs, `policy_data = "${data.google_iam_policy.admin.policy_data}"`)
+	tfs = append(tfs, `}`)
+	// IAM policy data.
+	// Example:
+	// data "google_iam_policy" "admin" {
+	//   binding {
+	//    role = "roles/compute.instanceAdmin"
+
+	//    members = [
+	//      "serviceAccount:your-custom-sa@your-project.iam.gserviceaccount.com",
+	//    ]
+	//  }
+	//   binding {
+	//     role = "roles/storage.objectViewer"
+
+	//     members = [
+	//       "user:jane@example.com",
+	//     ]
+	//   }
+	// }
+	tfs = append(tfs, (`data "google_iam_policy" "admin" {`))
+	for _, b := range i.Spec.Bindings {
+		tfs = append(tfs, `binding {`)
+		tfs = append(tfs, fmt.Sprintf(`role = "%s"`, b.Role))
+		tfs = append(tfs, `members = [`)
+		for _, m := range b.Members {
+			tfs = append(tfs, fmt.Sprintf(`"%s",`, m))
+		}
+		tfs = append(tfs, `]}`)
+	}
+	tfs = append(tfs, `}`)
+	return strings.Join(tfs, "\n"), nil
+}
+
+// GetTFImportConfig returns an empty terraform project resource block used for terraform import.
+func (i *IAMPolicy) GetTFImportConfig() string {
+	return `resource "google_project_iam_policy" "project_iam_policy" {}`
+}
+
+// GetTFResourceAddr returns the address of this project resource in terraform config.
+func (i *IAMPolicy) GetTFResourceAddr() string {
+	return `google_project_iam_policy.project_iam_policy`
+}
+
+// GetID returns the project ID from underlying provider (e.g. GCP).
+func (i *IAMPolicy) GetID() string {
+	return i.Spec.ResourceReference.Name
 }

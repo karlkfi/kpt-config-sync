@@ -17,10 +17,12 @@ limitations under the License.
 package controller
 
 import (
+	"github.com/google/nomos/pkg/bespin-controllers/iampolicy"
 	"github.com/google/nomos/pkg/bespin-controllers/project"
 )
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
 	AddToManagerFuncs = append(AddToManagerFuncs, project.Add)
+	AddToManagerFuncs = append(AddToManagerFuncs, iampolicy.Add)
 }

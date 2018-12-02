@@ -18,6 +18,7 @@ package terraform
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -49,6 +50,10 @@ const (
 	defaultFilePerm = 0644
 )
 
+// Set to true if the bespin binary is running locally, otherwise
+// assume it's running inside a container.
+var local = flag.Bool("local", false, "True if running bespin controller locally")
+
 func execCommand(name string, args ...string) ([]byte, error) {
 	cmd := exec.Command(name, args...)
 	var stderr bytes.Buffer
@@ -78,10 +83,6 @@ type Resource interface {
 
 // Executor is a Terraform wrapper to run Terraform comamnds.
 type Executor struct {
-	// True if the executor will run at a local environment, false indicates
-	// it runs inside a container.
-	localRun bool
-
 	// The working dir for this executor to perform all Terraform operations.
 	dir string
 
@@ -99,17 +100,16 @@ type Executor struct {
 }
 
 // NewExecutor creates and approproately initializes a new Terraform executor.
-func NewExecutor(resource Resource, localRun bool) (*Executor, error) {
+func NewExecutor(resource Resource) (*Executor, error) {
 	tmpDir, err := ioutil.TempDir("", defaultTmpDirPrefix)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create tmp dir")
 	}
 	tfeBinaryPath, tfePluginDir := binaryPath, pluginDir
-	if localRun {
+	if *local {
 		tfeBinaryPath, tfePluginDir = "terraform", ""
 	}
 	tfe := &Executor{
-		localRun:       localRun,
 		dir:            tmpDir,
 		configFileName: defaultConfigFileName,
 		stateFileName:  defaultStateFileName,
@@ -123,6 +123,7 @@ func NewExecutor(resource Resource, localRun bool) (*Executor, error) {
 
 // Close removes the tmp working dir of the executor.
 func (tfe *Executor) Close() error {
+	glog.V(1).Infof("Removing terraform tmp dir %s", tfe.dir)
 	if err := os.RemoveAll(tfe.dir); err != nil {
 		return errors.Wrapf(err, "failed to remove tmp dir %s", tfe.dir)
 	}
@@ -208,4 +209,24 @@ func (tfe *Executor) RunImport() error {
 	}
 	glog.V(1).Infof("Done terraform import.\n%s", out)
 	return nil
+}
+
+func run(f func() error, err error) {
+	if err != nil {
+		return
+	}
+	err = f()
+}
+
+// RunAll runs most common Terraform commands sequence in the order of init/import/plan/apply.
+// TODO(b/120279113): Ideally we should read the error from RunImport stdout/stderr and do something smarter here,
+// but letting the operation fail further down is fine for now.
+func (tfe *Executor) RunAll() error {
+	var err error
+	run(tfe.RunInit, err)
+	run(tfe.RunImport, err)
+	run(tfe.RunInit, err)
+	run(tfe.RunPlan, err)
+	run(tfe.RunApply, err)
+	return err
 }

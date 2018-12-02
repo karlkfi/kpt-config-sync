@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package project
+package iampolicy
 
 import (
 	"context"
@@ -35,76 +35,78 @@ import (
 
 const reconcileTimeout = time.Minute * 5
 
-// Add creates a new Project Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
+// Add creates a new IAMPolicy Controller and adds it to the Manager with default RBAC.
+// The Manager will set fields on the Controller and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
 }
 
 // newReconciler returns a new reconcile.Reconciler.
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileProject{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileIAMPolicy{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler.
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller.
-	c, err := controller.New("project-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("iampolicy-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		return errors.Wrap(err, "failed to create new Project controller")
+		return errors.Wrap(err, "failed to create new IAMPolicy controller")
 	}
 
-	// Watch for changes to Project.
-	err = c.Watch(&source.Kind{Type: &bespinv1.Project{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to IAMPolicy.
+	err = c.Watch(&source.Kind{Type: &bespinv1.IAMPolicy{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
-		return errors.Wrap(err, "failed to watch Project")
+		return errors.Wrap(err, "failed to watch IAMPolicy")
 	}
 
 	return nil
 }
 
-var _ reconcile.Reconciler = &ReconcileProject{}
+var _ reconcile.Reconciler = &ReconcileIAMPolicy{}
 
-// ReconcileProject reconciles a Project object.
-type ReconcileProject struct {
+// ReconcileIAMPolicy reconciles a IAMPolicy object.
+type ReconcileIAMPolicy struct {
 	client.Client
 	scheme *runtime.Scheme
 }
 
-// Reconcile reads that state of the cluster for a Project object and makes changes based on the state read
-// and what is in the Project.Spec.
-// The comment line below(starting with +kubebuilder) does not work without kubebuilder code layout. It was
+// Reconcile reads that state of the cluster for a IAMPolicy object and makes changes based on the state read
+// and what is in the IAMPolicy.Spec.
+// The comment line below (starting with +kubebuilder) does not work without kubebuilder code layout. It was
 // created by kubebuilder in some other repo. Kubebuilder can parse it to generate RBAC YAML.
-// +kubebuilder:rbac:groups=bespin.dev,resources=projects,verbs=get;list;watch;create;update;patch;delete
-func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// Fetch the Project instance
-	instance := &bespinv1.Project{}
+// +kubebuilder:rbac:groups=bespin.dev,resources=iampolicy,verbs=get;list;watch;create;update;patch;delete
+// TODO(b/120504718): Refactor the code to avoid using string literals.
+func (r *ReconcileIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	// Fetch the IAMPolicy instance
+	instance := &bespinv1.IAMPolicy{}
 	ctx, cancel := context.WithTimeout(context.TODO(), reconcileTimeout)
 	defer cancel()
 	err := r.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
-		glog.Errorf("failed to get Project instance: %v", err)
-		return reconcile.Result{}, errors.Wrap(err, "failed to get Project instance")
+		glog.Errorf("IAMPolicy reconciler error in getting iampolicy instance: %v", err)
+		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler error in getting iampolicy instance")
 	}
 	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
 	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
 	tfe, err := terraform.NewExecutor(instance)
 	if err != nil {
-		glog.Errorf("Project reconciler failed to create new Terraform executor: %v", err)
-		return reconcile.Result{}, errors.Wrap(err, "Project reconciler failed to create new Terraform executor")
+		glog.Errorf("IAMPolicy reconciler failed to create new Terraform executor: %v", err)
+		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to create new Terraform executor")
 	}
 	defer func() {
 		err = tfe.Close()
 		if err != nil {
-			glog.Errorf("Project reconciler failed to close Terraform executor: %v", err)
-			err = errors.Wrap(err, "Project reconciler failed to close Terraform executor")
+			glog.Errorf("IAMPolicy reconciler failed to close Terraform executor: %v", err)
+			err = errors.Wrap(err, "IAMPolicy reconciler failed to close Terraform executor")
 		}
 	}()
 
 	err = tfe.RunAll()
 	if err != nil {
-		glog.Errorf("Project reconciler failed to run Terraform command: %v", err)
-		return reconcile.Result{}, errors.Wrap(err, "Project reconciler failed to run Terraform command")
+		glog.Errorf("IAMPolicy reconciler failed to run Terraform command: %v", err)
+		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to run Terraform command")
 	}
+
 	return reconcile.Result{}, nil
 }

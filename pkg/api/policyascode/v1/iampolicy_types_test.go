@@ -85,3 +85,110 @@ func TestStorageIAMPolicy(t *testing.T) {
 		g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
 	}
 }
+
+func TestIAMPolicyGetTFResourceConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		ip      *IAMPolicy
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "IAMPolicy for Project",
+			ip: &IAMPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: IAMPolicySpec{
+					ResourceReference: ResourceReference{
+						Kind: "Project",
+						Name: "bar",
+					},
+					Bindings: []IAMPolicyBinding{
+						{
+							Members: []string{
+								"user:member1@foo.com",
+								"user:member2@bar.com",
+							},
+							Role: "roles/editor",
+						},
+						{
+							Members: []string{
+								"serviceAccount:service-account@foo.com",
+							},
+							Role: "roles/owner",
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+				Status: IAMPolicyStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: `resource "google_project_iam_policy" "project_iam_policy" {
+project = "bar"
+policy_data = "${data.google_iam_policy.admin.policy_data}"
+}
+data "google_iam_policy" "admin" {
+binding {
+role = "roles/editor"
+members = [
+"user:member1@foo.com",
+"user:member2@bar.com",
+]}
+binding {
+role = "roles/owner"
+members = [
+"serviceAccount:service-account@foo.com",
+]}
+}`,
+			wantErr: false,
+		},
+		{
+			name: "IAMPolicy with invalid ResourceReference",
+			ip: &IAMPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: IAMPolicySpec{
+					ResourceReference: ResourceReference{
+						Kind: "Invalid",
+						Name: "bar",
+					},
+					Bindings: []IAMPolicyBinding{
+						{
+							Members: []string{
+								"user:member1@foo.com",
+								"user:member2@bar.com",
+							},
+							Role: "roles/editor",
+						},
+						{
+							Members: []string{
+								"serviceAccount:service-account@foo.com",
+							},
+							Role: "roles/owner",
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+				Status: IAMPolicyStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.ip.GetTFResourceConfig()
+			switch {
+			case !tc.wantErr && err != nil:
+				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
+			case tc.wantErr && err == nil:
+				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
+			case got != tc.want:
+				t.Errorf("GetTFResourceConfig() got %s; want %s", got, tc.want)
+			}
+		})
+
+	}
+}
