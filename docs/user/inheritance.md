@@ -57,9 +57,9 @@ Once the above changes are committed, check the cluster:
 
 ```console
 $ kubectl get role --all-namespaces | grep job-creator
-shipping-dev       acme-admin                                  1m
-shipping-prod      acme-admin                                  1m
-shipping-staging   acme-admin                                  1m
+shipping-dev       job-creator                                  1m
+shipping-prod      job-creator                                  1m
+shipping-staging   job-creator                                  1m
 ```
 
 The role has been instantiated in all descendant namespaces.
