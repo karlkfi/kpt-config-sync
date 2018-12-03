@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -82,4 +84,34 @@ var folderSync = &v1alpha1.Sync{
 
 func init() {
 	SchemeBuilder.Register(&Folder{}, &FolderList{})
+}
+
+// GetTFResourceConfig converts the Folder's Spec struct into terraform config string.
+func (f *Folder) GetTFResourceConfig() (string, error) {
+	switch f.Spec.ParentReference.Kind {
+	case "Organization", "Folder":
+		break
+	default:
+		return "", fmt.Errorf("invalid parent reference kind: %v", f.Spec.ParentReference.Kind)
+	}
+
+	return fmt.Sprintf(`resource "google_folder" "bespin_folder" {
+display_name = "%s"
+parent = "%s"
+}`, f.Spec.DisplayName, f.Spec.ParentReference.Name), nil
+}
+
+// GetTFImportConfig returns an empty terraform project resource block used for terraform import.
+func (f *Folder) GetTFImportConfig() string {
+	return `resource "google_folder" "bespin_folder" {}`
+}
+
+// GetTFResourceAddr returns the address of this project resource in terraform config.
+func (f *Folder) GetTFResourceAddr() string {
+	return `google_folder.bespin_folder`
+}
+
+// GetID returns the project ID from underlying provider (e.g. GCP).
+func (f *Folder) GetID() string {
+	return fmt.Sprintf("%v", f.Spec.ID)
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/onsi/gomega"
@@ -62,4 +63,166 @@ func TestStorageFolder(t *testing.T) {
 	// Test Delete
 	g.Expect(c.Delete(context.TODO(), fetched)).NotTo(gomega.HaveOccurred())
 	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
+}
+
+func TestFolderGetTFResourceConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		f       *Folder
+		want    string
+		wantErr error
+	}{
+		{
+			name: "Folder with Organization as parent",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "organizations/1234567",
+					},
+					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: `resource "google_folder" "bespin_folder" {
+display_name = "spec-bar"
+parent = "organizations/1234567"
+}`,
+			wantErr: nil,
+		},
+		{
+			name: "Folder with Folder as parent",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Folder",
+						Name: "folders/1234567",
+					},
+					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: `resource "google_folder" "bespin_folder" {
+display_name = "spec-bar"
+parent = "folders/1234567"
+}`,
+			wantErr: nil,
+		},
+		{
+			name: "Project with invalid ParentReference",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Invalid",
+						Name: "bar",
+					},
+					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want:    "",
+			wantErr: fmt.Errorf("invalid parent reference kind: Invalid"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.f.GetTFResourceConfig()
+			switch {
+			case tc.wantErr == nil && err != nil:
+				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
+			case tc.wantErr != nil && err == nil:
+				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
+			case got != tc.want:
+				t.Errorf("GetTFResourceConfig() got \n%s\n want \n%s", got, tc.want)
+			}
+		})
+
+	}
+}
+
+func TestFolderGetID(t *testing.T) {
+	tests := []struct {
+		name string
+		f    *Folder
+		want string
+	}{
+		{
+			name: "Folder with Organization as parent",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "organizations/1234567",
+					},
+					DisplayName:   "spec-bar",
+					ID:            7654321,
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: "7654321",
+		},
+		{
+			name: "Folder with Folder as parent",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Folder",
+						Name: "folders/1234567",
+					},
+					DisplayName:   "spec-bar",
+					ID:            9876543,
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: "9876543",
+		},
+		{
+			name: "Project with no ID",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Invalid",
+						Name: "bar",
+					},
+					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: "0",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.f.GetID()
+			if got != tc.want {
+				t.Errorf("GetID() got \n%s\n want \n%s", got, tc.want)
+			}
+		})
+	}
 }

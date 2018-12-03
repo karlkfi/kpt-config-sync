@@ -18,7 +18,6 @@ package v1
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +36,6 @@ type ProjectSpec struct {
 
 // GetTFResourceConfig converts the Project's Spec struct into terraform config string.
 func (p *Project) GetTFResourceConfig() (string, error) {
-	var tfs []string
 	parentReference := ""
 	if p.Spec.ParentReference.Kind == OrganizationKind {
 		parentReference = fmt.Sprintf(`org_id = "%s"`, p.Spec.ParentReference.Name)
@@ -47,12 +45,11 @@ func (p *Project) GetTFResourceConfig() (string, error) {
 		return "", fmt.Errorf("invalid parent reference kind: %v", p.Spec.ParentReference.Kind)
 	}
 
-	tfs = append(tfs, `resource "google_project" "bespin_project" {`)
-	tfs = append(tfs, fmt.Sprintf(`name = "%s"`, p.Spec.Name))
-	tfs = append(tfs, fmt.Sprintf(`project_id = "%s"`, p.Spec.ID))
-	tfs = append(tfs, parentReference)
-	tfs = append(tfs, `}`)
-	return strings.Join(tfs, "\n"), nil
+	return fmt.Sprintf(`resource "google_project" "bespin_project" {
+name = "%s"
+project_id = "%s"
+%s
+}`, p.Spec.Name, p.Spec.ID, parentReference), nil
 }
 
 // GetTFImportConfig returns an empty terraform project resource block used for terraform import.
