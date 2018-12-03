@@ -67,12 +67,17 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	if err != nil {
 		return err
 	}
+	deployment, err := clientset.AppsV1().Deployments(controllerNamespace).Get(controllerName, metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "while obtaining current deployment")
+	}
 
 	failurePolicy := admissionregistrationv1beta1.Fail
 	webhookConfig := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   externalAdmissionHookConfigName,
-			Labels: labeling.NomosSystem.New(),
+			Name:            externalAdmissionHookConfigName,
+			Labels:          labeling.NomosSystem.New(),
+			OwnerReferences: deployment.OwnerReferences,
 		},
 		Webhooks: []admissionregistrationv1beta1.Webhook{
 			{
