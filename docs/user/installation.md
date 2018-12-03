@@ -49,7 +49,7 @@ and make sure to select version 1.9+ when creating the cluster.
 
 ### Create Cluster-Admin ClusterRoleBinding
 
-Ensure that the current user has cluster-admin in the cluster
+Ensure that the current user has cluster-admin in the cluster:
 
 ```console
 $ kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user [CURRENT_USERNAME]
@@ -57,7 +57,7 @@ $ kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-
 
 ### Download Operator Manifest Bundle
 
-Download the operator bundle directly to your machine
+Download the operator bundle directly to your machine:
 
 ```console
 $ curl -LO https://storage.googleapis.com/nomos-release/operator-latest/nomos-operator.yaml
@@ -72,14 +72,14 @@ namespace into your cluster.
 $ kubectl apply -f nomos-operator.yaml
 ```
 
-You can verify that the Nomos Operator was deployed correctly
+You can verify that the Nomos Operator was deployed correctly:
 
 ```console
 $ kubectl -n kube-system get pods | grep nomos
 nomos-operator-6f988f5fdd-4r7tr 1/1 Running 0 26s
 ```
 
-and that the nomos-system namespace was created
+and that the nomos-system namespace was created:
 
 ```console
 $ kubectl get ns | grep nomos
@@ -209,7 +209,7 @@ using the `enableHierarchicalResourceQuota` flag.
 
 ## Uninstalling
 
-To uninstall nomos from your cluster, delete the Nomos Resource
+To uninstall nomos from your cluster, delete the Nomos Resource:
 
 ```console
 $ kubectl -n=nomos-system delete nomos --all
@@ -222,5 +222,41 @@ The affected components are:
 *   Any cluster level roles and role bindings installed by GKE Policy
     Management.
 *   Any admission controller configurations installed by GKE Policy Management.
+
+### Uninstalling the Operator
+
+Usually, uninstalling Nomos's functional components with the instructions above should be sufficient and it is not necessary to uninstall the Operator. The Operator can safely remain on the cluster to assist with future reinstallation, and will not affect the cluster until the Nomos CRD is created. If the Operator is removed, it will have to be re-created before Nomos can be installed again. Users of GKE on-prem should not attempt to uninstall the operator, as it is managed by the GKE on-prem platform.
+
+However, if you do wish to completely remove the Operator and associated resources, follow this process:
+
+First uninstall Nomos as [above](#uninstalling), and wait until the `nomos-system` namespace is empty.
+
+Make sure that `nomos-system` has no resources before proceeding:
+
+```console
+$ kubectl -n nomos-system get all
+No resources found.
+```
+
+Delete the `nomos-system` namespace:
+
+```console
+$ kubectl delete ns nomos-system
+```
+
+Then, delete the Nomos CRD:
+
+```console
+$ kubectl delete crd nomos.addons.sigs.k8s.io
+```
+
+And delete all `kube-system` resources for the operator:
+
+```console
+$ kubectl -n kube-system delete all -l k8s-app=nomos-operator
+```
+
+Note: there is one additional CRD called `applications.app.k8s.io` that
+is installed with the Nomos Operator bundle, *but* this CRD is also used by some other GKE [add-ons](https://kubernetes.io/docs/concepts/cluster-administration/addons/). If you are confident that no other add-ons are using this CRD, it can be deleted as well.
 
 [< Back](../../README.md)
