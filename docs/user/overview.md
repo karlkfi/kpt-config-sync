@@ -25,6 +25,7 @@ sophisticated pipelines for vetting and deploying at scale.
     1.  [Rename](#rename)
     1.  [Move](#move)
 1.  [Nomos CLI](#nomos-cli)
+    1.  [init](#init)
     1.  [vet](#vet)
     1.  [view](#view)
 
