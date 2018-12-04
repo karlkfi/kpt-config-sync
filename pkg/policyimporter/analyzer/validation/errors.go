@@ -471,6 +471,9 @@ type MultipleVersionForSameSyncedTypeError struct {
 // PrettyPrint returns a convenient representation of a list of SyncVersions for error messages.
 func PrettyPrint(versions []v1alpha1.SyncVersion) string {
 	result := make([]string, len(versions))
+	for index, version := range versions {
+		result[index] = version.Version
+	}
 
 	return "versions: [" + strings.Join(result, ", ") + "]"
 }

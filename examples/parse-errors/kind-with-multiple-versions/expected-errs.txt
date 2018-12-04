@@ -5,6 +5,6 @@ Found issues: 1 error(s)
 
 source: system/resource-quota.yaml
 group: 
-versions: [, ]
+versions: [v1, v2]
 kind: ResourceQuota
 
