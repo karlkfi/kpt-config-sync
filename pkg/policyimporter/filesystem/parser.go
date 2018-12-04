@@ -46,6 +46,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/discovery"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
@@ -751,6 +752,13 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 				errorBuilder.Add(validation.IllegalSystemResourcePlacementError{Info: info})
 			}
 
+			if isCrd(gvk) {
+				errs := utilvalidation.IsDNS1123Subdomain(info.Name)
+				if errs != nil {
+					errorBuilder.Add(validation.InvalidMetadataNameError{Info: info})
+				}
+			}
+
 			validation.CheckAnnotationsAndLabels(info, errorBuilder)
 
 			switch gvk {
@@ -833,4 +841,11 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 			}
 		}
 	}
+}
+
+func isCrd(gvk schema.GroupVersionKind) bool {
+	return gvk.Group == policyhierarchy.GroupName ||
+		(gvk.Group == "app.k8s.io" && gvk.Kind == "Application") ||
+		(gvk.Group == "clusterregistry.k8s.io" && gvk.Kind == "Cluster") ||
+		(gvk.Group == "addons.sigs.k8s.io" && gvk.Kind == "Nomos")
 }

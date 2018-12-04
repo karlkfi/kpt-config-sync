@@ -36,6 +36,9 @@ func TestParse(t *testing.T) {
 			root: "examples/parse-errors/illegal-system-kind",
 		},
 		{
+			root: "examples/parse-errors/invalid-crd-name",
+		},
+		{
 			root: "examples/parse-errors/invalid-resources-sync",
 		},
 		{

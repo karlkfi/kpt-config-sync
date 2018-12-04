@@ -261,7 +261,7 @@ metadata:
 kind: Sync
 apiVersion: nomos.dev/v1alpha1
 metadata:
-  name: {{.Kind}}
+  name: {{.KindLower}}
 spec:
   groups:
   - group: {{.Group}}
@@ -275,7 +275,7 @@ spec:
 kind: Sync
 apiVersion: nomos.dev/v1alpha1
 metadata:
-  name: {{.Kind}}
+  name: {{.KindLower}}
 spec:
   groups:
   - group: {{.Group}}
@@ -397,6 +397,10 @@ func (d templateData) apply(t *template.Template) string {
 		panic(errors.Wrapf(err, "template data: %#v", d))
 	}
 	return b.String()
+}
+
+func (d templateData) KindLower() string {
+	return strings.ToLower(d.Kind)
 }
 
 type testDir struct {
@@ -616,7 +620,7 @@ func createClusterPolicy() *v1.ClusterPolicy {
 		&v1.ClusterPolicySpec{})
 }
 
-func createResourceQuota(path, name, namespace string, labels map[string]string) *corev1.ResourceQuota {
+func createResourceQuota(path, name string, labels map[string]string) *corev1.ResourceQuota {
 	rq := &corev1.ResourceQuota{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -908,7 +912,7 @@ var parserTestCases = []parserTestCase{
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
-						"namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
+						"namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 				},
 			),
 		},
@@ -928,7 +932,7 @@ var parserTestCases = []parserTestCase{
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
-						"namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
+						"namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 				},
 			),
 		},
@@ -946,7 +950,7 @@ var parserTestCases = []parserTestCase{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{ResourceQuotaV1: createResourceQuota(
-					"namespaces/bar/combo.yaml", resourcequota.ResourceQuotaObjectName, "bar", resourcequota.NewNomosQuotaLabels()),
+					"namespaces/bar/combo.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 				},
 			),
 		},
@@ -1251,7 +1255,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
@@ -1267,7 +1271,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
@@ -1283,7 +1287,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
 		},
 		expectedErrorCode: validation.IllegalHierarchyModeErrorCode,
 	},
@@ -1318,7 +1322,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
@@ -1334,7 +1338,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
@@ -1562,7 +1566,7 @@ spec:
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(&Policies{
-				ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+				ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
@@ -1578,10 +1582,10 @@ spec:
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, "", nil)}),
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{ResourceQuotaV1: createResourceQuota(
-					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, "", resourcequota.NewNomosQuotaLabels()),
+					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 				}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -1975,8 +1979,8 @@ spec:
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aRepo,
-			"system/rb-1.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", Name: "Sync"}.apply(aNamedSync),
-			"system/rb-2.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role", Name: "Sync"}.apply(aNamedSync),
+			"system/rb-1.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", Name: "sync"}.apply(aNamedSync),
+			"system/rb-2.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role", Name: "sync"}.apply(aNamedSync),
 		},
 		expectedErrorCode: validation.ObjectNameCollisionErrorCode,
 	},
@@ -2033,6 +2037,15 @@ spec:
 			"system/sync.yaml":  templateData{Group: "nomos.dev", Version: "v1alpha1", Kind: "Sync"}.apply(aSync),
 		},
 		expectedErrorCode: validation.UnsupportedResourceInSyncErrorCode,
+	},
+	{
+		testName: "Invalid name for CRD",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml": aRepo,
+			"system/sync.yaml":  templateData{Group: "nomos.dev", Version: "v1alpha1", Kind: "Sync", Name: "Sync"}.apply(aNamedSync),
+		},
+		expectedErrorCode: validation.InvalidMetadataNameErrorCode,
 	},
 }
 

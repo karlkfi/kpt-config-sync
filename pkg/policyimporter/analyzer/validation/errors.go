@@ -68,6 +68,7 @@ const (
 	IllegalSystemResourcePlacementErrorCode        = "1033"
 	UnsupportedResourceInSyncErrorCode             = "1034"
 	IllegalHierarchyModeErrorCode                  = "1035"
+	InvalidMetadataNameErrorCode                   = "1036"
 	UndefinedErrorCode                             = "????"
 )
 
@@ -803,3 +804,19 @@ func (e IllegalHierarchyModeError) Error() string {
 
 // Code implements KNVError
 func (e IllegalHierarchyModeError) Code() string { return IllegalHierarchyModeErrorCode }
+
+// InvalidMetadataNameError represents the usage of a non-RFC1123 compliant metadata.name
+type InvalidMetadataNameError struct {
+	*resource.Info
+}
+
+// Error implements error.
+func (e InvalidMetadataNameError) Error() string {
+	return format(e,
+		"Resources MUST define a metadata.name which is a valid RFC1123 DNS subdomain. Rename or remove the resource:\n\n"+
+			"%[1]s",
+		resourceInfo{e.Info})
+}
+
+// Code implements KNVError
+func (e InvalidMetadataNameError) Code() string { return InvalidMetadataNameErrorCode }
