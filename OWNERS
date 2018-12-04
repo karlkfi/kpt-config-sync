@@ -1,0 +1,16 @@
+# Current nomos-team members
+
+briankennedy@google.com
+brycecr@google.com
+cslink@google.com
+ekitson@google.com
+fmil@google.com
+frankf@google.com
+smythe@google.com
+mdruskin@google.com
+poertel@google.com
+rayc@google.com
+sbochins@google.com
+willbeason@google.com
+
+per-file Gopkg.toml,Gopkg.lock = briankennedy@google.com,frankf@google.com,mdruskin@google.com

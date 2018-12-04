@@ -1,0 +1,10 @@
+# Note to OWNERS, you are responsible for ensuring that vendored libraries have
+# appropriate licences.
+
+set noparent
+
+briankennedy@google.com
+frankf@google.com
+
+# backup
+mdruskin@google.com
