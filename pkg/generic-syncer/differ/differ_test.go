@@ -216,3 +216,52 @@ func TestComparator(t *testing.T) {
 		})
 	}
 }
+
+func TestActualResourceIsManaged(t *testing.T) {
+	testcases := []struct {
+		name      string
+		actualNil bool
+		labels    map[string]string
+		want      bool
+	}{
+		{
+			name:      "nil actual",
+			actualNil: true,
+			want:      false,
+		},
+		{
+			name: "nil labels",
+			want: false,
+		},
+		{
+			name:   "invalid value",
+			labels: map[string]string{"nomos.dev/managed": "enalbed"},
+			want:   false,
+		},
+		{
+			name:   "disabled value",
+			labels: map[string]string{"nomos.dev/managed": "disabled"},
+			want:   false,
+		},
+		{
+			name:   "enabled value",
+			labels: map[string]string{"nomos.dev/managed": "enabled"},
+			want:   true,
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.name, func(t *testing.T) {
+			d := Diff{
+				Actual: TestItem{labels: testcase.labels}.Object(t),
+			}
+			if testcase.actualNil {
+				d.Actual = nil
+			}
+			got := d.ActualResourceIsManaged()
+			if got != testcase.want {
+				t.Errorf("want actual is managed %t, got %t", testcase.want, got)
+			}
+		})
+	}
+}

@@ -57,11 +57,17 @@ func (d Diff) ActualResourceIsManaged() bool {
 	}
 
 	labels := d.Actual.GetLabels()
-	if _, ok := labels[labeling.ResourceManagementKey]; ok {
-		return true
+	if labels == nil {
+		return false
 	}
 
-	return false
+	value, ok := labels[labeling.ResourceManagementKey]
+	if !ok {
+		return false
+	}
+
+	// TODO(120490008): return value for indicating invalid label value.
+	return value == labeling.Enabled
 }
 
 // Diffs returns the diffs between declared and actual state. The diffs will be returned in an
