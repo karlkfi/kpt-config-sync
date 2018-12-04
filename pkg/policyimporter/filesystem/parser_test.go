@@ -261,7 +261,7 @@ metadata:
 kind: Sync
 apiVersion: nomos.dev/v1alpha1
 metadata:
-  name: {{.KindLower}}
+  name: {{.Kind}}
 spec:
   groups:
   - group: {{.Group}}
@@ -275,7 +275,7 @@ spec:
 kind: Sync
 apiVersion: nomos.dev/v1alpha1
 metadata:
-  name: {{.KindLower}}
+  name: {{.Kind}}
 spec:
   groups:
   - group: {{.Group}}
@@ -397,10 +397,6 @@ func (d templateData) apply(t *template.Template) string {
 		panic(errors.Wrapf(err, "template data: %#v", d))
 	}
 	return b.String()
-}
-
-func (d templateData) KindLower() string {
-	return strings.ToLower(d.Kind)
 }
 
 type testDir struct {
