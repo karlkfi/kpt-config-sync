@@ -11,19 +11,31 @@ func TestCommitHash(t *testing.T) {
 	}{
 		{
 			"Valid path",
-			"repo/rev-abcdef123/my-policies",
+			"/repo/rev-abcdef123/my-policies",
 			"abcdef123",
 			false,
 		},
 		{
-			"Missing git-sync prefix",
-			"abcdef123/my-policies",
+			"Valid path nested",
+			"/repo/rev-abcdef123/path/to/my/policies",
+			"abcdef123",
+			false,
+		},
+		{
+			"Valid path root",
+			"/repo/rev-abcdef123",
+			"abcdef123",
+			false,
+		},
+		{
+			"Invalid path",
+			"/abcdef123",
 			"",
 			true,
 		},
 		{
-			"Missing policy dir suffix",
-			"repo/rev-abcdef123",
+			"Missing git-sync prefix",
+			"/repo/abdef123/my-policies",
 			"",
 			true,
 		},
