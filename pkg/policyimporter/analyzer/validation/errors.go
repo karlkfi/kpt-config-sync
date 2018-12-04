@@ -320,7 +320,7 @@ type IllegalMetadataNamespaceDeclarationError struct {
 func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 	// TODO(willbeason): Error unused until b/118715158
 	return format(e,
-		"Objects MUST NOT delcare metadata.namespace:\n\n"+
+		"Objects MUST NOT declare metadata.namespace:\n\n"+
 			"%[1]s",
 		resourceInfo{info: e.Info})
 }
