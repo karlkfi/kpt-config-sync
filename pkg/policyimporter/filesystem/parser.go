@@ -74,7 +74,7 @@ func init() {
 type Parser struct {
 	opts            ParserOpt
 	factory         cmdutil.Factory
-	discoveryClient discovery.ServerResourcesInterface
+	discoveryClient discovery.CachedDiscoveryInterface
 	// OS-specific path to root.
 	root string
 	// Visitor Provider for generating the list of visitors.
@@ -200,6 +200,8 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	fsCtx := &ast.Root{Cluster: &ast.Cluster{}}
 	errorBuilder := multierror.Builder{}
 
+	// Always make sure we're getting the freshest data.
+	p.discoveryClient.Invalidate()
 	resources, discoveryErr := p.discoveryClient.ServerResources()
 	if discoveryErr != nil {
 		return nil, errors.Wrap(discoveryErr, "failed to get server resources")
