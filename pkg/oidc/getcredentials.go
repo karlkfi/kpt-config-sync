@@ -22,7 +22,7 @@ const NomosOIDCExtensionKey = "oidc.nomos.dev"
 
 var getCredentialsCmd = &cobra.Command{
 	Use:     "get-credentials",
-	Short:   "Gets the OIDC credentials for a cluster",
+	Short:   "Gets the OIDC credentials for a cluster.",
 	Run:     getCreds,
 	PreRunE: getCredsCheck,
 }
@@ -31,24 +31,34 @@ func getCredsCheck(cmd *cobra.Command, _ []string) error {
 	if cluster == "" {
 		return fmt.Errorf("value for flag --cluster=... is required")
 	}
-	if clientID == "" {
-		return fmt.Errorf("value for flag --client-file=... is required")
+	if clientFile == "" {
+		if clientID == "" || clientSecret == "" {
+			return fmt.Errorf("must set --client-file or --client-id and --client-secret")
+		}
 	}
 	return nil
 }
 
 var (
-	cluster  string
-	clientID string
+	cluster      string
+	clientFile   string
+	clientID     string
+	clientSecret string
 )
 
 func init() {
 	getCredentialsCmd.Flags().StringVar(&cluster, "cluster",
 		os.Getenv("KUBECTL_PLUGINS_GLOBAL_FLAG_CLUSTER"),
 		"the name of the cluster to configure")
-	getCredentialsCmd.Flags().StringVar(&clientID, "client-file",
+	getCredentialsCmd.Flags().StringVar(&clientFile, "client-file",
 		os.Getenv("KUBECTL_PLUGINS_LOCAL_FLAG_CLIENT_FILE"),
 		"the JSON-formatted credentials file for the OIDC client ID for the cluster")
+	getCredentialsCmd.Flags().StringVar(&clientID, "client-id",
+		os.Getenv("KUBECTL_PLUGINS_LOCAL_FLAG_CLIENT_ID"),
+		"the OIDC client ID for the cluster")
+	getCredentialsCmd.Flags().StringVar(&clientSecret, "client-secret",
+		os.Getenv("KUBECTL_PLUGINS_LOCAL_FLAG_CLIENT_SECRET"),
+		"the OIDC client secret for the cluster")
 	rootCmd.AddCommand(getCredentialsCmd)
 }
 
@@ -61,21 +71,38 @@ type credsFlow struct {
 func getCreds(cmd *cobra.Command, _ []string) {
 	var f credsFlow
 
-	c := f.Open(clientID)
-	creds := f.DecodeJSON(c)
+	cid := f.GetClientID()
 	config := f.LoadKubeConfig(kubeConfig)
 	clusterRec := f.Cluster(config, cluster)
 
-	clusterConfig := f.EmbedClientID(cluster, clusterRec, creds)
+	clusterConfig := f.EmbedClientID(cluster, clusterRec, cid)
 	output := f.ToYAML(clusterConfig)
 
 	if f.err != nil {
-		glog.Errorf("with file %q: %v", clientID, f.err)
+		glog.Errorf("with file %q: %v", clientFile, f.err)
 		os.Exit(1)
 	}
 
 	// If we survived all the conversion traps, we're done and we print out.
 	fmt.Println(output)
+}
+
+func (f *credsFlow) GetClientID() config.ClientID {
+	var cid config.ClientID
+
+	if clientFile != "" {
+		c := f.Open(clientFile)
+		cid = f.DecodeJSON(c)
+	} else {
+		cid.TypeMeta.Kind = "ClientID"
+		cid.APIVersion = config.SchemeGroupVersion.String()
+		cid.Installed = &config.InstalledClientSpec{
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+		}
+	}
+
+	return cid
 }
 
 func (f *credsFlow) Open(clientID string) io.Reader {
