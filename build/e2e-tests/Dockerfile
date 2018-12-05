@@ -15,7 +15,7 @@ ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
 RUN apt-get update && apt-get install -y curl python
 RUN curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-210.0.0-linux-x86_64.tar.gz > /tmp/google-cloud-sdk.tar.gz
 RUN mkdir -p /opt/gcloud
-RUN tar -C /opt/gcloud -xvf /tmp/google-cloud-sdk.tar.gz
+RUN tar -C /opt/gcloud -xf /tmp/google-cloud-sdk.tar.gz
 RUN /opt/gcloud/google-cloud-sdk/install.sh --quiet
 RUN gcloud components install alpha beta
 
