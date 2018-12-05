@@ -211,11 +211,11 @@ func (tfe *Executor) RunImport() error {
 	return nil
 }
 
-func run(f func() error, err error) {
+func run(f func() error, err error) error {
 	if err != nil {
-		return
+		return err
 	}
-	err = f()
+	return f()
 }
 
 // RunAll runs most common Terraform commands sequence in the order of init/import/plan/apply.
@@ -223,10 +223,10 @@ func run(f func() error, err error) {
 // but letting the operation fail further down is fine for now.
 func (tfe *Executor) RunAll() error {
 	var err error
-	run(tfe.RunInit, err)
-	run(tfe.RunImport, err)
-	run(tfe.RunInit, err)
-	run(tfe.RunPlan, err)
-	run(tfe.RunApply, err)
+	err = run(tfe.RunInit, err)
+	err = run(tfe.RunImport, err)
+	err = run(tfe.RunInit, err)
+	err = run(tfe.RunPlan, err)
+	err = run(tfe.RunApply, err)
 	return err
 }
