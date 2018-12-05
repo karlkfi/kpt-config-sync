@@ -45,7 +45,7 @@ function install() {
         kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user "$(gcloud config get-value account)" || true
         kubectl apply -f defined-operator-bundle.yaml
         kubectl create secret generic git-creds -n=nomos-system --from-file=ssh="$HOME"/.ssh/id_rsa.nomos || true
-        kubectl create -f "${TEST_DIR}/operator-config-git.yaml"
+        kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
         wait::for -s -t 60 -- nomos_running
         ;;
 
