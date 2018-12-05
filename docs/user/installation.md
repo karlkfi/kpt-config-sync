@@ -185,7 +185,7 @@ Alpha and the flag should be set to false or omitted.
 Once you have created your nomos.yaml file, apply it to the API server:
 
 ```console
-$ kubectl create -f nomos.yaml
+$ kubectl apply -f nomos.yaml
 ```
 
 ### Verify Installation
