@@ -182,7 +182,8 @@ upload-release:
 # the artifacts to a GCS release bucket with version name "latest".
 release: \
 		clean \
-		test-all-local \
+		test \
+		ci-test-e2e \
 		$(STAGING_DIR)/installer.zip \
 		docs-package \
 		upload-release
