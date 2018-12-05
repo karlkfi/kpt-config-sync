@@ -16,14 +16,15 @@ function add_clusterregistry_data() {
     "${YAML_DIR}/clusterselector-env-prod.yaml" \
     acme/clusterregistry/clusterselector-1.yaml
   git::add \
-    "${YAML_DIR}/clusterselector-env-test.yaml" \
+    "${YAML_DIR}/clusterselector-env-other.yaml" \
     acme/clusterregistry/clusterselector-2.yaml
   git::commit -m "Add cluster and cluster registry data"
 }
 
 @test "ClusterSelector: Object reacts to per-cluster annotations" {
-  # skipped per b/119795668
-  skip
+  debug::log "Require that the cluster name exists on the cluster"
+  wait::for -t 10 -- kubectl get configmaps -n nomos-system cluster-name
+
   add_clusterregistry_data
 
   debug::log "Adding a valid cluster selector annotation to a role binding"
@@ -50,13 +51,11 @@ function add_clusterregistry_data() {
     acme/namespaces/eng/backend/bob-rolebinding.yaml
   git::commit -m "Revert to selector-env-prod"
 
-  debug::log "Wait for bob-rolebinding to reapear in the backend namespace"
+  debug::log "Wait for bob-rolebinding to reappear in the backend namespace"
   wait::for -- kubectl get rolebindings -n backend bob-rolebinding
 }
 
 @test "ClusterSelector: Namespace reacts to per-cluster annotations" {
-  # skipped per b/119795668
-  skip
   add_clusterregistry_data
 
   debug::log "Adding a valid cluster selector annotation to a namespace"
@@ -94,8 +93,6 @@ function add_clusterregistry_data() {
 }
 
 @test "ClusterSelector: Object reacts to changing the selector" {
-  # skipped per b/119795668
-  skip
   add_clusterregistry_data
 
   debug::log "Adding a valid cluster selector annotation to a role binding"

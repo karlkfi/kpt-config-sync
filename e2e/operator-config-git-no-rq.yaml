@@ -6,6 +6,7 @@ metadata:
 spec:
   channel: dev
   enableHierarchicalResourceQuota: false
+  clusterName: e2e-test-cluster
   git:
     syncRepo: git@test-git-server.nomos-system-test:/git-server/repos/sot.git
     syncBranch: master
