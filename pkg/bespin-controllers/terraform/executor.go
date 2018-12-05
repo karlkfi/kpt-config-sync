@@ -143,7 +143,7 @@ func (tfe *Executor) Close() error {
 
 // RunInit runs terraform init.
 func (tfe *Executor) RunInit() error {
-	glog.V(1).Infof("Running terraform init in dir %s", tfe.dir)
+	glog.V(1).Infof("[%s]: Running terraform init.", tfe.dir)
 	resourceConfig, err := tfe.resource.GetTFResourceConfig()
 	if err != nil {
 		return errors.Wrapf(err, "failed to get Terraform resource config from resource (%+v)", tfe.resource)
@@ -153,23 +153,23 @@ func (tfe *Executor) RunInit() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to write Terraform resource config to file %s", fileName)
 	}
-	out, err := execCommand(
-		tfe.binaryPath,
-		"init",
-		"-input=false",
-		"-upgrade=false",
-		fmt.Sprintf("-plugin-dir=%s", tfe.pluginDir),
-		tfe.dir)
+	var out []byte
+	args := []string{"init", "-input=false", "-upgrade=false"}
+	if !*local {
+		args = append(args, fmt.Sprintf("-plugin-dir=%s", pluginDir))
+	}
+	args = append(args, tfe.dir)
+	out, err = execCommand(tfe.binaryPath, args...)
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform init")
 	}
-	glog.V(1).Infof("Done terraform init in dir %s.\n%s", tfe.dir, out)
+	glog.V(1).Infof("[%s]: Completed terraform init.\n%s", tfe.dir, out)
 	return nil
 }
 
 // RunPlan runs terraform plan.
 func (tfe *Executor) RunPlan() error {
-	glog.V(1).Infof("Running Terraform Plan in dir %s", tfe.dir)
+	glog.V(1).Infof("[%s]: Running terraform plan.", tfe.dir)
 	out, err := execCommand(
 		tfe.binaryPath,
 		"plan",
@@ -178,13 +178,29 @@ func (tfe *Executor) RunPlan() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform plan")
 	}
-	glog.V(1).Infof("Done terraform plan in dir %s.\n%s", tfe.dir, out)
+	glog.V(1).Infof("[%s]: Completed terraform plan.\n%s", tfe.dir, out)
+	return nil
+}
+
+// RunPlanDestroy runs terraform plan.
+func (tfe *Executor) RunPlanDestroy() error {
+	glog.V(1).Infof("[%s]: Running terraform plan destroy.", tfe.dir)
+	out, err := execCommand(
+		tfe.binaryPath,
+		"plan",
+		"-destroy",
+		fmt.Sprintf("-state=%s", filepath.Join(tfe.dir, tfe.stateFileName)),
+		tfe.dir)
+	if err != nil {
+		return errors.Wrap(err, "failed to run terraform plan -destroy")
+	}
+	glog.V(1).Infof("Completed terraform plan -destroy.\n%s", out)
 	return nil
 }
 
 // RunApply runs terraform apply.
 func (tfe *Executor) RunApply() error {
-	glog.V(1).Infof("Running terraform apply in dir %s", tfe.dir)
+	glog.V(1).Infof("[%s]: Running terraform apply.", tfe.dir)
 	out, err := execCommand(
 		tfe.binaryPath,
 		"apply",
@@ -196,13 +212,13 @@ func (tfe *Executor) RunApply() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform apply")
 	}
-	glog.V(1).Infof("Done terraform apply in dir %s.\n%s", tfe.dir, out)
+	glog.V(1).Infof("[%s]: Completed terraform apply.\n%s", tfe.dir, out)
 	return nil
 }
 
 // RunImport imports the attached resource into local Terraform state.
 func (tfe *Executor) RunImport() error {
-	glog.V(1).Infof("Running terraform import in dir %s\n", tfe.dir)
+	glog.V(1).Infof("[%s]: Running terraform import.", tfe.dir)
 	fileName := filepath.Join(tfe.dir, tfe.configFileName)
 	err := ioutil.WriteFile(fileName, []byte(tfe.resource.GetTFImportConfig()), defaultFilePerm)
 	if err != nil {
@@ -219,7 +235,7 @@ func (tfe *Executor) RunImport() error {
 	if err != nil {
 		glog.Warningf("failed to run terraform import: %v", err)
 	}
-	glog.V(1).Infof("Done terraform import in dir %s.\n%s", tfe.dir, out)
+	glog.V(1).Infof("[%s]: Completed terraform import.\n%s", tfe.dir, out)
 	return nil
 }
 
@@ -230,10 +246,28 @@ func run(f func() error, err error) error {
 	return f()
 }
 
-// RunAll runs most common Terraform commands sequence in the order of init/import/plan/apply.
+// RunDestroy runs terraform destroy to remove the resource.
+func (tfe *Executor) RunDestroy() error {
+	glog.V(1).Infof("[%s]: Running terraform destroy.", tfe.dir)
+	out, err := execCommand(
+		tfe.binaryPath,
+		"destroy",
+		"-auto-approve",
+		fmt.Sprintf("-state=%s", filepath.Join(tfe.dir, tfe.stateFileName)),     // Source state file.
+		fmt.Sprintf("-state-out=%s", filepath.Join(tfe.dir, tfe.stateFileName)), // Target state file to update.
+		tfe.dir)
+	if err != nil {
+		return errors.Wrap(err, "failed to run terraform destroy")
+	}
+	glog.V(1).Infof("Completed terraform destroy.\n%s", out)
+	return nil
+}
+
+// RunCreateOrUpdateFlow runs most common Terraform commands sequence in the order of init/import/plan/apply
+// to create or update resource.
 // TODO(b/120279113): Ideally we should read the error from RunImport stdout/stderr and do something smarter here,
 // but letting the operation fail further down is fine for now.
-func (tfe *Executor) RunAll() error {
+func (tfe *Executor) RunCreateOrUpdateFlow() error {
 	var err error
 	err = run(tfe.RunInit, err)
 	err = run(tfe.RunImport, err)
@@ -248,7 +282,7 @@ func (tfe *Executor) RunAll() error {
 // needs to make sure the terraform state file is update-to-date otherwise the stale data
 // maybe used later.
 func (tfe *Executor) UpdateState() error {
-	glog.V(1).Infof("Running terraform state show in dir %s\n", tfe.dir)
+	glog.V(1).Infof("[%s]: Running terraform state show.", tfe.dir)
 	resourceAddr := tfe.resource.GetTFResourceAddr()
 	out, err := execCommand(
 		tfe.binaryPath,
@@ -313,4 +347,17 @@ func (tfe *Executor) GetFolderID() (int, error) {
 		}
 	}
 	return 0, fmt.Errorf("Folder ID not found")
+}
+
+// RunDeleteFlow runs Terraform commands sequence in the order of init/import/destroy to delete resource.
+// TODO(b/120279113): Ideally we should read the error from RunImport stdout/stderr and do something smarter here,
+// but letting the operation fail further down is fine for now.
+func (tfe *Executor) RunDeleteFlow() error {
+	var err error
+	err = run(tfe.RunInit, err)
+	err = run(tfe.RunImport, err)
+	err = run(tfe.RunInit, err)
+	err = run(tfe.RunPlanDestroy, err)
+	err = run(tfe.RunDestroy, err)
+	return err
 }

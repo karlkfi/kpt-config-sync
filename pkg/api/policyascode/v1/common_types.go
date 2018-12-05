@@ -20,6 +20,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Finalizer defines the k8s finalizer for bespin CRDs.
+const Finalizer string = "finalizer.bespin.dev"
+
 // ImportDetails defines detailed import information for CRD operations.
 // Not consolidating ImportDetails and SyncDetails on token and time because
 // in ImportDetails they are required, while in SyncDetails they are not.

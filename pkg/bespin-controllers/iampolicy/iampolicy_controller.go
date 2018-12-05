@@ -102,7 +102,7 @@ func (r *ReconcileIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 	}()
 
-	err = tfe.RunAll()
+	err = tfe.RunCreateOrUpdateFlow()
 	if err != nil {
 		glog.Errorf("IAMPolicy reconciler failed to run Terraform command: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to run Terraform command")

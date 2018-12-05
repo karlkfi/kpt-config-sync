@@ -37,7 +37,7 @@ bespin-controllers-manager:
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 bespin-run-manager-local:
-	go run ./cmd/bespin-controllers-manager/main.go  --local_run=true
+	go run ./cmd/bespin-controllers-manager/main.go  --local=true --alsologtostderr=true --v=10
 
 # Install Bespin CRDs into a cluster
 bespin-install-crds:

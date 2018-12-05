@@ -87,14 +87,16 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 	err := r.Get(ctx, request.NamespacedName, folder)
 	if err != nil {
 		glog.Errorf("[Folder %v] reconciler failed to get folder instance: %v", request.NamespacedName, err)
-		return reconcile.Result{}, errors.Wrapf(err, "[Folder %v] reconciler failed to get folder instance", request.NamespacedName)
+		return reconcile.Result{},
+			errors.Wrapf(err, "[Folder %v] reconciler failed to get folder instance", request.NamespacedName)
 	}
 	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
 	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
 	tfe, err := terraform.NewExecutor(folder)
 	if err != nil {
 		glog.Errorf("[Folder %v] reconciler failed to create new terraform executor: %v", request.NamespacedName, err)
-		return reconcile.Result{}, errors.Wrapf(err, "[Folder %v] reconciler failed to create new terraform executor", request.NamespacedName)
+		return reconcile.Result{},
+			errors.Wrapf(err, "[Folder %v] reconciler failed to create new terraform executor", request.NamespacedName)
 	}
 	defer func() {
 		if err != nil {
@@ -107,17 +109,19 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 
 	// If Terraform returns an error, update API server with the error details; otherwise update
 	// the API server to bring the resource's Status in sync with its Spec.
-	if err = tfe.RunAll(); err != nil {
-		err = errors.Wrap(err, "reconciler failed to execute Terraform commands")
+	if err = tfe.RunCreateOrUpdateFlow(); err != nil {
+		err = errors.Wrapf(err, "[Folder %v] reconciler failed to execute Terraform commands", request.NamespacedName)
 		folder.Status.SyncDetails.Error = err.Error()
 		if uErr := r.Update(ctx, folder); uErr != nil {
-			err = errors.Wrapf(err, "reconciler failed to update Folder in API server: %v", uErr)
+			err = errors.Wrapf(err, "[Folder %v] reconciler failed to update Folder in API server: %v",
+				request.NamespacedName, uErr)
 		}
 		return reconcile.Result{}, err
 	}
 
 	if err = r.updateAPIServer(ctx, tfe, folder); err != nil {
-		return reconcile.Result{}, errors.Wrap(err, "reconciler failed to update Folder in API server")
+		return reconcile.Result{}, errors.Wrapf(err, "[Folder %v] reconciler failed to update Folder in API server",
+			request.NamespacedName)
 	}
 	return reconcile.Result{}, nil
 }
@@ -127,11 +131,11 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 // when there is nothing changed.
 func (r *ReconcileFolder) updateAPIServer(ctx context.Context, tfe *terraform.Executor, f *bespinv1.Folder) error {
 	if err := tfe.UpdateState(); err != nil {
-		return errors.Wrap(err, "failed to update terraform state")
+		return errors.Wrapf(err, "[Folder %v] failed to update terraform state", f.Spec.DisplayName)
 	}
 	id, err := tfe.GetFolderID()
 	if err != nil {
-		return errors.Wrap(err, "failed to get Folder ID from terraform state")
+		return errors.Wrapf(err, "[Folder %v] failed to get Folder ID from terraform state", f.Spec.DisplayName)
 	}
 
 	newF := &bespinv1.Folder{}
@@ -147,7 +151,7 @@ func (r *ReconcileFolder) updateAPIServer(ctx context.Context, tfe *terraform.Ex
 	}
 	newF.Status.SyncDetails.Time = metav1.Now()
 	if err = r.Update(ctx, newF); err != nil {
-		return errors.Wrap(err, "failed to update Folder in API server")
+		return errors.Wrapf(err, "[Folder %v] failed to update Folder in API server", newF.Spec.DisplayName)
 	}
 	return nil
 }
