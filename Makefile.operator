@@ -41,8 +41,8 @@ prepare-operator: push-to-gcr-nomos pull-git-sync
 	@rm -rf ${OPERATOR_STAGING_DIR}
 	@mkdir -p ${OPERATOR_STAGING_DIR}
 	@gsutil cp ${DEV_BUCKET}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
-	@docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
-	@docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
+	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
+	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 # TODO(b/119836195): Using sed here because the Prow test environment doesn't have the envsubst
 # command. Once it does, switch back
 	@cat ${OPERATOR_STAGING_DIR}/operator-bundle.yaml | sed 's|$${PROJECT_NAME}|$(GCP_PROJECT)|g' | \
@@ -68,12 +68,12 @@ prepare-operator-user: push-to-gcr-nomos pull-git-sync
 	@rm -rf ${OPERATOR_STAGING_DIR}
 	@mkdir -p ${OPERATOR_STAGING_DIR}
 	@gsutil cp ${DEV_BUCKET_USER}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
-	@docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
-	@docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
+	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
+	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	@PROJECT_NAME=${GCP_PROJECT}/${USER} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
 
 # deploy-operator-user installs the operator prepared with prepare-operator-user
 .PHONY: deploy-operator-user
-deploy-operator-user: push-to-gcr-nomos pull-git-sync
+deploy-operator-user: prepare-operator-user
 	kubectl apply -f ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml

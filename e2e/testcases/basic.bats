@@ -72,6 +72,22 @@ load ../lib/loader
   clean_test_configmaps
 }
 
+@test "ResourceQuota live uninstall/reinstall" {
+  # Verify the resourcequota admission controller is currently installed
+  wait::for kubectl get deployment -n nomos-system resourcequota-admission-controller
+  wait::for kubectl get validatingwebhookconfigurations resource-quota.nomos.dev
+
+  # Verify that disabling the resource quota admission controller causes it to be uninstalled
+  kubectl apply -f ${BATS_TEST_DIRNAME}/../operator-config-git-no-rq.yaml
+  wait::for -f -- kubectl get deployment -n nomos-system resourcequota-admission-controller
+  wait::for -f -- kubectl get validatingwebhookconfigurations resource-quota.nomos.dev
+
+  # Verify that re-enabling the resource quota admission controller causes it to be reinstalled
+  kubectl apply -f ${BATS_TEST_DIRNAME}/../operator-config-git.yaml
+  wait::for kubectl get deployment -n nomos-system resourcequota-admission-controller
+  wait::for kubectl get validatingwebhookconfigurations resource-quota.nomos.dev
+}
+
 function clean_test_configmaps() {
   kubectl delete configmaps -n new-prj --all > /dev/null
   kubectl delete configmaps -n newer-prj --all > /dev/null

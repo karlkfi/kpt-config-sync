@@ -33,8 +33,10 @@ import (
 	"k8s.io/client-go/informers"
 	informerscorev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 const (
@@ -71,13 +73,24 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	if err != nil {
 		return errors.Wrapf(err, "while obtaining current deployment")
 	}
+	gvk, err := apiutil.GVKForObject(deployment, scheme.Scheme)
+	if err != nil {
+		return err
+	}
 
 	failurePolicy := admissionregistrationv1beta1.Fail
 	webhookConfig := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            externalAdmissionHookConfigName,
-			Labels:          labeling.NomosSystem.New(),
-			OwnerReferences: deployment.OwnerReferences,
+			Name:   externalAdmissionHookConfigName,
+			Labels: labeling.NomosSystem.New(),
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: gvk.GroupVersion().String(),
+					Kind:       gvk.Kind,
+					Name:       deployment.GetName(),
+					UID:        deployment.GetUID(),
+				},
+			},
 		},
 		Webhooks: []admissionregistrationv1beta1.Webhook{
 			{
