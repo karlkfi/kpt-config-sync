@@ -215,6 +215,12 @@ syncer-58545bc77d-l485n                               1/1       Running   0     
 Note that the ResourceQuota admission controller will only be running if enabled
 using the `enableHierarchicalResourceQuota` flag.
 
+If the above components do not appear, you may find relevant error messages in the operator logs:
+
+```console
+kubectl -n kube-system logs -l k8s-app=nomos-operator
+```
+
 ## Uninstalling
 
 To uninstall nomos from your cluster, delete the Nomos Resource:
