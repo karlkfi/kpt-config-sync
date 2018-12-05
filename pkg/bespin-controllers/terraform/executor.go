@@ -205,7 +205,7 @@ func (tfe *Executor) RunImport() error {
 		tfe.resource.GetTFResourceAddr(),
 		tfe.resource.GetID())
 	if err != nil {
-		return errors.Wrap(err, "failed to run terraform import")
+		glog.Warningf("failed to run terraform import: %v", err)
 	}
 	glog.V(1).Infof("Done terraform import.\n%s", out)
 	return nil
