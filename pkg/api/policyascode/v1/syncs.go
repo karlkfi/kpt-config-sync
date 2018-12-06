@@ -16,12 +16,55 @@ limitations under the License.
 
 package v1
 
-import "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+import (
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // Syncs contains all the Sync resources required for Nomos to sync
 // Bespin resources to K8S.
 var Syncs = []*v1alpha1.Sync{
-	folderSync,
-	organizationSync,
-	projectSync,
+	{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "nomos.dev/v1alpha1",
+			Kind:       "Sync",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "bespin",
+			Finalizers: []string{v1alpha1.SyncFinalizer},
+		},
+		Spec: v1alpha1.SyncSpec{
+			Groups: []v1alpha1.SyncGroup{
+				{
+					Group: "bespin.dev",
+					Kinds: []v1alpha1.SyncKind{
+						{
+							Kind: "Folder",
+							Versions: []v1alpha1.SyncVersion{
+								{
+									Version: "v1",
+								},
+							},
+						},
+						{
+							Kind: "Organization",
+							Versions: []v1alpha1.SyncVersion{
+								{
+									Version: "v1",
+								},
+							},
+						},
+						{
+							Kind: "Project",
+							Versions: []v1alpha1.SyncVersion{
+								{
+									Version: "v1",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	},
 }

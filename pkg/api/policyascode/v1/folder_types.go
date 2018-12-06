@@ -19,7 +19,6 @@ package v1
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -60,26 +59,6 @@ type FolderList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Folder `json:"items"`
-}
-
-var folderSync = &v1alpha1.Sync{
-	Spec: v1alpha1.SyncSpec{
-		Groups: []v1alpha1.SyncGroup{
-			{
-				Group: "bespin.dev",
-				Kinds: []v1alpha1.SyncKind{
-					{
-						Kind: "Folder",
-						Versions: []v1alpha1.SyncVersion{
-							{
-								Version: "v1",
-							},
-						},
-					},
-				},
-			},
-		},
-	},
 }
 
 func init() {
