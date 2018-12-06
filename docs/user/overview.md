@@ -240,7 +240,8 @@ directory, populates it with required files and a few commonly-needed objects to
 get you started.
 
 ```console
-$ cd foo-corp
+$ mkdir newrepo
+$ cd newrepo
 $ git init
 $ nomos init
 ```
@@ -271,8 +272,7 @@ You can also automatically run nomos vet as a git
 the root of the repo, run:
 
 ```console
-$ cd foo-corp
-$ echo "nomos vet" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
+$ echo "nomos vet --path foo-corp" > .git/hooks/pre-commit; chmod +x .git/hooks/pre-commit
 ```
 
 You can also integrate this into your CI/CD setup, e.g. when using GitHub
@@ -285,6 +285,7 @@ are converted to ClusterPolicy and PolicyNode CRDs during the import process. To
 print the generated CRD resources in JSON:
 
 ```console
+$ cd foo-corp
 $ nomos view
 ```
 
