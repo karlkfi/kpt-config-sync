@@ -18,6 +18,8 @@ spec:
     kind: Sync
   validation:
     openAPIV3Schema:
+      required:
+      - spec
       properties:
         spec:
           # SyncSpec

@@ -19,6 +19,8 @@ spec:
     - cp
   validation:
       openAPIV3Schema:
+        required:
+        - spec
         properties:
           spec:
             # ClusterPolicySpec
