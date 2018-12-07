@@ -1,0 +1,7 @@
+apiVersion: nomos.dev/v1
+kind: PolicyNode
+metadata:
+  name: invalid
+spec:
+  resources:
+  - {}

@@ -1,0 +1,10 @@
+apiVersion: nomos.dev/v1alpha1
+kind: Sync
+metadata:
+  name: invalid
+spec:
+  groups:
+  - kinds:
+    - kind: PodSecurityPolicy
+      versions:
+      - version: v1beta1

@@ -1,0 +1,4 @@
+apiVersion: nomos.dev/v1alpha1
+kind: Sync
+metadata:
+  name: invalid

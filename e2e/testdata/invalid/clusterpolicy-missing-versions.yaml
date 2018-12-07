@@ -1,0 +1,10 @@
+apiVersion: nomos.dev/v1
+kind: ClusterPolicy
+metadata:
+  name: invalid
+spec:
+  resources:
+  - group: rbac.authorization.k8s.io
+    kind: ClusterRole
+    versions:
+    - {}

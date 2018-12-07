@@ -1,0 +1,22 @@
+apiVersion: nomos.dev/v1
+kind: PolicyNode
+metadata:
+  name: invalid
+spec:
+  resources:
+  - kind: ResourceQuota
+    versions:
+    - objects:
+      - apiVersion: v1
+        kind: ResourceQuota
+        metadata:
+          annotations:
+            nomos.dev/cluster-name: e2e-test-cluster
+            nomos.dev/source-path: namespaces/rnd/quota.yaml
+          creationTimestamp: null
+          name: nomos-resource-quota
+        spec:
+          hard:
+            configmaps: "2"
+        status: {}
+  type: namespace
