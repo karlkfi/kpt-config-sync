@@ -164,11 +164,14 @@ $(STAGING_DIR)/installer.zip: \
 # Unconditional upload of nomos artifacts tagged with $(IMAGE_TAG) to gcr.io.
 upload-release:
 	@echo "+++ Marking release $(IMAGE_TAG) as 'latest'"
+# We are not ready to expose Bespin binaries yet; therefore we'll need to
+# exclude them via the rsync filter.
+	gsutil -m rsync -r -p -x ".*bespin.*" $(BIN_DIR) \
+		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil -m cp -R \
 		$(STAGING_DIR)/installer.zip \
 		$(STAGING_DIR)/nomos-docs.zip  \
 		$(STAGING_DIR)/kubectl-oidc/kubectl-oidc-plugin.zip  \
-	    $(BIN_DIR) \
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/$(VERSION)
 	gcloud container images add-tag --quiet \
