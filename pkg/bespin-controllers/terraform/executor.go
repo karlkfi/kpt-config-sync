@@ -24,6 +24,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/golang/glog"
@@ -103,6 +105,9 @@ type Executor struct {
 
 	// The path to Terraform binary and plugin.
 	binaryPath, pluginDir string
+
+	// A map that stores the parsed output of "terraform state show".
+	state map[string]string
 }
 
 // NewExecutor creates and approproately initializes a new Terraform executor.
@@ -158,7 +163,7 @@ func (tfe *Executor) RunInit() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform init")
 	}
-	glog.V(1).Infof("Done terraform init.\n%s", out)
+	glog.V(1).Infof("Done terraform init in dir %s.\n%s", tfe.dir, out)
 	return nil
 }
 
@@ -173,7 +178,7 @@ func (tfe *Executor) RunPlan() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform plan")
 	}
-	glog.V(1).Infof("Done terraform plan.\n%s", out)
+	glog.V(1).Infof("Done terraform plan in dir %s.\n%s", tfe.dir, out)
 	return nil
 }
 
@@ -191,7 +196,7 @@ func (tfe *Executor) RunApply() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform apply")
 	}
-	glog.V(1).Infof("Done terraform apply.\n%s", out)
+	glog.V(1).Infof("Done terraform apply in dir %s.\n%s", tfe.dir, out)
 	return nil
 }
 
@@ -214,7 +219,7 @@ func (tfe *Executor) RunImport() error {
 	if err != nil {
 		glog.Warningf("failed to run terraform import: %v", err)
 	}
-	glog.V(1).Infof("Done terraform import.\n%s", out)
+	glog.V(1).Infof("Done terraform import in dir %s.\n%s", tfe.dir, out)
 	return nil
 }
 
@@ -236,4 +241,76 @@ func (tfe *Executor) RunAll() error {
 	err = run(tfe.RunPlan, err)
 	err = run(tfe.RunApply, err)
 	return err
+}
+
+// UpdateState inspects the terraform local state file and updates the resource info
+// in the executor's map, e.g. {"id": "xxx", "create_time": "xxx", ...}. The caller of this function
+// needs to make sure the terraform state file is update-to-date otherwise the stale data
+// maybe used later.
+func (tfe *Executor) UpdateState() error {
+	glog.V(1).Infof("Running terraform state show in dir %s\n", tfe.dir)
+	resourceAddr := tfe.resource.GetTFResourceAddr()
+	out, err := execCommand(
+		tfe.binaryPath,
+		"state",
+		"show",
+		fmt.Sprintf("-state=%s", filepath.Join(tfe.dir, tfe.stateFileName)),
+		resourceAddr)
+	if err != nil {
+		return errors.Wrapf(err, "failed to run terraform state show on resource %s", resourceAddr)
+	}
+	glog.V(1).Infof("Done terraform state show on resource %s.\n%s", resourceAddr, out)
+
+	m, err := parseStateConfig(string(out))
+	if err != nil {
+		return errors.Wrap(err, "failed to parse terraform state")
+	}
+	tfe.state = m
+	return nil
+}
+
+// parseStateConfig parses the input string with expected format and
+// returns a map of key->value pairs.
+// config is of format (using Folder as an example):
+// id              = folders/1234567
+// create_time     = 2000-12-05T21:32:29.614Z
+// display_name    = name-of-the-resource
+// lifecycle_state = ACTIVE
+// name            = folders/1234567
+// parent          = organizations/9876543
+func parseStateConfig(config string) (map[string]string, error) {
+	m := make(map[string]string)
+	lines := strings.Split(config, "\n")
+	for _, line := range lines {
+		line = strings.Trim(line, " ")
+		if len(line) == 0 {
+			continue
+		}
+		kv := strings.SplitN(line, "=", 2)
+		if len(kv) != 2 {
+			glog.Errorf("config line doesn't match known format: [key] = [value]: %s", line)
+			return nil, fmt.Errorf("config line doesn't match known format: [key] = [value]: %s", line)
+		}
+		m[strings.Trim(kv[0], " ")] = strings.Trim(kv[1], " ")
+	}
+	return m, nil
+}
+
+// GetFolderID returns the Folder ID stored in its state map.
+func (tfe *Executor) GetFolderID() (int, error) {
+	re := regexp.MustCompile(`^folders\/(\d+)$`)
+	if fid, ok := tfe.state["id"]; ok {
+		// "id": "folders/1234567"
+		switch {
+		case re.MatchString(fid):
+			id, err := strconv.Atoi(strings.Split(fid, "/")[1])
+			if err != nil {
+				return 0, errors.Wrapf(err, "failed to get Folder ID: %s", fid)
+			}
+			return id, nil
+		default:
+			return 0, fmt.Errorf("invalid Folder ID: %s", fid)
+		}
+	}
+	return 0, fmt.Errorf("Folder ID not found")
 }
