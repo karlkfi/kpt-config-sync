@@ -14,7 +14,7 @@ metrics for the Syncer:
 $ kubectl port-forward -n nomos-system $(kubectl get pods -n nomos-system -l app=syncer -o jsonpath='{.items[0].metadata.name}') 8675
 ```
 
-Now you can view the metric values by visiting http://localhost:8675. If you
+Now you can view the metric values by visiting http://localhost:8675/metrics. If you
 have the Prometheus server process running then you can forward the port from it
 (default is 9090) to enable local querying:
 
