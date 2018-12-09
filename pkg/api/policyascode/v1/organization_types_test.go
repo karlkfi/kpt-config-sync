@@ -60,3 +60,54 @@ func TestStorageOrganization(t *testing.T) {
 	g.Expect(c.Delete(context.TODO(), fetched)).NotTo(gomega.HaveOccurred())
 	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
 }
+
+func TestOrganizationGetTFResourceConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		o       *Organization
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "Organization with valid ID",
+			o: &Organization{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+				Spec: OrganizationSpec{
+					ID:            1234567,
+					ImportDetails: fakeImportDetails,
+				},
+				Status: OrganizationStatus{},
+			},
+			want: `data "google_organization" "bespin_organization" {
+organization = "organizations/1234567"
+}`,
+			wantErr: false,
+		},
+		{
+			name: "Organization with no ID",
+			o: &Organization{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+				Spec: OrganizationSpec{
+					ImportDetails: fakeImportDetails,
+				},
+				Status: OrganizationStatus{},
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.o.GetTFResourceConfig()
+			switch {
+			case !tc.wantErr && err != nil:
+				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
+			case tc.wantErr && err == nil:
+				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
+			case got != tc.want:
+				t.Errorf("GetTFResourceConfig() got \n%s\n want \n%s", got, tc.want)
+			}
+		})
+	}
+}
