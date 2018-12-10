@@ -2036,6 +2036,23 @@ spec:
 	},
 }
 
+func errorCodes(err error) []string {
+	switch e := err.(type) {
+	case nil:
+		return []string{}
+	case validation.KNVError:
+		return []string{e.Code()}
+	case *multierror.MultiError:
+		var result []string
+		for _, er := range e.Errors() {
+			result = append(result, errorCodes(er)...)
+		}
+		return result
+	default:
+		return []string{"????"}
+	}
+}
+
 func (tc *parserTestCase) Run(t *testing.T) {
 	d := newTestDir(t, tc.root)
 	defer d.remove()
@@ -2075,31 +2092,16 @@ func (tc *parserTestCase) Run(t *testing.T) {
 
 	expectedCode := tc.expectedErrorCode
 
-	switch e := err.(type) {
-	case nil:
-		if expectedCode != "" {
-			t.Fatalf("Expected error with code %s but got no error.", expectedCode)
+	actualCodes := errorCodes(err)
+	for _, actualCode := range actualCodes {
+		if expectedCode == "" {
+			t.Fatalf("Expected no errors but got [%s]\n\n%s", strings.Join(actualCodes, ","), err.Error())
+		} else if actualCode == expectedCode {
+			return
 		}
-	case *multierror.MultiError:
-		codes := make([]string, len(e.Errors()))
-		for i, er := range e.Errors() {
-			code := validation.Code(er)
-			codes[i] = code
-			if expectedCode == validation.Code(er) {
-				return
-			}
-		}
-		if expectedCode == "" && len(codes) != 0 {
-			t.Fatalf("Expected no errors but got [%s]\n\n%s", strings.Join(codes, ","), e.Error())
-		} else {
-			t.Fatalf("Expected error with code %s but got [%s]\n\n%s", expectedCode, strings.Join(codes, ","), e.Error())
-		}
-	default:
-		actualCode := validation.Code(e)
-		if expectedCode != actualCode {
-			t.Fatalf("Expected error with code %s but got [%s]\n\n%s", expectedCode, actualCode, e.Error())
-		}
-		return
+	}
+	if expectedCode != "" {
+		t.Fatalf("Expected error with code %s but got no error.", expectedCode)
 	}
 
 	if actualPolicies == nil {

@@ -71,92 +71,52 @@ const (
 	UndefinedErrorCode                             = "????"
 )
 
-// Code returns the unique code associated with the error type.
-// Only ever (1) add to this method or (2) deprecate ids. Do not reuse.
-func Code(e error) string {
-	switch e.(type) {
-	case ReservedDirectoryNameError:
-		return ReservedDirectoryNameErrorCode
-	case DuplicateDirectoryNameError:
-		return DuplicateDirectoryNameErrorCode
-	case IllegalNamespaceSubdirectoryError:
-		return IllegalNamespaceSubdirectoryErrorCode
-	case IllegalNamespaceSelectorAnnotationError:
-		return IllegalNamespaceSelectorAnnotationErrorCode
-	case UnsyncableClusterObjectError:
-		return UnsyncableClusterObjectErrorCode
-	case UnsyncableNamespaceObjectError:
-		return UnsyncableNamespaceObjectErrorCode
-	case IllegalAbstractNamespaceObjectKindError:
-		return IllegalAbstractNamespaceObjectKindErrorCode
-	case ConflictingResourceQuotaError:
-		return ConflictingResourceQuotaErrorCode
-	case IllegalMetadataNamespaceDeclarationError:
-		return IllegalNamespaceDeclarationErrorCode
-	case IllegalAnnotationDefinitionError:
-		return IllegalAnnotationDefinitionErrorCode
-	case IllegalLabelDefinitionError:
-		return IllegalLabelDefinitionErrorCode
-	case NamespaceSelectorMayNotHaveAnnotation:
-		return NamespaceSelectorMayNotHaveAnnotationCode
-	case ObjectHasUnknownClusterSelector:
-		return ObjectHasUnknownClusterSelectorCode
-	case InvalidSelectorError:
-		return InvalidSelectorErrorCode
-	case MissingDirectoryError:
-		return MissingDirectoryErrorCode
-	case MissingRepoError:
-		return MissingRepoErrorCode
-	case IllegalSubdirectoryError:
-		return IllegalSubdirectoryErrorCode
-	case IllegalTopLevelNamespaceError:
-		return IllegalTopLevelNamespaceErrorCode
-	case InvalidNamespaceNameError:
-		return InvalidNamespaceNameErrorCode
-	case UnknownObjectError:
-		return UnknownObjectErrorCode
-	case MultipleVersionForSameSyncedTypeError:
-		return MultipleVersionForSameSyncedTypeErrorCode
-	case IllegalNamespaceSyncDeclarationError:
-		return IllegalNamespaceSyncDeclarationErrorCode
-	case IllegalSystemObjectDefinitionInSystemError:
-		return IllegalSystemObjectDefinitionInSystemErrorCode
-	case MultipleRepoDefinitionsError:
-		return MultipleRepoDefinitionsErrorCode
-	case MultipleConfigMapsError:
-		return MultipleConfigMapsErrorCode
-	case UnsupportedRepoSpecVersion:
-		return UnsupportedRepoSpecVersionCode
-	case InvalidDirectoryNameError:
-		return InvalidDirectoryNameErrorCode
-	case ObjectNameCollisionError:
-		return ObjectNameCollisionErrorCode
-	case MultipleNamespacesError:
-		return MultipleNamespacesErrorCode
-	case MissingObjectNameError:
-		return MissingObjectNameErrorCode
-	case UnknownResourceInSyncError:
-		return UnknownResourceInSyncErrorCode
-	case IllegalSystemResourcePlacementError:
-		return IllegalSystemResourcePlacementErrorCode
-	case UnsupportedResourceInSyncError:
-		return UnsupportedResourceInSyncErrorCode
-	case IllegalHierarchyModeError:
-		return IllegalHierarchyModeErrorCode
+// Example returns a canonical example to use
+func Example(code string) KNVError {
+	switch code {
+	case ReservedDirectoryNameErrorCode:
+		return ReservedDirectoryNameError{Dir: "reserved"}
+	case InvalidNamespaceNameErrorCode:
+		return InvalidNamespaceNameError{Source: "namespaces/foo/namespace.yaml", Expected: "foo", Actual: "bar"}
 	default:
-		return UndefinedErrorCode // Undefined
+		panic(errors.Errorf("programmer error: example undefined for %T", code))
 	}
 }
 
-// withPrefix formats the start of error messages consistently.
-func format(err error, format string, a ...interface{}) string {
-	code := Code(err)
-	if code == UndefinedErrorCode {
-		// Only reachable by programmer error. Requires calling format() on an error other than the ones
-		// defined in this file or not having an entry in Code() above.
-		panic(fmt.Sprintf("Unknown Error: %+v", err))
+// Explanation returns documentation about what the bug is, why it occurs, and more information on
+// how to fix it than just the error message.
+func Explanation(code string) string {
+	switch code {
+	case ReservedDirectoryNameErrorCode:
+		return `
+GKE Policy Management defines several Reserved Namespaces (TODO: which ones?), and users may [specify
+their own Reserved Namespaces](../system_config.md#reserved-namespaces). Directories MUST NOT use
+these reserved names. To fix:
+1. rename the directory,
+2. remove the directory, or
+3. remove the reserved namespace declaration.
+`
+	case InvalidNamespaceNameErrorCode:
+		return `
+A Namespace defines the scope in which all resources in its directory live. A Namespace MUST
+have a metadata.name that matches the name of its directory. To fix, correct the offending Namespace's
+metadata.name or its directory.
+`
+	default:
+		panic(errors.Errorf("programmer error: explanation undefined for %T", code))
 	}
-	return fmt.Sprintf("KNV%s: ", Code(err)) + fmt.Sprintf(format, a...)
+}
+
+// KNVError Defines a Kubernetes Nomos Vet error
+// These are GKE Policy Management directory errors which are shown to the user and documented.
+type KNVError interface {
+	Error() string
+	Code() string
+}
+
+// withPrefix formats the start of error messages consistently.
+func format(err KNVError, format string, a ...interface{}) string {
+	return fmt.Sprintf("KNV%s: ", err.Code()) + fmt.Sprintf(format, a...)
 }
 
 type groupVersionKind schema.GroupVersionKind
@@ -196,6 +156,9 @@ func (e ReservedDirectoryNameError) Error() string {
 		e.Dir, path.Base(e.Dir))
 }
 
+// Code implements KNVError
+func (e ReservedDirectoryNameError) Code() string { return ReservedDirectoryNameErrorCode }
+
 // DuplicateDirectoryNameError represents an illegal duplication of directory names.
 type DuplicateDirectoryNameError struct {
 	Duplicates []string
@@ -212,6 +175,9 @@ func (e DuplicateDirectoryNameError) Error() string {
 		strings.Join(e.Duplicates, "\n"))
 }
 
+// Code implements KNVError
+func (e DuplicateDirectoryNameError) Code() string { return DuplicateDirectoryNameErrorCode }
+
 // IllegalNamespaceSubdirectoryError represents an illegal child directory of a namespace directory.
 type IllegalNamespaceSubdirectoryError struct {
 	child  *ast.TreeNode
@@ -227,6 +193,9 @@ func (e IllegalNamespaceSubdirectoryError) Error() string {
 		ast.Namespace, e.child.Name(), e.child, e.parent.Name())
 }
 
+// Code implements KNVError
+func (e IllegalNamespaceSubdirectoryError) Code() string { return IllegalNamespaceSubdirectoryErrorCode }
+
 // IllegalNamespaceSelectorAnnotationError represents an illegal usage of the namespace selector annotation.
 type IllegalNamespaceSelectorAnnotationError struct {
 	*ast.TreeNode
@@ -239,6 +208,11 @@ func (e IllegalNamespaceSelectorAnnotationError) Error() string {
 			"Remove metadata.annotations.%[2]s from:\n\n"+
 			"%[1]s",
 		e.TreeNode, v1alpha1.NamespaceSelectorAnnotationKey, ast.Namespace)
+}
+
+// Code implements KNVError
+func (e IllegalNamespaceSelectorAnnotationError) Code() string {
+	return IllegalNamespaceSelectorAnnotationErrorCode
 }
 
 // UnsyncableClusterObjectError represents an illegal usage of a cluster object kind which has not be explicitly declared.
@@ -255,6 +229,9 @@ func (e UnsyncableClusterObjectError) Error() string {
 		fileObject{e.FileObject}, e.Name())
 }
 
+// Code implements KNVError
+func (e UnsyncableClusterObjectError) Code() string { return UnsyncableClusterObjectErrorCode }
+
 // UnsyncableNamespaceObjectError represents an illegal usage of a resource which has not been defined for use in namespaces/.
 type UnsyncableNamespaceObjectError struct {
 	*ast.NamespaceObject
@@ -269,6 +246,9 @@ func (e UnsyncableNamespaceObjectError) Error() string {
 		fileObject{e.FileObject}, e.Name())
 }
 
+// Code implements KNVError
+func (e UnsyncableNamespaceObjectError) Code() string { return UnsyncableNamespaceObjectErrorCode }
+
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
 type IllegalAbstractNamespaceObjectKindError struct {
 	*ast.NamespaceObject
@@ -281,6 +261,11 @@ func (e IllegalAbstractNamespaceObjectKindError) Error() string {
 			"Move this resource to a %[2]s directory:\n\n"+
 			"%[3]s",
 		ast.AbstractNamespace, ast.Namespace, fileObject{e.FileObject}, e.Name())
+}
+
+// Code implements KNVError
+func (e IllegalAbstractNamespaceObjectKindError) Code() string {
+	return IllegalAbstractNamespaceObjectKindErrorCode
 }
 
 // ConflictingResourceQuotaError represents multiple ResourceQuotas illegally presiding in the same directory.
@@ -305,6 +290,9 @@ func (e ConflictingResourceQuotaError) Error() string {
 		e.Path, strings.Join(strs, "\n\n"))
 }
 
+// Code implements KNVError
+func (e ConflictingResourceQuotaError) Code() string { return ConflictingResourceQuotaErrorCode }
+
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
 type IllegalMetadataNamespaceDeclarationError struct {
 	Info *resource.Info
@@ -317,6 +305,11 @@ func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 		"Resources MUST NOT declare metadata.namespace:\n\n"+
 			"%[1]s",
 		resourceInfo{info: e.Info})
+}
+
+// Code implements KNVError
+func (e IllegalMetadataNamespaceDeclarationError) Code() string {
+	return IllegalNamespaceDeclarationErrorCode
 }
 
 // IllegalAnnotationDefinitionError represents a set of illegal annotation definitions.
@@ -336,6 +329,9 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 		a, fileObject{e.object}, policyhierarchy.GroupName, e.object.Name())
 }
 
+// Code implements KNVError
+func (e IllegalAnnotationDefinitionError) Code() string { return IllegalAnnotationDefinitionErrorCode }
+
 // IllegalLabelDefinitionError represent a set of illegal label definitions.
 type IllegalLabelDefinitionError struct {
 	object ast.FileObject
@@ -353,6 +349,9 @@ func (e IllegalLabelDefinitionError) Error() string {
 		l, fileObject{e.object}, policyhierarchy.GroupName)
 }
 
+// Code implements KNVError
+func (e IllegalLabelDefinitionError) Code() string { return IllegalLabelDefinitionErrorCode }
+
 // NamespaceSelectorMayNotHaveAnnotation reports that a namespace selector has
 // an annotation that is not allowed.
 type NamespaceSelectorMayNotHaveAnnotation struct {
@@ -363,6 +362,11 @@ type NamespaceSelectorMayNotHaveAnnotation struct {
 func (e NamespaceSelectorMayNotHaveAnnotation) Error() string {
 	// TODO(willbeason): Print information about the object so it can actually be found.
 	return format(e, "The NamespaceSelector resource %q MUST NOT have ClusterSelector annotation", e.o.GetName())
+}
+
+// Code implements KNVError
+func (e NamespaceSelectorMayNotHaveAnnotation) Code() string {
+	return NamespaceSelectorMayNotHaveAnnotationCode
 }
 
 // ObjectHasUnknownClusterSelector is an error denoting an object that has an unknown annotation.
@@ -376,6 +380,9 @@ func (e ObjectHasUnknownClusterSelector) Error() string {
 	return format(e, "Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector", e.o.GetName(), v1alpha1.ClusterSelectorAnnotationKey, e.a)
 }
 
+// Code implements KNVError
+func (e ObjectHasUnknownClusterSelector) Code() string { return ObjectHasUnknownClusterSelectorCode }
+
 // InvalidSelectorError is a validation error.
 type InvalidSelectorError struct {
 	name  string
@@ -387,6 +394,9 @@ func (e InvalidSelectorError) Error() string {
 	return format(e, errors.Wrapf(e.cause, "ClusterSelector %q has validation errors that must be corrected", e.name).Error())
 }
 
+// Code implements KNVError
+func (e InvalidSelectorError) Code() string { return InvalidSelectorErrorCode }
+
 // MissingDirectoryError reports that a required directory is missing.
 type MissingDirectoryError struct{}
 
@@ -396,6 +406,9 @@ func (e MissingDirectoryError) Error() string {
 		"Required %s/ directory is missing.", repo.SystemDir)
 }
 
+// Code implements KNVError
+func (e MissingDirectoryError) Code() string { return MissingDirectoryErrorCode }
+
 // MissingRepoError reports that there is no Repo definition in system/
 type MissingRepoError struct{}
 
@@ -404,6 +417,9 @@ func (e MissingRepoError) Error() string {
 	return format(e,
 		"%s/ directory must declare a Repo resource.", repo.SystemDir)
 }
+
+// Code implements KNVError
+func (e MissingRepoError) Code() string { return MissingRepoErrorCode }
 
 // IllegalSubdirectoryError reports that the directory has an illegal subdirectory.
 type IllegalSubdirectoryError struct {
@@ -418,6 +434,9 @@ func (e IllegalSubdirectoryError) Error() string {
 			"path: %[2]s", e.BaseDir, e.SubDir)
 }
 
+// Code implements KNVError
+func (e IllegalSubdirectoryError) Code() string { return IllegalSubdirectoryErrorCode }
+
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
 type IllegalTopLevelNamespaceError struct {
 	Info *resource.Info
@@ -426,10 +445,13 @@ type IllegalTopLevelNamespaceError struct {
 // Error implements error
 func (e IllegalTopLevelNamespaceError) Error() string {
 	return format(e,
-		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for namespaces in:\n\n"+
+		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:\n\n"+
 			"source: %[3]s",
 		repo.NamespacesDir, ast.Namespace, e.Info.Source)
 }
+
+// Code implements KNVError
+func (e IllegalTopLevelNamespaceError) Code() string { return IllegalTopLevelNamespaceErrorCode }
 
 // InvalidNamespaceNameError reports that a Namespace has an invalid name.
 type InvalidNamespaceNameError struct {
@@ -448,6 +470,9 @@ func (e InvalidNamespaceNameError) Error() string {
 		ast.Namespace, e.Source, e.Expected, e.Actual)
 }
 
+// Code implements KNVError
+func (e InvalidNamespaceNameError) Code() string { return InvalidNamespaceNameErrorCode }
+
 // UnknownObjectError reports that an object declared in the repo does not have a definition in the cluster.
 type UnknownObjectError struct {
 	*ast.FileObject
@@ -460,6 +485,9 @@ func (e UnknownObjectError) Error() string {
 			"\nResource must be a native K8S resources or have an associated CustomResourceDefinition:\n\n%s",
 		e.FileObject)
 }
+
+// Code implements KNVError
+func (e UnknownObjectError) Code() string { return UnknownObjectErrorCode }
 
 // MultipleVersionForSameSyncedTypeError reports that multiple versions were declared for the same synced kind
 type MultipleVersionForSameSyncedTypeError struct {
@@ -489,6 +517,11 @@ func (e MultipleVersionForSameSyncedTypeError) Error() string {
 		e.Source, e.Kind.Kind, e.Group.Group, PrettyPrint(e.Kind.Versions))
 }
 
+// Code implements KNVError
+func (e MultipleVersionForSameSyncedTypeError) Code() string {
+	return MultipleVersionForSameSyncedTypeErrorCode
+}
+
 // IllegalNamespaceSyncDeclarationError reports that Namespace has incorrectly been declared as a Sync type
 type IllegalNamespaceSyncDeclarationError struct {
 	Source string
@@ -500,6 +533,11 @@ func (e IllegalNamespaceSyncDeclarationError) Error() string {
 		"Sync may not declare resources of type %[1]s\n\n"+
 			"source: %[2]s",
 		ast.Namespace, e.Source)
+}
+
+// Code implements KNVError
+func (e IllegalNamespaceSyncDeclarationError) Code() string {
+	return IllegalNamespaceSyncDeclarationErrorCode
 }
 
 // IllegalSystemObjectDefinitionInSystemError reports that an object has been illegally defined in system/
@@ -515,6 +553,11 @@ func (e IllegalSystemObjectDefinitionInSystemError) Error() string {
 			"source: %[3]s\n"+
 			"%[1]s",
 		groupVersionKind(e.GroupVersionKind), repo.SystemDir, e.Source)
+}
+
+// Code implements KNVError
+func (e IllegalSystemObjectDefinitionInSystemError) Code() string {
+	return IllegalSystemObjectDefinitionInSystemErrorCode
 }
 
 // MultipleRepoDefinitionsError reports that the system/ directory contains multiple Repo declarations.
@@ -538,6 +581,9 @@ func (e MultipleRepoDefinitionsError) Error() string {
 		repo.SystemDir, strings.Join(repos, "\n\n"))
 }
 
+// Code implements KNVError
+func (e MultipleRepoDefinitionsError) Code() string { return MultipleRepoDefinitionsErrorCode }
+
 // MultipleConfigMapsError reports that system/ declares multiple ConfigMaps.
 type MultipleConfigMapsError struct {
 	ConfigMaps map[*corev1.ConfigMap]string
@@ -559,6 +605,9 @@ func (e MultipleConfigMapsError) Error() string {
 		repo.SystemDir, strings.Join(configMaps, "\n\n"))
 }
 
+// Code implements KNVError
+func (e MultipleConfigMapsError) Code() string { return MultipleConfigMapsErrorCode }
+
 // UnsupportedRepoSpecVersion reports that the repo version is not supported.
 type UnsupportedRepoSpecVersion struct {
 	Source  string
@@ -575,6 +624,9 @@ func (e UnsupportedRepoSpecVersion) Error() string {
 		e.Source, e.Name, e.Version)
 }
 
+// Code implements KNVError
+func (e UnsupportedRepoSpecVersion) Code() string { return UnsupportedRepoSpecVersionCode }
+
 // InvalidDirectoryNameError represents an illegal usage of a reserved name.
 type InvalidDirectoryNameError struct {
 	Dir string
@@ -588,6 +640,9 @@ func (e InvalidDirectoryNameError) Error() string {
 			"name: %[2]s",
 		e.Dir, path.Base(e.Dir))
 }
+
+// Code implements KNVError
+func (e InvalidDirectoryNameError) Code() string { return InvalidDirectoryNameErrorCode }
 
 // ObjectNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
 type ObjectNameCollisionError struct {
@@ -612,6 +667,9 @@ func (e ObjectNameCollisionError) Error() string {
 			"%[2]s",
 		ast.Namespace, strings.Join(strs, "\n\n"), ast.AbstractNamespace)
 }
+
+// Code implements KNVError
+func (e ObjectNameCollisionError) Code() string { return ObjectNameCollisionErrorCode }
 
 type resourceInfo struct {
 	info *resource.Info
@@ -645,6 +703,9 @@ func (e MultipleNamespacesError) Error() string {
 		ast.Namespace, strings.Join(strs, "\n\n"))
 }
 
+// Code implements KNVError
+func (e MultipleNamespacesError) Code() string { return MultipleNamespacesErrorCode }
+
 // MissingObjectNameError reports that an object has no name.
 type MissingObjectNameError struct {
 	*resource.Info
@@ -659,6 +720,9 @@ func (e MissingObjectNameError) Error() string {
 			"name: %[3]s",
 		e.Info.Source, groupVersionKind(e.Mapping.GroupVersionKind), e.Name)
 }
+
+// Code implements KNVError
+func (e MissingObjectNameError) Code() string { return MissingObjectNameErrorCode }
 
 // UnknownResourceInSyncError reports that a resource defined in a Sync does not have a definition in the cluster.
 type UnknownResourceInSyncError struct {
@@ -677,6 +741,9 @@ func (e UnknownResourceInSyncError) Error() string {
 		e.SyncPath, groupVersionKind(e.ResourceType))
 }
 
+// Code implements KNVError
+func (e UnknownResourceInSyncError) Code() string { return UnknownResourceInSyncErrorCode }
+
 // IllegalSystemResourcePlacementError reports that a nomos.dev object has been defined outside of system/
 type IllegalSystemResourcePlacementError struct {
 	Info *resource.Info
@@ -688,6 +755,11 @@ func (e IllegalSystemResourcePlacementError) Error() string {
 		"Resources of the below kind MUST NOT be declared outside %[1]s/:\n"+
 			"%[2]s",
 		repo.SystemDir, resourceInfo{e.Info}.String())
+}
+
+// Code implements KNVError
+func (e IllegalSystemResourcePlacementError) Code() string {
+	return IllegalSystemResourcePlacementErrorCode
 }
 
 // UnsupportedResourceInSyncError reports that policy management is unsupported for a resource defined in a Sync.
@@ -704,6 +776,9 @@ func (e UnsupportedResourceInSyncError) Error() string {
 			"%[2]s",
 		e.SyncPath, groupVersionKind(e.ResourceType))
 }
+
+// Code implements KNVError
+func (e UnsupportedResourceInSyncError) Code() string { return UnsupportedResourceInSyncErrorCode }
 
 // IllegalHierarchyModeError reports that a Sync is defined with a disallowed hierarchyMode.
 type IllegalHierarchyModeError struct {
@@ -722,3 +797,6 @@ func (e IllegalHierarchyModeError) Error() string {
 		"HierarchyMode %[1]s is not a valid value for Sync %[2]s. Allowed values are [%[3]s].",
 		e.Mode, e.Name, strings.Join(allowedStr, ","))
 }
+
+// Code implements KNVError
+func (e IllegalHierarchyModeError) Code() string { return IllegalHierarchyModeErrorCode }

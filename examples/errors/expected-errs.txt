@@ -99,7 +99,7 @@ kind: RoleBinding
 path: cluster/illegal-cluster-subdir
 
 
-[15] KNV1019: Namespaces MUST be declared in subdirectories of namespaces/. Create a subdirectory for namespaces in:
+[15] KNV1019: Namespaces MUST be declared in subdirectories of namespaces/. Create a subdirectory for Namespaces declared in:
 
 source: namespaces/namespace.yaml
 
