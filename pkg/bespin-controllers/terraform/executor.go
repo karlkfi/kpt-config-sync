@@ -48,6 +48,12 @@ const (
 
 	// Default file mode when bespin creates a new file.
 	defaultFilePerm = 0644
+
+	// Terraform provider config.
+	providerConfig = `provider "google" {
+version = "1.19.1"
+}
+`
 )
 
 // Set to true if the bespin binary is running locally, otherwise
@@ -138,15 +144,16 @@ func (tfe *Executor) RunInit() error {
 		return errors.Wrapf(err, "failed to get Terraform resource config from resource (%+v)", tfe.resource)
 	}
 	fileName := filepath.Join(tfe.dir, tfe.configFileName)
-	err = ioutil.WriteFile(fileName, []byte(resourceConfig), defaultFilePerm)
+	err = ioutil.WriteFile(fileName, []byte(providerConfig+resourceConfig), defaultFilePerm)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write Terraform resource config to file %s", fileName)
 	}
 	out, err := execCommand(
-		binaryPath,
+		tfe.binaryPath,
 		"init",
 		"-input=false",
-		fmt.Sprintf("-plugin-dir=%s", pluginDir),
+		"-upgrade=false",
+		fmt.Sprintf("-plugin-dir=%s", tfe.pluginDir),
 		tfe.dir)
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform init")
@@ -159,7 +166,7 @@ func (tfe *Executor) RunInit() error {
 func (tfe *Executor) RunPlan() error {
 	glog.V(1).Infof("Running Terraform Plan in dir %s", tfe.dir)
 	out, err := execCommand(
-		binaryPath,
+		tfe.binaryPath,
 		"plan",
 		fmt.Sprintf("-state=%s", filepath.Join(tfe.dir, tfe.stateFileName)),
 		tfe.dir)
@@ -174,7 +181,7 @@ func (tfe *Executor) RunPlan() error {
 func (tfe *Executor) RunApply() error {
 	glog.V(1).Infof("Running terraform apply in dir %s", tfe.dir)
 	out, err := execCommand(
-		binaryPath,
+		tfe.binaryPath,
 		"apply",
 		"-auto-approve",
 		"-refresh=true",
@@ -197,7 +204,7 @@ func (tfe *Executor) RunImport() error {
 		return errors.Wrapf(err, "failed to write terraform import config to file %s", fileName)
 	}
 	out, err := execCommand(
-		binaryPath,
+		tfe.binaryPath,
 		"import",
 		fmt.Sprintf("-config=%s", tfe.dir), // Dir to find provider info.
 		fmt.Sprintf("-state=%s", filepath.Join(tfe.dir, tfe.stateFileName)),     // Source state file.

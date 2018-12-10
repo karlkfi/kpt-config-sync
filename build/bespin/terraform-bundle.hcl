@@ -6,6 +6,6 @@ terraform {
 
 # Define which provider plugins are to be included
 providers {
-  # Include the newest 1.0 version of the "google" provider.
-  google = [">= 1.9"]
+  # See https://releases.hashicorp.com/terraform-provider-google
+  google = ["1.19.1"]
 }
