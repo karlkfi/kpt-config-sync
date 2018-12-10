@@ -17,9 +17,8 @@ BESPIN_BUILD_DIR := $(TOP_DIR)/build/bespin
 # Bespin manifests.
 BESPIN_CONFIG_DIR := $(TOP_DIR)/manifests/bespin/config
 
-# Image URLs for bespin image targets
-# TODO(zhuzenglu): templatize the project and gcr path.
-BESPIN_CONTROLLERS_MANAGER_IMG ?= gcr.io/bespin-prototype/kubebuilder-images/bespin-controllers-manager:latest
+# Image URLs for bespin image targets.
+BESPIN_CONTROLLERS_MANAGER_IMG ?= gcr.io/${GCR_PREFIX}/bespin/controllers-manager:latest
 
 ###################################
 # Bespin build rules

@@ -8,5 +8,5 @@ spec:
     spec:
       containers:
       # Change the value of image field below to your controller image URL
-      - image: gcr.io/bespin-prototype/kubebuilder-images/bespin-controllers-manager:latest
+      - image: gcr.io/${GCR_PREFIX}/bespin/controllers-manager:latest
         name: manager
