@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
 		os.Exit(0)
 	}
 	t := &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "manifests")},
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", "..", "manifests/bespin/config/crds")},
 	}
 	apis.AddToScheme(scheme.Scheme)
 
