@@ -91,11 +91,14 @@ nomos-system Active 1m
 Note that these secrets are deployed into the nomos-system namespace, so it is
 necessary to have that namespace created before creating the secret.
 
-Choose the correct authentication method for your Git repository from the options below. The method chosen will determine the value you use for `secretType` when creating the `Nomos` resource in the next section.
+Choose the correct authentication method for your Git repository from the
+options below. The method chosen will determine the value you use for
+`secretType` when creating the `Nomos` resource in the next section.
 
 #### Using `ssh`
 
-Follow this process when `secretType` is set to `ssh`. This would be use when authenticating to a Git repo using ssh keys.
+Follow this process when `secretType` is set to `ssh`. This would be use when
+authenticating to a Git repo using ssh keys.
 
 First, create a nomos-specific private/public key pair.
 
@@ -122,7 +125,8 @@ $ kubectl create secret generic git-creds -n=nomos-system \
 
 #### Using `cookiefile`
 
-Follow this process when `secretType` is set to `cookiefile`. This would be used when authenticating to a Git repo using Git cookies.
+Follow this process when `secretType` is set to `cookiefile`. This would be used
+when authenticating to a Git repo using Git cookies.
 
 The process for acquiring a Git cookie depends on the configuration of your Git
 server your repository is on, but is commonly used as an authentication
@@ -140,9 +144,9 @@ $ kubectl create secret generic git-creds -n=nomos-system \
 
 #### Using `none`
 
-No secret is needed when `secretType` is set to `none`. This would be used when accessing a repo
-via a public https:// target, which implies the repo is open to the public. __Such a configuration
-is not recommended.__
+No secret is needed when `secretType` is set to `none`. This would be used when
+accessing a repo via a public https:// target, which implies the repo is open to
+the public. __Such a configuration is not recommended.__
 
 ### Create the Nomos Resource
 
@@ -215,7 +219,8 @@ syncer-58545bc77d-l485n                               1/1       Running   0     
 Note that the ResourceQuota admission controller will only be running if enabled
 using the `enableHierarchicalResourceQuota` flag.
 
-If the above components do not appear, you may find relevant error messages in the operator logs:
+If the above components do not appear, you may find relevant error messages in
+the operator logs:
 
 ```console
 kubectl -n kube-system logs -l k8s-app=nomos-operator
@@ -239,11 +244,19 @@ The affected components are:
 
 ### Uninstalling the Operator
 
-Usually, uninstalling Nomos's functional components with the instructions above should be sufficient and it is not necessary to uninstall the Operator. The Operator can safely remain on the cluster to assist with future reinstallation, and will not affect the cluster until the Nomos CRD is created. If the Operator is removed, it will have to be re-created before Nomos can be installed again. Users of GKE on-prem should not attempt to uninstall the operator, as it is managed by the GKE on-prem platform.
+Usually, uninstalling Nomos's functional components with the instructions above
+should be sufficient and it is not necessary to uninstall the Operator. The
+Operator can safely remain on the cluster to assist with future reinstallation,
+and will not affect the cluster until the Nomos CRD is created. If the Operator
+is removed, it will have to be re-created before Nomos can be installed again.
+Users of GKE on-prem should not attempt to uninstall the operator, as it is
+managed by the GKE on-prem platform.
 
-However, if you do wish to completely remove the Operator and associated resources, follow this process:
+However, if you do wish to completely remove the Operator and associated
+resources, follow this process:
 
-First uninstall Nomos as [above](#uninstalling), and wait until the `nomos-system` namespace is empty.
+First uninstall Nomos as [above](#uninstalling), and wait until the
+`nomos-system` namespace is empty.
 
 Make sure that `nomos-system` has no resources before proceeding:
 
@@ -270,7 +283,11 @@ And delete all `kube-system` resources for the operator:
 $ kubectl -n kube-system delete all -l k8s-app=nomos-operator
 ```
 
-Note: there is one additional CRD called `applications.app.k8s.io` that
-is installed with the Nomos Operator bundle, *but* this CRD is also used by some other GKE [add-ons](https://kubernetes.io/docs/concepts/cluster-administration/addons/). If you are confident that no other add-ons are using this CRD, it can be deleted as well.
+Note: there is one additional CRD called `applications.app.k8s.io` that is
+installed with the Nomos Operator bundle, *but* this CRD is also used by some
+other GKE
+[add-ons](https://kubernetes.io/docs/concepts/cluster-administration/addons/).
+If you are confident that no other add-ons are using this CRD, it can be deleted
+as well.
 
 [< Back](../../README.md)

@@ -2093,10 +2093,13 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	expectedCode := tc.expectedErrorCode
 
 	actualCodes := errorCodes(err)
+
+	if expectedCode == "" && len(actualCodes) != 0 {
+		t.Fatalf("Expected no errors but got [%s]\n\n%s", strings.Join(actualCodes, ","), err.Error())
+	}
+
 	for _, actualCode := range actualCodes {
-		if expectedCode == "" {
-			t.Fatalf("Expected no errors but got [%s]\n\n%s", strings.Join(actualCodes, ","), err.Error())
-		} else if actualCode == expectedCode {
+		if actualCode == expectedCode {
 			return
 		}
 	}

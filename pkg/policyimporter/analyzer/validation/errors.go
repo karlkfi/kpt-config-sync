@@ -89,18 +89,21 @@ func Explanation(code string) string {
 	switch code {
 	case ReservedDirectoryNameErrorCode:
 		return `
-GKE Policy Management defines several Reserved Namespaces (TODO: which ones?), and users may [specify
-their own Reserved Namespaces](../system_config.md#reserved-namespaces). Directories MUST NOT use
-these reserved names. To fix:
-1. rename the directory,
-2. remove the directory, or
-3. remove the reserved namespace declaration.
+GKE Policy Management defines several
+[Reserved Namespaces](../management_flow.md#namespaces), and users may
+[specify their own Reserved Namespaces](../system_config.md#reserved-namespaces).
+Namespace and Abstract Namespace directories MUST NOT use these reserved names.
+To fix:
+
+1.  rename the directory,
+1.  remove the directory, or
+1.  remove the reserved namespace declaration.
 `
 	case InvalidNamespaceNameErrorCode:
 		return `
-A Namespace defines the scope in which all resources in its directory live. A Namespace MUST
-have a metadata.name that matches the name of its directory. To fix, correct the offending Namespace's
-metadata.name or its directory.
+A Namespace resource MUST have a metadata.name that matches the name of its
+directory. To fix, correct the offending Namespace's metadata.name or its
+directory.
 `
 	default:
 		panic(errors.Errorf("programmer error: explanation undefined for %T", code))
