@@ -17,7 +17,6 @@ limitations under the License.
 package v1
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/onsi/gomega"
@@ -70,16 +69,22 @@ func TestFolderGetTFResourceConfig(t *testing.T) {
 		name    string
 		f       *Folder
 		want    string
-		wantErr error
+		wantErr bool
 	}{
 		{
 			name: "Folder with Organization as parent",
 			f: &Folder{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+					Annotations: map[string]string{
+						"key1":                  "value1",
+						ParentOrganizationIDKey: "1234567",
+					},
+				},
 				Spec: FolderSpec{
 					ParentReference: ParentReference{
 						Kind: "Organization",
-						Name: "organizations/1234567",
+						Name: "organizations-001",
 					},
 					DisplayName:   "spec-bar",
 					ImportDetails: fakeImportDetails,
@@ -92,16 +97,22 @@ func TestFolderGetTFResourceConfig(t *testing.T) {
 display_name = "spec-bar"
 parent = "organizations/1234567"
 }`,
-			wantErr: nil,
+			wantErr: false,
 		},
 		{
 			name: "Folder with Folder as parent",
 			f: &Folder{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+					Annotations: map[string]string{
+						"key1":            "value1",
+						ParentFolderIDKey: "1234567",
+					},
+				},
 				Spec: FolderSpec{
 					ParentReference: ParentReference{
 						Kind: "Folder",
-						Name: "folders/1234567",
+						Name: "folders-001",
 					},
 					DisplayName:   "spec-bar",
 					ImportDetails: fakeImportDetails,
@@ -114,12 +125,18 @@ parent = "organizations/1234567"
 display_name = "spec-bar"
 parent = "folders/1234567"
 }`,
-			wantErr: nil,
+			wantErr: false,
 		},
 		{
-			name: "Project with invalid ParentReference",
+			name: "Folder with invalid ParentReference",
 			f: &Folder{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+					Annotations: map[string]string{
+						"key1":            "value1",
+						ParentFolderIDKey: "1234567",
+					},
+				},
 				Spec: FolderSpec{
 					ParentReference: ParentReference{
 						Kind: "Invalid",
@@ -133,7 +150,32 @@ parent = "folders/1234567"
 				},
 			},
 			want:    "",
-			wantErr: fmt.Errorf("invalid parent reference kind: Invalid"),
+			wantErr: true,
+		},
+		{
+			name: "Folder with no parent ID annotation",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+					Annotations: map[string]string{
+						"key1": "value1",
+					},
+				},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Folder",
+						Name: "folders-001",
+					},
+					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+
+			want:    "",
+			wantErr: true,
 		},
 	}
 
@@ -141,9 +183,9 @@ parent = "folders/1234567"
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := tc.f.GetTFResourceConfig()
 			switch {
-			case tc.wantErr == nil && err != nil:
+			case !tc.wantErr && err != nil:
 				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
-			case tc.wantErr != nil && err == nil:
+			case tc.wantErr && err == nil:
 				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
 			case got != tc.want:
 				t.Errorf("GetTFResourceConfig() got \n%s\n want \n%s", got, tc.want)
@@ -162,7 +204,7 @@ func TestFolderGetID(t *testing.T) {
 		{
 			name: "Folder with Organization as parent",
 			f: &Folder{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
 					ParentReference: ParentReference{
 						Kind: "Organization",
@@ -181,7 +223,7 @@ func TestFolderGetID(t *testing.T) {
 		{
 			name: "Folder with Folder as parent",
 			f: &Folder{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
 					ParentReference: ParentReference{
 						Kind: "Folder",
@@ -198,9 +240,9 @@ func TestFolderGetID(t *testing.T) {
 			want: "9876543",
 		},
 		{
-			name: "Project with no ID",
+			name: "Folder with no ID",
 			f: &Folder{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
 					ParentReference: ParentReference{
 						Kind: "Invalid",

@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/bespin-controllers/apiobject"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -84,11 +85,14 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 	folder := &bespinv1.Folder{}
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
-	err := r.Get(ctx, request.NamespacedName, folder)
-	if err != nil {
+	if err := r.Get(ctx, request.NamespacedName, folder); err != nil {
 		glog.Errorf("[Folder %v] reconciler failed to get folder instance: %v", request.NamespacedName, err)
 		return reconcile.Result{},
 			errors.Wrapf(err, "[Folder %v] reconciler failed to get folder instance", request.NamespacedName)
+	}
+	if err := apiobject.CheckAndSetParentAnnotation(ctx, r, folder); err != nil {
+		glog.Errorf("[Folder %v] rparent is not ready: %v", request.NamespacedName, err)
+		return reconcile.Result{}, errors.Wrapf(err, "[Folder %v] parent is not ready", request.NamespacedName)
 	}
 	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
 	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.

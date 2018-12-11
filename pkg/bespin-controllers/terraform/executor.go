@@ -146,7 +146,7 @@ func (tfe *Executor) RunInit() error {
 	glog.V(1).Infof("[%s]: Running terraform init.", tfe.dir)
 	resourceConfig, err := tfe.resource.GetTFResourceConfig()
 	if err != nil {
-		return errors.Wrapf(err, "failed to get Terraform resource config from resource (%+v)", tfe.resource)
+		return errors.Wrap(err, "failed to get Terraform resource config from resource")
 	}
 	fileName := filepath.Join(tfe.dir, tfe.configFileName)
 	err = ioutil.WriteFile(fileName, []byte(providerConfig+resourceConfig), defaultFilePerm)

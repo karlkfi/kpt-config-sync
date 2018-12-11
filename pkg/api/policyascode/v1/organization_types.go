@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -56,4 +58,9 @@ type OrganizationList struct {
 
 func init() {
 	SchemeBuilder.Register(&Organization{}, &OrganizationList{})
+}
+
+// GetID returns the Organization ID from GCP.
+func (o *Organization) GetID() string {
+	return fmt.Sprintf("%v", o.Spec.ID)
 }

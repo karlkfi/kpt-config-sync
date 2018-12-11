@@ -67,9 +67,21 @@ func init() {
 
 // GetTFResourceConfig converts the Folder's Spec struct into terraform config string.
 func (f *Folder) GetTFResourceConfig() (string, error) {
+	var parent string
+	annotations := f.GetAnnotations()
 	switch f.Spec.ParentReference.Kind {
-	case "Organization", "Folder":
-		break
+	case OrganizationKind:
+		orgID, ok := annotations[ParentOrganizationIDKey]
+		if !ok {
+			return "", fmt.Errorf("parent Organization ID not found in annotations: %v", ParentOrganizationIDKey)
+		}
+		parent = fmt.Sprintf("organizations/%s", orgID)
+	case FolderKind:
+		folderID, ok := annotations[ParentFolderIDKey]
+		if !ok {
+			return "", fmt.Errorf("parent Folder ID not found in annotations: %v", ParentFolderIDKey)
+		}
+		parent = fmt.Sprintf("folders/%s", folderID)
 	default:
 		return "", fmt.Errorf("invalid parent reference kind: %v", f.Spec.ParentReference.Kind)
 	}
@@ -77,20 +89,25 @@ func (f *Folder) GetTFResourceConfig() (string, error) {
 	return fmt.Sprintf(`resource "google_folder" "bespin_folder" {
 display_name = "%s"
 parent = "%s"
-}`, f.Spec.DisplayName, f.Spec.ParentReference.Name), nil
+}`, f.Spec.DisplayName, parent), nil
 }
 
-// GetTFImportConfig returns an empty terraform project resource block used for terraform import.
+// GetTFImportConfig returns an empty terraform Folder resource block used for terraform import.
 func (f *Folder) GetTFImportConfig() string {
 	return `resource "google_folder" "bespin_folder" {}`
 }
 
-// GetTFResourceAddr returns the address of this project resource in terraform config.
+// GetTFResourceAddr returns the address of this Folder resource in terraform config.
 func (f *Folder) GetTFResourceAddr() string {
 	return `google_folder.bespin_folder`
 }
 
-// GetID returns the project ID from underlying provider (e.g. GCP).
+// GetID returns the Folder ID from underlying provider (e.g. GCP).
 func (f *Folder) GetID() string {
 	return fmt.Sprintf("%v", f.Spec.ID)
+}
+
+// GetParentReference returns the Folder ParentRefernce.
+func (f *Folder) GetParentReference() ParentReference {
+	return f.Spec.ParentReference
 }

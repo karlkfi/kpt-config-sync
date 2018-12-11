@@ -35,12 +35,22 @@ type ProjectSpec struct {
 
 // GetTFResourceConfig converts the Project's Spec struct into terraform config string.
 func (p *Project) GetTFResourceConfig() (string, error) {
-	parentReference := ""
-	if p.Spec.ParentReference.Kind == OrganizationKind {
-		parentReference = fmt.Sprintf(`org_id = "%s"`, p.Spec.ParentReference.Name)
-	} else if p.Spec.ParentReference.Kind == FolderKind {
-		parentReference = fmt.Sprintf(`folder_id = "%s"`, p.Spec.ParentReference.Name)
-	} else {
+	var parent string
+	annotations := p.GetAnnotations()
+	switch p.Spec.ParentReference.Kind {
+	case OrganizationKind:
+		orgID, ok := annotations[ParentOrganizationIDKey]
+		if !ok {
+			return "", fmt.Errorf("parent Organization ID not found in annotations: %v", ParentOrganizationIDKey)
+		}
+		parent = fmt.Sprintf(`org_id = "%s"`, orgID)
+	case FolderKind:
+		folderID, ok := annotations[ParentFolderIDKey]
+		if !ok {
+			return "", fmt.Errorf("parent Folder ID not found in annotations: %v", ParentFolderIDKey)
+		}
+		parent = fmt.Sprintf(`folder_id = "%s"`, folderID)
+	default:
 		return "", fmt.Errorf("invalid parent reference kind: %v", p.Spec.ParentReference.Kind)
 	}
 
@@ -48,7 +58,7 @@ func (p *Project) GetTFResourceConfig() (string, error) {
 name = "%s"
 project_id = "%s"
 %s
-}`, p.Spec.Name, p.Spec.ID, parentReference), nil
+}`, p.Spec.Name, p.Spec.ID, parent), nil
 }
 
 // GetTFImportConfig returns an empty terraform project resource block used for terraform import.
@@ -64,6 +74,11 @@ func (p *Project) GetTFResourceAddr() string {
 // GetID returns the project ID from underlying provider (e.g. GCP).
 func (p *Project) GetID() string {
 	return p.Spec.ID
+}
+
+// GetParentReference returns the Project ParentRefernce.
+func (p *Project) GetParentReference() ParentReference {
+	return p.Spec.ParentReference
 }
 
 // ProjectLabels defines a label dictionary for CRD resources

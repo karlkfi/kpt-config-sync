@@ -17,7 +17,6 @@ limitations under the License.
 package v1
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/onsi/gomega"
@@ -70,12 +69,19 @@ func TestProjectGetTFResourceConfig(t *testing.T) {
 		name    string
 		p       *Project
 		want    string
-		wantErr error
+		wantErr bool
 	}{
 		{
 			name: "Project with Organization as parent",
 			p: &Project{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"key1":                  "value1",
+						ParentOrganizationIDKey: "1234567",
+					},
+				},
 				Spec: ProjectSpec{
 					ParentReference: ParentReference{
 						Kind: "Organization",
@@ -92,14 +98,20 @@ func TestProjectGetTFResourceConfig(t *testing.T) {
 			want: `resource "google_project" "bespin_project" {
 name = "spec-bar"
 project_id = "some-fake-project"
-org_id = "bar"
+org_id = "1234567"
 }`,
-			wantErr: nil,
+			wantErr: false,
 		},
 		{
 			name: "Project with Folder as parent",
 			p: &Project{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				ObjectMeta: metav1.ObjectMeta{Name: "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"key1":            "value1",
+						ParentFolderIDKey: "1234567",
+					},
+				},
 				Spec: ProjectSpec{
 					ParentReference: ParentReference{
 						Kind: "Folder",
@@ -116,9 +128,9 @@ org_id = "bar"
 			want: `resource "google_project" "bespin_project" {
 name = "spec-bar"
 project_id = "some-fake-project"
-folder_id = "bar"
+folder_id = "1234567"
 }`,
-			wantErr: nil,
+			wantErr: false,
 		},
 		{
 			name: "Project with invalid parentReference",
@@ -138,7 +150,33 @@ folder_id = "bar"
 				},
 			},
 			want:    "",
-			wantErr: fmt.Errorf("invalid parent reference kind: invalid"),
+			wantErr: true,
+		},
+		{
+			name: "Project with no Parent ID annotation",
+			p: &Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"key1": "value1",
+					},
+				},
+				Spec: ProjectSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "bar",
+					},
+					Name:          "spec-bar",
+					ID:            "some-fake-project",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: ProjectStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want:    "",
+			wantErr: true,
 		},
 	}
 
@@ -146,14 +184,13 @@ folder_id = "bar"
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := tc.p.GetTFResourceConfig()
 			switch {
-			case tc.wantErr == nil && err != nil:
+			case !tc.wantErr && err != nil:
 				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
-			case tc.wantErr != nil && err == nil:
+			case tc.wantErr && err == nil:
 				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
 			case got != tc.want:
 				t.Errorf("GetTFResourceConfig() got %s; want %s", got, tc.want)
 			}
 		})
-
 	}
 }
