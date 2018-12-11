@@ -1,5 +1,17 @@
 # Management Flow
 
+## Introduction
+
+GKE Policy Management checks for the `nomos.dev/managed=enabled` label to
+determine if it should perform management operations on an resource. If the
+resource on cluster differs from the desired state, the cluster state will be
+updated to match the desired state. For resources that are no longer in Git,
+they will be removed from the cluster if they have the label. If a user removes
+the `nomos.dev/managed=enabled` label from an resource, nomos will no longer
+manage the resource.
+
+## Resource Control Flow
+
 The following decision tree shows the expected operations taken by GKE Policy
 Management System based on the desired state in the Git repo and the current
 state of the cluster, including the management labels applied by the user.
@@ -55,23 +67,57 @@ Examples:
     is not on the cluster and is added to Git. GKE Policy Management will create
     the `audit` Namespace with a `nomos.dev/managed` label even though there is
     no Sync declared for namespaces because Namespace sync is always enabled.
-*   Namespace
-    [shipping-dev](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/namespace.yaml)
-    exists on the cluster with no management label and RoleBinding
-    [job-creators](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/job-creator-rolebinding.yaml)
-    exists in the `shipping-dev` namespace with the `nomos.dev/managed` label
-    and foo-corp has a
-    [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
-    for RoleBinding. `job-creators` will not be managed at this time.
-    *   Someone adds `shipping-dev` to Git but does not add `job-creators` to
-        Git. The `shipping-dev` Namespace will remain untouched because it does
-        not have a `nomos.dev/managed` label, but `job-creators` will be deleted
-        because it has a `nomos.dev/managed` label and is not declared in Git.
-    *   Someone adds `shipping-dev` and `job-creators` to Git. The
-        `job-creators` resource will be updated to match the declaration in Git
-        because it has a `nomos.dev/managed` label, but the `shipping-dev`
-        Namespace will remain untouched because it does not have a
-        `nomos.dev/managed` label.
+
+## Namespaced Resources Interaction with Management Labeling on Namespaces
+
+The management label `nomos.dev/managed=enabled` applies to Namespaces, however,
+there is subtle interaction with the resources contained within the namespace.
+
+### Managed Namespaces
+
+If a namespace object has a `nomos.dev/managed=enabled` label, then deleting the
+namespace from Git will result in GKE Policy Management deleting the namespace
+on the cluster and consequently all objects in the namespace will be deleted
+regardless of whether those objects have a management label. Consider this
+behavior analogous to granting `rwx` UNIX directory permissions where a user
+can't read or write the content of files in the directory, but can still delete
+them.
+
+Example:
+
+Namespace
+[shipping-dev](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/namespace.yaml)
+exists on the cluster with no management label and RoleBinding
+[job-creators](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/job-creator-rolebinding.yaml)
+exists in the `shipping-dev` namespace with the `nomos.dev/managed` label and
+foo-corp has a
+[Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
+for RoleBinding. `job-creators` will not be managed at this time. Someone adds
+`shipping-dev` and `job-creators` to Git. The `job-creators` resource will be
+updated to match the declaration in Git because it has a `nomos.dev/managed`
+label, but the `shipping-dev` Namespace will remain untouched because it does
+not have a `nomos.dev/managed` label.
+
+### Unmanaged Namespaces
+
+If a namespace doesn't have the `nomos.dev/managed=enabled` label, objects
+inside the namespace will still be managed if they have a
+`nomos.dev/managed=enabled` label.
+
+Example:
+
+Namespace
+[shipping-dev](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/namespace.yaml)
+exists on the cluster with no management label and RoleBinding
+[job-creators](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/job-creator-rolebinding.yaml)
+exists in the `shipping-dev` namespace with the `nomos.dev/managed` label and
+foo-corp has a
+[Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
+for RoleBinding. `job-creators` will not be managed at this time. Someone adds
+`shipping-dev` and `job-creators` to Git. The `job-creators` resource will be
+updated to match the declaration in Git because it has a `nomos.dev/managed`
+label, but the `shipping-dev` Namespace will remain untouched because it does
+not have a `nomos.dev/managed` label.
 
 ## Sync and Resource Precedence
 
