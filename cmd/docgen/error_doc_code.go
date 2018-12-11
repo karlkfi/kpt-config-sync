@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/pkg/errors"
 )
 
@@ -45,7 +45,7 @@ func (e errorDocCode) writePreamble(wr io.Writer) error {
 }
 
 func (e errorDocCode) writeExplanation(wr io.Writer) error {
-	return e.execute(wr, validation.Explanation(e.Code()), "Explanation")
+	return e.execute(wr, vet.Explanation(e.Code()), "Explanation")
 }
 
 func (e errorDocCode) writeExample(wr io.Writer) error {
@@ -89,8 +89,8 @@ func (e errorDocCode) Code() string {
 }
 
 // Example returns an example error
-func (e errorDocCode) Example() validation.KNVError {
-	return validation.Example(e.Code())
+func (e errorDocCode) Example() vet.Error {
+	return vet.Example(e.Code())
 }
 
 // Aka returns the type of error in a near-human-readable format

@@ -34,6 +34,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -264,7 +265,7 @@ func (p *Parser) relativePath(source string) string {
 // Returns an error if the directory is missing.
 func (p *Parser) readRequiredResources(dir string, allowSubdirectories bool, errorBuilder *multierror.Builder) []*resource.Info {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		errorBuilder.Add(validation.MissingDirectoryError{})
+		errorBuilder.Add(vet.MissingDirectoryError{})
 		return nil
 	}
 	return p.readResources(dir, allowSubdirectories, errorBuilder)
@@ -315,7 +316,7 @@ func (p *Parser) readResources(dir string, allowSubdirectories bool, errorBuilde
 			for _, info := range fileInfos {
 				baseDir := path.Base(dir)
 				if subDir := path.Dir(info.Source); subDir != baseDir {
-					errorBuilder.Add(validation.IllegalSubdirectoryError{BaseDir: baseDir, SubDir: subDir})
+					errorBuilder.Add(vet.IllegalSubdirectoryError{BaseDir: baseDir, SubDir: subDir})
 				}
 			}
 		}
@@ -543,7 +544,7 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 		case *v1alpha1.Repo:
 			repos[o] = info.Source
 			if version := o.Spec.Version; version != "0.1.0" {
-				errorBuilder.Add(validation.UnsupportedRepoSpecVersion{Source: info.Source, Name: o.Name, Version: version})
+				errorBuilder.Add(vet.UnsupportedRepoSpecVersion{Source: info.Source, Name: o.Name, Version: version})
 			}
 			fsRoot.Repo = o
 
@@ -554,20 +555,20 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 		case *v1alpha1.Sync:
 			syncMap[info.Source] = append(syncMap[info.Source], o)
 		default:
-			errorBuilder.Add(validation.IllegalSystemObjectDefinitionInSystemError{Source: info.Source, GroupVersionKind: o.GetObjectKind().GroupVersionKind()})
+			errorBuilder.Add(vet.IllegalSystemObjectDefinitionInSystemError{Source: info.Source, GroupVersionKind: o.GetObjectKind().GroupVersionKind()})
 		}
 	}
 
 	if len(repos) == 0 {
-		errorBuilder.Add(validation.MissingRepoError{})
+		errorBuilder.Add(vet.MissingRepoError{})
 		return nil
 	} else if len(repos) >= 2 {
-		errorBuilder.Add(validation.MultipleRepoDefinitionsError{Repos: repos})
+		errorBuilder.Add(vet.MultipleRepoDefinitionsError{Repos: repos})
 		return nil
 	}
 
 	if len(configMaps) >= 2 {
-		errorBuilder.Add(validation.MultipleConfigMapsError{ConfigMaps: configMaps})
+		errorBuilder.Add(vet.MultipleConfigMapsError{ConfigMaps: configMaps})
 	}
 
 	for source, syncs := range syncMap {
@@ -600,12 +601,12 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 func (p *Parser) validateSyncKind(name string, kind *v1alpha1.SyncKind, group string, inheritance bool,
 	source string, apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) {
 	if len(kind.Versions) > 1 {
-		errorBuilder.Add(validation.MultipleVersionForSameSyncedTypeError{Source: source, Kind: *kind})
+		errorBuilder.Add(vet.MultipleVersionForSameSyncedTypeError{Source: source, Kind: *kind})
 	}
 	if kind.Kind == string(ast.Namespace) && group == "" {
 		// Require that Group is the empty string since that is the core Namespace object
 		// A different group could validly define a Kind called "Namespace"
-		errorBuilder.Add(validation.IllegalNamespaceSyncDeclarationError{Source: source})
+		errorBuilder.Add(vet.IllegalNamespaceSyncDeclarationError{Source: source})
 	}
 	syncGVK := schema.GroupVersionKind{
 		Group:   group,
@@ -613,12 +614,12 @@ func (p *Parser) validateSyncKind(name string, kind *v1alpha1.SyncKind, group st
 		Kind:    kind.Kind,
 	}
 	if unsupportedSyncResources[syncGVK] || syncGVK.Group == policyhierarchy.GroupName {
-		errorBuilder.Add(validation.UnsupportedResourceInSyncError{
+		errorBuilder.Add(vet.UnsupportedResourceInSyncError{
 			SyncPath:     source,
 			ResourceType: syncGVK,
 		})
 	} else if !apiInfo.Exists(syncGVK) {
-		errorBuilder.Add(validation.UnknownResourceInSyncError{
+		errorBuilder.Add(vet.UnknownResourceInSyncError{
 			SyncPath:     source,
 			ResourceType: syncGVK,
 		})
@@ -636,7 +637,7 @@ func (p *Parser) validateSyncKind(name string, kind *v1alpha1.SyncKind, group st
 
 func checkModeAllowed(allowed []v1alpha1.HierarchyModeType, actual v1alpha1.HierarchyModeType, name string, eb *multierror.Builder) {
 	if !containsMode(allowed, actual) {
-		eb.Add(validation.IllegalHierarchyModeError{Name: name, Mode: actual, Allowed: allowed})
+		eb.Add(vet.IllegalHierarchyModeError{Name: name, Mode: actual, Allowed: allowed})
 	}
 }
 
@@ -703,10 +704,10 @@ func (p *Parser) validateDirNames(dirs []string, errorBuilder *multierror.Builde
 	for _, d := range dirs {
 		n := filepath.Base(d)
 		if namespaceutil.IsInvalid(n) {
-			errorBuilder.Add(validation.InvalidDirectoryNameError{Dir: d})
+			errorBuilder.Add(vet.InvalidDirectoryNameError{Dir: d})
 		}
 		if namespaceutil.IsReserved(n) {
-			errorBuilder.Add(validation.ReservedDirectoryNameError{Dir: d})
+			errorBuilder.Add(vet.ReservedDirectoryNameError{Dir: d})
 		}
 		if names, ok := dirNames[n]; ok {
 			dirNames[n] = append(names, d)
@@ -717,7 +718,7 @@ func (p *Parser) validateDirNames(dirs []string, errorBuilder *multierror.Builde
 
 	for _, duplicates := range dirNames {
 		if len(duplicates) > 1 {
-			errorBuilder.Add(validation.DuplicateDirectoryNameError{Duplicates: duplicates})
+			errorBuilder.Add(vet.DuplicateDirectoryNameError{Duplicates: duplicates})
 		}
 	}
 }
@@ -733,12 +734,12 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 			dir := path.Dir(info.Source)
 
 			if info.Namespace != "" {
-				errorBuilder.Add(validation.IllegalMetadataNamespaceDeclarationError{Info: info})
+				errorBuilder.Add(vet.IllegalMetadataNamespaceDeclarationError{Info: info})
 			}
 
 			gvk := info.Mapping.GroupVersionKind
 			if info.Name == "" {
-				errorBuilder.Add(validation.MissingObjectNameError{Info: info})
+				errorBuilder.Add(vet.MissingObjectNameError{Info: info})
 				continue
 			}
 
@@ -749,13 +750,13 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 			}
 
 			if validation.IsSystemOnly(gvk) && !strings.HasPrefix(dir, repo.SystemDir) {
-				errorBuilder.Add(validation.IllegalSystemResourcePlacementError{Info: info})
+				errorBuilder.Add(vet.IllegalSystemResourcePlacementError{Info: info})
 			}
 
 			if isCrd(gvk) {
 				errs := utilvalidation.IsDNS1123Subdomain(info.Name)
 				if errs != nil {
-					errorBuilder.Add(validation.InvalidMetadataNameError{Info: info})
+					errorBuilder.Add(vet.InvalidMetadataNameError{Info: info})
 				}
 			}
 
@@ -764,10 +765,10 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 			switch gvk {
 			case corev1.SchemeGroupVersion.WithKind("Namespace"):
 				if dir == repo.NamespacesDir {
-					errorBuilder.Add(validation.IllegalTopLevelNamespaceError{Info: info})
+					errorBuilder.Add(vet.IllegalTopLevelNamespaceError{Info: info})
 					continue
 				} else if path.Base(dir) != info.Name {
-					errorBuilder.Add(validation.InvalidNamespaceNameError{Source: info.Source, Expected: path.Base(dir), Actual: info.Name})
+					errorBuilder.Add(vet.InvalidNamespaceNameError{Source: info.Source, Expected: path.Base(dir), Actual: info.Name})
 				}
 				seenNamespaceDirs[dir] = append(seenNamespaceDirs[dir], info)
 			case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
@@ -784,14 +785,14 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 	// Check for namespace object collisions
 	for _, namespaces := range seenNamespaceDirs {
 		if len(namespaces) > 1 {
-			errorBuilder.Add(validation.MultipleNamespacesError{Duplicates: namespaces})
+			errorBuilder.Add(vet.MultipleNamespacesError{Duplicates: namespaces})
 		}
 	}
 
 	// Check for ResourceQuota collisions
 	for dir, quotas := range seenResourceQuotas {
 		if len(quotas) > 1 {
-			errorBuilder.Add(validation.ConflictingResourceQuotaError{Path: dir, Duplicates: quotas})
+			errorBuilder.Add(vet.ConflictingResourceQuotaError{Path: dir, Duplicates: quotas})
 		}
 	}
 
@@ -802,7 +803,7 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 			for aPath := range paths {
 				duplicates = append(duplicates, aPath)
 			}
-			errorBuilder.Add(validation.DuplicateDirectoryNameError{Duplicates: duplicates})
+			errorBuilder.Add(vet.DuplicateDirectoryNameError{Duplicates: duplicates})
 		}
 	}
 
@@ -832,7 +833,7 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 				}
 
 				if len(duplicates) > 1 {
-					errorBuilder.Add(validation.ObjectNameCollisionError{Name: name, Duplicates: duplicates})
+					errorBuilder.Add(vet.ObjectNameCollisionError{Name: name, Duplicates: duplicates})
 				}
 
 				// Recall that len(duplicates) is always at least 1.
