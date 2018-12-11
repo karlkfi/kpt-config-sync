@@ -35,6 +35,7 @@ Try it out by following the [Quickstart Guide](docs/user/quickstart.md).
 *   [System Configuration](docs/user/system_config.md)
 *   [Hierarchical ResourceQuota](docs/user/rq.md)
 *   [Monitoring and Debugging](docs/user/monitoring_and_debugging.md)
+*   [ClusterSelectors](docs/user/clusterselectors.md)
 
 ## Contributing to GKE Policy Management
 
