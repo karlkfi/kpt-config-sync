@@ -525,39 +525,23 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 	runtimeObjects := toRuntimeObjects(infos)
 	syntax.RepoVersionValidator.Validate(runtimeObjects, errorBuilder)
 	syntax.SystemKindValidator.Validate(runtimeObjects, errorBuilder)
+	semantic.RepoCountValidator{Objects: runtimeObjects}.Validate(errorBuilder)
+	semantic.ConfigMapCountValidator{Objects: runtimeObjects}.Validate(errorBuilder)
 
 	p.validateDuplicateNames(infos, errorBuilder)
 
 	syncMap := make(map[string][]*v1alpha1.Sync)
-	repos := make(map[*v1alpha1.Repo]string)         // holds all Repo definitions
-	configMaps := make(map[*corev1.ConfigMap]string) // holds all ConfigMap definitions
-	for _, info := range infos {
-		obj := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
-
+	for obj, source := range runtimeObjects {
 		switch o := obj.(type) {
 		case *v1alpha1.Repo:
-			repos[o] = info.Source
 			fsRoot.Repo = o
 
 		case *corev1.ConfigMap:
-			configMaps[o] = info.Source
 			fsRoot.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
 
 		case *v1alpha1.Sync:
-			syncMap[info.Source] = append(syncMap[info.Source], o)
+			syncMap[source] = append(syncMap[source], o)
 		}
-	}
-
-	if len(repos) == 0 {
-		errorBuilder.Add(vet.MissingRepoError{})
-		return nil
-	} else if len(repos) >= 2 {
-		errorBuilder.Add(vet.MultipleRepoDefinitionsError{Repos: repos})
-		return nil
-	}
-
-	if len(configMaps) >= 2 {
-		errorBuilder.Add(vet.MultipleConfigMapsError{ConfigMaps: configMaps})
 	}
 
 	for source, syncs := range syncMap {
