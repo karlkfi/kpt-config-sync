@@ -1,12 +1,7 @@
-Found issues: 2 error(s)
+Found issues: 1 error(s)
 
 
-[1] KNV1023: Sync may not declare resources of type Namespace
-
-source: system/sync.yaml
-
-
-[2] KNV1034: Sync contains an unsupported resource type:
+[1] KNV1034: This Resource Kind MUST NOT be declared in a Sync:
 
 source: system/sync.yaml
 group: 

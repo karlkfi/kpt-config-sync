@@ -258,6 +258,19 @@ metadata:
   name: repo
 `
 
+	aNamespaceSync = `
+kind: Sync
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: sync
+spec:
+  groups:
+  - kinds:
+    - kind: Namespace
+      versions:
+      - version: v1
+`
+
 	aSyncTemplate = `
 kind: Sync
 apiVersion: nomos.dev/v1alpha1
@@ -1540,7 +1553,7 @@ spec:
       - version: v2
 `,
 		},
-		expectedErrorCode: vet.MultipleVersionForSameSyncedTypeErrorCode,
+		expectedErrorCode: vet.DuplicateSyncGroupKindErrorCode,
 	},
 	{
 		testName: "Namespaces dir with ignore file",
@@ -1852,9 +1865,9 @@ spec:
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aRepo,
-			"system/syncs.yaml": templateData{Group: "", Version: "v1", Kind: "Namespace"}.apply(aSync),
+			"system/syncs.yaml": aNamespaceSync,
 		},
-		expectedErrorCode: vet.IllegalNamespaceSyncDeclarationErrorCode,
+		expectedErrorCode: vet.UnsupportedResourceInSyncErrorCode,
 	},
 	{
 		testName: "Illegal object declaration in system/ is an error",

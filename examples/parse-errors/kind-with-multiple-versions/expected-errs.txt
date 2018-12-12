@@ -1,10 +1,28 @@
-Found issues: 1 error(s)
+Found issues: 2 error(s)
 
 
-[1] KNV1022: Kinds MUST declare exactly one version:
+[1] KNV1022: A Kind for a given Group may be declared at most once:
+
+group: 
+kind: ResourceQuota
+
+source: system/resource-quota.yaml
+metadata.name: resourcequotas
+group: nomos.dev
+version: v1alpha1
+kind: Sync
+
+source: system/resource-quota.yaml
+metadata.name: resourcequotas
+group: nomos.dev
+version: v1alpha1
+kind: Sync
+
+
+[2] KNV1032: Sync contains a resource type that does not exist on cluster. Either remove the resource type from the Sync or create a CustomResourceDefinition for the resource type on the cluster.
 
 source: system/resource-quota.yaml
 group: 
-versions: [v1, v2]
+version: v2
 kind: ResourceQuota
 

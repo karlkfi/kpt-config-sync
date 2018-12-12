@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
@@ -32,6 +31,7 @@ import (
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/sync"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/meta"
@@ -40,7 +40,6 @@ import (
 	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -53,12 +52,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource"
 	kubevalidation "k8s.io/kubernetes/pkg/kubectl/validation"
 )
-
-// unsupportedSyncResources is a set of GroupVersionKinds that are not allowed in Syncs.
-var unsupportedSyncResources = map[schema.GroupVersionKind]bool{
-	extensionsv1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition"): true,
-	corev1.SchemeGroupVersion.WithKind("Namespace"):                           true,
-}
 
 func init() {
 	// Add Nomos and Bespin types to the Scheme used by util.AsDefaultVersionedOrOriginal for
@@ -505,30 +498,24 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 	semantic.RepoCountValidator{Objects: objects}.Validate(errorBuilder)
 	semantic.ConfigMapCountValidator{Objects: objects}.Validate(errorBuilder)
 
+	sync.VersionValidator{Objects: objects}.Validate(errorBuilder)
+	sync.KindValidator.Validate(objects, errorBuilder)
+	sync.KnownResourceValidator{APIInfo: apiInfo}.Validate(objects, errorBuilder)
+
 	syncMap := make(map[string][]*v1alpha1.Sync)
 	for _, object := range objects {
 		switch o := object.Object.(type) {
 		case *v1alpha1.Repo:
 			fsRoot.Repo = o
-
 		case *corev1.ConfigMap:
 			fsRoot.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
-
 		case *v1alpha1.Sync:
 			syncMap[object.Source] = append(syncMap[object.Source], o)
 		}
 	}
 
-	for source, syncs := range syncMap {
-		for _, sync := range syncs {
-			for _, group := range sync.Spec.Groups {
-				for k := range group.Kinds {
-					// TODO(willbeason) Ensure globally that Kinds with the same Group are not given multiple versions.
-					validateSyncKind(sync.Name, &group.Kinds[k], group.Group, fsRoot.Repo.Spec.ExperimentalInheritance, source, apiInfo, errorBuilder)
-				}
-			}
-		}
-	}
+	// Must occur after fsRoot.Repo is set
+	sync.InheritanceValidator{Repo: fsRoot.Repo}.Validate(objects, errorBuilder)
 
 	var allSyncs []*v1alpha1.Sync
 	for _, syncs := range syncMap {
@@ -538,64 +525,6 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 		allSyncs = append(allSyncs, bespinv1.Syncs...)
 	}
 	return allSyncs
-}
-
-// validateSyncKind validates a SyncKind.
-// - name is the Sync name
-// - kind is the SyncKind to be validated
-// - group is the group of the enclosing SyncGroup
-// - inheritance is the value of the experimentalInheritance flag in Repo.
-// - source is the source file of the Sync, used for error messages.
-func validateSyncKind(name string, kind *v1alpha1.SyncKind, group string, inheritance bool,
-	source string, apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) {
-	if len(kind.Versions) > 1 {
-		errorBuilder.Add(vet.MultipleVersionForSameSyncedTypeError{Source: source, Kind: *kind})
-	}
-	if kind.Kind == string(ast.Namespace) && group == "" {
-		// Require that Group is the empty string since that is the core Namespace object
-		// A different group could validly define a Kind called "Namespace"
-		errorBuilder.Add(vet.IllegalNamespaceSyncDeclarationError{Source: source})
-	}
-	syncGVK := schema.GroupVersionKind{
-		Group:   group,
-		Version: kind.Versions[0].Version,
-		Kind:    kind.Kind,
-	}
-	if unsupportedSyncResources[syncGVK] || syncGVK.Group == policyhierarchy.GroupName {
-		errorBuilder.Add(vet.UnsupportedResourceInSyncError{
-			SyncPath:     source,
-			ResourceType: syncGVK,
-		})
-	} else if !apiInfo.Exists(syncGVK) {
-		errorBuilder.Add(vet.UnknownResourceInSyncError{
-			SyncPath:     source,
-			ResourceType: syncGVK,
-		})
-	}
-	if inheritance {
-		if kind.Kind == "ResourceQuota" && group == "" {
-			checkModeAllowed([]v1alpha1.HierarchyModeType{v1alpha1.HierarchyModeDefault, v1alpha1.HierarchyModeHierarchicalQuota, v1alpha1.HierarchyModeInherit, v1alpha1.HierarchyModeNone}, kind.HierarchyMode, name, errorBuilder)
-		} else {
-			checkModeAllowed([]v1alpha1.HierarchyModeType{v1alpha1.HierarchyModeDefault, v1alpha1.HierarchyModeInherit, v1alpha1.HierarchyModeNone}, kind.HierarchyMode, name, errorBuilder)
-		}
-	} else {
-		checkModeAllowed([]v1alpha1.HierarchyModeType{v1alpha1.HierarchyModeDefault}, kind.HierarchyMode, name, errorBuilder)
-	}
-}
-
-func checkModeAllowed(allowed []v1alpha1.HierarchyModeType, actual v1alpha1.HierarchyModeType, name string, eb *multierror.Builder) {
-	if !containsMode(allowed, actual) {
-		eb.Add(vet.IllegalHierarchyModeError{Name: name, Mode: actual, Allowed: allowed})
-	}
-}
-
-func containsMode(haystack []v1alpha1.HierarchyModeType, needle v1alpha1.HierarchyModeType) bool {
-	for _, h := range haystack {
-		if h == needle {
-			return true
-		}
-	}
-	return false
 }
 
 // processClusterRegistryDir looks at all files in <root>/clusterregistry and

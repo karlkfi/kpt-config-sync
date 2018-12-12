@@ -53,8 +53,7 @@ const (
 	IllegalTopLevelNamespaceErrorCode           = "1019"
 	InvalidNamespaceNameErrorCode               = "1020"
 	UnknownObjectErrorCode                      = "1021" // Impossible to create consistent example.
-	MultipleVersionForSameSyncedTypeErrorCode   = "1022"
-	IllegalNamespaceSyncDeclarationErrorCode    = "1023"
+	DuplicateSyncGroupKindErrorCode             = "1022"
 	IllegalKindInSystemErrorCode                = "1024"
 	MultipleRepoDefinitionsErrorCode            = "1025"
 	MultipleConfigMapsErrorCode                 = "1026"
@@ -71,6 +70,10 @@ const (
 	IllegalKindInClusterregistryErrorCode       = "1037"
 	IllegalKindInNamespacesErrorCode            = "1038"
 	UndefinedErrorCode                          = "????"
+
+	// Obsolete error codes. Do not reuse.
+	//Unused1016 = "1016"
+	//Unused1023 = "1023"
 )
 
 // Example returns a canonical example to use
@@ -494,55 +497,30 @@ func (e UnknownObjectError) Error() string {
 // Code implements Error
 func (e UnknownObjectError) Code() string { return UnknownObjectErrorCode }
 
-// MultipleVersionForSameSyncedTypeError reports that multiple versions were declared for the same synced kind
-type MultipleVersionForSameSyncedTypeError struct {
-	Source string
-	Group  v1alpha1.SyncGroup
-	Kind   v1alpha1.SyncKind
+// DuplicateSyncGroupKindError reports that multiple versions were declared for the same synced kind
+type DuplicateSyncGroupKindError struct {
+	Group   string
+	Kind    string
+	Objects []ast.FileObject
 }
 
-// PrettyPrint returns a convenient representation of a list of SyncVersions for error messages.
-func PrettyPrint(versions []v1alpha1.SyncVersion) string {
-	result := make([]string, len(versions))
-	for index, version := range versions {
-		result[index] = version.Version
+// Error implements error
+func (e DuplicateSyncGroupKindError) Error() string {
+	var objStrs []string
+	for _, object := range e.Objects {
+		objStrs = append(objStrs, fileObject{object}.String())
 	}
-
-	return "versions: [" + strings.Join(result, ", ") + "]"
-}
-
-// Error implements error
-func (e MultipleVersionForSameSyncedTypeError) Error() string {
 	return format(e,
-		"Kinds MUST declare exactly one version:\n\n"+
-			"source: %[1]s\n"+
-			"group: %[3]s\n"+
-			"%[4]s\n"+
-			"kind: %[2]s",
-		e.Source, e.Kind.Kind, e.Group.Group, PrettyPrint(e.Kind.Versions))
+		"A Kind for a given Group may be declared at most once:\n\n"+
+			"group: %[1]s\n"+
+			"kind: %[2]s\n\n"+
+			"%[3]s",
+		e.Group, e.Kind, strings.Join(objStrs, "\n\n"))
 }
 
 // Code implements Error
-func (e MultipleVersionForSameSyncedTypeError) Code() string {
-	return MultipleVersionForSameSyncedTypeErrorCode
-}
-
-// IllegalNamespaceSyncDeclarationError reports that Namespace has incorrectly been declared as a Sync type
-type IllegalNamespaceSyncDeclarationError struct {
-	Source string
-}
-
-// Error implements error
-func (e IllegalNamespaceSyncDeclarationError) Error() string {
-	return format(e,
-		"Sync may not declare resources of type %[1]s\n\n"+
-			"source: %[2]s",
-		ast.Namespace, e.Source)
-}
-
-// Code implements Error
-func (e IllegalNamespaceSyncDeclarationError) Code() string {
-	return IllegalNamespaceSyncDeclarationErrorCode
+func (e DuplicateSyncGroupKindError) Code() string {
+	return DuplicateSyncGroupKindErrorCode
 }
 
 // IllegalKindInSystemError reports that an object has been illegally defined in system/
@@ -761,7 +739,7 @@ type UnsupportedResourceInSyncError struct {
 // Error implements error
 func (e UnsupportedResourceInSyncError) Error() string {
 	return format(e,
-		"Sync contains an unsupported resource type:\n\n"+
+		"This Resource Kind MUST NOT be declared in a Sync:\n\n"+
 			"source: %[1]s\n"+
 			"%[2]s",
 		e.SyncPath, groupVersionKind(e.ResourceType))
@@ -772,20 +750,23 @@ func (e UnsupportedResourceInSyncError) Code() string { return UnsupportedResour
 
 // IllegalHierarchyModeError reports that a Sync is defined with a disallowed hierarchyMode.
 type IllegalHierarchyModeError struct {
+	Object  ast.FileObject
+	GVK     schema.GroupVersionKind
 	Mode    v1alpha1.HierarchyModeType
-	Name    string
-	Allowed []v1alpha1.HierarchyModeType
+	Allowed map[v1alpha1.HierarchyModeType]bool
 }
 
 // Error implements error
 func (e IllegalHierarchyModeError) Error() string {
 	var allowedStr []string
-	for _, a := range e.Allowed {
+	for a := range e.Allowed {
 		allowedStr = append(allowedStr, string(a))
 	}
 	return format(e,
-		"HierarchyMode %[1]s is not a valid value for Sync %[2]s. Allowed values are [%[3]s].",
-		e.Mode, e.Name, strings.Join(allowedStr, ","))
+		"HierarchyMode %[1]q is not a valid value for this Resource. Allowed values are [%[2]s].\n\n"+
+			"%[3]s\n\n"+
+			"%[4]s",
+		e.Mode, strings.Join(allowedStr, ","), fileObject{e.Object}, groupVersionKind(e.GVK))
 }
 
 // Code implements Error
