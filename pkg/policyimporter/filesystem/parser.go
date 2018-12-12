@@ -34,6 +34,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
@@ -222,11 +223,11 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 	clusterDir := filepath.Join(root, repo.ClusterDir)
 	clusterInfos := p.readResources(clusterDir, false, &errorBuilder)
-	p.validateDuplicateNames(toDirInfoMap(clusterInfos), &errorBuilder)
+	p.validateDuplicateNames(clusterInfos, &errorBuilder)
 
 	clusterregistryPath := filepath.Join(root, repo.ClusterRegistryDir)
 	clusterregistryInfos := p.readResources(clusterregistryPath, false, &errorBuilder)
-	p.validateDuplicateNames(toDirInfoMap(clusterregistryInfos), &errorBuilder)
+	p.validateDuplicateNames(clusterregistryInfos, &errorBuilder)
 
 	nsDir := filepath.Join(root, repo.NamespacesDir)
 	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
@@ -237,9 +238,9 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 	// TODO(filmil): dirInfos could just be map[string]runtime.Object, it seems.  Let's wait
 	// until the new repo format commit lands, and change it then.
-	dirInfos := toDirInfoMap(fileInfos)
-	p.validateDuplicateNames(dirInfos, &errorBuilder)
+	p.validateDuplicateNames(fileInfos, &errorBuilder)
 
+	dirInfos := toDirInfoMap(fileInfos)
 	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered,
 		clusterDir, fsCtx, syncs)
 	if err != nil {
@@ -532,7 +533,7 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) []*v1alpha1.Sync {
 	// Ignore individual file read errors for now and continue processing parsed files.
 	fileInfos := p.readRequiredResources(systemDir, false, errorBuilder)
-	p.validateDuplicateNames(toDirInfoMap(fileInfos), errorBuilder)
+	p.validateDuplicateNames(fileInfos, errorBuilder)
 
 	syncMap := make(map[string][]*v1alpha1.Sync)
 	repos := make(map[*v1alpha1.Repo]string)         // holds all Repo definitions
@@ -723,62 +724,62 @@ func (p *Parser) validateDirNames(dirs []string, errorBuilder *multierror.Builde
 	}
 }
 
-func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, errorBuilder *multierror.Builder) {
+func (p *Parser) validateDuplicateNames(infos []*resource.Info, errorBuilder *multierror.Builder) {
 	seenObjectNames := make(map[schema.GroupVersionKind]map[string][]*resource.Info)
 	seenNamespaceDirs := make(map[string][]*resource.Info)
 	seenResourceQuotas := make(map[string][]*resource.Info)
 	seenDirs := make(map[string]map[string]struct{})
 
-	for _, infos := range dirInfos {
-		for _, info := range infos {
-			dir := path.Dir(info.Source)
+	fileObjects := toFileObjects(infos)
+	syntax.AnnotationValidator.Validate(fileObjects, errorBuilder)
+	syntax.LabelValidator.Validate(fileObjects, errorBuilder)
 
-			if info.Namespace != "" {
-				errorBuilder.Add(vet.IllegalMetadataNamespaceDeclarationError{Info: info})
+	for _, info := range infos {
+		dir := path.Dir(info.Source)
+
+		if info.Namespace != "" {
+			errorBuilder.Add(vet.IllegalMetadataNamespaceDeclarationError{Info: info})
+		}
+
+		gvk := info.Mapping.GroupVersionKind
+		if info.Name == "" {
+			errorBuilder.Add(vet.MissingObjectNameError{Info: info})
+			continue
+		}
+
+		if _, found := seenDirs[path.Base(dir)]; !found {
+			seenDirs[path.Base(dir)] = map[string]struct{}{dir: {}}
+		} else {
+			seenDirs[path.Base(dir)][dir] = struct{}{}
+		}
+
+		if validation.IsSystemOnly(gvk) && !strings.HasPrefix(dir, repo.SystemDir) {
+			errorBuilder.Add(vet.IllegalSystemResourcePlacementError{Info: info})
+		}
+
+		if isCrd(gvk) {
+			errs := utilvalidation.IsDNS1123Subdomain(info.Name)
+			if errs != nil {
+				errorBuilder.Add(vet.InvalidMetadataNameError{Info: info})
 			}
+		}
 
-			gvk := info.Mapping.GroupVersionKind
-			if info.Name == "" {
-				errorBuilder.Add(vet.MissingObjectNameError{Info: info})
+		switch gvk {
+		case corev1.SchemeGroupVersion.WithKind("Namespace"):
+			if dir == repo.NamespacesDir {
+				errorBuilder.Add(vet.IllegalTopLevelNamespaceError{Info: info})
 				continue
+			} else if path.Base(dir) != info.Name {
+				errorBuilder.Add(vet.InvalidNamespaceNameError{Source: info.Source, Expected: path.Base(dir), Actual: info.Name})
 			}
-
-			if _, found := seenDirs[path.Base(dir)]; !found {
-				seenDirs[path.Base(dir)] = map[string]struct{}{dir: {}}
-			} else {
-				seenDirs[path.Base(dir)][dir] = struct{}{}
+			seenNamespaceDirs[dir] = append(seenNamespaceDirs[dir], info)
+		case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
+			seenResourceQuotas[dir] = append(seenResourceQuotas[dir], info)
+		default:
+			if _, found := seenObjectNames[gvk]; !found {
+				seenObjectNames[gvk] = make(map[string][]*resource.Info)
 			}
-
-			if validation.IsSystemOnly(gvk) && !strings.HasPrefix(dir, repo.SystemDir) {
-				errorBuilder.Add(vet.IllegalSystemResourcePlacementError{Info: info})
-			}
-
-			if isCrd(gvk) {
-				errs := utilvalidation.IsDNS1123Subdomain(info.Name)
-				if errs != nil {
-					errorBuilder.Add(vet.InvalidMetadataNameError{Info: info})
-				}
-			}
-
-			validation.CheckAnnotationsAndLabels(info, errorBuilder)
-
-			switch gvk {
-			case corev1.SchemeGroupVersion.WithKind("Namespace"):
-				if dir == repo.NamespacesDir {
-					errorBuilder.Add(vet.IllegalTopLevelNamespaceError{Info: info})
-					continue
-				} else if path.Base(dir) != info.Name {
-					errorBuilder.Add(vet.InvalidNamespaceNameError{Source: info.Source, Expected: path.Base(dir), Actual: info.Name})
-				}
-				seenNamespaceDirs[dir] = append(seenNamespaceDirs[dir], info)
-			case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
-				seenResourceQuotas[dir] = append(seenResourceQuotas[dir], info)
-			default:
-				if _, found := seenObjectNames[gvk]; !found {
-					seenObjectNames[gvk] = make(map[string][]*resource.Info)
-				}
-				seenObjectNames[gvk][info.Name] = append(seenObjectNames[gvk][info.Name], info)
-			}
+			seenObjectNames[gvk][info.Name] = append(seenObjectNames[gvk][info.Name], info)
 		}
 	}
 
@@ -842,6 +843,16 @@ func (p *Parser) validateDuplicateNames(dirInfos map[string][]*resource.Info, er
 			}
 		}
 	}
+}
+
+func toFileObjects(infos []*resource.Info) []ast.FileObject {
+	result := make([]ast.FileObject, len(infos))
+	for i, info := range infos {
+		object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
+		fileObject := ast.FileObject{Object: object, Source: info.Source}
+		result[i] = fileObject
+	}
+	return result
 }
 
 func isCrd(gvk schema.GroupVersionKind) bool {
