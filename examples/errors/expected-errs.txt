@@ -135,16 +135,16 @@ name: alice-rolebinding
 [19] KNV1030: A directory may declare at most one Namespace resource:
 
 source: namespaces/prod/prod-namespace/namespace-1.yaml
+metadata.name: prod-namespace
 group: 
 version: v1
 kind: Namespace
-name: prod-namespace
 
 source: namespaces/prod/prod-namespace/namespace-2.yaml
+metadata.name: prod-namespace
 group: 
 version: v1
 kind: Namespace
-name: prod-namespace
 
 
 [20] KNV1031: Resources must declare metadata.name:

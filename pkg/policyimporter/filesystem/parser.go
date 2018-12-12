@@ -19,10 +19,7 @@ package filesystem
 
 import (
 	"os"
-	"path"
 	"path/filepath"
-	"sort"
-	"strings"
 
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
@@ -224,12 +221,12 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	clusterDir := filepath.Join(root, repo.ClusterDir)
 	clusterInfos := p.readResources(clusterDir, &errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(toSources(clusterInfos), &errorBuilder)
-	p.validateDuplicateNames(clusterInfos, &errorBuilder)
+	validateObjects(toFileObjects(clusterInfos), &errorBuilder)
 
 	clusterregistryPath := filepath.Join(root, repo.ClusterRegistryDir)
 	clusterregistryInfos := p.readResources(clusterregistryPath, &errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(toSources(clusterregistryInfos), &errorBuilder)
-	p.validateDuplicateNames(clusterregistryInfos, &errorBuilder)
+	validateObjects(toFileObjects(clusterregistryInfos), &errorBuilder)
 
 	nsDir := filepath.Join(root, repo.NamespacesDir)
 	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
@@ -241,7 +238,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 	// TODO(filmil): dirInfos could just be map[string]runtime.Object, it seems.  Let's wait
 	// until the new repo format commit lands, and change it then.
-	p.validateDuplicateNames(fileInfos, &errorBuilder)
+	validateObjects(toFileObjects(fileInfos), &errorBuilder)
 
 	dirInfos := toDirInfoMap(fileInfos)
 	clusterRegistryObjects := toRuntimeObjects(clusterregistryInfos)
@@ -528,7 +525,8 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 	semantic.RepoCountValidator{Objects: runtimeObjects}.Validate(errorBuilder)
 	semantic.ConfigMapCountValidator{Objects: runtimeObjects}.Validate(errorBuilder)
 
-	p.validateDuplicateNames(infos, errorBuilder)
+	fileObjects := toFileObjects(infos)
+	validateObjects(fileObjects, errorBuilder)
 
 	syncMap := make(map[string][]*v1alpha1.Sync)
 	for obj, source := range runtimeObjects {
@@ -664,85 +662,16 @@ func (p *Parser) allDirs(nsDir string, errorBuilder *multierror.Builder) []strin
 	return paths
 }
 
-func (p *Parser) validateDuplicateNames(infos []*resource.Info, errorBuilder *multierror.Builder) {
-	fileObjects := toFileObjects(infos)
-	syntax.AnnotationValidator.Validate(fileObjects, errorBuilder)
-	syntax.LabelValidator.Validate(fileObjects, errorBuilder)
-	syntax.MetadataNamespaceValidator.Validate(fileObjects, errorBuilder)
-	syntax.MetadataNameValidator.Validate(fileObjects, errorBuilder)
-	syntax.SystemOnlyResourceValidator.Validate(fileObjects, errorBuilder)
+func validateObjects(objects []ast.FileObject, errorBuilder *multierror.Builder) {
+	syntax.AnnotationValidator.Validate(objects, errorBuilder)
+	syntax.LabelValidator.Validate(objects, errorBuilder)
+	syntax.MetadataNamespaceValidator.Validate(objects, errorBuilder)
+	syntax.MetadataNameValidator.Validate(objects, errorBuilder)
+	syntax.SystemOnlyResourceValidator.Validate(objects, errorBuilder)
 
-	seenObjectNames := make(map[schema.GroupVersionKind]map[string][]*resource.Info)
-	seenNamespaceDirs := make(map[string][]*resource.Info)
-	seenResourceQuotas := make(map[string][]*resource.Info)
-
-	for _, info := range infos {
-		dir := path.Dir(info.Source)
-
-		gvk := info.Mapping.GroupVersionKind
-
-		switch gvk {
-		case corev1.SchemeGroupVersion.WithKind("Namespace"):
-			seenNamespaceDirs[dir] = append(seenNamespaceDirs[dir], info)
-		case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
-			seenResourceQuotas[dir] = append(seenResourceQuotas[dir], info)
-		default:
-			if _, found := seenObjectNames[gvk]; !found {
-				seenObjectNames[gvk] = make(map[string][]*resource.Info)
-			}
-			seenObjectNames[gvk][info.Name] = append(seenObjectNames[gvk][info.Name], info)
-		}
-	}
-
-	// Check for namespace object collisions
-	for _, namespaces := range seenNamespaceDirs {
-		if len(namespaces) > 1 {
-			errorBuilder.Add(vet.MultipleNamespacesError{Duplicates: namespaces})
-		}
-	}
-
-	// Check for ResourceQuota collisions
-	for dir, quotas := range seenResourceQuotas {
-		if len(quotas) > 1 {
-			errorBuilder.Add(vet.ConflictingResourceQuotaError{Path: dir, Duplicates: quotas})
-		}
-	}
-
-	// Check for object name collisions
-	for _, objectsByNames := range seenObjectNames {
-		// All objects have the same kind
-		for name, objects := range objectsByNames {
-			// All objects have the same name and kind
-			sort.Slice(objects, func(i, j int) bool {
-				// Sort by source file
-				return path.Dir(objects[i].Source) < path.Dir(objects[j].Source)
-			})
-
-			for i := 0; i < len(objects); {
-				dir := path.Dir(objects[i].Source)
-				duplicates := []*resource.Info{objects[i]}
-
-				for j := i + 1; j < len(objects); j++ {
-					if strings.HasPrefix(objects[j].Source, dir) {
-						// Pick up duplicates in the same directory and child directories.
-						duplicates = append(duplicates, objects[j])
-					} else {
-						// Since objects are sorted by paths, this guarantees that objects within a directory
-						// will be contiguous. We can exit at the first non-matching source path.
-						break
-					}
-				}
-
-				if len(duplicates) > 1 {
-					errorBuilder.Add(vet.ObjectNameCollisionError{Name: name, Duplicates: duplicates})
-				}
-
-				// Recall that len(duplicates) is always at least 1.
-				// There's no need to have multiple errors when more than two objects collide.
-				i += len(duplicates)
-			}
-		}
-	}
+	semantic.ConflictingResourceQuotaValidator{Objects: objects}.Validate(errorBuilder)
+	semantic.DuplicateNamespaceValidator{Objects: objects}.Validate(errorBuilder)
+	semantic.DuplicateNameValidator{Objects: objects}.Validate(errorBuilder)
 }
 
 func toSources(infos []*resource.Info) []string {

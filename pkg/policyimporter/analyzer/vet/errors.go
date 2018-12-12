@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource"
 )
 
 // Codes for each Nomos error.
@@ -277,7 +276,7 @@ func (e IllegalAbstractNamespaceObjectKindError) Code() string {
 // ConflictingResourceQuotaError represents multiple ResourceQuotas illegally presiding in the same directory.
 type ConflictingResourceQuotaError struct {
 	Path       string
-	Duplicates []*resource.Info
+	Duplicates []ast.FileObject
 }
 
 // Error implements error.
@@ -285,7 +284,7 @@ func (e ConflictingResourceQuotaError) Error() string {
 	var strs []string
 	for _, duplicate := range e.Duplicates {
 		strs = append(strs, fmt.Sprintf("source: %[1]s\nname: %[2]s",
-			path.Join(e.Path, path.Base(duplicate.Source)), duplicate.Name))
+			path.Join(e.Path, path.Base(duplicate.Source)), duplicate.Name()))
 	}
 	sort.Strings(strs)
 
@@ -653,7 +652,7 @@ func (e InvalidDirectoryNameError) Code() string { return InvalidDirectoryNameEr
 // ObjectNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
 type ObjectNameCollisionError struct {
 	Name       string
-	Duplicates []*resource.Info
+	Duplicates []ast.FileObject
 }
 
 // Error implements error
@@ -664,7 +663,7 @@ func (e ObjectNameCollisionError) Error() string {
 			"source: %[1]s\n"+
 				"%[2]s\n"+
 				"name: %[3]s",
-			duplicate.Source, groupVersionKind(duplicate.Mapping.GroupVersionKind), duplicate.Name))
+			duplicate.Source, groupVersionKind(duplicate.GroupVersionKind()), duplicate.Name()))
 	}
 	sort.Strings(strs)
 
@@ -677,29 +676,16 @@ func (e ObjectNameCollisionError) Error() string {
 // Code implements Error
 func (e ObjectNameCollisionError) Code() string { return ObjectNameCollisionErrorCode }
 
-type resourceInfo struct {
-	info *resource.Info
-}
-
-// String implements Stringer
-func (i resourceInfo) String() string {
-	return fmt.Sprintf(
-		"source: %[1]s\n"+
-			"%[2]s\n"+
-			"name: %[3]s",
-		i.info.Source, groupVersionKind(i.info.Mapping.GroupVersionKind), i.info.Name)
-}
-
 // MultipleNamespacesError reports that multiple Namespaces are defined in the same directory.
 type MultipleNamespacesError struct {
-	Duplicates []*resource.Info
+	Duplicates []ast.FileObject
 }
 
 // Error implements error
 func (e MultipleNamespacesError) Error() string {
 	var strs []string
 	for _, duplicate := range e.Duplicates {
-		strs = append(strs, resourceInfo{info: duplicate}.String())
+		strs = append(strs, fileObject{duplicate}.String())
 	}
 	sort.Strings(strs)
 
