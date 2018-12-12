@@ -39,7 +39,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/multierror"
-	"github.com/google/nomos/pkg/util/namespaceutil"
 	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -222,11 +221,13 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	}
 
 	clusterDir := filepath.Join(root, repo.ClusterDir)
-	clusterInfos := p.readResources(clusterDir, false, &errorBuilder)
+	clusterInfos := p.readResources(clusterDir, &errorBuilder)
+	syntax.FlatDirectoryValidator.Validate(toSources(clusterInfos), &errorBuilder)
 	p.validateDuplicateNames(clusterInfos, &errorBuilder)
 
 	clusterregistryPath := filepath.Join(root, repo.ClusterRegistryDir)
-	clusterregistryInfos := p.readResources(clusterregistryPath, false, &errorBuilder)
+	clusterregistryInfos := p.readResources(clusterregistryPath, &errorBuilder)
+	syntax.FlatDirectoryValidator.Validate(toSources(clusterregistryInfos), &errorBuilder)
 	p.validateDuplicateNames(clusterregistryInfos, &errorBuilder)
 
 	nsDir := filepath.Join(root, repo.NamespacesDir)
@@ -234,7 +235,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 	p.validateDirNames(nsDirsOrdered, &errorBuilder)
 
-	fileInfos := p.readResources(nsDir, true, &errorBuilder)
+	fileInfos := p.readResources(nsDir, &errorBuilder)
 
 	// TODO(filmil): dirInfos could just be map[string]runtime.Object, it seems.  Let's wait
 	// until the new repo format commit lands, and change it then.
@@ -265,16 +266,16 @@ func (p *Parser) relativePath(source string) string {
 
 // readRequiredResources walks dir recursively, looking for resources, and builds FileInfos from them.
 // Returns an error if the directory is missing.
-func (p *Parser) readRequiredResources(dir string, allowSubdirectories bool, errorBuilder *multierror.Builder) []*resource.Info {
+func (p *Parser) readRequiredResources(dir string, errorBuilder *multierror.Builder) []*resource.Info {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		errorBuilder.Add(vet.MissingDirectoryError{})
 		return nil
 	}
-	return p.readResources(dir, allowSubdirectories, errorBuilder)
+	return p.readResources(dir, errorBuilder)
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) readResources(dir string, allowSubdirectories bool, errorBuilder *multierror.Builder) []*resource.Info {
+func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []*resource.Info {
 	// If there aren't any resources, skip builder, because builder treats that as an error.
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		// Return empty list if unable to read directory
@@ -311,16 +312,6 @@ func (p *Parser) readResources(dir string, allowSubdirectories bool, errorBuilde
 		for _, fileInfo := range fileInfos {
 			// Assign relative path since that's what we actually need.
 			fileInfo.Source = p.relativePath(fileInfo.Source)
-		}
-
-		if !allowSubdirectories {
-			// If subdirectories are not allowed, return an error for each invalid subdirectory.
-			for _, info := range fileInfos {
-				baseDir := path.Base(dir)
-				if subDir := path.Dir(info.Source); subDir != baseDir {
-					errorBuilder.Add(vet.IllegalSubdirectoryError{BaseDir: baseDir, SubDir: subDir})
-				}
-			}
 		}
 	}
 	return fileInfos
@@ -526,7 +517,8 @@ func (p *Parser) processNamespaceDir(dir string, objects map[runtime.Object]stri
 func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) []*v1alpha1.Sync {
 	// Ignore individual file read errors for now and continue processing parsed files.
-	infos := p.readRequiredResources(systemDir, false, errorBuilder)
+	infos := p.readRequiredResources(systemDir, errorBuilder)
+	syntax.FlatDirectoryValidator.Validate(toSources(infos), errorBuilder)
 
 	runtimeObjects := toRuntimeObjects(infos)
 	syntax.RepoVersionValidator.Validate(runtimeObjects, errorBuilder)
@@ -691,15 +683,11 @@ func (p *Parser) allDirs(nsDir string, errorBuilder *multierror.Builder) []strin
 // 2. Directory name is a valid namespace name:
 // https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md
 func (p *Parser) validateDirNames(dirs []string, errorBuilder *multierror.Builder) {
+	syntax.DirectoryNameValidator.Validate(dirs, errorBuilder)
+
 	dirNames := make(map[string][]string)
 	for _, d := range dirs {
 		n := filepath.Base(d)
-		if namespaceutil.IsInvalid(n) {
-			errorBuilder.Add(vet.InvalidDirectoryNameError{Dir: d})
-		}
-		if namespaceutil.IsReserved(n) {
-			errorBuilder.Add(vet.ReservedDirectoryNameError{Dir: d})
-		}
 		if names, ok := dirNames[n]; ok {
 			dirNames[n] = append(names, d)
 		} else {
@@ -811,6 +799,14 @@ func (p *Parser) validateDuplicateNames(infos []*resource.Info, errorBuilder *mu
 			}
 		}
 	}
+}
+
+func toSources(infos []*resource.Info) []string {
+	result := make([]string, len(infos))
+	for i, info := range infos {
+		result[i] = info.Source
+	}
+	return result
 }
 
 func toFileObjects(infos []*resource.Info) []ast.FileObject {
