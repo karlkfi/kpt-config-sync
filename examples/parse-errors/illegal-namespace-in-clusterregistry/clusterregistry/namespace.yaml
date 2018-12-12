@@ -1,0 +1,4 @@
+kind: Namespace # Cannot be declared in clusterregistry/
+apiVersion: v1
+metadata:
+  name: clusterregistry

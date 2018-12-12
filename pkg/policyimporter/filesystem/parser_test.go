@@ -2047,6 +2047,25 @@ spec:
 		},
 		expectedErrorCode: vet.InvalidMetadataNameErrorCode,
 	},
+	{
+		testName: "Illegal Namespace in clusterregistry/",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":              aRepo,
+			"clusterregistry/namespace.yaml": templateData{Name: "clusterregistry"}.apply(aNamespace),
+		},
+		expectedErrorCode: vet.IllegalKindInClusterregistryErrorCode,
+	},
+	{
+		testName: "Illegal NamespaceSelector in namespaces/",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":                     aRepo,
+			"namespaces/foo/namespace.yaml":         templateData{Name: "foo"}.apply(aNamespace),
+			"namespaces/foo/namespaceselector.yaml": templateData{}.apply(aNamespaceSelector),
+		},
+		expectedErrorCode: vet.IllegalKindInNamespacesErrorCode,
+	},
 }
 
 func errorCodes(err error) []string {

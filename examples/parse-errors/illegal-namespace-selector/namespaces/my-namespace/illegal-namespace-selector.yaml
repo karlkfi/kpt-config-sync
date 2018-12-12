@@ -1,0 +1,8 @@
+kind: NamespaceSelector # can't be in a namespace directory
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: illegal-namespace-selector
+spec:
+  selector:
+    matchLabels:
+      env: prod

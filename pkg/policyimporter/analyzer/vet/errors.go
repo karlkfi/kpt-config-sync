@@ -69,6 +69,8 @@ const (
 	UnsupportedResourceInSyncErrorCode          = "1034"
 	IllegalHierarchyModeErrorCode               = "1035"
 	InvalidMetadataNameErrorCode                = "1036"
+	IllegalKindInClusterregistryErrorCode       = "1037"
+	IllegalKindInNamespacesErrorCode            = "1038"
 	UndefinedErrorCode                          = "????"
 )
 
@@ -553,7 +555,7 @@ type IllegalKindInSystemError struct {
 // Error implements error
 func (e IllegalKindInSystemError) Error() string {
 	return format(e,
-		"Resources of the below kind may not be declared in %[2]s/:\n\n"+
+		"Resources of this Kind may not be declared in %[2]s/:\n\n"+
 			"source: %[3]s\n"+
 			"%[1]s",
 		groupVersionKind(e.GroupVersionKind), repo.SystemDir, e.Source)
@@ -818,3 +820,43 @@ func (e InvalidMetadataNameError) Error() string {
 
 // Code implements Error
 func (e InvalidMetadataNameError) Code() string { return InvalidMetadataNameErrorCode }
+
+// IllegalKindInClusterregistryError reports that an object has been illegally defined in clusterregistry/
+type IllegalKindInClusterregistryError struct {
+	Source           string
+	GroupVersionKind schema.GroupVersionKind
+}
+
+// Error implements error
+func (e IllegalKindInClusterregistryError) Error() string {
+	return format(e,
+		"Resources of the below Kind may not be declared in %[2]s/:\n\n"+
+			"source: %[3]s\n"+
+			"%[1]s",
+		groupVersionKind(e.GroupVersionKind), repo.ClusterRegistryDir, e.Source)
+}
+
+// Code implements Error
+func (e IllegalKindInClusterregistryError) Code() string {
+	return IllegalKindInClusterregistryErrorCode
+}
+
+// IllegalKindInNamespacesError reports that an object has been illegally defined in namespaces/
+type IllegalKindInNamespacesError struct {
+	Source           string
+	GroupVersionKind schema.GroupVersionKind
+}
+
+// Error implements error
+func (e IllegalKindInNamespacesError) Error() string {
+	return format(e,
+		"Resources of the below Kind may not be declared in %[2]s/:\n\n"+
+			"source: %[3]s\n"+
+			"%[1]s",
+		groupVersionKind(e.GroupVersionKind), repo.NamespacesDir, e.Source)
+}
+
+// Code implements Error
+func (e IllegalKindInNamespacesError) Code() string {
+	return IllegalKindInNamespacesErrorCode
+}

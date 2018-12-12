@@ -241,7 +241,8 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	p.validateDuplicateNames(fileInfos, &errorBuilder)
 
 	dirInfos := toDirInfoMap(fileInfos)
-	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered,
+	clusterRegistryObjects := toRuntimeObjects(clusterregistryInfos)
+	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, clusterRegistryObjects, nsDirsOrdered,
 		clusterDir, fsCtx, syncs)
 	if err != nil {
 		errorBuilder.Add(err)
@@ -337,7 +338,7 @@ func (p *Parser) readResources(dir string, allowSubdirectories bool, errorBuilde
 func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	dirInfos map[string][]*resource.Info,
 	clusterInfos []*resource.Info,
-	clusterregistryInfos []*resource.Info,
+	clusterregistryObjects map[runtime.Object]string,
 	nsDirsOrdered []string,
 	clusterDir string,
 	fsRoot *ast.Root,
@@ -350,7 +351,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 		errorBuilder.Add(errors.Wrapf(err, "cluster directory is invalid: %s", clusterDir))
 		return nil, errorBuilder.Build()
 	}
-	clusters, selectors := p.processClusterRegistryDir(repo.ClusterRegistryDir, clusterregistryInfos, &errorBuilder)
+	clusters, selectors := p.processClusterRegistryDir(repo.ClusterRegistryDir, clusterregistryObjects, &errorBuilder)
 	cs, err := sel.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
 	if err != nil {
 		// TODO(b/120229144): To be factored into KNV Error.
@@ -363,13 +364,15 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]
 		infos := dirInfos[rootDir]
-		if err = p.processNamespacesDir(rootDir, infos, namespaceDirs, treeGenerator, true); err != nil {
+		p.processNamespacesDir(rootDir, infos, namespaceDirs, treeGenerator, true, &errorBuilder)
+		if errorBuilder.HasErrors() {
 			errorBuilder.Add(errors.Wrapf(err, "directory is invalid: %s", rootDir))
 			return nil, errorBuilder.Build()
 		}
 		for _, d := range nsDirsOrdered[1:] {
 			infos := dirInfos[d]
-			if err = p.processNamespacesDir(d, infos, namespaceDirs, treeGenerator, false); err != nil {
+			p.processNamespacesDir(d, infos, namespaceDirs, treeGenerator, false, &errorBuilder)
+			if errorBuilder.HasErrors() {
 				errorBuilder.Add(errors.Wrapf(err, "directory is invalid: %s", d))
 				return nil, errorBuilder.Build()
 			}
@@ -457,7 +460,7 @@ func (p *Parser) processNamespacesDir(
 	infos []*resource.Info,
 	namespaceDirs map[string]bool,
 	treeGenerator *DirectoryTree,
-	root bool) error {
+	root bool, errorBuilder *multierror.Builder) {
 	var treeNode *ast.TreeNode
 	for _, i := range infos {
 		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
@@ -470,7 +473,9 @@ func (p *Parser) processNamespacesDir(
 			} else {
 				treeNode = treeGenerator.AddDir(dir, ast.Namespace)
 			}
-			return p.processNamespaceDir(dir, infos, treeNode)
+			objects := toRuntimeObjects(infos)
+			p.processNamespaceDir(dir, objects, treeNode, errorBuilder)
+			return
 		}
 	}
 	// No namespace resource was found.
@@ -489,40 +494,29 @@ func (p *Parser) processNamespacesDir(
 			treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: o, Source: i.Source}})
 		}
 	}
-	return nil
 }
 
-func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNode *ast.TreeNode) error {
+func (p *Parser) processNamespaceDir(dir string, objects map[runtime.Object]string, treeNode *ast.TreeNode, errorBuilder *multierror.Builder) {
+	syntax.NamespacesKindValidator.Validate(objects, errorBuilder)
+
 	v := newValidator()
 
-	for _, i := range infos {
-		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
-		gvk := o.GetObjectKind().GroupVersionKind()
+	for object, source := range objects {
+		gvk := object.GetObjectKind().GroupVersionKind()
 		if gvk == corev1.SchemeGroupVersion.WithKind("Namespace") {
 			// TODO: Move this out.
-			metaObj := o.(metav1.Object)
+			metaObj := object.(metav1.Object)
 			treeNode.Labels = metaObj.GetLabels()
 			treeNode.Annotations = metaObj.GetAnnotations()
 			v.MarkSeen(gvk)
 			continue
 		}
 
-		if o.GetObjectKind().GroupVersionKind() == v1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector") {
-			v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
-		}
-		if v.err != nil {
-			return v.err
-		}
-
-		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: o, Source: i.Source}})
+		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: object, Source: source}})
 	}
 
 	v.HaveSeen(schema.GroupVersionKind{Version: "v1", Kind: "Namespace"})
-	if v.err != nil {
-		return v.err
-	}
-
-	return nil
+	errorBuilder.Add(v.err)
 }
 
 // processSystemDir processes resources in system dir including:
@@ -655,24 +649,20 @@ func containsMode(haystack []v1alpha1.HierarchyModeType, needle v1alpha1.Hierarc
 // extracts Cluster and ClusterSelector objects out. dirname is the directory
 // name relative to the root directory of the repository, and infos is the set
 // of resource data that were read from the directory.
-func (p *Parser) processClusterRegistryDir(dirname string, infos []*resource.Info, errorBuilder *multierror.Builder) ([]clusterregistry.Cluster, []v1alpha1.ClusterSelector) {
-	v := newValidator()
+func (p *Parser) processClusterRegistryDir(dirname string, objects map[runtime.Object]string, errorBuilder *multierror.Builder) ([]clusterregistry.Cluster, []v1alpha1.ClusterSelector) {
+	syntax.ClusterregistryKindValidator.Validate(objects, errorBuilder)
+
 	var crc []clusterregistry.Cluster
 	var css []v1alpha1.ClusterSelector
-	for _, i := range infos {
-		obj := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
-		switch o := obj.(type) {
+	for object := range objects {
+		switch o := object.(type) {
 		case *v1alpha1.ClusterSelector:
 			css = append(css, *o)
 		case *clusterregistry.Cluster:
 			crc = append(crc, *o)
-		default:
-			// No other objects are allowed in the clusterregistry directory.
-			v.ObjectDisallowedInContext(i, o.GetObjectKind().GroupVersionKind())
 		}
 	}
 
-	errorBuilder.Add(errors.Wrapf(v.err, "clusterregistry directory is invalid: %s", dirname))
 	return crc, css
 }
 

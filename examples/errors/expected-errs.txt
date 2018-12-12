@@ -21,8 +21,8 @@ name: illegal-child
 
 [4] KNV1004: A Namespace MUST NOT use the annotation nomos.dev/namespace-selector. Remove metadata.annotations.nomos.dev/namespace-selector from:
 
-path: namespaces
-name: namespaces
+path: namespaces/dev/dev-namespace
+name: dev-namespace
 
 
 [5] KNV1005: Unable to sync resource "not-syncable-clusterrolebinding". Enable sync for this resource's kind.
