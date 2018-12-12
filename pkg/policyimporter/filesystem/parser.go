@@ -69,8 +69,6 @@ type Parser struct {
 	discoveryClient discovery.CachedDiscoveryInterface
 	// OS-specific path to root.
 	root string
-	// Visitor Provider for generating the list of visitors.
-	vp visitorProvider
 }
 
 // ParserOpt has often customized parser options. Use for example in NewParser.
@@ -86,26 +84,23 @@ type ParserOpt struct {
 // visitorProvider is an interface that abstracts out the source of visitors
 // that are used to walk the AST.
 type visitorProvider interface {
-	visitors(apiInfo *meta.APIInfo,
-		syncs []*v1alpha1.Sync,
-		clusters []clusterregistry.Cluster,
-		selectors []v1alpha1.ClusterSelector,
-		opts ParserOpt) []ast.Visitor
+	visitors(apiInfo *meta.APIInfo) []ast.Visitor
 }
 
 // nomosVisitorProvider is the default visitor provider.  It handles
 // plain vanilla nomos configs.
-type nomosVisitorProvider struct{}
+type nomosVisitorProvider struct {
+	syncs     []*v1alpha1.Sync
+	clusters  []clusterregistry.Cluster
+	selectors []v1alpha1.ClusterSelector
+	opts      ParserOpt
+}
 
-func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo,
-	syncs []*v1alpha1.Sync,
-	clusters []clusterregistry.Cluster,
-	selectors []v1alpha1.ClusterSelector,
-	opts ParserOpt) []ast.Visitor {
+func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
 
-	specs := toInheritanceSpecs(syncs)
+	specs := toInheritanceSpecs(n.syncs)
 	visitors := []ast.Visitor{
-		validation.NewInputValidator(syncs, specs, clusters, selectors, opts.Vet),
+		validation.NewInputValidator(n.syncs, specs, n.clusters, n.selectors, n.opts.Vet),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(apiInfo),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
@@ -124,11 +119,7 @@ func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo,
 // parts that won't pass the regular nomos checks.
 type bespinVisitorProvider struct{}
 
-func (b bespinVisitorProvider) visitors(apiInfo *meta.APIInfo,
-	syncs []*v1alpha1.Sync,
-	clusters []clusterregistry.Cluster,
-	selectors []v1alpha1.ClusterSelector,
-	opts ParserOpt) []ast.Visitor {
+func (b bespinVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
 	// TODO(b/119825336): Bespin and the InputValidator are having trouble playing
 	// nicely. For now, just return the visitors that Bespin needs.
 	return []ast.Visitor{
@@ -148,6 +139,22 @@ func NewParser(clientGetter genericclioptions.RESTClientGetter, opts ParserOpt) 
 	return NewParserWithFactory(cmdutil.NewFactory(clientGetter), opts)
 }
 
+func (p *Parser) nomosVisitorProvider(
+	syncs []*v1alpha1.Sync,
+	clusters []clusterregistry.Cluster,
+	selectors []v1alpha1.ClusterSelector) visitorProvider {
+	return nomosVisitorProvider{
+		syncs:     syncs,
+		clusters:  clusters,
+		selectors: selectors,
+		opts:      p.opts,
+	}
+}
+
+func (p *Parser) bespinVisitorProvider() visitorProvider {
+	return bespinVisitorProvider{}
+}
+
 // NewParserWithFactory creates a new Parser using the specified factory.
 // NewParser is the more common constructor, but this is useful for testing.
 func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
@@ -155,15 +162,10 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get discovery client")
 	}
-	var vp visitorProvider = nomosVisitorProvider{}
-	if opts.Bespin {
-		vp = bespinVisitorProvider{}
-	}
 	p := &Parser{
 		opts:            opts,
 		factory:         f,
 		discoveryClient: dc,
-		vp:              vp,
 	}
 	return p, nil
 }
@@ -203,22 +205,28 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 		return nil, err
 	}
 
-	// Special processing for <root>/system/*
+	// processing for <root>/system/*
 	syncs := p.processSystemDir(filepath.Join(root, repo.SystemDir), fsCtx, apiInfo, &errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
 		return nil, errorBuilder.Build()
 	}
 
+	// processing for <root>/cluster/*
 	clusterDir := filepath.Join(root, repo.ClusterDir)
 	clusterInfos := p.readResources(clusterDir, &errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(toSources(clusterInfos), &errorBuilder)
 	validateObjects(clusterInfos, &errorBuilder)
 
-	clusterregistryPath := filepath.Join(root, repo.ClusterRegistryDir)
-	clusterregistryInfos := p.readResources(clusterregistryPath, &errorBuilder)
-	syntax.FlatDirectoryValidator.Validate(toSources(clusterregistryInfos), &errorBuilder)
-	validateObjects(clusterregistryInfos, &errorBuilder)
+	// processing for <root>/clusterregistry/*
+	clusterregistryInfos := p.readResources(filepath.Join(root, repo.ClusterRegistryDir), &errorBuilder)
+	validateClusterRegistry(clusterregistryInfos, &errorBuilder)
+	clusters := getClusters(clusterregistryInfos)
+	selectors := getSelectors(clusterregistryInfos)
+	cs, err := sel.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
+	// TODO(b/120229144): To be factored into KNV Error.
+	errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
+	sel.SetClusterSelector(cs, fsCtx)
 
 	nsDir := filepath.Join(root, repo.NamespacesDir)
 	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
@@ -229,10 +237,16 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	nsInfos := p.readResources(nsDir, &errorBuilder)
 	validateObjects(nsInfos, &errorBuilder)
 
-	// TODO(filmil): dirInfos could just be map[string]ast.FileObject, it seems.  Let's wait
-	// until the new repo format commit lands, and change it then.
+	// TODO: temporary until processDirs refactoring
 	dirInfos := toDirInfoMap(nsInfos)
-	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered, clusterDir, fsCtx, syncs)
+	var vp visitorProvider
+	if p.opts.Bespin {
+		vp = p.bespinVisitorProvider()
+	} else {
+		vp = p.nomosVisitorProvider(syncs, clusters, selectors)
+	}
+
+	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, vp, nsDirsOrdered, clusterDir, fsCtx, syncs)
 	errorBuilder.Add(err)
 
 	if errorBuilder.HasErrors() {
@@ -317,39 +331,29 @@ func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []a
 func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	dirInfos map[string][]ast.FileObject,
 	clusterObjects []ast.FileObject,
-	clusterregistryObjects []ast.FileObject,
+	vp visitorProvider,
 	nsDirsOrdered []string,
 	clusterDir string,
 	fsRoot *ast.Root,
 	syncs []*v1alpha1.Sync) (*v1.AllPolicies, error) {
 
-	errorBuilder := multierror.Builder{}
 	namespaceDirs := make(map[string]bool)
 
 	processClusterDir(clusterObjects, fsRoot)
-	clusters, selectors := processClusterRegistryDir(clusterregistryObjects, &errorBuilder)
-	cs, err := sel.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
-	if err != nil {
-		// TODO(b/120229144): To be factored into KNV Error.
-		errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
-		return nil, errorBuilder.Build()
-	}
-	sel.SetClusterSelector(cs, fsRoot)
 
+	errorBuilder := multierror.Builder{}
 	treeGenerator := NewDirectoryTree()
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]
 		infos := dirInfos[rootDir]
 		processNamespacesDir(rootDir, infos, namespaceDirs, treeGenerator, true, &errorBuilder)
 		if errorBuilder.HasErrors() {
-			errorBuilder.Add(errors.Wrapf(err, "directory is invalid: %s", rootDir))
 			return nil, errorBuilder.Build()
 		}
 		for _, d := range nsDirsOrdered[1:] {
 			infos := dirInfos[d]
 			processNamespacesDir(d, infos, namespaceDirs, treeGenerator, false, &errorBuilder)
 			if errorBuilder.HasErrors() {
-				errorBuilder.Add(errors.Wrapf(err, "directory is invalid: %s", d))
 				return nil, errorBuilder.Build()
 			}
 		}
@@ -362,8 +366,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	}
 	fsRoot.Tree = tree
 
-	visitors := p.vp.visitors(apiInfo, syncs, clusters, selectors, p.opts)
-
+	visitors := vp.visitors(apiInfo)
 	for _, visitor := range visitors {
 		fsRoot = fsRoot.Accept(visitor)
 		if err := visitor.Error(); err != nil {
@@ -525,27 +528,6 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 		allSyncs = append(allSyncs, bespinv1.Syncs...)
 	}
 	return allSyncs
-}
-
-// processClusterRegistryDir looks at all files in <root>/clusterregistry and
-// extracts Cluster and ClusterSelector objects out. dirname is the directory
-// name relative to the root directory of the repository, and infos is the set
-// of resource data that were read from the directory.
-func processClusterRegistryDir(objects []ast.FileObject, errorBuilder *multierror.Builder) ([]clusterregistry.Cluster, []v1alpha1.ClusterSelector) {
-	syntax.ClusterregistryKindValidator.Validate(objects, errorBuilder)
-
-	var crc []clusterregistry.Cluster
-	var css []v1alpha1.ClusterSelector
-	for _, object := range objects {
-		switch o := object.Object.(type) {
-		case *v1alpha1.ClusterSelector:
-			css = append(css, *o)
-		case *clusterregistry.Cluster:
-			crc = append(crc, *o)
-		}
-	}
-
-	return crc, css
 }
 
 // allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
