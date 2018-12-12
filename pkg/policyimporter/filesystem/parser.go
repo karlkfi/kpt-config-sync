@@ -34,6 +34,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/meta"
@@ -233,7 +234,8 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	nsDir := filepath.Join(root, repo.NamespacesDir)
 	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
 
-	p.validateDirNames(nsDirsOrdered, &errorBuilder)
+	syntax.DirectoryNameValidator.Validate(nsDirsOrdered, &errorBuilder)
+	semantic.DuplicateDirectoryValidator{Dirs: nsDirsOrdered}.Validate(&errorBuilder)
 
 	fileInfos := p.readResources(nsDir, &errorBuilder)
 
@@ -678,30 +680,6 @@ func (p *Parser) allDirs(nsDir string, errorBuilder *multierror.Builder) []strin
 	return paths
 }
 
-// validateDirNames validates that:
-// 1. Directory name is not reserved by the system.
-// 2. Directory name is a valid namespace name:
-// https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md
-func (p *Parser) validateDirNames(dirs []string, errorBuilder *multierror.Builder) {
-	syntax.DirectoryNameValidator.Validate(dirs, errorBuilder)
-
-	dirNames := make(map[string][]string)
-	for _, d := range dirs {
-		n := filepath.Base(d)
-		if names, ok := dirNames[n]; ok {
-			dirNames[n] = append(names, d)
-		} else {
-			dirNames[n] = []string{d}
-		}
-	}
-
-	for _, duplicates := range dirNames {
-		if len(duplicates) > 1 {
-			errorBuilder.Add(vet.DuplicateDirectoryNameError{Duplicates: duplicates})
-		}
-	}
-}
-
 func (p *Parser) validateDuplicateNames(infos []*resource.Info, errorBuilder *multierror.Builder) {
 	fileObjects := toFileObjects(infos)
 	syntax.AnnotationValidator.Validate(fileObjects, errorBuilder)
@@ -713,18 +691,11 @@ func (p *Parser) validateDuplicateNames(infos []*resource.Info, errorBuilder *mu
 	seenObjectNames := make(map[schema.GroupVersionKind]map[string][]*resource.Info)
 	seenNamespaceDirs := make(map[string][]*resource.Info)
 	seenResourceQuotas := make(map[string][]*resource.Info)
-	seenDirs := make(map[string]map[string]struct{})
 
 	for _, info := range infos {
 		dir := path.Dir(info.Source)
 
 		gvk := info.Mapping.GroupVersionKind
-
-		if _, found := seenDirs[path.Base(dir)]; !found {
-			seenDirs[path.Base(dir)] = map[string]struct{}{dir: {}}
-		} else {
-			seenDirs[path.Base(dir)][dir] = struct{}{}
-		}
 
 		switch gvk {
 		case corev1.SchemeGroupVersion.WithKind("Namespace"):
@@ -750,17 +721,6 @@ func (p *Parser) validateDuplicateNames(infos []*resource.Info, errorBuilder *mu
 	for dir, quotas := range seenResourceQuotas {
 		if len(quotas) > 1 {
 			errorBuilder.Add(vet.ConflictingResourceQuotaError{Path: dir, Duplicates: quotas})
-		}
-	}
-
-	// Check for directory name collisions
-	for _, paths := range seenDirs {
-		if len(paths) > 1 {
-			var duplicates []string
-			for aPath := range paths {
-				duplicates = append(duplicates, aPath)
-			}
-			errorBuilder.Add(vet.DuplicateDirectoryNameError{Duplicates: duplicates})
 		}
 	}
 
