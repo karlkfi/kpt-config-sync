@@ -43,7 +43,6 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
@@ -176,8 +175,8 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 	return p, nil
 }
 
-func toDirInfoMap(fileInfos []*resource.Info) map[string][]*resource.Info {
-	result := make(map[string][]*resource.Info)
+func toDirInfoMap(fileInfos []ast.FileObject) map[string][]ast.FileObject {
+	result := make(map[string][]ast.FileObject)
 
 	// If a directory has resources, its value in the map will be non-nil.
 	for _, i := range fileInfos {
@@ -221,12 +220,12 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	clusterDir := filepath.Join(root, repo.ClusterDir)
 	clusterInfos := p.readResources(clusterDir, &errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(toSources(clusterInfos), &errorBuilder)
-	validateObjects(toFileObjects(clusterInfos), &errorBuilder)
+	validateObjects(clusterInfos, &errorBuilder)
 
 	clusterregistryPath := filepath.Join(root, repo.ClusterRegistryDir)
 	clusterregistryInfos := p.readResources(clusterregistryPath, &errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(toSources(clusterregistryInfos), &errorBuilder)
-	validateObjects(toFileObjects(clusterregistryInfos), &errorBuilder)
+	validateObjects(clusterregistryInfos, &errorBuilder)
 
 	nsDir := filepath.Join(root, repo.NamespacesDir)
 	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
@@ -234,24 +233,18 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	syntax.DirectoryNameValidator.Validate(nsDirsOrdered, &errorBuilder)
 	semantic.DuplicateDirectoryValidator{Dirs: nsDirsOrdered}.Validate(&errorBuilder)
 
-	fileInfos := p.readResources(nsDir, &errorBuilder)
+	nsInfos := p.readResources(nsDir, &errorBuilder)
+	validateObjects(nsInfos, &errorBuilder)
 
-	// TODO(filmil): dirInfos could just be map[string]runtime.Object, it seems.  Let's wait
+	// TODO(filmil): dirInfos could just be map[string]ast.FileObject, it seems.  Let's wait
 	// until the new repo format commit lands, and change it then.
-	validateObjects(toFileObjects(fileInfos), &errorBuilder)
+	dirInfos := toDirInfoMap(nsInfos)
+	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, clusterregistryInfos, nsDirsOrdered, clusterDir, fsCtx, syncs)
+	errorBuilder.Add(err)
 
-	dirInfos := toDirInfoMap(fileInfos)
-	clusterRegistryObjects := toRuntimeObjects(clusterregistryInfos)
-	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, clusterRegistryObjects, nsDirsOrdered,
-		clusterDir, fsCtx, syncs)
-	if err != nil {
-		errorBuilder.Add(err)
-		return nil, errorBuilder.Build()
-	}
 	if errorBuilder.HasErrors() {
 		return nil, errorBuilder.Build()
 	}
-
 	return policies, nil
 }
 
@@ -265,7 +258,7 @@ func (p *Parser) relativePath(source string) string {
 
 // readRequiredResources walks dir recursively, looking for resources, and builds FileInfos from them.
 // Returns an error if the directory is missing.
-func (p *Parser) readRequiredResources(dir string, errorBuilder *multierror.Builder) []*resource.Info {
+func (p *Parser) readRequiredResources(dir string, errorBuilder *multierror.Builder) []ast.FileObject {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		errorBuilder.Add(vet.MissingDirectoryError{})
 		return nil
@@ -274,7 +267,7 @@ func (p *Parser) readRequiredResources(dir string, errorBuilder *multierror.Buil
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []*resource.Info {
+func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []ast.FileObject {
 	// If there aren't any resources, skip builder, because builder treats that as an error.
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		// Return empty list if unable to read directory
@@ -292,7 +285,7 @@ func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []*
 		return nil
 	}
 
-	var fileInfos []*resource.Info
+	var fileObjects []ast.FileObject
 	if len(visitors) > 0 {
 		s, err := p.factory.Validator(p.opts.Validate)
 		if err != nil {
@@ -306,14 +299,17 @@ func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []*
 			ContinueOnError().
 			FilenameParam(false, options).
 			Do()
-		fileInfos, err = result.Infos()
+		fileInfos, err := result.Infos()
 		errorBuilder.Add(err)
-		for _, fileInfo := range fileInfos {
+		for _, info := range fileInfos {
 			// Assign relative path since that's what we actually need.
-			fileInfo.Source = p.relativePath(fileInfo.Source)
+			source := p.relativePath(info.Source)
+			object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
+			fileObject := ast.FileObject{Object: object, Source: source}
+			fileObjects = append(fileObjects, fileObject)
 		}
 	}
-	return fileInfos
+	return fileObjects
 }
 
 // processDirs validates objects in directory trees and converts them into hierarchical policy objects.
@@ -326,9 +322,9 @@ func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []*
 // 1. AbstractNamespace directory: Non-leaf directories at any depth within root directory.
 // 2. Namespace directory: Leaf directories at any depth within root directory.
 func (p *Parser) processDirs(apiInfo *meta.APIInfo,
-	dirInfos map[string][]*resource.Info,
-	clusterInfos []*resource.Info,
-	clusterregistryObjects map[runtime.Object]string,
+	dirInfos map[string][]ast.FileObject,
+	clusterObjects []ast.FileObject,
+	clusterregistryObjects []ast.FileObject,
 	nsDirsOrdered []string,
 	clusterDir string,
 	fsRoot *ast.Root,
@@ -337,11 +333,8 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	errorBuilder := multierror.Builder{}
 	namespaceDirs := make(map[string]bool)
 
-	if err := p.processClusterDir(clusterDir, clusterInfos, fsRoot); err != nil {
-		errorBuilder.Add(errors.Wrapf(err, "cluster directory is invalid: %s", clusterDir))
-		return nil, errorBuilder.Build()
-	}
-	clusters, selectors := p.processClusterRegistryDir(repo.ClusterRegistryDir, clusterregistryObjects, &errorBuilder)
+	processClusterDir(clusterObjects, fsRoot)
+	clusters, selectors := processClusterRegistryDir(clusterregistryObjects, &errorBuilder)
 	cs, err := sel.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
 	if err != nil {
 		// TODO(b/120229144): To be factored into KNV Error.
@@ -354,14 +347,14 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]
 		infos := dirInfos[rootDir]
-		p.processNamespacesDir(rootDir, infos, namespaceDirs, treeGenerator, true, &errorBuilder)
+		processNamespacesDir(rootDir, infos, namespaceDirs, treeGenerator, true, &errorBuilder)
 		if errorBuilder.HasErrors() {
 			errorBuilder.Add(errors.Wrapf(err, "directory is invalid: %s", rootDir))
 			return nil, errorBuilder.Build()
 		}
 		for _, d := range nsDirsOrdered[1:] {
 			infos := dirInfos[d]
-			p.processNamespacesDir(d, infos, namespaceDirs, treeGenerator, false, &errorBuilder)
+			processNamespacesDir(d, infos, namespaceDirs, treeGenerator, false, &errorBuilder)
 			if errorBuilder.HasErrors() {
 				errorBuilder.Add(errors.Wrapf(err, "directory is invalid: %s", d))
 				return nil, errorBuilder.Build()
@@ -433,29 +426,23 @@ func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.
 	return specs
 }
 
-func (p *Parser) processClusterDir(
-	dir string,
-	infos []*resource.Info,
-	fsRoot *ast.Root) error {
-	for _, i := range infos {
-		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
-		fsRoot.Cluster.Objects = append(fsRoot.Cluster.Objects, &ast.ClusterObject{FileObject: ast.FileObject{Object: o, Source: i.Source}})
+func processClusterDir(
+	objects []ast.FileObject,
+	fsRoot *ast.Root) {
+	for _, i := range objects {
+		fsRoot.Cluster.Objects = append(fsRoot.Cluster.Objects, &ast.ClusterObject{FileObject: i})
 	}
-
-	return nil
 }
 
-func (p *Parser) processNamespacesDir(
+func processNamespacesDir(
 	dir string,
-	infos []*resource.Info,
+	objects []ast.FileObject,
 	namespaceDirs map[string]bool,
 	treeGenerator *DirectoryTree,
 	root bool, errorBuilder *multierror.Builder) {
 	var treeNode *ast.TreeNode
-	for _, i := range infos {
-		o := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
-
-		switch o.(type) {
+	for _, object := range objects {
+		switch object.Object.(type) {
 		case *corev1.Namespace:
 			namespaceDirs[dir] = true
 			if root {
@@ -463,8 +450,7 @@ func (p *Parser) processNamespacesDir(
 			} else {
 				treeNode = treeGenerator.AddDir(dir, ast.Namespace)
 			}
-			objects := toRuntimeObjects(infos)
-			p.processNamespaceDir(dir, objects, treeNode, errorBuilder)
+			processNamespaceDir(objects, treeNode, errorBuilder)
 			return
 		}
 	}
@@ -475,9 +461,8 @@ func (p *Parser) processNamespacesDir(
 		treeNode = treeGenerator.AddDir(dir, ast.AbstractNamespace)
 	}
 
-	for _, i := range infos {
-		obj := cmdutil.AsDefaultVersionedOrOriginal(i.Object, i.Mapping)
-		switch o := obj.(type) {
+	for _, i := range objects {
+		switch o := i.Object.(type) {
 		case *v1alpha1.NamespaceSelector:
 			treeNode.Selectors[o.Name] = o
 		default:
@@ -486,23 +471,23 @@ func (p *Parser) processNamespacesDir(
 	}
 }
 
-func (p *Parser) processNamespaceDir(dir string, objects map[runtime.Object]string, treeNode *ast.TreeNode, errorBuilder *multierror.Builder) {
+func processNamespaceDir(objects []ast.FileObject, treeNode *ast.TreeNode, errorBuilder *multierror.Builder) {
 	syntax.NamespacesKindValidator.Validate(objects, errorBuilder)
 
 	v := newValidator()
 
-	for object, source := range objects {
-		gvk := object.GetObjectKind().GroupVersionKind()
+	for _, object := range objects {
+		gvk := object.GroupVersionKind()
 		if gvk == corev1.SchemeGroupVersion.WithKind("Namespace") {
 			// TODO: Move this out.
-			metaObj := object.(metav1.Object)
+			metaObj := object.Object.(metav1.Object)
 			treeNode.Labels = metaObj.GetLabels()
 			treeNode.Annotations = metaObj.GetAnnotations()
 			v.MarkSeen(gvk)
 			continue
 		}
 
-		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: object, Source: source}})
+		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: object.Object, Source: object.Source}})
 	}
 
 	v.HaveSeen(schema.GroupVersionKind{Version: "v1", Kind: "Namespace"})
@@ -516,21 +501,18 @@ func (p *Parser) processNamespaceDir(dir string, objects map[runtime.Object]stri
 func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) []*v1alpha1.Sync {
 	// Ignore individual file read errors for now and continue processing parsed files.
-	infos := p.readRequiredResources(systemDir, errorBuilder)
-	syntax.FlatDirectoryValidator.Validate(toSources(infos), errorBuilder)
+	objects := p.readRequiredResources(systemDir, errorBuilder)
+	validateObjects(objects, errorBuilder)
 
-	runtimeObjects := toRuntimeObjects(infos)
-	syntax.RepoVersionValidator.Validate(runtimeObjects, errorBuilder)
-	syntax.SystemKindValidator.Validate(runtimeObjects, errorBuilder)
-	semantic.RepoCountValidator{Objects: runtimeObjects}.Validate(errorBuilder)
-	semantic.ConfigMapCountValidator{Objects: runtimeObjects}.Validate(errorBuilder)
-
-	fileObjects := toFileObjects(infos)
-	validateObjects(fileObjects, errorBuilder)
+	syntax.FlatDirectoryValidator.Validate(toSources(objects), errorBuilder)
+	syntax.RepoVersionValidator.Validate(objects, errorBuilder)
+	syntax.SystemKindValidator.Validate(objects, errorBuilder)
+	semantic.RepoCountValidator{Objects: objects}.Validate(errorBuilder)
+	semantic.ConfigMapCountValidator{Objects: objects}.Validate(errorBuilder)
 
 	syncMap := make(map[string][]*v1alpha1.Sync)
-	for obj, source := range runtimeObjects {
-		switch o := obj.(type) {
+	for _, object := range objects {
+		switch o := object.Object.(type) {
 		case *v1alpha1.Repo:
 			fsRoot.Repo = o
 
@@ -538,7 +520,7 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 			fsRoot.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
 
 		case *v1alpha1.Sync:
-			syncMap[source] = append(syncMap[source], o)
+			syncMap[object.Source] = append(syncMap[object.Source], o)
 		}
 	}
 
@@ -547,7 +529,7 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 			for _, group := range sync.Spec.Groups {
 				for k := range group.Kinds {
 					// TODO(willbeason) Ensure globally that Kinds with the same Group are not given multiple versions.
-					p.validateSyncKind(sync.Name, &group.Kinds[k], group.Group, fsRoot.Repo.Spec.ExperimentalInheritance, source, apiInfo, errorBuilder)
+					validateSyncKind(sync.Name, &group.Kinds[k], group.Group, fsRoot.Repo.Spec.ExperimentalInheritance, source, apiInfo, errorBuilder)
 				}
 			}
 		}
@@ -569,7 +551,7 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 // - group is the group of the enclosing SyncGroup
 // - inheritance is the value of the experimentalInheritance flag in Repo.
 // - source is the source file of the Sync, used for error messages.
-func (p *Parser) validateSyncKind(name string, kind *v1alpha1.SyncKind, group string, inheritance bool,
+func validateSyncKind(name string, kind *v1alpha1.SyncKind, group string, inheritance bool,
 	source string, apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) {
 	if len(kind.Versions) > 1 {
 		errorBuilder.Add(vet.MultipleVersionForSameSyncedTypeError{Source: source, Kind: *kind})
@@ -625,13 +607,13 @@ func containsMode(haystack []v1alpha1.HierarchyModeType, needle v1alpha1.Hierarc
 // extracts Cluster and ClusterSelector objects out. dirname is the directory
 // name relative to the root directory of the repository, and infos is the set
 // of resource data that were read from the directory.
-func (p *Parser) processClusterRegistryDir(dirname string, objects map[runtime.Object]string, errorBuilder *multierror.Builder) ([]clusterregistry.Cluster, []v1alpha1.ClusterSelector) {
+func processClusterRegistryDir(objects []ast.FileObject, errorBuilder *multierror.Builder) ([]clusterregistry.Cluster, []v1alpha1.ClusterSelector) {
 	syntax.ClusterregistryKindValidator.Validate(objects, errorBuilder)
 
 	var crc []clusterregistry.Cluster
 	var css []v1alpha1.ClusterSelector
-	for object := range objects {
-		switch o := object.(type) {
+	for _, object := range objects {
+		switch o := object.Object.(type) {
 		case *v1alpha1.ClusterSelector:
 			css = append(css, *o)
 		case *clusterregistry.Cluster:
@@ -674,29 +656,10 @@ func validateObjects(objects []ast.FileObject, errorBuilder *multierror.Builder)
 	semantic.DuplicateNameValidator{Objects: objects}.Validate(errorBuilder)
 }
 
-func toSources(infos []*resource.Info) []string {
+func toSources(infos []ast.FileObject) []string {
 	result := make([]string, len(infos))
 	for i, info := range infos {
 		result[i] = info.Source
-	}
-	return result
-}
-
-func toFileObjects(infos []*resource.Info) []ast.FileObject {
-	result := make([]ast.FileObject, len(infos))
-	for i, info := range infos {
-		object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
-		fileObject := ast.FileObject{Object: object, Source: info.Source}
-		result[i] = fileObject
-	}
-	return result
-}
-
-func toRuntimeObjects(infos []*resource.Info) map[runtime.Object]string {
-	result := make(map[runtime.Object]string, len(infos))
-	for _, info := range infos {
-		object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
-		result[object] = info.Source
 	}
 	return result
 }
