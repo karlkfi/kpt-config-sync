@@ -46,8 +46,9 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
@@ -66,10 +67,10 @@ var unsupportedSyncResources = map[schema.GroupVersionKind]bool{
 func init() {
 	// Add Nomos and Bespin types to the Scheme used by util.AsDefaultVersionedOrOriginal for
 	// converting Unstructured to specific types.
-	runtime.Must(v1.AddToScheme(legacyscheme.Scheme))
-	runtime.Must(v1alpha1.AddToScheme(legacyscheme.Scheme))
-	runtime.Must(bespinv1.AddToScheme(legacyscheme.Scheme))
-	runtime.Must(clusterregistry.AddToScheme(legacyscheme.Scheme))
+	utilruntime.Must(v1.AddToScheme(legacyscheme.Scheme))
+	utilruntime.Must(v1alpha1.AddToScheme(legacyscheme.Scheme))
+	utilruntime.Must(bespinv1.AddToScheme(legacyscheme.Scheme))
+	utilruntime.Must(clusterregistry.AddToScheme(legacyscheme.Scheme))
 }
 
 // Parser reads files on disk and builds Nomos CRDs.
@@ -531,21 +532,23 @@ func (p *Parser) processNamespaceDir(dir string, infos []*resource.Info, treeNod
 func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) []*v1alpha1.Sync {
 	// Ignore individual file read errors for now and continue processing parsed files.
-	fileInfos := p.readRequiredResources(systemDir, false, errorBuilder)
-	p.validateDuplicateNames(fileInfos, errorBuilder)
+	infos := p.readRequiredResources(systemDir, false, errorBuilder)
+
+	runtimeObjects := toRuntimeObjects(infos)
+	syntax.RepoVersionValidator.Validate(runtimeObjects, errorBuilder)
+	syntax.SystemKindValidator.Validate(runtimeObjects, errorBuilder)
+
+	p.validateDuplicateNames(infos, errorBuilder)
 
 	syncMap := make(map[string][]*v1alpha1.Sync)
 	repos := make(map[*v1alpha1.Repo]string)         // holds all Repo definitions
 	configMaps := make(map[*corev1.ConfigMap]string) // holds all ConfigMap definitions
-	for _, info := range fileInfos {
+	for _, info := range infos {
 		obj := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
 
 		switch o := obj.(type) {
 		case *v1alpha1.Repo:
 			repos[o] = info.Source
-			if version := o.Spec.Version; version != "0.1.0" {
-				errorBuilder.Add(vet.UnsupportedRepoSpecVersion{Source: info.Source, Name: o.Name, Version: version})
-			}
 			fsRoot.Repo = o
 
 		case *corev1.ConfigMap:
@@ -554,8 +557,6 @@ func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
 
 		case *v1alpha1.Sync:
 			syncMap[info.Source] = append(syncMap[info.Source], o)
-		default:
-			errorBuilder.Add(vet.IllegalSystemObjectDefinitionInSystemError{Source: info.Source, GroupVersionKind: o.GetObjectKind().GroupVersionKind()})
 		}
 	}
 
@@ -828,6 +829,15 @@ func toFileObjects(infos []*resource.Info) []ast.FileObject {
 		object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
 		fileObject := ast.FileObject{Object: object, Source: info.Source}
 		result[i] = fileObject
+	}
+	return result
+}
+
+func toRuntimeObjects(infos []*resource.Info) map[runtime.Object]string {
+	result := make(map[runtime.Object]string, len(infos))
+	for _, info := range infos {
+		object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
+		result[object] = info.Source
 	}
 	return result
 }

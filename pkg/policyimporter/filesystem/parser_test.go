@@ -1855,7 +1855,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"system/syncs.yaml": templateData{Name: "myname"}.apply(aRole),
 		},
-		expectedErrorCode: vet.IllegalSystemObjectDefinitionInSystemErrorCode,
+		expectedErrorCode: vet.IllegalKindInSystemErrorCode,
 	},
 	{
 		testName: "Duplicate Repo definitions is an error",

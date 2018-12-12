@@ -34,42 +34,42 @@ import (
 
 // Codes for each Nomos error.
 const (
-	ReservedDirectoryNameErrorCode                 = "1001"
-	DuplicateDirectoryNameErrorCode                = "1002"
-	IllegalNamespaceSubdirectoryErrorCode          = "1003"
-	IllegalNamespaceSelectorAnnotationErrorCode    = "1004"
-	UnsyncableClusterObjectErrorCode               = "1005"
-	UnsyncableNamespaceObjectErrorCode             = "1006"
-	IllegalAbstractNamespaceObjectKindErrorCode    = "1007"
-	ConflictingResourceQuotaErrorCode              = "1008"
-	IllegalNamespaceDeclarationErrorCode           = "1009"
-	IllegalAnnotationDefinitionErrorCode           = "1010"
-	IllegalLabelDefinitionErrorCode                = "1011"
-	NamespaceSelectorMayNotHaveAnnotationCode      = "1012"
-	ObjectHasUnknownClusterSelectorCode            = "1013"
-	InvalidSelectorErrorCode                       = "1014" // TODO: Must refactor to use properly
-	MissingDirectoryErrorCode                      = "1015"
-	MissingRepoErrorCode                           = "1017"
-	IllegalSubdirectoryErrorCode                   = "1018"
-	IllegalTopLevelNamespaceErrorCode              = "1019"
-	InvalidNamespaceNameErrorCode                  = "1020"
-	UnknownObjectErrorCode                         = "1021" // Impossible to create consistent example.
-	MultipleVersionForSameSyncedTypeErrorCode      = "1022"
-	IllegalNamespaceSyncDeclarationErrorCode       = "1023"
-	IllegalSystemObjectDefinitionInSystemErrorCode = "1024"
-	MultipleRepoDefinitionsErrorCode               = "1025"
-	MultipleConfigMapsErrorCode                    = "1026"
-	UnsupportedRepoSpecVersionCode                 = "1027"
-	InvalidDirectoryNameErrorCode                  = "1028"
-	ObjectNameCollisionErrorCode                   = "1029"
-	MultipleNamespacesErrorCode                    = "1030"
-	MissingObjectNameErrorCode                     = "1031"
-	UnknownResourceInSyncErrorCode                 = "1032"
-	IllegalSystemResourcePlacementErrorCode        = "1033"
-	UnsupportedResourceInSyncErrorCode             = "1034"
-	IllegalHierarchyModeErrorCode                  = "1035"
-	InvalidMetadataNameErrorCode                   = "1036"
-	UndefinedErrorCode                             = "????"
+	ReservedDirectoryNameErrorCode              = "1001"
+	DuplicateDirectoryNameErrorCode             = "1002"
+	IllegalNamespaceSubdirectoryErrorCode       = "1003"
+	IllegalNamespaceSelectorAnnotationErrorCode = "1004"
+	UnsyncableClusterObjectErrorCode            = "1005"
+	UnsyncableNamespaceObjectErrorCode          = "1006"
+	IllegalAbstractNamespaceObjectKindErrorCode = "1007"
+	ConflictingResourceQuotaErrorCode           = "1008"
+	IllegalNamespaceDeclarationErrorCode        = "1009"
+	IllegalAnnotationDefinitionErrorCode        = "1010"
+	IllegalLabelDefinitionErrorCode             = "1011"
+	NamespaceSelectorMayNotHaveAnnotationCode   = "1012"
+	ObjectHasUnknownClusterSelectorCode         = "1013"
+	InvalidSelectorErrorCode                    = "1014" // TODO: Must refactor to use properly
+	MissingDirectoryErrorCode                   = "1015"
+	MissingRepoErrorCode                        = "1017"
+	IllegalSubdirectoryErrorCode                = "1018"
+	IllegalTopLevelNamespaceErrorCode           = "1019"
+	InvalidNamespaceNameErrorCode               = "1020"
+	UnknownObjectErrorCode                      = "1021" // Impossible to create consistent example.
+	MultipleVersionForSameSyncedTypeErrorCode   = "1022"
+	IllegalNamespaceSyncDeclarationErrorCode    = "1023"
+	IllegalKindInSystemErrorCode                = "1024"
+	MultipleRepoDefinitionsErrorCode            = "1025"
+	MultipleConfigMapsErrorCode                 = "1026"
+	UnsupportedRepoSpecVersionCode              = "1027"
+	InvalidDirectoryNameErrorCode               = "1028"
+	ObjectNameCollisionErrorCode                = "1029"
+	MultipleNamespacesErrorCode                 = "1030"
+	MissingObjectNameErrorCode                  = "1031"
+	UnknownResourceInSyncErrorCode              = "1032"
+	IllegalSystemResourcePlacementErrorCode     = "1033"
+	UnsupportedResourceInSyncErrorCode          = "1034"
+	IllegalHierarchyModeErrorCode               = "1035"
+	InvalidMetadataNameErrorCode                = "1036"
+	UndefinedErrorCode                          = "????"
 )
 
 // Example returns a canonical example to use
@@ -544,14 +544,14 @@ func (e IllegalNamespaceSyncDeclarationError) Code() string {
 	return IllegalNamespaceSyncDeclarationErrorCode
 }
 
-// IllegalSystemObjectDefinitionInSystemError reports that an object has been illegally defined in system/
-type IllegalSystemObjectDefinitionInSystemError struct {
+// IllegalKindInSystemError reports that an object has been illegally defined in system/
+type IllegalKindInSystemError struct {
 	Source           string
 	GroupVersionKind schema.GroupVersionKind
 }
 
 // Error implements error
-func (e IllegalSystemObjectDefinitionInSystemError) Error() string {
+func (e IllegalKindInSystemError) Error() string {
 	return format(e,
 		"Resources of the below kind may not be declared in %[2]s/:\n\n"+
 			"source: %[3]s\n"+
@@ -560,8 +560,8 @@ func (e IllegalSystemObjectDefinitionInSystemError) Error() string {
 }
 
 // Code implements Error
-func (e IllegalSystemObjectDefinitionInSystemError) Code() string {
-	return IllegalSystemObjectDefinitionInSystemErrorCode
+func (e IllegalKindInSystemError) Code() string {
+	return IllegalKindInSystemErrorCode
 }
 
 // MultipleRepoDefinitionsError reports that the system/ directory contains multiple Repo declarations.
