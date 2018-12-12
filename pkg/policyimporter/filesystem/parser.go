@@ -48,7 +48,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/discovery"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
@@ -725,27 +724,22 @@ func (p *Parser) validateDirNames(dirs []string, errorBuilder *multierror.Builde
 }
 
 func (p *Parser) validateDuplicateNames(infos []*resource.Info, errorBuilder *multierror.Builder) {
+	fileObjects := toFileObjects(infos)
+	syntax.AnnotationValidator.Validate(fileObjects, errorBuilder)
+	syntax.LabelValidator.Validate(fileObjects, errorBuilder)
+	syntax.MetadataNamespaceValidator.Validate(fileObjects, errorBuilder)
+	syntax.MetadataNameValidator.Validate(fileObjects, errorBuilder)
+	syntax.SystemOnlyResourceValidator.Validate(fileObjects, errorBuilder)
+
 	seenObjectNames := make(map[schema.GroupVersionKind]map[string][]*resource.Info)
 	seenNamespaceDirs := make(map[string][]*resource.Info)
 	seenResourceQuotas := make(map[string][]*resource.Info)
 	seenDirs := make(map[string]map[string]struct{})
 
-	fileObjects := toFileObjects(infos)
-	syntax.AnnotationValidator.Validate(fileObjects, errorBuilder)
-	syntax.LabelValidator.Validate(fileObjects, errorBuilder)
-
 	for _, info := range infos {
 		dir := path.Dir(info.Source)
 
-		if info.Namespace != "" {
-			errorBuilder.Add(vet.IllegalMetadataNamespaceDeclarationError{Info: info})
-		}
-
 		gvk := info.Mapping.GroupVersionKind
-		if info.Name == "" {
-			errorBuilder.Add(vet.MissingObjectNameError{Info: info})
-			continue
-		}
 
 		if _, found := seenDirs[path.Base(dir)]; !found {
 			seenDirs[path.Base(dir)] = map[string]struct{}{dir: {}}
@@ -753,25 +747,8 @@ func (p *Parser) validateDuplicateNames(infos []*resource.Info, errorBuilder *mu
 			seenDirs[path.Base(dir)][dir] = struct{}{}
 		}
 
-		if validation.IsSystemOnly(gvk) && !strings.HasPrefix(dir, repo.SystemDir) {
-			errorBuilder.Add(vet.IllegalSystemResourcePlacementError{Info: info})
-		}
-
-		if isCrd(gvk) {
-			errs := utilvalidation.IsDNS1123Subdomain(info.Name)
-			if errs != nil {
-				errorBuilder.Add(vet.InvalidMetadataNameError{Info: info})
-			}
-		}
-
 		switch gvk {
 		case corev1.SchemeGroupVersion.WithKind("Namespace"):
-			if dir == repo.NamespacesDir {
-				errorBuilder.Add(vet.IllegalTopLevelNamespaceError{Info: info})
-				continue
-			} else if path.Base(dir) != info.Name {
-				errorBuilder.Add(vet.InvalidNamespaceNameError{Source: info.Source, Expected: path.Base(dir), Actual: info.Name})
-			}
 			seenNamespaceDirs[dir] = append(seenNamespaceDirs[dir], info)
 		case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
 			seenResourceQuotas[dir] = append(seenResourceQuotas[dir], info)
@@ -853,11 +830,4 @@ func toFileObjects(infos []*resource.Info) []ast.FileObject {
 		result[i] = fileObject
 	}
 	return result
-}
-
-func isCrd(gvk schema.GroupVersionKind) bool {
-	return gvk.Group == policyhierarchy.GroupName ||
-		(gvk.Group == "app.k8s.io" && gvk.Kind == "Application") ||
-		(gvk.Group == "clusterregistry.k8s.io" && gvk.Kind == "Cluster") ||
-		(gvk.Group == "addons.sigs.k8s.io" && gvk.Kind == "Nomos")
 }

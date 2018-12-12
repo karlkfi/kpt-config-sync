@@ -299,7 +299,7 @@ func (e ConflictingResourceQuotaError) Code() string { return ConflictingResourc
 
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
 type IllegalMetadataNamespaceDeclarationError struct {
-	Info *resource.Info
+	Object ast.FileObject
 }
 
 // Error implements error.
@@ -308,7 +308,7 @@ func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 	return format(e,
 		"Resources MUST NOT declare metadata.namespace:\n\n"+
 			"%[1]s",
-		resourceInfo{info: e.Info})
+		fileObject{e.Object})
 }
 
 // Code implements Error
@@ -443,7 +443,7 @@ func (e IllegalSubdirectoryError) Code() string { return IllegalSubdirectoryErro
 
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
 type IllegalTopLevelNamespaceError struct {
-	Info *resource.Info
+	Object ast.FileObject
 }
 
 // Error implements error
@@ -451,7 +451,7 @@ func (e IllegalTopLevelNamespaceError) Error() string {
 	return format(e,
 		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:\n\n"+
 			"source: %[3]s",
-		repo.NamespacesDir, ast.Namespace, e.Info.Source)
+		repo.NamespacesDir, ast.Namespace, e.Object.Source)
 }
 
 // Code implements Error
@@ -712,17 +712,15 @@ func (e MultipleNamespacesError) Code() string { return MultipleNamespacesErrorC
 
 // MissingObjectNameError reports that an object has no name.
 type MissingObjectNameError struct {
-	*resource.Info
+	Object ast.FileObject
 }
 
 // Error implements error
 func (e MissingObjectNameError) Error() string {
 	return format(e,
 		"Resources must declare metadata.name:\n\n"+
-			"source: %[1]s\n"+
-			"%[2]s\n"+
-			"name: %[3]s",
-		e.Info.Source, groupVersionKind(e.Mapping.GroupVersionKind), e.Name)
+			"%[1]s",
+		fileObject{e.Object})
 }
 
 // Code implements Error
@@ -750,7 +748,7 @@ func (e UnknownResourceInSyncError) Code() string { return UnknownResourceInSync
 
 // IllegalSystemResourcePlacementError reports that a nomos.dev object has been defined outside of system/
 type IllegalSystemResourcePlacementError struct {
-	Info *resource.Info
+	Object ast.FileObject
 }
 
 // Error implements error
@@ -758,7 +756,7 @@ func (e IllegalSystemResourcePlacementError) Error() string {
 	return format(e,
 		"Resources of the below kind MUST NOT be declared outside %[1]s/:\n"+
 			"%[2]s",
-		repo.SystemDir, resourceInfo{e.Info}.String())
+		repo.SystemDir, fileObject{e.Object}.String())
 }
 
 // Code implements Error
@@ -807,7 +805,7 @@ func (e IllegalHierarchyModeError) Code() string { return IllegalHierarchyModeEr
 
 // InvalidMetadataNameError represents the usage of a non-RFC1123 compliant metadata.name
 type InvalidMetadataNameError struct {
-	*resource.Info
+	Object ast.FileObject
 }
 
 // Error implements error.
@@ -815,7 +813,7 @@ func (e InvalidMetadataNameError) Error() string {
 	return format(e,
 		"Resources MUST define a metadata.name which is a valid RFC1123 DNS subdomain. Rename or remove the resource:\n\n"+
 			"%[1]s",
-		resourceInfo{e.Info})
+		fileObject{e.Object})
 }
 
 // Code implements Error

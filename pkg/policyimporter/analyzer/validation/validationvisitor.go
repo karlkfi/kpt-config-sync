@@ -18,11 +18,11 @@ package validation
 import (
 	"path"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
@@ -222,21 +222,10 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterOb
 	return v.Base.VisitClusterObject(o)
 }
 
-// IsSystemOnly returns true if the object is only allowed in the system/ directory.
-func IsSystemOnly(gvk schema.GroupVersionKind) bool {
-	switch gvk {
-	case v1alpha1.SchemeGroupVersion.WithKind(policyhierarchy.RepoKind),
-		v1alpha1.SchemeGroupVersion.WithKind(policyhierarchy.SyncKind):
-		return true
-	default:
-		return false
-	}
-}
-
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	if !v.allowedGVKs[o.GroupVersionKind()] {
-		if !IsSystemOnly(o.GroupVersionKind()) {
+		if !syntax.IsSystemOnly(o.GroupVersionKind()) {
 			// This is already checked elsewhere.
 			v.errs.Add(vet.UnsyncableNamespaceObjectError{NamespaceObject: o})
 		}
