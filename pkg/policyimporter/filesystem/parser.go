@@ -30,9 +30,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/sync"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
@@ -41,7 +38,6 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
@@ -185,10 +181,10 @@ func toDirInfoMap(fileInfos []ast.FileObject) map[string][]ast.FileObject {
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
 // Resources are read from the following directories:
 //
-// * system/ (may be absent)
-// * cluster/
-// * clusterregistry/ (may be absent)
-// * namespaces/ (recursively)
+// * system/ (flat, required)
+// * cluster/ (flat, optional)
+// * clusterregistry/ (flat, optional)
+// * namespaces/ (recursive, optional)
 func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	p.root = root
 	fsCtx := &ast.Root{Cluster: &ast.Cluster{}}
@@ -206,7 +202,9 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	}
 
 	// processing for <root>/system/*
-	syncs := p.processSystemDir(filepath.Join(root, repo.SystemDir), fsCtx, apiInfo, &errorBuilder)
+	var syncs []*v1alpha1.Sync
+	systemInfos := p.readRequiredResources(filepath.Join(root, repo.SystemDir), &errorBuilder)
+	fsCtx.Repo, syncs, fsCtx.ReservedNamespaces = processSystem(systemInfos, p.opts, apiInfo, &errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
 		return nil, errorBuilder.Build()
@@ -215,8 +213,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	// processing for <root>/cluster/*
 	clusterDir := filepath.Join(root, repo.ClusterDir)
 	clusterInfos := p.readResources(clusterDir, &errorBuilder)
-	syntax.FlatDirectoryValidator.Validate(toSources(clusterInfos), &errorBuilder)
-	validateObjects(clusterInfos, &errorBuilder)
+	validateCluster(clusterInfos, &errorBuilder)
 
 	// processing for <root>/clusterregistry/*
 	clusterregistryInfos := p.readResources(filepath.Join(root, repo.ClusterRegistryDir), &errorBuilder)
@@ -231,11 +228,8 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	nsDir := filepath.Join(root, repo.NamespacesDir)
 	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
 
-	syntax.DirectoryNameValidator.Validate(nsDirsOrdered, &errorBuilder)
-	semantic.DuplicateDirectoryValidator{Dirs: nsDirsOrdered}.Validate(&errorBuilder)
-
 	nsInfos := p.readResources(nsDir, &errorBuilder)
-	validateObjects(nsInfos, &errorBuilder)
+	validateNamespaces(nsInfos, nsDirsOrdered, &errorBuilder)
 
 	// TODO: temporary until processDirs refactoring
 	dirInfos := toDirInfoMap(nsInfos)
@@ -339,20 +333,20 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 
 	namespaceDirs := make(map[string]bool)
 
-	processClusterDir(clusterObjects, fsRoot)
+	processCluster(clusterObjects, fsRoot)
 
 	errorBuilder := multierror.Builder{}
 	treeGenerator := NewDirectoryTree()
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]
 		infos := dirInfos[rootDir]
-		processNamespacesDir(rootDir, infos, namespaceDirs, treeGenerator, true, &errorBuilder)
+		processNamespaces(rootDir, infos, namespaceDirs, treeGenerator, true, &errorBuilder)
 		if errorBuilder.HasErrors() {
 			return nil, errorBuilder.Build()
 		}
 		for _, d := range nsDirsOrdered[1:] {
 			infos := dirInfos[d]
-			processNamespacesDir(d, infos, namespaceDirs, treeGenerator, false, &errorBuilder)
+			processNamespaces(d, infos, namespaceDirs, treeGenerator, false, &errorBuilder)
 			if errorBuilder.HasErrors() {
 				return nil, errorBuilder.Build()
 			}
@@ -422,114 +416,6 @@ func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.
 	return specs
 }
 
-func processClusterDir(
-	objects []ast.FileObject,
-	fsRoot *ast.Root) {
-	for _, i := range objects {
-		fsRoot.Cluster.Objects = append(fsRoot.Cluster.Objects, &ast.ClusterObject{FileObject: i})
-	}
-}
-
-func processNamespacesDir(
-	dir string,
-	objects []ast.FileObject,
-	namespaceDirs map[string]bool,
-	treeGenerator *DirectoryTree,
-	root bool, errorBuilder *multierror.Builder) {
-	var treeNode *ast.TreeNode
-	for _, object := range objects {
-		switch object.Object.(type) {
-		case *corev1.Namespace:
-			namespaceDirs[dir] = true
-			if root {
-				treeNode = treeGenerator.SetRootDir(dir, ast.Namespace)
-			} else {
-				treeNode = treeGenerator.AddDir(dir, ast.Namespace)
-			}
-			processNamespaceDir(objects, treeNode, errorBuilder)
-			return
-		}
-	}
-	// No namespace resource was found.
-	if root {
-		treeNode = treeGenerator.SetRootDir(dir, ast.AbstractNamespace)
-	} else {
-		treeNode = treeGenerator.AddDir(dir, ast.AbstractNamespace)
-	}
-
-	for _, i := range objects {
-		switch o := i.Object.(type) {
-		case *v1alpha1.NamespaceSelector:
-			treeNode.Selectors[o.Name] = o
-		default:
-			treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: o, Source: i.Source}})
-		}
-	}
-}
-
-func processNamespaceDir(objects []ast.FileObject, treeNode *ast.TreeNode, errorBuilder *multierror.Builder) {
-	syntax.NamespacesKindValidator.Validate(objects, errorBuilder)
-
-	for _, object := range objects {
-		gvk := object.GroupVersionKind()
-		if gvk == corev1.SchemeGroupVersion.WithKind("Namespace") {
-			// TODO: Move this out.
-			metaObj := object.Object.(metav1.Object)
-			treeNode.Labels = metaObj.GetLabels()
-			treeNode.Annotations = metaObj.GetAnnotations()
-			continue
-		}
-
-		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: object.Object, Source: object.Source}})
-	}
-
-}
-
-// processSystemDir processes resources in system dir including:
-// - Nomos Repo
-// - Reserved Namespaces
-// - Syncs
-func (p *Parser) processSystemDir(systemDir string, fsRoot *ast.Root,
-	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) []*v1alpha1.Sync {
-	// Ignore individual file read errors for now and continue processing parsed files.
-	objects := p.readRequiredResources(systemDir, errorBuilder)
-	validateObjects(objects, errorBuilder)
-
-	syntax.FlatDirectoryValidator.Validate(toSources(objects), errorBuilder)
-	syntax.RepoVersionValidator.Validate(objects, errorBuilder)
-	syntax.SystemKindValidator.Validate(objects, errorBuilder)
-	semantic.RepoCountValidator{Objects: objects}.Validate(errorBuilder)
-	semantic.ConfigMapCountValidator{Objects: objects}.Validate(errorBuilder)
-
-	sync.VersionValidator{Objects: objects}.Validate(errorBuilder)
-	sync.KindValidator.Validate(objects, errorBuilder)
-	sync.KnownResourceValidator{APIInfo: apiInfo}.Validate(objects, errorBuilder)
-
-	syncMap := make(map[string][]*v1alpha1.Sync)
-	for _, object := range objects {
-		switch o := object.Object.(type) {
-		case *v1alpha1.Repo:
-			fsRoot.Repo = o
-		case *corev1.ConfigMap:
-			fsRoot.ReservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
-		case *v1alpha1.Sync:
-			syncMap[object.Source] = append(syncMap[object.Source], o)
-		}
-	}
-
-	// Must occur after fsRoot.Repo is set
-	sync.InheritanceValidator{Repo: fsRoot.Repo}.Validate(objects, errorBuilder)
-
-	var allSyncs []*v1alpha1.Sync
-	for _, syncs := range syncMap {
-		allSyncs = append(allSyncs, syncs...)
-	}
-	if p.opts.Bespin {
-		allSyncs = append(allSyncs, bespinv1.Syncs...)
-	}
-	return allSyncs
-}
-
 // allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
 func (p *Parser) allDirs(nsDir string, errorBuilder *multierror.Builder) []string {
 	var paths []string
@@ -548,24 +434,4 @@ func (p *Parser) allDirs(nsDir string, errorBuilder *multierror.Builder) []strin
 		return nil
 	}
 	return paths
-}
-
-func validateObjects(objects []ast.FileObject, errorBuilder *multierror.Builder) {
-	syntax.AnnotationValidator.Validate(objects, errorBuilder)
-	syntax.LabelValidator.Validate(objects, errorBuilder)
-	syntax.MetadataNamespaceValidator.Validate(objects, errorBuilder)
-	syntax.MetadataNameValidator.Validate(objects, errorBuilder)
-	syntax.SystemOnlyResourceValidator.Validate(objects, errorBuilder)
-
-	semantic.ConflictingResourceQuotaValidator{Objects: objects}.Validate(errorBuilder)
-	semantic.DuplicateNamespaceValidator{Objects: objects}.Validate(errorBuilder)
-	semantic.DuplicateNameValidator{Objects: objects}.Validate(errorBuilder)
-}
-
-func toSources(infos []ast.FileObject) []string {
-	result := make([]string, len(infos))
-	for i, info := range infos {
-		result[i] = info.Source
-	}
-	return result
 }

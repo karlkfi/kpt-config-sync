@@ -12,9 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// SystemOnlyResourceValidator validates that the resources which may appear in system/ and nowhere
+// DisallowSystemObjectsValidator validates that the resources which may appear in system/ and nowhere
 // else only appear in system/.
-var SystemOnlyResourceValidator = &FileObjectValidator{
+var DisallowSystemObjectsValidator = &FileObjectValidator{
 	validate: func(fileObject ast.FileObject) error {
 		if IsSystemOnly(fileObject.GroupVersionKind()) && !isInSystemDir(fileObject) {
 			return vet.IllegalSystemResourcePlacementError{Object: fileObject}

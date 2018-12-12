@@ -10,7 +10,9 @@ import (
 
 func validateClusterRegistry(objects []ast.FileObject, errorBuilder *multierror.Builder) {
 	validateObjects(objects, errorBuilder)
+
 	syntax.ClusterregistryKindValidator.Validate(objects, errorBuilder)
+	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(toSources(objects), errorBuilder)
 }
 
