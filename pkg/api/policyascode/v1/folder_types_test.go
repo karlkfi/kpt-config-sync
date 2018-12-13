@@ -202,7 +202,7 @@ func TestFolderGetID(t *testing.T) {
 		want string
 	}{
 		{
-			name: "Folder with Organization as parent",
+			name: "Folder with Organization as parent, uses Status.ID",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
@@ -211,7 +211,26 @@ func TestFolderGetID(t *testing.T) {
 						Name: "organizations/1234567",
 					},
 					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					ID:          7654321,
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: "7654321",
+		},
+		{
+			name: "Folder with Organization as parent, uses Spec.ID",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "organizations/1234567",
+					},
 					ID:            7654321,
+					DisplayName:   "spec-bar",
 					ImportDetails: fakeImportDetails,
 				},
 				Status: FolderStatus{
@@ -221,7 +240,26 @@ func TestFolderGetID(t *testing.T) {
 			want: "7654321",
 		},
 		{
-			name: "Folder with Folder as parent",
+			name: "Folder with Folder as parent, uses Status.ID",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Folder",
+						Name: "folders/1234567",
+					},
+					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					ID:          9876543,
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: "9876543",
+		},
+		{
+			name: "Folder with Folder as parent, uses Spec.ID",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
@@ -240,7 +278,7 @@ func TestFolderGetID(t *testing.T) {
 			want: "9876543",
 		},
 		{
-			name: "Folder with no ID",
+			name: "Folder with no Spec.ID and Status.ID",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
@@ -257,6 +295,26 @@ func TestFolderGetID(t *testing.T) {
 			},
 			want: "0",
 		},
+		{
+			name: "Folder with both Spec.ID and Status.ID",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Invalid",
+						Name: "bar",
+					},
+					DisplayName:   "spec-bar",
+					ID:            9876543,
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					ID:          9876543,
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			want: "9876543",
+		},
 	}
 
 	for _, tc := range tests {
@@ -264,6 +322,115 @@ func TestFolderGetID(t *testing.T) {
 			got := tc.f.GetID()
 			if got != tc.want {
 				t.Errorf("GetID() got \n%s\n want \n%s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFolderValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		f       *Folder
+		wantErr bool
+	}{
+		{
+			name: "Folder with no Spec.ID and Status.ID",
+			f: &Folder{
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "organizations-001",
+					},
+					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Folder with Spec.ID, without Status.ID",
+			f: &Folder{
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "organizations-001",
+					},
+					DisplayName:   "spec-bar",
+					ID:            9876543,
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Folder with Status.ID, without Spec.ID",
+			f: &Folder{
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "organizations-001",
+					},
+					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					ID:          9876543,
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Folder with both IDs, and Status.ID == Spec.ID",
+			f: &Folder{
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "organizations-001",
+					},
+					DisplayName:   "spec-bar",
+					ID:            9876543,
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					ID:          9876543,
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Folder with both IDs, and Status.ID != Spec.ID",
+			f: &Folder{
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "organizations-001",
+					},
+					DisplayName:   "spec-bar",
+					ID:            1234567,
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					ID:          9876543,
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.f.Validate()
+			if tc.wantErr != (got != nil) {
+				t.Errorf("Validate() got error %+v; want error %+v", got, tc.wantErr)
 			}
 		})
 	}

@@ -102,12 +102,27 @@ func (f *Folder) GetTFResourceAddr() string {
 	return `google_folder.bespin_folder`
 }
 
-// GetID returns the Folder ID from underlying provider (e.g. GCP).
+// GetID returns the Folder ID from GCP. It first looks at Status.ID, and use that
+// if present, if not it uses Spec.ID. When there is no ID present, Spec.ID will
+// be 0 and returned.
 func (f *Folder) GetID() string {
+	if f.Status.ID != 0 {
+		return fmt.Sprintf("%v", f.Status.ID)
+	}
 	return fmt.Sprintf("%v", f.Spec.ID)
 }
 
 // GetParentReference returns the Folder ParentRefernce.
 func (f *Folder) GetParentReference() ParentReference {
 	return f.Spec.ParentReference
+}
+
+// Validate does sanity check on the Folder resource, and returns error if any
+// inconsistency found.
+func (f *Folder) Validate() error {
+	// Invalid if Spec.ID and Status.ID both present but not equal.
+	if f.Spec.ID != 0 && f.Status.ID != 0 && f.Spec.ID != f.Status.ID {
+		return fmt.Errorf("inconsistent Foder Spec ID (%v) and Folder Status ID (%v)", f.Spec.ID, f.Status.ID)
+	}
+	return nil
 }

@@ -90,6 +90,11 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{},
 			errors.Wrapf(err, "[Folder %v] reconciler failed to get folder instance", request.NamespacedName)
 	}
+	if err := folder.Validate(); err != nil {
+		glog.Errorf("[Folder %v] reconciler failed to validate Folder instance: %v", request.NamespacedName, err)
+		return reconcile.Result{},
+			errors.Wrapf(err, "[Folder %v] reconciler failed to validate Folder instance", request.NamespacedName)
+	}
 	if err := apiobject.CheckAndSetParentAnnotation(ctx, r, folder); err != nil {
 		glog.Errorf("[Folder %v] rparent is not ready: %v", request.NamespacedName, err)
 		return reconcile.Result{}, errors.Wrapf(err, "[Folder %v] parent is not ready", request.NamespacedName)
@@ -144,7 +149,6 @@ func (r *ReconcileFolder) updateAPIServer(ctx context.Context, tfe *terraform.Ex
 
 	newF := &bespinv1.Folder{}
 	f.DeepCopyInto(newF)
-	newF.Spec.ID = id
 	newF.Status.ID = id
 	newF.Status.SyncDetails.Token = f.Spec.ImportDetails.Token
 	newF.Status.SyncDetails.Error = ""
