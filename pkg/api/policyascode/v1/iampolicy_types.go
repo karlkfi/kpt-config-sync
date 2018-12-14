@@ -17,10 +17,13 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func init() {
@@ -50,18 +53,44 @@ type IAMPolicyList struct {
 }
 
 // GetTFResourceConfig converts the IAMPolicy's Spec struct into terraform config string.
-func (i *IAMPolicy) GetTFResourceConfig() (string, error) {
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+func (i *IAMPolicy) GetTFResourceConfig(ctx context.Context, c Client) (string, error) {
 	var tfs []string
+	resName := types.NamespacedName{Name: i.Spec.ResourceReference.Name}
 	switch i.Spec.ResourceReference.Kind {
 	case OrganizationKind:
-		tfs = append(tfs, `resource "google_organization_iam_policy" "organization_iam_policy" {`)
-		tfs = append(tfs, fmt.Sprintf(`org_id = "%s"`, i.Spec.ResourceReference.Name))
+		org := &Organization{}
+		if err := c.Get(ctx, resName, org); err != nil {
+			return "", errors.Wrapf(err, "failed to get reference resource Organization instance: %v", resName)
+		}
+		ID := org.GetID()
+		if ID == "" {
+			return "", fmt.Errorf("missing resource reference Organization ID: %v", resName)
+		}
+		tfs = append(tfs, `resource "google_organization_iam_policy" "bespin_organization_iam_policy" {`)
+		tfs = append(tfs, fmt.Sprintf(`org_id = "organizations/%s"`, ID))
 	case FolderKind:
-		tfs = append(tfs, `resource "google_folder_iam_policy" "folder_iam_policy" {`)
-		tfs = append(tfs, fmt.Sprintf(`folder = "%s"`, i.Spec.ResourceReference.Name))
+		folder := &Folder{}
+		if err := c.Get(ctx, resName, folder); err != nil {
+			return "", errors.Wrapf(err, "failed to get reference resource Folder instance: %v", resName)
+		}
+		ID := folder.GetID()
+		if ID == "" {
+			return "", fmt.Errorf("missing resource reference Folder ID: %v", resName)
+		}
+		tfs = append(tfs, `resource "google_folder_iam_policy" "bespin_folder_iam_policy" {`)
+		tfs = append(tfs, fmt.Sprintf(`folder = "folders/%s"`, ID))
 	case ProjectKind:
-		tfs = append(tfs, `resource "google_project_iam_policy" "project_iam_policy" {`)
-		tfs = append(tfs, fmt.Sprintf(`project = "%s"`, i.Spec.ResourceReference.Name))
+		project := &Project{}
+		if err := c.Get(ctx, resName, project); err != nil {
+			return "", errors.Wrapf(err, "failed to get resource reference Project instance: %v", resName)
+		}
+		ID := project.GetID()
+		if ID == "" {
+			return "", fmt.Errorf("missing resource reference Project ID: %v", resName)
+		}
+		tfs = append(tfs, `resource "google_project_iam_policy" "bespin_project_iam_policy" {`)
+		tfs = append(tfs, fmt.Sprintf(`project = "%s"`, ID))
 	default:
 		return "", fmt.Errorf("invalid resource reference kind: %v", i.Spec.ResourceReference.Kind)
 	}
@@ -99,17 +128,20 @@ func (i *IAMPolicy) GetTFResourceConfig() (string, error) {
 	return strings.Join(tfs, "\n"), nil
 }
 
-// GetTFImportConfig returns an empty terraform project resource block used for terraform import.
+// GetTFImportConfig returns an empty terraform IAMPolicy resource block used for terraform import.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (i *IAMPolicy) GetTFImportConfig() string {
 	return `resource "google_project_iam_policy" "project_iam_policy" {}`
 }
 
-// GetTFResourceAddr returns the address of this project resource in terraform config.
+// GetTFResourceAddr returns the address of this IAMPolicy resource in Terraform config.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (i *IAMPolicy) GetTFResourceAddr() string {
 	return `google_project_iam_policy.project_iam_policy`
 }
 
-// GetID returns the project ID from underlying provider (e.g. GCP).
+// GetID doesn't apply to IAMPolicy.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (i *IAMPolicy) GetID() string {
-	return i.Spec.ResourceReference.Name
+	return ""
 }

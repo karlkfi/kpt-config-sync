@@ -22,7 +22,6 @@ import (
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
-	"github.com/google/nomos/pkg/bespin-controllers/apiobject"
 	"github.com/google/nomos/pkg/bespin-controllers/slices"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	"github.com/pkg/errors"
@@ -94,13 +93,9 @@ func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, errors.Wrapf(err,
 			"[Project %v] failed to get project instance", request.NamespacedName)
 	}
-	if err := apiobject.CheckAndSetParentAnnotation(ctx, r, project); err != nil {
-		glog.Errorf("[Project %v] parent is not ready: %v", request.NamespacedName, err)
-		return reconcile.Result{}, errors.Wrapf(err, "[Project %v] parent is not ready", request.NamespacedName)
-	}
 	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
 	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
-	tfe, err := terraform.NewExecutor(project)
+	tfe, err := terraform.NewExecutor(ctx, r, project)
 	if err != nil {
 		glog.Errorf("[Project %v] reconciler failed to create new Terraform executor: %v", request.NamespacedName, err)
 		return reconcile.Result{}, errors.Wrapf(err,

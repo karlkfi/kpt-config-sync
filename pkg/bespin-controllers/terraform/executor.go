@@ -18,6 +18,7 @@ package terraform
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -29,7 +30,9 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/pkg/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -76,8 +79,8 @@ func execCommand(name string, args ...string) ([]byte, error) {
 // Resource defines a collection of common Terraform-related functionalities
 // that all bespin resources should implement.
 type Resource interface {
-	// GetTFResourceConfig converts the Project's Spec struct into Terraform config string.
-	GetTFResourceConfig() (string, error)
+	// GetTFResourceConfig converts the resource's Spec struct into Terraform config string.
+	GetTFResourceConfig(ctx context.Context, c bespinv1.Client) (string, error)
 
 	// GetTFImportConfig returns an empty Terraform resource block used for terraform import.
 	GetTFImportConfig() string
@@ -85,7 +88,7 @@ type Resource interface {
 	// GetTFResourceAddr returns the address of this resource in Terraform config.
 	GetTFResourceAddr() string
 
-	// GetID returns the resource ID from underlying provider (e.g. GCP).
+	// GetID returns the resource ID from GCP.
 	GetID() string
 }
 
@@ -108,10 +111,16 @@ type Executor struct {
 
 	// A map that stores the parsed output of "terraform state show".
 	state map[string]string
+
+	// ctx is used across all executor operations.
+	ctx context.Context
+
+	// client is used to talk to k8s API server.
+	k8sClient bespinv1.Client
 }
 
 // NewExecutor creates and approproately initializes a new Terraform executor.
-func NewExecutor(resource Resource) (*Executor, error) {
+func NewExecutor(ctx context.Context, c client.Client, resource Resource) (*Executor, error) {
 	tmpDir, err := ioutil.TempDir("", defaultTmpDirPrefix)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create tmp dir")
@@ -127,14 +136,16 @@ func NewExecutor(resource Resource) (*Executor, error) {
 		resource:       resource,
 		binaryPath:     tfeBinaryPath,
 		pluginDir:      tfePluginDir,
+		ctx:            ctx,
+		k8sClient:      c,
 	}
-	glog.V(1).Infof("Terraform to use:\n - binary: %v\n - plugin-dir: %v", tfe.binaryPath, tfe.pluginDir)
+	glog.V(1).Infof("[%s]: Terraform to use:\n - binary: %v\n - plugin-dir: %v", tfe.dir, tfe.binaryPath, tfe.pluginDir)
 	return tfe, nil
 }
 
 // Close removes the tmp working dir of the executor.
 func (tfe *Executor) Close() error {
-	glog.V(1).Infof("Removing terraform tmp dir %s", tfe.dir)
+	glog.V(1).Infof("[%s]: Removing terraform tmp dir %s", tfe.dir, tfe.dir)
 	if err := os.RemoveAll(tfe.dir); err != nil {
 		return errors.Wrapf(err, "failed to remove tmp dir %s", tfe.dir)
 	}
@@ -144,22 +155,19 @@ func (tfe *Executor) Close() error {
 // RunInit runs terraform init.
 func (tfe *Executor) RunInit() error {
 	glog.V(1).Infof("[%s]: Running terraform init.", tfe.dir)
-	resourceConfig, err := tfe.resource.GetTFResourceConfig()
-	if err != nil {
-		return errors.Wrap(err, "failed to get Terraform resource config from resource")
-	}
+
 	fileName := filepath.Join(tfe.dir, tfe.configFileName)
-	err = ioutil.WriteFile(fileName, []byte(providerConfig+resourceConfig), defaultFilePerm)
-	if err != nil {
-		return errors.Wrapf(err, "failed to write Terraform resource config to file %s", fileName)
+	if err := ioutil.WriteFile(fileName, []byte(providerConfig), defaultFilePerm); err != nil {
+		return errors.Wrapf(err, "failed to write Terraform init config to file %s", fileName)
 	}
+
 	var out []byte
 	args := []string{"init", "-input=false", "-upgrade=false"}
 	if !*local {
 		args = append(args, fmt.Sprintf("-plugin-dir=%s", pluginDir))
 	}
 	args = append(args, tfe.dir)
-	out, err = execCommand(tfe.binaryPath, args...)
+	out, err := execCommand(tfe.binaryPath, args...)
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform init")
 	}
@@ -194,7 +202,7 @@ func (tfe *Executor) RunPlanDestroy() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform plan -destroy")
 	}
-	glog.V(1).Infof("Completed terraform plan -destroy.\n%s", out)
+	glog.V(1).Infof("[%s]: Completed terraform plan -destroy.\n%s", tfe.dir, out)
 	return nil
 }
 
@@ -259,7 +267,7 @@ func (tfe *Executor) RunDestroy() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform destroy")
 	}
-	glog.V(1).Infof("Completed terraform destroy.\n%s", out)
+	glog.V(1).Infof("[%s]: Completed terraform destroy.\n%s", tfe.dir, out)
 	return nil
 }
 
@@ -269,9 +277,16 @@ func (tfe *Executor) RunDestroy() error {
 // but letting the operation fail further down is fine for now.
 func (tfe *Executor) RunCreateOrUpdateFlow() error {
 	var err error
+
 	err = run(tfe.RunInit, err)
-	err = run(tfe.RunImport, err)
-	err = run(tfe.RunInit, err)
+
+	// Only import the resource from GCP if we already know its GCP ID.
+	if tfe.resource.GetID() != "" {
+		err = run(tfe.RunImport, err)
+		err = run(tfe.UpdateState, err)
+	}
+
+	err = run(tfe.createResoureConfig, err)
 	err = run(tfe.RunPlan, err)
 	err = run(tfe.RunApply, err)
 	return err
@@ -293,7 +308,7 @@ func (tfe *Executor) UpdateState() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to run terraform state show on resource %s", resourceAddr)
 	}
-	glog.V(1).Infof("Done terraform state show on resource %s.\n%s", resourceAddr, out)
+	glog.V(1).Infof("[%s]: Done terraform state show on resource %s.\n%s", tfe.dir, resourceAddr, out)
 
 	m, err := parseStateConfig(string(out))
 	if err != nil {
@@ -360,4 +375,21 @@ func (tfe *Executor) RunDeleteFlow() error {
 	err = run(tfe.RunPlanDestroy, err)
 	err = run(tfe.RunDestroy, err)
 	return err
+}
+
+// createResoureConfig generates the attached resource's Terraform config string
+// and writes it to a local config file.
+func (tfe *Executor) createResoureConfig() error {
+	glog.V(1).Infof("[%s]: Creating Terraform resource config.", tfe.dir)
+	resourceConfig, err := tfe.resource.GetTFResourceConfig(tfe.ctx, tfe.k8sClient)
+	if err != nil {
+		return errors.Wrap(err, "failed to get Terraform resource config from resource")
+	}
+	fileName := filepath.Join(tfe.dir, tfe.configFileName)
+	err = ioutil.WriteFile(fileName, []byte(providerConfig+resourceConfig), defaultFilePerm)
+	if err != nil {
+		return errors.Wrapf(err, "failed to write Terraform resource config to file %s", fileName)
+	}
+	glog.V(1).Infof("[%s]: Completed Terraform resource config.", tfe.dir)
+	return nil
 }

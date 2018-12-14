@@ -68,6 +68,7 @@ func TestProjectGetTFResourceConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		p       *Project
+		c       *stubClient
 		want    string
 		wantErr bool
 	}{
@@ -77,10 +78,6 @@ func TestProjectGetTFResourceConfig(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "default",
-					Annotations: map[string]string{
-						"key1":                  "value1",
-						ParentOrganizationIDKey: "1234567",
-					},
 				},
 				Spec: ProjectSpec{
 					ParentReference: ParentReference{
@@ -93,6 +90,13 @@ func TestProjectGetTFResourceConfig(t *testing.T) {
 				},
 				Status: ProjectStatus{
 					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Organization{
+					Spec: OrganizationSpec{
+						ID: 1234567,
+					},
 				},
 			},
 			want: `resource "google_project" "bespin_project" {
@@ -125,6 +129,13 @@ org_id = "1234567"
 					SyncDetails: fakeSyncDetails,
 				},
 			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
+				},
+			},
 			want: `resource "google_project" "bespin_project" {
 name = "spec-bar"
 project_id = "some-fake-project"
@@ -133,7 +144,66 @@ folder_id = "1234567"
 			wantErr: false,
 		},
 		{
-			name: "Project with invalid parentReference",
+			name: "Project with Organization as parent, but missing parent Organization ID",
+			p: &Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "default",
+				},
+				Spec: ProjectSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "bar",
+					},
+					Name:          "spec-bar",
+					ID:            "some-fake-project",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: ProjectStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Organization{
+					Spec: OrganizationSpec{},
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "Project with Folder as parent, but missing parent Folder ID",
+			p: &Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"key1":            "value1",
+						ParentFolderIDKey: "1234567",
+					},
+				},
+				Spec: ProjectSpec{
+					ParentReference: ParentReference{
+						Kind: "Folder",
+						Name: "bar",
+					},
+					Name:          "spec-bar",
+					ID:            "some-fake-project",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: ProjectStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{},
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "Project with invalid parent reference",
 			p: &Project{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: ProjectSpec{
@@ -149,30 +219,34 @@ folder_id = "1234567"
 					SyncDetails: fakeSyncDetails,
 				},
 			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
+				},
+			},
 			want:    "",
 			wantErr: true,
 		},
 		{
-			name: "Project with no Parent ID annotation",
+			name: "Project with no parent reference",
 			p: &Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"key1": "value1",
-					},
-				},
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: ProjectSpec{
-					ParentReference: ParentReference{
-						Kind: "Organization",
-						Name: "bar",
-					},
 					Name:          "spec-bar",
 					ID:            "some-fake-project",
 					ImportDetails: fakeImportDetails,
 				},
 				Status: ProjectStatus{
 					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
 				},
 			},
 			want:    "",
@@ -182,7 +256,7 @@ folder_id = "1234567"
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.p.GetTFResourceConfig()
+			got, err := tc.p.GetTFResourceConfig(context.Background(), tc.c)
 			switch {
 			case !tc.wantErr && err != nil:
 				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)

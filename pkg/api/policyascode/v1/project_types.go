@@ -17,10 +17,17 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
+
+func init() {
+	SchemeBuilder.Register(&Project{}, &ProjectList{})
+}
 
 // ProjectSpec defines the desired state of Project
 type ProjectSpec struct {
@@ -31,54 +38,6 @@ type ProjectSpec struct {
 	ParentReference ParentReference `json:"parentReference,omitempty"`
 	Labels          ProjectLabels   `json:"labels,omitempty"`
 	ImportDetails   ImportDetails   `json:"importDetails"`
-}
-
-// GetTFResourceConfig converts the Project's Spec struct into terraform config string.
-func (p *Project) GetTFResourceConfig() (string, error) {
-	var parent string
-	annotations := p.GetAnnotations()
-	switch p.Spec.ParentReference.Kind {
-	case OrganizationKind:
-		orgID, ok := annotations[ParentOrganizationIDKey]
-		if !ok {
-			return "", fmt.Errorf("parent Organization ID not found in annotations: %v", ParentOrganizationIDKey)
-		}
-		parent = fmt.Sprintf(`org_id = "%s"`, orgID)
-	case FolderKind:
-		folderID, ok := annotations[ParentFolderIDKey]
-		if !ok {
-			return "", fmt.Errorf("parent Folder ID not found in annotations: %v", ParentFolderIDKey)
-		}
-		parent = fmt.Sprintf(`folder_id = "%s"`, folderID)
-	default:
-		return "", fmt.Errorf("invalid parent reference kind: %v", p.Spec.ParentReference.Kind)
-	}
-
-	return fmt.Sprintf(`resource "google_project" "bespin_project" {
-name = "%s"
-project_id = "%s"
-%s
-}`, p.Spec.Name, p.Spec.ID, parent), nil
-}
-
-// GetTFImportConfig returns an empty terraform project resource block used for terraform import.
-func (p *Project) GetTFImportConfig() string {
-	return `resource "google_project" "bespin_project" {}`
-}
-
-// GetTFResourceAddr returns the address of this project resource in terraform config.
-func (p *Project) GetTFResourceAddr() string {
-	return `google_project.bespin_project`
-}
-
-// GetID returns the project ID from underlying provider (e.g. GCP).
-func (p *Project) GetID() string {
-	return p.Spec.ID
-}
-
-// GetParentReference returns the Project ParentRefernce.
-func (p *Project) GetParentReference() ParentReference {
-	return p.Spec.ParentReference
 }
 
 // ProjectLabels defines a label dictionary for CRD resources
@@ -114,6 +73,57 @@ type ProjectList struct {
 	Items           []Project `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&Project{}, &ProjectList{})
+// GetTFResourceConfig converts the Project's Spec struct into terraform config string.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+func (p *Project) GetTFResourceConfig(ctx context.Context, c Client) (string, error) {
+	var parent string
+	resName := types.NamespacedName{Name: p.Spec.ParentReference.Name}
+	switch p.Spec.ParentReference.Kind {
+	case OrganizationKind:
+		org := &Organization{}
+		if err := c.Get(ctx, resName, org); err != nil {
+			return "", errors.Wrapf(err, "failed to get parent Organization instance: %v", resName)
+		}
+		ID := org.GetID()
+		if ID == "" {
+			return "", fmt.Errorf("missing parent Organization ID: %v", resName)
+		}
+		parent = fmt.Sprintf(`org_id = "%s"`, ID)
+	case FolderKind:
+		folder := &Folder{}
+		if err := c.Get(ctx, resName, folder); err != nil {
+			return "", errors.Wrapf(err, "failed to get parent Folder instance: %v", resName)
+		}
+		ID := folder.GetID()
+		if ID == "" {
+			return "", fmt.Errorf("missing parent Folder ID: %v", resName)
+		}
+		parent = fmt.Sprintf(`folder_id = "%s"`, ID)
+	default:
+		return "", fmt.Errorf("invalid parent reference kind: %v", p.Spec.ParentReference.Kind)
+	}
+
+	return fmt.Sprintf(`resource "google_project" "bespin_project" {
+name = "%s"
+project_id = "%s"
+%s
+}`, p.Spec.Name, p.GetID(), parent), nil
+}
+
+// GetTFImportConfig returns an empty terraform project resource block used for terraform import.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+func (p *Project) GetTFImportConfig() string {
+	return `resource "google_project" "bespin_project" {}`
+}
+
+// GetTFResourceAddr returns the address of this project resource in terraform config.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+func (p *Project) GetTFResourceAddr() string {
+	return `google_project.bespin_project`
+}
+
+// GetID returns the project ID from GCP.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+func (p *Project) GetID() string {
+	return p.Spec.ID
 }

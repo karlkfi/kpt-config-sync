@@ -90,7 +90,7 @@ func (r *ReconcileOrganization) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{},
 			errors.Wrapf(err, "[Organization %v] reconciler failed to get organization instance", request.NamespacedName)
 	}
-	tfe, err := terraform.NewExecutor(organization)
+	tfe, err := terraform.NewExecutor(ctx, r, organization)
 	if err != nil {
 		glog.Errorf("[Organization %v] reconciler failed to create new Terraform executor: %v", request.NamespacedName, err)
 		return reconcile.Result{},

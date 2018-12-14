@@ -99,7 +99,7 @@ organization = "organizations/1234567"
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.o.GetTFResourceConfig()
+			got, err := tc.o.GetTFResourceConfig(context.Background(), nil)
 			switch {
 			case !tc.wantErr && err != nil:
 				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
@@ -107,6 +107,43 @@ organization = "organizations/1234567"
 				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
 			case got != tc.want:
 				t.Errorf("GetTFResourceConfig() got \n%s\n want \n%s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestOrganizationGetID(t *testing.T) {
+	tests := []struct {
+		name string
+		o    *Organization
+		want string
+	}{
+		{
+			name: "Organization with valid ID",
+			o: &Organization{
+				Spec: OrganizationSpec{
+					ID:            1234567,
+					ImportDetails: fakeImportDetails,
+				},
+			},
+			want: "1234567",
+		},
+		{
+			name: "Organization with empty ID",
+			o: &Organization{
+				Spec: OrganizationSpec{
+					ImportDetails: fakeImportDetails,
+				},
+			},
+			want: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.o.GetID()
+			if got != tc.want {
+				t.Errorf("GetID() got \n%s\n want \n%s", got, tc.want)
 			}
 		})
 	}

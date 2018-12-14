@@ -68,6 +68,7 @@ func TestFolderGetTFResourceConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		f       *Folder
+		c       *stubClient
 		want    string
 		wantErr bool
 	}{
@@ -76,10 +77,6 @@ func TestFolderGetTFResourceConfig(t *testing.T) {
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo",
-					Annotations: map[string]string{
-						"key1":                  "value1",
-						ParentOrganizationIDKey: "1234567",
-					},
 				},
 				Spec: FolderSpec{
 					ParentReference: ParentReference{
@@ -93,6 +90,13 @@ func TestFolderGetTFResourceConfig(t *testing.T) {
 					SyncDetails: fakeSyncDetails,
 				},
 			},
+			c: &stubClient{
+				obj: &Organization{
+					Spec: OrganizationSpec{
+						ID: 1234567,
+					},
+				},
+			},
 			want: `resource "google_folder" "bespin_folder" {
 display_name = "spec-bar"
 parent = "organizations/1234567"
@@ -104,10 +108,6 @@ parent = "organizations/1234567"
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo",
-					Annotations: map[string]string{
-						"key1":            "value1",
-						ParentFolderIDKey: "1234567",
-					},
 				},
 				Spec: FolderSpec{
 					ParentReference: ParentReference{
@@ -121,6 +121,13 @@ parent = "organizations/1234567"
 					SyncDetails: fakeSyncDetails,
 				},
 			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
+				},
+			},
 			want: `resource "google_folder" "bespin_folder" {
 display_name = "spec-bar"
 parent = "folders/1234567"
@@ -128,14 +135,62 @@ parent = "folders/1234567"
 			wantErr: false,
 		},
 		{
+			name: "Folder with Organization as parent, but missing parent Organizaton ID",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Organization",
+						Name: "organizations-001",
+					},
+					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Organization{
+					Spec: OrganizationSpec{},
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "Folder with Folder as parent, but missing parent Folder ID",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Spec: FolderSpec{
+					ParentReference: ParentReference{
+						Kind: "Folder",
+						Name: "folders-001",
+					},
+					DisplayName:   "spec-bar",
+					ImportDetails: fakeImportDetails,
+				},
+				Status: FolderStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{},
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
 			name: "Folder with invalid ParentReference",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo",
-					Annotations: map[string]string{
-						"key1":            "value1",
-						ParentFolderIDKey: "1234567",
-					},
 				},
 				Spec: FolderSpec{
 					ParentReference: ParentReference{
@@ -149,23 +204,23 @@ parent = "folders/1234567"
 					SyncDetails: fakeSyncDetails,
 				},
 			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
+				},
+			},
 			want:    "",
 			wantErr: true,
 		},
 		{
-			name: "Folder with no parent ID annotation",
+			name: "Folder with no parent reference",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo",
-					Annotations: map[string]string{
-						"key1": "value1",
-					},
 				},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
-						Kind: "Folder",
-						Name: "folders-001",
-					},
 					DisplayName:   "spec-bar",
 					ImportDetails: fakeImportDetails,
 				},
@@ -173,7 +228,13 @@ parent = "folders/1234567"
 					SyncDetails: fakeSyncDetails,
 				},
 			},
-
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
+				},
+			},
 			want:    "",
 			wantErr: true,
 		},
@@ -181,7 +242,7 @@ parent = "folders/1234567"
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.f.GetTFResourceConfig()
+			got, err := tc.f.GetTFResourceConfig(context.Background(), tc.c)
 			switch {
 			case !tc.wantErr && err != nil:
 				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
@@ -293,7 +354,7 @@ func TestFolderGetID(t *testing.T) {
 					SyncDetails: fakeSyncDetails,
 				},
 			},
-			want: "0",
+			want: "",
 		},
 		{
 			name: "Folder with both Spec.ID and Status.ID",

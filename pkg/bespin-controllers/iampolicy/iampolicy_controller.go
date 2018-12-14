@@ -89,7 +89,7 @@ func (r *ReconcileIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
 	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
-	tfe, err := terraform.NewExecutor(instance)
+	tfe, err := terraform.NewExecutor(ctx, r, instance)
 	if err != nil {
 		glog.Errorf("IAMPolicy reconciler failed to create new Terraform executor: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to create new Terraform executor")

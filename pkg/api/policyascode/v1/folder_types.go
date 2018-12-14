@@ -17,10 +17,17 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
+
+func init() {
+	SchemeBuilder.Register(&Folder{}, &FolderList{})
+}
 
 // FolderSpec defines the desired state of Folder
 type FolderSpec struct {
@@ -61,27 +68,32 @@ type FolderList struct {
 	Items           []Folder `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&Folder{}, &FolderList{})
-}
-
 // GetTFResourceConfig converts the Folder's Spec struct into terraform config string.
-func (f *Folder) GetTFResourceConfig() (string, error) {
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+func (f *Folder) GetTFResourceConfig(ctx context.Context, c Client) (string, error) {
 	var parent string
-	annotations := f.GetAnnotations()
+	resName := types.NamespacedName{Name: f.Spec.ParentReference.Name}
 	switch f.Spec.ParentReference.Kind {
 	case OrganizationKind:
-		orgID, ok := annotations[ParentOrganizationIDKey]
-		if !ok {
-			return "", fmt.Errorf("parent Organization ID not found in annotations: %v", ParentOrganizationIDKey)
+		org := &Organization{}
+		if err := c.Get(ctx, resName, org); err != nil {
+			return "", errors.Wrapf(err, "failed to get parent Organization instance: %v", resName)
 		}
-		parent = fmt.Sprintf("organizations/%s", orgID)
+		ID := org.GetID()
+		if ID == "" {
+			return "", fmt.Errorf("missing parent Organization ID: %v", resName)
+		}
+		parent = fmt.Sprintf("organizations/%s", ID)
 	case FolderKind:
-		folderID, ok := annotations[ParentFolderIDKey]
-		if !ok {
-			return "", fmt.Errorf("parent Folder ID not found in annotations: %v", ParentFolderIDKey)
+		folder := &Folder{}
+		if err := c.Get(ctx, resName, folder); err != nil {
+			return "", errors.Wrapf(err, "failed to get parent Folder instance: %v", resName)
 		}
-		parent = fmt.Sprintf("folders/%s", folderID)
+		ID := folder.GetID()
+		if ID == "" {
+			return "", fmt.Errorf("missing parent Folder ID: %v", resName)
+		}
+		parent = fmt.Sprintf("folders/%s", ID)
 	default:
 		return "", fmt.Errorf("invalid parent reference kind: %v", f.Spec.ParentReference.Kind)
 	}
@@ -93,28 +105,28 @@ parent = "%s"
 }
 
 // GetTFImportConfig returns an empty terraform Folder resource block used for terraform import.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (f *Folder) GetTFImportConfig() string {
 	return `resource "google_folder" "bespin_folder" {}`
 }
 
 // GetTFResourceAddr returns the address of this Folder resource in terraform config.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (f *Folder) GetTFResourceAddr() string {
 	return `google_folder.bespin_folder`
 }
 
 // GetID returns the Folder ID from GCP. It first looks at Status.ID, and use that
-// if present, if not it uses Spec.ID. When there is no ID present, Spec.ID will
-// be 0 and returned.
+// if present, if not it uses Spec.ID if it's present, otherwise return empty string.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (f *Folder) GetID() string {
 	if f.Status.ID != 0 {
 		return fmt.Sprintf("%v", f.Status.ID)
 	}
-	return fmt.Sprintf("%v", f.Spec.ID)
-}
-
-// GetParentReference returns the Folder ParentRefernce.
-func (f *Folder) GetParentReference() ParentReference {
-	return f.Spec.ParentReference
+	if f.Spec.ID != 0 {
+		return fmt.Sprintf("%v", f.Spec.ID)
+	}
+	return ""
 }
 
 // Validate does sanity check on the Folder resource, and returns error if any

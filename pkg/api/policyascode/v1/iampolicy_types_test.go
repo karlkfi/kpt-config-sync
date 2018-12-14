@@ -90,9 +90,122 @@ func TestIAMPolicyGetTFResourceConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		ip      *IAMPolicy
+		c       *stubClient
 		want    string
 		wantErr bool
 	}{
+		{
+			name: "IAMPolicy for Organization",
+			ip: &IAMPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+				Spec: IAMPolicySpec{
+					ResourceReference: ResourceReference{
+						Kind: "Organization",
+						Name: "bar",
+					},
+					Bindings: []IAMPolicyBinding{
+						{
+							Members: []string{
+								"user:member1@foo.com",
+								"user:member2@bar.com",
+							},
+							Role: "roles/iam.organizationRoleAdmin",
+						},
+						{
+							Members: []string{
+								"serviceAccount:service-account@foo.com",
+							},
+							Role: "roles/iam.organizationRoleAdmin",
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+				Status: IAMPolicyStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Organization{
+					Spec: OrganizationSpec{
+						ID: 1234567,
+					},
+				},
+			},
+			want: `resource "google_organization_iam_policy" "bespin_organization_iam_policy" {
+org_id = "organizations/1234567"
+policy_data = "${data.google_iam_policy.admin.policy_data}"
+}
+data "google_iam_policy" "admin" {
+binding {
+role = "roles/iam.organizationRoleAdmin"
+members = [
+"user:member1@foo.com",
+"user:member2@bar.com",
+]}
+binding {
+role = "roles/iam.organizationRoleAdmin"
+members = [
+"serviceAccount:service-account@foo.com",
+]}
+}`,
+			wantErr: false,
+		},
+		{
+			name: "IAMPolicy for Folder",
+			ip: &IAMPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+				Spec: IAMPolicySpec{
+					ResourceReference: ResourceReference{
+						Kind: "Folder",
+						Name: "bar",
+					},
+					Bindings: []IAMPolicyBinding{
+						{
+							Members: []string{
+								"user:member1@foo.com",
+								"user:member2@bar.com",
+							},
+							Role: "roles/resourcemanager.folderAdmin",
+						},
+						{
+							Members: []string{
+								"serviceAccount:service-account@foo.com",
+							},
+							Role: "roles/resourcemanager.folderAdmin",
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+				Status: IAMPolicyStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
+				},
+			},
+			want: `resource "google_folder_iam_policy" "bespin_folder_iam_policy" {
+folder = "folders/1234567"
+policy_data = "${data.google_iam_policy.admin.policy_data}"
+}
+data "google_iam_policy" "admin" {
+binding {
+role = "roles/resourcemanager.folderAdmin"
+members = [
+"user:member1@foo.com",
+"user:member2@bar.com",
+]}
+binding {
+role = "roles/resourcemanager.folderAdmin"
+members = [
+"serviceAccount:service-account@foo.com",
+]}
+}`,
+			wantErr: false,
+		},
 		{
 			name: "IAMPolicy for Project",
 			ip: &IAMPolicy{
@@ -123,8 +236,15 @@ func TestIAMPolicyGetTFResourceConfig(t *testing.T) {
 					SyncDetails: fakeSyncDetails,
 				},
 			},
-			want: `resource "google_project_iam_policy" "project_iam_policy" {
-project = "bar"
+			c: &stubClient{
+				obj: &Project{
+					Spec: ProjectSpec{
+						ID: "project-001",
+					},
+				},
+			},
+			want: `resource "google_project_iam_policy" "bespin_project_iam_policy" {
+project = "project-001"
 policy_data = "${data.google_iam_policy.admin.policy_data}"
 }
 data "google_iam_policy" "admin" {
@@ -141,6 +261,120 @@ members = [
 ]}
 }`,
 			wantErr: false,
+		},
+		{
+			name: "IAMPolicy for Organization, but missing Organization ID",
+			ip: &IAMPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+				Spec: IAMPolicySpec{
+					ResourceReference: ResourceReference{
+						Kind: "Organization",
+						Name: "bar",
+					},
+					Bindings: []IAMPolicyBinding{
+						{
+							Members: []string{
+								"user:member1@foo.com",
+								"user:member2@bar.com",
+							},
+							Role: "roles/iam.organizationRoleAdmin",
+						},
+						{
+							Members: []string{
+								"serviceAccount:service-account@foo.com",
+							},
+							Role: "roles/iam.organizationRoleAdmin",
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+				Status: IAMPolicyStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Organization{
+					Spec: OrganizationSpec{},
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "IAMPolicy for Folder, but missing Folder ID",
+			ip: &IAMPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+				Spec: IAMPolicySpec{
+					ResourceReference: ResourceReference{
+						Kind: "Folder",
+						Name: "bar",
+					},
+					Bindings: []IAMPolicyBinding{
+						{
+							Members: []string{
+								"user:member1@foo.com",
+								"user:member2@bar.com",
+							},
+							Role: "roles/resourcemanager.folderAdmin",
+						},
+						{
+							Members: []string{
+								"serviceAccount:service-account@foo.com",
+							},
+							Role: "roles/resourcemanager.folderAdmin",
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+				Status: IAMPolicyStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{},
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "IAMPolicy for Project, but missing Project ID",
+			ip: &IAMPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: IAMPolicySpec{
+					ResourceReference: ResourceReference{
+						Kind: "Project",
+						Name: "bar",
+					},
+					Bindings: []IAMPolicyBinding{
+						{
+							Members: []string{
+								"user:member1@foo.com",
+								"user:member2@bar.com",
+							},
+							Role: "roles/editor",
+						},
+						{
+							Members: []string{
+								"serviceAccount:service-account@foo.com",
+							},
+							Role: "roles/owner",
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+				Status: IAMPolicyStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Project{
+					Spec: ProjectSpec{},
+				},
+			},
+			want:    "",
+			wantErr: true,
 		},
 		{
 			name: "IAMPolicy with invalid ResourceReference",
@@ -172,6 +406,51 @@ members = [
 					SyncDetails: fakeSyncDetails,
 				},
 			},
+			c: &stubClient{
+				obj: &Project{
+					Spec: ProjectSpec{
+						ID: "project-001",
+					},
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "IAMPolicy with No ResourceReference",
+			ip: &IAMPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: IAMPolicySpec{
+					ResourceReference: ResourceReference{
+						Kind: "Project",
+						Name: "bar",
+					},
+					Bindings: []IAMPolicyBinding{
+						{
+							Members: []string{
+								"user:member1@foo.com",
+								"user:member2@bar.com",
+							},
+							Role: "roles/editor",
+						},
+						{
+							Members: []string{
+								"serviceAccount:service-account@foo.com",
+							},
+							Role: "roles/owner",
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+				Status: IAMPolicyStatus{
+					SyncDetails: fakeSyncDetails,
+				},
+			},
+			c: &stubClient{
+				obj: &Project{
+					Spec: ProjectSpec{},
+				},
+			},
 			want:    "",
 			wantErr: true,
 		},
@@ -179,7 +458,7 @@ members = [
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.ip.GetTFResourceConfig()
+			got, err := tc.ip.GetTFResourceConfig(context.Background(), tc.c)
 			switch {
 			case !tc.wantErr && err != nil:
 				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
