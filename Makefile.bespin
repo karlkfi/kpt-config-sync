@@ -1,5 +1,9 @@
 # Included by Makefile.
 # Rules related to building bespin and docker images.
+#
+# NOTE: Bespin binaries must contain the string "bespin" in its name -
+#       that's how we exclude Bespin binaries from being uploaded to GCS
+#       as part of Nomos release process.
 
 ###################################
 # Bespin config
