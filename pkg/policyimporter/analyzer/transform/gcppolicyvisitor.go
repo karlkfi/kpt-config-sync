@@ -89,7 +89,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 	}
 	switch gcpObj := o.FileObject.Object.(type) {
 	case *v1.IAMPolicy:
-		if attachmentPoint == nil {
+		if attachmentPoint.Kind == "" {
 			panic(fmt.Sprintf("Missing attachment point for IAM policy %v", o))
 		}
 		iamPolicy := gcpObj.DeepCopy()
@@ -115,7 +115,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		v.addToClusterObjects(ciam, o.Source)
 		return nil
 	case *v1.OrganizationPolicy:
-		if attachmentPoint == nil {
+		if attachmentPoint.Kind == "" {
 			panic(fmt.Sprintf("Missing attachment point for org policy %v", o))
 		}
 		orgPolicy := gcpObj.DeepCopy()

@@ -164,9 +164,10 @@ func TestIAMPolicyConversion(t *testing.T) {
 	project := vt.Helper.GCPProject()
 
 	var tests = []struct {
-		name   string
-		policy *v1.IAMPolicy
-		want   *v1.ClusterIAMPolicy
+		name    string
+		policy  *v1.IAMPolicy
+		want    *v1.ClusterIAMPolicy
+		recover bool
 	}{
 		{
 			name: "A non-project attachment point should attach to a cluster instead",
@@ -199,11 +200,39 @@ func TestIAMPolicyConversion(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "No attachment point should panic",
+			policy: &v1.IAMPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       v1.IAMPolicyKind,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "iam-policy",
+				},
+				Spec: v1.IAMPolicySpec{
+					Bindings: []v1.IAMPolicyBinding{},
+				},
+			},
+			want: &v1.ClusterIAMPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       v1.ClusterIAMPolicyKind,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "iam-policy",
+				},
+				Spec: v1.IAMPolicySpec{
+					Bindings: []v1.IAMPolicyBinding{},
+				},
+			},
+			recover: true,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			runClusterObjectsTest(t, org, project, tc.policy, tc.want)
+			runClusterObjectsTest(t, org, project, tc.policy, tc.want, tc.recover)
 		})
 	}
 }
@@ -213,9 +242,10 @@ func TestOrgPolicyConversion(t *testing.T) {
 	project := vt.Helper.GCPProject()
 
 	var tests = []struct {
-		name   string
-		policy *v1.OrganizationPolicy
-		want   *v1.ClusterOrganizationPolicy
+		name    string
+		policy  *v1.OrganizationPolicy
+		want    *v1.ClusterOrganizationPolicy
+		recover bool
 	}{
 		{
 			name: "A non-project attachment point should attach to a cluster instead",
@@ -250,16 +280,43 @@ func TestOrgPolicyConversion(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "No attachment point should panic",
+			policy: &v1.OrganizationPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       v1.OrganizationPolicyKind,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "org-policy",
+				},
+				Spec: v1.OrganizationPolicySpec{},
+			},
+			want: &v1.ClusterOrganizationPolicy{
+				Spec: v1.OrganizationPolicySpec{},
+			},
+			recover: true,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			runClusterObjectsTest(t, org, project, tc.policy, tc.want)
+			runClusterObjectsTest(t, org, project, tc.policy, tc.want, tc.recover)
 		})
 	}
 }
 
-func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Project, policy, want runtime.Object) {
+func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Project, policy, want runtime.Object, rcvr bool) {
+	defer func() {
+		r := recover()
+		switch {
+		case r != nil && !rcvr:
+			t.Fatalf("test panicked with %v, want no panic", r)
+		case r == nil && rcvr:
+			t.Fatalf("test didn't panic, want panic")
+		}
+	}()
+
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
