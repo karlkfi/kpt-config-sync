@@ -153,8 +153,6 @@ function set_up_env_minimal() {
 function clean_up_test_resources() {
   kubectl delete --ignore-not-found ns -l "nomos.dev/testdata=true"
   kubectl delete --ignore-not-found ns -l "nomos.dev/managed=enabled"
-  # TODO: delete this once everyone's e2e cluster has been cleaned up properly
-  kubectl delete --ignore-not-found ns -l "nomos.dev/namespace-management"
 
   if [[ "$importer" == "git" ]]; then
     echo "killing kubectl port forward..."
@@ -172,13 +170,6 @@ function clean_up_test_resources() {
 function clean_up() {
 
   echo "++++ Cleaning up environment"
-
-  # TODO: workaround for b/111218567 remove this once resolved
-  if ! kubectl get customresourcedefinition policynodes.nomos.dev &> /dev/null; then
-    echo "Policynodes not found, skipping uninstall"
-    clean_up_test_resources
-    return
-  fi
 
   uninstall
 
