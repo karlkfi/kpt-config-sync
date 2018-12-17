@@ -2,7 +2,16 @@
 
 set -u
 
-load ../lib/loader
+load "../lib/assert"
+load "../lib/cluster"
+load "../lib/debug"
+load "../lib/git"
+load "../lib/ignore"
+load "../lib/namespace"
+load "../lib/policynode"
+load "../lib/resource"
+load "../lib/setup"
+load "../lib/wait"
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 

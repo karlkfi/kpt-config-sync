@@ -213,7 +213,7 @@ function resource::check_count() {
     return 1
   fi
   if (( count != actual )); then
-    echo "Expected $count, got $actual"
+    echo -e "check_count failure\\nArgs: ${args[*]}\\nExpected $count, got $actual\\n"
     return 1
   fi
 }
@@ -273,4 +273,3 @@ function resource::count() {
   fi
   echo $count
 }
-
