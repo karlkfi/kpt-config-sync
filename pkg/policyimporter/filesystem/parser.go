@@ -474,8 +474,6 @@ func processNamespacesDir(
 func processNamespaceDir(objects []ast.FileObject, treeNode *ast.TreeNode, errorBuilder *multierror.Builder) {
 	syntax.NamespacesKindValidator.Validate(objects, errorBuilder)
 
-	v := newValidator()
-
 	for _, object := range objects {
 		gvk := object.GroupVersionKind()
 		if gvk == corev1.SchemeGroupVersion.WithKind("Namespace") {
@@ -483,15 +481,12 @@ func processNamespaceDir(objects []ast.FileObject, treeNode *ast.TreeNode, error
 			metaObj := object.Object.(metav1.Object)
 			treeNode.Labels = metaObj.GetLabels()
 			treeNode.Annotations = metaObj.GetAnnotations()
-			v.MarkSeen(gvk)
 			continue
 		}
 
 		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: object.Object, Source: object.Source}})
 	}
 
-	v.HaveSeen(schema.GroupVersionKind{Version: "v1", Kind: "Namespace"})
-	errorBuilder.Add(v.err)
 }
 
 // processSystemDir processes resources in system dir including:
