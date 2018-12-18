@@ -318,8 +318,6 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	fsRoot *ast.Root,
 	syncs []*v1alpha1.Sync) (*v1.AllPolicies, error) {
 
-	namespaceDirs := make(map[string]bool)
-
 	processCluster(clusterObjects, fsRoot)
 
 	errorBuilder := multierror.Builder{}
@@ -327,13 +325,13 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]
 		infos := dirInfos[rootDir]
-		processNamespaces(rootDir, infos, namespaceDirs, treeGenerator, true, &errorBuilder)
+		processNamespaces(rootDir, infos, treeGenerator, &errorBuilder)
 		if errorBuilder.HasErrors() {
 			return nil, errorBuilder.Build()
 		}
 		for _, d := range nsDirsOrdered[1:] {
 			infos := dirInfos[d]
-			processNamespaces(d, infos, namespaceDirs, treeGenerator, false, &errorBuilder)
+			processNamespaces(d, infos, treeGenerator, &errorBuilder)
 			if errorBuilder.HasErrors() {
 				return nil, errorBuilder.Build()
 			}

@@ -28,29 +28,18 @@ func validateNamespaces(objects []ast.FileObject, dirs []string, errorBuilder *m
 func processNamespaces(
 	dir string,
 	objects []ast.FileObject,
-	namespaceDirs map[string]bool,
 	treeGenerator *DirectoryTree,
-	root bool, errorBuilder *multierror.Builder) {
-	var treeNode *ast.TreeNode
+	errorBuilder *multierror.Builder) {
 	for _, object := range objects {
 		switch object.Object.(type) {
 		case *corev1.Namespace:
-			namespaceDirs[dir] = true
-			if root {
-				treeNode = treeGenerator.SetRootDir(dir, ast.Namespace)
-			} else {
-				treeNode = treeGenerator.AddDir(dir, ast.Namespace)
-			}
+			treeNode := treeGenerator.AddDir(dir, ast.Namespace)
 			processNamespace(objects, treeNode, errorBuilder)
 			return
 		}
 	}
 	// No namespace resource was found.
-	if root {
-		treeNode = treeGenerator.SetRootDir(dir, ast.AbstractNamespace)
-	} else {
-		treeNode = treeGenerator.AddDir(dir, ast.AbstractNamespace)
-	}
+	treeNode := treeGenerator.AddDir(dir, ast.AbstractNamespace)
 
 	for _, i := range objects {
 		switch o := i.Object.(type) {

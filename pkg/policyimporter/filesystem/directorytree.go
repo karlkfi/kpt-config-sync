@@ -16,7 +16,6 @@ limitations under the License.
 package filesystem
 
 import (
-	"fmt"
 	"path"
 	"path/filepath"
 
@@ -27,12 +26,9 @@ import (
 
 // DirectoryTree handles constructing an ast.TreeNode tree from directory paths.
 type DirectoryTree struct {
-	// rootParent is the parent directory of the root node.
-	// Uses OS-specific path separators
-	rootParent string
 	// root is the root node of the tree
 	root *ast.TreeNode
-	// nodes is a map of relative directory path to node
+	// nodes is a map of relative UNIX-style directory path to node
 	nodes map[string]*ast.TreeNode
 }
 
@@ -41,51 +37,31 @@ func NewDirectoryTree() *DirectoryTree {
 	return &DirectoryTree{nodes: map[string]*ast.TreeNode{}}
 }
 
-// SetRootDir sets the given OS-specific path as the root path.
-// p is the filepath of the root directory.
-// typ denotes whether the root directory is a policyspace or a namespace.
-func (t *DirectoryTree) SetRootDir(p string, typ ast.TreeNodeType) *ast.TreeNode {
-	if t.root != nil {
-		panic("programmer error, cannot set root dir multiple times")
-	}
-	t.rootParent = filepath.Dir(p)
-	t.root = &ast.TreeNode{
-		Path:      path.Base(filepath.ToSlash(p)),
-		Type:      typ,
-		Selectors: map[string]*v1alpha1.NamespaceSelector{},
-	}
-	t.nodes[t.root.Path] = t.root
-	return t.root
-}
-
 // AddDir adds the given node at the the given OS-specific path.
-// p is the filepath of the directory.
+// p is the OS-specific filepath of the directory relative to the Nomos repo root directory.
 // typ denotes whether the directory is a policyspace or a namespace.
 func (t *DirectoryTree) AddDir(p string, typ ast.TreeNodeType) *ast.TreeNode {
-	if t.root == nil {
-		panic("programmer error, cannot add dir without root")
-	}
-	relPath, err := filepath.Rel(t.rootParent, p)
-	if err != nil {
-		panic(fmt.Sprintf("programmer error, should not be non-relative path here: %s", err))
-	}
-	n := &ast.TreeNode{
-		Path:      filepath.ToSlash(relPath),
+	node := &ast.TreeNode{
+		Path:      filepath.ToSlash(p),
 		Type:      typ,
 		Selectors: map[string]*v1alpha1.NamespaceSelector{},
 	}
-	t.nodes[relPath] = n
-	return n
+	t.nodes[node.Path] = node
+
+	if t.root == nil {
+		t.root = node
+	}
+	return node
 }
 
 // Build takes all the created nodes and produces a tree.
 func (t *DirectoryTree) Build() (*ast.TreeNode, error) {
-	for path, node := range t.nodes {
-		parent := filepath.Dir(path)
+	for p, node := range t.nodes {
+		parent := path.Dir(p)
 		if parent != "." {
 			parentNode, ok := t.nodes[parent]
 			if !ok {
-				return nil, errors.Errorf("Node %q missing parent %q", path, parent)
+				return nil, errors.Errorf("Node %q missing parent %q", p, parent)
 			}
 			parentNode.Children = append(parentNode.Children, node)
 		}

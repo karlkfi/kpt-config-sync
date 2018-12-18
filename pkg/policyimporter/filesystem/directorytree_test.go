@@ -38,7 +38,7 @@ type directoryTreeTestcase struct {
 
 func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	tg := NewDirectoryTree()
-	tg.SetRootDir(tc.inputs[0].path, ast.AbstractNamespace)
+	tg.AddDir(tc.inputs[0].path, ast.AbstractNamespace)
 	for _, inp := range tc.inputs[1:] {
 		typ := inp.typ
 		if typ == "" {
@@ -68,10 +68,10 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 	{
 		name: "only root",
 		inputs: []directoryTreeInput{
-			{path: "/a/b/c"},
+			{path: "a"},
 		},
 		expect: &ast.TreeNode{
-			Path:      "c",
+			Path:      "a",
 			Type:      ast.AbstractNamespace,
 			Selectors: map[string]*v1alpha1.NamespaceSelector{},
 		},
@@ -79,22 +79,22 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 	{
 		name: "small tree",
 		inputs: []directoryTreeInput{
-			{path: "/a/b/c"},
-			{path: "/a/b/c/d/e", typ: ast.Namespace},
-			{path: "/a/b/c/d"},
+			{path: "a"},
+			{path: "a/b/c", typ: ast.Namespace},
+			{path: "a/b"},
 		},
 		expect: &ast.TreeNode{
-			Path:      "c",
+			Path:      "a",
 			Type:      ast.AbstractNamespace,
 			Selectors: map[string]*v1alpha1.NamespaceSelector{},
 			Children: []*ast.TreeNode{
 				{
-					Path:      "c/d",
+					Path:      "a/b",
 					Type:      ast.AbstractNamespace,
 					Selectors: map[string]*v1alpha1.NamespaceSelector{},
 					Children: []*ast.TreeNode{
 						{
-							Path:      "c/d/e",
+							Path:      "a/b/c",
 							Type:      ast.Namespace,
 							Selectors: map[string]*v1alpha1.NamespaceSelector{},
 						},
