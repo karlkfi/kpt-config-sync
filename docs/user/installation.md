@@ -149,13 +149,14 @@ the public. __Such a configuration is not recommended.__
 
 ### Create the Nomos Resource
 
-The Nomos resource is a Kubernetes Custom Resource Definition (CRD) that defines
-a Nomos installation. The `spec` field of a Nomos resources specifies the
-installation parameters for Nomos.
+The Nomos resource is a Kubernetes Custom Resource (CR) that defines a Nomos
+installation on a given cluster. The `spec` field of a Nomos resource specifies
+the installation parameters for Nomos.
 
 An example config using
 [foo-corp GitHub repo](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0)
-with SSH authentication is shown below:
+with SSH authentication is shown below. One Nomos resource is needed per
+cluster.
 
 ```yaml
 apiVersion: addons.sigs.k8s.io/v1alpha1
@@ -164,6 +165,7 @@ metadata:
   name: nomos
   namespace: nomos-system
 spec:
+  clusterName: some-cluster-name
   git:
     syncRepo: git@github.com:frankfarzan/foo-corp-example.git
     syncBranch: 0.1.0
@@ -189,14 +191,23 @@ In addition, the following top level properties can be specified:
 Key                               | Description
 --------------------------------- | -----------
 `enableHierarchicalResourceQuota` | Enables the [Hierarchical Resource Quota Controller](rq.md) that enforces quota set on Abstract Namespaces. Default: false.
+`clusterName`                     | User-defined name for the cluster used by [ClusterSelectors](clusterselectors.md) to group clusters together. Unique in a Nomos installation.
 
-Note that Hierarchical Resource Quota is currently unsupported on GKE On Prem
-Alpha and the flag should be set to false or omitted.
+Note: Hierarchical Resource Quota is currently unsupported on GKE On Prem Alpha
+and the flag should be set to false or omitted.
 
-Once you have created your nomos.yaml file, apply it to the API server:
+Once you have created your Nomos resource file, apply it to the API server.
+Repeat the step for each cluster in an installation.
 
 ```console
 $ kubectl apply -f nomos.yaml
+```
+
+You may need to apply different Nomos resources to different clusters.
+
+```console
+$ kubectl apply -f nomos1.yaml --context=cluster-1
+$ kubectl apply -f nomos2.yaml --context=cluster-2
 ```
 
 ### Verify Installation

@@ -69,6 +69,5 @@ ENV USER $UNAME
 USER $UNAME
 
 WORKDIR /opt/testing/e2e
-
 ENTRYPOINT ["/opt/testing/e2e/setup.sh"]
 

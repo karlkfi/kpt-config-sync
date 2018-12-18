@@ -54,18 +54,51 @@ steps:
 ##### 1. At install time, give Nomos-wide names to your clusters
 
 To use `ClusterSelectors`, clusters must be named at
-[installation](installation.md) time. These names become Nomos-wide cluster
-names.
+[installation](installation.md) time by adding the parameter `spec.clusterName`
+into Nomos resource.
+
+```console
+$ cat nomos1.yaml
+```
 
 ```yaml
-user: "myuser@mydomain.com
-git:
-  # ... "regular" git configuration
-clusters:
-- name: "cluster-1"
-  context: "context-1"
-- name: "cluster-2"
-  context: "context-2"
+apiVersion: addons.sigs.k8s.io/v1alpha1
+kind: Nomos
+metadata:
+  name: nomos
+  namespace: nomos-system
+spec:
+  clusterName: cluster-1
+  git:
+    syncRepo: git@github.com:frankfarzan/foo-corp-example.git
+    syncBranch: 0.1.0
+    secretType: ssh
+    policyDir: foo-corp
+  enableHierarchicalResourceQuota: true
+```
+
+`spec.clusterName` is an installation-wide cluster name.
+
+Repeat the cluster naming and installation steps for all named clusters.
+
+```console
+$ cat nomos2.yaml
+```
+
+```yaml
+apiVersion: addons.sigs.k8s.io/v1alpha1
+kind: Nomos
+metadata:
+  name: nomos
+  namespace: nomos-system
+spec:
+  clusterName: cluster-2
+  git:
+    syncRepo: git@github.com:frankfarzan/foo-corp-example.git
+    syncBranch: 0.1.0
+    secretType: ssh
+    policyDir: foo-corp
+  enableHierarchicalResourceQuota: true
 ```
 
 ##### 2. Add labels to your clusters
@@ -104,7 +137,7 @@ Clusters are grouped so they can be treated as a unit. Each `ClusterSelector`
 may match zero or more clusters.
 
 ```console
-$ cat clusteregistry/clusterselector-1.yaml
+$ cat clusterregistry/clusterselector-1.yaml
 ```
 
 ```yaml
@@ -119,7 +152,7 @@ spec:
 ```
 
 ```console
-$ cat clusteregistry/clusterselector-2.yaml
+$ cat clusterregistry/clusterselector-2.yaml
 ```
 
 ```yaml
