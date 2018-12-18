@@ -12,7 +12,10 @@ make
 ## E2E Tests
 
 end-to-end tests deploy GKE Policy Management components on a Kubernetes cluster
-from your current context, and then verify functionality through Git commits:
+from your current context, and then verify functionality through Git commits.
+Running the tests requires local kubeconfig set up properly with Nomos cluster;
+the cluster's service account needs storage.objectViewer role on the GCP project
+that holds Docker images in Google Container Registry.
 
 ```console
 make test-e2e-all
