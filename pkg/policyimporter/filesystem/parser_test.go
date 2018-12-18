@@ -208,6 +208,7 @@ data:
   {{.Namespace}}: {{.Attribute}}
 metadata:
   name: {{.Name}}
+{{template "objectmetatemplate" .}}
 `
 
 	aNamespaceSelectorTemplate = `
@@ -490,6 +491,13 @@ func crbs(ds ...templateData) []rbacv1.ClusterRoleBinding {
 		o = append(o, crb(d))
 	}
 	return o
+}
+
+func cfgMapPtr(d templateData) *corev1.ConfigMap {
+	s := d.apply(aConfigMap)
+	var o corev1.ConfigMap
+	mustParse(s, &o)
+	return &o
 }
 
 type Policies struct {
@@ -2347,6 +2355,94 @@ func TestParserPerClusterAddressing(t *testing.T) {
 									Kind:     "Role",
 									APIGroup: "rbac.authorization.k8s.io",
 									Name:     "job-creator",
+								},
+							},
+						},
+					},
+					/* Labels */
+					nil,
+					/* Annotations */
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+					}),
+			},
+		},
+		{
+			testName:    "Generic resource in abstract namespace",
+			root:        "foo",
+			clusterName: "cluster-1",
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/nomos.yaml": aRepoWithHierarchy,
+				"system/configmap-sync.yaml": templateData{
+					Group: "", Version: "v1", Kind: "ConfigMap",
+					HierarchyMode: "inherit",
+				}.apply(aHierarchicalSync),
+
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name: "sel-1",
+				}.apply(aClusterSelector),
+
+				// Tree dir
+				"namespaces/foo/bar/bar.yaml": templateData{
+					Name: "bar",
+				}.apply(aNamespace),
+				"namespaces/foo/configmap.yaml": templateData{
+					Name:      "cfg",
+					Namespace: "key",
+					Attribute: "value",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-1",
+					},
+				}.apply(aConfigMap),
+				"namespaces/foo/configmap2.yaml": templateData{
+					Name:      "cfg-excluded",
+					Namespace: "key",
+					Attribute: "value",
+					Annotations: map[string]string{
+						"nomos.dev/cluster-selector": "sel-2",
+					},
+				}.apply(aConfigMap),
+			},
+			expectedPolicyNodes: map[string]v1.PolicyNode{
+				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+					}),
+				"bar": createPNWithMeta("namespaces/foo/bar", v1.RootPolicyNodeName, v1.Namespace,
+					&Policies{
+						Resources: []v1.GenericResources{
+							{
+								Group: "",
+								Kind:  "ConfigMap",
+								Versions: []v1.GenericVersionResources{
+									{
+										Version: "v1",
+										Objects: []runtime.RawExtension{
+											{
+												Object: runtime.Object(
+													cfgMapPtr(templateData{
+														Name:      "cfg",
+														Namespace: "key",
+														Attribute: "value",
+														Annotations: map[string]string{
+															v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+															v1alpha1.SourcePathAnnotationKey:      "namespaces/foo/configmap.yaml",
+															v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+														},
+													}),
+												),
+											},
+										},
+									},
 								},
 							},
 						},
