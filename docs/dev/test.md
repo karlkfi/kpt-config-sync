@@ -28,35 +28,6 @@ make test-nomos-vet-local
 
 This requires a Nomos cluster configured and in your kubeconfig context.
 
-## E2E prober tests
-
-Prober tests verify the GCP functionality on a predefined test cluster, using
-the tests defined in your local repository, and a predefined prober GCP service
-account.
-
-```console
-make test-e2e-prober
-```
-
-### Deploying e2e prober
-
-E2E prober is currently deployed manually, while work is underway to ensure that
-it gets deployed continuously.
-
-Deploying a new version of the prober, based on the code that is currently
-checked out in your git repo, you need this process.
-
-1.  Build and push the image like this:
-
-```console
-make push-to-gcr-e2e-prober
-```
-
-1.  Manually add the tag `test-e2e-latest` to the image you just built
-    [in Pantheon][1].
-
-The next scheduled run of the [nomos prober][2] will use the newly built image.
-
 ## Working on the e2e framework or e2e tests.
 
 While doing development of e2e test / framework features, it's desirable to skip
