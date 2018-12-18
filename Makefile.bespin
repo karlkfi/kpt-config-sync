@@ -48,10 +48,14 @@ bespin-run-manager-local:
 bespin-install-crds:
 	kubectl apply -f ${BESPIN_CONFIG_DIR}/crds
 
+# Apply RBAC roles and role bindings.
+bespin-install-rbac:
+	kubectl apply -f ${BESPIN_CONFIG_DIR}/rbac
+
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-bespin-deploy: bespin-install-crds
+bespin-deploy: bespin-install-crds bespin-install-rbac
 	kubectl delete StatefulSet --all -n bespin-system
-	kustomize build $(BESPIN_CONFIG_DIR)/default | kubectl apply -f -
+	kubectl apply -f ${BESPIN_CONFIG_DIR}/manager
 
 # Build terraform binary
 bespin-terraform:
@@ -70,8 +74,8 @@ bespin-terraform:
 # Build the docker image
 bespin-docker-build: bespin-controllers-manager bespin-terraform
 	docker build . -t ${BESPIN_CONTROLLERS_MANAGER_IMG} -f build/bespin/Dockerfile
-	@echo "updating kustomize image patch file for bespin controllers manager resource"
-	sed -i 's@image: .*@image: '"${BESPIN_CONTROLLERS_MANAGER_IMG}"'@' ${BESPIN_CONFIG_DIR}/default/manager_image_patch.yaml
+	@echo "updating image patch file for bespin controllers manager resource"
+	sed -i 's@image: .*@image: '"${BESPIN_CONTROLLERS_MANAGER_IMG}"'@' ${BESPIN_CONFIG_DIR}/manager/manager.yaml
 
 # Push the docker image
 bespin-docker-push: bespin-docker-build

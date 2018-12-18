@@ -1,53 +1,41 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  labels:
-    controller-tools.k8s.io: "1.0"
-  name: system
----
-apiVersion: v1
 kind: Service
 metadata:
-  name: controller-manager-service
-  namespace: system
   labels:
-    control-plane: controller-manager
-    controller-tools.k8s.io: "1.0"
+    bespin.dev/system: "true"
+  name: bespin-controller-manager-service
+  namespace: bespin-system
 spec:
-  selector:
-    control-plane: controller-manager
-    controller-tools.k8s.io: "1.0"
   ports:
   - port: 443
+  selector:
+    bespin.dev/system: "true"
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: controller-manager
-  namespace: system
   labels:
-    control-plane: controller-manager
-    controller-tools.k8s.io: "1.0"
+    bespin.dev/system: "true"
+  name: bespin-controller-manager
+  namespace: bespin-system
 spec:
   selector:
     matchLabels:
-      control-plane: controller-manager
-      controller-tools.k8s.io: "1.0"
-  serviceName: controller-manager-service
+      bespin.dev/system: "true"
+  serviceName: bespin-controller-manager-service
   template:
     metadata:
       labels:
-        control-plane: controller-manager
-        controller-tools.k8s.io: "1.0"
+        bespin.dev/system: "true"
     spec:
       containers:
-      - command: [
+      - image: gcr.io/${GCR_PREFIX}/bespin/controllers-manager:latest
+        name: manager
+        command: [
           "/bespin/bespin-controllers-manager",
           "-alsologtostderr=true",
           "-v=10",
         ]
-        image: controller:latest
-        name: manager
         resources:
           limits:
             cpu: 100m

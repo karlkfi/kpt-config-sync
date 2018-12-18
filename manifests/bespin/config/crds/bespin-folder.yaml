@@ -5,7 +5,7 @@ kind: CustomResourceDefinition
 metadata:
   creationTimestamp: null
   labels:
-    controller-tools.k8s.io: "1.0"
+    bespin.dev/system: "true"
   name: folders.bespin.dev
 spec:
   group: bespin.dev
