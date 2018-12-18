@@ -33,17 +33,16 @@ Enable RBAC                               | Add `RBAC` to list passed to `--auth
 Enable ResourceQuota admission controller | Add `ResourceQuota` to list passed to `--admission-control`
 Enable ValidatingAdmissionWebhook         | Add `ValidatingAdmissionWebhook` to list passed to `--admission-control`
 
-Minimum required Kubernetes Server Version: **1.9**
+Minimum required Kubernetes Server Version: **1.10**
 
-Note that GKE running K8S 1.9 satisfies all these requirements.
+Note that GKE running K8S 1.10 satisfies all these requirements.
 
 **Warning:** In the current release of GKE Policy Management, we require that
 all namespaces be managed by GKE Policy Management. It is recommended to create
 a new cluster for use with GKE Policy Management.
 
 The easiest way to get all of these is to follow the
-[GKE quick start guide](https://cloud.google.com/kubernetes-engine/docs/quickstart)
-and make sure to select version 1.9+ when creating the cluster.
+[GKE quick start guide](https://cloud.google.com/kubernetes-engine/docs/quickstart).
 
 ## Installing
 
