@@ -1,4 +1,4 @@
-package nomos
+package parse
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
@@ -10,9 +10,9 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 )
 
-// parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
+// Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
-func parse(dir string, parserOpt filesystem.ParserOpt) (*v1.AllPolicies, error) {
+func Parse(dir string, parserOpt filesystem.ParserOpt) (*v1.AllPolicies, error) {
 	clientConfig, err := restconfig.NewClientConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get kubectl config")

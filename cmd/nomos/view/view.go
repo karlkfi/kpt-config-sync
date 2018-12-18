@@ -1,4 +1,4 @@
-package nomos
+package view
 
 import (
 	"encoding/json"
@@ -6,16 +6,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/google/nomos/cmd/nomos/flags"
+	"github.com/google/nomos/cmd/nomos/parse"
+	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	rootCmd.AddCommand(printCmd)
-}
-
-var printCmd = &cobra.Command{
+// PrintCmd is the Cobra object representing the nomos view command.
+var PrintCmd = &cobra.Command{
 	Use:   "view",
 	Short: "View compiled objects from a GKE Policy Management directory",
 	Long: `View compiled objects from a GKE Policy Management directory
@@ -30,22 +30,22 @@ non-zero error code.`,
   nomos view --path=/path/to/my/directory`,
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		dir, err := filepath.Abs(nomosPath.String())
+		dir, err := filepath.Abs(flags.Path.String())
 		if err != nil {
-			printErrAndDie(errors.Wrap(err, "Failed to get absolute path"))
+			util.PrintErrAndDie(errors.Wrap(err, "Failed to get absolute path"))
 		}
 
 		// Check for a set environment variable instead of using a flag so as not to expose
 		// this WIP externally.
 		_, bespin := os.LookupEnv("NOMOS_ENABLE_BESPIN")
-		resources, err := parse(dir, filesystem.ParserOpt{Validate: validate, Vet: true, Bespin: bespin})
+		resources, err := parse.Parse(dir, filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Bespin: bespin})
 		if err != nil {
-			printErrAndDie(err)
+			util.PrintErrAndDie(err)
 		}
 
 		err = prettyPrint(resources)
 		if err != nil {
-			printErrAndDie(errors.Wrap(err, "Failed to print generated CRDs"))
+			util.PrintErrAndDie(errors.Wrap(err, "Failed to print generated CRDs"))
 		}
 	},
 }

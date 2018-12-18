@@ -9,6 +9,8 @@ import (
 
 const (
 	workingDirectory = "."
+	// PathFlag is the key to use to set adn retreive the path value.
+	PathFlag = "path"
 )
 
 // WorkingDirectoryPath is the path to the working directory
