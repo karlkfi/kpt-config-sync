@@ -18,8 +18,12 @@ package v1
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,4 +37,31 @@ type Client interface {
 	// and allows Client to be extended later to implement the controller-runtime
 	// client.
 	Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error
+}
+
+// container is an interface that combines the things we need from TF Resource interface and the runtime.Object interface.
+type container interface {
+	ID() string
+	GetObjectKind() schema.ObjectKind
+	DeepCopyObject() runtime.Object
+}
+
+// ResourceID implments the ResourceClient interface
+func ResourceID(ctx context.Context, client Client, Kind string, Name string) (string, error) {
+	var res container
+	resName := types.NamespacedName{Name: Name}
+	switch Kind {
+	case OrganizationKind:
+		res = &Organization{}
+	case FolderKind:
+		res = &Folder{}
+	case ProjectKind:
+		res = &Project{}
+	default:
+		return "", fmt.Errorf("invalid kind: %v", Kind)
+	}
+	if err := client.Get(ctx, resName, res); err != nil {
+		return "", errors.Wrapf(err, "failed to get resource: %v/%v", Kind, Name)
+	}
+	return res.ID(), nil
 }

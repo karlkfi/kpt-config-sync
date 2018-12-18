@@ -97,6 +97,8 @@ type OrganizationPolicyStatus struct {
 }
 
 // OrganizationPolicyConstraint is the Schema for Constraints in OrganizationPolicySpec
+// Note that ListPolicy and BooleanPolicy are mutually exclusive.
+// TODO(b/121393215): add validation on creation/import.
 type OrganizationPolicyConstraint struct {
 	Constraint    string                          `json:"constraint"`
 	ListPolicy    OrganizationPolicyListPolicy    `json:"listPolicy,omitempty"`

@@ -17,13 +17,209 @@ limitations under the License.
 package v1
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+func TestQuoteList(t *testing.T) {
+	tests := []struct {
+		name   string
+		values []string
+		want   string
+	}{
+		{
+			name:   "single element",
+			values: []string{"foo"},
+			want:   `["foo"]`,
+		},
+		{
+			name:   "empty list",
+			values: []string{},
+			want:   "[]",
+		},
+		{
+			name:   "multiple elements",
+			values: []string{"foo", "bar", "baz"},
+			want:   `["foo", "bar", "baz"]`,
+		},
+		{
+			name:   "elements with quoted values",
+			values: []string{"foo", `bar"`, `baz\`},
+			want:   `["foo", "bar\"", "baz\\"]`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := quoteList(tc.values)
+			if got != tc.want {
+				t.Errorf("quoteList got %v, wanted %v", got, tc.want)
+			}
+		})
+	}
+}
+func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
+	org := &Organization{
+		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+		Spec: OrganizationSpec{
+			ImportDetails: fakeImportDetails,
+		},
+		Status: OrganizationStatus{},
+	}
+	folder := &Folder{
+		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+		Spec: FolderSpec{
+			ParentReference: ParentReference{
+				Kind: OrganizationKind,
+				Name: "bar",
+			},
+			DisplayName:   "spec-bar",
+			ID:            1,
+			ImportDetails: fakeImportDetails,
+		},
+		Status: FolderStatus{
+			SyncDetails: fakeSyncDetails,
+		},
+	}
+	project := &Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+		Spec: ProjectSpec{
+			ParentReference: ParentReference{
+				Kind: FolderKind,
+				Name: "bar",
+			},
+			Name:          "spec-bar",
+			ID:            "some-fake-project",
+			ImportDetails: fakeImportDetails,
+		},
+		Status: ProjectStatus{
+			SyncDetails: fakeSyncDetails,
+		},
+	}
+
+	tests := []struct {
+		name    string
+		obj     runtime.Object
+		ops     OrganizationPolicy
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "policy with allowed values",
+			obj:  org,
+			ops: OrganizationPolicy{
+				Spec: OrganizationPolicySpec{
+					ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
+					Constraints: []OrganizationPolicyConstraint{
+						{
+							Constraint: "c1",
+							ListPolicy: OrganizationPolicyListPolicy{
+								AllowedValues: []string{"projects/foo", "projects/bar"},
+							},
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+			},
+			want: `["projects/foo", "projects/bar"]`,
+		},
+		{
+			name: "policy with disallowed values",
+			obj:  folder,
+			ops: OrganizationPolicy{
+				Spec: OrganizationPolicySpec{
+					ResourceReference: ResourceReference{Kind: FolderKind, Name: "bar"},
+					Constraints: []OrganizationPolicyConstraint{
+						{
+							Constraint: "c1",
+							ListPolicy: OrganizationPolicyListPolicy{
+								DisallowedValues: []string{"projects/disallowed-bar"},
+							},
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+			},
+			want: `values = ["projects/disallowed-bar"]`,
+		},
+		{
+			name: "policy with boolean value",
+			obj:  project,
+			ops: OrganizationPolicy{
+				Spec: OrganizationPolicySpec{
+					ResourceReference: ResourceReference{Kind: ProjectKind, Name: "bar"},
+					Constraints: []OrganizationPolicyConstraint{
+						{
+							Constraint:    "c3",
+							BooleanPolicy: OrganizationPolicyBooleanPolicy{Enforced: true},
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+			},
+			want: "enforced = true",
+		},
+		{
+			name: "policy with allow all value",
+			obj:  org,
+			ops: OrganizationPolicy{
+				Spec: OrganizationPolicySpec{
+					ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
+					Constraints: []OrganizationPolicyConstraint{
+						{
+							Constraint: "c3",
+							ListPolicy: OrganizationPolicyListPolicy{
+								AllValues: "ALLOW",
+							},
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+			},
+			want: "allow",
+		},
+		{
+			name: "policy with deny all value",
+			obj:  org,
+			ops: OrganizationPolicy{
+				Spec: OrganizationPolicySpec{
+					ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
+					Constraints: []OrganizationPolicyConstraint{
+						{
+							Constraint: "c3",
+							ListPolicy: OrganizationPolicyListPolicy{
+								AllValues: "DENY",
+							},
+						},
+					},
+					ImportDetails: fakeImportDetails,
+				},
+			},
+			want: "deny",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			client := stubClient{obj: tc.obj}
+			got, err := tc.ops.TFResourceConfig(context.Background(), &client)
+			switch {
+			case !tc.wantErr && err != nil:
+				t.Errorf("TFResourceConfig() got err %+v; want nil", err)
+			case tc.wantErr && err == nil:
+				t.Errorf("TFResourceConfig() got nil; want err %+v", tc.wantErr)
+			case !strings.Contains(got, tc.want):
+				t.Errorf("TFResourceConfig() got [%s] does not contain [%s]", got, tc.want)
+			}
+
+		})
+	}
+}
 
 func TestStorageOrganizationPolicy(t *testing.T) {
 	key := types.NamespacedName{Name: "foo", Namespace: "default"}
@@ -40,6 +236,7 @@ func TestStorageOrganizationPolicy(t *testing.T) {
 						InheritFromParent: true,
 						AllValues:         "ALLOW",
 					},
+					// TODO(lschumacher): this spec is ill-formed
 					BooleanPolicy: OrganizationPolicyBooleanPolicy{Enforced: true},
 				},
 				{
