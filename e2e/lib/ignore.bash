@@ -1,5 +1,11 @@
 #!/bin/bash
 
+set -euo pipefail
+
+DIR=$(dirname "${BASH_SOURCE[0]}")
+# shellcheck source=e2e/lib/debug.bash
+source "$DIR/debug.bash"
+
 # Helpers for ignoring command failures.
 
 # ignore::log_err <command>

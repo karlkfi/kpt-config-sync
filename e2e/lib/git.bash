@@ -1,6 +1,10 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
+
+DIR=$(dirname "${BASH_SOURCE[0]}")
+# shellcheck source=e2e/lib/debug.bash
+source "$DIR/debug.bash"
 
 # Helpers for changing the state of the e2e source-of-truth git
 # repository. Prepare the next state to commit using git::add, git::update, and

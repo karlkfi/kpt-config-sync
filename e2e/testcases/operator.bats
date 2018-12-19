@@ -5,14 +5,7 @@ set -euo pipefail
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 TEST_REPO=${BATS_TMPDIR}/repo
 
-load "../lib/assert"
-load "../lib/cluster"
-load "../lib/debug"
 load "../lib/git"
-load "../lib/ignore"
-load "../lib/namespace"
-load "../lib/policynode"
-load "../lib/resource"
 load "../lib/setup"
 load "../lib/wait"
 

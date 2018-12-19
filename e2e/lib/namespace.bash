@@ -1,5 +1,17 @@
 #!/bin/bash
 
+set -euo pipefail
+
+DIR=$(dirname "${BASH_SOURCE[0]}")
+# shellcheck source=e2e/lib/assert.bash
+source "$DIR/assert.bash"
+# shellcheck source=e2e/lib/debug.bash
+source "$DIR/debug.bash"
+# shellcheck source=e2e/lib/resource.bash
+source "$DIR/resource.bash"
+# shellcheck source=e2e/lib/wait.bash
+source "$DIR/wait.bash"
+
 # Helpers for creating namespaces/policyspaces in git.
 
 # Directly creates a namespace on the cluster with optional label for nomos management.

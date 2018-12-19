@@ -3,14 +3,8 @@
 
 set -euo pipefail
 
-load "../lib/assert"
-load "../lib/cluster"
 load "../lib/debug"
 load "../lib/git"
-load "../lib/ignore"
-load "../lib/namespace"
-load "../lib/policynode"
-load "../lib/resource"
 load "../lib/setup"
 load "../lib/wait"
 
@@ -167,4 +161,3 @@ function add_clusterregistry_data() {
   wait::for -- kubectl patch nomos -n=nomos-system nomos --type=merge \
     -p '{"spec":{"clusterName": "e2e-test-cluster"}}'
 }
-

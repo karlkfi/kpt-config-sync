@@ -2,6 +2,22 @@
 
 set -euo pipefail
 
+DIR=$(dirname "${BASH_SOURCE[0]}")
+# shellcheck source=e2e/lib/debug.bash
+source "$DIR/debug.bash"
+# shellcheck source=e2e/lib/git.bash
+source "$DIR/git.bash"
+# shellcheck source=e2e/lib/ignore.bash
+source "$DIR/ignore.bash"
+# shellcheck source=e2e/lib/namespace.bash
+source "$DIR/namespace.bash"
+# shellcheck source=e2e/lib/policynode.bash
+source "$DIR/policynode.bash"
+# shellcheck source=e2e/lib/resource.bash
+source "$DIR/resource.bash"
+# shellcheck source=e2e/lib/wait.bash
+source "$DIR/wait.bash"
+
 TEST_REPO_DIR=${BATS_TMPDIR}
 
 # Total count of namespaces in acme

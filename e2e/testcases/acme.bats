@@ -6,12 +6,8 @@
 set -euo pipefail
 
 load "../lib/assert"
-load "../lib/cluster"
 load "../lib/debug"
-load "../lib/git"
-load "../lib/ignore"
 load "../lib/namespace"
-load "../lib/policynode"
 load "../lib/resource"
 load "../lib/setup"
 load "../lib/wait"
