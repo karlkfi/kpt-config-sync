@@ -15,6 +15,17 @@
 # limitations under the License.
 #
 
+#
+# NOTE: When updating this file, you will also need to do the following:
+#
+# 1. Update the BUILDENV_IMAGE_VERSION variable in Makefile
+# 2. Run the following locally to test the build then push the image so it's
+#    accessible by CI:
+#    $ make build-buildenv && make build && make push-buildenv
+# 3. Upload your change for review and check the CI results.  Note that Prow
+#    will fail if you have not uploaded your new image.
+#
+
 # The build environment docker file.
 FROM golang:1.11.2-alpine
 
