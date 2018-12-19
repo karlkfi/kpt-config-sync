@@ -2,7 +2,15 @@
 
 set -euo pipefail
 
-load ../lib/loader
+load "../lib/assert"
+load "../lib/cluster"
+load "../lib/debug"
+load "../lib/ignore"
+load "../lib/namespace"
+load "../lib/policynode"
+load "../lib/resource"
+load "../lib/setup"
+load "../lib/wait"
 
 # Project should exist
 @test "Namespace under org create/get/delete" {
