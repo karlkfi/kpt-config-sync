@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 
-	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
@@ -50,11 +49,10 @@ import (
 )
 
 func init() {
-	// Add Nomos and Bespin types to the Scheme used by util.AsDefaultVersionedOrOriginal for
+	// Add Nomos types to the Scheme used by util.AsDefaultVersionedOrOriginal for
 	// converting Unstructured to specific types.
 	utilruntime.Must(v1.AddToScheme(legacyscheme.Scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(legacyscheme.Scheme))
-	utilruntime.Must(bespinv1.AddToScheme(legacyscheme.Scheme))
 	utilruntime.Must(clusterregistry.AddToScheme(legacyscheme.Scheme))
 }
 
@@ -67,19 +65,31 @@ type Parser struct {
 	root string
 }
 
+// ParserExtension extends the functionality of the parser by allowing the override of visitors or addition
+// of sync resources.
+// TODO(willbeason): Bespin requires the visitors to be overridden to avoid validators that
+// cause a Bespin import to fail, but the resources need to be appended to. This
+// isn't great. Ideally the visitors should be able to be chained as well, then
+// the ParserOpt could take multiple ParserExtensions and run them all.
+type ParserExtension interface {
+	// Visitors *overrides* the normal visitor functionality of the parser.
+	Visitors() VisitorProvider
+	// SyncResources *appends* sync resources to the normal Nomos sync resources.
+	SyncResources() []*v1alpha1.Sync
+}
+
 // ParserOpt has often customized parser options. Use for example in NewParser.
 type ParserOpt struct {
 	// Vet turns on vetting mode, which catches a wider range of cross-cluster errors.
 	Vet bool
 	// Validate will raise validation errors if set.
-	Validate bool
-	// Bespin will enable the Bespin visitors.
-	Bespin bool
+	Validate  bool
+	Extension ParserExtension
 }
 
-// visitorProvider is an interface that abstracts out the source of visitors
+// VisitorProvider is an interface that abstracts out the source of visitors
 // that are used to walk the AST.
-type visitorProvider interface {
+type VisitorProvider interface {
 	visitors(apiInfo *meta.APIInfo) []ast.Visitor
 }
 
@@ -93,7 +103,6 @@ type nomosVisitorProvider struct {
 }
 
 func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
-
 	specs := toInheritanceSpecs(n.syncs)
 	visitors := []ast.Visitor{
 		validation.NewInputValidator(n.syncs, specs, n.clusters, n.selectors, n.opts.Vet),
@@ -111,21 +120,6 @@ func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
 	return visitors
 }
 
-// bespinVisitorProvider is used when bespin is enabled to handle the bespin specific
-// parts that won't pass the regular nomos checks.
-type bespinVisitorProvider struct{}
-
-func (b bespinVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
-	// TODO(b/119825336): Bespin and the InputValidator are having trouble playing
-	// nicely. For now, just return the visitors that Bespin needs.
-	return []ast.Visitor{
-		transform.NewGCPHierarchyVisitor(),
-		transform.NewGCPPolicyVisitor(),
-		validation.NewScope(apiInfo),
-		validation.NewNameValidator(),
-	}
-}
-
 // NewParser creates a new Parser.
 // clientConfig can be used to configure api server client. It should be set to nil when running in cluster.
 // resources is the list returned by the DisoveryClient ServerResources call which represents resources
@@ -138,17 +132,13 @@ func NewParser(clientGetter genericclioptions.RESTClientGetter, opts ParserOpt) 
 func (p *Parser) nomosVisitorProvider(
 	syncs []*v1alpha1.Sync,
 	clusters []clusterregistry.Cluster,
-	selectors []v1alpha1.ClusterSelector) visitorProvider {
+	selectors []v1alpha1.ClusterSelector) VisitorProvider {
 	return nomosVisitorProvider{
 		syncs:     syncs,
 		clusters:  clusters,
 		selectors: selectors,
 		opts:      p.opts,
 	}
-}
-
-func (p *Parser) bespinVisitorProvider() visitorProvider {
-	return bespinVisitorProvider{}
 }
 
 // NewParserWithFactory creates a new Parser using the specified factory.
@@ -233,11 +223,9 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 	// TODO: temporary until processDirs refactoring
 	dirInfos := toDirInfoMap(nsInfos)
-	var vp visitorProvider
-	if p.opts.Bespin {
-		vp = p.bespinVisitorProvider()
-	} else {
-		vp = p.nomosVisitorProvider(syncs, clusters, selectors)
+	vp := p.nomosVisitorProvider(syncs, clusters, selectors)
+	if p.opts.Extension != nil && p.opts.Extension.Visitors() != nil {
+		vp = p.opts.Extension.Visitors()
 	}
 
 	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, vp, nsDirsOrdered, clusterDir, fsCtx, syncs)
@@ -325,7 +313,7 @@ func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []a
 func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	dirInfos map[string][]ast.FileObject,
 	clusterObjects []ast.FileObject,
-	vp visitorProvider,
+	vp VisitorProvider,
 	nsDirsOrdered []string,
 	clusterDir string,
 	fsRoot *ast.Root,

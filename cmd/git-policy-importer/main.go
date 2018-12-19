@@ -25,6 +25,7 @@ import (
 	"os"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
@@ -61,7 +62,11 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	parser, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, filesystem.ParserOpt{Validate: true, Bespin: bespin})
+	var e *parse.Ext
+	if bespin {
+		e = &parse.Ext{VP: filesystem.BespinVisitors, Syncs: filesystem.BespinSyncs}
+	}
+	parser, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, filesystem.ParserOpt{Validate: true, Extension: e})
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %+v", err)
 	}

@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
@@ -36,8 +35,8 @@ func processSystem(
 
 	validateSystem(objects, repo, apiInfo, errorBuilder)
 
-	if opts.Bespin {
-		syncs = append(syncs, bespinv1.Syncs...)
+	if opts.Extension != nil {
+		syncs = append(syncs, opts.Extension.SyncResources()...)
 	}
 	return repo, syncs, reservedNamespaces
 }

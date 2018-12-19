@@ -22,7 +22,6 @@ var VetCmd = &cobra.Command{
 	Use:   "vet",
 	Short: "Validate a GKE Policy Management directory",
 	Long: `Validate a GKE Policy Management directory
-
 Checks for semantic and syntactic errors in a GKE Policy Management directory
 that will interfere with applying resources. Prints found errors to STDERR and
 returns a non-zero error code if any issues are found.
@@ -36,11 +35,13 @@ returns a non-zero error code if any issues are found.
 		if err != nil {
 			util.PrintErrAndDie(errors.Wrap(err, "Failed to get absolute path"))
 		}
-
 		// Check for a set environment variable instead of using a flag so as not to expose
 		// this WIP externally.
-		_, bespin := os.LookupEnv("NOMOS_ENABLE_BESPIN")
-		_, err = parse.Parse(dir, filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Bespin: bespin})
+		var e *parse.Ext
+		if _, ok := os.LookupEnv("NOMOS_ENABLE_BESPIN"); ok {
+			e = &parse.Ext{VP: filesystem.BespinVisitors, Syncs: filesystem.BespinSyncs}
+		}
+		_, err = parse.Parse(dir, filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: e})
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

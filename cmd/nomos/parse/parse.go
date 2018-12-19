@@ -2,6 +2,7 @@ package parse
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/pkg/errors"
@@ -9,6 +10,18 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 )
+
+// Ext implements filesystem.ParserExtension.
+type Ext struct {
+	VP    filesystem.VisitorProvider
+	Syncs []*v1alpha1.Sync
+}
+
+// Visitors returns a filesystem.VisitorProvider that returns the visitors the parser should execute.
+func (e *Ext) Visitors() filesystem.VisitorProvider { return e.VP }
+
+// SyncResources returns additional resources that should be synced to the API server.
+func (e *Ext) SyncResources() []*v1alpha1.Sync { return e.Syncs }
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
