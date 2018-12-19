@@ -71,7 +71,7 @@ fi
 
 # Old-style podutils for go/prow use ${WORKSPACE} as base directory but do not
 # define $ARTIFACTS.
-if [ -n "${WORKSPACE+x}" ]; then
+if [[ -n "${WORKSPACE+x}" && ! -n "${ARTIFACTS+x}" ]]; then
   ARTIFACTS="${WORKSPACE}/_artifacts"
 fi
 
