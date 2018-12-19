@@ -21,7 +21,6 @@ FROM golang:1.11.2-alpine
 # Adds support for building dynamically linked libraries.
 RUN apk add --no-cache \
   bash \
-  curl \
   gcc \
   musl-dev \
   py-pip \
@@ -35,8 +34,6 @@ RUN pip install grip
 ENV GOCACHE=/go/cache
 
 RUN go get gopkg.in/alecthomas/gometalinter.v2 && gometalinter.v2 --install
-
-RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 
 # sembump knows how to increment semvers.
 # sembump -kind=minor v1.2.3

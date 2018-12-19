@@ -94,7 +94,7 @@ GCR_PREFIX ?= $(GCP_PROJECT)/$(USER)/$(DATE)
 # NOTE: nomos-public is fully accessible publicly, do not use for anything
 # other than buildenv
 BUILDENV_PROJECT ?= nomos-public
-BUILDENV_IMAGE_VERSION ?= v0.1.4
+BUILDENV_IMAGE_VERSION ?= v0.1.3
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
 # GCP service account credentials used in gcp e2e tests.
@@ -205,8 +205,8 @@ test-unit: $(OUTPUT_DIR) pull-buildenv
 	@echo "+++ Running unit tests in a docker container"
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/test-unit.sh $(NOMOS_GO_PKG)
 
-# Runs unit tests, linter, and dep check.
-test: test-unit lint lint-bash dep-check
+# Runs unit tests and linter.
+test: test-unit lint lint-bash
 
 # Runs tests and local nomos vet tests.
 test-local: test test-nomos-vet-local
@@ -217,9 +217,6 @@ test-all-local: test test-nomos-vet-local test-e2e-all
 
 goimports:
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
-
-dep-check:
-	@docker run $(DOCKER_RUN_ARGS) dep check
 
 lint: lint-go lint-bash lint-license
 
