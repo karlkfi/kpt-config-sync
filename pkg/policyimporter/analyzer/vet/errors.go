@@ -499,23 +499,26 @@ func (e UnknownObjectError) Code() string { return UnknownObjectErrorCode }
 
 // DuplicateSyncGroupKindError reports that multiple versions were declared for the same synced kind
 type DuplicateSyncGroupKindError struct {
-	Group   string
-	Kind    string
-	Objects []ast.FileObject
+	// The Group of the Group/Kind pair with multiple definitions.
+	Group string
+	// The Kind of the Group/Kind pair with multiple definitions.
+	Kind string
+	// All Syncs defining the Group/Kind pair.
+	Syncs []ResourceAddr
 }
 
 // Error implements error
 func (e DuplicateSyncGroupKindError) Error() string {
-	var objStrs []string
-	for _, object := range e.Objects {
-		objStrs = append(objStrs, fileObject{object}.String())
+	var rStrs []string
+	for _, r := range e.Syncs {
+		rStrs = append(rStrs, r.String())
 	}
 	return format(e,
 		"A Kind for a given Group may be declared at most once:\n\n"+
 			"group: %[1]s\n"+
 			"kind: %[2]s\n\n"+
 			"%[3]s",
-		e.Group, e.Kind, strings.Join(objStrs, "\n\n"))
+		e.Group, e.Kind, strings.Join(rStrs, "\n\n"))
 }
 
 // Code implements Error
@@ -694,19 +697,21 @@ func (e MissingObjectNameError) Code() string { return MissingObjectNameErrorCod
 
 // UnknownResourceInSyncError reports that a resource defined in a Sync does not have a definition in the cluster.
 type UnknownResourceInSyncError struct {
-	SyncPath     string
-	ResourceType schema.GroupVersionKind
+	Sync ResourceAddr
+	GVK  schema.GroupVersionKind
 }
 
 // Error implements error
 func (e UnknownResourceInSyncError) Error() string {
 	return format(e,
-		"Sync contains a resource type that does not exist on cluster. "+
+		"Sync contains a Resource Kind that does not exist on cluster. "+
 			"Either remove the resource type from the Sync or create a CustomResourceDefinition for "+
 			"the resource type on the cluster.\n\n"+
-			"source: %[1]s\n"+
-			"%[2]s",
-		e.SyncPath, groupVersionKind(e.ResourceType))
+			"Resource Kind:\n"+
+			"%[2]s\n\n"+
+			"Sync:\n"+
+			"%[1]s",
+		e.Sync, groupVersionKind(e.GVK))
 }
 
 // Code implements Error
@@ -732,17 +737,19 @@ func (e IllegalSystemResourcePlacementError) Code() string {
 
 // UnsupportedResourceInSyncError reports that policy management is unsupported for a resource defined in a Sync.
 type UnsupportedResourceInSyncError struct {
-	SyncPath     string
-	ResourceType schema.GroupVersionKind
+	Sync ResourceAddr
+	GVK  schema.GroupVersionKind
 }
 
 // Error implements error
 func (e UnsupportedResourceInSyncError) Error() string {
 	return format(e,
 		"This Resource Kind MUST NOT be declared in a Sync:\n\n"+
-			"source: %[1]s\n"+
-			"%[2]s",
-		e.SyncPath, groupVersionKind(e.ResourceType))
+			"Resource Kind:\n"+
+			"%[2]s\n\n"+
+			"Sync:\n"+
+			"%[1]s",
+		e.Sync.String(), groupVersionKind(e.GVK).String())
 }
 
 // Code implements Error
@@ -750,7 +757,7 @@ func (e UnsupportedResourceInSyncError) Code() string { return UnsupportedResour
 
 // IllegalHierarchyModeError reports that a Sync is defined with a disallowed hierarchyMode.
 type IllegalHierarchyModeError struct {
-	Object  ast.FileObject
+	Sync    ResourceAddr
 	GVK     schema.GroupVersionKind
 	Mode    v1alpha1.HierarchyModeType
 	Allowed map[v1alpha1.HierarchyModeType]bool
@@ -766,7 +773,7 @@ func (e IllegalHierarchyModeError) Error() string {
 		"HierarchyMode %[1]q is not a valid value for this Resource. Allowed values are [%[2]s].\n\n"+
 			"%[3]s\n\n"+
 			"%[4]s",
-		e.Mode, strings.Join(allowedStr, ","), fileObject{e.Object}, groupVersionKind(e.GVK))
+		e.Mode, strings.Join(allowedStr, ","), e.Sync, groupVersionKind(e.GVK))
 }
 
 // Code implements Error

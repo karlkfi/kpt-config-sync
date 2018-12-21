@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/scale/scheme/extensionsv1beta1"
@@ -37,7 +38,7 @@ func kindSyncs(objects []ast.FileObject) []kindSync {
 							Kind:    kind.Kind,
 						}
 						hierarchy := kind.HierarchyMode
-						result = append(result, kindSync{sync: object, gvk: gvk, hierarchy: hierarchy})
+						result = append(result, kindSync{sync: vet.ToResourceAddr(object), gvk: gvk, hierarchy: hierarchy})
 					}
 				}
 			}

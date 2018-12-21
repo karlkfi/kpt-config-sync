@@ -3,8 +3,15 @@ Found issues: 1 error(s)
 
 [1] KNV1034: This Resource Kind MUST NOT be declared in a Sync:
 
-source: system/sync.yaml
+Resource Kind:
 group: 
 version: v1
 kind: Namespace
+
+Sync:
+source: system/sync.yaml
+metadata.name: resourcequotas
+group: nomos.dev
+version: v1alpha1
+kind: Sync
 

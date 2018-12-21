@@ -19,10 +19,17 @@ version: v1alpha1
 kind: Sync
 
 
-[2] KNV1032: Sync contains a resource type that does not exist on cluster. Either remove the resource type from the Sync or create a CustomResourceDefinition for the resource type on the cluster.
+[2] KNV1032: Sync contains a Resource Kind that does not exist on cluster. Either remove the resource type from the Sync or create a CustomResourceDefinition for the resource type on the cluster.
 
-source: system/resource-quota.yaml
+Resource Kind:
 group: 
 version: v2
 kind: ResourceQuota
+
+Sync:
+source: system/resource-quota.yaml
+metadata.name: resourcequotas
+group: nomos.dev
+version: v1alpha1
+kind: Sync
 

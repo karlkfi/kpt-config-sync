@@ -13,7 +13,7 @@ type VersionValidator struct {
 
 // Validate adds errors for each Group/Kind with multiple declarations.
 func (v VersionValidator) Validate(errorBuilder *multierror.Builder) {
-	syncKinds := make(map[groupKind][]ast.FileObject)
+	syncKinds := make(map[groupKind][]vet.ResourceAddr)
 	for _, sync := range kindSyncs(v.Objects) {
 		gk := groupKind{group: sync.gvk.Group, kind: sync.gvk.Kind}
 		syncKinds[gk] = append(syncKinds[gk], sync.sync)
@@ -21,7 +21,7 @@ func (v VersionValidator) Validate(errorBuilder *multierror.Builder) {
 
 	for syncKind, duplicates := range syncKinds {
 		if len(duplicates) > 1 {
-			errorBuilder.Add(vet.DuplicateSyncGroupKindError{Group: syncKind.group, Kind: syncKind.kind, Objects: duplicates})
+			errorBuilder.Add(vet.DuplicateSyncGroupKindError{Group: syncKind.group, Kind: syncKind.kind, Syncs: duplicates})
 		}
 	}
 }

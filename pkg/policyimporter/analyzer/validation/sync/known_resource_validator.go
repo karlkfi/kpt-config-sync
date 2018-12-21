@@ -22,7 +22,7 @@ func (v KnownResourceValidator) knownResourceValidator() *validator {
 		validate: func(sync kindSync) error {
 			gvk := sync.gvk
 			if !isUnsupported(gvk) && !v.APIInfo.Exists(gvk) {
-				return vet.UnknownResourceInSyncError{SyncPath: sync.sync.Source, ResourceType: gvk}
+				return vet.UnknownResourceInSyncError{Sync: sync.sync, GVK: gvk}
 			}
 			return nil
 		},

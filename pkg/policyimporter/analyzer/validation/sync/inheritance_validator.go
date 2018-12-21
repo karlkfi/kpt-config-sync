@@ -40,7 +40,7 @@ func (v InheritanceValidator) inheritanceValidator() *validator {
 		validate: func(sync kindSync) error {
 			allowed := v.allowedModes(sync)
 			if !allowed[sync.hierarchy] {
-				return vet.IllegalHierarchyModeError{Object: sync.sync, GVK: sync.gvk, Mode: sync.hierarchy, Allowed: allowed}
+				return vet.IllegalHierarchyModeError{Sync: sync.sync, GVK: sync.gvk, Mode: sync.hierarchy, Allowed: allowed}
 			}
 			return nil
 		},

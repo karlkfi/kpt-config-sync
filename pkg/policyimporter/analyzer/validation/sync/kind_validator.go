@@ -9,8 +9,8 @@ var KindValidator = &validator{
 	validate: func(sync kindSync) error {
 		if isUnsupported(sync.gvk) {
 			return vet.UnsupportedResourceInSyncError{
-				SyncPath:     sync.sync.Source,
-				ResourceType: sync.gvk,
+				Sync: sync.sync,
+				GVK:  sync.gvk,
 			}
 		}
 		return nil
