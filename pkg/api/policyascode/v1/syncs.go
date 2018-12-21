@@ -62,6 +62,38 @@ var Syncs = []*v1alpha1.Sync{
 								},
 							},
 						},
+						{
+							Kind: "IAMPolicy",
+							Versions: []v1alpha1.SyncVersion{
+								{
+									Version: "v1",
+								},
+							},
+						},
+						{
+							Kind: "ClusterIAMPolicy",
+							Versions: []v1alpha1.SyncVersion{
+								{
+									Version: "v1",
+								},
+							},
+						},
+						{
+							Kind: "OrganizationPolicy",
+							Versions: []v1alpha1.SyncVersion{
+								{
+									Version: "v1",
+								},
+							},
+						},
+						{
+							Kind: "ClusterOrganizationPolicy",
+							Versions: []v1alpha1.SyncVersion{
+								{
+									Version: "v1",
+								},
+							},
+						},
 					},
 				},
 			},
