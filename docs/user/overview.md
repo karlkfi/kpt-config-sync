@@ -156,7 +156,8 @@ The following constraints apply to `cluster` directory and are enforced during
 system.
 
 The `system` directory MUST only contain the `nomos.dev` objects, and an
-optional ConfigMap (core v1) that contains the reserved namespace mapping. See
+optional ConfigMap (core v1) containing
+[reserved namespaces](system_config.md#reserved-namespaces). See
 [GKE Policy Management System Configuration](system_config.md).
 
 ## Filesystem Operations
@@ -211,7 +212,7 @@ $ curl -LO https://storage.googleapis.com/nomos-release/stable/linux_amd64/nomos
 $ chmod u+x nomos
 ```
 
-You can replace `linux_amd64` in the URL with other supported platforms:
+You can replace `linux_amd64` in the URL with the following supported platforms:
 
 *   `darwin_amd64`
 *   `windows_amd64`
@@ -266,6 +267,9 @@ You can manually run nomos:
 $ cd foo-corp
 $ nomos vet
 ```
+
+If any issues are found, `vet` returns a non-zero exit code and prints error
+messages to `stderr`.
 
 You can also automatically run nomos vet as a git
 [pre-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks). In

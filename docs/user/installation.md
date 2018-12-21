@@ -51,8 +51,10 @@ The easiest way to get all of these is to follow the
 Ensure that the current user has cluster-admin in the cluster:
 
 ```console
-$ kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user [CURRENT_USERNAME]
+$ kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user <user>
 ```
+
+On GKE clusters, `<user>` would be the GSuite account (e.g. `charlie@foo-corp.com`).
 
 ### Download Operator Manifest Bundle
 
@@ -213,21 +215,14 @@ $ kubectl apply -f nomos2.yaml --context=cluster-2
 ### Verify Installation
 
 To verify that GKE Policy Management components are correctly installed, issue
-the following command and verify that all components listed have status
+the following command and verify that all deployments listed have status
 displayed as "Running."
 
 Check running components:
 
 ```console
 $ kubectl get pods -n=nomos-system
-NAME                                                  READY     STATUS    RESTARTS   AGE
-git-policy-importer-66bf6b9db4-pbsxn                  2/2       Running   0          24m
-monitor-6f968db9-mc2xp                                1/1       Running   0          24m
-syncer-58545bc77d-l485n                               1/1       Running   0          24m
 ```
-
-Note that the ResourceQuota admission controller will only be running if enabled
-using the `enableHierarchicalResourceQuota` flag.
 
 If the above components do not appear, you may find relevant error messages in
 the operator logs:

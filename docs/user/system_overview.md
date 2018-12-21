@@ -3,7 +3,7 @@
 ![drawing](../img/nomos_arch.png)
 
 The above diagram is a simplified view of GKE Policy Management components
-running on a workload cluster. Each component is described below.
+running on multiple Kubernetes clusters. Each component is described below.
 
 ## PolicyImporter
 
