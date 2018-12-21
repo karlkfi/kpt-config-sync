@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
@@ -35,8 +36,6 @@ import (
 	"github.com/google/nomos/pkg/util/multierror"
 	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
@@ -112,7 +111,7 @@ func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
 		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(specs),
 	}
-	if spec, found := specs[corev1.SchemeGroupVersion.WithKind("ResourceQuota").GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
+	if spec, found := specs[kinds.ResourceQuota().GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
 		visitors = append(visitors, transform.NewQuotaVisitor())
 	}
 	visitors = append(visitors, validation.NewNameValidator())
@@ -387,9 +386,9 @@ func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.
 				var effectiveMode v1alpha1.HierarchyModeType
 				gk := schema.GroupKind{Group: sg.Group, Kind: k.Kind}
 				if k.HierarchyMode == v1alpha1.HierarchyModeDefault {
-					if gk == rbacv1.SchemeGroupVersion.WithKind("RoleBinding").GroupKind() {
+					if gk == kinds.RoleBinding().GroupKind() {
 						effectiveMode = v1alpha1.HierarchyModeInherit
-					} else if gk == corev1.SchemeGroupVersion.WithKind("ResourceQuota").GroupKind() {
+					} else if gk == kinds.ResourceQuota().GroupKind() {
 						effectiveMode = v1alpha1.HierarchyModeHierarchicalQuota
 					} else {
 						effectiveMode = v1alpha1.HierarchyModeNone

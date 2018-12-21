@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
@@ -65,7 +66,7 @@ func processNamespace(objects []ast.FileObject, treeNode *ast.TreeNode, errorBui
 
 	for _, object := range objects {
 		gvk := object.GroupVersionKind()
-		if gvk == corev1.SchemeGroupVersion.WithKind("Namespace") {
+		if gvk == kinds.Namespace() {
 			// TODO: Move this out.
 			metaObj := object.Object.(metav1.Object)
 			treeNode.Labels = metaObj.GetLabels()

@@ -27,8 +27,8 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/installer/config"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/process/kubectl"
 	"github.com/pkg/errors"
 	"k8s.io/api/rbac/v1"
@@ -529,17 +529,17 @@ func (i *Installer) uninstallCluster() error {
 	if err != nil {
 		return errors.Wrapf(err, "while listing CRDs")
 	}
-	if crdListContains(crds, v1alpha1.SchemeGroupVersion.WithKind("PolicyNode")) {
+	if crdListContains(crds, kinds.PolicyNode()) {
 		if err = i.DeletePolicyNodes(); err != nil {
 			return err
 		}
 	}
-	if crdListContains(crds, v1alpha1.SchemeGroupVersion.WithKind("ClusterPolicy")) {
+	if crdListContains(crds, kinds.ClusterPolicy()) {
 		if err = i.DeleteClusterPolicies(); err != nil {
 			return err
 		}
 	}
-	if crdListContains(crds, v1alpha1.SchemeGroupVersion.WithKind("Sync")) {
+	if crdListContains(crds, kinds.Sync()) {
 		if err = i.DeleteSyncs(); err != nil {
 			return err
 		}

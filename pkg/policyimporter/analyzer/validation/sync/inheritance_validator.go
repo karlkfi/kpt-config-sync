@@ -2,9 +2,8 @@ package sync
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var (
@@ -47,7 +46,7 @@ func newInheritanceDisabledValidator() ValidatorFactory {
 // newInheritanceEnabledValidator implements validation for when inheritance is enabled.
 func newInheritanceEnabledValidator() ValidatorFactory {
 	return ValidatorFactory{fn: func(sync FileGroupVersionKindHierarchySync) error {
-		if isResourceQuota(sync.GroupVersionKind) {
+		if sync.GroupVersionKind == kinds.ResourceQuota() {
 			return errIfNotAllowed(sync, resourceQuotaIfInheritanceEnabled)
 		}
 		return errIfNotAllowed(sync, othersIfInheritanceEnabled)
@@ -65,8 +64,4 @@ func errIfNotAllowed(sync FileGroupVersionKindHierarchySync, allowed map[v1alpha
 		HierarchyMode:    sync.HierarchyMode,
 		Allowed:          allowed,
 	}
-}
-
-func isResourceQuota(gvk schema.GroupVersionKind) bool {
-	return gvk.Kind == "ResourceQuota" && gvk.Group == corev1.GroupName
 }

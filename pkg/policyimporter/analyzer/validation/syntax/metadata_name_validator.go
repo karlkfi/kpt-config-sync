@@ -5,16 +5,11 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
-)
-
-var (
-	// NamespaceGVK is the GroupVersionKind of the canonical Namespace Kind
-	NamespaceGVK = corev1.SchemeGroupVersion.WithKind("Namespace")
 )
 
 // MetadataNameValidator validates the value of metadata.name
@@ -31,7 +26,7 @@ var MetadataNameValidator = &FileObjectValidator{
 			if errs != nil {
 				return vet.InvalidMetadataNameError{Object: fileObject}
 			}
-		} else if gvk == NamespaceGVK {
+		} else if gvk == kinds.Namespace() {
 			expectedName := path.Base(path.Dir(fileObject.Source))
 			if expectedName == repo.NamespacesDir {
 				return vet.IllegalTopLevelNamespaceError{Object: fileObject}
@@ -49,6 +44,5 @@ var MetadataNameValidator = &FileObjectValidator{
 // This explicitly does not check for Nomos or Application even though they are CRDs because they
 // should never be in a Nomos repository anyway.
 func isDefaultCrdAllowedInNomos(gvk schema.GroupVersionKind) bool {
-	return gvk.Group == policyhierarchy.GroupName ||
-		(gvk.Group == "clusterregistry.k8s.io" && gvk.Kind == "Cluster")
+	return gvk.Group == policyhierarchy.GroupName || (gvk == kinds.Cluster())
 }

@@ -19,11 +19,10 @@ package transform
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,10 +38,10 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.Visitor {
 		return NewInheritanceVisitor(
 			map[schema.GroupKind]*InheritanceSpec{
-				rbacv1.SchemeGroupVersion.WithKind("RoleBinding").GroupKind(): {
+				kinds.RoleBinding().GroupKind(): {
 					Mode: "inherit",
 				},
-				corev1.SchemeGroupVersion.WithKind("ResourceQuota").GroupKind(): {
+				kinds.ResourceQuota().GroupKind(): {
 					Mode: "inherit",
 				},
 			},

@@ -22,7 +22,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/util/meta"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -73,7 +73,7 @@ func (d *Comparator) Equal(lhs *unstructured.Unstructured, rhs *unstructured.Uns
 	// When checking for equality, we ignore the management label.
 	// It's during reconciliation that we deal with mismatched management labels.
 	lhs, rhs = d.copyWithoutIgnoredLabels(lhs), d.copyWithoutIgnoredLabels(rhs)
-	if gvk == meta.ClusterRole {
+	if gvk == kinds.ClusterRole() {
 		// We need special equality handling for ClusterRoles. Since depending on whether or not AggregationRules are set,
 		// we will ignore the Rules field during comparison.
 		return clusterRolesEqual(lhs, rhs) && action.MetaEqual(lhs, rhs)

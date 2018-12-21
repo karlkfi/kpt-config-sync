@@ -19,6 +19,7 @@ import (
 	"github.com/filmil/k8s-oidc-helper/pkg/oidc"
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/kinds"
 	oidcconfig "github.com/google/nomos/pkg/oidc/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
@@ -260,7 +261,7 @@ func (l *loginFlow) Reparse(result *api.Config) (*api.Config, *oidcconfig.Client
 		glog.Infof("raw: %v", spew.Sdump(raw.Raw))
 	}
 	cid := oidcconfig.ClientID{}
-	gvk := oidcconfig.SchemeGroupVersion.WithKind("ClientID")
+	gvk := kinds.ClientID()
 	if _, _, err := clientcmdlatest.Codec.Decode(raw.Raw, &gvk, &cid); err != nil {
 		l.Err = fmt.Errorf("could not decode: %v", err)
 		return nil, nil

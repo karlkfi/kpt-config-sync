@@ -3,10 +3,10 @@ package semantic
 import (
 	"path"
 
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/util/multierror"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // ConflictingResourceQuotaValidator ensures no more than one ResourceQuota is defined in a
@@ -20,7 +20,7 @@ func (v ConflictingResourceQuotaValidator) Validate(errorBuilder *multierror.Bui
 	resourceQuotas := make(map[string][]ast.FileObject)
 
 	for _, obj := range v.Objects {
-		if obj.GroupVersionKind() == corev1.SchemeGroupVersion.WithKind("ResourceQuota") {
+		if obj.GroupVersionKind() == kinds.ResourceQuota() {
 			dir := path.Dir(obj.Source)
 			resourceQuotas[dir] = append(resourceQuotas[dir], obj)
 		}

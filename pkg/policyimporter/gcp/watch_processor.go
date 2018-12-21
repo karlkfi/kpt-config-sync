@@ -30,14 +30,12 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	clientaction "github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
-	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -246,7 +244,7 @@ func unmarshalClusterPolicy(change *watcher.Change) (*v1.ClusterPolicy, error) {
 		return nil, errors.Wrapf(err, "failed to unmarshal resource %q to ClusterPolicy", change.Element)
 	}
 	if len(cp.Spec.ClusterRolesV1) > 0 {
-		cp.Spec.Resources = addGVR(cp.Spec.Resources, rbacv1.SchemeGroupVersion.WithKind("ClusterRole"))
+		cp.Spec.Resources = addGVR(cp.Spec.Resources, kinds.ClusterRole())
 		crgvr := &cp.Spec.Resources[len(cp.Spec.Resources)-1].Versions[0]
 		for i := range cp.Spec.ClusterRolesV1 {
 			crgvr.Objects = append(crgvr.Objects, runtime.RawExtension{
@@ -255,7 +253,7 @@ func unmarshalClusterPolicy(change *watcher.Change) (*v1.ClusterPolicy, error) {
 		}
 	}
 	if len(cp.Spec.ClusterRoleBindingsV1) > 0 {
-		cp.Spec.Resources = addGVR(cp.Spec.Resources, rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"))
+		cp.Spec.Resources = addGVR(cp.Spec.Resources, kinds.ClusterRoleBinding())
 		crbgvr := &cp.Spec.Resources[len(cp.Spec.Resources)-1].Versions[0]
 		for i := range cp.Spec.ClusterRoleBindingsV1 {
 			crbgvr.Objects = append(crbgvr.Objects, runtime.RawExtension{
@@ -264,7 +262,7 @@ func unmarshalClusterPolicy(change *watcher.Change) (*v1.ClusterPolicy, error) {
 		}
 	}
 	if len(cp.Spec.PodSecurityPoliciesV1Beta1) > 0 {
-		cp.Spec.Resources = addGVR(cp.Spec.Resources, policyv1beta1.SchemeGroupVersion.WithKind("PodSecurityPolicy"))
+		cp.Spec.Resources = addGVR(cp.Spec.Resources, kinds.PodSecurityPolicy())
 		pspgvr := &cp.Spec.Resources[len(cp.Spec.Resources)-1].Versions[0]
 		for i := range cp.Spec.PodSecurityPoliciesV1Beta1 {
 			pspgvr.Objects = append(pspgvr.Objects, runtime.RawExtension{
@@ -286,7 +284,7 @@ func unmarshalPolicyNode(change *watcher.Change) (*v1.PolicyNode, error) {
 		return nil, errors.Wrapf(err, "failed to unmarshal resource %q to PolicyNode", change.Element)
 	}
 	if len(pn.Spec.RolesV1) > 0 {
-		pn.Spec.Resources = addGVR(pn.Spec.Resources, rbacv1.SchemeGroupVersion.WithKind("Role"))
+		pn.Spec.Resources = addGVR(pn.Spec.Resources, kinds.Role())
 		rolegvr := &pn.Spec.Resources[len(pn.Spec.Resources)-1].Versions[0]
 		for i := range pn.Spec.RolesV1 {
 			rolegvr.Objects = append(rolegvr.Objects, runtime.RawExtension{
@@ -295,7 +293,7 @@ func unmarshalPolicyNode(change *watcher.Change) (*v1.PolicyNode, error) {
 		}
 	}
 	if len(pn.Spec.RoleBindingsV1) > 0 {
-		pn.Spec.Resources = addGVR(pn.Spec.Resources, rbacv1.SchemeGroupVersion.WithKind("RoleBinding"))
+		pn.Spec.Resources = addGVR(pn.Spec.Resources, kinds.RoleBinding())
 		rbgvr := &pn.Spec.Resources[len(pn.Spec.Resources)-1].Versions[0]
 		for i := range pn.Spec.RoleBindingsV1 {
 			rbgvr.Objects = append(rbgvr.Objects, runtime.RawExtension{
@@ -304,7 +302,7 @@ func unmarshalPolicyNode(change *watcher.Change) (*v1.PolicyNode, error) {
 		}
 	}
 	if pn.Spec.ResourceQuotaV1 != nil {
-		pn.Spec.Resources = addGVR(pn.Spec.Resources, corev1.SchemeGroupVersion.WithKind("ResourceQuota"))
+		pn.Spec.Resources = addGVR(pn.Spec.Resources, kinds.ResourceQuota())
 		rqgvr := &pn.Spec.Resources[len(pn.Spec.Resources)-1].Versions[0]
 		rqgvr.Objects = []runtime.RawExtension{
 			{

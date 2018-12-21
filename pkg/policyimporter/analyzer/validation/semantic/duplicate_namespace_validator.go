@@ -3,10 +3,10 @@ package semantic
 import (
 	"path"
 
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/util/multierror"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // DuplicateNamespaceValidator ensures no more than one Namespace is defined in a directory.
@@ -19,7 +19,7 @@ func (v DuplicateNamespaceValidator) Validate(errorBuilder *multierror.Builder) 
 	namespaces := make(map[string][]ast.FileObject)
 
 	for _, obj := range v.Objects {
-		if obj.GroupVersionKind() == corev1.SchemeGroupVersion.WithKind("Namespace") {
+		if obj.GroupVersionKind() == kinds.Namespace() {
 			dir := path.Dir(obj.Source)
 			namespaces[dir] = append(namespaces[dir], obj)
 		}

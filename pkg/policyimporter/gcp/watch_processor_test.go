@@ -30,6 +30,7 @@ import (
 	mock "github.com/google/nomos/clientgen/watcher/v1/testing"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	clientaction "github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
@@ -653,7 +654,7 @@ func TestProcessAtomicGroup(t *testing.T) {
 							RoleBindingsV1: []rbacv1.RoleBinding{
 								{ObjectMeta: metav1.ObjectMeta{Name: "myrb"}},
 							},
-							Resources: toResources(rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
+							Resources: toResources(kinds.RoleBinding(),
 								runtime.Object(&rbacv1.RoleBinding{
 									ObjectMeta: metav1.ObjectMeta{
 										Name: "myrb",
@@ -690,7 +691,7 @@ func TestProcessAtomicGroup(t *testing.T) {
 								{ObjectMeta: metav1.ObjectMeta{Name: "myrb1"}},
 								{ObjectMeta: metav1.ObjectMeta{Name: "myrb2"}},
 							},
-							Resources: toResources(rbacv1.SchemeGroupVersion.WithKind("RoleBinding"),
+							Resources: toResources(kinds.RoleBinding(),
 								runtime.Object(&rbacv1.RoleBinding{
 									ObjectMeta: metav1.ObjectMeta{Name: "myrb1"},
 								}),
@@ -731,7 +732,7 @@ func TestProcessAtomicGroup(t *testing.T) {
 									Name: "myrq",
 								},
 							},
-							Resources: toResources(corev1.SchemeGroupVersion.WithKind("ResourceQuota"),
+							Resources: toResources(kinds.ResourceQuota(),
 								runtime.Object(&corev1.ResourceQuota{
 									ObjectMeta: metav1.ObjectMeta{
 										Name: "myrq",
@@ -768,7 +769,7 @@ func TestProcessAtomicGroup(t *testing.T) {
 								Name: "mycr",
 							},
 						}},
-						Resources: toResources(rbacv1.SchemeGroupVersion.WithKind("ClusterRole"),
+						Resources: toResources(kinds.ClusterRole(),
 							runtime.Object(&rbacv1.ClusterRole{
 								ObjectMeta: metav1.ObjectMeta{
 									Name: "mycr",
@@ -806,7 +807,7 @@ func TestProcessAtomicGroup(t *testing.T) {
 								Name: "mycrb",
 							},
 						}},
-						Resources: toResources(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"),
+						Resources: toResources(kinds.ClusterRoleBinding(),
 							runtime.Object(&rbacv1.ClusterRoleBinding{
 								ObjectMeta: metav1.ObjectMeta{
 									Name: "mycrb",

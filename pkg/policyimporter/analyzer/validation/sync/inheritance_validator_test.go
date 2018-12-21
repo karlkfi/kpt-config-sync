@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	vettesting "github.com/google/nomos/pkg/policyimporter/analyzer/vet/testing"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -26,40 +27,40 @@ func withMode(gvk schema.GroupVersionKind, mode v1alpha1.HierarchyModeType) File
 var inheritanceDisabledTestCases = []inheritanceDisabledTestCase{
 	{
 		name:   "no-inheritance rolebinding default",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeDefault),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeDefault),
 	},
 	{
 		name:   "no-inheritance rolebinding quota error",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
 		error:  []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "no-inheritance rolebinding inherit error",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeInherit),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeInherit),
 		error:  []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "no-inheritance rolebinding none error",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeNone),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeNone),
 		error:  []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "no-inheritance resourcequota default",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeDefault),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeDefault),
 	},
 	{
 		name:   "no-inheritance resourcequota quota error",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeHierarchicalQuota),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeHierarchicalQuota),
 		error:  []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "no-inheritance resourcequota inherit error",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeInherit),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeInherit),
 		error:  []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "no-inheritance resourcequota none error",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeNone),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeNone),
 		error:  []string{vet.IllegalHierarchyModeErrorCode},
 	},
 }
@@ -90,36 +91,53 @@ type inheritanceEnabledTestCase struct {
 var inheritanceEnabledTestCases = []inheritanceEnabledTestCase{
 	{
 		name:   "inheritance rolebinding default",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeDefault),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeDefault),
 	},
 	{
 		name:   "inheritance rolebinding quota error",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
 		error:  []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "inheritance rolebinding inherit",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeInherit),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeInherit),
 	},
 	{
 		name:   "inheritance rolebinding none",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeNone),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeNone),
 	},
 	{
 		name:   "inheritance resourcequota default",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeDefault),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeDefault),
 	},
 	{
 		name:   "inheritance resourcequota quota",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeHierarchicalQuota),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeHierarchicalQuota),
 	},
 	{
 		name:   "inheritance resourcequota inherit",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeInherit),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeInherit),
 	},
 	{
 		name:   "inheritance resourcequota none",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeNone),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeNone),
+	},
+	{
+		name:   "inheritance resourcequota v2 default",
+		fgvkhs: withMode(kinds.ResourceQuota().GroupKind().WithVersion("v2"), v1alpha1.HierarchyModeDefault),
+	},
+	{
+		name:   "inheritance resourcequota v2 quota error",
+		fgvkhs: withMode(kinds.ResourceQuota().GroupKind().WithVersion("v2"), v1alpha1.HierarchyModeHierarchicalQuota),
+		error:  []string{vet.IllegalHierarchyModeErrorCode},
+	},
+	{
+		name:   "inheritance resourcequota v2 inherit",
+		fgvkhs: withMode(kinds.ResourceQuota().GroupKind().WithVersion("v2"), v1alpha1.HierarchyModeInherit),
+	},
+	{
+		name:   "inheritance resourcequota v2 none",
+		fgvkhs: withMode(kinds.ResourceQuota().GroupKind().WithVersion("v2"), v1alpha1.HierarchyModeNone),
 	},
 }
 
@@ -148,35 +166,35 @@ type inheritanceMissingTestCase struct {
 var inheritanceMissingTestCases = []inheritanceMissingTestCase{
 	{
 		name:   "inheritance rolebinding default",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeDefault),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeDefault),
 	},
 	{
 		name:   "inheritance rolebinding quota error",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
 	},
 	{
 		name:   "inheritance rolebinding inherit",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeInherit),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeInherit),
 	},
 	{
 		name:   "inheritance rolebinding none",
-		fgvkhs: withMode(roleBinding(), v1alpha1.HierarchyModeNone),
+		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeNone),
 	},
 	{
 		name:   "inheritance resourcequota default",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeDefault),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeDefault),
 	},
 	{
 		name:   "inheritance resourcequota quota",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeHierarchicalQuota),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeHierarchicalQuota),
 	},
 	{
 		name:   "inheritance resourcequota inherit",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeInherit),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeInherit),
 	},
 	{
 		name:   "inheritance resourcequota none",
-		fgvkhs: withMode(resourceQuota(), v1alpha1.HierarchyModeNone),
+		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeNone),
 	},
 }
 

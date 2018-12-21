@@ -29,6 +29,7 @@ import (
 	"github.com/google/nomos/pkg/generic-syncer/differ"
 	"github.com/google/nomos/pkg/generic-syncer/labeling"
 	"github.com/google/nomos/pkg/generic-syncer/metrics"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
@@ -429,7 +430,7 @@ func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *nomosv1.PolicyN
 	namespace.Labels = labels
 	namespace.Annotations = policyNode.Annotations
 	namespace.Name = policyNode.Name
-	namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
+	namespace.SetGroupVersionKind(kinds.Namespace())
 	return namespace
 }
 

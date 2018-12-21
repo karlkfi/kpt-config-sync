@@ -4,9 +4,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,8 +31,7 @@ func isInSystemDir(o ast.FileObject) bool {
 // It returns true iff the object is allowed in system/, but no other directories.
 func IsSystemOnly(gvk schema.GroupVersionKind) bool {
 	switch gvk {
-	case v1alpha1.SchemeGroupVersion.WithKind(policyhierarchy.RepoKind),
-		v1alpha1.SchemeGroupVersion.WithKind(policyhierarchy.SyncKind):
+	case kinds.Repo(), kinds.Sync():
 		return true
 	default:
 		return false

@@ -3,6 +3,7 @@ package sync
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	vettesting "github.com/google/nomos/pkg/policyimporter/analyzer/vet/testing"
 	"github.com/google/nomos/pkg/policyimporter/meta"
@@ -21,18 +22,18 @@ type knownResourceValidatorTestCase struct {
 var knownResourceValidatorTestCases = []knownResourceValidatorTestCase{
 	{
 		name:  "RoleBinding throws error if not known",
-		gvk:   roleBinding(),
+		gvk:   kinds.RoleBinding(),
 		error: []string{vet.UnknownResourceInSyncErrorCode},
 	},
 	{
 		name:  "RoleBinding valid if known",
-		known: []schema.GroupVersionKind{roleBinding()},
-		gvk:   roleBinding(),
+		known: []schema.GroupVersionKind{kinds.RoleBinding()},
+		gvk:   kinds.RoleBinding(),
 	},
 	{
-		name:  "Rolebinding throws error if wrong version",
-		gvk:   roleBinding(),
-		known: []schema.GroupVersionKind{roleBinding().GroupKind().WithVersion("v2")},
+		name:  "RoleBinding throws error if wrong version",
+		gvk:   kinds.RoleBinding(),
+		known: []schema.GroupVersionKind{kinds.RoleBinding().GroupKind().WithVersion("v2")},
 		error: []string{vet.UnknownResourceVersionInSyncErrorCode},
 	},
 }

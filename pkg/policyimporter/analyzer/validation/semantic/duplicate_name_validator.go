@@ -5,10 +5,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/util/multierror"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -26,10 +26,8 @@ func (v DuplicateNameValidator) Validate(errorBuilder *multierror.Builder) {
 		name := obj.Name()
 
 		switch gvk {
-		case corev1.SchemeGroupVersion.WithKind("Namespace"):
+		case kinds.Namespace(), kinds.ResourceQuota():
 			// Namespace names are validated separately.
-			continue
-		case corev1.SchemeGroupVersion.WithKind("ResourceQuota"):
 			// As only one ResourceQuota may currently exist in a directory, this need not be validated.
 			continue
 		}

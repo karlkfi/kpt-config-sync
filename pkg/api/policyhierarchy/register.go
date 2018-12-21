@@ -19,10 +19,4 @@ package policyhierarchy
 const (
 	// GroupName is the name of the group of policyhierarchy resources.
 	GroupName = "nomos.dev"
-
-	// RepoKind is the Kind of objects that define basic settings for a Nomos repository
-	RepoKind = "Repo"
-
-	// SyncKind is the Kind of objects that define syncable objects for a Nomos repository
-	SyncKind = "Sync"
 )
