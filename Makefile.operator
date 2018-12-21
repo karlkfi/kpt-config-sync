@@ -13,7 +13,7 @@ ifndef OPERATOR_STAGING_DIR
 $(error OPERATOR_STAGING_DIR must be set, but is not)
 endif
 
-DEV_BUCKET := gs://${GCP_PROJECT}
+DEV_BUCKET := gs://nomos-release/operator-latest
 DEV_BUCKET_USER ?= gs://${GCP_PROJECT}/${USER}
 OPERATOR_STAGING_DIR := ${OUTPUT_DIR}/staging/operator
 GIT_SYNC_TAG := v3.0.1-gke.1__linux_amd64
@@ -28,27 +28,24 @@ pull-git-sync:
 
 # prepare-operator builds and pushes the local tree, then retrieves the operator
 # manifest bundle from GCP_PROJECT and applies it, injecting PRIVATE_REGISTRY
-# so that the operator deploys the nomos binary deployed by the operator reflects
+# so that the operator deploys the nomos binary from the local tree
 # the local tree. The version of the operator is the latest dev version, which
 # is the same for all developers on the nomos cluster. To use a custom operator
 # build, use deploy-operator-user.
-# To ensure the latest build is being used, in the nomos operator repo, run:
-# $> PROJECT_NAME=stolos-dev make release-dev
-#
 .PHONY: prepare-operator
 prepare-operator: push-to-gcr-nomos pull-git-sync
 	@echo "+++ Preparing regular operator"
 	@rm -rf ${OPERATOR_STAGING_DIR}
 	@mkdir -p ${OPERATOR_STAGING_DIR}
-	@gsutil cp ${DEV_BUCKET}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
+	@gsutil cp ${DEV_BUCKET}/nomos-operator.yaml \
+		${OPERATOR_STAGING_DIR}/operator-bundle.yaml
 	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
-# TODO(b/119836195): Using sed here because the Prow test environment doesn't have the envsubst
-# command. Once it does, switch back
-	@cat ${OPERATOR_STAGING_DIR}/operator-bundle.yaml | sed 's|$${PROJECT_NAME}|$(GCP_PROJECT)|g' | \
-		sed 's|$${PRIVATE_REGISTRY}|gcr.io/$(GCR_PREFIX)|g' > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
-# @PROJECT_NAME=${GCP_PROJECT} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
-#	 ${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+# TODO(b/119836195): Using sed here because the Prow test environment doesn't
+# have the envsubst command. Once it does, switch back
+	@cat .output/staging/operator/operator-bundle.yaml \
+		| sed 's|private-registry=|private-registry=gcr.io/${GCR_PREFIX}|' \
+		> ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
 
 # deploy-operator installs the operator prepared with prepare-operator
 .PHONY: deploy-operator
@@ -70,7 +67,7 @@ prepare-operator-user: push-to-gcr-nomos pull-git-sync
 	@gsutil cp ${DEV_BUCKET_USER}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
 	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
-	@PROJECT_NAME=${GCP_PROJECT}/${USER} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
+	@PROJECT_NAME=${GCP_PROJECT}/${USER} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" IMAGE_TAG=${IMAGE_TAG} envsubst < \
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
 
 # deploy-operator-user installs the operator prepared with prepare-operator-user
