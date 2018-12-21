@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	// hcl is vendored and will be used in a future CL.
+	_ "github.com/hashicorp/hcl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
