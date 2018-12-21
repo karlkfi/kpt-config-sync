@@ -306,13 +306,15 @@ func (tfe *Executor) UpdateState() error {
 		fmt.Sprintf("-state=%s", filepath.Join(tfe.dir, tfe.stateFileName)),
 		resourceAddr)
 	if err != nil {
-		return errors.Wrapf(err, "failed to run terraform state show on resource %s", resourceAddr)
+		glog.Warningf("failed to run terraform state show on resource %s. err: %v."+
+			" This can be ignored in GCP Project creation.", resourceAddr, err)
 	}
 	glog.V(1).Infof("[%s]: Done terraform state show on resource %s.\n%s", tfe.dir, resourceAddr, out)
 
 	m, err := parseStateConfig(string(out))
 	if err != nil {
-		return errors.Wrap(err, "failed to parse terraform state")
+		glog.Warningf("failed to parse terraform state. err: %v."+
+			" This can be ignored in GCP Project creation", err)
 	}
 	tfe.state = m
 	return nil

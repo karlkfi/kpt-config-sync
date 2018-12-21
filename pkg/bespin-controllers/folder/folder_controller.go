@@ -96,7 +96,7 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
 	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
-	tfe, err := terraform.NewExecutor(ctx, r, folder)
+	tfe, err := terraform.NewExecutor(ctx, r.Client, folder)
 	if err != nil {
 		glog.Errorf("[Folder %v] reconciler failed to create new terraform executor: %v", request.NamespacedName, err)
 		return reconcile.Result{},

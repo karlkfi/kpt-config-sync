@@ -81,6 +81,7 @@ func (i *IAMPolicy) TFResourceConfig(ctx context.Context, c Client) (string, err
 		tfs = append(tfs, `resource "google_folder_iam_policy" "bespin_folder_iam_policy" {`)
 		tfs = append(tfs, fmt.Sprintf(`folder = "folders/%s"`, ID))
 	case ProjectKind:
+		resName = types.NamespacedName{Namespace: i.Namespace, Name: i.Spec.ResourceReference.Name}
 		project := &Project{}
 		if err := c.Get(ctx, resName, project); err != nil {
 			return "", errors.Wrapf(err, "failed to get resource reference Project instance: %v", resName)

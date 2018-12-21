@@ -85,7 +85,7 @@ func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Resul
 	defer cancel()
 	project := &bespinv1.Project{}
 	if err := r.Get(ctx, request.NamespacedName, project); err != nil {
-		// Instance not found, e.g. was just deleted.
+		// Instance was just deleted or there's some internal K8S error.
 		if k8serrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
@@ -95,7 +95,7 @@ func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
 	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
-	tfe, err := terraform.NewExecutor(ctx, r, project)
+	tfe, err := terraform.NewExecutor(ctx, r.Client, project)
 	if err != nil {
 		glog.Errorf("[Project %v] reconciler failed to create new Terraform executor: %v", request.NamespacedName, err)
 		return reconcile.Result{}, errors.Wrapf(err,
