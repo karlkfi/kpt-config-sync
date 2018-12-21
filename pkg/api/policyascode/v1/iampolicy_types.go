@@ -52,9 +52,9 @@ type IAMPolicyList struct {
 	Items           []IAMPolicy `json:"items"`
 }
 
-// GetTFResourceConfig converts the IAMPolicy's Spec struct into terraform config string.
+// TFResourceConfig converts the IAMPolicy's Spec struct into terraform config string.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (i *IAMPolicy) GetTFResourceConfig(ctx context.Context, c Client) (string, error) {
+func (i *IAMPolicy) TFResourceConfig(ctx context.Context, c Client) (string, error) {
 	var tfs []string
 	resName := types.NamespacedName{Name: i.Spec.ResourceReference.Name}
 	switch i.Spec.ResourceReference.Kind {
@@ -63,7 +63,7 @@ func (i *IAMPolicy) GetTFResourceConfig(ctx context.Context, c Client) (string, 
 		if err := c.Get(ctx, resName, org); err != nil {
 			return "", errors.Wrapf(err, "failed to get reference resource Organization instance: %v", resName)
 		}
-		ID := org.GetID()
+		ID := org.ID()
 		if ID == "" {
 			return "", fmt.Errorf("missing resource reference Organization ID: %v", resName)
 		}
@@ -74,7 +74,7 @@ func (i *IAMPolicy) GetTFResourceConfig(ctx context.Context, c Client) (string, 
 		if err := c.Get(ctx, resName, folder); err != nil {
 			return "", errors.Wrapf(err, "failed to get reference resource Folder instance: %v", resName)
 		}
-		ID := folder.GetID()
+		ID := folder.ID()
 		if ID == "" {
 			return "", fmt.Errorf("missing resource reference Folder ID: %v", resName)
 		}
@@ -85,7 +85,7 @@ func (i *IAMPolicy) GetTFResourceConfig(ctx context.Context, c Client) (string, 
 		if err := c.Get(ctx, resName, project); err != nil {
 			return "", errors.Wrapf(err, "failed to get resource reference Project instance: %v", resName)
 		}
-		ID := project.GetID()
+		ID := project.ID()
 		if ID == "" {
 			return "", fmt.Errorf("missing resource reference Project ID: %v", resName)
 		}
@@ -128,20 +128,20 @@ func (i *IAMPolicy) GetTFResourceConfig(ctx context.Context, c Client) (string, 
 	return strings.Join(tfs, "\n"), nil
 }
 
-// GetTFImportConfig returns an empty terraform IAMPolicy resource block used for terraform import.
+// TFImportConfig returns an empty terraform IAMPolicy resource block used for terraform import.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (i *IAMPolicy) GetTFImportConfig() string {
+func (i *IAMPolicy) TFImportConfig() string {
 	return `resource "google_project_iam_policy" "project_iam_policy" {}`
 }
 
-// GetTFResourceAddr returns the address of this IAMPolicy resource in Terraform config.
+// TFResourceAddr returns the address of this IAMPolicy resource in Terraform config.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (i *IAMPolicy) GetTFResourceAddr() string {
+func (i *IAMPolicy) TFResourceAddr() string {
 	return `google_project_iam_policy.project_iam_policy`
 }
 
-// GetID doesn't apply to IAMPolicy.
+// ID doesn't apply to IAMPolicy.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (i *IAMPolicy) GetID() string {
+func (i *IAMPolicy) ID() string {
 	return ""
 }

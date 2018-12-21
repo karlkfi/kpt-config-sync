@@ -61,7 +61,7 @@ func TestStorageOrganization(t *testing.T) {
 	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
 }
 
-func TestOrganizationGetTFResourceConfig(t *testing.T) {
+func TestOrganizationTFResourceConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		o       *Organization
@@ -99,20 +99,20 @@ organization = "organizations/1234567"
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.o.GetTFResourceConfig(context.Background(), nil)
+			got, err := tc.o.TFResourceConfig(context.Background(), nil)
 			switch {
 			case !tc.wantErr && err != nil:
-				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
+				t.Errorf("TFResourceConfig() got err %+v; want nil", err)
 			case tc.wantErr && err == nil:
-				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
+				t.Errorf("TFResourceConfig() got nil; want err %+v", tc.wantErr)
 			case got != tc.want:
-				t.Errorf("GetTFResourceConfig() got \n%s\n want \n%s", got, tc.want)
+				t.Errorf("TFResourceConfig() got \n%s\n want \n%s", got, tc.want)
 			}
 		})
 	}
 }
 
-func TestOrganizationGetID(t *testing.T) {
+func TestOrganizationID(t *testing.T) {
 	tests := []struct {
 		name string
 		o    *Organization
@@ -141,9 +141,9 @@ func TestOrganizationGetID(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := tc.o.GetID()
+			got := tc.o.ID()
 			if got != tc.want {
-				t.Errorf("GetID() got \n%s\n want \n%s", got, tc.want)
+				t.Errorf("ID() got \n%s\n want \n%s", got, tc.want)
 			}
 		})
 	}

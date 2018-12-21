@@ -86,7 +86,7 @@ func TestStorageIAMPolicy(t *testing.T) {
 	}
 }
 
-func TestIAMPolicyGetTFResourceConfig(t *testing.T) {
+func TestIAMPolicyTFResourceConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		ip      *IAMPolicy
@@ -458,14 +458,14 @@ members = [
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.ip.GetTFResourceConfig(context.Background(), tc.c)
+			got, err := tc.ip.TFResourceConfig(context.Background(), tc.c)
 			switch {
 			case !tc.wantErr && err != nil:
-				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
+				t.Errorf("TFResourceConfig() got err %+v; want nil", err)
 			case tc.wantErr && err == nil:
-				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
+				t.Errorf("TFResourceConfig() got nil; want err %+v", tc.wantErr)
 			case got != tc.want:
-				t.Errorf("GetTFResourceConfig() got %s; want %s", got, tc.want)
+				t.Errorf("TFResourceConfig() got %s; want %s", got, tc.want)
 			}
 		})
 

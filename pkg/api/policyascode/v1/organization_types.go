@@ -61,14 +61,14 @@ type OrganizationList struct {
 	Items           []Organization `json:"items"`
 }
 
-// GetTFResourceConfig converts the Organization's Spec struct into terraform config string.
+// TFResourceConfig converts the Organization's Spec struct into terraform config string.
 // Organizations are different from other GCP resources that they are not allowed to be created,
 // updated (OrgPolicy can be attached, but not update the Organization itself), deleted. It's
 // READONLY in bespin world, and in Terraform there is only a "data" config (no "resource")
 // for an Organization.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (o *Organization) GetTFResourceConfig(ctx context.Context, c Client) (string, error) {
-	ID := o.GetID()
+func (o *Organization) TFResourceConfig(ctx context.Context, c Client) (string, error) {
+	ID := o.ID()
 	if ID == "" {
 		return "", fmt.Errorf("missing Organization ID")
 	}
@@ -77,25 +77,25 @@ organization = "organizations/%v"
 }`, ID), nil
 }
 
-// GetTFImportConfig returns an empty terraform organization resource block used for terraform import.
+// TFImportConfig returns an empty terraform organization resource block used for terraform import.
 // The string is NOT applicable for google_organization because there doesn't exist a "resource" for
 // google_organization and trying to import an organization in Terraform is not supported in Terraform.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (o *Organization) GetTFImportConfig() string {
+func (o *Organization) TFImportConfig() string {
 	return ""
 }
 
-// GetTFResourceAddr returns the address of this Organization resource in terraform config.
+// TFResourceAddr returns the address of this Organization resource in terraform config.
 // The string is NOT applicable for google_organization because there doesn't exist a "resource" for
 // google_organization and trying to import an organization in Terraform is not supported in Terraform.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (o *Organization) GetTFResourceAddr() string {
+func (o *Organization) TFResourceAddr() string {
 	return ""
 }
 
-// GetID returns the Organization ID from GCP.
+// ID returns the Organization ID from GCP.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (o *Organization) GetID() string {
+func (o *Organization) ID() string {
 	if o.Spec.ID == 0 {
 		return ""
 	}

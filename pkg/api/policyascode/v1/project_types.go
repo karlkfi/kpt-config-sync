@@ -73,9 +73,9 @@ type ProjectList struct {
 	Items           []Project `json:"items"`
 }
 
-// GetTFResourceConfig converts the Project's Spec struct into terraform config string.
+// TFResourceConfig converts the Project's Spec struct into terraform config string.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (p *Project) GetTFResourceConfig(ctx context.Context, c Client) (string, error) {
+func (p *Project) TFResourceConfig(ctx context.Context, c Client) (string, error) {
 	var parent string
 	resName := types.NamespacedName{Name: p.Spec.ParentReference.Name}
 	switch p.Spec.ParentReference.Kind {
@@ -84,7 +84,7 @@ func (p *Project) GetTFResourceConfig(ctx context.Context, c Client) (string, er
 		if err := c.Get(ctx, resName, org); err != nil {
 			return "", errors.Wrapf(err, "failed to get parent Organization instance: %v", resName)
 		}
-		ID := org.GetID()
+		ID := org.ID()
 		if ID == "" {
 			return "", fmt.Errorf("missing parent Organization ID: %v", resName)
 		}
@@ -94,7 +94,7 @@ func (p *Project) GetTFResourceConfig(ctx context.Context, c Client) (string, er
 		if err := c.Get(ctx, resName, folder); err != nil {
 			return "", errors.Wrapf(err, "failed to get parent Folder instance: %v", resName)
 		}
-		ID := folder.GetID()
+		ID := folder.ID()
 		if ID == "" {
 			return "", fmt.Errorf("missing parent Folder ID: %v", resName)
 		}
@@ -107,23 +107,23 @@ func (p *Project) GetTFResourceConfig(ctx context.Context, c Client) (string, er
 name = "%s"
 project_id = "%s"
 %s
-}`, p.Spec.Name, p.GetID(), parent), nil
+}`, p.Spec.Name, p.ID(), parent), nil
 }
 
-// GetTFImportConfig returns an empty terraform project resource block used for terraform import.
+// TFImportConfig returns an empty terraform project resource block used for terraform import.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (p *Project) GetTFImportConfig() string {
+func (p *Project) TFImportConfig() string {
 	return `resource "google_project" "bespin_project" {}`
 }
 
-// GetTFResourceAddr returns the address of this project resource in terraform config.
+// TFResourceAddr returns the address of this project resource in terraform config.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (p *Project) GetTFResourceAddr() string {
+func (p *Project) TFResourceAddr() string {
 	return `google_project.bespin_project`
 }
 
-// GetID returns the project ID from GCP.
+// ID returns the project ID from GCP.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (p *Project) GetID() string {
+func (p *Project) ID() string {
 	return p.Spec.ID
 }

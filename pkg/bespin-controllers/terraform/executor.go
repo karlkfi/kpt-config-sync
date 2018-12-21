@@ -79,17 +79,17 @@ func execCommand(name string, args ...string) ([]byte, error) {
 // Resource defines a collection of common Terraform-related functionalities
 // that all bespin resources should implement.
 type Resource interface {
-	// GetTFResourceConfig converts the resource's Spec struct into Terraform config string.
-	GetTFResourceConfig(ctx context.Context, c bespinv1.Client) (string, error)
+	// TFResourceConfig converts the resource's Spec struct into Terraform config string.
+	TFResourceConfig(ctx context.Context, c bespinv1.Client) (string, error)
 
-	// GetTFImportConfig returns an empty Terraform resource block used for terraform import.
-	GetTFImportConfig() string
+	// TFImportConfig returns an empty Terraform resource block used for terraform import.
+	TFImportConfig() string
 
-	// GetTFResourceAddr returns the address of this resource in Terraform config.
-	GetTFResourceAddr() string
+	// TFResourceAddr returns the address of this resource in Terraform config.
+	TFResourceAddr() string
 
-	// GetID returns the resource ID from GCP.
-	GetID() string
+	// ID returns the resource ID from GCP.
+	ID() string
 }
 
 // Executor is a Terraform wrapper to run Terraform comamnds.
@@ -228,7 +228,7 @@ func (tfe *Executor) RunApply() error {
 func (tfe *Executor) RunImport() error {
 	glog.V(1).Infof("[%s]: Running terraform import.", tfe.dir)
 	fileName := filepath.Join(tfe.dir, tfe.configFileName)
-	err := ioutil.WriteFile(fileName, []byte(tfe.resource.GetTFImportConfig()), defaultFilePerm)
+	err := ioutil.WriteFile(fileName, []byte(tfe.resource.TFImportConfig()), defaultFilePerm)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write terraform import config to file %s", fileName)
 	}
@@ -238,8 +238,8 @@ func (tfe *Executor) RunImport() error {
 		fmt.Sprintf("-config=%s", tfe.dir), // Dir to find provider info.
 		fmt.Sprintf("-state=%s", filepath.Join(tfe.dir, tfe.stateFileName)),     // Source state file.
 		fmt.Sprintf("-state-out=%s", filepath.Join(tfe.dir, tfe.stateFileName)), // Target state file to update.
-		tfe.resource.GetTFResourceAddr(),
-		tfe.resource.GetID())
+		tfe.resource.TFResourceAddr(),
+		tfe.resource.ID())
 	if err != nil {
 		glog.Warningf("failed to run terraform import: %v", err)
 	}
@@ -281,7 +281,7 @@ func (tfe *Executor) RunCreateOrUpdateFlow() error {
 	err = run(tfe.RunInit, err)
 
 	// Only import the resource from GCP if we already know its GCP ID.
-	if tfe.resource.GetID() != "" {
+	if tfe.resource.ID() != "" {
 		err = run(tfe.RunImport, err)
 		err = run(tfe.UpdateState, err)
 	}
@@ -298,7 +298,7 @@ func (tfe *Executor) RunCreateOrUpdateFlow() error {
 // maybe used later.
 func (tfe *Executor) UpdateState() error {
 	glog.V(1).Infof("[%s]: Running terraform state show.", tfe.dir)
-	resourceAddr := tfe.resource.GetTFResourceAddr()
+	resourceAddr := tfe.resource.TFResourceAddr()
 	out, err := execCommand(
 		tfe.binaryPath,
 		"state",
@@ -381,7 +381,7 @@ func (tfe *Executor) RunDeleteFlow() error {
 // and writes it to a local config file.
 func (tfe *Executor) createResoureConfig() error {
 	glog.V(1).Infof("[%s]: Creating Terraform resource config.", tfe.dir)
-	resourceConfig, err := tfe.resource.GetTFResourceConfig(tfe.ctx, tfe.k8sClient)
+	resourceConfig, err := tfe.resource.TFResourceConfig(tfe.ctx, tfe.k8sClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to get Terraform resource config from resource")
 	}

@@ -68,9 +68,9 @@ type FolderList struct {
 	Items           []Folder `json:"items"`
 }
 
-// GetTFResourceConfig converts the Folder's Spec struct into terraform config string.
+// TFResourceConfig converts the Folder's Spec struct into terraform config string.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (f *Folder) GetTFResourceConfig(ctx context.Context, c Client) (string, error) {
+func (f *Folder) TFResourceConfig(ctx context.Context, c Client) (string, error) {
 	var parent string
 	resName := types.NamespacedName{Name: f.Spec.ParentReference.Name}
 	switch f.Spec.ParentReference.Kind {
@@ -79,7 +79,7 @@ func (f *Folder) GetTFResourceConfig(ctx context.Context, c Client) (string, err
 		if err := c.Get(ctx, resName, org); err != nil {
 			return "", errors.Wrapf(err, "failed to get parent Organization instance: %v", resName)
 		}
-		ID := org.GetID()
+		ID := org.ID()
 		if ID == "" {
 			return "", fmt.Errorf("missing parent Organization ID: %v", resName)
 		}
@@ -89,7 +89,7 @@ func (f *Folder) GetTFResourceConfig(ctx context.Context, c Client) (string, err
 		if err := c.Get(ctx, resName, folder); err != nil {
 			return "", errors.Wrapf(err, "failed to get parent Folder instance: %v", resName)
 		}
-		ID := folder.GetID()
+		ID := folder.ID()
 		if ID == "" {
 			return "", fmt.Errorf("missing parent Folder ID: %v", resName)
 		}
@@ -104,22 +104,22 @@ parent = "%s"
 }`, f.Spec.DisplayName, parent), nil
 }
 
-// GetTFImportConfig returns an empty terraform Folder resource block used for terraform import.
+// TFImportConfig returns an empty terraform Folder resource block used for terraform import.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (f *Folder) GetTFImportConfig() string {
+func (f *Folder) TFImportConfig() string {
 	return `resource "google_folder" "bespin_folder" {}`
 }
 
-// GetTFResourceAddr returns the address of this Folder resource in terraform config.
+// TFResourceAddr returns the address of this Folder resource in terraform config.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (f *Folder) GetTFResourceAddr() string {
+func (f *Folder) TFResourceAddr() string {
 	return `google_folder.bespin_folder`
 }
 
-// GetID returns the Folder ID from GCP. It first looks at Status.ID, and use that
+// ID returns the Folder ID from GCP. It first looks at Status.ID, and use that
 // if present, if not it uses Spec.ID if it's present, otherwise return empty string.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (f *Folder) GetID() string {
+func (f *Folder) ID() string {
 	if f.Status.ID != 0 {
 		return fmt.Sprintf("%v", f.Status.ID)
 	}

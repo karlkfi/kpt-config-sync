@@ -64,7 +64,7 @@ func TestStorageProject(t *testing.T) {
 	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
 }
 
-func TestProjectGetTFResourceConfig(t *testing.T) {
+func TestProjectTFResourceConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		p       *Project
@@ -256,14 +256,14 @@ folder_id = "1234567"
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.p.GetTFResourceConfig(context.Background(), tc.c)
+			got, err := tc.p.TFResourceConfig(context.Background(), tc.c)
 			switch {
 			case !tc.wantErr && err != nil:
-				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
+				t.Errorf("TFResourceConfig() got err %+v; want nil", err)
 			case tc.wantErr && err == nil:
-				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
+				t.Errorf("TFResourceConfig() got nil; want err %+v", tc.wantErr)
 			case got != tc.want:
-				t.Errorf("GetTFResourceConfig() got %s; want %s", got, tc.want)
+				t.Errorf("TFResourceConfig() got %s; want %s", got, tc.want)
 			}
 		})
 	}

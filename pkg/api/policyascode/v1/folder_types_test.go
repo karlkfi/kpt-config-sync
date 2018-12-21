@@ -64,7 +64,7 @@ func TestStorageFolder(t *testing.T) {
 	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
 }
 
-func TestFolderGetTFResourceConfig(t *testing.T) {
+func TestFolderTFResourceConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		f       *Folder
@@ -242,21 +242,21 @@ parent = "folders/1234567"
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.f.GetTFResourceConfig(context.Background(), tc.c)
+			got, err := tc.f.TFResourceConfig(context.Background(), tc.c)
 			switch {
 			case !tc.wantErr && err != nil:
-				t.Errorf("GetTFResourceConfig() got err %+v; want nil", err)
+				t.Errorf("TFResourceConfig() got err %+v; want nil", err)
 			case tc.wantErr && err == nil:
-				t.Errorf("GetTFResourceConfig() got nil; want err %+v", tc.wantErr)
+				t.Errorf("TFResourceConfig() got nil; want err %+v", tc.wantErr)
 			case got != tc.want:
-				t.Errorf("GetTFResourceConfig() got \n%s\n want \n%s", got, tc.want)
+				t.Errorf("TFResourceConfig() got \n%s\n want \n%s", got, tc.want)
 			}
 		})
 
 	}
 }
 
-func TestFolderGetID(t *testing.T) {
+func TestFolderID(t *testing.T) {
 	tests := []struct {
 		name string
 		f    *Folder
@@ -380,9 +380,9 @@ func TestFolderGetID(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := tc.f.GetID()
+			got := tc.f.ID()
 			if got != tc.want {
-				t.Errorf("GetID() got \n%s\n want \n%s", got, tc.want)
+				t.Errorf("ID() got \n%s\n want \n%s", got, tc.want)
 			}
 		})
 	}
