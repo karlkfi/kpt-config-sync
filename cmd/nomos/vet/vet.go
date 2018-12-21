@@ -37,7 +37,7 @@ returns a non-zero error code if any issues are found.
 		}
 		// Check for a set environment variable instead of using a flag so as not to expose
 		// this WIP externally.
-		var e *parse.Ext
+		e := &parse.Ext{}
 		if _, ok := os.LookupEnv("NOMOS_ENABLE_BESPIN"); ok {
 			e = &parse.Ext{VP: filesystem.BespinVisitors, Syncs: filesystem.BespinSyncs}
 		}

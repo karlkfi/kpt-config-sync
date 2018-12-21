@@ -62,7 +62,7 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	var e *parse.Ext
+	e := &parse.Ext{}
 	if bespin {
 		e = &parse.Ext{VP: filesystem.BespinVisitors, Syncs: filesystem.BespinSyncs}
 	}
