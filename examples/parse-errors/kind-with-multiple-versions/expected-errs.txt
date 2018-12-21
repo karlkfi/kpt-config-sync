@@ -5,31 +5,13 @@ Found issues: 2 error(s)
 
 group: 
 kind: ResourceQuota
-
-source: system/resource-quota.yaml
-metadata.name: resourcequotas
-group: nomos.dev
-version: v1alpha1
-kind: Sync
-
-source: system/resource-quota.yaml
-metadata.name: resourcequotas
-group: nomos.dev
-version: v1alpha1
-kind: Sync
+sources: [system/resource-quota.yaml, system/resource-quota.yaml]
 
 
 [2] KNV1032: Sync contains a Resource Kind that does not exist on cluster. Either remove the resource type from the Sync or create a CustomResourceDefinition for the resource type on the cluster.
 
-Resource Kind:
+source: system/resource-quota.yaml
 group: 
 version: v2
 kind: ResourceQuota
-
-Sync:
-source: system/resource-quota.yaml
-metadata.name: resourcequotas
-group: nomos.dev
-version: v1alpha1
-kind: Sync
 

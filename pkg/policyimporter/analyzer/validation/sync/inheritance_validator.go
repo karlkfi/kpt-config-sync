@@ -2,10 +2,9 @@ package sync
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/util/multierror"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var (
@@ -25,34 +24,49 @@ var (
 	}
 )
 
-// InheritanceValidator ensures only valid inheritance modes are used in the repository.
-type InheritanceValidator struct {
-	Repo *v1alpha1.Repo
-}
-
-// Validate adds errors for each Kind defined in a Sync with an illegal inheritance mode.
-func (v InheritanceValidator) Validate(objects []ast.FileObject, errorBuilder *multierror.Builder) {
-	v.inheritanceValidator().Validate(objects, errorBuilder)
-}
-
-func (v InheritanceValidator) inheritanceValidator() *validator {
-	return &validator{
-		validate: func(sync kindSync) error {
-			allowed := v.allowedModes(sync)
-			if !allowed[sync.hierarchy] {
-				return vet.IllegalHierarchyModeError{Sync: sync.sync, GVK: sync.gvk, Mode: sync.hierarchy, Allowed: allowed}
-			}
-			return nil
-		},
+// NewInheritanceValidatorFactory creates a validator factory for the passed Repo that validates the
+// inheritance setting of all Kinds defined in Syncs. If the passed repo is Nil, returns the
+// disabled validator.
+func NewInheritanceValidatorFactory(repo *v1alpha1.Repo) ValidatorFactory {
+	if repo == nil {
+		return nilValidatorFactory
 	}
+	if repo.Spec.ExperimentalInheritance {
+		return newInheritanceEnabledValidator()
+	}
+	return newInheritanceDisabledValidator()
 }
 
-func (v InheritanceValidator) allowedModes(sync kindSync) map[v1alpha1.HierarchyModeType]bool {
-	if v.Repo.Spec.ExperimentalInheritance {
-		if sync.gvk.Kind == "ResourceQuota" && sync.gvk.Group == corev1.GroupName {
-			return resourceQuotaIfInheritanceEnabled
+// newInheritanceDisabledValidator implements validation for when inheritance is disabled.
+func newInheritanceDisabledValidator() ValidatorFactory {
+	return ValidatorFactory{fn: func(sync FileGroupVersionKindHierarchySync) error {
+		return errIfNotAllowed(sync, inheritanceDisabled)
+	}}
+}
+
+// newInheritanceEnabledValidator implements validation for when inheritance is enabled.
+func newInheritanceEnabledValidator() ValidatorFactory {
+	return ValidatorFactory{fn: func(sync FileGroupVersionKindHierarchySync) error {
+		if isResourceQuota(sync.GroupVersionKind) {
+			return errIfNotAllowed(sync, resourceQuotaIfInheritanceEnabled)
 		}
-		return othersIfInheritanceEnabled
+		return errIfNotAllowed(sync, othersIfInheritanceEnabled)
+	}}
+}
+
+// errIfNotAllowed returns an error if the kindSync has an inheritance mode which is not allowed for that Kind.
+func errIfNotAllowed(sync FileGroupVersionKindHierarchySync, allowed map[v1alpha1.HierarchyModeType]bool) error {
+	if allowed[sync.HierarchyMode] {
+		return nil
 	}
-	return inheritanceDisabled
+	return vet.IllegalHierarchyModeError{
+		Source:           sync.Source,
+		GroupVersionKind: sync.GroupVersionKind,
+		HierarchyMode:    sync.HierarchyMode,
+		Allowed:          allowed,
+	}
+}
+
+func isResourceQuota(gvk schema.GroupVersionKind) bool {
+	return gvk.Kind == "ResourceQuota" && gvk.Group == corev1.GroupName
 }

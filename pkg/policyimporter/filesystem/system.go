@@ -51,8 +51,9 @@ func validateSystem(objects []ast.FileObject, repo *v1alpha1.Repo, apiInfo *meta
 	semantic.RepoCountValidator{Objects: objects}.Validate(errorBuilder)
 	semantic.ConfigMapCountValidator{Objects: objects}.Validate(errorBuilder)
 
-	sync.KindValidator.Validate(objects, errorBuilder)
-	sync.KnownResourceValidator{APIInfo: apiInfo}.Validate(objects, errorBuilder)
-	sync.InheritanceValidator{Repo: repo}.Validate(objects, errorBuilder)
-	sync.VersionValidator{Objects: objects}.Validate(errorBuilder)
+	syncs := fileObjects(objects).syncs()
+	sync.KindValidatorFactory.New(syncs).Validate(errorBuilder)
+	sync.KnownResourceValidatorFactory(apiInfo).New(syncs).Validate(errorBuilder)
+	sync.NewInheritanceValidatorFactory(repo).New(syncs).Validate(errorBuilder)
+	sync.VersionValidatorFactory{}.New(syncs).Validate(errorBuilder)
 }

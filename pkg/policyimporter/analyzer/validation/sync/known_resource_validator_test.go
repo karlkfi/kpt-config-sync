@@ -1,0 +1,67 @@
+package sync
+
+import (
+	"testing"
+
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	vettesting "github.com/google/nomos/pkg/policyimporter/analyzer/vet/testing"
+	"github.com/google/nomos/pkg/policyimporter/meta"
+	"github.com/google/nomos/pkg/util/multierror"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+type knownResourceValidatorTestCase struct {
+	name  string
+	known []schema.GroupVersionKind
+	gvk   schema.GroupVersionKind
+	error []string
+}
+
+var knownResourceValidatorTestCases = []knownResourceValidatorTestCase{
+	{
+		name:  "RoleBinding throws error if not known",
+		gvk:   roleBinding(),
+		error: []string{vet.UnknownResourceInSyncErrorCode},
+	},
+	{
+		name:  "RoleBinding valid if known",
+		known: []schema.GroupVersionKind{roleBinding()},
+		gvk:   roleBinding(),
+	},
+}
+
+func toAPIInfo(known []schema.GroupVersionKind) (*meta.APIInfo, error) {
+	resources := make([]*metav1.APIResourceList, len(known))
+
+	for i, gvk := range known {
+		resources[i] = &metav1.APIResourceList{
+			GroupVersion: gvk.GroupVersion().String(),
+			APIResources: []metav1.APIResource{{Kind: gvk.Kind}},
+		}
+	}
+
+	return meta.NewAPIInfo(resources)
+}
+
+func (tc knownResourceValidatorTestCase) Run(t *testing.T) {
+	syncs := []FileSync{
+		toFileSync(FileGroupVersionKindHierarchySync{GroupVersionKind: tc.gvk}),
+	}
+	eb := multierror.Builder{}
+
+	apiInfo, err := toAPIInfo(tc.known)
+	if err != nil {
+		t.Fatalf("unexpected error forming APIInfo: %v", err)
+	}
+
+	KnownResourceValidatorFactory(apiInfo).New(syncs).Validate(&eb)
+
+	vettesting.ExpectErrors(tc.error, eb.Build(), t)
+}
+
+func TestKnownResourceValidator(t *testing.T) {
+	for _, tc := range knownResourceValidatorTestCases {
+		t.Run(tc.name, tc.Run)
+	}
+}

@@ -1,38 +1,41 @@
 package sync
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/validator"
 	"github.com/google/nomos/pkg/util/multierror"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type groupKind struct {
-	group string
-	kind  string
+// ValidatorFactory is a function that returns an error if the supplied
+// FileGroupVersionKindHierarchySync is not valid. Validates each independently.
+type ValidatorFactory struct {
+	fn func(sync FileGroupVersionKindHierarchySync) error
 }
 
-// Identifies a Group/Kind definition in a Sync.
-// This is not unique if the same Sync Resource defines the multiple of the same Group/Kind.
-type kindSync struct {
-	// sync is the Sync which defined the Kind.
-	sync vet.ResourceAddr
-	// gvk is the Group/Version/Kind which the Sync defined
-	gvk schema.GroupVersionKind
-	// hierarchy is the hierarchy mode which the Sync defined for the Kind.
-	hierarchy v1alpha1.HierarchyModeType
+// nilValidatorFn is a no-op ValidatorFactory to be used when the particular Sync validator
+// is unsafe or impossible to use.
+var nilValidatorFactory = ValidatorFactory{
+	fn: func(sync FileGroupVersionKindHierarchySync) error { return nil },
 }
 
-// validator validates Kind declarations in Sync Resources
-type validator struct {
-	validate func(sync kindSync) error
+// New returns a ValidatorFactory with the set validation function on the set of passed objects.
+func (v ValidatorFactory) New(syncs []FileSync) Validator {
+	return Validator{fn: v.fn, syncs: syncs}
 }
 
-// Validate adds errors for each unsupported Kind defined in a Sync.
+// Validator is a validation function to be applied to a specific set of syncs.
+type Validator struct {
+	fn    func(sync FileGroupVersionKindHierarchySync) error
+	syncs []FileSync
+}
+
+var _ validator.Validator = Validator{}
+
+// Validate adds errors for each misconfigured Kind defined in a Sync.
 // It abstracts out the deeply-nested logic for extracting every Kind defined in every Sync.
-func (v validator) Validate(objects []ast.FileObject, errorBuilder *multierror.Builder) {
-	for _, sync := range kindSyncs(objects) {
-		errorBuilder.Add(v.validate(sync))
+func (v Validator) Validate(errorBuilder *multierror.Builder) {
+	for _, sync := range v.syncs {
+		for _, k := range sync.flatten() {
+			errorBuilder.Add(v.fn(k))
+		}
 	}
 }

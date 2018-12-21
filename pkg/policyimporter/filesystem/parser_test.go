@@ -2066,7 +2066,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"system/sync.yaml":  templateData{Group: "nomos.dev", Version: "v1", Kind: "PolicyNode"}.apply(aSync),
 		},
-		expectedErrorCodes: []string{vet.UnsupportedResourceInSyncErrorCode},
+		expectedErrorCodes: []string{vet.UnsupportedResourceInSyncErrorCode, vet.UnknownResourceInSyncErrorCode},
 	},
 	{
 		testName: "Sync contains a Sync",
