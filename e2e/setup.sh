@@ -77,7 +77,7 @@ function uninstall() {
         git)
         # we do not care if part of the deletion fails, as the objects may not all exist
         kubectl -n=nomos-system delete nomos --all || true
-        wait::for -s -t 60 -- nomos_uninstalled
+        wait::for -s -t 300 -- nomos_uninstalled
         kubectl delete -f defined-operator-bundle.yaml || true
         ;;
 
