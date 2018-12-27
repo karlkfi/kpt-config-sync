@@ -11,100 +11,98 @@ spec:
     kind: OrganizationPolicy
     plural: organizationpolicies
   scope: Namespaced
-  # TODO(b/118383540): This is commented out because a bug in GKE 1.10 Alpha is rejecting
-  # the validation schema even though it is valid.
-  #validation:
-    #openAPIV3Schema:
-      #properties:
-        #apiVersion:
-          #type: string
-        #kind:
-          #type: string
-        #metadata:
-          #type: object
-        #spec:
-          #properties:
-            #constraints:
-              #items:
-                #properties:
-                  #booleanPolicy:
-                    #properties:
-                      #enforced:
-                        #type: boolean
-                    #required:
-                    #- enforced
-                    #type: object
-                  #constraint:
-                    #type: string
-                  #listPolicy:
-                    #properties:
-                      #allValues:
-                        #pattern: ^(ALLOW|DENY)$
-                        #type: string
-                      #allowedValues:
-                        #items:
-                          #pattern: ^((is|under):)?(organizations|folders|projects)/
-                          #type: string
-                        #pattern: ^((is|under):)?(organizations|folders|projects)/
-                        #type: array
-                      #disallowedValues:
-                        #items:
-                          #pattern: ^((is|under):)?(organizations|folders|projects)/
-                          #type: string
-                        #pattern: ^((is|under):)?(organizations|folders|projects)/
-                        #type: array
-                      #inheritFromParent:
-                        #type: boolean
-                    #type: object
-                #required:
-                #- constraint
-                #type: object
-              #type: array
-            #importDetails:
-              #properties:
-                #time:
-                  #format: date-time
-                  #type: string
-                #token:
-                  #pattern: ^\w{40}$
-                  #type: string
-              #required:
-              #- token
-              #- time
-              #type: object
-            #resourceReference:
-              #properties:
-                #kind:
-                  #pattern: ^(Organization|Folder|Project)$
-                  #type: string
-                #name:
-                  #type: string
-              #required:
-              #- kind
-              #- name
-              #type: object
-          #required:
-          #- constraints
-          #- resourceReference
-          #- importDetails
-          #type: object
-        #status:
-          #properties:
-            #syncDetails:
-              #properties:
-                #error:
-                  #type: string
-                #time:
-                  #format: date-time
-                  #type: string
-                #token:
-                  #pattern: ^\w{40}$
-                  #type: string
-              #type: object
-          #type: object
-      #required:
-      #- spec
-      #type: object
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            constraints:
+              items:
+                properties:
+                  booleanPolicy:
+                    properties:
+                      enforced:
+                        type: boolean
+                    required:
+                    - enforced
+                    type: object
+                  constraint:
+                    type: string
+                  listPolicy:
+                    properties:
+                      allValues:
+                        pattern: ^(ALLOW|DENY)$
+                        type: string
+                      allowedValues:
+                        items:
+                          pattern: ^((is|under):)?(organizations|folders|projects)/
+                          type: string
+                        pattern: ^((is|under):)?(organizations|folders|projects)/
+                        type: array
+                      disallowedValues:
+                        items:
+                          pattern: ^((is|under):)?(organizations|folders|projects)/
+                          type: string
+                        pattern: ^((is|under):)?(organizations|folders|projects)/
+                        type: array
+                      inheritFromParent:
+                        type: boolean
+                    type: object
+                required:
+                - constraint
+                type: object
+              type: array
+            importDetails:
+              properties:
+                time:
+                  format: date-time
+                  type: string
+                token:
+                  pattern: ^\w{40}$
+                  type: string
+              required:
+              - token
+              - time
+              type: object
+            resourceReference:
+              properties:
+                kind:
+                  pattern: ^(Organization|Folder|Project)$
+                  type: string
+                name:
+                  type: string
+              required:
+              - kind
+              - name
+              type: object
+          required:
+          - constraints
+          - resourceReference
+          - importDetails
+          type: object
+        status:
+          properties:
+            syncDetails:
+              properties:
+                error:
+                  type: string
+                time:
+                  format: date-time
+                  type: string
+                token:
+                  pattern: ^\w{40}$
+                  type: string
+              type: object
+          type: object
+      required:
+      - spec
+      type: object
   version: v1
 status:
   acceptedNames:
