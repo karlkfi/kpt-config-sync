@@ -28,5 +28,9 @@ type Client interface {
 	// Get retrieves an obj for the given object key from the Kubernetes Cluster.
 	// obj must be a struct pointer so that obj can be updated with the response
 	// returned by the Server.
+	// This uses the same (non-Go-idiomatic) method signature as
+	// sigs.k8s.io/controller-runtime/pkg/client, which keeps the code consistent
+	// and allows Client to be extended later to implement the controller-runtime
+	// client.
 	Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error
 }
