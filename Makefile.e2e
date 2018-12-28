@@ -87,7 +87,7 @@ test-e2e-%: e2e-image-all
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)"
 
 test-e2e-%-user:
-	$(MAKE) OPERATOR_TARGET=prepare-operator-user test-e2e-$*
+	$(MAKE) IMAGE_TAG=${IMAGE_TAG} OPERATOR_TARGET=prepare-operator-user test-e2e-$*
 
 test-e2e-dev-gcp:
 test-e2e-dev-git:
