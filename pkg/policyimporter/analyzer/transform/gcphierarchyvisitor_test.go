@@ -21,23 +21,380 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/google/nomos/pkg/api/policyascode/v1"
+	v1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+func TestMultiTopOrgFolderProject(t *testing.T) {
+	de := ast.Extension{}
+	org1 := vt.Helper.GCPOrg("org1")
+	org2 := vt.Helper.GCPOrg("org2")
+	org3 := vt.Helper.GCPOrg("org3")
+	folder1 := vt.Helper.GCPFolder("folder1")
+	folder2 := vt.Helper.GCPFolder("folder2")
+	folder3 := vt.Helper.GCPFolder("folder3")
+	project1 := vt.Helper.GCPProject("project1")
+	project2 := vt.Helper.GCPProject("project2")
+	project3 := vt.Helper.GCPProject("project3")
+
+	var tests = []struct {
+		name string
+		root *ast.Root
+		want *ast.Root
+	}{
+		{
+			name: "Single root organization",
+			root: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(org1),
+						},
+					},
+				},
+			},
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(org1),
+				},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org1"}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Multiple root organizations",
+			root: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(org1),
+						},
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(org2),
+						},
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(org3),
+						},
+					},
+				},
+			},
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(org1, org2, org3),
+				},
+				Tree: &ast.TreeNode{
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org1"}),
+						},
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org2"}),
+						},
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org3"}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Single root folder",
+			root: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(folder1),
+						},
+					},
+				},
+			},
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(folder1),
+				},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder1"}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Multiple root folders",
+			root: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(folder1),
+						},
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(folder2),
+						},
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(folder3),
+						},
+					},
+				},
+			},
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(folder1, folder2, folder3),
+				},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder1"}),
+						},
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder2"}),
+						},
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder3"}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Single root project",
+			root: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project1),
+						},
+					},
+				},
+			},
+			want: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project1),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project1"}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Multiple root projects",
+			root: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project1),
+						},
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project2),
+						},
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project3),
+						},
+					},
+				},
+			},
+			want: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project1),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project1"}),
+						},
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project2),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project2"}),
+						},
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project3),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project3"}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Multiple root orgs folders and projects",
+			root: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(org1),
+						},
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(org2),
+						},
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(org3),
+						},
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(folder1),
+						},
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(folder2),
+						},
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(folder3),
+						},
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project1),
+						},
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project2),
+						},
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project3),
+						},
+					},
+				},
+			},
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(org1, org2, org3, folder1, folder2, folder3),
+				},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org1"}),
+						},
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org2"}),
+						},
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org3"}),
+						},
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder1"}),
+						},
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder2"}),
+						},
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder3"}),
+						},
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project1),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project1"}),
+						},
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project2),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project2"}),
+						},
+						&ast.TreeNode{
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project3),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project3"}),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Make sure the Copying visitor doesn't mutate the tree.
+			copier := visitorpkg.NewCopying()
+			copier.SetImpl(copier)
+			rootCopy := tc.root.Accept(copier)
+			verifyInputUnmodified(t, tc.root, rootCopy)
+
+			// Run GCP hierarchy visitor.
+			visitor := NewGCPHierarchyVisitor()
+			output := tc.root.Accept(visitor)
+			if err := visitor.Error(); err != nil {
+				t.Errorf("GCP hierarchy visitor resulted in error: %v", err)
+			}
+			if diff := cmp.Diff(output, tc.want); diff != "" {
+				t.Errorf("GCP hierarchy visitor got wrong output.\ngot:\n%+v\nwant:\n%+v\ndiff:\n%s", output, tc.want, diff)
+			}
+		})
+	}
+}
+
 func TestFolderAndOrg(t *testing.T) {
-	org := vt.Helper.GCPOrg()
-	folder := vt.Helper.GCPFolder()
-	folderUnderOrg := vt.Helper.GCPFolder()
-	folderUnderOrg.Spec.ParentReference = v1.ParentReference{
+	de := ast.Extension{}
+	org := vt.Helper.GCPOrg("org-sample")
+	folder := vt.Helper.GCPFolder("folder-sample")
+	folderUnderOrg := vt.Helper.GCPFolder("folder-under-org-sample")
+	folderUnderOrgWithParentRef := folderUnderOrg.DeepCopy()
+	folderUnderOrgWithParentRef.Spec.ParentReference = v1.ParentReference{
 		Kind: org.TypeMeta.Kind,
 		Name: org.ObjectMeta.Name,
 	}
-	subFolder := vt.Helper.GCPFolder()
-	subFolder.ObjectMeta.Name = "subfolder-sample"
+	subFolder := vt.Helper.GCPFolder("subfolder-sample")
 	subFolderWithParentRef := subFolder.DeepCopy()
 	subFolderWithParentRef.Spec.ParentReference = v1.ParentReference{
 		Kind: folder.TypeMeta.Kind,
@@ -47,7 +404,7 @@ func TestFolderAndOrg(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input *ast.Root
-		want  ast.ClusterObjectList
+		want  *ast.Root
 	}{
 		// These tests need Cluster initialized or bad things happen.
 		{
@@ -55,52 +412,140 @@ func TestFolderAndOrg(t *testing.T) {
 			input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
-					Objects: vt.ObjectSets(org),
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(org),
+						},
+					},
 				},
 			},
-			want: vt.ClusterObjectSets(org),
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(org),
+				},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org-sample"}),
+						},
+					},
+				},
+			},
 		},
 		{
 			name: "Folder should be cluster scoped",
 			input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
-					Objects: vt.ObjectSets(folder),
-				},
-			},
-			want: vt.ClusterObjectSets(folder),
-		},
-		{
-			name: "Folder under an organization should be cluster scoped with parent reference",
-			input: &ast.Root{
-				Cluster: &ast.Cluster{},
-				Tree: &ast.TreeNode{
-					Objects: vt.ObjectSets(org),
+					Type: ast.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						{
+						&ast.TreeNode{
 							Type:    ast.AbstractNamespace,
 							Objects: vt.ObjectSets(folder),
 						},
 					},
 				},
 			},
-			want: vt.ClusterObjectSets(folderUnderOrg, org),
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(folder),
+				},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder-sample"}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Folder under an organization should be cluster scoped with parent reference",
+			input: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(org),
+							Children: []*ast.TreeNode{
+								{
+									Type:    ast.AbstractNamespace,
+									Objects: vt.ObjectSets(folderUnderOrg),
+								},
+							},
+						},
+					},
+				},
+			},
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(folderUnderOrgWithParentRef, org),
+				},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org-sample"}),
+							Children: []*ast.TreeNode{
+								&ast.TreeNode{
+									Type: ast.AbstractNamespace,
+									Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder-under-org-sample"}),
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		{
 			name: "Folder under another folder should be cluster scoped with parent reference",
 			input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
-					Objects: vt.ObjectSets(folder),
+					Type: ast.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						{
+						&ast.TreeNode{
 							Type:    ast.AbstractNamespace,
-							Objects: vt.ObjectSets(subFolder),
+							Objects: vt.ObjectSets(folder),
+							Children: []*ast.TreeNode{
+								{
+									Type:    ast.AbstractNamespace,
+									Objects: vt.ObjectSets(subFolder),
+								},
+							},
 						},
 					},
 				},
 			},
-			want: vt.ClusterObjectSets(subFolderWithParentRef, folder),
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(subFolderWithParentRef, folder),
+				},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder-sample"}),
+							Children: []*ast.TreeNode{
+								&ast.TreeNode{
+									Type: ast.AbstractNamespace,
+									Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "subfolder-sample"}),
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -119,7 +564,7 @@ func TestFolderAndOrg(t *testing.T) {
 			if err := visitor.Error(); err != nil {
 				t.Errorf("GCP hierarchy visitor resulted in error: %v", err)
 			}
-			if diff := cmp.Diff(tc.want, output.Cluster.Objects); diff != "" {
+			if diff := cmp.Diff(output, tc.want); diff != "" {
 				t.Errorf("got diff:\n%v", diff)
 			}
 		})
@@ -127,16 +572,17 @@ func TestFolderAndOrg(t *testing.T) {
 }
 
 func TestProject(t *testing.T) {
-	org := vt.Helper.GCPOrg()
-	folder := vt.Helper.GCPFolder()
-	project := vt.Helper.GCPProject()
-	projectUnderOrg := vt.Helper.GCPProject()
-	projectUnderOrg.Spec.ParentReference = v1.ParentReference{
+	de := ast.Extension{}
+	org := vt.Helper.GCPOrg("org")
+	folder := vt.Helper.GCPFolder("folder")
+	project := vt.Helper.GCPProject("project")
+	projectUnderOrgWithParentRef := project.DeepCopy()
+	projectUnderOrgWithParentRef.Spec.ParentReference = v1.ParentReference{
 		Kind: org.TypeMeta.Kind,
 		Name: org.ObjectMeta.Name,
 	}
-	projectUnderFolder := vt.Helper.GCPProject()
-	projectUnderFolder.Spec.ParentReference = v1.ParentReference{
+	projectUnderFolderWithParentRef := project.DeepCopy()
+	projectUnderFolderWithParentRef.Spec.ParentReference = v1.ParentReference{
 		Kind: folder.TypeMeta.Kind,
 		Name: folder.ObjectMeta.Name,
 	}
@@ -144,39 +590,91 @@ func TestProject(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input *ast.Root
-		want  ast.ObjectList
+		want  *ast.Root
 	}{
 		{
 			name: "Project under organization should be namespace scoped with parent reference",
 			input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
-					Objects: vt.ObjectSets(org),
+					Type: ast.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						{
+						&ast.TreeNode{
 							Type:    ast.AbstractNamespace,
-							Objects: vt.ObjectSets(project),
+							Objects: vt.ObjectSets(org),
+							Children: []*ast.TreeNode{
+								{
+									Type:    ast.Namespace,
+									Objects: vt.ObjectSets(project),
+								},
+							},
 						},
 					},
 				},
 			},
-			want: vt.ObjectSets(projectUnderOrg),
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(org),
+				},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Children: []*ast.TreeNode{
+								{
+									Type:    ast.Namespace,
+									Objects: vt.ObjectSets(projectUnderOrgWithParentRef),
+									Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project"}),
+								},
+							},
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org"}),
+						},
+					},
+				},
+			},
 		},
 		{
 			name: "Project under folder should be namespace scoped with parent reference",
 			input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
-					Objects: vt.ObjectSets(folder),
+					Type: ast.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						{
+						&ast.TreeNode{
 							Type:    ast.AbstractNamespace,
-							Objects: vt.ObjectSets(project),
+							Objects: vt.ObjectSets(folder),
+							Children: []*ast.TreeNode{
+								{
+									Type:    ast.Namespace,
+									Objects: vt.ObjectSets(project),
+								},
+							},
 						},
 					},
 				},
 			},
-			want: vt.ObjectSets(projectUnderFolder),
+			want: &ast.Root{
+				Cluster: &ast.Cluster{
+					Objects: vt.ClusterObjectSets(folder),
+				},
+				Tree: &ast.TreeNode{
+					Type: ast.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							Children: []*ast.TreeNode{
+								{
+									Type:    ast.Namespace,
+									Objects: vt.ObjectSets(projectUnderFolderWithParentRef),
+									Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project"}),
+								},
+							},
+							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder"}),
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -192,11 +690,10 @@ func TestProject(t *testing.T) {
 			visitor := NewGCPHierarchyVisitor()
 			output := tc.input.Accept(visitor)
 			verifyInputUnmodified(t, tc.input, inputCopy)
-			if output.Tree == nil || len(output.Tree.Children) != 1 {
+			if output.Tree == nil || len(output.Tree.Children[0].Children) != 1 {
 				t.Fatalf("unexpected output root: %+v", output)
 			}
-			projectNode := output.Tree.Children[0]
-			if diff := cmp.Diff(tc.want, projectNode.Objects); diff != "" {
+			if diff := cmp.Diff(output, tc.want); diff != "" {
 				t.Errorf("got diff:\n%v", diff)
 			}
 		})
@@ -204,22 +701,26 @@ func TestProject(t *testing.T) {
 }
 
 func TestAttachmentPoint(t *testing.T) {
-	org := vt.Helper.GCPOrg()
-	folder := vt.Helper.GCPFolder()
-	project := vt.Helper.GCPProject()
+	org := vt.Helper.GCPOrg("org")
+	folder := vt.Helper.GCPFolder("folder")
+	project := vt.Helper.GCPProject("project")
 
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
-			Objects: vt.ObjectSets(org),
 			Children: []*ast.TreeNode{
 				&ast.TreeNode{
-					Type:    ast.AbstractNamespace,
-					Objects: vt.ObjectSets(folder),
+					Objects: vt.ObjectSets(org),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type:    ast.AbstractNamespace,
-							Objects: vt.ObjectSets(project),
+							Objects: vt.ObjectSets(folder),
+							Children: []*ast.TreeNode{
+								&ast.TreeNode{
+									Type:    ast.AbstractNamespace,
+									Objects: vt.ObjectSets(project),
+								},
+							},
 						},
 					},
 				},
@@ -232,13 +733,14 @@ func TestAttachmentPoint(t *testing.T) {
 		Kind: org.TypeMeta.Kind,
 		Name: org.ObjectMeta.Name,
 	}
-	verifyAttachmentPoint(t, output.Tree, wantOrgRef)
+	orgNode := output.Tree.Children[0]
+	verifyAttachmentPoint(t, orgNode, wantOrgRef)
 
 	wantFolderRef := &v1.ResourceReference{
 		Kind: folder.TypeMeta.Kind,
 		Name: folder.ObjectMeta.Name,
 	}
-	folderNode := output.Tree.Children[0]
+	folderNode := orgNode.Children[0]
 	verifyAttachmentPoint(t, folderNode, wantFolderRef)
 
 	wantProjectRef := &v1.ResourceReference{
@@ -257,33 +759,79 @@ func verifyAttachmentPoint(t *testing.T, node *ast.TreeNode, wantRef *v1.Resourc
 }
 
 func TestHierarchyError(t *testing.T) {
-	project := vt.Helper.GCPProject()
-	project2 := vt.Helper.GCPProject()
-	project2.ObjectMeta.Name = "project2"
-	folder := vt.Helper.GCPFolder()
-	org := vt.Helper.GCPFolder()
+	project := vt.Helper.GCPProject("project")
+	project2 := vt.Helper.GCPProject("project2")
+	folder := vt.Helper.GCPFolder("folder")
+	folder2 := vt.Helper.GCPFolder("folder2")
+	org := vt.Helper.GCPFolder("org")
+	org2 := vt.Helper.GCPOrg("org2")
 	var tests = []struct {
 		name  string
 		input *ast.Root
 	}{
 		{
-			name: "Project w/o parent",
+			name: "GCP Resources defined at top directory",
 			input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
-					Objects: vt.ObjectSets(project),
+					// Error: resources shouldn't be defined at top directory.
+					Objects: vt.ObjectSets(org),
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(folder),
+							Children: []*ast.TreeNode{
+								&ast.TreeNode{
+									Type: ast.Namespace,
+									// Error: project with Project parent.
+									Objects: vt.ObjectSets(project2),
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		{
-			name: "Project w/o a GCP folder/org parent",
+			name: "Multiple orgs at same tree node",
 			input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
-							Type:    ast.AbstractNamespace,
-							Objects: vt.ObjectSets(project),
+							Type: ast.AbstractNamespace,
+							// Error: multiple orgs at same tree node.
+							Objects: vt.ObjectSets(org, org2),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Multiple folders at same tree node",
+			input: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							// Error: multiple folders at same tree node.
+							Objects: vt.ObjectSets(folder, folder2),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Multiple projets at same tree node",
+			input: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.Namespace,
+							// Error: multiple projects at same tree node.
+							Objects: vt.ObjectSets(project, project2),
 						},
 					},
 				},
@@ -294,11 +842,18 @@ func TestHierarchyError(t *testing.T) {
 			input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
-					Objects: vt.ObjectSets(project),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
-							Type:    ast.AbstractNamespace,
-							Objects: vt.ObjectSets(project2),
+							Type: ast.Namespace,
+							// Parent project.
+							Objects: vt.ObjectSets(project),
+							Children: []*ast.TreeNode{
+								&ast.TreeNode{
+									Type: ast.Namespace,
+									// Error: project with Project parent.
+									Objects: vt.ObjectSets(project2),
+								},
+							},
 						},
 					},
 				},
@@ -309,39 +864,10 @@ func TestHierarchyError(t *testing.T) {
 			input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
-					Objects: vt.ObjectSets(project),
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
-							Type:    ast.AbstractNamespace,
-							Objects: vt.ObjectSets(folder),
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "Org with parent",
-			input: &ast.Root{
-				Cluster: &ast.Cluster{},
-				Tree: &ast.TreeNode{
-					Children: []*ast.TreeNode{
-						&ast.TreeNode{
-							Type:    ast.AbstractNamespace,
-							Objects: vt.ObjectSets(org),
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "Gap in hierarchy",
-			input: &ast.Root{
-				Cluster: &ast.Cluster{},
-				Tree: &ast.TreeNode{
-					Objects: vt.ObjectSets(org),
-					Children: []*ast.TreeNode{
-						&ast.TreeNode{
-							Type: ast.AbstractNamespace,
+							Type:    ast.Namespace,
+							Objects: vt.ObjectSets(project),
 							Children: []*ast.TreeNode{
 								&ast.TreeNode{
 									Type:    ast.AbstractNamespace,
@@ -354,12 +880,50 @@ func TestHierarchyError(t *testing.T) {
 			},
 		},
 		{
-			name: "Cannot have both org and folder at the same level",
+			name: "Org with org (any) parent",
 			input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
-					Type:    ast.AbstractNamespace,
-					Objects: vt.ObjectSets(org, folder),
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Objects: vt.ObjectSets(org),
+							Children: []*ast.TreeNode{
+								&ast.TreeNode{
+									Children: []*ast.TreeNode{
+										&ast.TreeNode{
+											Type:    ast.AbstractNamespace,
+											Objects: vt.ObjectSets(org2),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Gap in hierarchy",
+			input: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Objects: vt.ObjectSets(org),
+							Children: []*ast.TreeNode{
+								&ast.TreeNode{
+									Type:    ast.AbstractNamespace,
+									Objects: vt.ObjectSets(), // No objects exist meaning this level of directory is empty.
+									Children: []*ast.TreeNode{
+										&ast.TreeNode{
+											Type:    ast.AbstractNamespace,
+											Objects: vt.ObjectSets(folder),
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

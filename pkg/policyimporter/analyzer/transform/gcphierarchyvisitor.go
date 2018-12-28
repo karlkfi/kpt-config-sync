@@ -14,11 +14,43 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package transform provides the functions to traverse through an *ast.Root
+// tree. A valid Bespin-managed GCP top-level directory (i.e. namespaces/*)
+// should contain only root directories of each GCP root resources, such that
+// multi-organization, multi-folder and single/multi-project management are all
+// supported. For example, below is a valid GCP hierarchy that Bespin should be
+// able to manage:
+//
+// ├── system
+// |   └── bespin.yaml
+// ├── namespaces  <-- this is the entry of our GCP hierarchy
+// │   ├── folder1  <-- this represents a root-directory, which manages everything for GCP folder1
+// │   │   └── folder.yaml
+// │   ├── folder2  <-- another root-directory.
+// │   │   ├── folder3
+// │   │   │   └── folder.yaml
+// │   │   ├── folder.yaml
+// │   │   └── project2
+// │   │       └── project.yaml
+// │   ├── organization1
+// │   │   ├── folder4
+// │   │   │   └── folder.yaml
+// │   │   ├── folder5
+// │   │   │   ├── folder6
+// │   │   │   │   └── folder.yaml
+// │   │   │   ├── folder.yaml
+// │   │   │   └── project3
+// │   │   │       └── project.yaml
+// │   │   ├── organization.yaml
+// │   │   └── org_policy.yaml
+// │   └── project1
+// │       ├── iam.yaml
+// │       └── project.yaml
 package transform
 
 import (
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/policyascode/v1"
+	v1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -89,6 +121,19 @@ var gcpAttachmentPointKey = gcpAttachmentPointKeyType{}
 // If the object is a folder or organization, it is added as a cluster level
 // resource instead.
 func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
+	// Top-level directory (i.e. namespaces/*) should contain only root
+	// directories of each GCP root resources.
+	if v.ctx == nil {
+		if len(n.Objects) > 0 {
+			var objNames []string
+			for _, obj := range n.Objects {
+				objNames = append(objNames, obj.Source)
+			}
+			v.errs.Add(errors.Errorf("GCP top-level hierarchy should not contain specific resources. Found %v", objNames))
+			return nil
+		}
+	}
+
 	ctx := &gcpHierarchyContext{
 		prev: v.ctx,
 	}
@@ -101,7 +146,9 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		glog.V(1).Infof("Moving %v to cluster scope", v.ctx.clusterObj.Source)
 		v.cluster.Objects = append(v.cluster.Objects, v.ctx.clusterObj)
 	}
-	newNode.Data = newNode.Data.Add(gcpAttachmentPointKey, v.ctx.policyAttachmentPoint)
+	if v.ctx.policyAttachmentPoint != nil {
+		newNode.Data = newNode.Data.Add(gcpAttachmentPointKey, v.ctx.policyAttachmentPoint)
+	}
 
 	v.ctx = ctx.prev
 	return newNode
@@ -119,17 +166,20 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) *ast.Namespace
 		if !v.setAttachmentPoint(o) {
 			return nil
 		}
-		pr := v.parentReference()
-		if pr == nil {
-			v.errs.Add(errors.Errorf("GCP project %v is missing its parent.", gcpObj.Name))
-			return nil
-		}
-		if pr.Kind != "Folder" && pr.Kind != "Organization" {
-			v.errs.Add(errors.Errorf("Project %v must have either folder or org as its parent: %v", gcpObj, pr))
-			return nil
-		}
 		p := gcpObj.DeepCopy()
-		p.Spec.ParentReference = *pr
+		pr := v.parentReference()
+		// Project without parent must be at root.
+		if pr == nil && !v.visitingRoot() {
+			v.errs.Add(errors.Errorf("Project %v without a folder or organization parent must be at root", gcpObj))
+			return nil
+		}
+		if pr != nil {
+			if pr.Kind != "Folder" && pr.Kind != "Organization" {
+				v.errs.Add(errors.Errorf("Project %v must have either folder or organization as its parent: %v", gcpObj, pr))
+				return nil
+			}
+			p.Spec.ParentReference = *pr
+		}
 		return &ast.NamespaceObject{
 			FileObject: ast.FileObject{
 				Object: p,
@@ -146,17 +196,17 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) *ast.Namespace
 		}
 		pr := v.parentReference()
 		if pr == nil {
-			if v.ctx.prev == nil {
-				v.ctx.clusterObj = &ast.ClusterObject{
-					FileObject: o.FileObject,
-				}
-			} else {
-				v.errs.Add(errors.Errorf("Folder %v is missing its parent", gcpObj))
+			if !v.visitingRoot() {
+				v.errs.Add(errors.Errorf("Folder %v without a folder or organization parent must be at root", gcpObj))
+				return nil
+			}
+			v.ctx.clusterObj = &ast.ClusterObject{
+				FileObject: o.FileObject,
 			}
 			return nil
 		}
 		if pr.Kind != "Folder" && pr.Kind != "Organization" {
-			v.errs.Add(errors.Errorf("Folder %v must have either folder or org as its parent: %v", gcpObj, pr))
+			v.errs.Add(errors.Errorf("Folder %v must have either folder or organization as its parent: %v", gcpObj, pr))
 			return nil
 		}
 		f := gcpObj.DeepCopy()
@@ -176,7 +226,7 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) *ast.Namespace
 			v.errs.Add(errors.Errorf("Invalid hierarchy: %v and %v ", v.ctx.clusterObj, gcpObj))
 			return nil
 		}
-		if v.ctx.prev != nil {
+		if !v.visitingRoot() {
 			v.errs.Add(errors.Errorf("Organization must be at root level"))
 			return nil
 		}
@@ -219,4 +269,9 @@ func (v *GCPHierarchyVisitor) parentReference() *v1.ParentReference {
 // VisitObjectList visits the object list.
 func (v *GCPHierarchyVisitor) VisitObjectList(o ast.ObjectList) ast.ObjectList {
 	return v.Copying.VisitObjectList(o)
+}
+
+// visitingRoot returns true if the visitor is currently visiting a root tree node.
+func (v *GCPHierarchyVisitor) visitingRoot() bool {
+	return v.ctx != nil && v.ctx.prev != nil && v.ctx.prev.prev == nil
 }

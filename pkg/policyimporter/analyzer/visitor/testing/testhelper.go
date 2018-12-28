@@ -381,46 +381,46 @@ func (t *TestHelper) AcmeRoot() *ast.Root {
 }
 
 // GCPProject returns a new, sample GCP project object.
-func (t *TestHelper) GCPProject() *gcpv1.Project {
+func (t *TestHelper) GCPProject(name string) *gcpv1.Project {
 	return &gcpv1.Project{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gcpv1.SchemeGroupVersion.String(),
 			Kind:       gcpv1.ProjectKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "project-sample",
+			Name: name,
 		},
 		Spec: gcpv1.ProjectSpec{
-			Name: "project-sample-name",
+			Name: name,
 		},
 	}
 }
 
 // GCPFolder returns a new, sample GCP folder object.
-func (t *TestHelper) GCPFolder() *gcpv1.Folder {
+func (t *TestHelper) GCPFolder(name string) *gcpv1.Folder {
 	return &gcpv1.Folder{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gcpv1.SchemeGroupVersion.String(),
 			Kind:       gcpv1.FolderKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "folder-sample",
+			Name: name,
 		},
 		Spec: gcpv1.FolderSpec{
-			DisplayName: "folder-sample-name",
+			DisplayName: name,
 		},
 	}
 }
 
 // GCPOrg returns a new, sample GCP organization object.
-func (t *TestHelper) GCPOrg() *gcpv1.Organization {
+func (t *TestHelper) GCPOrg(name string) *gcpv1.Organization {
 	return &gcpv1.Organization{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gcpv1.SchemeGroupVersion.String(),
 			Kind:       gcpv1.OrganizationKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "org-sample",
+			Name: name,
 		},
 		Spec: gcpv1.OrganizationSpec{
 			ID: 123456789,

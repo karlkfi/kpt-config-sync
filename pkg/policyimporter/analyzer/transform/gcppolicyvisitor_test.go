@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyascode/v1"
+	v1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
@@ -29,7 +29,7 @@ import (
 )
 
 func TestIAMPolicies(t *testing.T) {
-	project := vt.Helper.GCPProject()
+	project := vt.Helper.GCPProject("project")
 
 	var tests = []struct {
 		name   string
@@ -72,7 +72,7 @@ func TestIAMPolicies(t *testing.T) {
 }
 
 func TestOrgPolicies(t *testing.T) {
-	project := vt.Helper.GCPProject()
+	project := vt.Helper.GCPProject("project")
 
 	var tests = []struct {
 		name   string
@@ -111,7 +111,7 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Ob
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
-			Objects: vt.ObjectSets(vt.Helper.GCPOrg()),
+			Objects: vt.ObjectSets(vt.Helper.GCPOrg("org")),
 			Children: []*ast.TreeNode{
 				&ast.TreeNode{
 					Type:    ast.AbstractNamespace,
@@ -160,8 +160,8 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Ob
 }
 
 func TestIAMPolicyConversion(t *testing.T) {
-	org := vt.Helper.GCPOrg()
-	project := vt.Helper.GCPProject()
+	org := vt.Helper.GCPOrg("org")
+	project := vt.Helper.GCPProject("project")
 
 	var tests = []struct {
 		name    string
@@ -238,8 +238,8 @@ func TestIAMPolicyConversion(t *testing.T) {
 }
 
 func TestOrgPolicyConversion(t *testing.T) {
-	org := vt.Helper.GCPOrg()
-	project := vt.Helper.GCPProject()
+	org := vt.Helper.GCPOrg("org")
+	project := vt.Helper.GCPProject("project")
 
 	var tests = []struct {
 		name    string
@@ -320,7 +320,7 @@ func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Proje
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
-			Objects: vt.ObjectSets(vt.Helper.GCPOrg()),
+			Objects: vt.ObjectSets(vt.Helper.GCPOrg("org")),
 			Children: []*ast.TreeNode{
 				&ast.TreeNode{
 					Type:    ast.AbstractNamespace,
