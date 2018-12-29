@@ -123,3 +123,48 @@ function add_clusterregistry_data() {
   wait::for -f -- kubectl get rolebindings -n backend bob-rolebinding
 }
 
+@test "ClusterSelector: Cluster reacts to CLUSTER_NAME change" {
+  debug::log "Require that the cluster name exists on the cluster"
+  wait::for -t 10 -- kubectl get configmaps -n nomos-system cluster-name
+
+  add_clusterregistry_data
+
+  debug::log "Adding a valid cluster selector annotation to a role binding"
+  git::update \
+    "${YAML_DIR}/backend/bob-rolebinding-env-prod.yaml" \
+    acme/namespaces/eng/backend/bob-rolebinding.yaml
+  git::commit -m "Add a valid cluster selector annotation to a role binding"
+
+  debug::log "Wait for bob-rolebinding to appear in the namespace backend"
+  wait::for -- kubectl get rolebindings -n backend bob-rolebinding
+
+  debug::log "Change cluster selector to selector-env-test"
+  git::update \
+    "${YAML_DIR}/backend/bob-rolebinding-env-test.yaml" \
+    acme/namespaces/eng/backend/bob-rolebinding.yaml
+  git::commit -m "Change cluster selector to selector-env-test"
+
+  debug::log "Wait for bob-rolebinding to disappear in namespace backend"
+  wait::for -f -- kubectl get rolebindings -n backend bob-rolebinding
+
+  debug::log "Change the cluster name"
+  wait::for -- kubectl patch nomos -n=nomos-system nomos --type=merge \
+    -p '{"spec":{"clusterName": "test-cluster-env-test"}}'
+
+  debug::log "Change the cluster and selector to point to test"
+  git::update \
+    "${YAML_DIR}/clusterregistry-cluster-env-test.yaml" \
+    acme/clusterregistry/cluster-1.yaml
+  git::update \
+    "${YAML_DIR}/clusterselector-env-test.yaml" \
+    acme/clusterregistry/clusterselector-1.yaml
+  git::commit -m "Change cluster selector to selector-env-test"
+
+  debug::log "Wait for bob-rolebinding to reappear in the backend namespace"
+  wait::for -- kubectl get rolebindings -n backend bob-rolebinding
+
+  debug::log "Change the cluster name back to what it used to be"
+  wait::for -- kubectl patch nomos -n=nomos-system nomos --type=merge \
+    -p '{"spec":{"clusterName": "e2e-test-cluster"}}'
+}
+
