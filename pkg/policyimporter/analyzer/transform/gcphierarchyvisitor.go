@@ -111,6 +111,24 @@ type gcpHierarchyContext struct {
 	policyAttachmentPoint *v1.ResourceReference
 }
 
+// needsAttachmentPoint returns true if the visitor's current context is visiting
+// a TreeNode that MUST have an attachment point. GCP organiztion/folder/project
+// are valid attachment points, and bespin structure requires:
+// 1. "namespaces/" TreeNode, the top TreeNode of the repo, should have NO attachment
+//     point;
+// 2. Each directory/sub-directory TreeNode under "namespaces/" should have exactly
+//    one attachment point.
+func (c *gcpHierarchyContext) needsAttachmentPoint() bool {
+	// Only "namespaces/" TreeNode has no prev context.
+	return c.prev != nil
+}
+
+// needsNamespace returns true if the visitor's current context is inside a GCP
+// hierarchy and has no cluster scope resources.
+func (c *gcpHierarchyContext) needsNamespace() bool {
+	return c.prev != nil && c.clusterObj == nil
+}
+
 type gcpAttachmentPointKeyType struct{}
 
 // Extension key storing/retrieving the policy attachment point resource
@@ -142,6 +160,10 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// Call c.Copying.VisitTreeNode to continue iteration.
 	newNode := v.Copying.VisitTreeNode(n)
 
+	if v.ctx.needsAttachmentPoint() && v.ctx.policyAttachmentPoint == nil {
+		v.errs.Add(errors.Errorf("Missing GCP policy attachment point, must be an organization, folder, or project"))
+		return nil
+	}
 	if v.ctx.needsNamespace() {
 		glog.V(1).Infof("Marking tree node %v as namespace scope", newNode.Path)
 		newNode.Type = ast.Namespace
@@ -278,10 +300,4 @@ func (v *GCPHierarchyVisitor) VisitObjectList(o ast.ObjectList) ast.ObjectList {
 // visitingRoot returns true if the visitor is currently visiting a root tree node.
 func (v *GCPHierarchyVisitor) visitingRoot() bool {
 	return v.ctx != nil && v.ctx.prev != nil && v.ctx.prev.prev == nil
-}
-
-// needsNamespace returns true if the visitor's current context is inside a GCP
-// hierarchy and has no cluster scope resources.
-func (c *gcpHierarchyContext) needsNamespace() bool {
-	return c.prev != nil && c.clusterObj == nil
 }

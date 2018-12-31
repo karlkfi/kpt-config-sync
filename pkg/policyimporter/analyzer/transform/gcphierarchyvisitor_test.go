@@ -928,6 +928,42 @@ func TestHierarchyError(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Root tree node without an organization/folder/project resource",
+			input: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type: ast.AbstractNamespace,
+							// Error: tree node with no organization/folder/project resource defined.
+							Objects: vt.ObjectSets(),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Child tree node without folder/project resource",
+			input: &ast.Root{
+				Cluster: &ast.Cluster{},
+				Tree: &ast.TreeNode{
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:    ast.AbstractNamespace,
+							Objects: vt.ObjectSets(folder),
+							Children: []*ast.TreeNode{
+								&ast.TreeNode{
+									Type: ast.AbstractNamespace,
+									// Error: tree node with no folder/project resource defined.
+									Objects: vt.ObjectSets(),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {
