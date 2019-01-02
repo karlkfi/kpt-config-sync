@@ -29,6 +29,12 @@ var knownResourceValidatorTestCases = []knownResourceValidatorTestCase{
 		known: []schema.GroupVersionKind{roleBinding()},
 		gvk:   roleBinding(),
 	},
+	{
+		name:  "Rolebinding throws error if wrong version",
+		gvk:   roleBinding(),
+		known: []schema.GroupVersionKind{roleBinding().GroupKind().WithVersion("v2")},
+		error: []string{vet.UnknownResourceVersionInSyncErrorCode},
+	},
 }
 
 func toAPIInfo(known []schema.GroupVersionKind) (*meta.APIInfo, error) {

@@ -1562,7 +1562,7 @@ spec:
 		},
 		expectedErrorCodes: []string{
 			vet.DuplicateSyncGroupKindErrorCode,
-			vet.UnknownResourceInSyncErrorCode,
+			vet.UnknownResourceVersionInSyncErrorCode,
 		},
 	},
 	{

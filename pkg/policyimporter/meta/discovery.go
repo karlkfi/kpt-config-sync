@@ -70,3 +70,14 @@ func (a *APIInfo) Exists(gvk schema.GroupVersionKind) bool {
 	_, exists := a.resources[gvk]
 	return exists
 }
+
+// AllowedVersions returns a list of the versions allowed for the passed Group/Kind
+func (a *APIInfo) AllowedVersions(gk schema.GroupKind) []string {
+	var results []string
+	for gvk := range a.resources {
+		if gvk.GroupKind() == gk {
+			results = append(results, gvk.Version)
+		}
+	}
+	return results
+}

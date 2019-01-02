@@ -69,6 +69,7 @@ const (
 	InvalidMetadataNameErrorCode                = "1036"
 	IllegalKindInClusterregistryErrorCode       = "1037"
 	IllegalKindInNamespacesErrorCode            = "1038"
+	UnknownResourceVersionInSyncErrorCode       = "1039"
 	UndefinedErrorCode                          = "????"
 
 	// Obsolete error codes. Do not reuse.
@@ -698,9 +699,8 @@ type UnknownResourceInSyncError struct {
 // Error implements error
 func (e UnknownResourceInSyncError) Error() string {
 	return format(e,
-		"Sync contains a Resource Kind that does not exist on cluster. "+
-			"Either remove the resource type from the Sync or create a CustomResourceDefinition for "+
-			"the resource type on the cluster.\n\n"+
+		"Sync defines a Resource Kind that does not exist on cluster. "+
+			"Ensure the Group, Version, and Kind are spelled correctly.\n\n"+
 			"source: %[1]s\n"+
 			"%[2]s",
 		e.Source, groupVersionKind(e.GVK))
@@ -824,3 +824,24 @@ func (e IllegalKindInNamespacesError) Error() string {
 func (e IllegalKindInNamespacesError) Code() string {
 	return IllegalKindInNamespacesErrorCode
 }
+
+// UnknownResourceVersionInSyncError reports that a Sync contains a Group/Kind with an incorrect
+// Version.
+type UnknownResourceVersionInSyncError struct {
+	Source  string
+	GVK     schema.GroupVersionKind
+	Allowed []string
+}
+
+// Error implements error
+func (e UnknownResourceVersionInSyncError) Error() string {
+	return format(e,
+		"Sync defines a Resource Kind with an incorrect Version. "+
+			"Known Versions: [%[1]s]\n\n"+
+			"source: %[2]s\n"+
+			"%[3]s",
+		strings.Join(e.Allowed, ", "), e.Source, groupVersionKind(e.GVK))
+}
+
+// Code implements Error
+func (e UnknownResourceVersionInSyncError) Code() string { return UnknownResourceVersionInSyncErrorCode }
