@@ -40,7 +40,27 @@ const timeout = time.Second * 5
 
 func TestReconcile(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
-	instance := &bespinv1.Folder{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+	instance := &bespinv1.Folder{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+		},
+		Spec: bespinv1.FolderSpec{
+			DisplayName: "foobar",
+			// TODO(b/122317240): ImportDetails will move out of Spec.
+			ImportDetails: bespinv1.ImportDetails{
+				Time:  metav1.NewTime(time.Now()),
+				Token: "0123456789012345678901234567890123456789",
+			},
+			ParentReference: bespinv1.ParentReference{
+				Kind: "Organization",
+			},
+		},
+		Status: bespinv1.FolderStatus{
+			SyncDetails: bespinv1.SyncDetails{
+				Time: metav1.NewTime(time.Now()),
+			},
+		},
+	}
 
 	// Setup the Manager and Controller. Wrap the Controller Reconcile function so it writes each request to a
 	// channel when it is finished.
