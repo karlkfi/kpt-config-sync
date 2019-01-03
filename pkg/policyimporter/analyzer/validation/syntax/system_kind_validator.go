@@ -9,7 +9,7 @@ import (
 
 // SystemKindValidator ensures only the allowed set of Kinds appear in system/
 var SystemKindValidator = &FileObjectValidator{
-	validate: func(object ast.FileObject) error {
+	ValidateFn: func(object ast.FileObject) error {
 		switch object.Object.(type) {
 		case *v1alpha1.Repo:
 		case *corev1.ConfigMap:

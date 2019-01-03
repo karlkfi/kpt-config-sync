@@ -11,7 +11,7 @@ const AllowedRepoVersion = "0.1.0"
 
 // RepoVersionValidator validates that
 var RepoVersionValidator = &FileObjectValidator{
-	validate: func(object ast.FileObject) error {
+	ValidateFn: func(object ast.FileObject) error {
 		switch o := object.Object.(type) {
 		case *v1alpha1.Repo:
 			if version := o.Spec.Version; version != AllowedRepoVersion {

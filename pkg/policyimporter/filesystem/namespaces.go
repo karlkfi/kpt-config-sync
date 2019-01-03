@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -14,7 +15,7 @@ import (
 // validateNamespaces validates all Resources in namespaces/ including Namespaces and Abstract
 // Namespaces.
 func validateNamespaces(objects []ast.FileObject, dirs []string, errorBuilder *multierror.Builder) {
-	validateObjects(objects, errorBuilder)
+	metadata.Validate(objects, errorBuilder)
 
 	syntax.DirectoryNameValidator.Validate(dirs, errorBuilder)
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)

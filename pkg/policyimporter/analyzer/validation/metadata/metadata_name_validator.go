@@ -1,4 +1,4 @@
-package syntax
+package metadata
 
 import (
 	"path"
@@ -7,14 +7,15 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
 // MetadataNameValidator validates the value of metadata.name
-var MetadataNameValidator = &FileObjectValidator{
-	validate: func(fileObject ast.FileObject) error {
+var MetadataNameValidator = &syntax.FileObjectValidator{
+	ValidateFn: func(fileObject ast.FileObject) error {
 		gvk := fileObject.GroupVersionKind()
 
 		if fileObject.Name() == "" {

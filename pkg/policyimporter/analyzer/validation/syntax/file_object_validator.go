@@ -7,12 +7,13 @@ import (
 
 // FileObjectValidator validates the local state of a single ast.FileObject
 type FileObjectValidator struct {
-	validate func(object ast.FileObject) error
+	// ValidateFn returns an error if it finds any problems with the state of the passed FileObject.
+	ValidateFn func(object ast.FileObject) error
 }
 
 // Validate validates each ast.FileObject individually
 func (v FileObjectValidator) Validate(fileObjects []ast.FileObject, errorBuilder *multierror.Builder) {
 	for _, fileObject := range fileObjects {
-		errorBuilder.Add(v.validate(fileObject))
+		errorBuilder.Add(v.ValidateFn(fileObject))
 	}
 }

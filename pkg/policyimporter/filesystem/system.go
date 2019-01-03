@@ -3,6 +3,7 @@ package filesystem
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/sync"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
@@ -43,7 +44,7 @@ func processSystem(
 
 // validateSystem validates objects in system/
 func validateSystem(objects []ast.FileObject, repo *v1alpha1.Repo, apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) {
-	validateObjects(objects, errorBuilder)
+	metadata.Validate(objects, errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(toSources(objects), errorBuilder)
 	syntax.RepoVersionValidator.Validate(objects, errorBuilder)
 	syntax.SystemKindValidator.Validate(objects, errorBuilder)

@@ -2,12 +2,13 @@ package filesystem
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
 func validateCluster(objects []ast.FileObject, errorBuilder *multierror.Builder) {
-	validateObjects(objects, errorBuilder)
+	metadata.Validate(objects, errorBuilder)
 
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(toSources(objects), errorBuilder)

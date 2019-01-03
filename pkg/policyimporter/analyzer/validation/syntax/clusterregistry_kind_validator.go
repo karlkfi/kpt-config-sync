@@ -9,7 +9,7 @@ import (
 
 // ClusterregistryKindValidator ensures only the allowed set of types appear in clusterregistry/
 var ClusterregistryKindValidator = &FileObjectValidator{
-	validate: func(object ast.FileObject) error {
+	ValidateFn: func(object ast.FileObject) error {
 		switch o := object.Object.(type) {
 		case *v1alpha1.ClusterSelector:
 		case *clusterregistry.Cluster:
