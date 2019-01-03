@@ -142,6 +142,10 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// Call c.Copying.VisitTreeNode to continue iteration.
 	newNode := v.Copying.VisitTreeNode(n)
 
+	if v.ctx.needsNamespace() {
+		glog.V(1).Infof("Marking tree node %v as namespace scope", newNode.Path)
+		newNode.Type = ast.Namespace
+	}
 	if v.ctx.clusterObj != nil {
 		glog.V(1).Infof("Moving %v to cluster scope", v.ctx.clusterObj.Source)
 		v.cluster.Objects = append(v.cluster.Objects, v.ctx.clusterObj)
@@ -274,4 +278,10 @@ func (v *GCPHierarchyVisitor) VisitObjectList(o ast.ObjectList) ast.ObjectList {
 // visitingRoot returns true if the visitor is currently visiting a root tree node.
 func (v *GCPHierarchyVisitor) visitingRoot() bool {
 	return v.ctx != nil && v.ctx.prev != nil && v.ctx.prev.prev == nil
+}
+
+// needsNamespace returns true if the visitor's current context is inside a GCP
+// hierarchy and has no cluster scope resources.
+func (c *gcpHierarchyContext) needsNamespace() bool {
+	return c.prev != nil && c.clusterObj == nil
 }

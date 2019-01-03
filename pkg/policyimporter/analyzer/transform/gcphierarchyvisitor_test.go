@@ -199,7 +199,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 					Type: ast.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
-							Type:    ast.Namespace,
+							Type:    ast.AbstractNamespace,
 							Objects: vt.ObjectSets(project1),
 						},
 					},
@@ -211,6 +211,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 					Type: ast.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
+							// Project tree node is namespace scope.
 							Type:    ast.Namespace,
 							Objects: vt.ObjectSets(project1),
 							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project1"}),
@@ -227,15 +228,15 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 					Type: ast.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
-							Type:    ast.Namespace,
+							Type:    ast.AbstractNamespace,
 							Objects: vt.ObjectSets(project1),
 						},
 						&ast.TreeNode{
-							Type:    ast.Namespace,
+							Type:    ast.AbstractNamespace,
 							Objects: vt.ObjectSets(project2),
 						},
 						&ast.TreeNode{
-							Type:    ast.Namespace,
+							Type:    ast.AbstractNamespace,
 							Objects: vt.ObjectSets(project3),
 						},
 					},
@@ -604,7 +605,7 @@ func TestProject(t *testing.T) {
 							Objects: vt.ObjectSets(org),
 							Children: []*ast.TreeNode{
 								{
-									Type:    ast.Namespace,
+									Type:    ast.AbstractNamespace,
 									Objects: vt.ObjectSets(project),
 								},
 							},
@@ -646,7 +647,7 @@ func TestProject(t *testing.T) {
 							Objects: vt.ObjectSets(folder),
 							Children: []*ast.TreeNode{
 								{
-									Type:    ast.Namespace,
+									Type:    ast.AbstractNamespace,
 									Objects: vt.ObjectSets(project),
 								},
 							},
