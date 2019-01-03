@@ -18,13 +18,10 @@ only covers the possibility that e2e tests are so badly broken that they fail to
 run at all but still report passing. It also tests that our documentation is
 accurate (which can't be automated).*
 
-Follow [installation instructions](../user/installation.md), but instead of
-`stable`, pick a fixed release from
-[GCS nomos releases](https://console.cloud.google.com/storage/browser/nomos-release?project=nomos-release).
-Choose the highest versioned release. It must be a release candidate (rc), such
-as `v0.10.3-rc.39`.
+Follow [installation instructions](../user/installation.md), BUT instead of
+downloading the `operator-stable` release as instructed, use the latest release at https://storage.cloud.google.com/nomos-release/operator-latest/nomos-operator.yaml
 
-Follow instructions for [Git config](../user/config.md). Use the sample YAML
+Follow instructions for [Git config](../user/config.md). Use the Nomos YAML
 from those instructions, for the foo-corp repo. You will most likely have
 memorized these steps, but try to follow the documentation. This is our only
 regular review of the documentation.
@@ -60,6 +57,25 @@ verification before release. For now, automated tests, plus the above sanity
 test, are sufficient.
 
 ## Blessing
+
+After you have completed release candidate testing, it is time to bless the release.
+This will convert an existing release candidate into a version that has its own (non-rc)
+version number and will replace the version of the operator bundle at `operator-stable`. For example, blessing v0.2.4-rc.6 will release version v0.2.4 and mark it as the current stable version. The Nomos Operator and Nomos binary codebases are in separate repositories, but the two are currently released together because the Nomos Operator must include the Nomos binaries
+in its image (this is a limitation of the operator frameork that will change in the
+Q1 2019 timeframe). The two binaries are versioned separately, however.
+
+### Anatomy of a Blessed Release
+
+A blessed release consists of three distinct pieces:
+
+* **`nomos-operator.yaml` manifest** | a yaml bundle that specifies the operator deployment and the roles and role bindings necessary to run it. This file specifies a version of the nomos operator image to use. The current stable (blessed) version of this file is at https://storage.cloud.google.com/nomos-release/operator-stable/nomos-operator.yaml
+* **`nomos-operator` image** | the container image of Nomos Operator. The current stable version is at gcr.io/nomos-release/nomos-operator: stable . The operator manifest (above) specifies which version of this image to use.
+* **`nomos` image** | the container image of the Nomos binary. The current stable version is at gcr.io/nomos-release/nomos:stable . The manifests that are packaged inside the Nomos Operator image specify which version of this image to use.
+
+
+### Nomos binary
+
+First, bless the Nomos binary release candidate.
 
 ```console
 make -f Makefile.release bless-autorelease
@@ -133,10 +149,27 @@ c79426d4 Fri Sep 7 .. Filip Filmar            buildenv: upgrade buildenv to v0.1
 e15b4b28 Thu Sep 6 .. Erik Kitson             Fix broken links in documentation and add monitor pod.
 ```
 
--   Final step: send an email to nomos-team@google.com with subject `Nomos
+-   Send an email to nomos-team@google.com with subject `Nomos binary
     Release ${RELEASE_VERSION}` (where `RELEASE_VERSION` is the tag you chose
     for the release). Copy the above changelog into the body. Copy using `Copy
     as HTML` to retain formatting.
+
+### Nomos Operator
+
+Switch to the `nomos-operator` repository. Before blessing, take note of whether the new release should have be a new patch, minor, or major version. By default, the blessing target increments the patch set, so to bless a new version with just a patch increment run:
+
+```console
+make bless-release
+```
+
+If you would instead like to increment the minor version, run:
+```console
+MINOR=true make bless-release
+```
+
+See the comments on this target in the [Makefile](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/+/master/nomos-operator/Makefile#186) for other options available for this target.
+
+The `bless-release` target is interactive; please ensure the version name proposed by the target is what you expect before continuing.
 
 ## Check the build artifacts (optional)
 
