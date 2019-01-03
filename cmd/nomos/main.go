@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/initialize"
 	"github.com/google/nomos/cmd/nomos/vet"
 	"github.com/google/nomos/cmd/nomos/view"
+	"github.com/google/nomos/pkg/util/log"
 	"github.com/spf13/cobra"
 )
 
@@ -34,6 +36,8 @@ func init() {
 }
 
 func main() {
+	flag.Parse()
+	log.Setup()
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

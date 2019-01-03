@@ -84,7 +84,7 @@ func NewClusterSelectors(
 	selectors []policyhierarchy.ClusterSelector,
 	clusterName string,
 ) (*ClusterSelectors, error) {
-	glog.Infof("Cluster name: %q", clusterName)
+	glog.V(2).Infof("Cluster name: %q", clusterName)
 	cc := &ClusterSelectors{
 		selectors:   make(map[string]policyhierarchy.ClusterSelector),
 		clusterName: clusterName,
