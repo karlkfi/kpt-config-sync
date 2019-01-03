@@ -21,6 +21,7 @@ import (
 
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -30,7 +31,7 @@ func TestStorageClusterOrganizationPolicy(t *testing.T) {
 	created := &ClusterOrganizationPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 		Spec: OrganizationPolicySpec{
-			ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
+			ResourceRef: corev1.ObjectReference{Kind: OrganizationKind, Name: "bar"},
 			Constraints: []OrganizationPolicyConstraint{
 				{
 					Constraint: "c1",
@@ -53,11 +54,8 @@ func TestStorageClusterOrganizationPolicy(t *testing.T) {
 					BooleanPolicy: OrganizationPolicyBooleanPolicy{Enforced: false},
 				},
 			},
-			ImportDetails: fakeImportDetails,
 		},
-		Status: OrganizationPolicyStatus{
-			SyncDetails: fakeSyncDetails,
-		},
+		Status: OrganizationPolicyStatus{},
 	}
 	g := gomega.NewGomegaWithT(t)
 

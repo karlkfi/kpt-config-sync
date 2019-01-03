@@ -36,7 +36,7 @@ spec:
         bespin.dev/system: "true"
     spec:
       containers:
-      - image: gcr.io/${GCR_PREFIX}/bespin/controllers-manager:latest
+      - image: gcr.io/bespin-prototype/zhuzenglu/1546553038/bespin/controllers-manager:latest
         name: manager
         command: [
           "/bespin/bespin-controllers-manager",

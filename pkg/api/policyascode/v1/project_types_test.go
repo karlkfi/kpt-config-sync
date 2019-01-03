@@ -21,6 +21,7 @@ import (
 
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -30,17 +31,14 @@ func TestStorageProject(t *testing.T) {
 	created := &Project{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 		Spec: ProjectSpec{
-			ParentReference: ParentReference{
+			ParentRef: corev1.ObjectReference{
 				Kind: FolderKind,
 				Name: "bar",
 			},
-			Name:          "spec-bar",
-			ID:            "some-fake-project",
-			ImportDetails: fakeImportDetails,
+			DisplayName: "spec-bar",
+			ID:          "some-fake-project",
 		},
-		Status: ProjectStatus{
-			SyncDetails: fakeSyncDetails,
-		},
+		Status: ProjectStatus{},
 	}
 	g := gomega.NewGomegaWithT(t)
 
@@ -80,17 +78,14 @@ func TestProjectTFResourceConfig(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: ProjectSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Organization",
 						Name: "bar",
 					},
-					Name:          "spec-bar",
-					ID:            "some-fake-project",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
+					ID:          "some-fake-project",
 				},
-				Status: ProjectStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: ProjectStatus{},
 			},
 			c: &stubClient{
 				obj: &Organization{
@@ -117,17 +112,14 @@ org_id = "1234567"
 					},
 				},
 				Spec: ProjectSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Folder",
 						Name: "bar",
 					},
-					Name:          "spec-bar",
-					ID:            "some-fake-project",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
+					ID:          "some-fake-project",
 				},
-				Status: ProjectStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: ProjectStatus{},
 			},
 			c: &stubClient{
 				obj: &Folder{
@@ -151,17 +143,14 @@ folder_id = "1234567"
 					Namespace: "default",
 				},
 				Spec: ProjectSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Organization",
 						Name: "bar",
 					},
-					Name:          "spec-bar",
-					ID:            "some-fake-project",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
+					ID:          "some-fake-project",
 				},
-				Status: ProjectStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: ProjectStatus{},
 			},
 			c: &stubClient{
 				obj: &Organization{
@@ -182,17 +171,14 @@ folder_id = "1234567"
 					},
 				},
 				Spec: ProjectSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Folder",
 						Name: "bar",
 					},
-					Name:          "spec-bar",
-					ID:            "some-fake-project",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
+					ID:          "some-fake-project",
 				},
-				Status: ProjectStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: ProjectStatus{},
 			},
 			c: &stubClient{
 				obj: &Folder{
@@ -207,17 +193,14 @@ folder_id = "1234567"
 			p: &Project{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: ProjectSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "invalid",
 						Name: "bar",
 					},
-					Name:          "spec-bar",
-					ID:            "some-fake-project",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
+					ID:          "some-fake-project",
 				},
-				Status: ProjectStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: ProjectStatus{},
 			},
 			c: &stubClient{
 				obj: &Folder{
@@ -234,13 +217,10 @@ folder_id = "1234567"
 			p: &Project{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: ProjectSpec{
-					Name:          "spec-bar",
-					ID:            "some-fake-project",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
+					ID:          "some-fake-project",
 				},
-				Status: ProjectStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: ProjectStatus{},
 			},
 			c: &stubClient{
 				obj: &Folder{

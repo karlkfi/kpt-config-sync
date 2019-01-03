@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -31,31 +32,17 @@ func init() {
 
 // ProjectSpec defines the desired state of Project
 type ProjectSpec struct {
-	// +kubebuilder:validation:Pattern=[a-zA-Z][\w!"\- ]{3,27}
-	Name string `json:"name"`
-	// +kubebuilder:validation:Pattern=^[a-z][a-z\d\-]{5,29}$
-	ID              string          `json:"id"`
-	ParentReference ParentReference `json:"parentReference,omitempty"`
-	Labels          ProjectLabels   `json:"labels,omitempty"`
-	ImportDetails   ImportDetails   `json:"importDetails"`
-}
-
-// ProjectLabels defines a label dictionary for CRD resources
-// https://swagger.io/docs/specification/data-models/dictionaries/
-type ProjectLabels struct {
-	AdditionalProperties string `json:"additionalProperties"`
+	DisplayName string                 `json:"displayName"`
+	ID          string                 `json:"id"`
+	ParentRef   corev1.ObjectReference `json:"parentRef,omitempty"`
 }
 
 // ProjectStatus defines the observed state of Project
 type ProjectStatus struct {
-	SyncDetails SyncDetails `json:"syncDetails,omitempty"`
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // Project is the Schema for the projects API
-// +k8s:openapi-gen=true
 type Project struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -63,8 +50,6 @@ type Project struct {
 	Spec   ProjectSpec   `json:"spec"`
 	Status ProjectStatus `json:"status,omitempty"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ProjectList contains a list of Project
 type ProjectList struct {
@@ -77,8 +62,8 @@ type ProjectList struct {
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (p *Project) TFResourceConfig(ctx context.Context, c Client) (string, error) {
 	var parent string
-	resName := types.NamespacedName{Name: p.Spec.ParentReference.Name}
-	switch p.Spec.ParentReference.Kind {
+	resName := types.NamespacedName{Name: p.Spec.ParentRef.Name}
+	switch p.Spec.ParentRef.Kind {
 	case OrganizationKind:
 		org := &Organization{}
 		if err := c.Get(ctx, resName, org); err != nil {
@@ -100,14 +85,14 @@ func (p *Project) TFResourceConfig(ctx context.Context, c Client) (string, error
 		}
 		parent = fmt.Sprintf(`folder_id = "%s"`, ID)
 	default:
-		return "", fmt.Errorf("invalid parent reference kind: %v", p.Spec.ParentReference.Kind)
+		return "", fmt.Errorf("invalid parent reference kind: %v", p.Spec.ParentRef.Kind)
 	}
 
 	return fmt.Sprintf(`resource "google_project" "bespin_project" {
 name = "%s"
 project_id = "%s"
 %s
-}`, p.Spec.Name, p.ID(), parent), nil
+}`, p.Spec.DisplayName, p.ID(), parent), nil
 }
 
 // TFImportConfig returns an empty terraform project resource block used for terraform import.

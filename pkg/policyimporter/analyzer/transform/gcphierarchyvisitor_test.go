@@ -20,11 +20,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
-	v1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestMultiTopOrgFolderProject(t *testing.T) {
@@ -67,7 +66,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org1"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org1"}),
 						},
 					},
 				},
@@ -102,15 +101,15 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org1"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org1"}),
 						},
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org2"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org2"}),
 						},
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org3"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org3"}),
 						},
 					},
 				},
@@ -139,7 +138,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder1"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder1"}),
 						},
 					},
 				},
@@ -176,15 +175,15 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder1"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder1"}),
 						},
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder2"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder2"}),
 						},
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder3"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder3"}),
 						},
 					},
 				},
@@ -213,7 +212,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 							// Project tree node is namespace scope.
 							Type:    ast.Namespace,
 							Objects: vt.ObjectSets(project1),
-							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project1"}),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project1"}),
 						},
 					},
 				},
@@ -249,17 +248,17 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 						&ast.TreeNode{
 							Type:    ast.Namespace,
 							Objects: vt.ObjectSets(project1),
-							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project1"}),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project1"}),
 						},
 						&ast.TreeNode{
 							Type:    ast.Namespace,
 							Objects: vt.ObjectSets(project2),
-							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project2"}),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project2"}),
 						},
 						&ast.TreeNode{
 							Type:    ast.Namespace,
 							Objects: vt.ObjectSets(project3),
-							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project3"}),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project3"}),
 						},
 					},
 				},
@@ -320,42 +319,42 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org1"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org1"}),
 						},
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org2"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org2"}),
 						},
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org3"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org3"}),
 						},
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder1"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder1"}),
 						},
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder2"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder2"}),
 						},
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder3"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder3"}),
 						},
 						&ast.TreeNode{
 							Type:    ast.Namespace,
 							Objects: vt.ObjectSets(project1),
-							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project1"}),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project1"}),
 						},
 						&ast.TreeNode{
 							Type:    ast.Namespace,
 							Objects: vt.ObjectSets(project2),
-							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project2"}),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project2"}),
 						},
 						&ast.TreeNode{
 							Type:    ast.Namespace,
 							Objects: vt.ObjectSets(project3),
-							Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project3"}),
+							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project3"}),
 						},
 					},
 				},
@@ -390,13 +389,13 @@ func TestFolderAndOrg(t *testing.T) {
 	folder := vt.Helper.GCPFolder("folder-sample")
 	folderUnderOrg := vt.Helper.GCPFolder("folder-under-org-sample")
 	folderUnderOrgWithParentRef := folderUnderOrg.DeepCopy()
-	folderUnderOrgWithParentRef.Spec.ParentReference = v1.ParentReference{
+	folderUnderOrgWithParentRef.Spec.ParentRef = corev1.ObjectReference{
 		Kind: org.TypeMeta.Kind,
 		Name: org.ObjectMeta.Name,
 	}
 	subFolder := vt.Helper.GCPFolder("subfolder-sample")
 	subFolderWithParentRef := subFolder.DeepCopy()
-	subFolderWithParentRef.Spec.ParentReference = v1.ParentReference{
+	subFolderWithParentRef.Spec.ParentRef = corev1.ObjectReference{
 		Kind: folder.TypeMeta.Kind,
 		Name: folder.ObjectMeta.Name,
 	}
@@ -430,7 +429,7 @@ func TestFolderAndOrg(t *testing.T) {
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org-sample"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org-sample"}),
 						},
 					},
 				},
@@ -459,7 +458,7 @@ func TestFolderAndOrg(t *testing.T) {
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder-sample"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder-sample"}),
 						},
 					},
 				},
@@ -494,11 +493,11 @@ func TestFolderAndOrg(t *testing.T) {
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org-sample"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org-sample"}),
 							Children: []*ast.TreeNode{
 								&ast.TreeNode{
 									Type: ast.AbstractNamespace,
-									Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder-under-org-sample"}),
+									Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder-under-org-sample"}),
 								},
 							},
 						},
@@ -535,11 +534,11 @@ func TestFolderAndOrg(t *testing.T) {
 					Children: []*ast.TreeNode{
 						&ast.TreeNode{
 							Type: ast.AbstractNamespace,
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder-sample"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder-sample"}),
 							Children: []*ast.TreeNode{
 								&ast.TreeNode{
 									Type: ast.AbstractNamespace,
-									Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "subfolder-sample"}),
+									Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "subfolder-sample"}),
 								},
 							},
 						},
@@ -577,12 +576,12 @@ func TestProject(t *testing.T) {
 	folder := vt.Helper.GCPFolder("folder")
 	project := vt.Helper.GCPProject("project")
 	projectUnderOrgWithParentRef := project.DeepCopy()
-	projectUnderOrgWithParentRef.Spec.ParentReference = v1.ParentReference{
+	projectUnderOrgWithParentRef.Spec.ParentRef = corev1.ObjectReference{
 		Kind: org.TypeMeta.Kind,
 		Name: org.ObjectMeta.Name,
 	}
 	projectUnderFolderWithParentRef := project.DeepCopy()
-	projectUnderFolderWithParentRef.Spec.ParentReference = v1.ParentReference{
+	projectUnderFolderWithParentRef.Spec.ParentRef = corev1.ObjectReference{
 		Kind: folder.TypeMeta.Kind,
 		Name: folder.ObjectMeta.Name,
 	}
@@ -625,10 +624,10 @@ func TestProject(t *testing.T) {
 								{
 									Type:    ast.Namespace,
 									Objects: vt.ObjectSets(projectUnderOrgWithParentRef),
-									Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project"}),
+									Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project"}),
 								},
 							},
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Organization", Name: "org"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org"}),
 						},
 					},
 				},
@@ -667,10 +666,10 @@ func TestProject(t *testing.T) {
 								{
 									Type:    ast.Namespace,
 									Objects: vt.ObjectSets(projectUnderFolderWithParentRef),
-									Data:    de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Project", Name: "project"}),
+									Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project"}),
 								},
 							},
-							Data: de.Add(gcpAttachmentPointKeyType{}, &v1.ResourceReference{Kind: "Folder", Name: "folder"}),
+							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder"}),
 						},
 					},
 				},
@@ -729,21 +728,21 @@ func TestAttachmentPoint(t *testing.T) {
 	}
 	visitor := NewGCPHierarchyVisitor()
 	output := input.Accept(visitor)
-	wantOrgRef := &v1.ResourceReference{
+	wantOrgRef := &corev1.ObjectReference{
 		Kind: org.TypeMeta.Kind,
 		Name: org.ObjectMeta.Name,
 	}
 	orgNode := output.Tree.Children[0]
 	verifyAttachmentPoint(t, orgNode, wantOrgRef)
 
-	wantFolderRef := &v1.ResourceReference{
+	wantFolderRef := &corev1.ObjectReference{
 		Kind: folder.TypeMeta.Kind,
 		Name: folder.ObjectMeta.Name,
 	}
 	folderNode := orgNode.Children[0]
 	verifyAttachmentPoint(t, folderNode, wantFolderRef)
 
-	wantProjectRef := &v1.ResourceReference{
+	wantProjectRef := &corev1.ObjectReference{
 		Kind: project.TypeMeta.Kind,
 		Name: project.ObjectMeta.Name,
 	}
@@ -751,7 +750,7 @@ func TestAttachmentPoint(t *testing.T) {
 	verifyAttachmentPoint(t, projectNode, wantProjectRef)
 }
 
-func verifyAttachmentPoint(t *testing.T, node *ast.TreeNode, wantRef *v1.ResourceReference) {
+func verifyAttachmentPoint(t *testing.T, node *ast.TreeNode, wantRef *corev1.ObjectReference) {
 	gotRef := node.Data.Get(gcpAttachmentPointKey)
 	if !cmp.Equal(gotRef, wantRef) {
 		t.Errorf("Got policy attachment point %v, want %v", gotRef, wantRef)

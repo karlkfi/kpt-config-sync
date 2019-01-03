@@ -27,7 +27,6 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -134,19 +133,19 @@ func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Resul
 func (r *ReconcileProject) doDeletion(tfe *terraform.Executor, project *bespinv1.Project) (reconcile.Result, error) {
 	// Project has our finalizer, so run terraform flow to delete resource.
 	if !slices.ContainsString(project.ObjectMeta.Finalizers, bespinv1.Finalizer) {
-		glog.Warningf("[Project %v] instance being deleted does not have bespin finalizer.", project.Spec.Name)
+		glog.Warningf("[Project %v] instance being deleted does not have bespin finalizer.", project.Spec.DisplayName)
 	}
 	if err := tfe.RunDeleteFlow(); err != nil {
 		glog.Errorf("[Project %v] reconciler failed to run Terraform command in project deletion: %v",
-			project.Spec.Name, err)
+			project.Spec.DisplayName, err)
 		return reconcile.Result{}, errors.Wrapf(err,
-			"[Project %v] reconciler failed to run Terraform command in project deletion.", project.Spec.Name)
+			"[Project %v] reconciler failed to run Terraform command in project deletion.", project.Spec.DisplayName)
 	}
 	// Remove bespinv1.Finalizer after deletion so k8s resource can be removed.
 	project.ObjectMeta.Finalizers = slices.RemoveString(project.ObjectMeta.Finalizers, bespinv1.Finalizer)
 	if err := r.Update(context.Background(), project); err != nil {
 		glog.Errorf("[Project %v] reconciler failed to remove finalizer from k8s resource: %v",
-			project.Spec.Name, err)
+			project.Spec.DisplayName, err)
 		return reconcile.Result{Requeue: true}, nil
 	}
 	return reconcile.Result{}, nil
@@ -158,14 +157,11 @@ func (r *ReconcileProject) doDeletion(tfe *terraform.Executor, project *bespinv1
 func (r *ReconcileProject) updateServer(ctx context.Context, p *bespinv1.Project) error {
 	newP := &bespinv1.Project{}
 	p.DeepCopyInto(newP)
-	newP.Status.SyncDetails.Token = p.Spec.ImportDetails.Token
-	newP.Status.SyncDetails.Error = ""
 
 	if equality.Semantic.DeepEqual(p, newP) {
-		glog.V(1).Infof("[Project %v] nothing to update", newP.Spec.Name)
+		glog.V(1).Infof("[Project %v] nothing to update", newP.Spec.DisplayName)
 		return nil
 	}
-	newP.Status.SyncDetails.Time = metav1.Now()
 	if err := r.Update(ctx, newP); err != nil {
 		return errors.Wrap(err, "failed to update Project in API server")
 	}

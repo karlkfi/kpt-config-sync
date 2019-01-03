@@ -22,6 +22,7 @@ import (
 
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -66,40 +67,32 @@ func TestQuoteList(t *testing.T) {
 func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 	org := &Organization{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
-		Spec: OrganizationSpec{
-			ImportDetails: fakeImportDetails,
-		},
-		Status: OrganizationStatus{},
+		Spec:       OrganizationSpec{},
+		Status:     OrganizationStatus{},
 	}
 	folder := &Folder{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 		Spec: FolderSpec{
-			ParentReference: ParentReference{
+			ParentRef: corev1.ObjectReference{
 				Kind: OrganizationKind,
 				Name: "bar",
 			},
-			DisplayName:   "spec-bar",
-			ID:            1,
-			ImportDetails: fakeImportDetails,
+			DisplayName: "spec-bar",
+			ID:          1,
 		},
-		Status: FolderStatus{
-			SyncDetails: fakeSyncDetails,
-		},
+		Status: FolderStatus{},
 	}
 	project := &Project{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 		Spec: ProjectSpec{
-			ParentReference: ParentReference{
+			ParentRef: corev1.ObjectReference{
 				Kind: FolderKind,
 				Name: "bar",
 			},
-			Name:          "spec-bar",
-			ID:            "some-fake-project",
-			ImportDetails: fakeImportDetails,
+			DisplayName: "spec-bar",
+			ID:          "some-fake-project",
 		},
-		Status: ProjectStatus{
-			SyncDetails: fakeSyncDetails,
-		},
+		Status: ProjectStatus{},
 	}
 
 	tests := []struct {
@@ -114,7 +107,7 @@ func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 			obj:  org,
 			ops: OrganizationPolicy{
 				Spec: OrganizationPolicySpec{
-					ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
+					ResourceRef: corev1.ObjectReference{Kind: OrganizationKind, Name: "bar"},
 					Constraints: []OrganizationPolicyConstraint{
 						{
 							Constraint: "c1",
@@ -123,7 +116,6 @@ func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 							},
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
 			},
 			want: `["projects/foo", "projects/bar"]`,
@@ -133,7 +125,7 @@ func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 			obj:  folder,
 			ops: OrganizationPolicy{
 				Spec: OrganizationPolicySpec{
-					ResourceReference: ResourceReference{Kind: FolderKind, Name: "bar"},
+					ResourceRef: corev1.ObjectReference{Kind: FolderKind, Name: "bar"},
 					Constraints: []OrganizationPolicyConstraint{
 						{
 							Constraint: "c1",
@@ -142,7 +134,6 @@ func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 							},
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
 			},
 			want: `values = ["projects/disallowed-bar"]`,
@@ -152,14 +143,13 @@ func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 			obj:  project,
 			ops: OrganizationPolicy{
 				Spec: OrganizationPolicySpec{
-					ResourceReference: ResourceReference{Kind: ProjectKind, Name: "bar"},
+					ResourceRef: corev1.ObjectReference{Kind: ProjectKind, Name: "bar"},
 					Constraints: []OrganizationPolicyConstraint{
 						{
 							Constraint:    "c3",
 							BooleanPolicy: OrganizationPolicyBooleanPolicy{Enforced: true},
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
 			},
 			want: "enforced = true",
@@ -169,7 +159,7 @@ func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 			obj:  org,
 			ops: OrganizationPolicy{
 				Spec: OrganizationPolicySpec{
-					ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
+					ResourceRef: corev1.ObjectReference{Kind: OrganizationKind, Name: "bar"},
 					Constraints: []OrganizationPolicyConstraint{
 						{
 							Constraint: "c3",
@@ -178,7 +168,6 @@ func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 							},
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
 			},
 			want: "allow",
@@ -188,7 +177,7 @@ func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 			obj:  org,
 			ops: OrganizationPolicy{
 				Spec: OrganizationPolicySpec{
-					ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
+					ResourceRef: corev1.ObjectReference{Kind: OrganizationKind, Name: "bar"},
 					Constraints: []OrganizationPolicyConstraint{
 						{
 							Constraint: "c3",
@@ -197,7 +186,6 @@ func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 							},
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
 			},
 			want: "deny",
@@ -226,7 +214,7 @@ func TestStorageOrganizationPolicy(t *testing.T) {
 	created := &OrganizationPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 		Spec: OrganizationPolicySpec{
-			ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
+			ResourceRef: corev1.ObjectReference{Kind: OrganizationKind, Name: "bar"},
 			Constraints: []OrganizationPolicyConstraint{
 				{
 					Constraint: "c1",
@@ -250,11 +238,8 @@ func TestStorageOrganizationPolicy(t *testing.T) {
 					BooleanPolicy: OrganizationPolicyBooleanPolicy{Enforced: false},
 				},
 			},
-			ImportDetails: fakeImportDetails,
 		},
-		Status: OrganizationPolicyStatus{
-			SyncDetails: fakeSyncDetails,
-		},
+		Status: OrganizationPolicyStatus{},
 	}
 	g := gomega.NewGomegaWithT(t)
 

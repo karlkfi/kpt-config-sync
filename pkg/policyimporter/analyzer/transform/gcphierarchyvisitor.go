@@ -55,6 +55,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // GCPHierarchyVisitor sets up the hierarchical relationship between
@@ -102,7 +103,7 @@ type gcpHierarchyContext struct {
 	// It can be either Organization or Folder.
 	clusterObj *ast.ClusterObject
 	// Policy attachment point associated with the current TreeNode.
-	policyAttachmentPoint *v1.ResourceReference
+	policyAttachmentPoint *corev1.ObjectReference
 }
 
 // needsAttachmentPoint returns true if the visitor's current context is visiting
@@ -198,7 +199,7 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) *ast.Namespace
 				v.errs.Add(errors.Errorf("Project %v must have either folder or organization as its parent: %v", gcpObj, pr))
 				return nil
 			}
-			p.Spec.ParentReference = *pr
+			p.Spec.ParentRef = *pr
 		}
 		return &ast.NamespaceObject{
 			FileObject: ast.NewFileObject(p, o.Relative),
@@ -227,7 +228,7 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) *ast.Namespace
 			return nil
 		}
 		f := gcpObj.DeepCopy()
-		f.Spec.ParentReference = *pr
+		f.Spec.ParentRef = *pr
 		v.ctx.clusterObj = &ast.ClusterObject{
 			FileObject: ast.NewFileObject(f, o.Relative),
 		}
@@ -260,7 +261,7 @@ func (v *GCPHierarchyVisitor) setAttachmentPoint(o *ast.NamespaceObject) bool {
 		v.errs.Add(errors.Errorf("Too many GCP policy attachment points: %v", v.ctx.policyAttachmentPoint))
 		return false
 	}
-	v.ctx.policyAttachmentPoint = &v1.ResourceReference{
+	v.ctx.policyAttachmentPoint = &corev1.ObjectReference{
 		Kind: o.GroupVersionKind().Kind,
 		Name: o.Name(),
 	}
@@ -269,12 +270,12 @@ func (v *GCPHierarchyVisitor) setAttachmentPoint(o *ast.NamespaceObject) bool {
 
 // parentReference returns the name and kind that point to the parent GCP
 // folder/organization, or nil if there is no parent.
-func (v *GCPHierarchyVisitor) parentReference() *v1.ParentReference {
+func (v *GCPHierarchyVisitor) parentReference() *corev1.ObjectReference {
 	if v.ctx.prev == nil || v.ctx.prev.clusterObj == nil {
 		return nil
 	}
 	gvk := v.ctx.prev.clusterObj.GetObjectKind().GroupVersionKind()
-	return &v1.ParentReference{
+	return &corev1.ObjectReference{
 		Kind: gvk.Kind,
 		Name: v.ctx.prev.clusterObj.Name(),
 	}

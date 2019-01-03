@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -31,18 +32,14 @@ func init() {
 
 // FolderSpec defines the desired state of Folder
 type FolderSpec struct {
-	// +kubebuilder:validation:Pattern=[a-zA-Z\d][\w_ \-]{3,27}[\w\d]?
-	DisplayName string `json:"displayName"`
-	// +kubebuilder:validation:Minimum=1
-	ID              int             `json:"id,omitempty"`
-	ParentReference ParentReference `json:"parentReference,omitempty"`
-	ImportDetails   ImportDetails   `json:"importDetails"`
+	DisplayName string                 `json:"displayName"`
+	ID          int64                  `json:"id,omitempty"`
+	ParentRef   corev1.ObjectReference `json:"parentRef,omitempty"`
 }
 
 // FolderStatus defines the observed state of Folder
 type FolderStatus struct {
-	ID          int         `json:"id,omitempty"`
-	SyncDetails SyncDetails `json:"syncDetails,omitempty"`
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
 // +genclient
@@ -72,8 +69,8 @@ type FolderList struct {
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (f *Folder) TFResourceConfig(ctx context.Context, c Client) (string, error) {
 	var parent string
-	resName := types.NamespacedName{Name: f.Spec.ParentReference.Name}
-	switch f.Spec.ParentReference.Kind {
+	resName := types.NamespacedName{Name: f.Spec.ParentRef.Name}
+	switch f.Spec.ParentRef.Kind {
 	case OrganizationKind:
 		org := &Organization{}
 		if err := c.Get(ctx, resName, org); err != nil {
@@ -95,7 +92,7 @@ func (f *Folder) TFResourceConfig(ctx context.Context, c Client) (string, error)
 		}
 		parent = fmt.Sprintf("folders/%s", ID)
 	default:
-		return "", fmt.Errorf("invalid parent reference kind: %v", f.Spec.ParentReference.Kind)
+		return "", fmt.Errorf("invalid parent reference kind: %v", f.Spec.ParentRef.Kind)
 	}
 
 	return fmt.Sprintf(`resource "google_folder" "bespin_folder" {
@@ -116,25 +113,11 @@ func (f *Folder) TFResourceAddr() string {
 	return `google_folder.bespin_folder`
 }
 
-// ID returns the Folder ID from GCP. It first looks at Status.ID, and use that
-// if present, if not it uses Spec.ID if it's present, otherwise return empty string.
+// ID returns the Folder ID from GCP.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (f *Folder) ID() string {
-	if f.Status.ID != 0 {
-		return fmt.Sprintf("%v", f.Status.ID)
-	}
 	if f.Spec.ID != 0 {
 		return fmt.Sprintf("%v", f.Spec.ID)
 	}
 	return ""
-}
-
-// Validate does sanity check on the Folder resource, and returns error if any
-// inconsistency found.
-func (f *Folder) Validate() error {
-	// Invalid if Spec.ID and Status.ID both present but not equal.
-	if f.Spec.ID != 0 && f.Status.ID != 0 && f.Spec.ID != f.Status.ID {
-		return fmt.Errorf("inconsistent Foder Spec ID (%v) and Folder Status ID (%v)", f.Spec.ID, f.Status.ID)
-	}
-	return nil
 }

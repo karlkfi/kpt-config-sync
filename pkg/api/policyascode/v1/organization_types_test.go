@@ -18,7 +18,6 @@ package v1
 
 import (
 	"testing"
-	"time"
 
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
@@ -32,10 +31,6 @@ func TestStorageOrganization(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 		Spec: OrganizationSpec{
 			ID: 1,
-			ImportDetails: ImportDetails{
-				Token: "0123456789012345678901234567890123456789",
-				Time:  metav1.Date(1998, time.May, 5, 5, 5, 5, 0, time.UTC),
-			},
 		},
 		Status: OrganizationStatus{},
 	}
@@ -73,8 +68,7 @@ func TestOrganizationTFResourceConfig(t *testing.T) {
 			o: &Organization{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: OrganizationSpec{
-					ID:            1234567,
-					ImportDetails: fakeImportDetails,
+					ID: 1234567,
 				},
 				Status: OrganizationStatus{},
 			},
@@ -87,10 +81,8 @@ organization = "organizations/1234567"
 			name: "Organization with no ID",
 			o: &Organization{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
-				Spec: OrganizationSpec{
-					ImportDetails: fakeImportDetails,
-				},
-				Status: OrganizationStatus{},
+				Spec:       OrganizationSpec{},
+				Status:     OrganizationStatus{},
 			},
 			want:    "",
 			wantErr: true,
@@ -122,8 +114,7 @@ func TestOrganizationID(t *testing.T) {
 			name: "Organization with valid ID",
 			o: &Organization{
 				Spec: OrganizationSpec{
-					ID:            1234567,
-					ImportDetails: fakeImportDetails,
+					ID: 1234567,
 				},
 			},
 			want: "1234567",
@@ -131,9 +122,7 @@ func TestOrganizationID(t *testing.T) {
 		{
 			name: "Organization with empty ID",
 			o: &Organization{
-				Spec: OrganizationSpec{
-					ImportDetails: fakeImportDetails,
-				},
+				Spec: OrganizationSpec{},
 			},
 			want: "",
 		},

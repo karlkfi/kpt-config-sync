@@ -23,6 +23,7 @@ import (
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -47,20 +48,11 @@ func TestReconcile(t *testing.T) {
 		},
 		Spec: bespinv1.IAMPolicySpec{
 			Bindings: []bespinv1.IAMPolicyBinding{},
-			// TODO(b/122317240): ImportDetails will move out of Spec.
-			ImportDetails: bespinv1.ImportDetails{
-				Time:  metav1.NewTime(time.Now()),
-				Token: "0123456789012345678901234567890123456789",
-			},
-			ResourceReference: bespinv1.ResourceReference{
+			ResourceRef: corev1.ObjectReference{
 				Kind: "Organization",
 			},
 		},
-		Status: bespinv1.IAMPolicyStatus{
-			SyncDetails: bespinv1.SyncDetails{
-				Time: metav1.NewTime(time.Now()),
-			},
-		},
+		Status: bespinv1.IAMPolicyStatus{},
 	}
 
 	// Setup the Manager and Controller. Wrap the Controller Reconcile function so it writes each request to a

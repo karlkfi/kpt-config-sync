@@ -16,24 +16,6 @@ limitations under the License.
 
 package v1
 
-import (
-	"time"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-// These vars are commonly used in unit tests in xxxx_types_test.go.
-var fakeImportDetails = ImportDetails{
-	Token: "0123456789012345678901234567890123456789",
-	Time:  metav1.Date(1998, time.May, 5, 5, 5, 5, 0, time.UTC),
-}
-
-var fakeSyncDetails = SyncDetails{
-	Error: "",
-	Token: "0123456789012345678901234567890123456789",
-	Time:  metav1.Date(1998, time.May, 5, 5, 5, 5, 0, time.UTC),
-}
-
 var fakeBindings = []IAMPolicyBinding{
 	{
 		Members: []string{"user:foo", "serviceAccount:bar"},

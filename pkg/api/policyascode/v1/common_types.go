@@ -17,45 +17,26 @@ limitations under the License.
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Finalizer defines the k8s finalizer for bespin CRDs.
 const Finalizer string = "finalizer.bespin.dev"
 
-// ImportDetails defines detailed import information for CRD operations.
-// Not consolidating ImportDetails and SyncDetails on token and time because
-// in ImportDetails they are required, while in SyncDetails they are not.
-type ImportDetails struct {
-	// +kubebuilder:validation:Pattern=^\w{40}$
-	Token string `json:"token"`
-	// +kubebuilder:validation:Format=dateTime
-	Time metav1.Time `json:"time"`
-}
-
-// SyncDetails defines detailed sync information for CRD operations
-type SyncDetails struct {
-	// +kubebuilder:validation:Pattern=^\w{40}$
-	Token string `json:"token,omitempty"`
-	// +kubebuilder:validation:Format=dateTime
-	Time  metav1.Time `json:"time,omitempty"`
-	Error string      `json:"error,omitempty"`
-}
-
-// ParentReference defines schema to denote parent resource. Note that
-// ParentReference and ResourceReference are no consolidated, because
-// ParentReference cannot be "Project".
-type ParentReference struct {
-	// +kubebuilder:validation:Pattern=^(Organization|Folder)$
-	Kind string `json:"kind"`
-	Name string `json:"name"`
-}
-
-// ResourceReference defines schema to denote resource
-type ResourceReference struct {
-	// +kubebuilder:validation:Pattern=^(Organization|Folder|Project)$
-	Kind string `json:"kind"`
-	Name string `json:"name"`
+// Condition defines a set of common observed fields for GCP resources. This
+// is a copy-n-paste from CNRM code repo:
+// https://cnrm.git.corp.google.com/cnrm/+/master/pkg/apis/k8s/v1alpha1/condition_types.go
+type Condition struct {
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime string `json:"lastTransitionTime,omitempty"`
+	// Human-readable message indicating details about last transition.
+	Message string `json:"message,omitempty"`
+	// Unique, one-word, CamelCase reason for the condition's last transition.
+	Reason string `json:"reason,omitempty"`
+	// Status is the status of the condition. Can be True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status,omitempty"`
+	// Type is the type of the condition.
+	Type string `json:"type,omitempty"`
 }
 
 // IAMPolicyBinding is the Schema for Bindings in IAMPolicySpec
@@ -74,26 +55,24 @@ type IAMPolicyBinding struct {
 
 // IAMPolicySpec defines the desired state of IAMPolicy
 type IAMPolicySpec struct {
-	ResourceReference ResourceReference  `json:"resourceReference"`
-	Bindings          []IAMPolicyBinding `json:"bindings"`
-	ImportDetails     ImportDetails      `json:"importDetails"`
+	ResourceRef corev1.ObjectReference `json:"resourceRef"`
+	Bindings    []IAMPolicyBinding     `json:"bindings"`
 }
 
 // IAMPolicyStatus defines the observed state of IAMPolicy
 type IAMPolicyStatus struct {
-	SyncDetails SyncDetails `json:"syncDetails,omitempty"`
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
 // OrganizationPolicySpec defines the desired state of OrganizationPolicy
 type OrganizationPolicySpec struct {
-	Constraints       []OrganizationPolicyConstraint `json:"constraints"`
-	ResourceReference ResourceReference              `json:"resourceReference"`
-	ImportDetails     ImportDetails                  `json:"importDetails"`
+	ResourceRef corev1.ObjectReference         `json:"resourceRef"`
+	Constraints []OrganizationPolicyConstraint `json:"constraints"`
 }
 
 // OrganizationPolicyStatus defines the observed state of OrganizationPolicy
 type OrganizationPolicyStatus struct {
-	SyncDetails SyncDetails `json:"syncDetails,omitempty"`
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
 // OrganizationPolicyConstraint is the Schema for Constraints in OrganizationPolicySpec

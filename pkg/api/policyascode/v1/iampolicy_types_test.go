@@ -21,6 +21,7 @@ import (
 
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -31,35 +32,26 @@ func TestStorageIAMPolicy(t *testing.T) {
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 			Spec: IAMPolicySpec{
-				ResourceReference: ResourceReference{Kind: OrganizationKind, Name: "bar"},
-				Bindings:          fakeBindings,
-				ImportDetails:     fakeImportDetails,
+				ResourceRef: corev1.ObjectReference{Kind: OrganizationKind, Name: "bar"},
+				Bindings:    fakeBindings,
 			},
-			Status: IAMPolicyStatus{
-				SyncDetails: fakeSyncDetails,
-			},
+			Status: IAMPolicyStatus{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 			Spec: IAMPolicySpec{
-				ResourceReference: ResourceReference{Kind: FolderKind, Name: "bar"},
-				Bindings:          fakeBindings,
-				ImportDetails:     fakeImportDetails,
+				ResourceRef: corev1.ObjectReference{Kind: FolderKind, Name: "bar"},
+				Bindings:    fakeBindings,
 			},
-			Status: IAMPolicyStatus{
-				SyncDetails: fakeSyncDetails,
-			},
+			Status: IAMPolicyStatus{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 			Spec: IAMPolicySpec{
-				ResourceReference: ResourceReference{Kind: ProjectKind, Name: "bar"},
-				Bindings:          fakeBindings,
-				ImportDetails:     fakeImportDetails,
+				ResourceRef: corev1.ObjectReference{Kind: ProjectKind, Name: "bar"},
+				Bindings:    fakeBindings,
 			},
-			Status: IAMPolicyStatus{
-				SyncDetails: fakeSyncDetails,
-			},
+			Status: IAMPolicyStatus{},
 		},
 	}
 	g := gomega.NewGomegaWithT(t)
@@ -99,7 +91,7 @@ func TestIAMPolicyTFResourceConfig(t *testing.T) {
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: IAMPolicySpec{
-					ResourceReference: ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: "Organization",
 						Name: "bar",
 					},
@@ -118,11 +110,8 @@ func TestIAMPolicyTFResourceConfig(t *testing.T) {
 							Role: "roles/iam.organizationRoleAdmin",
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
-				Status: IAMPolicyStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: IAMPolicyStatus{},
 			},
 			c: &stubClient{
 				obj: &Organization{
@@ -155,7 +144,7 @@ members = [
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: IAMPolicySpec{
-					ResourceReference: ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: "Folder",
 						Name: "bar",
 					},
@@ -174,11 +163,8 @@ members = [
 							Role: "roles/resourcemanager.folderAdmin",
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
-				Status: IAMPolicyStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: IAMPolicyStatus{},
 			},
 			c: &stubClient{
 				obj: &Folder{
@@ -211,7 +197,7 @@ members = [
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: IAMPolicySpec{
-					ResourceReference: ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: "Project",
 						Name: "bar",
 					},
@@ -230,11 +216,8 @@ members = [
 							Role: "roles/owner",
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
-				Status: IAMPolicyStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: IAMPolicyStatus{},
 			},
 			c: &stubClient{
 				obj: &Project{
@@ -267,7 +250,7 @@ members = [
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: IAMPolicySpec{
-					ResourceReference: ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: "Organization",
 						Name: "bar",
 					},
@@ -286,11 +269,8 @@ members = [
 							Role: "roles/iam.organizationRoleAdmin",
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
-				Status: IAMPolicyStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: IAMPolicyStatus{},
 			},
 			c: &stubClient{
 				obj: &Organization{
@@ -305,7 +285,7 @@ members = [
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: IAMPolicySpec{
-					ResourceReference: ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: "Folder",
 						Name: "bar",
 					},
@@ -324,11 +304,8 @@ members = [
 							Role: "roles/resourcemanager.folderAdmin",
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
-				Status: IAMPolicyStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: IAMPolicyStatus{},
 			},
 			c: &stubClient{
 				obj: &Folder{
@@ -343,7 +320,7 @@ members = [
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: IAMPolicySpec{
-					ResourceReference: ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: "Project",
 						Name: "bar",
 					},
@@ -362,11 +339,8 @@ members = [
 							Role: "roles/owner",
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
-				Status: IAMPolicyStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: IAMPolicyStatus{},
 			},
 			c: &stubClient{
 				obj: &Project{
@@ -381,7 +355,7 @@ members = [
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: IAMPolicySpec{
-					ResourceReference: ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: "Invalid",
 						Name: "bar",
 					},
@@ -400,11 +374,8 @@ members = [
 							Role: "roles/owner",
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
-				Status: IAMPolicyStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: IAMPolicyStatus{},
 			},
 			c: &stubClient{
 				obj: &Project{
@@ -421,7 +392,7 @@ members = [
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: IAMPolicySpec{
-					ResourceReference: ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: "Project",
 						Name: "bar",
 					},
@@ -440,11 +411,8 @@ members = [
 							Role: "roles/owner",
 						},
 					},
-					ImportDetails: fakeImportDetails,
 				},
-				Status: IAMPolicyStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: IAMPolicyStatus{},
 			},
 			c: &stubClient{
 				obj: &Project{

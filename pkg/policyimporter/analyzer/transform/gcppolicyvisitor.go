@@ -23,6 +23,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -78,9 +79,9 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 	if gvk.Group != v1.SchemeGroupVersion.Group {
 		return o
 	}
-	var attachmentPoint *v1.ResourceReference
+	var attachmentPoint *corev1.ObjectReference
 	if ap := v.currentTreeNode.Data.Get(gcpAttachmentPointKey); ap != nil {
-		attachmentPoint = ap.(*v1.ResourceReference)
+		attachmentPoint = ap.(*corev1.ObjectReference)
 	}
 	switch gcpObj := o.FileObject.Object.(type) {
 	case *v1.IAMPolicy:
@@ -88,7 +89,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 			panic(fmt.Sprintf("Missing attachment point for IAM policy %v", o))
 		}
 		iamPolicy := gcpObj.DeepCopy()
-		iamPolicy.Spec.ResourceReference = *attachmentPoint
+		iamPolicy.Spec.ResourceRef = *attachmentPoint
 		if attachmentPoint.Kind == "Project" {
 			return &ast.NamespaceObject{
 				FileObject: ast.NewFileObject(iamPolicy, o.Relative),
@@ -111,7 +112,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 			panic(fmt.Sprintf("Missing attachment point for org policy %v", o))
 		}
 		orgPolicy := gcpObj.DeepCopy()
-		orgPolicy.Spec.ResourceReference = *attachmentPoint
+		orgPolicy.Spec.ResourceRef = *attachmentPoint
 		if attachmentPoint.Kind == "Project" {
 			return &ast.NamespaceObject{
 				FileObject: ast.NewFileObject(orgPolicy, o.Relative),

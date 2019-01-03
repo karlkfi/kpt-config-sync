@@ -127,10 +127,10 @@ func (r *ReconcileIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Res
 }
 
 func (r *ReconcileIAMPolicy) ensureOwnerReference(ctx context.Context, iampolicy *bespinv1.IAMPolicy) error {
-	if iampolicy.Spec.ResourceReference.Kind != bespinv1.ProjectKind {
-		return errors.Errorf("invalid resource reference reference kind: %v", iampolicy.Spec.ResourceReference.Kind)
+	if iampolicy.Spec.ResourceRef.Kind != bespinv1.ProjectKind {
+		return errors.Errorf("invalid resource reference reference kind: %v", iampolicy.Spec.ResourceRef.Kind)
 	}
-	resourceName := types.NamespacedName{Namespace: iampolicy.Namespace, Name: iampolicy.Spec.ResourceReference.Name}
+	resourceName := types.NamespacedName{Namespace: iampolicy.Namespace, Name: iampolicy.Spec.ResourceRef.Name}
 	project := &bespinv1.Project{}
 	if err := r.Get(ctx, resourceName, project); err != nil {
 		return errors.Wrapf(err, "failed to get resource reference Project instance: %v", resourceName)
@@ -160,18 +160,14 @@ func (r *ReconcileIAMPolicy) ensureOwnerReference(ctx context.Context, iampolicy
 func (r *ReconcileIAMPolicy) updateServer(ctx context.Context, iampolicy *bespinv1.IAMPolicy) error {
 	newI := &bespinv1.IAMPolicy{}
 	iampolicy.DeepCopyInto(newI)
-	newI.Status.SyncDetails.Token = iampolicy.Spec.ImportDetails.Token
-	newI.Status.SyncDetails.Error = ""
 
 	// If there's no diff, we don't need to Update().
 	if equality.Semantic.DeepEqual(iampolicy, newI) {
 		glog.V(1).Infof("[IAMPolicy %v] nothing to update", newI.Name)
 		return nil
 	}
-	newI.Status.SyncDetails.Time = metav1.Now()
 	if err := r.Update(ctx, newI); err != nil {
-		return errors.Wrapf(err, "failed to update SyncDetails of IAMPolicy %s in API server."+
-			" Wanted to populate Token %s.", iampolicy.Name, newI.Status.SyncDetails.Token)
+		return errors.Wrapf(err, "failed to update SyncDetails of IAMPolicy %s in API server.", iampolicy.Name)
 	}
 	return nil
 }

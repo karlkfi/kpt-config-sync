@@ -23,6 +23,7 @@ import (
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -46,22 +47,13 @@ func TestReconcile(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: bespinv1.ProjectSpec{
-			ID:   "foobarbaz",
-			Name: "foo bar",
-			ParentReference: bespinv1.ParentReference{
+			ID:          "foobarbaz",
+			DisplayName: "foo bar",
+			ParentRef: corev1.ObjectReference{
 				Kind: "Organization",
 			},
-			// TODO(b/122317240): ImportDetails will move out of Spec.
-			ImportDetails: bespinv1.ImportDetails{
-				Time:  metav1.NewTime(time.Now()),
-				Token: "0123456789012345678901234567890123456789",
-			},
 		},
-		Status: bespinv1.ProjectStatus{
-			SyncDetails: bespinv1.SyncDetails{
-				Time: metav1.NewTime(time.Now()),
-			},
-		},
+		Status: bespinv1.ProjectStatus{},
 	}
 
 	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a

@@ -22,60 +22,36 @@ spec:
           type: object
         spec:
           properties:
+            displayName:
+              pattern: '[a-zA-Z][\w!"\- ]{3,27}'
+              type: string
             id:
               pattern: ^[a-z][a-z\d\-]{5,29}$
               type: string
-            importDetails:
-              properties:
-                time:
-                  format: date-time
-                  type: string
-                token:
-                  pattern: ^\w{40}$
-                  type: string
-              required:
-              - token
-              - time
-              type: object
-            labels:
-              properties:
-                additionalProperties:
-                  type: string
-              required:
-              - additionalProperties
-              type: object
-            name:
-              pattern: '[a-zA-Z][\w!"\- ]{3,27}'
-              type: string
-            parentReference:
-              properties:
-                kind:
-                  pattern: ^(Organization|Folder)$
-                  type: string
-                name:
-                  type: string
-              required:
-              - kind
-              - name
+            parentRef:
               type: object
           required:
-          - name
+          - displayName
           - id
-          - importDetails
           type: object
         status:
           properties:
-            syncDetails:
-              properties:
-                error:
-                  type: string
-                time:
-                  format: date-time
-                  type: string
-                token:
-                  pattern: ^\w{40}$
-                  type: string
-              type: object
+            conditions:
+              items:
+                properties:
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    type: string
+                  status:
+                    type: string
+                  type:
+                    type: string
+                type: object
+              type: array
           type: object
       required:
       - spec

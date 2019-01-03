@@ -20,12 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +genclient:nonNamespaced
-
 // ClusterOrganizationPolicy is the Schema for the clusterorganizationpolicies API
-// +k8s:openapi-gen=true
 type ClusterOrganizationPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -33,8 +28,6 @@ type ClusterOrganizationPolicy struct {
 	Spec   OrganizationPolicySpec   `json:"spec,omitempty"`
 	Status OrganizationPolicyStatus `json:"status,omitempty"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ClusterOrganizationPolicyList contains a list of ClusterOrganizationPolicy
 type ClusterOrganizationPolicyList struct {

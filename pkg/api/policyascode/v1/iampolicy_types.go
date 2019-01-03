@@ -30,11 +30,7 @@ func init() {
 	SchemeBuilder.Register(&IAMPolicy{}, &IAMPolicyList{})
 }
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // IAMPolicy is the Schema for the iampolicies API
-// +k8s:openapi-gen=true
 type IAMPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -42,8 +38,6 @@ type IAMPolicy struct {
 	Spec   IAMPolicySpec   `json:"spec"`
 	Status IAMPolicyStatus `json:"status,omitempty"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // IAMPolicyList contains a list of IAMPolicy
 type IAMPolicyList struct {
@@ -56,8 +50,8 @@ type IAMPolicyList struct {
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (i *IAMPolicy) TFResourceConfig(ctx context.Context, c Client) (string, error) {
 	var tfs []string
-	resName := types.NamespacedName{Name: i.Spec.ResourceReference.Name}
-	switch i.Spec.ResourceReference.Kind {
+	resName := types.NamespacedName{Name: i.Spec.ResourceRef.Name}
+	switch i.Spec.ResourceRef.Kind {
 	case OrganizationKind:
 		org := &Organization{}
 		if err := c.Get(ctx, resName, org); err != nil {
@@ -81,7 +75,7 @@ func (i *IAMPolicy) TFResourceConfig(ctx context.Context, c Client) (string, err
 		tfs = append(tfs, `resource "google_folder_iam_policy" "bespin_folder_iam_policy" {`)
 		tfs = append(tfs, fmt.Sprintf(`folder = "folders/%s"`, ID))
 	case ProjectKind:
-		resName = types.NamespacedName{Namespace: i.Namespace, Name: i.Spec.ResourceReference.Name}
+		resName = types.NamespacedName{Namespace: i.Namespace, Name: i.Spec.ResourceRef.Name}
 		project := &Project{}
 		if err := c.Get(ctx, resName, project); err != nil {
 			return "", errors.Wrapf(err, "failed to get resource reference Project instance: %v", resName)
@@ -93,7 +87,7 @@ func (i *IAMPolicy) TFResourceConfig(ctx context.Context, c Client) (string, err
 		tfs = append(tfs, `resource "google_project_iam_policy" "bespin_project_iam_policy" {`)
 		tfs = append(tfs, fmt.Sprintf(`project = "%s"`, ID))
 	default:
-		return "", fmt.Errorf("invalid resource reference kind: %v", i.Spec.ResourceReference.Kind)
+		return "", fmt.Errorf("invalid resource reference kind: %v", i.Spec.ResourceRef.Kind)
 	}
 	tfs = append(tfs, `policy_data = "${data.google_iam_policy.admin.policy_data}"`)
 	tfs = append(tfs, `}`)

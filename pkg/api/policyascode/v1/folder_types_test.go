@@ -21,6 +21,7 @@ import (
 
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -30,17 +31,14 @@ func TestStorageFolder(t *testing.T) {
 	created := &Folder{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 		Spec: FolderSpec{
-			ParentReference: ParentReference{
+			ParentRef: corev1.ObjectReference{
 				Kind: OrganizationKind,
 				Name: "bar",
 			},
-			DisplayName:   "spec-bar",
-			ID:            1,
-			ImportDetails: fakeImportDetails,
+			DisplayName: "spec-bar",
+			ID:          1,
 		},
-		Status: FolderStatus{
-			SyncDetails: fakeSyncDetails,
-		},
+		Status: FolderStatus{},
 	}
 	g := gomega.NewGomegaWithT(t)
 
@@ -79,16 +77,13 @@ func TestFolderTFResourceConfig(t *testing.T) {
 					Name: "foo",
 				},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Organization",
 						Name: "organizations-001",
 					},
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
 				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			c: &stubClient{
 				obj: &Organization{
@@ -110,16 +105,13 @@ parent = "organizations/1234567"
 					Name: "foo",
 				},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Folder",
 						Name: "folders-001",
 					},
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
 				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			c: &stubClient{
 				obj: &Folder{
@@ -141,16 +133,13 @@ parent = "folders/1234567"
 					Name: "foo",
 				},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Organization",
 						Name: "organizations-001",
 					},
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
 				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			c: &stubClient{
 				obj: &Organization{
@@ -167,16 +156,13 @@ parent = "folders/1234567"
 					Name: "foo",
 				},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Folder",
 						Name: "folders-001",
 					},
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
 				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			c: &stubClient{
 				obj: &Folder{
@@ -187,22 +173,19 @@ parent = "folders/1234567"
 			wantErr: true,
 		},
 		{
-			name: "Folder with invalid ParentReference",
+			name: "Folder with invalid ParentRef",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo",
 				},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Invalid",
 						Name: "bar",
 					},
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
 				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			c: &stubClient{
 				obj: &Folder{
@@ -221,12 +204,9 @@ parent = "folders/1234567"
 					Name: "foo",
 				},
 				Spec: FolderSpec{
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
 				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			c: &stubClient{
 				obj: &Folder{
@@ -267,17 +247,13 @@ func TestFolderID(t *testing.T) {
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Organization",
 						Name: "organizations/1234567",
 					},
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
 				},
-				Status: FolderStatus{
-					ID:          7654321,
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			want: "7654321",
 		},
@@ -286,17 +262,14 @@ func TestFolderID(t *testing.T) {
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Organization",
 						Name: "organizations/1234567",
 					},
-					ID:            7654321,
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
+					ID:          7654321,
+					DisplayName: "spec-bar",
 				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			want: "7654321",
 		},
@@ -305,17 +278,13 @@ func TestFolderID(t *testing.T) {
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Folder",
 						Name: "folders/1234567",
 					},
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
 				},
-				Status: FolderStatus{
-					ID:          9876543,
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			want: "9876543",
 		},
@@ -324,17 +293,14 @@ func TestFolderID(t *testing.T) {
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Folder",
 						Name: "folders/1234567",
 					},
-					DisplayName:   "spec-bar",
-					ID:            9876543,
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
+					ID:          9876543,
 				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			want: "9876543",
 		},
@@ -343,16 +309,13 @@ func TestFolderID(t *testing.T) {
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Invalid",
 						Name: "bar",
 					},
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
+					DisplayName: "spec-bar",
 				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
+				Status: FolderStatus{},
 			},
 			want: "",
 		},
@@ -361,18 +324,14 @@ func TestFolderID(t *testing.T) {
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
-					ParentReference: ParentReference{
+					ParentRef: corev1.ObjectReference{
 						Kind: "Invalid",
 						Name: "bar",
 					},
-					DisplayName:   "spec-bar",
-					ID:            9876543,
-					ImportDetails: fakeImportDetails,
-				},
-				Status: FolderStatus{
+					DisplayName: "spec-bar",
 					ID:          9876543,
-					SyncDetails: fakeSyncDetails,
 				},
+				Status: FolderStatus{},
 			},
 			want: "9876543",
 		},
@@ -383,115 +342,6 @@ func TestFolderID(t *testing.T) {
 			got := tc.f.ID()
 			if got != tc.want {
 				t.Errorf("ID() got \n%s\n want \n%s", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestFolderValidate(t *testing.T) {
-	tests := []struct {
-		name    string
-		f       *Folder
-		wantErr bool
-	}{
-		{
-			name: "Folder with no Spec.ID and Status.ID",
-			f: &Folder{
-				Spec: FolderSpec{
-					ParentReference: ParentReference{
-						Kind: "Organization",
-						Name: "organizations-001",
-					},
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
-				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "Folder with Spec.ID, without Status.ID",
-			f: &Folder{
-				Spec: FolderSpec{
-					ParentReference: ParentReference{
-						Kind: "Organization",
-						Name: "organizations-001",
-					},
-					DisplayName:   "spec-bar",
-					ID:            9876543,
-					ImportDetails: fakeImportDetails,
-				},
-				Status: FolderStatus{
-					SyncDetails: fakeSyncDetails,
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "Folder with Status.ID, without Spec.ID",
-			f: &Folder{
-				Spec: FolderSpec{
-					ParentReference: ParentReference{
-						Kind: "Organization",
-						Name: "organizations-001",
-					},
-					DisplayName:   "spec-bar",
-					ImportDetails: fakeImportDetails,
-				},
-				Status: FolderStatus{
-					ID:          9876543,
-					SyncDetails: fakeSyncDetails,
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "Folder with both IDs, and Status.ID == Spec.ID",
-			f: &Folder{
-				Spec: FolderSpec{
-					ParentReference: ParentReference{
-						Kind: "Organization",
-						Name: "organizations-001",
-					},
-					DisplayName:   "spec-bar",
-					ID:            9876543,
-					ImportDetails: fakeImportDetails,
-				},
-				Status: FolderStatus{
-					ID:          9876543,
-					SyncDetails: fakeSyncDetails,
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "Folder with both IDs, and Status.ID != Spec.ID",
-			f: &Folder{
-				Spec: FolderSpec{
-					ParentReference: ParentReference{
-						Kind: "Organization",
-						Name: "organizations-001",
-					},
-					DisplayName:   "spec-bar",
-					ID:            1234567,
-					ImportDetails: fakeImportDetails,
-				},
-				Status: FolderStatus{
-					ID:          9876543,
-					SyncDetails: fakeSyncDetails,
-				},
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got := tc.f.Validate()
-			if tc.wantErr != (got != nil) {
-				t.Errorf("Validate() got error %+v; want error %+v", got, tc.wantErr)
 			}
 		})
 	}

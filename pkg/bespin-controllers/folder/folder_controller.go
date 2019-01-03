@@ -27,7 +27,6 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -95,11 +94,6 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{},
 			errors.Wrapf(err, "[Folder %v] reconciler failed to get folder instance", request.NamespacedName)
 	}
-	if err := folder.Validate(); err != nil {
-		glog.Errorf("[Folder %v] reconciler failed to validate Folder instance: %v", request.NamespacedName, err)
-		return reconcile.Result{},
-			errors.Wrapf(err, "[Folder %v] reconciler failed to validate Folder instance", request.NamespacedName)
-	}
 	tfe, err := terraform.NewExecutor(ctx, r.Client, folder)
 	if err != nil {
 		glog.Errorf("[Folder %v] reconciler failed to create new terraform executor: %v", request.NamespacedName, err)
@@ -131,7 +125,6 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 	// the API server to bring the resource's Status in sync with its Spec.
 	if err = tfe.RunCreateOrUpdateFlow(); err != nil {
 		err = errors.Wrapf(err, "[Folder %v] reconciler failed to execute Terraform commands", request.NamespacedName)
-		folder.Status.SyncDetails.Error = err.Error()
 		if uErr := r.Update(ctx, folder); uErr != nil {
 			err = errors.Wrapf(err, "[Folder %v] reconciler failed to update Folder in API server: %v",
 				request.NamespacedName, uErr)
@@ -174,23 +167,15 @@ func (r *ReconcileFolder) updateAPIServer(ctx context.Context, tfe *terraform.Ex
 	if err := tfe.UpdateState(); err != nil {
 		return errors.Wrapf(err, "[Folder %v] failed to update terraform state", f.Spec.DisplayName)
 	}
-	id, err := tfe.GetFolderID()
-	if err != nil {
-		return errors.Wrapf(err, "[Folder %v] failed to get Folder ID from terraform state", f.Spec.DisplayName)
-	}
 
 	newF := &bespinv1.Folder{}
 	f.DeepCopyInto(newF)
-	newF.Status.ID = id
-	newF.Status.SyncDetails.Token = f.Spec.ImportDetails.Token
-	newF.Status.SyncDetails.Error = ""
 
 	if equality.Semantic.DeepEqual(f, newF) {
 		glog.V(1).Infof("[Folder %v] nothing to update", newF.Spec.DisplayName)
 		return nil
 	}
-	newF.Status.SyncDetails.Time = metav1.Now()
-	if err = r.Update(ctx, newF); err != nil {
+	if err := r.Update(ctx, newF); err != nil {
 		return errors.Wrapf(err, "[Folder %v] failed to update Folder in API server", newF.Spec.DisplayName)
 	}
 	return nil

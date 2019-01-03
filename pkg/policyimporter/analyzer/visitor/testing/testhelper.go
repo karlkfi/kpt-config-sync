@@ -367,7 +367,7 @@ func (t *TestHelper) GCPProject(name string) *gcpv1.Project {
 			Name: name,
 		},
 		Spec: gcpv1.ProjectSpec{
-			Name: name,
+			DisplayName: name,
 		},
 	}
 }

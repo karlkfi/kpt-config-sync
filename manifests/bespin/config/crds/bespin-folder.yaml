@@ -29,49 +29,29 @@ spec:
               format: int64
               minimum: 1
               type: integer
-            importDetails:
-              properties:
-                time:
-                  format: date-time
-                  type: string
-                token:
-                  pattern: ^\w{40}$
-                  type: string
-              required:
-              - token
-              - time
-              type: object
-            parentReference:
-              properties:
-                kind:
-                  pattern: ^(Organization|Folder)$
-                  type: string
-                name:
-                  type: string
-              required:
-              - kind
-              - name
+            parentRef:
               type: object
           required:
           - displayName
-          - importDetails
           type: object
         status:
           properties:
-            id:
-              format: int64
-              type: integer
-            syncDetails:
-              properties:
-                error:
-                  type: string
-                time:
-                  format: date-time
-                  type: string
-                token:
-                  pattern: ^\w{40}$
-                  type: string
-              type: object
+            conditions:
+              items:
+                properties:
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    type: string
+                  status:
+                    type: string
+                  type:
+                    type: string
+                type: object
+              type: array
           type: object
       required:
       - spec

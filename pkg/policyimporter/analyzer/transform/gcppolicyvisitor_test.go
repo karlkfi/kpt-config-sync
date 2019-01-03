@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -34,7 +35,7 @@ func TestIAMPolicies(t *testing.T) {
 	var tests = []struct {
 		name   string
 		policy *v1.IAMPolicy
-		want   v1.ResourceReference
+		want   corev1.ObjectReference
 	}{
 		{
 			name: "IAM policies should gain a project attachment point",
@@ -50,7 +51,7 @@ func TestIAMPolicies(t *testing.T) {
 					Bindings: []v1.IAMPolicyBinding{},
 				},
 			},
-			want: v1.ResourceReference{
+			want: corev1.ObjectReference{
 				Kind: project.TypeMeta.Kind,
 				Name: project.ObjectMeta.Name,
 			},
@@ -77,7 +78,7 @@ func TestOrgPolicies(t *testing.T) {
 	var tests = []struct {
 		name   string
 		policy *v1.OrganizationPolicy
-		want   v1.ResourceReference
+		want   corev1.ObjectReference
 	}{
 		{
 			name: "Organization policies should gain a project attachment point",
@@ -93,7 +94,7 @@ func TestOrgPolicies(t *testing.T) {
 					Constraints: []v1.OrganizationPolicyConstraint{},
 				},
 			},
-			want: v1.ResourceReference{
+			want: corev1.ObjectReference{
 				Kind: project.TypeMeta.Kind,
 				Name: project.ObjectMeta.Name,
 			},
@@ -107,7 +108,7 @@ func TestOrgPolicies(t *testing.T) {
 	}
 }
 
-func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Object, want v1.ResourceReference) {
+func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Object, want corev1.ObjectReference) {
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
@@ -146,9 +147,9 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Ob
 	// it doesn't know which to pick. This means the code has to be repeated for each type case.
 	switch v := wantObj.(type) {
 	case *v1.IAMPolicy:
-		v.Spec.ResourceReference = want
+		v.Spec.ResourceRef = want
 	case *v1.OrganizationPolicy:
-		v.Spec.ResourceReference = want
+		v.Spec.ResourceRef = want
 	default:
 		t.Fatal("unknown policy type")
 	}
@@ -193,7 +194,7 @@ func TestIAMPolicyConversion(t *testing.T) {
 				},
 				Spec: v1.IAMPolicySpec{
 					Bindings: []v1.IAMPolicyBinding{},
-					ResourceReference: v1.ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: org.TypeMeta.Kind,
 						Name: org.ObjectMeta.Name,
 					},
@@ -258,7 +259,7 @@ func TestOrgPolicyConversion(t *testing.T) {
 					Name: "org-policy",
 				},
 				Spec: v1.OrganizationPolicySpec{
-					ResourceReference: v1.ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: org.TypeMeta.Kind,
 						Name: org.ObjectMeta.Name,
 					},
@@ -273,7 +274,7 @@ func TestOrgPolicyConversion(t *testing.T) {
 					Name: "org-policy",
 				},
 				Spec: v1.OrganizationPolicySpec{
-					ResourceReference: v1.ResourceReference{
+					ResourceRef: corev1.ObjectReference{
 						Kind: org.TypeMeta.Kind,
 						Name: org.ObjectMeta.Name,
 					},
@@ -335,9 +336,9 @@ func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Proje
 
 	switch v := want.(type) {
 	case *v1.ClusterIAMPolicy:
-		projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &v.Spec.ResourceReference)
+		projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &v.Spec.ResourceRef)
 	case *v1.ClusterOrganizationPolicy:
-		projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &v.Spec.ResourceReference)
+		projectNode.Data = projectNode.Data.Add(gcpAttachmentPointKey, &v.Spec.ResourceRef)
 	}
 
 	copier := visitorpkg.NewCopying()

@@ -30,11 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // OrganizationPolicy is the Schema for the organizationpolicies API
-// +k8s:openapi-gen=true
 type OrganizationPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -153,8 +149,8 @@ func tfFormatConstraintPolicy(constraint OrganizationPolicyConstraint) (string, 
 // tfResourceID returns the resource ID in the correct TF plugin format.  The gcp plugin for terraform uses an inconsistent format
 // for these ids (ie, only using kind for the folders), hence the need for this code.
 func tfResourceID(ctx context.Context, client Client, ps OrganizationPolicySpec) (string, error) {
-	kind := ps.ResourceReference.Kind
-	res, err := ResourceID(ctx, client, kind, ps.ResourceReference.Name)
+	kind := ps.ResourceRef.Kind
+	res, err := ResourceID(ctx, client, kind, ps.ResourceRef.Name)
 	if err != nil {
 		return "", err
 	}
@@ -173,7 +169,7 @@ func tfResourceID(ctx context.Context, client Client, ps OrganizationPolicySpec)
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (op *OrganizationPolicy) TFResourceConfig(ctx context.Context, c Client) (string, error) {
 	ps := op.Spec
-	kind := ps.ResourceReference.Kind
+	kind := ps.ResourceRef.Kind
 
 	// Make sure we like the kind value.
 	switch kind {
@@ -256,10 +252,8 @@ func (op *OrganizationPolicy) TFResourceAddr() string {
 // really have a separate ID, its just the resource Id of the attachment point.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
 func (op *OrganizationPolicy) ID() string {
-	return op.Spec.ResourceReference.Name
+	return op.Spec.ResourceRef.Name
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // OrganizationPolicyList contains a list of OrganizationPolicy
 type OrganizationPolicyList struct {
