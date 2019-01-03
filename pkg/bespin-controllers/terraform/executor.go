@@ -286,7 +286,7 @@ func (tfe *Executor) RunCreateOrUpdateFlow() error {
 		err = run(tfe.UpdateState, err)
 	}
 
-	err = run(tfe.createResoureConfig, err)
+	err = run(tfe.createResourceConfig, err)
 	err = run(tfe.RunPlan, err)
 	err = run(tfe.RunApply, err)
 	return err
@@ -377,9 +377,9 @@ func (tfe *Executor) RunDeleteFlow() error {
 	return err
 }
 
-// createResoureConfig generates the attached resource's Terraform config string
+// createResourceConfig generates the attached resource's Terraform config string
 // and writes it to a local config file.
-func (tfe *Executor) createResoureConfig() error {
+func (tfe *Executor) createResourceConfig() error {
 	glog.V(1).Infof("[%s]: Creating Terraform resource config.", tfe.dir)
 	resourceConfig, err := tfe.resource.TFResourceConfig(tfe.ctx, tfe.k8sClient)
 	if err != nil {
