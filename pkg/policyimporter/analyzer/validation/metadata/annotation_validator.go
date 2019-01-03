@@ -16,7 +16,7 @@ var AnnotationValidator = &syntax.FileObjectValidator{
 	ValidateFn: func(o ast.FileObject) error {
 		found := invalids(o.ToMeta().GetAnnotations(), v1alpha1.InputAnnotations)
 		if len(found) > 0 {
-			return vet.IllegalAnnotationDefinitionError{Object: o, Annotations: found}
+			return vet.IllegalAnnotationDefinitionError{ResourceID: &o, Annotations: found}
 		}
 		return nil
 	},

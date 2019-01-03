@@ -63,7 +63,7 @@ func (tc versionTestCase) Run(t *testing.T) {
 
 	syncs := make([]FileSync, len(tc.gvks))
 	for i, gvk := range tc.gvks {
-		syncs[i] = toFileSync(FileGroupVersionKindHierarchySync{GroupVersionKind: gvk})
+		syncs[i] = toFileSync(FileGroupVersionKindHierarchySync{groupVersionKind: gvk})
 	}
 
 	eb := multierror.Builder{}

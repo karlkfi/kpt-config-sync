@@ -21,7 +21,9 @@ import (
 	"path"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/resourcequota"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,7 +34,27 @@ import (
 type FileObject struct {
 	runtime.Object
 	// Source is the OS-agnostic slash-separated path to the source file from the root.
-	Source string
+	source string
+}
+
+// TODO(willbeason) Add compile-time check for vet.ResourceID
+
+// NewFileObject returns an ast.FileObject with the specified underlying runtime.Object and the
+// designated source file.
+func NewFileObject(object runtime.Object, source string) FileObject {
+	return FileObject{Object: object, source: source}
+}
+
+// FileObjectCmp provides a comparer option for FileObject
+func FileObjectCmp() cmp.Option {
+	return cmp.Comparer(func(lhs, rhs FileObject) bool {
+		return (lhs.Source() == rhs.Source()) && cmp.Equal(lhs.Object, rhs.Object, resourcequota.ResourceQuantityEqual())
+	})
+}
+
+// Source implements vet.ResourceID
+func (o *FileObject) Source() string {
+	return o.source
 }
 
 // ToMeta converts the underlying object to a metav1.Object
@@ -115,7 +137,7 @@ func (o *ClusterObject) Accept(visitor Visitor) *ClusterObject {
 
 // DeepCopy creates a deep copy of the object
 func (o *ClusterObject) DeepCopy() *ClusterObject {
-	return &ClusterObject{FileObject{o.DeepCopyObject(), o.Source}}
+	return &ClusterObject{FileObject{o.DeepCopyObject(), o.source}}
 }
 
 // TreeNodeType represents the type of the node.
@@ -245,7 +267,7 @@ func (o *NamespaceObject) Accept(visitor Visitor) *NamespaceObject {
 
 // DeepCopy creates a deep copy of the object
 func (o *NamespaceObject) DeepCopy() *NamespaceObject {
-	return &NamespaceObject{FileObject{o.DeepCopyObject(), o.Source}}
+	return &NamespaceObject{FileObject{o.DeepCopyObject(), o.source}}
 }
 
 // ReservedNamespaces represents the reserved namespaces object

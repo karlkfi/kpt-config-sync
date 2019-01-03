@@ -45,7 +45,7 @@ var kindValidatorTestCases = []kindValidatorTestCase{
 
 func (tc kindValidatorTestCase) Run(t *testing.T) {
 	syncs := []FileSync{
-		toFileSync(FileGroupVersionKindHierarchySync{GroupVersionKind: tc.gvk}),
+		toFileSync(FileGroupVersionKindHierarchySync{groupVersionKind: tc.gvk}),
 	}
 	eb := multierror.Builder{}
 

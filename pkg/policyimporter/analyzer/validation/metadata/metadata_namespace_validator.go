@@ -10,7 +10,7 @@ import (
 var MetadataNamespaceValidator = &syntax.FileObjectValidator{
 	ValidateFn: func(fileObject ast.FileObject) error {
 		if fileObject.ToMeta().GetNamespace() != "" {
-			return vet.IllegalMetadataNamespaceDeclarationError{Object: fileObject}
+			return vet.IllegalMetadataNamespaceDeclarationError{ResourceID: &fileObject}
 		}
 		return nil
 	},

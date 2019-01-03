@@ -26,17 +26,17 @@ var _ validator.Validator = VersionValidator{}
 
 // Validate adds errors for each Group/Kind with multiple declarations.
 func (v VersionValidator) Validate(errorBuilder *multierror.Builder) {
-	syncKinds := make(map[schema.GroupKind][]string)
+	syncKinds := make(map[schema.GroupKind][]vet.SyncID)
 	for _, sync := range v.syncs {
 		for _, k := range sync.flatten() {
-			gk := k.GroupVersionKind.GroupKind()
-			syncKinds[gk] = append(syncKinds[gk], sync.Source)
+			gk := k.GroupVersionKind().GroupKind()
+			syncKinds[gk] = append(syncKinds[gk], sync)
 		}
 	}
 
-	for groupKind, duplicates := range syncKinds {
+	for _, duplicates := range syncKinds {
 		if len(duplicates) > 1 {
-			errorBuilder.Add(vet.DuplicateSyncGroupKindError{Duplicated: groupKind, Sources: duplicates})
+			errorBuilder.Add(vet.DuplicateSyncGroupKindError{Duplicates: duplicates})
 		}
 	}
 }

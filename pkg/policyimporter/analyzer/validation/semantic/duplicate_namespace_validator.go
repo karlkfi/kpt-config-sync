@@ -16,12 +16,12 @@ type DuplicateNamespaceValidator struct {
 
 // Validate adds errors to the errorBuilder if there are multiple Namespaces defined in directories.
 func (v DuplicateNamespaceValidator) Validate(errorBuilder *multierror.Builder) {
-	namespaces := make(map[string][]ast.FileObject)
+	namespaces := make(map[string][]vet.ResourceID)
 
-	for _, obj := range v.Objects {
+	for i, obj := range v.Objects {
 		if obj.GroupVersionKind() == kinds.Namespace() {
-			dir := path.Dir(obj.Source)
-			namespaces[dir] = append(namespaces[dir], obj)
+			dir := path.Dir(obj.Source())
+			namespaces[dir] = append(namespaces[dir], &v.Objects[i])
 		}
 	}
 

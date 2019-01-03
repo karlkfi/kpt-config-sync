@@ -53,7 +53,7 @@ func toAPIInfo(known []schema.GroupVersionKind) (*meta.APIInfo, error) {
 
 func (tc knownResourceValidatorTestCase) Run(t *testing.T) {
 	syncs := []FileSync{
-		toFileSync(FileGroupVersionKindHierarchySync{GroupVersionKind: tc.gvk}),
+		toFileSync(FileGroupVersionKindHierarchySync{groupVersionKind: tc.gvk}),
 	}
 	eb := multierror.Builder{}
 

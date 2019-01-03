@@ -1,7 +1,7 @@
 Found issues: 1 error(s)
 
 
-[1] KNV1036: Resources MUST define a metadata.name which is a valid RFC1123 DNS subdomain. Rename or remove the resource:
+[1] KNV1036: Resources MUST define a metadata.name which is a valid RFC1123 DNS subdomain. Rename or remove the Resource:
 
 source: system/repo.yaml
 metadata.name: InvalidRepoName

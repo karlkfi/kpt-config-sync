@@ -16,7 +16,7 @@ import (
 var DisallowSystemObjectsValidator = &FileObjectValidator{
 	ValidateFn: func(fileObject ast.FileObject) error {
 		if IsSystemOnly(fileObject.GroupVersionKind()) && !isInSystemDir(fileObject) {
-			return vet.IllegalSystemResourcePlacementError{Object: fileObject}
+			return vet.IllegalSystemResourcePlacementError{ResourceID: &fileObject}
 		}
 		return nil
 	},
@@ -24,7 +24,7 @@ var DisallowSystemObjectsValidator = &FileObjectValidator{
 
 // isInSystemDir returns true if the Resource is currently placed in system/.
 func isInSystemDir(o ast.FileObject) bool {
-	return strings.HasPrefix(path.Dir(o.Source), repo.SystemDir)
+	return strings.HasPrefix(path.Dir(o.Source()), repo.SystemDir)
 }
 
 // IsSystemOnly returns true if the GVK is only allowed in the system/ directory.

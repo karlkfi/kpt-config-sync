@@ -25,7 +25,7 @@ path: namespaces/dev/dev-namespace
 name: dev-namespace
 
 
-[5] KNV1005: Unable to sync resource "not-syncable-clusterrolebinding". Enable sync for this resource's kind.
+[5] KNV1005: Unable to sync Resource. Enable sync for this Resource's kind.
 
 source: cluster/not-syncable-clusterrolebinding.yaml
 metadata.name: not-syncable-clusterrolebinding
@@ -34,7 +34,7 @@ version: v1
 kind: ClusterRoleBinding
 
 
-[6] KNV1006: Unable to sync resource "jamal-rolebinding". Enable sync for this resource's kind.
+[6] KNV1006: Unable to sync Resource. Enable sync for this Resource's kind.
 
 source: namespaces/prod/prod-namespace/jamal-clusterrolebinding.yaml
 metadata.name: jamal-rolebinding
@@ -43,7 +43,7 @@ version: v1
 kind: ClusterRoleBinding
 
 
-[7] KNV1007: Resource "illegal-clusterrole" illegally declared in an Abstract Namespace directory. Move this resource to a Namespace directory:
+[7] KNV1007: Resource "illegal-clusterrole" illegally declared in an Abstract Namespace directory. Move this Resource to a Namespace directory:
 
 source: namespaces/prod/illegal-resource-kind.yaml
 metadata.name: illegal-clusterrole
@@ -52,13 +52,19 @@ version: v1
 kind: ClusterRole
 
 
-[8] KNV1008: A directory MUST NOT contain more than one ResourceQuota resource. Directory "namespaces/prod/prod-namespace" contains multiple ResourceQuota resources:
-
-source: namespaces/prod/prod-namespace/quota-1.yaml
-name: pod-quota-1
+[8] KNV1008: A directory MUST NOT contain more than one ResourceQuota Resource. Directory "namespaces/prod/prod-namespace" contains multiple ResourceQuota Resources:
 
 source: namespaces/prod/prod-namespace/quota-2.yaml
-name: pod-quota-2
+metadata.name: pod-quota-2
+group: 
+version: v1
+kind: ResourceQuota
+
+source: namespaces/prod/prod-namespace/quota-2.yaml
+metadata.name: pod-quota-2
+group: 
+version: v1
+kind: ResourceQuota
 
 
 [9] KNV1009: Resources MUST NOT declare metadata.namespace:
@@ -70,7 +76,7 @@ version: v1
 kind: RoleBinding
 
 
-[10] KNV1010: Resources MUST NOT declare unsupported annotations starting with "nomos.dev". Resource "kesim-rolebinding" has offending annotations: "nomos.dev/unsupported"
+[10] KNV1010: Resources MUST NOT declare unsupported annotations starting with "nomos.dev". Resource has offending annotations: "nomos.dev/unsupported"
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
 metadata.name: kesim-rolebinding
@@ -79,7 +85,7 @@ version: v1
 kind: RoleBinding
 
 
-[11] KNV1011: Resources MUST NOT declare labels starting with "nomos.dev". Below resource declares these offending labels: "nomos.dev/illegal-label", "nomos.dev/illegal-label-2"
+[11] KNV1011: Resources MUST NOT declare labels starting with "nomos.dev". Below Resource declares these offending labels: "nomos.dev/illegal-label", "nomos.dev/illegal-label-2"
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
 metadata.name: kesim-rolebinding
@@ -88,7 +94,7 @@ version: v1
 kind: RoleBinding
 
 
-[12] KNV1012: The NamespaceSelector resource "sre-supported" MUST NOT have ClusterSelector annotation
+[12] KNV1012: The NamespaceSelector Resource "sre-supported" MUST NOT have ClusterSelector annotation
 
 
 [13] KNV1013: Resource "no-such-cluster-selector" MUST refer to an existing ClusterSelector, but has annotation nomos.dev/cluster-selector="nonexistent-selector" which maps to no declared ClusterSelector
@@ -102,13 +108,22 @@ path: cluster/illegal-cluster-subdir
 [15] KNV1019: Namespaces MUST be declared in subdirectories of namespaces/. Create a subdirectory for Namespaces declared in:
 
 source: namespaces/namespace.yaml
+metadata.name: namespaces
+group: 
+version: v1
+kind: Namespace
 
 
-[16] KNV1020: Namespace MUST declare metadata.name that matches the name of its directory.
+[16] KNV1020: A Namespace MUST declare metadata.name that matches the name of its directory.
 
 source: namespaces/dev/dev-namespace/namespace.yaml
-expected name: dev-namespace
-actual name: incorrect-name
+metadata.name: incorrect-name
+group: 
+version: v1
+kind: Namespace
+
+expected metadata.name: dev-namespace
+
 
 
 [17] KNV1028: Directories MUST be a valid RFC1123 DNS label. Rename or remove directory:
@@ -120,19 +135,19 @@ name: illegal.dir.name
 [18] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
 
 source: namespaces/dev/alice-rolebinding.yaml
+metadata.name: alice-rolebinding
 group: rbac.authorization.k8s.io
 version: v1
 kind: RoleBinding
-name: alice-rolebinding
 
 source: namespaces/dev/dev-namespace/alice-rolebinding-2.yaml
+metadata.name: alice-rolebinding
 group: rbac.authorization.k8s.io
 version: v1
 kind: RoleBinding
-name: alice-rolebinding
 
 
-[19] KNV1030: A directory may declare at most one Namespace resource:
+[19] KNV1030: A directory may declare at most one Namespace Resource:
 
 source: namespaces/prod/prod-namespace/namespace-1.yaml
 metadata.name: prod-namespace

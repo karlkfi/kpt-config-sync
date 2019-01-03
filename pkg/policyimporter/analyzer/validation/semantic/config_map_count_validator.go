@@ -19,7 +19,7 @@ func (v ConfigMapCountValidator) Validate(errorBuilder *multierror.Builder) {
 	for _, obj := range v.Objects {
 		switch configMap := obj.Object.(type) {
 		case *corev1.ConfigMap:
-			configMaps[configMap] = obj.Source
+			configMaps[configMap] = obj.Source()
 		}
 	}
 

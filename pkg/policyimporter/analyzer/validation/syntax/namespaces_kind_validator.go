@@ -9,9 +9,9 @@ import (
 // NamespacesKindValidator ensures only the allowed set of Kinds appear in namespaces/
 var NamespacesKindValidator = &FileObjectValidator{
 	ValidateFn: func(object ast.FileObject) error {
-		switch o := object.Object.(type) {
+		switch object.Object.(type) {
 		case *v1alpha1.NamespaceSelector:
-			return vet.IllegalKindInNamespacesError{Source: object.Source, GroupVersionKind: o.GetObjectKind().GroupVersionKind()}
+			return vet.IllegalKindInNamespacesError{ResourceID: &object}
 		default:
 		}
 		return nil

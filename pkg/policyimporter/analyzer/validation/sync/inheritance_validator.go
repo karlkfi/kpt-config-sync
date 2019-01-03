@@ -46,7 +46,7 @@ func newInheritanceDisabledValidator() ValidatorFactory {
 // newInheritanceEnabledValidator implements validation for when inheritance is enabled.
 func newInheritanceEnabledValidator() ValidatorFactory {
 	return ValidatorFactory{fn: func(sync FileGroupVersionKindHierarchySync) error {
-		if sync.GroupVersionKind == kinds.ResourceQuota() {
+		if sync.GroupVersionKind() == kinds.ResourceQuota() {
 			return errIfNotAllowed(sync, resourceQuotaIfInheritanceEnabled)
 		}
 		return errIfNotAllowed(sync, othersIfInheritanceEnabled)
@@ -59,9 +59,8 @@ func errIfNotAllowed(sync FileGroupVersionKindHierarchySync, allowed map[v1alpha
 		return nil
 	}
 	return vet.IllegalHierarchyModeError{
-		Source:           sync.Source,
-		GroupVersionKind: sync.GroupVersionKind,
-		HierarchyMode:    sync.HierarchyMode,
-		Allowed:          allowed,
+		SyncID:        sync,
+		HierarchyMode: sync.HierarchyMode,
+		Allowed:       allowed,
 	}
 }

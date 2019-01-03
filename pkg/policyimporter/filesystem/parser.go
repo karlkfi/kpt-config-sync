@@ -160,7 +160,7 @@ func toDirInfoMap(fileInfos []ast.FileObject) map[string][]ast.FileObject {
 
 	// If a directory has resources, its value in the map will be non-nil.
 	for _, i := range fileInfos {
-		d := filepath.Dir(i.Source)
+		d := filepath.Dir(i.Source())
 		result[d] = append(result[d], i)
 	}
 
@@ -293,7 +293,7 @@ func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []a
 			// Assign relative path since that's what we actually need.
 			source := p.relativePath(info.Source)
 			object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
-			fileObject := ast.FileObject{Object: object, Source: source}
+			fileObject := ast.NewFileObject(object, source)
 			fileObjects = append(fileObjects, fileObject)
 		}
 	}

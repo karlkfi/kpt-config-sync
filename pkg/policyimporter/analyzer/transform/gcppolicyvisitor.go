@@ -96,10 +96,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		iamPolicy.Spec.ResourceReference = *attachmentPoint
 		if attachmentPoint.Kind == "Project" {
 			return &ast.NamespaceObject{
-				FileObject: ast.FileObject{
-					Object: iamPolicy,
-					Source: o.Source,
-				},
+				FileObject: ast.NewFileObject(iamPolicy, o.Source()),
 			}
 		}
 
@@ -112,7 +109,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 			Spec:       iamPolicy.Spec,
 			Status:     iamPolicy.Status,
 		}
-		v.addToClusterObjects(ciam, o.Source)
+		v.addToClusterObjects(ciam, o.Source())
 		return nil
 	case *v1.OrganizationPolicy:
 		if attachmentPoint.Kind == "" {
@@ -123,10 +120,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		// TODO(ttt): Is this enough attachment points? What about orgs/folders?
 		if attachmentPoint.Kind == "Project" {
 			return &ast.NamespaceObject{
-				FileObject: ast.FileObject{
-					Object: orgPolicy,
-					Source: o.Source,
-				},
+				FileObject: ast.NewFileObject(orgPolicy, o.Source()),
 			}
 		}
 
@@ -139,7 +133,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 			Spec:       orgPolicy.Spec,
 			Status:     orgPolicy.Status,
 		}
-		v.addToClusterObjects(corg, o.Source)
+		v.addToClusterObjects(corg, o.Source())
 		return nil
 	}
 
@@ -153,10 +147,7 @@ func (v *GCPPolicyVisitor) VisitObjectList(o ast.ObjectList) ast.ObjectList {
 
 func (v *GCPPolicyVisitor) addToClusterObjects(o runtime.Object, source string) {
 	co := &ast.ClusterObject{
-		FileObject: ast.FileObject{
-			Object: o,
-			Source: source,
-		},
+		FileObject: ast.NewFileObject(o, source),
 	}
 	v.cluster.Objects = append(v.cluster.Objects, co)
 }

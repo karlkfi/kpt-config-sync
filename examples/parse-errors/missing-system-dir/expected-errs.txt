@@ -4,5 +4,5 @@ Found issues: 2 error(s)
 [1] KNV1015: Required system/ directory is missing.
 
 
-[2] KNV1017: system/ directory must declare a Repo resource.
+[2] KNV1017: system/ directory must declare a Repo Resource.
 

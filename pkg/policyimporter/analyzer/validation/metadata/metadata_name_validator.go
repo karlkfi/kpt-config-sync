@@ -20,20 +20,20 @@ var MetadataNameValidator = &syntax.FileObjectValidator{
 
 		if fileObject.Name() == "" {
 			// Name MUST NOT be empty
-			return vet.MissingObjectNameError{Object: fileObject}
+			return vet.MissingObjectNameError{ResourceID: &fileObject}
 		} else if isDefaultCrdAllowedInNomos(gvk) {
 			// If CRD, then namee must be a valid DNS1123 subdomain
 			errs := utilvalidation.IsDNS1123Subdomain(fileObject.Name())
 			if errs != nil {
-				return vet.InvalidMetadataNameError{Object: fileObject}
+				return vet.InvalidMetadataNameError{ResourceID: &fileObject}
 			}
 		} else if gvk == kinds.Namespace() {
-			expectedName := path.Base(path.Dir(fileObject.Source))
+			expectedName := path.Base(path.Dir(fileObject.Source()))
 			if expectedName == repo.NamespacesDir {
-				return vet.IllegalTopLevelNamespaceError{Object: fileObject}
+				return vet.IllegalTopLevelNamespaceError{ResourceID: &fileObject}
 			}
 			if fileObject.Name() != expectedName {
-				return vet.InvalidNamespaceNameError{Source: fileObject.Source, Expected: expectedName, Actual: fileObject.Name()}
+				return vet.InvalidNamespaceNameError{ResourceID: &fileObject, Expected: expectedName}
 			}
 		}
 		return nil

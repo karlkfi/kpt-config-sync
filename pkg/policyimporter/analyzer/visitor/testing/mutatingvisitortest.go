@@ -23,7 +23,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // MutatingVisitorTestcase is a struct that halps for testing
@@ -39,15 +38,8 @@ type MutatingVisitorTestcase struct {
 // Defaults is the set of default comparison options.
 func Defaults() []cmp.Option {
 	return []cmp.Option{
-		ResourceVersionCmp(),
+		ast.FileObjectCmp(),
 	}
-}
-
-// ResourceVersionCmp provides a comparer option for resource.Quantity
-func ResourceVersionCmp() cmp.Option {
-	return cmp.Comparer(func(lhs, rhs resource.Quantity) bool {
-		return lhs.Cmp(rhs) == 0
-	})
 }
 
 // Runf returns a function that runs the testcase. visitor is the visitor to use

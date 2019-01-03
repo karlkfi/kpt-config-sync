@@ -9,12 +9,11 @@ import (
 
 // KindValidatorFactory ensures that only supported Resource Kinds are declared in Syncs.
 var KindValidatorFactory = ValidatorFactory{fn: func(sync FileGroupVersionKindHierarchySync) error {
-	if allowedInSyncs(sync.GroupVersionKind) {
+	if allowedInSyncs(sync.GroupVersionKind()) {
 		return nil
 	}
 	return vet.UnsupportedResourceInSyncError{
-		Source: sync.Source,
-		GVK:    sync.GroupVersionKind,
+		SyncID: sync,
 	}
 }}
 

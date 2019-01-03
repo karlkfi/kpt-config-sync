@@ -17,12 +17,12 @@ type ConflictingResourceQuotaValidator struct {
 
 // Validate adds errors to the errorBuilder if there are conflicting ResourceQuotas in a directory
 func (v ConflictingResourceQuotaValidator) Validate(errorBuilder *multierror.Builder) {
-	resourceQuotas := make(map[string][]ast.FileObject)
+	resourceQuotas := make(map[string][]vet.ResourceID)
 
 	for _, obj := range v.Objects {
 		if obj.GroupVersionKind() == kinds.ResourceQuota() {
-			dir := path.Dir(obj.Source)
-			resourceQuotas[dir] = append(resourceQuotas[dir], obj)
+			dir := path.Dir(obj.Source())
+			resourceQuotas[dir] = append(resourceQuotas[dir], &obj)
 		}
 	}
 

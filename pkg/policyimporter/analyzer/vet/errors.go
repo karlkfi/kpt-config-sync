@@ -24,11 +24,11 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // Codes for each Nomos error.
@@ -83,7 +83,9 @@ func Example(code string) Error {
 	case ReservedDirectoryNameErrorCode:
 		return ReservedDirectoryNameError{Dir: "reserved"}
 	case InvalidNamespaceNameErrorCode:
-		return InvalidNamespaceNameError{Source: "namespaces/foo/namespace.yaml", Expected: "foo", Actual: "bar"}
+		return InvalidNamespaceNameError{ResourceID: &resourceID{source: "namespaces/foo/namespace.yaml", name: "bar", groupVersionKind: kinds.Namespace()}, Expected: "foo"}
+	case UnknownResourceVersionInSyncErrorCode:
+		return UnknownResourceVersionInSyncError{SyncID: &syncID{source: "system/rq-sync.yaml", groupVersionKind: kinds.ResourceQuota().GroupKind().WithVersion("v2")}}
 	default:
 		panic(errors.Errorf("programmer error: example undefined for %T", code))
 	}
@@ -107,7 +109,7 @@ To fix:
 `
 	case InvalidNamespaceNameErrorCode:
 		return `
-A Namespace resource MUST have a metadata.name that matches the name of its
+A Namespace Resource MUST have a metadata.name that matches the name of its
 directory. To fix, correct the offending Namespace's metadata.name or its
 directory.
 `
@@ -126,29 +128,6 @@ type Error interface {
 // withPrefix formats the start of error messages consistently.
 func format(err Error, format string, a ...interface{}) string {
 	return fmt.Sprintf("KNV%s: ", err.Code()) + fmt.Sprintf(format, a...)
-}
-
-type groupVersionKind schema.GroupVersionKind
-
-// String implements Stringer
-func (gvk groupVersionKind) String() string {
-	return fmt.Sprintf(
-		"group: %[1]s\n"+
-			"version: %[2]s\n"+
-			"kind: %[3]s",
-		gvk.Group, gvk.Version, gvk.Kind)
-}
-
-type fileObject struct {
-	ast.FileObject
-}
-
-// String implements Stringer
-func (o fileObject) String() string {
-	return fmt.Sprintf("source: %[1]s\n"+
-		"metadata.name: %[2]s\n"+
-		"%[3]s",
-		o.Source, o.Name(), groupVersionKind(o.GetObjectKind().GroupVersionKind()))
 }
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.
@@ -226,33 +205,32 @@ func (e IllegalNamespaceSelectorAnnotationError) Code() string {
 
 // UnsyncableClusterObjectError represents an illegal usage of a cluster object kind which has not be explicitly declared.
 type UnsyncableClusterObjectError struct {
-	*ast.ClusterObject
+	ResourceID
 }
 
 // Error implements error.
 func (e UnsyncableClusterObjectError) Error() string {
 	return format(e,
-		"Unable to sync resource %[2]q. "+
-			"Enable sync for this resource's kind.\n\n"+
+		"Unable to sync Resource. Enable sync for this Resource's kind.\n\n"+
 			"%[1]s",
-		fileObject{e.FileObject}, e.Name())
+		printResourceID(e))
 }
 
 // Code implements Error
 func (e UnsyncableClusterObjectError) Code() string { return UnsyncableClusterObjectErrorCode }
 
-// UnsyncableNamespaceObjectError represents an illegal usage of a resource which has not been defined for use in namespaces/.
+// UnsyncableNamespaceObjectError represents an illegal usage of a Resource which has not been defined for use in namespaces/.
 type UnsyncableNamespaceObjectError struct {
-	*ast.NamespaceObject
+	ResourceID
 }
 
 // Error implements error.
 func (e UnsyncableNamespaceObjectError) Error() string {
 	return format(e,
-		"Unable to sync resource %[2]q. "+
-			"Enable sync for this resource's kind.\n\n"+
+		"Unable to sync Resource. "+
+			"Enable sync for this Resource's kind.\n\n"+
 			"%[1]s",
-		fileObject{e.FileObject}, e.Name())
+		printResourceID(e))
 }
 
 // Code implements Error
@@ -260,16 +238,16 @@ func (e UnsyncableNamespaceObjectError) Code() string { return UnsyncableNamespa
 
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
 type IllegalAbstractNamespaceObjectKindError struct {
-	*ast.NamespaceObject
+	ResourceID
 }
 
 // Error implements error.
 func (e IllegalAbstractNamespaceObjectKindError) Error() string {
 	return format(e,
 		"Resource %[4]q illegally declared in an %[1]s directory. "+
-			"Move this resource to a %[2]s directory:\n\n"+
+			"Move this Resource to a %[2]s directory:\n\n"+
 			"%[3]s",
-		ast.AbstractNamespace, ast.Namespace, fileObject{e.FileObject}, e.Name())
+		ast.AbstractNamespace, ast.Namespace, printResourceID(e), e.Name())
 }
 
 // Code implements Error
@@ -280,21 +258,20 @@ func (e IllegalAbstractNamespaceObjectKindError) Code() string {
 // ConflictingResourceQuotaError represents multiple ResourceQuotas illegally presiding in the same directory.
 type ConflictingResourceQuotaError struct {
 	Path       string
-	Duplicates []ast.FileObject
+	Duplicates []ResourceID
 }
 
 // Error implements error.
 func (e ConflictingResourceQuotaError) Error() string {
 	var strs []string
 	for _, duplicate := range e.Duplicates {
-		strs = append(strs, fmt.Sprintf("source: %[1]s\nname: %[2]s",
-			path.Join(e.Path, path.Base(duplicate.Source)), duplicate.Name()))
+		strs = append(strs, printResourceID(duplicate))
 	}
 	sort.Strings(strs)
 
 	return format(e,
-		"A directory MUST NOT contain more than one ResourceQuota resource. "+
-			"Directory %[1]q contains multiple ResourceQuota resources:\n\n"+
+		"A directory MUST NOT contain more than one ResourceQuota Resource. "+
+			"Directory %[1]q contains multiple ResourceQuota Resources:\n\n"+
 			"%[2]s",
 		e.Path, strings.Join(strs, "\n\n"))
 }
@@ -304,7 +281,7 @@ func (e ConflictingResourceQuotaError) Code() string { return ConflictingResourc
 
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
 type IllegalMetadataNamespaceDeclarationError struct {
-	Object ast.FileObject
+	ResourceID
 }
 
 // Error implements error.
@@ -313,7 +290,7 @@ func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 	return format(e,
 		"Resources MUST NOT declare metadata.namespace:\n\n"+
 			"%[1]s",
-		fileObject{e.Object})
+		printResourceID(e))
 }
 
 // Code implements Error
@@ -323,7 +300,7 @@ func (e IllegalMetadataNamespaceDeclarationError) Code() string {
 
 // IllegalAnnotationDefinitionError represents a set of illegal annotation definitions.
 type IllegalAnnotationDefinitionError struct {
-	Object      ast.FileObject
+	ResourceID
 	Annotations []string
 }
 
@@ -333,9 +310,9 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 	a := strings.Join(e.Annotations, ", ")
 	return format(e,
 		"Resources MUST NOT declare unsupported annotations starting with %[3]q. "+
-			"Resource %[4]q has offending annotations: %[1]s\n\n"+
+			"Resource has offending annotations: %[1]s\n\n"+
 			"%[2]s",
-		a, fileObject{e.Object}, policyhierarchy.GroupName, e.Object.Name())
+		a, printResourceID(e), policyhierarchy.GroupName)
 }
 
 // Code implements Error
@@ -343,7 +320,7 @@ func (e IllegalAnnotationDefinitionError) Code() string { return IllegalAnnotati
 
 // IllegalLabelDefinitionError represent a set of illegal label definitions.
 type IllegalLabelDefinitionError struct {
-	Object ast.FileObject
+	ResourceID
 	Labels []string
 }
 
@@ -353,9 +330,9 @@ func (e IllegalLabelDefinitionError) Error() string {
 	l := strings.Join(e.Labels, ", ")
 	return format(e,
 		"Resources MUST NOT declare labels starting with %[3]q. "+
-			"Below resource declares these offending labels: %[1]s\n\n"+
+			"Below Resource declares these offending labels: %[1]s\n\n"+
 			"%[2]s",
-		l, fileObject{e.Object}, policyhierarchy.GroupName)
+		l, printResourceID(e), policyhierarchy.GroupName)
 }
 
 // Code implements Error
@@ -370,7 +347,7 @@ type NamespaceSelectorMayNotHaveAnnotation struct {
 // Error implements error.
 func (e NamespaceSelectorMayNotHaveAnnotation) Error() string {
 	// TODO(willbeason): Print information about the object so it can actually be found.
-	return format(e, "The NamespaceSelector resource %q MUST NOT have ClusterSelector annotation", e.Object.GetName())
+	return format(e, "The NamespaceSelector Resource %q MUST NOT have ClusterSelector annotation", e.Object.GetName())
 }
 
 // Code implements Error
@@ -424,7 +401,7 @@ type MissingRepoError struct{}
 // Error implements error
 func (e MissingRepoError) Error() string {
 	return format(e,
-		"%s/ directory must declare a Repo resource.", repo.SystemDir)
+		"%s/ directory must declare a Repo Resource.", repo.SystemDir)
 }
 
 // Code implements Error
@@ -448,15 +425,15 @@ func (e IllegalSubdirectoryError) Code() string { return IllegalSubdirectoryErro
 
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
 type IllegalTopLevelNamespaceError struct {
-	Object ast.FileObject
+	ResourceID
 }
 
 // Error implements error
 func (e IllegalTopLevelNamespaceError) Error() string {
 	return format(e,
 		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:\n\n"+
-			"source: %[3]s",
-		repo.NamespacesDir, ast.Namespace, e.Object.Source)
+			"%[3]s",
+		repo.NamespacesDir, ast.Namespace, printResourceID(e))
 }
 
 // Code implements Error
@@ -464,19 +441,17 @@ func (e IllegalTopLevelNamespaceError) Code() string { return IllegalTopLevelNam
 
 // InvalidNamespaceNameError reports that a Namespace has an invalid name.
 type InvalidNamespaceNameError struct {
-	Source   string
+	ResourceID
 	Expected string
-	Actual   string
 }
 
 // Error implements error
 func (e InvalidNamespaceNameError) Error() string {
 	return format(e,
-		"%[1]s MUST declare metadata.name that matches the name of its directory.\n\n"+
-			"source: %[2]s\n"+
-			"expected name: %[3]s\n"+
-			"actual name: %[4]s",
-		ast.Namespace, e.Source, e.Expected, e.Actual)
+		"A %[1]s MUST declare metadata.name that matches the name of its directory.\n\n"+
+			"%[2]s\n\n"+
+			"expected metadata.name: %[3]s\n",
+		ast.Namespace, printResourceID(e), e.Expected)
 }
 
 // Code implements Error
@@ -484,15 +459,15 @@ func (e InvalidNamespaceNameError) Code() string { return InvalidNamespaceNameEr
 
 // UnknownObjectError reports that an object declared in the repo does not have a definition in the cluster.
 type UnknownObjectError struct {
-	*ast.FileObject
+	ResourceID
 }
 
 // Error implements error
 func (e UnknownObjectError) Error() string {
 	return format(e,
 		"Transient Error: Resource is declared, but has no definition on the cluster."+
-			"\nResource must be a native K8S resources or have an associated CustomResourceDefinition:\n\n%s",
-		e.FileObject)
+			"\nResource must be a native K8S Resources or have an associated CustomResourceDefinition:\n\n%s",
+		printResourceID(e))
 }
 
 // Code implements Error
@@ -500,20 +475,22 @@ func (e UnknownObjectError) Code() string { return UnknownObjectErrorCode }
 
 // DuplicateSyncGroupKindError reports that multiple versions were declared for the same synced kind
 type DuplicateSyncGroupKindError struct {
-	// Duplicated is the Group/Kind pair with duplicate definitions in Syncs.
-	Duplicated schema.GroupKind
-	// Sources is the list of all source files containing Syncs defining the duplicate GroupKind pair.
-	Sources []string
+	// Duplicates is the Group/Kind pair with duplicate definitions in Syncs.
+	Duplicates []SyncID
 }
 
 // Error implements error
 func (e DuplicateSyncGroupKindError) Error() string {
+	var duplicates []string
+	for _, duplicate := range e.Duplicates {
+		duplicates = append(duplicates, printSyncID(duplicate))
+	}
+	sort.Strings(duplicates)
+
 	return format(e,
 		"A Kind for a given Group may be declared at most once:\n\n"+
-			"group: %[1]s\n"+
-			"kind: %[2]s\n"+
-			"sources: [%[3]s]",
-		e.Duplicated.Group, e.Duplicated.Kind, strings.Join(e.Sources, ", "))
+			"%[1]s",
+		strings.Join(duplicates, "\n\n"))
 }
 
 // Code implements Error
@@ -523,17 +500,15 @@ func (e DuplicateSyncGroupKindError) Code() string {
 
 // IllegalKindInSystemError reports that an object has been illegally defined in system/
 type IllegalKindInSystemError struct {
-	Source           string
-	GroupVersionKind schema.GroupVersionKind
+	ResourceID
 }
 
 // Error implements error
 func (e IllegalKindInSystemError) Error() string {
 	return format(e,
 		"Resources of this Kind may not be declared in %[2]s/:\n\n"+
-			"source: %[3]s\n"+
 			"%[1]s",
-		groupVersionKind(e.GroupVersionKind), repo.SystemDir, e.Source)
+		printResourceID(e), repo.SystemDir, e.Source)
 }
 
 // Code implements Error
@@ -591,18 +566,16 @@ func (e MultipleConfigMapsError) Code() string { return MultipleConfigMapsErrorC
 
 // UnsupportedRepoSpecVersion reports that the repo version is not supported.
 type UnsupportedRepoSpecVersion struct {
-	Source  string
-	Name    string
+	ResourceID
 	Version string
 }
 
 // Error implements error
 func (e UnsupportedRepoSpecVersion) Error() string {
 	return format(e,
-		"Unsupported Repo spec.version: %[3]q. Must use version \"0.1.0\"\n\n"+
-			"source: %[1]s\n"+
-			"name: %[2]s",
-		e.Source, e.Name, e.Version)
+		"Unsupported Repo spec.version: %[2]q. Must use version \"0.1.0\"\n\n"+
+			"%[1]s",
+		printResourceID(e), e.Version)
 }
 
 // Code implements Error
@@ -628,18 +601,14 @@ func (e InvalidDirectoryNameError) Code() string { return InvalidDirectoryNameEr
 // ObjectNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
 type ObjectNameCollisionError struct {
 	Name       string
-	Duplicates []ast.FileObject
+	Duplicates []ResourceID
 }
 
 // Error implements error
 func (e ObjectNameCollisionError) Error() string {
 	var strs []string
 	for _, duplicate := range e.Duplicates {
-		strs = append(strs, fmt.Sprintf(
-			"source: %[1]s\n"+
-				"%[2]s\n"+
-				"name: %[3]s",
-			duplicate.Source, groupVersionKind(duplicate.GroupVersionKind()), duplicate.Name()))
+		strs = append(strs, printResourceID(duplicate))
 	}
 	sort.Strings(strs)
 
@@ -654,19 +623,19 @@ func (e ObjectNameCollisionError) Code() string { return ObjectNameCollisionErro
 
 // MultipleNamespacesError reports that multiple Namespaces are defined in the same directory.
 type MultipleNamespacesError struct {
-	Duplicates []ast.FileObject
+	Duplicates []ResourceID
 }
 
 // Error implements error
 func (e MultipleNamespacesError) Error() string {
 	var strs []string
 	for _, duplicate := range e.Duplicates {
-		strs = append(strs, fileObject{duplicate}.String())
+		strs = append(strs, printResourceID(duplicate))
 	}
 	sort.Strings(strs)
 
 	return format(e,
-		"A directory may declare at most one %[1]s resource:\n\n"+
+		"A directory may declare at most one %[1]s Resource:\n\n"+
 			"%[2]s",
 		ast.Namespace, strings.Join(strs, "\n\n"))
 }
@@ -676,7 +645,7 @@ func (e MultipleNamespacesError) Code() string { return MultipleNamespacesErrorC
 
 // MissingObjectNameError reports that an object has no name.
 type MissingObjectNameError struct {
-	Object ast.FileObject
+	ResourceID
 }
 
 // Error implements error
@@ -684,16 +653,15 @@ func (e MissingObjectNameError) Error() string {
 	return format(e,
 		"Resources must declare metadata.name:\n\n"+
 			"%[1]s",
-		fileObject{e.Object})
+		printResourceID(e))
 }
 
 // Code implements Error
 func (e MissingObjectNameError) Code() string { return MissingObjectNameErrorCode }
 
-// UnknownResourceInSyncError reports that a resource defined in a Sync does not have a definition in the cluster.
+// UnknownResourceInSyncError reports that a Resource defined in a Sync does not have a definition in the cluster.
 type UnknownResourceInSyncError struct {
-	Source string
-	GVK    schema.GroupVersionKind
+	SyncID
 }
 
 // Error implements error
@@ -701,9 +669,8 @@ func (e UnknownResourceInSyncError) Error() string {
 	return format(e,
 		"Sync defines a Resource Kind that does not exist on cluster. "+
 			"Ensure the Group, Version, and Kind are spelled correctly.\n\n"+
-			"source: %[1]s\n"+
-			"%[2]s",
-		e.Source, groupVersionKind(e.GVK))
+			"%[1]s",
+		printSyncID(e))
 }
 
 // Code implements Error
@@ -711,7 +678,7 @@ func (e UnknownResourceInSyncError) Code() string { return UnknownResourceInSync
 
 // IllegalSystemResourcePlacementError reports that a nomos.dev object has been defined outside of system/
 type IllegalSystemResourcePlacementError struct {
-	Object ast.FileObject
+	ResourceID
 }
 
 // Error implements error
@@ -719,7 +686,7 @@ func (e IllegalSystemResourcePlacementError) Error() string {
 	return format(e,
 		"Resources of the below kind MUST NOT be declared outside %[1]s/:\n"+
 			"%[2]s",
-		repo.SystemDir, fileObject{e.Object}.String())
+		repo.SystemDir, printResourceID(e))
 }
 
 // Code implements Error
@@ -727,19 +694,17 @@ func (e IllegalSystemResourcePlacementError) Code() string {
 	return IllegalSystemResourcePlacementErrorCode
 }
 
-// UnsupportedResourceInSyncError reports that policy management is unsupported for a resource defined in a Sync.
+// UnsupportedResourceInSyncError reports that policy management is unsupported for a Resource defined in a Sync.
 type UnsupportedResourceInSyncError struct {
-	Source string
-	GVK    schema.GroupVersionKind
+	SyncID
 }
 
 // Error implements error
 func (e UnsupportedResourceInSyncError) Error() string {
 	return format(e,
 		"This Resource Kind MUST NOT be declared in a Sync:\n\n"+
-			"source: %[1]s\n"+
-			"%[2]s",
-		e.Source, groupVersionKind(e.GVK).String())
+			"%[1]s",
+		printSyncID(e))
 }
 
 // Code implements Error
@@ -747,10 +712,9 @@ func (e UnsupportedResourceInSyncError) Code() string { return UnsupportedResour
 
 // IllegalHierarchyModeError reports that a Sync is defined with a disallowed hierarchyMode.
 type IllegalHierarchyModeError struct {
-	Source           string
-	GroupVersionKind schema.GroupVersionKind
-	HierarchyMode    v1alpha1.HierarchyModeType
-	Allowed          map[v1alpha1.HierarchyModeType]bool
+	SyncID
+	HierarchyMode v1alpha1.HierarchyModeType
+	Allowed       map[v1alpha1.HierarchyModeType]bool
 }
 
 // Error implements error
@@ -761,9 +725,8 @@ func (e IllegalHierarchyModeError) Error() string {
 	}
 	return format(e,
 		"HierarchyMode %[1]q is not a valid value for this Resource. Allowed values are [%[2]s].\n\n"+
-			"source: %[3]s\n"+
-			"%[4]s",
-		e.HierarchyMode, strings.Join(allowedStr, ","), e.Source, groupVersionKind(e.GroupVersionKind))
+			"%[3]s",
+		e.HierarchyMode, strings.Join(allowedStr, ","), printSyncID(e))
 }
 
 // Code implements Error
@@ -771,15 +734,15 @@ func (e IllegalHierarchyModeError) Code() string { return IllegalHierarchyModeEr
 
 // InvalidMetadataNameError represents the usage of a non-RFC1123 compliant metadata.name
 type InvalidMetadataNameError struct {
-	Object ast.FileObject
+	ResourceID
 }
 
 // Error implements error.
 func (e InvalidMetadataNameError) Error() string {
 	return format(e,
-		"Resources MUST define a metadata.name which is a valid RFC1123 DNS subdomain. Rename or remove the resource:\n\n"+
+		"Resources MUST define a metadata.name which is a valid RFC1123 DNS subdomain. Rename or remove the Resource:\n\n"+
 			"%[1]s",
-		fileObject{e.Object})
+		printResourceID(e))
 }
 
 // Code implements Error
@@ -787,17 +750,15 @@ func (e InvalidMetadataNameError) Code() string { return InvalidMetadataNameErro
 
 // IllegalKindInClusterregistryError reports that an object has been illegally defined in clusterregistry/
 type IllegalKindInClusterregistryError struct {
-	Source           string
-	GroupVersionKind schema.GroupVersionKind
+	ResourceID
 }
 
 // Error implements error
 func (e IllegalKindInClusterregistryError) Error() string {
 	return format(e,
 		"Resources of the below Kind may not be declared in %[2]s/:\n\n"+
-			"source: %[3]s\n"+
 			"%[1]s",
-		groupVersionKind(e.GroupVersionKind), repo.ClusterRegistryDir, e.Source)
+		printResourceID(e), repo.ClusterRegistryDir)
 }
 
 // Code implements Error
@@ -807,17 +768,15 @@ func (e IllegalKindInClusterregistryError) Code() string {
 
 // IllegalKindInNamespacesError reports that an object has been illegally defined in namespaces/
 type IllegalKindInNamespacesError struct {
-	Source           string
-	GroupVersionKind schema.GroupVersionKind
+	ResourceID
 }
 
 // Error implements error
 func (e IllegalKindInNamespacesError) Error() string {
 	return format(e,
 		"Resources of the below Kind may not be declared in %[2]s/:\n\n"+
-			"source: %[3]s\n"+
 			"%[1]s",
-		groupVersionKind(e.GroupVersionKind), repo.NamespacesDir, e.Source)
+		printResourceID(e), repo.NamespacesDir)
 }
 
 // Code implements Error
@@ -828,8 +787,7 @@ func (e IllegalKindInNamespacesError) Code() string {
 // UnknownResourceVersionInSyncError reports that a Sync contains a Group/Kind with an incorrect
 // Version.
 type UnknownResourceVersionInSyncError struct {
-	Source  string
-	GVK     schema.GroupVersionKind
+	SyncID
 	Allowed []string
 }
 
@@ -838,9 +796,8 @@ func (e UnknownResourceVersionInSyncError) Error() string {
 	return format(e,
 		"Sync defines a Resource Kind with an incorrect Version. "+
 			"Known Versions: [%[1]s]\n\n"+
-			"source: %[2]s\n"+
-			"%[3]s",
-		strings.Join(e.Allowed, ", "), e.Source, groupVersionKind(e.GVK))
+			"%[2]s",
+		strings.Join(e.Allowed, ", "), printSyncID(e))
 }
 
 // Code implements Error

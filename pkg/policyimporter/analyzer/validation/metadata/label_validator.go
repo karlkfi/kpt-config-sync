@@ -11,7 +11,7 @@ var LabelValidator = &syntax.FileObjectValidator{
 	ValidateFn: func(o ast.FileObject) error {
 		found := invalids(o.ToMeta().GetLabels(), noneAllowed)
 		if len(found) > 0 {
-			return vet.IllegalLabelDefinitionError{Object: o, Labels: found}
+			return vet.IllegalLabelDefinitionError{ResourceID: &o, Labels: found}
 		}
 		return nil
 	},

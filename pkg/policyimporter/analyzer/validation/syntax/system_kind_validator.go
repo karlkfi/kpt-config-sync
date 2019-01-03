@@ -15,7 +15,7 @@ var SystemKindValidator = &FileObjectValidator{
 		case *corev1.ConfigMap:
 		case *v1alpha1.Sync:
 		default:
-			return vet.IllegalKindInSystemError{Source: object.Source, GroupVersionKind: object.GroupVersionKind()}
+			return vet.IllegalKindInSystemError{ResourceID: &object}
 		}
 		return nil
 	},

@@ -4,6 +4,7 @@ Found issues: 1 error(s)
 [1] KNV1024: Resources of this Kind may not be declared in system/:
 
 source: system/namespace.yaml
+metadata.name: system
 group: 
 version: v1
 kind: Namespace

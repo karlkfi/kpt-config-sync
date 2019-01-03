@@ -145,7 +145,7 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		if len(n.Objects) > 0 {
 			var objNames []string
 			for _, obj := range n.Objects {
-				objNames = append(objNames, obj.Source)
+				objNames = append(objNames, obj.Source())
 			}
 			v.errs.Add(errors.Errorf("GCP top-level hierarchy should not contain specific resources. Found %v", objNames))
 			return nil
@@ -169,7 +169,7 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		newNode.Type = ast.Namespace
 	}
 	if v.ctx.clusterObj != nil {
-		glog.V(1).Infof("Moving %v to cluster scope", v.ctx.clusterObj.Source)
+		glog.V(1).Infof("Moving %v to cluster scope", v.ctx.clusterObj.Source())
 		v.cluster.Objects = append(v.cluster.Objects, v.ctx.clusterObj)
 	}
 	if v.ctx.policyAttachmentPoint != nil {
@@ -207,10 +207,7 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) *ast.Namespace
 			p.Spec.ParentReference = *pr
 		}
 		return &ast.NamespaceObject{
-			FileObject: ast.FileObject{
-				Object: p,
-				Source: o.Source,
-			},
+			FileObject: ast.NewFileObject(p, o.Source()),
 		}
 	case *v1.Folder:
 		if !v.setAttachmentPoint(o) {
@@ -238,10 +235,7 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) *ast.Namespace
 		f := gcpObj.DeepCopy()
 		f.Spec.ParentReference = *pr
 		v.ctx.clusterObj = &ast.ClusterObject{
-			FileObject: ast.FileObject{
-				Object: f,
-				Source: o.Source,
-			},
+			FileObject: ast.NewFileObject(f, o.Source()),
 		}
 		return nil
 	case *v1.Organization:

@@ -8,13 +8,13 @@ import (
 // KnownResourceValidatorFactory adds errors for unknown resources which are not explicitly unsupported.
 func KnownResourceValidatorFactory(apiInfo *meta.APIInfo) ValidatorFactory {
 	return ValidatorFactory{fn: func(sync FileGroupVersionKindHierarchySync) error {
-		gvk := sync.GroupVersionKind
+		gvk := sync.GroupVersionKind()
 		if !apiInfo.Exists(gvk) {
 			versions := apiInfo.AllowedVersions(gvk.GroupKind())
 			if versions == nil {
-				return vet.UnknownResourceInSyncError{Source: sync.Source, GVK: gvk}
+				return vet.UnknownResourceInSyncError{SyncID: sync}
 			}
-			return vet.UnknownResourceVersionInSyncError{Source: sync.Source, GVK: gvk, Allowed: versions}
+			return vet.UnknownResourceVersionInSyncError{SyncID: sync, Allowed: versions}
 		}
 		return nil
 	}}

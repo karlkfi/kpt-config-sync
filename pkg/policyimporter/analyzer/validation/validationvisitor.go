@@ -214,7 +214,7 @@ func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.Namespace
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	gvk := o.GroupVersionKind()
 	if !v.allowedGVKs[gvk] {
-		v.errs.Add(vet.UnsyncableClusterObjectError{ClusterObject: o})
+		v.errs.Add(vet.UnsyncableClusterObjectError{ResourceID: o})
 	}
 	if v.coverage != nil {
 		v.coverage.ValidateObject(o.ToMeta(), &v.errs)
@@ -227,7 +227,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	if !v.allowedGVKs[o.GroupVersionKind()] {
 		if !syntax.IsSystemOnly(o.GroupVersionKind()) {
 			// This is already checked elsewhere.
-			v.errs.Add(vet.UnsyncableNamespaceObjectError{NamespaceObject: o})
+			v.errs.Add(vet.UnsyncableNamespaceObjectError{ResourceID: o})
 		}
 	}
 
@@ -235,7 +235,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	if node.Type == ast.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[o.GroupVersionKind().GroupKind()]
 		if !found || spec.Mode == v1alpha1.HierarchyModeNone {
-			v.errs.Add(vet.IllegalAbstractNamespaceObjectKindError{NamespaceObject: o})
+			v.errs.Add(vet.IllegalAbstractNamespaceObjectKindError{ResourceID: o})
 		}
 	}
 

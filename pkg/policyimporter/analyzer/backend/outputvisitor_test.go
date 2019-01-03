@@ -24,6 +24,7 @@ import (
 	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
+	"github.com/google/nomos/pkg/resourcequota"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -50,9 +51,9 @@ func (tc *OutputVisitorTestcase) Run(t *testing.T) {
 	ov := NewOutputVisitor([]*v1alpha1.Sync{})
 	tc.input.Accept(ov)
 	actual := ov.AllPolicies()
-	if !cmp.Equal(actual, tc.expect, vt.ResourceVersionCmp()) {
+	if !cmp.Equal(actual, tc.expect, resourcequota.ResourceQuantityEqual()) {
 		t.Errorf("mismatch on expected vs actual: %s",
-			cmp.Diff(tc.expect, actual, vt.ResourceVersionCmp()))
+			cmp.Diff(tc.expect, actual, resourcequota.ResourceQuantityEqual()))
 	}
 }
 

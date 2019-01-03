@@ -61,12 +61,12 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 				"directory.  Move declaration to the appropriate %q directory.",
 			gvk,
 			o.ToMeta().GetName(),
-			o.Source,
+			o.Source(),
 			repo.ClusterDir,
 			repo.NamespacesDir,
 		))
 	case meta.NotFound:
-		p.errs.Add(vet.UnknownObjectError{FileObject: &o.FileObject})
+		p.errs.Add(vet.UnknownObjectError{ResourceID: &o.FileObject})
 	}
 
 	return o
@@ -83,12 +83,12 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 				"%q directory.  Move declaration to the %q directory.",
 			gvk,
 			o.ToMeta().GetName(),
-			o.Source,
+			o.Source(),
 			repo.NamespacesDir,
 			repo.ClusterDir,
 		))
 	case meta.NotFound:
-		p.errs.Add(vet.UnknownObjectError{FileObject: &o.FileObject})
+		p.errs.Add(vet.UnknownObjectError{ResourceID: &o.FileObject})
 	}
 
 	return o

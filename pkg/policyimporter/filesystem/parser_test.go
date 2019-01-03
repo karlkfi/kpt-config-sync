@@ -1987,10 +1987,10 @@ spec:
 		testName: "No name collision in sibling nodes",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":                        aRepo,
-			"system/rb.yaml":                           templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-			"namespaces/foo/bar/rb-1-stuff-stuff.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
-			"namespaces/foo/qux/rb-2-stuff-stuff.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
+			"system/nomos.yaml":            aRepo,
+			"system/rb.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/fox/bar/rb-1.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
+			"namespaces/fox/qux/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
 		},
 	},
 	{

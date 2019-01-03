@@ -88,7 +88,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.AbstractNamespace,
 					Path: "namespaces",
 					Objects: vt.FileObjectSets(
-						ast.FileObject{Object: vt.Helper.AdminRoleBinding(), Source: "acme/admin.yaml"},
+						ast.NewFileObject(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"),
 					),
 				},
 			},
@@ -97,7 +97,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.AbstractNamespace,
 					Path: "namespaces",
 					Objects: vt.FileObjectSets(
-						ast.FileObject{Object: withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), Source: "acme/admin.yaml"},
+						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), "acme/admin.yaml"),
 					),
 					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
 				},
@@ -110,7 +110,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.Namespace,
 					Path: "namespaces",
 					Objects: vt.FileObjectSets(
-						ast.FileObject{Object: vt.Helper.AdminRoleBinding(), Source: "acme/admin.yaml"},
+						ast.NewFileObject(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"),
 					),
 				},
 			},
@@ -119,7 +119,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: ast.Namespace,
 					Path: "namespaces",
 					Objects: vt.FileObjectSets(
-						ast.FileObject{Object: withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), Source: "acme/admin.yaml"},
+						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), "acme/admin.yaml"),
 					),
 					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
 				},
@@ -133,7 +133,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Path:        "namespaces",
 					Annotations: map[string]string{"color": "orange"},
 					Objects: vt.FileObjectSets(
-						ast.FileObject{Object: adminRoleBindingWithAnnotation(), Source: "acme/admin.yaml"},
+						ast.NewFileObject(adminRoleBindingWithAnnotation(), "acme/admin.yaml"),
 					),
 				},
 			},
@@ -143,7 +143,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Path:        "namespaces",
 					Annotations: map[string]string{"color": "orange", v1alpha1.SourcePathAnnotationKey: "namespaces"},
 					Objects: vt.FileObjectSets(
-						ast.FileObject{Object: withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/admin.yaml"), Source: "acme/admin.yaml"},
+						ast.NewFileObject(withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/admin.yaml"), "acme/admin.yaml"),
 					),
 				},
 			},

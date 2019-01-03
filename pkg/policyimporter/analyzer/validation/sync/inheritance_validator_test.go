@@ -19,7 +19,7 @@ type inheritanceDisabledTestCase struct {
 
 func withMode(gvk schema.GroupVersionKind, mode v1alpha1.HierarchyModeType) FileGroupVersionKindHierarchySync {
 	return FileGroupVersionKindHierarchySync{
-		GroupVersionKind: gvk,
+		groupVersionKind: gvk,
 		HierarchyMode:    mode,
 	}
 }

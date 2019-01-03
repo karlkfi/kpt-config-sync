@@ -19,12 +19,10 @@ type DuplicateNameValidator struct {
 
 // Validate adds errors to the errorBuilder if there are multiple Namespaces defined in directories.
 func (v DuplicateNameValidator) Validate(errorBuilder *multierror.Builder) {
-	seenObjectNames := make(map[schema.GroupVersionKind]map[string][]ast.FileObject)
+	seenObjectNames := make(map[schema.GroupVersionKind]map[string][]vet.ResourceID)
 
-	for _, obj := range v.Objects {
+	for i, obj := range v.Objects {
 		gvk := obj.GroupVersionKind()
-		name := obj.Name()
-
 		switch gvk {
 		case kinds.Namespace(), kinds.ResourceQuota():
 			// Namespace names are validated separately.
@@ -33,10 +31,11 @@ func (v DuplicateNameValidator) Validate(errorBuilder *multierror.Builder) {
 		}
 
 		if _, found := seenObjectNames[gvk]; !found {
-			seenObjectNames[gvk] = make(map[string][]ast.FileObject)
+			seenObjectNames[gvk] = make(map[string][]vet.ResourceID)
 		}
 
-		seenObjectNames[gvk][name] = append(seenObjectNames[gvk][name], obj)
+		name := obj.Name()
+		seenObjectNames[gvk][name] = append(seenObjectNames[gvk][name], &v.Objects[i])
 	}
 
 	// Check for object name collisions
@@ -46,15 +45,15 @@ func (v DuplicateNameValidator) Validate(errorBuilder *multierror.Builder) {
 			// All objects have the same name and kind
 			sort.Slice(objects, func(i, j int) bool {
 				// Sort by source file
-				return path.Dir(objects[i].Source) < path.Dir(objects[j].Source)
+				return path.Dir(objects[i].Source()) < path.Dir(objects[j].Source())
 			})
 
 			for i := 0; i < len(objects); {
-				dir := path.Dir(objects[i].Source)
-				duplicates := []ast.FileObject{objects[i]}
+				dir := path.Dir(objects[i].Source())
+				duplicates := []vet.ResourceID{objects[i]}
 
 				for j := i + 1; j < len(objects); j++ {
-					if strings.HasPrefix(objects[j].Source, dir) {
+					if strings.HasPrefix(objects[j].Source(), dir) {
 						// Pick up duplicates in the same directory and child directories.
 						duplicates = append(duplicates, objects[j])
 					} else {

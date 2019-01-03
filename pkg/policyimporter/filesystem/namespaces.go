@@ -46,7 +46,7 @@ func processNamespaces(
 		case *v1alpha1.NamespaceSelector:
 			treeNode.Selectors[o.Name] = o
 		default:
-			treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: o, Source: i.Source}})
+			treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.NewFileObject(o, i.Source())})
 		}
 	}
 }
@@ -63,7 +63,7 @@ func processNamespace(objects []ast.FileObject, treeNode *ast.TreeNode, errorBui
 			treeNode.Annotations = metaObj.GetAnnotations()
 			continue
 		}
-		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: object.Object, Source: object.Source}})
+		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.NewFileObject(object.Object, object.Source())})
 	}
 }
 
