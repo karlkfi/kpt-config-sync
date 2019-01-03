@@ -1,7 +1,6 @@
 package oidc
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -35,6 +34,7 @@ var (
 	// Set with flags
 	issuerURL string
 	scope     string
+	port      int
 )
 
 func init() {
@@ -53,6 +53,9 @@ func init() {
 	loginCmd.Flags().StringVar(&scope, "scope",
 		"openid+email+https://www.googleapis.com/auth/userinfo.groups",
 		"The scopes to request; by default requests groups")
+	loginCmd.Flags().IntVar(&port, "port",
+		9789,
+		"http://localhost:PORT is the redirect URI used for the OAuth flow.")
 	loginCmd.Flags().BoolVar(&cfg.Open, "open-browser", true,
 		"If set, open a browser to log in, else print a URL for the user to open")
 	loginCmd.Flags().BoolVar(&cfg.Write,
@@ -299,6 +302,35 @@ func (l *loginFlow) printKubeConfig(authInfo *api.AuthInfo, authInfoName string)
 	glog.Infof("%v", string(output))
 }
 
+func (l *loginFlow) getAuthorizationCode() string {
+	// Start up local webserver at redirect URI to intercept authorization code.
+	var code string
+	m := http.NewServeMux()
+	s := http.Server{Addr: fmt.Sprintf("localhost:%d", port), Handler: m}
+	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		code = r.FormValue("code")
+		_, err := w.Write([]byte("done"))
+		if err != nil {
+			glog.Errorf("Error writing response: %v", err)
+			return
+		}
+		go func() {
+			if err = s.Shutdown(context.Background()); err != nil {
+				glog.Errorf("Error shutting down server: %v", err)
+				return
+			}
+		}()
+	})
+
+	err := s.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
+		l.Err = fmt.Errorf("ListenAndServe: %s", err)
+		return ""
+	}
+
+	return code
+}
+
 // Run invokes the browser-based OIDC login flow.  Returns the authinfo obtained for
 // the user.
 func (l *loginFlow) Run(cfg oidc.Config, issuerURL string) string {
@@ -323,7 +355,7 @@ func (l *loginFlow) Run(cfg oidc.Config, issuerURL string) string {
 	oauth2Config := oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
-		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
+		RedirectURL:  fmt.Sprintf("http://localhost:%d", port),
 
 		// Discovery returns the OAuth2 endpoints.
 		Endpoint: provider.Endpoint(),
@@ -336,11 +368,12 @@ func (l *loginFlow) Run(cfg oidc.Config, issuerURL string) string {
 	glog.Infof("Visit the URL for the auth dialog: %v", url)
 	helper.LaunchBrowser(true, url)
 
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter the code: ")
-	code, _ := reader.ReadString('\n')
-	code = strings.TrimSpace(code)
+	code := l.getAuthorizationCode()
+	if l.Err != nil {
+		return ""
+	}
 
+	// Exchange code for tokens
 	tok, err := oauth2Config.Exchange(clientContext, code)
 	if err != nil {
 		l.Err = fmt.Errorf("Error getting tokens: %s", err)
