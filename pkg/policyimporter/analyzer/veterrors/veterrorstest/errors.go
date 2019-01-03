@@ -11,10 +11,12 @@ import (
 // ExpectErrors adds an error to testing if the expected and actual errors don't match.
 // Does not verify the ordering of errors.
 func ExpectErrors(expected []string, err error, t *testing.T) {
+	t.Helper()
 	actual := ErrorCodeMap(err)
 	if diff := cmp.Diff(toMap(expected), actual); diff != "" {
-		t.Errorf("error mismatch\n%s", diff)
-		t.Error(err)
+		// All of expected, err and diff are needed to debug this error message
+		// effectively when it happens.
+		t.Errorf("expected:\n%v\nactual:\n%v\ndiff:\n%v", expected, err, diff)
 	}
 }
 

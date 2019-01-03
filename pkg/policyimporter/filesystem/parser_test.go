@@ -94,11 +94,11 @@ kind: ResourceQuota
 apiVersion: v1
 metadata:
   name: pod-quota{{.ID}}
+{{template "objectmetatemplate" .}}
 spec:
   hard:
     pods: "10"
 `
-
 	aRoleTemplate = `
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -344,6 +344,16 @@ spec:
       environment: prod
 `
 
+	aClusterSelectorWithEnvTemplate = `
+apiVersion: nomos.dev/v1alpha1
+kind: ClusterSelector
+metadata:
+  name: {{.Name}}
+spec:
+  selector:
+    matchLabels:
+      environment: {{.Environment}}
+`
 	anUndefinedResourceTemplate = `
 apiVersion: does.not.exist/v1
 kind: Nonexistent
@@ -392,6 +402,7 @@ var (
 	aNode                              = tpl("aNode", aNodeTemplate)
 	aClusterRegistryCluster            = tpl("aClusterRegistryCluster", aClusterRegistryClusterTemplate)
 	aClusterSelector                   = tpl("aClusterSelector", aClusterSelectorTemplate)
+	aClusterSelectorWithEnv            = tpl("aClusterSelector", aClusterSelectorWithEnvTemplate)
 	aNamespaceSelector                 = tpl("aNamespaceSelectorTemplate", aNamespaceSelectorTemplate)
 	aNamedRole                         = tpl("aNamedRole", aNamedRoleTemplate)
 	aNamedSync                         = tpl("aNamedSync", aNamedSyncTemplate)
@@ -401,8 +412,12 @@ var (
 // templateData can be used to format any of the below values into templates to create
 // a repository file set.
 type templateData struct {
-	ID, Name, Namespace, Attribute, Group, Version, Kind, LBPName, HierarchyMode string
-	Labels, Annotations                                                          map[string]string
+	ID, Name, Namespace, Attribute string
+	Group, Version, Kind           string
+	LBPName, HierarchyMode         string
+	Labels, Annotations            map[string]string
+	// Environment is formatted into selectors that have matchLabels sections.
+	Environment string
 }
 
 func (d templateData) apply(t *template.Template) string {
@@ -2824,6 +2839,159 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 					}),
 			},
+		},
+		{
+			// Look at Tree dir below for the meat of the test.
+			testName: "Quotas targeted to different clusters may coexist in a namespace",
+			root:     "foo",
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/rq.yaml":                 templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+				"system/nomos.yaml":              aRepo,
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/cluster-2.yaml": templateData{
+					Name: "cluster-2",
+					Labels: map[string]string{
+						"environment": "test",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name:        "sel-1",
+					Environment: "prod",
+				}.apply(aClusterSelectorWithEnv),
+				"clusterregistry/sel-2.yaml": templateData{
+					Name:        "sel-2",
+					Environment: "test",
+				}.apply(aClusterSelectorWithEnv),
+
+				// Tree dir  The quota resources below are in the same directory,
+				// but targeted to a different cluster.
+				"namespaces/bar/quota-1.yaml": templateData{
+					ID: "1",
+					Annotations: map[string]string{
+						v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+					},
+				}.apply(aQuota),
+				"namespaces/bar/quota-2.yaml": templateData{
+					ID: "2",
+					Annotations: map[string]string{
+						v1alpha1.ClusterSelectorAnnotationKey: "sel-2",
+					},
+				}.apply(aQuota),
+
+				// Cluster dir (cluster scoped objects).
+				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
+			},
+			expectedClusterPolicy: policynode.NewClusterPolicy(
+				v1.ClusterPolicyName,
+				&v1.ClusterPolicySpec{
+					ClusterRoleBindingsV1: crbs(
+						templateData{
+							Name: "1",
+							Annotations: map[string]string{
+								v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+								v1alpha1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
+							},
+						}),
+					Resources: []v1.GenericResources{
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kind:  "ClusterRoleBinding",
+							Versions: []v1.GenericVersionResources{
+								{
+									Version: "v1",
+									Objects: []runtime.RawExtension{
+										{
+											Object: runtime.Object(
+												crbPtr(templateData{
+													Name: "1",
+													Annotations: map[string]string{
+														v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+														v1alpha1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
+													},
+												}),
+											),
+										},
+									},
+								},
+							},
+						},
+					},
+				}),
+			expectedPolicyNodes: map[string]v1.PolicyNode{
+				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+					}),
+				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
+					&Policies{
+						RoleBindingsV1: rbs(
+							templateData{Name: "job-creators",
+								Annotations: map[string]string{
+									v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+									v1alpha1.SourcePathAnnotationKey:  "namespaces/bar/rolebinding.yaml",
+								},
+							}),
+					},
+					/* Labels */
+					nil,
+					/* Annotations */
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+					}),
+			},
+		},
+		{
+			testName: "Quotas targeted to a cluster and everything conflict in that cluster",
+			root:     "foo",
+			testFiles: fstesting.FileContentMap{
+				// System dir
+				"system/rq.yaml":                 templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+				"system/nomos.yaml":              aRepo,
+				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
+
+				// Cluster registry dir
+				"clusterregistry/cluster-1.yaml": templateData{
+					Name: "cluster-1",
+					Labels: map[string]string{
+						"environment": "prod",
+					},
+				}.apply(aClusterRegistryCluster),
+				"clusterregistry/sel-1.yaml": templateData{
+					Name:        "sel-1",
+					Environment: "prod",
+				}.apply(aClusterSelectorWithEnv),
+
+				// Tree dir  The quota resources below are in the same directory,
+				// but targeted to a different cluster.
+				"namespaces/bar/quota-1.yaml": templateData{
+					ID: "1",
+					Annotations: map[string]string{
+						v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+					},
+				}.apply(aQuota),
+				// This quota should apply everywhere
+				"namespaces/bar/quota-2.yaml": templateData{
+					ID: "2",
+				}.apply(aQuota),
+
+				// Cluster dir (cluster scoped objects).
+				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
+			},
+			// "A directory MUST not contain more than one ResourceQuota..."
+			expectedErrorCodes: []string{"1008"},
 		},
 	}
 	for _, test := range tests {

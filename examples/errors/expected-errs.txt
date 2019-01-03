@@ -48,8 +48,8 @@ kind: ClusterRole
 
 [7] KNV1008: A directory MUST NOT contain more than one ResourceQuota Resource. Directory "namespaces/prod/prod-namespace" contains multiple ResourceQuota Resources:
 
-source: namespaces/prod/prod-namespace/quota-2.yaml
-metadata.name: pod-quota-2
+source: namespaces/prod/prod-namespace/quota-1.yaml
+metadata.name: pod-quota-1
 group: 
 version: v1
 kind: ResourceQuota

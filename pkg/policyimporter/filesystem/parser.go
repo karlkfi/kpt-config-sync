@@ -30,6 +30,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
@@ -218,7 +219,8 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
 
 	nsInfos := p.readResources(nsDir, &errorBuilder)
-	validateNamespaces(nsInfos, nsDirsOrdered, &errorBuilder)
+	validateNamespaces(nsInfos, nsDirsOrdered,
+		coverage.NewForCluster(clusters, selectors, &errorBuilder), &errorBuilder)
 
 	// TODO: temporary until processDirs refactoring
 	dirInfos := toDirInfoMap(nsInfos)

@@ -13,57 +13,33 @@ import (
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 )
 
-type testCase struct {
-	root string
-}
+type testCase string
 
 func (tc testCase) Root() string {
-	return filepath.Join("../../../", tc.root)
+	return filepath.Join("../../../", string(tc))
 }
 
 func TestParse(t *testing.T) {
-	testCases := []testCase{
-		{
-			root: "examples/errors",
-		},
-		{
-			root: "examples/parse-errors/empty-system-dir",
-		},
-		{
-			root: "examples/parse-errors/illegal-namespace-sync",
-		},
-		{
-			root: "examples/parse-errors/illegal-system-kind",
-		},
-		{
-			root: "examples/parse-errors/invalid-crd-name",
-		},
-		{
-			root: "examples/parse-errors/invalid-resources-sync",
-		},
-		{
-			root: "examples/parse-errors/kind-with-multiple-versions",
-		},
-		{
-			root: "examples/parse-errors/missing-repo",
-		},
-		{
-			root: "examples/parse-errors/missing-system-dir",
-		},
-		{
-			root: "examples/parse-errors/multiple-repos",
-		},
-		{
-			root: "examples/parse-errors/unsupported-repo-version",
-		},
+	tests := []testCase{
+		"examples/errors",
+		"examples/parse-errors/empty-system-dir",
+		"examples/parse-errors/illegal-namespace-sync",
+		"examples/parse-errors/illegal-system-kind",
+		"examples/parse-errors/invalid-crd-name",
+		"examples/parse-errors/invalid-resources-sync",
+		"examples/parse-errors/kind-with-multiple-versions",
+		"examples/parse-errors/missing-repo",
+		"examples/parse-errors/missing-system-dir",
+		"examples/parse-errors/multiple-repos",
+		"examples/parse-errors/unsupported-repo-version",
 	}
 
-	for _, tc := range testCases {
-		runTestCase(t, tc)
+	for _, test := range tests {
+		t.Run(string(test), test.Run)
 	}
 }
 
-func runTestCase(t *testing.T, tc testCase) {
+func (tc *testCase) Run(t *testing.T) {
 	var expected []string
 	expectedFile, err := os.Open(filepath.Join(tc.Root(), "expected-errs.txt"))
 	if err != nil && !os.IsNotExist(err) {
@@ -103,10 +79,9 @@ func runTestCase(t *testing.T, tc testCase) {
 	diff := cmp.Diff(expected, actual)
 
 	if diff != "" {
-		t.Errorf("Test Dir %q", tc.root)
-		t.Error(diff)
+		t.Errorf("diff:\n%v", diff)
 		t.Errorf(`If this change is correct, run:
 make build
-nomos vet --path=%[1]s --validate=false 2> %[1]s/expected-errs.txt`, tc.root)
+nomos vet --path=%[1]v --validate=false 2> %[1]v/expected-errs.txt`, *tc)
 	}
 }
