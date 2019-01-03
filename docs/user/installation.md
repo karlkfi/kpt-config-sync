@@ -54,7 +54,8 @@ Ensure that the current user has cluster-admin in the cluster:
 $ kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user <user>
 ```
 
-On GKE clusters, `<user>` would be the GSuite account (e.g. `charlie@foo-corp.com`).
+On GKE clusters, `<user>` would be the GSuite account (e.g.
+`charlie@foo-corp.com`).
 
 ### Download Operator Manifest Bundle
 

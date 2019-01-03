@@ -2,12 +2,12 @@
 
 ![drawing](../img/nomos_arch.png)
 
-The above diagram is a simplified view of GKE Policy Management components
-running on multiple Kubernetes clusters. Each component is described below.
+System diagram above shows all GKE Policy Management components running on
+multiple Kubernetes clusters. Each component is described below.
 
-## PolicyImporter
+## git-policy-importer
 
-PolicyImporter is an abstraction for a controller that consumes policy
+A PolicyImporter is an abstraction for a controller that consumes policy
 definitions from an external source of truth and builds a canonical
 representation of the hierarchy using cluster-level CRD(s) defined by GKE Policy
 Management. GKE Policy Management can be extended to support different sources
@@ -15,44 +15,52 @@ of truth (e.g. Git, GCS, Active Directory) using different implementations of
 this abstraction. Note that we treat this canonical representation as internal
 implementation which should not be directly consumed by users.
 
+`git-policy-importer` is an implementation of PolicyImporter. The pod consists
+of 2 containers:
+
+*   `git-sync`: A side-car that pulls a Git repo into a volume mount. In the
+    future, this can be replaced with other implementations reading from a
+    different source of truth.
+*   `policy-importer`: Reads the repo from the volume mount and reconciles
+    resources via API server.
+
 ## CustomResourceDefinitions
 
 GKE Policy Management defines three custom resources:
 
-*   PolicyNode: A resource that stores hierarchical policy information. This
+*   `PolicyNode`: A resource that stores hierarchical policy information. This
     includes Roles, RoleBindings and ResourceQuota. PolicyNodes form a tree,
     where leaf nodes represent Namespaces.
-*   ClusterPolicy: A resource that stores cluster-level resources such as
+*   `ClusterPolicy`: A resource that stores cluster-level resources such as
     ClusterRoles and PodSecurityPolicies. There is only one ClusterPolicy per
     cluster.
-*   Sync: A resource that stores the resource types that GKE Policy Management
+*   `Sync`: A resource that stores the resource types that GKE Policy Management
     will sync from the source of truth.
 
-## Syncer
+## syncer
 
 A controller (currently packaged as a single binary) that consumes the canonical
-representation of the hierarchy produced by PolicyImporter and performs CRUD on
+representation of the hierarchy produced by policy-importer and performs CRUD on
 namespaces and [sync-enabled](system_config.md#Sync) resources.
 
-## ResourceQuotaAdmissionController
+## resourcequota-admission-controller
 
 A ValidatingAdmissionWebhook that enforces hierarchical quota policies which
 provides hierarchical quota on top of the existing ResourceQuota admission
 controller. This is an optional component if the user chooses not to use
 [hierarchical Resource Quota feature](rq.md).
 
-## Monitor
+## monitor
 
-Monitor is a controller that watches the ClusterPolicy and all PolicyNodes as
-they get updated by the PolicyImporter and Syncer. It aggregates status such as
-how many policies are synced or stale and the latency between import and sync.
-All metrics are exported as Prometheus metrics and documented on the
+A controller that watches the ClusterPolicy and all PolicyNodes as they get
+updated by the controllers above. It aggregates status such as how many policies
+are synced or stale and the latency between import and sync. All metrics are
+exported as Prometheus metrics and documented on the
 [Monitoring page](monitoring_and_debugging.md#gke-policy-management-metrics).
 
-## NomosOperator
+## nomos-operator
 
-NomosOperator is a [standard operator](https://coreos.com/operators/) which is
-used to install Nomos components on a cluster and update them as new versions
-become available.
+A [standard operator](https://coreos.com/operators/) which is used to install
+Nomos components on a cluster and update them as new versions become available.
 
 [< Back](../../README.md)
