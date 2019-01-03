@@ -103,7 +103,7 @@ test-e2e-dev-%: e2e-staging
 # Requires kubeconfig set up properly with Nomos cluster.
 test-nomos-vet-local: build
 	@echo "Running test-nomos-vet-local..."
-	$(NOMOS_LOCAL) vet --path=$(TOP_DIR)/examples/acme
+	$(NOMOS_LOCAL) --validate vet --path=$(TOP_DIR)/examples/acme
 	$(NOMOS_LOCAL) vet --path=$(TOP_DIR)/examples/foo-corp-example/foo-corp
 
 	@rm -rf $(TOP_DIR)/.output/tmp/empty

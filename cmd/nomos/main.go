@@ -9,8 +9,8 @@ import (
 	"github.com/google/nomos/cmd/nomos/initialize"
 	"github.com/google/nomos/cmd/nomos/vet"
 	"github.com/google/nomos/cmd/nomos/view"
-	"github.com/google/nomos/pkg/util/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -33,11 +33,10 @@ func init() {
 	rootCmd.PersistentFlags().Var(&flags.Path, flags.PathFlag,
 		`The path to use as a GKE Policy Management directory. Defaults to the working directory.
 `)
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 }
 
 func main() {
-	flag.Parse()
-	log.Setup()
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
