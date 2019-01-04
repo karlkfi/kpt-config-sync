@@ -21,74 +21,15 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
-	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
 	"github.com/google/nomos/pkg/util/multierror"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
-
-// ClusterCoverage contains information about which clusters are covered by which cluster
-// selectors.
-type ClusterCoverage struct {
-	clusterNames     map[string]bool
-	coveredClusters  map[string]bool
-	selectorNames    map[string]bool
-	coveredSelectors map[string]bool
-}
-
-func newClusterCoverage(
-	clusters []clusterregistry.Cluster,
-	selectors []v1alpha1.ClusterSelector,
-	errs *multierror.Builder,
-) *ClusterCoverage {
-	cov := ClusterCoverage{
-		clusterNames:     map[string]bool{},
-		coveredClusters:  map[string]bool{},
-		selectorNames:    map[string]bool{},
-		coveredSelectors: map[string]bool{},
-	}
-	for _, c := range clusters {
-		cov.clusterNames[c.ObjectMeta.Name] = true
-	}
-	for _, s := range selectors {
-		cov.selectorNames[s.ObjectMeta.Name] = true
-	}
-	for _, s := range selectors {
-		sn := s.ObjectMeta.Name
-		selector, err := sels.AsPopulatedSelector(&s.Spec.Selector)
-		if err != nil {
-			// TODO(b/120229144): Impossible to get here.
-			errs.Add(veterrors.InvalidSelectorError{Name: sn, Cause: err})
-			continue
-		}
-		for _, c := range clusters {
-			cn := c.ObjectMeta.Name
-			if sels.IsSelected(c.ObjectMeta.Labels, selector) {
-				cov.coveredClusters[cn] = true
-				cov.coveredSelectors[sn] = true
-			}
-		}
-	}
-	return &cov
-}
-
-// ValidateObject validates the coverage of the object with clusters and selectors. An object
-// may not have an annotation, but if it does, it has to map to a valid selector.  Also if an
-// object has a selector in the annotation, that annotation must refer to a valid selector.
-func (c ClusterCoverage) ValidateObject(o metav1.Object, errs *multierror.Builder) {
-	a := v1alpha1.GetClusterSelectorAnnotation(o.GetAnnotations())
-	if a == "" {
-		return
-	}
-	if !c.selectorNames[a] {
-		errs.Add(veterrors.ObjectHasUnknownClusterSelector{Object: o, Annotation: a})
-	}
-}
 
 // InputValidator checks various filesystem constraints after loading into the tree format.
 // Error messages emitted from the validator should be formatted to first print the constraint
@@ -100,7 +41,7 @@ type InputValidator struct {
 	reserved         *reserved.Namespaces
 	nodes            []*ast.TreeNode
 	allowedGVKs      map[schema.GroupVersionKind]bool
-	coverage         *ClusterCoverage
+	coverage         *coverage.ForCluster
 	inheritanceSpecs map[schema.GroupKind]*transform.InheritanceSpec
 }
 
@@ -128,7 +69,7 @@ func NewInputValidator(
 	v.Base.SetImpl(v)
 
 	if vet {
-		v.coverage = newClusterCoverage(clusters, cs, &v.errs)
+		v.coverage = coverage.NewForCluster(clusters, cs, &v.errs)
 	}
 	return v
 }
