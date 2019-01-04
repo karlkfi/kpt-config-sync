@@ -73,7 +73,7 @@ function check_metrics_pages() {
   resource::check_count -n analytics -r rolebinding -c 2
   resource::check -n analytics rolebinding mike-rolebinding -l "nomos.dev/managed=enabled"
   resource::check -n analytics rolebinding alice-rolebinding -l "nomos.dev/managed=enabled"
-  resource::check_count -n analytics -r resourcequota -c 1
+  resource::check_count -n analytics -r resourcequota -c 1 -l "nomos.dev/managed=enabled"
   resource::check -n analytics resourcequota nomos-resource-quota -l "nomos.dev/managed=enabled"
 
   # backend
@@ -81,7 +81,7 @@ function check_metrics_pages() {
   resource::check_count -n backend -r rolebinding -c 2
   resource::check -n backend rolebinding bob-rolebinding -l "nomos.dev/managed=enabled"
   resource::check -n backend rolebinding alice-rolebinding -l "nomos.dev/managed=enabled"
-  resource::check_count -n backend -r resourcequota -c 1
+  resource::check_count -n backend -r resourcequota -c 1 -l "nomos.dev/managed=enabled"
   resource::check -n backend resourcequota nomos-resource-quota -l "nomos.dev/managed=enabled"
   run kubectl get quota -n backend -o yaml
   assert::contains 'pods: "1"'
@@ -92,20 +92,20 @@ function check_metrics_pages() {
   resource::check_count -n frontend -r rolebinding -c 2
   resource::check -n frontend rolebinding alice-rolebinding -l "nomos.dev/managed=enabled"
   resource::check -n frontend rolebinding sre-admin -l "nomos.dev/managed=enabled"
-  resource::check_count -n frontend -r resourcequota -c 1
+  resource::check_count -n frontend -r resourcequota -c 1 -l "nomos.dev/managed=enabled"
   resource::check -n frontend resourcequota nomos-resource-quota -l "nomos.dev/managed=enabled"
 
   # new-prj
   resource::check_count -n new-prj -r role -c 1
   resource::check -n new-prj role acme-admin -l "nomos.dev/managed=enabled"
   resource::check_count -n new-prj -r rolebinding -c 0
-  resource::check_count -n new-prj -r resourcequota -c 1
+  resource::check_count -n new-prj -r resourcequota -c 1 -l "nomos.dev/managed=enabled"
   resource::check -n new-prj resourcequota nomos-resource-quota -l "nomos.dev/managed=enabled"
 
   # newer-prj
   resource::check_count -n newer-prj -r role -c 0
   resource::check_count -n newer-prj -r rolebinding -c 0
-  resource::check_count -n newer-prj -r resourcequota -c 1
+  resource::check_count -n newer-prj -r resourcequota -c 1 -l "nomos.dev/managed=enabled"
   resource::check -n newer-prj resourcequota nomos-resource-quota -l "nomos.dev/managed=enabled"
 
   local services=(

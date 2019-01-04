@@ -47,7 +47,7 @@ load "../lib/wait"
   resource::check_count -n audit -r role -c 0
   resource::check_count -n audit -r rolebinding -c 1
   resource::check -n audit rolebinding viewers -l "nomos.dev/managed=enabled"
-  resource::check_count -n audit -r resourcequota -c 0
+  resource::check_count -n audit -r resourcequota -c 0 -l "nomos.dev/managed=enabled"
 
   # shipping-dev
   resource::check_count -n shipping-dev -r role -c 1
@@ -56,7 +56,7 @@ load "../lib/wait"
   resource::check -n shipping-dev rolebinding viewers -l "nomos.dev/managed=enabled"
   resource::check -n shipping-dev rolebinding pod-creators -l "nomos.dev/managed=enabled"
   resource::check -n shipping-dev rolebinding job-creators -l "nomos.dev/managed=enabled"
-  resource::check_count -n shipping-dev -r resourcequota -c 1
+  resource::check_count -n shipping-dev -r resourcequota -c 1 -l "nomos.dev/managed=enabled"
   resource::check -n shipping-dev resourcequota nomos-resource-quota -l "nomos.dev/managed=enabled"
 
   # shipping-staging
@@ -64,7 +64,7 @@ load "../lib/wait"
   resource::check_count -n shipping-staging -r rolebinding -c 2
   resource::check -n shipping-staging rolebinding viewers -l "nomos.dev/managed=enabled"
   resource::check -n shipping-staging rolebinding pod-creators -l "nomos.dev/managed=enabled"
-  resource::check_count -n shipping-staging -r resourcequota -c 1
+  resource::check_count -n shipping-staging -r resourcequota -c 1 -l "nomos.dev/managed=enabled"
   resource::check -n shipping-staging resourcequota nomos-resource-quota -l "nomos.dev/managed=enabled"
 
   # shipping-prod
@@ -73,7 +73,7 @@ load "../lib/wait"
   resource::check -n shipping-prod rolebinding viewers -l "nomos.dev/managed=enabled"
   resource::check -n shipping-prod rolebinding pod-creators -l "nomos.dev/managed=enabled"
   resource::check -n shipping-prod rolebinding sre-admin -l "nomos.dev/managed=enabled"
-  resource::check_count -n shipping-prod -r resourcequota -c 1
+  resource::check_count -n shipping-prod -r resourcequota -c 1 -l "nomos.dev/managed=enabled"
   resource::check -n shipping-prod resourcequota nomos-resource-quota -l "nomos.dev/managed=enabled"
 }
 
