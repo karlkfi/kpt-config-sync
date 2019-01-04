@@ -879,7 +879,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.MultipleNamespacesErrorCode},
+		expectedErrorCodes: []string{veterrors.MultipleNamespacesErrorCode, veterrors.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces with different names",
@@ -1058,7 +1058,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/role1.yaml": templateData{}.apply(aRole),
 			"namespaces/bar/role2.yaml": templateData{}.apply(aRole),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
 	},
 	{
 		testName: "Namespace dir with multiple RoleBindings",
@@ -1082,7 +1082,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
 	},
 	{
 		testName: "Policyspace dir with duplicate RoleBindings",
@@ -1094,7 +1094,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r2.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
 	},
 	{
 		testName: "Namespace dir with non-conflicting reserved Namespace specified",
@@ -1487,7 +1487,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
 			"namespaces/bar/baz/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
 	},
 	{
 		testName: "Policyspace and Namespace dir have duplicate Deployments",
@@ -1500,7 +1500,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/depl1.yaml": aDeploymentTemplate,
 		},
 		expectedErrorCodes: []string{
-			veterrors.ObjectNameCollisionErrorCode,
+			veterrors.MetadataNameCollisionErrorCode,
 			veterrors.IllegalAbstractNamespaceObjectKindErrorCode,
 			veterrors.InvalidNamespaceNameErrorCode,
 		},
@@ -1707,7 +1707,7 @@ spec:
 			"cluster/cr1.yaml":  templateData{ID: "1"}.apply(aClusterRole),
 			"cluster/cr2.yaml":  templateData{ID: "1"}.apply(aClusterRole),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
 	},
 	{
 		testName: "Cluster dir with duplicate ClusterRoleBinding names",
@@ -1718,7 +1718,7 @@ spec:
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			"cluster/crb2.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
 	},
 	{
 		testName: "Clusterregistry dir with duplicate Cluster names",
@@ -1739,7 +1739,7 @@ spec:
 				},
 			}.apply(aClusterRegistryCluster),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Cluster dir with duplicate PodSecurityPolicy names",
@@ -1750,7 +1750,7 @@ spec:
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
 	},
 	{
 		testName: "Dir name not unique 1",
@@ -1903,7 +1903,7 @@ spec:
 			"system/nomos-1.yaml": aRepo,
 			"system/nomos-2.yaml": aRepo,
 		},
-		expectedErrorCodes: []string{veterrors.MultipleRepoDefinitionsErrorCode, veterrors.ObjectNameCollisionErrorCode},
+		expectedErrorCodes: []string{veterrors.MultipleRepoDefinitionsErrorCode, veterrors.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Duplicate ConfigMap definitions is an error",
@@ -1913,7 +1913,7 @@ spec:
 			"system/reserved-1.yaml": templateData{Namespace: "baz", Attribute: string(v1alpha1.ReservedAttribute), Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 			"system/reserved-2.yaml": templateData{Namespace: "baz", Attribute: string(v1alpha1.ReservedAttribute), Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
 		},
-		expectedErrorCodes: []string{veterrors.MultipleConfigMapsErrorCode, veterrors.ObjectNameCollisionErrorCode},
+		expectedErrorCodes: []string{veterrors.MultipleConfigMapsErrorCode, veterrors.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Unsupported repo version is an error",
@@ -1948,7 +1948,7 @@ spec:
 			"namespaces/foo/rb-1.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/rb-2.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "No name collision if types different",
@@ -1970,7 +1970,7 @@ spec:
 			"namespaces/foo/rb-1.yaml":     templateData{ID: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/bar/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Name collision in grandchild node",
@@ -1981,7 +1981,7 @@ spec:
 			"namespaces/foo/rb-1.yaml":         templateData{ID: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/bar/qux/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "No name collision in sibling nodes",
@@ -2021,7 +2021,7 @@ spec:
 			"system/rb-1.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", Name: "sync"}.apply(aNamedSync),
 			"system/rb-2.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role", Name: "sync"}.apply(aNamedSync),
 		},
-		expectedErrorCodes: []string{veterrors.ObjectNameCollisionErrorCode},
+		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Repo outside system/ is an error",
@@ -3012,7 +3012,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			expectedErrorCodes: []string{
 				veterrors.IllegalSubdirectoryErrorCode,
 				veterrors.MultipleRepoDefinitionsErrorCode,
-				veterrors.ObjectNameCollisionErrorCode},
+				veterrors.MetadataNameCollisionErrorCode},
 		},
 		{
 			testName:    "Objects in non-namespaces/ with an invalid label is an error",

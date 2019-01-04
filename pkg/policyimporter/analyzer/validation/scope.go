@@ -60,7 +60,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 			"Namespace scoped object %s with Name %q in file %q cannot be declared in %q "+
 				"directory.  Move declaration to the appropriate %q directory.",
 			gvk,
-			o.ToMeta().GetName(),
+			o.MetaObject().GetName(),
 			o.Source(),
 			repo.ClusterDir,
 			repo.NamespacesDir,
@@ -82,7 +82,7 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 			"Cluster scoped object %s with Name %q from file %s cannot be declared inside "+
 				"%q directory.  Move declaration to the %q directory.",
 			gvk,
-			o.ToMeta().GetName(),
+			o.MetaObject().GetName(),
 			o.Source(),
 			repo.NamespacesDir,
 			repo.ClusterDir,

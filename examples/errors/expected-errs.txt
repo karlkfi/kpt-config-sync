@@ -1,4 +1,4 @@
-Found issues: 21 error(s)
+Found issues: 22 error(s)
 
 
 [1] KNV1001: Directories MUST NOT have reserved namespace names. Rename or remove directory:
@@ -147,7 +147,7 @@ version: v1
 kind: RoleBinding
 
 
-[19] KNV1030: A directory may declare at most one Namespace Resource:
+[19] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
 
 source: namespaces/prod/prod-namespace/namespace-1.yaml
 metadata.name: prod-namespace
@@ -162,7 +162,22 @@ version: v1
 kind: Namespace
 
 
-[20] KNV1031: Resources must declare metadata.name:
+[20] KNV1030: A directory may declare at most one Namespace Resource:
+
+source: namespaces/prod/prod-namespace/namespace-1.yaml
+metadata.name: prod-namespace
+group: 
+version: v1
+kind: Namespace
+
+source: namespaces/prod/prod-namespace/namespace-2.yaml
+metadata.name: prod-namespace
+group: 
+version: v1
+kind: Namespace
+
+
+[21] KNV1031: Resources must declare metadata.name:
 
 source: namespaces/prod/prod-namespace/nameless-rolebinding.yaml
 metadata.name: 
@@ -171,7 +186,7 @@ version: v1
 kind: RoleBinding
 
 
-[21] KNV1033: Resources of the below kind MUST NOT be declared outside system/:
+[22] KNV1033: Resources of the below kind MUST NOT be declared outside system/:
 source: namespaces/prod/prod-namespace/illegal-sync.yaml
 metadata.name: illegal-sync
 group: nomos.dev

@@ -134,7 +134,7 @@ func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) *ast.Name
 	glog.V(5).Infof("VisitObject(): ENTER")
 	defer glog.V(6).Infof("VisitObject(): EXIT")
 	newObject := v.Copying.VisitObject(o)
-	m := newObject.ToMeta()
+	m := newObject.MetaObject()
 	v.errs.Add(errors.Wrapf(v.nsTransformer.transform(m),
 		"failed to inline annotation for object %q", m.GetName()))
 	v.errs.Add(errors.Wrapf(v.clusterSelectorTransformer.transform(m),
@@ -148,7 +148,7 @@ func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) *ast
 	glog.V(5).Infof("VisitClusterObject(): ENTER")
 	defer glog.V(6).Infof("VisitClusterObject(): EXIT")
 	newObject := o.DeepCopy()
-	m := newObject.ToMeta()
+	m := newObject.MetaObject()
 	v.errs.Add(errors.Wrapf(v.clusterSelectorTransformer.transform(m),
 		"failed to inline cluster selector annotations for object %q", m.GetName()))
 	annotatePopulated(m, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())

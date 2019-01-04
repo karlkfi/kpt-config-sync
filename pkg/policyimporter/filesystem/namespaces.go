@@ -15,7 +15,7 @@ import (
 // validateNamespaces validates all Resources in namespaces/ including Namespaces and Abstract
 // Namespaces.
 func validateNamespaces(objects []ast.FileObject, dirs []string, errorBuilder *multierror.Builder) {
-	metadata.Validate(objects, errorBuilder)
+	metadata.Validate(toResourceMetas(objects), errorBuilder)
 
 	syntax.DirectoryNameValidator.Validate(dirs, errorBuilder)
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)

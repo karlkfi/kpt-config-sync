@@ -1,6 +1,7 @@
 package veterrors
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -15,8 +16,13 @@ type IllegalLabelDefinitionError struct {
 
 // Error implements error.
 func (e IllegalLabelDefinitionError) Error() string {
-	sort.Strings(e.Labels) // ensure deterministic label order
-	l := strings.Join(e.Labels, ", ")
+	labels := e.Labels
+	sort.Strings(labels) // ensure deterministic label order
+	labels2 := make([]string, len(labels))
+	for i, label := range labels {
+		labels2[i] = fmt.Sprintf("%q", label)
+	}
+	l := strings.Join(labels2, ", ")
 	return format(e,
 		"Resources MUST NOT declare labels starting with %[3]q. "+
 			"Below Resource declares these offending labels: %[1]s\n\n"+

@@ -158,7 +158,7 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterOb
 		v.errs.Add(veterrors.UnsyncableClusterObjectError{ResourceID: o})
 	}
 	if v.coverage != nil {
-		v.coverage.ValidateObject(o.ToMeta(), &v.errs)
+		v.coverage.ValidateObject(o.MetaObject(), &v.errs)
 	}
 	return v.Base.VisitClusterObject(o)
 }
@@ -181,7 +181,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	}
 
 	if v.coverage != nil {
-		v.coverage.ValidateObject(o.ToMeta(), &v.errs)
+		v.coverage.ValidateObject(o.MetaObject(), &v.errs)
 	}
 
 	return v.Base.VisitObject(o)

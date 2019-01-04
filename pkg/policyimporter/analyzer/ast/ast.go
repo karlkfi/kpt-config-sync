@@ -57,8 +57,8 @@ func (o *FileObject) Source() string {
 	return o.source
 }
 
-// ToMeta converts the underlying object to a metav1.Object
-func (o *FileObject) ToMeta() metav1.Object {
+// MetaObject converts the underlying object to a metav1.Object
+func (o *FileObject) MetaObject() metav1.Object {
 	return o.Object.(metav1.Object)
 }
 
@@ -69,7 +69,7 @@ func (o *FileObject) GroupVersionKind() schema.GroupVersionKind {
 
 // Name returns the user-defined name of the object.
 func (o *FileObject) Name() string {
-	return o.ToMeta().GetName()
+	return o.MetaObject().GetName()
 }
 
 // Root represents a set of declared policies, configuration for how those policies will be

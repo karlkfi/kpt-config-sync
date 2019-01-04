@@ -7,14 +7,14 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 
-// ObjectNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
-type ObjectNameCollisionError struct {
+// MetadataNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
+type MetadataNameCollisionError struct {
 	Name       string
 	Duplicates []ResourceID
 }
 
 // Error implements error
-func (e ObjectNameCollisionError) Error() string {
+func (e MetadataNameCollisionError) Error() string {
 	var strs []string
 	for _, duplicate := range e.Duplicates {
 		strs = append(strs, printResourceID(duplicate))
@@ -28,4 +28,4 @@ func (e ObjectNameCollisionError) Error() string {
 }
 
 // Code implements Error
-func (e ObjectNameCollisionError) Code() string { return ObjectNameCollisionErrorCode }
+func (e MetadataNameCollisionError) Code() string { return MetadataNameCollisionErrorCode }

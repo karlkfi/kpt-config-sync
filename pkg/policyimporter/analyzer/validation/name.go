@@ -90,14 +90,14 @@ func (n nameChecker) add(scope string, o *ast.FileObject) error {
 		n[gk] = gkObjs
 	}
 
-	name := o.ToMeta().GetName()
+	name := o.MetaObject().GetName()
 	prev, found := gkObjs[name]
 	if found {
 		return errors.Errorf(
 			"%s scoped object %s with Name %q has duplicate declarations:\n%s:\n%#v\n%s:\n%#v",
 			scope,
 			o.GetObjectKind().GroupVersionKind(),
-			o.ToMeta().GetName(),
+			o.MetaObject().GetName(),
 			prev.Source(),
 			prev.Object,
 			o.Source(),

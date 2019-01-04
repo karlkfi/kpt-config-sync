@@ -16,7 +16,11 @@ limitations under the License.
 
 package v1alpha1
 
-import "github.com/google/nomos/pkg/api/policyhierarchy"
+import (
+	"strings"
+
+	"github.com/google/nomos/pkg/api/policyhierarchy"
+)
 
 const (
 	// NomosPrefix is the prefix for all Nomos annotations.
@@ -43,11 +47,21 @@ const (
 	SyncTokenAnnotationKey = NomosPrefix + "sync-token"
 )
 
-// InputAnnotations is a map of annotations that are valid to exist on objects when imported from
+// HasNomosPrefix returns true if the string begins with the Nomos annotation prefix.
+func HasNomosPrefix(s string) bool {
+	return strings.HasPrefix(s, NomosPrefix)
+}
+
+// inputAnnotations is a map of annotations that are valid to exist on objects when imported from
 // the filesystem.
-var InputAnnotations = map[string]struct{}{
-	NamespaceSelectorAnnotationKey: {},
-	ClusterSelectorAnnotationKey:   {},
+var inputAnnotations = map[string]bool{
+	NamespaceSelectorAnnotationKey: true,
+	ClusterSelectorAnnotationKey:   true,
+}
+
+// IsInputAnnotation returns true if the annotation is a Nomos input annotation.
+func IsInputAnnotation(s string) bool {
+	return inputAnnotations[s]
 }
 
 var nomosAnnotations = map[string]bool{

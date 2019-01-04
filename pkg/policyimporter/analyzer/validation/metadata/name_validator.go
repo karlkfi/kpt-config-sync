@@ -6,34 +6,33 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
-// MetadataNameValidator validates the value of metadata.name
-var MetadataNameValidator = &syntax.FileObjectValidator{
-	ValidateFn: func(fileObject ast.FileObject) error {
-		gvk := fileObject.GroupVersionKind()
+// NameValidatorFactory validates the value of metadata.name
+var NameValidatorFactory = ValidatorFactory{
+	fn: func(meta ResourceMeta) error {
+		gvk := meta.GroupVersionKind()
 
-		if fileObject.Name() == "" {
+		if meta.Name() == "" {
 			// Name MUST NOT be empty
-			return veterrors.MissingObjectNameError{ResourceID: &fileObject}
+			return veterrors.MissingObjectNameError{ResourceID: meta}
 		} else if isDefaultCrdAllowedInNomos(gvk) {
-			// If CRD, then namee must be a valid DNS1123 subdomain
-			errs := utilvalidation.IsDNS1123Subdomain(fileObject.Name())
+			// If CRD, then name must be a valid DNS1123 subdomain
+			errs := utilvalidation.IsDNS1123Subdomain(meta.Name())
 			if errs != nil {
-				return veterrors.InvalidMetadataNameError{ResourceID: &fileObject}
+				return veterrors.InvalidMetadataNameError{ResourceID: meta}
 			}
 		} else if gvk == kinds.Namespace() {
-			expectedName := path.Base(path.Dir(fileObject.Source()))
+			// TODO(willbeason) Move this to Namespace-specific package.
+			expectedName := path.Base(path.Dir(meta.Source()))
 			if expectedName == repo.NamespacesDir {
-				return veterrors.IllegalTopLevelNamespaceError{ResourceID: &fileObject}
+				return veterrors.IllegalTopLevelNamespaceError{ResourceID: meta}
 			}
-			if fileObject.Name() != expectedName {
-				return veterrors.InvalidNamespaceNameError{ResourceID: &fileObject, Expected: expectedName}
+			if meta.Name() != expectedName {
+				return veterrors.InvalidNamespaceNameError{ResourceID: meta, Expected: expectedName}
 			}
 		}
 		return nil

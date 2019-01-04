@@ -14,6 +14,7 @@ func ExpectErrors(expected []string, err error, t *testing.T) {
 	actual := ErrorCodeMap(err)
 	if diff := cmp.Diff(toMap(expected), actual); diff != "" {
 		t.Errorf("error mismatch\n%s", diff)
+		t.Error(err)
 	}
 }
 

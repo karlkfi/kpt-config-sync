@@ -50,7 +50,7 @@ const (
 	MultipleConfigMapsErrorCode                 = "1026"
 	UnsupportedRepoSpecVersionCode              = "1027"
 	InvalidDirectoryNameErrorCode               = "1028"
-	ObjectNameCollisionErrorCode                = "1029"
+	MetadataNameCollisionErrorCode              = "1029"
 	MultipleNamespacesErrorCode                 = "1030"
 	MissingObjectNameErrorCode                  = "1031"
 	UnknownResourceInSyncErrorCode              = "1032"

@@ -1,6 +1,7 @@
 package veterrors
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -15,8 +16,13 @@ type IllegalAnnotationDefinitionError struct {
 
 // Error implements error.
 func (e IllegalAnnotationDefinitionError) Error() string {
-	sort.Strings(e.Annotations) // ensure deterministic annotation order
-	a := strings.Join(e.Annotations, ", ")
+	annotations := e.Annotations
+	sort.Strings(annotations) // ensure deterministic annotation order
+	annotations2 := make([]string, len(annotations))
+	for i, annotation := range annotations {
+		annotations2[i] = fmt.Sprintf("%q", annotation)
+	}
+	a := strings.Join(annotations2, ", ")
 	return format(e,
 		"Resources MUST NOT declare unsupported annotations starting with %[3]q. "+
 			"Resource has offending annotations: %[1]s\n\n"+

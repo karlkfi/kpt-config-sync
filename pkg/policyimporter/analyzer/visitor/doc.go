@@ -64,7 +64,7 @@ Example usage:
 	// VisitObject removes any object with the "testing=true" annotation while omitting copying of
 	// objects that do not have the annotation.
 	func (v *MyVisitor) VisitObject(o *ast.Object) {
-		metaObj := o.ToMeta()
+		metaObj := o.MetaObject()
 		if metaObj.GetAnnotations() != nil && metaObj.GetAnnotations()["testing"] == "true" {
 			return nil
 		}

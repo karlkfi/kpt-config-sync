@@ -17,12 +17,12 @@ var nilValidatorFactory = ValidatorFactory{
 	fn: func(sync FileGroupVersionKindHierarchySync) error { return nil },
 }
 
-// New returns a ValidatorFactory with the set validation function on the set of passed objects.
+// New returns a Validator with the set validation function on the set of passed FileSyncs.
 func (v ValidatorFactory) New(syncs []FileSync) Validator {
 	return Validator{fn: v.fn, syncs: syncs}
 }
 
-// Validator is a validation function to be applied to a specific set of syncs.
+// Validator is a validation function to be applied to a specific set of FileSyncs.
 type Validator struct {
 	fn    func(sync FileGroupVersionKindHierarchySync) error
 	syncs []FileSync

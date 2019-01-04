@@ -10,7 +10,7 @@ import (
 )
 
 func validateClusterRegistry(objects []ast.FileObject, errorBuilder *multierror.Builder) {
-	metadata.Validate(objects, errorBuilder)
+	metadata.Validate(toResourceMetas(objects), errorBuilder)
 
 	syntax.ClusterregistryKindValidator.Validate(objects, errorBuilder)
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
