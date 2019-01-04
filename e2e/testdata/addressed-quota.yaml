@@ -1,0 +1,21 @@
+kind: ResourceQuota
+apiVersion: v1
+metadata:
+  name: nomos-resource-quota
+  annotations:
+    nomos.dev/cluster-selector: selector-env-prod
+spec:
+  hard:
+    # Magic value that can be tested to prove that the quota has been applied.
+    pods: "133"
+---
+kind: ResourceQuota
+apiVersion: v1
+metadata:
+  name: nomos-resource-quota
+  annotations:
+    nomos.dev/cluster-selector: selector-env-other
+spec:
+  hard:
+    # Magic value that can be tested to prove that the quota has been applied.
+    pods: "266"

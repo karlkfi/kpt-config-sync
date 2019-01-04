@@ -161,3 +161,47 @@ function add_clusterregistry_data() {
   wait::for -- kubectl patch nomos -n=nomos-system nomos --type=merge \
     -p '{"spec":{"clusterName": "e2e-test-cluster"}}'
 }
+
+# Echoes to stdout the current cluster name, based on the content of the configmap
+# from the git-policy-importer deployment.
+function get_cluster_name() {
+  local cluster_name_config_map_name
+  cluster_name_config_map_name=$(kubectl get deployments \
+    -n=nomos-system git-policy-importer -o yaml \
+    --output='jsonpath={.spec.template.spec.containers[0].envFrom[1].configMapRef.name}')
+  local cluster_name
+  cluster_name=$(kubectl get configmaps \
+    -n=nomos-system "${cluster_name_config_map_name}" \
+    --output='jsonpath={.data.CLUSTER_NAME}')
+  echo "${cluster_name}"
+}
+
+@test "ClusterSelector: Target different ResourceQuotas to different clusters" {
+  debug::log "Force a cluster rename in the operator deployment."
+
+  local expected_cluster_name="e2e-test-cluster"
+  # A double rename is needed to ensure that if initially the name matches the
+  # final state, that the operator reloads the deployment anyways.
+  wait::for -t 20 -- kubectl patch nomos -n=nomos-system nomos --type=merge \
+    -p '{"spec":{"clusterName": "bogus-cluster-name"}}'
+  wait::for -t 20 -- kubectl patch nomos -n=nomos-system nomos --type=merge \
+    -p "{\"spec\":{\"clusterName\": \"${expected_cluster_name}\"}}"
+
+  debug::log "Wait for the operator to modify the cluster name in the deployment."
+  wait::for -o "${expected_cluster_name}" -- get_cluster_name 
+
+  add_clusterregistry_data
+
+  debug::log "Add a valid cluster selector annotation to a role binding"
+  git::update \
+    "${YAML_DIR}/addressed-quota.yaml" \
+    acme/namespaces/eng/quota.yaml
+  git::commit -m "Adding quotas targeted to different clusters"
+
+  debug::log "Wait for resource quota to appear in the namespace frontend"
+  local magic_pod_count="133"  # Hard-coded in addressed-quota.yaml
+  wait::for -o "${magic_pod_count}" -- \
+    kubectl get resourcequotas --namespace=frontend \
+    nomos-resource-quota --output='jsonpath={.spec.hard.pods}'
+}
+

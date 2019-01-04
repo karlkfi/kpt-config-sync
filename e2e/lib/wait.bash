@@ -10,12 +10,14 @@
 #  wait::for -f -- <command>
 #
 # Flags
-#   -s                 Wait for success (exit 0)
-#   -f                 Wait for failure (exit nonzero)
-#   -e [exit code]     Wait for specific integer exit code
-#   -t [timeout]       The timeout in seconds (default 30 seconds)
 #   -d [deadline]      The deadline in seconds since the epoch
+#   -e [exit code]     Wait for specific integer exit code
+#   -f                 Wait for failure (exit nonzero)
+#   -o [output]        The expected output at the end of the wait. If omitted,
+#                      output is not checked.  Default: ""
 #   -p [poll interval] The amount of time to wait between executions
+#   -s                 Wait for success (exit 0)
+#   -t [timeout]       The timeout in seconds (default 30 seconds)
 #   -- End of flags, command starts after this
 # Args
 #  Args for command
@@ -25,6 +27,7 @@ function wait::for() {
   local exitf=(wait::__exit_eq 0)
   local timeout=300
   local deadline="$(( $(date +%s) + timeout ))"
+  local expected_output=""
 
   local parse_args=false
   for i in "$@"; do
@@ -62,6 +65,10 @@ function wait::for() {
           sleeptime=${1:-}
           shift
         ;;
+        -o)
+          expected_output=${1:-}
+          shift
+        ;;
         --)
           break
         ;;
@@ -79,6 +86,10 @@ function wait::for() {
   while (( $(date +%s) < deadline )); do
     status=0
     out="$("${args[@]}" 2>&1)" || status=$?
+    if [[ -n "${expected_output}" ]] && [[ "${out}" != "${expected_output}" ]]; then
+      sleep "${sleeptime}"
+      continue
+    fi
     if "${exitf[@]}" "${status}"; then
       return 0
     fi

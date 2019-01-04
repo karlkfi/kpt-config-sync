@@ -21,6 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
@@ -232,6 +234,11 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, vp, nsDirsOrdered, clusterDir, fsCtx, syncs)
 	errorBuilder.Add(err)
 
+	if glog.V(8) {
+		// REALLY useful when debugging.
+		glog.Warningf("allPolicies: %v", spew.Sdump(policies))
+		glog.Warningf("all errors: %v", spew.Sdump(errorBuilder.Build()))
+	}
 	if errorBuilder.HasErrors() {
 		return nil, errorBuilder.Build()
 	}
