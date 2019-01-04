@@ -32,9 +32,11 @@ var (
 	clusterConfig string
 	cfg           oidc.Config
 	// Set with flags
-	issuerURL string
-	scope     string
-	port      int
+	issuerURL   string
+	scope       string
+	port        int
+	openBrowser bool
+	writeConfig bool
 )
 
 func init() {
@@ -56,9 +58,9 @@ func init() {
 	loginCmd.Flags().IntVar(&port, "port",
 		9789,
 		"http://localhost:PORT is the redirect URI used for the OAuth flow.")
-	loginCmd.Flags().BoolVar(&cfg.Open, "open-browser", true,
+	loginCmd.Flags().BoolVar(&openBrowser, "open-browser", true,
 		"If set, open a browser to log in, else print a URL for the user to open")
-	loginCmd.Flags().BoolVar(&cfg.Write,
+	loginCmd.Flags().BoolVar(&writeConfig,
 		"write-config", true, "If set, writes kubectl config for theuser")
 
 	rootCmd.AddCommand(loginCmd)
@@ -284,22 +286,46 @@ func (l *loginFlow) printKubeConfig(authInfo *api.AuthInfo, authInfoName string)
 		AuthInfos: map[string]*api.AuthInfo{authInfoName: authInfo},
 	}
 
-	// TODO: Merge this into existing kubeconfig
-	glog.Info("\n# Add the following to your ~/.kube/config")
+	if writeConfig {
+		tempKubeConfig := l.TempFile()
+		if l.Err != nil {
+			return
+		}
+		l.WriteToFile(k8sconfig, tempKubeConfig.Name())
+		if l.Err != nil {
+			return
+		}
+		kubeConfigPath := l.kubeConfigName()
+		loadingRules := clientcmd.ClientConfigLoadingRules{
+			Precedence: []string{tempKubeConfig.Name(), kubeConfigPath},
+		}
+		mergedConfig, err := loadingRules.Load()
+		if err != nil {
+			glog.Errorf("Error merging configs: %v", err)
+			return
+		}
+		l.WriteToFile(mergedConfig, kubeConfigPath)
+		if l.Err != nil {
+			return
+		}
+		glog.Infof("Configuration has been written to %s\n", kubeConfigPath)
+	} else {
+		glog.Info("\n# Add the following to your ~/.kube/config")
 
-	var json []byte
-	json, err := runtime.Encode(clientcmdlatest.Codec, k8sconfig)
-	if err != nil {
-		l.Err = fmt.Errorf("unexpected error: %v", err)
-		return
+		var json []byte
+		json, err := runtime.Encode(clientcmdlatest.Codec, k8sconfig)
+		if err != nil {
+			l.Err = fmt.Errorf("unexpected error: %v", err)
+			return
+		}
+		var output []byte
+		output, err = yaml.JSONToYAML(json)
+		if err != nil {
+			l.Err = fmt.Errorf("unexpected error: %v", err)
+			return
+		}
+		glog.Infof("%v", string(output))
 	}
-	var output []byte
-	output, err = yaml.JSONToYAML(json)
-	if err != nil {
-		l.Err = fmt.Errorf("unexpected error: %v", err)
-		return
-	}
-	glog.Infof("%v", string(output))
 }
 
 func (l *loginFlow) getAuthorizationCode() string {
@@ -365,8 +391,11 @@ func (l *loginFlow) Run(cfg oidc.Config, issuerURL string) string {
 	}
 
 	url := oauth2Config.AuthCodeURL("state", oauth2.AccessTypeOffline)
-	glog.Infof("Visit the URL for the auth dialog: %v", url)
-	helper.LaunchBrowser(true, url)
+	if openBrowser {
+		helper.LaunchBrowser(true, url)
+	} else {
+		glog.Infof("Visit the URL for the auth dialog: %v", url)
+	}
 
 	code := l.getAuthorizationCode()
 	if l.Err != nil {
