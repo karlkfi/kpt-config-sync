@@ -38,6 +38,7 @@ func NewFilesystemHandler(path string, force bool) *FilesystemHandler {
 	return &FilesystemHandler{root: path, force: force}
 }
 
+// Emit implements ResourceEmitter
 func (h *FilesystemHandler) Emit(items []Resource) error {
 	if err := h.begin(); err != nil {
 		return err
@@ -145,7 +146,7 @@ const (
 // normalizeResources converts all resources in all policies into a slice of Resource
 func normalizeResources(ap *v1.AllPolicies) []Resource {
 	var objs []Resource
-	objs = append(objs, normalizeGenRes(clusterDir, ap.ClusterPolicy.Spec.Resources)...)
+	objs = append(objs, normalizeGenRes(clusterDir, "", ap.ClusterPolicy.Spec.Resources)...)
 	for namespace, pn := range ap.PolicyNodes {
 		path := filepath.Join(namespaceDir, namespace)
 		objs = append(objs, Resource{
@@ -164,13 +165,13 @@ func normalizeResources(ap *v1.AllPolicies) []Resource {
 				},
 			},
 		})
-		objs = append(objs, normalizeGenRes(path, pn.Spec.Resources)...)
+		objs = append(objs, normalizeGenRes(path, namespace, pn.Spec.Resources)...)
 	}
 	return objs
 }
 
 // normalizeGenRes converts a slice of v1.GenericResources into a slice of Resource
-func normalizeGenRes(pathPrefix string, allRes []v1.GenericResources) []Resource {
+func normalizeGenRes(pathPrefix string, namespace string, allRes []v1.GenericResources) []Resource {
 	var objs []Resource
 	for _, genRes := range allRes {
 		for _, ver := range genRes.Versions {
@@ -178,6 +179,7 @@ func normalizeGenRes(pathPrefix string, allRes []v1.GenericResources) []Resource
 				metaObj := obj.Object.(metav1.Object)
 				kind := strings.ToLower(obj.Object.GetObjectKind().GroupVersionKind().Kind)
 				path := filepath.Join(pathPrefix, fmt.Sprintf("%s-%s.yaml", kind, metaObj.GetName()))
+				metaObj.SetNamespace(namespace)
 				objs = append(objs, Resource{Path: path, Obj: obj})
 			}
 		}

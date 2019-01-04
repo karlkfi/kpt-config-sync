@@ -43,7 +43,7 @@ non-zero error code.`,
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}
-		glog.Infof("parse took %s", time.Now().Sub(start))
+		glog.Infof("parse took %s", time.Since(start))
 
 		var handler ResourceEmitter
 		if viewPath == "" {
