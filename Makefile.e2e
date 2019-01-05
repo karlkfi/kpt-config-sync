@@ -72,10 +72,10 @@ test-e2e-all: banner e2e-image-all
 		$(E2E_PARAMS) \
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
 		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
-	$(MAKE) test-e2e-run-gcp \
-		$(E2E_PARAMS) \
-		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
-		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
+#	$(MAKE) test-e2e-run-gcp \
+#		$(E2E_PARAMS) \
+#		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
+#		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
 
 test-e2e-gcp:
 test-e2e-git:
