@@ -9,6 +9,12 @@ load "../lib/git"
 load "../lib/setup"
 load "../lib/wait"
 
+setup() {
+  setup::common
+  setup::git::initialize
+  setup::git::init_acme
+}
+
 @test "ResourceQuota live uninstall/reinstall" {
   # Verify the resourcequota admission controller is currently installed
   wait::for kubectl get deployment -n nomos-system resourcequota-admission-controller

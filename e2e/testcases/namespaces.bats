@@ -9,6 +9,12 @@ load "../lib/policynode"
 load "../lib/setup"
 load "../lib/wait"
 
+setup() {
+  setup::common
+  setup::git::initialize
+  setup::git::init_acme
+}
+
 # This cleans up any namespaces that were created by a testcase
 function teardown() {
   kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found=true || true

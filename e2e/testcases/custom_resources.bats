@@ -12,6 +12,12 @@ load "../lib/wait"
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 WATCH_PID=""
 
+setup() {
+  setup::common
+  setup::git::initialize
+  setup::git::init_acme
+}
+
 # This cleans up any CRDs that were created by a testcase
 function teardown() {
   kubectl delete crd anvils.acme.com --ignore-not-found=true || true

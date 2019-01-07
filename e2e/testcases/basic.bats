@@ -7,13 +7,26 @@ load "../lib/git"
 load "../lib/setup"
 load "../lib/wait"
 
+setup() {
+  setup::common
+  setup::git::initialize
+
+  local TEST_REPO_DIR=${BATS_TMPDIR}
+  cd "${TEST_REPO_DIR}/repo"
+
+  mkdir -p acme/system
+  cp -r /opt/testing/e2e/examples/acme/system acme
+  git add -A
+}
+
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 @test "Namespace garbage collection" {
-  git::add ${YAML_DIR}/accounting-namespace.yaml acme/namespaces/eng/accounting/namespace.yaml
+  mkdir -p acme/namespaces/accounting
+  git::add ${YAML_DIR}/accounting-namespace.yaml acme/namespaces/accounting/namespace.yaml
   git::commit
   wait::for kubectl get ns accounting
-  git::rm acme/namespaces/eng/accounting/namespace.yaml
+  git::rm acme/namespaces/accounting/namespace.yaml
   git::commit
   wait::for -f -t 60 -- kubectl get ns accounting
   run kubectl get policynodes new-ns
@@ -22,19 +35,28 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 }
 
 @test "Namespace to Policyspace conversion" {
-  git::rm acme/namespaces/rnd/newer-prj/namespace.yaml
-  git::add ${YAML_DIR}/accounting-namespace.yaml acme/namespaces/rnd/newer-prj/accounting/namespace.yaml
+  git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
+  git::commit
+  wait::for kubectl get ns dir
+
+  git::rm acme/namespaces/dir/namespace.yaml
+  git::add ${YAML_DIR}/subdir-namespace.yaml acme/namespaces/dir/subdir/namespace.yaml
   git::commit
 
-  wait::for kubectl get ns accounting
-  wait::for -f -- kubectl get ns newer-prj
+  wait::for kubectl get ns subdir
+  wait::for -f -- kubectl get ns dir
 }
 
 @test "RoleBindings updated" {
+  git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/namespace.yaml acme/namespaces/eng/backend/namespace.yaml
+  git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
+  git::commit
+  wait::for -- kubectl get rolebinding -n backend bob-rolebinding
+
   run kubectl get rolebindings -n backend bob-rolebinding -o yaml
   assert::contains "acme-admin"
 
-  git::update ${YAML_DIR}/robert-rolebinding.yaml acme/namespaces/eng/backend/bob-rolebinding.yaml
+  git::update ${YAML_DIR}/robert-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
   git::commit
   wait::for -t 30 -f -- kubectl get rolebindings -n backend bob-rolebinding
 
@@ -52,6 +74,14 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 }
 
 @test "RoleBindings enforced" {
+  git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/namespace.yaml acme/namespaces/eng/backend/namespace.yaml
+  git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
+  git::add /opt/testing/e2e/examples/acme/namespaces/eng/alice-rolebinding.yaml acme/namespaces/eng/backend/ar.yaml
+  git::add /opt/testing/e2e/examples/acme/namespaces/eng/frontend/namespace.yaml acme/namespaces/eng/frontend/namespace.yaml
+  git::commit
+  wait::for -- kubectl get rolebinding -n backend bob-rolebinding
+  wait::for -- kubectl get rolebinding -n backend alice-rolebinding
+
   run kubectl get pods -n backend --as bob@acme.com
   assert::contains "No resources"
   run kubectl get pods -n backend --as alice@acme.com
@@ -65,7 +95,10 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 @test "ResourceQuota enforced" {
   clean_test_configmaps
+  git::add /opt/testing/e2e/examples/acme/namespaces/rnd acme/namespaces/rnd/
+  git::commit
   wait::for kubectl get ns new-prj
+  wait::for kubectl get ns newer-prj
   run kubectl create configmap map1 -n new-prj
   assert::contains "created"
   run kubectl create configmap map2 -n newer-prj

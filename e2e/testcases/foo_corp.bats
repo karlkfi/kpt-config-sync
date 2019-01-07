@@ -10,6 +10,12 @@ load "../lib/namespace"
 load "../lib/resource"
 load "../lib/setup"
 
+setup() {
+  setup::common
+  setup::git::initialize
+  setup::git::init_acme
+}
+
 @test "All foo-corp created" {
   git::rm acme
   # TODO(frankf): POLICY_DIR is currently set to "acme" during installation.

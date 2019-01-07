@@ -12,6 +12,12 @@ load "../lib/resource"
 load "../lib/setup"
 load "../lib/wait"
 
+setup() {
+  setup::common
+  setup::git::initialize
+  setup::git::init_acme
+}
+
 declare KUBE_PROXY_PID
 function local_setup() {
   kubectl proxy &

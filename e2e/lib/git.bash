@@ -126,7 +126,7 @@ function git::commit() {
 
   echo "git: commit / push"
   git commit -m "${message}"
-  git push origin master
+  git push origin master -f
 
   cd -
 }

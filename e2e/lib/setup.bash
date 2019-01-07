@@ -18,8 +18,6 @@ source "$DIR/resource.bash"
 # shellcheck source=e2e/lib/wait.bash
 source "$DIR/wait.bash"
 
-TEST_REPO_DIR=${BATS_TMPDIR}
-
 # Total count of namespaces in acme
 ACME_NAMESPACES=(
   analytics
@@ -43,6 +41,8 @@ setup::git::initialize() {
   # Reset git repo to initial state.
   CWD="$(pwd)"
   echo "Setting up local git repo"
+
+  local TEST_REPO_DIR=${BATS_TMPDIR}
   rm -rf "${TEST_REPO_DIR}/repo"
   mkdir -p "${TEST_REPO_DIR}/repo"
   cd "${TEST_REPO_DIR}/repo"
@@ -52,6 +52,12 @@ setup::git::initialize() {
   git fetch
   git config user.name "Testing Nome"
   git config user.email testing_nome@example.com
+}
+
+setup::git::init_acme() {
+  local TEST_REPO_DIR=${BATS_TMPDIR}
+  cd "${TEST_REPO_DIR}/repo"
+
   mkdir acme
   touch acme/README.md
   git add acme/README.md
@@ -79,14 +85,9 @@ setup::git::initialize() {
   for ns in "${ACME_NAMESPACES[@]}"; do
     wait::for -- policynode::sync_token_eq "${ns}" "${commit_hash}"
   done
-
-  if type local_setup &> /dev/null; then
-    echo "Running local_setup"
-    local_setup
-  fi
 }
 
-setup() {
+setup::common() {
   E2E_TEST_FILTER="${E2E_TEST_FILTER:-}"
   if [[ "${E2E_TEST_FILTER}" != "" ]]; then
     local cur_test=""
@@ -103,7 +104,6 @@ setup() {
   # Delete testdata that might exist.
   kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found || true
 
-  setup::git::initialize
   echo "--- SETUP COMPLETE ---------------------------------------------------"
 }
 

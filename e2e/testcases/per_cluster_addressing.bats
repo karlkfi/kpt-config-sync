@@ -8,6 +8,12 @@ load "../lib/git"
 load "../lib/setup"
 load "../lib/wait"
 
+setup() {
+  setup::common
+  setup::git::initialize
+  setup::git::init_acme
+}
+
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 function add_clusterregistry_data() {

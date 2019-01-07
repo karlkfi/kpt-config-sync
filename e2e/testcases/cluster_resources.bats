@@ -7,6 +7,12 @@ load "../lib/resource"
 load "../lib/setup"
 load "../lib/wait"
 
+setup() {
+  setup::common
+  setup::git::initialize
+  setup::git::init_acme
+}
+
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 function sync_token_eq() {
