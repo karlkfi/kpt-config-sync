@@ -78,16 +78,7 @@ function check_cluster_scoped_resource() {
     '["get","list","create"]'
 }
 
-@test "Lifecycle for clusterrolebindings 1" {
-  skip # b/111606994
-  check_cluster_scoped_resource \
-    clusterrolebinding \
-    ".roleRef.name" \
-    '"edit"' \
-    '"view"'
-}
-
-@test "Lifecycle for clusterrolebindings 2" {
+@test "Lifecycle for clusterrolebindings" {
   check_cluster_scoped_resource \
     clusterrolebinding \
     ".subjects[].name" \
@@ -103,4 +94,3 @@ function check_cluster_scoped_resource() {
     'true' \
     'null'
 }
-
