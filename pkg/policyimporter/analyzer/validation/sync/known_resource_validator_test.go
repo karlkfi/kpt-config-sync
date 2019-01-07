@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	vettesting "github.com/google/nomos/pkg/policyimporter/analyzer/vet/testing"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/multierror"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +23,7 @@ var knownResourceValidatorTestCases = []knownResourceValidatorTestCase{
 	{
 		name:  "RoleBinding throws error if not known",
 		gvk:   kinds.RoleBinding(),
-		error: []string{vet.UnknownResourceInSyncErrorCode},
+		error: []string{veterrors.UnknownResourceInSyncErrorCode},
 	},
 	{
 		name:  "RoleBinding valid if known",
@@ -34,7 +34,7 @@ var knownResourceValidatorTestCases = []knownResourceValidatorTestCase{
 		name:  "RoleBinding throws error if wrong version",
 		gvk:   kinds.RoleBinding(),
 		known: []schema.GroupVersionKind{kinds.RoleBinding().GroupKind().WithVersion("v2")},
-		error: []string{vet.UnknownResourceVersionInSyncErrorCode},
+		error: []string{veterrors.UnknownResourceVersionInSyncErrorCode},
 	},
 }
 
@@ -64,7 +64,7 @@ func (tc knownResourceValidatorTestCase) Run(t *testing.T) {
 
 	KnownResourceValidatorFactory(apiInfo).New(syncs).Validate(&eb)
 
-	vettesting.ExpectErrors(tc.error, eb.Build(), t)
+	veterrorstest.ExpectErrors(tc.error, eb.Build(), t)
 }
 
 func TestKnownResourceValidator(t *testing.T) {

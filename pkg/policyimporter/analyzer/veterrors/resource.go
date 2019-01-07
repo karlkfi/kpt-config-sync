@@ -1,4 +1,4 @@
-package vet
+package veterrors
 
 import (
 	"fmt"

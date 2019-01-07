@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
@@ -43,7 +43,7 @@ func (v DuplicateDirectoryValidator) Validate(errorBuilder *multierror.Builder) 
 			for fullPath := range fullPaths {
 				duplicates = append(duplicates, fullPath)
 			}
-			errorBuilder.Add(vet.DuplicateDirectoryNameError{Duplicates: duplicates})
+			errorBuilder.Add(veterrors.DuplicateDirectoryNameError{Duplicates: duplicates})
 		}
 	}
 }

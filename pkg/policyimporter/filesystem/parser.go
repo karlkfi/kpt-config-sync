@@ -30,7 +30,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -248,7 +248,7 @@ func (p *Parser) relativePath(source string) string {
 // Returns an error if the directory is missing.
 func (p *Parser) readRequiredResources(dir string, errorBuilder *multierror.Builder) []ast.FileObject {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		errorBuilder.Add(vet.MissingDirectoryError{})
+		errorBuilder.Add(veterrors.MissingDirectoryError{})
 		return nil
 	}
 	return p.readResources(dir, errorBuilder)

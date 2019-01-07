@@ -23,7 +23,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/reserved"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -63,7 +63,7 @@ func newClusterCoverage(
 		selector, err := sels.AsPopulatedSelector(&s.Spec.Selector)
 		if err != nil {
 			// TODO(b/120229144): Impossible to get here.
-			errs.Add(vet.InvalidSelectorError{Name: sn, Cause: err})
+			errs.Add(veterrors.InvalidSelectorError{Name: sn, Cause: err})
 			continue
 		}
 		for _, c := range clusters {
@@ -86,7 +86,7 @@ func (c ClusterCoverage) ValidateObject(o metav1.Object, errs *multierror.Builde
 		return
 	}
 	if !c.selectorNames[a] {
-		errs.Add(vet.ObjectHasUnknownClusterSelector{Object: o, Annotation: a})
+		errs.Add(veterrors.ObjectHasUnknownClusterSelector{Object: o, Annotation: a})
 	}
 }
 
@@ -168,7 +168,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	name := path.Base(n.Path)
 	if v.reserved.IsReserved(name) {
 		// The node's name must not be a reserved namespace name.
-		v.errs.Add(vet.ReservedDirectoryNameError{Dir: n.Path})
+		v.errs.Add(veterrors.ReservedDirectoryNameError{Dir: n.Path})
 	}
 
 	// Namespaces may not have children.
@@ -178,7 +178,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		// If len == 1, this is a child of namespaces/ and so it cannot be the child of a Namespace directory.
 		// We check for the two cases above elsewhere, so adding errors here adds noise and incorrect advice.
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == ast.Namespace {
-			v.errs.Add(vet.IllegalNamespaceSubdirectoryError{Child: n, Parent: parent})
+			v.errs.Add(veterrors.IllegalNamespaceSubdirectoryError{Child: n, Parent: parent})
 		}
 	}
 	for _, s := range n.Selectors {
@@ -189,7 +189,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		// Namespace-specific validation
 		if _, found := n.Annotations[v1alpha1.NamespaceSelectorAnnotationKey]; found {
 			// Namespaces may not use the selector annotation.
-			v.errs.Add(vet.IllegalNamespaceSelectorAnnotationError{TreeNode: n})
+			v.errs.Add(veterrors.IllegalNamespaceSelectorAnnotationError{TreeNode: n})
 		}
 	}
 
@@ -205,7 +205,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.NamespaceSelector) {
 	if a := s.GetAnnotations(); a != nil {
 		if _, ok := a[v1alpha1.ClusterSelectorAnnotationKey]; ok {
-			v.errs.Add(vet.NamespaceSelectorMayNotHaveAnnotation{Object: s})
+			v.errs.Add(veterrors.NamespaceSelectorMayNotHaveAnnotation{Object: s})
 		}
 	}
 }
@@ -214,7 +214,7 @@ func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.Namespace
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	gvk := o.GroupVersionKind()
 	if !v.allowedGVKs[gvk] {
-		v.errs.Add(vet.UnsyncableClusterObjectError{ResourceID: o})
+		v.errs.Add(veterrors.UnsyncableClusterObjectError{ResourceID: o})
 	}
 	if v.coverage != nil {
 		v.coverage.ValidateObject(o.ToMeta(), &v.errs)
@@ -227,7 +227,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	if !v.allowedGVKs[o.GroupVersionKind()] {
 		if !syntax.IsSystemOnly(o.GroupVersionKind()) {
 			// This is already checked elsewhere.
-			v.errs.Add(vet.UnsyncableNamespaceObjectError{ResourceID: o})
+			v.errs.Add(veterrors.UnsyncableNamespaceObjectError{ResourceID: o})
 		}
 	}
 
@@ -235,7 +235,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	if node.Type == ast.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[o.GroupVersionKind().GroupKind()]
 		if !found || spec.Mode == v1alpha1.HierarchyModeNone {
-			v.errs.Add(vet.IllegalAbstractNamespaceObjectKindError{ResourceID: o})
+			v.errs.Add(veterrors.IllegalAbstractNamespaceObjectKindError{ResourceID: o})
 		}
 	}
 

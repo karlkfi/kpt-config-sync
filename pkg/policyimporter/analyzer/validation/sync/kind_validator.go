@@ -3,7 +3,7 @@ package sync
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -12,7 +12,7 @@ var KindValidatorFactory = ValidatorFactory{fn: func(sync FileGroupVersionKindHi
 	if allowedInSyncs(sync.GroupVersionKind()) {
 		return nil
 	}
-	return vet.UnsupportedResourceInSyncError{
+	return veterrors.UnsupportedResourceInSyncError{
 		SyncID: sync,
 	}
 }}

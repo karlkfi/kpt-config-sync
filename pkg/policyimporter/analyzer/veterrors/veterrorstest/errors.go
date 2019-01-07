@@ -1,10 +1,10 @@
-package testing
+package veterrorstest
 
 import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
@@ -39,7 +39,7 @@ func ErrorCodes(err error) []string {
 	switch e := err.(type) {
 	case nil:
 		return []string{}
-	case vet.Error:
+	case veterrors.Error:
 		return []string{e.Code()}
 	case *multierror.MultiError:
 		var result []string
@@ -49,6 +49,6 @@ func ErrorCodes(err error) []string {
 		return result
 	default:
 		// For errors without a specific code
-		return []string{vet.UndefinedErrorCode}
+		return []string{veterrors.UndefinedErrorCode}
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 )
 
 // AnnotationValidator validates the annotations in a ast.FileObject
@@ -16,7 +16,7 @@ var AnnotationValidator = &syntax.FileObjectValidator{
 	ValidateFn: func(o ast.FileObject) error {
 		found := invalids(o.ToMeta().GetAnnotations(), v1alpha1.InputAnnotations)
 		if len(found) > 0 {
-			return vet.IllegalAnnotationDefinitionError{ResourceID: &o, Annotations: found}
+			return veterrors.IllegalAnnotationDefinitionError{ResourceID: &o, Annotations: found}
 		}
 		return nil
 	},

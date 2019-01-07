@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/pkg/errors"
 )
 
@@ -51,6 +51,6 @@ func main() {
 // Add documented errors here. Adding errors which do not have validation.Example() or
 // validation.Explanation() defined for them will cause a panic().
 var codes = []errorDocCode{
-	vet.ReservedDirectoryNameErrorCode,
-	vet.InvalidNamespaceNameErrorCode,
+	veterrors.ReservedDirectoryNameErrorCode,
+	veterrors.InvalidNamespaceNameErrorCode,
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -19,7 +19,7 @@ type DuplicateNameValidator struct {
 
 // Validate adds errors to the errorBuilder if there are multiple Namespaces defined in directories.
 func (v DuplicateNameValidator) Validate(errorBuilder *multierror.Builder) {
-	seenObjectNames := make(map[schema.GroupVersionKind]map[string][]vet.ResourceID)
+	seenObjectNames := make(map[schema.GroupVersionKind]map[string][]veterrors.ResourceID)
 
 	for i, obj := range v.Objects {
 		gvk := obj.GroupVersionKind()
@@ -31,7 +31,7 @@ func (v DuplicateNameValidator) Validate(errorBuilder *multierror.Builder) {
 		}
 
 		if _, found := seenObjectNames[gvk]; !found {
-			seenObjectNames[gvk] = make(map[string][]vet.ResourceID)
+			seenObjectNames[gvk] = make(map[string][]veterrors.ResourceID)
 		}
 
 		name := obj.Name()
@@ -50,7 +50,7 @@ func (v DuplicateNameValidator) Validate(errorBuilder *multierror.Builder) {
 
 			for i := 0; i < len(objects); {
 				dir := path.Dir(objects[i].Source())
-				duplicates := []vet.ResourceID{objects[i]}
+				duplicates := []veterrors.ResourceID{objects[i]}
 
 				for j := i + 1; j < len(objects); j++ {
 					if strings.HasPrefix(objects[j].Source(), dir) {
@@ -64,7 +64,7 @@ func (v DuplicateNameValidator) Validate(errorBuilder *multierror.Builder) {
 				}
 
 				if len(duplicates) > 1 {
-					errorBuilder.Add(vet.ObjectNameCollisionError{Name: name, Duplicates: duplicates})
+					errorBuilder.Add(veterrors.ObjectNameCollisionError{Name: name, Duplicates: duplicates})
 				}
 
 				// Recall that len(duplicates) is always at least 1.

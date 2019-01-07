@@ -6,7 +6,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/validator"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
@@ -27,7 +27,7 @@ func NewConflictingResourceQuotaValidator(objects []ast.FileObject) ConflictingR
 
 // Validate adds errors to the errorBuilder if there are conflicting ResourceQuotas in a directory
 func (v ConflictingResourceQuotaValidator) Validate(errorBuilder *multierror.Builder) {
-	resourceQuotas := make(map[string][]vet.ResourceID)
+	resourceQuotas := make(map[string][]veterrors.ResourceID)
 
 	for _, obj := range v.objects {
 		if obj.GroupVersionKind() == kinds.ResourceQuota() {
@@ -38,7 +38,7 @@ func (v ConflictingResourceQuotaValidator) Validate(errorBuilder *multierror.Bui
 
 	for dir, quotas := range resourceQuotas {
 		if len(quotas) > 1 {
-			errorBuilder.Add(vet.ConflictingResourceQuotaError{Path: dir, Duplicates: quotas})
+			errorBuilder.Add(veterrors.ConflictingResourceQuotaError{Path: dir, Duplicates: quotas})
 		}
 	}
 }

@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	vettesting "github.com/google/nomos/pkg/policyimporter/analyzer/vet/testing"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -32,17 +32,17 @@ var inheritanceDisabledTestCases = []inheritanceDisabledTestCase{
 	{
 		name:   "no-inheritance rolebinding quota error",
 		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
+		error:  []string{veterrors.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "no-inheritance rolebinding inherit error",
 		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeInherit),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
+		error:  []string{veterrors.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "no-inheritance rolebinding none error",
 		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeNone),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
+		error:  []string{veterrors.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "no-inheritance resourcequota default",
@@ -51,17 +51,17 @@ var inheritanceDisabledTestCases = []inheritanceDisabledTestCase{
 	{
 		name:   "no-inheritance resourcequota quota error",
 		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeHierarchicalQuota),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
+		error:  []string{veterrors.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "no-inheritance resourcequota inherit error",
 		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeInherit),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
+		error:  []string{veterrors.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "no-inheritance resourcequota none error",
 		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeNone),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
+		error:  []string{veterrors.IllegalHierarchyModeErrorCode},
 	},
 }
 
@@ -73,7 +73,7 @@ func (tc inheritanceDisabledTestCase) Run(t *testing.T) {
 	eb := multierror.Builder{}
 	v.New(syncs).Validate(&eb)
 
-	vettesting.ExpectErrors(tc.error, eb.Build(), t)
+	veterrorstest.ExpectErrors(tc.error, eb.Build(), t)
 }
 
 func TestInheritanceDisabledValidator(t *testing.T) {
@@ -96,7 +96,7 @@ var inheritanceEnabledTestCases = []inheritanceEnabledTestCase{
 	{
 		name:   "inheritance rolebinding quota error",
 		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
+		error:  []string{veterrors.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "inheritance rolebinding inherit",
@@ -129,7 +129,7 @@ var inheritanceEnabledTestCases = []inheritanceEnabledTestCase{
 	{
 		name:   "inheritance resourcequota v2 quota error",
 		fgvkhs: withMode(kinds.ResourceQuota().GroupKind().WithVersion("v2"), v1alpha1.HierarchyModeHierarchicalQuota),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
+		error:  []string{veterrors.IllegalHierarchyModeErrorCode},
 	},
 	{
 		name:   "inheritance resourcequota v2 inherit",
@@ -149,7 +149,7 @@ func (tc inheritanceEnabledTestCase) Run(t *testing.T) {
 	eb := multierror.Builder{}
 	v.New(syncs).Validate(&eb)
 
-	vettesting.ExpectErrors(tc.error, eb.Build(), t)
+	veterrorstest.ExpectErrors(tc.error, eb.Build(), t)
 }
 
 func TestInheritanceEnabledValidator(t *testing.T) {
@@ -205,7 +205,7 @@ func (tc inheritanceMissingTestCase) Run(t *testing.T) {
 	eb := multierror.Builder{}
 	v.New(syncs).Validate(&eb)
 
-	vettesting.ExpectErrors([]string{}, eb.Build(), t)
+	veterrorstest.ExpectErrors([]string{}, eb.Build(), t)
 }
 
 func TestNilRepo(t *testing.T) {

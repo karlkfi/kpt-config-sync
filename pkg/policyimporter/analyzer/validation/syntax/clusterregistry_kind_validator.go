@@ -3,7 +3,7 @@ package syntax
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
@@ -14,7 +14,7 @@ var ClusterregistryKindValidator = &FileObjectValidator{
 		case *v1alpha1.ClusterSelector:
 		case *clusterregistry.Cluster:
 		default:
-			return vet.IllegalKindInClusterregistryError{ResourceID: &object}
+			return veterrors.IllegalKindInClusterregistryError{ResourceID: &object}
 		}
 		return nil
 	},

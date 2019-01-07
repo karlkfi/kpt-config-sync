@@ -2,7 +2,7 @@ package sync
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/validator"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -26,7 +26,7 @@ var _ validator.Validator = VersionValidator{}
 
 // Validate adds errors for each Group/Kind with multiple declarations.
 func (v VersionValidator) Validate(errorBuilder *multierror.Builder) {
-	syncKinds := make(map[schema.GroupKind][]vet.SyncID)
+	syncKinds := make(map[schema.GroupKind][]veterrors.SyncID)
 	for _, sync := range v.syncs {
 		for _, k := range sync.flatten() {
 			gk := k.GroupVersionKind().GroupKind()
@@ -36,7 +36,7 @@ func (v VersionValidator) Validate(errorBuilder *multierror.Builder) {
 
 	for _, duplicates := range syncKinds {
 		if len(duplicates) > 1 {
-			errorBuilder.Add(vet.DuplicateSyncGroupKindError{Duplicates: duplicates})
+			errorBuilder.Add(veterrors.DuplicateSyncGroupKindError{Duplicates: duplicates})
 		}
 	}
 }

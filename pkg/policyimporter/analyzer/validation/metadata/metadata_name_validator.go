@@ -8,7 +8,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 )
@@ -20,20 +20,20 @@ var MetadataNameValidator = &syntax.FileObjectValidator{
 
 		if fileObject.Name() == "" {
 			// Name MUST NOT be empty
-			return vet.MissingObjectNameError{ResourceID: &fileObject}
+			return veterrors.MissingObjectNameError{ResourceID: &fileObject}
 		} else if isDefaultCrdAllowedInNomos(gvk) {
 			// If CRD, then namee must be a valid DNS1123 subdomain
 			errs := utilvalidation.IsDNS1123Subdomain(fileObject.Name())
 			if errs != nil {
-				return vet.InvalidMetadataNameError{ResourceID: &fileObject}
+				return veterrors.InvalidMetadataNameError{ResourceID: &fileObject}
 			}
 		} else if gvk == kinds.Namespace() {
 			expectedName := path.Base(path.Dir(fileObject.Source()))
 			if expectedName == repo.NamespacesDir {
-				return vet.IllegalTopLevelNamespaceError{ResourceID: &fileObject}
+				return veterrors.IllegalTopLevelNamespaceError{ResourceID: &fileObject}
 			}
 			if fileObject.Name() != expectedName {
-				return vet.InvalidNamespaceNameError{ResourceID: &fileObject, Expected: expectedName}
+				return veterrors.InvalidNamespaceNameError{ResourceID: &fileObject, Expected: expectedName}
 			}
 		}
 		return nil

@@ -2,7 +2,7 @@ package semantic
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/util/multierror"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -24,6 +24,6 @@ func (v ConfigMapCountValidator) Validate(errorBuilder *multierror.Builder) {
 	}
 
 	if len(configMaps) >= 2 {
-		errorBuilder.Add(vet.MultipleConfigMapsError{ConfigMaps: configMaps})
+		errorBuilder.Add(veterrors.MultipleConfigMapsError{ConfigMaps: configMaps})
 	}
 }

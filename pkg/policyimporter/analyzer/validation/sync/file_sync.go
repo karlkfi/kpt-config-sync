@@ -2,7 +2,7 @@ package sync
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -13,7 +13,7 @@ type FileSync struct {
 	source string
 }
 
-var _ vet.SyncID = FileSync{}
+var _ veterrors.SyncID = FileSync{}
 
 // NewFileSync creates a new FileSync from a Sync Resource and the source file declearing the Sync.
 func NewFileSync(sync *v1alpha1.Sync, source string) FileSync {
