@@ -57,21 +57,13 @@ $ kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-
 On GKE clusters, `<user>` would be the GSuite account (e.g.
 `charlie@foo-corp.com`).
 
-### Download Operator Manifest Bundle
-
-Download the operator bundle directly to your machine:
-
-```console
-$ curl -LO https://storage.googleapis.com/nomos-release/operator-stable/nomos-operator.yaml
-```
-
 ### Deploy the Operator
 
 Apply the operator bundle in order to create the Nomos Operator and nomos-system
 namespace into your cluster.
 
 ```console
-$ kubectl apply -f nomos-operator.yaml
+$ kubectl apply --filename https://storage.googleapis.com/nomos-release/operator-stable/nomos-operator.yaml
 ```
 
 You can verify that the Nomos Operator was deployed correctly:
