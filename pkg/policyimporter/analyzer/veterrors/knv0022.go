@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+// DuplicateSyncGroupKindErrorCode is the error code for DuplicateSyncGroupKindError
+const DuplicateSyncGroupKindErrorCode = "1022"
+
+func init() {
+	register(DuplicateSyncGroupKindErrorCode, nil, "")
+}
+
 // DuplicateSyncGroupKindError reports that multiple versions were declared for the same synced kind
 type DuplicateSyncGroupKindError struct {
 	// Duplicates is the Group/Kind pair with duplicate definitions in Syncs.

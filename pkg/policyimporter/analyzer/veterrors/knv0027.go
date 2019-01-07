@@ -6,6 +6,13 @@ type UnsupportedRepoSpecVersion struct {
 	Version string
 }
 
+// UnsupportedRepoSpecVersionCode is the error code for UnsupportedRepoSpecVersion
+const UnsupportedRepoSpecVersionCode = "1027"
+
+func init() {
+	register(UnsupportedRepoSpecVersionCode, nil, "")
+}
+
 // Error implements error
 func (e UnsupportedRepoSpecVersion) Error() string {
 	return format(e,

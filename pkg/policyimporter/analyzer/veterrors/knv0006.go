@@ -1,5 +1,12 @@
 package veterrors
 
+// UnsyncableNamespaceObjectErrorCode is the error code for UnsyncableNamespaceObjectErrorCode
+const UnsyncableNamespaceObjectErrorCode = "1006"
+
+func init() {
+	register(UnsyncableNamespaceObjectErrorCode, nil, "")
+}
+
 // UnsyncableNamespaceObjectError represents an illegal usage of a Resource which has not been defined for use in namespaces/.
 type UnsyncableNamespaceObjectError struct {
 	ResourceID

@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+// DuplicateDirectoryNameErrorCode is the error code for DuplicateDirectoryNameError
+const DuplicateDirectoryNameErrorCode = "1002"
+
+func init() {
+	register(DuplicateDirectoryNameErrorCode, nil, "")
+}
+
 // DuplicateDirectoryNameError represents an illegal duplication of directory names.
 type DuplicateDirectoryNameError struct {
 	Duplicates []string

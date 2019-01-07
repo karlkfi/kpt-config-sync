@@ -8,6 +8,13 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 )
 
+// IllegalLabelDefinitionErrorCode is the error code for IllegalLabelDefinitionError
+const IllegalLabelDefinitionErrorCode = "1011"
+
+func init() {
+	register(IllegalLabelDefinitionErrorCode, nil, "")
+}
+
 // IllegalLabelDefinitionError represent a set of illegal label definitions.
 type IllegalLabelDefinitionError struct {
 	ResourceID

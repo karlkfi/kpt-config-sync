@@ -18,96 +18,42 @@ package veterrors
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/pkg/errors"
 )
 
-// Codes for each Nomos error.
-const (
-	ReservedDirectoryNameErrorCode              = "1001"
-	DuplicateDirectoryNameErrorCode             = "1002"
-	IllegalNamespaceSubdirectoryErrorCode       = "1003"
-	IllegalNamespaceSelectorAnnotationErrorCode = "1004"
-	UnsyncableClusterObjectErrorCode            = "1005"
-	UnsyncableNamespaceObjectErrorCode          = "1006"
-	IllegalAbstractNamespaceObjectKindErrorCode = "1007"
-	ConflictingResourceQuotaErrorCode           = "1008"
-	IllegalNamespaceDeclarationErrorCode        = "1009"
-	IllegalAnnotationDefinitionErrorCode        = "1010"
-	IllegalLabelDefinitionErrorCode             = "1011"
-	NamespaceSelectorMayNotHaveAnnotationCode   = "1012"
-	ObjectHasUnknownClusterSelectorCode         = "1013"
-	InvalidSelectorErrorCode                    = "1014" // TODO: Must refactor to use properly
-	MissingDirectoryErrorCode                   = "1015"
-	MissingRepoErrorCode                        = "1017"
-	IllegalSubdirectoryErrorCode                = "1018"
-	IllegalTopLevelNamespaceErrorCode           = "1019"
-	InvalidNamespaceNameErrorCode               = "1020"
-	UnknownObjectErrorCode                      = "1021" // Impossible to create consistent example.
-	DuplicateSyncGroupKindErrorCode             = "1022"
-	IllegalKindInSystemErrorCode                = "1024"
-	MultipleRepoDefinitionsErrorCode            = "1025"
-	MultipleConfigMapsErrorCode                 = "1026"
-	UnsupportedRepoSpecVersionCode              = "1027"
-	InvalidDirectoryNameErrorCode               = "1028"
-	MetadataNameCollisionErrorCode              = "1029"
-	MultipleNamespacesErrorCode                 = "1030"
-	MissingObjectNameErrorCode                  = "1031"
-	UnknownResourceInSyncErrorCode              = "1032"
-	IllegalSystemResourcePlacementErrorCode     = "1033"
-	UnsupportedResourceInSyncErrorCode          = "1034"
-	IllegalHierarchyModeErrorCode               = "1035"
-	InvalidMetadataNameErrorCode                = "1036"
-	IllegalKindInClusterregistryErrorCode       = "1037"
-	IllegalKindInNamespacesErrorCode            = "1038"
-	UnknownResourceVersionInSyncErrorCode       = "1039"
-	UndefinedErrorCode                          = "????"
-
+var codes = map[string]bool{
 	// Obsolete error codes. Do not reuse.
-	//Unused1016 = "1016"
-	//Unused1023 = "1023"
-)
+	"1016": true,
+	"1023": true,
 
-// Example returns a canonical example to use
-func Example(code string) Error {
-	switch code {
-	case ReservedDirectoryNameErrorCode:
-		return ReservedDirectoryNameError{Dir: "reserved"}
-	case InvalidNamespaceNameErrorCode:
-		return InvalidNamespaceNameError{ResourceID: &resourceID{source: "namespaces/foo/namespace.yaml", name: "bar", groupVersionKind: kinds.Namespace()}, Expected: "foo"}
-	case UnknownResourceVersionInSyncErrorCode:
-		return UnknownResourceVersionInSyncError{SyncID: &syncID{source: "system/rq-sync.yaml", groupVersionKind: kinds.ResourceQuota().GroupKind().WithVersion("v2")}}
-	default:
-		panic(errors.Errorf("programmer error: example undefined for %T", code))
-	}
+	// The unknown error code.
+	UndefinedErrorCode: true,
 }
 
-// Explanation returns documentation about what the bug is, why it occurs, and more information on
-// how to fix it than just the error message.
-func Explanation(code string) string {
-	switch code {
-	case ReservedDirectoryNameErrorCode:
-		return `
-GKE Policy Management defines several
-[Reserved Namespaces](../management_flow.md#namespaces), and users may
-[specify their own Reserved Namespaces](../system_config.md#reserved-namespaces).
-Namespace and Abstract Namespace directories MUST NOT use these reserved names.
-To fix:
+// Examples is the canonical example errors for each code.
+var Examples = make(map[string]Error)
 
-1.  rename the directory,
-1.  remove the directory, or
-1.  remove the reserved namespace declaration.
-`
-	case InvalidNamespaceNameErrorCode:
-		return `
-A Namespace Resource MUST have a metadata.name that matches the name of its
-directory. To fix, correct the offending Namespace's metadata.name or its
-directory.
-`
-	default:
-		panic(errors.Errorf("programmer error: explanation undefined for %T", code))
+// Explanations is the error documentation for each code.
+var Explanations = make(map[string]string)
+
+func register(code string, example Error, explanation string) {
+	if codes[code] {
+		panic(errors.Errorf("duplicate error code: %q", code))
 	}
+	codes[code] = true
+
+	if example != nil {
+		if example.Code() != code {
+			panic(errors.Errorf("supplied error code %q does not match code of example %q", code, example.Code()))
+		}
+		Examples[code] = example
+	}
+
+	Explanations[code] = explanation
 }
+
+// UndefinedErrorCode is the code representing an unregistered error. These should be eliminated.
+const UndefinedErrorCode = "????"
 
 // Error Defines a Kubernetes Nomos Vet error
 // These are GKE Policy Management directory errors which are shown to the user and documented.

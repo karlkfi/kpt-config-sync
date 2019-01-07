@@ -2,6 +2,13 @@ package veterrors
 
 import "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 
+// MissingRepoErrorCode is the error code for MissingRepoError
+const MissingRepoErrorCode = "1017"
+
+func init() {
+	register(MissingRepoErrorCode, nil, "")
+}
+
 // MissingRepoError reports that there is no Repo definition in system/
 type MissingRepoError struct{}
 

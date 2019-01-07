@@ -2,6 +2,13 @@ package veterrors
 
 import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 
+// IllegalNamespaceSubdirectoryErrorCode is the error code for IllegalNamespaceSubdirectoryError
+const IllegalNamespaceSubdirectoryErrorCode = "1003"
+
+func init() {
+	register(IllegalNamespaceSubdirectoryErrorCode, nil, "")
+}
+
 // IllegalNamespaceSubdirectoryError represents an illegal child directory of a namespace directory.
 type IllegalNamespaceSubdirectoryError struct {
 	Child  *ast.TreeNode

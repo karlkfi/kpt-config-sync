@@ -45,7 +45,7 @@ func (e errorDocCode) writePreamble(wr io.Writer) error {
 }
 
 func (e errorDocCode) writeExplanation(wr io.Writer) error {
-	return e.execute(wr, veterrors.Explanation(e.Code()), "Explanation")
+	return e.execute(wr, veterrors.Explanations[e.Code()], "Explanation")
 }
 
 func (e errorDocCode) writeExample(wr io.Writer) error {
@@ -90,7 +90,7 @@ func (e errorDocCode) Code() string {
 
 // Example returns an example error
 func (e errorDocCode) Example() veterrors.Error {
-	return veterrors.Example(e.Code())
+	return veterrors.Examples[e.Code()]
 }
 
 // Aka returns the type of error in a near-human-readable format

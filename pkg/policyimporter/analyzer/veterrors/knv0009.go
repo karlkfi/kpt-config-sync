@@ -1,5 +1,12 @@
 package veterrors
 
+// IllegalNamespaceDeclarationErrorCode is the error code for IllegalNamespaceDeclarationError
+const IllegalNamespaceDeclarationErrorCode = "1009"
+
+func init() {
+	register(IllegalNamespaceDeclarationErrorCode, nil, "")
+}
+
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
 type IllegalMetadataNamespaceDeclarationError struct {
 	ResourceID

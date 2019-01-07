@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+// ConflictingResourceQuotaErrorCode is the error code for ConflictingResourceQuotaError
+const ConflictingResourceQuotaErrorCode = "1008"
+
+func init() {
+	register(ConflictingResourceQuotaErrorCode, nil, "")
+}
+
 // ConflictingResourceQuotaError represents multiple ResourceQuotas illegally presiding in the same directory.
 type ConflictingResourceQuotaError struct {
 	Path       string

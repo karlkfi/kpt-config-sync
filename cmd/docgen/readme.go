@@ -3,6 +3,8 @@ package main
 import (
 	"path/filepath"
 	"text/template"
+
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 )
 
 const (
@@ -34,7 +36,14 @@ func writeReadme() error {
 		return writeErr
 	}
 
-	if executeErr := tmpl.Execute(file, codes); executeErr != nil {
+	errorDocCodes := make([]errorDocCode, len(veterrors.Examples))
+	for code, example := range veterrors.Examples {
+		if example == nil {
+			continue
+		}
+		errorDocCodes = append(errorDocCodes, errorDocCode(code))
+	}
+	if executeErr := tmpl.Execute(file, errorDocCodes); executeErr != nil {
 		return executeErr
 	}
 

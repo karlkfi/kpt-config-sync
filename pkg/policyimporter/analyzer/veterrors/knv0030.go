@@ -7,6 +7,13 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 
+// MultipleNamespacesErrorCode is the error code for MultipleNamespacesError
+const MultipleNamespacesErrorCode = "1030"
+
+func init() {
+	register(MultipleNamespacesErrorCode, nil, "")
+}
+
 // MultipleNamespacesError reports that multiple Namespaces are defined in the same directory.
 type MultipleNamespacesError struct {
 	Duplicates []ResourceID

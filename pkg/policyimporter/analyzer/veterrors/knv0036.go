@@ -1,5 +1,12 @@
 package veterrors
 
+// InvalidMetadataNameErrorCode is the error code for InvalidMetadataNameError
+const InvalidMetadataNameErrorCode = "1036"
+
+func init() {
+	register(InvalidMetadataNameErrorCode, nil, "")
+}
+
 // InvalidMetadataNameError represents the usage of a non-RFC1123 compliant metadata.name
 type InvalidMetadataNameError struct {
 	ResourceID

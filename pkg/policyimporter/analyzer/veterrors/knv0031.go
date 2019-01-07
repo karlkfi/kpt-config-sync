@@ -1,5 +1,12 @@
 package veterrors
 
+// MissingObjectNameErrorCode is the error code for MissingObjectNameError
+const MissingObjectNameErrorCode = "1031"
+
+func init() {
+	register(MissingObjectNameErrorCode, nil, "")
+}
+
 // MissingObjectNameError reports that an object has no name.
 type MissingObjectNameError struct {
 	ResourceID

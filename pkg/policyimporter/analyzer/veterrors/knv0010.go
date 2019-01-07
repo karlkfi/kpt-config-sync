@@ -8,6 +8,13 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 )
 
+// IllegalAnnotationDefinitionErrorCode is the error code for IllegalAnnotationDefinitionError
+const IllegalAnnotationDefinitionErrorCode = "1010"
+
+func init() {
+	register(IllegalAnnotationDefinitionErrorCode, nil, "")
+}
+
 // IllegalAnnotationDefinitionError represents a set of illegal annotation definitions.
 type IllegalAnnotationDefinitionError struct {
 	ResourceID

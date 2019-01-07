@@ -2,6 +2,13 @@ package veterrors
 
 import "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 
+// MissingDirectoryErrorCode is the error code for MissingDirectoryError
+const MissingDirectoryErrorCode = "1015"
+
+func init() {
+	register(MissingDirectoryErrorCode, nil, "")
+}
+
 // MissingDirectoryError reports that a required directory is missing.
 type MissingDirectoryError struct{}
 

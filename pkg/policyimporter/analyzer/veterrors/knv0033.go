@@ -2,6 +2,13 @@ package veterrors
 
 import "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 
+// IllegalSystemResourcePlacementErrorCode is the error code for IllegalSystemResourcePlacementError
+const IllegalSystemResourcePlacementErrorCode = "1033"
+
+func init() {
+	register(IllegalSystemResourcePlacementErrorCode, nil, "")
+}
+
 // IllegalSystemResourcePlacementError reports that a nomos.dev object has been defined outside of system/
 type IllegalSystemResourcePlacementError struct {
 	ResourceID

@@ -6,6 +6,13 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 )
 
+// IllegalHierarchyModeErrorCode is the error code for IllegalHierarchyModeError
+const IllegalHierarchyModeErrorCode = "1035"
+
+func init() {
+	register(IllegalHierarchyModeErrorCode, nil, "")
+}
+
 // IllegalHierarchyModeError reports that a Sync is defined with a disallowed hierarchyMode.
 type IllegalHierarchyModeError struct {
 	SyncID

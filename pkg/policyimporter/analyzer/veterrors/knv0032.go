@@ -1,5 +1,12 @@
 package veterrors
 
+// UnknownResourceInSyncErrorCode is the error code for UnknownResourceInSyncError
+const UnknownResourceInSyncErrorCode = "1032"
+
+func init() {
+	register(UnknownResourceInSyncErrorCode, nil, "")
+}
+
 // UnknownResourceInSyncError reports that a Resource defined in a Sync does not have a definition in the cluster.
 type UnknownResourceInSyncError struct {
 	SyncID

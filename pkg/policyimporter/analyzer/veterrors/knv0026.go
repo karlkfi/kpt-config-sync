@@ -9,6 +9,13 @@ import (
 	"k8s.io/api/core/v1"
 )
 
+// MultipleConfigMapsErrorCode is the error code for MultipleConfigMapsError
+const MultipleConfigMapsErrorCode = "1026"
+
+func init() {
+	register(MultipleConfigMapsErrorCode, nil, "")
+}
+
 // MultipleConfigMapsError reports that system/ declares multiple ConfigMaps.
 type MultipleConfigMapsError struct {
 	ConfigMaps map[*v1.ConfigMap]string

@@ -41,16 +41,13 @@ func main() {
 		panic(errors.Wrap(err, "error writing README.md"))
 	}
 
-	for _, code := range codes {
-		if err := code.document(); err != nil {
+	for code, example := range veterrors.Examples {
+		if example == nil {
+			// No documentation for this error code yet.
+			continue
+		}
+		if err := errorDocCode(code).document(); err != nil {
 			panic(errors.Wrapf(err, "error writing documentation for %s", code))
 		}
 	}
-}
-
-// Add documented errors here. Adding errors which do not have validation.Example() or
-// validation.Explanation() defined for them will cause a panic().
-var codes = []errorDocCode{
-	veterrors.ReservedDirectoryNameErrorCode,
-	veterrors.InvalidNamespaceNameErrorCode,
 }

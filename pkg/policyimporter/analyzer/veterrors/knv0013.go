@@ -5,6 +5,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ObjectHasUnknownClusterSelectorCode is the error code for ObjectHasUnknownClusterSelector
+const ObjectHasUnknownClusterSelectorCode = "1013"
+
+func init() {
+	register(ObjectHasUnknownClusterSelectorCode, nil, "")
+}
+
 // ObjectHasUnknownClusterSelector is an error denoting an object that has an unknown annotation.
 type ObjectHasUnknownClusterSelector struct {
 	Object     v1.Object

@@ -2,6 +2,13 @@ package veterrors
 
 import "github.com/pkg/errors"
 
+// InvalidSelectorErrorCode is the error code for InvalidSelectorError
+const InvalidSelectorErrorCode = "1014" // TODO: Must refactor to use properly
+
+func init() {
+	register(InvalidSelectorErrorCode, nil, "")
+}
+
 // InvalidSelectorError is a validation error.
 type InvalidSelectorError struct {
 	Name  string

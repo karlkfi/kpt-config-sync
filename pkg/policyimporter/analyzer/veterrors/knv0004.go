@@ -5,6 +5,13 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 
+// IllegalNamespaceSelectorAnnotationErrorCode is the error code for IllegalNamespaceSelectorAnnotationError
+const IllegalNamespaceSelectorAnnotationErrorCode = "1004"
+
+func init() {
+	register(IllegalNamespaceSelectorAnnotationErrorCode, nil, "")
+}
+
 // IllegalNamespaceSelectorAnnotationError represents an illegal usage of the namespace selector annotation.
 type IllegalNamespaceSelectorAnnotationError struct {
 	*ast.TreeNode

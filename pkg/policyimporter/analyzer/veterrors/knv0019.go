@@ -5,6 +5,13 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 
+// IllegalTopLevelNamespaceErrorCode is the error code for IllegalTopLevelNamespaceError
+const IllegalTopLevelNamespaceErrorCode = "1019"
+
+func init() {
+	register(IllegalTopLevelNamespaceErrorCode, nil, "")
+}
+
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
 type IllegalTopLevelNamespaceError struct {
 	ResourceID

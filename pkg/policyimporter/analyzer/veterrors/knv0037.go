@@ -2,6 +2,13 @@ package veterrors
 
 import "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 
+// IllegalKindInClusterregistryErrorCode is the error code for IllegalKindInClusterregistryError
+const IllegalKindInClusterregistryErrorCode = "1037"
+
+func init() {
+	register(IllegalKindInClusterregistryErrorCode, nil, "")
+}
+
 // IllegalKindInClusterregistryError reports that an object has been illegally defined in clusterregistry/
 type IllegalKindInClusterregistryError struct {
 	ResourceID

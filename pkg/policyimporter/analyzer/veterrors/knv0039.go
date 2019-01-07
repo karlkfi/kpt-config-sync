@@ -1,6 +1,24 @@
 package veterrors
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/google/nomos/pkg/kinds"
+)
+
+// UnknownResourceVersionInSyncErrorCode is the error code for UnknownResourceVersionInSyncError
+const UnknownResourceVersionInSyncErrorCode = "1039"
+
+var unknownResourceVersionInSyncErrorExample = UnknownResourceVersionInSyncError{
+	SyncID: &syncID{
+		source:           "system/rq-sync.yaml",
+		groupVersionKind: kinds.ResourceQuota().GroupKind().WithVersion("v2"),
+	},
+}
+
+func init() {
+	register(UnknownResourceVersionInSyncErrorCode, unknownResourceVersionInSyncErrorExample, "")
+}
 
 // UnknownResourceVersionInSyncError reports that a Sync contains a Group/Kind with an incorrect
 // Version.

@@ -2,6 +2,13 @@ package veterrors
 
 import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 
+// IllegalAbstractNamespaceObjectKindErrorCode is the error code for IllegalAbstractNamespaceObjectKindError
+const IllegalAbstractNamespaceObjectKindErrorCode = "1007"
+
+func init() {
+	register(IllegalAbstractNamespaceObjectKindErrorCode, nil, "")
+}
+
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
 type IllegalAbstractNamespaceObjectKindError struct {
 	ResourceID

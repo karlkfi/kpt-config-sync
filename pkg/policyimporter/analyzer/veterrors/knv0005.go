@@ -1,5 +1,12 @@
 package veterrors
 
+// UnsyncableClusterObjectErrorCode is the error code for UnsyncableClusterObjectErrorCode
+const UnsyncableClusterObjectErrorCode = "1005"
+
+func init() {
+	register(UnsyncableClusterObjectErrorCode, nil, "")
+}
+
 // UnsyncableClusterObjectError represents an illegal usage of a cluster object kind which has not be explicitly declared.
 type UnsyncableClusterObjectError struct {
 	ResourceID

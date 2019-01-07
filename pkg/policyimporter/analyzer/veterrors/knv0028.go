@@ -2,6 +2,13 @@ package veterrors
 
 import "path"
 
+// InvalidDirectoryNameErrorCode is the error code for InvalidDirectoryNameError
+const InvalidDirectoryNameErrorCode = "1028"
+
+func init() {
+	register(InvalidDirectoryNameErrorCode, nil, "")
+}
+
 // InvalidDirectoryNameError represents an illegal usage of a reserved name.
 type InvalidDirectoryNameError struct {
 	Dir string

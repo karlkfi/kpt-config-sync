@@ -9,6 +9,13 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 )
 
+// MultipleRepoDefinitionsErrorCode is the error code for MultipleRepoDefinitionsError
+const MultipleRepoDefinitionsErrorCode = "1025"
+
+func init() {
+	register(MultipleRepoDefinitionsErrorCode, nil, "")
+}
+
 // MultipleRepoDefinitionsError reports that the system/ directory contains multiple Repo declarations.
 type MultipleRepoDefinitionsError struct {
 	Repos map[*v1alpha1.Repo]string

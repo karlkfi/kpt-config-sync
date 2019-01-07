@@ -7,6 +7,13 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 
+// MetadataNameCollisionErrorCode is the error code for ObjectNameCollisionError
+const MetadataNameCollisionErrorCode = "1029"
+
+func init() {
+	register(MetadataNameCollisionErrorCode, nil, "")
+}
+
 // MetadataNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
 type MetadataNameCollisionError struct {
 	Name       string
