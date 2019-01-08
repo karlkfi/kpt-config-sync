@@ -1136,7 +1136,7 @@
   version = "kubernetes-1.11.2"
 
 [[projects]]
-  digest = "1:3cffae465cefaa6f13c4a81784330ba678c7b652183e00474ca0709d3e17e771"
+  digest = "1:4086dba6c97902c4cdccd59d20061044e1f22c59c98d46fa8e77cb8f682cdb55"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/equality",
@@ -1176,6 +1176,7 @@
     "pkg/util/initialization",
     "pkg/util/intstr",
     "pkg/util/json",
+    "pkg/util/jsonmergepatch",
     "pkg/util/mergepatch",
     "pkg/util/net",
     "pkg/util/rand",
@@ -1698,6 +1699,7 @@
     "google.golang.org/grpc/credentials",
     "google.golang.org/grpc/credentials/oauth",
     "google.golang.org/grpc/metadata",
+    "gopkg.in/yaml.v2",
     "k8s.io/api/admission/v1beta1",
     "k8s.io/api/admissionregistration/v1beta1",
     "k8s.io/api/apps/v1",
@@ -1725,8 +1727,11 @@
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/errors",
     "k8s.io/apimachinery/pkg/util/json",
+    "k8s.io/apimachinery/pkg/util/jsonmergepatch",
+    "k8s.io/apimachinery/pkg/util/mergepatch",
     "k8s.io/apimachinery/pkg/util/runtime",
     "k8s.io/apimachinery/pkg/util/sets",
+    "k8s.io/apimachinery/pkg/util/strategicpatch",
     "k8s.io/apimachinery/pkg/util/validation",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/apimachinery/pkg/version",
@@ -1735,6 +1740,7 @@
     "k8s.io/apiserver/pkg/authentication/user",
     "k8s.io/client-go/discovery",
     "k8s.io/client-go/discovery/fake",
+    "k8s.io/client-go/dynamic",
     "k8s.io/client-go/informers",
     "k8s.io/client-go/informers/core/v1",
     "k8s.io/client-go/kubernetes",
@@ -1759,6 +1765,7 @@
     "k8s.io/gengo/types",
     "k8s.io/kubernetes/pkg/api/legacyscheme",
     "k8s.io/kubernetes/pkg/apis/core/validation",
+    "k8s.io/kubernetes/pkg/apis/rbac",
     "k8s.io/kubernetes/pkg/kubectl",
     "k8s.io/kubernetes/pkg/kubectl/cmd/util",
     "k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi",
