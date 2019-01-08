@@ -6,3 +6,4 @@ Errors `nomos vet` may throw while analyzing a GKE Policy Management directory.
 
 *   [KNV1001: ReservedDirectoryNameError](KNV1001.md)
 *   [KNV1020: InvalidNamespaceNameError](KNV1020.md)
+*   [KNV1039: UnknownResourceVersionInSyncError](KNV1039.md)

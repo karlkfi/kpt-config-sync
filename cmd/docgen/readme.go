@@ -36,7 +36,7 @@ func writeReadme() error {
 		return writeErr
 	}
 
-	errorDocCodes := make([]errorDocCode, len(veterrors.Examples))
+	var errorDocCodes []errorDocCode
 	for code, example := range veterrors.Examples {
 		if example == nil {
 			continue

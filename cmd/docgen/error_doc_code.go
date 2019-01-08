@@ -95,7 +95,7 @@ func (e errorDocCode) Example() veterrors.Error {
 
 // Aka returns the type of error in a near-human-readable format
 func (e errorDocCode) Aka() string {
-	return strings.Split(fmt.Sprintf("%T", e.Example()), "validation.")[1]
+	return strings.Split(fmt.Sprintf("%T", e.Example()), "veterrors.")[1]
 }
 
 // Sample returns a string of the sample error
