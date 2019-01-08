@@ -85,7 +85,7 @@ func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Resul
 	defer cancel()
 	project := &bespinv1.Project{}
 	if err := r.Get(ctx, request.NamespacedName, project); err != nil {
-		// Instance was just deleted or there's some internal K8S error.
+		// Instance was just deleted.
 		if k8serrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}

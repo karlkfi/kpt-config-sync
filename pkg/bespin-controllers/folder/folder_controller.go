@@ -22,9 +22,11 @@ import (
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/bespin-controllers/slices"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/equality"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -85,6 +87,10 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 	if err := r.Get(ctx, request.NamespacedName, folder); err != nil {
+		// Instance was just deleted.
+		if k8serrors.IsNotFound(err) {
+			return reconcile.Result{}, nil
+		}
 		glog.Errorf("[Folder %v] reconciler failed to get folder instance: %v", request.NamespacedName, err)
 		return reconcile.Result{},
 			errors.Wrapf(err, "[Folder %v] reconciler failed to get folder instance", request.NamespacedName)
@@ -94,8 +100,6 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{},
 			errors.Wrapf(err, "[Folder %v] reconciler failed to validate Folder instance", request.NamespacedName)
 	}
-	// TODO(b/122522361): Handle the deletion by using finalizer: check for deletionTimestamp, verify
-	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
 	tfe, err := terraform.NewExecutor(ctx, r.Client, folder)
 	if err != nil {
 		glog.Errorf("[Folder %v] reconciler failed to create new terraform executor: %v", request.NamespacedName, err)
@@ -110,7 +114,19 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 			glog.Errorf("[Folder %v] reconciler failed to close Terraform executor: %v", request.NamespacedName, cErr)
 		}
 	}()
-
+	// Folder has been requested for deletion.
+	if !folder.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.doDeletion(tfe, folder)
+	}
+	// Folder is not being deleted, make sure it has bespinv1.Finalizer.
+	if !slices.ContainsString(folder.ObjectMeta.Finalizers, bespinv1.Finalizer) {
+		folder.ObjectMeta.Finalizers = append(folder.ObjectMeta.Finalizers, bespinv1.Finalizer)
+		if err = r.Update(context.Background(), folder); err != nil {
+			glog.Errorf("[Folder %v] reconciler failed to add finalizer to k8s resource: %v",
+				folder.Spec.DisplayName, err)
+			return reconcile.Result{Requeue: true}, nil
+		}
+	}
 	// If Terraform returns an error, update API server with the error details; otherwise update
 	// the API server to bring the resource's Status in sync with its Spec.
 	if err = tfe.RunCreateOrUpdateFlow(); err != nil {
@@ -122,10 +138,31 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 		}
 		return reconcile.Result{}, err
 	}
-
 	if err = r.updateAPIServer(ctx, tfe, folder); err != nil {
 		return reconcile.Result{}, errors.Wrapf(err, "[Folder %v] reconciler failed to update Folder in API server",
 			request.NamespacedName)
+	}
+	return reconcile.Result{}, nil
+}
+
+// doDeletion deletes the Folder on GCP via Terraform, and removes finalizer so that the Folder resource on k8s API
+// server will be deleted as well.
+func (r *ReconcileFolder) doDeletion(tfe *terraform.Executor, folder *bespinv1.Folder) (reconcile.Result, error) {
+	if !slices.ContainsString(folder.ObjectMeta.Finalizers, bespinv1.Finalizer) {
+		glog.Warningf("[Folder %v] instance being deleted does not have bespin finalizer.", folder.Spec.DisplayName)
+	}
+	if err := tfe.RunDeleteFlow(); err != nil {
+		glog.Errorf("[Folder %v] reconciler failed to run Terraform command in folder deletion: %v",
+			folder.Spec.DisplayName, err)
+		return reconcile.Result{}, errors.Wrapf(err,
+			"[Folder %v] reconciler failed to run Terraform command in folder deletion.", folder.Spec.DisplayName)
+	}
+	// Remove bespinv1.Finalizer after deletion so k8s resource can be removed.
+	folder.ObjectMeta.Finalizers = slices.RemoveString(folder.ObjectMeta.Finalizers, bespinv1.Finalizer)
+	if err := r.Update(context.Background(), folder); err != nil {
+		glog.Errorf("[Folder %v] reconciler failed to remove finalizer from k8s resource: %v",
+			folder.Spec.DisplayName, err)
+		return reconcile.Result{Requeue: true}, nil
 	}
 	return reconcile.Result{}, nil
 }
