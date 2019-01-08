@@ -51,9 +51,6 @@ func TestParse(t *testing.T) {
 			root: "examples/parse-errors/missing-system-dir",
 		},
 		{
-			root: "examples/parse-errors/multiple-configmaps",
-		},
-		{
 			root: "examples/parse-errors/multiple-repos",
 		},
 		{

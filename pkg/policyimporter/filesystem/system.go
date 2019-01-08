@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/multierror"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // processSystem processes resources in system dir including:
@@ -19,16 +18,13 @@ import (
 func processSystem(
 	objects []ast.FileObject,
 	opts ParserOpt,
-	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) (*v1alpha1.Repo, []*v1alpha1.Sync, *ast.ReservedNamespaces) {
+	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) (*v1alpha1.Repo, []*v1alpha1.Sync) {
 	var syncs []*v1alpha1.Sync
 	var repo *v1alpha1.Repo
-	var reservedNamespaces *ast.ReservedNamespaces
 	for _, object := range objects {
 		switch o := object.Object.(type) {
 		case *v1alpha1.Repo:
 			repo = o
-		case *corev1.ConfigMap:
-			reservedNamespaces = &ast.ReservedNamespaces{ConfigMap: *o}
 		case *v1alpha1.Sync:
 			syncs = append(syncs, o)
 		}
@@ -39,7 +35,7 @@ func processSystem(
 	if opts.Extension != nil {
 		syncs = append(syncs, opts.Extension.SyncResources()...)
 	}
-	return repo, syncs, reservedNamespaces
+	return repo, syncs
 }
 
 // validateSystem validates objects in system/
@@ -50,7 +46,6 @@ func validateSystem(objects []ast.FileObject, repo *v1alpha1.Repo, apiInfo *meta
 	syntax.SystemKindValidator.Validate(objects, errorBuilder)
 
 	semantic.RepoCountValidator{Objects: objects}.Validate(errorBuilder)
-	semantic.ConfigMapCountValidator{Objects: objects}.Validate(errorBuilder)
 
 	syncs := fileObjects(objects).syncs()
 	sync.KindValidatorFactory.New(syncs).Validate(errorBuilder)

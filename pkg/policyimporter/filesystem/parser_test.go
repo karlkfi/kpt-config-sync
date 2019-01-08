@@ -615,13 +615,6 @@ func createPNWithMeta(
 	return pn
 }
 
-func createReservedPN(
-	name string,
-	parent string,
-	policies *Policies) v1.PolicyNode {
-	return createPolicyNode(name, parent, v1.ReservedNamespace, policies)
-}
-
 func createRootPN(
 	policies *Policies) v1.PolicyNode {
 	pn := createPolicyNode(v1.RootPolicyNodeName, v1.NoParentNamespace, v1.Policyspace, policies)
@@ -1095,51 +1088,6 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
-	},
-	{
-		testName: "Namespace dir with non-conflicting reserved Namespace specified",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aRepo,
-			"system/reserved.yaml":   templateData{Namespace: "baz", Attribute: string(v1alpha1.ReservedAttribute), Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
-			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-		},
-		expectedClusterPolicy: createClusterPolicy(),
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"baz":                 createReservedPN("baz", "", nil),
-			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
-		},
-		expectedSyncs: map[string]v1alpha1.Sync{},
-	},
-	{
-		testName: "Namespace dir with non-conflicting reserved Namespace, but invalid attribute specified",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aRepo,
-			"system/reserved.yaml":   templateData{Namespace: "foo", Attribute: "invalid-attribute", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
-			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-		},
-		expectedErrorCodes: []string{veterrors.UndefinedErrorCode},
-	},
-	{
-		testName: "Namespace dir with conflicting reserved Namespace specified",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aRepo,
-			"system/reserved.yaml":   templateData{Namespace: "foo", Attribute: "reserved", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
-			"namespaces/foo/ns.yaml": templateData{Name: "foo"}.apply(aNamespace),
-		},
-		expectedErrorCodes: []string{veterrors.ReservedDirectoryNameErrorCode},
-	},
-	{
-		testName: "reserved namespace ConfigMap with invalid name",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":    aRepo,
-			"system/reserved.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: "random-name"}.apply(aConfigMap),
-		},
-		expectedErrorCodes: []string{veterrors.UndefinedErrorCode},
 	},
 	{
 		testName: "Namespace dir with ClusterRole",
@@ -1904,16 +1852,6 @@ spec:
 			"system/nomos-2.yaml": aRepo,
 		},
 		expectedErrorCodes: []string{veterrors.MultipleRepoDefinitionsErrorCode, veterrors.MetadataNameCollisionErrorCode},
-	},
-	{
-		testName: "Duplicate ConfigMap definitions is an error",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aRepo,
-			"system/reserved-1.yaml": templateData{Namespace: "baz", Attribute: string(v1alpha1.ReservedAttribute), Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
-			"system/reserved-2.yaml": templateData{Namespace: "baz", Attribute: string(v1alpha1.ReservedAttribute), Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
-		},
-		expectedErrorCodes: []string{veterrors.MultipleConfigMapsErrorCode, veterrors.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Unsupported repo version is an error",

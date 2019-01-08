@@ -193,7 +193,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	// processing for <root>/system/*
 	var syncs []*v1alpha1.Sync
 	systemInfos := p.readRequiredResources(filepath.Join(root, repo.SystemDir), &errorBuilder)
-	fsCtx.Repo, syncs, fsCtx.ReservedNamespaces = processSystem(systemInfos, p.opts, apiInfo, &errorBuilder)
+	fsCtx.Repo, syncs = processSystem(systemInfos, p.opts, apiInfo, &errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
 		return nil, errorBuilder.Build()

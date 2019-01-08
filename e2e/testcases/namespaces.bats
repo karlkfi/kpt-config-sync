@@ -77,35 +77,6 @@ function local_teardown() {
   namespace::check_warning $ns
 }
 
-@test "Namespace has enabled label and reserved" {
-  local ns=decl-reserved-label-enabled
-  namespace::create $ns -l "nomos.dev/managed=enabled"
-  namespace::declare_reserved $ns
-  git::commit
-
-  namespace::check_exists $ns -l "nomos.dev/managed=enabled"
-  namespace::check_warning $ns
-}
-
-@test "Namespace exists and reserved" {
-  local ns=decl-reserved-label-none
-  namespace::create $ns
-  namespace::declare_reserved $ns
-  git::commit
-
-  namespace::check_exists $ns
-  namespace::check_no_warning $ns
-}
-
-@test "Namespace does not exist and reserved" {
-  local ns=decl-reserved-noexist
-  namespace::declare_reserved $ns
-  git::commit
-
-  namespace::check_not_found $ns enabled
-  namespace::check_no_warning $ns
-}
-
 @test "Namespace warn on invalid management label" {
   local ns=decl-invalid-label
   namespace::create $ns -l "nomos.dev/namespace-management=a-garbage-label"

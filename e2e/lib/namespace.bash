@@ -88,28 +88,6 @@ function namespace::declare() {
   git -C "${TEST_REPO}" add "${dst}"
 }
 
-# Designates a reserved namespace in the git repo in the
-# nomos-reserved-namespaces.yaml.  This will overwrite any previous designations
-# with only this designation.
-#
-# Arguments
-#   name: The name of the reserved namespace.
-#
-function namespace::declare_reserved() {
-  local name=$1
-  local dst=acme/system/nomos-reserved-namespaces.yaml
-
-  cat > "${TEST_REPO}/${dst}" <<- EOM
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nomos-reserved-namespaces
-data:
-  ${name}: reserved
-EOM
-  git -C "${TEST_REPO}" add "${dst}"
-}
-
 # Checks that a namespace exists on the cluster.
 #
 # Arguments
