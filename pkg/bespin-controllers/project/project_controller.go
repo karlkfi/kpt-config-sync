@@ -93,8 +93,6 @@ func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, errors.Wrapf(err,
 			"[Project %v] failed to get project instance", request.NamespacedName)
 	}
-	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
-	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
 	tfe, err := terraform.NewExecutor(ctx, r.Client, project)
 	if err != nil {
 		glog.Errorf("[Project %v] reconciler failed to create new Terraform executor: %v", request.NamespacedName, err)

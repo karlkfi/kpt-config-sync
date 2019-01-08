@@ -94,7 +94,7 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{},
 			errors.Wrapf(err, "[Folder %v] reconciler failed to validate Folder instance", request.NamespacedName)
 	}
-	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
+	// TODO(b/122522361): Handle the deletion by using finalizer: check for deletionTimestamp, verify
 	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
 	tfe, err := terraform.NewExecutor(ctx, r.Client, folder)
 	if err != nil {
