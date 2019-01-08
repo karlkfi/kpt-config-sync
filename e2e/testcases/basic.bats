@@ -27,7 +27,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::commit
 
   wait::for kubectl get ns accounting
-  kubectl get ns newer-prj
+  wait::for -f -- kubectl get ns newer-prj
 }
 
 @test "RoleBindings updated" {
