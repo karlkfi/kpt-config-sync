@@ -19,6 +19,8 @@ package v1
 import (
 	// hcl is vendored and will be used in a future CL.
 	_ "github.com/hashicorp/hcl"
+	// hcl/printer is vendored and will be used in a future CL.
+	_ "github.com/hashicorp/hcl/hcl/printer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
