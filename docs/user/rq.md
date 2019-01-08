@@ -48,4 +48,12 @@ and `shipping-staging` is 3. When creating the fourth pod (e.g. in
 Error from server (Forbidden): exceeded quota in Abstract Namespace "shipping-app-backend", requested: pods=4, limit: pods=3
 ```
 
+## Caveats
+
+Hierarchical ResourceQuota does not support the
+[Quota Scopes](https://kubernetes.io/docs/concepts/policy/resource-quotas/#quota-scopes)
+or
+[Priority Class](https://kubernetes.io/docs/concepts/policy/resource-quotas/#limit-priority-class-consumption-by-default)
+features. Usage of these features will result in undefined behavior.
+
 [< Back](../../README.md)
