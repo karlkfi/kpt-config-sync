@@ -155,9 +155,7 @@ The following constraints apply to `cluster` directory and are enforced during
 `system` directory contains resources for configuring the GKE Policy Management
 system.
 
-The `system` directory MUST only contain the `nomos.dev` objects, and an
-optional ConfigMap (core v1) containing
-[reserved namespaces](system_config.md#reserved-namespaces). See
+The `system` directory MUST only contain the `nomos.dev` objects. See
 [GKE Policy Management System Configuration](system_config.md).
 
 ## Filesystem Operations

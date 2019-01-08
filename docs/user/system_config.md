@@ -261,35 +261,4 @@ is ambiguous in certain cases.
 An example illustrating this can be found
 [here](management_flow.md#sync-and-resource-precedence).
 
-## Reserved Namespaces
-
-See [Managagement Flow](management_flow.md).
-
-Reserved namespaces are namespaces that GKE Policy Management will not manage.
-This is here to indicates to GKE Policy Management should not allow another
-namespace of the same name to be created via a Namespace directory as well as
-suppresses alerts of an unknown namespace.
-
-A ConfigMap defined in the root named "nomos-reserved-namespaces" defines the
-reserved namespaces. For example, the following declares the namespaces
-'test-sandbox', 'billing', and 'database' as reserved and as such they will be
-ignored and not trigger warnings for namespaces that are not in the
-declarations. Note that 'default', 'kube-system', 'kube-public' and
-'nomos-system' do not need to be added to this list.
-
-```console
-$ cat system/nomos-reserved-namespaces.yaml
-```
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nomos-reserved-namespaces
-data:
-  test-sandbox: reserved
-  billing: reserved
-  database: reserved
-```
-
 [< Back](../../README.md)

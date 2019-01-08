@@ -182,11 +182,10 @@ Nomos handles Namespaces as a first-class notion with regard to lifecycle
 management. There are three categories of namespaces: Managed, Reserved, and
 Legacy Namespaces.
 
-1.  **Reserved Namespaces** are namespaces that are either pre-installed on the
-    kubernetes cluster (`kube-*`, `nomos-system`, `default`) or
-    [designated as reserved](system_config.md#reserved-namespaces) by the user.
-    Reserved namespaces and the resources within them **will not be managed**
-    even if the namespace and/or resource has a nomos.dev/managed=enabled label.
+1.  **Reserved Namespaces** are namespaces that are pre-installed on the
+    kubernetes cluster (`kube-*`, `nomos-system`, `default`). Reserved
+    namespaces and the resources within them **will not be managed** even if the
+    namespace and/or resource has a nomos.dev/managed=enabled label.
 1.  **Managed Namespaces** are namespaces on the cluster that GKE Policy
     Management keeps in sync with the repo. The Namespace **MUST** have the
     label nomos.dev/managed=enabled on cluster and exist in the Git source of
