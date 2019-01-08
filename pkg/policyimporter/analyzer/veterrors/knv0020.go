@@ -8,22 +8,30 @@ import (
 // InvalidNamespaceNameErrorCode is the error code for InvalidNamespaceNameError
 const InvalidNamespaceNameErrorCode = "1020"
 
-var invalidNamespaceNameErrorExample = InvalidNamespaceNameError{
-	ResourceID: &resourceID{
-		source:           "namespaces/foo/namespace.yaml",
-		name:             "bar",
-		groupVersionKind: kinds.Namespace()},
-	Expected: "foo",
+var invalidNamespaceNameErrorExamples = []Error{
+	InvalidNamespaceNameError{
+		ResourceID: &resourceID{
+			source:           "namespaces/foo/namespace.yaml",
+			name:             "bar",
+			groupVersionKind: kinds.Namespace()},
+		Expected: "foo",
+	},
 }
 
 var invalidNamespacesNameErrorExplanation = `
 A Namespace Resource MUST have a metadata.name that matches the name of its
 directory. To fix, correct the offending Namespace's metadata.name or its
 directory.
+
+Sample Error Message:
+
+{{.CodeMode}}
+{{index .Examples 0}}
+{{.CodeMode}}
 `
 
 func init() {
-	register(InvalidNamespaceNameErrorCode, invalidNamespaceNameErrorExample, invalidNamespacesNameErrorExplanation)
+	register(InvalidNamespaceNameErrorCode, invalidNamespaceNameErrorExamples, invalidNamespacesNameErrorExplanation)
 }
 
 // InvalidNamespaceNameError reports that a Namespace has an invalid name.

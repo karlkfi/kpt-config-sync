@@ -5,7 +5,7 @@ import "path"
 // ReservedDirectoryNameErrorCode is the error code for ReservedDirectoryNameError
 const ReservedDirectoryNameErrorCode = "1001"
 
-var reservedDirectoryNameErrorExample = ReservedDirectoryNameError{Dir: "namespaces/reserved"}
+var reservedDirectoryNameErrorExamples = []Error{ReservedDirectoryNameError{Dir: "namespaces/reserved"}}
 
 var reservedDirectoryNameExplanation = `
 GKE Policy Management defines several
@@ -17,10 +17,16 @@ To fix:
 1.  rename the directory,
 1.  remove the directory, or
 1.  remove the reserved namespace declaration.
+
+Sample Error Message:
+
+{{.CodeMode}}
+{{index .Examples 0}}
+{{.CodeMode}}
 `
 
 func init() {
-	register(ReservedDirectoryNameErrorCode, reservedDirectoryNameErrorExample, reservedDirectoryNameExplanation)
+	register(ReservedDirectoryNameErrorCode, reservedDirectoryNameErrorExamples, reservedDirectoryNameExplanation)
 }
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.

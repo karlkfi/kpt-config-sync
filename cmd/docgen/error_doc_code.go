@@ -33,10 +33,6 @@ func (e errorDocCode) document() error {
 		return errors.Wrap(explanationErr, "programmer error: unable to write explanation")
 	}
 
-	if exampleErr := e.writeExample(file); exampleErr != nil {
-		return errors.Wrap(exampleErr, "programmer error: unable to write example")
-	}
-
 	return file.Close()
 }
 
@@ -48,8 +44,9 @@ func (e errorDocCode) writeExplanation(wr io.Writer) error {
 	return e.execute(wr, veterrors.Explanations[e.Code()], "Explanation")
 }
 
-func (e errorDocCode) writeExample(wr io.Writer) error {
-	return e.execute(wr, errorExampleTmplString, "Example")
+// CodeMode enters and exits multiline monospace mode.
+func (e errorDocCode) CodeMode() string {
+	return "```"
 }
 
 // execute is a convenience method for templating logic.
@@ -88,19 +85,14 @@ func (e errorDocCode) Code() string {
 	return string(e)
 }
 
-// Example returns an example error
-func (e errorDocCode) Example() veterrors.Error {
+// Examples returns the example errors
+func (e errorDocCode) Examples() []veterrors.Error {
 	return veterrors.Examples[e.Code()]
 }
 
 // Aka returns the type of error in a near-human-readable format
 func (e errorDocCode) Aka() string {
-	return strings.Split(fmt.Sprintf("%T", e.Example()), "veterrors.")[1]
-}
-
-// Sample returns a string of the sample error
-func (e errorDocCode) Sample() string {
-	return fmt.Sprintf("```\n%s\n```", e.Example().Error())
+	return strings.Split(fmt.Sprintf("%T", e.Examples()[0]), "veterrors.")[1]
 }
 
 // Nomos returns `nomos`
@@ -121,4 +113,11 @@ func (e errorDocCode) Namespace() string {
 // NamespacesDir returns the dir holding Namespaces
 func (e errorDocCode) NamespacesDir() string {
 	return "`" + repo.NamespacesDir + "/`"
+}
+
+// Q puts the passed parameter in monospace mode.
+// The method name is short because it is going to appear everywhere. It will harm the readability
+// of the template code for this to be anything longer.
+func (e errorDocCode) Q(s string) string {
+	return "`" + s + "`"
 }

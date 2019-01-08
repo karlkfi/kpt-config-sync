@@ -2,6 +2,7 @@ package main
 
 import (
 	"path/filepath"
+	"sort"
 	"text/template"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
@@ -43,6 +44,9 @@ func writeReadme() error {
 		}
 		errorDocCodes = append(errorDocCodes, errorDocCode(code))
 	}
+	sort.Slice(errorDocCodes, func(i, j int) bool {
+		return errorDocCodes[i].Code() < errorDocCodes[j].Code()
+	})
 	if executeErr := tmpl.Execute(file, errorDocCodes); executeErr != nil {
 		return executeErr
 	}

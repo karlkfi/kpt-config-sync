@@ -31,24 +31,24 @@ var codes = map[string]bool{
 }
 
 // Examples is the canonical example errors for each code.
-var Examples = make(map[string]Error)
+var Examples = make(map[string][]Error)
 
 // Explanations is the error documentation for each code.
 var Explanations = make(map[string]string)
 
-func register(code string, example Error, explanation string) {
+func register(code string, examples []Error, explanation string) {
 	if codes[code] {
 		panic(errors.Errorf("duplicate error code: %q", code))
 	}
 	codes[code] = true
 
-	if example != nil {
+	for _, example := range examples {
 		if example.Code() != code {
 			panic(errors.Errorf("supplied error code %q does not match code of example %q", code, example.Code()))
 		}
-		Examples[code] = example
 	}
 
+	Examples[code] = examples
 	Explanations[code] = explanation
 }
 

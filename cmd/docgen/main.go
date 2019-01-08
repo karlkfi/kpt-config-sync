@@ -17,12 +17,6 @@ const (
 	errorPreambleTmplString = `
 # KNV{{.Code}}: {{.Aka}}
 `
-
-	errorExampleTmplString = `
-Sample Error Message:
-
-{{.Sample}}
-`
 )
 
 var (
@@ -41,8 +35,8 @@ func main() {
 		panic(errors.Wrap(err, "error writing README.md"))
 	}
 
-	for code, example := range veterrors.Examples {
-		if example == nil {
+	for code, explanation := range veterrors.Explanations {
+		if explanation == "" {
 			// No documentation for this error code yet.
 			continue
 		}
