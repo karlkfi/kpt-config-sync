@@ -19,7 +19,7 @@ func (v RepoCountValidator) Validate(errorBuilder *multierror.Builder) {
 	for _, obj := range v.Objects {
 		switch repo := obj.Object.(type) {
 		case *v1alpha1.Repo:
-			repos[repo] = obj.Source()
+			repos[repo] = obj.RelativeSlashPath()
 		}
 	}
 

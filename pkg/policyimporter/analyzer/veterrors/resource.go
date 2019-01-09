@@ -3,14 +3,14 @@ package veterrors
 import (
 	"fmt"
 
+	"github.com/google/nomos/pkg/policyimporter/filesystem/path"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // ResourceID identifies a Resource in a Nomos repository.
 // Unique so long as no single file illegally declares two Resources of the same Name and Group/Version/Kind.
 type ResourceID interface {
-	// Source returns the UNIX-style path to the file declaring the Resource.
-	Source() string
+	path.Sourced
 	// Name returns the metadata.name of the Resource.
 	Name() string
 	// GroupVersionKind returns the K8S Group/Version/Kind of the Resource.
@@ -22,7 +22,7 @@ func printResourceID(r ResourceID) string {
 	return fmt.Sprintf("source: %[1]s\n"+
 		"metadata.name: %[2]s\n"+
 		"%[3]s",
-		r.Source(), r.Name(), printGroupVersionKind(r.GroupVersionKind()))
+		r.RelativeSlashPath(), r.Name(), printGroupVersionKind(r.GroupVersionKind()))
 }
 
 // String implements Stringer
@@ -42,8 +42,10 @@ type resourceID struct {
 	groupVersionKind schema.GroupVersionKind
 }
 
-// Source implements ResourceID
-func (r resourceID) Source() string {
+var _ ResourceID = resourceID{}
+
+// RelativeSlashPath implements ResourceID
+func (r resourceID) RelativeSlashPath() string {
 	return r.source
 }
 
@@ -60,8 +62,7 @@ func (r resourceID) GroupVersionKind() schema.GroupVersionKind {
 // SyncID identifies a Kind which has been declared in a Sync in a Nomos repository.
 // Unique so long as no single file illegally defines two Kinds of the same Group/Kind.
 type SyncID interface {
-	// Source returns the UNIX-style path to the file with the Sync defining the Resource Kind.
-	Source() string
+	path.Sourced
 	// GroupVersionKind returns the K8S Group/Version/Kind the Sync defines.
 	GroupVersionKind() schema.GroupVersionKind
 }
@@ -69,18 +70,20 @@ type SyncID interface {
 func printSyncID(s SyncID) string {
 	return fmt.Sprintf("source: %[1]s\n"+
 		"%[2]s",
-		s.Source(), printGroupVersionKind(s.GroupVersionKind()))
+		s.RelativeSlashPath(), printGroupVersionKind(s.GroupVersionKind()))
 }
 
 // syncID implements SyncID in a minimal way. This enables directly instantiating errors for
-// documenation or testing.
+// documentation or testing.
 type syncID struct {
 	source           string
 	groupVersionKind schema.GroupVersionKind
 }
 
-// Source implements SyncID
-func (s syncID) Source() string {
+var _ SyncID = syncID{}
+
+// RelativeSlashPath implements SyncID
+func (s syncID) RelativeSlashPath() string {
 	return s.source
 }
 

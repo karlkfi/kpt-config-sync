@@ -163,7 +163,7 @@ func toDirInfoMap(fileInfos []ast.FileObject) map[string][]ast.FileObject {
 
 	// If a directory has resources, its value in the map will be non-nil.
 	for _, i := range fileInfos {
-		d := filepath.Dir(i.Source())
+		d := filepath.Dir(i.RelativeSlashPath())
 		result[d] = append(result[d], i)
 	}
 

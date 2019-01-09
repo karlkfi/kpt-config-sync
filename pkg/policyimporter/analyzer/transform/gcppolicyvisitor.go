@@ -90,7 +90,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		iamPolicy.Spec.ResourceReference = *attachmentPoint
 		if attachmentPoint.Kind == "Project" {
 			return &ast.NamespaceObject{
-				FileObject: ast.NewFileObject(iamPolicy, o.Source()),
+				FileObject: ast.NewFileObject(iamPolicy, o.RelativeSlashPath()),
 			}
 		}
 
@@ -103,7 +103,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 			Spec:       iamPolicy.Spec,
 			Status:     iamPolicy.Status,
 		}
-		v.addToClusterObjects(ciam, o.Source())
+		v.addToClusterObjects(ciam, o.RelativeSlashPath())
 		return nil
 	case *v1.OrganizationPolicy:
 		if attachmentPoint.Kind == "" {
@@ -113,7 +113,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		orgPolicy.Spec.ResourceReference = *attachmentPoint
 		if attachmentPoint.Kind == "Project" {
 			return &ast.NamespaceObject{
-				FileObject: ast.NewFileObject(orgPolicy, o.Source()),
+				FileObject: ast.NewFileObject(orgPolicy, o.RelativeSlashPath()),
 			}
 		}
 
@@ -126,7 +126,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 			Spec:       orgPolicy.Spec,
 			Status:     orgPolicy.Status,
 		}
-		v.addToClusterObjects(corg, o.Source())
+		v.addToClusterObjects(corg, o.RelativeSlashPath())
 		return nil
 	}
 

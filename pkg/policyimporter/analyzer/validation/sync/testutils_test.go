@@ -21,7 +21,7 @@ func toFileSync(sync FileGroupVersionKindHierarchySync) FileSync {
 	}
 
 	return FileSync{
-		source: sync.Source(),
+		source: sync.RelativeSlashPath(),
 		Sync: &v1alpha1.Sync{
 			Spec: v1alpha1.SyncSpec{
 				Groups: []v1alpha1.SyncGroup{group},

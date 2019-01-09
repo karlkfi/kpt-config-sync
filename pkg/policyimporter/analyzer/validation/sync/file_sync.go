@@ -20,8 +20,8 @@ func NewFileSync(sync *v1alpha1.Sync, source string) FileSync {
 	return FileSync{Sync: sync, source: source}
 }
 
-// Source implements vet.ResourceID
-func (s FileSync) Source() string {
+// RelativeSlashPath implements vet.ResourceID
+func (s FileSync) RelativeSlashPath() string {
 	return s.source
 }
 
@@ -53,8 +53,10 @@ type FileGroupVersionKindHierarchySync struct {
 	source string
 }
 
-// Source implements vet.SyncID
-func (s FileGroupVersionKindHierarchySync) Source() string {
+var _ veterrors.SyncID = FileGroupVersionKindHierarchySync{}
+
+// RelativeSlashPath implements vet.SyncID
+func (s FileGroupVersionKindHierarchySync) RelativeSlashPath() string {
 	return s.source
 }
 

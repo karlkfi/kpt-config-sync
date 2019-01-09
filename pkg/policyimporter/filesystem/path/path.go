@@ -5,6 +5,11 @@ import (
 	"path/filepath"
 )
 
+// Sourced represents an object associated with a path in a Nomos repository.
+type Sourced interface {
+	RelativeSlashPath() string
+}
+
 // NomosRootPath is a path to a directory holding a Nomos repository.
 // Robust to changes in the working directory.
 type NomosRootPath struct {

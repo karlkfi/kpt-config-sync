@@ -63,15 +63,15 @@ func validateGroupKindCollisions(metas []veterrors.ResourceID, eb *multierror.Bu
 func validateNameCollisions(name string, metas []veterrors.ResourceID, eb *multierror.Builder) {
 	sort.Slice(metas, func(i, j int) bool {
 		// Sort by source file.
-		return path.Dir(metas[i].Source()) < path.Dir(metas[j].Source())
+		return path.Dir(metas[i].RelativeSlashPath()) < path.Dir(metas[j].RelativeSlashPath())
 	})
 
 	for i := 0; i < len(metas); {
-		dir := path.Dir(metas[i].Source())
+		dir := path.Dir(metas[i].RelativeSlashPath())
 		var duplicates []veterrors.ResourceID
 
 		for j := i + 1; j < len(metas); j++ {
-			if strings.HasPrefix(metas[j].Source(), dir) {
+			if strings.HasPrefix(metas[j].RelativeSlashPath(), dir) {
 				// Pick up duplicates in the same directory and child directories.
 				duplicates = append(duplicates, metas[j])
 			} else {

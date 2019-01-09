@@ -57,5 +57,5 @@ func applyPathAnnotation(fo ast.FileObject) {
 		a = map[string]string{}
 		metaObj.SetAnnotations(a)
 	}
-	a[v1alpha1.SourcePathAnnotationKey] = fo.Source()
+	a[v1alpha1.SourcePathAnnotationKey] = fo.RelativeSlashPath()
 }

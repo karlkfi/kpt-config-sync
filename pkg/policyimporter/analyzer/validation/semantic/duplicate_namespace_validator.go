@@ -20,7 +20,7 @@ func (v DuplicateNamespaceValidator) Validate(errorBuilder *multierror.Builder) 
 
 	for i, obj := range v.Objects {
 		if obj.GroupVersionKind() == kinds.Namespace() {
-			dir := path.Dir(obj.Source())
+			dir := path.Dir(obj.RelativeSlashPath())
 			namespaces[dir] = append(namespaces[dir], &v.Objects[i])
 		}
 	}

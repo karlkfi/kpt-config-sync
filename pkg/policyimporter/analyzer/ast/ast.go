@@ -47,12 +47,12 @@ func NewFileObject(object runtime.Object, source string) FileObject {
 // FileObjectCmp provides a comparer option for FileObject
 func FileObjectCmp() cmp.Option {
 	return cmp.Comparer(func(lhs, rhs FileObject) bool {
-		return (lhs.Source() == rhs.Source()) && cmp.Equal(lhs.Object, rhs.Object, resourcequota.ResourceQuantityEqual())
+		return (lhs.RelativeSlashPath() == rhs.RelativeSlashPath()) && cmp.Equal(lhs.Object, rhs.Object, resourcequota.ResourceQuantityEqual())
 	})
 }
 
-// Source implements vet.ResourceID
-func (o *FileObject) Source() string {
+// RelativeSlashPath implements vet.ResourceID
+func (o *FileObject) RelativeSlashPath() string {
 	return o.source
 }
 

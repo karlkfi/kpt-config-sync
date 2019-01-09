@@ -49,7 +49,7 @@ func (v ConflictingResourceQuotaValidator) Validate(errorBuilder *multierror.Bui
 			glog.V(5).Infof("obj: %v", obj)
 		}
 		if obj.GroupVersionKind() == kinds.ResourceQuota() {
-			dir := path.Dir(obj.Source())
+			dir := path.Dir(obj.RelativeSlashPath())
 			for _, c := range v.coverage.MapToClusters(obj.MetaObject()) {
 				if glog.V(7) {
 					glog.Infof("seen cluster: i=%v, dir=%v, c=%v", obj, dir, c)

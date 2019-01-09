@@ -12,7 +12,7 @@ import (
 func toSources(infos []ast.FileObject) []string {
 	result := make([]string, len(infos))
 	for i, info := range infos {
-		result[i] = info.Source()
+		result[i] = info.RelativeSlashPath()
 	}
 	return result
 }
@@ -27,7 +27,7 @@ func (objects fileObjects) syncs() []sync.FileSync {
 	for _, obj := range objects {
 		switch o := obj.Object.(type) {
 		case *v1alpha1.Sync:
-			result = append(result, sync.NewFileSync(o, obj.Source()))
+			result = append(result, sync.NewFileSync(o, obj.RelativeSlashPath()))
 		}
 	}
 

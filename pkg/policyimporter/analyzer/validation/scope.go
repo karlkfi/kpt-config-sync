@@ -61,7 +61,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 				"directory.  Move declaration to the appropriate %q directory.",
 			gvk,
 			o.MetaObject().GetName(),
-			o.Source(),
+			o.RelativeSlashPath(),
 			repo.ClusterDir,
 			repo.NamespacesDir,
 		))
@@ -83,7 +83,7 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 				"%q directory.  Move declaration to the %q directory.",
 			gvk,
 			o.MetaObject().GetName(),
-			o.Source(),
+			o.RelativeSlashPath(),
 			repo.NamespacesDir,
 			repo.ClusterDir,
 		))

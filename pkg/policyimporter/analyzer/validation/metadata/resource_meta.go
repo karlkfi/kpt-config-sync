@@ -22,8 +22,8 @@ type resourceMeta struct {
 
 var _ ResourceMeta = resourceMeta{}
 
-// Source implements ResourceMeta
-func (m resourceMeta) Source() string { return m.source }
+// RelativeSlashPath implements ResourceMeta
+func (m resourceMeta) RelativeSlashPath() string { return m.source }
 
 // Name implements ResourceMeta
 func (m resourceMeta) Name() string { return m.name }

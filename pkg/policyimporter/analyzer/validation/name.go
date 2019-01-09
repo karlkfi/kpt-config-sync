@@ -98,9 +98,9 @@ func (n nameChecker) add(scope string, o *ast.FileObject) error {
 			scope,
 			o.GetObjectKind().GroupVersionKind(),
 			o.MetaObject().GetName(),
-			prev.Source(),
+			prev.RelativeSlashPath(),
 			prev.Object,
-			o.Source(),
+			o.RelativeSlashPath(),
 			o.Object,
 		)
 	}

@@ -27,7 +27,7 @@ var NameValidatorFactory = ValidatorFactory{
 			}
 		} else if gvk == kinds.Namespace() {
 			// TODO(willbeason) Move this to Namespace-specific package.
-			expectedName := path.Base(path.Dir(meta.Source()))
+			expectedName := path.Base(path.Dir(meta.RelativeSlashPath()))
 			if expectedName == repo.NamespacesDir {
 				return veterrors.IllegalTopLevelNamespaceError{ResourceID: meta}
 			}
