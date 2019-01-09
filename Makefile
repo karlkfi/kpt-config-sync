@@ -73,7 +73,7 @@ TEMPLATES_DIR := $(TOP_DIR)/manifests/templates
 TEST_TEMPLATES_DIR := $(TOP_DIR)/test/manifests/templates
 
 # Use git tags to set version string.
-VERSION := $(shell git describe --tags --always --dirty)
+VERSION = $(shell git describe --tags --always --dirty)
 
 # UID of current user
 UID := $(shell id -u)
@@ -143,7 +143,7 @@ GCLOUD_QUIET := --quiet
 DATE := $(shell date +'%s')
 IMAGE_TAG ?= latest
 
-DOCKER_RUN_ARGS := \
+DOCKER_RUN_ARGS = \
 	$(DOCKER_INTERACTIVE)                                              \
 	-e VERSION=$(VERSION)                                              \
 	-e PKG=$(REPO)                                                     \

@@ -46,7 +46,7 @@ RELEASE_BUCKET ?= gs://nomos-release
 FETCH_TAGS := $(shell git fetch --tags)
 
 # Use git tags to set version string.
-VERSION := $(shell git describe --tags --always --dirty)
+VERSION = $(shell git describe --tags --always --dirty)
 
 # TODO(filmil): See if we can avoid referring explicitly to the internal
 # repository.
@@ -208,7 +208,7 @@ bless-release: check-dirty
 # Where the "origin" remote is not defined, define it.   go/prow jobs don't have
 # it defined, and this matters in the 'autorelease' target below.
 git-remote-add:
-	git remote add origin $(NOMOS_GIT_REPO)
+	git remote add origin $(NOMOS_GIT_REPO) || true
 
 # Ensures that tags are fetched from the git repository.
 git-tag:
@@ -248,9 +248,9 @@ else
 __internal-autorelease: VERSION=$(NEXT_RC)
 __internal-autorelease: IMAGE_TAG=$(NEXT_RC)
 __internal-autorelease: \
+		info \
 		git-remote-add \
 		git-tag \
-		info \
 		clean \
 	    test \
 		ci-test-e2e \
