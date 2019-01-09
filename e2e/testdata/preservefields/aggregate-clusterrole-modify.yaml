@@ -1,0 +1,11 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: aggregate
+  labels:
+    meaningless-label: "exists"
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      permissions: "viewer"
+rules: []

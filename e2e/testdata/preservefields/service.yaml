@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: e2e-test-service
+spec:
+  sessionAffinity: ClientIP
+  selector:
+    app: e2e-test-service
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 9376
