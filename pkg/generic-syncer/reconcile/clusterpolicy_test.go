@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/client"
 	syncerdiffer "github.com/google/nomos/pkg/generic-syncer/differ"
@@ -45,8 +45,8 @@ func TestClusterPolicyReconcile(t *testing.T) {
 		clusterPolicy    *v1.ClusterPolicy
 		declared         []runtime.Object
 		actual           []runtime.Object
+		wantApplies      []application
 		wantCreates      []runtime.Object
-		wantUpdates      []runtime.Object
 		wantDeletes      []runtime.Object
 		wantStatusUpdate *v1.ClusterPolicy
 		wantEvents       []event
@@ -93,21 +93,36 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					},
 				},
 			},
-			wantUpdates: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "my-persistentvolume",
-						Labels: labeling.ManageResource.New(),
-						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+			wantApplies: []application{
+				{
+					intended: &corev1.PersistentVolume{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "PersistentVolume",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "my-persistentvolume",
+							Labels: labeling.ManageResource.New(),
+							Annotations: map[string]string{
+								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							},
+						},
+						Spec: corev1.PersistentVolumeSpec{
+							PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
 						},
 					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
+					current: &corev1.PersistentVolume{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "PersistentVolume",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "my-persistentvolume",
+							Labels: labeling.ManageResource.New(),
+						},
+						Spec: corev1.PersistentVolumeSpec{
+							PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimDelete,
+						},
 					},
 				},
 			},
@@ -177,6 +192,42 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					},
 				},
 			},
+			wantApplies: []application{
+				{
+					intended: &corev1.PersistentVolume{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "PersistentVolume",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "my-persistentvolume",
+							Labels: labeling.ManageResource.New(),
+							Annotations: map[string]string{
+								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							},
+						},
+						Spec: corev1.PersistentVolumeSpec{
+							PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
+						},
+					},
+					current: &corev1.PersistentVolume{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "PersistentVolume",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "my-persistentvolume",
+							Labels: labeling.ManageResource.New(),
+							Annotations: map[string]string{
+								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							},
+						},
+						Spec: corev1.PersistentVolumeSpec{
+							PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
+						},
+					},
+				},
+			},
 			wantStatusUpdate: &v1.ClusterPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterPolicyName,
@@ -188,6 +239,13 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					SyncState: v1.StateSynced,
 					SyncTime:  now(),
 					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+				},
+			},
+			wantEvents: []event{
+				{
+					kind:    corev1.EventTypeNormal,
+					reason:  "ReconcileComplete",
+					varargs: true,
 				},
 			},
 		},
@@ -404,12 +462,13 @@ func TestClusterPolicyReconcile(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockClient := syncertesting.NewMockClient(mockCtrl)
+			mockApplier := syncertesting.NewMockApplier(mockCtrl)
 			mockCache := syncertesting.NewMockGenericCache(mockCtrl)
 			mockRecorder := syncertesting.NewMockEventRecorder(mockCtrl)
 			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, tc.declared))
 
 			testReconciler := NewClusterPolicyReconciler(
-				client.New(mockClient), mockCache, mockRecorder, fakeDecoder, comparator, toSync)
+				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, comparator, toSync)
 
 			// Get ClusterPolicy from cache.
 			mockCache.EXPECT().
@@ -423,21 +482,16 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					Return(toUnstructureds(t, converter, tc.actual), nil)
 			}
 
-			// Check for expected create, update and deletes.
+			// Check for expected creates, applies and deletes.
 			for _, wantCreate := range tc.wantCreates {
-				mockClient.EXPECT().
-					Create(gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantCreate)))
+				mockApplier.EXPECT().
+					Create(gomock.Any(), NewUnstructuredMatcher(toUnstructured(t, converter, wantCreate)))
 			}
-			for _, wantUpdate := range tc.wantUpdates {
-				u := toUnstructured(t, converter, wantUpdate)
-				// Converting to unstructured removes empty fields. We always set the resource version for updates, so we need to set
-				// it explicitly here.
-				u.SetResourceVersion("")
-				// Updates involve first getting the resource from API Server.
-				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Any())
-				mockClient.EXPECT().
-					Update(gomock.Any(), gomock.Eq(u))
+			for _, wantApply := range tc.wantApplies {
+				mockApplier.EXPECT().
+					ApplyCluster(
+						gomock.Eq(toUnstructured(t, converter, wantApply.intended)),
+						gomock.Eq(toUnstructured(t, converter, wantApply.current)))
 			}
 			for _, wantDelete := range tc.wantDeletes {
 				mockClient.EXPECT().

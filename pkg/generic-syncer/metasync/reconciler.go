@@ -104,6 +104,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	// restart the GenericResourceManager to sync the appropriate resources.
 	if err := r.genericResourceManager.UpdateSyncResources(enabled, r.mgrStartErrCh); err != nil {
 		r.genericResourceManager.Clear()
+		glog.Errorf("Could not start GenericResourceManager: %v", err)
 		return reconcile.Result{}, err
 	}
 

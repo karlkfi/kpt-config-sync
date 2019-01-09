@@ -30,20 +30,6 @@ import (
 
 var converter = runtime.DefaultUnstructuredConverter
 
-func testEqualsFn(t *testing.T) func(*unstructured.Unstructured, *unstructured.Unstructured) bool {
-	return func(lhsObj *unstructured.Unstructured, rhsObj *unstructured.Unstructured) bool {
-		lhs := &nomosv1.ClusterPolicy{}
-		rhs := &nomosv1.ClusterPolicy{}
-		if err := converter.FromUnstructured(lhsObj.UnstructuredContent(), lhs); err != nil {
-			t.Fatal(err)
-		}
-		if err := converter.FromUnstructured(rhsObj.UnstructuredContent(), rhs); err != nil {
-			t.Fatal(err)
-		}
-		return lhs.Spec.ImportToken == rhs.Spec.ImportToken
-	}
-}
-
 type TestItem struct {
 	name        string
 	value       string
@@ -157,6 +143,12 @@ func TestComparator(t *testing.T) {
 					Actual:   TestItem{name: "foo", value: "2"}.Object(t),
 				},
 				{
+					Name:     "bar",
+					Type:     Update,
+					Declared: TestItem{name: "bar", value: "2"}.Object(t),
+					Actual:   TestItem{name: "bar", value: "2"}.Object(t),
+				},
+				{
 					Name:     "baz",
 					Type:     Add,
 					Declared: TestItem{name: "baz", value: "3"}.Object(t),
@@ -196,7 +188,7 @@ func TestComparator(t *testing.T) {
 			declared := testcase.decls.Objects(t)
 			actuals := testcase.actuals.Objects(t)
 
-			diff := Diffs(testEqualsFn(t), declared, actuals)
+			diff := Diffs(declared, actuals)
 
 			for _, expect := range testcase.expect {
 				var found bool
@@ -235,7 +227,7 @@ func TestActualResourceIsManaged(t *testing.T) {
 		},
 		{
 			name:   "invalid value",
-			labels: map[string]string{"nomos.dev/managed": "enalbed"},
+			labels: map[string]string{"nomos.dev/managed": "invalid"},
 			want:   false,
 		},
 		{

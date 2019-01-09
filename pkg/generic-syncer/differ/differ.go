@@ -21,7 +21,6 @@ package differ
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/generic-syncer/labeling"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -72,7 +71,7 @@ func (d Diff) ActualResourceIsManaged() bool {
 
 // Diffs returns the diffs between declared and actual state. The diffs will be returned in an
 // arbitrary order.
-func Diffs(equals Equals, declared []*unstructured.Unstructured, existing []*unstructured.Unstructured) []*Diff {
+func Diffs(declared []*unstructured.Unstructured, existing []*unstructured.Unstructured) []*Diff {
 	var diffs []*Diff
 
 	decls := map[string]*unstructured.Unstructured{}
@@ -99,15 +98,13 @@ func Diffs(equals Equals, declared []*unstructured.Unstructured, existing []*uns
 				Actual:   nil,
 			})
 		} else {
-			// We check equals on content body, and label/annotations meta.
-			if !equals(decl, actual) || !action.MetaEqual(actual, decl) {
-				diffs = append(diffs, &Diff{
-					Name:     name,
-					Type:     Update,
-					Declared: decl,
-					Actual:   actual,
-				})
-			}
+			// Applier handles comparison between declared and actual: always update.
+			diffs = append(diffs, &Diff{
+				Name:     name,
+				Type:     Update,
+				Declared: decl,
+				Actual:   actual,
+			})
 		}
 	}
 

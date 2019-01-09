@@ -39,9 +39,16 @@ const policyNodeControllerName = "policynode-resources"
 // AddPolicyNode adds PolicyNode sync controllers to the Manager.
 func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *differ.Comparator,
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
+	genericClient := client.New(mgr.GetClient())
+	applier, err := genericreconcile.NewApplier(mgr.GetScheme(), mgr.GetConfig(), genericClient)
+	if err != nil {
+		return err
+	}
+
 	pnc, err := controller.New(policyNodeControllerName, mgr, controller.Options{
 		Reconciler: genericreconcile.NewPolicyNodeReconciler(
-			client.New(mgr.GetClient()),
+			genericClient,
+			applier,
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
 			mgr.GetRecorder(policyNodeControllerName),
 			decoder,

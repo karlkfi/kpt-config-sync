@@ -17,11 +17,12 @@ package reconcile
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/client"
 	syncerdiffer "github.com/google/nomos/pkg/generic-syncer/differ"
@@ -45,6 +46,11 @@ type event struct {
 	varargs bool
 }
 
+// application contains the arguments needed for Applier's apply calls.
+type application struct {
+	intended, current runtime.Object
+}
+
 func TestPolicyNodeReconcile(t *testing.T) {
 	now = func() metav1.Time {
 		return metav1.Time{Time: time.Unix(0, 0)}
@@ -56,8 +62,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 		declared            []runtime.Object
 		actual              []runtime.Object
 		wantNamespaceUpdate *corev1.Namespace
+		wantApplies         []application
 		wantCreates         []runtime.Object
-		wantUpdates         []runtime.Object
 		wantDeletes         []runtime.Object
 		wantStatusUpdate    *v1.PolicyNode
 		wantEvents          []event
@@ -128,23 +134,41 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					},
 				},
 			},
-			wantUpdates: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-deployment",
-						Namespace: "eng",
-						Labels:    labeling.ManageResource.New(),
-						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+			wantApplies: []application{
+				{
+					intended: &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-deployment",
+							Namespace: "eng",
+							Labels:    labeling.ManageResource.New(),
+							Annotations: map[string]string{
+								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							},
+						},
+						Spec: appsv1.DeploymentSpec{
+							Strategy: appsv1.DeploymentStrategy{
+								Type: appsv1.RollingUpdateDeploymentStrategyType,
+							},
 						},
 					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
+					current: &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-deployment",
+							Namespace: "eng",
+							Labels:    labeling.ManageResource.New(),
+						},
+						Spec: appsv1.DeploymentSpec{
+							Strategy: appsv1.DeploymentStrategy{
+								Type: appsv1.RecreateDeploymentStrategyType,
+							},
 						},
 					},
 				},
@@ -229,6 +253,48 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					},
 				},
 			},
+			wantApplies: []application{
+				{
+					intended: &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-deployment",
+							Namespace: "eng",
+							Labels:    labeling.ManageResource.New(),
+							Annotations: map[string]string{
+								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							},
+						},
+						Spec: appsv1.DeploymentSpec{
+							Strategy: appsv1.DeploymentStrategy{
+								Type: appsv1.RollingUpdateDeploymentStrategyType,
+							},
+						},
+					},
+					current: &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-deployment",
+							Namespace: "eng",
+							Labels:    labeling.ManageResource.New(),
+							Annotations: map[string]string{
+								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							},
+						},
+						Spec: appsv1.DeploymentSpec{
+							Strategy: appsv1.DeploymentStrategy{
+								Type: appsv1.RollingUpdateDeploymentStrategyType,
+							},
+						},
+					},
+				},
+			},
 			wantNamespaceUpdate: &corev1.Namespace{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Namespace",
@@ -239,6 +305,13 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Labels: map[string]string{
 						labeling.ResourceManagementKey: labeling.Enabled,
 					},
+				},
+			},
+			wantEvents: []event{
+				{
+					kind:    corev1.EventTypeNormal,
+					reason:  "ReconcileComplete",
+					varargs: true,
 				},
 			},
 		},
@@ -591,23 +664,41 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					reason: "UnmanagedNamespace",
 				},
 			},
-			wantUpdates: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-deployment",
-						Namespace: "eng",
-						Labels:    labeling.ManageResource.New(),
-						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+			wantApplies: []application{
+				{
+					intended: &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-deployment",
+							Namespace: "eng",
+							Labels:    labeling.ManageResource.New(),
+							Annotations: map[string]string{
+								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							},
+						},
+						Spec: appsv1.DeploymentSpec{
+							Strategy: appsv1.DeploymentStrategy{
+								Type: appsv1.RecreateDeploymentStrategyType,
+							},
 						},
 					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RecreateDeploymentStrategyType,
+					current: &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-deployment",
+							Namespace: "eng",
+							Labels:    labeling.ManageResource.New(),
+						},
+						Spec: appsv1.DeploymentSpec{
+							Strategy: appsv1.DeploymentStrategy{
+								Type: appsv1.RollingUpdateDeploymentStrategyType,
+							},
 						},
 					},
 				},
@@ -630,12 +721,13 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockClient := syncertesting.NewMockClient(mockCtrl)
+			mockApplier := syncertesting.NewMockApplier(mockCtrl)
 			mockCache := syncertesting.NewMockGenericCache(mockCtrl)
 			mockRecorder := syncertesting.NewMockEventRecorder(mockCtrl)
 			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, tc.declared))
 
 			testReconciler := NewPolicyNodeReconciler(
-				client.New(mockClient), mockCache, mockRecorder, fakeDecoder, comparator, toSync)
+				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, comparator, toSync)
 
 			// Get PolicyNode from cache.
 			mockCache.EXPECT().
@@ -662,21 +754,17 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Return(toUnstructureds(t, converter, tc.actual), nil)
 			}
 
-			// Check for expected create, update and deletes.
+			// Check for expected creates, applies and deletes.
 			for _, wantCreate := range tc.wantCreates {
-				mockClient.EXPECT().
-					Create(gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantCreate)))
+				mockApplier.EXPECT().
+					Create(gomock.Any(), NewUnstructuredMatcher(toUnstructured(t, converter, wantCreate)))
 			}
-			for _, wantUpdate := range tc.wantUpdates {
-				// Updates involve first getting the resource from API Server.
-				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Any())
-				u := toUnstructured(t, converter, wantUpdate)
-				// Converting to unstructured removes empty fields. We always set the resource version for updates, so we need to set
-				// it explicitly here.
-				u.SetResourceVersion("")
-				mockClient.EXPECT().
-					Update(gomock.Any(), gomock.Eq(u))
+			for _, wantApply := range tc.wantApplies {
+				mockApplier.EXPECT().
+					ApplyNamespace(
+						gomock.Eq(tc.policyNode.Name),
+						gomock.Eq(toUnstructured(t, converter, wantApply.intended)),
+						gomock.Eq(toUnstructured(t, converter, wantApply.current)))
 			}
 			for _, wantDelete := range tc.wantDeletes {
 				mockClient.EXPECT().
@@ -716,6 +804,9 @@ func TestPolicyNodeReconcile(t *testing.T) {
 }
 
 func toUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj runtime.Object) *unstructured.Unstructured {
+	if obj == nil {
+		return &unstructured.Unstructured{}
+	}
 	u, err := converter.ToUnstructured(obj)
 	if err != nil {
 		t.Fatalf("could not convert to unstructured type: %#v", obj)
@@ -754,4 +845,28 @@ func sync(gvk schema.GroupVersionKind) *v1alpha1.Sync {
 			},
 		},
 	}
+}
+
+// unstructuredMatcher ignores fields with randomly ordered values in unstructured.Unstructured when comparing.
+type unstructuredMatcher struct {
+	u *unstructured.Unstructured
+}
+
+func NewUnstructuredMatcher(u *unstructured.Unstructured) gomock.Matcher {
+	return &unstructuredMatcher{u: u}
+}
+
+func (m *unstructuredMatcher) Matches(x interface{}) bool {
+	u, ok := x.(*unstructured.Unstructured)
+	if !ok {
+		return false
+	}
+	as := u.GetAnnotations()
+	delete(as, corev1.LastAppliedConfigAnnotation)
+	u.SetAnnotations(as)
+	return reflect.DeepEqual(u, m.u)
+}
+
+func (m *unstructuredMatcher) String() string {
+	return fmt.Sprintf("unstructured.Unstructured Matcher: %v", m.u)
 }

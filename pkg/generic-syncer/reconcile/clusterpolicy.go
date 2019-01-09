@@ -48,6 +48,7 @@ var now = metav1.Now
 // ClusterPolicyReconciler reconciles a ClusterPolicy object.
 type ClusterPolicyReconciler struct {
 	client     *client.Client
+	applier    Applier
 	cache      cache.GenericCache
 	recorder   record.EventRecorder
 	decoder    decode.Decoder
@@ -56,10 +57,11 @@ type ClusterPolicyReconciler struct {
 }
 
 // NewClusterPolicyReconciler returns a new ClusterPolicyReconciler.
-func NewClusterPolicyReconciler(client *client.Client, cache cache.GenericCache, recorder record.EventRecorder,
+func NewClusterPolicyReconciler(client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
 	decoder decode.Decoder, comparator *differ.Comparator, toSync []schema.GroupVersionKind) *ClusterPolicyReconciler {
 	return &ClusterPolicyReconciler{
 		client:     client,
+		applier:    applier,
 		cache:      cache,
 		recorder:   recorder,
 		decoder:    decoder,
@@ -146,7 +148,7 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *no
 			continue
 		}
 
-		diffs := differ.Diffs(r.comparator.Equal, declaredInstances, actualInstances)
+		diffs := differ.Diffs(declaredInstances, actualInstances)
 		for _, diff := range diffs {
 			if updated, err := r.handleDiff(ctx, diff); err != nil {
 				errBuilder.Add(err)
@@ -214,21 +216,19 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 	switch t := diff.Type; t {
 	case differ.Add:
 		toCreate := diff.Declared
-		if err := r.client.Create(ctx, toCreate); err != nil {
-			metrics.ErrTotal.WithLabelValues("", toCreate.GetObjectKind().GroupVersionKind().Kind, "create").Inc()
+		if err := r.applier.Create(ctx, toCreate); err != nil {
+			metrics.ErrTotal.WithLabelValues(toCreate.GetNamespace(), toCreate.GetKind(), "create").Inc()
 			return false, errors.Wrapf(err, "could not create resource %q", diff.Name)
 		}
 	case differ.Update:
-		if !diff.ActualResourceIsManaged() {
+		if diff.Actual.Object != nil && !diff.ActualResourceIsManaged() {
+			// Warn in the case of an existing resource on cluster without a managed label.
 			r.warnNoLabelResource(diff.Actual)
 			return false, nil
 		}
-
-		toUpdate := diff.Declared
-		toUpdate.SetResourceVersion(diff.Actual.GetResourceVersion())
-		if err := r.client.Upsert(ctx, toUpdate); err != nil {
-			metrics.ErrTotal.WithLabelValues("", toUpdate.GetObjectKind().GroupVersionKind().Kind, "update").Inc()
-			return false, errors.Wrapf(err, "could not update resource %q", diff.Name)
+		if err := r.applier.ApplyCluster(diff.Declared, diff.Actual); err != nil {
+			metrics.ErrTotal.WithLabelValues("", diff.Declared.GetObjectKind().GroupVersionKind().Kind, "patch").Inc()
+			return false, err
 		}
 	case differ.Delete:
 		if !diff.ActualResourceIsManaged() {

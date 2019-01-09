@@ -38,9 +38,16 @@ const clusterPolicyControllerName = "clusterpolicy-resources"
 // AddClusterPolicy adds ClusterPolicy sync controllers to the Manager.
 func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder, comparator *differ.Comparator,
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
+	genericClient := client.New(mgr.GetClient())
+	applier, err := genericreconcile.NewApplier(mgr.GetScheme(), mgr.GetConfig(), genericClient)
+	if err != nil {
+		return err
+	}
+
 	cpc, err := controller.New(clusterPolicyControllerName, mgr, controller.Options{
 		Reconciler: genericreconcile.NewClusterPolicyReconciler(
 			client.New(mgr.GetClient()),
+			applier,
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
 			mgr.GetRecorder(clusterPolicyControllerName),
 			decoder,
