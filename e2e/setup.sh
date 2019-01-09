@@ -46,7 +46,7 @@ function install() {
         kubectl apply -f defined-operator-bundle.yaml
         kubectl create secret generic git-creds -n=nomos-system --from-file=ssh="$HOME"/.ssh/id_rsa.nomos || true
         kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
-        wait::for -s -t 60 -- nomos_running
+        wait::for -s -t 180 -- nomos_running
         ;;
 
         gcp)
