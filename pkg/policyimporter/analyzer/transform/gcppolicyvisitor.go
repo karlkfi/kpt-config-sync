@@ -117,7 +117,6 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		}
 		orgPolicy := gcpObj.DeepCopy()
 		orgPolicy.Spec.ResourceReference = *attachmentPoint
-		// TODO(ttt): Is this enough attachment points? What about orgs/folders?
 		if attachmentPoint.Kind == "Project" {
 			return &ast.NamespaceObject{
 				FileObject: ast.NewFileObject(orgPolicy, o.Source()),
