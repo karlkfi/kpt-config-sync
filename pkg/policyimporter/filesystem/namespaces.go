@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/path"
 	"github.com/google/nomos/pkg/util/multierror"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,16 +18,16 @@ import (
 // Namespaces.
 func validateNamespaces(
 	objects []ast.FileObject,
-	dirs []string,
+	dirs []path.NomosRelative,
 	cov *coverage.ForCluster,
 	errorBuilder *multierror.Builder) {
 	metadata.Validate(toResourceMetas(objects), errorBuilder)
 
-	syntax.DirectoryNameValidator.Validate(dirs, errorBuilder)
+	syntax.DirectoryNameValidator.Validate(path.ToRelativeSlashPaths(dirs), errorBuilder)
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
 
 	semantic.NewConflictingResourceQuotaValidator(objects, cov).Validate(errorBuilder)
-	semantic.DuplicateDirectoryValidator{Dirs: dirs}.Validate(errorBuilder)
+	semantic.DuplicateDirectoryValidator{Dirs: path.ToRelativeSlashPaths(dirs)}.Validate(errorBuilder)
 	semantic.DuplicateNamespaceValidator{Objects: objects}.Validate(errorBuilder)
 }
 

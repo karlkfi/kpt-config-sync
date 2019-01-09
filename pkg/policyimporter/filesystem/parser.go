@@ -34,6 +34,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/path"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -63,8 +64,8 @@ type Parser struct {
 	opts            ParserOpt
 	factory         cmdutil.Factory
 	discoveryClient discovery.CachedDiscoveryInterface
-	// OS-specific path to root.
-	root string
+	// root is the path to Nomos root.
+	root path.NomosRoot
 }
 
 // ParserExtension extends the functionality of the parser by allowing the override of visitors or addition
@@ -178,7 +179,12 @@ func toDirInfoMap(fileInfos []ast.FileObject) map[string][]ast.FileObject {
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
 func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
-	p.root = root
+	r, err := path.NewNomosRoot(root)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to use as Nomos root")
+	}
+	p.root = r
+
 	fsCtx := &ast.Root{Cluster: &ast.Cluster{}}
 	errorBuilder := multierror.Builder{}
 
@@ -195,7 +201,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 	// processing for <root>/system/*
 	var syncs []*v1alpha1.Sync
-	systemInfos := p.readRequiredResources(filepath.Join(root, repo.SystemDir), &errorBuilder)
+	systemInfos := p.readRequiredResources(p.root.Join(repo.SystemDir), &errorBuilder)
 	fsCtx.Repo, syncs = processSystem(systemInfos, p.opts, apiInfo, &errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
@@ -203,12 +209,12 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	}
 
 	// processing for <root>/cluster/*
-	clusterDir := filepath.Join(root, repo.ClusterDir)
+	clusterDir := p.root.Join(repo.ClusterDir)
 	clusterInfos := p.readResources(clusterDir, &errorBuilder)
 	validateCluster(clusterInfos, &errorBuilder)
 
 	// processing for <root>/clusterregistry/*
-	clusterregistryInfos := p.readResources(filepath.Join(root, repo.ClusterRegistryDir), &errorBuilder)
+	clusterregistryInfos := p.readResources(p.root.Join(repo.ClusterRegistryDir), &errorBuilder)
 	validateClusterRegistry(clusterregistryInfos, &errorBuilder)
 	clusters := getClusters(clusterregistryInfos)
 	selectors := getSelectors(clusterregistryInfos)
@@ -217,7 +223,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
 	sel.SetClusterSelector(cs, fsCtx)
 
-	nsDir := filepath.Join(root, repo.NamespacesDir)
+	nsDir := p.root.Join(repo.NamespacesDir)
 	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
 
 	nsInfos := p.readResources(nsDir, &errorBuilder)
@@ -231,7 +237,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 		vp = p.opts.Extension.Visitors()
 	}
 
-	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, vp, nsDirsOrdered, clusterDir, fsCtx, syncs)
+	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, vp, nsDirsOrdered, fsCtx, syncs)
 	errorBuilder.Add(err)
 
 	if glog.V(8) {
@@ -245,18 +251,10 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	return policies, nil
 }
 
-func (p *Parser) relativePath(source string) string {
-	r, err := filepath.Rel(p.root, source)
-	if err != nil {
-		panic(errors.Wrap(err, "programmer error"))
-	}
-	return r
-}
-
 // readRequiredResources walks dir recursively, looking for resources, and builds FileInfos from them.
 // Returns an error if the directory is missing.
-func (p *Parser) readRequiredResources(dir string, errorBuilder *multierror.Builder) []ast.FileObject {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
+func (p *Parser) readRequiredResources(dir path.NomosRelative, errorBuilder *multierror.Builder) []ast.FileObject {
+	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		errorBuilder.Add(veterrors.MissingDirectoryError{})
 		return nil
 	}
@@ -264,9 +262,9 @@ func (p *Parser) readRequiredResources(dir string, errorBuilder *multierror.Buil
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []ast.FileObject {
+func (p *Parser) readResources(dir path.NomosRelative, errorBuilder *multierror.Builder) []ast.FileObject {
 	// If there aren't any resources, skip builder, because builder treats that as an error.
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
+	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		// Return empty list if unable to read directory
 		return nil
 	} else if err != nil {
@@ -276,7 +274,7 @@ func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []a
 	}
 
 	visitors, err := resource.ExpandPathsToFileVisitors(
-		nil, dir, true, resource.FileExtensions, kubevalidation.NullSchema{})
+		nil, dir.AbsoluteOSPath(), true, resource.FileExtensions, kubevalidation.NullSchema{})
 	if err != nil {
 		errorBuilder.Add(err)
 		return nil
@@ -289,7 +287,7 @@ func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []a
 			errorBuilder.Add(errors.Wrap(err, "failed to get schema"))
 			return nil
 		}
-		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir}}
+		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
 		result := p.factory.NewBuilder().
 			Unstructured().
 			Schema(s).
@@ -300,9 +298,13 @@ func (p *Parser) readResources(dir string, errorBuilder *multierror.Builder) []a
 		errorBuilder.Add(err)
 		for _, info := range fileInfos {
 			// Assign relative path since that's what we actually need.
-			source := p.relativePath(info.Source)
+			source, err := p.root.Rel(info.Source)
+			errorBuilder.Add(err)
+			if err != nil {
+				continue
+			}
 			object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
-			fileObject := ast.NewFileObject(object, source)
+			fileObject := ast.NewFileObject(object, source.RelativeSlashPath())
 			fileObjects = append(fileObjects, fileObject)
 		}
 	}
@@ -322,8 +324,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	dirInfos map[string][]ast.FileObject,
 	clusterObjects []ast.FileObject,
 	vp VisitorProvider,
-	nsDirsOrdered []string,
-	clusterDir string,
+	nsDirsOrdered []path.NomosRelative,
 	fsRoot *ast.Root,
 	syncs []*v1alpha1.Sync) (*v1.AllPolicies, error) {
 
@@ -333,14 +334,14 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	treeGenerator := NewDirectoryTree()
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]
-		infos := dirInfos[rootDir]
-		processNamespaces(rootDir, infos, treeGenerator, &errorBuilder)
+		infos := dirInfos[rootDir.RelativeSlashPath()]
+		processNamespaces(rootDir.RelativeSlashPath(), infos, treeGenerator, &errorBuilder)
 		if errorBuilder.HasErrors() {
 			return nil, errorBuilder.Build()
 		}
 		for _, d := range nsDirsOrdered[1:] {
-			infos := dirInfos[d]
-			processNamespaces(d, infos, treeGenerator, &errorBuilder)
+			infos := dirInfos[d.RelativeSlashPath()]
+			processNamespaces(d.RelativeSlashPath(), infos, treeGenerator, &errorBuilder)
 			if errorBuilder.HasErrors() {
 				return nil, errorBuilder.Build()
 			}
@@ -411,14 +412,18 @@ func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.
 }
 
 // allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
-func (p *Parser) allDirs(nsDir string, errorBuilder *multierror.Builder) []string {
-	var paths []string
-	err := filepath.Walk(nsDir, func(path string, info os.FileInfo, err error) error {
+func (p *Parser) allDirs(nsDir path.NomosRelative, errorBuilder *multierror.Builder) []path.NomosRelative {
+	var paths []path.NomosRelative
+	err := filepath.Walk(nsDir.AbsoluteOSPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() {
-			paths = append(paths, p.relativePath(path))
+			rel, err := p.root.Rel(path)
+			if err != nil {
+				return err
+			}
+			paths = append(paths, rel)
 		}
 		return nil
 	})
