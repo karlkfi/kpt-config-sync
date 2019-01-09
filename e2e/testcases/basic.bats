@@ -15,7 +15,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for kubectl get ns accounting
   git::rm acme/namespaces/eng/accounting/namespace.yaml
   git::commit
-  wait::for -f -t 20 -- kubectl get ns accounting
+  wait::for -f -t 60 -- kubectl get ns accounting
   run kubectl get policynodes new-ns
   [ "$status" -eq 1 ]
   assert::contains "not found"
