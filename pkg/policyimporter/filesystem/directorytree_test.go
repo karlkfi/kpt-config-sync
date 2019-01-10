@@ -61,7 +61,7 @@ func (tc *directoryTreeTestcase) Run(t *testing.T) {
 		}
 	}
 
-	if diff := cmp.Diff(tc.expect, tree, ast.FileObjectCmp()); diff != "" {
+	if diff := cmp.Diff(tc.expect, tree); diff != "" {
 		spew.Printf("%#v\n", tree)
 		t.Errorf("unexpected output:\n%s", diff)
 	}

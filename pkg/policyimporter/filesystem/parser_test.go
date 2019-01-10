@@ -2107,8 +2107,8 @@ func (tc *parserTestCase) Run(t *testing.T) {
 				}
 			}
 		}
-		if !cmp.Equal(n, tc.expectedNumPolicies, Options()...) {
-			t.Errorf("Actual and expected number of policy nodes didn't match: %v", cmp.Diff(n, tc.expectedNumPolicies, Options()...))
+		if !cmp.Equal(n, tc.expectedNumPolicies) {
+			t.Errorf("Actual and expected number of policy nodes didn't match: %v", cmp.Diff(n, tc.expectedNumPolicies))
 		}
 	}
 
@@ -2120,8 +2120,8 @@ func (tc *parserTestCase) Run(t *testing.T) {
 				n += len(version.Objects)
 			}
 		}
-		if !cmp.Equal(n, *tc.expectedNumClusterPolicies, Options()...) {
-			t.Errorf("Actual and expected number of cluster policies didn't match: %v", cmp.Diff(n, *tc.expectedNumClusterPolicies, Options()...))
+		if !cmp.Equal(n, *tc.expectedNumClusterPolicies) {
+			t.Errorf("Actual and expected number of cluster policies didn't match: %v", cmp.Diff(n, *tc.expectedNumClusterPolicies))
 		}
 
 		if tc.expectedPolicyNodes != nil || tc.expectedClusterPolicy != nil || tc.expectedSyncs != nil {
@@ -2130,8 +2130,8 @@ func (tc *parserTestCase) Run(t *testing.T) {
 				ClusterPolicy: tc.expectedClusterPolicy,
 				Syncs:         tc.expectedSyncs,
 			}
-			if !cmp.Equal(actualPolicies, expectedPolicies, Options()...) {
-				t.Errorf("Actual and expected policies didn't match: diff\n%v", cmp.Diff(actualPolicies, expectedPolicies, Options()...))
+			if !cmp.Equal(actualPolicies, expectedPolicies) {
+				t.Errorf("Actual and expected policies didn't match: diff\n%v", cmp.Diff(actualPolicies, expectedPolicies))
 			}
 		}
 	}
@@ -3150,15 +3150,6 @@ metadata:
 	}
 }
 
-// Options provides comparison options for equality testing.
-func Options() []cmp.Option {
-	return []cmp.Option{
-		cmp.Comparer(func(a, b resource.Quantity) bool {
-			return a.Cmp(b) == 0
-		}),
-	}
-}
-
 func TestEmptyDirectories(t *testing.T) {
 	d := newTestDir(t, "foo")
 	defer d.remove()
@@ -3203,8 +3194,8 @@ func TestEmptyDirectories(t *testing.T) {
 				ClusterPolicy: createClusterPolicy(),
 				Syncs:         map[string]v1alpha1.Sync{},
 			}
-			if !cmp.Equal(actualPolicies, expectedPolicies, Options()...) {
-				t.Errorf("actual and expected AllPolicies didn't match: %v", cmp.Diff(actualPolicies, expectedPolicies, Options()...))
+			if !cmp.Equal(actualPolicies, expectedPolicies) {
+				t.Errorf("actual and expected AllPolicies didn't match: %v", cmp.Diff(actualPolicies, expectedPolicies))
 			}
 		})
 	}

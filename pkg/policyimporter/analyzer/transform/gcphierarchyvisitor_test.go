@@ -377,7 +377,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 			if err := visitor.Error(); err != nil {
 				t.Errorf("GCP hierarchy visitor resulted in error: %v", err)
 			}
-			if diff := cmp.Diff(output, tc.want, ast.FileObjectCmp()); diff != "" {
+			if diff := cmp.Diff(output, tc.want); diff != "" {
 				t.Errorf("GCP hierarchy visitor got wrong output.\ngot:\n%+v\nwant:\n%+v\ndiff:\n%s", output, tc.want, diff)
 			}
 		})
@@ -564,7 +564,7 @@ func TestFolderAndOrg(t *testing.T) {
 			if err := visitor.Error(); err != nil {
 				t.Errorf("GCP hierarchy visitor resulted in error: %v", err)
 			}
-			if diff := cmp.Diff(output, tc.want, ast.FileObjectCmp()); diff != "" {
+			if diff := cmp.Diff(output, tc.want); diff != "" {
 				t.Errorf("got diff:\n%v", diff)
 			}
 		})
@@ -693,7 +693,7 @@ func TestProject(t *testing.T) {
 			if output.Tree == nil || len(output.Tree.Children[0].Children) != 1 {
 				t.Fatalf("unexpected output root: %+v", output)
 			}
-			if diff := cmp.Diff(output, tc.want, ast.FileObjectCmp()); diff != "" {
+			if diff := cmp.Diff(output, tc.want); diff != "" {
 				t.Errorf("got diff:\n%v", diff)
 			}
 		})
@@ -978,7 +978,7 @@ func TestHierarchyError(t *testing.T) {
 
 func verifyInputUnmodified(t *testing.T, input, inputCopy *ast.Root) {
 	// Mutation indicates something was implemented wrong, the input shouldn't be modified.
-	if diff := cmp.Diff(input, inputCopy, ast.FileObjectCmp()); diff != "" {
+	if diff := cmp.Diff(input, inputCopy); diff != "" {
 		t.Errorf("input mutated while running visitor: %s", diff)
 	}
 }

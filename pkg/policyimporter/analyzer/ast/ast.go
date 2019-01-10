@@ -46,11 +46,9 @@ func NewFileObject(object runtime.Object, source nomospath.Relative) FileObject 
 	return FileObject{Object: object, Relative: source}
 }
 
-// FileObjectCmp provides a comparer option for FileObject
-func FileObjectCmp() cmp.Option {
-	return cmp.Comparer(func(lhs, rhs FileObject) bool {
-		return cmp.Equal(lhs.Relative, rhs.Relative) && cmp.Equal(lhs.Object, rhs.Object, resourcequota.ResourceQuantityEqual())
-	})
+// Equal returns true if the underlying objects and paths relative to the Nomos repo are identical.
+func (o FileObject) Equal(that FileObject) bool {
+	return cmp.Equal(o.Relative, that.Relative) && cmp.Equal(o.Object, that.Object, resourcequota.ResourceQuantityEqual())
 }
 
 // MetaObject converts the underlying object to a metav1.Object
@@ -178,7 +176,7 @@ func copyMapInto(from map[string]string, to *map[string]string) {
 	if from == nil {
 		return
 	}
-	(*to) = make(map[string]string)
+	*to = make(map[string]string)
 	for k, v := range from {
 		(*to)[k] = v
 	}

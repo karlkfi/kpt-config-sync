@@ -38,16 +38,7 @@ type ClusterSelectors struct {
 }
 
 // Equal returns true if c and other are exactly equal.
-func (stc *ClusterSelectors) Equal(other *ClusterSelectors) bool {
-	if stc == nil && other != nil {
-		return false
-	}
-	if stc != nil && other == nil {
-		return false
-	}
-	if stc == nil && other == nil {
-		return true
-	}
+func (stc ClusterSelectors) Equal(other ClusterSelectors) bool {
 	return reflect.DeepEqual(stc.cluster, other.cluster) &&
 		reflect.DeepEqual(stc.selectors, other.selectors) &&
 		reflect.DeepEqual(stc.clusterName, other.clusterName)

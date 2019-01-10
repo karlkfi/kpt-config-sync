@@ -158,7 +158,7 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Ob
 	}
 
 	projectNode = output.Tree.Children[0]
-	if diff := cmp.Diff(vt.ObjectSets(project, wantObj), projectNode.Objects, ast.FileObjectCmp()); diff != "" {
+	if diff := cmp.Diff(vt.ObjectSets(project, wantObj), projectNode.Objects); diff != "" {
 		t.Errorf("got diff:\n%v", diff)
 	}
 }
@@ -350,7 +350,7 @@ func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Proje
 		t.Fatalf("unexpected output root: %+v", output)
 	}
 
-	if diff := cmp.Diff(vt.ClusterObjectSets(want), output.Cluster.Objects, ast.FileObjectCmp()); diff != "" {
+	if diff := cmp.Diff(vt.ClusterObjectSets(want), output.Cluster.Objects); diff != "" {
 		t.Errorf("got diff:\n%v", diff)
 	}
 }

@@ -36,20 +36,13 @@ type MutatingVisitorTestcase struct {
 	ExpectNoop   bool // Output is expected to the exact tree as input (same pointer, not mutated)
 }
 
-// Defaults is the set of default comparison options.
-func Defaults() []cmp.Option {
-	return []cmp.Option{
-		ast.FileObjectCmp(),
-	}
-}
-
 // Runf returns a function that runs the testcase. visitor is the visitor to use
 // in the test case, and initRoot optionally initializes the root of the tree before traversal.
 func (tc *MutatingVisitorTestcase) Runf(
 	visitor ast.Visitor,
 	initRoot func(*ast.Root),
 	options func() []cmp.Option) func(t *testing.T) {
-	opts := Defaults()
+	var opts []cmp.Option
 	if options != nil {
 		opts = append(opts, options()...)
 	}
@@ -86,7 +79,7 @@ func (tc *MutatingVisitorTestcase) Runf(
 		}
 		if !cmp.Equal(tc.ExpectOutput, actual, opts...) {
 			t.Fatalf("mismatch on expected vs actual:\ndiff:\n%s\nexpected:\n%v\nactual:\n%v",
-				cmp.Diff(tc.ExpectOutput, actual, Defaults()...),
+				cmp.Diff(tc.ExpectOutput, actual),
 				spew.Sdump(tc.ExpectOutput), spew.Sdump(actual))
 		}
 	}

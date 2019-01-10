@@ -37,19 +37,13 @@ type clusterselectorsTestCase struct {
 	expectedForEach    map[string]policyhierarchy.ClusterSelector
 }
 
-func Opts() cmp.Options {
-	return cmp.Options{
-		cmp.AllowUnexported(ClusterSelectors{}),
-	}
-}
-
 func (tc *clusterselectorsTestCase) run(t *testing.T) {
 	s, err := NewClusterSelectors(tc.clusters, tc.selectors, "cluster-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !cmp.Equal(tc.expectedMapping, *s, Opts()...) {
-		t.Errorf("GetClusterSelectors(_)=%+v,\nwant:\n%+v\ndiff:\n%v", *s, tc.expectedMapping, cmp.Diff(tc.expectedMapping, *s, Opts()))
+	if !cmp.Equal(tc.expectedMapping, *s) {
+		t.Errorf("GetClusterSelectors(_)=%+v,\nwant:\n%+v\ndiff:\n%v", *s, tc.expectedMapping, cmp.Diff(tc.expectedMapping, *s))
 	}
 	for _, o := range tc.expectedMatches {
 		if !tc.expectedMapping.Matches(o) {
