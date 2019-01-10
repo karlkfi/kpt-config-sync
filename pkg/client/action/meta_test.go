@@ -37,7 +37,7 @@ func newObjectMeta(labels map[string]string, annotations map[string]string) meta
 }
 
 var objectMetaSubsetTestcases = []ObjectMetaTestCase{
-	ObjectMetaTestCase{
+	{
 		Name: "labels and annotations are both subsets",
 		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
@@ -49,7 +49,7 @@ var objectMetaSubsetTestcases = []ObjectMetaTestCase{
 		),
 		ExpectReturn: true,
 	},
-	ObjectMetaTestCase{
+	{
 		Name: "labels not subset",
 		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
@@ -61,7 +61,7 @@ var objectMetaSubsetTestcases = []ObjectMetaTestCase{
 		),
 		ExpectReturn: false,
 	},
-	ObjectMetaTestCase{
+	{
 		Name: "annotations not subset",
 		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
@@ -73,7 +73,7 @@ var objectMetaSubsetTestcases = []ObjectMetaTestCase{
 		),
 		ExpectReturn: false,
 	},
-	ObjectMetaTestCase{
+	{
 		Name: "neither are subset",
 		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
@@ -100,7 +100,7 @@ func TestObjectMetaSubset(t *testing.T) {
 }
 
 var objectMetaEqualTestcases = []ObjectMetaTestCase{
-	ObjectMetaTestCase{
+	{
 		Name: "labels and annotations are qual",
 		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
@@ -112,13 +112,13 @@ var objectMetaEqualTestcases = []ObjectMetaTestCase{
 		),
 		ExpectReturn: true,
 	},
-	ObjectMetaTestCase{
+	{
 		Name:         "labels and annotations not set",
 		Left:         newObjectMeta(nil, nil),
 		Right:        newObjectMeta(nil, nil),
 		ExpectReturn: true,
 	},
-	ObjectMetaTestCase{
+	{
 		Name: "labels and annotations are subsets",
 		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
@@ -130,7 +130,7 @@ var objectMetaEqualTestcases = []ObjectMetaTestCase{
 		),
 		ExpectReturn: false,
 	},
-	ObjectMetaTestCase{
+	{
 		Name: "neither are subset",
 		Left: newObjectMeta(
 			map[string]string{"k1": "v1", "k2": "v2"},
@@ -142,7 +142,7 @@ var objectMetaEqualTestcases = []ObjectMetaTestCase{
 		),
 		ExpectReturn: false,
 	},
-	ObjectMetaTestCase{
+	{
 		Name: "left labels and annotations not set",
 		Left: newObjectMeta(nil, nil),
 		Right: newObjectMeta(
@@ -151,7 +151,7 @@ var objectMetaEqualTestcases = []ObjectMetaTestCase{
 		),
 		ExpectReturn: false,
 	},
-	ObjectMetaTestCase{
+	{
 		Name: "right labels and annotations not set",
 		Left: newObjectMeta(
 			map[string]string{"k5": "v5"},

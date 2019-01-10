@@ -26,22 +26,22 @@ func (s *pluralTestCase) Run(t *testing.T) {
 }
 
 var pluralTestCases = []pluralTestCase{
-	pluralTestCase{
+	{
 		input:       v1.PolicyNode{},
 		output:      "PolicyNodes",
 		outputLower: "policynodes",
 	},
-	pluralTestCase{
+	{
 		input:       v1.ClusterPolicy{},
 		output:      "ClusterPolicies",
 		outputLower: "clusterpolicies",
 	},
-	pluralTestCase{
+	{
 		input:       rbacv1.ClusterRole{},
 		output:      "ClusterRoles",
 		outputLower: "clusterroles",
 	},
-	pluralTestCase{
+	{
 		input:       &rbacv1.ClusterRole{},
 		output:      "ClusterRoles",
 		outputLower: "clusterroles",

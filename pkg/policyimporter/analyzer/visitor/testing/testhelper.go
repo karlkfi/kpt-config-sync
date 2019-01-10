@@ -75,7 +75,7 @@ func (t *TestHelper) NomosAdminClusterRole() *rbacv1.ClusterRole {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "nomos:admin",
 		},
-		Rules: []rbacv1.PolicyRule{rbacv1.PolicyRule{
+		Rules: []rbacv1.PolicyRule{{
 			Verbs:     []string{rbacv1.VerbAll},
 			APIGroups: []string{"nomos.dev"},
 			Resources: []string{rbacv1.ResourceAll},
@@ -94,7 +94,7 @@ func (t *TestHelper) NomosAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 			Name: "nomos:admin",
 		},
 		Subjects: []rbacv1.Subject{
-			rbacv1.Subject{
+			{
 				APIGroup: rbacv1.GroupName,
 				Kind:     rbacv1.UserKind,
 				Name:     "charlie@acme.com",
@@ -159,7 +159,7 @@ func (t *TestHelper) AdminRoleBinding() *rbacv1.RoleBinding {
 			Name: "admin",
 		},
 		Subjects: []rbacv1.Subject{
-			rbacv1.Subject{
+			{
 				APIGroup: rbacv1.GroupName,
 				Kind:     rbacv1.UserKind,
 				Name:     "alice@acme.com",
@@ -183,7 +183,7 @@ func (t *TestHelper) PodReaderRole() *rbacv1.Role {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "pod-reader",
 		},
-		Rules: []rbacv1.PolicyRule{rbacv1.PolicyRule{
+		Rules: []rbacv1.PolicyRule{{
 			Verbs:     []string{"get", "list", "watch"},
 			APIGroups: []string{corev1.GroupName},
 			Resources: []string{"pods"},
@@ -202,7 +202,7 @@ func (t *TestHelper) PodReaderRoleBinding() *rbacv1.RoleBinding {
 			Name: "admin",
 		},
 		Subjects: []rbacv1.Subject{
-			rbacv1.Subject{
+			{
 				APIGroup: rbacv1.GroupName,
 				Kind:     rbacv1.UserKind,
 				Name:     "bob@acme.com",
@@ -226,7 +226,7 @@ func (t *TestHelper) DeploymentReaderRole() *rbacv1.Role {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "deployment-reader",
 		},
-		Rules: []rbacv1.PolicyRule{rbacv1.PolicyRule{
+		Rules: []rbacv1.PolicyRule{{
 			Verbs:     []string{"get", "list", "watch"},
 			APIGroups: []string{corev1.GroupName},
 			Resources: []string{"deployments"},
@@ -245,7 +245,7 @@ func (t *TestHelper) DeploymentReaderRoleBinding() *rbacv1.RoleBinding {
 			Name: "admin",
 		},
 		Subjects: []rbacv1.Subject{
-			rbacv1.Subject{
+			{
 				APIGroup: rbacv1.GroupName,
 				Kind:     rbacv1.UserKind,
 				Name:     "bob@acme.com",
@@ -316,7 +316,7 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 			t.AcmeResourceQuota(),
 		),
 		Children: []*ast.TreeNode{
-			&ast.TreeNode{
+			{
 				Type:        node.Namespace,
 				Relative:    nomospath.NewFakeRelative("namespaces/frontend"),
 				Labels:      map[string]string{"environment": "prod"},
@@ -327,7 +327,7 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 					t.FrontendResourceQuota(),
 				),
 			},
-			&ast.TreeNode{
+			{
 				Type:        node.Namespace,
 				Relative:    nomospath.NewFakeRelative("namespaces/frontend-test"),
 				Labels:      map[string]string{"environment": "test"},

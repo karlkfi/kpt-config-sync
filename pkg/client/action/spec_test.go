@@ -35,9 +35,9 @@ func fakeEqual(lhs runtime.Object, rhs runtime.Object) bool {
 
 func TestSpecListNamespaced(t *testing.T) {
 	roles := []*rbacv1.Role{
-		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "role-1"}},
-		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "role-2"}},
-		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "role-3"}},
+		{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "role-1"}},
+		{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "role-2"}},
+		{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "role-3"}},
 	}
 	var objs []runtime.Object
 	for _, role := range roles {
@@ -69,9 +69,9 @@ func TestSpecListNamespaced(t *testing.T) {
 
 func TestSpecListCluster(t *testing.T) {
 	clusterRoles := []*rbacv1.ClusterRole{
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "cluster-1"}},
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "cluster-2"}},
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "cluster-3"}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "cluster-1"}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "cluster-2"}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "cluster-3"}},
 	}
 	var objs []runtime.Object
 	for _, clusterRole := range clusterRoles {

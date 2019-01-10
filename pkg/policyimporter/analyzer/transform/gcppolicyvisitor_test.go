@@ -117,7 +117,7 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Ob
 		Tree: &ast.TreeNode{
 			Objects: vt.ObjectSets(vt.Helper.GCPOrg("org")),
 			Children: []*ast.TreeNode{
-				&ast.TreeNode{
+				{
 					Type:    node.AbstractNamespace,
 					Objects: vt.ObjectSets(project, policy),
 				},

@@ -51,7 +51,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(org1),
 						},
@@ -65,7 +65,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org1"}),
 						},
@@ -79,15 +79,15 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(org1),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(org2),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(org3),
 						},
@@ -100,15 +100,15 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org1"}),
 						},
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org2"}),
 						},
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org3"}),
 						},
@@ -123,7 +123,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder1),
 						},
@@ -137,7 +137,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder1"}),
 						},
@@ -152,15 +152,15 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder1),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder2),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder3),
 						},
@@ -174,15 +174,15 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder1"}),
 						},
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder2"}),
 						},
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder3"}),
 						},
@@ -197,7 +197,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(project1),
 						},
@@ -209,7 +209,7 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							// Project tree node is namespace scope.
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project1),
@@ -226,15 +226,15 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(project1),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(project2),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(project3),
 						},
@@ -246,17 +246,17 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project1),
 							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project1"}),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project2),
 							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project2"}),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project3),
 							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project3"}),
@@ -272,39 +272,39 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(org1),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(org2),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(org3),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder1),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder2),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder3),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project1),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project2),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project3),
 						},
@@ -318,41 +318,41 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org1"}),
 						},
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org2"}),
 						},
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org3"}),
 						},
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder1"}),
 						},
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder2"}),
 						},
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder3"}),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project1),
 							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project1"}),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project2),
 							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project2"}),
 						},
-						&ast.TreeNode{
+						{
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project3),
 							Data:    de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Project", Name: "project3"}),
@@ -414,7 +414,7 @@ func TestFolderAndOrg(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(org),
 						},
@@ -428,7 +428,7 @@ func TestFolderAndOrg(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org-sample"}),
 						},
@@ -443,7 +443,7 @@ func TestFolderAndOrg(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder),
 						},
@@ -457,7 +457,7 @@ func TestFolderAndOrg(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder-sample"}),
 						},
@@ -472,7 +472,7 @@ func TestFolderAndOrg(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(org),
 							Children: []*ast.TreeNode{
@@ -492,11 +492,11 @@ func TestFolderAndOrg(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Organization", Name: "org-sample"}),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type: node.AbstractNamespace,
 									Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder-under-org-sample"}),
 								},
@@ -513,7 +513,7 @@ func TestFolderAndOrg(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder),
 							Children: []*ast.TreeNode{
@@ -533,11 +533,11 @@ func TestFolderAndOrg(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "folder-sample"}),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type: node.AbstractNamespace,
 									Data: de.Add(gcpAttachmentPointKeyType{}, &corev1.ObjectReference{Kind: "Folder", Name: "subfolder-sample"}),
 								},
@@ -599,7 +599,7 @@ func TestProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(org),
 							Children: []*ast.TreeNode{
@@ -619,7 +619,7 @@ func TestProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Children: []*ast.TreeNode{
 								{
@@ -641,7 +641,7 @@ func TestProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder),
 							Children: []*ast.TreeNode{
@@ -661,7 +661,7 @@ func TestProject(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							Children: []*ast.TreeNode{
 								{
@@ -709,14 +709,14 @@ func TestAttachmentPoint(t *testing.T) {
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
 			Children: []*ast.TreeNode{
-				&ast.TreeNode{
+				{
 					Objects: vt.ObjectSets(org),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type:    node.AbstractNamespace,
 									Objects: vt.ObjectSets(project),
 								},
@@ -777,11 +777,11 @@ func TestHierarchyError(t *testing.T) {
 					// Error: resources shouldn't be defined at top directory.
 					Objects: vt.ObjectSets(org),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type: node.Namespace,
 									// Error: project with Project parent.
 									Objects: vt.ObjectSets(project2),
@@ -798,7 +798,7 @@ func TestHierarchyError(t *testing.T) {
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							// Error: multiple orgs at same tree node.
 							Objects: vt.ObjectSets(org, org2),
@@ -813,7 +813,7 @@ func TestHierarchyError(t *testing.T) {
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							// Error: multiple folders at same tree node.
 							Objects: vt.ObjectSets(folder, folder2),
@@ -828,7 +828,7 @@ func TestHierarchyError(t *testing.T) {
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.Namespace,
 							// Error: multiple projects at same tree node.
 							Objects: vt.ObjectSets(project, project2),
@@ -843,12 +843,12 @@ func TestHierarchyError(t *testing.T) {
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.Namespace,
 							// Parent project.
 							Objects: vt.ObjectSets(project),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type: node.Namespace,
 									// Error: project with Project parent.
 									Objects: vt.ObjectSets(project2),
@@ -865,11 +865,11 @@ func TestHierarchyError(t *testing.T) {
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.Namespace,
 							Objects: vt.ObjectSets(project),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type:    node.AbstractNamespace,
 									Objects: vt.ObjectSets(folder),
 								},
@@ -885,12 +885,12 @@ func TestHierarchyError(t *testing.T) {
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Objects: vt.ObjectSets(org),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Children: []*ast.TreeNode{
-										&ast.TreeNode{
+										{
 											Type:    node.AbstractNamespace,
 											Objects: vt.ObjectSets(org2),
 										},
@@ -908,14 +908,14 @@ func TestHierarchyError(t *testing.T) {
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Objects: vt.ObjectSets(org),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type:    node.AbstractNamespace,
 									Objects: vt.ObjectSets(), // No objects exist meaning this level of directory is empty.
 									Children: []*ast.TreeNode{
-										&ast.TreeNode{
+										{
 											Type:    node.AbstractNamespace,
 											Objects: vt.ObjectSets(folder),
 										},
@@ -933,7 +933,7 @@ func TestHierarchyError(t *testing.T) {
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type: node.AbstractNamespace,
 							// Error: tree node with no organization/folder/project resource defined.
 							Objects: vt.ObjectSets(),
@@ -948,11 +948,11 @@ func TestHierarchyError(t *testing.T) {
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:    node.AbstractNamespace,
 							Objects: vt.ObjectSets(folder),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type: node.AbstractNamespace,
 									// Error: tree node with no folder/project resource defined.
 									Objects: vt.ObjectSets(),

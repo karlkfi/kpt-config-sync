@@ -166,7 +166,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						),
 						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 						Children: []*ast.TreeNode{
-							&ast.TreeNode{
+							{
 								Type:     node.AbstractNamespace,
 								Relative: nomospath.NewFakeRelative("namespaces/frontend"),
 								Objects: vt.ObjectSets(
@@ -186,7 +186,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						),
 						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 						Children: []*ast.TreeNode{
-							&ast.TreeNode{
+							{
 								Type:     node.AbstractNamespace,
 								Relative: nomospath.NewFakeRelative("namespaces/frontend"),
 								Objects: vt.ObjectSets(
@@ -219,7 +219,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						Relative:  nomospath.NewFakeRelative("namespaces"),
 						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 						Children: []*ast.TreeNode{
-							&ast.TreeNode{
+							{
 								Type:     node.AbstractNamespace,
 								Relative: nomospath.NewFakeRelative("namespaces/frontend"),
 								Objects: vt.ObjectSets(
@@ -241,7 +241,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 						),
 						Children: []*ast.TreeNode{
-							&ast.TreeNode{
+							{
 								Type:      node.AbstractNamespace,
 								Relative:  nomospath.NewFakeRelative("namespaces/frontend"),
 								Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},

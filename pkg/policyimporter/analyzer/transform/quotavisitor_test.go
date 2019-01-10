@@ -65,7 +65,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 							}),
 					),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:        node.Namespace,
 							Relative:    nomospath.NewFakeRelative("namespaces/frontend"),
 							Labels:      map[string]string{"environment": "prod"},
@@ -83,7 +83,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 									}),
 							),
 						},
-						&ast.TreeNode{
+						{
 							Type:        node.Namespace,
 							Relative:    nomospath.NewFakeRelative("namespaces/frontend-test"),
 							Labels:      map[string]string{"environment": "test"},
@@ -112,11 +112,11 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Relative: nomospath.NewFakeRelative("namespaces"),
 					Objects:  vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:     node.AbstractNamespace,
 							Relative: nomospath.NewFakeRelative("namespaces/eng"),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type:     node.Namespace,
 									Relative: nomospath.NewFakeRelative("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
@@ -142,11 +142,11 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 							}),
 					),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:     node.AbstractNamespace,
 							Relative: nomospath.NewFakeRelative("namespaces/eng"),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type:     node.Namespace,
 									Relative: nomospath.NewFakeRelative("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
@@ -174,12 +174,12 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Relative: nomospath.NewFakeRelative("namespaces"),
 					Objects:  vt.ObjectSets(vt.Helper.AdminRoleBinding()),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:     node.Namespace,
 							Relative: nomospath.NewFakeRelative("namespaces/frontend"),
 							Objects:  vt.ObjectSets(vt.Helper.PodReaderRoleBinding(), vt.Helper.PodReaderRole()),
 						},
-						&ast.TreeNode{
+						{
 							Type:     node.Namespace,
 							Relative: nomospath.NewFakeRelative("namespaces/frontend-test"),
 							Objects:  vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
@@ -193,12 +193,12 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Relative: nomospath.NewFakeRelative("namespaces"),
 					Objects:  vt.ObjectSets(vt.Helper.AdminRoleBinding()),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:     node.Namespace,
 							Relative: nomospath.NewFakeRelative("namespaces/frontend"),
 							Objects:  vt.ObjectSets(vt.Helper.PodReaderRoleBinding(), vt.Helper.PodReaderRole()),
 						},
-						&ast.TreeNode{
+						{
 							Type:     node.Namespace,
 							Relative: nomospath.NewFakeRelative("namespaces/frontend-test"),
 							Objects:  vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),

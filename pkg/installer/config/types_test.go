@@ -197,8 +197,8 @@ contexts:
 					SyncBranch:      "master",
 				},
 				Clusters: []Cluster{
-					Cluster{Name: "other_cluster_1", Context: "other_cluster_context_1"},
-					Cluster{Name: "other_cluster_2", Context: "other_cluster_context_2"},
+					{Name: "other_cluster_1", Context: "other_cluster_context_1"},
+					{Name: "other_cluster_2", Context: "other_cluster_context_2"},
 				},
 			},
 		},
