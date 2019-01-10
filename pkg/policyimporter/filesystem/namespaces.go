@@ -24,11 +24,11 @@ func validateNamespaces(
 	errorBuilder *multierror.Builder) {
 	metadata.Validate(toResourceMetas(objects), errorBuilder)
 
-	syntax.DirectoryNameValidator.Validate(nomospath.ToRelativeSlashPaths(dirs), errorBuilder)
+	syntax.DirectoryNameValidator.Validate(dirs, errorBuilder)
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
 
 	semantic.NewConflictingResourceQuotaValidator(objects, cov).Validate(errorBuilder)
-	semantic.DuplicateDirectoryValidator{Dirs: nomospath.ToRelativeSlashPaths(dirs)}.Validate(errorBuilder)
+	semantic.DuplicateDirectoryValidator{Dirs: dirs}.Validate(errorBuilder)
 	semantic.DuplicateNamespaceValidator{Objects: objects}.Validate(errorBuilder)
 }
 

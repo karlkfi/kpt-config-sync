@@ -16,19 +16,16 @@ limitations under the License.
 package validation
 
 import (
-	"path"
-
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
-	"github.com/google/nomos/pkg/util/namespaceutil"
-
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/util/namespaceutil"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -96,10 +93,9 @@ func (v *InputValidator) Error() error {
 
 // VisitTreeNode implements Visitor
 func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	name := path.Base(n.RelativeSlashPath())
-	if namespaceutil.IsReserved(name) {
+	if name := n.Base(); namespaceutil.IsReserved(name) {
 		// The node's name must not be a reserved namespace name.
-		v.errs.Add(veterrors.ReservedDirectoryNameError{Dir: n.RelativeSlashPath()})
+		v.errs.Add(veterrors.ReservedDirectoryNameError{Dir: n.Relative})
 	}
 
 	// Namespaces may not have children.

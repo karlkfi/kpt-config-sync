@@ -41,7 +41,7 @@ func processSystem(
 // validateSystem validates objects in system/
 func validateSystem(objects []ast.FileObject, repo *v1alpha1.Repo, apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) {
 	metadata.Validate(toResourceMetas(objects), errorBuilder)
-	syntax.FlatDirectoryValidator.Validate(toSources(objects), errorBuilder)
+	syntax.FlatDirectoryValidator.Validate(ast.ToRelative(objects), errorBuilder)
 	syntax.RepoVersionValidator.Validate(objects, errorBuilder)
 	syntax.SystemKindValidator.Validate(objects, errorBuilder)
 

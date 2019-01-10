@@ -17,7 +17,6 @@ limitations under the License.
 package ast
 
 import (
-	"path"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -64,6 +63,15 @@ func (o *FileObject) GroupVersionKind() schema.GroupVersionKind {
 // Name returns the user-defined name of the object.
 func (o *FileObject) Name() string {
 	return o.MetaObject().GetName()
+}
+
+// ToRelative returns an array of nomospath.Sourced from the provided list of FileObjects.
+func ToRelative(os []FileObject) []nomospath.Relative {
+	result := make([]nomospath.Relative, len(os))
+	for i, o := range os {
+		result[i] = o.Relative
+	}
+	return result
 }
 
 // Root represents a set of declared policies, configuration for how those policies will be
@@ -169,7 +177,7 @@ func (n *TreeNode) PartialCopy() *TreeNode {
 
 // Name returns the name of the lowest-level directory in this node's path.
 func (n *TreeNode) Name() string {
-	return path.Base(n.RelativeSlashPath())
+	return n.Base()
 }
 
 func copyMapInto(from map[string]string, to *map[string]string) {

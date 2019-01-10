@@ -22,6 +22,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -29,7 +30,7 @@ import (
 // nodeContext keeps track of objects during the tree traversal for purposes of inheriting values.
 type nodeContext struct {
 	nodeType  node.Type              // the type of node being processed
-	nodePath  string                 // the node's path, used for annotating inherited objects
+	nodePath  nomospath.Relative     // the node's path, used for annotating inherited objects
 	inherited []*ast.NamespaceObject // the objects that are inherited from the node.
 }
 
@@ -76,7 +77,7 @@ func (v *InheritanceVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.treeContext = append(v.treeContext, nodeContext{
 		nodeType: n.Type,
-		nodePath: n.RelativeSlashPath(),
+		nodePath: n.Relative,
 	})
 	newNode := v.Copying.VisitTreeNode(n)
 	v.treeContext = v.treeContext[:len(v.treeContext)-1]
@@ -100,7 +101,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 // VisitObject implements Visitor
 func (v *InheritanceVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	context := &v.treeContext[len(v.treeContext)-1]
-	gk := o.GetObjectKind().GroupVersionKind().GroupKind()
+	gk := o.GroupVersionKind().GroupKind()
 	if context.nodeType == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[gk]
 		if found && spec.Mode == v1alpha1.HierarchyModeInherit {

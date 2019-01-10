@@ -11,7 +11,7 @@ func validateCluster(objects []ast.FileObject, errorBuilder *multierror.Builder)
 	metadata.Validate(toResourceMetas(objects), errorBuilder)
 
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
-	syntax.FlatDirectoryValidator.Validate(toSources(objects), errorBuilder)
+	syntax.FlatDirectoryValidator.Validate(ast.ToRelative(objects), errorBuilder)
 }
 
 func processCluster(

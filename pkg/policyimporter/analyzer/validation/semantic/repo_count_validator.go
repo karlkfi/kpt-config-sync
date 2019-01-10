@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
@@ -14,12 +15,12 @@ type RepoCountValidator struct {
 
 // Validate adds an error to errorBuilder if there are an incorrect number of Repo Resources
 func (v RepoCountValidator) Validate(errorBuilder *multierror.Builder) {
-	repos := make(map[*v1alpha1.Repo]string)
+	repos := make(map[*v1alpha1.Repo]nomospath.Relative)
 
 	for _, obj := range v.Objects {
 		switch repo := obj.Object.(type) {
 		case *v1alpha1.Repo:
-			repos[repo] = obj.RelativeSlashPath()
+			repos[repo] = obj.Relative
 		}
 	}
 

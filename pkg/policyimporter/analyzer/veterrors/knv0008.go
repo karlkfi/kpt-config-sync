@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
@@ -16,8 +17,8 @@ func init() {
 
 // ConflictingResourceQuotaError represents multiple ResourceQuotas illegally presiding in the same directory.
 type ConflictingResourceQuotaError struct {
-	// Path is the repository path in which the conflict happened
-	Path string
+	// Path is the repository directory in which the conflict happened
+	Path nomospath.Relative
 	// Cluster is the cluster in which the conflict happened
 	Cluster    string
 	Duplicates []id.Resource
@@ -37,14 +38,14 @@ func (e ConflictingResourceQuotaError) Error() string {
 				"Resource targeted to cluster %[3]q.  "+
 				"Directory %[1]q contains multiple ResourceQuota Resources:\n\n"+
 				"%[2]s",
-			e.Path, strings.Join(strs, "\n\n"), e.Cluster)
+			e.Path.RelativeSlashPath(), strings.Join(strs, "\n\n"), e.Cluster)
 	}
 
 	return format(e,
 		"A directory MUST NOT contain more than one ResourceQuota Resource. "+
 			"Directory %[1]q contains multiple ResourceQuota Resources:\n\n"+
 			"%[2]s",
-		e.Path, strings.Join(strs, "\n\n"))
+		e.Path.RelativeSlashPath(), strings.Join(strs, "\n\n"))
 }
 
 // Code implements Error

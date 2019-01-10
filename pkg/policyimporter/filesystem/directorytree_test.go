@@ -23,6 +23,8 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
 )
@@ -33,10 +35,10 @@ type directoryTreeInput struct {
 }
 
 type directoryTreeTestcase struct {
-	name      string
-	inputs    []directoryTreeInput
-	expect    *ast.TreeNode
-	expectErr bool
+	name   string
+	inputs []directoryTreeInput
+	expect *ast.TreeNode
+	errors []string
 }
 
 func (tc *directoryTreeTestcase) Run(t *testing.T) {
@@ -48,22 +50,22 @@ func (tc *directoryTreeTestcase) Run(t *testing.T) {
 		}
 		n := tg.AddDir(nomospath.NewFakeRelative(inp.path), typ)
 		if n == nil {
-			t.Errorf("AddNode returned nil")
+			t.Fatalf("AddNode returned nil")
 		}
 	}
 	eb := multierror.Builder{}
 	tree := tg.Build(&eb)
-	if eb.HasErrors() != tc.expectErr {
-		if tc.expectErr {
-			t.Errorf("Expected err, got nil")
-		} else {
-			t.Errorf("Unexpected error %v", eb.Build())
-		}
+
+	veterrorstest.ExpectErrors(tc.errors, eb.Build(), t)
+
+	if tc.errors != nil {
+		// No more validation; we got the errors we wanted.
+		return
 	}
 
 	if diff := cmp.Diff(tc.expect, tree); diff != "" {
 		spew.Printf("%#v\n", tree)
-		t.Errorf("unexpected output:\n%s", diff)
+		t.Fatalf("unexpected output:\n%s", diff)
 	}
 }
 
@@ -109,10 +111,10 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 	{
 		name: "missing node",
 		inputs: []directoryTreeInput{
-			{path: "/a/b/c"},
-			{path: "/a/b/c/d/e", typ: node.Namespace},
+			{path: "a"},
+			{path: "a/b/c", typ: node.Namespace},
 		},
-		expectErr: true,
+		errors: []string{veterrors.InternalErrorCode},
 	},
 }
 

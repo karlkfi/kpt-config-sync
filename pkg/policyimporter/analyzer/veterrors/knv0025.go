@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 )
 
 // MultipleRepoDefinitionsErrorCode is the error code for MultipleRepoDefinitionsError
@@ -18,7 +19,7 @@ func init() {
 
 // MultipleRepoDefinitionsError reports that the system/ directory contains multiple Repo declarations.
 type MultipleRepoDefinitionsError struct {
-	Repos map[*v1alpha1.Repo]string
+	Repos map[*v1alpha1.Repo]nomospath.Relative
 }
 
 // Error implements error
@@ -27,7 +28,7 @@ func (e MultipleRepoDefinitionsError) Error() string {
 	// Sort repos so that output is deterministic.
 	for r, source := range e.Repos {
 		repos = append(repos, fmt.Sprintf("source: %[1]s\n"+
-			"name: %[2]s", source, r.Name))
+			"name: %[2]s", source.RelativeSlashPath(), r.Name))
 	}
 	sort.Strings(repos)
 

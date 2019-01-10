@@ -1,7 +1,6 @@
 package syntax
 
 import (
-	"path"
 	"strings"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
@@ -24,7 +23,7 @@ var DisallowSystemObjectsValidator = &FileObjectValidator{
 
 // isInSystemDir returns true if the Resource is currently placed in system/.
 func isInSystemDir(o ast.FileObject) bool {
-	return strings.HasPrefix(path.Dir(o.RelativeSlashPath()), repo.SystemDir)
+	return strings.HasPrefix(o.RelativeSlashPath(), repo.SystemDir)
 }
 
 // IsSystemOnly returns true if the GVK is only allowed in the system/ directory.

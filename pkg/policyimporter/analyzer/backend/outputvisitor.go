@@ -17,7 +17,6 @@ limitations under the License.
 package backend
 
 import (
-	"path"
 	"time"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
@@ -111,10 +110,10 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		name = v1.RootPolicyNodeName
 		parent = v1.NoParentNamespace
 	case 1:
-		name = path.Base(n.RelativeSlashPath())
+		name = n.Base()
 		parent = v1.RootPolicyNodeName
 	default:
-		name = path.Base(n.RelativeSlashPath())
+		name = n.Base()
 		parent = v.policyNode[origLen-1].Name
 	}
 

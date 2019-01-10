@@ -14,7 +14,7 @@ func validateClusterRegistry(objects []ast.FileObject, errorBuilder *multierror.
 
 	syntax.ClusterregistryKindValidator.Validate(objects, errorBuilder)
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
-	syntax.FlatDirectoryValidator.Validate(toSources(objects), errorBuilder)
+	syntax.FlatDirectoryValidator.Validate(ast.ToRelative(objects), errorBuilder)
 }
 
 func getClusters(objects []ast.FileObject) []clusterregistry.Cluster {

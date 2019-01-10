@@ -1,7 +1,6 @@
 package metadata
 
 import (
-	"path"
 	"sort"
 	"strings"
 
@@ -73,15 +72,15 @@ func validateGroupKindCollisions(metas []id.Resource, eb *multierror.Builder) {
 func validateNameCollisions(name string, metas []id.Resource, eb *multierror.Builder) {
 	sort.Slice(metas, func(i, j int) bool {
 		// Sort by source file.
-		return path.Dir(metas[i].RelativeSlashPath()) < path.Dir(metas[j].RelativeSlashPath())
+		return metas[i].Dir().RelativeSlashPath() < metas[j].Dir().RelativeSlashPath()
 	})
 
 	for i := 0; i < len(metas); {
-		dir := path.Dir(metas[i].RelativeSlashPath())
+		dir := metas[i].Dir()
 		var duplicates []id.Resource
 
 		for j := i + 1; j < len(metas); j++ {
-			if strings.HasPrefix(metas[j].RelativeSlashPath(), dir) {
+			if strings.HasPrefix(metas[j].RelativeSlashPath(), dir.RelativeSlashPath()) {
 				// Pick up duplicates in the same directory and child directories.
 				duplicates = append(duplicates, metas[j])
 			} else {

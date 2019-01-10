@@ -5,6 +5,8 @@ package veterrors
 import (
 	"sort"
 	"strings"
+
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 )
 
 // DuplicateDirectoryNameErrorCode is the error code for DuplicateDirectoryNameError
@@ -12,10 +14,10 @@ const DuplicateDirectoryNameErrorCode = "1002"
 
 var duplicateDirectoryNameErrorExamples = []Error{
 	DuplicateDirectoryNameError{
-		Duplicates: []string{"foo/bar", "qux/bar"},
+		Duplicates: []nomospath.Relative{nomospath.NewFakeRelative("foo/bar"), nomospath.NewFakeRelative("qux/bar")},
 	},
 	DuplicateDirectoryNameError{
-		Duplicates: []string{"bar", "bar/foo/bar"},
+		Duplicates: []nomospath.Relative{nomospath.NewFakeRelative("bar"), nomospath.NewFakeRelative("bar/foo/bar")},
 	},
 }
 
@@ -66,17 +68,21 @@ func init() {
 
 // DuplicateDirectoryNameError represents an illegal duplication of directory names.
 type DuplicateDirectoryNameError struct {
-	Duplicates []string
+	Duplicates []nomospath.Relative
 }
 
 // Error implements error.
 func (e DuplicateDirectoryNameError) Error() string {
 	// Ensure deterministic node printing order.
-	sort.Strings(e.Duplicates)
+	duplicates := make([]string, len(e.Duplicates))
+	for i, duplicate := range e.Duplicates {
+		duplicates[i] = duplicate.RelativeSlashPath()
+	}
+	sort.Strings(duplicates)
 	return format(e,
 		"Directory names MUST be unique. Rename one of these directories:\n\n"+
 			"%[1]s",
-		strings.Join(e.Duplicates, "\n"))
+		strings.Join(duplicates, "\n"))
 }
 
 // Code implements Error

@@ -139,11 +139,11 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// directories of each GCP root resources.
 	if v.ctx == nil {
 		if len(n.Objects) > 0 {
-			var objNames []string
+			var objPaths []string
 			for _, obj := range n.Objects {
-				objNames = append(objNames, obj.RelativeSlashPath())
+				objPaths = append(objPaths, obj.RelativeSlashPath())
 			}
-			v.errs.Add(errors.Errorf("GCP top-level hierarchy should not contain specific resources. Found %v", objNames))
+			v.errs.Add(errors.Errorf("GCP top-level hierarchy should not contain specific resources. Found %v", objPaths))
 			return nil
 		}
 	}

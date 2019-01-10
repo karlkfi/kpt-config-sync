@@ -1,14 +1,13 @@
 package semantic
 
 import (
-	"path"
-
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/validator"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/util/multierror"
 )
@@ -34,7 +33,8 @@ func NewConflictingResourceQuotaValidator(
 
 // Used as map key below
 type dirCluster struct {
-	dir, cluster string
+	nomospath.Relative
+	cluster string
 }
 
 // Validate adds errors to the errorBuilder if there are conflicting ResourceQuotas in a directory
@@ -50,14 +50,14 @@ func (v ConflictingResourceQuotaValidator) Validate(errorBuilder *multierror.Bui
 			glog.V(5).Infof("obj: %v", obj)
 		}
 		if obj.GroupVersionKind() == kinds.ResourceQuota() {
-			dir := path.Dir(obj.RelativeSlashPath())
+			dir := obj.Dir()
 			for _, c := range v.coverage.MapToClusters(obj.MetaObject()) {
 				if glog.V(7) {
 					glog.Infof("seen cluster: i=%v, dir=%v, c=%v", obj, dir, c)
 				}
 				dc := dirCluster{
-					dir:     dir,
-					cluster: c,
+					Relative: dir,
+					cluster:  c,
 				}
 				resourceQuotas[dc] = append(resourceQuotas[dc], &v.objects[i])
 			}
@@ -67,7 +67,7 @@ func (v ConflictingResourceQuotaValidator) Validate(errorBuilder *multierror.Bui
 	for dc, quotas := range resourceQuotas {
 		if len(quotas) > 1 {
 			errorBuilder.Add(veterrors.ConflictingResourceQuotaError{
-				Path:       dc.dir,
+				Path:       dc.Relative,
 				Cluster:    dc.cluster,
 				Duplicates: quotas},
 			)
@@ -76,10 +76,10 @@ func (v ConflictingResourceQuotaValidator) Validate(errorBuilder *multierror.Bui
 		// special case when there's a 1 quota for this cluster and 1 quota targeted to
 		// all clusters.  All other combinations (2 quotas here, 1 in all) are handled
 		// by the default handler above.
-		allQuotas := resourceQuotas[dirCluster{dir: dc.dir, cluster: ""}]
+		allQuotas := resourceQuotas[dirCluster{Relative: dc.Relative, cluster: ""}]
 		if dc.cluster != "" && len(quotas) == 1 && len(allQuotas) == 1 {
 			errorBuilder.Add(veterrors.ConflictingResourceQuotaError{
-				Path:       dc.dir,
+				Path:       dc.Relative,
 				Cluster:    dc.cluster,
 				Duplicates: append(quotas, allQuotas...)},
 			)

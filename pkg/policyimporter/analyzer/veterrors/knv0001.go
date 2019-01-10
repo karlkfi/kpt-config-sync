@@ -1,11 +1,13 @@
 package veterrors
 
-import "path"
+import (
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+)
 
 // ReservedDirectoryNameErrorCode is the error code for ReservedDirectoryNameError
 const ReservedDirectoryNameErrorCode = "1001"
 
-var reservedDirectoryNameErrorExamples = []Error{ReservedDirectoryNameError{Dir: "namespaces/reserved"}}
+var reservedDirectoryNameErrorExamples = []Error{ReservedDirectoryNameError{Dir: nomospath.NewFakeRelative("namespaces/reserved")}}
 
 var reservedDirectoryNameExplanation = `
 GKE Policy Management defines several
@@ -31,7 +33,7 @@ func init() {
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.
 type ReservedDirectoryNameError struct {
-	Dir string
+	Dir nomospath.Relative
 }
 
 // Error implements error.
@@ -40,7 +42,7 @@ func (e ReservedDirectoryNameError) Error() string {
 		"Directories MUST NOT have reserved namespace names. Rename or remove directory:\n\n"+
 			"path: %[1]s\n"+
 			"name: %[2]s",
-		e.Dir, path.Base(e.Dir))
+		e.Dir.RelativeSlashPath(), e.Dir.Base())
 }
 
 // Code implements Error

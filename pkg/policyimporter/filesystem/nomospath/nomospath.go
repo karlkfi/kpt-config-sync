@@ -3,6 +3,7 @@ package nomospath
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
@@ -10,7 +11,11 @@ import (
 
 // Sourced represents an object associated with a path in a Nomos repository.
 type Sourced interface {
+	// RelativeSlashPath returns the slash-delimited path relative to Nomos root.
 	RelativeSlashPath() string
+
+	// Dir returns a Relative of the directory containing the path this object is associated with.
+	Dir() Relative
 }
 
 // Root is a path to a directory holding a Nomos repository.
@@ -100,15 +105,19 @@ func (p Relative) Dir() Relative {
 	return Relative{path: filepath.Dir(p.path), root: p.root}
 }
 
-// ToRelativeSlashPaths returns the slash paths relative to Nomos root for every passed
-// Relative. This is a temporary method with the sole purpose of allowing refactoring to be
-// broken into reasonably small pieces.
-func ToRelativeSlashPaths(relpaths []Relative) []string {
-	result := make([]string, len(relpaths))
-	for i, relpath := range relpaths {
-		result[i] = relpath.RelativeSlashPath()
-	}
-	return result
+// Base returns the Base path of this location.
+func (p Relative) Base() string {
+	return filepath.Base(p.path)
+}
+
+// IsRoot returns true if the path is the Nomos root directory.
+func (p Relative) IsRoot() bool {
+	return p.path == "."
+}
+
+// Split returns the path elements relative to Nomos root.
+func (p Relative) Split() []string {
+	return strings.Split(p.path, string(os.PathSeparator))
 }
 
 // Equal returns true if the underlying relative path and root directories are identical.

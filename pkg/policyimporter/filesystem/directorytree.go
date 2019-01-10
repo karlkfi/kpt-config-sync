@@ -16,8 +16,6 @@ limitations under the License.
 package filesystem
 
 import (
-	"path"
-
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -31,12 +29,12 @@ type DirectoryTree struct {
 	// root is the root node of the tree
 	root *ast.TreeNode
 	// nodes is a map of relative UNIX-style directory path to node
-	nodes map[string]*ast.TreeNode
+	nodes map[nomospath.Relative]*ast.TreeNode
 }
 
 // NewDirectoryTree returns a new tree generator
 func NewDirectoryTree() *DirectoryTree {
-	return &DirectoryTree{nodes: map[string]*ast.TreeNode{}}
+	return &DirectoryTree{nodes: map[nomospath.Relative]*ast.TreeNode{}}
 }
 
 // AddDir adds the given node at the the given OS-specific path.
@@ -48,7 +46,7 @@ func (t *DirectoryTree) AddDir(p nomospath.Relative, typ node.Type) *ast.TreeNod
 		Type:      typ,
 		Selectors: map[string]*v1alpha1.NamespaceSelector{},
 	}
-	t.nodes[newNode.RelativeSlashPath()] = newNode
+	t.nodes[newNode.Relative] = newNode
 
 	if t.root == nil {
 		t.root = newNode
@@ -59,12 +57,12 @@ func (t *DirectoryTree) AddDir(p nomospath.Relative, typ node.Type) *ast.TreeNod
 // Build takes all the created nodes and produces a tree.
 func (t *DirectoryTree) Build(eb *multierror.Builder) *ast.TreeNode {
 	for p, n := range t.nodes {
-		parent := path.Dir(p)
-		if parent != "." {
+		parent := p.Dir()
+		if !parent.IsRoot() {
 			parentNode, ok := t.nodes[parent]
 			if !ok {
-				eb.Add(veterrors.InternalErrorf("failed to treeify policy nodes: Node %q missing parent %q", p, parent))
-				return nil
+				eb.Add(veterrors.InternalErrorf("failed to treeify policy nodes: Node %q missing parent %q", p.RelativeSlashPath(), parent.RelativeSlashPath()))
+				continue
 			}
 			parentNode.Children = append(parentNode.Children, n)
 		}

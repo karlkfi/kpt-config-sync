@@ -7,16 +7,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/sync"
 )
 
-// toSources extracts the sources from the set of provided FileObjects.
-// TODO(willbeason): Move to fileObjects
-func toSources(infos []ast.FileObject) []string {
-	result := make([]string, len(infos))
-	for i, info := range infos {
-		result[i] = info.RelativeSlashPath()
-	}
-	return result
-}
-
 // fileObjects extends []ast.FileObject to provide operations helpful for parsing.
 type fileObjects []ast.FileObject
 

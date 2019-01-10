@@ -1,6 +1,7 @@
 package veterrors
 
 import (
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -18,6 +19,11 @@ var _ id.Resource = resourceID{}
 // RelativeSlashPath implements Resource
 func (r resourceID) RelativeSlashPath() string {
 	return r.source
+}
+
+// Dir implements Resource
+func (r resourceID) Dir() nomospath.Relative {
+	return nomospath.NewFakeRelative(r.source).Dir()
 }
 
 // Name implements Resource
@@ -42,6 +48,11 @@ var _ id.Sync = syncID{}
 // RelativeSlashPath implements Sync
 func (s syncID) RelativeSlashPath() string {
 	return s.source
+}
+
+// Dir implements Sync
+func (s syncID) Dir() nomospath.Relative {
+	return nomospath.NewFakeRelative(s.source).Dir()
 }
 
 // GroupVersionKind implements Sync
