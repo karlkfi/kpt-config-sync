@@ -20,10 +20,17 @@ import (
 	"github.com/google/nomos/pkg/bespin-controllers/folder"
 	"github.com/google/nomos/pkg/bespin-controllers/iampolicy"
 	"github.com/google/nomos/pkg/bespin-controllers/organization"
+	"github.com/google/nomos/pkg/bespin-controllers/organizationpolicy"
 	"github.com/google/nomos/pkg/bespin-controllers/project"
 )
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, project.Add, folder.Add, organization.Add, iampolicy.Add)
+	AddToManagerFuncs = append(AddToManagerFuncs,
+		project.Add,
+		folder.Add,
+		organization.Add,
+		iampolicy.Add,
+		organizationpolicy.Add,
+	)
 }
