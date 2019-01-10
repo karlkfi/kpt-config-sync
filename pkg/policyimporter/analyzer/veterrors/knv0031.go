@@ -1,5 +1,7 @@
 package veterrors
 
+import "github.com/google/nomos/pkg/policyimporter/id"
+
 // MissingObjectNameErrorCode is the error code for MissingObjectNameError
 const MissingObjectNameErrorCode = "1031"
 
@@ -9,7 +11,7 @@ func init() {
 
 // MissingObjectNameError reports that an object has no name.
 type MissingObjectNameError struct {
-	ResourceID
+	id.Resource
 }
 
 // Error implements error
@@ -17,7 +19,7 @@ func (e MissingObjectNameError) Error() string {
 	return format(e,
 		"Resources must declare metadata.name:\n\n"+
 			"%[1]s",
-		printResourceID(e))
+		id.PrintResource(e))
 }
 
 // Code implements Error

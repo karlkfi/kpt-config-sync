@@ -8,7 +8,7 @@ import (
 var NamespaceValidatorFactory = ValidatorFactory{
 	fn: func(meta ResourceMeta) error {
 		if meta.MetaObject().GetNamespace() != "" {
-			return veterrors.IllegalMetadataNamespaceDeclarationError{ResourceID: meta}
+			return veterrors.IllegalMetadataNamespaceDeclarationError{Resource: meta}
 		}
 		return nil
 	},

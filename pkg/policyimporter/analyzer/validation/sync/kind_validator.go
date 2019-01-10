@@ -13,7 +13,7 @@ var KindValidatorFactory = ValidatorFactory{fn: func(sync FileGroupVersionKindHi
 		return nil
 	}
 	return veterrors.UnsupportedResourceInSyncError{
-		SyncID: sync,
+		Sync: sync,
 	}
 }}
 

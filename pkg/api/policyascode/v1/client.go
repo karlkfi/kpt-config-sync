@@ -46,7 +46,7 @@ type container interface {
 	DeepCopyObject() runtime.Object
 }
 
-// ResourceID implments the ResourceClient interface
+// ResourceID implements the ResourceClient interface
 func ResourceID(ctx context.Context, client Client, Kind string, Name string) (string, error) {
 	var res container
 	resName := types.NamespacedName{Name: Name}

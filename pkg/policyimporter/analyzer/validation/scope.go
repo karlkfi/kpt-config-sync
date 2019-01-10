@@ -66,7 +66,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 			repo.NamespacesDir,
 		))
 	case meta.NotFound:
-		p.errs.Add(veterrors.UnknownObjectError{ResourceID: &o.FileObject})
+		p.errs.Add(veterrors.UnknownObjectError{Resource: &o.FileObject})
 	}
 
 	return o
@@ -88,7 +88,7 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 			repo.ClusterDir,
 		))
 	case meta.NotFound:
-		p.errs.Add(veterrors.UnknownObjectError{ResourceID: &o.FileObject})
+		p.errs.Add(veterrors.UnknownObjectError{Resource: &o.FileObject})
 	}
 
 	return o

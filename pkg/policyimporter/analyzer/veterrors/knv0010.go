@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
 // IllegalAnnotationDefinitionErrorCode is the error code for IllegalAnnotationDefinitionError
@@ -17,7 +18,7 @@ func init() {
 
 // IllegalAnnotationDefinitionError represents a set of illegal annotation definitions.
 type IllegalAnnotationDefinitionError struct {
-	ResourceID
+	id.Resource
 	Annotations []string
 }
 
@@ -34,7 +35,7 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 		"Resources MUST NOT declare unsupported annotations starting with %[3]q. "+
 			"Resource has offending annotations: %[1]s\n\n"+
 			"%[2]s",
-		a, printResourceID(e), policyhierarchy.GroupName)
+		a, id.PrintResource(e), policyhierarchy.GroupName)
 }
 
 // Code implements Error

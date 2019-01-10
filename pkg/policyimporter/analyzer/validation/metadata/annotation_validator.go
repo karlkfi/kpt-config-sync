@@ -15,7 +15,7 @@ var AnnotationValidatorFactory = ValidatorFactory{
 			}
 		}
 		if errors != nil {
-			return veterrors.IllegalAnnotationDefinitionError{ResourceID: meta, Annotations: errors}
+			return veterrors.IllegalAnnotationDefinitionError{Resource: meta, Annotations: errors}
 		}
 		return nil
 	},

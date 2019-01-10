@@ -1,6 +1,9 @@
 package veterrors
 
-import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+import (
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/id"
+)
 
 // IllegalNamespaceSubdirectoryErrorCode is the error code for IllegalNamespaceSubdirectoryError
 const IllegalNamespaceSubdirectoryErrorCode = "1003"
@@ -11,8 +14,8 @@ func init() {
 
 // IllegalNamespaceSubdirectoryError represents an illegal child directory of a namespace directory.
 type IllegalNamespaceSubdirectoryError struct {
-	Child  *ast.TreeNode
-	Parent *ast.TreeNode
+	Child  id.TreeNode
+	Parent id.TreeNode
 }
 
 // Error implements error.
@@ -21,7 +24,7 @@ func (e IllegalNamespaceSubdirectoryError) Error() string {
 		"A %[1]s directory MUST NOT have subdirectories. "+
 			"Restructure %[4]q so that it does not have subdirectory %[2]q:\n\n"+
 			"%[3]s",
-		ast.Namespace, e.Child.Name(), e.Child, e.Parent.Name())
+		ast.Namespace, e.Child.Name(), id.PrintTreeNode(e.Child), e.Parent.Name())
 }
 
 // Code implements Error

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
 // MetadataNameCollisionErrorCode is the error code for ObjectNameCollisionError
@@ -17,14 +18,14 @@ func init() {
 // MetadataNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
 type MetadataNameCollisionError struct {
 	Name       string
-	Duplicates []ResourceID
+	Duplicates []id.Resource
 }
 
 // Error implements error
 func (e MetadataNameCollisionError) Error() string {
 	var strs []string
 	for _, duplicate := range e.Duplicates {
-		strs = append(strs, printResourceID(duplicate))
+		strs = append(strs, id.PrintResource(duplicate))
 	}
 	sort.Strings(strs)
 

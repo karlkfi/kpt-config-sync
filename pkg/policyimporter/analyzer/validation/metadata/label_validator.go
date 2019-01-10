@@ -15,7 +15,7 @@ var LabelValidatorFactory = ValidatorFactory{
 			}
 		}
 		if errors != nil {
-			return veterrors.IllegalLabelDefinitionError{ResourceID: meta, Labels: errors}
+			return veterrors.IllegalLabelDefinitionError{Resource: meta, Labels: errors}
 		}
 		return nil
 	},

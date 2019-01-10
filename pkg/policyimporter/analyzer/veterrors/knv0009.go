@@ -1,5 +1,7 @@
 package veterrors
 
+import "github.com/google/nomos/pkg/policyimporter/id"
+
 // IllegalNamespaceDeclarationErrorCode is the error code for IllegalNamespaceDeclarationError
 const IllegalNamespaceDeclarationErrorCode = "1009"
 
@@ -9,7 +11,7 @@ func init() {
 
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
 type IllegalMetadataNamespaceDeclarationError struct {
-	ResourceID
+	id.Resource
 }
 
 // Error implements error.
@@ -18,7 +20,7 @@ func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 	return format(e,
 		"Resources MUST NOT declare metadata.namespace:\n\n"+
 			"%[1]s",
-		printResourceID(e))
+		id.PrintResource(e))
 }
 
 // Code implements Error

@@ -12,9 +12,9 @@ func KnownResourceValidatorFactory(apiInfo *meta.APIInfo) ValidatorFactory {
 		if !apiInfo.Exists(gvk) {
 			versions := apiInfo.AllowedVersions(gvk.GroupKind())
 			if versions == nil {
-				return veterrors.UnknownResourceInSyncError{SyncID: sync}
+				return veterrors.UnknownResourceInSyncError{Sync: sync}
 			}
-			return veterrors.UnknownResourceVersionInSyncError{SyncID: sync, Allowed: versions}
+			return veterrors.UnknownResourceVersionInSyncError{Sync: sync, Allowed: versions}
 		}
 		return nil
 	}}

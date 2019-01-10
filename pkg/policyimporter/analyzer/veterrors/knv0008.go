@@ -3,6 +3,8 @@ package veterrors
 import (
 	"sort"
 	"strings"
+
+	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
 // ConflictingResourceQuotaErrorCode is the error code for ConflictingResourceQuotaError
@@ -18,14 +20,14 @@ type ConflictingResourceQuotaError struct {
 	Path string
 	// Cluster is the cluster in which the conflict happened
 	Cluster    string
-	Duplicates []ResourceID
+	Duplicates []id.Resource
 }
 
 // Error implements error.
 func (e ConflictingResourceQuotaError) Error() string {
 	var strs sort.StringSlice
 	for _, duplicate := range e.Duplicates {
-		strs = append(strs, printResourceID(duplicate))
+		strs = append(strs, id.PrintResource(duplicate))
 	}
 	strs.Sort()
 

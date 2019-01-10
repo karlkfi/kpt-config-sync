@@ -11,7 +11,7 @@ var NamespacesKindValidator = &FileObjectValidator{
 	ValidateFn: func(object ast.FileObject) error {
 		switch object.Object.(type) {
 		case *v1alpha1.NamespaceSelector:
-			return veterrors.IllegalKindInNamespacesError{ResourceID: &object}
+			return veterrors.IllegalKindInNamespacesError{Resource: &object}
 		default:
 		}
 		return nil

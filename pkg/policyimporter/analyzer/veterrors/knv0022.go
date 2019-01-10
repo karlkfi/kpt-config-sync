@@ -3,6 +3,8 @@ package veterrors
 import (
 	"sort"
 	"strings"
+
+	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
 // DuplicateSyncGroupKindErrorCode is the error code for DuplicateSyncGroupKindError
@@ -15,14 +17,14 @@ func init() {
 // DuplicateSyncGroupKindError reports that multiple versions were declared for the same synced kind
 type DuplicateSyncGroupKindError struct {
 	// Duplicates is the Group/Kind pair with duplicate definitions in Syncs.
-	Duplicates []SyncID
+	Duplicates []id.Sync
 }
 
 // Error implements error
 func (e DuplicateSyncGroupKindError) Error() string {
 	var duplicates []string
 	for _, duplicate := range e.Duplicates {
-		duplicates = append(duplicates, printSyncID(duplicate))
+		duplicates = append(duplicates, id.PrintSync(duplicate))
 	}
 	sort.Strings(duplicates)
 

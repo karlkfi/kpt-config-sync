@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
@@ -16,7 +17,7 @@ type DuplicateNamespaceValidator struct {
 
 // Validate adds errors to the errorBuilder if there are multiple Namespaces defined in directories.
 func (v DuplicateNamespaceValidator) Validate(errorBuilder *multierror.Builder) {
-	namespaces := make(map[string][]veterrors.ResourceID)
+	namespaces := make(map[string][]id.Resource)
 
 	for i, obj := range v.Objects {
 		if obj.GroupVersionKind() == kinds.Namespace() {

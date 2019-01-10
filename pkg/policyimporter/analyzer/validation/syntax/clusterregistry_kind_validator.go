@@ -14,7 +14,7 @@ var ClusterregistryKindValidator = &FileObjectValidator{
 		case *v1alpha1.ClusterSelector:
 		case *clusterregistry.Cluster:
 		default:
-			return veterrors.IllegalKindInClusterregistryError{ResourceID: &object}
+			return veterrors.IllegalKindInClusterregistryError{Resource: &object}
 		}
 		return nil
 	},

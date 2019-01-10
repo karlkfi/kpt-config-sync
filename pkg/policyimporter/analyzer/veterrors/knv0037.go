@@ -1,6 +1,9 @@
 package veterrors
 
-import "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+import (
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/policyimporter/id"
+)
 
 // IllegalKindInClusterregistryErrorCode is the error code for IllegalKindInClusterregistryError
 const IllegalKindInClusterregistryErrorCode = "1037"
@@ -11,7 +14,7 @@ func init() {
 
 // IllegalKindInClusterregistryError reports that an object has been illegally defined in clusterregistry/
 type IllegalKindInClusterregistryError struct {
-	ResourceID
+	id.Resource
 }
 
 // Error implements error
@@ -19,7 +22,7 @@ func (e IllegalKindInClusterregistryError) Error() string {
 	return format(e,
 		"Resources of the below Kind may not be declared in %[2]s/:\n\n"+
 			"%[1]s",
-		printResourceID(e), repo.ClusterRegistryDir)
+		id.PrintResource(e), repo.ClusterRegistryDir)
 }
 
 // Code implements Error

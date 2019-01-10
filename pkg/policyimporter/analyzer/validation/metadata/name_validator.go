@@ -18,21 +18,21 @@ var NameValidatorFactory = ValidatorFactory{
 
 		if meta.Name() == "" {
 			// Name MUST NOT be empty
-			return veterrors.MissingObjectNameError{ResourceID: meta}
+			return veterrors.MissingObjectNameError{Resource: meta}
 		} else if isDefaultCrdAllowedInNomos(gvk) {
 			// If CRD, then name must be a valid DNS1123 subdomain
 			errs := utilvalidation.IsDNS1123Subdomain(meta.Name())
 			if errs != nil {
-				return veterrors.InvalidMetadataNameError{ResourceID: meta}
+				return veterrors.InvalidMetadataNameError{Resource: meta}
 			}
 		} else if gvk == kinds.Namespace() {
 			// TODO(willbeason) Move this to Namespace-specific package.
 			expectedName := path.Base(path.Dir(meta.RelativeSlashPath()))
 			if expectedName == repo.NamespacesDir {
-				return veterrors.IllegalTopLevelNamespaceError{ResourceID: meta}
+				return veterrors.IllegalTopLevelNamespaceError{Resource: meta}
 			}
 			if meta.Name() != expectedName {
-				return veterrors.InvalidNamespaceNameError{ResourceID: meta, Expected: expectedName}
+				return veterrors.InvalidNamespaceNameError{Resource: meta, Expected: expectedName}
 			}
 		}
 		return nil

@@ -2,8 +2,8 @@ package sync
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/id"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -14,7 +14,7 @@ type FileSync struct {
 	nomospath.Relative
 }
 
-var _ veterrors.SyncID = FileSync{}
+var _ id.Sync = FileSync{}
 
 // NewFileSync creates a new FileSync from a Sync Resource and the source file declearing the Sync.
 func NewFileSync(sync *v1alpha1.Sync, source nomospath.Relative) FileSync {
@@ -49,9 +49,9 @@ type FileGroupVersionKindHierarchySync struct {
 	nomospath.Relative
 }
 
-var _ veterrors.SyncID = FileGroupVersionKindHierarchySync{}
+var _ id.Sync = FileGroupVersionKindHierarchySync{}
 
-// GroupVersionKind implements vet.SyncID
+// GroupVersionKind implements vet.Sync
 func (s FileGroupVersionKindHierarchySync) GroupVersionKind() schema.GroupVersionKind {
 	return s.groupVersionKind
 }

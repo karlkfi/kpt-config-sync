@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
 // MultipleNamespacesErrorCode is the error code for MultipleNamespacesError
@@ -16,14 +17,14 @@ func init() {
 
 // MultipleNamespacesError reports that multiple Namespaces are defined in the same directory.
 type MultipleNamespacesError struct {
-	Duplicates []ResourceID
+	Duplicates []id.Resource
 }
 
 // Error implements error
 func (e MultipleNamespacesError) Error() string {
 	var strs []string
 	for _, duplicate := range e.Duplicates {
-		strs = append(strs, printResourceID(duplicate))
+		strs = append(strs, id.PrintResource(duplicate))
 	}
 	sort.Strings(strs)
 

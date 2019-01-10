@@ -1,8 +1,10 @@
 package veterrors
 
+import "github.com/google/nomos/pkg/policyimporter/id"
+
 // UnsupportedRepoSpecVersion reports that the repo version is not supported.
 type UnsupportedRepoSpecVersion struct {
-	ResourceID
+	id.Resource
 	Version string
 }
 
@@ -18,7 +20,7 @@ func (e UnsupportedRepoSpecVersion) Error() string {
 	return format(e,
 		"Unsupported Repo spec.version: %[2]q. Must use version \"0.1.0\"\n\n"+
 			"%[1]s",
-		printResourceID(e), e.Version)
+		id.PrintResource(e), e.Version)
 }
 
 // Code implements Error

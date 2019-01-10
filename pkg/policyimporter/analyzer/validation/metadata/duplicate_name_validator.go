@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -30,7 +31,7 @@ type DuplicateNameValidator struct {
 
 // Validate adds errors to the errorBuilder for each name collision.
 func (v DuplicateNameValidator) Validate(eb *multierror.Builder) {
-	metasByGroupKinds := make(map[schema.GroupKind][]veterrors.ResourceID)
+	metasByGroupKinds := make(map[schema.GroupKind][]id.Resource)
 	for i, meta := range v.metas {
 		gvk := meta.GroupVersionKind()
 		if gvk == kinds.ResourceQuota() {
@@ -47,8 +48,8 @@ func (v DuplicateNameValidator) Validate(eb *multierror.Builder) {
 }
 
 // validateGroupKindCollisions assumes all metas have the same GroupKind
-func validateGroupKindCollisions(metas []veterrors.ResourceID, eb *multierror.Builder) {
-	metasByNames := make(map[string][]veterrors.ResourceID)
+func validateGroupKindCollisions(metas []id.Resource, eb *multierror.Builder) {
+	metasByNames := make(map[string][]id.Resource)
 	for _, meta := range metas {
 		name := meta.Name()
 		metasByNames[name] = append(metasByNames[name], meta)
@@ -60,7 +61,7 @@ func validateGroupKindCollisions(metas []veterrors.ResourceID, eb *multierror.Bu
 }
 
 // validateNameCollisions assumes all metas have the same GroupKind and metadata.name
-func validateNameCollisions(name string, metas []veterrors.ResourceID, eb *multierror.Builder) {
+func validateNameCollisions(name string, metas []id.Resource, eb *multierror.Builder) {
 	sort.Slice(metas, func(i, j int) bool {
 		// Sort by source file.
 		return path.Dir(metas[i].RelativeSlashPath()) < path.Dir(metas[j].RelativeSlashPath())
@@ -68,7 +69,7 @@ func validateNameCollisions(name string, metas []veterrors.ResourceID, eb *multi
 
 	for i := 0; i < len(metas); {
 		dir := path.Dir(metas[i].RelativeSlashPath())
-		var duplicates []veterrors.ResourceID
+		var duplicates []id.Resource
 
 		for j := i + 1; j < len(metas); j++ {
 			if strings.HasPrefix(metas[j].RelativeSlashPath(), dir) {

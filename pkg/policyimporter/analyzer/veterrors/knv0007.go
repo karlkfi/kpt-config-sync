@@ -1,6 +1,9 @@
 package veterrors
 
-import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+import (
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/id"
+)
 
 // IllegalAbstractNamespaceObjectKindErrorCode is the error code for IllegalAbstractNamespaceObjectKindError
 const IllegalAbstractNamespaceObjectKindErrorCode = "1007"
@@ -11,7 +14,7 @@ func init() {
 
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
 type IllegalAbstractNamespaceObjectKindError struct {
-	ResourceID
+	id.Resource
 }
 
 // Error implements error.
@@ -20,7 +23,7 @@ func (e IllegalAbstractNamespaceObjectKindError) Error() string {
 		"Resource %[4]q illegally declared in an %[1]s directory. "+
 			"Move this Resource to a %[2]s directory:\n\n"+
 			"%[3]s",
-		ast.AbstractNamespace, ast.Namespace, printResourceID(e), e.Name())
+		ast.AbstractNamespace, ast.Namespace, id.PrintResource(e), e.Name())
 }
 
 // Code implements Error

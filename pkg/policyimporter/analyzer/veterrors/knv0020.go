@@ -3,6 +3,7 @@ package veterrors
 import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
 // InvalidNamespaceNameErrorCode is the error code for InvalidNamespaceNameError
@@ -10,7 +11,7 @@ const InvalidNamespaceNameErrorCode = "1020"
 
 var invalidNamespaceNameErrorExamples = []Error{
 	InvalidNamespaceNameError{
-		ResourceID: &resourceID{
+		Resource: &resourceID{
 			source:           "namespaces/foo/namespace.yaml",
 			name:             "bar",
 			groupVersionKind: kinds.Namespace()},
@@ -36,7 +37,7 @@ func init() {
 
 // InvalidNamespaceNameError reports that a Namespace has an invalid name.
 type InvalidNamespaceNameError struct {
-	ResourceID
+	id.Resource
 	Expected string
 }
 
@@ -46,7 +47,7 @@ func (e InvalidNamespaceNameError) Error() string {
 		"A %[1]s MUST declare metadata.name that matches the name of its directory.\n\n"+
 			"%[2]s\n\n"+
 			"expected metadata.name: %[3]s\n",
-		ast.Namespace, printResourceID(e), e.Expected)
+		ast.Namespace, id.PrintResource(e), e.Expected)
 }
 
 // Code implements Error

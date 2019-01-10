@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
 // UnknownResourceVersionInSyncErrorCode is the error code for UnknownResourceVersionInSyncError
@@ -11,7 +12,7 @@ const UnknownResourceVersionInSyncErrorCode = "1039"
 
 var unknownResourceVersionInSyncErrorExamples = []Error{
 	UnknownResourceVersionInSyncError{
-		SyncID: &syncID{
+		Sync: &syncID{
 			source:           "system/rq-sync.yaml",
 			groupVersionKind: kinds.ResourceQuota().GroupKind().WithVersion("v2"),
 		},
@@ -33,7 +34,7 @@ func init() {
 // UnknownResourceVersionInSyncError reports that a Sync contains a Group/Kind with an incorrect
 // Version.
 type UnknownResourceVersionInSyncError struct {
-	SyncID
+	id.Sync
 	Allowed []string
 }
 
@@ -43,7 +44,7 @@ func (e UnknownResourceVersionInSyncError) Error() string {
 		"Sync defines a Resource Kind with an incorrect Version. "+
 			"Known Versions: [%[1]s]\n\n"+
 			"%[2]s",
-		strings.Join(e.Allowed, ", "), printSyncID(e))
+		strings.Join(e.Allowed, ", "), id.PrintSync(e))
 }
 
 // Code implements Error

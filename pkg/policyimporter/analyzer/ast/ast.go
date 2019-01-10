@@ -17,13 +17,13 @@ limitations under the License.
 package ast
 
 import (
-	"fmt"
 	"path"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/resourcequota"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,7 +37,7 @@ type FileObject struct {
 	nomospath.Relative
 }
 
-// TODO(willbeason) Add compile-time check for vet.ResourceID
+var _ id.Resource = &FileObject{}
 
 // NewFileObject returns an ast.FileObject with the specified underlying runtime.Object and the
 // designated source file.
@@ -167,6 +167,8 @@ type TreeNode struct {
 	Children []*TreeNode
 }
 
+var _ id.TreeNode = &TreeNode{}
+
 // Accept invokes VisitTreeNode on the visitor.
 func (n *TreeNode) Accept(visitor Visitor) *TreeNode {
 	if n == nil {
@@ -190,13 +192,6 @@ func (n *TreeNode) PartialCopy() *TreeNode {
 // Name returns the name of the lowest-level directory in this node's path.
 func (n *TreeNode) Name() string {
 	return path.Base(n.RelativeSlashPath())
-}
-
-// PrettyPrint returns a convenient representation of a TreeNode for error messages.
-func (n TreeNode) String() string {
-	return fmt.Sprintf("path: %[1]s\n"+
-		"name: %[2]s",
-		n.RelativeSlashPath(), n.Name())
 }
 
 func copyMapInto(from map[string]string, to *map[string]string) {

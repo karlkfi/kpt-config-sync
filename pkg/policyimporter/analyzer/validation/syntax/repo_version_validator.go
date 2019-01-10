@@ -15,7 +15,7 @@ var RepoVersionValidator = &FileObjectValidator{
 		switch o := object.Object.(type) {
 		case *v1alpha1.Repo:
 			if version := o.Spec.Version; version != AllowedRepoVersion {
-				return veterrors.UnsupportedRepoSpecVersion{ResourceID: &object, Version: version}
+				return veterrors.UnsupportedRepoSpecVersion{Resource: &object, Version: version}
 			}
 		}
 		return nil

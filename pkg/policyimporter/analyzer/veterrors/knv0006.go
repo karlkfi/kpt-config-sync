@@ -1,5 +1,7 @@
 package veterrors
 
+import "github.com/google/nomos/pkg/policyimporter/id"
+
 // UnsyncableNamespaceObjectErrorCode is the error code for UnsyncableNamespaceObjectErrorCode
 const UnsyncableNamespaceObjectErrorCode = "1006"
 
@@ -9,7 +11,7 @@ func init() {
 
 // UnsyncableNamespaceObjectError represents an illegal usage of a Resource which has not been defined for use in namespaces/.
 type UnsyncableNamespaceObjectError struct {
-	ResourceID
+	id.Resource
 }
 
 // Error implements error.
@@ -18,7 +20,7 @@ func (e UnsyncableNamespaceObjectError) Error() string {
 		"Unable to sync Resource. "+
 			"Enable sync for this Resource's kind.\n\n"+
 			"%[1]s",
-		printResourceID(e))
+		id.PrintResource(e))
 }
 
 // Code implements Error

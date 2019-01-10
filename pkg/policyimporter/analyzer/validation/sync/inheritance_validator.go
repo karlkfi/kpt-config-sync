@@ -59,7 +59,7 @@ func errIfNotAllowed(sync FileGroupVersionKindHierarchySync, allowed map[v1alpha
 		return nil
 	}
 	return veterrors.IllegalHierarchyModeError{
-		SyncID:        sync,
+		Sync:          sync,
 		HierarchyMode: sync.HierarchyMode,
 		Allowed:       allowed,
 	}

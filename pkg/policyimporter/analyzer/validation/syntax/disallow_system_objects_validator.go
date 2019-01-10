@@ -16,7 +16,7 @@ import (
 var DisallowSystemObjectsValidator = &FileObjectValidator{
 	ValidateFn: func(fileObject ast.FileObject) error {
 		if IsSystemOnly(fileObject.GroupVersionKind()) && !isInSystemDir(fileObject) {
-			return veterrors.IllegalSystemResourcePlacementError{ResourceID: &fileObject}
+			return veterrors.IllegalSystemResourcePlacementError{Resource: &fileObject}
 		}
 		return nil
 	},

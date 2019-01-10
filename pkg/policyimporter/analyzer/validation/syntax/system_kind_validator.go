@@ -13,7 +13,7 @@ var SystemKindValidator = &FileObjectValidator{
 		case *v1alpha1.Repo:
 		case *v1alpha1.Sync:
 		default:
-			return veterrors.IllegalKindInSystemError{ResourceID: &object}
+			return veterrors.IllegalKindInSystemError{Resource: &object}
 		}
 		return nil
 	},

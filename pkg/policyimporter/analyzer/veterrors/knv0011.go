@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
 // IllegalLabelDefinitionErrorCode is the error code for IllegalLabelDefinitionError
@@ -17,7 +18,7 @@ func init() {
 
 // IllegalLabelDefinitionError represent a set of illegal label definitions.
 type IllegalLabelDefinitionError struct {
-	ResourceID
+	id.Resource
 	Labels []string
 }
 
@@ -34,7 +35,7 @@ func (e IllegalLabelDefinitionError) Error() string {
 		"Resources MUST NOT declare labels starting with %[3]q. "+
 			"Below Resource declares these offending labels: %[1]s\n\n"+
 			"%[2]s",
-		l, printResourceID(e), policyhierarchy.GroupName)
+		l, id.PrintResource(e), policyhierarchy.GroupName)
 }
 
 // Code implements Error

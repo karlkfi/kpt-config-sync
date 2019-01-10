@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/validator"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
@@ -43,7 +44,7 @@ func (v ConflictingResourceQuotaValidator) Validate(errorBuilder *multierror.Bui
 	// object (1) per each unique path-cluster combination; (2) per each case
 	// where there is a path-cluster combination that has a targeted RQ object
 	// AND a RQ object that is targeted to all clusters for that same path.
-	resourceQuotas := make(map[dirCluster][]veterrors.ResourceID)
+	resourceQuotas := make(map[dirCluster][]id.Resource)
 	for i, obj := range v.objects {
 		if glog.V(5) {
 			glog.V(5).Infof("obj: %v", obj)
