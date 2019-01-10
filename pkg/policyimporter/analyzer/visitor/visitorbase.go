@@ -79,15 +79,8 @@ func (vb *Base) VisitRoot(g *ast.Root) *ast.Root {
 	}
 	defer glog.V(6).Infof("VisitRoot(): EXIT")
 	g.Cluster.Accept(vb.impl)
-	g.ReservedNamespaces.Accept(vb.impl)
 	g.Tree.Accept(vb.impl)
 	return g
-}
-
-// VisitReservedNamespaces implements Visitor
-func (vb *Base) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
-	// leaf - noop
-	return r
 }
 
 // VisitCluster implements Visitor

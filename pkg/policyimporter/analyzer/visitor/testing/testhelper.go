@@ -18,7 +18,6 @@ package testing
 
 import (
 	gcpv1 "github.com/google/nomos/pkg/api/policyascode/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -294,14 +293,6 @@ func (t *TestHelper) FrontendResourceQuota() *corev1.ResourceQuota {
 	}
 }
 
-// ReservedNamespaces returns a Root with only reserved namespaces.
-func (t *TestHelper) ReservedNamespaces() *ast.Root {
-	return &ast.Root{
-		Cluster:            &ast.Cluster{},
-		ReservedNamespaces: t.AcmeReserved(),
-	}
-}
-
 // AcmeCluster returns the cluster info for Acme corp.
 func (t *TestHelper) AcmeCluster() *ast.Cluster {
 	return &ast.Cluster{
@@ -310,21 +301,6 @@ func (t *TestHelper) AcmeCluster() *ast.Cluster {
 			t.NomosAdminClusterRoleBinding(),
 			t.NomosPodSecurityPolicy(),
 		),
-	}
-}
-
-// AcmeReserved returns the reserved namespaces for Acme corp.
-func (t *TestHelper) AcmeReserved() *ast.ReservedNamespaces {
-	return &ast.ReservedNamespaces{
-		ConfigMap: corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: v1alpha1.ReservedNamespacesConfigMapName,
-			},
-			Data: map[string]string{
-				"testing":      string(v1alpha1.ReservedAttribute),
-				"more-testing": string(v1alpha1.ReservedAttribute),
-			},
-		},
 	}
 }
 
@@ -374,9 +350,8 @@ func (t *TestHelper) NamespacePolicies() *ast.Root {
 // AcmeRoot returns a Root with an example hierarchy.
 func (t *TestHelper) AcmeRoot() *ast.Root {
 	return &ast.Root{
-		Cluster:            t.AcmeCluster(),
-		ReservedNamespaces: t.AcmeReserved(),
-		Tree:               t.acmeTree(),
+		Cluster: t.AcmeCluster(),
+		Tree:    t.acmeTree(),
 	}
 }
 

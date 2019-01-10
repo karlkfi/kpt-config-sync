@@ -58,14 +58,8 @@ func (v *Copying) Error() error {
 func (v *Copying) VisitRoot(c *ast.Root) *ast.Root {
 	nc := *c
 	nc.Cluster = c.Cluster.Accept(v.impl)
-	nc.ReservedNamespaces = c.ReservedNamespaces.Accept(v.impl)
 	nc.Tree = c.Tree.Accept(v.impl)
 	return &nc
-}
-
-// VisitReservedNamespaces implements Visitor
-func (v *Copying) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
-	return r.DeepCopy()
 }
 
 // VisitCluster implements Visitor

@@ -18,6 +18,8 @@ package validation
 import (
 	"path"
 
+	"github.com/google/nomos/pkg/util/namespaceutil"
+
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
@@ -25,7 +27,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/policyimporter/reserved"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -38,7 +39,6 @@ import (
 type InputValidator struct {
 	*visitor.Base
 	errs             multierror.Builder
-	reserved         *reserved.Namespaces
 	nodes            []*ast.TreeNode
 	allowedGVKs      map[schema.GroupVersionKind]bool
 	coverage         *coverage.ForCluster
@@ -62,7 +62,6 @@ func NewInputValidator(
 	vet bool) *InputValidator {
 	v := &InputValidator{
 		Base:             visitor.NewBase(),
-		reserved:         reserved.EmptyNamespaces(),
 		allowedGVKs:      toAllowedGVKs(syncs),
 		inheritanceSpecs: specs,
 	}
@@ -94,20 +93,10 @@ func (v *InputValidator) Error() error {
 	return v.errs.Build()
 }
 
-// VisitReservedNamespaces implements Visitor
-func (v *InputValidator) VisitReservedNamespaces(rs *ast.ReservedNamespaces) *ast.ReservedNamespaces {
-	r, err := reserved.From(&rs.ConfigMap)
-	v.errs.Add(err)
-	if err == nil {
-		v.reserved = r
-	}
-	return nil
-}
-
 // VisitTreeNode implements Visitor
 func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	name := path.Base(n.Path)
-	if v.reserved.IsReserved(name) {
+	if namespaceutil.IsReserved(name) {
 		// The node's name must not be a reserved namespace name.
 		v.errs.Add(veterrors.ReservedDirectoryNameError{Dir: n.Path})
 	}

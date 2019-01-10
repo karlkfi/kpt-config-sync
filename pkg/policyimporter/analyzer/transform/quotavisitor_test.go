@@ -45,16 +45,10 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: vt.Helper.ClusterPolicies(),
 		},
 		{
-			Name:         "preserve reserved namespaces",
-			Input:        vt.Helper.ReservedNamespaces(),
-			ExpectOutput: vt.Helper.ReservedNamespaces(),
-		},
-		{
 			Name:  "acme",
 			Input: vt.Helper.AcmeRoot(),
 			ExpectOutput: &ast.Root{
-				Cluster:            vt.Helper.AcmeCluster(),
-				ReservedNamespaces: vt.Helper.AcmeReserved(),
+				Cluster: vt.Helper.AcmeCluster(),
 				Tree: &ast.TreeNode{
 					Type: ast.AbstractNamespace,
 					Path: "namespaces",

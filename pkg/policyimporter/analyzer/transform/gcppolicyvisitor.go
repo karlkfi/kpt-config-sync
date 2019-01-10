@@ -61,12 +61,6 @@ func (v *GCPPolicyVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	return newC
 }
 
-// VisitReservedNamespaces implements Visitor. Currently unused and always returns
-// the passed node.
-func (v *GCPPolicyVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
-	return r
-}
-
 // VisitTreeNode implements Visitor.
 func (v *GCPPolicyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.currentTreeNode = n

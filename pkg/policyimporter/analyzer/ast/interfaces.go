@@ -29,7 +29,6 @@ package ast
 //   Deleted: the visitor should return nil to indicate deleted.
 type Visitor interface {
 	VisitRoot(g *Root) *Root
-	VisitReservedNamespaces(r *ReservedNamespaces) *ReservedNamespaces
 	VisitCluster(c *Cluster) *Cluster
 	VisitClusterObjectList(o ClusterObjectList) ClusterObjectList
 	VisitClusterObject(o *ClusterObject) *ClusterObject

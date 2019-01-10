@@ -40,11 +40,6 @@ var copyingVisitorTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: vt.Helper.ClusterPolicies(),
 		},
 		{
-			Name:         "reserved namespaces",
-			Input:        vt.Helper.ReservedNamespaces(),
-			ExpectOutput: vt.Helper.ReservedNamespaces(),
-		},
-		{
 			Name:         "acme",
 			Input:        vt.Helper.AcmeRoot(),
 			ExpectOutput: vt.Helper.AcmeRoot(),

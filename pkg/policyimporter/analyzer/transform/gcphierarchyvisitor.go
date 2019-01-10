@@ -95,12 +95,6 @@ func (v *GCPHierarchyVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	return newC
 }
 
-// VisitReservedNamespaces implements Visitor. Currently unused and always returns
-// the passed node.
-func (v *GCPHierarchyVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
-	return r
-}
-
 // gcpHierarchyContext stores the objects seen as the tree is traversed.
 type gcpHierarchyContext struct {
 	prev *gcpHierarchyContext

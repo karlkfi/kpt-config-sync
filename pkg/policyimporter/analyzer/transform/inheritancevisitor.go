@@ -63,11 +63,6 @@ func (v *InheritanceVisitor) Error() error {
 	return nil
 }
 
-// VisitReservedNamespaces implements Visitor
-func (v *InheritanceVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
-	return r
-}
-
 // VisitCluster implements Visitor
 func (v *InheritanceVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	return c

@@ -17,7 +17,6 @@ limitations under the License.
 package backend
 
 import (
-	"fmt"
 	"path"
 	"time"
 
@@ -25,7 +24,6 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/policyimporter/reserved"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -90,29 +88,6 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 	v.commitHash = g.ImportToken
 	v.loadTime = g.LoadTime
 	v.Base.VisitRoot(g)
-	return nil
-}
-
-// VisitReservedNamespaces implements Visitor
-func (v *OutputVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
-	rns, err := reserved.From(&r.ConfigMap)
-	if err != nil {
-		panic(fmt.Sprintf("programmer error: input should have been validated %v", err))
-	}
-	for _, namespace := range rns.List(v1alpha1.ReservedAttribute) {
-		v.allPolicies.PolicyNodes[namespace] = v1.PolicyNode{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       "PolicyNode",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespace,
-			},
-			Spec: v1.PolicyNodeSpec{
-				Type: v1.ReservedNamespace,
-			},
-		}
-	}
 	return nil
 }
 

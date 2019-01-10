@@ -141,47 +141,6 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		),
 	},
 	{
-		name:  "reserved namespaces",
-		input: vt.Helper.ReservedNamespaces(),
-		expect: allPolicies(
-			v1.ClusterPolicy{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterPolicy",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterPolicyName,
-				},
-			},
-			[]v1.PolicyNode{
-				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "PolicyNode",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "testing",
-					},
-					Spec: v1.PolicyNodeSpec{
-						Type: v1.ReservedNamespace,
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "PolicyNode",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "more-testing",
-					},
-					Spec: v1.PolicyNodeSpec{
-						Type: v1.ReservedNamespace,
-					},
-				},
-			},
-		),
-	},
-	{
 		name:  "namespace policies",
 		input: vt.Helper.NamespacePolicies(),
 		expect: allPolicies(

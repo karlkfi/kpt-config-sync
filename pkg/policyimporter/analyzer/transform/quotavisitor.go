@@ -89,11 +89,6 @@ func (v *QuotaVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	return c
 }
 
-// VisitReservedNamespaces implements Visitor
-func (v *QuotaVisitor) VisitReservedNamespaces(r *ast.ReservedNamespaces) *ast.ReservedNamespaces {
-	return r
-}
-
 // VisitTreeNode implements Visitor
 func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// create/push context

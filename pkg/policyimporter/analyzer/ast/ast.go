@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/resourcequota"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -79,8 +78,6 @@ type Root struct {
 	LoadTime    time.Time      // Time at which the context was generated
 	Repo        *v1alpha1.Repo // Nomos repo
 
-	// ReservedNamespaces corresponds to the reserved namespaces declared in the system dir.
-	ReservedNamespaces *ReservedNamespaces // Reserved namespaces
 	// Cluster represents resources that are cluster scoped.
 	Cluster *Cluster
 	// Tree represents the directory hierarchy containing namespace scoped resources.
@@ -268,22 +265,4 @@ func (o *NamespaceObject) Accept(visitor Visitor) *NamespaceObject {
 // DeepCopy creates a deep copy of the object
 func (o *NamespaceObject) DeepCopy() *NamespaceObject {
 	return &NamespaceObject{FileObject{o.DeepCopyObject(), o.source}}
-}
-
-// ReservedNamespaces represents the reserved namespaces object
-type ReservedNamespaces struct {
-	corev1.ConfigMap
-}
-
-// Accept invokes VisitReservedNamespaces on the visitor.
-func (r *ReservedNamespaces) Accept(visitor Visitor) *ReservedNamespaces {
-	if r == nil {
-		return nil
-	}
-	return visitor.VisitReservedNamespaces(r)
-}
-
-// DeepCopy creates a deep copy of ReservedNamespaces
-func (r *ReservedNamespaces) DeepCopy() *ReservedNamespaces {
-	return &ReservedNamespaces{*r.ConfigMap.DeepCopy()}
 }
