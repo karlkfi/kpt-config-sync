@@ -5,6 +5,7 @@ metadata:
   namespace: nomos-system
   labels:
     monitored: "true"
+    nomos.dev/system: "true"
 spec:
   selector:
     app: git-policy-importer
@@ -20,6 +21,7 @@ metadata:
   namespace: nomos-system
   labels:
     app: git-policy-importer
+    nomos.dev/system: "true"
 spec:
   minReadySeconds: 10
   replicas: 1

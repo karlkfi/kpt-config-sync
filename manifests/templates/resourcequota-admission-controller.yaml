@@ -5,6 +5,7 @@ metadata:
   namespace: nomos-system
   labels:
     monitored: "true"
+    nomos.dev/system: "true"
 spec:
   selector:
     app: resourcequota-admission-controller
@@ -23,6 +24,7 @@ metadata:
   namespace: nomos-system
   labels:
     app: resourcequota-admission-controller
+    nomos.dev/system: "true"
 spec:
   minReadySeconds: 2
   replicas: 1
