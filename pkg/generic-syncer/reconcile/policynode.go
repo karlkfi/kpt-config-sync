@@ -122,8 +122,6 @@ func (r *PolicyNodeReconciler) getPolicyNodeState(ctx context.Context, name stri
 		return policyNodeStatePolicyspace, node, nil
 	case nomosv1.Namespace:
 		return policyNodeStateNamespace, node, nil
-	case nomosv1.ReservedNamespace:
-		return policyNodeStateReserved, node, nil
 	default:
 		return policyNodeStateNotFound, nil, errors.Errorf("invalid node type %q", node.Spec.Type)
 	}

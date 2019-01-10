@@ -1409,16 +1409,6 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
-		testName: "Policyspace dir with ConfigMap",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aRepo,
-			"system/cm.yaml":         templateData{Version: "v1", Kind: "ConfigMap"}.apply(aSync),
-			"namespaces/bar/cm.yaml": templateData{Namespace: "foo", Attribute: "reserved", Name: v1alpha1.ReservedNamespacesConfigMapName}.apply(aConfigMap),
-		},
-		expectedErrorCodes: []string{veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
-	},
-	{
 		testName: "Policyspace dir with NamespaceSelector CRD",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{

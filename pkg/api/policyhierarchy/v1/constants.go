@@ -40,11 +40,6 @@ func (p PolicyNodeType) IsPolicyspace() bool {
 	return p == Policyspace
 }
 
-// IsReservedNamespace returns true if the type corresponds to a reserved namespace type.
-func (p PolicyNodeType) IsReservedNamespace() bool {
-	return p == ReservedNamespace
-}
-
 const (
 	// Policyspace indicates that the PolicyNode is for a Policyspace and should not be manifested
 	// into a namespace
@@ -53,9 +48,6 @@ const (
 	// Namespace indicates that the PolicyNode is represents a Namespace that should be created
 	// and managed on the cluster.
 	Namespace = PolicyNodeType("namespace")
-
-	// ReservedNamespace indicates that the namespace's policies will not be managed by Nomos.
-	ReservedNamespace = PolicyNodeType("reservedNamespace")
 )
 
 // PolicySyncState represents the states that a policynode or clusterpolicy can be in with regards

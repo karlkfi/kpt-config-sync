@@ -46,18 +46,6 @@ func newNode(name string, parent string, policyspace bool) *v1.PolicyNode {
 	}
 }
 
-func newReservedNode(name string) *v1.PolicyNode {
-	return &v1.PolicyNode{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: v1.PolicyNodeSpec{
-			Type:   v1.ReservedNamespace,
-			Parent: v1.NoParentNamespace,
-		},
-	}
-}
-
 func setResources(pn *v1.PolicyNode, roleNames, roleBindingNames []string) {
 	var roles []rbacv1.Role
 	for _, rn := range roleNames {
@@ -166,14 +154,6 @@ func TestMultipleRoots(t *testing.T) {
 	checkErr(t, v.Add(newNode("child1", "root", true)))
 	checkErr(t, v.Add(newNode("child2", "child1", false)))
 
-	if err := v.checkRoots(); err != nil {
-		t.Errorf("Multiple roots state should be OK %s %s", err, spew.Sdump(v))
-	}
-	if err := v.Validate(); err != nil {
-		t.Errorf("Multiple roots state should be OK %s %s", err, spew.Sdump(v))
-	}
-
-	checkErr(t, v.Add(newReservedNode("reserved-1")))
 	if err := v.checkRoots(); err != nil {
 		t.Errorf("Multiple roots state should be OK %s %s", err, spew.Sdump(v))
 	}

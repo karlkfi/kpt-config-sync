@@ -131,7 +131,7 @@ func (s *Validator) checkRoots() error {
 	}
 	var roots []string
 	for nodeName, node := range s.policyNodes {
-		if node.Spec.Parent == v1.NoParentNamespace && node.Spec.Type != v1.ReservedNamespace {
+		if node.Spec.Parent == v1.NoParentNamespace {
 			roots = append(roots, nodeName)
 		}
 	}
