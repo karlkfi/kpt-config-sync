@@ -40,3 +40,5 @@ docs-preview: docs-format docs-package
 	@gsutil -m cp $(STAGING_DIR)/nomos-docs.zip $(DOCS_GCS_PREVIEW)
 	@echo "+++ Uploaded docs preview to $(DOCS_GCS_PREVIEW_DOWNLOAD)"
 
+docs-errors: build
+	@scripts/docs-errors-generate.sh

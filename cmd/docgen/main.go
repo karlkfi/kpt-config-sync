@@ -21,8 +21,7 @@ const (
 )
 
 var (
-	path = flag.String("path", os.Getenv("NOMOS_ERROR_DOCS_PATH"),
-		"Path to write docs to. Defaults to NOMOS_ERROR_DOCS_PATH")
+	path = flag.String("path", "", "Path to write docs to.")
 )
 
 // Automatically generate documentation
@@ -31,7 +30,7 @@ var (
 func main() {
 	flag.Parse()
 	if *path == "" {
-		glog.Fatal("--path must not be empty string")
+		glog.Fatal("--path must be set")
 	}
 
 	if err := os.RemoveAll(*path); err != nil {
