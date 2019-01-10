@@ -206,7 +206,7 @@ test-unit: $(OUTPUT_DIR) pull-buildenv
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/test-unit.sh $(NOMOS_GO_PKG)
 
 # Runs unit tests and linter.
-test: test-unit lint lint-bash
+test: test-unit lint
 
 # Runs tests and local nomos vet tests.
 test-local: test test-nomos-vet-local
