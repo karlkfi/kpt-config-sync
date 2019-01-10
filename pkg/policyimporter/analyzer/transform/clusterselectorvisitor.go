@@ -36,10 +36,10 @@ func (v *ClusterSelectorVisitor) VisitRoot(r *ast.Root) *ast.Root {
 // VisitTreeNode prunes the tree node (and by extension all objects in and
 // nodes below it) if it doesn't match the active cluster selector.
 func (v *ClusterSelectorVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	glog.V(6).Infof("VisitTreeNode(%v): enter: %+v", n.Path, *n)
-	defer glog.V(6).Infof("VisitTreeNode(%v): exit", n.Path)
+	glog.V(6).Infof("VisitTreeNode(%v): enter: %+v", n.RelativeSlashPath(), *n)
+	defer glog.V(6).Infof("VisitTreeNode(%v): exit", n.RelativeSlashPath())
 	if !v.selectors.Matches(n) {
-		glog.V(5).Infof("VisitTreeNode(%v): omit", n.Path)
+		glog.V(5).Infof("VisitTreeNode(%v): omit", n.RelativeSlashPath())
 		// Omit this tree node and children.
 		return nil
 	}

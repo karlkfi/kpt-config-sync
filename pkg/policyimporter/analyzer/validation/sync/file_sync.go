@@ -3,6 +3,7 @@ package sync
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -10,19 +11,14 @@ import (
 type FileSync struct {
 	*v1alpha1.Sync
 	// Source is the OS-agnostic slash-separated path to the source file from the root.
-	source string
+	nomospath.Relative
 }
 
 var _ veterrors.SyncID = FileSync{}
 
 // NewFileSync creates a new FileSync from a Sync Resource and the source file declearing the Sync.
-func NewFileSync(sync *v1alpha1.Sync, source string) FileSync {
-	return FileSync{Sync: sync, source: source}
-}
-
-// RelativeSlashPath implements vet.ResourceID
-func (s FileSync) RelativeSlashPath() string {
-	return s.source
+func NewFileSync(sync *v1alpha1.Sync, source nomospath.Relative) FileSync {
+	return FileSync{Sync: sync, Relative: source}
 }
 
 // flatten returns a list of all GroupVersionKinds defined in the Sync and their hierarchy modes.
@@ -34,7 +30,7 @@ func (s FileSync) flatten() []FileGroupVersionKindHierarchySync {
 				result = append(result, FileGroupVersionKindHierarchySync{
 					groupVersionKind: schema.GroupVersionKind{Group: group.Group, Version: version.Version, Kind: kind.Kind},
 					HierarchyMode:    kind.HierarchyMode,
-					source:           s.source,
+					Relative:         s.Relative,
 				})
 			}
 		}
@@ -50,15 +46,10 @@ type FileGroupVersionKindHierarchySync struct {
 	// HierarchyMode is the hierarchy mode which the Sync defined for the Kind.
 	HierarchyMode v1alpha1.HierarchyModeType
 	// Source is the OS-agnostic slash-separated path to the source file from the root.
-	source string
+	nomospath.Relative
 }
 
 var _ veterrors.SyncID = FileGroupVersionKindHierarchySync{}
-
-// RelativeSlashPath implements vet.SyncID
-func (s FileGroupVersionKindHierarchySync) RelativeSlashPath() string {
-	return s.source
-}
 
 // GroupVersionKind implements vet.SyncID
 func (s FileGroupVersionKindHierarchySync) GroupVersionKind() schema.GroupVersionKind {

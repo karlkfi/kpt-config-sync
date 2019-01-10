@@ -30,7 +30,7 @@ func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	if newNode.Annotations == nil {
 		newNode.Annotations = map[string]string{}
 	}
-	newNode.Annotations[v1alpha1.SourcePathAnnotationKey] = n.Path
+	newNode.Annotations[v1alpha1.SourcePathAnnotationKey] = n.RelativeSlashPath()
 	return newNode
 }
 

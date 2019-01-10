@@ -8,7 +8,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/path"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,21 +18,21 @@ import (
 // Namespaces.
 func validateNamespaces(
 	objects []ast.FileObject,
-	dirs []path.NomosRelative,
+	dirs []nomospath.Relative,
 	cov *coverage.ForCluster,
 	errorBuilder *multierror.Builder) {
 	metadata.Validate(toResourceMetas(objects), errorBuilder)
 
-	syntax.DirectoryNameValidator.Validate(path.ToRelativeSlashPaths(dirs), errorBuilder)
+	syntax.DirectoryNameValidator.Validate(nomospath.ToRelativeSlashPaths(dirs), errorBuilder)
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
 
 	semantic.NewConflictingResourceQuotaValidator(objects, cov).Validate(errorBuilder)
-	semantic.DuplicateDirectoryValidator{Dirs: path.ToRelativeSlashPaths(dirs)}.Validate(errorBuilder)
+	semantic.DuplicateDirectoryValidator{Dirs: nomospath.ToRelativeSlashPaths(dirs)}.Validate(errorBuilder)
 	semantic.DuplicateNamespaceValidator{Objects: objects}.Validate(errorBuilder)
 }
 
 func processNamespaces(
-	dir string,
+	dir nomospath.Relative,
 	objects []ast.FileObject,
 	treeGenerator *DirectoryTree,
 	errorBuilder *multierror.Builder) {
@@ -52,7 +52,7 @@ func processNamespaces(
 		case *v1alpha1.NamespaceSelector:
 			treeNode.Selectors[o.Name] = o
 		default:
-			treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.NewFileObject(o, i.RelativeSlashPath())})
+			treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.NewFileObject(o, i.Relative)})
 		}
 	}
 }
@@ -69,7 +69,7 @@ func processNamespace(objects []ast.FileObject, treeNode *ast.TreeNode, errorBui
 			treeNode.Annotations = metaObj.GetAnnotations()
 			continue
 		}
-		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.NewFileObject(object.Object, object.RelativeSlashPath())})
+		treeNode.Objects = append(treeNode.Objects, &ast.NamespaceObject{FileObject: ast.NewFileObject(object.Object, object.Relative)})
 	}
 }
 

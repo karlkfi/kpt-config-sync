@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 )
 
 type directoryTreeInput struct {
@@ -38,13 +39,12 @@ type directoryTreeTestcase struct {
 
 func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	tg := NewDirectoryTree()
-	tg.AddDir(tc.inputs[0].path, ast.AbstractNamespace)
-	for _, inp := range tc.inputs[1:] {
+	for _, inp := range tc.inputs {
 		typ := inp.typ
 		if typ == "" {
 			typ = ast.AbstractNamespace
 		}
-		n := tg.AddDir(inp.path, typ)
+		n := tg.AddDir(nomospath.NewFakeRelative(inp.path), typ)
 		if n == nil {
 			t.Errorf("AddNode returned nil")
 		}
@@ -58,7 +58,7 @@ func (tc *directoryTreeTestcase) Run(t *testing.T) {
 		}
 	}
 
-	if diff := cmp.Diff(tc.expect, tree); diff != "" {
+	if diff := cmp.Diff(tc.expect, tree, ast.FileObjectCmp()); diff != "" {
 		spew.Printf("%#v\n", tree)
 		t.Errorf("unexpected output:\n%s", diff)
 	}
@@ -71,7 +71,7 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 			{path: "a"},
 		},
 		expect: &ast.TreeNode{
-			Path:      "a",
+			Relative:  nomospath.NewFakeRelative("a"),
 			Type:      ast.AbstractNamespace,
 			Selectors: map[string]*v1alpha1.NamespaceSelector{},
 		},
@@ -84,17 +84,17 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 			{path: "a/b"},
 		},
 		expect: &ast.TreeNode{
-			Path:      "a",
+			Relative:  nomospath.NewFakeRelative("a"),
 			Type:      ast.AbstractNamespace,
 			Selectors: map[string]*v1alpha1.NamespaceSelector{},
 			Children: []*ast.TreeNode{
 				{
-					Path:      "a/b",
+					Relative:  nomospath.NewFakeRelative("a/b"),
 					Type:      ast.AbstractNamespace,
 					Selectors: map[string]*v1alpha1.NamespaceSelector{},
 					Children: []*ast.TreeNode{
 						{
-							Path:      "a/b/c",
+							Relative:  nomospath.NewFakeRelative("a/b/c"),
 							Type:      ast.Namespace,
 							Selectors: map[string]*v1alpha1.NamespaceSelector{},
 						},

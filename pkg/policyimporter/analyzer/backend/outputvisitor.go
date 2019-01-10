@@ -110,10 +110,10 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		name = v1.RootPolicyNodeName
 		parent = v1.NoParentNamespace
 	case 1:
-		name = path.Base(n.Path)
+		name = path.Base(n.RelativeSlashPath())
 		parent = v1.RootPolicyNodeName
 	default:
-		name = path.Base(n.Path)
+		name = path.Base(n.RelativeSlashPath())
 		parent = v.policyNode[origLen-1].Name
 	}
 

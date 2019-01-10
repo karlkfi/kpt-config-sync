@@ -34,7 +34,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/path"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -65,7 +65,7 @@ type Parser struct {
 	factory         cmdutil.Factory
 	discoveryClient discovery.CachedDiscoveryInterface
 	// root is the path to Nomos root.
-	root path.NomosRoot
+	root nomospath.Root
 }
 
 // ParserExtension extends the functionality of the parser by allowing the override of visitors or addition
@@ -159,12 +159,12 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 	return p, nil
 }
 
-func toDirInfoMap(fileInfos []ast.FileObject) map[string][]ast.FileObject {
-	result := make(map[string][]ast.FileObject)
+func toDirInfoMap(fileInfos []ast.FileObject) map[nomospath.Relative][]ast.FileObject {
+	result := make(map[nomospath.Relative][]ast.FileObject)
 
 	// If a directory has resources, its value in the map will be non-nil.
 	for _, i := range fileInfos {
-		d := filepath.Dir(i.RelativeSlashPath())
+		d := i.Dir()
 		result[d] = append(result[d], i)
 	}
 
@@ -179,7 +179,7 @@ func toDirInfoMap(fileInfos []ast.FileObject) map[string][]ast.FileObject {
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
 func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
-	r, err := path.NewNomosRoot(root)
+	r, err := nomospath.NewRoot(root)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to use as Nomos root")
 	}
@@ -253,7 +253,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 // readRequiredResources walks dir recursively, looking for resources, and builds FileInfos from them.
 // Returns an error if the directory is missing.
-func (p *Parser) readRequiredResources(dir path.NomosRelative, errorBuilder *multierror.Builder) []ast.FileObject {
+func (p *Parser) readRequiredResources(dir nomospath.Relative, errorBuilder *multierror.Builder) []ast.FileObject {
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		errorBuilder.Add(veterrors.MissingDirectoryError{})
 		return nil
@@ -262,7 +262,7 @@ func (p *Parser) readRequiredResources(dir path.NomosRelative, errorBuilder *mul
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) readResources(dir path.NomosRelative, errorBuilder *multierror.Builder) []ast.FileObject {
+func (p *Parser) readResources(dir nomospath.Relative, errorBuilder *multierror.Builder) []ast.FileObject {
 	// If there aren't any resources, skip builder, because builder treats that as an error.
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		// Return empty list if unable to read directory
@@ -304,7 +304,7 @@ func (p *Parser) readResources(dir path.NomosRelative, errorBuilder *multierror.
 				continue
 			}
 			object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
-			fileObject := ast.NewFileObject(object, source.RelativeSlashPath())
+			fileObject := ast.NewFileObject(object, source)
 			fileObjects = append(fileObjects, fileObject)
 		}
 	}
@@ -321,10 +321,10 @@ func (p *Parser) readResources(dir path.NomosRelative, errorBuilder *multierror.
 // 1. AbstractNamespace directory: Non-leaf directories at any depth within root directory.
 // 2. Namespace directory: Leaf directories at any depth within root directory.
 func (p *Parser) processDirs(apiInfo *meta.APIInfo,
-	dirInfos map[string][]ast.FileObject,
+	dirInfos map[nomospath.Relative][]ast.FileObject,
 	clusterObjects []ast.FileObject,
 	vp VisitorProvider,
-	nsDirsOrdered []path.NomosRelative,
+	nsDirsOrdered []nomospath.Relative,
 	fsRoot *ast.Root,
 	syncs []*v1alpha1.Sync) (*v1.AllPolicies, error) {
 
@@ -334,14 +334,14 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	treeGenerator := NewDirectoryTree()
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]
-		infos := dirInfos[rootDir.RelativeSlashPath()]
-		processNamespaces(rootDir.RelativeSlashPath(), infos, treeGenerator, &errorBuilder)
+		infos := dirInfos[rootDir]
+		processNamespaces(rootDir, infos, treeGenerator, &errorBuilder)
 		if errorBuilder.HasErrors() {
 			return nil, errorBuilder.Build()
 		}
 		for _, d := range nsDirsOrdered[1:] {
-			infos := dirInfos[d.RelativeSlashPath()]
-			processNamespaces(d.RelativeSlashPath(), infos, treeGenerator, &errorBuilder)
+			infos := dirInfos[d]
+			processNamespaces(d, infos, treeGenerator, &errorBuilder)
 			if errorBuilder.HasErrors() {
 				return nil, errorBuilder.Build()
 			}
@@ -412,8 +412,8 @@ func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.
 }
 
 // allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
-func (p *Parser) allDirs(nsDir path.NomosRelative, errorBuilder *multierror.Builder) []path.NomosRelative {
-	var paths []path.NomosRelative
+func (p *Parser) allDirs(nsDir nomospath.Relative, errorBuilder *multierror.Builder) []nomospath.Relative {
+	var paths []nomospath.Relative
 	err := filepath.Walk(nsDir.AbsoluteOSPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

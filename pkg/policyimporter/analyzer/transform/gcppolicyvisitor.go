@@ -22,6 +22,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -90,7 +91,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		iamPolicy.Spec.ResourceReference = *attachmentPoint
 		if attachmentPoint.Kind == "Project" {
 			return &ast.NamespaceObject{
-				FileObject: ast.NewFileObject(iamPolicy, o.RelativeSlashPath()),
+				FileObject: ast.NewFileObject(iamPolicy, o.Relative),
 			}
 		}
 
@@ -103,7 +104,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 			Spec:       iamPolicy.Spec,
 			Status:     iamPolicy.Status,
 		}
-		v.addToClusterObjects(ciam, o.RelativeSlashPath())
+		v.addToClusterObjects(ciam, o.Relative)
 		return nil
 	case *v1.OrganizationPolicy:
 		if attachmentPoint.Kind == "" {
@@ -113,7 +114,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		orgPolicy.Spec.ResourceReference = *attachmentPoint
 		if attachmentPoint.Kind == "Project" {
 			return &ast.NamespaceObject{
-				FileObject: ast.NewFileObject(orgPolicy, o.RelativeSlashPath()),
+				FileObject: ast.NewFileObject(orgPolicy, o.Relative),
 			}
 		}
 
@@ -126,7 +127,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 			Spec:       orgPolicy.Spec,
 			Status:     orgPolicy.Status,
 		}
-		v.addToClusterObjects(corg, o.RelativeSlashPath())
+		v.addToClusterObjects(corg, o.Relative)
 		return nil
 	}
 
@@ -138,7 +139,7 @@ func (v *GCPPolicyVisitor) VisitObjectList(o ast.ObjectList) ast.ObjectList {
 	return v.Copying.VisitObjectList(o)
 }
 
-func (v *GCPPolicyVisitor) addToClusterObjects(o runtime.Object, source string) {
+func (v *GCPPolicyVisitor) addToClusterObjects(o runtime.Object, source nomospath.Relative) {
 	co := &ast.ClusterObject{
 		FileObject: ast.NewFileObject(o, source),
 	}

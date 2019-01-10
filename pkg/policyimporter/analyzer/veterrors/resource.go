@@ -3,14 +3,14 @@ package veterrors
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/policyimporter/filesystem/path"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // ResourceID identifies a Resource in a Nomos repository.
 // Unique so long as no single file illegally declares two Resources of the same Name and Group/Version/Kind.
 type ResourceID interface {
-	path.Sourced
+	nomospath.Sourced
 	// Name returns the metadata.name of the Resource.
 	Name() string
 	// GroupVersionKind returns the K8S Group/Version/Kind of the Resource.
@@ -62,7 +62,7 @@ func (r resourceID) GroupVersionKind() schema.GroupVersionKind {
 // SyncID identifies a Kind which has been declared in a Sync in a Nomos repository.
 // Unique so long as no single file illegally defines two Kinds of the same Group/Kind.
 type SyncID interface {
-	path.Sourced
+	nomospath.Sourced
 	// GroupVersionKind returns the K8S Group/Version/Kind the Sync defines.
 	GroupVersionKind() schema.GroupVersionKind
 }

@@ -17,10 +17,10 @@ package filesystem
 
 import (
 	"path"
-	"path/filepath"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/pkg/errors"
 )
 
@@ -40,13 +40,13 @@ func NewDirectoryTree() *DirectoryTree {
 // AddDir adds the given node at the the given OS-specific path.
 // p is the OS-specific filepath of the directory relative to the Nomos repo root directory.
 // typ denotes whether the directory is a policyspace or a namespace.
-func (t *DirectoryTree) AddDir(p string, typ ast.TreeNodeType) *ast.TreeNode {
+func (t *DirectoryTree) AddDir(p nomospath.Relative, typ ast.TreeNodeType) *ast.TreeNode {
 	node := &ast.TreeNode{
-		Path:      filepath.ToSlash(p),
+		Relative:  p,
 		Type:      typ,
 		Selectors: map[string]*v1alpha1.NamespaceSelector{},
 	}
-	t.nodes[node.Path] = node
+	t.nodes[node.RelativeSlashPath()] = node
 
 	if t.root == nil {
 		t.root = node

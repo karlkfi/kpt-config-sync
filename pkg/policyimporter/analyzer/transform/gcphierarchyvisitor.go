@@ -159,7 +159,7 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		return nil
 	}
 	if v.ctx.needsNamespace() {
-		glog.V(1).Infof("Marking tree node %v as namespace scope", newNode.Path)
+		glog.V(1).Infof("Marking tree node %v as namespace scope", newNode.RelativeSlashPath())
 		newNode.Type = ast.Namespace
 	}
 	if v.ctx.clusterObj != nil {
@@ -201,7 +201,7 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) *ast.Namespace
 			p.Spec.ParentReference = *pr
 		}
 		return &ast.NamespaceObject{
-			FileObject: ast.NewFileObject(p, o.RelativeSlashPath()),
+			FileObject: ast.NewFileObject(p, o.Relative),
 		}
 	case *v1.Folder:
 		if !v.setAttachmentPoint(o) {
@@ -229,7 +229,7 @@ func (v *GCPHierarchyVisitor) VisitObject(o *ast.NamespaceObject) *ast.Namespace
 		f := gcpObj.DeepCopy()
 		f.Spec.ParentReference = *pr
 		v.ctx.clusterObj = &ast.ClusterObject{
-			FileObject: ast.NewFileObject(f, o.RelativeSlashPath()),
+			FileObject: ast.NewFileObject(f, o.Relative),
 		}
 		return nil
 	case *v1.Organization:

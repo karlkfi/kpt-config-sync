@@ -1,4 +1,4 @@
-package path
+package nomospath
 
 import (
 	"path/filepath"
@@ -32,7 +32,7 @@ var nomosRootTestCases = []nomosRootTestCase{
 }
 
 func (tc nomosRootTestCase) Run(t *testing.T) {
-	r, err := NewNomosRoot(tc.root)
+	r, err := NewRoot(tc.root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,8 +50,8 @@ func TestNewNomosRootPath(t *testing.T) {
 	}
 }
 
-func toRoot(root string, t *testing.T) NomosRoot {
-	r, err := NewNomosRoot(root)
+func toRoot(root string, t *testing.T) Root {
+	r, err := NewRoot(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func (tc nomosRelativeTestCase) Run(t *testing.T) {
 	actual := toRoot(".", t).Join(tc.relative)
 	expected := toRoot(".", t).Join(tc.expected)
 
-	if diff := cmp.Diff(actual, expected, CmpNomosRelativePath()); diff != "" {
+	if diff := cmp.Diff(actual, expected); diff != "" {
 		t.Fatal(diff)
 	}
 	if diff := cmp.Diff(actual.RelativeSlashPath(), tc.expected); diff != "" {
@@ -95,7 +95,7 @@ func TestNomosRootPath_Join(t *testing.T) {
 	}
 }
 
-type cmpNomosRelativePathTestCase struct {
+type cmpNomosRelativeTestCase struct {
 	name  string
 	root1 string
 	path1 string
@@ -104,7 +104,7 @@ type cmpNomosRelativePathTestCase struct {
 	equal bool
 }
 
-var cmpNomosRelativePathTestCases = []cmpNomosRelativePathTestCase{
+var cmpNomosRelativeTestCases = []cmpNomosRelativeTestCase{
 	{
 		name:  "identical",
 		root1: "root",
@@ -147,48 +147,34 @@ var cmpNomosRelativePathTestCases = []cmpNomosRelativePathTestCase{
 	},
 }
 
-func (tc cmpNomosRelativePathTestCase) Run(t *testing.T) {
+func (tc cmpNomosRelativeTestCase) Run(t *testing.T) {
 	path1 := toRoot(tc.root1, t).Join(tc.path1)
 	path2 := toRoot(tc.root2, t).Join(tc.path2)
 
 	if tc.equal {
-		if diff := cmp.Diff(path1, path2, CmpNomosRelativePath()); diff != "" {
+		if diff := cmp.Diff(path1, path2); diff != "" {
 			t.Fatal(diff)
 		}
 	} else {
-		if cmp.Equal(path1, path2, CmpNomosRelativePath()) {
+		if cmp.Equal(path1, path2) {
 			t.Fatal("paths unexpectedly equal")
 		}
 	}
 }
 
-func TestCmpNomosRelativePath(t *testing.T) {
-	for _, tc := range cmpNomosRelativePathTestCases {
+func TestCmpNomosRelative(t *testing.T) {
+	for _, tc := range cmpNomosRelativeTestCases {
 		t.Run(tc.name, tc.Run)
 	}
 }
 
-func TestNewFakeNomosRelativePath(t *testing.T) {
+func TestNewFakeNomosRelative(t *testing.T) {
 	foo := "foo"
-	fake := NewFakeNomosRelativePath(foo)
+	fake := NewFakeRelative(foo)
 
 	if diff := cmp.Diff(foo, fake.RelativeSlashPath()); diff != "" {
 		t.Fatal(diff)
 	}
-}
-
-// CmpNomosRelativePath returns a cmp.Option for NomosRoot.
-func CmpNomosRelativePath() cmp.Option {
-	return cmp.Comparer(func(lhs, rhs NomosRelative) bool {
-		return lhs.path == rhs.path && cmp.Equal(lhs.root, rhs.root, CmpNomosRootPath())
-	})
-}
-
-// CmpNomosRootPath returns a cmp.Option for NomosRoot.
-func CmpNomosRootPath() cmp.Option {
-	return cmp.Comparer(func(lhs, rhs NomosRoot) bool {
-		return lhs.path == rhs.path
-	})
 }
 
 type relTestCase struct {

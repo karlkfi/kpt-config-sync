@@ -95,10 +95,10 @@ func (v *InputValidator) Error() error {
 
 // VisitTreeNode implements Visitor
 func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	name := path.Base(n.Path)
+	name := path.Base(n.RelativeSlashPath())
 	if namespaceutil.IsReserved(name) {
 		// The node's name must not be a reserved namespace name.
-		v.errs.Add(veterrors.ReservedDirectoryNameError{Dir: n.Path})
+		v.errs.Add(veterrors.ReservedDirectoryNameError{Dir: n.RelativeSlashPath()})
 	}
 
 	// Namespaces may not have children.

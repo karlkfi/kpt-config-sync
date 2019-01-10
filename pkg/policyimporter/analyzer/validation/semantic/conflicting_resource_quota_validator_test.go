@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -117,7 +118,7 @@ func rq(meta metav1.ObjectMeta, dir string) ast.FileObject {
 		},
 		ObjectMeta: meta,
 	}
-	return ast.NewFileObject(&q, dir)
+	return ast.NewFileObject(&q, nomospath.NewFakeRelative(dir))
 }
 
 func cluster(name string, labels map[string]string) clusterregistry.Cluster {

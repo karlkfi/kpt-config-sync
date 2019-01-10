@@ -72,7 +72,7 @@ func (v *InheritanceVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.treeContext = append(v.treeContext, nodeContext{
 		nodeType: n.Type,
-		nodePath: n.Path,
+		nodePath: n.RelativeSlashPath(),
 	})
 	newNode := v.Copying.VisitTreeNode(n)
 	v.treeContext = v.treeContext[:len(v.treeContext)-1]

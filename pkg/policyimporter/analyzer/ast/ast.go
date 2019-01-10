@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/resourcequota"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,28 +33,23 @@ import (
 // FileObject extends runtime.FileObject to include the path to the file in the repo.
 type FileObject struct {
 	runtime.Object
-	// Source is the OS-agnostic slash-separated path to the source file from the root.
-	source string
+	// Relative is the path this object has relative to a nomospath.Root.
+	nomospath.Relative
 }
 
 // TODO(willbeason) Add compile-time check for vet.ResourceID
 
 // NewFileObject returns an ast.FileObject with the specified underlying runtime.Object and the
 // designated source file.
-func NewFileObject(object runtime.Object, source string) FileObject {
-	return FileObject{Object: object, source: source}
+func NewFileObject(object runtime.Object, source nomospath.Relative) FileObject {
+	return FileObject{Object: object, Relative: source}
 }
 
 // FileObjectCmp provides a comparer option for FileObject
 func FileObjectCmp() cmp.Option {
 	return cmp.Comparer(func(lhs, rhs FileObject) bool {
-		return (lhs.RelativeSlashPath() == rhs.RelativeSlashPath()) && cmp.Equal(lhs.Object, rhs.Object, resourcequota.ResourceQuantityEqual())
+		return cmp.Equal(lhs.Relative, rhs.Relative) && cmp.Equal(lhs.Object, rhs.Object, resourcequota.ResourceQuantityEqual())
 	})
-}
-
-// RelativeSlashPath implements vet.ResourceID
-func (o *FileObject) RelativeSlashPath() string {
-	return o.source
 }
 
 // MetaObject converts the underlying object to a metav1.Object
@@ -134,7 +130,7 @@ func (o *ClusterObject) Accept(visitor Visitor) *ClusterObject {
 
 // DeepCopy creates a deep copy of the object
 func (o *ClusterObject) DeepCopy() *ClusterObject {
-	return &ClusterObject{FileObject{o.DeepCopyObject(), o.source}}
+	return &ClusterObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
 }
 
 // TreeNodeType represents the type of the node.
@@ -149,9 +145,8 @@ const (
 
 // TreeNode is analogous to a directory in the policy hierarchy.
 type TreeNode struct {
-	// Path is the OS-agnostic slash-separated path to the current node from POLICY_DIR directory.
-	// The root node is set to repo.NamespacesDir.
-	Path string
+	// Relative is the path this node has relative to a nomospath.Root.
+	nomospath.Relative
 
 	// The type of the HierarchyNode
 	Type        TreeNodeType
@@ -194,14 +189,14 @@ func (n *TreeNode) PartialCopy() *TreeNode {
 
 // Name returns the name of the lowest-level directory in this node's path.
 func (n *TreeNode) Name() string {
-	return path.Base(n.Path)
+	return path.Base(n.RelativeSlashPath())
 }
 
 // PrettyPrint returns a convenient representation of a TreeNode for error messages.
 func (n TreeNode) String() string {
 	return fmt.Sprintf("path: %[1]s\n"+
 		"name: %[2]s",
-		n.Path, n.Name())
+		n.RelativeSlashPath(), n.Name())
 }
 
 func copyMapInto(from map[string]string, to *map[string]string) {
@@ -264,5 +259,5 @@ func (o *NamespaceObject) Accept(visitor Visitor) *NamespaceObject {
 
 // DeepCopy creates a deep copy of the object
 func (o *NamespaceObject) DeepCopy() *NamespaceObject {
-	return &NamespaceObject{FileObject{o.DeepCopyObject(), o.source}}
+	return &NamespaceObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
 }
