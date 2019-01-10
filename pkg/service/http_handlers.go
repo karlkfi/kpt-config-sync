@@ -6,9 +6,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"flag"
-	"net/http"
-
 	"fmt"
+	"net/http"
 
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

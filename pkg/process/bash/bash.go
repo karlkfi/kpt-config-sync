@@ -17,9 +17,8 @@ limitations under the License.
 package bash
 
 import (
-	"context"
-
 	"bytes"
+	"context"
 	"os"
 
 	"github.com/golang/glog"

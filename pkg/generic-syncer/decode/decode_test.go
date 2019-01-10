@@ -17,13 +17,12 @@ limitations under the License.
 package decode
 
 import (
+	"reflect"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"

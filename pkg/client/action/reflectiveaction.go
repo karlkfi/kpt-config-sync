@@ -18,7 +18,6 @@ package action
 import (
 	"fmt"
 	"reflect"
-
 	"strings"
 
 	"github.com/golang/glog"

@@ -16,12 +16,11 @@ limitations under the License.
 package restconfig
 
 import (
-	"os/user"
-	"path/filepath"
-
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
+	"path/filepath"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"

@@ -16,14 +16,12 @@ limitations under the License.
 package admissioncontroller
 
 import (
-	"fmt"
-	"time"
-
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"net/http"
-
 	"net"
+	"net/http"
+	"time"
 
 	"github.com/golang/glog"
 	policynodeversions "github.com/google/nomos/clientgen/informer"

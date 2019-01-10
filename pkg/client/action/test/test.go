@@ -17,7 +17,6 @@ package test
 
 import (
 	"fmt"
-
 	"strings"
 
 	"github.com/google/nomos/pkg/client/action"
