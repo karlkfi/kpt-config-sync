@@ -3,7 +3,7 @@ package compile
 import (
 	"encoding/json"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 

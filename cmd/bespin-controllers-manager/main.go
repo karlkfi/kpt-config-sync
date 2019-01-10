@@ -21,7 +21,7 @@ import (
 
 	"github.com/golang/glog"
 	apis "github.com/google/nomos/pkg/api/policyascode"
-	controller "github.com/google/nomos/pkg/bespin-controllers"
+	controllers "github.com/google/nomos/pkg/bespin-controllers"
 	"github.com/pkg/errors"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -52,7 +52,7 @@ func main() {
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := controllers.AddToManager(mgr); err != nil {
 		glog.Fatal(errors.Wrap(err, "error in setting up controllers for manager"))
 	}
 

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
