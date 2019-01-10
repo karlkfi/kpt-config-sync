@@ -1,9 +1,10 @@
 package main
 
 import (
+	"flag"
 	"os"
-	"path/filepath"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/pkg/errors"
 )
@@ -20,28 +21,38 @@ const (
 )
 
 var (
-	docsPath = filepath.Join("docs", "user", "errors")
+	path = flag.String("path", os.Getenv("NOMOS_ERROR_DOCS_PATH"),
+		"Path to write docs to. Defaults to NOMOS_ERROR_DOCS_PATH")
 )
 
 // Automatically generate documentation
 
 // Main generates error documentation
 func main() {
-	if err := os.RemoveAll(filepath.Join(docsPath, "*")); err != nil {
-		panic(errors.Wrap(err, "unable to clear old docs"))
+	flag.Parse()
+	if *path == "" {
+		glog.Fatal("--path must not be empty string")
 	}
 
-	if err := writeReadme(); err != nil {
-		panic(errors.Wrap(err, "error writing README.md"))
+	if err := os.RemoveAll(*path); err != nil {
+		glog.Fatal(errors.Wrap(err, "unable to clear old docs"))
+	}
+	if err := os.MkdirAll(*path, os.ModePerm); err != nil {
+		glog.Fatal(errors.Wrap(err, "unable to create docs directory"))
+	}
+
+	if err := writeReadme(*path); err != nil {
+		glog.Fatal(errors.Wrap(err, "error writing README.md"))
 	}
 
 	for code, explanation := range veterrors.Explanations {
+
 		if explanation == "" {
 			// No documentation for this error code yet.
 			continue
 		}
-		if err := errorDocCode(code).document(); err != nil {
-			panic(errors.Wrapf(err, "error writing documentation for %s", code))
+		if err := errorDocCode(code).document(*path); err != nil {
+			glog.Fatal(errors.Wrapf(err, "error writing documentation for %s", code))
 		}
 	}
 }

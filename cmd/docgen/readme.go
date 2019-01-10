@@ -20,13 +20,13 @@ Errors ` + "`nomos vet`" + ` may throw while analyzing a GKE Policy Management d
 
 // Path to the nomos vet errors README.md file.
 var (
-	readmeFile = filepath.Join(docsPath, "README.md")
+	readmeFile = "README.md"
 )
 
 // writeReadme Writes the README.md which offers an overview of the nomos vet errors and what these
 // explanations are for. Also includes a list of errors and links to their respective pages.
-func writeReadme() error {
-	file := openOrDie(readmeFile)
+func writeReadme(docspath string) error {
+	file := openOrDie(filepath.Join(docspath, readmeFile))
 
 	tmpl, parseErr := template.New("Readme").Parse(readmeTmplString)
 	if parseErr != nil {

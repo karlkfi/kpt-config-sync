@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
@@ -18,8 +19,9 @@ import (
 type errorDocCode string
 
 // Fully document an error type.
-func (e errorDocCode) document() error {
-	file := openOrDie(e.errorFile())
+func (e errorDocCode) document(docsPath string) error {
+	glog.Error(e.errorFile(docsPath))
+	file := openOrDie(e.errorFile(docsPath))
 
 	if _, writeErr := file.WriteString(autogenString); writeErr != nil {
 		return errors.Wrap(writeErr, "programmer error: unable to write autogen string")
@@ -68,8 +70,8 @@ func openOrDie(path string) *os.File {
 	return file
 }
 
-func (e errorDocCode) errorFile() string {
-	return path.Join(docsPath, e.ErrorFileBase())
+func (e errorDocCode) errorFile(docsPath string) string {
+	return filepath.Join(docsPath, e.ErrorFileBase())
 }
 
 // ErrorFileBase returns the base file of the error doc.
