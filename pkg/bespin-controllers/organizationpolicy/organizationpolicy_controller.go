@@ -18,30 +18,30 @@ package organizationpolicy
 
 import (
 	"context"
-	"log"
-	"reflect"
+
+	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/google/nomos/pkg/bespin-controllers/resource"
+
+	"github.com/pkg/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/golang/glog"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
+const controllerName = "iampolicy-controller"
 
 // Add creates a new OrganizationPolicy Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -53,10 +53,10 @@ func Add(mgr manager.Manager, ef terraform.ExecutorCreator) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, ef terraform.ExecutorCreator) reconcile.Reconciler {
 	return &ReconcileOrganizationPolicy{
-		Client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
-		ef:     ef,
-	}
+		Client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
+		ef:       ef,
+		recorder: mgr.GetRecorder(controllerName)}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -87,82 +87,70 @@ var _ reconcile.Reconciler = &ReconcileOrganizationPolicy{}
 // ReconcileOrganizationPolicy reconciles a OrganizationPolicy object
 type ReconcileOrganizationPolicy struct {
 	client.Client
-	scheme *runtime.Scheme
-	ef     terraform.ExecutorCreator
+	scheme   *runtime.Scheme
+	ef       terraform.ExecutorCreator
+	recorder record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a OrganizationPolicy object and makes changes based on the state read
 // and what is in the OrganizationPolicy.Spec
-// TODO(b/117158187): Modify this Reconcile function to implement your Controller logic.  The scaffolding writes
-// a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=bespin.dev,resources=organizationpolicies,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileOrganizationPolicy) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), resource.ReconcileTimeout)
+	defer cancel()
 	// Fetch the OrganizationPolicy instance
 	instance := &bespinv1.OrganizationPolicy{}
-	err := r.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Object not found, return.  Created objects are automatically garbage collected.
-			// For additional cleanup logic use finalizers.
+	name := request.NamespacedName
+	if err := r.Get(ctx, name, instance); err != nil {
+		// Instance was just deleted.
+		if k8serrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-		// Error reading the object - requeue the request.
+		glog.Errorf("[OrganizationPolicy %v] failed to get instance: %v", name, err)
+		return reconcile.Result{}, errors.Wrapf(err,
+			"[OrganizationPolicy %v] failed to get instance", name)
+	}
+	newInstance := &bespinv1.OrganizationPolicy{}
+	instance.DeepCopyInto(newInstance)
+	resourceRef := instance.Spec.ResourceRef
+
+	// Fetch the owner so we can set the reference on the controller.
+	owner, err := resource.Get(ctx, r.Client, resourceRef.Kind, resourceRef.Name, resourceRef.Namespace)
+	if err != nil {
+		glog.Errorf("[OrganizationPolicy %v] failed to get reference resource %v", instance, resourceRef)
 		return reconcile.Result{}, err
 	}
-
-	// TODO(b/117158187): Change this to be the object type created by your controller
-	// Define the desired Deployment object
-	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name + "-deployment",
-			Namespace: instance.Namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"deployment": instance.Name + "-deployment"},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"deployment": instance.Name + "-deployment"}},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "nginx",
-							Image: "nginx",
-						},
-					},
-				},
-			},
-		},
+	if err = controllerutil.SetControllerReference(owner, newInstance, r.scheme); err != nil {
+		return reconcile.Result{}, errors.Wrapf(err, "reconciler failed to set controller reference: %v", instance)
 	}
-	if err = controllerutil.SetControllerReference(instance, deploy, r.scheme); err != nil {
-		return reconcile.Result{}, err
+	tfe, err := r.ef.NewExecutor(ctx, r.Client, newInstance)
+	if err != nil {
+		glog.Errorf("[OrganizationPolicy %v] reconciler failed to create new Terraform executor: %v", name, err)
+		return reconcile.Result{}, errors.Wrapf(err,
+			"[OrganizationPolicy %v] reconciler failed to create new Terraform executor", name)
 	}
-
-	// TODO(b/117158187): Change this for the object type created by your controller
-	// Check if the Deployment already exists
-	found := &appsv1.Deployment{}
-	err = r.Get(context.TODO(), types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		log.Printf("Creating Deployment %s/%s\n", deploy.Namespace, deploy.Name)
-		err = r.Create(context.TODO(), deploy)
-		if err != nil {
-			return reconcile.Result{}, err
+	defer func() {
+		if cerr := tfe.Close(); err != nil {
+			glog.Errorf("[OrganizationPolicy %v] reconciler failed to close Terraform executor: %v", name, cerr)
 		}
-	} else if err != nil {
+	}()
+
+	if err = tfe.RunCreateOrUpdateFlow(); err != nil {
+		glog.Errorf("[OrganizationPolicy %v] reconciler failed to run Terraform command: %v", name, err)
+		return reconcile.Result{}, errors.Wrapf(err,
+			"[OrganizationPolicy %v] reconciler failed to run Terraform command", name)
+	}
+	done, err := resource.Update(ctx, r.Client, r.recorder, instance, newInstance)
+	if err != nil {
+		err = errors.Wrap(err, "reconciler failed to update instance in API server")
 		return reconcile.Result{}, err
 	}
 
-	// TODO(b/117158187): Change this for the object type created by your controller
-	// Update the found object and write the result back if there are any changes
-	if !reflect.DeepEqual(deploy.Spec, found.Spec) {
-		found.Spec = deploy.Spec
-		log.Printf("Updating Deployment %s/%s\n", deploy.Namespace, deploy.Name)
-		err = r.Update(context.TODO(), found)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
+	if done {
+		glog.V(1).Infof("[OrganizationPolicy %v] reconciler successfully finished", name)
 	}
+
 	return reconcile.Result{}, nil
 }
