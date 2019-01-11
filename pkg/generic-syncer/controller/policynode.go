@@ -40,7 +40,7 @@ const policyNodeControllerName = "policynode-resources"
 func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *differ.Comparator,
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
 	genericClient := client.New(mgr.GetClient())
-	applier, err := genericreconcile.NewApplier(mgr.GetScheme(), mgr.GetConfig(), genericClient)
+	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
 	if err != nil {
 		return err
 	}

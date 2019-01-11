@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/kubectl"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
+	"k8s.io/kubernetes/pkg/kubectl/scheme"
 )
 
 // Applier updates a resource from its current state to its intended state using apply operations.
@@ -33,7 +34,6 @@ type Applier interface {
 
 // ClientApplier does apply operations on resources, client-side, using the same approach as running `kubectl apply`.
 type ClientApplier struct {
-	scheme           *runtime.Scheme
 	dynamicClient    dynamic.Interface
 	discoveryClient  *discovery.DiscoveryClient
 	openAPIResources openapi.Resources
@@ -41,7 +41,7 @@ type ClientApplier struct {
 }
 
 // NewApplier returns a new ClientApplier.
-func NewApplier(scheme *runtime.Scheme, cfg *rest.Config, client *client.Client) (*ClientApplier, error) {
+func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error) {
 	c, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,6 @@ func NewApplier(scheme *runtime.Scheme, cfg *rest.Config, client *client.Client)
 	}
 
 	return &ClientApplier{
-		scheme:           scheme,
 		dynamicClient:    c,
 		discoveryClient:  dc,
 		openAPIResources: oa,
@@ -138,8 +137,8 @@ func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedStat
 	var patch []byte
 	var patchType types.PatchType
 
-	versionedObject, sErr := c.scheme.New(gvk)
-	_, unversioned := c.scheme.IsUnversioned(intendedState)
+	versionedObject, sErr := scheme.Scheme.New(gvk)
+	_, unversioned := scheme.Scheme.IsUnversioned(intendedState)
 	switch {
 	case runtime.IsNotRegisteredError(sErr) || unversioned:
 		preconditions := []mergepatch.PreconditionFunc{
