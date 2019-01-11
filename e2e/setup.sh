@@ -32,6 +32,24 @@ function nomos_uninstalled() {
   return 0
 }
 
+function apply_cluster_admin_binding() {
+  local account="${1:-}"
+  kubectl apply -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-admin-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: $account
+EOF
+}
+
 # Runs the installer process to set up the cluster under test.
 function install() {
   if $do_installation; then
@@ -41,8 +59,7 @@ function install() {
         git)
         # Linter says this is better than "cd -"
         cd "${NOMOS_REPO}/.output/e2e"
-        # This will fail in subsequent runs, but is necessary for the first run
-        kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user "$(gcloud config get-value account)" || true
+        apply_cluster_admin_binding "$(gcloud config get-value account)"
         kubectl apply -f defined-operator-bundle.yaml
         kubectl create secret generic git-creds -n=nomos-system --from-file=ssh="$HOME"/.ssh/id_rsa.nomos || true
         kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
