@@ -23,6 +23,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/util/multierror"
 )
 
 type directoryTreeInput struct {
@@ -49,12 +50,13 @@ func (tc *directoryTreeTestcase) Run(t *testing.T) {
 			t.Errorf("AddNode returned nil")
 		}
 	}
-	tree, err := tg.Build()
-	if err != nil != tc.expectErr {
+	eb := multierror.Builder{}
+	tree := tg.Build(&eb)
+	if eb.HasErrors() != tc.expectErr {
 		if tc.expectErr {
 			t.Errorf("Expected err, got nil")
 		} else {
-			t.Errorf("Unexpected error %v", err)
+			t.Errorf("Unexpected error %v", eb.Build())
 		}
 	}
 

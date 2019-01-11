@@ -22,6 +22,8 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +34,7 @@ type testCase struct {
 	policy             metav1.Object
 	nsLabels           map[string]string
 	expectedApplicable bool
+	errors             []string
 }
 
 func TestIsPolicyApplicableToNamespace(t *testing.T) {
@@ -65,18 +68,33 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 			policy:             createPolicy(&seltest.ProdNamespaceSelector),
 			expectedApplicable: false,
 		},
+		{
+			testName: "Unmarshallable",
+			policy:   createPolicyAnnotation("{"),
+			errors:   []string{veterrors.UndocumentedErrorCode},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
-
-			applicable := IsPolicyApplicableToNamespace(tc.nsLabels, tc.policy)
+			applicable, err := IsPolicyApplicableToNamespace(tc.nsLabels, tc.policy)
 			if tc.expectedApplicable != applicable {
 				t.Fatalf("Result didn't match, expected=%t, actual=%t", tc.expectedApplicable, applicable)
 			}
-
+			veterrorstest.ExpectErrors(tc.errors, err, t)
 		})
 	}
+}
+
+func createPolicyAnnotation(annotation string) metav1.Object {
+	rb := &rbacv1.RoleBinding{}
+	rb.SetName("rb")
+	rb.SetAnnotations(map[string]string{v1alpha1.NamespaceSelectorAnnotationKey: annotation})
+	o, err := meta.Accessor(rb)
+	if err != nil {
+		panic(err)
+	}
+	return o
 }
 
 func createPolicy(s *v1alpha1.NamespaceSelector) metav1.Object {

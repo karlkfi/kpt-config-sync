@@ -21,6 +21,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -44,6 +45,8 @@ type InheritanceVisitor struct {
 	inheritanceSpecs map[schema.GroupKind]*InheritanceSpec
 	// treeContext is a stack that tracks ancestry and inherited objects during the tree traversal.
 	treeContext []nodeContext
+	// cumulative errors encountered by the visitor
+	errs multierror.Builder
 }
 
 var _ ast.Visitor = &InheritanceVisitor{}
@@ -79,7 +82,12 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	if n.Type == ast.Namespace {
 		for _, ctx := range v.treeContext {
 			for _, inherited := range ctx.inherited {
-				if sel.IsPolicyApplicableToNamespace(n.Labels, inherited.MetaObject()) {
+				isApplicable, err := sel.IsPolicyApplicableToNamespace(n.Labels, inherited.MetaObject())
+				v.errs.Add(err)
+				if err != nil {
+					continue
+				}
+				if isApplicable {
 					newNode.Objects = append(newNode.Objects, inherited)
 				}
 			}

@@ -22,6 +22,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	corev1 "k8s.io/api/core/v1"
@@ -165,10 +167,10 @@ func TestIAMPolicyConversion(t *testing.T) {
 	project := vt.Helper.GCPProject("project")
 
 	var tests = []struct {
-		name    string
-		policy  *v1.IAMPolicy
-		want    *v1.ClusterIAMPolicy
-		recover bool
+		name   string
+		policy *v1.IAMPolicy
+		want   *v1.ClusterIAMPolicy
+		errors []string
 	}{
 		{
 			name: "A non-project attachment point should attach to a cluster instead",
@@ -202,7 +204,7 @@ func TestIAMPolicyConversion(t *testing.T) {
 			},
 		},
 		{
-			name: "No attachment point should panic",
+			name: "No attachment point should error",
 			policy: &v1.IAMPolicy{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
@@ -227,13 +229,13 @@ func TestIAMPolicyConversion(t *testing.T) {
 					Bindings: []v1.IAMPolicyBinding{},
 				},
 			},
-			recover: true,
+			errors: []string{veterrors.UndocumentedErrorCode},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			runClusterObjectsTest(t, org, project, tc.policy, tc.want, tc.recover)
+			runClusterObjectsTest(t, org, project, tc.policy, tc.want, tc.errors)
 		})
 	}
 }
@@ -243,10 +245,10 @@ func TestOrgPolicyConversion(t *testing.T) {
 	project := vt.Helper.GCPProject("project")
 
 	var tests = []struct {
-		name    string
-		policy  *v1.OrganizationPolicy
-		want    *v1.ClusterOrganizationPolicy
-		recover bool
+		name   string
+		policy *v1.OrganizationPolicy
+		want   *v1.ClusterOrganizationPolicy
+		errors []string
 	}{
 		{
 			name: "A non-project attachment point should attach to a cluster instead",
@@ -282,7 +284,7 @@ func TestOrgPolicyConversion(t *testing.T) {
 			},
 		},
 		{
-			name: "No attachment point should panic",
+			name: "No attachment point should error",
 			policy: &v1.OrganizationPolicy{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
@@ -296,34 +298,24 @@ func TestOrgPolicyConversion(t *testing.T) {
 			want: &v1.ClusterOrganizationPolicy{
 				Spec: v1.OrganizationPolicySpec{},
 			},
-			recover: true,
+			errors: []string{veterrors.UndocumentedErrorCode},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			runClusterObjectsTest(t, org, project, tc.policy, tc.want, tc.recover)
+			runClusterObjectsTest(t, org, project, tc.policy, tc.want, tc.errors)
 		})
 	}
 }
 
-func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Project, policy, want runtime.Object, rcvr bool) {
-	defer func() {
-		r := recover()
-		switch {
-		case r != nil && !rcvr:
-			t.Fatalf("test panicked with %v, want no panic", r)
-		case r == nil && rcvr:
-			t.Fatalf("test didn't panic, want panic")
-		}
-	}()
-
+func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Project, policy, want runtime.Object, errors []string) {
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
 		Tree: &ast.TreeNode{
 			Objects: vt.ObjectSets(vt.Helper.GCPOrg("org")),
 			Children: []*ast.TreeNode{
-				&ast.TreeNode{
+				{
 					Type:    ast.AbstractNamespace,
 					Objects: vt.ObjectSets(project, policy),
 				},
@@ -347,8 +339,10 @@ func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Proje
 	visitor := NewGCPPolicyVisitor()
 	output := input.Accept(visitor)
 	verifyInputUnmodified(t, input, inputCopy)
-	if err := visitor.Error(); err != nil {
-		t.Errorf("GCP hierarchy visitor resulted in error: %v", err)
+
+	if errors != nil {
+		veterrorstest.ExpectErrors(errors, visitor.Error(), t)
+		return
 	}
 
 	if output.Tree == nil || len(output.Tree.Children) != 1 {

@@ -2068,7 +2068,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		d.createTestFile(k, v)
 	}
 
-	f := fstesting.NewTestFactory()
+	f := fstesting.NewTestFactory(t)
 	defer func() {
 		if err := f.Cleanup(); err != nil {
 			t.Fatal(errors.Wrap(err, "could not clean up"))
@@ -3174,7 +3174,7 @@ func TestEmptyDirectories(t *testing.T) {
 			if err := os.MkdirAll(path, 0750); err != nil {
 				d.Fatalf("error creating test dir %s: %v", path, err)
 			}
-			f := fstesting.NewTestFactory()
+			f := fstesting.NewTestFactory(t)
 			defer func() {
 				if err := f.Cleanup(); err != nil {
 					t.Fatal(errors.Wrap(err, "could not clean up"))

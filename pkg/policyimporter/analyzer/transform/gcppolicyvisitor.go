@@ -17,12 +17,12 @@ limitations under the License.
 package transform
 
 import (
-	"fmt"
-
 	"github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/util/multierror"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +40,8 @@ type GCPPolicyVisitor struct {
 	cluster *ast.Cluster
 	// Denotes the current TreeNode while visiting object list.
 	currentTreeNode *ast.TreeNode
+	// cumulative errors encountered by the visitor
+	errs multierror.Builder
 }
 
 var _ ast.Visitor = &GCPPolicyVisitor{}
@@ -53,7 +55,7 @@ func NewGCPPolicyVisitor() *GCPPolicyVisitor {
 
 // Error implements Visitor.
 func (v *GCPPolicyVisitor) Error() error {
-	return nil
+	return v.errs.Build()
 }
 
 // VisitCluster implements Visitor.
@@ -69,7 +71,7 @@ func (v *GCPPolicyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	return v.Copying.VisitTreeNode(n)
 }
 
-// VisitObject implements Visitor. The precondition is that the poicy attachment
+// VisitObject implements Visitor. The precondition is that the policy attachment
 // point has already been set up. It fills in the resource reference in the
 // policy spec. If the policy attachment point is cluster scoped (org or folder),
 // this method will transform the policy to the cluster scoped version and move
@@ -86,7 +88,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 	switch gcpObj := o.FileObject.Object.(type) {
 	case *v1.IAMPolicy:
 		if attachmentPoint.Kind == "" {
-			panic(fmt.Sprintf("Missing attachment point for IAM policy %v", o))
+			v.errs.Add(veterrors.UndocumentedErrorf("Missing attachment point for IAM policy %v", o))
 		}
 		iamPolicy := gcpObj.DeepCopy()
 		iamPolicy.Spec.ResourceRef = *attachmentPoint
@@ -109,7 +111,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		return nil
 	case *v1.OrganizationPolicy:
 		if attachmentPoint.Kind == "" {
-			panic(fmt.Sprintf("Missing attachment point for org policy %v", o))
+			v.errs.Add(veterrors.UndocumentedErrorf("Missing attachment point for org policy %v", o))
 		}
 		orgPolicy := gcpObj.DeepCopy()
 		orgPolicy.Spec.ResourceRef = *attachmentPoint

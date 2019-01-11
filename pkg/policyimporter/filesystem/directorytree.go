@@ -20,8 +20,9 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
-	"github.com/pkg/errors"
+	"github.com/google/nomos/pkg/util/multierror"
 )
 
 // DirectoryTree handles constructing an ast.TreeNode tree from directory paths.
@@ -55,16 +56,17 @@ func (t *DirectoryTree) AddDir(p nomospath.Relative, typ ast.TreeNodeType) *ast.
 }
 
 // Build takes all the created nodes and produces a tree.
-func (t *DirectoryTree) Build() (*ast.TreeNode, error) {
+func (t *DirectoryTree) Build(eb *multierror.Builder) *ast.TreeNode {
 	for p, node := range t.nodes {
 		parent := path.Dir(p)
 		if parent != "." {
 			parentNode, ok := t.nodes[parent]
 			if !ok {
-				return nil, errors.Errorf("Node %q missing parent %q", p, parent)
+				eb.Add(veterrors.InternalErrorf("failed to treeify policy nodes: Node %q missing parent %q", p, parent))
+				return nil
 			}
 			parentNode.Children = append(parentNode.Children, node)
 		}
 	}
-	return t.root, nil
+	return t.root
 }

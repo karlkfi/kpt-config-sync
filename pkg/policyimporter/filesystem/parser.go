@@ -348,11 +348,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 		}
 	}
 
-	tree, err := treeGenerator.Build()
-	if err != nil {
-		errorBuilder.Add(errors.Wrapf(err, "failed to treeify policy nodes"))
-		return nil, errorBuilder.Build()
-	}
+	tree := treeGenerator.Build(&errorBuilder)
 	fsRoot.Tree = tree
 
 	visitors := vp.visitors(apiInfo)

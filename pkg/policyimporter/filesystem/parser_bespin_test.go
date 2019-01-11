@@ -88,7 +88,7 @@ func TestBespinParser(t *testing.T) {
 				d.CreateTestFile(k, v)
 			}
 
-			f := fstesting.NewTestFactory()
+			f := fstesting.NewTestFactory(t)
 			defer func() {
 				if err := f.Cleanup(); err != nil {
 					t.Fatal(errors.Wrap(err, "could not clean up"))

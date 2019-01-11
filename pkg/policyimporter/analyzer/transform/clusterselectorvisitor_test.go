@@ -60,7 +60,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 		InitRoot: func(r *ast.Root) {
 			cs, err := sel.NewClusterSelectors(clusters, selectors, "cluster-1")
 			if err != nil {
-				panic(err)
+				t.Fatal(err)
 			}
 			sel.SetClusterSelector(cs, r)
 		},

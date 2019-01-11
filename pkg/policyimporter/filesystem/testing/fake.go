@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"testing"
 	"time"
 
 	"github.com/google/nomos/pkg/api/policyascode/v1"
@@ -119,10 +120,10 @@ type TestFactory struct {
 }
 
 // NewTestFactory returns a new test factory.
-func NewTestFactory() *TestFactory {
+func NewTestFactory(t *testing.T) *TestFactory {
 	// specify an optionalClientConfig to explicitly use in testing
 	// to avoid polluting an existing user Config.
-	config, configFile := defaultFakeClientConfig()
+	config, configFile := defaultFakeClientConfig(t)
 	rConfig, _ := config.ClientConfig()
 	return &TestFactory{
 		Factory: cmdutil.NewFactory(
@@ -145,10 +146,10 @@ func (f *TestFactory) Cleanup() error {
 	return os.Remove(f.tempConfigFile.Name())
 }
 
-func defaultFakeClientConfig() (clientcmd.ClientConfig, *os.File) {
+func defaultFakeClientConfig(t *testing.T) (clientcmd.ClientConfig, *os.File) {
 	loadingRules, tmpFile, err := newDefaultFakeClientConfigLoadingRules()
 	if err != nil {
-		panic(fmt.Sprintf("unable to create a fake client Config: %v", err))
+		t.Fatal(fmt.Sprintf("unable to create a fake client Config: %v", err))
 	}
 
 	overrides := &clientcmd.ConfigOverrides{ClusterDefaults: clientcmdapi.Cluster{Server: "http://localhost:8080"}}

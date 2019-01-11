@@ -99,8 +99,8 @@ func (d *Extension) Add(key, value interface{}) *Extension {
 		return newExtension().Add(key, value)
 	}
 	if v, found := d.items[key]; found {
-		panic(errors.Errorf(
-			"programmer error: key %s already added with value %#v while trying to add %#v", key, v, value))
+		//TODO(b/122740271) Don't panic!
+		panic(errors.Errorf("programmer error: key %s already added with value %#v while trying to add %#v", key, v, value))
 	}
 
 	nd := d.Copy()
@@ -115,8 +115,8 @@ func (d *Extension) Update(key, value interface{}) *Extension {
 		return newExtension().Update(key, value)
 	}
 	if _, found := d.items[key]; !found {
-		panic(errors.Errorf(
-			"programmer error: key %s does not exist when trying to update to value %#v", key, value))
+		//TODO(b/122740271) Don't panic!
+		panic(errors.Errorf("programmer error: key %s does not exist when trying to update to value %#v", key, value))
 	}
 	nd := d.Copy()
 	nd.items[key] = value
@@ -130,8 +130,8 @@ func (d *Extension) Get(key interface{}) interface{} {
 	}
 	value, found := d.items[key]
 	if !found {
-		panic(errors.Errorf(
-			"programmer error: key %s does not exist, unable to get value", key))
+		//TODO(b/122740271) Don't panic!
+		panic(errors.Errorf("programmer error: key %s does not exist, unable to get value", key))
 	}
 	return value
 }
@@ -144,8 +144,8 @@ func (d *Extension) Remove(key interface{}) *Extension {
 		return newExtension().Remove(key)
 	}
 	if _, found := d.items[key]; !found {
-		panic(errors.Errorf(
-			"programmer error: unable to delete key %s, does not exist in map", key))
+		//TODO(b/122740271) Don't panic!
+		panic(errors.Errorf("programmer error: unable to delete key %s, does not exist in map", key))
 	}
 	if len(d.items) == 1 {
 		return nil
