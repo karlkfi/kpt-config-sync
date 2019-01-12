@@ -243,22 +243,7 @@ func TestFolderID(t *testing.T) {
 		want string
 	}{
 		{
-			name: "Folder with Organization as parent, uses Status.ID",
-			f: &Folder{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
-				Spec: FolderSpec{
-					ParentRef: corev1.ObjectReference{
-						Kind: "Organization",
-						Name: "organizations/1234567",
-					},
-					DisplayName: "spec-bar",
-				},
-				Status: FolderStatus{},
-			},
-			want: "7654321",
-		},
-		{
-			name: "Folder with Organization as parent, uses Spec.ID",
+			name: "Folder with Organization as parent with valid Spec.ID",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
@@ -274,22 +259,7 @@ func TestFolderID(t *testing.T) {
 			want: "7654321",
 		},
 		{
-			name: "Folder with Folder as parent, uses Status.ID",
-			f: &Folder{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
-				Spec: FolderSpec{
-					ParentRef: corev1.ObjectReference{
-						Kind: "Folder",
-						Name: "folders/1234567",
-					},
-					DisplayName: "spec-bar",
-				},
-				Status: FolderStatus{},
-			},
-			want: "9876543",
-		},
-		{
-			name: "Folder with Folder as parent, uses Spec.ID",
+			name: "Folder with Folder as parent, with valid Spec.ID",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
@@ -305,7 +275,7 @@ func TestFolderID(t *testing.T) {
 			want: "9876543",
 		},
 		{
-			name: "Folder with no Spec.ID and Status.ID",
+			name: "Folder with no Spec.ID",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: FolderSpec{
@@ -318,22 +288,6 @@ func TestFolderID(t *testing.T) {
 				Status: FolderStatus{},
 			},
 			want: "",
-		},
-		{
-			name: "Folder with both Spec.ID and Status.ID",
-			f: &Folder{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
-				Spec: FolderSpec{
-					ParentRef: corev1.ObjectReference{
-						Kind: "Invalid",
-						Name: "bar",
-					},
-					DisplayName: "spec-bar",
-					ID:          9876543,
-				},
-				Status: FolderStatus{},
-			},
-			want: "9876543",
 		},
 	}
 
