@@ -26,6 +26,7 @@ BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 
 # Create piper client.
 cd "$(p4 g4d -f "$BRANCH")" || exit
+p4 client --set_option allwrite
 G4_DIR="$(pwd)"
 cd - || exit
 
