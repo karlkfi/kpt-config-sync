@@ -9,7 +9,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/scale/scheme/extensionsv1beta1"
-	"k8s.io/kubernetes/pkg/apis/rbac"
 )
 
 // Sync returns the canonical Sync GroupVersionKind
@@ -19,12 +18,12 @@ func Sync() schema.GroupVersionKind {
 
 // RoleBinding returns the canonical RoleBinding GroupVersionKind
 func RoleBinding() schema.GroupVersionKind {
-	return rbac.SchemeGroupVersion.WithKind("RoleBinding")
+	return rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
 }
 
 // Role returns the canonical Role GroupVersionKind
 func Role() schema.GroupVersionKind {
-	return rbac.SchemeGroupVersion.WithKind("Role")
+	return rbacv1.SchemeGroupVersion.WithKind("Role")
 }
 
 // ResourceQuota returns the canonical ResourceQuota GroupVersionKind
