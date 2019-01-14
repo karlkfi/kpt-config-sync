@@ -21,25 +21,15 @@ spec:
     - kind: ClusterRole
       versions:
       - version: v1
-        compareFields:
-        - rules
     - kind: ClusterRoleBinding
       versions:
       - version: v1
-        compareFields:
-        - subjects
-        - roleRef
     - kind: Role
       versions:
       - version: v1
-        compareFields:
-        - rules
     - kind: RoleBinding
       versions:
       - version: v1
-        compareFields:
-        - subjects
-        - roleRef
 `
 	resourceQuotaSyncFile     = "resourcequota-sync.yaml"
 	resourceQuotaSyncContents = `kind: Sync

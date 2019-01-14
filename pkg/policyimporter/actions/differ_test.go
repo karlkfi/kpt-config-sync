@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/policynode/validator"
@@ -481,28 +481,6 @@ func TestSyncReductions(t *testing.T) {
 			expected: nil,
 		},
 		{
-			testName: "Only CompareFields change",
-			current: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSyncWithCompareField("", "ResourceQuota", "foo", "v1"),
-			},
-			desired: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSyncWithCompareField("", "ResourceQuota", "bar", "v1"),
-			},
-			expected: nil,
-		},
-		{
-			testName: "Reduction keeps original CompareFields",
-			current: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSyncWithCompareField("", "ResourceQuota", "foo", "v1", "v2"),
-			},
-			desired: map[string]v1alpha1.Sync{
-				"ResourceQuota": makeSyncWithCompareField("", "ResourceQuota", "bar", "v1"),
-			},
-			expected: []v1alpha1.Sync{
-				makeSyncWithCompareField("", "ResourceQuota", "foo", "v1"),
-			},
-		},
-		{
 			testName: "Delete one kind",
 			current: map[string]v1alpha1.Sync{
 				"Role": {
@@ -673,21 +651,9 @@ func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
 }
 
 func makeSync(group, kind string, versions ...string) v1alpha1.Sync {
-	return makeSyncHelper(group, kind, nil, versions...)
-}
-
-func makeSyncWithCompareField(group, kind, cf string, version ...string) v1alpha1.Sync {
-	return makeSyncHelper(group, kind, &cf, version...)
-}
-
-// Makes a sync with a single CompareField, for tests that want to populate that field.
-func makeSyncHelper(group, kind string, cf *string, versions ...string) v1alpha1.Sync {
 	var svs []v1alpha1.SyncVersion
 	for _, version := range versions {
 		sv := v1alpha1.SyncVersion{Version: version}
-		if cf != nil {
-			sv.CompareFields = []string{*cf}
-		}
 		svs = append(svs, sv)
 	}
 	return v1alpha1.Sync{

@@ -17,7 +17,7 @@ package actions
 
 import (
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter"
@@ -255,7 +255,6 @@ func (d *Differ) reduce(current, desired v1alpha1.Sync) *v1alpha1.Sync {
 	}
 	// Even though we check for equality at the beginning of the method, this is reachable. That's
 	// because two Syncs may not be Equal() but nonetheless have the same set of GVKs (in that case,
-	// they may have different CompareFields, or the ordering of GVKs could be different.) Or, desired
-	// could be a superset of current.
+	// the ordering of GVKs could be different). Or, desired could be a superset of current.
 	return nil
 }

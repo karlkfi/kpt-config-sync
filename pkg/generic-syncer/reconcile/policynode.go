@@ -51,26 +51,24 @@ var _ reconcile.Reconciler = &PolicyNodeReconciler{}
 
 // PolicyNodeReconciler reconciles a PolicyNode object.
 type PolicyNodeReconciler struct {
-	client     *client.Client
-	applier    Applier
-	cache      cache.GenericCache
-	recorder   record.EventRecorder
-	decoder    decode.Decoder
-	comparator *differ.Comparator
-	toSync     []schema.GroupVersionKind
+	client   *client.Client
+	applier  Applier
+	cache    cache.GenericCache
+	recorder record.EventRecorder
+	decoder  decode.Decoder
+	toSync   []schema.GroupVersionKind
 }
 
 // NewPolicyNodeReconciler returns a new PolicyNodeReconciler.
 func NewPolicyNodeReconciler(client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
-	decoder decode.Decoder, comparator *differ.Comparator, toSync []schema.GroupVersionKind) *PolicyNodeReconciler {
+	decoder decode.Decoder, toSync []schema.GroupVersionKind) *PolicyNodeReconciler {
 	return &PolicyNodeReconciler{
-		client:     client,
-		applier:    applier,
-		cache:      cache,
-		recorder:   recorder,
-		decoder:    decoder,
-		comparator: comparator,
-		toSync:     toSync,
+		client:   client,
+		applier:  applier,
+		cache:    cache,
+		recorder: recorder,
+		decoder:  decoder,
+		toSync:   toSync,
 	}
 }
 

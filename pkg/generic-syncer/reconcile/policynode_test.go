@@ -25,7 +25,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/client"
-	syncerdiffer "github.com/google/nomos/pkg/generic-syncer/differ"
 	"github.com/google/nomos/pkg/generic-syncer/labeling"
 	syncertesting "github.com/google/nomos/pkg/generic-syncer/testing"
 	appsv1 "k8s.io/api/apps/v1"
@@ -712,7 +711,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 		Version: "v1",
 		Kind:    "Deployment",
 	}
-	comparator := syncerdiffer.NewComparator([]*v1alpha1.Sync{sync(gvk)}, labeling.ResourceManagementKey)
 	toSync := []schema.GroupVersionKind{gvk}
 
 	for _, tc := range testCases {
@@ -727,7 +725,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, tc.declared))
 
 			testReconciler := NewPolicyNodeReconciler(
-				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, comparator, toSync)
+				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, toSync)
 
 			// Get PolicyNode from cache.
 			mockCache.EXPECT().
@@ -820,31 +818,6 @@ func toUnstructureds(t *testing.T, converter runtime.UnstructuredConverter,
 		us = append(us, toUnstructured(t, converter, obj))
 	}
 	return
-}
-
-func sync(gvk schema.GroupVersionKind) *v1alpha1.Sync {
-	return &v1alpha1.Sync{
-		ObjectMeta: metav1.ObjectMeta{
-			Finalizers: []string{},
-		},
-		Spec: v1alpha1.SyncSpec{
-			Groups: []v1alpha1.SyncGroup{
-				{
-					Group: gvk.Group,
-					Kinds: []v1alpha1.SyncKind{
-						{
-							Kind: gvk.Kind,
-							Versions: []v1alpha1.SyncVersion{
-								{
-									Version: gvk.Version,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
 }
 
 // unstructuredMatcher ignores fields with randomly ordered values in unstructured.Unstructured when comparing.

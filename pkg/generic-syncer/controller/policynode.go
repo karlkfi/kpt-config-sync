@@ -20,7 +20,6 @@ import (
 	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
 	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
-	"github.com/google/nomos/pkg/generic-syncer/differ"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +36,7 @@ import (
 const policyNodeControllerName = "policynode-resources"
 
 // AddPolicyNode adds PolicyNode sync controllers to the Manager.
-func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *differ.Comparator,
+func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder,
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
 	genericClient := client.New(mgr.GetClient())
 	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
@@ -52,7 +51,6 @@ func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder, comparator *diff
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
 			mgr.GetRecorder(policyNodeControllerName),
 			decoder,
-			comparator,
 			extractGVKs(resourceTypes),
 		),
 	})

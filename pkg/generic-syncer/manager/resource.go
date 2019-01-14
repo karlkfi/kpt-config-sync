@@ -24,8 +24,6 @@ import (
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/controller"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
-	"github.com/google/nomos/pkg/generic-syncer/differ"
-	"github.com/google/nomos/pkg/generic-syncer/labeling"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -124,11 +122,10 @@ func (r *GenericResourceManager) startControllers(syncs []*nomosv1alpha1.Sync, s
 	}
 
 	decoder := decode.NewGenericResourceDecoder(r.GetScheme())
-	comparator := differ.NewComparator(syncs, labeling.ResourceManagementKey)
-	if err := controller.AddPolicyNode(r, decoder, comparator, namespace); err != nil {
+	if err := controller.AddPolicyNode(r, decoder, namespace); err != nil {
 		return errors.Wrap(err, "could not create PolicyNode controller")
 	}
-	if err := controller.AddClusterPolicy(r, decoder, comparator, cluster); err != nil {
+	if err := controller.AddClusterPolicy(r, decoder, cluster); err != nil {
 		return errors.Wrap(err, "could not create ClusterPolicy controller")
 	}
 

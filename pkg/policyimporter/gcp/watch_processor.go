@@ -27,7 +27,7 @@ import (
 	"github.com/gogo/status"
 	"github.com/golang/glog"
 	watcher "github.com/google/nomos/clientgen/watcher/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	clientaction "github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/kinds"
@@ -331,8 +331,7 @@ func addSyncs(ap *v1.AllPolicies) {
 								Kind: "Role",
 								Versions: []v1alpha1.SyncVersion{
 									{
-										Version:       "v1",
-										CompareFields: []string{"rules"},
+										Version: "v1",
 									},
 								},
 							},
@@ -340,8 +339,7 @@ func addSyncs(ap *v1.AllPolicies) {
 								Kind: "RoleBinding",
 								Versions: []v1alpha1.SyncVersion{
 									{
-										Version:       "v1",
-										CompareFields: []string{"subjects", "roleRef"},
+										Version: "v1",
 									},
 								},
 							},
@@ -349,8 +347,7 @@ func addSyncs(ap *v1.AllPolicies) {
 								Kind: "ClusterRole",
 								Versions: []v1alpha1.SyncVersion{
 									{
-										Version:       "v1",
-										CompareFields: []string{"rules"},
+										Version: "v1",
 									},
 								},
 							},
@@ -358,8 +355,7 @@ func addSyncs(ap *v1.AllPolicies) {
 								Kind: "ClusterRoleBinding",
 								Versions: []v1alpha1.SyncVersion{
 									{
-										Version:       "v1",
-										CompareFields: []string{"subjects", "roleRef"},
+										Version: "v1",
 									},
 								},
 							},

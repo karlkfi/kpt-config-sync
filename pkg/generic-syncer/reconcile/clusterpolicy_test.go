@@ -24,7 +24,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/client"
-	syncerdiffer "github.com/google/nomos/pkg/generic-syncer/differ"
 	"github.com/google/nomos/pkg/generic-syncer/labeling"
 	syncertesting "github.com/google/nomos/pkg/generic-syncer/testing"
 	corev1 "k8s.io/api/core/v1"
@@ -453,7 +452,6 @@ func TestClusterPolicyReconcile(t *testing.T) {
 		Version: "v1",
 		Kind:    "PersistentVolume",
 	}
-	comparator := syncerdiffer.NewComparator([]*v1alpha1.Sync{sync(gvk)}, labeling.ResourceManagementKey)
 	toSync := []schema.GroupVersionKind{gvk}
 
 	for _, tc := range testCases {
@@ -468,7 +466,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, tc.declared))
 
 			testReconciler := NewClusterPolicyReconciler(
-				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, comparator, toSync)
+				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, toSync)
 
 			// Get ClusterPolicy from cache.
 			mockCache.EXPECT().

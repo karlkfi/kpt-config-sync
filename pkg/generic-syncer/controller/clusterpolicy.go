@@ -20,7 +20,6 @@ import (
 	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
 	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
-	"github.com/google/nomos/pkg/generic-syncer/differ"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,7 +35,7 @@ import (
 const clusterPolicyControllerName = "clusterpolicy-resources"
 
 // AddClusterPolicy adds ClusterPolicy sync controllers to the Manager.
-func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder, comparator *differ.Comparator,
+func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder,
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
 	genericClient := client.New(mgr.GetClient())
 	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
@@ -51,7 +50,6 @@ func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder, comparator *d
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
 			mgr.GetRecorder(clusterPolicyControllerName),
 			decoder,
-			comparator,
 			extractGVKs(resourceTypes),
 		),
 	})

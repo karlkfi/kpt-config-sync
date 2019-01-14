@@ -66,10 +66,6 @@ spec:
                             properties:
                               version:
                                 type: string
-                              compareFields:
-                                type: array
-                                items:
-                                  type: string
                             # /SyncVersion
                       # /SyncKind
                 # /SyncGroup

@@ -159,14 +159,6 @@ type SyncKind struct {
 type SyncVersion struct {
 	// Version indicates the version used for the API Group, for example v1, v1beta1, v1alpha1.
 	Version string `json:"version"`
-
-	// CompareFields is an optional list of top-level fields to compare against.  This will default to
-	// ["spec"] which should be sufficient for most objects, however, there are exceptions (RBAC) so
-	// these need to be declared.
-	// In addition to "spec" or the the fields declared here, we also compare annotations and labels.
-	// Anything else stored in metadata is ignored for comparison purposes.
-	// +optional
-	CompareFields []string `json:"compareFields,omitempty"`
 }
 
 // SyncStatus represents the status for a sync declaration
