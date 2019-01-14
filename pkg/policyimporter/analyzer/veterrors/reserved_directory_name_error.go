@@ -7,18 +7,13 @@ import (
 // ReservedDirectoryNameErrorCode is the error code for ReservedDirectoryNameError
 const ReservedDirectoryNameErrorCode = "1001"
 
-var reservedDirectoryNameErrorExamples = []Error{ReservedDirectoryNameError{Dir: nomospath.NewFakeRelative("namespaces/reserved")}}
+var reservedDirectoryNameErrorExamples = []Error{ReservedDirectoryNameError{Dir: nomospath.NewFakeRelative("namespaces/default")}}
 
 var reservedDirectoryNameExplanation = `
 GKE Policy Management defines several
-[Reserved Namespaces](../management_flow.md#namespaces), and users may
-[specify their own Reserved Namespaces](../system_config.md#reserved-namespaces).
+[Reserved Namespaces](../management_flow.md#namespaces).
 Namespace and Abstract Namespace directories MUST NOT use these reserved names.
-To fix:
-
-1.  rename the directory,
-1.  remove the directory, or
-1.  remove the reserved namespace declaration.
+To fix, rename or remove the directory mentioned in the error.
 
 Sample Error Message:
 
