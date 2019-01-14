@@ -12,4 +12,5 @@ func Validate(metas []ResourceMeta, errorBuilder *multierror.Builder) {
 	NamespaceValidatorFactory.New(metas).Validate(errorBuilder)
 	NameValidatorFactory.New(metas).Validate(errorBuilder)
 	DuplicateNameValidatorFactory{}.New(metas).Validate(errorBuilder)
+	NamespaceAnnotationValidatorFactory.New(metas).Validate(errorBuilder)
 }

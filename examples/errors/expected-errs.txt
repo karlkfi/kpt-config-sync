@@ -15,8 +15,11 @@ name: illegal-child
 
 [3] KNV1004: A Namespace MUST NOT use the annotation nomos.dev/namespace-selector. Remove metadata.annotations.nomos.dev/namespace-selector from:
 
-path: namespaces/dev/dev-namespace
-name: dev-namespace
+source: namespaces/dev/dev-namespace/namespace.yaml
+metadata.name: incorrect-name
+group: 
+version: v1
+kind: Namespace
 
 
 [4] KNV1005: Unable to sync Resource. Enable sync for this Resource's kind.

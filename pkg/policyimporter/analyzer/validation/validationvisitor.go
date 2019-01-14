@@ -115,14 +115,6 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		v.checkNamespaceSelectorAnnotations(s)
 	}
 
-	if n.Type == ast.Namespace {
-		// Namespace-specific validation
-		if _, found := n.Annotations[v1alpha1.NamespaceSelectorAnnotationKey]; found {
-			// Namespaces may not use the selector annotation.
-			v.errs.Add(veterrors.IllegalNamespaceSelectorAnnotationError{TreeNode: n})
-		}
-	}
-
 	v.nodes = append(v.nodes, n)
 	o := v.Base.VisitTreeNode(n)
 	v.nodes = v.nodes[:len(v.nodes)-1]

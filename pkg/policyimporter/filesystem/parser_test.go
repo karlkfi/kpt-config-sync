@@ -1771,7 +1771,7 @@ spec:
 				v1alpha1.NamespaceSelectorAnnotationKey: "prod"},
 			}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalNamespaceSelectorAnnotationErrorCode},
+		expectedErrorCodes: []string{veterrors.IllegalNamespaceAnnotationErrorCode},
 	},
 	{
 		testName: "NamespaceSelector may not have ClusterSelector annotations",
