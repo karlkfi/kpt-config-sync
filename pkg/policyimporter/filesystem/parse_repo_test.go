@@ -75,6 +75,9 @@ func (tc *testCase) Run(t *testing.T) {
 	}
 
 	_, actualErrors := p.Parse(tc.Root())
+	if actualErrors == nil {
+		t.Fatal("expected error(s), got none")
+	}
 	actual := strings.Split("Found issues: "+actualErrors.Error(), "\n")
 
 	diff := cmp.Diff(expected, actual)
