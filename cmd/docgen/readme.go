@@ -20,7 +20,7 @@ Errors ` + "`nomos vet`" + ` may throw while analyzing a GKE Policy Management d
 
 // Path to the nomos vet errors README.md file.
 var (
-	readmeFile = "README.md"
+	readmeFile = "readme.md"
 )
 
 // writeReadme Writes the README.md which offers an overview of the nomos vet errors and what these

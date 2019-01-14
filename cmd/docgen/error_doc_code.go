@@ -76,7 +76,7 @@ func (e errorDocCode) errorFile(docsPath string) string {
 
 // ErrorFileBase returns the base file of the error doc.
 func (e errorDocCode) ErrorFileBase() string {
-	return fmt.Sprintf("KNV%s.md", e.Code())
+	return fmt.Sprintf("knv%s.md", e.Code())
 }
 
 // The below methods aren't really meant to be exported, but are here because Templates require
