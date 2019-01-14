@@ -93,7 +93,9 @@ function uninstall() {
       case ${importer} in
         git)
         # we do not care if part of the deletion fails, as the objects may not all exist
-        kubectl -n=nomos-system delete nomos --all || true
+        if kubectl get nomos &> /dev/null; then
+          kubectl -n=nomos-system delete nomos --all || true
+        fi
         wait::for -s -t 300 -- nomos_uninstalled
         kubectl delete -f defined-operator-bundle.yaml || true
         ;;
@@ -113,7 +115,9 @@ function uninstall() {
         ;;
       esac
       # make sure that nomos-system is no longer extant
-      kubectl delete ns nomos-system || true
+      if kubectl delete ns nomos-system &> /dev/null; then
+        echo "Error: nomos-system was not deleted during operator removal."
+      fi
       echo clean
     )
   fi
