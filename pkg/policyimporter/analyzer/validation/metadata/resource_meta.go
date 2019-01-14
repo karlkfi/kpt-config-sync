@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -24,6 +25,9 @@ var _ ResourceMeta = resourceMeta{}
 
 // RelativeSlashPath implements ResourceMeta
 func (m resourceMeta) RelativeSlashPath() string { return m.source }
+
+// Dir implements ResourceMeta
+func (m resourceMeta) Dir() nomospath.Relative { return nomospath.NewFakeRelative(m.source).Dir() }
 
 // Name implements ResourceMeta
 func (m resourceMeta) Name() string { return m.name }

@@ -5,8 +5,12 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 )
 
-// LabelValidatorFactory validates the labels in a ast.FileObject
-var LabelValidatorFactory = ValidatorFactory{
+func init() {
+	Register(LabelValidatorFactory)
+}
+
+// LabelValidatorFactory validates the labels declared in metadata
+var LabelValidatorFactory = SyntaxValidatorFactory{
 	fn: func(meta ResourceMeta) error {
 		var errors []string
 		for l := range meta.MetaObject().GetLabels() {

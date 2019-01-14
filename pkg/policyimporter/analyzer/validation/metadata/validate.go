@@ -4,13 +4,16 @@ import (
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
-// Validate validates metadata fields on the given Resources. These validations are
-// Group/Version/Kind-independent.
+var metaValidators []ValidatorFactory
+
+// Register adds new metadata field validators for policy Resources.
+func Register(factory ...ValidatorFactory) {
+	metaValidators = append(metaValidators, factory...)
+}
+
+// Validate validates metadata fields on the given Resources.
 func Validate(metas []ResourceMeta, errorBuilder *multierror.Builder) {
-	AnnotationValidatorFactory.New(metas).Validate(errorBuilder)
-	LabelValidatorFactory.New(metas).Validate(errorBuilder)
-	NamespaceValidatorFactory.New(metas).Validate(errorBuilder)
-	NameValidatorFactory.New(metas).Validate(errorBuilder)
-	DuplicateNameValidatorFactory{}.New(metas).Validate(errorBuilder)
-	NamespaceAnnotationValidatorFactory.New(metas).Validate(errorBuilder)
+	for _, v := range metaValidators {
+		v.New(metas).Validate(errorBuilder)
+	}
 }

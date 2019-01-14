@@ -6,11 +6,16 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/validator"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+func init() {
+	Register(DuplicateNameValidatorFactory{})
+}
 
 // DuplicateNameValidatorFactory ensures passed ResourceMetas do not have name conflicts.
 //
@@ -19,8 +24,10 @@ import (
 // 2) one is in a parent directory of the other.
 type DuplicateNameValidatorFactory struct{}
 
+var _ ValidatorFactory = DuplicateNameValidatorFactory{}
+
 // New returns a DuplicateNameValidator on a specific set of ResourceMetas.
-func (v DuplicateNameValidatorFactory) New(metas []ResourceMeta) DuplicateNameValidator {
+func (v DuplicateNameValidatorFactory) New(metas []ResourceMeta) validator.Validator {
 	return DuplicateNameValidator{metas: metas}
 }
 
@@ -28,6 +35,8 @@ func (v DuplicateNameValidatorFactory) New(metas []ResourceMeta) DuplicateNameVa
 type DuplicateNameValidator struct {
 	metas []ResourceMeta
 }
+
+var _ validator.Validator = DuplicateNameValidator{}
 
 // Validate adds errors to the errorBuilder for each name collision.
 func (v DuplicateNameValidator) Validate(eb *multierror.Builder) {

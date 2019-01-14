@@ -5,14 +5,21 @@ import (
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
-// ValidatorFactory is a function that returns an error if the supplied ResourceMeta
+// ValidatorFactory is a factory that returns a validator for a given set of ResourceMeta.
+type ValidatorFactory interface {
+	New(metas []ResourceMeta) validator.Validator
+}
+
+// SyntaxValidatorFactory is a function that returns an error if the supplied ResourceMeta
 // is not valid. Validates each ResourceMeta independently.
-type ValidatorFactory struct {
+type SyntaxValidatorFactory struct {
 	fn func(meta ResourceMeta) error
 }
 
+var _ ValidatorFactory = SyntaxValidatorFactory{}
+
 // New returns a Validator with the set validation function on the set of passed ResourceMetas.
-func (v ValidatorFactory) New(metas []ResourceMeta) Validator {
+func (v SyntaxValidatorFactory) New(metas []ResourceMeta) validator.Validator {
 	return Validator{fn: v.fn, metas: metas}
 }
 

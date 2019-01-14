@@ -11,8 +11,12 @@ import (
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
+func init() {
+	Register(NameValidatorFactory)
+}
+
 // NameValidatorFactory validates the value of metadata.name
-var NameValidatorFactory = ValidatorFactory{
+var NameValidatorFactory = SyntaxValidatorFactory{
 	fn: func(meta ResourceMeta) error {
 		gvk := meta.GroupVersionKind()
 

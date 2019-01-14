@@ -5,8 +5,12 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 )
 
+func init() {
+	Register(AnnotationValidatorFactory)
+}
+
 // AnnotationValidatorFactory returns errors
-var AnnotationValidatorFactory = ValidatorFactory{
+var AnnotationValidatorFactory = SyntaxValidatorFactory{
 	fn: func(meta ResourceMeta) error {
 		var errors []string
 		for a := range meta.MetaObject().GetAnnotations() {
