@@ -45,19 +45,19 @@ image-e2e-tests: installer-staging e2e-staging \
 		-t gcr.io/stolos-dev/e2e-tests:test-e2e-latest \
 		$(DOCKER_BUILD_QUIET)
 
-test-e2e-run-%:
-	@echo "+++ Running e2e tests: $*"
+test-e2e-run-git:
+	@echo "+++ Running e2e tests: git"
 	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
 	@e2e/e2e.sh \
 		--TEMP_OUTPUT_DIR "$(TEMP_OUTPUT_DIR)" \
 		--OUTPUT_DIR "$(OUTPUT_DIR)" \
 		$(TEST_E2E_RUN_FLAGS) \
 		-- \
-		--importer "$*" \
+		--importer "git" \
 		--gcp-watcher-cred "$(GCP_E2E_WATCHER_CRED)" \
 		--gcp-runner-cred "$(GCP_E2E_RUNNER_CRED)" \
 		$(E2E_FLAGS) \
-	    && echo "+++ $* e2e tests completed" \
+	    && echo "+++ git e2e tests completed" \
 	    || (echo "### e2e tests failed. Temp dir (with test output logs etc) are available in ${TEMP_OUTPUT_DIR}"; exit 1)
 
 e2e-image-all: image-e2e-tests installer-staging
@@ -72,31 +72,22 @@ test-e2e-all: banner e2e-image-all
 		$(E2E_PARAMS) \
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
 		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
-#	$(MAKE) test-e2e-run-gcp \
-#		$(E2E_PARAMS) \
-#		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
-#		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
 
-test-e2e-gcp:
-test-e2e-git:
 # Clean, build, and run e2e tests for a particular importer.
 # Clean cluster after running.
-test-e2e-%: e2e-image-all
-	$(MAKE) test-e2e-run-$* \
+test-e2e-git: e2e-image-all
+	$(MAKE) test-e2e-run-git \
 		$(E2E_PARAMS) \
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)"
 
-test-e2e-%-user:
-	$(MAKE) IMAGE_TAG=${IMAGE_TAG} OPERATOR_TARGET=prepare-operator-user test-e2e-$*
+test-e2e-git-user:
+	$(MAKE) IMAGE_TAG=${IMAGE_TAG} OPERATOR_TARGET=prepare-operator-user test-e2e-git
 
-test-e2e-dev-gcp:
-test-e2e-dev-git:
 # Dev mode allows for specifying the args manually via E2E_FLAGS, see e2e/setup.sh for
-# allowed flags
-test-e2e-dev-%: e2e-staging
-	$(MAKE) test-e2e-run-$* \
-		GCP_PROJECT=$(GCP_PROJECT) \
-		IMAGE_TAG=test-e2e-latest
+# allowed flags.  This command assumes you will run "make e2e-staging" separately.
+test-e2e-dev-git: e2e-staging
+	$(MAKE) test-e2e-run-git \
+		GCP_PROJECT=$(GCP_PROJECT)
 
 
 # Runs nomos vet locally for example repos.
