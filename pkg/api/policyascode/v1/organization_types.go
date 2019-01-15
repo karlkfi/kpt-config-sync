@@ -66,14 +66,14 @@ type OrganizationList struct {
 // READONLY in bespin world, and in Terraform there is only a "data" config (no "resource")
 // for an Organization.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (o *Organization) TFResourceConfig(ctx context.Context, c Client, tfState map[string]string) (string, error) {
-	ID := o.ID()
-	if ID == "" {
+func (o *Organization) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
+	id := o.ID()
+	if id == "" {
 		return "", fmt.Errorf("missing Organization ID")
 	}
 	return fmt.Sprintf(`data "google_organization" "bespin_organization" {
 organization = "organizations/%v"
-}`, ID), nil
+}`, id), nil
 }
 
 // TFImportConfig returns an empty terraform organization resource block used for terraform import.

@@ -154,7 +154,7 @@ func tfFormatConstraintPolicy(constraint OrganizationPolicyConstraint) (string, 
 // for these ids (ie, only using kind for the folders), hence the need for this code.
 func tfResourceID(ctx context.Context, client Client, ps OrganizationPolicySpec) (string, error) {
 	kind := ps.ResourceRef.Kind
-	res, err := ResourceID(ctx, client, kind, ps.ResourceRef.Name)
+	res, err := ResourceID(ctx, client, kind, ps.ResourceRef.Name, EmptyNamespace)
 	if err != nil {
 		return "", err
 	}
@@ -171,7 +171,7 @@ func tfResourceID(ctx context.Context, client Client, ps OrganizationPolicySpec)
 
 // TFResourceConfig converts the Organization's Spec struct into Terraform config string.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (op *OrganizationPolicy) TFResourceConfig(ctx context.Context, c Client, tfState map[string]string) (string, error) {
+func (op *OrganizationPolicy) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
 	ps := op.Spec
 	kind := ps.ResourceRef.Kind
 

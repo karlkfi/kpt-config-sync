@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package organizationpolicy
+package organization
 
 import (
 	"testing"
@@ -23,37 +23,36 @@ import (
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var c client.Client
-
-var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: "foo", Namespace: "default"}}
-var depKey = types.NamespacedName{Name: "foo-deployment", Namespace: "default"}
+var (
+	c               client.Client
+	expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: "foo"}}
+)
 
 const timeout = time.Second * 5
 
 func TestReconcile(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
-	instance := &bespinv1.OrganizationPolicy{
-		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
-		Spec: bespinv1.OrganizationPolicySpec{
-			Constraints: []bespinv1.OrganizationPolicyConstraint{},
-			ResourceRef: corev1.ObjectReference{
-				Kind: bespinv1.OrganizationKind,
-				Name: "FooOrg"},
+	instance := &bespinv1.Organization{
+		TypeMeta: metav1.TypeMeta{
+			Kind: bespinv1.OrganizationKind,
 		},
-		Status: bespinv1.OrganizationPolicyStatus{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+		},
+		Spec: bespinv1.OrganizationSpec{
+			ID: 12345678,
+		},
+		Status: bespinv1.OrganizationStatus{},
 	}
 
-	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
+	// Setup the Manager and Controller. Wrap the Controller Reconcile function so it writes each request to a
 	// channel when it is finished.
 	mgr, err := manager.New(cfg, manager.Options{})
 	g.Expect(err).NotTo(gomega.HaveOccurred())
@@ -67,17 +66,4 @@ func TestReconcile(t *testing.T) {
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	defer c.Delete(context.TODO(), instance)
 	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
-
-	deploy := &appsv1.Deployment{}
-	g.Eventually(func() error { return c.Get(context.TODO(), depKey, deploy) }, timeout).
-		Should(gomega.Succeed())
-
-	g.Expect(c.Delete(context.TODO(), deploy)).NotTo(gomega.HaveOccurred())
-	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
-	g.Eventually(func() error { return c.Get(context.TODO(), depKey, deploy) }, timeout).
-		Should(gomega.Succeed())
-
-	// Manually delete Deployment since GC isn't enabled in the test control plane
-	g.Expect(c.Delete(context.TODO(), deploy)).To(gomega.Succeed())
-
 }

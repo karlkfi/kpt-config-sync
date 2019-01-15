@@ -66,6 +66,7 @@ func TestOrganizationTFResourceConfig(t *testing.T) {
 		{
 			name: "Organization with valid ID",
 			o: &Organization{
+				TypeMeta:   metav1.TypeMeta{Kind: OrganizationKind},
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: OrganizationSpec{
 					ID: 1234567,
@@ -80,6 +81,7 @@ organization = "organizations/1234567"
 		{
 			name: "Organization with no ID",
 			o: &Organization{
+				TypeMeta:   metav1.TypeMeta{Kind: OrganizationKind},
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec:       OrganizationSpec{},
 				Status:     OrganizationStatus{},

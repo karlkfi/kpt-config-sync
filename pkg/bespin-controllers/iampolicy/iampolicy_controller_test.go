@@ -48,7 +48,8 @@ func TestReconcile(t *testing.T) {
 		Spec: bespinv1.IAMPolicySpec{
 			Bindings: []bespinv1.IAMPolicyBinding{},
 			ResourceRef: corev1.ObjectReference{
-				Kind: "Organization",
+				Kind: bespinv1.ProjectKind,
+				Name: "bar",
 			},
 		},
 		Status: bespinv1.IAMPolicyStatus{},
@@ -64,7 +65,6 @@ func TestReconcile(t *testing.T) {
 	g.Expect(add(mgr, recFn)).NotTo(gomega.HaveOccurred())
 	defer close(StartTestManager(mgr, g))
 
-	// Create the IAMPolicy object and expect the Reconcile to be created
 	err = c.Create(context.TODO(), instance)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	defer c.Delete(context.TODO(), instance)

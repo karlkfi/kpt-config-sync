@@ -17,11 +17,27 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
 // Finalizer defines the k8s finalizer for bespin CRDs.
 const Finalizer string = "finalizer.bespin.dev"
+
+// ResourceState contains the resource state. An example of a gcp project state
+// may look like the below:
+// id              = folders/986145150667
+// create_time     = 2019-01-15T01:47:19.518Z
+// display_name    = zlu-org-folder1
+// lifecycle_state = ACTIVE
+// name            = folders/986145150667
+// parent          = organizations/975672035171
+// Please refer to each resource's Terraform (Google provider) doc for all the fields
+// that may appear in the state. For example, GCP project:
+// https://www.terraform.io/docs/providers/google/r/google_project.html
+type ResourceState map[string]string
 
 // Condition defines a set of common observed fields for GCP resources. This
 // is a copy-n-paste from CNRM code repo:
@@ -57,6 +73,40 @@ type IAMPolicyBinding struct {
 type IAMPolicySpec struct {
 	ResourceRef corev1.ObjectReference `json:"resourceRef"`
 	Bindings    []IAMPolicyBinding     `json:"bindings"`
+}
+
+// TFBindingsConfig returns IAM policy bindings in string.
+func (ispec *IAMPolicySpec) TFBindingsConfig() string {
+	// IAM policy bindings data.
+	// Example:
+	// data "google_iam_policy" "admin" {
+	//   binding {
+	//    role = "roles/compute.instanceAdmin"
+
+	//    members = [
+	//      "serviceAccount:your-custom-sa@your-project.iam.gserviceaccount.com",
+	//    ]
+	//   }
+	//   binding {
+	//     role = "roles/storage.objectViewer"
+
+	//     members = [
+	//       "user:jane@example.com",
+	//       "user:bob@company.com",
+	//     ]
+	//   }
+	// }
+	var bindings []string
+	for _, b := range ispec.Bindings {
+		bindings = append(bindings, fmt.Sprintf(`binding {
+role = "%s"
+members = [
+"%s"
+]}`, b.Role, strings.Join(b.Members, "\",\n\"")))
+	}
+	return fmt.Sprintf(`data "google_iam_policy" "admin" {
+%s
+}`, strings.Join(bindings, "\n"))
 }
 
 // IAMPolicyStatus defines the observed state of IAMPolicy

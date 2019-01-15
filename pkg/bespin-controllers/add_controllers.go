@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"github.com/google/nomos/pkg/bespin-controllers/clusteriampolicy"
 	"github.com/google/nomos/pkg/bespin-controllers/folder"
 	"github.com/google/nomos/pkg/bespin-controllers/iampolicy"
 	"github.com/google/nomos/pkg/bespin-controllers/organization"
@@ -31,6 +32,7 @@ func init() {
 		folder.Add,
 		organization.Add,
 		iampolicy.Add,
+		clusteriampolicy.Add,
 		organizationpolicy.Add,
 	)
 }

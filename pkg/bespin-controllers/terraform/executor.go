@@ -81,7 +81,7 @@ func execCommand(name string, args ...string) ([]byte, error) {
 type Resource interface {
 	// TFResourceConfig converts the resource's Spec struct into Terraform config string. tfState
 	// contains the Terraform local state about this resource from running UpdateState().
-	TFResourceConfig(ctx context.Context, c bespinv1.Client, tfState map[string]string) (string, error)
+	TFResourceConfig(ctx context.Context, c bespinv1.Client, tfState bespinv1.ResourceState) (string, error)
 
 	// TFImportConfig returns an empty Terraform resource block used for terraform import.
 	TFImportConfig() string

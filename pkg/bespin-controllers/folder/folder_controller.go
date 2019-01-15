@@ -22,10 +22,10 @@ import (
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/bespin-controllers/resource"
 	"github.com/google/nomos/pkg/bespin-controllers/slices"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,63 +78,68 @@ type ReconcileFolder struct {
 // and what is in the Folder.Spec. In cases where the underlying Terraform commands return errors, the error
 // details will be updated in the k8s resource "Status.SyncDetails.Error" field and the request will be
 // retried.
-// The comment line below(starting with +kubebuilder) does not work without kubebuilder code layout. It was
-// created by kubebuilder in some other repo. Kubebuilder can parse it to generate rbac yaml.
-// +kubebuilder:rbac:groups=bespin.dev,resources=folders,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	folder := &bespinv1.Folder{}
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
+	name := request.NamespacedName
+	folder := &bespinv1.Folder{}
 	if err := r.Get(ctx, request.NamespacedName, folder); err != nil {
 		// Instance was just deleted.
 		if k8serrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-		glog.Errorf("[Folder %v] reconciler failed to get folder instance: %v", request.NamespacedName, err)
+		glog.Errorf("[Folder %v] reconciler failed to get folder instance: %v", name, err)
 		return reconcile.Result{},
-			errors.Wrapf(err, "[Folder %v] reconciler failed to get folder instance", request.NamespacedName)
+			errors.Wrapf(err, "[Folder %v] reconciler failed to get folder instance", name)
 	}
-	tfe, err := terraform.NewExecutor(ctx, r.Client, folder)
+	newFolder := &bespinv1.Folder{}
+	folder.DeepCopyInto(newFolder)
+	tfe, err := terraform.NewExecutor(ctx, r.Client, newFolder)
 	if err != nil {
-		glog.Errorf("[Folder %v] reconciler failed to create new terraform executor: %v", request.NamespacedName, err)
+		glog.Errorf("[Folder %v] reconciler failed to create new terraform executor: %v", name, err)
 		return reconcile.Result{},
-			errors.Wrapf(err, "[Folder %v] reconciler failed to create new terraform executor", request.NamespacedName)
+			errors.Wrapf(err, "[Folder %v] reconciler failed to create new terraform executor", name)
 	}
 	defer func() {
-		if err != nil {
-			glog.Errorf("[Folder %v] reconciler failed: %v", request.NamespacedName, err)
-		}
 		if cErr := tfe.Close(); cErr != nil {
-			glog.Errorf("[Folder %v] reconciler failed to close Terraform executor: %v", request.NamespacedName, cErr)
+			glog.Errorf("[Folder %v] reconciler failed to close Terraform executor: %v", name, cErr)
 		}
 	}()
 	// Folder has been requested for deletion.
-	if !folder.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.doDeletion(tfe, folder)
+	if !newFolder.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.doDeletion(tfe, newFolder)
 	}
 	// Folder is not being deleted, make sure it has bespinv1.Finalizer.
-	if !slices.ContainsString(folder.ObjectMeta.Finalizers, bespinv1.Finalizer) {
-		folder.ObjectMeta.Finalizers = append(folder.ObjectMeta.Finalizers, bespinv1.Finalizer)
-		if err = r.Update(context.Background(), folder); err != nil {
-			glog.Errorf("[Folder %v] reconciler failed to add finalizer to k8s resource: %v",
-				folder.Spec.DisplayName, err)
-			return reconcile.Result{Requeue: true}, nil
-		}
-	}
-	// If Terraform returns an error, update API server with the error details; otherwise update
-	// the API server to bring the resource's Status in sync with its Spec.
-	if err = tfe.RunCreateOrUpdateFlow(); err != nil {
-		err = errors.Wrapf(err, "[Folder %v] reconciler failed to execute Terraform commands", request.NamespacedName)
-		if uErr := r.Update(ctx, folder); uErr != nil {
-			err = errors.Wrapf(err, "[Folder %v] reconciler failed to update Folder in API server: %v",
-				request.NamespacedName, uErr)
+	if !slices.ContainsString(newFolder.ObjectMeta.Finalizers, bespinv1.Finalizer) {
+		newFolder.ObjectMeta.Finalizers = append(newFolder.ObjectMeta.Finalizers, bespinv1.Finalizer)
+		if err = r.Update(context.Background(), newFolder); err != nil {
+			glog.Errorf("[Folder %v] reconciler failed to add finalizer to k8s resource: ", err)
+			err = errors.Wrapf(err, "[Folder %v] reconciler failed to add finalizer to k8s resource", name)
 		}
 		return reconcile.Result{}, err
 	}
-	if err = r.updateAPIServer(ctx, tfe, folder); err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "[Folder %v] reconciler failed to update Folder in API server",
-			request.NamespacedName)
+	if err = tfe.RunCreateOrUpdateFlow(); err != nil {
+		glog.Errorf("[Folder %v] reconciler failed to execute Terraform commands: %v", name, err)
+		err = errors.Wrapf(err, "[Folder %v] reconciler failed to execute Terraform commands", name)
+		// TODO(b/123044952): populate the error message to resource status.
+		return reconcile.Result{}, err
 	}
+
+	// Update the Folder ID field in Spec:
+	// 1. If this is a new Folder, adding the ID will allow its child-folder or child-projects
+	//    to be created under it.
+	// 2. If this is an existing Folder, the Folder ID effectively is not changed.
+	if err = updateFolderID(tfe, newFolder); err != nil {
+		glog.Errorf("[Folder %v] reconciler failed to update Folder ID: %v", name, err)
+		err = errors.Wrap(err, "reconciler failed to update Folder ID")
+		return reconcile.Result{}, err
+	}
+	if err = resource.Update(ctx, r.Client, folder, newFolder); err != nil {
+		glog.Errorf("[Folder %v] reconciler failed to update Folder in API server: %v", name, err)
+		err = errors.Wrap(err, "reconciler failed to update Folder in API server")
+		return reconcile.Result{}, err
+	}
+	glog.V(1).Infof("[Folder %v] reconciler successfully finished", name)
 	return reconcile.Result{}, nil
 }
 
@@ -160,28 +165,14 @@ func (r *ReconcileFolder) doDeletion(tfe *terraform.Executor, folder *bespinv1.F
 	return reconcile.Result{}, nil
 }
 
-// updateAPIServer updates the Folder object in k8s API server.
-// Note: r.Update() will trigger another Reconcile(), we should't update the API server
-// when there is nothing changed.
-func (r *ReconcileFolder) updateAPIServer(ctx context.Context, tfe *terraform.Executor, f *bespinv1.Folder) error {
+func updateFolderID(tfe *terraform.Executor, folder *bespinv1.Folder) error {
 	if err := tfe.UpdateState(); err != nil {
-		return errors.Wrapf(err, "[Folder %v] failed to update terraform state", f.Spec.DisplayName)
+		return errors.Wrapf(err, "[Folder %v] failed to update terraform state", folder.Spec.DisplayName)
 	}
 	id, err := tfe.GetFolderID()
 	if err != nil {
-		return errors.Wrapf(err, "[Folder %v] failed to get Folder ID from terraform state", f.Spec.DisplayName)
+		return errors.Wrapf(err, "[Folder %v] failed to get Folder ID from terraform state", folder.Spec.DisplayName)
 	}
-
-	newF := &bespinv1.Folder{}
-	f.DeepCopyInto(newF)
-	newF.Spec.ID = id
-
-	if equality.Semantic.DeepEqual(f, newF) {
-		glog.V(1).Infof("[Folder %v] nothing to update", newF.Spec.DisplayName)
-		return nil
-	}
-	if err := r.Update(ctx, newF); err != nil {
-		return errors.Wrapf(err, "[Folder %v] failed to update Folder in API server", newF.Spec.DisplayName)
-	}
+	folder.Spec.ID = id
 	return nil
 }

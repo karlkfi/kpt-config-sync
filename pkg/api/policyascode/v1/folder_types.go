@@ -20,10 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 func init() {
@@ -67,34 +65,21 @@ type FolderList struct {
 
 // TFResourceConfig converts the Folder's Spec struct into terraform config string.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (f *Folder) TFResourceConfig(ctx context.Context, c Client, tfState map[string]string) (string, error) {
+func (f *Folder) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
 	var parent string
-	resName := types.NamespacedName{Name: f.Spec.ParentRef.Name}
-	switch f.Spec.ParentRef.Kind {
-	case OrganizationKind:
-		org := &Organization{}
-		if err := c.Get(ctx, resName, org); err != nil {
-			return "", errors.Wrapf(err, "failed to get parent Organization instance: %v", resName)
+	pKind := f.Spec.ParentRef.Kind
+	switch pKind {
+	case OrganizationKind, FolderKind:
+		id, err := ResourceID(ctx, c, f.Spec.ParentRef.Kind, f.Spec.ParentRef.Name, EmptyNamespace)
+		if err != nil {
+			return "", err
 		}
-		ID := org.ID()
-		if ID == "" {
-			return "", fmt.Errorf("missing parent Organization ID: %v", resName)
+		if pKind == OrganizationKind {
+			parent = fmt.Sprintf("organizations/%s", id)
+		} else {
+			parent = fmt.Sprintf("folders/%s", id)
 		}
-		parent = fmt.Sprintf("organizations/%s", ID)
-	case FolderKind:
-		folder := &Folder{}
-		if err := c.Get(ctx, resName, folder); err != nil {
-			return "", errors.Wrapf(err, "failed to get parent Folder instance: %v", resName)
-		}
-		ID := folder.ID()
-		if ID == "" {
-			return "", fmt.Errorf("missing parent Folder ID: %v", resName)
-		}
-		parent = fmt.Sprintf("folders/%s", ID)
 	case "":
-		if f.Spec.ParentRef.Name != "" {
-			return "", fmt.Errorf("invalid parent reference name when parent reference kind is missing: %v", f.Spec.ParentRef.Name)
-		}
 		// Terraform requires the parent field to present, get the parent from Terraform local state.
 		p, ok := tfState["parent"]
 		if !ok || p == "" {
@@ -102,7 +87,7 @@ func (f *Folder) TFResourceConfig(ctx context.Context, c Client, tfState map[str
 		}
 		parent = p
 	default:
-		return "", fmt.Errorf("invalid parent reference kind: %v", f.Spec.ParentRef.Kind)
+		return "", fmt.Errorf("invalid parent reference kind: %v", pKind)
 	}
 
 	return fmt.Sprintf(`resource "google_folder" "bespin_folder" {

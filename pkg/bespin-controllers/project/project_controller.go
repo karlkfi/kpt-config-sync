@@ -22,10 +22,10 @@ import (
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/bespin-controllers/resource"
 	"github.com/google/nomos/pkg/bespin-controllers/slices"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -76,55 +76,58 @@ type ReconcileProject struct {
 
 // Reconcile reads that state of the cluster for a Project object and makes changes based on the state read
 // and what is in the Project.Spec.
-// The comment line below(starting with +kubebuilder) does not work without kubebuilder code layout. It was
-// created by kubebuilder in some other repo. Kubebuilder can parse it to generate RBAC YAML.
-// +kubebuilder:rbac:groups=bespin.dev,resources=projects,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), reconcileTimeout)
 	defer cancel()
+	name := request.NamespacedName
 	project := &bespinv1.Project{}
-	if err := r.Get(ctx, request.NamespacedName, project); err != nil {
+	if err := r.Get(ctx, name, project); err != nil {
 		// Instance was just deleted.
 		if k8serrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-		glog.Errorf("[Project %v] failed to get project instance: %v", request.NamespacedName, err)
+		glog.Errorf("[Project %v] failed to get project instance: %v", name, err)
 		return reconcile.Result{}, errors.Wrapf(err,
-			"[Project %v] failed to get project instance", request.NamespacedName)
+			"[Project %v] failed to get project instance", name)
 	}
-	tfe, err := terraform.NewExecutor(ctx, r.Client, project)
+	newProject := &bespinv1.Project{}
+	project.DeepCopyInto(newProject)
+	tfe, err := terraform.NewExecutor(ctx, r.Client, newProject)
 	if err != nil {
-		glog.Errorf("[Project %v] reconciler failed to create new Terraform executor: %v", request.NamespacedName, err)
+		glog.Errorf("[Project %v] reconciler failed to create new Terraform executor: %v", name, err)
 		return reconcile.Result{}, errors.Wrapf(err,
-			"[Project %v] reconciler failed to create new Terraform executor", request.NamespacedName)
+			"[Project %v] reconciler failed to create new Terraform executor", name)
 	}
 	defer func() {
-		if err = tfe.Close(); err != nil {
-			glog.Errorf("[Project %v] reconciler failed to close Terraform executor: %v", request.NamespacedName, err)
-			err = errors.Wrapf(err,
-				"[Project %v] reconciler failed to close Terraform executor", request.NamespacedName)
+		if cErr := tfe.Close(); cErr != nil {
+			glog.Errorf("[Folder %v] reconciler failed to close Terraform executor: %v", name, cErr)
 		}
 	}()
 	// Project is being deleted.
-	if !project.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.doDeletion(tfe, project)
+	if !newProject.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.doDeletion(tfe, newProject)
 	}
 	// Project is not being deleted, make sure it has bespinv1.Finalizer.
-	if !slices.ContainsString(project.ObjectMeta.Finalizers, bespinv1.Finalizer) {
-		project.ObjectMeta.Finalizers = append(project.ObjectMeta.Finalizers, bespinv1.Finalizer)
-		if err = r.Update(context.Background(), project); err != nil {
-			return reconcile.Result{Requeue: true}, nil
+	if !slices.ContainsString(newProject.ObjectMeta.Finalizers, bespinv1.Finalizer) {
+		newProject.ObjectMeta.Finalizers = append(newProject.ObjectMeta.Finalizers, bespinv1.Finalizer)
+		if err = r.Update(context.Background(), newProject); err != nil {
+			glog.Errorf("[Project %v] reconciler failed to add finalizer to k8s resource: ", err)
+			err = errors.Wrapf(err, "[Project %v] reconciler failed to add finalizer to k8s resource", name)
 		}
+		return reconcile.Result{}, err
 	}
 	if err = tfe.RunCreateOrUpdateFlow(); err != nil {
-		glog.Errorf("[Project %v] reconciler failed to run Terraform command: %v", request.NamespacedName, err)
+		glog.Errorf("[Project %v] reconciler failed to run Terraform command: %v", name, err)
+		// TODO(b/123044952): populate the error message to resource status.
 		return reconcile.Result{}, errors.Wrapf(err,
-			"[Project %v] reconciler failed to run Terraform command", request.NamespacedName)
+			"[Project %v] reconciler failed to run Terraform command", name)
 	}
-	if err = r.updateServer(ctx, project); err != nil {
+	if err = resource.Update(ctx, r.Client, project, newProject); err != nil {
+		glog.Errorf("[Project %v] reconciler failed to update Project in API server: %v", name, err)
 		err = errors.Wrap(err, "reconciler failed to update Project in API server")
 		return reconcile.Result{}, err
 	}
+	glog.V(1).Infof("[Project %v] reconciler successfully finished", name)
 	return reconcile.Result{}, nil
 }
 
@@ -146,24 +149,7 @@ func (r *ReconcileProject) doDeletion(tfe *terraform.Executor, project *bespinv1
 	if err := r.Update(context.Background(), project); err != nil {
 		glog.Errorf("[Project %v] reconciler failed to remove finalizer from k8s resource: %v",
 			project.Spec.DisplayName, err)
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{}, nil
 	}
 	return reconcile.Result{}, nil
-}
-
-// updateServer updates the Project object in k8s API server.
-// Note: r.Update() will trigger another Reconcile(), we should't update the API server
-// when there is nothing changed.
-func (r *ReconcileProject) updateServer(ctx context.Context, p *bespinv1.Project) error {
-	newP := &bespinv1.Project{}
-	p.DeepCopyInto(newP)
-
-	if equality.Semantic.DeepEqual(p, newP) {
-		glog.V(1).Infof("[Project %v] nothing to update", newP.Spec.DisplayName)
-		return nil
-	}
-	if err := r.Update(ctx, newP); err != nil {
-		return errors.Wrap(err, "failed to update Project in API server")
-	}
-	return nil
 }

@@ -66,8 +66,9 @@ func TestQuoteList(t *testing.T) {
 }
 func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 	org := &Organization{
+		TypeMeta:   metav1.TypeMeta{Kind: OrganizationKind},
 		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
-		Spec:       OrganizationSpec{},
+		Spec:       OrganizationSpec{ID: 123456789},
 		Status:     OrganizationStatus{},
 	}
 	folder := &Folder{

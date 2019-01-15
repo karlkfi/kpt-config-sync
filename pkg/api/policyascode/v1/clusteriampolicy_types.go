@@ -17,6 +17,9 @@ limitations under the License.
 package v1
 
 import (
+	"context"
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -45,4 +48,65 @@ type ClusterIAMPolicyList struct {
 
 func init() {
 	SchemeBuilder.Register(&ClusterIAMPolicy{}, &ClusterIAMPolicyList{})
+}
+
+// TFResourceConfig converts the ClusterIAMPolicy's Spec struct into terraform config string.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+func (i *ClusterIAMPolicy) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
+	var tfs string
+	refKind := i.Spec.ResourceRef.Kind
+	id, err := ResourceID(ctx, c, i.Spec.ResourceRef.Kind, i.Spec.ResourceRef.Name, EmptyNamespace)
+	if err != nil {
+		return "", err
+	}
+	switch refKind {
+	case OrganizationKind:
+		tfs = fmt.Sprintf(`resource "google_organization_iam_policy" "bespin_organization_iam_policy" {
+org_id = "organizations/%s"
+`, id)
+	case FolderKind:
+		tfs = fmt.Sprintf(`resource "google_folder_iam_policy" "bespin_folder_iam_policy" {
+folder = "folders/%s"
+`, id)
+	default:
+		return "", fmt.Errorf("invalid resource reference kind for ClusterIAMPolicy: %v", refKind)
+	}
+	// TODO(b/122963799): format Terraform config string using https://github.com/hashicorp/hcl/blob/master/hcl/printer/printer.go
+	tfs = tfs + `policy_data = "${data.google_iam_policy.admin.policy_data}"
+}
+`
+	return tfs + i.Spec.TFBindingsConfig(), nil
+}
+
+// TFImportConfig returns a terraform ClusterIAMPolicy resource block used for terraform import.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+func (i *ClusterIAMPolicy) TFImportConfig() string {
+	switch i.Spec.ResourceRef.Kind {
+	case OrganizationKind:
+		return `resource "google_organization_iam_policy" "organization_iam_policy" {}`
+	case FolderKind:
+		return `resource "google_folder_iam_policy" "folder_iam_policy" {}`
+	default:
+		return ""
+	}
+}
+
+// TFResourceAddr returns the address of this ClusterIAMPolicy resource in Terraform config.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+func (i *ClusterIAMPolicy) TFResourceAddr() string {
+	switch i.Spec.ResourceRef.Kind {
+	case OrganizationKind:
+		return "google_organization_iam_policy.organization_iam_policy"
+	case FolderKind:
+		return "google_folder_iam_policy.folder_iam_policy"
+	default:
+		return ""
+	}
+}
+
+// ID returns the reference resource ID.
+// TODO(b/122925391): fetch resource reference ID from api server.
+// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+func (i *ClusterIAMPolicy) ID() string {
+	return ""
 }

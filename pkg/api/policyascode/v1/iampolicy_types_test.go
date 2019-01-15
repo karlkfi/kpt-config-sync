@@ -87,118 +87,12 @@ func TestIAMPolicyTFResourceConfig(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "IAMPolicy for Organization",
-			ip: &IAMPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
-				Spec: IAMPolicySpec{
-					ResourceRef: corev1.ObjectReference{
-						Kind: "Organization",
-						Name: "bar",
-					},
-					Bindings: []IAMPolicyBinding{
-						{
-							Members: []string{
-								"user:member1@foo.com",
-								"user:member2@bar.com",
-							},
-							Role: "roles/iam.organizationRoleAdmin",
-						},
-						{
-							Members: []string{
-								"serviceAccount:service-account@foo.com",
-							},
-							Role: "roles/iam.organizationRoleAdmin",
-						},
-					},
-				},
-				Status: IAMPolicyStatus{},
-			},
-			c: &stubClient{
-				obj: &Organization{
-					Spec: OrganizationSpec{
-						ID: 1234567,
-					},
-				},
-			},
-			want: `resource "google_organization_iam_policy" "bespin_organization_iam_policy" {
-org_id = "organizations/1234567"
-policy_data = "${data.google_iam_policy.admin.policy_data}"
-}
-data "google_iam_policy" "admin" {
-binding {
-role = "roles/iam.organizationRoleAdmin"
-members = [
-"user:member1@foo.com",
-"user:member2@bar.com",
-]}
-binding {
-role = "roles/iam.organizationRoleAdmin"
-members = [
-"serviceAccount:service-account@foo.com",
-]}
-}`,
-			wantErr: false,
-		},
-		{
-			name: "IAMPolicy for Folder",
-			ip: &IAMPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
-				Spec: IAMPolicySpec{
-					ResourceRef: corev1.ObjectReference{
-						Kind: "Folder",
-						Name: "bar",
-					},
-					Bindings: []IAMPolicyBinding{
-						{
-							Members: []string{
-								"user:member1@foo.com",
-								"user:member2@bar.com",
-							},
-							Role: "roles/resourcemanager.folderAdmin",
-						},
-						{
-							Members: []string{
-								"serviceAccount:service-account@foo.com",
-							},
-							Role: "roles/resourcemanager.folderAdmin",
-						},
-					},
-				},
-				Status: IAMPolicyStatus{},
-			},
-			c: &stubClient{
-				obj: &Folder{
-					Spec: FolderSpec{
-						ID: 1234567,
-					},
-				},
-			},
-			want: `resource "google_folder_iam_policy" "bespin_folder_iam_policy" {
-folder = "folders/1234567"
-policy_data = "${data.google_iam_policy.admin.policy_data}"
-}
-data "google_iam_policy" "admin" {
-binding {
-role = "roles/resourcemanager.folderAdmin"
-members = [
-"user:member1@foo.com",
-"user:member2@bar.com",
-]}
-binding {
-role = "roles/resourcemanager.folderAdmin"
-members = [
-"serviceAccount:service-account@foo.com",
-]}
-}`,
-			wantErr: false,
-		},
-		{
 			name: "IAMPolicy for Project",
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: IAMPolicySpec{
 					ResourceRef: corev1.ObjectReference{
-						Kind: "Project",
+						Kind: ProjectKind,
 						Name: "bar",
 					},
 					Bindings: []IAMPolicyBinding{
@@ -235,23 +129,23 @@ binding {
 role = "roles/editor"
 members = [
 "user:member1@foo.com",
-"user:member2@bar.com",
+"user:member2@bar.com"
 ]}
 binding {
 role = "roles/owner"
 members = [
-"serviceAccount:service-account@foo.com",
+"serviceAccount:service-account@foo.com"
 ]}
 }`,
 			wantErr: false,
 		},
 		{
-			name: "IAMPolicy for Organization, but missing Organization ID",
+			name: "IAMPolicy with invalid Organization reference",
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: IAMPolicySpec{
 					ResourceRef: corev1.ObjectReference{
-						Kind: "Organization",
+						Kind: OrganizationKind,
 						Name: "bar",
 					},
 					Bindings: []IAMPolicyBinding{
@@ -274,19 +168,20 @@ members = [
 			},
 			c: &stubClient{
 				obj: &Organization{
-					Spec: OrganizationSpec{},
+					Spec: OrganizationSpec{
+						ID: 1234567,
+					},
 				},
 			},
-			want:    "",
 			wantErr: true,
 		},
 		{
-			name: "IAMPolicy for Folder, but missing Folder ID",
+			name: "IAMPolicy with invalid Folder reference",
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 				Spec: IAMPolicySpec{
 					ResourceRef: corev1.ObjectReference{
-						Kind: "Folder",
+						Kind: FolderKind,
 						Name: "bar",
 					},
 					Bindings: []IAMPolicyBinding{
@@ -309,10 +204,11 @@ members = [
 			},
 			c: &stubClient{
 				obj: &Folder{
-					Spec: FolderSpec{},
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
 				},
 			},
-			want:    "",
 			wantErr: true,
 		},
 		{
@@ -321,7 +217,7 @@ members = [
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: IAMPolicySpec{
 					ResourceRef: corev1.ObjectReference{
-						Kind: "Project",
+						Kind: ProjectKind,
 						Name: "bar",
 					},
 					Bindings: []IAMPolicyBinding{
@@ -347,7 +243,6 @@ members = [
 					Spec: ProjectSpec{},
 				},
 			},
-			want:    "",
 			wantErr: true,
 		},
 		{
@@ -384,18 +279,13 @@ members = [
 					},
 				},
 			},
-			want:    "",
 			wantErr: true,
 		},
 		{
-			name: "IAMPolicy with No ResourceReference",
+			name: "IAMPolicy with No ResourceRef",
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: IAMPolicySpec{
-					ResourceRef: corev1.ObjectReference{
-						Kind: "Project",
-						Name: "bar",
-					},
 					Bindings: []IAMPolicyBinding{
 						{
 							Members: []string{
@@ -414,12 +304,7 @@ members = [
 				},
 				Status: IAMPolicyStatus{},
 			},
-			c: &stubClient{
-				obj: &Project{
-					Spec: ProjectSpec{},
-				},
-			},
-			want:    "",
+			c:       &stubClient{},
 			wantErr: true,
 		},
 	}

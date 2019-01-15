@@ -46,10 +46,11 @@ type container interface {
 	DeepCopyObject() runtime.Object
 }
 
-// ResourceID implements the ResourceClient interface
-func ResourceID(ctx context.Context, client Client, Kind string, Name string) (string, error) {
+// ResourceID implements the ResourceClient interface. An empty Namespace means the resoure to look up
+// is a cluster-scoped resource.
+func ResourceID(ctx context.Context, client Client, Kind string, Name string, Namespace string) (string, error) {
 	var res container
-	resName := types.NamespacedName{Name: Name}
+	resName := types.NamespacedName{Name: Name, Namespace: Namespace}
 	switch Kind {
 	case OrganizationKind:
 		res = &Organization{}
@@ -61,7 +62,10 @@ func ResourceID(ctx context.Context, client Client, Kind string, Name string) (s
 		return "", fmt.Errorf("invalid kind: %v", Kind)
 	}
 	if err := client.Get(ctx, resName, res); err != nil {
-		return "", errors.Wrapf(err, "failed to get resource: %v/%v", Kind, Name)
+		return "", errors.Wrapf(err, "failed to get resource: %v/%v within namespace: %v", Kind, Name, Namespace)
+	}
+	if res.ID() == "" {
+		return "", fmt.Errorf("missing resource ID: %v/%v within namespace: %v", Kind, Name, Namespace)
 	}
 	return res.ID(), nil
 }

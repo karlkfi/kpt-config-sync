@@ -20,10 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 func init() {
@@ -66,37 +64,28 @@ type ProjectList struct {
 
 // TFResourceConfig converts the Project's Spec struct into terraform config string.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (p *Project) TFResourceConfig(ctx context.Context, c Client, tfState map[string]string) (string, error) {
+func (p *Project) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
+	pKind := p.Spec.ParentRef.Kind
+	pName := p.Spec.ParentRef.Name
 	var parent string
-	resName := types.NamespacedName{Name: p.Spec.ParentRef.Name}
-	switch p.Spec.ParentRef.Kind {
-	case OrganizationKind:
-		org := &Organization{}
-		if err := c.Get(ctx, resName, org); err != nil {
-			return "", errors.Wrapf(err, "failed to get parent Organization instance: %v", resName)
+	switch pKind {
+	case OrganizationKind, FolderKind:
+		ID, err := ResourceID(ctx, c, pKind, pName, EmptyNamespace)
+		if err != nil {
+			return "", err
 		}
-		ID := org.ID()
-		if ID == "" {
-			return "", fmt.Errorf("missing parent Organization ID: %v", resName)
+		if pKind == OrganizationKind {
+			parent = fmt.Sprintf(`org_id = "%s"`, ID)
+		} else {
+			parent = fmt.Sprintf(`folder_id = "%s"`, ID)
 		}
-		parent = fmt.Sprintf(`org_id = "%s"`, ID)
-	case FolderKind:
-		folder := &Folder{}
-		if err := c.Get(ctx, resName, folder); err != nil {
-			return "", errors.Wrapf(err, "failed to get parent Folder instance: %v", resName)
-		}
-		ID := folder.ID()
-		if ID == "" {
-			return "", fmt.Errorf("missing parent Folder ID: %v", resName)
-		}
-		parent = fmt.Sprintf(`folder_id = "%s"`, ID)
 	case "":
-		if p.Spec.ParentRef.Name != "" {
-			return "", fmt.Errorf("invalid parent reference name when parent reference kind is missing: %v", p.Spec.ParentRef.Name)
+		if pName != "" {
+			return "", fmt.Errorf("invalid parent reference name when parent reference kind is missing: %v", pName)
 		}
 		// No parent reference.
 	default:
-		return "", fmt.Errorf("invalid parent reference kind: %v", p.Spec.ParentRef.Kind)
+		return "", fmt.Errorf("invalid parent reference kind: %v", pKind)
 	}
 
 	return fmt.Sprintf(`resource "google_project" "bespin_project" {

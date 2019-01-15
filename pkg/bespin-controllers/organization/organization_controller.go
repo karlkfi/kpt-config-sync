@@ -77,9 +77,6 @@ type ReconcileOrganization struct {
 // In cases where the underlying Terraform commands return errors, the error
 // details will be updated in the k8s resource "Status.SyncDetails.Error" field and the request will be
 // retried.
-// The comment line below(starting with +kubebuilder) does not work without kubebuilder code layout. It was
-// created by kubebuilder in some other repo. Kubebuilder can parse it to generate rbac yaml.
-// +kubebuilder:rbac:groups=bespin.dev,resources=organizations,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileOrganization) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	organization := &bespinv1.Organization{}
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
@@ -97,10 +94,6 @@ func (r *ReconcileOrganization) Reconcile(request reconcile.Request) (reconcile.
 			errors.Wrapf(err, "[Organization %v] reconciler failed to create new Terraform executor", request.NamespacedName)
 	}
 	defer func() {
-		if err != nil {
-			glog.Errorf("[Organization %v] reconciler failed: %v", request.NamespacedName, err)
-			return
-		}
 		if cErr := tfe.Close(); cErr != nil {
 			glog.Errorf("[Organization %v] reconciler failed to close Terraform executor: %v", request.NamespacedName, cErr)
 		}

@@ -22,15 +22,14 @@ import (
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/bespin-controllers/resource"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -77,97 +76,63 @@ type ReconcileIAMPolicy struct {
 
 // Reconcile reads that state of the cluster for a IAMPolicy object and makes changes based on the state read
 // and what is in the IAMPolicy.Spec.
-// The comment line below (starting with +kubebuilder) does not work without kubebuilder code layout. It was
-// created by kubebuilder in some other repo. Kubebuilder can parse it to generate RBAC YAML.
-// +kubebuilder:rbac:groups=bespin.dev,resources=iampolicy,verbs=get;list;watch;create;update;patch;delete
-// TODO(b/120504718): Refactor the code to avoid using string literals.
 func (r *ReconcileIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// Fetch the IAMPolicy instance.
-	iampolicy := &bespinv1.IAMPolicy{}
 	ctx, cancel := context.WithTimeout(context.TODO(), reconcileTimeout)
 	defer cancel()
-	if err := r.Get(ctx, request.NamespacedName, iampolicy); err != nil {
-		// Instance was just deleted or there's some internal K8S error.
+	iam := &bespinv1.IAMPolicy{}
+	name := request.NamespacedName
+	if err := r.Get(ctx, name, iam); err != nil {
+		// Instance was just deleted.
 		if k8serrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		glog.Errorf("IAMPolicy reconciler error in getting iampolicy instance: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler error in getting iampolicy instance")
 	}
-	if err := r.ensureOwnerReference(ctx, iampolicy); err != nil {
+	newiam := &bespinv1.IAMPolicy{}
+	iam.DeepCopyInto(newiam)
+	if err := r.setOwnerReference(ctx, newiam); err != nil {
 		glog.Errorf("IAMPolicy reconciler failed to set owner reference: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to set owner reference")
 	}
-	// TODO(b/119327784): Handle the deletion by using finalizer: check for deletionTimestamp, verify
-	// the delete finalizer is there, handle delete from GCP, then remove the finalizer.
-	tfe, err := terraform.NewExecutor(ctx, r.Client, iampolicy)
+	tfe, err := terraform.NewExecutor(ctx, r.Client, newiam)
 	if err != nil {
 		glog.Errorf("IAMPolicy reconciler failed to create new Terraform executor: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to create new Terraform executor")
 	}
 	defer func() {
-		err = tfe.Close()
-		if err != nil {
-			glog.Errorf("IAMPolicy reconciler failed to close Terraform executor: %v", err)
-			err = errors.Wrap(err, "IAMPolicy reconciler failed to close Terraform executor")
+		if cErr := tfe.Close(); cErr != nil {
+			glog.Errorf("[IAMPolicy %v] reconciler failed to close Terraform executor: %v", name, cErr)
 		}
 	}()
 
-	err = tfe.RunCreateOrUpdateFlow()
-	if err != nil {
+	if err = tfe.RunCreateOrUpdateFlow(); err != nil {
 		glog.Errorf("IAMPolicy reconciler failed to run Terraform command: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to run Terraform command")
 	}
 
-	if err = r.updateServer(ctx, iampolicy); err != nil {
+	if err = resource.Update(ctx, r.Client, iam, newiam); err != nil {
 		err = errors.Wrap(err, "reconciler failed to update IAMPolicy in API server")
 		return reconcile.Result{}, err
 	}
+	glog.V(1).Infof("[IAMPolicy %v] reconciler successfully finished", name)
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileIAMPolicy) ensureOwnerReference(ctx context.Context, iampolicy *bespinv1.IAMPolicy) error {
-	if iampolicy.Spec.ResourceRef.Kind != bespinv1.ProjectKind {
-		return errors.Errorf("invalid resource reference reference kind: %v", iampolicy.Spec.ResourceRef.Kind)
-	}
-	resourceName := types.NamespacedName{Namespace: iampolicy.Namespace, Name: iampolicy.Spec.ResourceRef.Name}
-	project := &bespinv1.Project{}
-	if err := r.Get(ctx, resourceName, project); err != nil {
-		return errors.Wrapf(err, "failed to get resource reference Project instance: %v", resourceName)
-	}
-	uid := project.GetUID()
-	if uid == "" {
-		return errors.Errorf("missing resource reference Project UID: %v", resourceName)
-	}
-	name := project.GetName()
-	if name == "" {
-		return errors.Errorf("missing resource reference Project Name: %v", resourceName)
-	}
-	owner := metav1.OwnerReference{
-		Kind:       bespinv1.ProjectKind,
-		APIVersion: bespinv1.SchemeGroupVersion.Version,
-		Name:       name,
-		UID:        uid,
-	}
-	glog.V(1).Infof("[IAMPolicy %v] set OwnerReference: %v", iampolicy.Name, owner)
-	iampolicy.SetOwnerReferences([]metav1.OwnerReference{owner})
-	return nil
-}
-
-// updateServer updates the IAMPolicy object in k8s API server.
-// Note: r.Update() will trigger another Reconcile(), we should't update the API server
-// when there is nothing changed.
-func (r *ReconcileIAMPolicy) updateServer(ctx context.Context, iampolicy *bespinv1.IAMPolicy) error {
-	newI := &bespinv1.IAMPolicy{}
-	iampolicy.DeepCopyInto(newI)
-
-	// If there's no diff, we don't need to Update().
-	if equality.Semantic.DeepEqual(iampolicy, newI) {
-		glog.V(1).Infof("[IAMPolicy %v] nothing to update", newI.Name)
-		return nil
-	}
-	if err := r.Update(ctx, newI); err != nil {
-		return errors.Wrapf(err, "failed to update SyncDetails of IAMPolicy %s in API server.", iampolicy.Name)
+func (r *ReconcileIAMPolicy) setOwnerReference(ctx context.Context, iampolicy *bespinv1.IAMPolicy) error {
+	refKind := iampolicy.Spec.ResourceRef.Kind
+	switch refKind {
+	case bespinv1.ProjectKind:
+		owner, err := resource.Get(ctx, r.Client, refKind, iampolicy.Spec.ResourceRef.Name, iampolicy.Namespace)
+		if err != nil {
+			return err
+		}
+		if err := controllerutil.SetControllerReference(owner, iampolicy, r.scheme); err != nil {
+			return errors.Errorf("reconciler failed to set controller reference: %v", err)
+		}
+		glog.V(1).Infof("[IAMPolicy %v] successfully set OwnerReference: %v", iampolicy.Name, owner)
+	default:
+		return errors.Errorf("invalid resource reference reference kind: %v", refKind)
 	}
 	return nil
 }

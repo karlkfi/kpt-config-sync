@@ -71,7 +71,7 @@ func SetupTestReconcile(inner reconcile.Reconciler) (reconcile.Reconciler, chan 
 	return fn, requests
 }
 
-// StartTestManager adds recFn
+// StartTestManager starts the manager.
 func StartTestManager(mgr manager.Manager, g *gomega.GomegaWithT) chan struct{} {
 	stop := make(chan struct{})
 	go func() {

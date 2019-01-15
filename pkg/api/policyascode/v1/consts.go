@@ -18,9 +18,6 @@ package v1
 
 // List of variables used across all types.
 const (
-	// Annotation key of parent Organization ID.
-	ParentOrganizationIDKey = "Bespin-Parent-Organization-ID"
-
-	// Annotation key of parent Folder ID.
-	ParentFolderIDKey = "Bespin-Parent-Folder-ID"
+	// EmptyNamespace is an empty string that represents a cluster-scoped resource's namespace.
+	EmptyNamespace = ""
 )
