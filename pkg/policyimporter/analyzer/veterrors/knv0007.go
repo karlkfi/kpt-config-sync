@@ -1,7 +1,7 @@
 package veterrors
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
@@ -23,7 +23,7 @@ func (e IllegalAbstractNamespaceObjectKindError) Error() string {
 		"Resource %[4]q illegally declared in an %[1]s directory. "+
 			"Move this Resource to a %[2]s directory:\n\n"+
 			"%[3]s",
-		ast.AbstractNamespace, ast.Namespace, id.PrintResource(e), e.Name())
+		node.AbstractNamespace, node.Namespace, id.PrintResource(e), e.Name())
 }
 
 // Code implements Error

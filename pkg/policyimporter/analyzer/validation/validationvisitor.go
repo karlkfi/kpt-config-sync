@@ -18,6 +18,7 @@ package validation
 import (
 	"path"
 
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
@@ -107,7 +108,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		// If len == 0, this node has no ancestors and so cannot be the child of a Namespace directory.
 		// If len == 1, this is a child of namespaces/ and so it cannot be the child of a Namespace directory.
 		// We check for the two cases above elsewhere, so adding errors here adds noise and incorrect advice.
-		if parent := v.nodes[len(v.nodes)-1]; parent.Type == ast.Namespace {
+		if parent := v.nodes[len(v.nodes)-1]; parent.Type == node.Namespace {
 			v.errs.Add(veterrors.IllegalNamespaceSubdirectoryError{Child: n, Parent: parent})
 		}
 	}
@@ -153,8 +154,8 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 		}
 	}
 
-	node := v.nodes[len(v.nodes)-1]
-	if node.Type == ast.AbstractNamespace {
+	n := v.nodes[len(v.nodes)-1]
+	if n.Type == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[o.GroupVersionKind().GroupKind()]
 		if !found || spec.Mode == v1alpha1.HierarchyModeNone {
 			v.errs.Add(veterrors.IllegalAbstractNamespaceObjectKindError{Resource: o})

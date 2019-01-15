@@ -2,7 +2,7 @@ package veterrors
 
 import (
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
@@ -47,7 +47,7 @@ func (e InvalidNamespaceNameError) Error() string {
 		"A %[1]s MUST declare metadata.name that matches the name of its directory.\n\n"+
 			"%[2]s\n\n"+
 			"expected metadata.name: %[3]s\n",
-		ast.Namespace, id.PrintResource(e), e.Expected)
+		node.Namespace, id.PrintResource(e), e.Expected)
 }
 
 // Code implements Error

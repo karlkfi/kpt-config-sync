@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/pkg/errors"
 )
@@ -109,7 +109,7 @@ func (e errorDocCode) Nomosvet() string {
 
 // Namespace returns the Namespace object string
 func (e errorDocCode) Namespace() string {
-	return string(ast.Namespace)
+	return string(node.Namespace)
 }
 
 // NamespacesDir returns the dir holding Namespaces

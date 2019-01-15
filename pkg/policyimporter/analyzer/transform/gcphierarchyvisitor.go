@@ -52,6 +52,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
@@ -161,7 +162,7 @@ func (v *GCPHierarchyVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	}
 	if v.ctx.needsNamespace() {
 		glog.V(1).Infof("Marking tree node %v as namespace scope", newNode.RelativeSlashPath())
-		newNode.Type = ast.Namespace
+		newNode.Type = node.Namespace
 	}
 	if v.ctx.clusterObj != nil {
 		glog.V(1).Infof("Moving %v to cluster scope", v.ctx.clusterObj.RelativeSlashPath())

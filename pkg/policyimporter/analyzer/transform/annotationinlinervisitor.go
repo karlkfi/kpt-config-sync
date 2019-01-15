@@ -22,6 +22,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -104,7 +105,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 	n = n.PartialCopy()
 	m := valueMap{}
 	for k, s := range n.Selectors {
-		if n.Type == ast.Namespace {
+		if n.Type == node.Namespace {
 			// TODO(b/122739070) This should already be validated in parser.
 			v.errs.Add(veterrors.UndocumentedErrorf("NamespaceSelector must not be in namespace directories, found in %q", n.RelativeSlashPath()))
 			return n

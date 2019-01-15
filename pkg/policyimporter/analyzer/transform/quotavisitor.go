@@ -18,6 +18,7 @@ package transform
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/resourcequota"
 	corev1 "k8s.io/api/core/v1"
@@ -98,9 +99,9 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.ctx = context
 	newNode := v.Copying.VisitTreeNode(n)
 
-	if (n.Type == ast.AbstractNamespace && context.quota != nil) || (n.Type == ast.Namespace) {
+	if (n.Type == node.AbstractNamespace && context.quota != nil) || (n.Type == node.Namespace) {
 		if quota := context.aggregated(); quota != nil {
-			if n.Type == ast.Namespace {
+			if n.Type == node.Namespace {
 				labeledQuota := *quota
 				labeledQuota.Labels = resourcequota.NewNomosQuotaLabels()
 				quota = &labeledQuota

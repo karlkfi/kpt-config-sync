@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -54,13 +55,13 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "annotate policyspace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:     ast.AbstractNamespace,
+					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:        ast.AbstractNamespace,
+					Type:        node.AbstractNamespace,
 					Relative:    nomospath.NewFakeRelative("namespaces"),
 					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
 				},
@@ -70,13 +71,13 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "annotate namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:     ast.Namespace,
+					Type:     node.Namespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:        ast.Namespace,
+					Type:        node.Namespace,
 					Relative:    nomospath.NewFakeRelative("namespaces"),
 					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
 				},
@@ -86,7 +87,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "annotate RoleBinding in policyspace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:     ast.AbstractNamespace,
+					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(vt.Helper.AdminRoleBinding(), nomospath.NewFakeRelative("acme/admin.yaml")),
@@ -95,7 +96,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:     ast.AbstractNamespace,
+					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), nomospath.NewFakeRelative("acme/admin.yaml")),
@@ -108,7 +109,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "annotate RoleBinding in namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:     ast.Namespace,
+					Type:     node.Namespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(vt.Helper.AdminRoleBinding(), nomospath.NewFakeRelative("acme/admin.yaml")),
@@ -117,7 +118,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:     ast.Namespace,
+					Type:     node.Namespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), nomospath.NewFakeRelative("acme/admin.yaml")),
@@ -130,7 +131,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "preserve annotations",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:        ast.Namespace,
+					Type:        node.Namespace,
 					Relative:    nomospath.NewFakeRelative("namespaces"),
 					Annotations: map[string]string{"color": "orange"},
 					Objects: vt.FileObjectSets(
@@ -140,7 +141,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:        ast.Namespace,
+					Type:        node.Namespace,
 					Relative:    nomospath.NewFakeRelative("namespaces"),
 					Annotations: map[string]string{"color": "orange", v1alpha1.SourcePathAnnotationKey: "namespaces"},
 					Objects: vt.FileObjectSets(

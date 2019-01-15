@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -117,7 +118,7 @@ func runAttachmentPointTest(t *testing.T, project *v1.Project, policy runtime.Ob
 			Objects: vt.ObjectSets(vt.Helper.GCPOrg("org")),
 			Children: []*ast.TreeNode{
 				&ast.TreeNode{
-					Type:    ast.AbstractNamespace,
+					Type:    node.AbstractNamespace,
 					Objects: vt.ObjectSets(project, policy),
 				},
 			},
@@ -316,7 +317,7 @@ func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Proje
 			Objects: vt.ObjectSets(vt.Helper.GCPOrg("org")),
 			Children: []*ast.TreeNode{
 				{
-					Type:    ast.AbstractNamespace,
+					Type:    node.AbstractNamespace,
 					Objects: vt.ObjectSets(project, policy),
 				},
 			},

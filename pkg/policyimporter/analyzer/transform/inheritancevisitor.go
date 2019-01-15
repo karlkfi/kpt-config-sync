@@ -19,6 +19,7 @@ package transform
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -27,7 +28,7 @@ import (
 
 // nodeContext keeps track of objects during the tree traversal for purposes of inheriting values.
 type nodeContext struct {
-	nodeType  ast.TreeNodeType       // the type of node being processed
+	nodeType  node.Type              // the type of node being processed
 	nodePath  string                 // the node's path, used for annotating inherited objects
 	inherited []*ast.NamespaceObject // the objects that are inherited from the node.
 }
@@ -79,7 +80,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	})
 	newNode := v.Copying.VisitTreeNode(n)
 	v.treeContext = v.treeContext[:len(v.treeContext)-1]
-	if n.Type == ast.Namespace {
+	if n.Type == node.Namespace {
 		for _, ctx := range v.treeContext {
 			for _, inherited := range ctx.inherited {
 				isApplicable, err := sel.IsPolicyApplicableToNamespace(n.Labels, inherited.MetaObject())
@@ -100,7 +101,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 func (v *InheritanceVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	context := &v.treeContext[len(v.treeContext)-1]
 	gk := o.GetObjectKind().GroupVersionKind().GroupKind()
-	if context.nodeType == ast.AbstractNamespace {
+	if context.nodeType == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[gk]
 		if found && spec.Mode == v1alpha1.HierarchyModeInherit {
 			context.inherited = append(context.inherited, o)

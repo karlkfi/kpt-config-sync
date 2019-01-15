@@ -2,7 +2,7 @@ package veterrors
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
@@ -23,7 +23,7 @@ func (e IllegalTopLevelNamespaceError) Error() string {
 	return format(e,
 		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:\n\n"+
 			"%[3]s",
-		repo.NamespacesDir, ast.Namespace, id.PrintResource(e))
+		repo.NamespacesDir, node.Namespace, id.PrintResource(e))
 }
 
 // Code implements Error

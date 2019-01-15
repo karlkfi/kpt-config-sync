@@ -22,13 +22,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
 type directoryTreeInput struct {
 	path string
-	typ  ast.TreeNodeType
+	typ  node.Type
 }
 
 type directoryTreeTestcase struct {
@@ -43,7 +44,7 @@ func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	for _, inp := range tc.inputs {
 		typ := inp.typ
 		if typ == "" {
-			typ = ast.AbstractNamespace
+			typ = node.AbstractNamespace
 		}
 		n := tg.AddDir(nomospath.NewFakeRelative(inp.path), typ)
 		if n == nil {
@@ -74,7 +75,7 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 		},
 		expect: &ast.TreeNode{
 			Relative:  nomospath.NewFakeRelative("a"),
-			Type:      ast.AbstractNamespace,
+			Type:      node.AbstractNamespace,
 			Selectors: map[string]*v1alpha1.NamespaceSelector{},
 		},
 	},
@@ -82,22 +83,22 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 		name: "small tree",
 		inputs: []directoryTreeInput{
 			{path: "a"},
-			{path: "a/b/c", typ: ast.Namespace},
+			{path: "a/b/c", typ: node.Namespace},
 			{path: "a/b"},
 		},
 		expect: &ast.TreeNode{
 			Relative:  nomospath.NewFakeRelative("a"),
-			Type:      ast.AbstractNamespace,
+			Type:      node.AbstractNamespace,
 			Selectors: map[string]*v1alpha1.NamespaceSelector{},
 			Children: []*ast.TreeNode{
 				{
 					Relative:  nomospath.NewFakeRelative("a/b"),
-					Type:      ast.AbstractNamespace,
+					Type:      node.AbstractNamespace,
 					Selectors: map[string]*v1alpha1.NamespaceSelector{},
 					Children: []*ast.TreeNode{
 						{
 							Relative:  nomospath.NewFakeRelative("a/b/c"),
-							Type:      ast.Namespace,
+							Type:      node.Namespace,
 							Selectors: map[string]*v1alpha1.NamespaceSelector{},
 						},
 					},
@@ -109,7 +110,7 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 		name: "missing node",
 		inputs: []directoryTreeInput{
 			{path: "/a/b/c"},
-			{path: "/a/b/c/d/e", typ: ast.Namespace},
+			{path: "/a/b/c/d/e", typ: node.Namespace},
 		},
 		expectErr: true,
 	},

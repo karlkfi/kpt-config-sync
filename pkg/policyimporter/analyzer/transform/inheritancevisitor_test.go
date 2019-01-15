@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
@@ -60,11 +61,11 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: &ast.Root{
 				Cluster: vt.Helper.AcmeCluster(),
 				Tree: &ast.TreeNode{
-					Type:     ast.AbstractNamespace,
+					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
 					Children: []*ast.TreeNode{
 						{
-							Type:        ast.Namespace,
+							Type:        node.Namespace,
 							Relative:    nomospath.NewFakeRelative("namespaces/frontend"),
 							Labels:      map[string]string{"environment": "prod"},
 							Annotations: map[string]string{"has-waffles": "true"},
@@ -77,7 +78,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 							),
 						},
 						{
-							Type:        ast.Namespace,
+							Type:        node.Namespace,
 							Relative:    nomospath.NewFakeRelative("namespaces/frontend-test"),
 							Labels:      map[string]string{"environment": "test"},
 							Annotations: map[string]string{"has-waffles": "false"},
@@ -96,18 +97,18 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "inherit filtered by NamespaceSelector",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: ast.AbstractNamespace,
+					Type: node.AbstractNamespace,
 					Objects: vt.ObjectSets(
 						withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 					),
 					Children: []*ast.TreeNode{
 						{
-							Type:     ast.Namespace,
+							Type:     node.Namespace,
 							Relative: nomospath.NewFakeRelative("namespaces/frontend"),
 							Labels:   map[string]string{"env": "prod"},
 						},
 						{
-							Type:     ast.Namespace,
+							Type:     node.Namespace,
 							Relative: nomospath.NewFakeRelative("namespaces/frontend-test"),
 							Labels:   map[string]string{"env": "test"},
 						},
@@ -116,10 +117,10 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: ast.AbstractNamespace,
+					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Type:     ast.Namespace,
+							Type:     node.Namespace,
 							Relative: nomospath.NewFakeRelative("namespaces/frontend"),
 							Labels:   map[string]string{"env": "prod"},
 							Objects: vt.ObjectSets(
@@ -127,7 +128,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 							),
 						},
 						{
-							Type:     ast.Namespace,
+							Type:     node.Namespace,
 							Relative: nomospath.NewFakeRelative("namespaces/frontend-test"),
 							Labels:   map[string]string{"env": "test"},
 						},

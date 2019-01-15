@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
@@ -31,7 +31,7 @@ func (e MultipleNamespacesError) Error() string {
 	return format(e,
 		"A directory may declare at most one %[1]s Resource:\n\n"+
 			"%[2]s",
-		ast.Namespace, strings.Join(strs, "\n\n"))
+		node.Namespace, strings.Join(strs, "\n\n"))
 }
 
 // Code implements Error

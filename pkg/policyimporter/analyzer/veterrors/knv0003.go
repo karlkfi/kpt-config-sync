@@ -1,7 +1,7 @@
 package veterrors
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
@@ -24,7 +24,7 @@ func (e IllegalNamespaceSubdirectoryError) Error() string {
 		"A %[1]s directory MUST NOT have subdirectories. "+
 			"Restructure %[4]q so that it does not have subdirectory %[2]q:\n\n"+
 			"%[3]s",
-		ast.Namespace, e.Child.Name(), id.PrintTreeNode(e.Child), e.Parent.Name())
+		node.Namespace, e.Child.Name(), id.PrintTreeNode(e.Child), e.Parent.Name())
 }
 
 // Code implements Error

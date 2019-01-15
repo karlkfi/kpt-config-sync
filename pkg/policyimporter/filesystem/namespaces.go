@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
@@ -39,13 +40,13 @@ func processNamespaces(
 	for _, object := range objects {
 		switch object.Object.(type) {
 		case *corev1.Namespace:
-			treeNode := treeGenerator.AddDir(dir, ast.Namespace)
+			treeNode := treeGenerator.AddDir(dir, node.Namespace)
 			processNamespace(objects, treeNode, errorBuilder)
 			return
 		}
 	}
 	// No namespace resource was found.
-	treeNode := treeGenerator.AddDir(dir, ast.AbstractNamespace)
+	treeNode := treeGenerator.AddDir(dir, node.AbstractNamespace)
 
 	for _, i := range objects {
 		switch o := i.Object.(type) {

@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/resourcequota"
@@ -133,23 +134,13 @@ func (o *ClusterObject) DeepCopy() *ClusterObject {
 	return &ClusterObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
 }
 
-// TreeNodeType represents the type of the node.
-type TreeNodeType string
-
-const (
-	// Namespace represents a leaf node in the hierarchy which are materialized as kubernetes Namespace.
-	Namespace = TreeNodeType("Namespace")
-	// AbstractNamespace represents a non-leaf node in the hierarchy.
-	AbstractNamespace = TreeNodeType("Abstract Namespace")
-)
-
 // TreeNode is analogous to a directory in the policy hierarchy.
 type TreeNode struct {
 	// Relative is the path this node has relative to a nomospath.Root.
 	nomospath.Relative
 
 	// The type of the HierarchyNode
-	Type        TreeNodeType
+	Type        node.Type
 	Labels      map[string]string
 	Annotations map[string]string
 
