@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Nomos Authors.
+Copyright 2018 The Nomos Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -123,10 +123,5 @@ message RepoSpec {
   // Repo version string, corresponds to how policy importer should handle the
   // directory structure (implicit assumptions).
   optional string version = 1;
-
-  // ExperimentalInheritance controls whether inheritance behavior is user-configurable via Sync's
-  // HierarchyMode setting. If false, hierarchy is generally disallowed, except for certain defaults
-  // as described on the HierarchyMode field.
-  optional bool experimentalInheritance = 2;
 }
 
