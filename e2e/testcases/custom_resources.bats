@@ -116,7 +116,7 @@ function local_teardown() {
   resource::wait_for_update -t 20 clusteranvil "${resname}" "${oldresver}"
   selection=$(kubectl get clusteranvil ${resname} -ojson | jq -c ".spec.lbs")
   if [[ "${selection}" != "100" ]]; then
-    debug::log "Output from kubectl get clusteranvil -w -oyaml:\n$(cat clusteranvil.log)"
+    debug::log "Output from kubectl get clusteranvil -w -oyaml:\\n$(cat clusteranvil.log)"
     debug::error "custom resource weight should be updated to 100, not ${selection}"
   fi
 
