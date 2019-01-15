@@ -93,7 +93,7 @@ function local_teardown() {
   resource::check crd clusteranvils.acme.com
 
   kubectl get clusteranvil -w -oyaml > clusteranvil.log &
-  WATCH_PID=$?
+  WATCH_PID=$!
 
   debug::log "Updating repo with sync and custom cluster resource"
   git::add "${YAML_DIR}/customresources/acme-sync.yaml" acme/system/acme-sync.yaml
