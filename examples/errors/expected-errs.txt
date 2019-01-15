@@ -17,7 +17,7 @@ name: illegal-child
 
 source: namespaces/dev/dev-namespace/namespace.yaml
 metadata.name: incorrect-name
-group: 
+group:
 version: v1
 kind: Namespace
 
@@ -53,13 +53,13 @@ kind: ClusterRole
 
 source: namespaces/prod/prod-namespace/quota-1.yaml
 metadata.name: pod-quota-1
-group: 
+group:
 version: v1
 kind: ResourceQuota
 
 source: namespaces/prod/prod-namespace/quota-2.yaml
 metadata.name: pod-quota-2
-group: 
+group:
 version: v1
 kind: ResourceQuota
 
@@ -106,7 +106,7 @@ path: cluster/illegal-cluster-subdir
 
 source: namespaces/namespace.yaml
 metadata.name: namespaces
-group: 
+group:
 version: v1
 kind: Namespace
 
@@ -115,7 +115,7 @@ kind: Namespace
 
 source: namespaces/dev/dev-namespace/namespace.yaml
 metadata.name: incorrect-name
-group: 
+group:
 version: v1
 kind: Namespace
 
@@ -148,13 +148,13 @@ kind: RoleBinding
 
 source: namespaces/prod/prod-namespace/namespace-1.yaml
 metadata.name: prod-namespace
-group: 
+group:
 version: v1
 kind: Namespace
 
 source: namespaces/prod/prod-namespace/namespace-2.yaml
 metadata.name: prod-namespace
-group: 
+group:
 version: v1
 kind: Namespace
 
@@ -163,13 +163,13 @@ kind: Namespace
 
 source: namespaces/prod/prod-namespace/namespace-1.yaml
 metadata.name: prod-namespace
-group: 
+group:
 version: v1
 kind: Namespace
 
 source: namespaces/prod/prod-namespace/namespace-2.yaml
 metadata.name: prod-namespace
-group: 
+group:
 version: v1
 kind: Namespace
 
@@ -177,7 +177,7 @@ kind: Namespace
 [20] KNV1031: Resources must declare metadata.name:
 
 source: namespaces/prod/prod-namespace/nameless-rolebinding.yaml
-metadata.name: 
+metadata.name:
 group: rbac.authorization.k8s.io
 version: v1
 kind: RoleBinding

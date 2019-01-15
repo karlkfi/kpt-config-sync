@@ -4,7 +4,7 @@ Found issues: 1 error(s)
 [1] KNV1034: This Resource Kind MUST NOT be declared in a Sync:
 
 source: system/sync.yaml
-group: 
+group:
 version: v1
 kind: Namespace
 

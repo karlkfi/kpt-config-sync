@@ -21,7 +21,15 @@ type Resource interface {
 // PrintResource returns a human-readable output for the Resource.
 func PrintResource(r Resource) string {
 	return fmt.Sprintf("source: %[1]s\n"+
-		"metadata.name: %[2]s\n"+
+		"metadata.name:%[2]s\n"+
 		"%[3]s",
-		r.RelativeSlashPath(), r.Name(), printGroupVersionKind(r.GroupVersionKind()))
+		r.RelativeSlashPath(), name(r), printGroupVersionKind(r.GroupVersionKind()))
+}
+
+// name returns the empty string if r.Name is the empty string, otherwise prepends a space.
+func name(r Resource) string {
+	if r.Name() == "" {
+		return ""
+	}
+	return " " + r.Name()
 }

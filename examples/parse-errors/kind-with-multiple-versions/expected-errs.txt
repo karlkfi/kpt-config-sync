@@ -17,7 +17,7 @@ kind: Sync
 [2] KNV1039: Sync defines a Resource Kind with an incorrect Version. Known Versions: [v1]
 
 source: system/resource-quota.yaml
-group: 
+group:
 version: v2
 kind: ResourceQuota
 
