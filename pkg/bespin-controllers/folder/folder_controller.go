@@ -167,9 +167,14 @@ func (r *ReconcileFolder) updateAPIServer(ctx context.Context, tfe *terraform.Ex
 	if err := tfe.UpdateState(); err != nil {
 		return errors.Wrapf(err, "[Folder %v] failed to update terraform state", f.Spec.DisplayName)
 	}
+	id, err := tfe.GetFolderID()
+	if err != nil {
+		return errors.Wrapf(err, "[Folder %v] failed to get Folder ID from terraform state", f.Spec.DisplayName)
+	}
 
 	newF := &bespinv1.Folder{}
 	f.DeepCopyInto(newF)
+	newF.Spec.ID = id
 
 	if equality.Semantic.DeepEqual(f, newF) {
 		glog.V(1).Infof("[Folder %v] nothing to update", newF.Spec.DisplayName)

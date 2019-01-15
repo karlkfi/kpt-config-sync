@@ -68,6 +68,7 @@ func TestFolderTFResourceConfig(t *testing.T) {
 		f       *Folder
 		c       *stubClient
 		want    string
+		tfState map[string]string
 		wantErr bool
 	}{
 		{
@@ -127,6 +128,84 @@ parent = "folders/1234567"
 			wantErr: false,
 		},
 		{
+			name: "Folder with no parent reference, parent Organization is stored in terraform state",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Spec: FolderSpec{
+					DisplayName: "spec-bar",
+					ID:          1234567,
+				},
+				Status: FolderStatus{},
+			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
+				},
+			},
+			tfState: map[string]string{
+				"parent": "organizations/7654321",
+			},
+			want: `resource "google_folder" "bespin_folder" {
+display_name = "spec-bar"
+parent = "organizations/7654321"
+}`,
+			wantErr: false,
+		},
+		{
+			name: "Folder with no parent reference, parent Folder is stored in terraform state",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Spec: FolderSpec{
+					DisplayName: "spec-bar",
+					ID:          1234567,
+				},
+				Status: FolderStatus{},
+			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
+				},
+			},
+			tfState: map[string]string{
+				"parent": "folders/7654321",
+			},
+			want: `resource "google_folder" "bespin_folder" {
+display_name = "spec-bar"
+parent = "folders/7654321"
+}`,
+			wantErr: false,
+		},
+		{
+			name: "Folder with no parent reference, and there is no parent in terraform state",
+			f: &Folder{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Spec: FolderSpec{
+					DisplayName: "spec-bar",
+					ID:          1234567,
+				},
+				Status: FolderStatus{},
+			},
+			c: &stubClient{
+				obj: &Folder{
+					Spec: FolderSpec{
+						ID: 1234567,
+					},
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
 			name: "Folder with Organization as parent, but missing parent Organizaton ID",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{
@@ -135,7 +214,7 @@ parent = "folders/1234567"
 				Spec: FolderSpec{
 					ParentRef: corev1.ObjectReference{
 						Kind: "Organization",
-						Name: "organizations-001",
+						Name: "",
 					},
 					DisplayName: "spec-bar",
 				},
@@ -158,7 +237,7 @@ parent = "folders/1234567"
 				Spec: FolderSpec{
 					ParentRef: corev1.ObjectReference{
 						Kind: "Folder",
-						Name: "folders-001",
+						Name: "",
 					},
 					DisplayName: "spec-bar",
 				},
@@ -173,14 +252,14 @@ parent = "folders/1234567"
 			wantErr: true,
 		},
 		{
-			name: "Folder with invalid ParentRef",
+			name: "Folder missing parent reference kind, but with parent reference name",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo",
 				},
 				Spec: FolderSpec{
 					ParentRef: corev1.ObjectReference{
-						Kind: "Invalid",
+						Kind: "",
 						Name: "bar",
 					},
 					DisplayName: "spec-bar",
@@ -198,12 +277,16 @@ parent = "folders/1234567"
 			wantErr: true,
 		},
 		{
-			name: "Folder with no parent reference",
+			name: "Folder with invalid parent reference kind",
 			f: &Folder{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo",
 				},
 				Spec: FolderSpec{
+					ParentRef: corev1.ObjectReference{
+						Kind: "invalid",
+						Name: "bar",
+					},
 					DisplayName: "spec-bar",
 				},
 				Status: FolderStatus{},
@@ -222,7 +305,7 @@ parent = "folders/1234567"
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.f.TFResourceConfig(context.Background(), tc.c)
+			got, err := tc.f.TFResourceConfig(context.Background(), tc.c, tc.tfState)
 			switch {
 			case !tc.wantErr && err != nil:
 				t.Errorf("TFResourceConfig() got err %+v; want nil", err)
@@ -232,7 +315,6 @@ parent = "folders/1234567"
 				t.Errorf("TFResourceConfig() got \n%s\n want \n%s", got, tc.want)
 			}
 		})
-
 	}
 }
 

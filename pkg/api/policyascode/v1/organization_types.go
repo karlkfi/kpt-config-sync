@@ -59,7 +59,7 @@ type OrganizationList struct {
 // READONLY in bespin world, and in Terraform there is only a "data" config (no "resource")
 // for an Organization.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (o *Organization) TFResourceConfig(ctx context.Context, c Client) (string, error) {
+func (o *Organization) TFResourceConfig(ctx context.Context, c Client, tfState map[string]string) (string, error) {
 	ID := o.ID()
 	if ID == "" {
 		return "", fmt.Errorf("missing Organization ID")

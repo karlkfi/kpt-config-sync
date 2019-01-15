@@ -165,9 +165,9 @@ func tfResourceID(ctx context.Context, client Client, ps OrganizationPolicySpec)
 	return result, nil
 }
 
-// TFResourceConfig converts the Project's Spec struct into Terraform config string.
+// TFResourceConfig converts the Organization's Spec struct into Terraform config string.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (op *OrganizationPolicy) TFResourceConfig(ctx context.Context, c Client) (string, error) {
+func (op *OrganizationPolicy) TFResourceConfig(ctx context.Context, c Client, tfState map[string]string) (string, error) {
 	ps := op.Spec
 	kind := ps.ResourceRef.Kind
 

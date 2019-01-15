@@ -195,7 +195,7 @@ func TestOrganizationPolicyGetTFResourceConfig(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			client := stubClient{obj: tc.obj}
-			got, err := tc.ops.TFResourceConfig(context.Background(), &client)
+			got, err := tc.ops.TFResourceConfig(context.Background(), &client, nil)
 			switch {
 			case !tc.wantErr && err != nil:
 				t.Errorf("TFResourceConfig() got err %+v; want nil", err)

@@ -48,7 +48,7 @@ type IAMPolicyList struct {
 
 // TFResourceConfig converts the IAMPolicy's Spec struct into terraform config string.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (i *IAMPolicy) TFResourceConfig(ctx context.Context, c Client) (string, error) {
+func (i *IAMPolicy) TFResourceConfig(ctx context.Context, c Client, tfState map[string]string) (string, error) {
 	var tfs []string
 	resName := types.NamespacedName{Name: i.Spec.ResourceRef.Name}
 	switch i.Spec.ResourceRef.Kind {

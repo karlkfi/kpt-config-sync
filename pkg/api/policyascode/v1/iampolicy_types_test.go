@@ -426,7 +426,7 @@ members = [
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.ip.TFResourceConfig(context.Background(), tc.c)
+			got, err := tc.ip.TFResourceConfig(context.Background(), tc.c, nil)
 			switch {
 			case !tc.wantErr && err != nil:
 				t.Errorf("TFResourceConfig() got err %+v; want nil", err)

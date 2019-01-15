@@ -91,7 +91,7 @@ organization = "organizations/1234567"
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.o.TFResourceConfig(context.Background(), nil)
+			got, err := tc.o.TFResourceConfig(context.Background(), nil, nil)
 			switch {
 			case !tc.wantErr && err != nil:
 				t.Errorf("TFResourceConfig() got err %+v; want nil", err)

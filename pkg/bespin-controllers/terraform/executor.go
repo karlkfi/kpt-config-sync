@@ -79,8 +79,9 @@ func execCommand(name string, args ...string) ([]byte, error) {
 // Resource defines a collection of common Terraform-related functionalities
 // that all bespin resources should implement.
 type Resource interface {
-	// TFResourceConfig converts the resource's Spec struct into Terraform config string.
-	TFResourceConfig(ctx context.Context, c bespinv1.Client) (string, error)
+	// TFResourceConfig converts the resource's Spec struct into Terraform config string. tfState
+	// contains the Terraform local state about this resource from running UpdateState().
+	TFResourceConfig(ctx context.Context, c bespinv1.Client, tfState map[string]string) (string, error)
 
 	// TFImportConfig returns an empty Terraform resource block used for terraform import.
 	TFImportConfig() string
@@ -348,13 +349,13 @@ func parseStateConfig(config string) (map[string]string, error) {
 }
 
 // GetFolderID returns the Folder ID stored in its state map.
-func (tfe *Executor) GetFolderID() (int, error) {
+func (tfe *Executor) GetFolderID() (int64, error) {
 	re := regexp.MustCompile(`^folders\/(\d+)$`)
 	if fid, ok := tfe.state["id"]; ok {
 		// "id": "folders/1234567"
 		switch {
 		case re.MatchString(fid):
-			id, err := strconv.Atoi(strings.Split(fid, "/")[1])
+			id, err := strconv.ParseInt(strings.Split(fid, "/")[1], 10, 64)
 			if err != nil {
 				return 0, errors.Wrapf(err, "failed to get Folder ID: %s", fid)
 			}
@@ -383,7 +384,7 @@ func (tfe *Executor) RunDeleteFlow() error {
 // and writes it to a local config file.
 func (tfe *Executor) createResourceConfig() error {
 	glog.V(1).Infof("[%s]: Creating Terraform resource config.", tfe.dir)
-	resourceConfig, err := tfe.resource.TFResourceConfig(tfe.ctx, tfe.k8sClient)
+	resourceConfig, err := tfe.resource.TFResourceConfig(tfe.ctx, tfe.k8sClient, tfe.state)
 	if err != nil {
 		return errors.Wrap(err, "failed to get Terraform resource config from resource")
 	}

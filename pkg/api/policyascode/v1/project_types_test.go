@@ -106,10 +106,6 @@ org_id = "1234567"
 			p: &Project{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo",
 					Namespace: "default",
-					Annotations: map[string]string{
-						"key1":            "value1",
-						ParentFolderIDKey: "1234567",
-					},
 				},
 				Spec: ProjectSpec{
 					ParentRef: corev1.ObjectReference{
@@ -165,10 +161,6 @@ folder_id = "1234567"
 			p: &Project{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo",
 					Namespace: "default",
-					Annotations: map[string]string{
-						"key1":            "value1",
-						ParentFolderIDKey: "1234567",
-					},
 				},
 				Spec: ProjectSpec{
 					ParentRef: corev1.ObjectReference{
@@ -189,12 +181,12 @@ folder_id = "1234567"
 			wantErr: true,
 		},
 		{
-			name: "Project with invalid parent reference",
+			name: "Project with parent name, but missing parent kind",
 			p: &Project{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
 				Spec: ProjectSpec{
 					ParentRef: corev1.ObjectReference{
-						Kind: "invalid",
+						Kind: "",
 						Name: "bar",
 					},
 					DisplayName: "spec-bar",
@@ -229,14 +221,18 @@ folder_id = "1234567"
 					},
 				},
 			},
-			want:    "",
-			wantErr: true,
+			want: `resource "google_project" "bespin_project" {
+name = "spec-bar"
+project_id = "some-fake-project"
+
+}`,
+			wantErr: false,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.p.TFResourceConfig(context.Background(), tc.c)
+			got, err := tc.p.TFResourceConfig(context.Background(), tc.c, nil)
 			switch {
 			case !tc.wantErr && err != nil:
 				t.Errorf("TFResourceConfig() got err %+v; want nil", err)

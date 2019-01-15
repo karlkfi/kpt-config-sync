@@ -67,7 +67,7 @@ type FolderList struct {
 
 // TFResourceConfig converts the Folder's Spec struct into terraform config string.
 // It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
-func (f *Folder) TFResourceConfig(ctx context.Context, c Client) (string, error) {
+func (f *Folder) TFResourceConfig(ctx context.Context, c Client, tfState map[string]string) (string, error) {
 	var parent string
 	resName := types.NamespacedName{Name: f.Spec.ParentRef.Name}
 	switch f.Spec.ParentRef.Kind {
@@ -91,6 +91,16 @@ func (f *Folder) TFResourceConfig(ctx context.Context, c Client) (string, error)
 			return "", fmt.Errorf("missing parent Folder ID: %v", resName)
 		}
 		parent = fmt.Sprintf("folders/%s", ID)
+	case "":
+		if f.Spec.ParentRef.Name != "" {
+			return "", fmt.Errorf("invalid parent reference name when parent reference kind is missing: %v", f.Spec.ParentRef.Name)
+		}
+		// Terraform requires the parent field to present, get the parent from Terraform local state.
+		p, ok := tfState["parent"]
+		if !ok || p == "" {
+			return "", fmt.Errorf("missing parent from terraform state")
+		}
+		parent = p
 	default:
 		return "", fmt.Errorf("invalid parent reference kind: %v", f.Spec.ParentRef.Kind)
 	}

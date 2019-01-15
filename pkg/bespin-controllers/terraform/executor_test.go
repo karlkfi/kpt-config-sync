@@ -90,7 +90,7 @@ func TestGetFolderID(t *testing.T) {
 	tests := []struct {
 		name     string
 		executor *Executor
-		want     int
+		want     int64
 		wantErr  bool
 	}{
 		{
@@ -102,6 +102,17 @@ func TestGetFolderID(t *testing.T) {
 				},
 			},
 			want:    1234567,
+			wantErr: false,
+		},
+		{
+			name: "Valid Folder ID: math.MaxInt64",
+			executor: &Executor{
+				state: map[string]string{
+					"id":     "folders/9223372036854775807",
+					"others": "value",
+				},
+			},
+			want:    9223372036854775807,
 			wantErr: false,
 		},
 		{
