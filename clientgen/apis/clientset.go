@@ -32,10 +32,10 @@ type Interface interface {
 	BespinV1() bespinv1.BespinV1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Bespin() bespinv1.BespinV1Interface
-	NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface
 	NomosV1() nomosv1.NomosV1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Nomos() nomosv1.NomosV1Interface
+	NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -43,8 +43,8 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	bespinV1      *bespinv1.BespinV1Client
-	nomosV1alpha1 *nomosv1alpha1.NomosV1alpha1Client
 	nomosV1       *nomosv1.NomosV1Client
+	nomosV1alpha1 *nomosv1alpha1.NomosV1alpha1Client
 }
 
 // BespinV1 retrieves the BespinV1Client
@@ -58,11 +58,6 @@ func (c *Clientset) Bespin() bespinv1.BespinV1Interface {
 	return c.bespinV1
 }
 
-// NomosV1alpha1 retrieves the NomosV1alpha1Client
-func (c *Clientset) NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface {
-	return c.nomosV1alpha1
-}
-
 // NomosV1 retrieves the NomosV1Client
 func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
 	return c.nomosV1
@@ -72,6 +67,11 @@ func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
 // Please explicitly pick a version.
 func (c *Clientset) Nomos() nomosv1.NomosV1Interface {
 	return c.nomosV1
+}
+
+// NomosV1alpha1 retrieves the NomosV1alpha1Client
+func (c *Clientset) NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface {
+	return c.nomosV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -94,11 +94,11 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.nomosV1alpha1, err = nomosv1alpha1.NewForConfig(&configShallowCopy)
+	cs.nomosV1, err = nomosv1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
-	cs.nomosV1, err = nomosv1.NewForConfig(&configShallowCopy)
+	cs.nomosV1alpha1, err = nomosv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +115,8 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.bespinV1 = bespinv1.NewForConfigOrDie(c)
-	cs.nomosV1alpha1 = nomosv1alpha1.NewForConfigOrDie(c)
 	cs.nomosV1 = nomosv1.NewForConfigOrDie(c)
+	cs.nomosV1alpha1 = nomosv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -126,8 +126,8 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.bespinV1 = bespinv1.New(c)
-	cs.nomosV1alpha1 = nomosv1alpha1.New(c)
 	cs.nomosV1 = nomosv1.New(c)
+	cs.nomosV1alpha1 = nomosv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

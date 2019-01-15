@@ -30,7 +30,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // OrganizationPolicy is the Schema for the organizationpolicies API
+// +k8s:openapi-gen=true
 type OrganizationPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -254,6 +258,8 @@ func (op *OrganizationPolicy) TFResourceAddr() string {
 func (op *OrganizationPolicy) ID() string {
 	return op.Spec.ResourceRef.Name
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // OrganizationPolicyList contains a list of OrganizationPolicy
 type OrganizationPolicyList struct {

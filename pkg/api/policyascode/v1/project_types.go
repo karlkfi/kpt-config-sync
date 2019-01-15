@@ -42,7 +42,11 @@ type ProjectStatus struct {
 	Conditions []Condition `json:"conditions,omitempty"`
 }
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // Project is the Schema for the projects API
+// +k8s:openapi-gen=true
 type Project struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -50,6 +54,8 @@ type Project struct {
 	Spec   ProjectSpec   `json:"spec"`
 	Status ProjectStatus `json:"status,omitempty"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ProjectList contains a list of Project
 type ProjectList struct {

@@ -30,7 +30,11 @@ func init() {
 	SchemeBuilder.Register(&IAMPolicy{}, &IAMPolicyList{})
 }
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // IAMPolicy is the Schema for the iampolicies API
+// +k8s:openapi-gen=true
 type IAMPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -38,6 +42,8 @@ type IAMPolicy struct {
 	Spec   IAMPolicySpec   `json:"spec"`
 	Status IAMPolicyStatus `json:"status,omitempty"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // IAMPolicyList contains a list of IAMPolicy
 type IAMPolicyList struct {

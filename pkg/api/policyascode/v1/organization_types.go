@@ -37,7 +37,12 @@ type OrganizationStatus struct {
 	Conditions []Condition `json:"conditions,omitempty"`
 }
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +genclient:nonNamespaced
+
 // Organization is the Schema for the organizations API
+// +k8s:openapi-gen=true
 type Organization struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -45,6 +50,8 @@ type Organization struct {
 	Spec   OrganizationSpec   `json:"spec"`
 	Status OrganizationStatus `json:"status,omitempty"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // OrganizationList contains a list of Organization
 type OrganizationList struct {
