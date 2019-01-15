@@ -10,11 +10,16 @@ load "../lib/setup"
 load "../lib/wait"
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
+WATCH_PID=""
 
 # This cleans up any CRDs that were created by a testcase
 function local_teardown() {
   kubectl delete crd anvils.acme.com --ignore-not-found=true || true
   kubectl delete crd clusteranvils.acme.com --ignore-not-found=true || true
+  if [[ "$WATCH_PID" != "" ]]; then
+    kill $WATCH_PID || true
+    WATCH_PID=""
+  fi
 }
 
 @test "Sync custom namespace scoped resource" {
@@ -87,6 +92,9 @@ function local_teardown() {
   resource::check crd anvils.acme.com
   resource::check crd clusteranvils.acme.com
 
+  kubectl get clusteranvil -w -oyaml > clusteranvil.log &
+  WATCH_PID=$?
+
   debug::log "Updating repo with sync and custom cluster resource"
   git::add "${YAML_DIR}/customresources/acme-sync.yaml" acme/system/acme-sync.yaml
   git::add "${YAML_DIR}/customresources/clusteranvil.yaml" acme/cluster/clusteranvil.yaml
@@ -107,7 +115,10 @@ function local_teardown() {
   debug::log "Checking that custom resource was updated on cluster"
   resource::wait_for_update -t 20 clusteranvil "${resname}" "${oldresver}"
   selection=$(kubectl get clusteranvil ${resname} -ojson | jq -c ".spec.lbs")
-  [[ "${selection}" == "100" ]] || debug::error "custom resource weight should be updated to 100, not ${selection}"
+  if [[ "${selection}" != "100" ]]; then
+    debug::log "Output from kubectl get clusteranvil -w -oyaml:\n$(cat clusteranvil.log)"
+    debug::error "custom resource weight should be updated to 100, not ${selection}"
+  fi
 
   debug::log "Remove custom cluster resource from cluster"
   git::rm acme/cluster/clusteranvil.yaml
