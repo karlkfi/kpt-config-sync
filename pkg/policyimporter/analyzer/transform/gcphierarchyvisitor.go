@@ -50,7 +50,7 @@ package transform
 
 import (
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/policyascode/v1"
+	v1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -280,11 +280,6 @@ func (v *GCPHierarchyVisitor) parentReference() *corev1.ObjectReference {
 		Kind: gvk.Kind,
 		Name: v.ctx.prev.clusterObj.Name(),
 	}
-}
-
-// VisitObjectList visits the object list.
-func (v *GCPHierarchyVisitor) VisitObjectList(o ast.ObjectList) ast.ObjectList {
-	return v.Copying.VisitObjectList(o)
 }
 
 // visitingRoot returns true if the visitor is currently visiting a root tree node.

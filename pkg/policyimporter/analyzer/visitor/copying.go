@@ -65,19 +65,13 @@ func (v *Copying) VisitRoot(c *ast.Root) *ast.Root {
 // VisitCluster implements Visitor
 func (v *Copying) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	nc := *c
-	nc.Objects = c.Objects.Accept(v.impl)
-	return &nc
-}
-
-// VisitClusterObjectList implements Visitor
-func (v *Copying) VisitClusterObjectList(objectList ast.ClusterObjectList) ast.ClusterObjectList {
-	var olc ast.ClusterObjectList
-	for _, object := range objectList {
-		if obj := object.Accept(v.impl); obj != nil {
-			olc = append(olc, obj)
+	nc.Objects = nil
+	for _, obj := range c.Objects {
+		if newObj := obj.Accept(v.impl); newObj != nil {
+			nc.Objects = append(nc.Objects, newObj)
 		}
 	}
-	return olc
+	return &nc
 }
 
 // VisitClusterObject implements Visitor
@@ -85,22 +79,17 @@ func (v *Copying) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	return o.DeepCopy()
 }
 
-// VisitObjectList implements Visitor
-func (v *Copying) VisitObjectList(objectList ast.ObjectList) ast.ObjectList {
-	var olc ast.ObjectList
-	for _, object := range objectList {
-		if obj := object.Accept(v.impl); obj != nil {
-			olc = append(olc, obj)
-		}
-	}
-	return olc
-}
-
 // VisitTreeNode implements Visitor
 func (v *Copying) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// Almost-shallow copy of n, check PartialCopy to see if this is enough.
 	nn := n.PartialCopy()
-	nn.Objects = n.Objects.Accept(v.impl)
+	nn.Objects = nil
+	for _, obj := range n.Objects {
+		if newObj := obj.Accept(v.impl); newObj != nil {
+			nn.Objects = append(nn.Objects, newObj)
+		}
+	}
+
 	nn.Children = nil
 	for _, child := range n.Children {
 		if ch := child.Accept(v.impl); ch != nil {

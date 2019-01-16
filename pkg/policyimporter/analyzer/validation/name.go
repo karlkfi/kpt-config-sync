@@ -47,10 +47,10 @@ func (v *NameValidator) Error() error {
 	return v.errs.Build()
 }
 
-// VisitClusterObjectList implements Visitor
-func (v *NameValidator) VisitClusterObjectList(o ast.ClusterObjectList) ast.ClusterObjectList {
+// VisitCluster implements Visitor
+func (v *NameValidator) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	v.nameChecker = nameChecker{}
-	return v.Base.VisitClusterObjectList(o)
+	return v.Base.VisitCluster(c)
 }
 
 // VisitClusterObject implements Visitor
@@ -59,10 +59,10 @@ func (v *NameValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObj
 	return o
 }
 
-// VisitObjectList implements Visitor
-func (v *NameValidator) VisitObjectList(o ast.ObjectList) ast.ObjectList {
+// VisitTreeNode implements Visitor
+func (v *NameValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.nameChecker = nameChecker{}
-	return v.Base.VisitObjectList(o)
+	return v.Base.VisitTreeNode(n)
 }
 
 // VisitObject implements Visitor

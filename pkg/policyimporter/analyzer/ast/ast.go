@@ -92,7 +92,7 @@ func (c *Root) Accept(visitor Visitor) *Root {
 
 // Cluster represents cluster scoped policies.
 type Cluster struct {
-	Objects ClusterObjectList
+	Objects []*ClusterObject
 }
 
 // Accept invokes VisitCluster on the visitor.
@@ -101,17 +101,6 @@ func (c *Cluster) Accept(visitor Visitor) *Cluster {
 		return nil
 	}
 	return visitor.VisitCluster(c)
-}
-
-// ClusterObjectList represents a set of cluser scoped objects.
-type ClusterObjectList []*ClusterObject
-
-// Accept invokes VisitClusterObjectList on the visitor.
-func (o ClusterObjectList) Accept(visitor Visitor) ClusterObjectList {
-	if o == nil {
-		return nil
-	}
-	return visitor.VisitClusterObjectList(o)
 }
 
 // ClusterObject extends FileObject to implement Visitable for cluster scoped objects.
@@ -145,7 +134,7 @@ type TreeNode struct {
 	Annotations map[string]string
 
 	// Objects from the directory
-	Objects ObjectList
+	Objects []*NamespaceObject
 
 	// Selectors is a map of name to NamespaceSelector objects found at this node.
 	// One or more Objects may have an annotation referring to these NamespaceSelectors by name.
@@ -214,17 +203,6 @@ func (n *TreeNode) GetAnnotations() map[string]string {
 // SetAnnotations replaces the annotations on the tree node with the supplied ones.
 func (n *TreeNode) SetAnnotations(a map[string]string) {
 	n.Annotations = a
-}
-
-// ObjectList represents a set of namespace scoped objects.
-type ObjectList []*NamespaceObject
-
-// Accept invokes VisitObjectList on the visitor.
-func (o ObjectList) Accept(visitor Visitor) ObjectList {
-	if o == nil {
-		return nil
-	}
-	return visitor.VisitObjectList(o)
 }
 
 // NamespaceObject extends FileObject to implement Visitable for namespace scoped objects.

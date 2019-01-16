@@ -32,30 +32,30 @@ import (
 )
 
 // ObjectSets constructs a list of ObjectSet from a list of runtime.Object.
-func ObjectSets(runtimeObjs ...runtime.Object) ast.ObjectList {
+func ObjectSets(runtimeObjs ...runtime.Object) []*ast.NamespaceObject {
 	astObjs := make([]*ast.NamespaceObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.NamespaceObject{FileObject: ast.FileObject{Object: runtimeObjs[idx]}}
 	}
-	return ast.ObjectList(astObjs)
+	return astObjs
 }
 
 // FileObjectSets constructs a list of ObjectSet from a list of ast.FileObject
-func FileObjectSets(runtimeObjs ...ast.FileObject) ast.ObjectList {
+func FileObjectSets(runtimeObjs ...ast.FileObject) []*ast.NamespaceObject {
 	astObjs := make([]*ast.NamespaceObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.NamespaceObject{FileObject: runtimeObjs[idx]}
 	}
-	return ast.ObjectList(astObjs)
+	return astObjs
 }
 
 // ClusterObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
-func ClusterObjectSets(runtimeObjs ...runtime.Object) ast.ClusterObjectList {
+func ClusterObjectSets(runtimeObjs ...runtime.Object) []*ast.ClusterObject {
 	astObjs := make([]*ast.ClusterObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.ClusterObject{FileObject: ast.FileObject{Object: runtimeObjs[idx]}}
 	}
-	return ast.ClusterObjectList(astObjs)
+	return astObjs
 }
 
 // Helper provides a number of pre-built types for use in testcases.

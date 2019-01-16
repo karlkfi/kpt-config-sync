@@ -30,10 +30,8 @@ package ast
 type Visitor interface {
 	VisitRoot(g *Root) *Root
 	VisitCluster(c *Cluster) *Cluster
-	VisitClusterObjectList(o ClusterObjectList) ClusterObjectList
 	VisitClusterObject(o *ClusterObject) *ClusterObject
 	VisitTreeNode(n *TreeNode) *TreeNode
-	VisitObjectList(o ObjectList) ObjectList
 	VisitObject(o *NamespaceObject) *NamespaceObject
 
 	// Error allows the visitor to emit errors that may have occurred while operating.

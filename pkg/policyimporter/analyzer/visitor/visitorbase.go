@@ -85,16 +85,10 @@ func (vb *Base) VisitRoot(g *ast.Root) *ast.Root {
 
 // VisitCluster implements Visitor
 func (vb *Base) VisitCluster(c *ast.Cluster) *ast.Cluster {
-	c.Objects.Accept(vb.impl)
-	return c
-}
-
-// VisitClusterObjectList implements Visitor
-func (vb *Base) VisitClusterObjectList(o ast.ClusterObjectList) ast.ClusterObjectList {
-	for _, obj := range o {
-		obj.Accept(vb.impl)
+	for _, o := range c.Objects {
+		o.Accept(vb.impl)
 	}
-	return o
+	return c
 }
 
 // VisitClusterObject implements Visitor
@@ -109,23 +103,13 @@ func (vb *Base) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		glog.Infof("VisitTreeNode(): ENTER: %v", spew.Sdump(n))
 	}
 	defer glog.V(6).Infof("VisitTreeNode(): EXIT")
-	n.Objects.Accept(vb.impl)
+	for _, o := range n.Objects {
+		o.Accept(vb.impl)
+	}
 	for _, child := range n.Children {
 		child.Accept(vb.impl)
 	}
 	return n
-}
-
-// VisitObjectList implements Visitor
-func (vb *Base) VisitObjectList(o ast.ObjectList) ast.ObjectList {
-	if glog.V(5) {
-		glog.Infof("VisitObjectList(): ENTER: %+v", spew.Sdump(o))
-	}
-	defer glog.V(6).Infof("VisitObjectList(): EXIT")
-	for _, obj := range o {
-		obj.Accept(vb.impl)
-	}
-	return o
 }
 
 // VisitObject implements Visitor

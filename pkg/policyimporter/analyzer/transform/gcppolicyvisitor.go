@@ -17,7 +17,7 @@ limitations under the License.
 package transform
 
 import (
-	"github.com/google/nomos/pkg/api/policyascode/v1"
+	v1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -135,11 +135,6 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 	}
 
 	return o
-}
-
-// VisitObjectList implements Visitor.
-func (v *GCPPolicyVisitor) VisitObjectList(o ast.ObjectList) ast.ObjectList {
-	return v.Copying.VisitObjectList(o)
 }
 
 func (v *GCPPolicyVisitor) addToClusterObjects(o runtime.Object, source nomospath.Relative) {
