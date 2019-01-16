@@ -53,7 +53,6 @@ function expect_rename_to() {
 
 
 @test "Operator: Cluster rename load test" {
-  skip "Enable this test only if you are debugging"
   for count in {0..30}; do
     expect_rename_to "eenie_${count}"
     expect_rename_to "meenie_${count}"
