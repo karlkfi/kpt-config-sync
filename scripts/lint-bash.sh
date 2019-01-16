@@ -54,7 +54,7 @@ if (( 0 < ${#check_bats[@]} )); then
   for f in "${check_bats[@]}"; do
     dest="${bats_tmp}/$f"
     mkdir -p "$(dirname "$dest")"
-    third_party/bats-core/libexec/bats-preprocess \
+    third_party/bats-core/libexec/bats-core/bats-preprocess \
       <<< "$(< "$f")"$'\n' \
       > "${dest}"
     check_files+=("${dest}")
