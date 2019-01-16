@@ -13,6 +13,10 @@ setup() {
   setup::git::init_acme
 }
 
+teardown() {
+  setup::common_teardown
+}
+
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 function sync_token_eq() {

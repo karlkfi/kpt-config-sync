@@ -77,7 +77,10 @@ setup::git::init_acme() {
   done
 }
 
+# Record timing info, and implement the test filter. This is cheap, and all tests should do it.
 setup::common() {
+  START_TIME=$(date +%s%3N)
+
   E2E_TEST_FILTER="${E2E_TEST_FILTER:-}"
   if [[ "${E2E_TEST_FILTER}" != "" ]]; then
     local cur_test=""
@@ -90,9 +93,6 @@ setup::common() {
       skip
     fi
   fi
-
-  # Delete testdata that might exist.
-  kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found || true
 
   echo "--- SETUP COMPLETE ---------------------------------------------------"
 }
@@ -127,4 +127,15 @@ function setup::check_stable() {
       return 1
     fi
   done
+}
+
+# Record and print timing info. This is cheap, and all tests should do it.
+setup::common_teardown() {
+  local end
+  end=$(date +%s%3N)
+  ((runtime="$end - $START_TIME"))
+
+  if [ -n "${TIMING:+1}" ]; then
+    echo "# total time: ${runtime}ms" >&3
+  fi
 }

@@ -26,6 +26,7 @@ function teardown() {
     kill $WATCH_PID || true
     WATCH_PID=""
   fi
+  setup::common_teardown
 }
 
 @test "Sync custom namespace scoped resource" {

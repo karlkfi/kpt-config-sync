@@ -16,6 +16,10 @@ setup() {
   setup::git::init_acme
 }
 
+teardown() {
+  setup::common_teardown
+}
+
 @test "All foo-corp created" {
   git::rm acme
   # TODO(frankf): POLICY_DIR is currently set to "acme" during installation.

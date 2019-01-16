@@ -2,8 +2,7 @@
 
 ## Unit Tests
 
-During iterative development, you want to run unit tests, linters, and nomos vet
-tests using:
+During iterative development, run unit tests and linters using:
 
 ```console
 make
@@ -18,7 +17,7 @@ the cluster's service account needs storage.objectViewer role on the GCP project
 that holds Docker images in Google Container Registry.
 
 ```console
-make test-e2e-all
+make test-e2e-git
 ```
 
 ## Local nomos vet tests
@@ -31,11 +30,25 @@ make test-nomos-vet-local
 
 This requires a Nomos cluster configured and in your kubeconfig context.
 
-## Working on the e2e framework or e2e tests.
+## e2e test filters
 
-While doing development of e2e test / framework features, it's desirable to skip
-steps in the full e2e process. The following commands are available for finer
-grained control. This is now supported for the -git suffix.
+It's possible to filter which e2e tests are run, rather than running the whole suite.
+
+You can restrict by test name:
+```console
+make test-e2e-git E2E_FLAGS="--test_filter acme"
+```
+
+Or by file name:
+```console
+make test-e2e-git E2E_FLAGS="--file_filter acme"
+```
+
+## Isolating setup, tests, and cleanup.
+
+The e2e test suite starts with a suite setup, then runs tests, and finally does a cleanup.
+(The setup also contains a clean step.) You can run these stages individually using the
+`test-e2e-dev-git` target.
 
 1- Build GKE Policy Management and end to end images. You must do this each time
 you make changes to .go code.
@@ -51,8 +64,7 @@ make e2e-image-all
 make test-e2e-dev-git E2E_FLAGS="--setup"
 ```
 
-3- Run specific test with full debug output. See E2E_FLAGS section for filter
-flag usage
+3- Run tests with `--test`. This example runs a filtered set of tests with full debug output.
 
 ```console
 # git
@@ -70,13 +82,11 @@ make test-e2e-dev-git E2E_FLAGS="--clean"
 
 Name          | Value                                                                                                                        | Example
 ------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------
---test_filter | the filter for test casess as a regex                                                                                        | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
+--clean       | boolean, uninstalls GKE Policy Management and test infra from cluster at end of execution                                    | E2E_FLAGS="--clean"
 --file_filter | the filter for test files as a regex                                                                                         | The following filters for a file containing 'acme-foo' E2E_FLAGS="--file_filter acme-foo"
 --preclean    | boolean, uninstalls GKE Policy Management prior to setup/test, useful for making a 'clean slate' without doing anything else | E2E_FLAGS="--preclean"
---clean       | boolean, uninstalls GKE Policy Management and test infra from cluster at end of execution                                    | E2E_FLAGS="--clean"
 --setup       | boolean, sets up GKE Policy Management and test infra on cluster                                                             | E2E_FLAGS="--setup"
 --tap         | boolean, emit tap output while tests are running, useful for debugging                                                       | E2E_FLAGS="--tap"
 --test        | boolean, run e2e tests                                                                                                       | E2E_FLAGS="--test"
-
-[1]: https://pantheon.corp.google.com/gcr/images/stolos-dev/GLOBAL/e2e-prober?project=stolos-dev&gcrImageListsize=50
-[2]: https://prow-gob.gcpnode.com/?job=nomos-prober
+--test_filter | the filter for test cases as a regex                                                                                         | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
+--timing      | boolean, print timing info for each test. Also turns on --tap.                                                               | E2E_FLAGS="--timing"

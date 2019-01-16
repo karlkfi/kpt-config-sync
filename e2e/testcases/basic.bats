@@ -19,6 +19,10 @@ setup() {
   git add -A
 }
 
+teardown() {
+  setup::common_teardown
+}
+
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 @test "Namespace garbage collection" {

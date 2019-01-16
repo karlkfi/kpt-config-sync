@@ -11,13 +11,15 @@ load "../lib/wait"
 
 setup() {
   setup::common
+  kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found=true
   setup::git::initialize
   setup::git::init_acme
 }
 
 # This cleans up any namespaces that were created by a testcase
 function teardown() {
-  kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found=true || true
+  kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found=true
+  setup::common_teardown
 }
 
 @test "Namespace has enabled label and declared" {

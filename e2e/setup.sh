@@ -11,7 +11,6 @@ source "$TEST_DIR/lib/wait.bash"
 # shellcheck source=e2e/lib/install.bash
 source "$TEST_DIR/lib/install.bash"
 
-
 NOMOS_REPO="${NOMOS_REPO:-.}"
 
 function apply_cluster_admin_binding() {
@@ -69,7 +68,6 @@ function uninstall() {
   fi
 }
 
-
 function set_up_env() {
   echo "++++ Setting up environment"
   /opt/testing/e2e/init-git-server.sh
@@ -125,7 +123,6 @@ function clean_up() {
   uninstall
 
   clean_up_test_resources
-
 }
 
 function post_clean() {
@@ -176,6 +173,10 @@ function main() {
 
   if [[ "${testcase_filter}" != "" ]]; then
     export E2E_TEST_FILTER="${testcase_filter}"
+  fi
+
+  if [ -n "${timing+x}" ]; then
+    export TIMING="${timing}"
   fi
 
   # prow test runner defines the $ARTIFACTS env variable pointing to a
@@ -287,6 +288,11 @@ while [[ $# -gt 0 ]]; do
 
     --test)
       run_tests=true
+    ;;
+
+    --timing)
+      timing=true
+      tap=true
     ;;
 
     --test_filter)

@@ -16,6 +16,10 @@ setup() {
   setup::git::init_acme
 }
 
+teardown() {
+  setup::common_teardown
+}
+
 @test "ResourceQuota live uninstall/reinstall" {
   # Verify the resourcequota admission controller is currently installed
   wait::for kubectl get deployment -n nomos-system resourcequota-admission-controller

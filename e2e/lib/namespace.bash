@@ -31,20 +31,6 @@ function namespace::create() {
   kubectl apply -f "${tmp}"
 }
 
-# Creates a policyspace directory in the git repo.
-#
-# Arguments
-#   path: The path to the policyspace directory under acme with the last portion being the policyspace name.
-#
-function namespace::declare_policyspace() {
-  local path="$1"
-  local dst="acme/namespaces/acme/${path}/OWNERS"
-  local abs_dst="${TEST_REPO}/${dst}"
-  mkdir -p "$(dirname "${abs_dst}")"
-  touch "${abs_dst}"
-  git -C "${TEST_REPO}" add "${dst}"
-}
-
 # Creates a namespace directory and yaml in the git repo.  If policyspaces are
 # required based on the path they will be implicitly created as well.
 #

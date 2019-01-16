@@ -18,6 +18,10 @@ setup() {
   setup::git::initialize
 }
 
+teardown() {
+  setup::common_teardown
+}
+
 @test "CLI Vet Foo-corp" {
   ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/foo-corp-example/foo-corp
 }
