@@ -5,7 +5,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -21,10 +21,14 @@ func NewActionSpec(client typedv1.NomosV1Interface, lister listersv1.PolicyNodeL
 		lister)
 }
 
+func resourceQuantityCmp(lhs, rhs resource.Quantity) bool {
+	return lhs.Cmp(rhs) == 0
+}
+
 var pnsIgnore = []cmp.Option{
-	// Quantity has a few unexported fields which we need to explicitly ignore. The path is:
+	// Quantity has a few unexported fields which we need to manually compare. The path is:
 	// PolicyNodeSpec -> ResourceQuota -> ResourceQuotaSpec -> ResourceList -> Quantity
-	cmpopts.IgnoreUnexported(resource.Quantity{}),
+	cmp.Comparer(resourceQuantityCmp),
 	cmpopts.IgnoreFields(v1.PolicyNodeSpec{}, "ImportToken", "ImportTime"),
 }
 
