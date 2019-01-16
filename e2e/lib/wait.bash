@@ -17,7 +17,7 @@
 #                      output is not checked.  Default: ""
 #   -p [poll interval] The amount of time to wait between executions
 #   -s                 Wait for success (exit 0)
-#   -t [timeout]       The timeout in seconds (default 30 seconds)
+#   -t [timeout]       The timeout in seconds (default 300 seconds)
 #   -- End of flags, command starts after this
 # Args
 #  Args for command
