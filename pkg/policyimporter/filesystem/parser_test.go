@@ -27,7 +27,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
@@ -2077,8 +2077,9 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	p, err := NewParserWithFactory(
 		f,
 		ParserOpt{
-			Vet:      tc.vet,
-			Validate: true,
+			Vet:       tc.vet,
+			Validate:  true,
+			Extension: ParserConfigFactory(),
 		},
 	)
 	if err != nil {
@@ -3175,8 +3176,9 @@ func TestEmptyDirectories(t *testing.T) {
 			p, err := NewParserWithFactory(
 				f,
 				ParserOpt{
-					Vet:      false,
-					Validate: true,
+					Vet:       false,
+					Validate:  true,
+					Extension: ParserConfigFactory(),
 				},
 			)
 			if err != nil {

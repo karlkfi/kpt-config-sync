@@ -68,17 +68,37 @@ type Parser struct {
 	root nomospath.Root
 }
 
-// ParserExtension extends the functionality of the parser by allowing the override of visitors or addition
+// ParserConfig extends the functionality of the parser by allowing the override of visitors or addition
 // of sync resources.
 // TODO(willbeason): Bespin requires the visitors to be overridden to avoid validators that
 // cause a Bespin import to fail, but the resources need to be appended to. This
 // isn't great. Ideally the visitors should be able to be chained as well, then
 // the ParserOpt could take multiple ParserExtensions and run them all.
-type ParserExtension interface {
+type ParserConfig interface {
 	// Visitors *overrides* the normal visitor functionality of the parser.
-	Visitors() VisitorProvider
+	Visitors(
+		syncs []*v1alpha1.Sync,
+		clusters []clusterregistry.Cluster,
+		selectors []v1alpha1.ClusterSelector,
+		vet bool,
+		apiInfo *meta.APIInfo) []ast.Visitor
 	// SyncResources *appends* sync resources to the normal Nomos sync resources.
 	SyncResources() []*v1alpha1.Sync
+	// NamespacesDir returns the name of the namespaces dir.
+	NamespacesDir() string
+}
+
+// ParserConfigFactory returns the appropriate ParserConfig based on the environment.
+func ParserConfigFactory() ParserConfig {
+	var e ParserConfig
+	// Check for a set environment variable instead of using a flag so as not to expose
+	// this WIP externally.
+	if _, ok := os.LookupEnv("NOMOS_ENABLE_BESPIN"); ok {
+		e = &BespinVisitorProvider{}
+	} else {
+		e = &NomosVisitorProvider{}
+	}
+	return e
 }
 
 // ParserOpt has often customized parser options. Use for example in NewParser.
@@ -87,28 +107,24 @@ type ParserOpt struct {
 	Vet bool
 	// Validate will raise validation errors if set.
 	Validate  bool
-	Extension ParserExtension
+	Extension ParserConfig
 }
 
-// VisitorProvider is an interface that abstracts out the source of visitors
-// that are used to walk the AST.
-type VisitorProvider interface {
-	visitors(apiInfo *meta.APIInfo) []ast.Visitor
-}
-
-// nomosVisitorProvider is the default visitor provider.  It handles
+// NomosVisitorProvider is the default visitor provider.  It handles
 // plain vanilla nomos configs.
-type nomosVisitorProvider struct {
-	syncs     []*v1alpha1.Sync
-	clusters  []clusterregistry.Cluster
-	selectors []v1alpha1.ClusterSelector
-	vet       bool
+type NomosVisitorProvider struct {
 }
 
-func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
-	specs := toInheritanceSpecs(n.syncs)
+// Visitors implements ParserConfig
+func (n NomosVisitorProvider) Visitors(
+	syncs []*v1alpha1.Sync,
+	clusters []clusterregistry.Cluster,
+	selectors []v1alpha1.ClusterSelector,
+	vet bool,
+	apiInfo *meta.APIInfo) []ast.Visitor {
+	specs := toInheritanceSpecs(syncs)
 	visitors := []ast.Visitor{
-		validation.NewInputValidator(n.syncs, specs, n.clusters, n.selectors, n.vet),
+		validation.NewInputValidator(syncs, specs, clusters, selectors, vet),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(apiInfo),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
@@ -123,6 +139,16 @@ func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
 	return visitors
 }
 
+// SyncResources implements ParserConfig
+func (n NomosVisitorProvider) SyncResources() []*v1alpha1.Sync {
+	return nil
+}
+
+// NamespacesDir implements ParserConfig
+func (n NomosVisitorProvider) NamespacesDir() string {
+	return repo.NamespacesDir
+}
+
 // NewParser creates a new Parser.
 // clientConfig can be used to configure api server client. It should be set to nil when running in cluster.
 // resources is the list returned by the DisoveryClient ServerResources call which represents resources
@@ -130,18 +156,6 @@ func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
 // opts turns on options for the parser.
 func NewParser(clientGetter genericclioptions.RESTClientGetter, opts ParserOpt) (*Parser, error) {
 	return NewParserWithFactory(cmdutil.NewFactory(clientGetter), opts)
-}
-
-func (p *Parser) nomosVisitorProvider(
-	syncs []*v1alpha1.Sync,
-	clusters []clusterregistry.Cluster,
-	selectors []v1alpha1.ClusterSelector) VisitorProvider {
-	return nomosVisitorProvider{
-		syncs:     syncs,
-		clusters:  clusters,
-		selectors: selectors,
-		vet:       p.opts.Vet,
-	}
 }
 
 // NewParserWithFactory creates a new Parser using the specified factory.
@@ -223,7 +237,7 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 	errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
 	sel.SetClusterSelector(cs, fsCtx)
 
-	nsDir := p.root.Join(repo.NamespacesDir)
+	nsDir := p.root.Join(p.opts.Extension.NamespacesDir())
 	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
 
 	nsInfos := p.readResources(nsDir, &errorBuilder)
@@ -232,12 +246,8 @@ func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
 
 	// TODO: temporary until processDirs refactoring
 	dirInfos := toDirInfoMap(nsInfos)
-	vp := p.nomosVisitorProvider(syncs, clusters, selectors)
-	if p.opts.Extension != nil && p.opts.Extension.Visitors() != nil {
-		vp = p.opts.Extension.Visitors()
-	}
 
-	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, vp, nsDirsOrdered, fsCtx, syncs)
+	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, nsDirsOrdered, fsCtx, syncs, clusters, selectors)
 	errorBuilder.Add(err)
 
 	if glog.V(8) {
@@ -323,10 +333,11 @@ func (p *Parser) readResources(dir nomospath.Relative, errorBuilder *multierror.
 func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	dirInfos map[nomospath.Relative][]ast.FileObject,
 	clusterObjects []ast.FileObject,
-	vp VisitorProvider,
 	nsDirsOrdered []nomospath.Relative,
 	fsRoot *ast.Root,
-	syncs []*v1alpha1.Sync) (*v1.AllPolicies, error) {
+	syncs []*v1alpha1.Sync,
+	clusters []clusterregistry.Cluster,
+	selectors []v1alpha1.ClusterSelector) (*v1.AllPolicies, error) {
 
 	processCluster(clusterObjects, fsRoot)
 
@@ -351,7 +362,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	tree := treeGenerator.Build(&errorBuilder)
 	fsRoot.Tree = tree
 
-	visitors := vp.visitors(apiInfo)
+	visitors := p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet, apiInfo)
 	for _, visitor := range visitors {
 		fsRoot = fsRoot.Accept(visitor)
 		if err := visitor.Error(); err != nil {

@@ -1,7 +1,6 @@
 package vet
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/google/nomos/cmd/nomos/flags"
@@ -35,13 +34,9 @@ returns a non-zero error code if any issues are found.
 		if err != nil {
 			util.PrintErrAndDie(errors.Wrap(err, "Failed to get absolute path"))
 		}
-		// Check for a set environment variable instead of using a flag so as not to expose
-		// this WIP externally.
-		e := &parse.Ext{}
-		if _, ok := os.LookupEnv("NOMOS_ENABLE_BESPIN"); ok {
-			e = &parse.Ext{VP: filesystem.BespinVisitors, Syncs: filesystem.BespinSyncs}
-		}
-		_, err = parse.Parse(dir, filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: e})
+		_, err = parse.Parse(
+			dir,
+			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: filesystem.ParserConfigFactory()})
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

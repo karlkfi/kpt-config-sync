@@ -32,9 +32,7 @@ func processSystem(
 
 	validateSystem(objects, repo, apiInfo, errorBuilder)
 
-	if opts.Extension != nil {
-		syncs = append(syncs, opts.Extension.SyncResources()...)
-	}
+	syncs = append(syncs, opts.Extension.SyncResources()...)
 	return repo, syncs
 }
 

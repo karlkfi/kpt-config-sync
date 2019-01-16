@@ -20,7 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	policyascode_v1 "github.com/google/nomos/pkg/api/policyascode/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/pkg/errors"
 )
@@ -95,7 +95,7 @@ func TestBespinParser(t *testing.T) {
 				}
 			}()
 
-			p, err := NewParserWithFactory(f, ParserOpt{Validate: true})
+			p, err := NewParserWithFactory(f, ParserOpt{Validate: true, Extension: ParserConfigFactory()})
 			if err != nil {
 				t.Fatal(err)
 			}

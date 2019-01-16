@@ -25,7 +25,6 @@ import (
 	"os"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
@@ -34,15 +33,10 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 )
 
-const bespinEnv = "NOMOS_ENABLE_BESPIN"
-
 var (
 	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directly has changed")
-	// Check for a set environment variable instead of using a flag so as not to expose
-	// this WIP externally.
-	_, bespin = os.LookupEnv(bespinEnv)
 )
 
 func main() {
@@ -62,11 +56,9 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	e := &parse.Ext{}
-	if bespin {
-		e = &parse.Ext{VP: filesystem.BespinVisitors, Syncs: filesystem.BespinSyncs}
-	}
-	parser, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, filesystem.ParserOpt{Validate: true, Extension: e})
+	parser, err := filesystem.NewParser(
+		&genericclioptions.ConfigFlags{},
+		filesystem.ParserOpt{Validate: true, Extension: filesystem.ParserConfigFactory()})
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %+v", err)
 	}

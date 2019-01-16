@@ -2,11 +2,13 @@ package filesystem
 
 import (
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 )
 
@@ -14,18 +16,17 @@ func init() {
 	utilruntime.Must(bespinv1.AddToScheme(legacyscheme.Scheme))
 }
 
-var (
-	// BespinVisitors is a VisitorProvider that exports the required Bespin visitors.
-	BespinVisitors = bespinVisitorProvider{}
-	// BespinSyncs are the sync resources required to parse a Bespin repository.
-	BespinSyncs = bespinv1.Syncs
-)
-
-// bespinVisitorProvider is used when bespin is enabled to handle the bespin specific
+// BespinVisitorProvider is used when bespin is enabled to handle the bespin specific
 // parts that won't pass the regular nomos checks.
-type bespinVisitorProvider struct{}
+type BespinVisitorProvider struct{}
 
-func (b bespinVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
+// Visitors implements ParserConfig
+func (b BespinVisitorProvider) Visitors(
+	syncs []*v1alpha1.Sync,
+	clusters []clusterregistry.Cluster,
+	selectors []v1alpha1.ClusterSelector,
+	vet bool,
+	apiInfo *meta.APIInfo) []ast.Visitor {
 	// TODO(b/119825336): Bespin and the InputValidator are having trouble playing
 	// nicely. For now, just return the visitors that Bespin needs.
 	return []ast.Visitor{
@@ -34,4 +35,14 @@ func (b bespinVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
 		validation.NewScope(apiInfo),
 		validation.NewNameValidator(),
 	}
+}
+
+// SyncResources implements ParserConfig
+func (b BespinVisitorProvider) SyncResources() []*v1alpha1.Sync {
+	return bespinv1.Syncs
+}
+
+// NamespacesDir implements ParserConfig
+func (b BespinVisitorProvider) NamespacesDir() string {
+	return "hierarchy"
 }

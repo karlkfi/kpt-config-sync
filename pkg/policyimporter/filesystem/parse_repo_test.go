@@ -65,8 +65,9 @@ func (tc *testCase) Run(t *testing.T) {
 	p, err2 := NewParserWithFactory(
 		f,
 		ParserOpt{
-			Vet:      true,
-			Validate: false,
+			Vet:       true,
+			Validate:  false,
+			Extension: ParserConfigFactory(),
 		},
 	)
 	if err2 != nil {
