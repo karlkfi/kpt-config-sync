@@ -45,9 +45,6 @@ function expect_rename_to() {
 }
 
 @test "Operator: basic successive cluster renames in Nomos resource" {
-  debug::log "Check that the initial cluster state has the correct name"
-  wait::for -o "e2e-test-cluster" -- get_cluster_name
-
   expect_rename_to "eenie"
   expect_rename_to "meenie"
   expect_rename_to "minie"
@@ -57,9 +54,6 @@ function expect_rename_to() {
 
 @test "Operator: Cluster rename load test" {
   skip "Enable this test only if you are debugging"
-  debug::log "Check that the initial cluster state has the correct name"
-  wait::for -t 40 -o "e2e-test-cluster" -- get_cluster_name
-
   for count in {0..30}; do
     expect_rename_to "eenie_${count}"
     expect_rename_to "meenie_${count}"
