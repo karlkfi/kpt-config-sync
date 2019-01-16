@@ -1,0 +1,14 @@
+apiVersion: addons.sigs.k8s.io/v1alpha1
+kind: Nomos
+metadata:
+  name: nomos
+  namespace: nomos-system
+spec:
+  enableHierarchicalResourceQuota: false
+  clusterName: e2e-test-cluster
+  git:
+    syncRepo: git@test-git-server.nomos-system-test:/git-server/repos/sot.git
+    syncBranch: master
+    syncWait: 1
+    secretType: ssh
+    policyDir: acme

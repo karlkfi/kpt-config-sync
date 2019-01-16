@@ -97,3 +97,4 @@ test-nomos-vet-local: build
 	@cd $(TOP_DIR)/.output/tmp/empty && git init && $(NOMOS_LOCAL) init && $(NOMOS_LOCAL) vet
 
 include Makefile.e2e.ci
+include Makefile.e2e.syllogi

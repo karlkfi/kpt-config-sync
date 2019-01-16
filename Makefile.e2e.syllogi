@@ -1,0 +1,17 @@
+
+# This target creates an image for a test that is used by the Syllogi E2E
+# framework. The script that actually runs this image is in the Syllogi repo at
+# https://gke-internal.googlesource.com/syllogi/cluster-management/+/master/test-infra/scripts/
+
+image-e2e-syllogi: image-e2e-tests build/e2e-tests/Dockerfile.syllogi
+	@echo "+++ Building the e2e syllogi image"
+	@docker build \
+	  --file=build/e2e-tests/Dockerfile.syllogi \
+	  --build-arg "DOCKER_GID=$(shell stat -c '%g' /var/run/docker.sock)" \
+	  --build-arg "UID=$(UID)" \
+	  --build-arg "GID=$(GID)" \
+	  --build-arg "UNAME=${USER}" \
+	  -t gcr.io/syllogi-ci/e2e-nomos-syllogi:latest \
+    $(DOCKER_BUILD_QUIET) \
+	  .
+	@docker push gcr.io/syllogi-ci/e2e-nomos-syllogi:latest

@@ -6,31 +6,13 @@ readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 readonly FWD_SSH_PORT=2222
 
-# linter does not recognize that lib/wait.bash is a linted source file
-# shellcheck disable=SC1091
-source ./lib/wait.bash
+# shellcheck source=e2e/lib/wait.bash
+source "$TEST_DIR/lib/wait.bash"
+# shellcheck source=e2e/lib/install.bash
+source "$TEST_DIR/lib/install.bash"
+
 
 NOMOS_REPO="${NOMOS_REPO:-.}"
-
-function nomos_running() {
-  if ! kubectl get pods -n nomos-system | grep git-policy-importer | grep Running; then
-    echo "Importer not yet running"
-    return 1
-  fi
-  if ! kubectl get pods -n nomos-system | grep syncer | grep Running; then
-    echo "Syncer not yet running"
-    return 1
-  fi
-  return 0
-}
-
-function nomos_uninstalled() {
-  if [ "$(kubectl get pods -n nomos-system | wc -l)" -ne 0 ]; then
-    echo "Nomos pods not yet uninstalled"
-    return 1
-  fi
-  return 0
-}
 
 function apply_cluster_admin_binding() {
   local account="${1:-}"
@@ -60,7 +42,7 @@ function install() {
     kubectl apply -f defined-operator-bundle.yaml
     kubectl create secret generic git-creds -n=nomos-system --from-file=ssh="$HOME"/.ssh/id_rsa.nomos || true
     kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
-    wait::for -s -t 180 -- nomos_running
+    wait::for -s -t 180 -- install::nomos_running
   fi
 }
 
@@ -72,7 +54,7 @@ function uninstall() {
     if kubectl get nomos &> /dev/null; then
       kubectl -n=nomos-system delete nomos --all
     fi
-    wait::for -s -t 300 -- nomos_uninstalled
+    wait::for -s -t 300 -- install::nomos_uninstalled
     kubectl delete --ignore-not-found -f defined-operator-bundle.yaml
 
     # make sure that nomos-system is no longer extant
@@ -233,42 +215,6 @@ function main() {
   return ${retcode}
 }
 
-# Configures gcloud and kubectl to use supplied service account credentials
-# to interact with the cluster under test.
-#
-# Params:
-#   $1: File path to the JSON file containing service account credentials.
-#   #2: Optional, GCS file that we want to download the configuration from.
-setup_prober_cred() {
-  echo "+++ Setting up prober credentials"
-  local cred_file="$1"
-
-  # Makes the service account from ${_cred_file} the active account that drives
-  # cluster changes.
-  gcloud --quiet auth activate-service-account --key-file="${cred_file}"
-
-  # Installs gcloud as an auth helper for kubectl with the credentials that
-  # were set with the service account activation above.
-  # Needs cloud.containers.get permission.
-  gcloud --quiet container clusters get-credentials \
-    "${gcp_cluster_name}" --zone us-central1-a --project stolos-dev
-}
-
-# Creates a public-private ssh key pair.
-# TODO(filmil): Eliminate the need for the keypair to exist both in $HOME
-# and /opt/testing.
-create_keypair() {
-  echo "+++ Creating keypair at: ${HOME}/.ssh"
-  mkdir -p "$HOME/.ssh"
-  # Skipping confirmation in keygen returns nonzero code even if it was a
-  # success.
-  (yes | ssh-keygen \
-        -t rsa -b 4096 \
-        -C "your_email@example.com" \
-        -N '' -f "/opt/testing/e2e/id_rsa.nomos") || echo "Key created here."
-  ln -s "/opt/testing/e2e/id_rsa.nomos" "${HOME}/.ssh/id_rsa.nomos"
-}
-
 echo "e2e/setup.sh: executed with args" "$@"
 
 clean=false
@@ -361,7 +307,7 @@ if [[ "${gcp_prober_cred}" != "" ]]; then
 fi
 
 if ${create_ssh_key}; then
-  create_keypair
+  install::create_keypair
 fi
 
 install_config="${TEST_DIR}/install-config.yaml"
