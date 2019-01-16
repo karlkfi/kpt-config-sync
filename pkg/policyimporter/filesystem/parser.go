@@ -23,7 +23,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
@@ -102,13 +102,13 @@ type nomosVisitorProvider struct {
 	syncs     []*v1alpha1.Sync
 	clusters  []clusterregistry.Cluster
 	selectors []v1alpha1.ClusterSelector
-	opts      ParserOpt
+	vet       bool
 }
 
 func (n nomosVisitorProvider) visitors(apiInfo *meta.APIInfo) []ast.Visitor {
 	specs := toInheritanceSpecs(n.syncs)
 	visitors := []ast.Visitor{
-		validation.NewInputValidator(n.syncs, specs, n.clusters, n.selectors, n.opts.Vet),
+		validation.NewInputValidator(n.syncs, specs, n.clusters, n.selectors, n.vet),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(apiInfo),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
@@ -140,7 +140,7 @@ func (p *Parser) nomosVisitorProvider(
 		syncs:     syncs,
 		clusters:  clusters,
 		selectors: selectors,
-		opts:      p.opts,
+		vet:       p.opts.Vet,
 	}
 }
 
