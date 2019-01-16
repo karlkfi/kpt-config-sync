@@ -7,6 +7,7 @@ import (
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -21,6 +22,9 @@ func NewActionSpec(client typedv1.NomosV1Interface, lister listersv1.PolicyNodeL
 }
 
 var pnsIgnore = []cmp.Option{
+	// Quantity has a few unexported fields which we need to explicitly ignore. The path is:
+	// PolicyNodeSpec -> ResourceQuota -> ResourceQuotaSpec -> ResourceList -> Quantity
+	cmpopts.IgnoreUnexported(resource.Quantity{}),
 	cmpopts.IgnoreFields(v1.PolicyNodeSpec{}, "ImportToken", "ImportTime"),
 }
 
