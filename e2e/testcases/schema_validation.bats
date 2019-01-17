@@ -9,7 +9,7 @@ load "../lib/debug"
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 # This cleans up any nomos resources that were erroneously written.
-function local_teardown() {
+function teardown() {
   kubectl delete syncs invalid || true
   kubectl delete policynodes invalid || true
   kubectl delete clusterpolicies invalid || true
