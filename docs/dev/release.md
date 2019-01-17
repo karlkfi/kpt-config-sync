@@ -179,6 +179,15 @@ just a patch increment run:
 make bless-release
 ```
 
+NOTE: You will need go version 1.11.4 or above to properly bless the release.  You may also need to
+run go clean -modcache if you get errors.
+
+```console
+$ go version
+go version go1.11.4 linux/amd64
+$ go clean -modcache
+```
+
 If you would instead like to increment the minor version, run: `console
 MINOR=true make bless-release`
 
