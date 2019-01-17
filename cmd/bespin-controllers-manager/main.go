@@ -22,12 +22,19 @@ import (
 	"github.com/golang/glog"
 	apis "github.com/google/nomos/pkg/api/policyascode"
 	controllers "github.com/google/nomos/pkg/bespin-controllers"
+	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	"github.com/pkg/errors"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
+
+// The path to Terraform plugin directory, default points to the plugin dir in docker container.
+var tfPluginDir = flag.String("tf_plugin_dir", "/bespin/terraform-bundle", "Terraform provider's plug-in dir")
+
+// The path to Terraform binary, default poins to the binary in docker container.
+var tfBinaryPath = flag.String("tf_binary_path", "/bespin/terraform-bundle/terraform", "Terraform binary path")
 
 func main() {
 	flag.Parse()
@@ -50,9 +57,9 @@ func main() {
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		glog.Fatal(errors.Wrap(err, "error in setting up resource scheme for manager"))
 	}
-
+	tfec := terraform.NewTFExecutorCreator(*tfBinaryPath, *tfPluginDir)
 	// Setup all Controllers
-	if err := controllers.AddToManager(mgr); err != nil {
+	if err := controllers.AddToManager(mgr, &tfec); err != nil {
 		glog.Fatal(errors.Wrap(err, "error in setting up controllers for manager"))
 	}
 

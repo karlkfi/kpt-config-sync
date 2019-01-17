@@ -41,8 +41,8 @@ bespin-controllers-manager:
 	go build -o $(BESPIN_BIN_DIR)/bespin-controllers-manager ./cmd/bespin-controllers-manager/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-bespin-run-manager-local:
-	go run ./cmd/bespin-controllers-manager/main.go  --local=true --alsologtostderr=true --v=10
+bespin-run-manager-local: bespin-terraform
+	go run ./cmd/bespin-controllers-manager/main.go  --tf_binary_path="${BESPIN_OUTPUT_DIR}/terraform-bundle/terraform" --tf_plugin_dir="${BESPIN_OUTPUT_DIR}/terraform-bundle" --alsologtostderr=true --v=10
 
 # Install Bespin CRDs into a cluster
 bespin-install-crds:
@@ -67,7 +67,7 @@ bespin-terraform:
 	git -C ${GOPATH}/src/github.com/hashicorp clone https://github.com/hashicorp/terraform.git -b v0.11.1 || true
 	go install github.com/hashicorp/terraform/tools/terraform-bundle
 	cd $(BESPIN_OUTPUT_DIR); \
-	terraform-bundle package $(BESPIN_BUILD_DIR)/terraform-bundle.hcl && \
+	$(GOPATH)/bin/terraform-bundle package $(BESPIN_BUILD_DIR)/terraform-bundle.hcl && \
 	mkdir -p terraform-bundle && unzip -o -d terraform-bundle terraform_*.zip && \
 	rm -rf terraform_*.zip
 

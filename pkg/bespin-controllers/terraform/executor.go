@@ -19,7 +19,6 @@ package terraform
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -36,12 +35,7 @@ import (
 )
 
 const (
-	// The path to Terraform binary.
-	binaryPath = "/bespin/terraform-bundle/terraform"
-
-	// The path to Terraform plugin directory.
-	pluginDir = "/bespin/terraform-bundle"
-
+	// Default prefix of the tmp dir that holds Terraform config and state files.
 	defaultTmpDirPrefix = "terraform"
 
 	// Default file name to use when generating Terraform config
@@ -54,16 +48,13 @@ const (
 	// Default file mode when bespin creates a new file.
 	defaultFilePerm = 0644
 
-	// Terraform provider config.
+	// Terraform provider config. The version number should be the same as the
+	// one in build/bespin/terraform-bundle.hcl file.
 	providerConfig = `provider "google" {
 version = "1.19.1"
 }
 `
 )
-
-// Set to true if the bespin binary is running locally, otherwise
-// assume it's running inside a container.
-var local = flag.Bool("local", false, "True if running bespin controller locally")
 
 func execCommand(name string, args ...string) ([]byte, error) {
 	cmd := exec.Command(name, args...)
@@ -93,6 +84,29 @@ type Resource interface {
 	ID() string
 }
 
+// ExecutorCreator defines the interface to create an executor by production code or by controller unit test.
+type ExecutorCreator interface {
+	NewExecutor(ctx context.Context, c client.Client, resource Resource) (*Executor, error)
+}
+
+// TFExecutorCreator wraps the Terraform binary path and plugin dir and can create new Executor.
+type TFExecutorCreator struct {
+	// tfBinPath is the path to Terraform binary.
+	tfBinPath string
+
+	// tfPluginDir is the dir to Terraform plugin.
+	tfPluginDir string
+}
+
+// NewTFExecutorCreator creates new ExecutorCreator object.
+func NewTFExecutorCreator(binPath, pluginDir string) TFExecutorCreator {
+	ef := TFExecutorCreator{
+		tfBinPath:   binPath,
+		tfPluginDir: pluginDir,
+	}
+	return ef
+}
+
 // Executor is a Terraform wrapper to run Terraform comamnds.
 type Executor struct {
 	// The working dir for this executor to perform all Terraform operations.
@@ -120,23 +134,19 @@ type Executor struct {
 	k8sClient bespinv1.Client
 }
 
-// NewExecutor creates and approproately initializes a new Terraform executor.
-func NewExecutor(ctx context.Context, c client.Client, resource Resource) (*Executor, error) {
+// NewExecutor creates and approproately initializes a new Terraform executor. It impolements the ExecutorFactory interface.
+func (ef *TFExecutorCreator) NewExecutor(ctx context.Context, c client.Client, resource Resource) (*Executor, error) {
 	tmpDir, err := ioutil.TempDir("", defaultTmpDirPrefix)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create tmp dir")
-	}
-	tfeBinaryPath, tfePluginDir := binaryPath, pluginDir
-	if *local {
-		tfeBinaryPath, tfePluginDir = "terraform", ""
 	}
 	tfe := &Executor{
 		dir:            tmpDir,
 		configFileName: defaultConfigFileName,
 		stateFileName:  defaultStateFileName,
 		resource:       resource,
-		binaryPath:     tfeBinaryPath,
-		pluginDir:      tfePluginDir,
+		binaryPath:     ef.tfBinPath,
+		pluginDir:      ef.tfPluginDir,
 		ctx:            ctx,
 		k8sClient:      c,
 	}
@@ -164,9 +174,7 @@ func (tfe *Executor) RunInit() error {
 
 	var out []byte
 	args := []string{"init", "-input=false", "-upgrade=false"}
-	if !*local {
-		args = append(args, fmt.Sprintf("-plugin-dir=%s", pluginDir))
-	}
+	args = append(args, fmt.Sprintf("-plugin-dir=%s", tfe.pluginDir))
 	args = append(args, tfe.dir)
 	out, err := execCommand(tfe.binaryPath, args...)
 	if err != nil {

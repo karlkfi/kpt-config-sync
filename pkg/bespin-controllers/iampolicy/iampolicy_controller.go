@@ -48,16 +48,17 @@ const (
 
 // Add creates a new IAMPolicy Controller and adds it to the Manager with default RBAC.
 // The Manager will set fields on the Controller and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, ef terraform.ExecutorCreator) error {
+	return add(mgr, newReconciler(mgr, ef))
 }
 
 // newReconciler returns a new reconcile.Reconciler.
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, ef terraform.ExecutorCreator) reconcile.Reconciler {
 	return &ReconcileIAMPolicy{
 		Client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
 		recorder: mgr.GetRecorder(controllerName),
+		ef:       ef,
 	}
 }
 
@@ -85,6 +86,7 @@ type ReconcileIAMPolicy struct {
 	client.Client
 	scheme   *runtime.Scheme
 	recorder record.EventRecorder
+	ef       terraform.ExecutorCreator
 }
 
 // Reconcile reads that state of the cluster for a IAMPolicy object and makes changes based on the state read
@@ -108,7 +110,7 @@ func (r *ReconcileIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Res
 		glog.Errorf("IAMPolicy reconciler failed to set owner reference: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to set owner reference")
 	}
-	tfe, err := terraform.NewExecutor(ctx, r.Client, newiam)
+	tfe, err := r.ef.NewExecutor(ctx, r.Client, newiam)
 	if err != nil {
 		glog.Errorf("IAMPolicy reconciler failed to create new Terraform executor: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to create new Terraform executor")

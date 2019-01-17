@@ -40,13 +40,17 @@ const reconcileTimeout = time.Minute * 5
 
 // Add creates a new Folder Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, ef terraform.ExecutorCreator) error {
+	return add(mgr, newReconciler(mgr, ef))
 }
 
 // newReconciler returns a new reconcile.Reconciler.
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileFolder{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+func newReconciler(mgr manager.Manager, ef terraform.ExecutorCreator) reconcile.Reconciler {
+	return &ReconcileFolder{
+		Client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		ef:     ef,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler.
@@ -72,6 +76,7 @@ var _ reconcile.Reconciler = &ReconcileFolder{}
 type ReconcileFolder struct {
 	client.Client
 	scheme *runtime.Scheme
+	ef     terraform.ExecutorCreator
 }
 
 // Reconcile reads that state of the cluster for a Folder object and makes changes based on the state read
@@ -94,7 +99,7 @@ func (r *ReconcileFolder) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 	newFolder := &bespinv1.Folder{}
 	folder.DeepCopyInto(newFolder)
-	tfe, err := terraform.NewExecutor(ctx, r.Client, newFolder)
+	tfe, err := r.ef.NewExecutor(ctx, r.Client, newFolder)
 	if err != nil {
 		glog.Errorf("[Folder %v] reconciler failed to create new terraform executor: %v", name, err)
 		return reconcile.Result{},

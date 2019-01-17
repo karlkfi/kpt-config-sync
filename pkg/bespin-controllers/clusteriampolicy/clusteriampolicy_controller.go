@@ -41,13 +41,17 @@ const reconcileTimeout = time.Minute * 5
 
 // Add creates a new ClusterIAMPolicy Controller and adds it to the Manager with default RBAC.
 // The Manager will set fields on the Controller and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, ef terraform.ExecutorCreator) error {
+	return add(mgr, newReconciler(mgr, ef))
 }
 
 // newReconciler returns a new reconcile.Reconciler.
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileClusterIAMPolicy{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+func newReconciler(mgr manager.Manager, ef terraform.ExecutorCreator) reconcile.Reconciler {
+	return &ReconcileClusterIAMPolicy{
+		Client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		ef:     ef,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler.
@@ -73,6 +77,7 @@ var _ reconcile.Reconciler = &ReconcileClusterIAMPolicy{}
 type ReconcileClusterIAMPolicy struct {
 	client.Client
 	scheme *runtime.Scheme
+	ef     terraform.ExecutorCreator
 }
 
 // Reconcile reads that state of the cluster for a ClusterIAMPolicy object and makes changes based on the state read
@@ -96,7 +101,7 @@ func (r *ReconcileClusterIAMPolicy) Reconcile(request reconcile.Request) (reconc
 		glog.Errorf("ClusterIAMPolicy reconciler failed to set owner reference: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "ClusterIAMPolicy reconciler failed to set owner reference")
 	}
-	tfe, err := terraform.NewExecutor(ctx, r.Client, newciam)
+	tfe, err := r.ef.NewExecutor(ctx, r.Client, newciam)
 	if err != nil {
 		glog.Errorf("ClusterIAMPolicy reconciler failed to create new Terraform executor: %v", err)
 		return reconcile.Result{}, errors.Wrap(err, "ClusterIAMPolicy reconciler failed to create new Terraform executor")

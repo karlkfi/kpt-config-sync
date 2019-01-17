@@ -7,5 +7,7 @@ terraform {
 # Define which provider plugins are to be included
 providers {
   # See https://releases.hashicorp.com/terraform-provider-google
+  # This version number should be the same as in const providerConfig
+  # in pkg/bespin-controllers/terraform/executor.go
   google = ["1.19.1"]
 }

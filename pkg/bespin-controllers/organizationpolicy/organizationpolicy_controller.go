@@ -22,6 +22,7 @@ import (
 	"reflect"
 
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -45,13 +46,17 @@ import (
 // Add creates a new OrganizationPolicy Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 // USER ACTION REQUIRED: update cmd/manager/main.go to call this bespin.Add(mgr) to install this Controller
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, ef terraform.ExecutorCreator) error {
+	return add(mgr, newReconciler(mgr, ef))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileOrganizationPolicy{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+func newReconciler(mgr manager.Manager, ef terraform.ExecutorCreator) reconcile.Reconciler {
+	return &ReconcileOrganizationPolicy{
+		Client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		ef:     ef,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -83,6 +88,7 @@ var _ reconcile.Reconciler = &ReconcileOrganizationPolicy{}
 type ReconcileOrganizationPolicy struct {
 	client.Client
 	scheme *runtime.Scheme
+	ef     terraform.ExecutorCreator
 }
 
 // Reconcile reads that state of the cluster for a OrganizationPolicy object and makes changes based on the state read

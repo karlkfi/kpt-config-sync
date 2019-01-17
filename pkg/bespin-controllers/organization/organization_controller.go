@@ -37,13 +37,17 @@ const reconcileTimeout = time.Minute * 5
 
 // Add creates a new Organization Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, ef terraform.ExecutorCreator) error {
+	return add(mgr, newReconciler(mgr, ef))
 }
 
 // newReconciler returns a new reconcile.Reconciler.
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileOrganization{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+func newReconciler(mgr manager.Manager, ef terraform.ExecutorCreator) reconcile.Reconciler {
+	return &ReconcileOrganization{
+		Client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		ef:     ef,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler.
@@ -69,6 +73,7 @@ var _ reconcile.Reconciler = &ReconcileOrganization{}
 type ReconcileOrganization struct {
 	client.Client
 	scheme *runtime.Scheme
+	ef     terraform.ExecutorCreator
 }
 
 // Reconcile reads that state of the cluster for a Organization object and makes sure the Organization exists
@@ -87,7 +92,7 @@ func (r *ReconcileOrganization) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{},
 			errors.Wrapf(err, "[Organization %v] reconciler failed to get organization instance", request.NamespacedName)
 	}
-	tfe, err := terraform.NewExecutor(ctx, r.Client, organization)
+	tfe, err := r.ef.NewExecutor(ctx, r.Client, organization)
 	if err != nil {
 		glog.Errorf("[Organization %v] reconciler failed to create new Terraform executor: %v", request.NamespacedName, err)
 		return reconcile.Result{},
