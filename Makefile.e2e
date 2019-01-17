@@ -6,6 +6,8 @@ E2E_PARAMS := \
 	IMAGE_TAG=$(IMAGE_TAG) \
 	GCP_PROJECT=$(GCP_PROJECT) \
 	GCR_PREFIX=$(GCR_PREFIX) \
+	GCP_E2E_WATCHER_CRED=$(GCP_E2E_WATCHER_CRED) \
+        GCP_E2E_RUNNER_CRED=$(GCP_E2E_RUNNER_CRED)
 
 # Note that it is basically a copy of the staging directory for the installer
 # plus a few extras for e2e.
@@ -51,6 +53,9 @@ test-e2e-run-git:
 		--OUTPUT_DIR "$(OUTPUT_DIR)" \
 		$(TEST_E2E_RUN_FLAGS) \
 		-- \
+		--importer "git" \
+		--gcp-watcher-cred "$(GCP_E2E_WATCHER_CRED)" \
+		--gcp-runner-cred "$(GCP_E2E_RUNNER_CRED)" \
 		$(E2E_FLAGS) \
 	    && echo "+++ git e2e tests completed" \
 	    || (echo "### e2e tests failed. Temp dir (with test output logs etc) are available in ${TEMP_OUTPUT_DIR}"; exit 1)

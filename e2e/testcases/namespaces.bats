@@ -10,7 +10,7 @@ load "../lib/setup"
 load "../lib/wait"
 
 # This cleans up any namespaces that were created by a testcase
-function teardown() {
+function local_teardown() {
   kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found=true || true
 }
 

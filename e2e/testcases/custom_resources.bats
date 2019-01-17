@@ -13,7 +13,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 WATCH_PID=""
 
 # This cleans up any CRDs that were created by a testcase
-function teardown() {
+function local_teardown() {
   kubectl delete crd anvils.acme.com --ignore-not-found=true || true
   kubectl delete crd clusteranvils.acme.com --ignore-not-found=true || true
   if [[ "$WATCH_PID" != "" ]]; then

@@ -54,13 +54,33 @@ EOF
 function install() {
   if $do_installation; then
     echo "+++++ Installing..."
-    # Linter says this is better than "cd -"
-    cd "${NOMOS_REPO}/.output/e2e"
-    apply_cluster_admin_binding "$(gcloud config get-value account)"
-    kubectl apply -f defined-operator-bundle.yaml
-    kubectl create secret generic git-creds -n=nomos-system --from-file=ssh="$HOME"/.ssh/id_rsa.nomos || true
-    kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
-    wait::for -s -t 180 -- nomos_running
+    (
+       case ${importer} in
+        git)
+        # Linter says this is better than "cd -"
+        cd "${NOMOS_REPO}/.output/e2e"
+        apply_cluster_admin_binding "$(gcloud config get-value account)"
+        kubectl apply -f defined-operator-bundle.yaml
+        kubectl create secret generic git-creds -n=nomos-system --from-file=ssh="$HOME"/.ssh/id_rsa.nomos || true
+        kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
+        wait::for -s -t 180 -- nomos_running
+        ;;
+
+        gcp)
+        # gcp is still using the old-style installer. This can be removed once this is not the case
+        # Linter says this is better than "cd -"
+        cd "${NOMOS_REPO}/.output/e2e/installer"
+        "${run_installer}" \
+          --config="${install_config}" \
+          --work_dir="${PWD}"
+        ;;
+
+        *)
+         echo "invalid importer value: ${importer}"
+         exit 1
+        ;;
+      esac
+    )
   fi
 }
 
@@ -69,67 +89,103 @@ function uninstall() {
   if $do_installation; then
     # If we did the installation, then we should uninstall as well.
     echo "+++++ Uninstalling..."
-    if kubectl get nomos &> /dev/null; then
-      kubectl -n=nomos-system delete nomos --all
-    fi
-    wait::for -s -t 300 -- nomos_uninstalled
-    kubectl delete --ignore-not-found -f defined-operator-bundle.yaml
+    (
+      case ${importer} in
+        git)
+        # we do not care if part of the deletion fails, as the objects may not all exist
+        if kubectl get nomos &> /dev/null; then
+          kubectl -n=nomos-system delete nomos --all || true
+        fi
+        wait::for -s -t 300 -- nomos_uninstalled
+        kubectl delete -f defined-operator-bundle.yaml || true
+        ;;
 
-    # make sure that nomos-system is no longer extant
-    if kubectl delete ns nomos-system &> /dev/null; then
-      echo "Error: nomos-system was not deleted during operator removal."
-    fi
-    echo clean
+        gcp)
+        # gcp is still using the old-style installer. This can be removed once this is not the case
+        cd "${NOMOS_REPO}/.output/e2e/installer"
+        "${run_installer}" \
+          --config="${install_config}" \
+          --work_dir="${PWD}" \
+          --uninstall=deletedeletedelete
+        ;;
+
+        *)
+         echo "invalid importer value: ${importer}"
+         exit 1
+        ;;
+      esac
+      # make sure that nomos-system is no longer extant
+      if kubectl delete ns nomos-system &> /dev/null; then
+        echo "Error: nomos-system was not deleted during operator removal."
+      fi
+      echo clean
+    )
   fi
 }
 
 
 function set_up_env() {
-  echo "++++ Setting up environment"
-  /opt/testing/e2e/init-git-server.sh
+  echo "++++ Setting up environment: ${importer}"
+  case ${importer} in
+    git)
+    /opt/testing/e2e/init-git-server.sh
+    ;;
+    gcp)
+    gsutil cp "${gcp_watcher_cred}" "$HOME"
+    gsutil cp "${gcp_runner_cred}" "$HOME"
+    ;;
+  esac
 
   install
 }
 
 function set_up_env_minimal() {
   echo "++++ Setting up environment (minimal)"
-
-  echo "Starting port forwarding"
-  TEST_LOG_REPO=/tmp/nomos-test
-  POD_ID=$(kubectl get pods -n=nomos-system-test -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
-  mkdir -p ${TEST_LOG_REPO}
-  kubectl -n=nomos-system-test port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > ${TEST_LOG_REPO}/port-forward.log &
-  local pid=$!
-  local start_time
-  start_time=$(date +%s)
-  # Our image doesn't have netstat, so we have check for listen by
-  # looking at kubectl's Uninstalling tcp sockets in procfs.  This looks for listen on
-  # 127.0.0.1:$FWD_SSH_PORT with remote of 0.0.0.0:0.
-  # TODO: This should use git ls-remote, but for some reason it fails to be able
-  # to connect to the remote.
-  while ! grep "0100007F:08AE 00000000:0000 0A" "/proc/${pid}/net/tcp" &> /dev/null; do
-    echo -n "."
-    sleep 0.1
-    if (( $(date +%s) - start_time > 10 )); then
-      echo "Failed to set up kubectl tunnel!"
-      return 1
-    fi
-  done
+  case ${importer} in
+    git)
+    echo "Starting port forwarding"
+    TEST_LOG_REPO=/tmp/nomos-test
+    POD_ID=$(kubectl get pods -n=nomos-system-test -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
+    mkdir -p ${TEST_LOG_REPO}
+    kubectl -n=nomos-system-test port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > ${TEST_LOG_REPO}/port-forward.log &
+    local pid=$!
+    local start_time
+    start_time=$(date +%s)
+    # Our image doesn't have netstat, so we have check for listen by
+    # looking at kubectl's Uninstalling tcp sockets in procfs.  This looks for listen on
+    # 127.0.0.1:$FWD_SSH_PORT with remote of 0.0.0.0:0.
+    # TODO: This should use git ls-remote, but for some reason it fails to be able
+    # to connect to the remote.
+    while ! grep "0100007F:08AE 00000000:0000 0A" "/proc/${pid}/net/tcp" &> /dev/null; do
+      echo -n "."
+      sleep 0.1
+      if (( $(date +%s) - start_time > 10 )); then
+        echo "Failed to set up kubectl tunnel!"
+        return 1
+      fi
+    done
+    ;;
+    gcp)
+    gsutil cp "${gcp_runner_cred}" "$HOME"
+    ;;
+  esac
 }
 
 function clean_up_test_resources() {
   kubectl delete --ignore-not-found ns -l "nomos.dev/testdata=true"
   kubectl delete --ignore-not-found ns -l "nomos.dev/managed=enabled"
 
-  echo "killing kubectl port forward..."
-  pkill -f "kubectl -n=nomos-system-test port-forward.*${FWD_SSH_PORT}:22" || true
-  echo "  taking down nomos-system-test namespace"
-  kubectl delete --ignore-not-found ns nomos-system-test
-  while kubectl get ns nomos-system-test > /dev/null 2>&1
-  do
-    sleep 3
-    echo -n "."
-  done
+  if [[ "$importer" == "git" ]]; then
+    echo "killing kubectl port forward..."
+    pkill -f "kubectl -n=nomos-system-test port-forward.*${FWD_SSH_PORT}:22" || true
+    echo "  taking down nomos-system-test namespace"
+    kubectl delete --ignore-not-found ns nomos-system-test
+    while kubectl get ns nomos-system-test > /dev/null 2>&1
+    do
+      sleep 3
+      echo -n "."
+    done
+  fi
 }
 
 function clean_up() {
@@ -161,7 +217,11 @@ function main() {
 
   echo "+++ Starting tests"
   local all_test_files=()
-  mapfile -t all_test_files < <(find "${TEST_DIR}/testcases" -name '*.bats' | sort)
+  if [[ "$importer" == gcp ]]; then
+    mapfile -t all_test_files < <(find "${TEST_DIR}/gcp_testcases" -name '*.bats' | sort)
+  else
+    mapfile -t all_test_files < <(find "${TEST_DIR}/testcases" -name '*.bats' | sort)
+  fi
 
   local filtered_test_files=()
   if [[ "${file_filter}" == "" ]]; then
@@ -188,6 +248,8 @@ function main() {
     bats_cmd+=(--tap)
   fi
 
+  export IMPORTER="${importer}"
+
   if [[ "${testcase_filter}" != "" ]]; then
     export E2E_TEST_FILTER="${testcase_filter}"
   fi
@@ -198,7 +260,7 @@ function main() {
   local result_file=""
   local has_artifacts=false
   if [ -n "${ARTIFACTS+x}" ]; then
-    result_file="${ARTIFACTS}/result_git.bats"
+    result_file="${ARTIFACTS}/result_${importer}.bats"
     has_artifacts=true
   fi
 
@@ -219,10 +281,10 @@ function main() {
 
     if "${has_artifacts}"; then
       echo "+++ Converting test results from TAP format to jUnit"
-      tap2junit --name "git_tests" "${result_file}"
+      tap2junit --name "${importer}_tests" "${result_file}"
       # Testgrid requires this particular file name, and tap2junit doesn't allow
       # renames. So...
-      mv "${result_file}".xml "${ARTIFACTS}/junit_git.xml"
+      mv "${result_file}".xml "${ARTIFACTS}/junit_${importer}.xml"
     fi
   else
     echo "No files to test!"
@@ -231,6 +293,27 @@ function main() {
   end_time=$(date +%s)
   echo "Tests took $(( end_time - start_time )) seconds."
   return ${retcode}
+}
+
+# Configures gcloud and kubectl to use supplied service account credentials
+# to interact with the cluster under test.
+#
+# Params:
+#   $1: File path to the JSON file containing service account credentials.
+#   #2: Optional, GCS file that we want to download the configuration from.
+setup_prober_cred() {
+  echo "+++ Setting up prober credentials"
+  local cred_file="$1"
+
+  # Makes the service account from ${_cred_file} the active account that drives
+  # cluster changes.
+  gcloud --quiet auth activate-service-account --key-file="${cred_file}"
+
+  # Installs gcloud as an auth helper for kubectl with the credentials that
+  # were set with the service account activation above.
+  # Needs cloud.containers.get permission.
+  gcloud --quiet container clusters get-credentials \
+    "${gcp_cluster_name}" --zone us-central1-a --project stolos-dev
 }
 
 # Creates a public-private ssh key pair.
@@ -252,6 +335,9 @@ echo "e2e/setup.sh: executed with args" "$@"
 
 clean=false
 file_filter=".*"
+gcp_runner_cred=""
+gcp_watcher_cred=""
+importer=""
 preclean=false
 run_tests=false
 setup=false
@@ -259,6 +345,15 @@ tap=false
 
 # If set, the tests will skip the installation.
 do_installation=true
+
+# If set, the supplied credentials file will be used to set up the identity
+# of the test runner.  Otherwise defaults to whatever user is the current
+# default in gcloud and kubectl config.
+gcp_prober_cred=""
+
+# The name of the cluster to use for testing by default.    This is used to
+# obtain cluster credentials at start of the installation process.
+gcp_cluster_name="$USER-cluster-1"
 
 # If set, the setup will create a new ssh key to use in the tests.
 create_ssh_key=false
@@ -305,6 +400,26 @@ while [[ $# -gt 0 ]]; do
       file_filter="$(sed -e 's/[^=]*=//' <<< "$arg")"
     ;;
 
+    --importer)
+      importer="${1}"
+      shift
+    ;;
+    --gcp-watcher-cred)
+      gcp_watcher_cred="${1}"
+      shift
+    ;;
+    --gcp-runner-cred)
+      gcp_runner_cred="${1}"
+      shift
+    ;;
+    --gcp-prober-cred)
+      gcp_prober_cred="${1}"
+      shift
+    ;;
+    --gcp-cluster-name)
+      gcp_cluster_name="${1}"
+      shift
+    ;;
     --skip-installation)
       do_installation=false
     ;;
@@ -318,17 +433,35 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "${gcp_prober_cred}" != "" ]]; then
+  setup_prober_cred "${gcp_prober_cred}"
+fi
+
 if ${create_ssh_key}; then
   create_keypair
 fi
 
 install_config="${TEST_DIR}/install-config.yaml"
 install_config_template=""
-install_config_template="${TEST_DIR}/install-config-git.yaml"
+case ${importer} in
+  git)
+  install_config_template="${TEST_DIR}/install-config-git.yaml"
+  ;;
+
+  gcp)
+  install_config_template="${TEST_DIR}/install-config-gcp.yaml"
+  ;;
+
+  *)
+   echo "invalid importer value: ${importer}"
+   exit 1
+  ;;
+esac
 
 if $do_installation; then
   suggested_user="$(gcloud config get-value account)"
   kubectl_context="$(kubectl config current-context)"
+  run_installer="${TEST_DIR}/installer/install.sh"
   sed -e "s/CONTEXT/${kubectl_context}/" -e "s/USER/${suggested_user}/" \
     < "${install_config_template}" \
     > "${install_config}"

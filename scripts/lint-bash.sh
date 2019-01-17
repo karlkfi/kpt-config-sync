@@ -22,6 +22,7 @@ readonly exclude_bats=(
   e2e/testcases/basic.bats
   e2e/testcases/cluster_resources.bats
   e2e/testcases/namespaces.bats
+  e2e/gcp_testcases/basic.bats
 )
 
 # mapfile reads stdin lines into array, -t trims newlines

@@ -18,7 +18,7 @@ function local_setup() {
   KUBE_PROXY_PID=$!
 }
 
-function teardown() {
+function local_teardown() {
   kill $KUBE_PROXY_PID
   wait $KUBE_PROXY_PID || true
 }
