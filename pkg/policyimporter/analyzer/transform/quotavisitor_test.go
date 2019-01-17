@@ -167,6 +167,90 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 		},
 		{
+			Name: "merge multiple quotas ",
+			Input: &ast.Root{
+				Tree: &ast.TreeNode{
+					Type:     node.AbstractNamespace,
+					Relative: nomospath.NewFakeRelative("namespaces"),
+					Objects:  vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:     node.AbstractNamespace,
+							Relative: nomospath.NewFakeRelative("namespaces/eng"),
+							Children: []*ast.TreeNode{
+								&ast.TreeNode{
+									Type:     node.Namespace,
+									Relative: nomospath.NewFakeRelative("namespaces/eng/frontend"),
+									Objects: vt.ObjectSets(
+										modQuota(
+											vt.Helper.FrontendResourceQuota(),
+											"quota1",
+											resourcequota.NewNomosQuotaLabels(),
+											corev1.ResourceList{
+												corev1.ResourceCPU:     resource.MustParse("4"),
+												corev1.ResourceStorage: resource.MustParse("6"),
+											}),
+										modQuota(
+											vt.Helper.FrontendResourceQuota(),
+											"quota2",
+											resourcequota.NewNomosQuotaLabels(),
+											corev1.ResourceList{
+												corev1.ResourceMemory:  resource.MustParse("2"),
+												corev1.ResourceStorage: resource.MustParse("7"),
+											}),
+										modQuota(vt.Helper.FrontendResourceQuota(),
+											"quota3",
+											resourcequota.NewNomosQuotaLabels(),
+											corev1.ResourceList{
+												corev1.ResourceCPU: resource.MustParse("3"),
+											}),
+									),
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectOutput: &ast.Root{
+				Tree: &ast.TreeNode{
+					Type:     node.AbstractNamespace,
+					Relative: nomospath.NewFakeRelative("namespaces"),
+					Objects: vt.ObjectSets(
+						modQuota(
+							vt.Helper.AcmeResourceQuota(),
+							resourcequota.ResourceQuotaObjectName,
+							nil,
+							corev1.ResourceList{
+								corev1.ResourceCPU: resource.MustParse("5"),
+							}),
+					),
+					Children: []*ast.TreeNode{
+						&ast.TreeNode{
+							Type:     node.AbstractNamespace,
+							Relative: nomospath.NewFakeRelative("namespaces/eng"),
+							Children: []*ast.TreeNode{
+								&ast.TreeNode{
+									Type:     node.Namespace,
+									Relative: nomospath.NewFakeRelative("namespaces/eng/frontend"),
+									Objects: vt.ObjectSets(
+										modQuota(
+											vt.Helper.AcmeResourceQuota(),
+											resourcequota.ResourceQuotaObjectName,
+											resourcequota.NewNomosQuotaLabels(),
+											corev1.ResourceList{
+												corev1.ResourceCPU:     resource.MustParse("3"),
+												corev1.ResourceMemory:  resource.MustParse("2"),
+												corev1.ResourceStorage: resource.MustParse("6"),
+											}),
+									),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			Name: "no quota",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{

@@ -121,7 +121,7 @@ func (v *QuotaVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject 
 	if gvk.Group == "" && gvk.Kind == "ResourceQuota" {
 		quota := *o.FileObject.Object.(*corev1.ResourceQuota)
 		quota.Name = resourcequota.ResourceQuotaObjectName
-		v.ctx.quota = &quota
+		v.ctx.quota = merge(&quota, v.ctx.quota)
 		return nil
 	}
 	return o
