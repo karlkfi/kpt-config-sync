@@ -61,13 +61,13 @@ include Makefile
 # The version of the last known release candidate, e.g. v1.2.3-rc.4, but could
 # also be v1.2.3 if the last release candidate was promoted to a release.
 LAST_RC := $(shell \
-		git tag --sort=version:refname | \
+		git tag --sort=version:refname --list 'v*' | \
 		docker run -i $(BUILDENV_IMAGE) semsort 2>&1 | \
 		tail -n 1)
 
 # The version of the last known release (without -rc.X), e.g. v1.2.3
 LAST_RELEASE := $(shell \
-		git tag --sort=version:refname | \
+		git tag --sort=version:refname --list 'v*' | \
 		grep -v "rc" | \
 		docker run -i $(BUILDENV_IMAGE) semsort 2>&1 | \
 		tail -n 1)
