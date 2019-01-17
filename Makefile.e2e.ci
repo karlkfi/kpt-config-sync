@@ -6,20 +6,15 @@
 # Environment:
 #   E2E_FLAGS: flag passed into the test container
 #   TEST_E2E_RUN_FLAGS: flags passed to the e2e/e2e.sh script.
-#
-# The --gcp-prober-cred is mounted in as a Kubernetes secret at the path seen
-# below.
 ci-test-e2e:
 	$(MAKE) $(E2E_PARAMS) \
       E2E_FLAGS="\
         --tap \
 		--create-ssh-key \
-        --gcp-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
 		$(E2E_FLAGS) \
      " \
      TEST_E2E_RUN_FLAGS="\
 	    --hermetic \
-		--mounted-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
 		$(TEST_E2E_RUN_FLAGS) \
 	 " \
      test-e2e-all
@@ -28,10 +23,6 @@ ci-test-e2e:
 # We must download the gcs prober credentials, as they will not be mounted in.
 ci-test-e2e-local:
 	$(MAKE) $(E2E_PARAMS) \
-	 E2E_FLAGS="\
-		--gcp-prober-cred /tmp/config/prober_runner_client_key.json \
-	 " \
-     TEST_E2E_RUN_FLAGS="\
-		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json \
-	 " \
-     ci-test-e2e
+	 E2E_FLAGS="" \
+   TEST_E2E_RUN_FLAGS="" \
+   ci-test-e2e
