@@ -9,6 +9,12 @@ to deploy your local version run
 $ make deploy-operator
 ```
 
+And add the following to `nomos.yaml`:
+```
+spec:
+  channel: dev
+```
+
 This is instead of downloading and applying the operator bundle (replaces the
 steps
 [Download Operator Manifest Bundle](../user/installation.md#download-operator-manifest-bundle)
@@ -22,3 +28,9 @@ If you work in a project shared with other developers and you wish to test with
 a build of the operator other than the project-shared version `deploy-operator`
 uses, check out the operator source and run `make release-user` there, then run
 `make deploy-operator-user` in this repo.
+
+### Troubleshooting
+
+*Nomos Deployments are stuck in ImagePullBackoff*
+
+This happens when you don't add `channel: dev` to the Nomos.
