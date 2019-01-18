@@ -966,6 +966,19 @@
   revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
+  digest = "1:ba11048adc57b0bee1f3e3a43e4d055328e6618d0a67f34e0051c1acb7ba5081"
+  name = "google.golang.org/api"
+  packages = [
+    "cloudresourcemanager/v1",
+    "gensupport",
+    "googleapi",
+    "googleapi/internal/uritemplates",
+  ]
+  pruneopts = "UT"
+  revision = "19e022d8cf43ce81f046bae8cc18c5397cc7732f"
+  version = "v0.1.0"
+
+[[projects]]
   digest = "1:193950893ea275f89ed92e5da11ed8fa1436872f755a9ea5d4afa83dc9d9c3a8"
   name = "google.golang.org/appengine"
   packages = [
@@ -1690,6 +1703,9 @@
     "github.com/spf13/pflag",
     "golang.org/x/net/context",
     "golang.org/x/oauth2",
+    "golang.org/x/oauth2/google",
+    "google.golang.org/api/cloudresourcemanager/v1",
+    "google.golang.org/api/googleapi",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/credentials",
@@ -1728,6 +1744,7 @@
     "k8s.io/apimachinery/pkg/util/runtime",
     "k8s.io/apimachinery/pkg/util/sets",
     "k8s.io/apimachinery/pkg/util/strategicpatch",
+    "k8s.io/apimachinery/pkg/util/uuid",
     "k8s.io/apimachinery/pkg/util/validation",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/apimachinery/pkg/version",

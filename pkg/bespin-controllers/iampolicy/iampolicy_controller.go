@@ -18,13 +18,18 @@ package iampolicy
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"k8s.io/client-go/tools/record"
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/bespin-controllers/resource"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
+	"github.com/google/nomos/pkg/bespin-controllers/test/k8s"
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,7 +41,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const reconcileTimeout = time.Minute * 5
+const (
+	reconcileTimeout = time.Minute * 5
+	controllerName   = "iampolicy-controller"
+)
 
 // Add creates a new IAMPolicy Controller and adds it to the Manager with default RBAC.
 // The Manager will set fields on the Controller and Start it when the Manager is Started.
@@ -46,7 +54,11 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler.
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileIAMPolicy{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileIAMPolicy{
+		Client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
+		recorder: mgr.GetRecorder(controllerName),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler.
@@ -71,7 +83,8 @@ var _ reconcile.Reconciler = &ReconcileIAMPolicy{}
 // ReconcileIAMPolicy reconciles a IAMPolicy object.
 type ReconcileIAMPolicy struct {
 	client.Client
-	scheme *runtime.Scheme
+	scheme   *runtime.Scheme
+	recorder record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a IAMPolicy object and makes changes based on the state read
@@ -115,6 +128,13 @@ func (r *ReconcileIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Res
 		err = errors.Wrap(err, "reconciler failed to update IAMPolicy in API server")
 		return reconcile.Result{}, err
 	}
+
+	newCondition := k8s.NewCustomReadyCondition(v1.ConditionTrue, k8s.Updated, k8s.UpdatedMessage)
+	if err := r.updateAPIServerInstanceCondition(newiam, newCondition); err != nil {
+		return reconcile.Result{}, err
+	}
+	r.recorder.Eventf(newiam, v1.EventTypeNormal, k8s.Updated, k8s.UpdatedMessage)
+
 	glog.V(1).Infof("[IAMPolicy %v] reconciler successfully finished", name)
 	return reconcile.Result{}, nil
 }
@@ -133,6 +153,16 @@ func (r *ReconcileIAMPolicy) setOwnerReference(ctx context.Context, iampolicy *b
 		glog.V(1).Infof("[IAMPolicy %v] successfully set OwnerReference: %v", iampolicy.Name, owner)
 	default:
 		return errors.Errorf("invalid resource reference reference kind: %v", refKind)
+	}
+	return nil
+}
+
+func (r *ReconcileIAMPolicy) updateAPIServerInstanceCondition(iam *bespinv1.IAMPolicy,
+	newCondition bespinv1.Condition) error {
+	iam.Status.Conditions = []bespinv1.Condition{newCondition}
+	err := r.Update(context.Background(), iam)
+	if err != nil {
+		return fmt.Errorf("error updating instance '%v' in api server: %v", r, err)
 	}
 	return nil
 }
