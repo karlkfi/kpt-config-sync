@@ -170,13 +170,6 @@ e15b4b28 Thu Sep 6 .. Erik Kitson             Fix broken links in documentation 
 
 ### Nomos Operator
 
-IMPORTANT: before running the operator release command, you will need to unset PROJECT_NAME in your
-environment, b/123030864 is file to resolve this issue:
-
-```console
-unset PROJECT_NAME
-```
-
 Switch to the `nomos-operator` repository. Before blessing, take note of whether
 the new release should have be a new patch, minor, or major version. By default,
 the blessing target increments the patch set, so to bless a new version with
