@@ -27,7 +27,6 @@ func validateNamespaces(
 	syntax.DirectoryNameValidator.Validate(dirs, errorBuilder)
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
 
-	semantic.NewConflictingResourceQuotaValidator(objects, cov).Validate(errorBuilder)
 	semantic.DuplicateDirectoryValidator{Dirs: dirs}.Validate(errorBuilder)
 	semantic.DuplicateNamespaceValidator{Objects: objects}.Validate(errorBuilder)
 }

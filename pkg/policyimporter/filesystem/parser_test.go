@@ -990,30 +990,6 @@ var parserTestCases = []parserTestCase{
 		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
 	{
-		testName: "Namespace dir with multiple ResourceQuota",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":       aRepo,
-			"system/rq.yaml":          templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/rq.yaml":  templateData{ID: "1"}.apply(aQuota),
-			"namespaces/bar/rq2.yaml": templateData{ID: "2"}.apply(aQuota),
-		},
-		expectedErrorCodes: []string{veterrors.ConflictingResourceQuotaErrorCode},
-	},
-	{
-		testName: "Policyspace dir with multiple ResourceQuota",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":          aRepo,
-			"system/rq.yaml":             templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"namespaces/bar/rq.yaml":     templateData{ID: "1"}.apply(aQuota),
-			"namespaces/bar/rq2.yaml":    templateData{ID: "2"}.apply(aQuota),
-			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
-		},
-		expectedErrorCodes: []string{veterrors.ConflictingResourceQuotaErrorCode},
-	},
-	{
 		testName: "Namespace dir with multiple Roles",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
@@ -2941,48 +2917,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 					}),
 			},
-		},
-		{
-			testName: "Quotas targeted to a cluster and everything conflict in that cluster",
-			root:     "foo",
-			testFiles: fstesting.FileContentMap{
-				// System dir
-				"system/rq.yaml":                 templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-				"system/nomos.yaml":              aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
-
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name:        "sel-1",
-					Environment: "prod",
-				}.apply(aClusterSelectorWithEnv),
-
-				// Tree dir  The quota resources below are in the same directory,
-				// but targeted to a different cluster.
-				"namespaces/bar/quota-1.yaml": templateData{
-					ID: "1",
-					Annotations: map[string]string{
-						v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
-					},
-				}.apply(aQuota),
-				// This quota should apply everywhere
-				"namespaces/bar/quota-2.yaml": templateData{
-					ID: "2",
-				}.apply(aQuota),
-
-				// Cluster dir (cluster scoped objects).
-				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
-			},
-			// "A directory MUST not contain more than one ResourceQuota..."
-			expectedErrorCodes: []string{"1008"},
 		},
 	}
 	for _, test := range tests {
