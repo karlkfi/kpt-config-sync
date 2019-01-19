@@ -40,16 +40,16 @@ const (
 	// aggregate for all descendent namespaces.
 	//
 	// This mode can only be used for ResourceQuota.
-	HierarchyModeHierarchicalQuota = "hierarchicalQuota"
+	HierarchyModeHierarchicalQuota = HierarchyModeType("hierarchicalQuota")
 	// HierarchyModeInherit indicates that the resource can appear in abstract namespace directories
 	// and will be inherited by any descendent namespaces. Without this value on the Sync, resources
 	// must not appear in abstract namespaces.
-	HierarchyModeInherit = "inherit"
+	HierarchyModeInherit = HierarchyModeType("inherit")
 	// HierarchyModeNone indicates that the resource cannot appear in abstract namespace directories.
 	// For most resource types, this is the same as default, and it's not necessary to specify this
 	// value. But RoleBinding and ResourceQuota have different default behaviors, and this value is
 	// used to disable inheritance behaviors for those types.
-	HierarchyModeNone = "none"
+	HierarchyModeNone = HierarchyModeType("none")
 	// HierarchyModeDefault is the default value. Default behavior is type-specific.
-	HierarchyModeDefault = ""
+	HierarchyModeDefault = HierarchyModeType("")
 )

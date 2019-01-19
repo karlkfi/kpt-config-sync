@@ -19,6 +19,8 @@ package testing
 import (
 	"time"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+
 	gcpv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -31,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
 var (
@@ -63,6 +66,24 @@ func ClusterObjectSets(runtimeObjs ...runtime.Object) []*ast.ClusterObject {
 	astObjs := make([]*ast.ClusterObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.ClusterObject{FileObject: ast.FileObject{Object: runtimeObjs[idx]}}
+	}
+	return astObjs
+}
+
+// ClusterRegistryObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
+func ClusterRegistryObjectSets(runtimeObjs ...runtime.Object) []*ast.ClusterRegistryObject {
+	astObjs := make([]*ast.ClusterRegistryObject, len(runtimeObjs))
+	for idx := range runtimeObjs {
+		astObjs[idx] = &ast.ClusterRegistryObject{FileObject: ast.FileObject{Object: runtimeObjs[idx]}}
+	}
+	return astObjs
+}
+
+// SystemObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
+func SystemObjectSets(runtimeObjs ...runtime.Object) []*ast.SystemObject {
+	astObjs := make([]*ast.SystemObject, len(runtimeObjs))
+	for idx := range runtimeObjs {
+		astObjs[idx] = &ast.SystemObject{FileObject: ast.FileObject{Object: runtimeObjs[idx]}}
 	}
 	return astObjs
 }
@@ -368,6 +389,102 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 	}
 }
 
+// ClusterRegistry returns the contents of a test cluster registry directory.
+func (t *TestHelper) ClusterRegistry() *ast.ClusterRegistry {
+	return &ast.ClusterRegistry{
+		Objects: ClusterRegistryObjectSets(
+			&clusterregistry.Cluster{},
+		),
+	}
+}
+
+// System returns the contents of a test system directory.
+func (t *TestHelper) System() *ast.System {
+	return &ast.System{
+		Objects: SystemObjectSets(
+			&v1alpha1.Sync{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1alpha1.SchemeGroupVersion.String(),
+					Kind:       "Sync",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "sync",
+				},
+				Spec: v1alpha1.SyncSpec{
+					Groups: []v1alpha1.SyncGroup{
+						{
+							Group: "",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind:          "ResourceQuota",
+									HierarchyMode: v1alpha1.HierarchyModeHierarchicalQuota,
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version: "v1",
+										},
+									},
+								},
+							},
+						},
+						{
+							Group: "rbac.authorization.k8s.io",
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind: "ClusterRole",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version: "v1",
+										},
+									},
+								},
+								{
+									Kind: "ClusterRoleBinding",
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version: "v1",
+										},
+									},
+								},
+								{
+									Kind:          "Role",
+									HierarchyMode: v1alpha1.HierarchyModeNone,
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version: "v1",
+										},
+									},
+								},
+								{
+									Kind:          "RoleBinding",
+									HierarchyMode: v1alpha1.HierarchyModeInherit,
+									Versions: []v1alpha1.SyncVersion{
+										{
+											Version: "v1",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			&v1alpha1.Repo{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1alpha1.SchemeGroupVersion.String(),
+					Kind:       "Repo",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "nomos",
+				},
+				Spec: v1alpha1.RepoSpec{
+					Version:                 "0.1.0",
+					ExperimentalInheritance: true,
+				},
+			},
+		),
+	}
+}
+
 // NamespacePolicies returns a Root with an example hierarchy.
 func (t *TestHelper) NamespacePolicies() *ast.Root {
 	return &ast.Root{
@@ -381,10 +498,12 @@ func (t *TestHelper) NamespacePolicies() *ast.Root {
 // AcmeRoot returns a Root with an example hierarchy.
 func (t *TestHelper) AcmeRoot() *ast.Root {
 	return &ast.Root{
-		Cluster:     t.AcmeCluster(),
-		Tree:        t.acmeTree(),
-		ImportToken: t.ImportToken,
-		LoadTime:    t.ImportTime,
+		ClusterRegistry: t.ClusterRegistry(),
+		System:          t.System(),
+		Cluster:         t.AcmeCluster(),
+		Tree:            t.acmeTree(),
+		ImportToken:     t.ImportToken,
+		LoadTime:        t.ImportTime,
 	}
 }
 

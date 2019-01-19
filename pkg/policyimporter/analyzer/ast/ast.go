@@ -84,6 +84,13 @@ type Root struct {
 
 	// Cluster represents resources that are cluster scoped.
 	Cluster *Cluster
+
+	// ClusterRegistry represents resources that are related to multi-cluster.
+	ClusterRegistry *ClusterRegistry
+
+	// System represents resources regarding nomos configuration.
+	System *System
+
 	// Tree represents the directory hierarchy containing namespace scoped resources.
 	Tree *TreeNode
 	Data *Extension
@@ -95,6 +102,72 @@ func (c *Root) Accept(visitor Visitor) *Root {
 		return nil
 	}
 	return visitor.VisitRoot(c)
+}
+
+// System represents cluster scoped policies.
+type System struct {
+	Objects []*SystemObject
+}
+
+// Accept invokes VisitSystem on the visitor.
+func (s *System) Accept(visitor Visitor) *System {
+	if s == nil {
+		return nil
+	}
+	return visitor.VisitSystem(s)
+}
+
+// SystemObject extends FileObject to implement Visitable for cluster scoped objects.
+//
+// A SystemObject represents a cluster scoped resource from the cluster directory.
+type SystemObject struct {
+	FileObject
+}
+
+// Accept invokes VisitSystemObject on the visitor.
+func (o *SystemObject) Accept(visitor Visitor) *SystemObject {
+	if o == nil {
+		return nil
+	}
+	return visitor.VisitSystemObject(o)
+}
+
+// DeepCopy creates a deep copy of the object
+func (o *SystemObject) DeepCopy() *SystemObject {
+	return &SystemObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
+}
+
+// ClusterRegistry represents cluster scoped policies.
+type ClusterRegistry struct {
+	Objects []*ClusterRegistryObject
+}
+
+// Accept invokes VisitClusterRegistry on the visitor.
+func (c *ClusterRegistry) Accept(visitor Visitor) *ClusterRegistry {
+	if c == nil {
+		return nil
+	}
+	return visitor.VisitClusterRegistry(c)
+}
+
+// ClusterRegistryObject extends FileObject to implement Visitable for cluster scoped objects.
+//
+// A ClusterRegistryObject represents a cluster scoped resource from the cluster directory.
+type ClusterRegistryObject struct {
+	FileObject
+}
+
+// Accept invokes VisitClusterRegistryObject on the visitor.
+func (o *ClusterRegistryObject) Accept(visitor Visitor) *ClusterRegistryObject {
+	if o == nil {
+		return nil
+	}
+	return visitor.VisitClusterRegistryObject(o)
+}
+
+// DeepCopy creates a deep copy of the object
+func (o *ClusterRegistryObject) DeepCopy() *ClusterRegistryObject {
+	return &ClusterRegistryObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
 }
 
 // Cluster represents cluster scoped policies.

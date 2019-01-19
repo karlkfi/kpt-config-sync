@@ -20,7 +20,6 @@ package testing
 import (
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -78,9 +77,8 @@ func (tc *MutatingVisitorTestcase) Runf(
 			tc.ExpectOutput = inputCopy
 		}
 		if !cmp.Equal(tc.ExpectOutput, actual, opts...) {
-			t.Fatalf("mismatch on expected vs actual:\ndiff:\n%s\nexpected:\n%v\nactual:\n%v",
-				cmp.Diff(tc.ExpectOutput, actual),
-				spew.Sdump(tc.ExpectOutput), spew.Sdump(actual))
+			t.Errorf("mismatch on expected vs actual:\ndiff:\n%s",
+				cmp.Diff(tc.ExpectOutput, actual))
 		}
 	}
 }

@@ -201,7 +201,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	}
 	p.root = r
 
-	fsCtx := &ast.Root{
+	astRoot := &ast.Root{
 		Cluster:     &ast.Cluster{},
 		ImportToken: importToken,
 		LoadTime:    loadTime,
@@ -222,7 +222,8 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	// processing for <root>/system/*
 	var syncs []*v1alpha1.Sync
 	systemInfos := p.readRequiredResources(p.root.Join(repo.SystemDir), &errorBuilder)
-	fsCtx.Repo, syncs = processSystem(systemInfos, p.opts, apiInfo, &errorBuilder)
+	astRoot.System = getSystemDir(systemInfos)
+	astRoot.Repo, syncs = processSystem(systemInfos, p.opts, apiInfo, &errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
 		return nil, errorBuilder.Build()
@@ -238,10 +239,11 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	validateClusterRegistry(clusterregistryInfos, &errorBuilder)
 	clusters := getClusters(clusterregistryInfos)
 	selectors := getSelectors(clusterregistryInfos)
+	astRoot.ClusterRegistry = getClusterRegistry(clusterregistryInfos)
 	cs, err := sel.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
 	// TODO(b/120229144): To be factored into KNV Error.
 	errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
-	sel.SetClusterSelector(cs, fsCtx)
+	sel.SetClusterSelector(cs, astRoot)
 
 	nsDir := p.root.Join(p.opts.Extension.NamespacesDir())
 	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
@@ -253,7 +255,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	// TODO: temporary until processDirs refactoring
 	dirInfos := toDirInfoMap(nsInfos)
 
-	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, nsDirsOrdered, fsCtx, syncs, clusters, selectors)
+	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, nsDirsOrdered, astRoot, syncs, clusters, selectors)
 	errorBuilder.Add(err)
 
 	if glog.V(8) {
@@ -340,12 +342,12 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	dirInfos map[nomospath.Relative][]ast.FileObject,
 	clusterObjects []ast.FileObject,
 	nsDirsOrdered []nomospath.Relative,
-	fsRoot *ast.Root,
+	astRoot *ast.Root,
 	syncs []*v1alpha1.Sync,
 	clusters []clusterregistry.Cluster,
 	selectors []v1alpha1.ClusterSelector) (*v1.AllPolicies, error) {
 
-	processCluster(clusterObjects, fsRoot)
+	processCluster(clusterObjects, astRoot)
 
 	errorBuilder := multierror.Builder{}
 	treeGenerator := NewDirectoryTree()
@@ -366,11 +368,11 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	}
 
 	tree := treeGenerator.Build(&errorBuilder)
-	fsRoot.Tree = tree
+	astRoot.Tree = tree
 
 	visitors := p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet, apiInfo)
 	for _, visitor := range visitors {
-		fsRoot = fsRoot.Accept(visitor)
+		astRoot = astRoot.Accept(visitor)
 		if err := visitor.Error(); err != nil {
 			errorBuilder.Add(err)
 			return nil, errorBuilder.Build()
@@ -378,7 +380,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	}
 
 	outputVisitor := backend.NewOutputVisitor(syncs)
-	fsRoot.Accept(outputVisitor)
+	astRoot.Accept(outputVisitor)
 	policies := outputVisitor.AllPolicies()
 
 	if err := clusterpolicy.Validate(policies.ClusterPolicy); err != nil {

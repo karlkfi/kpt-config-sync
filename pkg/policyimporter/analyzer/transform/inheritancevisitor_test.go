@@ -59,7 +59,9 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name:  "inherit policies",
 			Input: vt.Helper.AcmeRoot(),
 			ExpectOutput: &ast.Root{
-				Cluster: vt.Helper.AcmeCluster(),
+				Cluster:         vt.Helper.AcmeCluster(),
+				System:          vt.Helper.System(),
+				ClusterRegistry: vt.Helper.ClusterRegistry(),
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),

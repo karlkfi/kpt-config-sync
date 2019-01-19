@@ -36,6 +36,14 @@ func processSystem(
 	return repo, syncs
 }
 
+func getSystemDir(objects []ast.FileObject) *ast.System {
+	sys := &ast.System{}
+	for _, o := range objects {
+		sys.Objects = append(sys.Objects, &ast.SystemObject{FileObject: o})
+	}
+	return sys
+}
+
 // validateSystem validates objects in system/
 func validateSystem(objects []ast.FileObject, repo *v1alpha1.Repo, apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) {
 	metadata.Validate(toResourceMetas(objects), errorBuilder)

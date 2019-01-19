@@ -83,6 +83,34 @@ func (vb *Base) VisitRoot(g *ast.Root) *ast.Root {
 	return g
 }
 
+// VisitSystem implements Visitor
+func (vb *Base) VisitSystem(c *ast.System) *ast.System {
+	for _, o := range c.Objects {
+		o.Accept(vb.impl)
+	}
+	return c
+}
+
+// VisitSystemObject implements Visitor
+func (vb *Base) VisitSystemObject(o *ast.SystemObject) *ast.SystemObject {
+	// leaf - noop
+	return o
+}
+
+// VisitClusterRegistry implements Visitor
+func (vb *Base) VisitClusterRegistry(c *ast.ClusterRegistry) *ast.ClusterRegistry {
+	for _, o := range c.Objects {
+		o.Accept(vb.impl)
+	}
+	return c
+}
+
+// VisitClusterRegistryObject implements Visitor
+func (vb *Base) VisitClusterRegistryObject(o *ast.ClusterRegistryObject) *ast.ClusterRegistryObject {
+	// leaf - noop
+	return o
+}
+
 // VisitCluster implements Visitor
 func (vb *Base) VisitCluster(c *ast.Cluster) *ast.Cluster {
 	for _, o := range c.Objects {
