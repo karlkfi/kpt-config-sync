@@ -6,6 +6,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 TEST_REPO=${BATS_TMPDIR}/repo
 
 load "../lib/git"
+load "../lib/configmap"
 load "../lib/setup"
 load "../lib/wait"
 
@@ -32,6 +33,7 @@ setup() {
 }
 
 @test "Changing TheNomos target branch takes effect" {
+  local configMapPrefix="git-policy-importer"
   # Create a new git branch and make a change there
   cd "${TEST_REPO}"
   echo "git checkout branch"
@@ -43,10 +45,11 @@ setup() {
 
   # Apply a Nomos that points to branch "branch"
   kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git-branch.yaml"
-
+  wait::for -t 10 -- configmaps::check_one_exists ${configMapPrefix} nomos-system
   wait::for -t 30 -- kubectl get rolebindings -n backend branch-rolebinding
 
   # Verify that switching the branch back reverts the branch-rolebinding
   kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git.yaml"
+  wait::for -t 10 -- configmaps::check_one_exists ${configMapPrefix} nomos-system
   wait::for -t 30 -f -- kubectl get rolebindings -n backend branch-rolebinding
 }

@@ -4,6 +4,7 @@
 set -euo pipefail
 
 load "../lib/debug"
+load "../lib/configmap"
 load "../lib/git"
 load "../lib/setup"
 load "../lib/wait"
@@ -211,13 +212,14 @@ function rename_cluster() {
 
 # Renames a cluster under test, and waits until the rename has taken effect.
 function expect_rename_to() {
+  local configMapPrefix="cluster-name"
   local expected_cluster_name
   expected_cluster_name="${1}"
   debug::log "Rename cluster to ${expected_cluster_name}"
   wait::for -t 20 -- rename_cluster "${expected_cluster_name}"
   debug::log "Expect cluster name to be ${expected_cluster_name}"
   wait::for -t 40 -o "${expected_cluster_name}" -- get_cluster_name
-
+  wait::for -t 10 -- configmaps::check_one_exists ${configMapPrefix} nomos-system
 }
 
 @test "Operator: Cluster rename load test" {
