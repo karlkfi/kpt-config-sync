@@ -28,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -144,12 +145,38 @@ func (r *ReconcileProject) doDeletion(tfe *terraform.Executor, project *bespinv1
 		return reconcile.Result{}, errors.Wrapf(err,
 			"[Project %v] reconciler failed to run Terraform command in project deletion.", project.Spec.DisplayName)
 	}
-	// Remove bespinv1.Finalizer after deletion so k8s resource can be removed.
-	project.ObjectMeta.Finalizers = slices.RemoveString(project.ObjectMeta.Finalizers, bespinv1.Finalizer)
-	if err := r.Update(context.Background(), project); err != nil {
-		glog.Errorf("[Project %v] reconciler failed to remove finalizer from k8s resource: %v",
-			project.Spec.DisplayName, err)
-		return reconcile.Result{}, nil
+	// The project is being deleted because its namespace is being deleted. k8s has an issue while deleting a
+	// namespace containing resources with finalizers, the behavior is documented in b/123084662.
+	// While deleting a namespace that contains a bespin Project resource, the project has a
+	// bespin-defined finalizer that needs to be removed before the resource can be deleted. However
+	// k8s in such case repeatedly updates the project's version/deletionTImestamp on api server, making
+	// the project version on k8s api server diverged from the project that bespin holds, and this fails
+	// bespin's Update request due to the "the object has been modified; please apply your changes to
+	// the latest version and try again" error.
+	// To address this the code below firstly reads the most update-to-date resource from k8s api server,
+	// removes the finalizer, then writes back to k8s api server. The chances are
+	// that the read-update-write takes minimal time (less than a second probably) during which the project
+	// has not been updated again by k8s.
+	// See https://github.com/kubernetes/kubernetes/issues/73098 for a long-term fix.
+	pName := types.NamespacedName{Name: project.GetName(), Namespace: project.GetNamespace()}
+	var err error
+	for i := 0; i < resource.MaxRetries; i++ {
+		ctx := context.Background()
+		if err = r.Get(ctx, pName, project); err != nil {
+			// Instance was just deleted.
+			if k8serrors.IsNotFound(err) {
+				return reconcile.Result{}, nil
+			}
+			glog.Errorf("[Project %v] reconciler failed to get project instance: %v", pName, err)
+			return reconcile.Result{}, err
+		}
+		project.ObjectMeta.Finalizers = slices.RemoveString(project.ObjectMeta.Finalizers, bespinv1.Finalizer)
+		err = r.Update(ctx, project)
+		if err == nil {
+			return reconcile.Result{}, nil
+		}
+		glog.Errorf("[Project %v] reconciler failed to remove finalizer from k8s resource (retry count: %v): %v",
+			pName, i, err)
 	}
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, err
 }

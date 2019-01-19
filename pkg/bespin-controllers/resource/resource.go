@@ -30,6 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// MaxRetries is the maximal number of retries for each Reconcile request.
+const MaxRetries = 5
+
 // GenericObject is an interface that combines functionalities from both:
 // runtime.Object - used when taking to k8s api server.
 // metav1.Object - used when working with object metadata.
