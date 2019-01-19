@@ -192,3 +192,33 @@ function get_cluster_name() {
   wait::for -- kubectl get rolebindings -n backend bob-rolebinding
 }
 
+# Renames the cluster under test by patching the Nomos resource with the new
+# cluster name.  Will fail if the cluster already has that name.
+#
+# Args:
+#   $1: new cluster name (string)
+function rename_cluster() {
+  local new_name="${1}"
+  kubectl patch nomos -n=nomos-system nomos --type=merge \
+    -p "{\"spec\":{\"clusterName\": \"${new_name}\"}}"
+}
+
+# Renames a cluster under test, and waits until the rename has taken effect.
+function expect_rename_to() {
+  local expected_cluster_name
+  expected_cluster_name="${1}"
+  debug::log "Rename cluster to ${expected_cluster_name}"
+  wait::for -t 20 -- rename_cluster "${expected_cluster_name}"
+  debug::log "Expect cluster name to be ${expected_cluster_name}"
+  wait::for -t 40 -o "${expected_cluster_name}" -- get_cluster_name
+
+}
+
+@test "Operator: Cluster rename load test" {
+  for count in {0..3}; do
+    expect_rename_to "eenie_${count}"
+    expect_rename_to "meenie_${count}"
+    expect_rename_to "minie_${count}"
+    expect_rename_to "moe_${count}"
+  done
+}
