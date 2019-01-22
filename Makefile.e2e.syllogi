@@ -1,4 +1,6 @@
 
+E2E_GIT_PROJECT := syllogi-ci
+
 # This target creates an image for a test that is used by the Syllogi E2E
 # framework. The script that actually runs this image is in the Syllogi repo at
 # https://gke-internal.googlesource.com/syllogi/cluster-management/+/master/test-infra/scripts/

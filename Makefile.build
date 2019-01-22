@@ -66,10 +66,12 @@ gen-yaml-%:
 # E2E Git Server
 ###################################
 
+E2E_GIT_PROJECT ?= $(GCP_PROJECT)
+
 # Generates yaml for git server used in e2e testing.
 $(TEST_GEN_YAML_DIR)/git-server.yaml: $(TEST_TEMPLATES_DIR)/git-server.yaml Makefile $(OUTPUT_DIR)
-	@echo "+++ Generating yaml for git-server"
-	@sed -e 's|IMAGE_NAME|gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE)|' < \
+	@echo "+++ Generating yaml for git-server at $(E2E_GIT_PROJECT)"
+	@sed -e 's|IMAGE_NAME|gcr.io/$(E2E_GIT_PROJECT)/git-server:$(GIT_SERVER_RELEASE)|' < \
 			 $< > $@
 
 GIT_SERVER_DOCKER := $(OUTPUT_DIR)/git-server-docker
@@ -83,6 +85,6 @@ build-git-server:
 	@cd $(GIT_SERVER_DOCKER) && git checkout $(GIT_SERVER_RELEASE)
 	@docker build $(DOCKER_BUILD_QUIET) \
 			$(GIT_SERVER_DOCKER) \
-			-t gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
+			-t gcr.io/$(E2E_GIT_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
-	@docker push gcr.io/$(GCP_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
+	@docker push gcr.io/$(E2E_GIT_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
