@@ -26,7 +26,7 @@ import (
 	"github.com/google/nomos/clientgen/informer"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
@@ -138,14 +138,6 @@ func (c *Controller) pollDir() error {
 				return errors.Wrapf(err, "failed to list current policies")
 			}
 
-			// Parse filesystem tree into in-memory PolicyNode and ClusterPolicy objects.
-			desiredPolicies, err := c.parser.Parse(newDir)
-			if err != nil {
-				glog.Warningf("Failed to parse: %v", err)
-				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
-				continue
-			}
-
 			// Parse the commit hash from the new directory to use as an import token.
 			token, err := git.CommitHash(newDir)
 			if err != nil {
@@ -154,17 +146,21 @@ func (c *Controller) pollDir() error {
 				continue
 			}
 
-			// Update the import tokens and times for all policy nodes and cluster policy.
-			now := metav1.Now()
+			loadTime := time.Now()
+			// Parse filesystem tree into in-memory PolicyNode and ClusterPolicy objects.
+			desiredPolicies, err := c.parser.Parse(newDir, token, loadTime)
+			if err != nil {
+				glog.Warningf("Failed to parse: %v", err)
+				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				continue
+			}
+
+			// Update the SyncState for all policy nodes and cluster policy.
 			for n := range desiredPolicies.PolicyNodes {
 				pn := desiredPolicies.PolicyNodes[n]
-				pn.Spec.ImportToken = token
-				pn.Spec.ImportTime = now
 				pn.Status.SyncState = v1.StateStale
 				desiredPolicies.PolicyNodes[n] = pn
 			}
-			desiredPolicies.ClusterPolicy.Spec.ImportToken = token
-			desiredPolicies.ClusterPolicy.Spec.ImportTime = now
 			desiredPolicies.ClusterPolicy.Status.SyncState = v1.StateStale
 
 			if err := c.updatePolicies(currentPolicies, desiredPolicies); err != nil {

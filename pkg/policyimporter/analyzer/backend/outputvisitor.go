@@ -17,9 +17,7 @@ limitations under the License.
 package backend
 
 import (
-	"time"
-
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -37,8 +35,8 @@ const (
 // OutputVisitor converts the AST into PolicyNode and ClusterPolicy objects.
 type OutputVisitor struct {
 	*visitor.Base
-	commitHash  string
-	loadTime    time.Time
+	importToken string
+	loadTime    metav1.Time
 	allPolicies *v1.AllPolicies
 	context     string
 	policyNode  []*v1.PolicyNode
@@ -73,6 +71,8 @@ func mapByName(syncs []*v1alpha1.Sync) map[string]v1alpha1.Sync {
 
 // VisitRoot implements Visitor
 func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
+	v.importToken = g.ImportToken
+	v.loadTime = metav1.NewTime(g.LoadTime)
 	v.allPolicies = &v1.AllPolicies{
 		PolicyNodes: map[string]v1.PolicyNode{},
 		ClusterPolicy: &v1.ClusterPolicy{
@@ -83,10 +83,12 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: v1.ClusterPolicyName,
 			},
+			Spec: v1.ClusterPolicySpec{
+				ImportToken: v.importToken,
+				ImportTime:  v.loadTime,
+			},
 		},
 	}
-	v.commitHash = g.ImportToken
-	v.loadTime = g.LoadTime
 	v.Base.VisitRoot(g)
 	return nil
 }
@@ -128,7 +130,9 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 			Labels:      n.Labels,
 		},
 		Spec: v1.PolicyNodeSpec{
-			Parent: parent,
+			Parent:      parent,
+			ImportToken: v.importToken,
+			ImportTime:  v.loadTime,
 		},
 	}
 	if n.Type == node.Namespace {

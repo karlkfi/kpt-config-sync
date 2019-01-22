@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -74,7 +75,7 @@ func (tc *testCase) Run(t *testing.T) {
 		t.Fatalf("unexpected error: %#v", err2)
 	}
 
-	_, actualErrors := p.Parse(tc.Root())
+	_, actualErrors := p.Parse(tc.Root(), "", time.Time{})
 	if actualErrors == nil {
 		t.Fatal("expected error(s), got none")
 	}

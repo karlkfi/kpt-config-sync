@@ -17,6 +17,7 @@ package filesystem
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	policyascode_v1 "github.com/google/nomos/pkg/api/policyascode/v1"
@@ -100,7 +101,7 @@ func TestBespinParser(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			policies, err := p.Parse(d.Root())
+			policies, err := p.Parse(d.Root(), "", time.Time{})
 			if (err != nil) != tc.wantErr {
 				t.Errorf("got error = %v, want error %v", err, tc.wantErr)
 			}

@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 	"text/template"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
@@ -2062,7 +2063,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		t.Fatalf("unexpected error: %#v", err)
 	}
 
-	actualPolicies, err := p.Parse(d.rootDir)
+	actualPolicies, err := p.Parse(d.rootDir, "", time.Time{})
 
 	veterrorstest.ExpectErrors(tc.expectedErrorCodes, err, t)
 	if err != nil {
@@ -3119,7 +3120,7 @@ func TestEmptyDirectories(t *testing.T) {
 				t.Fatalf("unexpected error: %#v", err)
 			}
 
-			actualPolicies, err := p.Parse(d.rootDir)
+			actualPolicies, err := p.Parse(d.rootDir, "", time.Time{})
 			if err != nil {
 				t.Fatalf("unexpected error: %#v", err)
 			}

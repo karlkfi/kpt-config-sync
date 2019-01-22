@@ -17,6 +17,8 @@ limitations under the License.
 package testing
 
 import (
+	"time"
+
 	gcpv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -29,6 +31,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+var (
+	ImportToken = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+	ImportTime  = time.Date(2017, 8, 10, 5, 16, 00, 0, time.FixedZone("PDT", -7*60*60))
 )
 
 // ObjectSets constructs a list of ObjectSet from a list of runtime.Object.
@@ -58,11 +65,21 @@ func ClusterObjectSets(runtimeObjs ...runtime.Object) []*ast.ClusterObject {
 	return astObjs
 }
 
-// Helper provides a number of pre-built types for use in testcases.
+// Helper provides a number of pre-built types for use in testcases.  This does not set an ImportToken
+// or ImportTime
 var Helper TestHelper
 
 // TestHelper provides a number of pre-built types for use in testcases.
 type TestHelper struct {
+	ImportToken string
+	ImportTime  time.Time
+}
+
+func NewTestHelper() *TestHelper {
+	return &TestHelper{
+		ImportToken: ImportToken,
+		ImportTime:  ImportTime,
+	}
 }
 
 // NomosAdminClusterRole returns a ClusterRole for testing.
@@ -129,12 +146,19 @@ func (t *TestHelper) NomosPodSecurityPolicy() *extensionsv1beta1.PodSecurityPoli
 
 // EmptyRoot returns an empty Root.
 func (t *TestHelper) EmptyRoot() *ast.Root {
-	return &ast.Root{}
+	return &ast.Root{
+		ImportToken: t.ImportToken,
+		LoadTime:    t.ImportTime,
+	}
 }
 
 // ClusterPolicies returns a Root with only cluster policies.
 func (t *TestHelper) ClusterPolicies() *ast.Root {
-	return &ast.Root{Cluster: t.AcmeCluster()}
+	return &ast.Root{
+		Cluster:     t.AcmeCluster(),
+		ImportToken: t.ImportToken,
+		LoadTime:    t.ImportTime,
+	}
 }
 
 // UnknownResource returns a custom resource without a corresponding CRD on the cluster.
@@ -344,16 +368,20 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 // NamespacePolicies returns a Root with an example hierarchy.
 func (t *TestHelper) NamespacePolicies() *ast.Root {
 	return &ast.Root{
-		Cluster: &ast.Cluster{},
-		Tree:    t.acmeTree(),
+		Cluster:     &ast.Cluster{},
+		Tree:        t.acmeTree(),
+		ImportToken: t.ImportToken,
+		LoadTime:    t.ImportTime,
 	}
 }
 
 // AcmeRoot returns a Root with an example hierarchy.
 func (t *TestHelper) AcmeRoot() *ast.Root {
 	return &ast.Root{
-		Cluster: t.AcmeCluster(),
-		Tree:    t.acmeTree(),
+		Cluster:     t.AcmeCluster(),
+		Tree:        t.acmeTree(),
+		ImportToken: t.ImportToken,
+		LoadTime:    t.ImportTime,
 	}
 }
 

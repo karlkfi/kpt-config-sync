@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
@@ -28,6 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+var helper = vt.NewTestHelper()
 
 func allPolicies(cp v1.ClusterPolicy, pns []v1.PolicyNode) *v1.AllPolicies {
 	ap := &v1.AllPolicies{
@@ -60,39 +62,7 @@ func (tc *OutputVisitorTestcase) Run(t *testing.T) {
 var outputVisitorTestCases = []OutputVisitorTestcase{
 	{
 		name:  "empty",
-		input: vt.Helper.EmptyRoot(),
-		expect: allPolicies(
-			v1.ClusterPolicy{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterPolicy",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterPolicyName,
-				},
-			},
-			[]v1.PolicyNode{},
-		),
-	},
-	{
-		name:  "empty cluster policies",
-		input: &ast.Root{Cluster: &ast.Cluster{}},
-		expect: allPolicies(
-			v1.ClusterPolicy{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterPolicy",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterPolicyName,
-				},
-			},
-			[]v1.PolicyNode{},
-		),
-	},
-	{
-		name:  "cluster policies",
-		input: vt.Helper.ClusterPolicies(),
+		input: helper.EmptyRoot(),
 		expect: allPolicies(
 			v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
@@ -103,6 +73,51 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Name: v1.ClusterPolicyName,
 				},
 				Spec: v1.ClusterPolicySpec{
+					ImportToken: vt.ImportToken,
+					ImportTime:  metav1.NewTime(vt.ImportTime),
+				},
+			},
+			[]v1.PolicyNode{},
+		),
+	},
+	{
+		name: "empty cluster policies",
+		input: &ast.Root{
+			ImportToken: vt.ImportToken,
+			LoadTime:    vt.ImportTime,
+			Cluster:     &ast.Cluster{}},
+		expect: allPolicies(
+			v1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.ClusterPolicyName,
+				},
+				Spec: v1.ClusterPolicySpec{
+					ImportToken: vt.ImportToken,
+					ImportTime:  metav1.NewTime(vt.ImportTime),
+				},
+			},
+			[]v1.PolicyNode{},
+		),
+	},
+	{
+		name:  "cluster policies",
+		input: helper.ClusterPolicies(),
+		expect: allPolicies(
+			v1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.ClusterPolicyName,
+				},
+				Spec: v1.ClusterPolicySpec{
+					ImportToken: vt.ImportToken,
+					ImportTime:  metav1.NewTime(vt.ImportTime),
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -110,7 +125,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 							Versions: []v1.GenericVersionResources{
 								{
 									Version: "v1",
-									Objects: []runtime.RawExtension{{Object: vt.Helper.NomosAdminClusterRole()}},
+									Objects: []runtime.RawExtension{{Object: helper.NomosAdminClusterRole()}},
 								},
 							},
 						},
@@ -120,7 +135,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 							Versions: []v1.GenericVersionResources{
 								{
 									Version: "v1",
-									Objects: []runtime.RawExtension{{Object: vt.Helper.NomosAdminClusterRoleBinding()}},
+									Objects: []runtime.RawExtension{{Object: helper.NomosAdminClusterRoleBinding()}},
 								},
 							},
 						},
@@ -130,7 +145,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 							Versions: []v1.GenericVersionResources{
 								{
 									Version: "v1beta1",
-									Objects: []runtime.RawExtension{{Object: vt.Helper.NomosPodSecurityPolicy()}},
+									Objects: []runtime.RawExtension{{Object: helper.NomosPodSecurityPolicy()}},
 								},
 							},
 						},
@@ -142,7 +157,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 	},
 	{
 		name:  "namespace policies",
-		input: vt.Helper.NamespacePolicies(),
+		input: helper.NamespacePolicies(),
 		expect: allPolicies(
 			v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
@@ -151,6 +166,10 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterPolicyName,
+				},
+				Spec: v1.ClusterPolicySpec{
+					ImportToken: vt.ImportToken,
+					ImportTime:  metav1.NewTime(vt.ImportTime),
 				},
 			},
 			[]v1.PolicyNode{
@@ -165,7 +184,9 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Spec: v1.PolicyNodeSpec{
 						Type:            v1.Policyspace,
 						Parent:          "",
-						ResourceQuotaV1: vt.Helper.AcmeResourceQuota(),
+						ResourceQuotaV1: helper.AcmeResourceQuota(),
+						ImportToken:     vt.ImportToken,
+						ImportTime:      metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",
@@ -173,7 +194,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
-										Objects: []runtime.RawExtension{{Object: vt.Helper.AdminRoleBinding()}},
+										Objects: []runtime.RawExtension{{Object: helper.AdminRoleBinding()}},
 									},
 								},
 							},
@@ -183,7 +204,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
-										Objects: []runtime.RawExtension{{Object: vt.Helper.AcmeResourceQuota()}},
+										Objects: []runtime.RawExtension{{Object: helper.AcmeResourceQuota()}},
 									},
 								},
 							},
@@ -203,7 +224,9 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Spec: v1.PolicyNodeSpec{
 						Type:            v1.Namespace,
 						Parent:          v1.RootPolicyNodeName,
-						ResourceQuotaV1: vt.Helper.FrontendResourceQuota(),
+						ResourceQuotaV1: helper.FrontendResourceQuota(),
+						ImportToken:     vt.ImportToken,
+						ImportTime:      metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",
@@ -211,7 +234,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
-										Objects: []runtime.RawExtension{{Object: vt.Helper.PodReaderRoleBinding()}},
+										Objects: []runtime.RawExtension{{Object: helper.PodReaderRoleBinding()}},
 									},
 								},
 							},
@@ -221,7 +244,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
-										Objects: []runtime.RawExtension{{Object: vt.Helper.PodReaderRole()}},
+										Objects: []runtime.RawExtension{{Object: helper.PodReaderRole()}},
 									},
 								},
 							},
@@ -231,7 +254,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
-										Objects: []runtime.RawExtension{{Object: vt.Helper.FrontendResourceQuota()}},
+										Objects: []runtime.RawExtension{{Object: helper.FrontendResourceQuota()}},
 									},
 								},
 							},
@@ -249,8 +272,10 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Annotations: map[string]string{"has-waffles": "false"},
 					},
 					Spec: v1.PolicyNodeSpec{
-						Type:   v1.Namespace,
-						Parent: v1.RootPolicyNodeName,
+						Type:        v1.Namespace,
+						Parent:      v1.RootPolicyNodeName,
+						ImportToken: vt.ImportToken,
+						ImportTime:  metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",
@@ -258,7 +283,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
-										Objects: []runtime.RawExtension{{Object: vt.Helper.DeploymentReaderRoleBinding()}},
+										Objects: []runtime.RawExtension{{Object: helper.DeploymentReaderRoleBinding()}},
 									},
 								},
 							},
@@ -268,7 +293,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 								Versions: []v1.GenericVersionResources{
 									{
 										Version: "v1",
-										Objects: []runtime.RawExtension{{Object: vt.Helper.DeploymentReaderRole()}},
+										Objects: []runtime.RawExtension{{Object: helper.DeploymentReaderRole()}},
 									},
 								},
 							},

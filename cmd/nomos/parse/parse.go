@@ -1,6 +1,8 @@
 package parse
 
 import (
+	"time"
+
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
@@ -30,7 +32,7 @@ func Parse(dir string, parserOpt filesystem.ParserOpt) (*v1.AllPolicies, error) 
 		return nil, errors.Wrap(err, "Failed to create parser")
 	}
 
-	resources, err := p.Parse(dir)
+	resources, err := p.Parse(dir, "", time.Time{})
 	if err != nil {
 		return nil, errors.Wrap(err, "Found issues")
 	}

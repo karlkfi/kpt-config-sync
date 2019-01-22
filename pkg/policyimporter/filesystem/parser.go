@@ -20,6 +20,7 @@ package filesystem
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
@@ -192,14 +193,18 @@ func toDirInfoMap(fileInfos []ast.FileObject) map[nomospath.Relative][]ast.FileO
 // * cluster/ (flat, optional)
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
-func (p *Parser) Parse(root string) (*v1.AllPolicies, error) {
+func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1.AllPolicies, error) {
 	r, err := nomospath.NewRoot(root)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to use as Nomos root")
 	}
 	p.root = r
 
-	fsCtx := &ast.Root{Cluster: &ast.Cluster{}}
+	fsCtx := &ast.Root{
+		Cluster:     &ast.Cluster{},
+		ImportToken: importToken,
+		LoadTime:    loadTime,
+	}
 	errorBuilder := multierror.Builder{}
 
 	// Always make sure we're getting the freshest data.
