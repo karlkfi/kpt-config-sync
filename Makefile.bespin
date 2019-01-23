@@ -60,7 +60,11 @@ bespin-deploy: bespin-install-crds bespin-install-rbac
 # Build terraform binary
 bespin-terraform:
 	@echo "+++ Downloading latest terraform and building terraform bundle"
-	go get -d -v github.com/hashicorp/terraform
+	mkdir -p ${GOPATH}/src/github.com/hashicorp
+	# Terraform needs to be pinned to a specific version. Nomos won't want
+	# a large dependency in their vendor tree. This will be easier when Bespin
+	# gets its own repository.
+	git -C ${GOPATH}/src/github.com/hashicorp clone https://github.com/hashicorp/terraform.git -b v0.11.1 || true
 	go install github.com/hashicorp/terraform/tools/terraform-bundle
 	cd $(BESPIN_OUTPUT_DIR); \
 	terraform-bundle package $(BESPIN_BUILD_DIR)/terraform-bundle.hcl && \
