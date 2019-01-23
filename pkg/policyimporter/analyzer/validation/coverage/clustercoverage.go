@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/util/multierror"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -40,7 +40,7 @@ func NewForCluster(
 		selector, err := sels.AsPopulatedSelector(&s.Spec.Selector)
 		if err != nil {
 			// TODO(b/120229144): Impossible to get here.
-			errs.Add(veterrors.InvalidSelectorError{Name: sn, Cause: err})
+			errs.Add(vet.InvalidSelectorError{Name: sn, Cause: err})
 			continue
 		}
 		for _, c := range clusters {
@@ -65,7 +65,7 @@ func (c ForCluster) ValidateObject(o metav1.Object, errs *multierror.Builder) {
 		return
 	}
 	if !c.selectorNames[a] {
-		errs.Add(veterrors.ObjectHasUnknownClusterSelector{Object: o, Annotation: a})
+		errs.Add(vet.ObjectHasUnknownClusterSelector{Object: o, Annotation: a})
 	}
 }
 

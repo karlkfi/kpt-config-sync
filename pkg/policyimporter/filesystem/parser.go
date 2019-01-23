@@ -34,7 +34,7 @@ import (
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
@@ -270,7 +270,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 // Returns an error if the directory is missing.
 func (p *Parser) readRequiredResources(dir nomospath.Relative, errorBuilder *multierror.Builder) []ast.FileObject {
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
-		errorBuilder.Add(veterrors.MissingDirectoryError{})
+		errorBuilder.Add(vet.MissingDirectoryError{})
 		return nil
 	}
 	return p.readResources(dir, errorBuilder)

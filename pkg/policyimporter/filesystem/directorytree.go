@@ -19,7 +19,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
 )
@@ -61,7 +61,7 @@ func (t *DirectoryTree) Build(eb *multierror.Builder) *ast.TreeNode {
 		if !parent.IsRoot() {
 			parentNode, ok := t.nodes[parent]
 			if !ok {
-				eb.Add(veterrors.InternalErrorf("failed to treeify policy nodes: Node %q missing parent %q", p.RelativeSlashPath(), parent.RelativeSlashPath()))
+				eb.Add(vet.InternalErrorf("failed to treeify policy nodes: Node %q missing parent %q", p.RelativeSlashPath(), parent.RelativeSlashPath()))
 				continue
 			}
 			parentNode.Children = append(parentNode.Children, n)

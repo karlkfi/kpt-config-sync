@@ -3,7 +3,7 @@ package semantic
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
 )
@@ -25,8 +25,8 @@ func (v RepoCountValidator) Validate(errorBuilder *multierror.Builder) {
 	}
 
 	if len(repos) == 0 {
-		errorBuilder.Add(veterrors.MissingRepoError{})
+		errorBuilder.Add(vet.MissingRepoError{})
 	} else if len(repos) >= 2 {
-		errorBuilder.Add(veterrors.MultipleRepoDefinitionsError{Repos: repos})
+		errorBuilder.Add(vet.MultipleRepoDefinitionsError{Repos: repos})
 	}
 }

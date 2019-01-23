@@ -1,7 +1,7 @@
 package syntax
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 )
@@ -11,9 +11,9 @@ var DirectoryNameValidator = &PathValidator{
 	validate: func(dir nomospath.Relative) error {
 		name := dir.Base()
 		if namespaceutil.IsInvalid(name) {
-			return veterrors.InvalidDirectoryNameError{Dir: dir}
+			return vet.InvalidDirectoryNameError{Dir: dir}
 		} else if namespaceutil.IsReserved(name) {
-			return veterrors.ReservedDirectoryNameError{Dir: dir}
+			return vet.ReservedDirectoryNameError{Dir: dir}
 		}
 		return nil
 	},

@@ -1,7 +1,7 @@
 package metadata
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 )
 
 func init() {
@@ -12,7 +12,7 @@ func init() {
 var NamespaceValidatorFactory = SyntaxValidatorFactory{
 	fn: func(meta ResourceMeta) error {
 		if meta.MetaObject().GetNamespace() != "" {
-			return veterrors.IllegalMetadataNamespaceDeclarationError{Resource: meta}
+			return vet.IllegalMetadataNamespaceDeclarationError{Resource: meta}
 		}
 		return nil
 	},

@@ -23,8 +23,8 @@ import (
 	"github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	corev1 "k8s.io/api/core/v1"
@@ -230,7 +230,7 @@ func TestIAMPolicyConversion(t *testing.T) {
 					Bindings: []v1.IAMPolicyBinding{},
 				},
 			},
-			errors: []string{veterrors.UndocumentedErrorCode},
+			errors: []string{vet.UndocumentedErrorCode},
 		},
 	}
 
@@ -299,7 +299,7 @@ func TestOrgPolicyConversion(t *testing.T) {
 			want: &v1.ClusterOrganizationPolicy{
 				Spec: v1.OrganizationPolicySpec{},
 			},
-			errors: []string{veterrors.UndocumentedErrorCode},
+			errors: []string{vet.UndocumentedErrorCode},
 		},
 	}
 
@@ -342,7 +342,7 @@ func runClusterObjectsTest(t *testing.T, org *v1.Organization, project *v1.Proje
 	verifyInputUnmodified(t, input, inputCopy)
 
 	if errors != nil {
-		veterrorstest.ExpectErrors(errors, visitor.Error(), t)
+		vettesting.ExpectErrors(errors, visitor.Error(), t)
 		return
 	}
 

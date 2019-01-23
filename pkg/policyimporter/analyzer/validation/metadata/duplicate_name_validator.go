@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/validator"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -92,7 +92,7 @@ func validateNameCollisions(name string, metas []id.Resource, eb *multierror.Bui
 		}
 
 		if duplicates != nil {
-			eb.Add(veterrors.MetadataNameCollisionError{Name: name, Duplicates: append(duplicates, metas[i])})
+			eb.Add(vet.MetadataNameCollisionError{Name: name, Duplicates: append(duplicates, metas[i])})
 		}
 
 		// Recall that len(duplicates) is 0 if there are no duplicates.

@@ -3,7 +3,7 @@ package validation
 import (
 	"github.com/google/nomos/pkg/bespin/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
 )
@@ -39,7 +39,7 @@ func (v *UniqueIAMValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	}
 
 	if len(iams) > 1 {
-		v.errors.Add(veterrors.UndocumentedErrorf(
+		v.errors.Add(vet.UndocumentedErrorf(
 			"Illegal duplicate IAM policies in %q", n.Relative.RelativeSlashPath()))
 	}
 	return n

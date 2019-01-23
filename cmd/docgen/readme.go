@@ -5,7 +5,7 @@ import (
 	"sort"
 	"text/template"
 
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 )
 
 const (
@@ -38,7 +38,7 @@ func writeReadme(docspath string) error {
 	}
 
 	var errorDocCodes []errorDocCode
-	for code, example := range veterrors.Examples {
+	for code, example := range vet.Examples {
 		if example == nil {
 			continue
 		}

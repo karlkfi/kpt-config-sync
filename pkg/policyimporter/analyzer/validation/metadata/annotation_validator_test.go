@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -33,17 +33,17 @@ var annotationTestCases = []annotationTestCase{
 	{
 		name:        "one illegal annotation",
 		annotations: []string{illegalAnnotation},
-		error:       []string{veterrors.IllegalAnnotationDefinitionErrorCode},
+		error:       []string{vet.IllegalAnnotationDefinitionErrorCode},
 	},
 	{
 		name:        "two illegal annotations",
 		annotations: []string{illegalAnnotation, illegalAnnotation2},
-		error:       []string{veterrors.IllegalAnnotationDefinitionErrorCode},
+		error:       []string{vet.IllegalAnnotationDefinitionErrorCode},
 	},
 	{
 		name:        "one legal and one illegal annotation",
 		annotations: []string{legalAnnotation, illegalAnnotation},
-		error:       []string{veterrors.IllegalAnnotationDefinitionErrorCode},
+		error:       []string{vet.IllegalAnnotationDefinitionErrorCode},
 	},
 	{
 		name:        "namespaceselector annotation",
@@ -65,7 +65,7 @@ func (tc annotationTestCase) Run(t *testing.T) {
 	eb := multierror.Builder{}
 	AnnotationValidatorFactory.New([]ResourceMeta{meta}).Validate(&eb)
 
-	veterrorstest.ExpectErrors(tc.error, eb.Build(), t)
+	vettesting.ExpectErrors(tc.error, eb.Build(), t)
 }
 
 func TestAnnotationValidator(t *testing.T) {

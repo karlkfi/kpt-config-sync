@@ -31,8 +31,8 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -888,7 +888,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.MultipleNamespacesErrorCode, veterrors.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MultipleNamespacesErrorCode, vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces with different names",
@@ -899,8 +899,8 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns2.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{
-			veterrors.MultipleNamespacesErrorCode,
-			veterrors.InvalidNamespaceNameErrorCode,
+			vet.MultipleNamespacesErrorCode,
+			vet.InvalidNamespaceNameErrorCode,
 		},
 	},
 	{
@@ -911,7 +911,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ignore":  "",
 			"namespaces/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.InvalidNamespaceNameErrorCode},
+		expectedErrorCodes: []string{vet.InvalidNamespaceNameErrorCode},
 	},
 	{
 		testName: "Namespace dir with namespace mismatch",
@@ -920,7 +920,7 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":      aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.InvalidNamespaceNameErrorCode},
+		expectedErrorCodes: []string{vet.InvalidNamespaceNameErrorCode},
 	},
 	{
 		testName: "Namespace dir with invalid name",
@@ -929,7 +929,7 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":      aRepo,
 			"namespaces/baR/ns.yaml": templateData{Name: "baR"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.InvalidDirectoryNameErrorCode},
+		expectedErrorCodes: []string{vet.InvalidDirectoryNameErrorCode},
 	},
 	{
 		testName: "Namespace dir with single ResourceQuota",
@@ -969,7 +969,7 @@ var parserTestCases = []parserTestCase{
 				},
 			),
 		},
-		expectedErrorCodes: []string{veterrors.UnsyncableNamespaceObjectErrorCode},
+		expectedErrorCodes: []string{vet.UnsyncableNamespaceObjectErrorCode},
 	},
 	{
 		testName: "Namespace dir with single ResourceQuota single file",
@@ -1043,7 +1043,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/role1.yaml": templateData{}.apply(aRole),
 			"namespaces/bar/role2.yaml": templateData{}.apply(aRole),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Namespace dir with multiple RoleBindings",
@@ -1067,7 +1067,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Policyspace dir with duplicate RoleBindings",
@@ -1079,7 +1079,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r2.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Namespace dir with ClusterRole",
@@ -1090,7 +1090,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
 		},
-		expectedErrorCodes: []string{veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Namespace dir with ClusterRoleBinding",
@@ -1101,7 +1101,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Namespace dir with PodSecurityPolicy",
@@ -1112,7 +1112,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
-		expectedErrorCodes: []string{veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Namespace dir with policyspace child",
@@ -1122,7 +1122,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/baz/ignore": "",
 		},
-		expectedErrorCodes: []string{veterrors.IllegalNamespaceSubdirectoryErrorCode},
+		expectedErrorCodes: []string{vet.IllegalNamespaceSubdirectoryErrorCode},
 	},
 	{
 		testName: "Policyspace dir with ignored file",
@@ -1156,7 +1156,7 @@ var parserTestCases = []parserTestCase{
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchicalSync),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalHierarchyModeErrorCode},
+		expectedErrorCodes: []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		testName: "Policyspace dir with RoleBinding, flag off, inheritance off",
@@ -1166,7 +1166,7 @@ var parserTestCases = []parserTestCase{
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "none"}.apply(aHierarchicalSync),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalHierarchyModeErrorCode},
+		expectedErrorCodes: []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		testName: "Policyspace dir with RoleBinding, flag off, inherit specified",
@@ -1176,7 +1176,7 @@ var parserTestCases = []parserTestCase{
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "inherit"}.apply(aHierarchicalSync),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalHierarchyModeErrorCode},
+		expectedErrorCodes: []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		testName: "Policyspace dir with RoleBinding, flag on, default",
@@ -1196,7 +1196,7 @@ var parserTestCases = []parserTestCase{
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchicalSync),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalHierarchyModeErrorCode},
+		expectedErrorCodes: []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		testName: "Policyspace dir with RoleBinding, flag on, inheritance off",
@@ -1206,7 +1206,7 @@ var parserTestCases = []parserTestCase{
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "none"}.apply(aHierarchicalSync),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Policyspace dir with RoleBinding, flag on, inherit specified",
@@ -1253,7 +1253,7 @@ var parserTestCases = []parserTestCase{
 			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalHierarchyModeErrorCode},
+		expectedErrorCodes: []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota, flag off, inheritance off",
@@ -1263,7 +1263,7 @@ var parserTestCases = []parserTestCase{
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "none"}.apply(aHierarchicalSync),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalHierarchyModeErrorCode},
+		expectedErrorCodes: []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota, flag off, inherit specified",
@@ -1273,7 +1273,7 @@ var parserTestCases = []parserTestCase{
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "inherit"}.apply(aHierarchicalSync),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalHierarchyModeErrorCode},
+		expectedErrorCodes: []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota, flag on, default",
@@ -1315,7 +1315,7 @@ var parserTestCases = []parserTestCase{
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "none"}.apply(aHierarchicalSync),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota, flag on, inherit specified",
@@ -1363,7 +1363,7 @@ var parserTestCases = []parserTestCase{
 			"system/cr.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
 			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Policyspace dir with ClusterRoleBinding",
@@ -1373,7 +1373,7 @@ var parserTestCases = []parserTestCase{
 			"system/crb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"}.apply(aSync),
 			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Policyspace dir with PodSecurityPolicy",
@@ -1383,7 +1383,7 @@ var parserTestCases = []parserTestCase{
 			"system/psp.yaml":         templateData{Group: "extensions", Version: "v1beta1", Kind: "PodSecurityPolicy"}.apply(aSync),
 			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Policyspace dir with NamespaceSelector CRD",
@@ -1417,7 +1417,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
 			"namespaces/bar/baz/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Policyspace and Namespace dir have duplicate Deployments",
@@ -1430,9 +1430,9 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/depl1.yaml": aDeploymentTemplate,
 		},
 		expectedErrorCodes: []string{
-			veterrors.MetadataNameCollisionErrorCode,
-			veterrors.IllegalAbstractNamespaceObjectKindErrorCode,
-			veterrors.InvalidNamespaceNameErrorCode,
+			vet.MetadataNameCollisionErrorCode,
+			vet.IllegalAbstractNamespaceObjectKindErrorCode,
+			vet.InvalidNamespaceNameErrorCode,
 		},
 	},
 	{
@@ -1491,8 +1491,8 @@ spec:
 `,
 		},
 		expectedErrorCodes: []string{
-			veterrors.DuplicateSyncGroupKindErrorCode,
-			veterrors.UnknownResourceVersionInSyncErrorCode,
+			vet.DuplicateSyncGroupKindErrorCode,
+			vet.UnknownResourceVersionInSyncErrorCode,
 		},
 	},
 	{
@@ -1515,7 +1515,7 @@ spec:
 			"system/nomos.yaml":  aRepo,
 			"namespaces/ns.yaml": templateData{Name: "namespaces"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalTopLevelNamespaceErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.IllegalTopLevelNamespaceErrorCode, vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Namespaces dir with ResourceQuota",
@@ -1560,7 +1560,7 @@ spec:
 			"system/role.yaml":     templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/role.yaml": templateData{}.apply(aRole),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Namespaces dir with multiple Rolebindings",
@@ -1637,7 +1637,7 @@ spec:
 			"cluster/cr1.yaml":  templateData{ID: "1"}.apply(aClusterRole),
 			"cluster/cr2.yaml":  templateData{ID: "1"}.apply(aClusterRole),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Cluster dir with duplicate ClusterRoleBinding names",
@@ -1648,7 +1648,7 @@ spec:
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			"cluster/crb2.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Clusterregistry dir with duplicate Cluster names",
@@ -1669,7 +1669,7 @@ spec:
 				},
 			}.apply(aClusterRegistryCluster),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Cluster dir with duplicate PodSecurityPolicy names",
@@ -1680,7 +1680,7 @@ spec:
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode, veterrors.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Dir name not unique 1",
@@ -1690,7 +1690,7 @@ spec:
 			"namespaces/baz/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/qux/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.DuplicateDirectoryNameErrorCode},
+		expectedErrorCodes: []string{vet.DuplicateDirectoryNameErrorCode},
 	},
 	{
 		testName: "Dir name not unique 2",
@@ -1701,7 +1701,7 @@ spec:
 			"namespaces/bar/baz/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
 			"namespaces/qux/baz/waldo/ns.yaml": templateData{Name: "waldo"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.DuplicateDirectoryNameErrorCode},
+		expectedErrorCodes: []string{vet.DuplicateDirectoryNameErrorCode},
 	},
 	{
 		testName: "Dir name reserved 1",
@@ -1710,7 +1710,7 @@ spec:
 			"system/nomos.yaml":              aRepo,
 			"namespaces/kube-system/ns.yaml": templateData{Name: "kube-system"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.ReservedDirectoryNameErrorCode, veterrors.ReservedDirectoryNameErrorCode},
+		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode, vet.ReservedDirectoryNameErrorCode},
 	},
 	{
 		testName: "Dir name reserved 2",
@@ -1719,7 +1719,7 @@ spec:
 			"system/nomos.yaml":              aRepo,
 			"namespaces/kube-system/ns.yaml": templateData{Name: "default"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.ReservedDirectoryNameErrorCode, veterrors.ReservedDirectoryNameErrorCode, veterrors.InvalidNamespaceNameErrorCode},
+		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode, vet.ReservedDirectoryNameErrorCode, vet.InvalidNamespaceNameErrorCode},
 	},
 	{
 		testName: "Dir name reserved 3",
@@ -1728,7 +1728,7 @@ spec:
 			"system/nomos.yaml":              aRepo,
 			"namespaces/kube-system/ns.yaml": templateData{Name: "nomos-system"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.ReservedDirectoryNameErrorCode, veterrors.ReservedDirectoryNameErrorCode, veterrors.InvalidNamespaceNameErrorCode},
+		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode, vet.ReservedDirectoryNameErrorCode, vet.InvalidNamespaceNameErrorCode},
 	},
 	{
 		testName: "Dir name invalid",
@@ -1737,7 +1737,7 @@ spec:
 			"system/nomos.yaml":          aRepo,
 			"namespaces/foo bar/ns.yaml": templateData{Name: "foo bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.InvalidDirectoryNameErrorCode},
+		expectedErrorCodes: []string{vet.InvalidDirectoryNameErrorCode},
 	},
 	{
 		testName: "Namespace with NamespaceSelector label is invalid",
@@ -1748,7 +1748,7 @@ spec:
 				v1alpha1.NamespaceSelectorAnnotationKey: "prod"},
 			}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalNamespaceAnnotationErrorCode},
+		expectedErrorCodes: []string{vet.IllegalNamespaceAnnotationErrorCode},
 	},
 	{
 		testName: "NamespaceSelector may not have ClusterSelector annotations",
@@ -1761,7 +1761,7 @@ spec:
 				},
 			}.apply(aNamespaceSelector),
 		},
-		expectedErrorCodes: []string{veterrors.NamespaceSelectorMayNotHaveAnnotationCode},
+		expectedErrorCodes: []string{vet.NamespaceSelectorMayNotHaveAnnotationCode},
 	},
 	{
 		testName: "Unsyncable cluster object",
@@ -1770,7 +1770,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"cluster/rb.yaml":   templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.UnsyncableClusterObjectErrorCode},
+		expectedErrorCodes: []string{vet.UnsyncableClusterObjectErrorCode},
 	},
 	{
 		testName: "Illegal annotation definition is an error",
@@ -1785,9 +1785,9 @@ spec:
 			}.apply(aRoleBinding),
 		},
 		expectedErrorCodes: []string{
-			veterrors.IllegalAnnotationDefinitionErrorCode,
-			veterrors.UnsyncableNamespaceObjectErrorCode,
-			veterrors.IllegalAbstractNamespaceObjectKindErrorCode,
+			vet.IllegalAnnotationDefinitionErrorCode,
+			vet.UnsyncableNamespaceObjectErrorCode,
+			vet.IllegalAbstractNamespaceObjectKindErrorCode,
 		},
 	},
 	{
@@ -1803,9 +1803,9 @@ spec:
 			}.apply(aRoleBinding),
 		},
 		expectedErrorCodes: []string{
-			veterrors.IllegalLabelDefinitionErrorCode,
-			veterrors.UnsyncableNamespaceObjectErrorCode,
-			veterrors.IllegalAbstractNamespaceObjectKindErrorCode,
+			vet.IllegalLabelDefinitionErrorCode,
+			vet.UnsyncableNamespaceObjectErrorCode,
+			vet.IllegalAbstractNamespaceObjectKindErrorCode,
 		},
 	},
 	{
@@ -1815,7 +1815,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"system/syncs.yaml": aNamespaceSync,
 		},
-		expectedErrorCodes: []string{veterrors.UnsupportedResourceInSyncErrorCode},
+		expectedErrorCodes: []string{vet.UnsupportedResourceInSyncErrorCode},
 	},
 	{
 		testName: "Illegal object declaration in system/ is an error",
@@ -1824,7 +1824,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"system/syncs.yaml": templateData{Name: "myname"}.apply(aRole),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalKindInSystemErrorCode},
+		expectedErrorCodes: []string{vet.IllegalKindInSystemErrorCode},
 	},
 	{
 		testName: "Duplicate Repo definitions is an error",
@@ -1833,7 +1833,7 @@ spec:
 			"system/nomos-1.yaml": aRepo,
 			"system/nomos-2.yaml": aRepo,
 		},
-		expectedErrorCodes: []string{veterrors.MultipleRepoDefinitionsErrorCode, veterrors.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MultipleRepoDefinitionsErrorCode, vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Unsupported repo version is an error",
@@ -1846,7 +1846,7 @@ spec:
   version: "0.0.0"
 `,
 		},
-		expectedErrorCodes: []string{veterrors.UnsupportedRepoSpecVersionCode, veterrors.MissingObjectNameErrorCode},
+		expectedErrorCodes: []string{vet.UnsupportedRepoSpecVersionCode, vet.MissingObjectNameErrorCode},
 	},
 	{
 		testName: "Sync contains resource w/o a CRD applied",
@@ -1857,7 +1857,7 @@ spec:
 			"namespaces/bar/undefined.yaml": templateData{}.apply(anUndefinedResource),
 			"namespaces/bar/ns.yaml":        templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.UnknownResourceInSyncErrorCode},
+		expectedErrorCodes: []string{vet.UnknownResourceInSyncErrorCode},
 	},
 	{
 		testName: "Name collision in node",
@@ -1868,7 +1868,7 @@ spec:
 			"namespaces/foo/rb-1.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/rb-2.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "No name collision if types different",
@@ -1890,7 +1890,7 @@ spec:
 			"namespaces/foo/rb-1.yaml":     templateData{ID: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/bar/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Name collision in grandchild node",
@@ -1901,7 +1901,7 @@ spec:
 			"namespaces/foo/rb-1.yaml":         templateData{ID: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/bar/qux/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "No name collision in sibling nodes",
@@ -1921,7 +1921,7 @@ spec:
 			"system/rb.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/foo/bar/rb-1.yaml": templateData{Name: ""}.apply(aNamedRole),
 		},
-		expectedErrorCodes: []string{veterrors.MissingObjectNameErrorCode, veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.MissingObjectNameErrorCode, vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "No name is an error",
@@ -1931,7 +1931,7 @@ spec:
 			"system/rb.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 			"namespaces/foo/bar/rb-1.yaml": templateData{}.apply(aNamedRole),
 		},
-		expectedErrorCodes: []string{veterrors.MissingObjectNameErrorCode, veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.MissingObjectNameErrorCode, vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Name collision in system/ is an error",
@@ -1941,7 +1941,7 @@ spec:
 			"system/rb-1.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", Name: "sync"}.apply(aNamedSync),
 			"system/rb-2.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role", Name: "sync"}.apply(aNamedSync),
 		},
-		expectedErrorCodes: []string{veterrors.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Repo outside system/ is an error",
@@ -1950,7 +1950,7 @@ spec:
 			"system/nomos.yaml":         aRepo,
 			"namespaces/foo/nomos.yaml": aRepo,
 		},
-		expectedErrorCodes: []string{veterrors.IllegalSystemResourcePlacementErrorCode, veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode, vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Sync outside system/ is an error",
@@ -1959,7 +1959,7 @@ spec:
 			"system/nomos.yaml":         aRepo,
 			"namespaces/foo/nomos.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalSystemResourcePlacementErrorCode, veterrors.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode, vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Sync contains a CRD",
@@ -1968,7 +1968,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"system/sync.yaml":  templateData{Group: "extensions", Version: "v1beta1", Kind: "CustomResourceDefinition"}.apply(aSync),
 		},
-		expectedErrorCodes: []string{veterrors.UnsupportedResourceInSyncErrorCode},
+		expectedErrorCodes: []string{vet.UnsupportedResourceInSyncErrorCode},
 	},
 	{
 		testName: "Sync contains a Namespace",
@@ -1977,7 +1977,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"system/sync.yaml":  templateData{Version: "v1", Kind: "Namespace"}.apply(aSync),
 		},
-		expectedErrorCodes: []string{veterrors.UnsupportedResourceInSyncErrorCode},
+		expectedErrorCodes: []string{vet.UnsupportedResourceInSyncErrorCode},
 	},
 	{
 		testName: "Sync contains a PolicyNode",
@@ -1986,7 +1986,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"system/sync.yaml":  templateData{Group: "nomos.dev", Version: "v1", Kind: "PolicyNode"}.apply(aSync),
 		},
-		expectedErrorCodes: []string{veterrors.UnsupportedResourceInSyncErrorCode, veterrors.UnknownResourceInSyncErrorCode},
+		expectedErrorCodes: []string{vet.UnsupportedResourceInSyncErrorCode, vet.UnknownResourceInSyncErrorCode},
 	},
 	{
 		testName: "Sync contains a Sync",
@@ -1995,7 +1995,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"system/sync.yaml":  templateData{Group: "nomos.dev", Version: "v1alpha1", Kind: "Sync"}.apply(aSync),
 		},
-		expectedErrorCodes: []string{veterrors.UnsupportedResourceInSyncErrorCode},
+		expectedErrorCodes: []string{vet.UnsupportedResourceInSyncErrorCode},
 	},
 	{
 		testName: "Invalid name for CRD",
@@ -2004,7 +2004,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"system/sync.yaml":  templateData{Group: "nomos.dev", Version: "v1alpha1", Kind: "Sync", Name: "Sync"}.apply(aNamedSync),
 		},
-		expectedErrorCodes: []string{veterrors.InvalidMetadataNameErrorCode, veterrors.UnsupportedResourceInSyncErrorCode},
+		expectedErrorCodes: []string{vet.InvalidMetadataNameErrorCode, vet.UnsupportedResourceInSyncErrorCode},
 	},
 	{
 		testName: "Illegal Namespace in clusterregistry/",
@@ -2013,7 +2013,7 @@ spec:
 			"system/nomos.yaml":              aRepo,
 			"clusterregistry/namespace.yaml": templateData{Name: "clusterregistry"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalKindInClusterregistryErrorCode},
+		expectedErrorCodes: []string{vet.IllegalKindInClusterregistryErrorCode},
 	},
 	{
 		testName: "Illegal NamespaceSelector in namespaces/",
@@ -2023,7 +2023,7 @@ spec:
 			"namespaces/foo/namespace.yaml":         templateData{Name: "foo"}.apply(aNamespace),
 			"namespaces/foo/namespaceselector.yaml": templateData{}.apply(aNamespaceSelector),
 		},
-		expectedErrorCodes: []string{veterrors.IllegalKindInNamespacesErrorCode},
+		expectedErrorCodes: []string{vet.IllegalKindInNamespacesErrorCode},
 	},
 }
 
@@ -2065,7 +2065,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 
 	actualPolicies, err := p.Parse(d.rootDir, "", time.Time{})
 
-	veterrorstest.ExpectErrors(tc.expectedErrorCodes, err, t)
+	vettesting.ExpectErrors(tc.expectedErrorCodes, err, t)
 	if err != nil {
 		// We expected there to be an error, so no need to do policy validation
 		return
@@ -2963,7 +2963,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			},
-			expectedErrorCodes: []string{veterrors.ObjectHasUnknownClusterSelectorCode},
+			expectedErrorCodes: []string{vet.ObjectHasUnknownClusterSelectorCode},
 		},
 		{
 			testName:    "A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
@@ -3001,7 +3001,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedErrorCodes: []string{veterrors.ObjectHasUnknownClusterSelectorCode},
+			expectedErrorCodes: []string{vet.ObjectHasUnknownClusterSelectorCode},
 		},
 		{
 			testName:           "A dir with no system directory is an error",
@@ -3009,7 +3009,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			clusterName:        "cluster-1",
 			vet:                true,
 			testFiles:          fstesting.FileContentMap{},
-			expectedErrorCodes: []string{veterrors.MissingDirectoryErrorCode, veterrors.MissingRepoErrorCode},
+			expectedErrorCodes: []string{vet.MissingDirectoryErrorCode, vet.MissingRepoErrorCode},
 		},
 		{
 			testName:    "A system directory defining no Repo object is an error",
@@ -3019,7 +3019,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			testFiles: fstesting.FileContentMap{
 				"system/nomos.yaml": "",
 			},
-			expectedErrorCodes: []string{veterrors.MissingRepoErrorCode},
+			expectedErrorCodes: []string{vet.MissingRepoErrorCode},
 		},
 		{
 			testName:    "Defining invalid yaml is an error.",
@@ -3030,7 +3030,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				"system/nomos.yaml":       aRepo,
 				"namespaces/invalid.yaml": "This is not valid yaml.",
 			},
-			expectedErrorCodes: []string{veterrors.UndefinedErrorCode},
+			expectedErrorCodes: []string{vet.UndefinedErrorCode},
 		},
 		{
 			testName:    "A subdir of system is an error",
@@ -3042,9 +3042,9 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				"system/sub/rb.yaml": aRepo,
 			},
 			expectedErrorCodes: []string{
-				veterrors.IllegalSubdirectoryErrorCode,
-				veterrors.MultipleRepoDefinitionsErrorCode,
-				veterrors.MetadataNameCollisionErrorCode},
+				vet.IllegalSubdirectoryErrorCode,
+				vet.MultipleRepoDefinitionsErrorCode,
+				vet.MetadataNameCollisionErrorCode},
 		},
 		{
 			testName:    "Objects in non-namespaces/ with an invalid label is an error",
@@ -3061,7 +3061,7 @@ metadata:
   labels:
     nomos.dev/illegal-label: "true"`,
 			},
-			expectedErrorCodes: []string{veterrors.IllegalLabelDefinitionErrorCode},
+			expectedErrorCodes: []string{vet.IllegalLabelDefinitionErrorCode},
 		},
 		{
 			testName:    "Objects in non-namespaces/ with an invalid annotation is an error",
@@ -3078,7 +3078,7 @@ metadata:
   annotations:
     nomos.dev/unsupported: "true"`,
 			},
-			expectedErrorCodes: []string{veterrors.IllegalAnnotationDefinitionErrorCode},
+			expectedErrorCodes: []string{vet.IllegalAnnotationDefinitionErrorCode},
 		},
 	}
 	for _, test := range tests {

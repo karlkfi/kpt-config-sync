@@ -3,7 +3,7 @@ package sync
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 )
 
 var (
@@ -58,7 +58,7 @@ func errIfNotAllowed(sync FileGroupVersionKindHierarchySync, allowed map[v1alpha
 	if allowed[sync.HierarchyMode] {
 		return nil
 	}
-	return veterrors.IllegalHierarchyModeError{
+	return vet.IllegalHierarchyModeError{
 		Sync:          sync,
 		HierarchyMode: sync.HierarchyMode,
 		Allowed:       allowed,

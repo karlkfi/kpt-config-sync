@@ -1,7 +1,7 @@
 package syntax
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 )
 
@@ -10,7 +10,7 @@ var FlatDirectoryValidator = &PathValidator{
 	validate: func(path nomospath.Relative) error {
 		parts := path.Split()
 		if len(parts) > 2 {
-			return veterrors.IllegalSubdirectoryError{BaseDir: parts[0], SubDir: path.Dir()}
+			return vet.IllegalSubdirectoryError{BaseDir: parts[0], SubDir: path.Dir()}
 		}
 		return nil
 	},

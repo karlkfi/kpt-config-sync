@@ -3,7 +3,7 @@ package metadata
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 )
 
 func init() {
@@ -15,7 +15,7 @@ var NamespaceAnnotationValidatorFactory = SyntaxValidatorFactory{
 	fn: func(meta ResourceMeta) error {
 		if meta.GroupVersionKind() == kinds.Namespace() {
 			if _, found := meta.MetaObject().GetAnnotations()[v1alpha1.NamespaceSelectorAnnotationKey]; found {
-				return veterrors.IllegalNamespaceAnnotationError{Resource: meta}
+				return vet.IllegalNamespaceAnnotationError{Resource: meta}
 			}
 		}
 		return nil

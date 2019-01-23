@@ -24,7 +24,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
 )
@@ -88,7 +88,7 @@ func (v *AnnotationInlinerVisitor) VisitRoot(r *ast.Root) *ast.Root {
 		content, err := json.Marshal(annotation)
 		if err != nil {
 			// TODO(b/122739070) ast.Root should store the ClusterSelectors rather than having to transform them every time.
-			v.errs.Add(veterrors.UndocumentedWrapf(err, "failed to marshal ClusterSelector %q", name))
+			v.errs.Add(vet.UndocumentedWrapf(err, "failed to marshal ClusterSelector %q", name))
 			return
 		}
 		m[name] = string(content)
@@ -107,18 +107,18 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 	for k, s := range n.Selectors {
 		if n.Type == node.Namespace {
 			// TODO(b/122739070) This should already be validated in parser.
-			v.errs.Add(veterrors.UndocumentedErrorf("NamespaceSelector must not be in namespace directories, found in %q", n.RelativeSlashPath()))
+			v.errs.Add(vet.UndocumentedErrorf("NamespaceSelector must not be in namespace directories, found in %q", n.RelativeSlashPath()))
 			return n
 		}
 		if _, err := sel.AsPopulatedSelector(&s.Spec.Selector); err != nil {
 			// TODO(b/122739070) This should already be validated in parser.
-			v.errs.Add(veterrors.UndocumentedWrapf(err, "NamespaceSelector %q is not valid", s.Name))
+			v.errs.Add(vet.UndocumentedWrapf(err, "NamespaceSelector %q is not valid", s.Name))
 			continue
 		}
 		content, err := json.Marshal(s)
 		if err != nil {
 			// TODO(b/122739070) This should already be validated in parser.
-			v.errs.Add(veterrors.UndocumentedWrapf(err, "failed to marshal NamespaceSelector %q", s.Name))
+			v.errs.Add(vet.UndocumentedWrapf(err, "failed to marshal NamespaceSelector %q", s.Name))
 			continue
 		}
 		m[k] = string(content)
@@ -126,7 +126,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 	v.nsTransformer = annotationTransformer{}
 	v.nsTransformer.addMappingForKey(v1alpha1.NamespaceSelectorAnnotationKey, m)
 
-	v.errs.Add(veterrors.UndocumentedWrapf(v.clusterSelectorTransformer.transform(n), "failed to inline ClusterSelector for node %q", n.RelativeSlashPath()))
+	v.errs.Add(vet.UndocumentedWrapf(v.clusterSelectorTransformer.transform(n), "failed to inline ClusterSelector for node %q", n.RelativeSlashPath()))
 	annotatePopulated(n, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return v.Copying.VisitTreeNode(n)
 }
@@ -137,9 +137,9 @@ func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) *ast.Name
 	defer glog.V(6).Infof("VisitObject(): EXIT")
 	newObject := v.Copying.VisitObject(o)
 	m := newObject.MetaObject()
-	v.errs.Add(veterrors.UndocumentedWrapf(v.nsTransformer.transform(m),
+	v.errs.Add(vet.UndocumentedWrapf(v.nsTransformer.transform(m),
 		"failed to inline annotation for object %q", m.GetName()))
-	v.errs.Add(veterrors.UndocumentedWrapf(v.clusterSelectorTransformer.transform(m),
+	v.errs.Add(vet.UndocumentedWrapf(v.clusterSelectorTransformer.transform(m),
 		"failed to inline cluster selector annotations for object %q", m.GetName()))
 	annotatePopulated(m, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject
@@ -151,7 +151,7 @@ func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) *ast
 	defer glog.V(6).Infof("VisitClusterObject(): EXIT")
 	newObject := o.DeepCopy()
 	m := newObject.MetaObject()
-	v.errs.Add(veterrors.InternalWrapf(v.clusterSelectorTransformer.transform(m),
+	v.errs.Add(vet.InternalWrapf(v.clusterSelectorTransformer.transform(m),
 		"failed to inline cluster selector annotations for object %q", m.GetName()))
 	annotatePopulated(m, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject

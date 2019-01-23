@@ -1,7 +1,7 @@
 package sync
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 )
 
@@ -12,9 +12,9 @@ func KnownResourceValidatorFactory(apiInfo *meta.APIInfo) ValidatorFactory {
 		if !apiInfo.Exists(gvk) {
 			versions := apiInfo.AllowedVersions(gvk.GroupKind())
 			if versions == nil {
-				return veterrors.UnknownResourceInSyncError{Sync: sync}
+				return vet.UnknownResourceInSyncError{Sync: sync}
 			}
-			return veterrors.UnknownResourceVersionInSyncError{Sync: sync, Allowed: versions}
+			return vet.UnknownResourceVersionInSyncError{Sync: sync, Allowed: versions}
 		}
 		return nil
 	}}

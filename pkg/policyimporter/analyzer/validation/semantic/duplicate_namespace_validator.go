@@ -3,7 +3,7 @@ package semantic
 import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -27,7 +27,7 @@ func (v DuplicateNamespaceValidator) Validate(errorBuilder *multierror.Builder) 
 
 	for _, namespaces := range namespaces {
 		if len(namespaces) > 1 {
-			errorBuilder.Add(veterrors.MultipleNamespacesError{Duplicates: namespaces})
+			errorBuilder.Add(vet.MultipleNamespacesError{Duplicates: namespaces})
 		}
 	}
 }

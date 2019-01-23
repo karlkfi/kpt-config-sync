@@ -22,8 +22,8 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,7 +71,7 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 		{
 			testName: "Unmarshallable",
 			policy:   createPolicyAnnotation("{"),
-			errors:   []string{veterrors.UndocumentedErrorCode},
+			errors:   []string{vet.UndocumentedErrorCode},
 		},
 	}
 
@@ -81,7 +81,7 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 			if tc.expectedApplicable != applicable {
 				t.Fatalf("Result didn't match, expected=%t, actual=%t", tc.expectedApplicable, applicable)
 			}
-			veterrorstest.ExpectErrors(tc.errors, err, t)
+			vettesting.ExpectErrors(tc.errors, err, t)
 		})
 	}
 }

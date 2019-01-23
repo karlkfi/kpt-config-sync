@@ -1,7 +1,7 @@
 package semantic
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
 )
@@ -38,7 +38,7 @@ func (v DuplicateDirectoryValidator) Validate(errorBuilder *multierror.Builder) 
 			for duplicate := range duplicatesMap {
 				duplicates = append(duplicates, duplicate)
 			}
-			errorBuilder.Add(veterrors.DuplicateDirectoryNameError{Duplicates: duplicates})
+			errorBuilder.Add(vet.DuplicateDirectoryNameError{Duplicates: duplicates})
 		}
 	}
 }

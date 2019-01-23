@@ -3,7 +3,7 @@ package syntax
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 )
 
 // SystemKindValidator ensures only the allowed set of Kinds appear in system/
@@ -13,7 +13,7 @@ var SystemKindValidator = &FileObjectValidator{
 		case *v1alpha1.Repo:
 		case *v1alpha1.Sync:
 		default:
-			return veterrors.IllegalKindInSystemError{Resource: &object}
+			return vet.IllegalKindInSystemError{Resource: &object}
 		}
 		return nil
 	},

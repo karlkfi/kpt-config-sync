@@ -6,7 +6,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -15,7 +15,7 @@ import (
 var DisallowSystemObjectsValidator = &FileObjectValidator{
 	ValidateFn: func(fileObject ast.FileObject) error {
 		if IsSystemOnly(fileObject.GroupVersionKind()) && !isInSystemDir(fileObject) {
-			return veterrors.IllegalSystemResourcePlacementError{Resource: &fileObject}
+			return vet.IllegalSystemResourcePlacementError{Resource: &fileObject}
 		}
 		return nil
 	},

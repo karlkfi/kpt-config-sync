@@ -11,7 +11,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/pkg/errors"
 )
 
@@ -43,7 +43,7 @@ func (e errorDocCode) writePreamble(wr io.Writer) error {
 }
 
 func (e errorDocCode) writeExplanation(wr io.Writer) error {
-	return e.execute(wr, veterrors.Explanations[e.Code()], "Explanation")
+	return e.execute(wr, vet.Explanations[e.Code()], "Explanation")
 }
 
 // CodeMode enters and exits multiline monospace mode.
@@ -88,8 +88,8 @@ func (e errorDocCode) Code() string {
 }
 
 // Examples returns the example errors
-func (e errorDocCode) Examples() []veterrors.Error {
-	return veterrors.Examples[e.Code()]
+func (e errorDocCode) Examples() []vet.Error {
+	return vet.Examples[e.Code()]
 }
 
 // Aka returns the type of error in a near-human-readable format

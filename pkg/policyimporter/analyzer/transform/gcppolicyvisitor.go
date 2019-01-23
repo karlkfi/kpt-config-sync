@@ -19,7 +19,7 @@ package transform
 import (
 	v1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -88,7 +88,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 	switch gcpObj := o.FileObject.Object.(type) {
 	case *v1.IAMPolicy:
 		if attachmentPoint.Kind == "" {
-			v.errs.Add(veterrors.UndocumentedErrorf("Missing attachment point for IAM policy %v", o))
+			v.errs.Add(vet.UndocumentedErrorf("Missing attachment point for IAM policy %v", o))
 		}
 		iamPolicy := gcpObj.DeepCopy()
 		iamPolicy.Spec.ResourceRef = *attachmentPoint
@@ -111,7 +111,7 @@ func (v *GCPPolicyVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 		return nil
 	case *v1.OrganizationPolicy:
 		if attachmentPoint.Kind == "" {
-			v.errs.Add(veterrors.UndocumentedErrorf("Missing attachment point for org policy %v", o))
+			v.errs.Add(vet.UndocumentedErrorf("Missing attachment point for org policy %v", o))
 		}
 		orgPolicy := gcpObj.DeepCopy()
 		orgPolicy.Spec.ResourceRef = *attachmentPoint

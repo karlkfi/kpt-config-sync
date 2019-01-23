@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -33,27 +33,27 @@ var labelTestCases = []labelTestCase{
 	{
 		name:        "one illegal annotation",
 		annotations: []string{illegalLabel},
-		error:       []string{veterrors.IllegalLabelDefinitionErrorCode},
+		error:       []string{vet.IllegalLabelDefinitionErrorCode},
 	},
 	{
 		name:        "two illegal annotations",
 		annotations: []string{illegalLabel, illegalLabel2},
-		error:       []string{veterrors.IllegalLabelDefinitionErrorCode},
+		error:       []string{vet.IllegalLabelDefinitionErrorCode},
 	},
 	{
 		name:        "one legal and one illegal annotation",
 		annotations: []string{legalLabel, illegalLabel},
-		error:       []string{veterrors.IllegalLabelDefinitionErrorCode},
+		error:       []string{vet.IllegalLabelDefinitionErrorCode},
 	},
 	{
 		name:        "namespaceselector annotation",
 		annotations: []string{v1alpha1.NamespaceSelectorAnnotationKey},
-		error:       []string{veterrors.IllegalLabelDefinitionErrorCode},
+		error:       []string{vet.IllegalLabelDefinitionErrorCode},
 	},
 	{
 		name:        "clusterselector annotation",
 		annotations: []string{v1alpha1.ClusterSelectorAnnotationKey},
-		error:       []string{veterrors.IllegalLabelDefinitionErrorCode},
+		error:       []string{vet.IllegalLabelDefinitionErrorCode},
 	},
 }
 
@@ -67,7 +67,7 @@ func (tc labelTestCase) Run(t *testing.T) {
 	eb := multierror.Builder{}
 	LabelValidatorFactory.New([]ResourceMeta{meta}).Validate(&eb)
 
-	veterrorstest.ExpectErrors(tc.error, eb.Build(), t)
+	vettesting.ExpectErrors(tc.error, eb.Build(), t)
 }
 
 func TestLabelValidator(t *testing.T) {

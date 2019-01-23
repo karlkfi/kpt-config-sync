@@ -18,7 +18,7 @@ package validation
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -66,7 +66,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 			repo.NamespacesDir,
 		))
 	case meta.NotFound:
-		p.errs.Add(veterrors.UnknownObjectError{Resource: &o.FileObject})
+		p.errs.Add(vet.UnknownObjectError{Resource: &o.FileObject})
 	}
 
 	return o
@@ -88,7 +88,7 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 			repo.ClusterDir,
 		))
 	case meta.NotFound:
-		p.errs.Add(veterrors.UnknownObjectError{Resource: &o.FileObject})
+		p.errs.Add(vet.UnknownObjectError{Resource: &o.FileObject})
 	}
 
 	return o

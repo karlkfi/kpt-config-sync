@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -24,7 +24,7 @@ func (tc namespaceAnnotationTestCase) Run(t *testing.T) {
 
 	eb := multierror.Builder{}
 	NamespaceAnnotationValidatorFactory.New([]ResourceMeta{meta}).Validate(&eb)
-	veterrorstest.ExpectErrors(tc.error, eb.Build(), t)
+	vettesting.ExpectErrors(tc.error, eb.Build(), t)
 }
 
 var namespaceAnnotationTestCases = []namespaceAnnotationTestCase{
@@ -41,7 +41,7 @@ var namespaceAnnotationTestCases = []namespaceAnnotationTestCase{
 		name:        "namespaceselector annotation on Namespace",
 		annotations: map[string]string{v1alpha1.NamespaceSelectorAnnotationKey: "not legal"},
 		gvk:         kinds.Namespace(),
-		error:       []string{veterrors.IllegalNamespaceAnnotationErrorCode},
+		error:       []string{vet.IllegalNamespaceAnnotationErrorCode},
 	},
 	{
 		name:        "namespaceselector annotation on Role",
@@ -52,7 +52,7 @@ var namespaceAnnotationTestCases = []namespaceAnnotationTestCase{
 		name:        "legal and namespaceselector annotations on Namespace",
 		annotations: map[string]string{"annotation": "stuff", v1alpha1.NamespaceSelectorAnnotationKey: "not legal"},
 		gvk:         kinds.Namespace(),
-		error:       []string{veterrors.IllegalNamespaceAnnotationErrorCode},
+		error:       []string{vet.IllegalNamespaceAnnotationErrorCode},
 	},
 }
 

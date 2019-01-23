@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/pkg/errors"
 )
 
@@ -44,7 +44,7 @@ func main() {
 		glog.Fatal(errors.Wrap(err, "error writing README.md"))
 	}
 
-	for code, explanation := range veterrors.Explanations {
+	for code, explanation := range vet.Explanations {
 
 		if explanation == "" {
 			// No documentation for this error code yet.

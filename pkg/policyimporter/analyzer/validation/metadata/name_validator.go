@@ -4,7 +4,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
@@ -20,21 +20,21 @@ var NameValidatorFactory = SyntaxValidatorFactory{
 
 		if meta.Name() == "" {
 			// Name MUST NOT be empty
-			return veterrors.MissingObjectNameError{Resource: meta}
+			return vet.MissingObjectNameError{Resource: meta}
 		} else if isDefaultCrdAllowedInNomos(gvk) {
 			// If CRD, then name must be a valid DNS1123 subdomain
 			errs := validation.IsDNS1123Subdomain(meta.Name())
 			if errs != nil {
-				return veterrors.InvalidMetadataNameError{Resource: meta}
+				return vet.InvalidMetadataNameError{Resource: meta}
 			}
 		} else if gvk == kinds.Namespace() {
 			// TODO(willbeason) Move this to Namespace-specific package.
 			expectedName := meta.Dir().Base()
 			if expectedName == repo.NamespacesDir {
-				return veterrors.IllegalTopLevelNamespaceError{Resource: meta}
+				return vet.IllegalTopLevelNamespaceError{Resource: meta}
 			}
 			if meta.Name() != expectedName {
-				return veterrors.InvalidNamespaceNameError{Resource: meta, Expected: expectedName}
+				return vet.InvalidNamespaceNameError{Resource: meta, Expected: expectedName}
 			}
 		}
 		return nil

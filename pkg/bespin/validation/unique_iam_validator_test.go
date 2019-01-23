@@ -7,8 +7,8 @@ import (
 	nomoskinds "github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 )
 
 func TestUniqueIAMValidatorVisitTreeNode(t *testing.T) {
@@ -76,9 +76,9 @@ func TestUniqueIAMValidatorVisitTreeNode(t *testing.T) {
 			v.VisitTreeNode(node)
 
 			if tc.shouldFail {
-				veterrorstest.ExpectErrors([]string{veterrors.UndocumentedErrorCode}, v.Error(), t)
+				vettesting.ExpectErrors([]string{vet.UndocumentedErrorCode}, v.Error(), t)
 			} else {
-				veterrorstest.ExpectErrors(nil, v.Error(), t)
+				vettesting.ExpectErrors(nil, v.Error(), t)
 			}
 		})
 	}

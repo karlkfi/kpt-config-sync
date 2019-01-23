@@ -77,7 +77,8 @@ func ToRelative(os []FileObject) []nomospath.Relative {
 // Root represents a set of declared policies, configuration for how those policies will be
 // interpreted, and information regarding where those policies came from.
 type Root struct {
-	ImportToken string         // Import token for context
+	// ImportToken is the token for context
+	ImportToken string
 	LoadTime    time.Time      // Time at which the context was generated
 	Repo        *v1alpha1.Repo // Nomos repo
 

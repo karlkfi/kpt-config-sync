@@ -2,7 +2,7 @@ package metadata
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 )
 
 func init() {
@@ -19,7 +19,7 @@ var AnnotationValidatorFactory = SyntaxValidatorFactory{
 			}
 		}
 		if errors != nil {
-			return veterrors.IllegalAnnotationDefinitionError{Resource: meta, Annotations: errors}
+			return vet.IllegalAnnotationDefinitionError{Resource: meta, Annotations: errors}
 		}
 		return nil
 	},

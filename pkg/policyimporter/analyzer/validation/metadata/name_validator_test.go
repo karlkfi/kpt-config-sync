@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -22,7 +22,7 @@ var nameTestCases = []nameTestCase{
 	{
 		testName:     "empty name",
 		resourceName: "",
-		error:        []string{veterrors.MissingObjectNameErrorCode},
+		error:        []string{vet.MissingObjectNameErrorCode},
 	},
 	{
 		testName:     "legal name",
@@ -32,7 +32,7 @@ var nameTestCases = []nameTestCase{
 		testName:     "illegal crd name",
 		resourceName: "Name",
 		gvk:          kinds.Repo(),
-		error:        []string{veterrors.InvalidMetadataNameErrorCode},
+		error:        []string{vet.InvalidMetadataNameErrorCode},
 	},
 	{
 		testName:     "legal crd name",
@@ -49,14 +49,14 @@ var nameTestCases = []nameTestCase{
 		resourceName: "namespaces",
 		source:       "namespaces/ns.yaml",
 		gvk:          kinds.Namespace(),
-		error:        []string{veterrors.IllegalTopLevelNamespaceErrorCode},
+		error:        []string{vet.IllegalTopLevelNamespaceErrorCode},
 	},
 	{
 		testName:     "illegal namespace name",
 		resourceName: "bar",
 		source:       "namespaces/foo/ns.yaml",
 		gvk:          kinds.Namespace(),
-		error:        []string{veterrors.InvalidNamespaceNameErrorCode},
+		error:        []string{vet.InvalidNamespaceNameErrorCode},
 	},
 	{
 		testName:     "legal namespace name",
@@ -72,7 +72,7 @@ func (tc nameTestCase) Run(t *testing.T) {
 	eb := multierror.Builder{}
 	NameValidatorFactory.New([]ResourceMeta{meta}).Validate(&eb)
 
-	veterrorstest.ExpectErrors(tc.error, eb.Build(), t)
+	vettesting.ExpectErrors(tc.error, eb.Build(), t)
 }
 
 func TestNameValidator(t *testing.T) {

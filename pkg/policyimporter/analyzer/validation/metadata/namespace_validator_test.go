@@ -3,8 +3,8 @@ package metadata
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,7 +23,7 @@ var namespaceTestCases = []namespaceTestCase{
 	{
 		name:      "has namespace",
 		namespace: "bar",
-		error:     []string{veterrors.IllegalNamespaceDeclarationErrorCode},
+		error:     []string{vet.IllegalNamespaceDeclarationErrorCode},
 	},
 }
 
@@ -33,7 +33,7 @@ func (tc namespaceTestCase) Run(t *testing.T) {
 	eb := multierror.Builder{}
 	NamespaceValidatorFactory.New([]ResourceMeta{meta}).Validate(&eb)
 
-	veterrorstest.ExpectErrors(tc.error, eb.Build(), t)
+	vettesting.ExpectErrors(tc.error, eb.Build(), t)
 }
 
 func TestNamespaceValidator(t *testing.T) {

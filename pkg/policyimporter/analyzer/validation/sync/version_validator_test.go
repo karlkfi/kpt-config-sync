@@ -3,8 +3,8 @@ package sync
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -38,7 +38,7 @@ var versionTestCases = []versionTestCase{
 			{Group: "G1", Version: "V1", Kind: "K1"},
 			{Group: "G1", Version: "V2", Kind: "K1"},
 		},
-		error: []string{veterrors.DuplicateSyncGroupKindErrorCode},
+		error: []string{vet.DuplicateSyncGroupKindErrorCode},
 	},
 	{
 		name: "two GVKs different Kind",
@@ -54,7 +54,7 @@ var versionTestCases = []versionTestCase{
 			{Group: "G1", Version: "V2", Kind: "K1"},
 			{Group: "G1", Version: "V3", Kind: "K1"},
 		},
-		error: []string{veterrors.DuplicateSyncGroupKindErrorCode},
+		error: []string{vet.DuplicateSyncGroupKindErrorCode},
 	},
 }
 
@@ -69,7 +69,7 @@ func (tc versionTestCase) Run(t *testing.T) {
 	eb := multierror.Builder{}
 	v.New(syncs).Validate(&eb)
 
-	veterrorstest.ExpectErrors(tc.error, eb.Build(), t)
+	vettesting.ExpectErrors(tc.error, eb.Build(), t)
 }
 
 func TestVersionValidation(t *testing.T) {

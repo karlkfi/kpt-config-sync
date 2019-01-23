@@ -2,7 +2,7 @@ package validation
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
 )
@@ -37,7 +37,7 @@ func (v *MaxDepthValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// Subtracts one since the top level "hierarchy/" doesn't count as a level of depth.
 	depth := len(relativePath) - 1
 	if depth > maxHierarchyDepth {
-		v.errors.Add(veterrors.UndocumentedErrorf(
+		v.errors.Add(vet.UndocumentedErrorf(
 			"Max allowed hierarchy depth of %d violated by %q", maxHierarchyDepth, n.RelativeSlashPath()))
 	}
 	return n

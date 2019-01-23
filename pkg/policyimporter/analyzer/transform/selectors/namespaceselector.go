@@ -20,14 +20,14 @@ import (
 	"encoding/json"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // IsPolicyApplicableToNamespace returns whether the NamespaceSelector
 // annotation on the given policy object matches the given labels on a
 // namespace.  The policy is applicable if it has no such annotation.
-func IsPolicyApplicableToNamespace(namespaceLabels map[string]string, policy metav1.Object) (bool, veterrors.Error) {
+func IsPolicyApplicableToNamespace(namespaceLabels map[string]string, policy metav1.Object) (bool, vet.Error) {
 	ls, exists := policy.GetAnnotations()[v1alpha1.NamespaceSelectorAnnotationKey]
 	if !exists {
 		return true, nil
@@ -35,11 +35,11 @@ func IsPolicyApplicableToNamespace(namespaceLabels map[string]string, policy met
 	var ns v1alpha1.NamespaceSelector
 	if err := json.Unmarshal([]byte(ls), &ns); err != nil {
 		// TODO(b/122738890)
-		return false, veterrors.UndocumentedWrapf(err, "failed to unmarshal NamespaceSelector in object %q", policy.GetName())
+		return false, vet.UndocumentedWrapf(err, "failed to unmarshal NamespaceSelector in object %q", policy.GetName())
 	}
 	selector, err := AsPopulatedSelector(&ns.Spec.Selector)
 	if err != nil {
-		return false, veterrors.InvalidSelectorError{Name: ns.Name, Cause: err}
+		return false, vet.InvalidSelectorError{Name: ns.Name, Cause: err}
 	}
 	return IsSelected(namespaceLabels, selector), nil
 }

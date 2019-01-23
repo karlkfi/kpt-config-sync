@@ -23,8 +23,8 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/multierror"
 )
@@ -56,7 +56,7 @@ func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	eb := multierror.Builder{}
 	tree := tg.Build(&eb)
 
-	veterrorstest.ExpectErrors(tc.errors, eb.Build(), t)
+	vettesting.ExpectErrors(tc.errors, eb.Build(), t)
 
 	if tc.errors != nil {
 		// No more validation; we got the errors we wanted.
@@ -114,7 +114,7 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 			{path: "a"},
 			{path: "a/b/c", typ: node.Namespace},
 		},
-		errors: []string{veterrors.InternalErrorCode},
+		errors: []string{vet.InternalErrorCode},
 	},
 }
 

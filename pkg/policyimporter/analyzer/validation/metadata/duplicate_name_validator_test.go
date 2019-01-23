@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/veterrors/veterrorstest"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
@@ -31,7 +31,7 @@ var duplicateNameTestCases = []duplicateNameTestCase{
 			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb1.yaml"},
 			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb2.yaml"},
 		},
-		error: []string{veterrors.MetadataNameCollisionErrorCode},
+		error: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		name: "three resources name collision",
@@ -40,7 +40,7 @@ var duplicateNameTestCases = []duplicateNameTestCase{
 			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb2.yaml"},
 			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb3.yaml"},
 		},
-		error: []string{veterrors.MetadataNameCollisionErrorCode},
+		error: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		name: "two resources different name",
@@ -69,7 +69,7 @@ var duplicateNameTestCases = []duplicateNameTestCase{
 			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding().GroupKind().WithVersion("v1"), source: "namespaces/rb1.yaml"},
 			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding().GroupKind().WithVersion("v2"), source: "namespaces/rb2.yaml"},
 		},
-		error: []string{veterrors.MetadataNameCollisionErrorCode},
+		error: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		name: "parent directory name collision",
@@ -77,7 +77,7 @@ var duplicateNameTestCases = []duplicateNameTestCase{
 			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb1.yaml"},
 			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/bar/rb2.yaml"},
 		},
-		error: []string{veterrors.MetadataNameCollisionErrorCode},
+		error: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		name: "parent directory name collision not possible for ResourceQuotas",
@@ -92,7 +92,7 @@ func (tc duplicateNameTestCase) Run(t *testing.T) {
 	eb := multierror.Builder{}
 	DuplicateNameValidatorFactory{}.New(tc.metas).Validate(&eb)
 
-	veterrorstest.ExpectErrors(tc.error, eb.Build(), t)
+	vettesting.ExpectErrors(tc.error, eb.Build(), t)
 }
 
 func TestDuplicateNameValidator(t *testing.T) {
