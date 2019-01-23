@@ -34,8 +34,10 @@ import (
 )
 
 var (
+	// ImportToken defines a default token to use for testing.
 	ImportToken = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
-	ImportTime  = time.Date(2017, 8, 10, 5, 16, 00, 0, time.FixedZone("PDT", -7*60*60))
+	// ImportTime defines a default time to use for testing.
+	ImportTime = time.Date(2017, 8, 10, 5, 16, 00, 0, time.FixedZone("PDT", -7*60*60))
 )
 
 // ObjectSets constructs a list of ObjectSet from a list of runtime.Object.
@@ -75,6 +77,7 @@ type TestHelper struct {
 	ImportTime  time.Time
 }
 
+// NewTestHelper returns a TestHelper with default import token and time.
 func NewTestHelper() *TestHelper {
 	return &TestHelper{
 		ImportToken: ImportToken,
