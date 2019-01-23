@@ -286,13 +286,6 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					},
 				},
 			},
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeWarning,
-					reason:  "UnmanagedResource",
-					varargs: true,
-				},
-			},
 		},
 		{
 			name: "create resource from declared state",

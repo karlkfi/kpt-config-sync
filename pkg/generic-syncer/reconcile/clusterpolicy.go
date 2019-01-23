@@ -106,15 +106,6 @@ func (r *ClusterPolicyReconciler) Reconcile(request reconcile.Request) (reconcil
 	return reconcile.Result{}, rErr
 }
 
-func (r *ClusterPolicyReconciler) warnNoLabelResource(u *unstructured.Unstructured) {
-	gvk := u.GroupVersionKind()
-	glog.Warningf("%q with name %q is declared in the source of truth but does not have a management label",
-		gvk, u.GetName())
-	r.recorder.Eventf(
-		u, corev1.EventTypeWarning, "UnmanagedResource",
-		"%q is declared in the source of truth but does not have a management label", gvk)
-}
-
 func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *nomosv1.ClusterPolicy) error {
 	grs, err := r.decoder.DecodeResources(policy.Spec.Resources...)
 	if err != nil {
@@ -221,8 +212,6 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 		}
 	case differ.Update:
 		if diff.Actual.Object != nil && !diff.ActualResourceIsManaged() {
-			// Warn in the case of an existing resource on cluster without a managed label.
-			r.warnNoLabelResource(diff.Actual)
 			return false, nil
 		}
 		removeEmptyRulesField(diff.Declared)
@@ -232,7 +221,6 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 		}
 	case differ.Delete:
 		if !diff.ActualResourceIsManaged() {
-			r.warnNoLabelResource(diff.Actual)
 			return false, nil
 		}
 		toDelete := diff.Actual
