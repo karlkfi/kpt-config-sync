@@ -37,7 +37,8 @@ func (b BespinVisitorProvider) Visitors(
 		validation.NewScope(apiInfo),
 		validation.NewNameValidator(),
 		bespinvalidation.NewUniqueIAMValidator(),
-		bespinvalidation.NewMaxDepthValidator(),
+		bespinvalidation.NewMaxFolderDepthValidator(),
+		bespinvalidation.NewIAMFilenameValidator(),
 	}
 }
 

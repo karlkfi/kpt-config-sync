@@ -1,44 +1,58 @@
 package validation
 
 import (
+	"github.com/google/nomos/pkg/bespin/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
-const maxHierarchyDepth = 4
+const maxFolderDepth = 4
 
-// MaxDepthValidator is an ast.Visitor which validates that no node in hierarchy/ has a depth greater
-// than maxHierarchyDepth.
-type MaxDepthValidator struct {
+// MaxFolderDepthValidator ensures Folder directories are not stacked more than 4 times.
+type MaxFolderDepthValidator struct {
 	*visitor.Base
+	depth  int
 	errors multierror.Builder
 }
 
-var _ ast.Visitor = &MaxDepthValidator{}
+var _ ast.Visitor = &MaxFolderDepthValidator{}
 
-// NewMaxDepthValidator returns an initialized MaxDepthValidator.
-func NewMaxDepthValidator() *MaxDepthValidator {
-	v := &MaxDepthValidator{Base: visitor.NewBase()}
+// NewMaxFolderDepthValidator initializes a MaxFolderDepthValidator.
+func NewMaxFolderDepthValidator() *MaxFolderDepthValidator {
+	v := &MaxFolderDepthValidator{Base: visitor.NewBase()}
 	v.SetImpl(v)
 	return v
 }
 
+// VisitTreeNode implements ast.Visitor.
+func (v *MaxFolderDepthValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
+	if isFolder(n) {
+		v.depth++
+	}
+	if v.depth > maxFolderDepth {
+		v.errors.Add(vet.UndocumentedErrorf("Max allowed hierarchy Folder depth of %d violated by %q", maxFolderDepth, n.RelativeSlashPath()))
+		// No need to visit child nodes and produce an error for every child.
+	} else {
+		v.Base.VisitTreeNode(n)
+	}
+	if isFolder(n) {
+		v.depth--
+	}
+	return n
+}
+
 // Error implements ast.Visitor.
-func (v *MaxDepthValidator) Error() error {
+func (v *MaxFolderDepthValidator) Error() error {
 	return v.errors.Build()
 }
 
-// VisitTreeNode adds an error if the depth of the node is greater than maxHierarchyDepth.
-func (v *MaxDepthValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	// Splits the path from repository root into distinct elements to determine the depth of this node.
-	relativePath := n.Relative.Split()
-	// Subtracts one since the top level "hierarchy/" doesn't count as a level of depth.
-	depth := len(relativePath) - 1
-	if depth > maxHierarchyDepth {
-		v.errors.Add(vet.UndocumentedErrorf(
-			"Max allowed hierarchy depth of %d violated by %q", maxHierarchyDepth, n.RelativeSlashPath()))
+func isFolder(n *ast.TreeNode) bool {
+	for _, o := range n.Objects {
+		if o.GroupVersionKind().GroupKind() == kinds.Folder() {
+			return true
+		}
 	}
-	return n
+	return false
 }

@@ -8,78 +8,57 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
+	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 )
 
 func TestUniqueIAMValidatorVisitTreeNode(t *testing.T) {
-	var testCases = []struct {
-		name       string
-		objects    []ast.FileObject
-		shouldFail bool
-	}{
-		{
-			name: "empty",
-		},
-		{
-			name: "one IAMPolicy",
-			objects: []ast.FileObject{
-				asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
+	test := vt.NodeObjectsValidatorTest{
+		Validator: NewUniqueIAMValidator,
+		ErrorCode: vet.UndocumentedErrorCode,
+		TestCases: []vt.NodeObjectsValidatorTestCase{
+			{
+				Name: "empty",
 			},
-		},
-		{
-			name: "one IAMPolicy and one Role",
-			objects: []ast.FileObject{
-				asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
-				asttesting.NewFakeFileObject(nomoskinds.Role(), ""),
+			{
+				Name: "one IAMPolicy",
+				Objects: []ast.FileObject{
+					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
+				},
 			},
-		},
-		{
-			name: "two IAMPolicies same version",
-			objects: []ast.FileObject{
-				asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v1"), ""),
-				asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v1"), ""),
+			{
+				Name: "one IAMPolicy and one Role",
+				Objects: []ast.FileObject{
+					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
+					asttesting.NewFakeFileObject(nomoskinds.Role(), ""),
+				},
 			},
-			shouldFail: true,
-		},
-		{
-			name: "two IAMPolicies different version",
-			objects: []ast.FileObject{
-				asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v1"), ""),
-				asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v2"), ""),
+			{
+				Name: "two IAMPolicies same version",
+				Objects: []ast.FileObject{
+					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v1"), ""),
+					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v1"), ""),
+				},
+				ShouldFail: true,
 			},
-			shouldFail: true,
-		},
-		{
-			name: "three IAMPolicies",
-			objects: []ast.FileObject{
-				asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
-				asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
-				asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
+			{
+				Name: "two IAMPolicies different version",
+				Objects: []ast.FileObject{
+					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v1"), ""),
+					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v2"), ""),
+				},
+				ShouldFail: true,
 			},
-			shouldFail: true,
+			{
+				Name: "three IAMPolicies",
+				Objects: []ast.FileObject{
+					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
+					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
+					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
+				},
+				ShouldFail: true,
+			},
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			objects := make([]*ast.NamespaceObject, len(tc.objects))
-			for i, object := range tc.objects {
-				objects[i] = &ast.NamespaceObject{FileObject: object}
-			}
-
-			node := &ast.TreeNode{
-				Objects: objects,
-			}
-
-			v := NewUniqueIAMValidator()
-
-			v.VisitTreeNode(node)
-
-			if tc.shouldFail {
-				vettesting.ExpectErrors([]string{vet.UndocumentedErrorCode}, v.Error(), t)
-			} else {
-				vettesting.ExpectErrors(nil, v.Error(), t)
-			}
-		})
-	}
+	test.Run(t)
 }
