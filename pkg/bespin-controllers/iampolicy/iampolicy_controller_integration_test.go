@@ -1,12 +1,11 @@
 // +build integration,nonhermetic
 
 // Warning: only run these tests using an individual's test project or the CNRM
-// CI setup.
-// Tests in this package alter the IAM policies of projects. This can lock out
-// all but the owner of the organization if the tests remove some permission that is
-// relied upon by others.
-// TODO(cflewis): This test should also test attaching IAM policies to folders and organizations
-// to get strong coverage for Bespin.
+// CI setup. Tests in this package alter the IAM policies of projects. This can
+// lock out all but the owner of the organization if the tests remove some
+// permission that is relied upon by others.
+// TODO(cflewis): This test should also test attaching IAM policies to folders
+// and organizations to get strong coverage for Bespin.
 package iampolicy
 
 import (
@@ -31,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -40,7 +40,10 @@ var (
 	cfg *rest.Config
 )
 
-func TestReconcileCreate(t *testing.T) {
+// TestReconcileCreateAndUpdate runs a creation and an update. The update
+// is dependent on the create succeeding, so they need to be tested at the
+// same time.
+func TestReconcileCreateAndUpdate(t *testing.T) {
 	if err := flag.Set("local", "true"); err != nil {
 		t.Fatalf("unable to run Terraform locally")
 	}
@@ -54,9 +57,6 @@ func TestReconcileCreate(t *testing.T) {
 		t.Fatalf("unable to get hostname: %v", err)
 	}
 
-	// Warning: These tests will overwrite any current IAM policy. If a policy is not set
-	// where you have at least editor permissions, you will lock yourself out
-	// of editing the project further and the project is essentially dead.
 	var tests = []struct {
 		name     string
 		bindings []bespinv1.IAMPolicyBinding
@@ -77,6 +77,9 @@ func TestReconcileCreate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Warning: These tests will overwrite any current IAM policy. If a policy is not set
+			// where you have at least editor permissions, you will lock yourself out
+			// of editing the project further and the project is essentially dead.
 			// Add the current service account and Googler (if run locally) as owners of the project
 			// to try and prevent lockouts.
 			members := []string{fmt.Sprintf("serviceAccount:%v", test.GetDefaultServiceAccount(t))}
@@ -90,71 +93,72 @@ func TestReconcileCreate(t *testing.T) {
 				})
 			projID := test.GetDefaultProjectID(t)
 			policy := newPolicyFixture(t, projID, tc.bindings)
-
-			// Create the K8S project resource so the policy can attach to something.
-			// Policies cannot exist without an attached resource.
-			proj := &bespinv1.Project{
-				TypeMeta: metav1.TypeMeta{
-					Kind: policy.Spec.ResourceRef.Kind,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      policy.Spec.ResourceRef.Name,
-					Namespace: projID,
-				},
-				Spec: bespinv1.ProjectSpec{
-					DisplayName: policy.Spec.ResourceRef.Name,
-					ID:          projID,
-				},
-			}
-
-			// Normally integration tests would remove the current resource to ensure the
-			// test is hermetic. However, removing all IAM bindings will lock the owners and the
-			// service account this test runs as, out of the project.
-			mgrC := mgr.GetClient()
-
-			t.Logf("Creating project %v into cluster", proj.Name)
-			if err := mgrC.Create(context.TODO(), proj); err != nil {
-				t.Fatalf("unable to enter project into cluster: %v", err)
-			}
-
-			// Add the policy to the K8S cluster.
-			t.Logf("Creating policy %v into cluster", policy.Name)
-			if err := mgrC.Create(context.TODO(), policy); err != nil {
-				t.Fatalf("unable to enter policy into cluster: %v", err)
-			}
-
-			// Check that the policy's reconcile() was called.
-			test.RunReconcilerAssertResults(t, newReconciler(mgr), policy.ObjectMeta, reconcile.Result{}, nil)
-
-			// Check that the policy was realized on GCP.
-			c, err := gcp.NewCloudResourceManagerClient(context.TODO())
-			if err != nil {
-				t.Fatalf("unable to spawn cloudresourcemanager client: %v", err)
-			}
-			gcpPolicy, err := c.Projects.GetIamPolicy(proj.Name, &cloudres.GetIamPolicyRequest{}).Do()
-			if err != nil {
-				t.Fatalf("unable to get GCP policy: %v", err)
-			}
-			compareBindings(t, policy.Spec.Bindings, gcpPolicy.Bindings)
-
-			// Check that the policy resource status was updated.
-			test.SyncCache(t, mgr)
-			name := types.NamespacedName{Namespace: policy.Namespace, Name: policy.Name}
-			err = mgrC.Get(context.TODO(), name, policy)
-			if err != nil {
-				t.Fatalf("unexpected error getting k8s policy: %v", err)
-			}
-			test.AssertReadyCondition(t, policy.Status.Conditions)
-			test.AssertEventRecorded(t, &mgrC, resourceKind, &policy.ObjectMeta, k8s.Updated)
+			testReconcileCreate(t, mgr, projID, policy)
+			testReconcileUpdate(t, mgr, projID, policy)
 		})
 	}
 }
 
-func newPolicyFixture(t *testing.T, projectID string, bindings []bespinv1.IAMPolicyBinding) *bespinv1.IAMPolicy {
-	t.Helper()
-	if projectID == "" {
-		t.Fatalf("project ID must be not nil")
+func testReconcileCreate(t *testing.T, mgr manager.Manager, projID string, policy *bespinv1.IAMPolicy) {
+	// Create the K8S project resource so the policy can attach to something.
+	// Policies cannot exist without an attached resource.
+	proj := &bespinv1.Project{
+		TypeMeta: metav1.TypeMeta{
+			Kind: policy.Spec.ResourceRef.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      policy.Spec.ResourceRef.Name,
+			Namespace: projID,
+		},
+		Spec: bespinv1.ProjectSpec{
+			DisplayName: policy.Spec.ResourceRef.Name,
+			ID:          projID,
+		},
 	}
+
+	// Normally integration tests would remove the current resource to ensure the
+	// test is hermetic. However, removing all IAM bindings will lock the owners and the
+	// service account this test runs as, out of the project.
+	mgrC := mgr.GetClient()
+
+	t.Logf("Creating project %v into cluster", proj.Name)
+	if err := mgrC.Create(context.TODO(), proj); err != nil {
+		t.Fatalf("unable to enter project into cluster: %v", err)
+	}
+
+	// Add the policy to the K8S cluster.
+	t.Logf("Creating policy %v into cluster", policy.Name)
+	if err := mgrC.Create(context.TODO(), policy); err != nil {
+		t.Fatalf("unable to enter policy into cluster: %v", err)
+	}
+
+	// Check that the policy's reconcile() was called.
+	test.RunReconcilerAssertResults(t, newReconciler(mgr), policy.ObjectMeta, reconcile.Result{}, nil)
+
+	// Check that the policy was realized on GCP.
+	c, err := gcp.NewCloudResourceManagerClient(context.TODO())
+	if err != nil {
+		t.Fatalf("unable to spawn cloudresourcemanager client: %v", err)
+	}
+	gcpPolicy, err := c.Projects.GetIamPolicy(proj.Name, &cloudres.GetIamPolicyRequest{}).Do()
+	if err != nil {
+		t.Fatalf("unable to get GCP policy: %v", err)
+	}
+	compareBindings(t, policy.Spec.Bindings, gcpPolicy.Bindings)
+
+	// Check that the policy resource status was updated.
+	test.SyncCache(t, mgr)
+	name := types.NamespacedName{Namespace: policy.Namespace, Name: policy.Name}
+	err = mgrC.Get(context.TODO(), name, policy)
+	if err != nil {
+		t.Fatalf("unexpected error getting k8s policy: %v", err)
+	}
+	test.AssertReadyCondition(t, policy.Status.Conditions)
+	test.AssertEventRecorded(t, &mgrC, resourceKind, &policy.ObjectMeta, k8s.Updated)
+}
+
+func newPolicyFixture(t *testing.T, projID string, bindings []bespinv1.IAMPolicyBinding) *bespinv1.IAMPolicy {
+	t.Helper()
 	if !strings.HasPrefix(t.Name(), "TestReconcile") {
 		t.Fatalf("Unexpected test name prefix, all tests are expected to start with TestReconcile")
 	}
@@ -162,19 +166,24 @@ func newPolicyFixture(t *testing.T, projectID string, bindings []bespinv1.IAMPol
 	return &bespinv1.IAMPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("policy-%v", uuid.NewUUID()),
-			Namespace: projectID,
+			Namespace: projID,
 		},
 		Spec: bespinv1.IAMPolicySpec{
 			ResourceRef: corev1.ObjectReference{
 				Kind: bespinv1.ProjectKind,
-				Name: projectID,
+				Name: projID,
 			},
 			Bindings: bindings,
 		},
 	}
 }
 
+func testReconcileUpdate(t *testing.T, mgr manager.Manager, projID string, policy *bespinv1.IAMPolicy) {
+
+}
+
 func compareBindings(t *testing.T, k8s []bespinv1.IAMPolicyBinding, gcp []*cloudres.Binding) {
+	t.Helper()
 	for _, k8sBind := range k8s {
 		sort.Strings(k8sBind.Members)
 		var found bool
