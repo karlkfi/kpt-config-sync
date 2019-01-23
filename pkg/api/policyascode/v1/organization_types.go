@@ -65,7 +65,7 @@ type OrganizationList struct {
 // updated (OrgPolicy can be attached, but not update the Organization itself), deleted. It's
 // READONLY in bespin world, and in Terraform there is only a "data" config (no "resource")
 // for an Organization.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (o *Organization) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
 	id := o.ID()
 	if id == "" {
@@ -79,7 +79,7 @@ organization = "organizations/%v"
 // TFImportConfig returns an empty terraform organization resource block used for terraform import.
 // The string is NOT applicable for google_organization because there doesn't exist a "resource" for
 // google_organization and trying to import an organization in Terraform is not supported in Terraform.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (o *Organization) TFImportConfig() string {
 	return ""
 }
@@ -87,16 +87,22 @@ func (o *Organization) TFImportConfig() string {
 // TFResourceAddr returns the address of this Organization resource in terraform config.
 // The string is NOT applicable for google_organization because there doesn't exist a "resource" for
 // google_organization and trying to import an organization in Terraform is not supported in Terraform.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (o *Organization) TFResourceAddr() string {
 	return ""
 }
 
 // ID returns the Organization ID from GCP.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (o *Organization) ID() string {
 	if o.Spec.ID == 0 {
 		return ""
 	}
 	return fmt.Sprintf("%v", o.Spec.ID)
+}
+
+// ReferenceID implements the terraform.Resource interface.
+// For Organization objects, it returns empty string.
+func (o *Organization) ReferenceID(ctx context.Context, c Client) (string, error) {
+	return "", nil
 }

@@ -64,7 +64,7 @@ type FolderList struct {
 }
 
 // TFResourceConfig converts the Folder's Spec struct into terraform config string.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (f *Folder) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
 	var parent string
 	pKind := f.Spec.ParentRef.Kind
@@ -97,22 +97,28 @@ parent = "%s"
 }
 
 // TFImportConfig returns an empty terraform Folder resource block used for terraform import.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (f *Folder) TFImportConfig() string {
 	return `resource "google_folder" "bespin_folder" {}`
 }
 
 // TFResourceAddr returns the address of this Folder resource in terraform config.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (f *Folder) TFResourceAddr() string {
 	return `google_folder.bespin_folder`
 }
 
 // ID returns the Folder ID from GCP.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (f *Folder) ID() string {
 	if f.Spec.ID != 0 {
 		return fmt.Sprintf("%v", f.Spec.ID)
 	}
 	return ""
+}
+
+// ReferenceID implements the terraform.Resource interface.
+// For Folder objects, it returns empty string.
+func (f *Folder) ReferenceID(ctx context.Context, c Client) (string, error) {
+	return "", nil
 }

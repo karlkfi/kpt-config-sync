@@ -50,12 +50,12 @@ type IAMPolicyList struct {
 }
 
 // TFResourceConfig converts the IAMPolicy's Spec struct into terraform config string.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (i *IAMPolicy) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
 	if i.Spec.ResourceRef.Kind != ProjectKind {
 		return "", fmt.Errorf("invalid resource reference kind for IAMPolicy: %v", i.Spec.ResourceRef.Kind)
 	}
-	id, err := ResourceID(ctx, c, i.Spec.ResourceRef.Kind, i.Spec.ResourceRef.Name, i.Namespace)
+	id, err := i.ReferenceID(ctx, c)
 	if err != nil {
 		return "", err
 	}
@@ -68,20 +68,30 @@ policy_data = "${data.google_iam_policy.admin.policy_data}"
 }
 
 // TFImportConfig returns a terraform IAMPolicy resource block used for terraform import.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (i *IAMPolicy) TFImportConfig() string {
-	return `resource "google_project_iam_policy" "project_iam_policy" {}`
+	return `resource "google_project_iam_policy" "bespin_project_iam_policy" {}`
 }
 
 // TFResourceAddr returns the address of this IAMPolicy resource in Terraform config.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (i *IAMPolicy) TFResourceAddr() string {
-	return `google_project_iam_policy.project_iam_policy`
+	return `google_project_iam_policy.bespin_project_iam_policy`
 }
 
 // ID returns the reference resource ID.
 // TODO(b/122925391): fetch resource reference ID from api server.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (i *IAMPolicy) ID() string {
 	return ""
+}
+
+// ReferenceID implements the terraform.Resource interface.
+// It returns the Project ID on GCP where the IAMPolicy points to.
+func (i *IAMPolicy) ReferenceID(ctx context.Context, c Client) (string, error) {
+	id, err := ResourceID(ctx, c, i.Spec.ResourceRef.Kind, i.Spec.ResourceRef.Name, i.Namespace)
+	if err != nil {
+		return "", err
+	}
+	return id, nil
 }

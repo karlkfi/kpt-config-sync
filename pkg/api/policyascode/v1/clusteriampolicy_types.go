@@ -51,11 +51,11 @@ func init() {
 }
 
 // TFResourceConfig converts the ClusterIAMPolicy's Spec struct into terraform config string.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (i *ClusterIAMPolicy) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
 	var tfs string
 	refKind := i.Spec.ResourceRef.Kind
-	id, err := ResourceID(ctx, c, i.Spec.ResourceRef.Kind, i.Spec.ResourceRef.Name, EmptyNamespace)
+	id, err := i.ReferenceID(ctx, c)
 	if err != nil {
 		return "", err
 	}
@@ -79,26 +79,26 @@ folder = "folders/%s"
 }
 
 // TFImportConfig returns a terraform ClusterIAMPolicy resource block used for terraform import.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (i *ClusterIAMPolicy) TFImportConfig() string {
 	switch i.Spec.ResourceRef.Kind {
 	case OrganizationKind:
-		return `resource "google_organization_iam_policy" "organization_iam_policy" {}`
+		return `resource "google_organization_iam_policy" "bespin_organization_iam_policy" {}`
 	case FolderKind:
-		return `resource "google_folder_iam_policy" "folder_iam_policy" {}`
+		return `resource "google_folder_iam_policy" "bespin_folder_iam_policy" {}`
 	default:
 		return ""
 	}
 }
 
 // TFResourceAddr returns the address of this ClusterIAMPolicy resource in Terraform config.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (i *ClusterIAMPolicy) TFResourceAddr() string {
 	switch i.Spec.ResourceRef.Kind {
 	case OrganizationKind:
-		return "google_organization_iam_policy.organization_iam_policy"
+		return "google_organization_iam_policy.bespin_organization_iam_policy"
 	case FolderKind:
-		return "google_folder_iam_policy.folder_iam_policy"
+		return "google_folder_iam_policy.bespin_folder_iam_policy"
 	default:
 		return ""
 	}
@@ -106,7 +106,16 @@ func (i *ClusterIAMPolicy) TFResourceAddr() string {
 
 // ID returns the reference resource ID.
 // TODO(b/122925391): fetch resource reference ID from api server.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (i *ClusterIAMPolicy) ID() string {
 	return ""
+}
+
+// ReferenceID implements the terraform.Resource interface.
+func (i *ClusterIAMPolicy) ReferenceID(ctx context.Context, c Client) (string, error) {
+	id, err := ResourceID(ctx, c, i.Spec.ResourceRef.Kind, i.Spec.ResourceRef.Name, EmptyNamespace)
+	if err != nil {
+		return "", err
+	}
+	return id, nil
 }

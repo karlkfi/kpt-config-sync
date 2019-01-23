@@ -80,8 +80,14 @@ type Resource interface {
 	// TFResourceAddr returns the address of this resource in Terraform config.
 	TFResourceAddr() string
 
-	// ID returns the resource ID from GCP.
+	// ID returns the resource ID from GCP. If the object is a policy instead of resource on GCP,
+	// it returns empty string.
 	ID() string
+
+	// ReferenceID returns the GCP ID of the resource that the policy object points to.
+	// It takes context and client as arguments to call k8s server to get the information.
+	// For resouces like Org, Folder and Project, it returns empty string.
+	ReferenceID(ctx context.Context, c bespinv1.Client) (string, error)
 }
 
 // ExecutorCreator defines the interface to create an executor by production code or by controller unit test.
@@ -234,7 +240,7 @@ func (tfe *Executor) RunApply() error {
 }
 
 // RunImport imports the attached resource into local Terraform state.
-func (tfe *Executor) RunImport() error {
+func (tfe *Executor) RunImport(id string) error {
 	glog.V(1).Infof("[%s]: Running terraform import.", tfe.dir)
 	fileName := filepath.Join(tfe.dir, tfe.configFileName)
 	err := ioutil.WriteFile(fileName, []byte(tfe.resource.TFImportConfig()), defaultFilePerm)
@@ -248,7 +254,7 @@ func (tfe *Executor) RunImport() error {
 		fmt.Sprintf("-state=%s", filepath.Join(tfe.dir, tfe.stateFileName)),     // Source state file.
 		fmt.Sprintf("-state-out=%s", filepath.Join(tfe.dir, tfe.stateFileName)), // Target state file to update.
 		tfe.resource.TFResourceAddr(),
-		tfe.resource.ID())
+		id)
 	if err != nil {
 		glog.Warningf("failed to run terraform import: %v", err)
 	}
@@ -286,12 +292,23 @@ func (tfe *Executor) RunDestroy() error {
 // but letting the operation fail further down is fine for now.
 func (tfe *Executor) RunCreateOrUpdateFlow() error {
 	var err error
+	if err = tfe.RunInit(); err != nil {
+		return err
+	}
+	id := tfe.resource.ID()
+	// If the ID is empty, it might still be available on the resource, e.g. for existing IAMPolicy, it doesn't
+	// have ID, but its reference must have ID, so try to get it with ReferenceID.
+	if id == "" {
+		if id, err = tfe.resource.ReferenceID(tfe.ctx, tfe.k8sClient); err != nil {
+			return errors.Wrap(err, "failed to run terraform RunCreateOrUpdateFlow")
+		}
+	}
 
-	err = run(tfe.RunInit, err)
-
-	// Only import the resource from GCP if we already know its GCP ID.
-	if tfe.resource.ID() != "" {
-		err = run(tfe.RunImport, err)
+	// Only import the resource or reference resource from GCP if we already know their GCP ID.
+	if id != "" {
+		if err = tfe.RunImport(id); err != nil {
+			return err
+		}
 		err = run(tfe.UpdateState, err)
 	}
 
@@ -379,9 +396,14 @@ func (tfe *Executor) GetFolderID() (int64, error) {
 // TODO(b/120279113): Ideally we should read the error from RunImport stdout/stderr and do something smarter here,
 // but letting the operation fail further down is fine for now.
 func (tfe *Executor) RunDeleteFlow() error {
-	var err error
-	err = run(tfe.RunInit, err)
-	err = run(tfe.RunImport, err)
+	err := tfe.RunInit()
+	if err != nil {
+		return err
+	}
+	err = tfe.RunImport(tfe.resource.ID())
+	if err != nil {
+		return err
+	}
 	err = run(tfe.RunInit, err)
 	err = run(tfe.RunPlanDestroy, err)
 	err = run(tfe.RunDestroy, err)

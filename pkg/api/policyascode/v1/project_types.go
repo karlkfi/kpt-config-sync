@@ -63,7 +63,7 @@ type ProjectList struct {
 }
 
 // TFResourceConfig converts the Project's Spec struct into terraform config string.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (p *Project) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
 	pKind := p.Spec.ParentRef.Kind
 	pName := p.Spec.ParentRef.Name
@@ -96,19 +96,25 @@ project_id = "%s"
 }
 
 // TFImportConfig returns an empty terraform project resource block used for terraform import.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (p *Project) TFImportConfig() string {
 	return `resource "google_project" "bespin_project" {}`
 }
 
 // TFResourceAddr returns the address of this project resource in terraform config.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (p *Project) TFResourceAddr() string {
 	return `google_project.bespin_project`
 }
 
 // ID returns the project ID from GCP.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (p *Project) ID() string {
 	return p.Spec.ID
+}
+
+// ReferenceID implements the terraform.Resource interface.
+// For Project objects, it returns empty string.
+func (p *Project) ReferenceID(ctx context.Context, c Client) (string, error) {
+	return "", nil
 }

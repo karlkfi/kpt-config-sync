@@ -170,7 +170,7 @@ func tfResourceID(ctx context.Context, client Client, ps OrganizationPolicySpec)
 }
 
 // TFResourceConfig converts the Organization's Spec struct into Terraform config string.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (op *OrganizationPolicy) TFResourceConfig(ctx context.Context, c Client, tfState ResourceState) (string, error) {
 	ps := op.Spec
 	kind := ps.ResourceRef.Kind
@@ -239,7 +239,7 @@ func (op *OrganizationPolicy) TFImportConfig() string {
 }
 
 // TFResourceAddr returns the address of this OrganizationPolicy resource in terraform config.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (op *OrganizationPolicy) TFResourceAddr() string {
 	switch op.Kind {
 	case ProjectKind:
@@ -254,9 +254,15 @@ func (op *OrganizationPolicy) TFResourceAddr() string {
 
 // ID returns the OrganizationPolicy ID from GCP.  OrganizationPolicy doesn't
 // really have a separate ID, its just the resource Id of the attachment point.
-// It implements the github.com/google/nomos/pkg/bespin-controllers/terraform.Resource interface.
+// It implements the terraform.Resource interface.
 func (op *OrganizationPolicy) ID() string {
 	return op.Spec.ResourceRef.Name
+}
+
+// ReferenceID implements the terraform.Resource interface.
+// TODO(b/123586680): implement this
+func (op *OrganizationPolicy) ReferenceID(ctx context.Context, c Client) (string, error) {
+	return "", nil
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
