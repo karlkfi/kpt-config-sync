@@ -80,7 +80,7 @@ A blessed release consists of three distinct pieces:
     current stable (blessed) version of this file is at
     https://storage.cloud.google.com/nomos-release/operator-stable/nomos-operator.yaml
 *   **`nomos-operator` image** | the container image of Nomos Operator. The
-    current stable version is at gcr.io/nomos-release/nomos-operator: stable .
+    current stable version is at gcr.io/nomos-release/nomos-operator:stable .
     The operator manifest (above) specifies which version of this image to use.
 *   **`nomos` image** | the container image of the Nomos binary. The current
     stable version is at gcr.io/nomos-release/nomos:stable . The manifests that
@@ -179,8 +179,8 @@ just a patch increment run:
 make bless-release
 ```
 
-NOTE: You will need go version 1.11.4 or above to properly bless the release.  You may also need to
-run go clean -modcache if you get errors.
+NOTE: You will need go version 1.11.4 or above to properly bless the release.
+You may also need to run go clean -modcache if you get errors.
 
 ```console
 $ go version

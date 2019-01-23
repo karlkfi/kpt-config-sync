@@ -10,6 +10,7 @@ $ make deploy-operator
 ```
 
 And add the following to `nomos.yaml`:
+
 ```
 spec:
   channel: dev
