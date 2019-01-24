@@ -11,12 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type inheritanceDisabledTestCase struct {
-	name   string
-	fgvkhs FileGroupVersionKindHierarchySync
-	error  []string
-}
-
 func withMode(gvk schema.GroupVersionKind, mode v1alpha1.HierarchyModeType) FileGroupVersionKindHierarchySync {
 	return FileGroupVersionKindHierarchySync{
 		groupVersionKind: gvk,
@@ -24,71 +18,13 @@ func withMode(gvk schema.GroupVersionKind, mode v1alpha1.HierarchyModeType) File
 	}
 }
 
-var inheritanceDisabledTestCases = []inheritanceDisabledTestCase{
-	{
-		name:   "no-inheritance rolebinding default",
-		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeDefault),
-	},
-	{
-		name:   "no-inheritance rolebinding quota error",
-		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
-	},
-	{
-		name:   "no-inheritance rolebinding inherit error",
-		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeInherit),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
-	},
-	{
-		name:   "no-inheritance rolebinding none error",
-		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeNone),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
-	},
-	{
-		name:   "no-inheritance resourcequota default",
-		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeDefault),
-	},
-	{
-		name:   "no-inheritance resourcequota quota error",
-		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeHierarchicalQuota),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
-	},
-	{
-		name:   "no-inheritance resourcequota inherit error",
-		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeInherit),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
-	},
-	{
-		name:   "no-inheritance resourcequota none error",
-		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeNone),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
-	},
-}
-
-func (tc inheritanceDisabledTestCase) Run(t *testing.T) {
-	repo := v1alpha1.Repo{Spec: v1alpha1.RepoSpec{ExperimentalInheritance: false}}
-	v := NewInheritanceValidatorFactory(&repo)
-
-	syncs := []FileSync{toFileSync(tc.fgvkhs)}
-	eb := multierror.Builder{}
-	v.New(syncs).Validate(&eb)
-
-	vettesting.ExpectErrors(tc.error, eb.Build(), t)
-}
-
-func TestInheritanceDisabledValidator(t *testing.T) {
-	for _, tc := range inheritanceDisabledTestCases {
-		t.Run(tc.name, tc.Run)
-	}
-}
-
-type inheritanceEnabledTestCase struct {
+type testCase struct {
 	name   string
 	fgvkhs FileGroupVersionKindHierarchySync
 	error  []string
 }
 
-var inheritanceEnabledTestCases = []inheritanceEnabledTestCase{
+var testCases = []testCase{
 	{
 		name:   "inheritance rolebinding default",
 		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeDefault),
@@ -141,9 +77,8 @@ var inheritanceEnabledTestCases = []inheritanceEnabledTestCase{
 	},
 }
 
-func (tc inheritanceEnabledTestCase) Run(t *testing.T) {
-	repo := v1alpha1.Repo{Spec: v1alpha1.RepoSpec{ExperimentalInheritance: true}}
-	v := NewInheritanceValidatorFactory(&repo)
+func (tc testCase) Run(t *testing.T) {
+	v := NewInheritanceValidatorFactory()
 
 	syncs := []FileSync{toFileSync(tc.fgvkhs)}
 	eb := multierror.Builder{}
@@ -152,64 +87,8 @@ func (tc inheritanceEnabledTestCase) Run(t *testing.T) {
 	vettesting.ExpectErrors(tc.error, eb.Build(), t)
 }
 
-func TestInheritanceEnabledValidator(t *testing.T) {
-	for _, tc := range inheritanceEnabledTestCases {
-		t.Run(tc.name, tc.Run)
-	}
-}
-
-type inheritanceMissingTestCase struct {
-	name   string
-	fgvkhs FileGroupVersionKindHierarchySync
-}
-
-var inheritanceMissingTestCases = []inheritanceMissingTestCase{
-	{
-		name:   "inheritance rolebinding default",
-		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeDefault),
-	},
-	{
-		name:   "inheritance rolebinding quota error",
-		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
-	},
-	{
-		name:   "inheritance rolebinding inherit",
-		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeInherit),
-	},
-	{
-		name:   "inheritance rolebinding none",
-		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeNone),
-	},
-	{
-		name:   "inheritance resourcequota default",
-		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeDefault),
-	},
-	{
-		name:   "inheritance resourcequota quota",
-		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeHierarchicalQuota),
-	},
-	{
-		name:   "inheritance resourcequota inherit",
-		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeInherit),
-	},
-	{
-		name:   "inheritance resourcequota none",
-		fgvkhs: withMode(kinds.ResourceQuota(), v1alpha1.HierarchyModeNone),
-	},
-}
-
-func (tc inheritanceMissingTestCase) Run(t *testing.T) {
-	v := NewInheritanceValidatorFactory(nil)
-
-	syncs := []FileSync{toFileSync(tc.fgvkhs)}
-	eb := multierror.Builder{}
-	v.New(syncs).Validate(&eb)
-
-	vettesting.ExpectErrors([]string{}, eb.Build(), t)
-}
-
-func TestNilRepo(t *testing.T) {
-	for _, tc := range inheritanceMissingTestCases {
+func TestValidator(t *testing.T) {
+	for _, tc := range testCases {
 		t.Run(tc.name, tc.Run)
 	}
 }

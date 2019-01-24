@@ -477,8 +477,7 @@ func (t *TestHelper) System() *ast.System {
 					Name: "nomos",
 				},
 				Spec: v1alpha1.RepoSpec{
-					Version:                 "0.1.0",
-					ExperimentalInheritance: true,
+					Version: "0.1.0",
 				},
 			},
 		),

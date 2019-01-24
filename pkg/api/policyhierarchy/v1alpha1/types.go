@@ -221,10 +221,6 @@ type RepoSpec struct {
 	// Repo version string, corresponds to how policy importer should handle the
 	// directory structure (implicit assumptions).
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
-	// ExperimentalInheritance controls whether inheritance behavior is user-configurable via Sync's
-	// HierarchyMode setting. If false, hierarchy is generally disallowed, except for certain defaults
-	// as described on the HierarchyMode field.
-	ExperimentalInheritance bool `json:"experimentalInheritance" protobuf:"bytes,2,opt,name=experimentalInheritance"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

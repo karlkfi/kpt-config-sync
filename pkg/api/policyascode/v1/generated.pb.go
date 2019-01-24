@@ -19,12 +19,12 @@ limitations under the License.
 // DO NOT EDIT!
 
 /*
-Package v1 is a generated protocol buffer package.
+	Package v1 is a generated protocol buffer package.
 
-It is generated from these files:
-	github.com/google/nomos/pkg/api/policyascode/v1/generated.proto
+	It is generated from these files:
+		github.com/google/nomos/pkg/api/policyascode/v1/generated.proto
 
-It has these top-level messages:
+	It has these top-level messages:
 */
 package v1
 

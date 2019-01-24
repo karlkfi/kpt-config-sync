@@ -7,49 +7,27 @@ import (
 )
 
 var (
-	resourceQuotaIfInheritanceEnabled = map[v1alpha1.HierarchyModeType]bool{
+	resourceQuotaModes = map[v1alpha1.HierarchyModeType]bool{
 		v1alpha1.HierarchyModeDefault:           true,
 		v1alpha1.HierarchyModeHierarchicalQuota: true,
 		v1alpha1.HierarchyModeInherit:           true,
 		v1alpha1.HierarchyModeNone:              true,
 	}
-	othersIfInheritanceEnabled = map[v1alpha1.HierarchyModeType]bool{
+	otherTypesModes = map[v1alpha1.HierarchyModeType]bool{
 		v1alpha1.HierarchyModeDefault: true,
 		v1alpha1.HierarchyModeInherit: true,
 		v1alpha1.HierarchyModeNone:    true,
 	}
-	inheritanceDisabled = map[v1alpha1.HierarchyModeType]bool{
-		v1alpha1.HierarchyModeDefault: true,
-	}
 )
 
-// NewInheritanceValidatorFactory creates a validator factory for the passed Repo that validates the
-// inheritance setting of all Kinds defined in Syncs. If the passed repo is Nil, returns the
-// disabled validator.
-func NewInheritanceValidatorFactory(repo *v1alpha1.Repo) ValidatorFactory {
-	if repo == nil {
-		return nilValidatorFactory
-	}
-	if repo.Spec.ExperimentalInheritance {
-		return newInheritanceEnabledValidator()
-	}
-	return newInheritanceDisabledValidator()
-}
-
-// newInheritanceDisabledValidator implements validation for when inheritance is disabled.
-func newInheritanceDisabledValidator() ValidatorFactory {
-	return ValidatorFactory{fn: func(sync FileGroupVersionKindHierarchySync) error {
-		return errIfNotAllowed(sync, inheritanceDisabled)
-	}}
-}
-
-// newInheritanceEnabledValidator implements validation for when inheritance is enabled.
-func newInheritanceEnabledValidator() ValidatorFactory {
+// NewInheritanceValidatorFactory creates a validator factory that validates the inheritance setting
+// of all Kinds defined in Syncs.
+func NewInheritanceValidatorFactory() ValidatorFactory {
 	return ValidatorFactory{fn: func(sync FileGroupVersionKindHierarchySync) error {
 		if sync.GroupVersionKind() == kinds.ResourceQuota() {
-			return errIfNotAllowed(sync, resourceQuotaIfInheritanceEnabled)
+			return errIfNotAllowed(sync, resourceQuotaModes)
 		}
-		return errIfNotAllowed(sync, othersIfInheritanceEnabled)
+		return errIfNotAllowed(sync, otherTypesModes)
 	}}
 }
 

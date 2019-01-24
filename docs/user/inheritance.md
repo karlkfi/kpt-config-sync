@@ -8,21 +8,7 @@ change this inheritance behavior.
 
 ## Example
 
-To configure inheritance behavior, enable the `experimentalInheritance` flag:
-
-```console
-$ cat system/repo.yaml
-
-kind: Repo
-apiVersion: nomos.dev/v1alpha1
-metadata:
-  name: repo
-spec:
-  version: "0.1.0"
-  experimentalInheritance: true
-```
-
-Now, inheritance can be added to any type by setting the `hierarchyMode` field
+Inheritance can be added to any type by setting the `hierarchyMode` field
 in the corresponding Sync:
 
 ```console
@@ -108,6 +94,3 @@ Resource      | Default value     | Allowed values
 ResourceQuota | hierarchicalQuota | hierarchicalQuota, inherit, none
 RoleBinding   | inherit           | inherit, none
 others        | none              | inherit, none
-
-If `experimentalInheritance` is false or not set, `hierarchyMode` settings are
-not allowed for any resources.

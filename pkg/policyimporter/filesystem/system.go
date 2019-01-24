@@ -30,7 +30,7 @@ func processSystem(
 		}
 	}
 
-	validateSystem(objects, repo, apiInfo, errorBuilder)
+	validateSystem(objects, apiInfo, errorBuilder)
 
 	syncs = append(syncs, opts.Extension.SyncResources()...)
 	return repo, syncs
@@ -45,7 +45,7 @@ func getSystemDir(objects []ast.FileObject) *ast.System {
 }
 
 // validateSystem validates objects in system/
-func validateSystem(objects []ast.FileObject, repo *v1alpha1.Repo, apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) {
+func validateSystem(objects []ast.FileObject, apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) {
 	metadata.Validate(toResourceMetas(objects), errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(ast.ToRelative(objects), errorBuilder)
 	syntax.RepoVersionValidator.Validate(objects, errorBuilder)
@@ -56,6 +56,6 @@ func validateSystem(objects []ast.FileObject, repo *v1alpha1.Repo, apiInfo *meta
 	syncs := fileObjects(objects).syncs()
 	sync.KindValidatorFactory.New(syncs).Validate(errorBuilder)
 	sync.KnownResourceValidatorFactory(apiInfo).New(syncs).Validate(errorBuilder)
-	sync.NewInheritanceValidatorFactory(repo).New(syncs).Validate(errorBuilder)
+	sync.NewInheritanceValidatorFactory().New(syncs).Validate(errorBuilder)
 	sync.VersionValidatorFactory{}.New(syncs).Validate(errorBuilder)
 }

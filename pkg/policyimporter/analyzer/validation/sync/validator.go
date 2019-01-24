@@ -11,12 +11,6 @@ type ValidatorFactory struct {
 	fn func(sync FileGroupVersionKindHierarchySync) error
 }
 
-// nilValidatorFn is a no-op ValidatorFactory to be used when the particular Sync validator
-// is unsafe or impossible to use.
-var nilValidatorFactory = ValidatorFactory{
-	fn: func(sync FileGroupVersionKindHierarchySync) error { return nil },
-}
-
 // New returns a Validator with the set validation function on the set of passed FileSyncs.
 func (v ValidatorFactory) New(syncs []FileSync) Validator {
 	return Validator{fn: v.fn, syncs: syncs}

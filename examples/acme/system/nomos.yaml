@@ -4,4 +4,3 @@ metadata:
   name: repo
 spec:
   version: "0.1.0"
-  experimentalInheritance: true
