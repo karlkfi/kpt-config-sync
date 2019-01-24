@@ -5,6 +5,7 @@
 /certs
 /.output
 *terraform-bundle/
+.terraform
 
 # IDE
 /.idea
