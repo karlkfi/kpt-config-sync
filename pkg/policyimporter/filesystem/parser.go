@@ -133,6 +133,7 @@ func (n NomosVisitorProvider) Visitors(
 		transform.NewInheritanceVisitor(specs),
 	}
 	if spec, found := specs[kinds.ResourceQuota().GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
+		visitors = append(visitors, validation.NewQuotaValidator())
 		visitors = append(visitors, transform.NewQuotaVisitor())
 	}
 	visitors = append(visitors, validation.NewNameValidator())

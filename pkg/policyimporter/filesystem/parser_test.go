@@ -99,6 +99,15 @@ metadata:
 spec:
   hard:
     pods: "10"
+  {{- if .Scope}}
+  scopes: ["Terminating"]
+  {{- end}}
+  {{- if .ScopeSelector}}
+  scopeSelector:
+    matchExpressions:
+      - operator : In
+        scopeName: PriorityClass
+  {{- end}}
 `
 	aRoleTemplate = `
 kind: Role
@@ -418,7 +427,8 @@ type templateData struct {
 	LBPName, HierarchyMode         string
 	Labels, Annotations            map[string]string
 	// Environment is formatted into selectors that have matchLabels sections.
-	Environment string
+	Environment          string
+	Scope, ScopeSelector bool
 }
 
 func (d templateData) apply(t *template.Template) string {
@@ -970,6 +980,28 @@ var parserTestCases = []parserTestCase{
 			),
 		},
 		expectedErrorCodes: []string{vet.UnsyncableNamespaceObjectErrorCode},
+	},
+	{
+		testName: "ResourceQuota with scope and no hierarchical quota",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepoWithHierarchy,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "none"}.apply(aHierarchicalSync),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/rq.yaml": templateData{ID: "1", Scope: true, ScopeSelector: true}.apply(aQuota),
+		},
+		expectedErrorCodes: nil,
+	},
+	{
+		testName: "ResourceQuota with scope and hierarchical quota",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/nomos.yaml":      aRepoWithHierarchy,
+			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchicalSync),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/rq.yaml": templateData{ID: "1", Scope: true, ScopeSelector: true}.apply(aQuota),
+		},
+		expectedErrorCodes: []string{vet.IllegalResourceQuotaFieldErrorCode, vet.IllegalResourceQuotaFieldErrorCode},
 	},
 	{
 		testName: "Namespace dir with single ResourceQuota single file",
