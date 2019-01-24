@@ -18,7 +18,6 @@ package clusteriampolicy
 
 import (
 	"context"
-	"time"
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
@@ -27,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -37,7 +37,7 @@ import (
 )
 
 // TODO(b/122955229): consolidate the common code in a single place.
-const reconcileTimeout = time.Minute * 5
+const controllerName = "clusteriampolicy-controller"
 
 // Add creates a new ClusterIAMPolicy Controller and adds it to the Manager with default RBAC.
 // The Manager will set fields on the Controller and Start it when the Manager is Started.
@@ -48,9 +48,10 @@ func Add(mgr manager.Manager, ef terraform.ExecutorCreator) error {
 // newReconciler returns a new reconcile.Reconciler.
 func newReconciler(mgr manager.Manager, ef terraform.ExecutorCreator) reconcile.Reconciler {
 	return &ReconcileClusterIAMPolicy{
-		Client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
-		ef:     ef,
+		Client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
+		ef:       ef,
+		recorder: mgr.GetRecorder(controllerName),
 	}
 }
 
@@ -76,14 +77,15 @@ var _ reconcile.Reconciler = &ReconcileClusterIAMPolicy{}
 // ReconcileClusterIAMPolicy reconciles a ClusterIAMPolicy object.
 type ReconcileClusterIAMPolicy struct {
 	client.Client
-	scheme *runtime.Scheme
-	ef     terraform.ExecutorCreator
+	scheme   *runtime.Scheme
+	ef       terraform.ExecutorCreator
+	recorder record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a ClusterIAMPolicy object and makes changes based on the state read
 // and what is in the ClusterIAMPolicy.Spec.
 func (r *ReconcileClusterIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), reconcileTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), resource.ReconcileTimeout)
 	defer cancel()
 	ciam := &bespinv1.ClusterIAMPolicy{}
 	name := request.NamespacedName
@@ -114,13 +116,16 @@ func (r *ReconcileClusterIAMPolicy) Reconcile(request reconcile.Request) (reconc
 
 	if err = tfe.RunCreateOrUpdateFlow(); err != nil {
 		glog.Errorf("ClusterIAMPolicy reconciler failed to run Terraform command: %v", err)
-		return reconcile.Result{}, errors.Wrap(err, "ClusterIAMPolicy reconciler failed to run Terraform command")
+		return reconcile.Result{}, errors.Wrapf(err, "ClusterIAMPolicy reconciler failed to run Terraform command")
 	}
-	if err = resource.Update(ctx, r.Client, ciam, newciam); err != nil {
-		err = errors.Wrap(err, "reconciler failed to update IAMPolicy in API server")
-		return reconcile.Result{}, err
+	done, err := resource.Update(ctx, r.Client, r.recorder, ciam, newciam)
+	if err != nil {
+		glog.Errorf("[ClusterIAMPolicy %v] reconciler failed to update api server: %v", name, err)
+		return reconcile.Result{}, errors.Wrapf(err, "[ClusterIAMPolicy %v] reconciler failed to update api server", name)
 	}
-	glog.V(1).Infof("[ClusterIAMPolicy %v] reconciler successfully finished", name)
+	if done {
+		glog.V(1).Infof("[ClusterIAMPolicy %v] reconciler successfully finished", name)
+	}
 	return reconcile.Result{}, nil
 }
 

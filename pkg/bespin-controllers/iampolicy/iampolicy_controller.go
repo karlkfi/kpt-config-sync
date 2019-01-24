@@ -18,8 +18,6 @@ package iampolicy
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"k8s.io/client-go/tools/record"
 
@@ -27,9 +25,7 @@ import (
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/bespin-controllers/resource"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
-	"github.com/google/nomos/pkg/bespin-controllers/test/k8s"
 	"github.com/pkg/errors"
-	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,10 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	reconcileTimeout = time.Minute * 5
-	controllerName   = "iampolicy-controller"
-)
+const controllerName = "iampolicy-controller"
 
 // Add creates a new IAMPolicy Controller and adds it to the Manager with default RBAC.
 // The Manager will set fields on the Controller and Start it when the Manager is Started.
@@ -92,7 +85,7 @@ type ReconcileIAMPolicy struct {
 // Reconcile reads that state of the cluster for a IAMPolicy object and makes changes based on the state read
 // and what is in the IAMPolicy.Spec.
 func (r *ReconcileIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), reconcileTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), resource.ReconcileTimeout)
 	defer cancel()
 	iam := &bespinv1.IAMPolicy{}
 	name := request.NamespacedName
@@ -101,19 +94,19 @@ func (r *ReconcileIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Res
 		if k8serrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-		glog.Errorf("IAMPolicy reconciler error in getting iampolicy instance: %v", err)
-		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler error in getting iampolicy instance")
+		glog.Errorf("[IAMPolicy %v] reconciler error in getting iampolicy instance: %v", name, err)
+		return reconcile.Result{}, errors.Wrapf(err, "[IAMPolicy %v] reconciler error in getting iampolicy instance", name)
 	}
 	newiam := &bespinv1.IAMPolicy{}
 	iam.DeepCopyInto(newiam)
 	if err := r.setOwnerReference(ctx, newiam); err != nil {
-		glog.Errorf("IAMPolicy reconciler failed to set owner reference: %v", err)
-		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to set owner reference")
+		glog.Errorf("[IAMPolicy %v] reconciler failed to set owner reference: %v", name, err)
+		return reconcile.Result{}, errors.Wrapf(err, "[IAMPolicy %v] reconciler failed to set owner reference", name)
 	}
 	tfe, err := r.ef.NewExecutor(ctx, r.Client, newiam)
 	if err != nil {
-		glog.Errorf("IAMPolicy reconciler failed to create new Terraform executor: %v", err)
-		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to create new Terraform executor")
+		glog.Errorf("[IAMPolicy %v] reconciler failed to create new Terraform executor: %v", name, err)
+		return reconcile.Result{}, errors.Wrapf(err, "[IAMPolicy %v] reconciler failed to create new Terraform executor", name)
 	}
 	defer func() {
 		if cErr := tfe.Close(); cErr != nil {
@@ -122,22 +115,17 @@ func (r *ReconcileIAMPolicy) Reconcile(request reconcile.Request) (reconcile.Res
 	}()
 
 	if err = tfe.RunCreateOrUpdateFlow(); err != nil {
-		glog.Errorf("IAMPolicy reconciler failed to run Terraform command: %v", err)
-		return reconcile.Result{}, errors.Wrap(err, "IAMPolicy reconciler failed to run Terraform command")
+		glog.Errorf("[IAMPolicy %v] reconciler failed to run Terraform command: %v", name, err)
+		return reconcile.Result{}, errors.Wrapf(err, "[IAMPolicy %v] reconciler failed to run Terraform command", name)
 	}
-
-	if err = resource.Update(ctx, r.Client, iam, newiam); err != nil {
-		err = errors.Wrap(err, "reconciler failed to update IAMPolicy in API server")
-		return reconcile.Result{}, err
+	done, err := resource.Update(ctx, r.Client, r.recorder, iam, newiam)
+	if err != nil {
+		glog.Errorf("[IAMPolicy %v] reconciler failed to update api server: %v", name, err)
+		return reconcile.Result{}, errors.Wrapf(err, "[IAMPolicy %v] reconciler failed to update api server", name)
 	}
-
-	newCondition := k8s.NewCustomReadyCondition(v1.ConditionTrue, k8s.Updated, k8s.UpdatedMessage)
-	if err := r.updateAPIServerInstanceCondition(newiam, newCondition); err != nil {
-		return reconcile.Result{}, err
+	if done {
+		glog.V(1).Infof("[IAMPolicy %v] reconciler successfully finished", name)
 	}
-	r.recorder.Eventf(newiam, v1.EventTypeNormal, k8s.Updated, k8s.UpdatedMessage)
-
-	glog.V(1).Infof("[IAMPolicy %v] reconciler successfully finished", name)
 	return reconcile.Result{}, nil
 }
 
@@ -155,16 +143,6 @@ func (r *ReconcileIAMPolicy) setOwnerReference(ctx context.Context, iampolicy *b
 		glog.V(1).Infof("[IAMPolicy %v] successfully set OwnerReference: %v", iampolicy.Name, owner)
 	default:
 		return errors.Errorf("invalid resource reference reference kind: %v", refKind)
-	}
-	return nil
-}
-
-func (r *ReconcileIAMPolicy) updateAPIServerInstanceCondition(iam *bespinv1.IAMPolicy,
-	newCondition bespinv1.Condition) error {
-	iam.Status.Conditions = []bespinv1.Condition{newCondition}
-	err := r.Update(context.Background(), iam)
-	if err != nil {
-		return fmt.Errorf("error updating instance '%v' in api server: %v", r, err)
 	}
 	return nil
 }

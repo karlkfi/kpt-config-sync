@@ -18,10 +18,10 @@ package organization
 
 import (
 	"context"
-	"time"
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/bespin-controllers/resource"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,8 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
-
-const reconcileTimeout = time.Minute * 5
 
 // Add creates a new Organization Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -84,7 +82,7 @@ type ReconcileOrganization struct {
 // retried.
 func (r *ReconcileOrganization) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	organization := &bespinv1.Organization{}
-	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), resource.ReconcileTimeout)
 	defer cancel()
 	err := r.Get(ctx, request.NamespacedName, organization)
 	if err != nil {

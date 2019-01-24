@@ -19,19 +19,28 @@ package resource
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	"github.com/google/nomos/pkg/bespin-controllers/test/k8s"
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MaxRetries is the maximal number of retries for each Reconcile request.
-const MaxRetries = 5
+const (
+	// MaxRetries is the maximal number of retries for each Reconcile request.
+	MaxRetries = 5
+
+	// ReconcileTimeout is the timeout limit for each reconcile request.
+	ReconcileTimeout = time.Minute * 5
+)
 
 // GenericObject is an interface that combines functionalities from both:
 // runtime.Object - used when taking to k8s api server.
@@ -61,18 +70,45 @@ func Get(ctx context.Context, c client.Client, Kind, Name, Namespace string) (Ge
 	return res, nil
 }
 
-// Update updates the Bespin GenericObject in k8s API server if the new object is not identical
-// to the existing object.
-// Note: r.Update() will trigger another Reconcile(), we should't update the API server
-// when there is nothing changed.
-func Update(ctx context.Context, c client.Client, obj, newobj GenericObject) error {
-	// If there's no diff, we don't need to Update().
+// Update updates the object in k8s api server with the latest condition if the newobj needs
+// to be updated. It returns true if the object doesn't need to be updated (thus the reconcile
+// is essentially done), and returns non-nil error if there is a failure.
+func Update(ctx context.Context, c client.Client, r record.EventRecorder, obj, newobj GenericObject) (bool, error) {
 	if equality.Semantic.DeepEqual(obj, newobj) {
 		glog.V(1).Infof("[%v] already update to date", obj.GetName())
-		return nil
+		return true, nil
+	}
+	if err := setCondition(newobj); err != nil {
+		return false, errors.Wrapf(err, "failed to set %v conditions", newobj.GetName())
 	}
 	if err := c.Update(ctx, newobj); err != nil {
-		return errors.Wrapf(err, "failed to update %s in API server.", newobj.GetName())
+		return false, errors.Wrapf(err, "failed to update %s in API server.", newobj.GetName())
+	}
+	r.Eventf(newobj, v1.EventTypeNormal, k8s.Updated, k8s.UpdatedMessage)
+	return false, nil
+}
+
+func setCondition(obj GenericObject) error {
+	conditions := []bespinv1.Condition{
+		k8s.NewCustomReadyCondition(v1.ConditionTrue, k8s.Updated, k8s.UpdatedMessage),
+	}
+	switch objType := obj.(type) {
+	case *bespinv1.Organization:
+		objType.Status.Conditions = conditions
+	case *bespinv1.Folder:
+		objType.Status.Conditions = conditions
+	case *bespinv1.Project:
+		objType.Status.Conditions = conditions
+	case *bespinv1.IAMPolicy:
+		objType.Status.Conditions = conditions
+	case *bespinv1.ClusterIAMPolicy:
+		objType.Status.Conditions = conditions
+	case *bespinv1.OrganizationPolicy:
+		objType.Status.Conditions = conditions
+	case *bespinv1.ClusterOrganizationPolicy:
+		objType.Status.Conditions = conditions
+	default:
+		return fmt.Errorf("invalid resource type: %v", objType)
 	}
 	return nil
 }

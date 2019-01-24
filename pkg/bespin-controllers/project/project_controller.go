@@ -18,7 +18,6 @@ package project
 
 import (
 	"context"
-	"time"
 
 	"github.com/golang/glog"
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
@@ -29,6 +28,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const reconcileTimeout = time.Minute * 5
+const controllerName = "project-controller"
 
 // Add creates a new Project Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -48,9 +48,10 @@ func Add(mgr manager.Manager, ef terraform.ExecutorCreator) error {
 // newReconciler returns a new reconcile.Reconciler.
 func newReconciler(mgr manager.Manager, ef terraform.ExecutorCreator) reconcile.Reconciler {
 	return &ReconcileProject{
-		Client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
-		ef:     ef,
+		Client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
+		ef:       ef,
+		recorder: mgr.GetRecorder(controllerName),
 	}
 }
 
@@ -76,14 +77,15 @@ var _ reconcile.Reconciler = &ReconcileProject{}
 // ReconcileProject reconciles a Project object.
 type ReconcileProject struct {
 	client.Client
-	scheme *runtime.Scheme
-	ef     terraform.ExecutorCreator
+	scheme   *runtime.Scheme
+	ef       terraform.ExecutorCreator
+	recorder record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a Project object and makes changes based on the state read
 // and what is in the Project.Spec.
 func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), reconcileTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), resource.ReconcileTimeout)
 	defer cancel()
 	name := request.NamespacedName
 	project := &bespinv1.Project{}
@@ -106,7 +108,7 @@ func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 	defer func() {
 		if cErr := tfe.Close(); cErr != nil {
-			glog.Errorf("[Folder %v] reconciler failed to close Terraform executor: %v", name, cErr)
+			glog.Errorf("[Project %v] reconciler failed to close Terraform executor: %v", name, cErr)
 		}
 	}()
 	// Project is being deleted.
@@ -128,12 +130,14 @@ func (r *ReconcileProject) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, errors.Wrapf(err,
 			"[Project %v] reconciler failed to run Terraform command", name)
 	}
-	if err = resource.Update(ctx, r.Client, project, newProject); err != nil {
-		glog.Errorf("[Project %v] reconciler failed to update Project in API server: %v", name, err)
-		err = errors.Wrap(err, "reconciler failed to update Project in API server")
-		return reconcile.Result{}, err
+	done, err := resource.Update(ctx, r.Client, r.recorder, project, newProject)
+	if err != nil {
+		glog.Errorf("[Project %v] reconciler failed to update api server: %v", name, err)
+		return reconcile.Result{}, errors.Wrapf(err, "[Project %v] reconciler failed to update api server", name)
 	}
-	glog.V(1).Infof("[Project %v] reconciler successfully finished", name)
+	if done {
+		glog.V(1).Infof("[Project %v] reconciler successfully finished", name)
+	}
 	return reconcile.Result{}, nil
 }
 
