@@ -69,16 +69,6 @@ setup::git::init_acme() {
   git push origin master:master -f
   cd "$CWD"
 
-  setup::wait_for_namespaces
-
-  # Wait for syncer to update each object type.
-  wait::for kubectl get rolebindings -n backend
-  wait::for kubectl get roles -n new-prj
-  wait::for kubectl get quota -n backend
-  # We delete bob-rolebinding in one test case, make sure it's restored.
-  wait::for kubectl get rolebindings bob-rolebinding -n backend
-  wait::for kubectl get clusterrole acme-admin
-
   local ns
   local commit_hash
   commit_hash="$(git::hash)"
@@ -105,26 +95,6 @@ setup::common() {
   kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found || true
 
   echo "--- SETUP COMPLETE ---------------------------------------------------"
-}
-
-# Previous tests can create / delete namespaces. This will wait for the
-# namespaces to finish terminating and the state to get restored to base acme.
-function setup::wait_for_namespaces() {
-  debug::log -n "Waiting for namespaces to stabilize"
-  local start
-  start=$(date +%s)
-  local deadline
-  deadline=$(( $(date +%s) + 30 ))
-  while (( "$(date +%s)" < deadline )); do
-    if setup::check_stable; then
-      debug::log "Namespaces stabilized in $(( $(date +%s) - start )) seconds"
-      return 0
-    fi
-    sleep 0.1
-  done
-  debug::log "Namespaces failed to stabilize to acme defaults, got:"
-  debug::log "$(kubectl get ns)"
-  return 1
 }
 
 function setup::check_stable() {
