@@ -33,6 +33,7 @@ func (b BespinVisitorProvider) Visitors(
 	return []ast.Visitor{
 		transform.NewGCPHierarchyVisitor(),
 		transform.NewGCPPolicyVisitor(),
+		transform.NewGCPAnnotationVisitor(),
 		validation.NewScope(apiInfo),
 		validation.NewNameValidator(),
 		bespinvalidation.NewUniqueIAMValidator(),
