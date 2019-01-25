@@ -28,6 +28,7 @@ import (
 type NomosV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ClusterSelectorsGetter
+	HierarchicalQuotasGetter
 	NamespaceSelectorsGetter
 	ReposGetter
 	SyncsGetter
@@ -40,6 +41,10 @@ type NomosV1alpha1Client struct {
 
 func (c *NomosV1alpha1Client) ClusterSelectors() ClusterSelectorInterface {
 	return newClusterSelectors(c)
+}
+
+func (c *NomosV1alpha1Client) HierarchicalQuotas() HierarchicalQuotaInterface {
+	return newHierarchicalQuotas(c)
 }
 
 func (c *NomosV1alpha1Client) NamespaceSelectors() NamespaceSelectorInterface {

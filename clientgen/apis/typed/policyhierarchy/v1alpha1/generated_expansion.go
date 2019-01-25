@@ -20,6 +20,8 @@ package v1alpha1
 
 type ClusterSelectorExpansion interface{}
 
+type HierarchicalQuotaExpansion interface{}
+
 type NamespaceSelectorExpansion interface{}
 
 type RepoExpansion interface{}

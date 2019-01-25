@@ -41,6 +41,8 @@ var (
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&ClusterSelector{},
+		&HierarchicalQuota{},
+		&HierarchicalQuotaList{},
 		&NamespaceSelector{},
 		&NamespaceSelectorList{},
 		&Repo{},

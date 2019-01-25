@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// ClusterSelectors returns a ClusterSelectorInformer.
 	ClusterSelectors() ClusterSelectorInformer
+	// HierarchicalQuotas returns a HierarchicalQuotaInformer.
+	HierarchicalQuotas() HierarchicalQuotaInformer
 	// NamespaceSelectors returns a NamespaceSelectorInformer.
 	NamespaceSelectors() NamespaceSelectorInformer
 	// Repos returns a RepoInformer.
@@ -48,6 +50,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // ClusterSelectors returns a ClusterSelectorInformer.
 func (v *version) ClusterSelectors() ClusterSelectorInformer {
 	return &clusterSelectorInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// HierarchicalQuotas returns a HierarchicalQuotaInformer.
+func (v *version) HierarchicalQuotas() HierarchicalQuotaInformer {
+	return &hierarchicalQuotaInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // NamespaceSelectors returns a NamespaceSelectorInformer.

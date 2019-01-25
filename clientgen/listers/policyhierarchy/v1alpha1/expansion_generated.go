@@ -22,6 +22,10 @@ package v1alpha1
 // ClusterSelectorLister.
 type ClusterSelectorListerExpansion interface{}
 
+// HierarchicalQuotaListerExpansion allows custom methods to be added to
+// HierarchicalQuotaLister.
+type HierarchicalQuotaListerExpansion interface{}
+
 // NamespaceSelectorListerExpansion allows custom methods to be added to
 // NamespaceSelectorLister.
 type NamespaceSelectorListerExpansion interface{}
