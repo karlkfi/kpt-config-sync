@@ -2,11 +2,11 @@ package vet
 
 import "github.com/google/nomos/pkg/policyimporter/id"
 
-// IllegalNamespaceDeclarationErrorCode is the error code for IllegalNamespaceDeclarationError
-const IllegalNamespaceDeclarationErrorCode = "1009"
+// IllegalMetadataNamespaceDeclarationErrorCode is the error code for IllegalNamespaceDeclarationError
+const IllegalMetadataNamespaceDeclarationErrorCode = "1009"
 
 func init() {
-	register(IllegalNamespaceDeclarationErrorCode, nil, "")
+	register(IllegalMetadataNamespaceDeclarationErrorCode, nil, "")
 }
 
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
@@ -25,5 +25,5 @@ func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 
 // Code implements Error
 func (e IllegalMetadataNamespaceDeclarationError) Code() string {
-	return IllegalNamespaceDeclarationErrorCode
+	return IllegalMetadataNamespaceDeclarationErrorCode
 }

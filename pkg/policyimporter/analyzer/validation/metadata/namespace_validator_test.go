@@ -23,7 +23,7 @@ var namespaceTestCases = []namespaceTestCase{
 	{
 		name:      "has namespace",
 		namespace: "bar",
-		error:     []string{vet.IllegalNamespaceDeclarationErrorCode},
+		error:     []string{vet.IllegalMetadataNamespaceDeclarationErrorCode},
 	},
 }
 
