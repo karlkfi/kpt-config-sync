@@ -78,6 +78,8 @@ func (vb *Base) VisitRoot(g *ast.Root) *ast.Root {
 		glog.Infof("VisitRoot(): ENTER: %v", spew.Sdump(g))
 	}
 	defer glog.V(6).Infof("VisitRoot(): EXIT")
+	g.System.Accept(vb.impl)
+	g.ClusterRegistry.Accept(vb.impl)
 	g.Cluster.Accept(vb.impl)
 	g.Tree.Accept(vb.impl)
 	return g
@@ -147,4 +149,8 @@ func (vb *Base) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	}
 	// leaf - noop
 	return o
+}
+
+func (vb *Base) Error() error {
+	return nil
 }

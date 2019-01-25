@@ -57,6 +57,8 @@ func (v *Copying) Error() error {
 // VisitRoot implements Visitor
 func (v *Copying) VisitRoot(c *ast.Root) *ast.Root {
 	nc := *c
+	nc.System = c.System.Accept(v.impl)
+	nc.ClusterRegistry = c.ClusterRegistry.Accept(v.impl)
 	nc.Cluster = c.Cluster.Accept(v.impl)
 	nc.Tree = c.Tree.Accept(v.impl)
 	return &nc
