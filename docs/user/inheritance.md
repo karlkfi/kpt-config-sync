@@ -8,8 +8,8 @@ change this inheritance behavior.
 
 ## Example
 
-Inheritance can be added to any type by setting the `hierarchyMode` field
-in the corresponding Sync:
+Inheritance can be added to any type by setting the `hierarchyMode` field in the
+corresponding Sync:
 
 ```console
 $ cat system/rbac.yaml

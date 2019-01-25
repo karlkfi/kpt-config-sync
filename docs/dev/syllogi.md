@@ -14,7 +14,7 @@ nomos-system namespace exists. You might recognize that as essentially the
 The Syllogi code is located at
 https://gke-internal.git.corp.google.com/syllogi/cluster-management/+/master#
 
-The Nomos integration is currently located in two places:
+The Nomos integration is currently located in the following places:
 
 *   The version of the operator specified in
     https://gke-internal.git.corp.google.com/syllogi/cluster-management/+/master/gkectl/pkg/bundle/constants.go
@@ -25,7 +25,12 @@ The Nomos integration is currently located in two places:
     changes. This build runs daily and pulls the latest code from our usual
     [Operator Repo](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/+/master/nomos-operator)
 
-*   The nomos-operator.yaml contents are located at
+*   The version of the Nomos binary specified in
+    https://gke-internal.git.corp.google.com/syllogi/cluster-management/+/master/gkectl/pkg/bundle/versions.go
+    defined by gcr.io/%s/Nomos:<version>. This is used by a script that copies
+    this binary to a private registry if the customer is using one.
+
+*   The nomos-operator.yaml contents located at
     https://gke-internal.git.corp.google.com/syllogi/cluster-management/+/master/gkectl/pkg/bundle/addonsdata.go
     (under `# Nomos` comment). This is the template for the yamls that get
     deployed with Syllogi by default.
@@ -48,6 +53,8 @@ has milestone releases that we want to hop on.
     operator, so normally you should do this on the following day.
 *   Edit `gkectl/pkg/bundle/constants.go` and point `ClusterOperatorsTag` to the
     version above.
+*   Edit `gkectl/pkg/bundle/versions.go` and update `gcr.io/%s/Nomos:<version>`
+    to the latest blessed version of the Nomos binary.
 *   Ensure that the contents of `gkectl/pkg/bundle/addonsdata.go` match the
     contents of `nomos-operator.yaml`. This file rarely changes, only if we
     modify TheNomos CRD or the operator deployment spec. The contents should
