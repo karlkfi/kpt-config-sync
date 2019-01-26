@@ -112,10 +112,11 @@ func (c *Controller) Run() error {
 	}
 	glog.Infof("Caches synced")
 
-	return c.pollDir()
+	c.pollDir()
+	return nil
 }
 
-func (c *Controller) pollDir() error {
+func (c *Controller) pollDir() {
 	currentDir := ""
 	ticker := time.NewTicker(c.pollPeriod)
 
@@ -125,7 +126,9 @@ func (c *Controller) pollDir() error {
 			// Detect whether symlink has changed.
 			newDir, err := filepath.EvalSymlinks(c.policyDir)
 			if err != nil {
-				return errors.Wrapf(err, "failed to resolve policy dir")
+				glog.Errorf("failed to resolve policydir: %v", err)
+				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				continue
 			}
 			if currentDir == newDir {
 				// No new commits, nothing to do.
@@ -135,7 +138,9 @@ func (c *Controller) pollDir() error {
 
 			currentPolicies, err := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
 			if err != nil {
-				return errors.Wrapf(err, "failed to list current policies")
+				glog.Errorf("failed to list current policies: %v", err)
+				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				continue
 			}
 
 			// Parse the commit hash from the new directory to use as an import token.
@@ -175,7 +180,7 @@ func (c *Controller) pollDir() error {
 
 		case <-c.stopChan:
 			glog.Info("Stop polling")
-			return nil
+			return
 		}
 	}
 }
