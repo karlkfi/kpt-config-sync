@@ -19,14 +19,10 @@ package transform
 import (
 	"time"
 
+	"github.com/google/nomos/pkg/bespin-controllers/resource"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	importTokenKey = "importToken"
-	importTimeKey  = "importTime"
 )
 
 // GCPAnnotationVisitor sets a list of bespin-specific annotations on GCP resources.
@@ -61,16 +57,16 @@ func (v *GCPAnnotationVisitor) VisitRoot(c *ast.Root) *ast.Root {
 // VisitClusterObject implements Visitor.
 func (v *GCPAnnotationVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	newObject := v.Copying.VisitClusterObject(o)
-	applyAnnotation(newObject.FileObject, importTokenKey, v.importToken)
-	applyAnnotation(newObject.FileObject, importTimeKey, v.importTime)
+	applyAnnotation(newObject.FileObject, resource.ImportTokenKey, v.importToken)
+	applyAnnotation(newObject.FileObject, resource.ImportTimeKey, v.importTime)
 	return newObject
 }
 
 // VisitObject implements Visitor.
 func (v *GCPAnnotationVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	newObject := v.Copying.VisitObject(o)
-	applyAnnotation(newObject.FileObject, importTokenKey, v.importToken)
-	applyAnnotation(newObject.FileObject, importTimeKey, v.importTime)
+	applyAnnotation(newObject.FileObject, resource.ImportTokenKey, v.importToken)
+	applyAnnotation(newObject.FileObject, resource.ImportTimeKey, v.importTime)
 	return newObject
 }
 

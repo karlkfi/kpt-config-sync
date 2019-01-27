@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/bespin-controllers/resource"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -35,8 +36,8 @@ func addImportAnnotationsFromRoot(r *ast.Root, o runtime.Object) {
 	if a == nil {
 		a = make(map[string]string)
 	}
-	a[importTokenKey] = r.ImportToken
-	a[importTimeKey] = r.LoadTime.Format(time.RFC3339)
+	a[resource.ImportTokenKey] = r.ImportToken
+	a[resource.ImportTimeKey] = r.LoadTime.Format(time.RFC3339)
 	m.SetAnnotations(a)
 }
 
@@ -46,8 +47,8 @@ func addImportAnnotations(o runtime.Object) {
 	if a == nil {
 		a = make(map[string]string)
 	}
-	a[importTokenKey] = "somethingfaked"
-	a[importTimeKey] = time.Now().Format(time.RFC3339)
+	a[resource.ImportTokenKey] = "somethingfaked"
+	a[resource.ImportTimeKey] = time.Now().Format(time.RFC3339)
 	m.SetAnnotations(a)
 }
 

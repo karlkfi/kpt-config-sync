@@ -40,6 +40,22 @@ const (
 
 	// ReconcileTimeout is the timeout limit for each reconcile request.
 	ReconcileTimeout = time.Minute * 5
+
+	// annotationKeyPrefix is the prefix for Bespin resource annotations.
+	annotationKeyPrefix = "bespin.dev/"
+
+	// ImportTokenKey is the annotation key of the latest commit
+	// ID imported from Git repo.
+	ImportTokenKey = annotationKeyPrefix + "importToken"
+
+	// ImportTimeKey is the annotation key of the latest time when
+	// git-policy-importer imports from the Git repo.
+	ImportTimeKey = annotationKeyPrefix + "importTime"
+
+	// syncTokenAnnotationKey and syncTimeAnnotationKey are the annotation
+	// keys for the latest successful sync token (commit hash) and sync time.
+	syncTokenKey = annotationKeyPrefix + "syncToken"
+	syncTimeKey  = annotationKeyPrefix + "syncTime"
 )
 
 // GenericObject is an interface that combines functionalities from both:
@@ -74,6 +90,7 @@ func Get(ctx context.Context, c client.Client, Kind, Name, Namespace string) (Ge
 // to be updated. It returns true if the object doesn't need to be updated (thus the reconcile
 // is essentially done), and returns non-nil error if there is a failure.
 func Update(ctx context.Context, c client.Client, r record.EventRecorder, obj, newobj GenericObject) (bool, error) {
+	annotateOKSync(newobj)
 	if equality.Semantic.DeepEqual(obj, newobj) {
 		glog.V(1).Infof("[%v] already update to date", obj.GetName())
 		return true, nil
@@ -111,4 +128,22 @@ func setCondition(obj GenericObject) error {
 		return fmt.Errorf("invalid resource type: %v", objType)
 	}
 	return nil
+}
+
+// annotateOKSync updates the object's sync detail annotations. The idea
+// is that if the sync token is not the same as import token, meaning this is
+// a new sync, the code sets the sync token to the import token and also updates
+// the sync time to the current time. Otherwise if the sync token is the same as
+// the import token, the code should not update any sync details.
+func annotateOKSync(obj GenericObject) {
+	a := obj.GetAnnotations()
+	if a == nil {
+		a = map[string]string{}
+		obj.SetAnnotations(a)
+	}
+	if a[syncTokenKey] != a[ImportTokenKey] {
+		a[syncTokenKey] = a[ImportTokenKey]
+		a[syncTimeKey] = metav1.Now().Format(time.RFC3339)
+	}
+	obj.SetAnnotations(a)
 }
