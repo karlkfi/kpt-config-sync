@@ -179,9 +179,10 @@ func (tfe *Executor) RunInit() error {
 	}
 
 	var out []byte
-	args := []string{"init", "-input=false", "-upgrade=false"}
-	args = append(args, fmt.Sprintf("-plugin-dir=%s", tfe.pluginDir))
-	args = append(args, tfe.dir)
+	args := []string{"init", "-input=false", "-upgrade=false", tfe.dir}
+	if tfe.pluginDir != "" {
+		args = append(args, fmt.Sprintf("-plugin-dir=%s", tfe.pluginDir))
+	}
 	out, err := execCommand(tfe.binaryPath, args...)
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform init")
