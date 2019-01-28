@@ -27,12 +27,10 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
@@ -69,86 +67,15 @@ type Parser struct {
 	root nomospath.Root
 }
 
-// ParserConfig extends the functionality of the parser by allowing the override of visitors or addition
-// of sync resources.
-// TODO(willbeason): Bespin requires the visitors to be overridden to avoid validators that
-// cause a Bespin import to fail, but the resources need to be appended to. This
-// isn't great. Ideally the visitors should be able to be chained as well, then
-// the ParserOpt could take multiple ParserExtensions and run them all.
-type ParserConfig interface {
-	// Visitors *overrides* the normal visitor functionality of the parser.
-	Visitors(
-		syncs []*v1alpha1.Sync,
-		clusters []clusterregistry.Cluster,
-		selectors []v1alpha1.ClusterSelector,
-		vet bool,
-		apiInfo *meta.APIInfo) []ast.Visitor
-	// SyncResources *appends* sync resources to the normal Nomos sync resources.
-	SyncResources() []*v1alpha1.Sync
-	// NamespacesDir returns the name of the namespaces dir.
-	NamespacesDir() string
-}
-
-// ParserConfigFactory returns the appropriate ParserConfig based on the environment.
-func ParserConfigFactory() ParserConfig {
-	var e ParserConfig
-	// Check for a set environment variable instead of using a flag so as not to expose
-	// this WIP externally.
-	if _, ok := os.LookupEnv("NOMOS_ENABLE_BESPIN"); ok {
-		e = &BespinVisitorProvider{}
-	} else {
-		e = &NomosVisitorProvider{}
-	}
-	return e
-}
-
 // ParserOpt has often customized parser options. Use for example in NewParser.
 type ParserOpt struct {
 	// Vet turns on vetting mode, which catches a wider range of cross-cluster errors.
 	Vet bool
 	// Validate will raise validation errors if set.
-	Validate  bool
+	Validate bool
+	// Extension is the ParserConfig object that the parser will consume for configuring various
+	// aspects of the execution (see ParserConfig).
 	Extension ParserConfig
-}
-
-// NomosVisitorProvider is the default visitor provider.  It handles
-// plain vanilla nomos configs.
-type NomosVisitorProvider struct {
-}
-
-// Visitors implements ParserConfig
-func (n NomosVisitorProvider) Visitors(
-	syncs []*v1alpha1.Sync,
-	clusters []clusterregistry.Cluster,
-	selectors []v1alpha1.ClusterSelector,
-	vet bool,
-	apiInfo *meta.APIInfo) []ast.Visitor {
-	specs := toInheritanceSpecs(syncs)
-	visitors := []ast.Visitor{
-		validation.NewInputValidator(syncs, specs, clusters, selectors, vet),
-		transform.NewPathAnnotationVisitor(),
-		validation.NewScope(apiInfo),
-		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
-		transform.NewAnnotationInlinerVisitor(),
-		transform.NewInheritanceVisitor(specs),
-	}
-	if spec, found := specs[kinds.ResourceQuota().GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
-		visitors = append(visitors, validation.NewQuotaValidator())
-		visitors = append(visitors, transform.NewQuotaVisitor())
-	}
-	visitors = append(visitors, validation.NewNameValidator())
-
-	return visitors
-}
-
-// SyncResources implements ParserConfig
-func (n NomosVisitorProvider) SyncResources() []*v1alpha1.Sync {
-	return nil
-}
-
-// NamespacesDir implements ParserConfig
-func (n NomosVisitorProvider) NamespacesDir() string {
-	return repo.NamespacesDir
 }
 
 // NewParser creates a new Parser.
