@@ -409,13 +409,7 @@ func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.
 				var effectiveMode v1alpha1.HierarchyModeType
 				gk := schema.GroupKind{Group: sg.Group, Kind: k.Kind}
 				if k.HierarchyMode == v1alpha1.HierarchyModeDefault {
-					if gk == kinds.RoleBinding().GroupKind() {
-						effectiveMode = v1alpha1.HierarchyModeInherit
-					} else if gk == kinds.ResourceQuota().GroupKind() {
-						effectiveMode = v1alpha1.HierarchyModeHierarchicalQuota
-					} else {
-						effectiveMode = v1alpha1.HierarchyModeNone
-					}
+					effectiveMode = v1alpha1.HierarchyModeInherit
 				} else {
 					effectiveMode = k.HierarchyMode
 				}
