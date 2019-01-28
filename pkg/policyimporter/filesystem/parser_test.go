@@ -28,9 +28,11 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
@@ -502,24 +504,11 @@ func rbs(ds ...templateData) []rbacv1.RoleBinding {
 	return o
 }
 
-func crb(d templateData) rbacv1.ClusterRoleBinding {
-	cp := crbPtr(d)
-	return *cp
-}
-
 func crbPtr(d templateData) *rbacv1.ClusterRoleBinding {
 	s := d.apply(aClusterRoleBinding)
 	var o rbacv1.ClusterRoleBinding
 	mustParse(s, &o)
 	return &o
-}
-
-func crbs(ds ...templateData) []rbacv1.ClusterRoleBinding {
-	var o []rbacv1.ClusterRoleBinding
-	for _, d := range ds {
-		o = append(o, crb(d))
-	}
-	return o
 }
 
 func cfgMapPtr(d templateData) *corev1.ConfigMap {
@@ -551,19 +540,17 @@ func createPolicyNode(
 		return *pn
 	}
 
-	// TODO(poertel): delete
-	pn.Spec.RolesV1 = policies.RolesV1
-	pn.Spec.RoleBindingsV1 = policies.RoleBindingsV1
+	// The ResourceQuotaV1 field is still being used for hierarchical quota.
 	pn.Spec.ResourceQuotaV1 = policies.ResourceQuotaV1
 
-	if len(pn.Spec.RolesV1) > 0 {
+	if len(policies.RolesV1) > 0 {
 		var roleObjects []runtime.Object
 		for _, role := range policies.RolesV1 {
 			roleObjects = append(roleObjects, runtime.Object(&role))
 		}
 		pn.Spec.Resources = append(pn.Spec.Resources, resourcesFromObjects(roleObjects, rbacv1.SchemeGroupVersion, "Role")...)
 	}
-	if len(pn.Spec.RoleBindingsV1) > 0 {
+	if len(policies.RoleBindingsV1) > 0 {
 		var rbObjects []runtime.Object
 		for _, rb := range policies.RoleBindingsV1 {
 			rbObjects = append(rbObjects, runtime.Object(&rb))
@@ -671,7 +658,7 @@ func createResourceQuota(path, name string, labels map[string]string) *corev1.Re
 	return rq
 }
 
-func createDeployment(ns string) v1.GenericResources {
+func createDeployment() v1.GenericResources {
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -686,9 +673,6 @@ func createDeployment(ns string) v1.GenericResources {
 		Spec: appsv1.DeploymentSpec{
 			Replicas: toInt32Pointer(3),
 		},
-	}
-	if ns != "" {
-		deployment.ObjectMeta.Namespace = ns
 	}
 	return v1.GenericResources{
 		Group: "apps",
@@ -721,7 +705,7 @@ func makeSync(group, version, kind string) v1alpha1.Sync {
 			Kind:       "Sync",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       kind,
+			Name:       strings.ToLower(kind),
 			Finalizers: []string{v1alpha1.SyncFinalizer},
 		},
 		Spec: v1alpha1.SyncSpec{
@@ -745,6 +729,11 @@ func makeSync(group, version, kind string) v1alpha1.Sync {
 }
 
 func mapOfSingleSync(name, group, kind string, versions ...string) map[string]v1alpha1.Sync {
+	return mapOfSingleSyncHierarchyMode(name, group, kind, "", versions...)
+}
+
+func mapOfSingleSyncHierarchyMode(name, group, kind string, hierarchyMode v1alpha1.HierarchyModeType,
+	versions ...string) map[string]v1alpha1.Sync {
 	var sv []v1alpha1.SyncVersion
 	for _, v := range versions {
 		sv = append(sv, v1alpha1.SyncVersion{Version: v})
@@ -765,8 +754,9 @@ func mapOfSingleSync(name, group, kind string, versions ...string) map[string]v1
 						Group: group,
 						Kinds: []v1alpha1.SyncKind{
 							{
-								Kind:     kind,
-								Versions: sv,
+								Kind:          kind,
+								Versions:      sv,
+								HierarchyMode: hierarchyMode,
 							},
 						},
 					},
@@ -905,7 +895,7 @@ var parserTestCases = []parserTestCase{
 		},
 	},
 	{
-		testName: "Namespace dir without Namespace multiple",
+		testName: "Namespace dir with Namespace mismatch and ignored file",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aRepo,
@@ -946,12 +936,12 @@ var parserTestCases = []parserTestCase{
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
-						"namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
+						"namespaces/bar/rq.yaml", "pod-quota", nil),
 				},
 			),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
+		expectedSyncs:         mapOfSingleSync("resourcequota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "ResourceQuota without declared Sync",
@@ -981,7 +971,10 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{ID: "1", Scope: true, ScopeSelector: true}.apply(aQuota),
 		},
-		expectedErrorCodes: nil,
+		expectedNumPolicies: map[string]int{
+			v1.RootPolicyNodeName: 0,
+			"bar":                 1,
+		},
 	},
 	{
 		testName: "ResourceQuota with scope and hierarchical quota",
@@ -995,7 +988,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.IllegalResourceQuotaFieldErrorCode, vet.IllegalResourceQuotaFieldErrorCode},
 	},
 	{
-		testName: "Namespace dir with single ResourceQuota single file",
+		testName: "Namespaces dir with single ResourceQuota single file",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":         aRepo,
@@ -1006,12 +999,12 @@ var parserTestCases = []parserTestCase{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{ResourceQuotaV1: createResourceQuota(
-					"namespaces/bar/combo.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
+					"namespaces/bar/combo.yaml", "pod-quota", nil),
 				},
 			),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
+		expectedSyncs:         mapOfSingleSync("resourcequota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Namespace dir with multiple Roles",
@@ -1038,12 +1031,12 @@ var parserTestCases = []parserTestCase{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{Resources: []v1.GenericResources{
-					createDeployment("bar"),
+					createDeployment(),
 				},
 				}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("Deployment", "apps", "Deployment", "v1"),
+		expectedSyncs:         mapOfSingleSync("deployment", "apps", "Deployment", "v1"),
 	},
 	{
 		testName: "Namespace dir with CRD",
@@ -1192,52 +1185,43 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
-		testName: "Policyspace dir with RoleBinding, inherit specified",
+		testName: "Namespaces dir with RoleBinding, inherit specified",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aRepo,
-			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "inherit"}.apply(aHierarchicalSync),
-			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+			"system/nomos.yaml": aRepo,
+			"system/rb.yaml": templateData{Version: kinds.RoleBinding().Version, Kind: kinds.RoleBinding().Kind,
+				Group: kinds.RoleBinding().Group, HierarchyMode: "inherit"}.apply(aHierarchicalSync),
+			"namespaces/rb.yaml":     templateData{}.apply(aRoleBinding),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
+			v1.RootPolicyNodeName: createRootPN(
+				&Policies{}),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
+				&Policies{RoleBindingsV1: rbs(templateData{Annotations: map[string]string{
+					v1alpha1.SourcePathAnnotationKey: "namespaces/rb.yaml",
+				}})}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
+		expectedSyncs: mapOfSingleSyncHierarchyMode("rolebinding", kinds.RoleBinding().Group, kinds.RoleBinding().Kind,
+			v1alpha1.HierarchyModeInherit, kinds.RoleBinding().Version),
 	},
 	{
-		testName: "Policyspace dir with ResourceQuota, default inheritance",
+		testName: "Namespaces dir with ResourceQuota, default inheritance",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":      aRepo,
 			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
-		},
-		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
-		},
-	},
-	{
-		testName: "Policyspace dir with ResourceQuota, hierarchicalQuota mode specified",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aRepo,
-			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchicalSync),
-			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", "pod-quota", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
+		expectedSyncs:         mapOfSingleSync("resourcequota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota, inheritance off",
@@ -1258,12 +1242,12 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
+			"bar":                 createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName, &Policies{}),
 		},
+		expectedSyncs: mapOfSingleSyncHierarchyMode("resourcequota", "", "ResourceQuota",
+			v1alpha1.HierarchyModeInherit, "v1"),
 	},
 	{
 		testName: "Policyspace dir with multiple Rolebindings",
@@ -1275,22 +1259,6 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rb2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
 		},
 		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
-	},
-	{
-		testName: "Policyspace dir with deployment",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":              aRepo,
-			"system/depl.yaml":               templateData{Group: "apps", Version: "v1", Kind: "Deployment", HierarchyMode: "inherit"}.apply(aHierarchicalSync),
-			"namespaces/bar/deployment.yaml": aDeploymentTemplate,
-		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar": createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName,
-				&Policies{Resources: []v1.GenericResources{createDeployment("")}}),
-		},
-		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Policyspace dir with ClusterRole",
@@ -1391,7 +1359,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
+		expectedSyncs:         mapOfSingleSync("resourcequota", "", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Multiple Syncs",
@@ -1404,8 +1372,8 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs: map[string]v1alpha1.Sync{
-			"ResourceQuota": makeSync("", "v1", "ResourceQuota"),
-			"Role":          makeSync("rbac.authorization.k8s.io", "v1", "Role"),
+			"resourcequota": makeSync("", "v1", "ResourceQuota"),
+			"role":          makeSync("rbac.authorization.k8s.io", "v1", "Role"),
 		},
 	},
 	{
@@ -1455,39 +1423,27 @@ spec:
 		expectedErrorCodes: []string{vet.IllegalTopLevelNamespaceErrorCode, vet.UndefinedErrorCode},
 	},
 	{
-		testName: "Namespaces dir with ResourceQuota",
+		testName: "Namespaces dir with ResourceQuota and hierarchical quota inheritance",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":  aRepo,
-			"system/rq.yaml":     templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
-			"namespaces/rq.yaml": templateData{}.apply(aQuota),
-		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(&Policies{
-				ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
-		},
-		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
-	},
-	{
-		testName: "Namespaces dir with ResourceQuota and namespace dir",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":      aRepo,
-			"system/rq.yaml":         templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
+			"system/nomos.yaml": aRepo,
+			"system/rq.yaml": templateData{Version: "v1", Kind: "ResourceQuota",
+				HierarchyMode: string(v1alpha1.HierarchyModeHierarchicalQuota)}.apply(aHierarchicalSync),
 			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			v1.RootPolicyNodeName: createRootPN(
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
+				&Policies{ResourceQuotaV1: createResourceQuota(
+					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{ResourceQuotaV1: createResourceQuota(
 					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 				}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("ResourceQuota", "", "ResourceQuota", "v1"),
+		expectedSyncs: mapOfSingleSyncHierarchyMode("resourcequota", "", "ResourceQuota",
+			v1alpha1.HierarchyModeHierarchicalQuota, "v1"),
 	},
 	{
 		testName: "Namespaces dir with Roles",
@@ -1816,6 +1772,11 @@ spec:
 			"system/rq.yaml":           templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"namespaces/foo/rb-1.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/rb-2.yaml": templateData{Name: "alice"}.apply(aQuota),
+			"namespaces/foo/ns.yaml":   templateData{Name: "foo"}.apply(aNamespace),
+		},
+		expectedNumPolicies: map[string]int{
+			v1.RootPolicyNodeName: 0,
+			"foo":                 2,
 		},
 	},
 	{
@@ -1970,7 +1931,9 @@ func (tc *parserTestCase) Run(t *testing.T) {
 
 	// Used in per-cluster addressing tests.  If undefined should mean
 	// the behavior does not change with respect to "regular" state.
-	os.Setenv("CLUSTER_NAME", tc.clusterName)
+	if err := os.Setenv("CLUSTER_NAME", tc.clusterName); err != nil {
+		t.Fatal("could not set up CLUSTER_NAME envvar for testing")
+	}
 	defer os.Unsetenv("CLUSTER_NAME")
 
 	if glog.V(6) {
@@ -2028,26 +1991,27 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	}
 
 	if tc.expectedNumClusterPolicies != nil {
-		p := actualPolicies.ClusterPolicy.Spec
-		n := 0
-		for _, res := range p.Resources {
+		actualNumClusterPolicies := 0
+		for _, res := range actualPolicies.ClusterPolicy.Spec.Resources {
 			for _, version := range res.Versions {
-				n += len(version.Objects)
+				actualNumClusterPolicies += len(version.Objects)
 			}
-		}
-		if !cmp.Equal(n, *tc.expectedNumClusterPolicies) {
-			t.Errorf("Actual and expected number of cluster policies didn't match: %v", cmp.Diff(n, *tc.expectedNumClusterPolicies))
 		}
 
-		if tc.expectedPolicyNodes != nil || tc.expectedClusterPolicy != nil || tc.expectedSyncs != nil {
-			expectedPolicies := &v1.AllPolicies{
-				PolicyNodes:   tc.expectedPolicyNodes,
-				ClusterPolicy: tc.expectedClusterPolicy,
-				Syncs:         tc.expectedSyncs,
-			}
-			if !cmp.Equal(actualPolicies, expectedPolicies) {
-				t.Errorf("Actual and expected policies didn't match: diff\n%v", cmp.Diff(actualPolicies, expectedPolicies))
-			}
+		if !cmp.Equal(actualNumClusterPolicies, *tc.expectedNumClusterPolicies) {
+			t.Errorf("Actual and expected number of cluster policies didn't match: %v", cmp.Diff(actualNumClusterPolicies,
+				tc.expectedNumClusterPolicies))
+		}
+	}
+
+	if tc.expectedPolicyNodes != nil || tc.expectedClusterPolicy != nil || tc.expectedSyncs != nil {
+		expectedPolicies := &v1.AllPolicies{
+			PolicyNodes:   tc.expectedPolicyNodes,
+			ClusterPolicy: tc.expectedClusterPolicy,
+			Syncs:         tc.expectedSyncs,
+		}
+		if d := cmp.Diff(actualPolicies, expectedPolicies, cmpopts.IgnoreUnexported(resource.Quantity{})); d != "" {
+			t.Errorf("Actual and expected policies didn't match: diff\n%v", d)
 		}
 	}
 }
@@ -2115,33 +2079,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			expectedClusterPolicy: policynode.NewClusterPolicy(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{
-					ClusterRoleBindingsV1: []rbacv1.ClusterRoleBinding{
-						{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: "rbac.authorization.k8s.io/v1",
-								Kind:       "ClusterRoleBinding",
-							},
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "job-creators1",
-								Annotations: map[string]string{
-									v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-									v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-									v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-								},
-							},
-							Subjects: []rbacv1.Subject{{
-								Kind:     "Group",
-								APIGroup: "rbac.authorization.k8s.io",
-								Name:     "bob@acme.com",
-							},
-							},
-							RoleRef: rbacv1.RoleRef{
-								Kind:     "ClusterRole",
-								APIGroup: "rbac.authorization.k8s.io",
-								Name:     "job-creator",
-							},
-						},
-					},
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -2228,6 +2165,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
+			expectedSyncs: map[string]v1alpha1.Sync{
+				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
+			},
 		},
 		{
 			testName:    "Generic resource in abstract namespace",
@@ -2273,12 +2216,23 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aConfigMap),
 			},
+			expectedClusterPolicy: createClusterPolicy(),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
 				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
 					map[string]string{
 						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 					}),
-				"bar": createPNWithMeta("namespaces/foo/bar", v1.RootPolicyNodeName, v1.Namespace,
+				"foo": createPNWithMeta(
+					"namespaces/foo",
+					v1.RootPolicyNodeName,
+					v1.Policyspace,
+					&Policies{},
+					nil,
+					map[string]string{
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+					},
+				),
+				"bar": createPNWithMeta("namespaces/foo/bar", "foo", v1.Namespace,
 					&Policies{
 						Resources: []v1.GenericResources{
 							{
@@ -2312,10 +2266,16 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					nil,
 					/* Annotations */
 					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 					}),
 			},
+			expectedSyncs: mapOfSingleSyncHierarchyMode(
+				"configmap",
+				corev1.SchemeGroupVersion.Group,
+				"ConfigMap",
+				v1alpha1.HierarchyModeInherit,
+				corev1.SchemeGroupVersion.Version,
+			),
 		},
 		{
 			// When cluster selector doesn't match, nothing (except for top-level dir) is created.
@@ -2372,6 +2332,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterNameAnnotationKey: "cluster-2",
 					}),
 			},
+			expectedSyncs: map[string]v1alpha1.Sync{
+				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
+			},
 		},
 		{
 			// This shows how a namespace scoped resource doesn't get synced if
@@ -2423,16 +2389,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			expectedClusterPolicy: policynode.NewClusterPolicy(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{
-					ClusterRoleBindingsV1: crbs(
-						templateData{
-							Name: "1",
-							Annotations: map[string]string{
-								v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-								v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-								v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-							},
-						},
-					),
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -2444,7 +2400,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 										{
 											Object: runtime.Object(
 												crbPtr(templateData{
-													Name: "1",
+													ID: "1",
 													Annotations: map[string]string{
 														v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
 														v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
@@ -2473,6 +2429,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
 						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
+			},
+			expectedSyncs: map[string]v1alpha1.Sync{
+				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			},
 		},
 		{
@@ -2523,33 +2485,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			expectedClusterPolicy: policynode.NewClusterPolicy(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{
-					ClusterRoleBindingsV1: []rbacv1.ClusterRoleBinding{
-						{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: "rbac.authorization.k8s.io/v1",
-								Kind:       "ClusterRoleBinding",
-							},
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "job-creators1",
-								Annotations: map[string]string{
-									v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-									v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-									v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-								},
-							},
-							Subjects: []rbacv1.Subject{{
-								Kind:     "Group",
-								APIGroup: "rbac.authorization.k8s.io",
-								Name:     "bob@acme.com",
-							},
-							},
-							RoleRef: rbacv1.RoleRef{
-								Kind:     "ClusterRole",
-								APIGroup: "rbac.authorization.k8s.io",
-								Name:     "job-creator",
-							},
-						},
-					},
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -2561,7 +2496,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 										{
 											Object: runtime.Object(
 												crbPtr(templateData{
-													Name: "1",
+													ID: "1",
 													Annotations: map[string]string{
 														v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
 														v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
@@ -2581,6 +2516,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					map[string]string{
 						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 					}),
+			},
+			expectedSyncs: map[string]v1alpha1.Sync{
+				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			},
 		},
 		{
@@ -2656,6 +2597,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
+			expectedSyncs: map[string]v1alpha1.Sync{
+				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
+			},
 		},
 		{
 			testName:    "Resources without cluster selectors are never filtered out",
@@ -2689,14 +2636,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			expectedClusterPolicy: policynode.NewClusterPolicy(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{
-					ClusterRoleBindingsV1: crbs(
-						templateData{
-							Name: "1",
-							Annotations: map[string]string{
-								v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-								v1alpha1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
-							},
-						}),
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -2708,7 +2647,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 										{
 											Object: runtime.Object(
 												crbPtr(templateData{
-													Name: "1",
+													ID: "1",
 													Annotations: map[string]string{
 														v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 														v1alpha1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
@@ -2743,6 +2682,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					map[string]string{
 						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 					}),
+			},
+			expectedSyncs: map[string]v1alpha1.Sync{
+				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			},
 		},
 		{
@@ -2800,14 +2745,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			expectedClusterPolicy: policynode.NewClusterPolicy(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{
-					ClusterRoleBindingsV1: crbs(
-						templateData{
-							Name: "1",
-							Annotations: map[string]string{
-								v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-								v1alpha1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
-							},
-						}),
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -2819,10 +2756,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 										{
 											Object: runtime.Object(
 												crbPtr(templateData{
-													Name: "1",
+													ID: "1",
 													Annotations: map[string]string{
-														v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-														v1alpha1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
+														v1alpha1.SourcePathAnnotationKey: "cluster/crb1.yaml",
 													},
 												}),
 											),
@@ -2834,26 +2770,21 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
-					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-					}),
-				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
-					&Policies{
-						RoleBindingsV1: rbs(
-							templateData{Name: "job-creators",
-								Annotations: map[string]string{
-									v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-									v1alpha1.SourcePathAnnotationKey:  "namespaces/bar/rolebinding.yaml",
-								},
-							}),
-					},
+				v1.RootPolicyNodeName: createRootPN(&Policies{}),
+				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Policyspace,
+					&Policies{},
 					/* Labels */
 					nil,
 					/* Annotations */
-					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-					}),
+					nil),
+			},
+			expectedSyncs: map[string]v1alpha1.Sync{
+				"resourcequota": makeSync(kinds.ResourceQuota().Group, kinds.ResourceQuota().Version,
+					kinds.ResourceQuota().Kind),
+				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			},
 		},
 	}

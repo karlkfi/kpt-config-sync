@@ -17,6 +17,7 @@ limitations under the License.
 package transform
 
 import (
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -102,9 +103,8 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	if (n.Type == node.AbstractNamespace && context.quota != nil) || (n.Type == node.Namespace) {
 		if quota := context.aggregated(); quota != nil {
 			if n.Type == node.Namespace {
-				labeledQuota := *quota
-				labeledQuota.Labels = resourcequota.NewNomosQuotaLabels()
-				quota = &labeledQuota
+				quota = quota.DeepCopy()
+				quota.Labels = resourcequota.NewNomosQuotaLabels()
 			}
 			newNode.Objects = append(newNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: quota}})
 		}
@@ -117,8 +117,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 // VisitObject implements Visitor, this should only be visited if the objectset
 // is of type ResourceQuota.
 func (v *QuotaVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
-	gvk := o.GetObjectKind().GroupVersionKind()
-	if gvk.Group == "" && gvk.Kind == "ResourceQuota" {
+	if kinds.ResourceQuota() == o.GetObjectKind().GroupVersionKind() {
 		quota := *o.FileObject.Object.(*corev1.ResourceQuota)
 		quota.Name = resourcequota.ResourceQuotaObjectName
 		v.ctx.quota = merge(&quota, v.ctx.quota)
