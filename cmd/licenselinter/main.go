@@ -36,8 +36,9 @@ import (
 )
 
 var dir = flag.String("dir", "", "Directory containing dep lock file")
-var printDeps = flag.Bool("print-deps", false, "Print vendored deps")
 var noRestrictedLicense = flag.Bool("no-restricted-license", true, "Disallow restricted licenses")
+var printDeps = flag.Bool("print-deps", false, "Print vendored deps")
+var printAggregate = flag.Bool("print-aggregate", false, "Prints an aggregate LICENSE file for embedding in an image")
 
 const (
 	sep = "\n\n-----------------------------------------------------------------------\n\n"
@@ -88,11 +89,14 @@ func (l licenseType) Disallowed() bool {
 }
 
 type metadata struct {
-	Name, Root, AbsPath, URL, Version, Description, License string
+	Name, Root, AbsPath, URL, Version, Description string
+	LicenseType                                    licenseType
+	// Text of all LICENSE files
+	LicenseText [][]byte
 }
 
 func (m *metadata) String() string {
-	return fmt.Sprintf("%s%s%sVersion:%s\nLicense:%s\nDescription:%q", sep, m.Root, sep, m.Version, m.License, m.Description)
+	return fmt.Sprintf("%s%s%sVersion:%s\nLicense:%s\nDescription:%q", sep, m.Root, sep, m.Version, m.LicenseType, m.Description)
 }
 
 type linter struct {
@@ -148,7 +152,7 @@ func (l *linter) detectLicenseType() error {
 		}
 		var resultType licenseType
 		for i, f := range matches {
-			t, err := classifyLicense(f)
+			t, content, err := classifyLicense(f)
 			if err != nil {
 				return err
 			}
@@ -157,11 +161,12 @@ func (l *linter) detectLicenseType() error {
 			} else if t < resultType {
 				resultType = t
 			}
+			m.LicenseText = append(m.LicenseText, content)
 		}
 		if resultType.Disallowed() && *noRestrictedLicense {
 			return errors.Errorf("Licence type %q not allowed in %s", resultType, m.AbsPath)
 		}
-		m.License = resultType.String()
+		m.LicenseType = resultType
 	}
 
 	for _, m := range l.metas {
@@ -170,7 +175,7 @@ func (l *linter) detectLicenseType() error {
 			return err
 		}
 		for _, f := range docMatches {
-			if _, err := classifyLicense(f); err != nil {
+			if _, _, err := classifyLicense(f); err != nil {
 				return err
 			}
 		}
@@ -195,18 +200,31 @@ func codeLicenses(absPath string) ([]string, error) {
 	return codeMatches, nil
 }
 
-func classifyLicense(f string) (licenseType, error) {
+func classifyLicense(f string) (licenseType, []byte, error) {
 	content, err := ioutil.ReadFile(f)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 
 	for k, v := range licenseCategories {
 		if bytes.Contains(content, []byte(k)) {
-			return v, nil
+			return v, content, nil
 		}
 	}
-	return 0, errors.Errorf("unrecognized licence: %s", f)
+	return 0, nil, errors.Errorf("unrecognized licence: %s", f)
+}
+
+func aggregateLicenses(metas []*metadata) string {
+	var out strings.Builder
+	out.WriteString("THE FOLLOWING SETS FORTH ATTRIBUTION NOTICES FOR THIRD PARTY SOFTWARE THAT MAY BE CONTAINED IN PORTIONS OF THE GKE POLICY MANAGEMENT (NOMOS) PRODUCT.\n")
+	for _, m := range metas {
+		for _, t := range m.LicenseText {
+			out.WriteString("\n-----\n\n")
+			out.WriteString(fmt.Sprintf("The following software may be included in this product: %s. This software contains the following license and notice below:\n\n", m.Root))
+			out.Write(t)
+		}
+	}
+	return out.String()
 }
 
 func main() {
@@ -224,5 +242,8 @@ func main() {
 		for _, m := range l.metas {
 			fmt.Println(m)
 		}
+	}
+	if *printAggregate {
+		fmt.Println(aggregateLicenses(l.metas))
 	}
 }
