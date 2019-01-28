@@ -28,9 +28,15 @@ import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 // The order of traversal:
 //
 // 1. Root
-// 2. Cluster
-// 3. ReservedNamespaces
-// 4. Pre-order traversal of TreeNode(s)
+// 2. System
+// 3. SystemObjects
+// 4. ClusterRegistry
+// 5. ClusterRegistryObjects
+// 6. Cluster
+// 7. ClusterObjects
+// 8. Pre-order (NLR) traversal of TreeNode(s)
+//      namespaces/ for Nomos
+//      hierarchy/ for Bespin
 type Copying struct {
 	impl ast.Visitor
 }

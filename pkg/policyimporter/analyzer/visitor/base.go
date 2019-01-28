@@ -30,15 +30,27 @@ import (
 // The order of traversal:
 //
 // 1. Root
-// 2. Cluster
-// 3. ReservedNamespaces
-// 4. Pre-order traversal of TreeNode(s)
+// 2. System
+// 3. SystemObjects
+// 4. ClusterRegistry
+// 5. ClusterRegistryObjects
+// 6. Cluster
+// 7. ClusterObjects
+// 8. Pre-order (NLR) traversal of TreeNode(s)
+//      namespaces/ for Nomos
+//      hierarchy/ for Bespin
+//
+// Pre-order traversal guarantees that when a child node is visited that all of its ancestors have
+// been visited.
 //
 // Example:
 //      type myVisitor {
 //        // Base supplies default implementations of all Visitor methods.
 //        // No need to implement methods that you don't need a custom implementation for.
 //        *visitor.Base
+//
+//        // See VisitTreeNode in this example.
+//        ancestors []*ast.TreeNode
 //      }
 //
 //      func NewMyVisitor() myVisitor {
@@ -50,9 +62,19 @@ import (
 //      func (v *myVisitor) VisitRoot(ctx *ast.Root) *ast.Root {
 //        // Do whatever you need to do in this Visitor that needs to happen before
 //        // traversing children.
-//        // Then call the matching continuation method from Base, in this case it is
-//        // VisitRoot.
+//        // Then call the matching continuation method from Base. In this case it is
+//        // VisitRoot. If the corresponding Base method is _not_ called, Visit*
+//        // functions on remaining elements will not be automatically called.
 //        return v.Base.VisitRoot(ctx)
+//      }
+//
+//      func (v *myVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
+//        // You can create a context stack by adding logic after visiting children.
+//        ancestors = append(ancestors, n)
+//        result := v.Base.VisitTreeNode(n)
+//        // Then do whatever cleanup you need to do after traversing children.
+//        ancestors = ancestors[:len(ancestors)-1]
+//        return result
 //      }
 type Base struct {
 	// impl handles the upper most implementation for the visitor.  This allows VisitorBase
