@@ -33,7 +33,6 @@ GID="${GID:-$(id -g)}"
 
 echo "+++ Building e2e image"
 exec docker build \
-  --build-arg "DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" \
   --build-arg "UID=${UID}" \
   --build-arg "GID=${GID}" \
   --build-arg "UNAME=${USER}" \
