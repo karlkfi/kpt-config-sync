@@ -19,6 +19,8 @@ package backend
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
@@ -50,7 +52,7 @@ type OutputVisitorTestcase struct {
 }
 
 func (tc *OutputVisitorTestcase) Run(t *testing.T) {
-	ov := NewOutputVisitor([]*v1alpha1.Sync{})
+	ov := NewOutputVisitor()
 	tc.input.Accept(ov)
 	actual := ov.AllPolicies()
 	if !cmp.Equal(actual, tc.expect, resourcequota.ResourceQuantityEqual()) {
@@ -302,6 +304,53 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 			},
 		),
+	},
+	{
+		name: "syncs",
+		input: &ast.Root{
+			System: &ast.System{
+				Objects: []*ast.SystemObject{
+					{
+						FileObject: ast.FileObject{
+							Relative: nomospath.NewFakeRelative("<builtin>"),
+							Object: &v1alpha1.Sync{
+								TypeMeta: metav1.TypeMeta{
+									APIVersion: v1alpha1.SchemeGroupVersion.String(),
+									Kind:       "Sync",
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "stuff",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		expect: &v1.AllPolicies{
+			PolicyNodes: map[string]v1.PolicyNode{},
+			ClusterPolicy: &v1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.ClusterPolicyName,
+				},
+			},
+			Syncs: map[string]v1alpha1.Sync{
+				"stuff": {
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: v1alpha1.SchemeGroupVersion.String(),
+						Kind:       "Sync",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "stuff",
+						Finalizers: []string{"syncer.nomos.dev"},
+					},
+				},
+			},
+		},
 	},
 }
 

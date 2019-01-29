@@ -46,8 +46,8 @@ type OutputVisitor struct {
 var _ ast.Visitor = &OutputVisitor{}
 
 // NewOutputVisitor creates a new output visitor.
-func NewOutputVisitor(syncs []*v1alpha1.Sync) *OutputVisitor {
-	v := &OutputVisitor{Base: visitor.NewBase(), syncs: syncs}
+func NewOutputVisitor() *OutputVisitor {
+	v := &OutputVisitor{Base: visitor.NewBase()}
 	v.SetImpl(v)
 	return v
 }
@@ -91,6 +91,15 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 	}
 	v.Base.VisitRoot(g)
 	return nil
+}
+
+// VisitSystemObject implements Visitor
+func (v *OutputVisitor) VisitSystemObject(o *ast.SystemObject) *ast.SystemObject {
+	switch obj := o.FileObject.Object.(type) {
+	case *v1alpha1.Sync:
+		v.syncs = append(v.syncs, obj)
+	}
+	return o
 }
 
 // VisitCluster implements Visitor

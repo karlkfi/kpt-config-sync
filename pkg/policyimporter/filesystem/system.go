@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/sync"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/multierror"
 )
@@ -18,9 +19,10 @@ import (
 func processSystem(
 	objects []ast.FileObject,
 	opts ParserOpt,
-	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) (*v1alpha1.Repo, []*v1alpha1.Sync) {
+	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) (*ast.System, *v1alpha1.Repo, []*v1alpha1.Sync) {
 	var syncs []*v1alpha1.Sync
 	var repo *v1alpha1.Repo
+	sys := &ast.System{}
 	for _, object := range objects {
 		switch o := object.Object.(type) {
 		case *v1alpha1.Repo:
@@ -28,20 +30,21 @@ func processSystem(
 		case *v1alpha1.Sync:
 			syncs = append(syncs, o)
 		}
+		sys.Objects = append(sys.Objects, &ast.SystemObject{FileObject: object})
 	}
 
 	validateSystem(objects, apiInfo, errorBuilder)
 
-	syncs = append(syncs, opts.Extension.SyncResources()...)
-	return repo, syncs
-}
-
-func getSystemDir(objects []ast.FileObject) *ast.System {
-	sys := &ast.System{}
-	for _, o := range objects {
-		sys.Objects = append(sys.Objects, &ast.SystemObject{FileObject: o})
+	for _, s := range opts.Extension.SyncResources() {
+		syncs = append(syncs, s)
+		sys.Objects = append(sys.Objects, &ast.SystemObject{
+			FileObject: ast.FileObject{
+				Relative: nomospath.NewFakeRelative("<builtin>"),
+				Object:   s,
+			},
+		})
 	}
-	return sys
+	return sys, repo, syncs
 }
 
 // validateSystem validates objects in system/

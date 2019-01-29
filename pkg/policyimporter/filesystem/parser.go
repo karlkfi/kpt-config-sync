@@ -149,8 +149,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	// processing for <root>/system/*
 	var syncs []*v1alpha1.Sync
 	systemInfos := p.readRequiredResources(p.root.Join(repo.SystemDir), &errorBuilder)
-	astRoot.System = getSystemDir(systemInfos)
-	astRoot.Repo, syncs = processSystem(systemInfos, p.opts, apiInfo, &errorBuilder)
+	astRoot.System, astRoot.Repo, syncs = processSystem(systemInfos, p.opts, apiInfo, &errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
 		return nil, errorBuilder.Build()
@@ -306,7 +305,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 		}
 	}
 
-	outputVisitor := backend.NewOutputVisitor(syncs)
+	outputVisitor := backend.NewOutputVisitor()
 	astRoot.Accept(outputVisitor)
 	policies := outputVisitor.AllPolicies()
 
