@@ -16,6 +16,8 @@ spec:
     plural: syncs
     singular: sync
     kind: Sync
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       required:

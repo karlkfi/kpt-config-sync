@@ -773,7 +773,9 @@ func TestPolicyNodeReconcile(t *testing.T) {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any())
-				mockClient.EXPECT().
+				mockStatusClient := syncertesting.NewMockStatusWriter(mockCtrl)
+				mockClient.EXPECT().Status().Return(mockStatusClient)
+				mockStatusClient.EXPECT().
 					Update(gomock.Any(), gomock.Eq(tc.wantStatusUpdate))
 			}
 

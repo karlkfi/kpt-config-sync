@@ -182,8 +182,7 @@ func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, po
 		}
 		return newPolicy, nil
 	}
-	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
-	_, err := r.client.Update(ctx, policy, updateFn)
+	_, err := r.client.UpdateStatus(ctx, policy, updateFn)
 	if err != nil {
 		metrics.ErrTotal.WithLabelValues("", policy.GroupVersionKind().Kind, "update").Inc()
 	}

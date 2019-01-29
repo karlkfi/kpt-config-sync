@@ -20,6 +20,8 @@ spec:
     kind: PolicyNode
     shortNames:
     - pn
+  subresources:
+    status: {}
   validation:
       openAPIV3Schema:
         required:

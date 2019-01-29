@@ -46,6 +46,9 @@ func New(client client.Client) *Client {
 	}
 }
 
+// clientUpdateFn is a Client function signature for updating an entire resource or a resource's status.
+type clientUpdateFn func(ctx context.Context, obj runtime.Object) error
+
 // Create saves the object obj in the Kubernetes cluster and records prometheus metrics.
 func (c *Client) Create(ctx context.Context, obj runtime.Object) error {
 	description, resource := resourceInfo(obj)
@@ -81,11 +84,22 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.
 	return nil
 }
 
-// Update updates the given obj in the Kubernetes cluster and records prometheus metrics.
-// In the event of a conflicting update, it will retry.
+// Update updates the given obj in the Kubernetes cluster.
+func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, error) {
+	return c.update(ctx, obj, updateFn, c.Client.Update)
+}
+
+// UpdateStatus updates the given obj's status in the Kubernetes cluster.
+func (c *Client) UpdateStatus(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, error) {
+	return c.update(ctx, obj, updateFn, c.Client.Status().Update)
+}
+
+// update updates the given obj in the Kubernetes cluster using clientUpdateFn and records prometheus
+// metrics. In the event of a conflicting update, it will retry.
 // This operation always involves retrieving the resource from API Server before actually updating it.
 // Refer to action package for expected return values for updateFn.
-func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, error) {
+func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action.Update,
+	clientUpdateFn clientUpdateFn) (runtime.Object, error) {
 	// We only want to modify the argument after successfully making an update to API Server.
 	workingObj := obj.DeepCopyObject()
 	description, resource := resourceInfo(workingObj)
@@ -107,7 +121,7 @@ func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn action
 
 		action.APICalls.WithLabelValues(resource, operation).Inc()
 		timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(resource, operation))
-		err = c.Client.Update(ctx, newObj)
+		err = clientUpdateFn(ctx, newObj)
 		timer.ObserveDuration()
 		if err == nil {
 			oldV, newV := resourceVersion(workingObj), resourceVersion(newObj)

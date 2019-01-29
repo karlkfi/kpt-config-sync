@@ -366,8 +366,7 @@ func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *no
 		}
 		return newPN, nil
 	}
-	// TODO(ekitson): Use UpdateStatus() when our minimum supported k8s version is 1.11.
-	_, err := r.client.Update(ctx, node, updateFn)
+	_, err := r.client.UpdateStatus(ctx, node, updateFn)
 	return err
 }
 
@@ -445,6 +444,7 @@ func (r *PolicyNodeReconciler) updateNamespace(ctx context.Context, policyNode *
 	glog.V(1).Infof("Namespace %q declared in a policy node, updating", policyNode.Name)
 
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: policyNode.Name}}
+	namespace.SetGroupVersionKind(kinds.Namespace())
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
 		return withPolicyNodeMeta(obj.(*corev1.Namespace), policyNode), nil
 	}

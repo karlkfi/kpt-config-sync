@@ -141,7 +141,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 				s.Status = status
 				return s, nil
 			}
-			_, err := r.client.Update(ctx, sync, updateFn)
+			_, err := r.client.UpdateStatus(ctx, sync, updateFn)
 			errBuilder.Add(errors.Wrap(err, "could not update sync status"))
 		}
 	}

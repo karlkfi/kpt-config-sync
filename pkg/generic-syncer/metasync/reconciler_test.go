@@ -29,9 +29,10 @@ import (
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
-		name        string
-		actualSyncs nomosv1alpha1.SyncList
-		wantUpdates []nomosv1alpha1.Sync
+		name              string
+		actualSyncs       nomosv1alpha1.SyncList
+		wantUpdates       []nomosv1alpha1.Sync
+		wantStatusUpdates []nomosv1alpha1.Sync
 	}{
 		{
 			name: "update state for one sync",
@@ -40,7 +41,7 @@ func TestReconcile(t *testing.T) {
 					sync("", "v1", "Deployment", ""),
 				},
 			},
-			wantUpdates: []nomosv1alpha1.Sync{
+			wantStatusUpdates: []nomosv1alpha1.Sync{
 				sync("", "v1", "Deployment", nomosv1alpha1.Syncing),
 			},
 		},
@@ -98,7 +99,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
-			wantUpdates: []nomosv1alpha1.Sync{
+			wantStatusUpdates: []nomosv1alpha1.Sync{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Finalizers: []string{},
@@ -265,7 +266,7 @@ func TestReconcile(t *testing.T) {
 					sync("", "v1", "Deployment", ""),
 				},
 			},
-			wantUpdates: []nomosv1alpha1.Sync{
+			wantStatusUpdates: []nomosv1alpha1.Sync{
 				sync("", "v1", "Deployment", nomosv1alpha1.Syncing),
 			},
 		},
@@ -288,6 +289,7 @@ func TestReconcile(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockClient := syncertesting.NewMockClient(mockCtrl)
+			mockStatusClient := syncertesting.NewMockStatusWriter(mockCtrl)
 			mockCache := syncertesting.NewMockCache(mockCtrl)
 			mockManager := syncertesting.NewMockRestartableManager(mockCtrl)
 
@@ -308,6 +310,15 @@ func TestReconcile(t *testing.T) {
 					Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockClient.EXPECT().
 					Update(gomock.Any(), gomock.Eq(&wantUpdate))
+			}
+
+			mockClient.EXPECT().Status().Times(len(tc.wantStatusUpdates)).Return(mockStatusClient)
+			for _, wantStatusUpdate := range tc.wantStatusUpdates {
+				// Updates involve first getting the resource from API Server.
+				mockClient.EXPECT().
+					Get(gomock.Any(), gomock.Any(), gomock.Any())
+				mockStatusClient.EXPECT().
+					Update(gomock.Any(), gomock.Eq(&wantStatusUpdate))
 			}
 
 			_, err := testReconciler.Reconcile(reconcile.Request{})
