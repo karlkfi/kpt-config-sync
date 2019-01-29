@@ -59,11 +59,15 @@ func (i *IAMPolicy) TFResourceConfig(ctx context.Context, c Client, tfState Reso
 	if err != nil {
 		return "", err
 	}
+	policyData := "${data.google_iam_policy.admin.policy_data}"
+	if len(i.Spec.Bindings) == 0 {
+		policyData = "{}"
+	}
 	tfPolicy := fmt.Sprintf(`resource "google_project_iam_policy" "bespin_project_iam_policy" {
 project = "%s"
-policy_data = "${data.google_iam_policy.admin.policy_data}"
+policy_data = "%s"
 }
-`, id)
+`, id, policyData)
 	return tfPolicy + i.Spec.TFBindingsConfig(), nil
 }
 

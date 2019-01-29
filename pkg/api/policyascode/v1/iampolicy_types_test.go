@@ -140,6 +140,33 @@ members = [
 			wantErr: false,
 		},
 		{
+			name: "IAMPolicy for Project with empty bindings",
+			ip: &IAMPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
+				Spec: IAMPolicySpec{
+					ResourceRef: corev1.ObjectReference{
+						Kind: ProjectKind,
+						Name: "bar",
+					},
+					Bindings: []IAMPolicyBinding{},
+				},
+				Status: IAMPolicyStatus{},
+			},
+			c: &stubClient{
+				obj: &Project{
+					Spec: ProjectSpec{
+						ID: "project-001",
+					},
+				},
+			},
+			want: `resource "google_project_iam_policy" "bespin_project_iam_policy" {
+project = "project-001"
+policy_data = "{}"
+}
+`,
+			wantErr: false,
+		},
+		{
 			name: "IAMPolicy with invalid Organization reference",
 			ip: &IAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},

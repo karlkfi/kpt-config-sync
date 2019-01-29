@@ -130,6 +130,32 @@ members = [
 }`,
 		},
 		{
+			name: "ClusterIAMPolicy for Organization with empty bindings",
+			ip: &ClusterIAMPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+				Spec: IAMPolicySpec{
+					ResourceRef: corev1.ObjectReference{
+						Kind: OrganizationKind,
+						Name: "bar",
+					},
+					Bindings: []IAMPolicyBinding{},
+				},
+				Status: IAMPolicyStatus{},
+			},
+			c: &stubClient{
+				obj: &Organization{
+					Spec: OrganizationSpec{
+						ID: 1234567,
+					},
+				},
+			},
+			want: `resource "google_organization_iam_policy" "bespin_organization_iam_policy" {
+org_id = "organizations/1234567"
+policy_data = "{}"
+}
+`,
+		},
+		{
 			name: "ClusterIAMPolicy for Folder",
 			ip: &ClusterIAMPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo"},

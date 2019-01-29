@@ -72,11 +72,14 @@ type IAMPolicyBinding struct {
 // IAMPolicySpec defines the desired state of IAMPolicy
 type IAMPolicySpec struct {
 	ResourceRef corev1.ObjectReference `json:"resourceRef"`
-	Bindings    []IAMPolicyBinding     `json:"bindings"`
+	Bindings    []IAMPolicyBinding     `json:"bindings,omitempty"`
 }
 
 // TFBindingsConfig returns IAM policy bindings in string.
 func (ispec *IAMPolicySpec) TFBindingsConfig() string {
+	if len(ispec.Bindings) == 0 {
+		return ""
+	}
 	// IAM policy bindings data.
 	// Example:
 	// data "google_iam_policy" "admin" {

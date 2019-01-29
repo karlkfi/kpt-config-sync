@@ -71,10 +71,15 @@ folder = "folders/%s"
 	default:
 		return "", fmt.Errorf("invalid resource reference kind for ClusterIAMPolicy: %v", refKind)
 	}
-	// TODO(b/122963799): format Terraform config string using https://github.com/hashicorp/hcl/blob/master/hcl/printer/printer.go
-	tfs = tfs + `policy_data = "${data.google_iam_policy.admin.policy_data}"
+	policyData := "${data.google_iam_policy.admin.policy_data}"
+	if len(i.Spec.Bindings) == 0 {
+		policyData = "{}"
+	}
+	tfPolicyData := fmt.Sprintf(`policy_data = "%s"
 }
-`
+`, policyData)
+	// TODO(b/122963799): format Terraform config string using https://github.com/hashicorp/hcl/blob/master/hcl/printer/printer.go
+	tfs = tfs + tfPolicyData
 	return tfs + i.Spec.TFBindingsConfig(), nil
 }
 
