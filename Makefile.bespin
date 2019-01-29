@@ -22,7 +22,7 @@ BESPIN_BUILD_DIR := $(TOP_DIR)/build/bespin
 BESPIN_CONFIG_DIR := $(TOP_DIR)/manifests/bespin/config
 
 # Image URLs for bespin image targets.
-BESPIN_CONTROLLERS_MANAGER_IMG ?= gcr.io/${GCR_PREFIX}/bespin/controllers-manager:latest
+BESPIN_CONTROLLERS_MANAGER_IMG ?= gcr.io/${GCR_PREFIX}/bespin-controllers-manager:$(IMAGE_TAG)
 
 ###################################
 # Bespin build rules
@@ -52,10 +52,27 @@ bespin-install-crds:
 bespin-install-rbac:
 	kubectl apply -f ${BESPIN_CONFIG_DIR}/rbac
 
-# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+# Deploy bespin controllers manager separately.
 bespin-deploy: bespin-install-crds bespin-install-rbac
 	kubectl delete StatefulSet --all -n bespin-system
 	kubectl apply -f ${BESPIN_CONFIG_DIR}/manager
+
+# Generate the bespin controllers manager YAML and put it to staging.
+gen-yaml-bespin-controllers-manager:
+	@echo "+++ Generating yaml bespin-controllers-manager"
+	@IMAGE_NAME=$(BESPIN_CONTROLLERS_MANAGER_IMG) envsubst < \
+			$(BESPIN_CONFIG_DIR)/manager/bespin-controllers-manager.yaml > \
+			$(STAGING_DIR)/installer/manifests/deployment/bespin-controllers-manager.yaml
+
+bespin-installer-staging: installer-staging \
+		gen-yaml-bespin-controllers-manager \
+		bespin-image-push
+	@echo "+++ bespin-installer-staging"
+	@cp $(BESPIN_CONFIG_DIR)/crds/*.yaml $(STAGING_DIR)/installer/manifests
+	@cp $(BESPIN_CONFIG_DIR)/rbac/*.yaml $(STAGING_DIR)/installer/manifests
+
+bespin-deploy-operator-user: bespin-image-push deploy-operator-user
+	@echo "+++ Finished deploying bespin operator"
 
 # Build terraform binary
 bespin-terraform:
@@ -75,12 +92,11 @@ bespin-terraform:
 # Docker images
 ###################################
 
-# Build the docker image
-bespin-docker-build: bespin-controllers-manager bespin-terraform
+# Build the bespin image.
+bespin-image-build: bespin-controllers-manager bespin-terraform
 	docker build . -t ${BESPIN_CONTROLLERS_MANAGER_IMG} -f build/bespin/Dockerfile
-	@echo "updating image patch file for bespin controllers manager resource"
-	sed -i 's@image: .*@image: '"${BESPIN_CONTROLLERS_MANAGER_IMG}"'@' ${BESPIN_CONFIG_DIR}/manager/manager.yaml
 
-# Push the docker image
-bespin-docker-push: bespin-docker-build
+# Push the bespin image to gcr.
+bespin-image-push: bespin-image-build
+	@echo "+++ Pushing bespin-image-push to ${BESPIN_CONTROLLERS_MANAGER_IMG}..."
 	docker push ${BESPIN_CONTROLLERS_MANAGER_IMG}

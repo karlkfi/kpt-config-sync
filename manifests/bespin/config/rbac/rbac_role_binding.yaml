@@ -4,12 +4,12 @@ metadata:
   creationTimestamp: null
   labels:
     bespin.dev/system: "true"
-  name: manager-rolebinding
+  name: bespin.dev:controllers-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: manager-role
+  name: bespin.dev:controllers-manager
 subjects:
 - kind: ServiceAccount
-  name: default
-  namespace: bespin-system
+  name: bespin-controllers-manager
+  namespace: nomos-system

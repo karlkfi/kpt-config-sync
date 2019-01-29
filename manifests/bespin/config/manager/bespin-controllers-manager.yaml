@@ -1,17 +1,10 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  labels:
-    bespin.dev/system: "true"
-  name: bespin-system
----
-apiVersion: v1
 kind: Service
 metadata:
   labels:
     bespin.dev/system: "true"
-  name: bespin-controller-manager-service
-  namespace: bespin-system
+  name: bespin-controllers-manager-service
+  namespace: nomos-system
 spec:
   ports:
   - port: 443
@@ -23,21 +16,22 @@ kind: StatefulSet
 metadata:
   labels:
     bespin.dev/system: "true"
-  name: bespin-controller-manager
-  namespace: bespin-system
+  name: bespin-controllers-manager
+  namespace: nomos-system
 spec:
   selector:
     matchLabels:
       bespin.dev/system: "true"
-  serviceName: bespin-controller-manager-service
+  serviceName: bespin-controllers-manager-service
   template:
     metadata:
       labels:
         bespin.dev/system: "true"
     spec:
+      serviceAccountName: bespin-controllers-manager
       containers:
-      - image: gcr.io/bespin-prototype/zhuzenglu/1546553038/bespin/controllers-manager:latest
-        name: manager
+      - image: ${IMAGE_NAME}
+        name: bespin-controllers-manager
         command: [
           "/bespin/bespin-controllers-manager",
           "-alsologtostderr=true",
