@@ -17,7 +17,10 @@ limitations under the License.
 package visitor_test
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/pkg/errors"
 
@@ -55,26 +58,15 @@ func TestCopyingVisitor(t *testing.T) {
 
 type testVisitor struct {
 	ast.Visitor
-
 	wantEq bool
 	fmt    string
-
-	RootVisited                  bool
-	SystemVisited                bool
-	SystemObjectVisited          bool
-	ClusterRegistryVisited       bool
-	ClusterRegistryObjectVisited bool
-	ClusterVisited               bool
-	ClusterObjectVisited         bool
-	TreeNodeVisited              bool
-	ObjectVisited                bool
-
+	visits []string
 	errors []error
 }
 
 // VisitRoot implements Visitor
 func (v *testVisitor) VisitRoot(c *ast.Root) *ast.Root {
-	v.RootVisited = true
+	v.visits = append(v.visits, "Root")
 	got := v.Visitor.VisitRoot(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -84,7 +76,7 @@ func (v *testVisitor) VisitRoot(c *ast.Root) *ast.Root {
 
 // VisitSystem implements Visitor
 func (v *testVisitor) VisitSystem(c *ast.System) *ast.System {
-	v.SystemVisited = true
+	v.visits = append(v.visits, "System")
 	got := v.Visitor.VisitSystem(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -94,7 +86,7 @@ func (v *testVisitor) VisitSystem(c *ast.System) *ast.System {
 
 // VisitSystemObject implements Visitor
 func (v *testVisitor) VisitSystemObject(c *ast.SystemObject) *ast.SystemObject {
-	v.SystemObjectVisited = true
+	v.visits = append(v.visits, fmt.Sprintf("SystemObject %s %s", c.GroupVersionKind(), c.Name()))
 	got := v.Visitor.VisitSystemObject(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -104,7 +96,7 @@ func (v *testVisitor) VisitSystemObject(c *ast.SystemObject) *ast.SystemObject {
 
 // VisitClusterRegistry implements Visitor
 func (v *testVisitor) VisitClusterRegistry(c *ast.ClusterRegistry) *ast.ClusterRegistry {
-	v.ClusterRegistryVisited = true
+	v.visits = append(v.visits, "ClusterRegistry")
 	got := v.Visitor.VisitClusterRegistry(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -114,7 +106,7 @@ func (v *testVisitor) VisitClusterRegistry(c *ast.ClusterRegistry) *ast.ClusterR
 
 // VisitClusterRegistryObject implements Visitor
 func (v *testVisitor) VisitClusterRegistryObject(c *ast.ClusterRegistryObject) *ast.ClusterRegistryObject {
-	v.ClusterRegistryObjectVisited = true
+	v.visits = append(v.visits, fmt.Sprintf("ClusterRegistryObject %s %s", c.GroupVersionKind(), c.Name()))
 	got := v.Visitor.VisitClusterRegistryObject(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -124,7 +116,7 @@ func (v *testVisitor) VisitClusterRegistryObject(c *ast.ClusterRegistryObject) *
 
 // VisitCluster implements Visitor
 func (v *testVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
-	v.ClusterVisited = true
+	v.visits = append(v.visits, "Cluster")
 	got := v.Visitor.VisitCluster(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -134,7 +126,7 @@ func (v *testVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 
 // VisitClusterObject implements Visitor
 func (v *testVisitor) VisitClusterObject(c *ast.ClusterObject) *ast.ClusterObject {
-	v.ClusterObjectVisited = true
+	v.visits = append(v.visits, fmt.Sprintf("ClusterObject %s %s", c.GroupVersionKind(), c.Name()))
 	got := v.Visitor.VisitClusterObject(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -144,7 +136,7 @@ func (v *testVisitor) VisitClusterObject(c *ast.ClusterObject) *ast.ClusterObjec
 
 // VisitTreeNode implements Visitor
 func (v *testVisitor) VisitTreeNode(c *ast.TreeNode) *ast.TreeNode {
-	v.TreeNodeVisited = true
+	v.visits = append(v.visits, fmt.Sprintf("TreeNode %s", c.Name()))
 	got := v.Visitor.VisitTreeNode(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -154,7 +146,7 @@ func (v *testVisitor) VisitTreeNode(c *ast.TreeNode) *ast.TreeNode {
 
 // VisitObject implements Visitor
 func (v *testVisitor) VisitObject(c *ast.NamespaceObject) *ast.NamespaceObject {
-	v.ObjectVisited = true
+	v.visits = append(v.visits, fmt.Sprintf("NamespaceObject %s %s", c.GroupVersionKind(), c.Name()))
 	got := v.Visitor.VisitObject(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -165,32 +157,33 @@ func (v *testVisitor) VisitObject(c *ast.NamespaceObject) *ast.NamespaceObject {
 func (v *testVisitor) Check(t *testing.T) {
 	t.Helper()
 
-	if !v.RootVisited {
-		t.Errorf("Root not visited")
+	expectOrder := []string{
+		"Root",
+		"System",
+		"SystemObject nomos.dev/v1alpha1, Kind=Sync sync",
+		"SystemObject nomos.dev/v1alpha1, Kind=Repo nomos",
+		"ClusterRegistry",
+		"ClusterRegistryObject /, Kind= ",
+		"Cluster",
+		"ClusterObject rbac.authorization.k8s.io/v1, Kind=ClusterRole nomos:admin",
+		"ClusterObject rbac.authorization.k8s.io/v1, Kind=ClusterRoleBinding nomos:admin",
+		"ClusterObject extensions/v1beta1, Kind=PodSecurityPolicy example",
+		"TreeNode namespaces",
+		"NamespaceObject rbac.authorization.k8s.io/v1, Kind=RoleBinding admin",
+		"NamespaceObject /v1, Kind=ResourceQuota quota",
+		"TreeNode frontend",
+		"NamespaceObject rbac.authorization.k8s.io/v1, Kind=RoleBinding admin",
+		"NamespaceObject rbac.authorization.k8s.io/v1, Kind=Role pod-reader",
+		"NamespaceObject /v1, Kind=ResourceQuota quota",
+		"TreeNode frontend-test",
+		"NamespaceObject rbac.authorization.k8s.io/v1, Kind=RoleBinding admin",
+		"NamespaceObject rbac.authorization.k8s.io/v1, Kind=Role deployment-reader",
 	}
-	if !v.SystemVisited {
-		t.Errorf("System not visited")
-	}
-	if !v.SystemObjectVisited {
-		t.Errorf("SystemObject not visited")
-	}
-	if !v.ClusterRegistryVisited {
-		t.Errorf("ClusterRegistry not visited")
-	}
-	if !v.ClusterRegistryObjectVisited {
-		t.Errorf("ClusterRegistryObject not visited")
-	}
-	if !v.ClusterVisited {
-		t.Errorf("Cluster not visited")
-	}
-	if !v.ClusterObjectVisited {
-		t.Errorf("ClusterObject not visited")
-	}
-	if !v.TreeNodeVisited {
-		t.Errorf("TreeNode not visited")
-	}
-	if !v.ObjectVisited {
-		t.Errorf("Object not visited")
+
+	diff := cmp.Diff(v.visits, expectOrder)
+	if diff != "" {
+		t.Errorf("%#v", v.visits)
+		t.Errorf("Invalid visit order:\n%s", diff)
 	}
 	for _, err := range v.errors {
 		t.Errorf("Got error: %s", err)
