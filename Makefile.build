@@ -29,7 +29,13 @@ build: $(OUTPUT_DIR) pull-buildenv $(addprefix build-platform-, $(PLATFORMS))
 # Compiles binaries for a specific platform (e.g. "linux-amd64").
 build-platform-%:
 	@echo "+++ Compiling Nomos binaries for $* platform"
-	@docker run -e PLATFORM=$* $(DOCKER_RUN_ARGS) ./scripts/build.sh
+	@docker run $(DOCKER_RUN_ARGS) ./scripts/build.sh \
+		--build_mode $(BUILD_MODE) \
+		--pkg $(REPO) \
+		--platform $* \
+		--version $(VERSION) \
+		-- \
+		./...
 
 # Creates a docker image for the specified nomos component.
 image-nomos: build

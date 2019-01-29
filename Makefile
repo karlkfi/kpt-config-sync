@@ -145,9 +145,6 @@ IMAGE_TAG ?= latest
 
 DOCKER_RUN_ARGS = \
 	$(DOCKER_INTERACTIVE)                                              \
-	-e VERSION=$(VERSION)                                              \
-	-e PKG=$(REPO)                                                     \
-	-e BUILD_MODE=$(BUILD_MODE)                                        \
 	-u $(UID):$(GID)                                                   \
 	-v $(GO_DIR):/go                                                   \
 	-v $$(pwd):/go/src/$(REPO)                                         \

@@ -16,6 +16,41 @@
 
 set -euo pipefail
 
+PKG=""
+VERSION=""
+PLATFORM=""
+BUILD_MODE=""
+
+while [[ $# -gt 0 ]]; do
+  ARG="${1:-}"
+  shift
+  case ${ARG} in
+    --pkg)
+      PKG=${1:-}
+      shift
+      ;;
+    --version)
+      VERSION=${1:-}
+      shift
+      ;;
+    --platform)
+      PLATFORM=${1:-}
+      shift
+      ;;
+    --build_mode)
+      BUILD_MODE=${1:-}
+      shift
+      ;;
+    --)
+      break
+      ;;
+    *)
+      echo "Invalid arg: ${ARG}"
+      exit 1
+    ;;
+  esac
+done
+
 if [ -z "${PKG}" ]; then
     echo "PKG must be set"
     exit 1
@@ -24,10 +59,13 @@ if [ -z "${VERSION}" ]; then
     echo "VERSION must be set"
     exit 1
 fi
-
 # Platform format: $GOOS-$GOARCH (e.g. linux-amd64).
 if [ -z "${PLATFORM}" ]; then
     echo "PLATFORM must be set"
+    exit 1
+fi
+if [ -z "${BUILD_MODE}" ]; then
+    echo "BUILD_MODE must be set"
     exit 1
 fi
 
@@ -39,7 +77,7 @@ GOARCH="${platform_split[1]}"
 env GOOS="${GOOS}" GOARCH="${GOARCH}" CGO_ENABLED="0" go install             \
     -installsuffix "static"                                        \
     -ldflags "-X ${PKG}/pkg/version.VERSION=${VERSION}"            \
-    ./...
+    "$@"
 
 output_dir="${GOPATH}/bin/${GOOS}_${GOARCH}"
 mkdir -p "${output_dir}"
@@ -49,5 +87,3 @@ find "${GOPATH}/bin" -maxdepth 1 -type f -exec mv {} "${output_dir}" \;
 if [ "${BUILD_MODE}" = "release" ]; then
   upx "${output_dir}/*"
 fi
-
-
