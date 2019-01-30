@@ -54,10 +54,10 @@ func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder,
 		),
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not create ClusterPolicy controller")
+		return errors.Wrapf(err, "could not create %q controller", clusterPolicyControllerName)
 	}
 	if err = cpc.Watch(&source.Kind{Type: &nomosv1.ClusterPolicy{}}, &handler.EnqueueRequestForObject{}); err != nil {
-		return errors.Wrap(err, "could not watch ClusterPolicies in the controller")
+		return errors.Wrapf(err, "could not watch ClusterPolicies in the %q controller", clusterPolicyControllerName)
 	}
 
 	mapToClusterPolicy := &handler.EnqueueRequestsFromMapFunc{
@@ -67,7 +67,7 @@ func AddClusterPolicy(mgr manager.Manager, decoder decode.Decoder,
 	// Look up the corresponding ClusterPolicy for the changed resources.
 	for gvk, t := range resourceTypes {
 		if err := cpc.Watch(&source.Kind{Type: t}, mapToClusterPolicy); err != nil {
-			return errors.Wrapf(err, "could not watch %q in the generic controller", gvk)
+			return errors.Wrapf(err, "could not watch %q in the %q controller", gvk, clusterPolicyControllerName)
 		}
 	}
 	return nil

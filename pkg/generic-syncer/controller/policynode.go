@@ -21,6 +21,7 @@ import (
 	"github.com/google/nomos/pkg/generic-syncer/client"
 	"github.com/google/nomos/pkg/generic-syncer/decode"
 	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
+	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -58,12 +59,15 @@ func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder,
 		return errors.Wrap(err, "could not create policynode controller")
 	}
 
-	if err = pnc.Watch(&source.Kind{Type: &nomosv1.PolicyNode{}}, &handler.EnqueueRequestForObject{}); err != nil {
-		return errors.Wrap(err, "could not watch PolicyNodes in the policy node controller")
+	mapValidPolicyNodes := &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: handler.ToRequestsFunc(validPolicyNodes),
 	}
-	// Namespaces have the same name as their corresponding PolicyNode, so we can also use EnqueueRequestForObject.
-	if err = pnc.Watch(&source.Kind{Type: &corev1.Namespace{}}, &handler.EnqueueRequestForObject{}); err != nil {
-		return errors.Wrap(err, "could not watch Namespaces in the policy node controller")
+	if err = pnc.Watch(&source.Kind{Type: &nomosv1.PolicyNode{}}, mapValidPolicyNodes); err != nil {
+		return errors.Wrapf(err, "could not watch PolicyNodes in the %q controller", policyNodeControllerName)
+	}
+	// Namespaces have the same name as their corresponding PolicyNode.
+	if err = pnc.Watch(&source.Kind{Type: &corev1.Namespace{}}, mapValidPolicyNodes); err != nil {
+		return errors.Wrapf(err, "could not watch Namespaces in the %q controller", policyNodeControllerName)
 	}
 
 	maptoPolicyNode := &handler.EnqueueRequestsFromMapFunc{
@@ -73,7 +77,7 @@ func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder,
 	// Look up the corresponding PolicyNode for the changed resources.
 	for gvk, t := range resourceTypes {
 		if err := pnc.Watch(&source.Kind{Type: t}, maptoPolicyNode); err != nil {
-			return errors.Wrapf(err, "could not watch %q in the generic controller", gvk)
+			return errors.Wrapf(err, "could not watch %q in the %q controller", gvk, policyNodeControllerName)
 		}
 	}
 	return nil
@@ -82,10 +86,24 @@ func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder,
 // genericResourceToPolicyNode maps generic resources being watched,
 // to reconciliation requests for the PolicyNode potentially managing them.
 func genericResourceToPolicyNode(o handler.MapObject) []reconcile.Request {
+	return reconcileRequests(o.Meta.GetNamespace())
+}
+
+// validPolicyNodes returns reconcile requests for the watched objects,
+// if the name of the resource corresponds to a PolicyNode that can be synced.
+func validPolicyNodes(o handler.MapObject) []reconcile.Request {
+	return reconcileRequests(o.Meta.GetName())
+}
+
+func reconcileRequests(ns string) []reconcile.Request {
+	if namespaceutil.IsReserved(ns) {
+		// Ignore changes to resources outside a namespace Nomos can manage.
+		return nil
+	}
 	return []reconcile.Request{{
 		NamespacedName: types.NamespacedName{
 			// The namespace of the generic resource is the name of the policy node potentially managing it.
-			Name: o.Meta.GetNamespace(),
+			Name: ns,
 		},
 	}}
 }

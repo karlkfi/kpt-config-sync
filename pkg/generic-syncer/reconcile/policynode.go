@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/cache"
 	"github.com/google/nomos/pkg/generic-syncer/client"
@@ -81,12 +81,20 @@ func (r *PolicyNodeReconciler) Reconcile(request reconcile.Request) (reconcile.R
 
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
+
+	name := request.Name
+	glog.Infof("Reconciling Policy Node: %q", name)
+	if namespaceutil.IsReserved(name) {
+		glog.Errorf("Trying to reconcile a PolicyNode corresponding to a reserved namespace: %q", name)
+		// We don't return an error, because we should never be reconciling these PolicyNodes in the first place.
+		return reconcile.Result{}, nil
+	}
+
 	// TODO(sbochins): Make use of reconcile.Result.RequeueAfter when we don't want exponential backoff for retries when
 	// using newer version of controller-runtime.
-	glog.Infof("Reconciling Policy Node: %s", request.Name)
-	err := r.reconcilePolicyNode(ctx, request.Name)
+	err := r.reconcilePolicyNode(ctx, name)
 	if err != nil {
-		glog.Errorf("Could not reconcile policynode %q: %v", request.Name, err)
+		glog.Errorf("Could not reconcile policynode %q: %v", name, err)
 	}
 	return reconcile.Result{}, err
 }
@@ -98,13 +106,12 @@ const (
 	policyNodeStateNotFound    = policyNodeState("notFound")    // the policy node does not exist
 	policyNodeStateNamespace   = policyNodeState("namespace")   // the policy node is declared as a namespace
 	policyNodeStatePolicyspace = policyNodeState("policyspace") // the policy node is declared as a policyspace
-	policyNodeStateReserved    = policyNodeState("reserved")    // the policy node is declared as a reserved namespace
 )
 
 // getPolicyNodeState normalizes the state of the policy node and returns the node.
-func (r *PolicyNodeReconciler) getPolicyNodeState(ctx context.Context, name string) (policyNodeState, *nomosv1.PolicyNode,
+func (r *PolicyNodeReconciler) getPolicyNodeState(ctx context.Context, name string) (policyNodeState, *v1.PolicyNode,
 	error) {
-	node := &nomosv1.PolicyNode{}
+	node := &v1.PolicyNode{}
 	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, node)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -113,14 +120,10 @@ func (r *PolicyNodeReconciler) getPolicyNodeState(ctx context.Context, name stri
 		panic(errors.Wrap(err, "cache returned error other than not found, this should not happen"))
 	}
 
-	if namespaceutil.IsReserved(name) {
-		return policyNodeStateReserved, node, nil
-	}
-
 	switch node.Spec.Type {
-	case nomosv1.Policyspace:
+	case v1.Policyspace:
 		return policyNodeStatePolicyspace, node, nil
-	case nomosv1.Namespace:
+	case v1.Namespace:
 		return policyNodeStateNamespace, node, nil
 	default:
 		return policyNodeStateNotFound, nil, errors.Errorf("invalid node type %q", node.Spec.Type)
@@ -140,7 +143,7 @@ const (
 func (r *PolicyNodeReconciler) getNamespaceState(
 	ctx context.Context,
 	name string,
-	syncErrs *[]nomosv1.PolicyNodeSyncError) (namespaceState, *corev1.Namespace,
+	syncErrs *[]v1.PolicyNodeSyncError) (namespaceState, *corev1.Namespace,
 	error) {
 	ns := &corev1.Namespace{}
 	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, ns)
@@ -154,7 +157,7 @@ func (r *PolicyNodeReconciler) getNamespaceState(
 	value, found := ns.Labels[labeling.ResourceManagementKey]
 	if !found {
 		r.warnNoLabel(ns)
-		*syncErrs = append(*syncErrs, nomosv1.PolicyNodeSyncError{
+		*syncErrs = append(*syncErrs, v1.PolicyNodeSyncError{
 			ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s=%s)",
 				labeling.ResourceManagementKey, labeling.Enabled),
 		})
@@ -173,7 +176,7 @@ func (r *PolicyNodeReconciler) getNamespaceState(
 		"Namespace %q has invalid management label %q",
 		name, value,
 	)
-	*syncErrs = append(*syncErrs, nomosv1.PolicyNodeSyncError{
+	*syncErrs = append(*syncErrs, v1.PolicyNodeSyncError{
 		ErrorMessage: fmt.Sprintf("Namespace has invalid management label %s=%s should be %s=%s or unset",
 			labeling.ResourceManagementKey, value,
 			labeling.ResourceManagementKey, labeling.Enabled),
@@ -184,7 +187,7 @@ func (r *PolicyNodeReconciler) getNamespaceState(
 func (r *PolicyNodeReconciler) reconcilePolicyNode(
 	ctx context.Context,
 	name string) error {
-	var syncErrs []nomosv1.PolicyNodeSyncError
+	var syncErrs []v1.PolicyNodeSyncError
 	pnState, node, pnErr := r.getPolicyNodeState(ctx, name)
 	if pnErr != nil {
 		return pnErr
@@ -197,9 +200,6 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 
 	switch pnState {
 	case policyNodeStateNotFound:
-		if namespaceutil.IsReserved(name) {
-			return nil
-		}
 		switch nsState {
 		case namespaceStateNotFound: // noop
 		case namespaceStateExists:
@@ -212,7 +212,7 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 		switch nsState {
 		case namespaceStateNotFound:
 			if err := r.createNamespace(ctx, node); err != nil {
-				syncErrs = append(syncErrs, nomosv1.PolicyNodeSyncError{
+				syncErrs = append(syncErrs, v1.PolicyNodeSyncError{
 					ErrorMessage: fmt.Sprintf("Failed to create namespace: %s", err.Error()),
 				})
 				if err2 := r.setPolicyNodeStatus(ctx, node, syncErrs); err2 != nil {
@@ -225,7 +225,7 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 			return r.managePolicies(ctx, name, node, syncErrs)
 		case namespaceStateManageFull:
 			if err := r.updateNamespace(ctx, node); err != nil {
-				syncErrs = append(syncErrs, nomosv1.PolicyNodeSyncError{
+				syncErrs = append(syncErrs, v1.PolicyNodeSyncError{
 					ErrorMessage: fmt.Sprintf("Failed to update namespace: %s", err.Error()),
 				})
 			}
@@ -240,15 +240,6 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 			r.warnPolicyspaceHasNamespace(ns)
 		case namespaceStateManageFull:
 			return r.handlePolicyspace(ctx, node)
-		}
-
-	case policyNodeStateReserved:
-		switch nsState {
-		case namespaceStateNotFound: // noop
-		case namespaceStateExists:
-			r.warnReservedLabel(ns)
-		case namespaceStateManageFull:
-			r.warnReservedLabel(ns)
 		}
 	}
 	return nil
@@ -268,13 +259,6 @@ func (r *PolicyNodeReconciler) warnPolicyspaceHasNamespace(ns *corev1.Namespace)
 		"namespace is declared as a policyspace in the source of truth")
 }
 
-func (r *PolicyNodeReconciler) warnReservedLabel(ns *corev1.Namespace) {
-	glog.Warningf("reserved namespace %q has a management label", ns.Name)
-	r.recorder.Event(
-		ns, corev1.EventTypeWarning, "UnmanagedNamespace",
-		"reserved namespace has a management label")
-}
-
 func (r *PolicyNodeReconciler) warnNoLabel(ns *corev1.Namespace) {
 	glog.Warningf("namespace %q is declared in the source of truth but does not have a management label", ns.Name)
 	r.recorder.Event(
@@ -291,7 +275,7 @@ func (r *PolicyNodeReconciler) warnNoLabelResource(u *unstructured.Unstructured)
 		"%q is declared in the source of truth but does not have a management label", gvk)
 }
 
-func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, node *nomosv1.PolicyNode, syncErrs []nomosv1.PolicyNodeSyncError) error {
+func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, node *v1.PolicyNode, syncErrs []v1.PolicyNodeSyncError) error {
 	var errBuilder multierror.Builder
 	reconcileCount := 0
 	grs, err := r.decoder.DecodeResources(node.Spec.Resources...)
@@ -346,8 +330,8 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 	return errBuilder.Build()
 }
 
-func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *nomosv1.PolicyNode,
-	errs []nomosv1.PolicyNodeSyncError) error {
+func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *v1.PolicyNode,
+	errs []v1.PolicyNodeSyncError) error {
 	freshSyncToken := node.Status.SyncToken == node.Spec.ImportToken
 	if node.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for PolicyNode %q is already up-to-date.", node.Name)
@@ -355,14 +339,14 @@ func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *no
 	}
 
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
-		newPN := obj.(*nomosv1.PolicyNode)
+		newPN := obj.(*v1.PolicyNode)
 		newPN.Status.SyncToken = node.Spec.ImportToken
 		newPN.Status.SyncTime = now()
 		newPN.Status.SyncErrors = errs
 		if len(errs) > 0 {
-			newPN.Status.SyncState = nomosv1.StateError
+			newPN.Status.SyncState = v1.StateError
 		} else {
-			newPN.Status.SyncState = nomosv1.StateSynced
+			newPN.Status.SyncState = v1.StateSynced
 		}
 		return newPN, nil
 	}
@@ -371,8 +355,8 @@ func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *no
 }
 
 // NewSyncError returns a PolicyNodeSyncError corresponding to the given error and action
-func NewSyncError(name string, gvk schema.GroupVersionKind, err error) nomosv1.PolicyNodeSyncError {
-	return nomosv1.PolicyNodeSyncError{
+func NewSyncError(name string, gvk schema.GroupVersionKind, err error) v1.PolicyNodeSyncError {
+	return v1.PolicyNodeSyncError{
 		SourceName:   name,
 		ResourceKind: gvk.Kind,
 		ResourceAPI:  gvk.GroupVersion().String(),
@@ -416,11 +400,11 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 	return true, nil
 }
 
-func asNamespace(policyNode *nomosv1.PolicyNode) *corev1.Namespace {
+func asNamespace(policyNode *v1.PolicyNode) *corev1.Namespace {
 	return withPolicyNodeMeta(&corev1.Namespace{}, policyNode)
 }
 
-func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *nomosv1.PolicyNode) *corev1.Namespace {
+func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *v1.PolicyNode) *corev1.Namespace {
 	labels := labeling.ManageResource.AddDeepCopy(policyNode.Labels)
 	namespace.Labels = labels
 	namespace.Annotations = policyNode.Annotations
@@ -429,7 +413,7 @@ func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *nomosv1.PolicyN
 	return namespace
 }
 
-func (r *PolicyNodeReconciler) createNamespace(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
+func (r *PolicyNodeReconciler) createNamespace(ctx context.Context, policyNode *v1.PolicyNode) error {
 	namespace := asNamespace(policyNode)
 	if err := r.client.Create(ctx, namespace); err != nil {
 		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GroupVersionKind().Kind, "create").Inc()
@@ -440,7 +424,7 @@ func (r *PolicyNodeReconciler) createNamespace(ctx context.Context, policyNode *
 	return nil
 }
 
-func (r *PolicyNodeReconciler) updateNamespace(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
+func (r *PolicyNodeReconciler) updateNamespace(ctx context.Context, policyNode *v1.PolicyNode) error {
 	glog.V(1).Infof("Namespace %q declared in a policy node, updating", policyNode.Name)
 
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: policyNode.Name}}
@@ -466,7 +450,7 @@ func (r *PolicyNodeReconciler) deleteNamespace(ctx context.Context, namespace *c
 	return nil
 }
 
-func (r *PolicyNodeReconciler) handlePolicyspace(ctx context.Context, policyNode *nomosv1.PolicyNode) error {
+func (r *PolicyNodeReconciler) handlePolicyspace(ctx context.Context, policyNode *v1.PolicyNode) error {
 	namespace := asNamespace(policyNode)
 	if err := r.client.Delete(ctx, namespace); err != nil {
 		metrics.ErrTotal.WithLabelValues("", namespace.GroupVersionKind().Kind, "delete").Inc()

@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/generic-syncer/cache"
 	"github.com/google/nomos/pkg/generic-syncer/client"
@@ -78,7 +78,7 @@ func (r *ClusterPolicyReconciler) Reconcile(request reconcile.Request) (reconcil
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
-	clusterPolicy := &nomosv1.ClusterPolicy{}
+	clusterPolicy := &v1.ClusterPolicy{}
 	err := r.cache.Get(ctx, request.NamespacedName, clusterPolicy)
 	if err != nil {
 		err = errors.Wrapf(err, "could not retrieve clusterpolicy %q", request.Name)
@@ -87,7 +87,7 @@ func (r *ClusterPolicyReconciler) Reconcile(request reconcile.Request) (reconcil
 	}
 
 	name := request.Name
-	if request.Name != nomosv1.ClusterPolicyName {
+	if request.Name != v1.ClusterPolicyName {
 		r.recorder.Eventf(clusterPolicy, corev1.EventTypeWarning, "InvalidClusterPolicy",
 			"ClusterPolicy resource has invalid name %q", name)
 		err := errors.Errorf("ClusterPolicy resource has invalid name %q", name)
@@ -106,14 +106,14 @@ func (r *ClusterPolicyReconciler) Reconcile(request reconcile.Request) (reconcil
 	return reconcile.Result{}, rErr
 }
 
-func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *nomosv1.ClusterPolicy) error {
+func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1.ClusterPolicy) error {
 	grs, err := r.decoder.DecodeResources(policy.Spec.Resources...)
 	if err != nil {
 		return errors.Wrapf(err, "could not process cluster policy: %q", policy.GetName())
 	}
 
 	name := policy.GetName()
-	var syncErrs []nomosv1.ClusterPolicySyncError
+	var syncErrs []v1.ClusterPolicySyncError
 	var errBuilder multierror.Builder
 	reconcileCount := 0
 	for _, gvk := range r.toSync {
@@ -162,8 +162,8 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *no
 	return errBuilder.Build()
 }
 
-func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, policy *nomosv1.ClusterPolicy,
-	errs ...nomosv1.ClusterPolicySyncError) error {
+func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, policy *v1.ClusterPolicy,
+	errs ...v1.ClusterPolicySyncError) error {
 	freshSyncToken := policy.Status.SyncToken == policy.Spec.ImportToken
 	if policy.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for ClusterPolicy %q is already up-to-date.", policy.Name)
@@ -171,14 +171,14 @@ func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, po
 	}
 
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
-		newPolicy := obj.(*nomosv1.ClusterPolicy)
+		newPolicy := obj.(*v1.ClusterPolicy)
 		newPolicy.Status.SyncToken = policy.Spec.ImportToken
 		newPolicy.Status.SyncTime = now()
 		newPolicy.Status.SyncErrors = errs
 		if len(errs) > 0 {
-			newPolicy.Status.SyncState = nomosv1.StateError
+			newPolicy.Status.SyncState = v1.StateError
 		} else {
-			newPolicy.Status.SyncState = nomosv1.StateSynced
+			newPolicy.Status.SyncState = v1.StateSynced
 		}
 		return newPolicy, nil
 	}
@@ -190,8 +190,8 @@ func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, po
 }
 
 // NewClusterPolicySyncError returns a ClusterPolicySyncError corresponding to the given error and GroupVersionKind.
-func NewClusterPolicySyncError(name string, gvk schema.GroupVersionKind, err error) nomosv1.ClusterPolicySyncError {
-	return nomosv1.ClusterPolicySyncError{
+func NewClusterPolicySyncError(name string, gvk schema.GroupVersionKind, err error) v1.ClusterPolicySyncError {
+	return v1.ClusterPolicySyncError{
 		ResourceName: name,
 		ResourceKind: gvk.Kind,
 		ResourceAPI:  gvk.GroupVersion().String(),
