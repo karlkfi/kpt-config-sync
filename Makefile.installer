@@ -50,9 +50,3 @@ installer-staging: \
 	@cp $(TOP_DIR)/scripts/generate-resourcequota-admission-controller-certs.sh \
 		$(STAGING_DIR)/installer/scripts
 
-check-nomos-installer-config:
-	@echo "+++ Checking installer configuration"
-	@if [ -z "$(NOMOS_INSTALLER_CONFIG)" ]; then \
-		echo '### Must set env variable NOMOS_INSTALLER_CONFIG to use make deploy'; \
-		exit 1; \
-	fi;
