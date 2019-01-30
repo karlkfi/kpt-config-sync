@@ -295,6 +295,9 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	astRoot.Tree = tree
 
 	visitors := p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet, apiInfo)
+
+	outputVisitor := backend.NewOutputVisitor()
+	visitors = append(visitors, outputVisitor)
 	for _, visitor := range visitors {
 		if errorBuilder.HasErrors() && visitor.RequiresValidState() {
 			return nil, errorBuilder.Build()
@@ -307,10 +310,7 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 		}
 	}
 
-	outputVisitor := backend.NewOutputVisitor()
-	astRoot.Accept(outputVisitor)
 	policies := outputVisitor.AllPolicies()
-
 	if errorBuilder.HasErrors() {
 		return nil, errorBuilder.Build()
 	}
