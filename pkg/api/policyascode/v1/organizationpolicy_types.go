@@ -152,9 +152,9 @@ func tfFormatConstraintPolicy(constraint OrganizationPolicyConstraint) (string, 
 
 // tfResourceID returns the resource ID in the correct TF plugin format.  The gcp plugin for terraform uses an inconsistent format
 // for these ids (ie, only using kind for the folders), hence the need for this code.
-func tfResourceID(ctx context.Context, client Client, ps OrganizationPolicySpec) (string, error) {
-	kind := ps.ResourceRef.Kind
-	res, err := ResourceID(ctx, client, kind, ps.ResourceRef.Name, EmptyNamespace)
+func tfResourceID(ctx context.Context, client Client, op *OrganizationPolicy) (string, error) {
+	kind := op.Spec.ResourceRef.Kind
+	res, err := op.ReferenceID(ctx, client)
 	if err != nil {
 		return "", err
 	}
@@ -183,7 +183,7 @@ func (op *OrganizationPolicy) TFResourceConfig(ctx context.Context, c Client, tf
 		return "", errors.Errorf("invalid kind: %s", kind)
 	}
 
-	resourceID, err := tfResourceID(ctx, c, ps)
+	resourceID, err := tfResourceID(ctx, c, op)
 	if err != nil {
 		return "", err
 	}
@@ -260,9 +260,18 @@ func (op *OrganizationPolicy) ID() string {
 }
 
 // ReferenceID implements the terraform.Resource interface.
-// TODO(b/123586680): implement this
+// Returns the resource reference ID on GCP where the OrganizationPolicy attaches to.
 func (op *OrganizationPolicy) ReferenceID(ctx context.Context, c Client) (string, error) {
-	return "", nil
+	kind := op.Spec.ResourceRef.Kind
+	ns := EmptyNamespace
+	if kind == ProjectKind {
+		ns = op.Namespace
+	}
+	refID, err := ResourceID(ctx, c, kind, op.Spec.ResourceRef.Name, ns)
+	if err != nil {
+		return "", err
+	}
+	return refID, nil
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
