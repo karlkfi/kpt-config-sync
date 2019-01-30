@@ -80,4 +80,4 @@ uploads it to gcr.io/syllogi-ci. This should be regenerated if you change the
 test in syllogi.sh.
 
 The result of the test can be viewed in Syllogi's testgrid
-[here](https://testgrid.corp.google.com/syllogi-ci#periodic-syllogi-cli-e2e-ipam-privatereg-onprem)
+[here](https://testgrid.corp.google.com/syllogi-periodic#cluster-create-ipam-privatereg)
