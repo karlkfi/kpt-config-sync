@@ -170,10 +170,11 @@ e15b4b28 Thu Sep 6 .. Erik Kitson             Fix broken links in documentation 
 
 ### Nomos Operator
 
-Switch to the `nomos-operator` repository. Before blessing, take note of whether
-the new release should have be a new patch, minor, or major version. By default,
-the blessing target increments the patch set, so to bless a new version with
-just a patch increment run:
+Switch to the `nomos-operator`
+[repository](https://g3doc.corp.google.com/company/teams/nomos-team/dev_guide.md#operator).
+Before blessing, take note of whether the new release should have be a new
+patch, minor, or major version. By default, the blessing target increments the
+patch set, so to bless a new version with just a patch increment run:
 
 ```console
 make bless-release
