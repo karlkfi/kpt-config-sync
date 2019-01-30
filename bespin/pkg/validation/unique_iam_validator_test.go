@@ -11,49 +11,61 @@ import (
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 )
 
+func fakeIAM(version string, path string) ast.FileObject {
+	return asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(version), path)
+}
+
 func TestUniqueIAMValidatorVisitTreeNode(t *testing.T) {
-	test := vt.NodeObjectsValidatorTest{
+	test := vt.ObjectsValidatorTest{
 		Validator: NewUniqueIAMValidator,
 		ErrorCode: vet.UndocumentedErrorCode,
-		TestCases: []vt.NodeObjectsValidatorTestCase{
+		TestCases: []vt.ObjectsValidatorTestCase{
 			{
 				Name: "empty",
 			},
 			{
 				Name: "one IAMPolicy",
 				Objects: []ast.FileObject{
-					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
+					fakeIAM("v1", "hierarchy/foo/iam.yaml"),
 				},
 			},
 			{
 				Name: "one IAMPolicy and one Role",
 				Objects: []ast.FileObject{
-					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
-					asttesting.NewFakeFileObject(nomoskinds.Role(), ""),
+					fakeIAM("v1", "hierarchy/foo/iam.yaml"),
+					asttesting.NewFakeFileObject(nomoskinds.Role(), "hierarchy/foo/role.yaml"),
 				},
 			},
 			{
 				Name: "two IAMPolicies same version",
 				Objects: []ast.FileObject{
-					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v1"), ""),
-					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v1"), ""),
+					fakeIAM("v1", "hierarchy/foo/iam-1.yaml"),
+					fakeIAM("v1", "hierarchy/foo/iam-2.yaml"),
 				},
 				ShouldFail: true,
 			},
 			{
 				Name: "two IAMPolicies different version",
 				Objects: []ast.FileObject{
-					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v1"), ""),
-					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion("v2"), ""),
+					fakeIAM("v1", "hierarchy/foo/iam-1.yaml"),
+					fakeIAM("v2", "hierarchy/foo/iam-2.yaml"),
+				},
+				ShouldFail: true,
+			},
+			{
+				Name: "two IAMPolicies different directories",
+				Objects: []ast.FileObject{
+					fakeIAM("v1", "hierarchy/foo/iam.yaml"),
+					fakeIAM("v1", "hierarchy/bar/iam.yaml"),
 				},
 				ShouldFail: true,
 			},
 			{
 				Name: "three IAMPolicies",
 				Objects: []ast.FileObject{
-					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
-					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
-					asttesting.NewFakeFileObject(kinds.IAMPolicy().WithVersion(""), ""),
+					fakeIAM("v1", "hierarchy/foo/iam-1.yaml"),
+					fakeIAM("v1", "hierarchy/foo/iam-2.yaml"),
+					fakeIAM("v1", "hierarchy/foo/iam-3.yaml"),
 				},
 				ShouldFail: true,
 			},

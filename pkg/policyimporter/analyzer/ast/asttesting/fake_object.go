@@ -49,6 +49,16 @@ func (o *FakeObject) WithMeta(meta *v1.ObjectMeta) *FakeObject {
 	}
 }
 
+// WithName returns a copy of the object with the metadata.Name set to the desired value.
+func (o *FakeObject) WithName(name string) *FakeObject {
+	meta := o.ObjectMeta.DeepCopy()
+	meta.SetName(name)
+	return &FakeObject{
+		ObjectMeta: meta,
+		TypeMeta:   o.TypeMeta,
+	}
+}
+
 // DeepCopyObject implements runtime.Object.
 func (o *FakeObject) DeepCopyObject() runtime.Object {
 	return &FakeObject{

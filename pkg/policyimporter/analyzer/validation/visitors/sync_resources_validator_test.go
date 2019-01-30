@@ -7,32 +7,11 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
-	"github.com/google/nomos/pkg/policyimporter/filesystem"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
-	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
-
-// This would be in a library as part of a separate CL.
-func buildTreeWithObjects(dirInfos map[string][]ast.FileObject, t *testing.T) *ast.TreeNode {
-	tree := filesystem.NewDirectoryTree()
-	for dir, objects := range dirInfos {
-		n := tree.AddDir(nomospath.NewFakeRelative(dir))
-		nsObjects := make([]*ast.NamespaceObject, len(objects))
-		for i, object := range objects {
-			nsObjects[i] = &ast.NamespaceObject{FileObject: object}
-		}
-		n.Objects = nsObjects
-	}
-	eb := multierror.Builder{}
-	result := tree.Build(&eb)
-	if eb.HasErrors() {
-		t.Fatal(eb.Build())
-	}
-	return result
-}
 
 // This would be in a library as part of a separate CL.
 func buildSystem(syncs map[schema.GroupVersionKind]bool) *ast.System {
@@ -69,7 +48,7 @@ func TestSyncResourcesValidator(t *testing.T) {
 	testCases := []struct {
 		name       string
 		syncs      map[schema.GroupVersionKind]bool
-		dirInfos   map[string][]ast.FileObject
+		objects    []ast.FileObject
 		shouldFail bool
 	}{
 		{
@@ -78,30 +57,29 @@ func TestSyncResourcesValidator(t *testing.T) {
 		{
 			name:  "role sync and role object",
 			syncs: map[schema.GroupVersionKind]bool{kinds.Role(): true},
-			dirInfos: map[string][]ast.FileObject{
-				"namespaces": {asttesting.NewFakeFileObject(kinds.Role(), "namespaces/r.yaml")},
+			objects: []ast.FileObject{
+				asttesting.NewFakeFileObject(kinds.Role(), "namespaces/r.yaml"),
 			},
 		},
 		{
 			name: "missing role sync",
-			dirInfos: map[string][]ast.FileObject{
-				"namespaces": {asttesting.NewFakeFileObject(kinds.Role(), "namespaces/r.yaml")},
+			objects: []ast.FileObject{
+				asttesting.NewFakeFileObject(kinds.Role(), "namespaces/r.yaml"),
 			},
 			shouldFail: true,
 		},
 		{
 			name:  "rolebinding sync and role object",
 			syncs: map[schema.GroupVersionKind]bool{kinds.RoleBinding(): true},
-			dirInfos: map[string][]ast.FileObject{
-				"namespaces": {asttesting.NewFakeFileObject(kinds.Role(), "namespaces/r.yaml")},
+			objects: []ast.FileObject{
+				asttesting.NewFakeFileObject(kinds.Role(), "namespaces/r.yaml"),
 			},
 			shouldFail: true,
 		},
 		{
-			name: "unsyncable rolebinding in child of namespaces",
-			dirInfos: map[string][]ast.FileObject{
-				"namespaces":     {},
-				"namespaces/foo": {asttesting.NewFakeFileObject(kinds.Role(), "namespaces/foo/r.yaml")},
+			name: "unsyncable role in child of namespaces",
+			objects: []ast.FileObject{
+				asttesting.NewFakeFileObject(kinds.Role(), "namespaces/foo/r.yaml"),
 			},
 			shouldFail: true,
 		},
@@ -110,7 +88,7 @@ func TestSyncResourcesValidator(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			root := ast.Root{
-				Tree:   buildTreeWithObjects(tc.dirInfos, t),
+				Tree:   treetesting.BuildTree(tc.objects...).Tree,
 				System: buildSystem(tc.syncs),
 			}
 

@@ -1085,7 +1085,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/role1.yaml": templateData{}.apply(aRole),
 			"namespaces/bar/role2.yaml": templateData{}.apply(aRole),
 		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Namespace dir with multiple RoleBindings",
@@ -1109,7 +1109,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Policyspace dir with duplicate RoleBindings",
@@ -1121,7 +1121,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r2.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Namespace dir with ClusterRole",
@@ -1160,9 +1160,10 @@ var parserTestCases = []parserTestCase{
 		testName: "Namespace dir with policyspace child",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":         aRepo,
-			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/baz/ignore": "",
+			"system/nomos.yaml":            aRepo,
+			"system/role.yaml":             templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
+			"namespaces/bar/ns.yaml":       templateData{Name: "bar"}.apply(aNamespace),
+			"namespaces/bar/baz/role.yaml": templateData{Name: "role"}.apply(aRole),
 		},
 		expectedErrorCodes: []string{vet.IllegalNamespaceSubdirectoryErrorCode},
 	},
@@ -1173,10 +1174,7 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":     aRepo,
 			"namespaces/bar/ignore": "",
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar":                 createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
-		},
+		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
@@ -1348,7 +1346,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
 			"namespaces/bar/baz/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Policyspace and Namespace dir have duplicate Deployments",
@@ -1362,7 +1360,6 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedErrorCodes: []string{
 			vet.MetadataNameCollisionErrorCode,
-			vet.IllegalAbstractNamespaceObjectKindErrorCode,
 			vet.InvalidNamespaceNameErrorCode,
 		},
 	},
@@ -1427,15 +1424,13 @@ spec:
 		},
 	},
 	{
-		testName: "Namespaces dir with ignore file",
+		testName: "Namespaces dir with ignored file",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aRepo,
 			"namespaces/ignore": "",
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(&Policies{}),
-		},
+		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
@@ -1594,7 +1589,7 @@ spec:
 			"cluster/cr1.yaml":  templateData{ID: "1"}.apply(aClusterRole),
 			"cluster/cr2.yaml":  templateData{ID: "1"}.apply(aClusterRole),
 		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Cluster dir with duplicate ClusterRoleBinding names",
@@ -1605,7 +1600,7 @@ spec:
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			"cluster/crb2.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Clusterregistry dir with duplicate Cluster names",
@@ -1637,7 +1632,7 @@ spec:
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode, vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Dir name not unique 1",
@@ -1667,7 +1662,7 @@ spec:
 			"system/nomos.yaml":              aRepo,
 			"namespaces/kube-system/ns.yaml": templateData{Name: "kube-system"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode, vet.ReservedDirectoryNameErrorCode},
+		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode},
 	},
 	{
 		testName: "Dir name reserved 2",
@@ -1676,7 +1671,7 @@ spec:
 			"system/nomos.yaml":              aRepo,
 			"namespaces/kube-system/ns.yaml": templateData{Name: "default"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode, vet.ReservedDirectoryNameErrorCode, vet.InvalidNamespaceNameErrorCode},
+		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode, vet.InvalidNamespaceNameErrorCode},
 	},
 	{
 		testName: "Dir name reserved 3",
@@ -1685,7 +1680,7 @@ spec:
 			"system/nomos.yaml":              aRepo,
 			"namespaces/kube-system/ns.yaml": templateData{Name: "nomos-system"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode, vet.ReservedDirectoryNameErrorCode, vet.InvalidNamespaceNameErrorCode},
+		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode, vet.InvalidNamespaceNameErrorCode},
 	},
 	{
 		testName: "Dir name invalid",
@@ -1743,8 +1738,6 @@ spec:
 		},
 		expectedErrorCodes: []string{
 			vet.IllegalAnnotationDefinitionErrorCode,
-			vet.UnsyncableNamespaceObjectErrorCode,
-			vet.IllegalAbstractNamespaceObjectKindErrorCode,
 		},
 	},
 	{
@@ -1761,8 +1754,6 @@ spec:
 		},
 		expectedErrorCodes: []string{
 			vet.IllegalLabelDefinitionErrorCode,
-			vet.UnsyncableNamespaceObjectErrorCode,
-			vet.IllegalAbstractNamespaceObjectKindErrorCode,
 		},
 	},
 	{
@@ -1912,7 +1903,7 @@ spec:
 			"system/nomos.yaml":         aRepo,
 			"namespaces/foo/nomos.yaml": aRepo,
 		},
-		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode, vet.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode},
 	},
 	{
 		testName: "Sync outside system/ is an error",
@@ -1921,7 +1912,7 @@ spec:
 			"system/nomos.yaml":         aRepo,
 			"namespaces/foo/nomos.yaml": templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 		},
-		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode, vet.IllegalAbstractNamespaceObjectKindErrorCode},
+		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode},
 	},
 	{
 		testName: "Sync contains a CRD",
@@ -2074,7 +2065,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			ClusterPolicy: tc.expectedClusterPolicy,
 			Syncs:         tc.expectedSyncs,
 		}
-		if d := cmp.Diff(actualPolicies, expectedPolicies, cmpopts.IgnoreUnexported(resource.Quantity{})); d != "" {
+		if d := cmp.Diff(expectedPolicies, actualPolicies, cmpopts.IgnoreUnexported(resource.Quantity{})); d != "" {
 			t.Errorf("Actual and expected policies didn't match: diff\n%v", d)
 		}
 	}
@@ -3057,9 +3048,7 @@ func TestEmptyDirectories(t *testing.T) {
 				t.Fatalf("unexpected error: %#v", err)
 			}
 			expectedPolicies := &v1.AllPolicies{
-				PolicyNodes: map[string]v1.PolicyNode{
-					v1.RootPolicyNodeName: createRootPN(nil),
-				},
+				PolicyNodes:   map[string]v1.PolicyNode{},
 				ClusterPolicy: createClusterPolicy(),
 				Syncs:         map[string]v1alpha1.Sync{},
 			}

@@ -3,31 +3,22 @@ package visitors
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
-	"github.com/google/nomos/pkg/policyimporter/filesystem"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
-	"github.com/google/nomos/pkg/util/multierror"
 )
 
-func buildTree(dirs []string, t *testing.T) *ast.TreeNode {
-	tree := filesystem.NewDirectoryTree()
-	for _, dir := range dirs {
-		tree.AddDir(nomospath.NewFakeRelative(dir))
-	}
-	eb := multierror.Builder{}
-	result := tree.Build(&eb)
-	if eb.HasErrors() {
-		t.Fatal(eb.Build())
-	}
-	return result
+func fakeRole(dir string) ast.FileObject {
+	return asttesting.NewFakeFileObject(kinds.Role(), dir+"/role.yaml")
 }
 
 func TestUniqueDirectoryValidator(t *testing.T) {
 	testCases := []struct {
 		name       string
-		dirs       []string
+		root       *ast.Root
 		shouldFail bool
 	}{
 		{
@@ -35,35 +26,38 @@ func TestUniqueDirectoryValidator(t *testing.T) {
 		},
 		{
 			name: "just namespaces/",
-			dirs: []string{"namespaces"},
+			root: treetesting.BuildTree(fakeRole("namespaces")),
 		},
 		{
 			name: "one dir",
-			dirs: []string{"namespaces", "namespaces/foo"},
+			root: treetesting.BuildTree(fakeRole("namespaces/foo")),
 		},
 		{
 			name:       "subdirectory of self",
-			dirs:       []string{"namespaces", "namespaces/foo", "namespaces/foo/foo"},
+			root:       treetesting.BuildTree(fakeRole("namespaces/foo/foo")),
 			shouldFail: true,
 		},
 		{
 			name:       "deep subdirectory of self",
-			dirs:       []string{"namespaces", "namespaces/foo", "namespaces/foo/bar", "namespaces/foo/bar/foo"},
+			root:       treetesting.BuildTree(fakeRole("namespaces/foo/bar/foo")),
 			shouldFail: true,
 		},
 		{
 			name:       "child of different directories",
-			dirs:       []string{"namespaces", "namespaces/foo", "namespaces/foo/bar", "namespaces/qux", "namespaces/qux/bar"},
+			root:       treetesting.BuildTree(fakeRole("namespaces/bar/foo"), fakeRole("namespaces/qux/foo")),
 			shouldFail: true,
+		},
+		{
+			name: "directory with two children",
+			root: treetesting.BuildTree(fakeRole("namespaces/bar/foo"), fakeRole("namespaces/bar/qux")),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			root := ast.Root{Tree: buildTree(tc.dirs, t)}
 
 			var v ast.Visitor = NewUniqueDirectoryValidator()
-			root.Accept(v)
+			tc.root.Accept(v)
 
 			if tc.shouldFail {
 				vettesting.ExpectErrors([]string{vet.DuplicateDirectoryNameErrorCode}, v.Error(), t)

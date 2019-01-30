@@ -31,6 +31,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/meta"
@@ -99,18 +100,6 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 	return p, nil
 }
 
-func toDirInfoMap(fileInfos []ast.FileObject) map[nomospath.Relative][]ast.FileObject {
-	result := make(map[nomospath.Relative][]ast.FileObject)
-
-	// If a directory has resources, its value in the map will be non-nil.
-	for _, i := range fileInfos {
-		d := i.Dir()
-		result[d] = append(result[d], i)
-	}
-
-	return result
-}
-
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
 // Resources are read from the following directories:
 //
@@ -156,6 +145,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	clusterDir := p.root.Join(repo.ClusterDir)
 	clusterInfos := p.readResources(clusterDir, errorBuilder)
 	validateCluster(clusterInfos, errorBuilder)
+	processCluster(clusterInfos, astRoot)
 
 	// processing for <root>/clusterregistry/*
 	clusterregistryInfos := p.readResources(p.root.Join(repo.ClusterRegistryDir), errorBuilder)
@@ -174,11 +164,26 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	nsInfos := p.readResources(nsDir, errorBuilder)
 	validateNamespaces(nsInfos, nsDirsOrdered, errorBuilder)
 
-	// TODO: temporary until processDirs refactoring
-	dirInfos := toDirInfoMap(nsInfos)
+	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos)}
+	visitors = append(visitors, p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet, apiInfo)...)
+	for _, visitor := range visitors {
+		if errorBuilder.HasErrors() && visitor.RequiresValidState() {
+			return nil, errorBuilder.Build()
+		}
+		astRoot = astRoot.Accept(visitor)
+		errorBuilder.Add(visitor.Error())
+		if visitor.Fatal() {
+			return nil, errorBuilder.Build()
+		}
+	}
 
-	policies, err := p.processDirs(apiInfo, dirInfos, clusterInfos, nsDirsOrdered, astRoot, syncs, clusters, selectors)
-	errorBuilder.Add(err)
+	outputVisitor := backend.NewOutputVisitor()
+	astRoot.Accept(outputVisitor)
+	policies := outputVisitor.AllPolicies()
+
+	if errorBuilder.HasErrors() {
+		return nil, errorBuilder.Build()
+	}
 
 	if glog.V(8) {
 		// REALLY useful when debugging.
@@ -249,64 +254,6 @@ func (p *Parser) readResources(dir nomospath.Relative, errorBuilder *multierror.
 		}
 	}
 	return fileObjects
-}
-
-// processDirs validates objects in directory trees and converts them into hierarchical policy objects.
-//
-// clusterregistryInfos is the set of resources found in the directory <root>/clusterregistry.
-//
-// It first processes the cluster directory and then the tree hierarchy.
-// cluster is a single, flat directory containing cluster-scoped resources.
-// tree is hierarchical, containing 2 categories of directories:
-// 1. AbstractNamespace directory: Non-leaf directories at any depth within root directory.
-// 2. Namespace directory: Leaf directories at any depth within root directory.
-func (p *Parser) processDirs(apiInfo *meta.APIInfo,
-	dirInfos map[nomospath.Relative][]ast.FileObject,
-	clusterObjects []ast.FileObject,
-	nsDirsOrdered []nomospath.Relative,
-	astRoot *ast.Root,
-	syncs []*v1alpha1.Sync,
-	clusters []clusterregistry.Cluster,
-	selectors []v1alpha1.ClusterSelector) (*v1.AllPolicies, error) {
-
-	processCluster(clusterObjects, astRoot)
-
-	errorBuilder := multierror.Builder{}
-	treeGenerator := NewDirectoryTree()
-	if len(nsDirsOrdered) > 0 {
-		rootDir := nsDirsOrdered[0]
-		infos := dirInfos[rootDir]
-		processNamespaces(rootDir, infos, treeGenerator)
-		for _, d := range nsDirsOrdered[1:] {
-			infos := dirInfos[d]
-			processNamespaces(d, infos, treeGenerator)
-		}
-	}
-
-	tree := treeGenerator.Build(&errorBuilder)
-	astRoot.Tree = tree
-
-	visitors := p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet, apiInfo)
-
-	outputVisitor := backend.NewOutputVisitor()
-	visitors = append(visitors, outputVisitor)
-	for _, visitor := range visitors {
-		if errorBuilder.HasErrors() && visitor.RequiresValidState() {
-			return nil, errorBuilder.Build()
-		}
-		astRoot = astRoot.Accept(visitor)
-		err := visitor.Error()
-		errorBuilder.Add(err)
-		if visitor.Fatal() {
-			return nil, errorBuilder.Build()
-		}
-	}
-
-	policies := outputVisitor.AllPolicies()
-	if errorBuilder.HasErrors() {
-		return nil, errorBuilder.Build()
-	}
-	return policies, nil
 }
 
 // toInheritanceSpecs converts Syncs to InheritanceSpecs. It also evaluates defaults so that later

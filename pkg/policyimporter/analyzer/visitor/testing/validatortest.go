@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 )
@@ -32,8 +33,8 @@ func (vt *ObjectValidatorTest) Run(t *testing.T) {
 	for _, tc := range vt.TestCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			validator := vt.Validator()
-			object := &ast.NamespaceObject{FileObject: tc.Object}
-			validator.VisitObject(object)
+			root := treetesting.BuildTree(tc.Object)
+			root.Accept(validator)
 
 			if tc.ShouldFail {
 				vettesting.ExpectErrors([]string{vt.ErrorCode}, validator.Error(), t)
@@ -44,40 +45,34 @@ func (vt *ObjectValidatorTest) Run(t *testing.T) {
 	}
 }
 
-// NodeObjectsValidatorTestCase defines objects in a single TreeNode, and whether the collection of
+// ObjectsValidatorTestCase defines objects in a repository, and whether the collection of
 // objects fails validation.
-type NodeObjectsValidatorTestCase struct {
+type ObjectsValidatorTestCase struct {
 	Name       string
 	ShouldFail bool
-	// Objects is a collection of FileObjects all in the same TreeNode.
+	// Objects is a collection of FileObjects, not necessarily in the same TreeNode.
 	Objects []ast.FileObject
 }
 
-// NodeObjectsValidatorTest defines a Validator which is initialized and run on each of the provided
+// ObjectsValidatorTest defines a Validator which is initialized and run on each of the provided
 // test cases.
-type NodeObjectsValidatorTest struct {
+type ObjectsValidatorTest struct {
 	// Validator is the function which produces a fresh ValidatorVisitor.
-	Validator func() *visitor.ValidatorVisitor
+	Validator func() ast.Visitor
 	// ErrorCode is what the Validator returns if there is an error.
 	ErrorCode string
 	// Test
-	TestCases []NodeObjectsValidatorTestCase
+	TestCases []ObjectsValidatorTestCase
 }
 
 // Run executes each test case in the test.
-func (vt *NodeObjectsValidatorTest) Run(t *testing.T) {
+func (vt *ObjectsValidatorTest) Run(t *testing.T) {
 	for _, tc := range vt.TestCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			validator := vt.Validator()
 
-			node := &ast.TreeNode{
-				Objects: make([]*ast.NamespaceObject, len(tc.Objects)),
-			}
-			for i, object := range tc.Objects {
-				node.Objects[i] = &ast.NamespaceObject{FileObject: object}
-			}
-
-			validator.VisitTreeNode(node)
+			root := treetesting.BuildTree(tc.Objects...)
+			root.Accept(validator)
 
 			if tc.ShouldFail {
 				vettesting.ExpectErrors([]string{vt.ErrorCode}, validator.Error(), t)
