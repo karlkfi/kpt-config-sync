@@ -145,3 +145,13 @@ func (v *Copying) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 func (v *Copying) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	return o.DeepCopy()
 }
+
+// Fatal implements Visitor.
+func (v *Copying) Fatal() bool {
+	return v.Error() != nil
+}
+
+// RequiresValidState implements Visitor.
+func (v *Copying) RequiresValidState() bool {
+	return true
+}

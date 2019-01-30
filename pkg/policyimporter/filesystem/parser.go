@@ -298,9 +298,13 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 
 	visitors := p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet, apiInfo)
 	for _, visitor := range visitors {
+		if errorBuilder.HasErrors() && visitor.RequiresValidState() {
+			return nil, errorBuilder.Build()
+		}
 		astRoot = astRoot.Accept(visitor)
-		if err := visitor.Error(); err != nil {
-			errorBuilder.Add(err)
+		err := visitor.Error()
+		errorBuilder.Add(err)
+		if visitor.Fatal() {
 			return nil, errorBuilder.Build()
 		}
 	}

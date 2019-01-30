@@ -40,4 +40,11 @@ type Visitor interface {
 
 	// Error allows the visitor to emit errors that may have occurred while operating.
 	Error() error
+
+	// Fatal returns if the Visitor has determined that Parser should stop processing immediately.
+	Fatal() bool
+
+	// RequiresValidState returns whether this Visitor should run if the Parser has encountered any
+	// errors whatsoever.
+	RequiresValidState() bool
 }

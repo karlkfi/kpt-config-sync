@@ -173,6 +173,17 @@ func (vb *Base) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	return o
 }
 
+// Error implements Visitor.
 func (vb *Base) Error() error {
 	return nil
+}
+
+// Fatal implements Visitor.
+func (vb *Base) Fatal() bool {
+	return false
+}
+
+// RequiresValidState implements Visitor.
+func (vb *Base) RequiresValidState() bool {
+	return false
 }
