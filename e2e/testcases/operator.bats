@@ -41,7 +41,7 @@ setup() {
   git::update "${YAML_DIR}/branch-rolebinding.yaml" acme/namespaces/eng/backend/bob-rolebinding.yaml
   git commit -m "branch test"
   echo "git push branch"
-  git push origin branch
+  git push origin branch -f
 
   # Apply a Nomos that points to branch "branch"
   kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git-branch.yaml"
