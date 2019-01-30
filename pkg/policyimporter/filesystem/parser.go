@@ -24,7 +24,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
@@ -37,7 +37,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/multierror"
-	policynodevalidator "github.com/google/nomos/pkg/util/policynode/validator"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -314,11 +313,6 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	policies := outputVisitor.AllPolicies()
 
 	if err := clusterpolicy.Validate(policies.ClusterPolicy); err != nil {
-		errorBuilder.Add(err)
-		return nil, errorBuilder.Build()
-	}
-	v := policynodevalidator.FromMap(policies.PolicyNodes)
-	if err := v.Validate(); err != nil {
 		errorBuilder.Add(err)
 		return nil, errorBuilder.Build()
 	}

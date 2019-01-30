@@ -1420,7 +1420,7 @@ spec:
 			"system/nomos.yaml":  aRepo,
 			"namespaces/ns.yaml": templateData{Name: "namespaces"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.IllegalTopLevelNamespaceErrorCode, vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.IllegalTopLevelNamespaceErrorCode},
 	},
 	{
 		testName: "Namespaces dir with ResourceQuota and hierarchical quota inheritance",

@@ -20,10 +20,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/util/policynode/validator"
 	"k8s.io/api/extensions/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -387,9 +386,6 @@ func TestDiffer(t *testing.T) {
 			for _, action := range gotActions {
 				executeAction(t, action, policyNodes)
 			}
-			if err := validate(policyNodes); err != nil {
-				t.Errorf("Policy hierarchy state became invalid after executing actions")
-			}
 		})
 	}
 }
@@ -582,17 +578,6 @@ func TestSyncReductions(t *testing.T) {
 			}
 		})
 	}
-}
-
-func validate(nodes map[string]v1.PolicyNode) error {
-	v := validator.New()
-	v.AllowMultipleRoots = true
-	for _, n := range nodes {
-		if err := v.Add(&n); err != nil {
-			return err
-		}
-	}
-	return v.Validate()
 }
 
 func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.PolicyNode) {
