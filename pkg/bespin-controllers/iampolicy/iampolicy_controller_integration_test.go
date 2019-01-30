@@ -114,8 +114,12 @@ func TestReconcileCreateAndUpdate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			restore := iamRestoreFunc(t, projID)
+			defer restore()
+
 			// Add the current service account and Googler (if run locally) as owners of the project
-			// to try and prevent locking the current user out of the project.
+			// to try and prevent locking the current user out of the project, or the test
+			// being able to restore the old IAM policy.
 			members := []string{fmt.Sprintf("serviceAccount:%v", test.GetDefaultServiceAccount(t))}
 			if strings.HasSuffix(hostname, ".corp.google.com") {
 				members = append(members, fmt.Sprintf("user:%s@google.com", currentUser.Username))
@@ -124,24 +128,6 @@ func TestReconcileCreateAndUpdate(t *testing.T) {
 			safetyBinding := bespinv1.IAMPolicyBinding{
 				Role:    "roles/owner",
 				Members: members,
-			}
-
-			c, err := gcp.NewCloudResourceManagerClient(context.TODO())
-			if err != nil {
-				t.Fatalf("unable to spawn cloudresourcemanager client: %v", err)
-			}
-			_, err = c.Projects.SetIamPolicy(projID, &cloudres.SetIamPolicyRequest{
-				Policy: &cloudres.Policy{
-					Bindings: []*cloudres.Binding{
-						{
-							Role:    safetyBinding.Role,
-							Members: safetyBinding.Members,
-						},
-					},
-				},
-			}).Do()
-			if err != nil {
-				t.Fatalf("unable to set GCP safety policy: %v", err)
 			}
 
 			tc.bindings = append(tc.bindings, safetyBinding)
@@ -153,6 +139,29 @@ func TestReconcileCreateAndUpdate(t *testing.T) {
 				testReconcileUpdate(t, mgr, projID, policy, tc.newBindings)
 			}
 		})
+	}
+}
+
+func iamRestoreFunc(t *testing.T, projID string) (done func()) {
+	t.Helper()
+	c, err := gcp.NewCloudResourceManagerClient(context.TODO())
+	if err != nil {
+		t.Fatalf("unable to spawn cloudresourcemanager client: %v", err)
+	}
+
+	oldPolicy, err := c.Projects.GetIamPolicy(projID, &cloudres.GetIamPolicyRequest{}).Do()
+	if err != nil {
+		t.Fatalf("unable to get project's current IAM policy: %v", err)
+	}
+
+	return func() {
+		// Removing the etag means the policy will be applied blindly, regardless of versioning.
+		// Different versions of the IAM policy may have been set between the time of saving this policy
+		// and restoring it.
+		oldPolicy.Etag = ""
+		if _, err := c.Projects.SetIamPolicy(projID, &cloudres.SetIamPolicyRequest{Policy: oldPolicy}).Do(); err != nil {
+			t.Logf("unable to reset project IAM, test possibly locked out from project: %v", err)
+		}
 	}
 }
 
