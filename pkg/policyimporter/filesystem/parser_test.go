@@ -1967,14 +1967,14 @@ spec:
 		expectedErrorCodes: []string{vet.IllegalKindInClusterregistryErrorCode},
 	},
 	{
-		testName: "Illegal NamespaceSelector in namespaces/",
+		testName: "Illegal NamespaceSelector in Namespace directory.",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":                     aRepo,
 			"namespaces/foo/namespace.yaml":         templateData{Name: "foo"}.apply(aNamespace),
 			"namespaces/foo/namespaceselector.yaml": templateData{}.apply(aNamespaceSelector),
 		},
-		expectedErrorCodes: []string{vet.IllegalKindInNamespacesErrorCode},
+		expectedErrorCodes: []string{vet.UndocumentedErrorCode},
 	},
 }
 

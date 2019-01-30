@@ -3,17 +3,25 @@ package syntax
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/util/multierror"
 )
 
-// NamespacesKindValidator ensures only the allowed set of Kinds appear in namespaces/
-var NamespacesKindValidator = &FileObjectValidator{
-	ValidateFn: func(object ast.FileObject) error {
-		switch object.Object.(type) {
-		case *v1alpha1.NamespaceSelector:
-			return vet.IllegalKindInNamespacesError{Resource: &object}
-		default:
+// NewNamespaceKindValidator returns a Validator that ensures only the allowed set of Kinds appear
+// in Namespaces.
+func NewNamespaceKindValidator() *visitor.ValidatorVisitor {
+	return visitor.NewTreeNodeValidator(func(n *ast.TreeNode) error {
+		eb := multierror.Builder{}
+		if n.Type == node.Namespace {
+			for _, object := range n.Objects {
+				switch object.Object.(type) {
+				case *v1alpha1.NamespaceSelector:
+					eb.Add(vet.IllegalKindInNamespacesError{Resource: object})
+				}
+			}
 		}
-		return nil
-	},
+		return eb.Build()
+	})
 }

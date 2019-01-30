@@ -40,10 +40,10 @@ func NewDirectoryTree() *DirectoryTree {
 // AddDir adds the given node at the the given OS-specific path.
 // p is the OS-specific filepath of the directory relative to the Nomos repo root directory.
 // typ denotes whether the directory is a policyspace or a namespace.
-func (t *DirectoryTree) AddDir(p nomospath.Relative, typ node.Type) *ast.TreeNode {
+func (t *DirectoryTree) AddDir(p nomospath.Relative) *ast.TreeNode {
 	newNode := &ast.TreeNode{
 		Relative:  p,
-		Type:      typ,
+		Type:      node.AbstractNamespace,
 		Selectors: map[string]*v1alpha1.NamespaceSelector{},
 	}
 	t.nodes[newNode.Relative] = newNode

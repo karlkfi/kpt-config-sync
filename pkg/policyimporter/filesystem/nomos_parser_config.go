@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -25,6 +26,7 @@ func (n NomosVisitorProvider) Visitors(
 	apiInfo *meta.APIInfo) []ast.Visitor {
 	specs := toInheritanceSpecs(syncs)
 	visitors := []ast.Visitor{
+		syntax.NewNamespaceKindValidator(),
 		validation.NewInputValidator(syncs, specs, clusters, selectors, vet),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(apiInfo),

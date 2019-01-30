@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
@@ -15,7 +14,7 @@ import (
 func buildTree(dirs []string, t *testing.T) *ast.TreeNode {
 	tree := filesystem.NewDirectoryTree()
 	for _, dir := range dirs {
-		tree.AddDir(nomospath.NewFakeRelative(dir), node.AbstractNamespace)
+		tree.AddDir(nomospath.NewFakeRelative(dir))
 	}
 	eb := multierror.Builder{}
 	result := tree.Build(&eb)

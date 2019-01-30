@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
@@ -20,7 +19,7 @@ import (
 func buildTreeWithObjects(dirInfos map[string][]ast.FileObject, t *testing.T) *ast.TreeNode {
 	tree := filesystem.NewDirectoryTree()
 	for dir, objects := range dirInfos {
-		n := tree.AddDir(nomospath.NewFakeRelative(dir), node.AbstractNamespace)
+		n := tree.AddDir(nomospath.NewFakeRelative(dir))
 		nsObjects := make([]*ast.NamespaceObject, len(objects))
 		for i, object := range objects {
 			nsObjects[i] = &ast.NamespaceObject{FileObject: object}

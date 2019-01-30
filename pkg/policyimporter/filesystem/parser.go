@@ -31,7 +31,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/meta"
@@ -131,7 +130,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 		ImportToken: importToken,
 		LoadTime:    loadTime,
 	}
-	errorBuilder := multierror.Builder{}
+	errorBuilder := &multierror.Builder{}
 
 	// Always make sure we're getting the freshest data.
 	p.discoveryClient.Invalidate()
@@ -146,8 +145,8 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 
 	// processing for <root>/system/*
 	var syncs []*v1alpha1.Sync
-	systemInfos := p.readRequiredResources(p.root.Join(repo.SystemDir), &errorBuilder)
-	astRoot.System, astRoot.Repo, syncs = processSystem(systemInfos, p.opts, apiInfo, &errorBuilder)
+	systemInfos := p.readRequiredResources(p.root.Join(repo.SystemDir), errorBuilder)
+	astRoot.System, astRoot.Repo, syncs = processSystem(systemInfos, p.opts, apiInfo, errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
 		return nil, errorBuilder.Build()
@@ -155,12 +154,12 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 
 	// processing for <root>/cluster/*
 	clusterDir := p.root.Join(repo.ClusterDir)
-	clusterInfos := p.readResources(clusterDir, &errorBuilder)
-	validateCluster(clusterInfos, &errorBuilder)
+	clusterInfos := p.readResources(clusterDir, errorBuilder)
+	validateCluster(clusterInfos, errorBuilder)
 
 	// processing for <root>/clusterregistry/*
-	clusterregistryInfos := p.readResources(p.root.Join(repo.ClusterRegistryDir), &errorBuilder)
-	validateClusterRegistry(clusterregistryInfos, &errorBuilder)
+	clusterregistryInfos := p.readResources(p.root.Join(repo.ClusterRegistryDir), errorBuilder)
+	validateClusterRegistry(clusterregistryInfos, errorBuilder)
 	clusters := getClusters(clusterregistryInfos)
 	selectors := getSelectors(clusterregistryInfos)
 	astRoot.ClusterRegistry = getClusterRegistry(clusterregistryInfos)
@@ -170,11 +169,10 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	sel.SetClusterSelector(cs, astRoot)
 
 	nsDir := p.root.Join(p.opts.Extension.NamespacesDir())
-	nsDirsOrdered := p.allDirs(nsDir, &errorBuilder)
+	nsDirsOrdered := p.allDirs(nsDir, errorBuilder)
 
-	nsInfos := p.readResources(nsDir, &errorBuilder)
-	validateNamespaces(nsInfos, nsDirsOrdered,
-		coverage.NewForCluster(clusters, selectors, &errorBuilder), &errorBuilder)
+	nsInfos := p.readResources(nsDir, errorBuilder)
+	validateNamespaces(nsInfos, nsDirsOrdered, errorBuilder)
 
 	// TODO: temporary until processDirs refactoring
 	dirInfos := toDirInfoMap(nsInfos)
@@ -278,16 +276,10 @@ func (p *Parser) processDirs(apiInfo *meta.APIInfo,
 	if len(nsDirsOrdered) > 0 {
 		rootDir := nsDirsOrdered[0]
 		infos := dirInfos[rootDir]
-		processNamespaces(rootDir, infos, treeGenerator, &errorBuilder)
-		if errorBuilder.HasErrors() {
-			return nil, errorBuilder.Build()
-		}
+		processNamespaces(rootDir, infos, treeGenerator)
 		for _, d := range nsDirsOrdered[1:] {
 			infos := dirInfos[d]
-			processNamespaces(d, infos, treeGenerator, &errorBuilder)
-			if errorBuilder.HasErrors() {
-				return nil, errorBuilder.Build()
-			}
+			processNamespaces(d, infos, treeGenerator)
 		}
 	}
 

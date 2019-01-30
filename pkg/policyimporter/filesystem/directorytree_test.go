@@ -29,26 +29,17 @@ import (
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
-type directoryTreeInput struct {
-	path string
-	typ  node.Type
-}
-
 type directoryTreeTestcase struct {
 	name   string
-	inputs []directoryTreeInput
+	inputs []string
 	expect *ast.TreeNode
 	errors []string
 }
 
 func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	tg := NewDirectoryTree()
-	for _, inp := range tc.inputs {
-		typ := inp.typ
-		if typ == "" {
-			typ = node.AbstractNamespace
-		}
-		n := tg.AddDir(nomospath.NewFakeRelative(inp.path), typ)
+	for _, dir := range tc.inputs {
+		n := tg.AddDir(nomospath.NewFakeRelative(dir))
 		if n == nil {
 			t.Fatalf("AddNode returned nil")
 		}
@@ -71,10 +62,8 @@ func (tc *directoryTreeTestcase) Run(t *testing.T) {
 
 var directoryTreeTestcases = []directoryTreeTestcase{
 	{
-		name: "only root",
-		inputs: []directoryTreeInput{
-			{path: "a"},
-		},
+		name:   "only root",
+		inputs: []string{"a"},
 		expect: &ast.TreeNode{
 			Relative:  nomospath.NewFakeRelative("a"),
 			Type:      node.AbstractNamespace,
@@ -82,12 +71,8 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 		},
 	},
 	{
-		name: "small tree",
-		inputs: []directoryTreeInput{
-			{path: "a"},
-			{path: "a/b/c", typ: node.Namespace},
-			{path: "a/b"},
-		},
+		name:   "small tree",
+		inputs: []string{"a", "a/b/c", "a/b"},
 		expect: &ast.TreeNode{
 			Relative:  nomospath.NewFakeRelative("a"),
 			Type:      node.AbstractNamespace,
@@ -100,7 +85,7 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 					Children: []*ast.TreeNode{
 						{
 							Relative:  nomospath.NewFakeRelative("a/b/c"),
-							Type:      node.Namespace,
+							Type:      node.AbstractNamespace,
 							Selectors: map[string]*v1alpha1.NamespaceSelector{},
 						},
 					},
@@ -109,11 +94,8 @@ var directoryTreeTestcases = []directoryTreeTestcase{
 		},
 	},
 	{
-		name: "missing node",
-		inputs: []directoryTreeInput{
-			{path: "a"},
-			{path: "a/b/c", typ: node.Namespace},
-		},
+		name:   "missing node",
+		inputs: []string{"a", "a/b/c"},
 		errors: []string{vet.InternalErrorCode},
 	},
 }
