@@ -273,9 +273,7 @@ func (c *Controller) syncReductions(current, desired *v1.AllPolicies) error {
 		var actualStatus *v1alpha1.SyncStatus
 		for !statusEqual(&expectedStatus, actualStatus) {
 			if time.Now().After(deadline) {
-				glog.Infof("timeout waiting for statuses to converge for Sync %s", sr.Name)
-				// TODO(poertel): return error, after we switch from syncer to generic-syncer.
-				return nil
+				return errors.Errorf("timeout waiting for statuses to converge for Sync %q", sr.Name)
 			}
 			time.Sleep(500 * time.Millisecond)
 			actualSync, err := c.client.PolicyHierarchy().NomosV1alpha1().Syncs().Get(sr.Name, metav1.GetOptions{})
