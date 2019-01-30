@@ -24,7 +24,6 @@ import (
 
 	bespinv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/bespin-controllers/terraform"
-	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -69,16 +68,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to OrganizationPolicy
 	err = c.Watch(&source.Kind{Type: &bespinv1.OrganizationPolicy{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
-	}
-
-	// TODO(user): Modify this to be the types you create
-	// Uncomment watch a Deployment created by OrganizationPolicy - change this for objects you create
-	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &bespinv1.OrganizationPolicy{},
-	})
 	return err
 }
 
