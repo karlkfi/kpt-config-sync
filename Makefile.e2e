@@ -7,8 +7,7 @@ E2E_PARAMS := \
 	GCP_PROJECT=$(GCP_PROJECT) \
 	GCR_PREFIX=$(GCR_PREFIX) \
 
-# Note that it is basically a copy of the staging directory for the installer
-# plus a few extras for e2e.
+# Create a staging directory for e2e
 .PHONY: e2e-staging
 e2e-staging: \
 		$(OPERATOR_TARGET) \
@@ -27,14 +26,15 @@ e2e-staging: \
 	fi
 	@cp $(TOP_DIR)/scripts/init-git-server.sh $(OUTPUT_DIR)/e2e/
 	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(OUTPUT_DIR)/e2e/
-	@cp -r $(STAGING_DIR)/installer $(OUTPUT_DIR)/e2e/
 	@cp ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml $(OUTPUT_DIR)/e2e/
 	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
 
 # Builds the e2e docker image and depencencies.
 # Note that the GCP project is hardcoded since we currently don't want
 # or need a nomos-release version of the e2e-tests image.
-image-e2e-tests: installer-staging e2e-staging \
+image-e2e-tests: \
+		e2e-staging \
+		push-to-gcr-nomos \
 		build/e2e-tests/Dockerfile \
 		build/e2e-tests/build.sh
 	@echo "+++ Building the e2e docker image"
@@ -54,7 +54,7 @@ test-e2e-run-git:
 	    && echo "+++ git e2e tests completed" \
 	    || (echo "### e2e tests failed. Temp dir (with test output logs etc) are available in ${TEMP_OUTPUT_DIR}"; exit 1)
 
-e2e-image-all: image-e2e-tests installer-staging
+e2e-image-all: image-e2e-tests
 
 banner:
 	@cat $(TOP_DIR)/build/banner.txt
