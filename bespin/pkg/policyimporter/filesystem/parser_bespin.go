@@ -2,10 +2,10 @@ package filesystem
 
 import (
 	bespinv1 "github.com/google/nomos/bespin/pkg/api/bespin/v1"
+	"github.com/google/nomos/bespin/pkg/policyimporter/analyzer/transform"
 	bespinvalidation "github.com/google/nomos/bespin/pkg/validation"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

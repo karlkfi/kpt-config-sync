@@ -3,6 +3,7 @@ package filesystem
 import (
 	"os"
 
+	bespinfs "github.com/google/nomos/bespin/pkg/policyimporter/filesystem"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/meta"
@@ -39,7 +40,7 @@ func ParserConfigFactory() ParserConfig {
 	// Check for a set environment variable instead of using a flag so as not to expose
 	// this WIP externally.
 	if _, ok := os.LookupEnv("NOMOS_ENABLE_BESPIN"); ok {
-		e = &BespinVisitorProvider{}
+		e = &bespinfs.BespinVisitorProvider{}
 	} else {
 		e = &NomosVisitorProvider{}
 	}
