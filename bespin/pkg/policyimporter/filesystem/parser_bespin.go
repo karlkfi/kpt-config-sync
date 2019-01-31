@@ -3,10 +3,10 @@ package filesystem
 import (
 	bespinv1 "github.com/google/nomos/bespin/pkg/api/bespin/v1"
 	"github.com/google/nomos/bespin/pkg/policyimporter/analyzer/transform"
-	bespinvalidation "github.com/google/nomos/bespin/pkg/validation"
+	"github.com/google/nomos/bespin/pkg/validation"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
+	nomosvalidation "github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/policyimporter/meta"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -34,11 +34,11 @@ func (b BespinVisitorProvider) Visitors(
 		transform.NewGCPHierarchyVisitor(),
 		transform.NewGCPPolicyVisitor(),
 		transform.NewGCPAnnotationVisitor(),
-		validation.NewScope(apiInfo),
-		validation.NewNameValidator(),
-		bespinvalidation.NewUniqueIAMValidator(),
-		bespinvalidation.NewMaxFolderDepthValidator(),
-		bespinvalidation.NewIAMFilenameValidator(),
+		nomosvalidation.NewScope(apiInfo),
+		nomosvalidation.NewNameValidator(),
+		validation.NewUniqueIAMValidator(),
+		validation.NewMaxFolderDepthValidator(),
+		validation.NewIAMFilenameValidator(),
 	}
 }
 

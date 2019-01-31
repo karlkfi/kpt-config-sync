@@ -119,7 +119,7 @@ type TestFactory struct {
 }
 
 // NewTestFactory returns a new test factory.
-func NewTestFactory(t *testing.T) *TestFactory {
+func NewTestFactory(t *testing.T, extraResources ...*restmapper.APIGroupResources) *TestFactory {
 	// specify an optionalClientConfig to explicitly use in testing
 	// to avoid polluting an existing user Config.
 	config, configFile := defaultFakeClientConfig(t)
@@ -128,7 +128,7 @@ func NewTestFactory(t *testing.T) *TestFactory {
 		Factory: cmdutil.NewFactory(
 			&FakeRESTClientGetter{
 				Config:          config,
-				DiscoveryClient: NewFakeCachedDiscoveryClient(TestAPIResourceList(TestDynamicResources())),
+				DiscoveryClient: NewFakeCachedDiscoveryClient(TestAPIResourceList(TestDynamicResources(extraResources...))),
 			}),
 		Client:          &fake.RESTClient{},
 		tempConfigFile:  configFile,
@@ -380,9 +380,9 @@ func testK8SResources() []*restmapper.APIGroupResources {
 
 // TestDynamicResources returns API Resources for both standard K8S resources
 // and Nomos resources.
-func TestDynamicResources() []*restmapper.APIGroupResources {
+func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*restmapper.APIGroupResources {
 	r := testK8SResources()
-	return append(r, []*restmapper.APIGroupResources{
+	r = append(r, []*restmapper.APIGroupResources{
 		{
 			Group: metav1.APIGroup{
 				Name: "nomos.dev",
@@ -428,5 +428,8 @@ func TestDynamicResources() []*restmapper.APIGroupResources {
 				},
 			},
 		},
-	}...)
+	}...,
+	)
+	r = append(r, extraResources...)
+	return r
 }

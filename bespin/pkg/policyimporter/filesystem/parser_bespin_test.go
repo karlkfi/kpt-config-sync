@@ -19,12 +19,15 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/client-go/restmapper"
+
 	"github.com/google/go-cmp/cmp"
-	bespinv1 "github.com/google/nomos/bespin/pkg/api/bespin/v1"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/bespin/pkg/api/bespin/v1"
+	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	nomosfs "github.com/google/nomos/pkg/policyimporter/filesystem"
 	nomostesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -78,15 +81,15 @@ func TestBespinParser(t *testing.T) {
 		wantErr         bool
 	}{
 		{
-			name: bespinv1.ProjectKind,
+			name: v1.ProjectKind,
 			root: "foo",
 			files: nomostesting.FileContentMap{
-				"system/nomos.yaml":           aRepo,
-				"system/project.yaml":         aProjectSync,
-				"namespaces/bar/ns.yaml":      aNamespaceConfig,
-				"namespaces/bar/project.yaml": aProjectConfig,
+				"system/nomos.yaml":          aRepo,
+				"system/project.yaml":        aProjectSync,
+				"hierarchy/bar/ns.yaml":      aNamespaceConfig,
+				"hierarchy/bar/project.yaml": aProjectConfig,
 			},
-			wantPolicyCount: map[string]int{v1.RootPolicyNodeName: 0, "bar": 1},
+			wantPolicyCount: map[string]int{nomosv1.RootPolicyNodeName: 0, "bar": 1},
 		},
 	}
 
@@ -99,7 +102,18 @@ func TestBespinParser(t *testing.T) {
 				d.CreateTestFile(k, v)
 			}
 
-			f := nomostesting.NewTestFactory(t)
+			f := nomostesting.NewTestFactory(t, &restmapper.APIGroupResources{
+				Group: metav1.APIGroup{
+					Name:             "bespin.dev",
+					Versions:         []metav1.GroupVersionForDiscovery{{Version: "v1"}},
+					PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1"},
+				},
+				VersionedResources: map[string][]metav1.APIResource{
+					"v1": {
+						{Name: "projects", Namespaced: true, Kind: v1.ProjectKind},
+					},
+				},
+			})
 			defer func() {
 				if err := f.Cleanup(); err != nil {
 					t.Fatal(errors.Wrap(err, "could not clean up"))
