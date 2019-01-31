@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/bespin/pkg/controllers/resource"
+	bespinvt "github.com/google/nomos/bespin/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -67,50 +68,50 @@ func TestApplyAnnotationsWithHierarchy(t *testing.T) {
 		ImportToken: "6c81e33a81e757e07ceb2fb06e4da1b22f5ef65b",
 		LoadTime:    time.Now(),
 	}
-	org1 := vt.Helper.GCPOrg("org1")
+	org1 := bespinvt.Helper.GCPOrg("org1")
 	org1WithAnnotations := org1.DeepCopy()
 	addImportAnnotationsFromRoot(r, org1WithAnnotations)
 
-	orgpolicy1 := vt.Helper.GCPOrgPolicy("orgpolicy1")
+	orgpolicy1 := bespinvt.Helper.GCPOrgPolicy("orgpolicy1")
 	addOtherAnnotations(orgpolicy1)
 	orgpolicy1WithAnnotations := orgpolicy1.DeepCopy()
 	addImportAnnotationsFromRoot(r, orgpolicy1WithAnnotations)
 
-	folder1 := vt.Helper.GCPFolder("folder1")
+	folder1 := bespinvt.Helper.GCPFolder("folder1")
 	addImportAnnotations(folder1)
 	folder1WithAnnotations := folder1.DeepCopy()
 	addImportAnnotationsFromRoot(r, folder1WithAnnotations)
 
-	fiam1 := vt.Helper.GCPIAMPolicy("fiam1")
+	fiam1 := bespinvt.Helper.GCPIAMPolicy("fiam1")
 	addImportAnnotations(fiam1)
 	addOtherAnnotations(fiam1)
 	fiam1WithAnnotations := fiam1.DeepCopy()
 	addImportAnnotationsFromRoot(r, fiam1WithAnnotations)
 
-	folder2 := vt.Helper.GCPFolder("folder2")
+	folder2 := bespinvt.Helper.GCPFolder("folder2")
 	folder2WithAnnotations := folder2.DeepCopy()
 	addImportAnnotationsFromRoot(r, folder2WithAnnotations)
 
-	project1 := vt.Helper.GCPProject("project1")
+	project1 := bespinvt.Helper.GCPProject("project1")
 	project1WithAnnotations := project1.DeepCopy()
 	addImportAnnotationsFromRoot(r, project1WithAnnotations)
-	piam1 := vt.Helper.GCPIAMPolicy("piam1")
+	piam1 := bespinvt.Helper.GCPIAMPolicy("piam1")
 	piam1WithAnnotations := piam1.DeepCopy()
 	addImportAnnotationsFromRoot(r, piam1WithAnnotations)
 
-	project2 := vt.Helper.GCPProject("project2")
+	project2 := bespinvt.Helper.GCPProject("project2")
 	addOtherAnnotations(project2)
 	project2WithAnnotations := project2.DeepCopy()
 	addImportAnnotationsFromRoot(r, project2WithAnnotations)
-	piam2 := vt.Helper.GCPIAMPolicy("piam2")
+	piam2 := bespinvt.Helper.GCPIAMPolicy("piam2")
 	piam2WithAnnotations := piam2.DeepCopy()
 	addImportAnnotationsFromRoot(r, piam2WithAnnotations)
 
-	project3 := vt.Helper.GCPProject("project3")
+	project3 := bespinvt.Helper.GCPProject("project3")
 	addOtherAnnotations(project3)
 	project3WithAnnotations := project3.DeepCopy()
 	addImportAnnotationsFromRoot(r, project3WithAnnotations)
-	piam3 := vt.Helper.GCPIAMPolicy("piam3")
+	piam3 := bespinvt.Helper.GCPIAMPolicy("piam3")
 	piam3WithAnnotations := piam3.DeepCopy()
 	addImportAnnotationsFromRoot(r, piam3WithAnnotations)
 

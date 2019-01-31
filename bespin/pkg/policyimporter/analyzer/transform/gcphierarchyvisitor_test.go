@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	bespinvt "github.com/google/nomos/bespin/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -29,15 +30,15 @@ import (
 
 func TestMultiTopOrgFolderProject(t *testing.T) {
 	de := ast.Extension{}
-	org1 := vt.Helper.GCPOrg("org1")
-	org2 := vt.Helper.GCPOrg("org2")
-	org3 := vt.Helper.GCPOrg("org3")
-	folder1 := vt.Helper.GCPFolder("folder1")
-	folder2 := vt.Helper.GCPFolder("folder2")
-	folder3 := vt.Helper.GCPFolder("folder3")
-	project1 := vt.Helper.GCPProject("project1")
-	project2 := vt.Helper.GCPProject("project2")
-	project3 := vt.Helper.GCPProject("project3")
+	org1 := bespinvt.Helper.GCPOrg("org1")
+	org2 := bespinvt.Helper.GCPOrg("org2")
+	org3 := bespinvt.Helper.GCPOrg("org3")
+	folder1 := bespinvt.Helper.GCPFolder("folder1")
+	folder2 := bespinvt.Helper.GCPFolder("folder2")
+	folder3 := bespinvt.Helper.GCPFolder("folder3")
+	project1 := bespinvt.Helper.GCPProject("project1")
+	project2 := bespinvt.Helper.GCPProject("project2")
+	project3 := bespinvt.Helper.GCPProject("project3")
 
 	var tests = []struct {
 		name string
@@ -386,15 +387,15 @@ func TestMultiTopOrgFolderProject(t *testing.T) {
 
 func TestFolderAndOrg(t *testing.T) {
 	de := ast.Extension{}
-	org := vt.Helper.GCPOrg("org-sample")
-	folder := vt.Helper.GCPFolder("folder-sample")
-	folderUnderOrg := vt.Helper.GCPFolder("folder-under-org-sample")
+	org := bespinvt.Helper.GCPOrg("org-sample")
+	folder := bespinvt.Helper.GCPFolder("folder-sample")
+	folderUnderOrg := bespinvt.Helper.GCPFolder("folder-under-org-sample")
 	folderUnderOrgWithParentRef := folderUnderOrg.DeepCopy()
 	folderUnderOrgWithParentRef.Spec.ParentRef = corev1.ObjectReference{
 		Kind: org.TypeMeta.Kind,
 		Name: org.ObjectMeta.Name,
 	}
-	subFolder := vt.Helper.GCPFolder("subfolder-sample")
+	subFolder := bespinvt.Helper.GCPFolder("subfolder-sample")
 	subFolderWithParentRef := subFolder.DeepCopy()
 	subFolderWithParentRef.Spec.ParentRef = corev1.ObjectReference{
 		Kind: folder.TypeMeta.Kind,
@@ -573,9 +574,9 @@ func TestFolderAndOrg(t *testing.T) {
 
 func TestProject(t *testing.T) {
 	de := ast.Extension{}
-	org := vt.Helper.GCPOrg("org")
-	folder := vt.Helper.GCPFolder("folder")
-	project := vt.Helper.GCPProject("project")
+	org := bespinvt.Helper.GCPOrg("org")
+	folder := bespinvt.Helper.GCPFolder("folder")
+	project := bespinvt.Helper.GCPProject("project")
 	projectUnderOrgWithParentRef := project.DeepCopy()
 	projectUnderOrgWithParentRef.Spec.ParentRef = corev1.ObjectReference{
 		Kind: org.TypeMeta.Kind,
@@ -701,9 +702,9 @@ func TestProject(t *testing.T) {
 }
 
 func TestAttachmentPoint(t *testing.T) {
-	org := vt.Helper.GCPOrg("org")
-	folder := vt.Helper.GCPFolder("folder")
-	project := vt.Helper.GCPProject("project")
+	org := bespinvt.Helper.GCPOrg("org")
+	folder := bespinvt.Helper.GCPFolder("folder")
+	project := bespinvt.Helper.GCPProject("project")
 
 	input := &ast.Root{
 		Cluster: &ast.Cluster{},
@@ -759,12 +760,12 @@ func verifyAttachmentPoint(t *testing.T, node *ast.TreeNode, wantRef *corev1.Obj
 }
 
 func TestHierarchyError(t *testing.T) {
-	project := vt.Helper.GCPProject("project")
-	project2 := vt.Helper.GCPProject("project2")
-	folder := vt.Helper.GCPFolder("folder")
-	folder2 := vt.Helper.GCPFolder("folder2")
-	org := vt.Helper.GCPFolder("org")
-	org2 := vt.Helper.GCPOrg("org2")
+	project := bespinvt.Helper.GCPProject("project")
+	project2 := bespinvt.Helper.GCPProject("project2")
+	folder := bespinvt.Helper.GCPFolder("folder")
+	folder2 := bespinvt.Helper.GCPFolder("folder2")
+	org := bespinvt.Helper.GCPFolder("org")
+	org2 := bespinvt.Helper.GCPOrg("org2")
 	var tests = []struct {
 		name  string
 		input *ast.Root

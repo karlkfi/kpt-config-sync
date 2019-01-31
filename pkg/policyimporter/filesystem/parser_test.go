@@ -2011,7 +2011,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		ParserOpt{
 			Vet:       tc.vet,
 			Validate:  true,
-			Extension: ParserConfigFactory(),
+			Extension: &NomosVisitorProvider{},
 		},
 	)
 	if err != nil {
@@ -3036,7 +3036,7 @@ func TestEmptyDirectories(t *testing.T) {
 				ParserOpt{
 					Vet:       false,
 					Validate:  true,
-					Extension: ParserConfigFactory(),
+					Extension: &NomosVisitorProvider{},
 				},
 			)
 			if err != nil {

@@ -20,9 +20,10 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	bespin_v1 "github.com/google/nomos/bespin/pkg/api/bespin/v1"
+	bespinv1 "github.com/google/nomos/bespin/pkg/api/bespin/v1"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
+	nomosfs "github.com/google/nomos/pkg/policyimporter/filesystem"
+	nomostesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/pkg/errors"
 )
 
@@ -58,19 +59,28 @@ spec:
   # Add fields here
   foo: bar
 `
+
+	aRepo = `
+kind: Repo
+apiVersion: nomos.dev/v1alpha1
+spec:
+  version: "0.1.0"
+metadata:
+  name: repo
+`
 )
 
 func TestBespinParser(t *testing.T) {
 	var tests = []struct {
 		name, root      string
-		files           fstesting.FileContentMap
+		files           nomostesting.FileContentMap
 		wantPolicyCount map[string]int
 		wantErr         bool
 	}{
 		{
-			name: bespin_v1.ProjectKind,
+			name: bespinv1.ProjectKind,
 			root: "foo",
-			files: fstesting.FileContentMap{
+			files: nomostesting.FileContentMap{
 				"system/nomos.yaml":           aRepo,
 				"system/project.yaml":         aProjectSync,
 				"namespaces/bar/ns.yaml":      aNamespaceConfig,
@@ -82,21 +92,21 @@ func TestBespinParser(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			d := fstesting.NewTestDir(t, tc.root)
+			d := nomostesting.NewTestDir(t, tc.root)
 			defer d.Remove()
 
 			for k, v := range tc.files {
 				d.CreateTestFile(k, v)
 			}
 
-			f := fstesting.NewTestFactory(t)
+			f := nomostesting.NewTestFactory(t)
 			defer func() {
 				if err := f.Cleanup(); err != nil {
 					t.Fatal(errors.Wrap(err, "could not clean up"))
 				}
 			}()
 
-			p, err := NewParserWithFactory(f, ParserOpt{Validate: true, Extension: ParserConfigFactory()})
+			p, err := nomosfs.NewParserWithFactory(f, nomosfs.ParserOpt{Validate: true, Extension: &BespinVisitorProvider{}})
 			if err != nil {
 				t.Fatal(err)
 			}

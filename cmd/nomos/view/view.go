@@ -33,7 +33,7 @@ non-zero error code.`,
 		}
 		resources, err := parse.Parse(
 			dir,
-			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: filesystem.ParserConfigFactory()})
+			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}})
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

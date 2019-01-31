@@ -68,7 +68,7 @@ func (tc *testCase) Run(t *testing.T) {
 		ParserOpt{
 			Vet:       true,
 			Validate:  false,
-			Extension: ParserConfigFactory(),
+			Extension: &NomosVisitorProvider{},
 		},
 	)
 	if err2 != nil {

@@ -58,7 +58,7 @@ func main() {
 
 	parser, err := filesystem.NewParser(
 		&genericclioptions.ConfigFlags{},
-		filesystem.ParserOpt{Validate: true, Extension: filesystem.ParserConfigFactory()})
+		filesystem.ParserOpt{Validate: true, Extension: &filesystem.NomosVisitorProvider{}})
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %+v", err)
 	}

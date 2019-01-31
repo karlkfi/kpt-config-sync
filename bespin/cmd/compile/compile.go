@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/bespin/pkg/policyimporter/filesystem"
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/cmd/nomos/util"
-	"github.com/google/nomos/pkg/policyimporter/filesystem"
+	nomosfs "github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +18,7 @@ import (
 var Cmd = &cobra.Command{
 	Use:   "compile",
 	Short: "Compile objects from a GKE Policy Management directory",
-	Long: `Output compiled objects from a GKE Policy Management directory.  This 
+	Long: `Output compiled objects from a GKE Policy Management directory.  This
 parses the directory then outputs YAML as it will be applied to the API server
 sans any implementation specific Custom Resources involved.  If errors are encountered
 during parsing, prints those errors and returns a non-zero error code.`,
@@ -33,7 +34,7 @@ during parsing, prints those errors and returns a non-zero error code.`,
 		start := time.Now()
 		resources, err := parse.Parse(
 			dir,
-			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: filesystem.ParserConfigFactory()})
+			nomosfs.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.BespinVisitorProvider{}})
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

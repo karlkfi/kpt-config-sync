@@ -21,7 +21,6 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 
-	gcpv1 "github.com/google/nomos/pkg/api/policyascode/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
@@ -503,85 +502,5 @@ func (t *TestHelper) AcmeRoot() *ast.Root {
 		Tree:            t.acmeTree(),
 		ImportToken:     t.ImportToken,
 		LoadTime:        t.ImportTime,
-	}
-}
-
-// GCPProject returns a new, sample GCP project object.
-func (t *TestHelper) GCPProject(name string) *gcpv1.Project {
-	return &gcpv1.Project{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gcpv1.SchemeGroupVersion.String(),
-			Kind:       gcpv1.ProjectKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: gcpv1.ProjectSpec{
-			DisplayName: name,
-		},
-	}
-}
-
-// GCPFolder returns a new, sample GCP folder object.
-func (t *TestHelper) GCPFolder(name string) *gcpv1.Folder {
-	return &gcpv1.Folder{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gcpv1.SchemeGroupVersion.String(),
-			Kind:       gcpv1.FolderKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: gcpv1.FolderSpec{
-			DisplayName: name,
-		},
-	}
-}
-
-// GCPOrg returns a new, sample GCP organization object.
-func (t *TestHelper) GCPOrg(name string) *gcpv1.Organization {
-	return &gcpv1.Organization{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gcpv1.SchemeGroupVersion.String(),
-			Kind:       gcpv1.OrganizationKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: gcpv1.OrganizationSpec{
-			ID: 123456789,
-		},
-	}
-}
-
-// GCPIAMPolicy returns a new, sample GCP IAMPolicy object.
-func (t *TestHelper) GCPIAMPolicy(name string) *gcpv1.IAMPolicy {
-	return &gcpv1.IAMPolicy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gcpv1.SchemeGroupVersion.String(),
-			Kind:       gcpv1.IAMPolicyKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: gcpv1.IAMPolicySpec{
-			Bindings: []gcpv1.IAMPolicyBinding{},
-		},
-	}
-}
-
-// GCPOrgPolicy returns a new, sample GCP OrganizationPolicy object.
-func (t *TestHelper) GCPOrgPolicy(name string) *gcpv1.OrganizationPolicy {
-	return &gcpv1.OrganizationPolicy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gcpv1.SchemeGroupVersion.String(),
-			Kind:       gcpv1.OrganizationKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: gcpv1.OrganizationPolicySpec{
-			Constraints: []gcpv1.OrganizationPolicyConstraint{},
-		},
 	}
 }

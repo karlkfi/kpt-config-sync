@@ -1,9 +1,6 @@
 package filesystem
 
 import (
-	"os"
-
-	bespinfs "github.com/google/nomos/bespin/pkg/policyimporter/filesystem"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/meta"
@@ -32,17 +29,4 @@ type ParserConfig interface {
 
 	// NamespacesDir returns the name of the namespaces dir.
 	NamespacesDir() string
-}
-
-// ParserConfigFactory returns the appropriate ParserConfig based on the environment.
-func ParserConfigFactory() ParserConfig {
-	var e ParserConfig
-	// Check for a set environment variable instead of using a flag so as not to expose
-	// this WIP externally.
-	if _, ok := os.LookupEnv("NOMOS_ENABLE_BESPIN"); ok {
-		e = &bespinfs.BespinVisitorProvider{}
-	} else {
-		e = &NomosVisitorProvider{}
-	}
-	return e
 }

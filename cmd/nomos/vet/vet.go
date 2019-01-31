@@ -36,7 +36,7 @@ returns a non-zero error code if any issues are found.
 		}
 		_, err = parse.Parse(
 			dir,
-			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: filesystem.ParserConfigFactory()})
+			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}})
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

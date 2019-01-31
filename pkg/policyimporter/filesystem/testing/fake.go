@@ -28,7 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/pkg/api/policyascode/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -426,18 +425,6 @@ func TestDynamicResources() []*restmapper.APIGroupResources {
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1alpha1": {
 					{Name: "engineers", Namespaced: true, Kind: "Engineer"},
-				},
-			},
-		},
-		{
-			Group: metav1.APIGroup{
-				Name:             "bespin.dev",
-				Versions:         []metav1.GroupVersionForDiscovery{{Version: "v1"}},
-				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1"},
-			},
-			VersionedResources: map[string][]metav1.APIResource{
-				"v1": {
-					{Name: "projects", Namespaced: true, Kind: v1.ProjectKind},
 				},
 			},
 		},
