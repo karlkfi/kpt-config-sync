@@ -24,11 +24,7 @@ kubectl-plugin-staging: \
 	)
 
 .PHONY: installer-staging
-installer-staging: \
-		push-to-gcr-nomos \
-		gen-yaml-all \
-		kubectl-plugin-staging \
-		$(OUTPUT_DIR)
+installer-staging: gen-yaml-all
 	@echo "+++ Creating installer staging directory"
 	@rm -rf $(STAGING_DIR)/installer
 	@mkdir -p $(STAGING_DIR)/installer/manifests/deployment

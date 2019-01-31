@@ -65,6 +65,7 @@ gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_DEPLOYMENTS))
 # Generates the podspec yaml for the component specified.
 gen-yaml-%:
 	@echo "+++ Generating yaml $*"
+	@mkdir -p $(GEN_YAML_DIR)
 	@sed -e 's|IMAGE_NAME|gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG)|' < \
 			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
 
