@@ -37,7 +37,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
-	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -531,11 +530,19 @@ func createPolicyNode(
 	parent string,
 	nodeType v1.PolicyNodeType,
 	policies *Policies) v1.PolicyNode {
-	pn := policynode.NewPolicyNode(name,
-		&v1.PolicyNodeSpec{
+	pn := &v1.PolicyNode{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "PolicyNode",
+			APIVersion: v1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: v1.PolicyNodeSpec{
 			Type:   nodeType,
 			Parent: parent,
-		})
+		},
+	}
 	if policies == nil {
 		return *pn
 	}
@@ -633,9 +640,22 @@ func createAnnotatedRootPN(policies *Policies, annotations map[string]string) v1
 	return pn
 }
 
+// createClusterPolicyWithSpec creates a PolicyNode from the given spec and name.
+func createClusterPolicyWithSpec(name string, spec *v1.ClusterPolicySpec) *v1.ClusterPolicy {
+	return &v1.ClusterPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterPolicy",
+			APIVersion: v1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: *spec,
+	}
+}
+
 func createClusterPolicy() *v1.ClusterPolicy {
-	return policynode.NewClusterPolicy(v1.ClusterPolicyName,
-		&v1.ClusterPolicySpec{})
+	return createClusterPolicyWithSpec(v1.ClusterPolicyName, &v1.ClusterPolicySpec{})
 }
 
 func createResourceQuota(path, name string, labels map[string]string) *corev1.ResourceQuota {
@@ -1441,7 +1461,7 @@ spec:
 					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 				}),
 		},
-		expectedClusterPolicy: policynode.NewClusterPolicy(
+		expectedClusterPolicy: createClusterPolicyWithSpec(
 			v1.ClusterPolicyName,
 			&v1.ClusterPolicySpec{
 				Resources: []v1.GenericResources{
@@ -2109,7 +2129,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: policynode.NewClusterPolicy(
+			expectedClusterPolicy: createClusterPolicyWithSpec(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{
 					Resources: []v1.GenericResources{
@@ -2356,7 +2376,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: policynode.NewClusterPolicy(
+			expectedClusterPolicy: createClusterPolicyWithSpec(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -2419,7 +2439,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: policynode.NewClusterPolicy(
+			expectedClusterPolicy: createClusterPolicyWithSpec(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{
 					Resources: []v1.GenericResources{
@@ -2515,7 +2535,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: policynode.NewClusterPolicy(
+			expectedClusterPolicy: createClusterPolicyWithSpec(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{
 					Resources: []v1.GenericResources{
@@ -2601,7 +2621,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: policynode.NewClusterPolicy(
+			expectedClusterPolicy: createClusterPolicyWithSpec(
 				v1.ClusterPolicyName,
 				// The cluster-scoped policy with mismatching selector was filtered out.
 				&v1.ClusterPolicySpec{}),
@@ -2666,7 +2686,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: policynode.NewClusterPolicy(
+			expectedClusterPolicy: createClusterPolicyWithSpec(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{
 					Resources: []v1.GenericResources{
@@ -2775,7 +2795,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: policynode.NewClusterPolicy(
+			expectedClusterPolicy: createClusterPolicyWithSpec(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{
 					Resources: []v1.GenericResources{

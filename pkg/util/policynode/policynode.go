@@ -17,60 +17,14 @@ limitations under the License.
 package policynode
 
 import (
-	"strconv"
-
 	"github.com/pkg/errors"
 
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
-
-// NewPolicyNode creates a PolicyNode from the given spec and name.
-func NewPolicyNode(name string, spec *v1.PolicyNodeSpec) *v1.PolicyNode {
-	return &v1.PolicyNode{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "PolicyNode",
-			APIVersion: v1.SchemeGroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: *spec,
-	}
-}
-
-// NewClusterPolicy creates a PolicyNode from the given spec and name.
-func NewClusterPolicy(name string, spec *v1.ClusterPolicySpec) *v1.ClusterPolicy {
-	return &v1.ClusterPolicy{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterPolicy",
-			APIVersion: v1.SchemeGroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: *spec,
-	}
-}
-
-// GetResourceVersion parses the resource version string into an int64
-func GetResourceVersion(node *v1.PolicyNode) (int64, error) {
-	resourceVersionStr := node.ResourceVersion
-	if resourceVersionStr == "" {
-		return 0, errors.Errorf("Empty resource version in %#v", node)
-	}
-
-	resourceVersion, err := strconv.ParseInt(resourceVersionStr, 10, 64)
-	if err != nil {
-		return 0, errors.Wrapf(err, "Failed to parse resource version from %#v", node)
-	}
-
-	return resourceVersion, nil
-}
 
 // ListPolicies returns all policies from API server.
 func ListPolicies(policyNodeLister listersv1.PolicyNodeLister,
