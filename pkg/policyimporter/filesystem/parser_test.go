@@ -1466,16 +1466,17 @@ spec:
 			&v1.ClusterPolicySpec{
 				Resources: []v1.GenericResources{
 					{
-						Kind: "HierarchicalQuota",
+						Group: "nomos.dev",
+						Kind:  "HierarchicalQuota",
 						Versions: []v1.GenericVersionResources{
 							{
-								Version: "v1",
+								Version: "v1alpha1",
 								Objects: []runtime.RawExtension{
 									{
 										Object: runtime.Object(
 											&v1alpha1.HierarchicalQuota{
 												TypeMeta: metav1.TypeMeta{
-													APIVersion: corev1.SchemeGroupVersion.String(),
+													APIVersion: v1alpha1.SchemeGroupVersion.String(),
 													Kind:       "HierarchicalQuota",
 												},
 												ObjectMeta: metav1.ObjectMeta{
@@ -1494,7 +1495,8 @@ spec:
 												},
 											}),
 									},
-								}}}}}}),
+								},
+							}}}}}),
 		expectedSyncs: mapOfSingleSyncHierarchyMode("resourcequota", "", "ResourceQuota",
 			v1alpha1.HierarchyModeHierarchicalQuota, "v1"),
 	},

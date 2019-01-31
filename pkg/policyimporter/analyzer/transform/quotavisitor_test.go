@@ -50,7 +50,7 @@ func modCluster(h *v1alpha1.HierarchicalQuota, c *ast.Cluster) *ast.Cluster {
 func makeHierarchicalQuota(h *v1alpha1.HierarchicalQuotaNode) *v1alpha1.HierarchicalQuota {
 	return &v1alpha1.HierarchicalQuota{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 			Kind:       "HierarchicalQuota",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -369,7 +369,8 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
-					Children: []v1alpha1.HierarchicalQuotaNode{v1alpha1.HierarchicalQuotaNode{}, v1alpha1.HierarchicalQuotaNode{}},
+					Children: []v1alpha1.HierarchicalQuotaNode{
+						v1alpha1.HierarchicalQuotaNode{}, v1alpha1.HierarchicalQuotaNode{}},
 				}), &ast.Cluster{}),
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,

@@ -96,7 +96,7 @@ func (v *QuotaVisitor) VisitRoot(c *ast.Root) *ast.Root {
 
 	h := &v1alpha1.HierarchicalQuota{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 			Kind:       "HierarchicalQuota",
 		},
 		ObjectMeta: metav1.ObjectMeta{
