@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/nomos/cmd/bespin/compile"
+	"github.com/google/nomos/bespin/cmd/compile"
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

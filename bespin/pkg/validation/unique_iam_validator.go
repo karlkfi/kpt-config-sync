@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"github.com/google/nomos/pkg/bespin/kinds"
+	"github.com/google/nomos/bespin/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"

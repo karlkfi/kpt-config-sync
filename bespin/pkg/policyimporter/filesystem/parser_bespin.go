@@ -2,8 +2,8 @@ package filesystem
 
 import (
 	bespinv1 "github.com/google/nomos/bespin/pkg/api/bespin/v1"
+	bespinvalidation "github.com/google/nomos/bespin/pkg/validation"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	bespinvalidation "github.com/google/nomos/pkg/bespin/validation"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"

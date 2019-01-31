@@ -20,8 +20,6 @@ package fake
 
 import (
 	clientset "github.com/google/nomos/clientgen/apis"
-	bespinv1 "github.com/google/nomos/clientgen/apis/typed/policyascode/v1"
-	fakebespinv1 "github.com/google/nomos/clientgen/apis/typed/policyascode/v1/fake"
 	nomosv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
 	fakenomosv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1/fake"
 	nomosv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1"
@@ -74,16 +72,6 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 }
 
 var _ clientset.Interface = &Clientset{}
-
-// BespinV1 retrieves the BespinV1Client
-func (c *Clientset) BespinV1() bespinv1.BespinV1Interface {
-	return &fakebespinv1.FakeBespinV1{Fake: &c.Fake}
-}
-
-// Bespin retrieves the BespinV1Client
-func (c *Clientset) Bespin() bespinv1.BespinV1Interface {
-	return &fakebespinv1.FakeBespinV1{Fake: &c.Fake}
-}
 
 // NomosV1alpha1 retrieves the NomosV1alpha1Client
 func (c *Clientset) NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface {

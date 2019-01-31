@@ -19,7 +19,7 @@ package transform
 import (
 	"time"
 
-	"github.com/google/nomos/pkg/bespin-controllers/resource"
+	"github.com/google/nomos/bespin/pkg/controllers/resource"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

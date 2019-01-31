@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyascode/v1"
+	v1 "github.com/google/nomos/bespin/pkg/api/bespin/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"

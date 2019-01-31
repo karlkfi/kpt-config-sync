@@ -3,7 +3,7 @@ package validation
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/bespin/kinds"
+	"github.com/google/nomos/bespin/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"

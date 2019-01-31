@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/bespin-controllers/resource"
+	"github.com/google/nomos/bespin/pkg/controllers/resource"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"

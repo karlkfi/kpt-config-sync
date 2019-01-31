@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/google/nomos/pkg/bespin/kinds"
+	"github.com/google/nomos/bespin/pkg/kinds"
 	nomoskinds "github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
