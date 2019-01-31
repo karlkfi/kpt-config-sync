@@ -45,7 +45,6 @@ image-e2e-tests: installer-staging e2e-staging \
 
 test-e2e-run-git:
 	@echo "+++ Running e2e tests: git"
-	@mkdir -p ${INSTALLER_OUTPUT_DIR}/{kubeconfig,certs,gen_configs,logs}
 	@e2e/e2e.sh \
 		--TEMP_OUTPUT_DIR "$(TEMP_OUTPUT_DIR)" \
 		--OUTPUT_DIR "$(OUTPUT_DIR)" \

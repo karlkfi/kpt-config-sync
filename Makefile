@@ -54,9 +54,6 @@ SCRIPTS_STAGING_DIR := $(STAGING_DIR)/scripts
 # Directory used for staging kubectl plugin release.
 KUBECTL_PLUGIN_STAGING_DIR := $(STAGING_DIR)/kubectl-oidc
 
-# Directory used for installer output.
-INSTALLER_OUTPUT_DIR := $(STAGING_DIR)/installer_output
-
 # Directory that gets mounted into /tmp for build and test containers.
 TEMP_OUTPUT_DIR := $(OUTPUT_DIR)/tmp
 
@@ -170,7 +167,6 @@ $(OUTPUT_DIR):
 	    $(GO_DIR)/std/linux_amd64_static \
 	    $(GO_DIR)/std/darwin_amd64_static \
 	    $(GO_DIR)/std/windows_amd64_static \
-		$(INSTALLER_OUTPUT_DIR) \
 		$(STAGING_DIR) \
 		$(SCRIPTS_STAGING_DIR) \
 		$(KUBECTL_PLUGIN_STAGING_DIR) \
