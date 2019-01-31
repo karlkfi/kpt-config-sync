@@ -230,5 +230,4 @@ lint-license: build
 clientgen:
 	@echo "+++ Generating clientgen directory"
 	$(TOP_DIR)/scripts/generate-clientset.sh
-	$(TOP_DIR)/scripts/generate-watcher.sh
 
