@@ -31,12 +31,6 @@ installer-staging: \
 		$(OUTPUT_DIR)
 	@echo "+++ Creating installer staging directory"
 	@rm -rf $(STAGING_DIR)/installer
-	@( \
-			cd $(GO_DIR); \
-			rsync --relative --quiet \
-			      `find bin -type f | grep installer` \
-			      $(STAGING_DIR)/installer/; \
-	)
 	@cp -r $(TOP_DIR)/build/installer $(STAGING_DIR)
 	@mkdir -p $(STAGING_DIR)/installer/manifests/deployment
 	@cp $(OUTPUT_DIR)/deployment/*  $(STAGING_DIR)/installer/manifests/deployment
