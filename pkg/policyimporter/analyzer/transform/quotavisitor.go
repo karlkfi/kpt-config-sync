@@ -17,6 +17,7 @@ limitations under the License.
 package transform
 
 import (
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -30,8 +31,10 @@ import (
 // of all defined quotas along the ancestry.  If a conflict between quotas is encountered, for
 // example, two nodes define CPU quota, the lower value is used.
 type QuotaVisitor struct {
-	*visitor.Copying               // The copying base class
-	ctx              *quotaContext // The context list for the hierarchy
+	*visitor.Copying // The copying base class
+	// For adding cluster scoped Hierarchical Quota.
+	ctx   *quotaContext // The context list for the hierarchy
+	hNode *v1alpha1.HierarchicalQuotaNode
 }
 
 var _ ast.Visitor = &QuotaVisitor{}
@@ -40,6 +43,7 @@ var _ ast.Visitor = &QuotaVisitor{}
 type quotaContext struct {
 	prev  *quotaContext         // previous context
 	quota *corev1.ResourceQuota // ResourceQuota from directory
+	hNode *v1alpha1.HierarchicalQuotaNode
 }
 
 // merge takes two resource quota objects and produces a merged output that represents the union
@@ -85,18 +89,39 @@ func (v *QuotaVisitor) Error() error {
 	return nil
 }
 
-// VisitCluster implements Visitor
-func (v *QuotaVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
-	// Avoid copying/visiting cluster
-	return c
+// VisitRoot implements Visitor.
+func (v *QuotaVisitor) VisitRoot(c *ast.Root) *ast.Root {
+	v.hNode = &v1alpha1.HierarchicalQuotaNode{}
+	newRoot := v.Copying.VisitRoot(c)
+
+	h := &v1alpha1.HierarchicalQuota{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "HierarchicalQuota",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: resourcequota.ResourceQuotaHierarchyName,
+		},
+		Spec: v1alpha1.HierarchicalQuotaSpec{
+			Hierarchy: *v.hNode,
+		},
+	}
+
+	// Add completed hierarchical quota tree to cluster objects.
+	newRoot.Cluster.Objects = append(newRoot.Cluster.Objects, &ast.ClusterObject{
+		FileObject: ast.FileObject{Object: h},
+	})
+	return newRoot
 }
 
 // VisitTreeNode implements Visitor
 func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// create/push context
 	context := &quotaContext{
-		prev: v.ctx,
+		prev:  v.ctx,
+		hNode: &v1alpha1.HierarchicalQuotaNode{},
 	}
+
 	v.ctx = context
 	newNode := v.Copying.VisitTreeNode(n)
 
@@ -105,11 +130,19 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 			if n.Type == node.Namespace {
 				quota = quota.DeepCopy()
 				quota.Labels = resourcequota.NewNomosQuotaLabels()
+
+				context.hNode.Namespace = n.Name()
+				context.hNode.ResourceQuotaV1 = quota
 			}
 			newNode.Objects = append(newNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: quota}})
 		}
 	}
-
+	if context.prev != nil {
+		context.prev.hNode.Children = append(context.prev.hNode.Children, *context.hNode)
+	} else {
+		// context.prev == nil implies root TreeNode so copy the root HierarchicalQuotaNode to the other context
+		v.hNode = context.hNode
+	}
 	v.ctx = context.prev
 	return newNode
 }

@@ -19,6 +19,8 @@ package transform
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
@@ -26,6 +28,7 @@ import (
 	"github.com/google/nomos/pkg/resourcequota"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func modQuota(q *corev1.ResourceQuota, name string, labels map[string]string, limits corev1.ResourceList) *corev1.ResourceQuota {
@@ -36,21 +39,72 @@ func modQuota(q *corev1.ResourceQuota, name string, labels map[string]string, li
 	return nq
 }
 
+func modCluster(h *v1alpha1.HierarchicalQuota, c *ast.Cluster) *ast.Cluster {
+	nc := *c
+	nc.Objects = append(nc.Objects, &ast.ClusterObject{
+		FileObject: ast.FileObject{Object: h},
+	})
+	return &nc
+}
+
+func makeHierarchicalQuota(h *v1alpha1.HierarchicalQuotaNode) *v1alpha1.HierarchicalQuota {
+	return &v1alpha1.HierarchicalQuota{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "HierarchicalQuota",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: resourcequota.ResourceQuotaHierarchyName,
+		},
+		Spec: v1alpha1.HierarchicalQuotaSpec{
+			Hierarchy: *h,
+		},
+	}
+}
+
 var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.Visitor {
 		return NewQuotaVisitor()
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
-			Name:         "preserve cluster policies",
-			Input:        vt.Helper.ClusterPolicies(),
-			ExpectOutput: vt.Helper.ClusterPolicies(),
+			Name:  "preserve cluster policies",
+			Input: vt.Helper.ClusterPolicies(),
+			ExpectOutput: &ast.Root{
+				Cluster:     modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{}), vt.Helper.AcmeCluster()),
+				ImportToken: vt.Helper.ImportToken,
+				LoadTime:    vt.Helper.ImportTime,
+			},
 		},
 		{
 			Name:  "acme",
 			Input: vt.Helper.AcmeRoot(),
 			ExpectOutput: &ast.Root{
-				Cluster:         vt.Helper.AcmeCluster(),
+				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					Children: []v1alpha1.HierarchicalQuotaNode{
+						{
+							ResourceQuotaV1: modQuota(
+								vt.Helper.AcmeResourceQuota(),
+								resourcequota.ResourceQuotaObjectName,
+								resourcequota.NewNomosQuotaLabels(),
+								corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("5"),
+									corev1.ResourceMemory: resource.MustParse("5"),
+								}),
+							Namespace: "frontend",
+						},
+						{
+							ResourceQuotaV1: modQuota(
+								vt.Helper.AcmeResourceQuota(),
+								resourcequota.ResourceQuotaObjectName,
+								resourcequota.NewNomosQuotaLabels(),
+								corev1.ResourceList{
+									corev1.ResourceCPU: resource.MustParse("5"),
+								}),
+							Namespace: "frontend-test",
+						},
+					}}),
+					vt.Helper.AcmeCluster()),
 				System:          vt.Helper.System(),
 				ClusterRegistry: vt.Helper.ClusterRegistry(),
 				Tree: &ast.TreeNode{
@@ -109,6 +163,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 		{
 			Name: "skip policyspace",
 			Input: &ast.Root{
+				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
@@ -131,6 +186,24 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				},
 			},
 			ExpectOutput: &ast.Root{
+				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					Children: []v1alpha1.HierarchicalQuotaNode{
+						{
+							Children: []v1alpha1.HierarchicalQuotaNode{
+								{
+									ResourceQuotaV1: modQuota(
+										vt.Helper.AcmeResourceQuota(),
+										resourcequota.ResourceQuotaObjectName,
+										resourcequota.NewNomosQuotaLabels(),
+										corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("5"),
+											corev1.ResourceMemory: resource.MustParse("5"),
+										}),
+									Namespace: "frontend",
+								},
+							},
+						}}}),
+					&ast.Cluster{}),
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
@@ -171,6 +244,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 		{
 			Name: "merge multiple quotas ",
 			Input: &ast.Root{
+				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
@@ -214,6 +288,25 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				},
 			},
 			ExpectOutput: &ast.Root{
+				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					Children: []v1alpha1.HierarchicalQuotaNode{
+						{
+							Children: []v1alpha1.HierarchicalQuotaNode{
+								{
+									ResourceQuotaV1: modQuota(
+										vt.Helper.AcmeResourceQuota(),
+										resourcequota.ResourceQuotaObjectName,
+										resourcequota.NewNomosQuotaLabels(),
+										corev1.ResourceList{
+											corev1.ResourceCPU:     resource.MustParse("3"),
+											corev1.ResourceMemory:  resource.MustParse("2"),
+											corev1.ResourceStorage: resource.MustParse("6"),
+										}),
+									Namespace: "frontend",
+								},
+							},
+						}}}),
+					&ast.Cluster{}),
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
@@ -255,6 +348,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 		{
 			Name: "no quota",
 			Input: &ast.Root{
+				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),
@@ -274,6 +368,9 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				},
 			},
 			ExpectOutput: &ast.Root{
+				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					Children: []v1alpha1.HierarchicalQuotaNode{v1alpha1.HierarchicalQuotaNode{}, v1alpha1.HierarchicalQuotaNode{}},
+				}), &ast.Cluster{}),
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
 					Relative: nomospath.NewFakeRelative("namespaces"),

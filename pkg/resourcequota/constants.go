@@ -26,6 +26,9 @@ const (
 // quota per namespace, so we hardcode the resource name.
 const ResourceQuotaObjectName = "nomos-resource-quota"
 
+// ResourceQuotaHierarchyName is the resource name for HierarchichalQuota.
+const ResourceQuotaHierarchyName = "nomos-quota-hierarchy"
+
 // NomosQuotaLabels are the labels applied to a workload namespace's quota object
 var NomosQuotaLabels = NewNomosQuotaLabels()
 

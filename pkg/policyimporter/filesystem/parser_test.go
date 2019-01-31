@@ -1441,7 +1441,40 @@ spec:
 					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 				}),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterPolicy: policynode.NewClusterPolicy(
+			v1.ClusterPolicyName,
+			&v1.ClusterPolicySpec{
+				Resources: []v1.GenericResources{
+					{
+						Kind: "HierarchicalQuota",
+						Versions: []v1.GenericVersionResources{
+							{
+								Version: "v1",
+								Objects: []runtime.RawExtension{
+									{
+										Object: runtime.Object(
+											&v1alpha1.HierarchicalQuota{
+												TypeMeta: metav1.TypeMeta{
+													APIVersion: corev1.SchemeGroupVersion.String(),
+													Kind:       "HierarchicalQuota",
+												},
+												ObjectMeta: metav1.ObjectMeta{
+													Name: resourcequota.ResourceQuotaHierarchyName,
+												},
+												Spec: v1alpha1.HierarchicalQuotaSpec{
+													Hierarchy: v1alpha1.HierarchicalQuotaNode{
+														Children: []v1alpha1.HierarchicalQuotaNode{
+															{
+																Namespace: "bar",
+																ResourceQuotaV1: createResourceQuota(
+																	"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
+															},
+														},
+													},
+												},
+											}),
+									},
+								}}}}}}),
 		expectedSyncs: mapOfSingleSyncHierarchyMode("resourcequota", "", "ResourceQuota",
 			v1alpha1.HierarchyModeHierarchicalQuota, "v1"),
 	},
