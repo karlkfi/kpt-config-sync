@@ -53,6 +53,6 @@ func init() {
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
 	bespinv1.AddToScheme(scheme)
-	nomosv1.AddToScheme(scheme)
 	nomosv1alpha1.AddToScheme(scheme)
+	nomosv1.AddToScheme(scheme)
 }

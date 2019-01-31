@@ -19,11 +19,13 @@ import (
 	"sort"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
-	"k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/policy/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -629,8 +631,24 @@ func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
 			Name: name,
 		},
 		Spec: v1.ClusterPolicySpec{
-			PodSecurityPoliciesV1Beta1: []v1beta1.PodSecurityPolicy{
-				{Spec: v1beta1.PodSecurityPolicySpec{Privileged: priviledged}}},
+			Resources: []v1.GenericResources{
+				{
+					Group: v1beta1.GroupName,
+					Kind:  "PodSecurityPolicy",
+					Versions: []v1.GenericVersionResources{
+						{
+							Version: v1beta1.SchemeGroupVersion.Version,
+							Objects: []runtime.RawExtension{
+								{
+									Object: &v1beta1.PodSecurityPolicy{
+										Spec: v1beta1.PodSecurityPolicySpec{Privileged: priviledged},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
