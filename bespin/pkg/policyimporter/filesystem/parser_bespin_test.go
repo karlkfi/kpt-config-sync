@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	policyascode_v1 "github.com/google/nomos/pkg/api/policyascode/v1"
+	bespin_v1 "github.com/google/nomos/bespin/pkg/api/bespin/v1"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/pkg/errors"
@@ -68,7 +68,7 @@ func TestBespinParser(t *testing.T) {
 		wantErr         bool
 	}{
 		{
-			name: policyascode_v1.ProjectKind,
+			name: bespin_v1.ProjectKind,
 			root: "foo",
 			files: fstesting.FileContentMap{
 				"system/nomos.yaml":           aRepo,
