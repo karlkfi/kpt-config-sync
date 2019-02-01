@@ -5,8 +5,8 @@ RUN apt-get update && apt-get install -y ca-certificates
 
 WORKDIR /bespin/
 
-COPY .output/bespin/bin/bespin-controllers-manager .
-COPY .output/bespin/terraform-bundle/ terraform-bundle/
+COPY .output/bin/bespin-controllers-manager .
+COPY .output/terraform-bundle/ terraform-bundle/
 
 # License file required for on-prem release.
 COPY LICENSE LICENSE

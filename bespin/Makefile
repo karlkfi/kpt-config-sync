@@ -9,73 +9,68 @@
 # Bespin config
 ###################################
 
-# Bespin artifacts.
-BESPIN_OUTPUT_DIR := $(OUTPUT_DIR)/bespin
+TOP_DIR := $(shell pwd)
+OUTPUT_DIR := $(TOP_DIR)/.output
+BIN_DIR := $(OUTPUT_DIR)/bin
+BUILD_DIR := $(TOP_DIR)/build/
+CONFIG_DIR := $(TOP_DIR)/manifests/bespin/config
 
-# Bespin build binaries.
-BESPIN_BIN_DIR := $(BESPIN_OUTPUT_DIR)/bin
-
-# Bespin build related files.
-BESPIN_BUILD_DIR := $(TOP_DIR)/build/bespin
-
-# Bespin manifests.
-BESPIN_CONFIG_DIR := $(TOP_DIR)/manifests/bespin/config
-
-# Image URLs for bespin image targets.
-BESPIN_CONTROLLERS_MANAGER_IMG ?= gcr.io/${GCR_PREFIX}/bespin-controllers-manager:$(IMAGE_TAG)
+# Image URLs for Bespin image targets.
+MANAGER_IMG ?= gcr.io/${GCR_PREFIX}/controllers-manager:$(IMAGE_TAG)
 
 ###################################
 # Bespin build rules
 ###################################
 
-bespin-all: bespin-test bespin-controllers-manager
+all: test controllers-manager
 
 # Run bespin related tests
-bespin-test:
-	go test -short ./pkg/bespin-controllers/...
+test:
+	go test -short ./pkg/controllers/...
 	go test -short ./pkg/api/bespin/v1/...
 
 # Build bespin controllers manager binary
 # TODO(b/119874295): build in a container
-bespin-controllers-manager:
-	go build -o $(BESPIN_BIN_DIR)/bespin-controllers-manager ./cmd/bespin-controllers-manager/main.go
+controllers-manager:
+	go build -o $(BIN_DIR)/bespin-controllers-manager ./cmd/controllers-manager/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-bespin-run-manager-local: bespin-terraform
-	go run ./cmd/bespin-controllers-manager/main.go  --tf_binary_path="${BESPIN_OUTPUT_DIR}/terraform-bundle/terraform" --tf_plugin_dir="${BESPIN_OUTPUT_DIR}/terraform-bundle" --alsologtostderr=true --v=10
+run-manager-local: terraform
+	go run ./cmd/bespin-controllers-manager/main.go  --tf_binary_path="${OUTPUT_DIR}/terraform-bundle/terraform" --tf_plugin_dir="${OUTPUT_DIR}/terraform-bundle" --alsologtostderr=true --v=10
 
 # Install Bespin CRDs into a cluster
-bespin-install-crds:
-	kubectl apply -f ${BESPIN_CONFIG_DIR}/crds
+install-crds:
+	kubectl apply -f ${CONFIG_DIR}/crds
 
 # Apply RBAC roles and role bindings.
-bespin-install-rbac:
-	kubectl apply -f ${BESPIN_CONFIG_DIR}/rbac
+install-rbac:
+	kubectl apply -f ${CONFIG_DIR}/rbac
 
 # Deploy bespin controllers manager separately.
-bespin-deploy: bespin-install-crds bespin-install-rbac
+deploy: install-crds install-rbac
 	kubectl delete StatefulSet --all -n bespin-system
-	kubectl apply -f ${BESPIN_CONFIG_DIR}/manager
+	kubectl apply -f ${CONFIG_DIR}/manager
 
 # Generate the bespin controllers manager YAML and put it to staging.
-gen-yaml-bespin-controllers-manager:
-	@echo "+++ Generating yaml bespin-controllers-manager"
-	@IMAGE_NAME=$(BESPIN_CONTROLLERS_MANAGER_IMG) envsubst < \
-			$(BESPIN_CONFIG_DIR)/manager/bespin-controllers-manager.yaml > \
+gen-yaml-controllers-manager:
+	@echo "+++ Generating yaml controllers-manager"
+	@IMAGE_NAME=$(MANAGER_IMG) envsubst < \
+			$(CONFIG_DIR)/manager/controllers-manager.yaml > \
 			$(STAGING_DIR)/installer/manifests/deployment/bespin-controllers-manager.yaml
 
-bespin-installer-staging: installer-staging \
-		gen-yaml-bespin-controllers-manager \
-		bespin-image-push
-	@echo "+++ bespin-installer-staging"
-	@cp $(BESPIN_CONFIG_DIR)/crds/*.yaml $(STAGING_DIR)/installer/manifests
-	@cp $(BESPIN_CONFIG_DIR)/rbac/*.yaml $(STAGING_DIR)/installer/manifests
+installer-staging: installer-staging \
+		gen-yaml-controllers-manager \
+		image-push
+	@echo "+++ installer-staging"
+	@cp $(CONFIG_DIR)/crds/*.yaml $(STAGING_DIR)/installer/manifests
+	@cp $(CONFIG_DIR)/rbac/*.yaml $(STAGING_DIR)/installer/manifests
 
-bespin-deploy-operator-user: bespin-image-push deploy-operator-user
+# TODO(b/123758600): E2E is currently broken as this make rule depends on a Nomos one.
+deploy-operator-user: image-push deploy-operator-user
 	@echo "+++ Finished deploying bespin operator"
 
 # Build terraform binary
-bespin-terraform:
+terraform:
 	@echo "+++ Downloading latest terraform and building terraform bundle"
 	mkdir -p ${GOPATH}/src/github.com/hashicorp
 	# Terraform needs to be pinned to a specific version. Nomos won't want
@@ -83,8 +78,8 @@ bespin-terraform:
 	# gets its own repository.
 	git -C ${GOPATH}/src/github.com/hashicorp clone https://github.com/hashicorp/terraform.git -b v0.11.1 || true
 	go install github.com/hashicorp/terraform/tools/terraform-bundle
-	cd $(BESPIN_OUTPUT_DIR); \
-	$(GOPATH)/bin/terraform-bundle package $(BESPIN_BUILD_DIR)/terraform-bundle.hcl && \
+	cd $(OUTPUT_DIR); \
+	$(GOPATH)/bin/terraform-bundle package $(BUILD_DIR)/terraform-bundle.hcl && \
 	mkdir -p terraform-bundle && unzip -o -d terraform-bundle terraform_*.zip && \
 	rm -rf terraform_*.zip
 
@@ -93,10 +88,10 @@ bespin-terraform:
 ###################################
 
 # Build the bespin image.
-bespin-image-build: bespin-controllers-manager bespin-terraform
-	docker build . -t ${BESPIN_CONTROLLERS_MANAGER_IMG} -f build/bespin/Dockerfile
+image-build: controllers-manager terraform
+	docker build . -t ${MANAGER_IMG} -f $(BUILD_DIR)/Dockerfile
 
 # Push the bespin image to gcr.
-bespin-image-push: bespin-image-build
-	@echo "+++ Pushing bespin-image-push to ${BESPIN_CONTROLLERS_MANAGER_IMG}..."
-	docker push ${BESPIN_CONTROLLERS_MANAGER_IMG}
+image-push: image-build
+	@echo "+++ Pushing image-push to ${MANAGER_IMG}..."
+	docker push ${MANAGER_IMG}

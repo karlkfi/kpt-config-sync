@@ -72,7 +72,7 @@ type IAMPolicyBinding struct {
 // IAMPolicySpec defines the desired state of IAMPolicy
 type IAMPolicySpec struct {
 	ResourceRef corev1.ObjectReference `json:"resourceRef"`
-	Bindings    []IAMPolicyBinding     `json:"bindings,omitempty"`
+	Bindings    []IAMPolicyBinding     `json:"bindings"`
 }
 
 // TFBindingsConfig returns IAM policy bindings in string.
