@@ -332,18 +332,6 @@ if ${create_ssh_key}; then
   install::create_keypair
 fi
 
-install_config="${TEST_DIR}/install-config.yaml"
-install_config_template=""
-install_config_template="${TEST_DIR}/install-config-git.yaml"
-
-if $do_installation; then
-  suggested_user="$(gcloud config get-value account)"
-  kubectl_context="$(kubectl config current-context)"
-  sed -e "s/CONTEXT/${kubectl_context}/" -e "s/USER/${suggested_user}/" \
-    < "${install_config_template}" \
-    > "${install_config}"
-fi
-
 if $preclean; then
   clean_up
 fi
