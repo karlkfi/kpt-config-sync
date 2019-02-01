@@ -29,7 +29,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
@@ -752,37 +752,43 @@ func mapOfSingleSync(name, group, kind string, versions ...string) map[string]v1
 	return mapOfSingleSyncHierarchyMode(name, group, kind, "", versions...)
 }
 
-func mapOfSingleSyncHierarchyMode(name, group, kind string, hierarchyMode v1alpha1.HierarchyModeType,
-	versions ...string) map[string]v1alpha1.Sync {
+func makeSyncHierarchyMode(name, group, kind string, hierarchyMode v1alpha1.HierarchyModeType, versions ...string) v1alpha1.Sync {
 	var sv []v1alpha1.SyncVersion
 	for _, v := range versions {
 		sv = append(sv, v1alpha1.SyncVersion{Version: v})
 	}
-	return map[string]v1alpha1.Sync{
-		name: {
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "nomos.dev/v1alpha1",
-				Kind:       "Sync",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       name,
-				Finalizers: []string{v1alpha1.SyncFinalizer},
-			},
-			Spec: v1alpha1.SyncSpec{
-				Groups: []v1alpha1.SyncGroup{
-					{
-						Group: group,
-						Kinds: []v1alpha1.SyncKind{
-							{
-								Kind:          kind,
-								Versions:      sv,
-								HierarchyMode: hierarchyMode,
-							},
+
+	return v1alpha1.Sync{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "nomos.dev/v1alpha1",
+			Kind:       "Sync",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       name,
+			Finalizers: []string{v1alpha1.SyncFinalizer},
+		},
+		Spec: v1alpha1.SyncSpec{
+			Groups: []v1alpha1.SyncGroup{
+				{
+					Group: group,
+					Kinds: []v1alpha1.SyncKind{
+						{
+							Kind:          kind,
+							Versions:      sv,
+							HierarchyMode: hierarchyMode,
 						},
 					},
 				},
 			},
 		},
+	}
+}
+
+func mapOfSingleSyncHierarchyMode(name, group, kind string, hierarchyMode v1alpha1.HierarchyModeType,
+	versions ...string) map[string]v1alpha1.Sync {
+
+	return map[string]v1alpha1.Sync{
+		name: makeSyncHierarchyMode(name, group, kind, hierarchyMode, versions...),
 	}
 }
 
@@ -1497,8 +1503,11 @@ spec:
 									},
 								},
 							}}}}}),
-		expectedSyncs: mapOfSingleSyncHierarchyMode("resourcequota", "", "ResourceQuota",
-			v1alpha1.HierarchyModeHierarchicalQuota, "v1"),
+		expectedSyncs: map[string]v1alpha1.Sync{
+			"hierarchicalquota": makeSync("nomos.dev", "v1alpha1", "HierarchicalQuota"),
+			"resourcequota": makeSyncHierarchyMode("resourcequota", "", "ResourceQuota",
+				v1alpha1.HierarchyModeHierarchicalQuota, "v1"),
+		},
 	},
 	{
 		testName: "Namespaces dir with Roles",
