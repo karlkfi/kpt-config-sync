@@ -17,8 +17,8 @@ type UnknownObjectError struct {
 // Error implements error
 func (e UnknownObjectError) Error() string {
 	return format(e,
-		"Transient Error: Resource is declared, but has no definition on the cluster."+
-			"\nResource must be a native K8S Resources or have an associated CustomResourceDefinition:\n\n%s",
+		"No CustomResourceDefinition is defined for the resource in the cluster. "+
+			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.\n\n%s",
 		id.PrintResource(e))
 }
 
