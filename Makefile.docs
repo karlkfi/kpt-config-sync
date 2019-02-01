@@ -8,8 +8,8 @@ docs-staging: $(OUTPUT_DIR)
 	@echo "+++ Creating directory for generating docs: $(OUTPUT_DIR)"
 	@rm -rf $(DOCS_STAGING_DIR)
 	@mkdir -p $(DOCS_STAGING_DIR)
-	@cp $(TOP_DIR)/README.md $(DOCS_STAGING_DIR)
-	@cp -r $(TOP_DIR)/docs $(DOCS_STAGING_DIR)
+	@cp ./README.md $(DOCS_STAGING_DIR)
+	@cp -r ./docs $(DOCS_STAGING_DIR)
 
 docs-generate: $(OUTPUT_DIR) docs-staging
 	@echo "+++ Converting Markdown docs into HTML"
@@ -21,7 +21,6 @@ docs-generate: $(OUTPUT_DIR) docs-staging
 		-e HOME=/go/src/$(REPO)/.output/config                             \
 		-e REPO=$(REPO)                                                    \
 		-e DOCS_STAGING_DIR=/go/src/$(REPO)/.output/staging/docs           \
-		-e TOP_DIR=/go/src/$(REPO)                                         \
 		--rm                                                               \
 		$(BUILDENV_IMAGE)                                                  \
 		/bin/bash -c " \

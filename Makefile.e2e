@@ -13,21 +13,21 @@ e2e-staging: \
 		$(OPERATOR_TARGET) \
 		$(OUTPUT_DIR) \
 		$(TEST_GEN_YAML_DIR)/git-server.yaml \
-		$(wildcard $(TOP_DIR)/e2e/*)
+		$(wildcard ./e2e/*)
 	@echo "+++ Creating staging directory for building e2e docker image"
 	@rm -rf $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
 	@mkdir -p $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
-	@cp -r $(TOP_DIR)/build/e2e-tests/* $(STAGING_DIR)/e2e-tests
-	@cp -r $(TOP_DIR)/third_party/bats-core $(OUTPUT_DIR)/e2e/bats
-	@cp -r $(TOP_DIR)/examples $(OUTPUT_DIR)/e2e
+	@cp -r ./build/e2e-tests/* $(STAGING_DIR)/e2e-tests
+	@cp -r ./third_party/bats-core $(OUTPUT_DIR)/e2e/bats
+	@cp -r ./examples $(OUTPUT_DIR)/e2e
 	@if [ -f $(HOME)/.ssh/id_rsa.nomos ]; then \
 	  cp -n $(HOME)/.ssh/id_rsa.nomos $(OUTPUT_DIR)/e2e/id_rsa.nomos; \
 	  cp $(HOME)/.ssh/id_rsa.nomos.pub $(OUTPUT_DIR)/e2e/id_rsa.nomos.pub; \
 	fi
-	@cp $(TOP_DIR)/scripts/init-git-server.sh $(OUTPUT_DIR)/e2e/
+	@cp ./scripts/init-git-server.sh $(OUTPUT_DIR)/e2e/
 	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(OUTPUT_DIR)/e2e/
 	@cp ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml $(OUTPUT_DIR)/e2e/
-	@cp -r $(TOP_DIR)/e2e $(OUTPUT_DIR)
+	@cp -r ./e2e $(OUTPUT_DIR)
 
 # Builds the e2e docker image and depencencies.
 # Note that the GCP project is hardcoded since we currently don't want
@@ -57,7 +57,7 @@ test-e2e-run-git:
 e2e-image-all: image-e2e-tests
 
 banner:
-	@cat $(TOP_DIR)/build/banner.txt
+	@cat ./build/banner.txt
 
 # Clean, build, and run e2e tests for all importers.
 # Clean cluster after running.
@@ -88,12 +88,12 @@ test-e2e-dev-git: e2e-staging
 # Requires kubeconfig set up properly with Nomos cluster.
 test-nomos-vet-local: build
 	@echo "Running test-nomos-vet-local..."
-	$(NOMOS_LOCAL) --validate vet --path=$(TOP_DIR)/examples/acme
-	$(NOMOS_LOCAL) vet --path=$(TOP_DIR)/examples/foo-corp-example/foo-corp
+	$(NOMOS_LOCAL) --validate vet --path=./examples/acme
+	$(NOMOS_LOCAL) vet --path=./examples/foo-corp-example/foo-corp
 
-	@rm -rf $(TOP_DIR)/.output/tmp/empty
-	@mkdir $(TOP_DIR)/.output/tmp/empty
-	@cd $(TOP_DIR)/.output/tmp/empty && git init && $(NOMOS_LOCAL) init && $(NOMOS_LOCAL) vet
+	@rm -rf ./.output/tmp/empty
+	@mkdir ./.output/tmp/empty
+	@cd ./.output/tmp/empty && git init && $(NOMOS_LOCAL) init && $(NOMOS_LOCAL) vet
 
 include Makefile.e2e.ci
 include Makefile.e2e.syllogi

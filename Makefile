@@ -18,8 +18,6 @@
 
 ##### CONFIG #####
 
-TOP_DIR := $(shell pwd)
-
 # List of GOOS-GOARCH cross compilation targets
 # Corresponding host mounts for Go std packages should be set below.
 PLATFORMS ?= linux-amd64
@@ -30,8 +28,11 @@ REPO := github.com/google/nomos
 NOMOS_CODE_DIRS := pkg cmd
 NOMOS_GO_PKG := $(foreach dir,$(NOMOS_CODE_DIRS),./$(dir)/...)
 
-# Directory containing all build artifacts.
-OUTPUT_DIR := $(TOP_DIR)/.output
+# Directory containing all build artifacts.  We need abspath here since
+# mounting a directory as a docker volume requires an abspath.  This should
+# eventually be pushed down into where docker commands are run rather than
+# requiring all our paths to be absolute.
+OUTPUT_DIR := $(abspath .output)
 
 # Self-contained GOPATH dir.
 GO_DIR := $(OUTPUT_DIR)/go
@@ -209,5 +210,5 @@ lint-license: build
 .PHONY: clientgen
 clientgen:
 	@echo "+++ Generating clientgen directory"
-	$(TOP_DIR)/scripts/generate-clientset.sh
+	./scripts/generate-clientset.sh
 

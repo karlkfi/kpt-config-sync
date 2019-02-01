@@ -40,9 +40,9 @@ build-platform-%:
 # Creates a docker image for the specified nomos component.
 image-nomos: build
 	@echo "+++ Building the Nomos image"
-	@cp -r $(TOP_DIR)/build/$(NOMOS_IMAGE) $(STAGING_DIR)
+	@cp -r ./build/$(NOMOS_IMAGE) $(STAGING_DIR)
 	@cp $(BIN_DIR)/linux_amd64/* $(STAGING_DIR)/$(NOMOS_IMAGE)
-	@cp $(TOP_DIR)/LICENSE $(STAGING_DIR)/$(NOMOS_IMAGE)
+	@cp ./LICENSE $(STAGING_DIR)/$(NOMOS_IMAGE)
 	@docker build $(DOCKER_BUILD_QUIET) \
 		-t gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) $(STAGING_DIR)/$(NOMOS_IMAGE)
 
