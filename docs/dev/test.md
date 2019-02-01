@@ -35,7 +35,7 @@ This requires a Nomos cluster configured and in your kubeconfig context.
 
 While doing development of e2e test / framework features, it's desirable to skip
 steps in the full e2e process. The following commands are available for finer
-grained control. This is now supported for -git and -gcp suffixes.
+grained control. This is now supported for the -git suffix.
 
 1- Build GKE Policy Management and end to end images. You must do this each time
 you make changes to .go code.
@@ -49,9 +49,6 @@ make e2e-image-all
 ```console
 # git
 make test-e2e-dev-git E2E_FLAGS="--setup"
-
-# gcp
-make test-e2e-dev-gcp E2E_FLAGS="--setup"
 ```
 
 3- Run specific test with full debug output. See E2E_FLAGS section for filter
@@ -60,9 +57,6 @@ flag usage
 ```console
 # git
 make test-e2e-dev-git E2E_FLAGS="--test --tap --test_filter acme"
-
-# gcp
-make test-e2e-dev-gcp E2E_FLAGS="--test --tap --test_filter acme"
 ```
 
 4- Clean up the test environment
@@ -70,9 +64,6 @@ make test-e2e-dev-gcp E2E_FLAGS="--test --tap --test_filter acme"
 ```console
 # git
 make test-e2e-dev-git E2E_FLAGS="--clean"
-
-# gcp
-make test-e2e-dev-gcp E2E_FLAGS="--clean"
 ```
 
 ### E2E_FLAGS

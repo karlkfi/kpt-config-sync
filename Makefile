@@ -97,10 +97,6 @@ BUILDENV_PROJECT ?= nomos-public
 BUILDENV_IMAGE_VERSION ?= v0.1.4
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
-# GCP service account credentials used in gcp e2e tests.
-GCP_E2E_WATCHER_CRED := gs://stolos-dev/e2e/nomos-e2e.joonix.net/watcher_client_key.json
-GCP_E2E_RUNNER_CRED := gs://stolos-dev/e2e/nomos-e2e.joonix.net/test_runner_client_key.json
-
 # When set to "release", enables these optimizations:
 # - Compress binary sizes
 BUILD_MODE ?= debug
