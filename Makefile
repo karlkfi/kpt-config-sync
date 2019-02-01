@@ -108,7 +108,6 @@ BUILD_MODE ?= debug
 # All Nomos K8S deployments.
 ALL_K8S_DEPLOYMENTS := syncer \
 	git-policy-importer \
-	gcp-policy-importer \
 	monitor \
 	resourcequota-admission-controller
 
