@@ -44,6 +44,8 @@ STAGING_DIR := $(OUTPUT_DIR)/staging
 
 # Directory used for staging the operator primitives.
 OPERATOR_STAGING_DIR := ${OUTPUT_DIR}/staging/operator
+# Directory for generated YAML
+OPERATOR_MANIFEST_DIR := $(STAGING_DIR)/operator-manifest
 
 # Directory used for staging docs.
 DOCS_STAGING_DIR := $(STAGING_DIR)/docs

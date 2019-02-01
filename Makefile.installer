@@ -23,10 +23,9 @@ kubectl-plugin-staging: \
 	        zip -r kubectl-oidc-plugin.zip .; \
 	)
 
+# installer-staging is deprecated, depend on operator-manifest instead
 .PHONY: installer-staging
-installer-staging: gen-yaml-all
-	@echo "+++ Creating installer staging directory"
-	@rm -rf $(STAGING_DIR)/installer
-	@mkdir -p $(STAGING_DIR)/installer/manifests/deployment
-	@cp $(OUTPUT_DIR)/deployment/*  $(STAGING_DIR)/installer/manifests/deployment
-	@cp $(TOP_DIR)/manifests/*.yaml $(STAGING_DIR)/installer/manifests
+installer-staging: operator-manifest
+	@for i in $(shell seq 1 40); do \
+		echo "+++ WARNING: installer-staging is deprecated, depend on operator-manifest instead"; \
+	done
