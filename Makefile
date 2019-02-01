@@ -43,7 +43,8 @@ BIN_DIR := $(GO_DIR)/bin
 STAGING_DIR := $(OUTPUT_DIR)/staging
 
 # Directory used for staging the operator primitives.
-OPERATOR_STAGING_DIR := ${OUTPUT_DIR}/staging/operator
+OPERATOR_STAGING_DIR := $(STAGING_DIR)/operator
+
 # Directory for generated YAML
 OPERATOR_MANIFEST_DIR := $(STAGING_DIR)/operator-manifest
 
