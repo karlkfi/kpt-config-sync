@@ -185,7 +185,6 @@ include Makefile.docs
 include Makefile.e2e
 include Makefile.installer
 include Makefile.operator
-include Makefile.bespin
 
 # Redeploy a component without rerunning the installer.
 redeploy-%: push-to-gcr-nomos gen-yaml-%
