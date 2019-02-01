@@ -51,9 +51,6 @@ OPERATOR_MANIFEST_DIR := $(STAGING_DIR)/operator-manifest
 # Directory used for staging docs.
 DOCS_STAGING_DIR := $(STAGING_DIR)/docs
 
-# Directory used for staging scripts.
-SCRIPTS_STAGING_DIR := $(STAGING_DIR)/scripts
-
 # Directory used for staging kubectl plugin release.
 KUBECTL_PLUGIN_STAGING_DIR := $(STAGING_DIR)/kubectl-oidc
 
@@ -65,12 +62,6 @@ GEN_YAML_DIR := $(OUTPUT_DIR)/deployment
 
 # Directory containing generated test yamls
 TEST_GEN_YAML_DIR := $(OUTPUT_DIR)/test/yaml
-
-# Directory containing templates yaml files.
-TEMPLATES_DIR := $(TOP_DIR)/manifests/templates
-
-# Directory containing test template yaml files.
-TEST_TEMPLATES_DIR := $(TOP_DIR)/test/manifests/templates
 
 # Use git tags to set version string.
 VERSION = $(shell git describe --tags --always --dirty)
@@ -112,9 +103,6 @@ NOMOS_IMAGE := nomos
 
 # nomos binary for local run.
 NOMOS_LOCAL := $(BIN_DIR)/linux_amd64/nomos
-
-# Git server used in e2e tests.
-GIT_SERVER_SRC := https://github.com/jkarlosb/git-server-docker.git
 
 # Allows an interactive docker build or test session to be interrupted
 # by Ctrl-C.  This must be turned off in case of non-interactive runs,
@@ -166,7 +154,6 @@ $(OUTPUT_DIR):
 	    $(GO_DIR)/std/darwin_amd64_static \
 	    $(GO_DIR)/std/windows_amd64_static \
 		$(STAGING_DIR) \
-		$(SCRIPTS_STAGING_DIR) \
 		$(KUBECTL_PLUGIN_STAGING_DIR) \
 		$(DOCS_STAGING_DIR) \
 		$(GEN_YAML_DIR) \

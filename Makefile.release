@@ -43,8 +43,6 @@ GCR_PREFIX ?= $(GCP_PROJECT)
 # The GCS bucket containing official releases.
 RELEASE_BUCKET ?= gs://nomos-release
 
-FETCH_TAGS := $(shell git fetch --tags)
-
 # Use git tags to set version string.
 VERSION = $(shell git describe --tags --always --dirty)
 
