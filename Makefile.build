@@ -59,15 +59,15 @@ push-to-gcr-%: image-%
 ###################################
 
 # Generates the podspec yaml for each component.
-gen-yaml-all: $(addprefix gen-yaml-, $(ALL_K8S_DEPLOYMENTS))
+.PHONY: gen-yaml-all
+gen-yaml-all: $(patsubst %,$(GEN_YAML_DIR)/%.yaml,$(ALL_K8S_DEPLOYMENTS))
 	@echo "+++ Finished generating all yaml"
 
 # Generates the podspec yaml for the component specified.
-gen-yaml-%:
+$(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
 	@echo "+++ Generating yaml $*"
-	@mkdir -p $(GEN_YAML_DIR)
-	@sed -e 's|IMAGE_NAME|gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG)|' < \
-			$(TEMPLATES_DIR)/$*.yaml > $(GEN_YAML_DIR)/$*.yaml
+	@mkdir -p $(dir $@)
+	@sed -e 's|IMAGE_NAME|gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG)|' < $< > $@
 
 ###################################
 # E2E Git Server
