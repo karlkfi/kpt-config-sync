@@ -18,7 +18,7 @@ package testing
 
 import (
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/generic-syncer/decode"
+	"github.com/google/nomos/pkg/syncer/decode"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )

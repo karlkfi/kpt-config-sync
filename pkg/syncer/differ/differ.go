@@ -21,7 +21,7 @@ package differ
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/generic-syncer/labeling"
+	"github.com/google/nomos/pkg/syncer/labeling"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 

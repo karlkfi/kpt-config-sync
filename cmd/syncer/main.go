@@ -22,8 +22,8 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/generic-syncer/metasync"
 	"github.com/google/nomos/pkg/service"
+	"github.com/google/nomos/pkg/syncer/metasync"
 	"github.com/google/nomos/pkg/util/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"

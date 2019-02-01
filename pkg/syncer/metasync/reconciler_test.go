@@ -21,8 +21,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/generic-syncer/client"
-	syncertesting "github.com/google/nomos/pkg/generic-syncer/testing"
+	"github.com/google/nomos/pkg/syncer/client"
+	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )

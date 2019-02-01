@@ -17,10 +17,10 @@ package controller
 
 import (
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	syncercache "github.com/google/nomos/pkg/generic-syncer/cache"
-	"github.com/google/nomos/pkg/generic-syncer/client"
-	"github.com/google/nomos/pkg/generic-syncer/decode"
-	genericreconcile "github.com/google/nomos/pkg/generic-syncer/reconcile"
+	syncercache "github.com/google/nomos/pkg/syncer/cache"
+	"github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/decode"
+	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

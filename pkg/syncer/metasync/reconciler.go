@@ -23,8 +23,8 @@ import (
 
 	"github.com/golang/glog"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	syncerclient "github.com/google/nomos/pkg/generic-syncer/client"
-	syncermanager "github.com/google/nomos/pkg/generic-syncer/manager"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	syncermanager "github.com/google/nomos/pkg/syncer/manager"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"

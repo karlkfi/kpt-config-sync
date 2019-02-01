@@ -21,7 +21,7 @@ import (
 	"github.com/golang/glog"
 	nomosapischeme "github.com/google/nomos/clientgen/apis/scheme"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/generic-syncer/client"
+	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachinerytypes "k8s.io/apimachinery/pkg/types"
