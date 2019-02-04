@@ -26,7 +26,8 @@ function install() {
 
   echo "Waiting for Nomos to come up"
   wait::for -s -t 180 -- install::nomos_running
-  echo "Nomos installed"
+  local image="$(kubectl get pods -n nomos-system -l app=syncer -ojsonpath='{.items[0].spec.containers[0].image}')"
+  echo "Nomos $image up and running"
 }
 
 function cleanup() {
@@ -54,7 +55,7 @@ cleanup
 install
 
 trap cleanup EXIT
-
+exitcode=0
 echo "Starting Nomos tests"
 result_file="${REPORT_DIR}/results.bats"
 # We only run the foo-corp test to have a minimal sanity test that the version that
@@ -62,6 +63,7 @@ result_file="${REPORT_DIR}/results.bats"
 run_bats_tests=("${TEST_DIR}/bats/bin/bats" "--tap" "${TEST_DIR}/testcases/foo_corp.bats")
 if ! "${run_bats_tests[@]}" | tee "${result_file}"; then
   echo "Failed Nomos tests"
+  exitcode=1
 fi
 
 echo "Converting test results from TAP format to jUnit"
@@ -70,3 +72,5 @@ echo "Converting test results from TAP format to jUnit"
 tap2junit --name "ZZPREFIX" "${result_file}"
 sed "s/ZZPREFIX/[Nomos Addon] /" "${result_file}".xml > "${REPORT_DIR}/junit_nomos.xml"
 echo "Results at ${REPORT_DIR}/junit_nomos.xml"
+
+exit ${exitcode}
