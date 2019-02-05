@@ -44,7 +44,8 @@ function install() {
     kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
     wait::for -s -t 180 -- install::nomos_running
 
-    local image="$(kubectl get pods -n nomos-system -l app=syncer -ojsonpath='{.items[0].spec.containers[0].image}')"
+    local image
+    image="$(kubectl get pods -n nomos-system -l app=syncer -ojsonpath='{.items[0].spec.containers[0].image}')"
     echo "Nomos $image up and running"
   fi
 }
