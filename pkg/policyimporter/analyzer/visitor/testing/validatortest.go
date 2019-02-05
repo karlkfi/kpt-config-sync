@@ -28,12 +28,17 @@ type ObjectValidatorTest struct {
 	TestCases []ObjectValidatorTestCase
 }
 
-// Run executes each test case in the test.
-func (vt *ObjectValidatorTest) Run(t *testing.T) {
+// RunAll executes each test case in the test.
+func (vt *ObjectValidatorTest) RunAll(t *testing.T) {
+	t.Helper()
+	if vt.Validator == nil {
+		t.Fatal("Assign a Validator factory method.")
+	}
+
 	for _, tc := range vt.TestCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			validator := vt.Validator()
-			root := treetesting.BuildTree(tc.Object)
+			root := treetesting.BuildTree(t, tc.Object)
 			root.Accept(validator)
 
 			if tc.ShouldFail {
@@ -65,13 +70,18 @@ type ObjectsValidatorTest struct {
 	TestCases []ObjectsValidatorTestCase
 }
 
-// Run executes each test case in the test.
-func (vt *ObjectsValidatorTest) Run(t *testing.T) {
+// RunAll executes each test case in the test.
+func (vt *ObjectsValidatorTest) RunAll(t *testing.T) {
+	t.Helper()
+	if vt.Validator == nil {
+		t.Fatal("Assign a Validator factory method.")
+	}
+
 	for _, tc := range vt.TestCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			validator := vt.Validator()
 
-			root := treetesting.BuildTree(tc.Objects...)
+			root := treetesting.BuildTree(t, tc.Objects...)
 			root.Accept(validator)
 
 			if tc.ShouldFail {

@@ -3,67 +3,49 @@ package visitors
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
+	visitortesting "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
+	"github.com/google/nomos/pkg/testing/fake"
 )
 
-func fakeRole(dir string) ast.FileObject {
-	return asttesting.NewFakeFileObject(kinds.Role(), dir+"/role.yaml")
-}
-
 func TestUniqueDirectoryValidator(t *testing.T) {
-	testCases := []struct {
-		name       string
-		root       *ast.Root
-		shouldFail bool
-	}{
-		{
-			name: "empty",
-		},
-		{
-			name: "just namespaces/",
-			root: treetesting.BuildTree(fakeRole("namespaces")),
-		},
-		{
-			name: "one dir",
-			root: treetesting.BuildTree(fakeRole("namespaces/foo")),
-		},
-		{
-			name:       "subdirectory of self",
-			root:       treetesting.BuildTree(fakeRole("namespaces/foo/foo")),
-			shouldFail: true,
-		},
-		{
-			name:       "deep subdirectory of self",
-			root:       treetesting.BuildTree(fakeRole("namespaces/foo/bar/foo")),
-			shouldFail: true,
-		},
-		{
-			name:       "child of different directories",
-			root:       treetesting.BuildTree(fakeRole("namespaces/bar/foo"), fakeRole("namespaces/qux/foo")),
-			shouldFail: true,
-		},
-		{
-			name: "directory with two children",
-			root: treetesting.BuildTree(fakeRole("namespaces/bar/foo"), fakeRole("namespaces/bar/qux")),
+	test := visitortesting.ObjectsValidatorTest{
+		Validator: NewUniqueDirectoryValidator,
+		ErrorCode: vet.DuplicateDirectoryNameErrorCode,
+		TestCases: []visitortesting.ObjectsValidatorTestCase{
+			{
+				Name: "empty",
+			},
+			{
+				Name:    "just namespaces/",
+				Objects: []ast.FileObject{fake.Role("namespaces/role.yaml")},
+			},
+			{
+				Name:    "one dir",
+				Objects: []ast.FileObject{fake.Role("namespaces/foo/role.yaml")},
+			},
+			{
+				Name:       "subdirectory of self",
+				Objects:    []ast.FileObject{fake.Role("namespaces/foo/foo/role.yaml")},
+				ShouldFail: true,
+			},
+			{
+				Name:       "deep subdirectory of self",
+				Objects:    []ast.FileObject{fake.Role("namespaces/foo/bar/foo/role.yaml")},
+				ShouldFail: true,
+			},
+			{
+				Name:       "child of different directories",
+				Objects:    []ast.FileObject{fake.Role("namespaces/bar/foo/role.yaml"), fake.Role("namespaces/qux/foo/role.yaml")},
+				ShouldFail: true,
+			},
+			{
+				Name:    "directory with two children",
+				Objects: []ast.FileObject{fake.Role("namespaces/bar/foo/role.yaml"), fake.Role("namespaces/bar/qux/role.yaml")},
+			},
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-
-			var v ast.Visitor = NewUniqueDirectoryValidator()
-			tc.root.Accept(v)
-
-			if tc.shouldFail {
-				vettesting.ExpectErrors([]string{vet.DuplicateDirectoryNameErrorCode}, v.Error(), t)
-			} else {
-				vettesting.ExpectErrors([]string{}, v.Error(), t)
-			}
-		})
-	}
+	test.RunAll(t)
 }

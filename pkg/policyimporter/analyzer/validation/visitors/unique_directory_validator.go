@@ -10,7 +10,7 @@ import (
 
 // NewUniqueDirectoryValidator initializes a ValidatorVisitor that checks that directory names are globally
 // unique.
-func NewUniqueDirectoryValidator() *visitor.ValidatorVisitor {
+func NewUniqueDirectoryValidator() ast.Visitor {
 	return visitor.NewTreeNodesValidator(func(ns []*ast.TreeNode) error {
 		eb := multierror.Builder{}
 		validateUniqueDirectories(ns, &eb)

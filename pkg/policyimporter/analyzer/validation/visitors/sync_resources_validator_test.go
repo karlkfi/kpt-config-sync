@@ -88,7 +88,7 @@ func TestSyncResourcesValidator(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			root := ast.Root{
-				Tree:   treetesting.BuildTree(tc.objects...).Tree,
+				Tree:   treetesting.BuildTree(t, tc.objects...).Tree,
 				System: buildSystem(tc.syncs),
 			}
 
