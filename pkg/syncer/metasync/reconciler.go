@@ -18,24 +18,21 @@ package metasync
 import (
 	"context"
 	"reflect"
-	"sort"
 	"time"
 
 	"github.com/golang/glog"
-	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	syncermanager "github.com/google/nomos/pkg/syncer/manager"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/multierror"
-	"github.com/google/nomos/pkg/util/sync"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -142,33 +139,19 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
-	for _, e := range enabled {
+	for _, sync := range enabled {
 		var status v1alpha1.SyncStatus
-		for gk := range sync.GroupKinds(e) {
-			statusGroupKind := v1alpha1.SyncGroupVersionKindStatus{
-				Group:  gk.Group,
-				Kind:   gk.Kind,
-				Status: v1alpha1.Syncing,
-			}
-			status.GroupVersionKinds = append(status.GroupVersionKinds, statusGroupKind)
-		}
-		// Sort the status fields, so we can compare statuses.
-		sort.Slice(status.GroupVersionKinds, func(i, j int) bool {
-			lgk, rgk := status.GroupVersionKinds[i], status.GroupVersionKinds[j]
-			if lgk.Group < rgk.Group {
-				return true
-			}
-			return lgk.Kind < rgk.Kind
-		})
+		status.Status = v1alpha1.Syncing
+
 		// Check if status changed before updating.
-		if !reflect.DeepEqual(e.Status, status) {
+		if !reflect.DeepEqual(sync.Status, status) {
 			updateFn := func(obj runtime.Object) (runtime.Object, error) {
 				s := obj.(*v1alpha1.Sync)
 				s.Status = status
 				s.SetGroupVersionKind(kinds.Sync())
 				return s, nil
 			}
-			_, err := r.client.UpdateStatus(ctx, e, updateFn)
+			_, err := r.client.UpdateStatus(ctx, sync, updateFn)
 			errBuilder.Add(errors.Wrap(err, "could not update sync status"))
 		}
 	}
@@ -182,17 +165,24 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 }
 
 func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1alpha1.Sync, apiInfo *utildiscovery.APIInfo) error {
+	var newFinalizers []string
+	var needsFinalize bool
+	for _, f := range sync.Finalizers {
+		if f == v1alpha1.SyncFinalizer {
+			needsFinalize = true
+		} else {
+			newFinalizers = append(newFinalizers, f)
+		}
+	}
+
 	// Check if Syncer finalizer is present before finalize.
-	finalizers := sets.NewString(sync.GetFinalizers()...)
-	if !finalizers.Has(v1alpha1.SyncFinalizer) {
+	if !needsFinalize {
 		glog.V(2).Infof("Sync %s already finalized", sync.Name)
 		return nil
 	}
 
 	sync = sync.DeepCopy()
-	finalizers.Delete(v1alpha1.SyncFinalizer)
-	sync.SetFinalizers(finalizers.UnsortedList())
-
+	sync.Finalizers = newFinalizers
 	glog.Infof("Beginning Sync finalize for %s", sync.Name)
 	if err := r.gcResources(ctx, sync, apiInfo); err != nil {
 		return err

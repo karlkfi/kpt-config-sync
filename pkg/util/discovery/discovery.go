@@ -18,7 +18,6 @@ package discovery
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/util/sync"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -102,18 +101,15 @@ func (a *APIInfo) AllowedVersions(gk schema.GroupKind) []string {
 	return a.groupKindVersions[gk]
 }
 
-// GroupVersionKinds returns a set of GroupVersionKinds represented by the slice of Syncs with only Group and Kind specified.
+// GroupVersionKinds returns a set of GroupVersionKinds represented by the slice of Syncs with only
+// Group and Kind specified.
 func (a *APIInfo) GroupVersionKinds(syncs ...*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
-	gvks := make(map[schema.GroupVersionKind]bool)
-	for gk := range sync.GroupKinds(syncs...) {
+	allGvk := make(map[schema.GroupVersionKind]bool)
+	for _, s := range syncs {
+		gk := s.Spec.GroupKind()
 		for _, v := range a.AllowedVersions(gk) {
-			gvk := schema.GroupVersionKind{
-				Group:   gk.Group,
-				Kind:    gk.Kind,
-				Version: v,
-			}
-			gvks[gvk] = true
+			allGvk[gk.WithVersion(v)] = true
 		}
 	}
-	return gvks
+	return allGvk
 }

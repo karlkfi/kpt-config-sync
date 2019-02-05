@@ -130,20 +130,8 @@ type Sync struct {
 // SyncSpec specifies the sync declaration which corresponds to an API Group and contained
 // kinds and versions.
 type SyncSpec struct {
-	// Groups represents all groups that are declared for sync.
-	Groups []SyncGroup `json:"groups"` // groups, eg nomos.dev
-}
-
-// SyncGroup represents sync declarations for a Group.
-type SyncGroup struct {
 	// Group is the group, for example nomos.dev or rbac.authorization.k8s.io
 	Group string `json:"group"` // group, eg nomos.dev
-	// Kinds represents kinds from the Group.
-	Kinds []SyncKind `json:"kinds"`
-}
-
-// SyncKind represents the spec for a Kind of object we are syncing.
-type SyncKind struct {
 	// Kind is the string that represents the Kind for the object as given in TypeMeta, for example
 	// ClusterRole, Namespace or Deployment.
 	Kind string `json:"kind"`
@@ -152,31 +140,10 @@ type SyncKind struct {
 	// the default is "inherit". For ResourceQuota, the default is "hierarchicalQuota".
 	// +optional
 	HierarchyMode HierarchyModeType `json:"hierarchyMode,omitempty"`
-	// Versions indicates the versions that will be handled for the object of Group and Kind.
-	Versions []SyncVersion `json:"versions"`
-}
-
-// SyncVersion corresponds to a single version in a (group, kind)
-type SyncVersion struct {
-	// Version indicates the version used for the API Group, for example v1, v1beta1, v1alpha1.
-	Version string `json:"version"`
 }
 
 // SyncStatus represents the status for a sync declaration
 type SyncStatus struct {
-	// +optional
-	GroupVersionKinds []SyncGroupVersionKindStatus `json:"groupVersionKinds,omitempty"`
-}
-
-// SyncGroupVersionKindStatus is a per Group, Kind status for the sync state of a resource.
-type SyncGroupVersionKindStatus struct {
-	// Group is the group, for example nomos.dev or rbac.authorization.k8s.io
-	Group string `json:"group"`
-	// Version is the version.
-	Version string `json:"version"`
-	// Kind is the string that represents the Kind for the object as given in TypeMeta, for example
-	// ClusterRole, Namespace or Deployment.
-	Kind string `json:"kind"`
 	// Status indicates the state of the sync.  One of "syncing", or "error".  If "error" is specified
 	// then Error will be populated with a message regarding the error.
 	Status SyncState `json:"status"`

@@ -321,42 +321,30 @@ func TestDiffer(t *testing.T) {
 			testName: "Sync create",
 			oldSyncs: []v1alpha1.Sync{},
 			newSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
+				*v1alpha1.NewSync("", "ResourceQuota"),
 			},
 			expected: []string{
-				"nomos.dev/v1alpha1/Syncs/ResourceQuota/create",
-			},
-		},
-		{
-			testName: "Sync update",
-			oldSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
-			},
-			newSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v2"),
-			},
-			expected: []string{
-				"nomos.dev/v1alpha1/Syncs/ResourceQuota/update",
+				"nomos.dev/v1alpha1/Syncs/resourcequota/create",
 			},
 		},
 		{
 			testName: "Sync update no change",
 			oldSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
+				*v1alpha1.NewSync("", "ResourceQuota"),
 			},
 			newSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
+				*v1alpha1.NewSync("", "ResourceQuota"),
 			},
 			expected: []string{},
 		},
 		{
 			testName: "Sync delete",
 			oldSyncs: []v1alpha1.Sync{
-				makeSync("", "ResourceQuota", "v1"),
+				*v1alpha1.NewSync("", "ResourceQuota"),
 			},
 			newSyncs: []v1alpha1.Sync{},
 			expected: []string{
-				"nomos.dev/v1alpha1/Syncs/ResourceQuota/delete",
+				"nomos.dev/v1alpha1/Syncs/resourcequota/delete",
 			},
 		},
 	} {
@@ -391,21 +379,6 @@ func TestDiffer(t *testing.T) {
 				executeAction(t, action, policyNodes)
 			}
 		})
-	}
-}
-
-func TestSyncDeletes(t *testing.T) {
-	g := NewDiffer(NewFactories(nil, nil, nil, nil, nil))
-	g.SortDiff = true
-
-	actual := g.SyncDeletes(
-		map[string]v1alpha1.Sync{
-			"ResourceQuota": makeSync("", "ResourceQuota", "v1"),
-		},
-		map[string]v1alpha1.Sync{})
-	expected := []string{"ResourceQuota"}
-	if diff := cmp.Diff(actual, expected); diff != "" {
-		t.Errorf("Actual and expected deletes didn't match: %#v", diff)
 	}
 }
 
@@ -472,36 +445,6 @@ func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
 									},
 								},
 							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func makeSync(group, kind string, versions ...string) v1alpha1.Sync {
-	var svs []v1alpha1.SyncVersion
-	for _, version := range versions {
-		sv := v1alpha1.SyncVersion{Version: version}
-		svs = append(svs, sv)
-	}
-	return v1alpha1.Sync{
-		TypeMeta: meta.TypeMeta{
-			APIVersion: "nomos.dev/v1alpha1",
-			Kind:       "Sync",
-		},
-		ObjectMeta: meta.ObjectMeta{
-			Name: kind,
-		},
-		Spec: v1alpha1.SyncSpec{
-			Groups: []v1alpha1.SyncGroup{
-				{
-					Group: group,
-					Kinds: []v1alpha1.SyncKind{
-						{
-							Kind:     kind,
-							Versions: svs,
 						},
 					},
 				},
