@@ -40,7 +40,7 @@ func (n NomosVisitorProvider) Visitors(
 		visitors = append(visitors, transform.NewQuotaVisitor())
 	}
 	visitors = append(visitors, validation.NewNameValidator())
-
+	visitors = append(visitors, transform.NewUnarySync())
 	return visitors
 }
 

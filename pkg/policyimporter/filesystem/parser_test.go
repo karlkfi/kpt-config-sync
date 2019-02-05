@@ -29,7 +29,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
@@ -719,13 +719,17 @@ func toInt32Pointer(i int32) *int32 {
 }
 
 func makeSync(group, version, kind string) v1alpha1.Sync {
+	name := strings.ToLower(kind)
+	if group != "" {
+		name += "." + group
+	}
 	return v1alpha1.Sync{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "nomos.dev/v1alpha1",
 			Kind:       "Sync",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       strings.ToLower(kind),
+			Name:       name,
 			Finalizers: []string{v1alpha1.SyncFinalizer},
 		},
 		Spec: v1alpha1.SyncSpec{
@@ -748,8 +752,8 @@ func makeSync(group, version, kind string) v1alpha1.Sync {
 	}
 }
 
-func mapOfSingleSync(name, group, kind string, versions ...string) map[string]v1alpha1.Sync {
-	return mapOfSingleSyncHierarchyMode(name, group, kind, "", versions...)
+func mapOfSingleSync(group, kind string, versions ...string) map[string]v1alpha1.Sync {
+	return mapOfSingleSyncHierarchyMode(group, kind, "", versions...)
 }
 
 func makeSyncHierarchyMode(name, group, kind string, hierarchyMode v1alpha1.HierarchyModeType, versions ...string) v1alpha1.Sync {
@@ -757,7 +761,6 @@ func makeSyncHierarchyMode(name, group, kind string, hierarchyMode v1alpha1.Hier
 	for _, v := range versions {
 		sv = append(sv, v1alpha1.SyncVersion{Version: v})
 	}
-
 	return v1alpha1.Sync{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "nomos.dev/v1alpha1",
@@ -784,12 +787,23 @@ func makeSyncHierarchyMode(name, group, kind string, hierarchyMode v1alpha1.Hier
 	}
 }
 
-func mapOfSingleSyncHierarchyMode(name, group, kind string, hierarchyMode v1alpha1.HierarchyModeType,
+func mapOfSingleSyncHierarchyMode(group, kind string, hierarchyMode v1alpha1.HierarchyModeType,
 	versions ...string) map[string]v1alpha1.Sync {
-
+	name := strings.ToLower(kind)
+	if group != "" {
+		name += "." + group
+	}
 	return map[string]v1alpha1.Sync{
 		name: makeSyncHierarchyMode(name, group, kind, hierarchyMode, versions...),
 	}
+}
+
+func syncMap(syncs ...v1alpha1.Sync) map[string]v1alpha1.Sync {
+	sm := map[string]v1alpha1.Sync{}
+	for _, sync := range syncs {
+		sm[sync.Name] = sync
+	}
+	return sm
 }
 
 type parserTestCase struct {
@@ -820,7 +834,6 @@ var parserTestCases = []parserTestCase{
 			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with JSON Namespace",
@@ -834,7 +847,6 @@ var parserTestCases = []parserTestCase{
 			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with Namespace with labels/annotations",
@@ -849,7 +861,6 @@ var parserTestCases = []parserTestCase{
 				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with ignored files",
@@ -864,7 +875,6 @@ var parserTestCases = []parserTestCase{
 			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with 2 ignored files",
@@ -880,7 +890,6 @@ var parserTestCases = []parserTestCase{
 			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Empty namespace dir",
@@ -895,7 +904,6 @@ var parserTestCases = []parserTestCase{
 			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces with same name",
@@ -967,7 +975,7 @@ var parserTestCases = []parserTestCase{
 			),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("resourcequota", "", "ResourceQuota", "v1"),
+		expectedSyncs:         mapOfSingleSync("", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "ResourceQuota without declared Sync",
@@ -1030,7 +1038,7 @@ var parserTestCases = []parserTestCase{
 			),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("resourcequota", "", "ResourceQuota", "v1"),
+		expectedSyncs:         mapOfSingleSync("", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Namespace dir with multiple Roles",
@@ -1062,7 +1070,7 @@ var parserTestCases = []parserTestCase{
 				}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("deployment", "apps", "Deployment", "v1"),
+		expectedSyncs:         mapOfSingleSync("apps", "Deployment", "v1"),
 	},
 	{
 		testName: "Namespace dir with CRD",
@@ -1174,9 +1182,7 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":     aRepo,
 			"namespaces/bar/ignore": "",
 		},
-		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Policyspace dir with RoleBinding, default inheritance",
@@ -1227,7 +1233,7 @@ var parserTestCases = []parserTestCase{
 				}})}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs: mapOfSingleSyncHierarchyMode("rolebinding", kinds.RoleBinding().Group, kinds.RoleBinding().Kind,
+		expectedSyncs: mapOfSingleSyncHierarchyMode(kinds.RoleBinding().Group, kinds.RoleBinding().Kind,
 			v1alpha1.HierarchyModeInherit, kinds.RoleBinding().Version),
 	},
 	{
@@ -1245,7 +1251,7 @@ var parserTestCases = []parserTestCase{
 				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", "pod-quota", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("resourcequota", "", "ResourceQuota", "v1"),
+		expectedSyncs:         mapOfSingleSync("", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota, inheritance off",
@@ -1270,7 +1276,7 @@ var parserTestCases = []parserTestCase{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar":                 createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName, &Policies{}),
 		},
-		expectedSyncs: mapOfSingleSyncHierarchyMode("resourcequota", "", "ResourceQuota",
+		expectedSyncs: mapOfSingleSyncHierarchyMode("", "ResourceQuota",
 			v1alpha1.HierarchyModeInherit, "v1"),
 	},
 	{
@@ -1369,9 +1375,7 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aRepo,
 		},
-		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Only system dir with valid sync",
@@ -1380,9 +1384,8 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml": aRepo,
 			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 		},
-		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         mapOfSingleSync("resourcequota", "", "ResourceQuota", "v1"),
+		expectedSyncs:         mapOfSingleSync("", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Multiple Syncs",
@@ -1392,12 +1395,11 @@ var parserTestCases = []parserTestCase{
 			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 			"system/role.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 		},
-		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs: map[string]v1alpha1.Sync{
-			"resourcequota": makeSync("", "v1", "ResourceQuota"),
-			"role":          makeSync("rbac.authorization.k8s.io", "v1", "Role"),
-		},
+		expectedSyncs: syncMap(
+			makeSync("", "v1", "ResourceQuota"),
+			makeSync("rbac.authorization.k8s.io", "v1", "Role"),
+		),
 	},
 	{
 		testName: "Sync declares multiple versions",
@@ -1430,9 +1432,7 @@ spec:
 			"system/nomos.yaml": aRepo,
 			"namespaces/ignore": "",
 		},
-		expectedPolicyNodes:   map[string]v1.PolicyNode{},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         map[string]v1alpha1.Sync{},
 	},
 	{
 		testName: "Namespaces dir with Namespace",
@@ -1498,11 +1498,11 @@ spec:
 									},
 								},
 							}}}}}),
-		expectedSyncs: map[string]v1alpha1.Sync{
-			"hierarchicalquota": makeSync("nomos.dev", "v1alpha1", "HierarchicalQuota"),
-			"resourcequota": makeSyncHierarchyMode("resourcequota", "", "ResourceQuota",
+		expectedSyncs: syncMap(
+			makeSync("nomos.dev", "v1alpha1", "HierarchicalQuota"),
+			makeSyncHierarchyMode("resourcequota", "", "ResourceQuota",
 				v1alpha1.HierarchyModeHierarchicalQuota, "v1"),
-		},
+		),
 	},
 	{
 		testName: "Namespaces dir with Roles",
@@ -2060,6 +2060,13 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	}
 
 	if tc.expectedPolicyNodes != nil || tc.expectedClusterPolicy != nil || tc.expectedSyncs != nil {
+		if tc.expectedPolicyNodes == nil {
+			tc.expectedPolicyNodes = map[string]v1.PolicyNode{}
+		}
+		if tc.expectedSyncs == nil {
+			tc.expectedSyncs = map[string]v1alpha1.Sync{}
+		}
+
 		expectedPolicies := &v1.AllPolicies{
 			PolicyNodes:   tc.expectedPolicyNodes,
 			ClusterPolicy: tc.expectedClusterPolicy,
@@ -2220,12 +2227,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
-			expectedSyncs: map[string]v1alpha1.Sync{
-				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
-				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
-				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+			expectedSyncs: syncMap(
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
 					kinds.ClusterRoleBinding().Kind),
-			},
+			),
 		},
 		{
 			testName:    "Generic resource in abstract namespace",
@@ -2325,7 +2332,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: mapOfSingleSyncHierarchyMode(
-				"configmap",
 				corev1.SchemeGroupVersion.Group,
 				"ConfigMap",
 				v1alpha1.HierarchyModeInherit,
@@ -2387,12 +2393,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterNameAnnotationKey: "cluster-2",
 					}),
 			},
-			expectedSyncs: map[string]v1alpha1.Sync{
-				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
-				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
-				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+			expectedSyncs: syncMap(
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
 					kinds.ClusterRoleBinding().Kind),
-			},
+			),
 		},
 		{
 			// This shows how a namespace scoped resource doesn't get synced if
@@ -2485,12 +2491,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
-			expectedSyncs: map[string]v1alpha1.Sync{
-				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
-				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
-				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+			expectedSyncs: syncMap(
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
 					kinds.ClusterRoleBinding().Kind),
-			},
+			),
 		},
 		{
 			testName:    "If namespace is not selected, its resources are not selected either.",
@@ -2572,12 +2578,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 					}),
 			},
-			expectedSyncs: map[string]v1alpha1.Sync{
-				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
-				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
-				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+			expectedSyncs: syncMap(
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
 					kinds.ClusterRoleBinding().Kind),
-			},
+			),
 		},
 		{
 			testName:    "Cluster resources not matching selector",
@@ -2652,12 +2658,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
-			expectedSyncs: map[string]v1alpha1.Sync{
-				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
-				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
-				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+			expectedSyncs: syncMap(
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
 					kinds.ClusterRoleBinding().Kind),
-			},
+			),
 		},
 		{
 			testName:    "Resources without cluster selectors are never filtered out",
@@ -2738,12 +2744,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 					}),
 			},
-			expectedSyncs: map[string]v1alpha1.Sync{
-				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
-				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
-				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+			expectedSyncs: syncMap(
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
 					kinds.ClusterRoleBinding().Kind),
-			},
+			),
 		},
 		{
 			// Look at Tree dir below for the meat of the test.
@@ -2833,14 +2839,14 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					/* Annotations */
 					nil),
 			},
-			expectedSyncs: map[string]v1alpha1.Sync{
-				"resourcequota": makeSync(kinds.ResourceQuota().Group, kinds.ResourceQuota().Version,
+			expectedSyncs: syncMap(
+				makeSync(kinds.ResourceQuota().Group, kinds.ResourceQuota().Version,
 					kinds.ResourceQuota().Kind),
-				"role":        makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
-				"rolebinding": makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
-				"clusterrolebinding": makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
 					kinds.ClusterRoleBinding().Kind),
-			},
+			),
 		},
 	}
 	for _, test := range tests {
