@@ -13,10 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package meta
+package discovery
 
 import (
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/util/sync"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,12 +28,12 @@ import (
 type ObjectScope string
 
 const (
-	// Cluster is an object scoped to the cluster
-	Cluster = ObjectScope("cluster")
-	// Namespace is an object scoped to namespace
-	Namespace = ObjectScope("namespace")
-	// NotFound is returned if the object does not exist in APIInfo
-	NotFound = ObjectScope("notFound")
+	// ClusterScope is an object scoped to the cluster
+	ClusterScope = ObjectScope("cluster")
+	// NamespaceScope is an object scoped to namespace
+	NamespaceScope = ObjectScope("namespace")
+	// UnknownScope is returned if the object does not exist in APIInfo
+	UnknownScope = ObjectScope("unknown")
 )
 
 type apiInfoKey struct{}
@@ -67,16 +69,16 @@ func NewAPIInfo(resourceLists []*metav1.APIResourceList) (*APIInfo, error) {
 	return &APIInfo{resources: resources}, nil
 }
 
-// GetScope returns the scope for the object.  If not found, NotFound will be returned.
+// GetScope returns the scope for the object.  If not found, UnknownScope will be returned.
 func (a *APIInfo) GetScope(gvk schema.GroupVersionKind) ObjectScope {
 	resource, found := a.resources[gvk]
 	if !found {
-		return NotFound
+		return UnknownScope
 	}
 	if resource.Namespaced {
-		return Namespace
+		return NamespaceScope
 	}
-	return Cluster
+	return ClusterScope
 }
 
 // Exists returns true if the GroupVersionKind is in the APIResources.
@@ -94,4 +96,20 @@ func (a *APIInfo) AllowedVersions(gk schema.GroupKind) []string {
 		}
 	}
 	return results
+}
+
+// GroupVersionKinds returns a set of GroupVersionKinds represented by the slice of Syncs with only Group and Kind specified.
+func (a *APIInfo) GroupVersionKinds(syncs ...*v1alpha1.Sync) (map[schema.GroupVersionKind]bool, error) {
+	gvks := make(map[schema.GroupVersionKind]bool)
+	for gk := range sync.GroupKinds(syncs...) {
+		for _, v := range a.AllowedVersions(gk) {
+			gvk := schema.GroupVersionKind{
+				Group:   gk.Group,
+				Kind:    gk.Kind,
+				Version: v,
+			}
+			gvks[gvk] = true
+		}
+	}
+	return gvks, nil
 }

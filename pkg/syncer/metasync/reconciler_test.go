@@ -48,33 +48,33 @@ func TestReconcile(t *testing.T) {
 			name: "update state for one sync",
 			actualSyncs: nomosv1alpha1.SyncList{
 				Items: []nomosv1alpha1.Sync{
-					sync("", "v1", "Deployment", ""),
+					makeSync("", "Deployment", ""),
 				},
 			},
 			wantStatusUpdates: []nomosv1alpha1.Sync{
-				sync("", "v1", "Deployment", nomosv1alpha1.Syncing),
+				makeSync("", "Deployment", nomosv1alpha1.Syncing),
 			},
 		},
 		{
 			name: "update state for multiple syncs",
 			actualSyncs: nomosv1alpha1.SyncList{
 				Items: []nomosv1alpha1.Sync{
-					sync("rbac.authorization.k8s.io", "v1", "Role", ""),
-					sync("", "v1", "Deployment", ""),
-					sync("", "v1", "ConfigMap", ""),
+					makeSync("rbac.authorization.k8s.io", "Role", ""),
+					makeSync("", "Deployment", ""),
+					makeSync("", "ConfigMap", ""),
 				},
 			},
 			wantStatusUpdates: []nomosv1alpha1.Sync{
-				sync("rbac.authorization.k8s.io", "v1", "Role", nomosv1alpha1.Syncing),
-				sync("", "v1", "Deployment", nomosv1alpha1.Syncing),
-				sync("", "v1", "ConfigMap", nomosv1alpha1.Syncing),
+				makeSync("rbac.authorization.k8s.io", "Role", nomosv1alpha1.Syncing),
+				makeSync("", "Deployment", nomosv1alpha1.Syncing),
+				makeSync("", "ConfigMap", nomosv1alpha1.Syncing),
 			},
 		},
 		{
 			name: "don't update state for one sync when unnecessary",
 			actualSyncs: nomosv1alpha1.SyncList{
 				Items: []nomosv1alpha1.Sync{
-					sync("", "v1", "Deployment", nomosv1alpha1.Syncing),
+					makeSync("", "Deployment", nomosv1alpha1.Syncing),
 				},
 			},
 		},
@@ -82,9 +82,9 @@ func TestReconcile(t *testing.T) {
 			name: "don't update state for multiple syncs when unnecessary",
 			actualSyncs: nomosv1alpha1.SyncList{
 				Items: []nomosv1alpha1.Sync{
-					sync("rbac.authorization.k8s.io", "v1", "Role", nomosv1alpha1.Syncing),
-					sync("", "v1", "Deployment", nomosv1alpha1.Syncing),
-					sync("", "v1", "ConfigMap", nomosv1alpha1.Syncing),
+					makeSync("rbac.authorization.k8s.io", "Role", nomosv1alpha1.Syncing),
+					makeSync("", "Deployment", nomosv1alpha1.Syncing),
+					makeSync("", "ConfigMap", nomosv1alpha1.Syncing),
 				},
 			},
 		},
@@ -92,25 +92,25 @@ func TestReconcile(t *testing.T) {
 			name: "only update syncs with state change",
 			actualSyncs: nomosv1alpha1.SyncList{
 				Items: []nomosv1alpha1.Sync{
-					sync("", "v1", "Secret", nomosv1alpha1.Syncing),
-					sync("", "v1", "Service", nomosv1alpha1.Syncing),
-					sync("", "v1", "Deployment", ""),
+					makeSync("", "Secret", nomosv1alpha1.Syncing),
+					makeSync("", "Service", nomosv1alpha1.Syncing),
+					makeSync("", "Deployment", ""),
 				},
 			},
 			wantStatusUpdates: []nomosv1alpha1.Sync{
-				sync("", "v1", "Deployment", nomosv1alpha1.Syncing),
+				makeSync("", "Deployment", nomosv1alpha1.Syncing),
 			},
 		},
 		{
 			name: "finalize sync that is pending delete",
 			actualSyncs: nomosv1alpha1.SyncList{
 				Items: []nomosv1alpha1.Sync{
-					withDeleteTimestamp(withFinalizer(sync("", "v1", "Deployment", nomosv1alpha1.Syncing))),
+					withDeleteTimestamp(withFinalizer(makeSync("", "Deployment", nomosv1alpha1.Syncing))),
 				},
 			},
 			wantUpdateList: []updateList{
 				{
-					update: withDeleteTimestamp(sync("", "v1", "Deployment", nomosv1alpha1.Syncing)),
+					update: withDeleteTimestamp(makeSync("", "Deployment", nomosv1alpha1.Syncing)),
 					list:   unstructuredList(schema.GroupVersionKind{Version: "v1", Kind: "DeploymentList"}),
 				},
 			},
@@ -125,11 +125,13 @@ func TestReconcile(t *testing.T) {
 			mockClient := syncertesting.NewMockClient(mockCtrl)
 			mockStatusClient := syncertesting.NewMockStatusWriter(mockCtrl)
 			mockCache := syncertesting.NewMockCache(mockCtrl)
+			mockDiscovery := syncertesting.NewMockDiscoveryInterface(mockCtrl)
 			mockManager := syncertesting.NewMockRestartableManager(mockCtrl)
 
 			testReconciler := &MetaReconciler{
 				client:                 syncerclient.New(mockClient),
 				cache:                  mockCache,
+				discoveryClient:        mockDiscovery,
 				genericResourceManager: mockManager,
 			}
 
@@ -137,7 +139,45 @@ func TestReconcile(t *testing.T) {
 				List(gomock.Any(), gomock.Any(), gomock.Any()).
 				SetArg(2, tc.actualSyncs)
 
-			mockManager.EXPECT().UpdateSyncResources(gomock.Any(), gomock.Any())
+			mockDiscovery.EXPECT().
+				ServerResources().Return(
+				[]*metav1.APIResourceList{
+					{
+						GroupVersion: "/v1",
+						APIResources: []metav1.APIResource{
+							{
+								Kind: "ConfigMap",
+							},
+							{
+								Kind: "Deployment",
+							},
+							{
+								Kind: "Secret",
+							},
+							{
+								Kind: "Service",
+							},
+						},
+					},
+					{
+						GroupVersion: "rbac.authorization.k8s.io/v1",
+						APIResources: []metav1.APIResource{
+							{
+								Kind: "Role",
+							},
+						},
+					},
+					{
+						GroupVersion: "rbac.authorization.k8s.io/v1beta1",
+						APIResources: []metav1.APIResource{
+							{
+								Kind: "Role",
+							},
+						},
+					},
+				}, nil)
+
+			mockManager.EXPECT().UpdateSyncResources(gomock.Any(), gomock.Any(), gomock.Any())
 			for _, wantUpdateListDelete := range tc.wantUpdateList {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
@@ -168,7 +208,7 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func sync(group, version, kind string, state nomosv1alpha1.SyncState) nomosv1alpha1.Sync {
+func makeSync(group, kind string, state nomosv1alpha1.SyncState) nomosv1alpha1.Sync {
 	s := nomosv1alpha1.Sync{
 		ObjectMeta: metav1.ObjectMeta{
 			Finalizers: []string{},
@@ -180,11 +220,6 @@ func sync(group, version, kind string, state nomosv1alpha1.SyncState) nomosv1alp
 					Kinds: []nomosv1alpha1.SyncKind{
 						{
 							Kind: kind,
-							Versions: []nomosv1alpha1.SyncVersion{
-								{
-									Version: version,
-								},
-							},
 						},
 					},
 				},
@@ -195,10 +230,9 @@ func sync(group, version, kind string, state nomosv1alpha1.SyncState) nomosv1alp
 		s.Status = nomosv1alpha1.SyncStatus{
 			GroupVersionKinds: []nomosv1alpha1.SyncGroupVersionKindStatus{
 				{
-					Group:   group,
-					Version: version,
-					Kind:    kind,
-					Status:  state,
+					Group:  group,
+					Kind:   kind,
+					Status: state,
 				},
 			},
 		}

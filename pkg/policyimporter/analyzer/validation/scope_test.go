@@ -24,7 +24,7 @@ import (
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	ft "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
-	"github.com/google/nomos/pkg/policyimporter/meta"
+	"github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -36,11 +36,11 @@ func withPath(o runtime.Object, path string) ast.FileObject {
 }
 
 func withScope(r *ast.Root) *ast.Root {
-	apiInfos, err := meta.NewAPIInfo(ft.TestAPIResourceList(ft.TestDynamicResources()))
+	apiInfos, err := discovery.NewAPIInfo(ft.TestAPIResourceList(ft.TestDynamicResources()))
 	if err != nil {
 		panic("testdata error")
 	}
-	meta.AddAPIInfo(r, apiInfos)
+	discovery.AddAPIInfo(r, apiInfos)
 	return r
 }
 

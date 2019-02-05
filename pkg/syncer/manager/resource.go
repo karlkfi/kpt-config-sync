@@ -19,6 +19,8 @@ package manager
 import (
 	"reflect"
 
+	"github.com/google/nomos/pkg/util/discovery"
+
 	"github.com/golang/glog"
 	nomosapischeme "github.com/google/nomos/clientgen/apis/scheme"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
@@ -29,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -38,7 +39,7 @@ import (
 type RestartableManager interface {
 	// UpdateSyncResources checks if the resources in Syncs have changed since last time we checked.
 	// If they have, we stop the old manager and brings up a new one with controllers for sync-enabled resources.
-	UpdateSyncResources(syncs []*nomosv1alpha1.Sync, startErrCh chan error) error
+	UpdateSyncResources(syncs []*nomosv1alpha1.Sync, apirs *discovery.APIInfo, startErrCh chan error) error
 	// Clear clears out the set of resource types ResourceManger is managing, without restarting the manager.
 	Clear()
 }
@@ -69,8 +70,12 @@ func NewGenericResourceManager(mgr manager.Manager, cfg *rest.Config) *GenericRe
 }
 
 // UpdateSyncResources implements RestartableManager.
-func (r *GenericResourceManager) UpdateSyncResources(syncs []*nomosv1alpha1.Sync, startErrCh chan error) error {
-	actual := GroupVersionKinds(syncs...)
+func (r *GenericResourceManager) UpdateSyncResources(syncs []*nomosv1alpha1.Sync, apirs *discovery.APIInfo,
+	startErrCh chan error) error {
+	actual, err := apirs.GroupVersionKinds(syncs...)
+	if err != nil {
+		return errors.Wrapf(err, "could not look up GroupVersionKinds of Syncs")
+	}
 	if reflect.DeepEqual(actual, r.syncEnabled) {
 		// The set of sync-enabled resources hasn't changed. There is no need to restart.
 		return nil
@@ -79,13 +84,14 @@ func (r *GenericResourceManager) UpdateSyncResources(syncs []*nomosv1alpha1.Sync
 	r.stopCh = make(chan struct{})
 	glog.Info("Stopping GenericResourceManager")
 
-	var err error
 	r.Manager, err = manager.New(rest.CopyConfig(r.baseCfg), manager.Options{})
 	if err != nil {
 		return errors.Wrap(err, "could not start GenericResourceManager")
 	}
-	r.register(syncs)
-	return r.startControllers(syncs, startErrCh)
+	if err := r.register(apirs, syncs); err != nil {
+		return errors.Wrap(err, "could not start GenericResourceManager")
+	}
+	return r.startControllers(apirs, syncs, startErrCh)
 }
 
 // Clear implements RestartableManager.
@@ -95,11 +101,14 @@ func (r *GenericResourceManager) Clear() {
 
 // register updates the scheme with resources declared in Syncs.
 // This is needed to generate informers/listers for resources that are sync enabled.
-func (r *GenericResourceManager) register(syncs []*nomosv1alpha1.Sync) {
+func (r *GenericResourceManager) register(apirs *discovery.APIInfo, syncs []*nomosv1alpha1.Sync) error {
 	scheme := r.GetScheme()
 	nomosapischeme.AddToScheme(scheme)
-
-	r.syncEnabled = GroupVersionKinds(syncs...)
+	enabled, err := apirs.GroupVersionKinds(syncs...)
+	if err != nil {
+		return err
+	}
+	r.syncEnabled = enabled
 	for gvk := range r.syncEnabled {
 		if !scheme.Recognizes(gvk) {
 			scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
@@ -112,11 +121,13 @@ func (r *GenericResourceManager) register(syncs []*nomosv1alpha1.Sync) {
 			metav1.AddToGroupVersion(scheme, gvk.GroupVersion())
 		}
 	}
+	return nil
 }
 
 // startControllers starts all the controllers watching sync-enabled resources.
-func (r *GenericResourceManager) startControllers(syncs []*nomosv1alpha1.Sync, startErrCh chan error) error {
-	namespace, cluster, err := r.resourceScopes()
+func (r *GenericResourceManager) startControllers(apirs *discovery.APIInfo, syncs []*nomosv1alpha1.Sync,
+	startErrCh chan error) error {
+	namespace, cluster, err := r.resourceScopes(apirs)
 	if err != nil {
 		return errors.Wrap(err, "could not get resource scope information from discovery API")
 	}
@@ -140,30 +151,8 @@ func (r *GenericResourceManager) startControllers(syncs []*nomosv1alpha1.Sync, s
 }
 
 // resourceScopes returns two slices representing the namespace and cluster scoped resource types with sync enabled.
-func (r *GenericResourceManager) resourceScopes() (map[schema.GroupVersionKind]runtime.Object,
+func (r *GenericResourceManager) resourceScopes(apirs *discovery.APIInfo) (map[schema.GroupVersionKind]runtime.Object,
 	map[schema.GroupVersionKind]runtime.Object, error) {
-	dc, err := discovery.NewDiscoveryClientForConfig(r.GetConfig())
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to create discoveryclient")
-	}
-	groups, err := dc.ServerResources()
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to get api groups")
-	}
-	namespaceScoped := make(map[schema.GroupVersionKind]bool)
-	for _, g := range groups {
-		gv, grpErr := schema.ParseGroupVersion(g.GroupVersion)
-		if grpErr != nil {
-			// This shouldn't happen because we get these values from the server.
-			return nil, nil, errors.Wrap(grpErr, "received invalid GroupVersion from server")
-		}
-		for _, apir := range g.APIResources {
-			if apir.Namespaced {
-				namespaceScoped[gv.WithKind(apir.Kind)] = true
-			}
-		}
-	}
-
 	rts, err := r.resourceTypes()
 	if err != nil {
 		return nil, nil, err
@@ -171,10 +160,13 @@ func (r *GenericResourceManager) resourceScopes() (map[schema.GroupVersionKind]r
 	namespace := make(map[schema.GroupVersionKind]runtime.Object)
 	cluster := make(map[schema.GroupVersionKind]runtime.Object)
 	for gvk, obj := range rts {
-		if namespaceScoped[gvk] {
+		switch apirs.GetScope(gvk) {
+		case discovery.NamespaceScope:
 			namespace[gvk] = obj
-		} else {
+		case discovery.ClusterScope:
 			cluster[gvk] = obj
+		case discovery.UnknownScope:
+			return nil, nil, errors.Errorf("Could not determine resource scope for %s", gvk)
 		}
 	}
 	return namespace, cluster, nil

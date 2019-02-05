@@ -26,13 +26,16 @@ import (
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	syncermanager "github.com/google/nomos/pkg/syncer/manager"
+	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/util/sync"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,6 +55,8 @@ type MetaReconciler struct {
 	// cache is a shared cache that is populated by informers in the scheme and used by all controllers / reconcilers in the
 	// manager.
 	cache cache.Cache
+	// discoveryClient is used to look up versions on the cluster for the GroupKinds in the Syncs being reconciled.
+	discoveryClient discovery.DiscoveryInterface
 	// genericResourceManager is the manager for all sync-enabled resources.
 	genericResourceManager syncermanager.RestartableManager
 	// mgrStartErrCh is used to listen for errors when (re)starting genericResourceManager.
@@ -59,7 +64,8 @@ type MetaReconciler struct {
 }
 
 // NewMetaReconciler returns a new MetaReconciler that reconciles changes in Syncs.
-func NewMetaReconciler(client *syncerclient.Client, cache cache.Cache, cfg *rest.Config, errCh chan error) (*MetaReconciler,
+func NewMetaReconciler(client *syncerclient.Client, cache cache.Cache, cfg *rest.Config,
+	dc discovery.DiscoveryInterface, errCh chan error) (*MetaReconciler,
 	error) {
 	mgr, err := manager.New(cfg, manager.Options{})
 	if err != nil {
@@ -70,6 +76,7 @@ func NewMetaReconciler(client *syncerclient.Client, cache cache.Cache, cfg *rest
 		client:                 client,
 		cache:                  cache,
 		genericResourceManager: syncermanager.NewGenericResourceManager(mgr, cfg),
+		discoveryClient:        dc,
 		mgrStartErrCh:          errCh,
 	}, nil
 }
@@ -104,9 +111,18 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 		}
 	}
 
+	sr, err := r.discoveryClient.ServerResources()
+	if err != nil {
+		return reconcile.Result{}, errors.Wrapf(err, "failed to get api groups")
+	}
+	apirs, err := utildiscovery.NewAPIInfo(sr)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// Check if the set of sync-enabled resources has changed,
 	// restart the GenericResourceManager to sync the appropriate resources.
-	if err := r.genericResourceManager.UpdateSyncResources(enabled, r.mgrStartErrCh); err != nil {
+	if err := r.genericResourceManager.UpdateSyncResources(enabled, apirs, r.mgrStartErrCh); err != nil {
 		r.genericResourceManager.Clear()
 		glog.Errorf("Could not start GenericResourceManager: %v", err)
 		return reconcile.Result{}, err
@@ -116,7 +132,11 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	// Finalize Syncs that have not already been finalized.
 	for _, tf := range toFinalize {
 		// Make sure to delete all Sync-managed resource before finalizing the Sync.
-		r.gcResources(ctx, syncermanager.GroupVersionKinds(tf), errBuilder)
+		gvks, err := apirs.GroupVersionKinds(tf)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		r.gcResources(ctx, gvks, errBuilder)
 		if errBuilder.HasErrors() {
 			bErr := errBuilder.Build()
 			glog.Errorf("Could not remove managed resources before sync finalization: %v", bErr)
@@ -126,14 +146,13 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
-	for _, sync := range enabled {
+	for _, e := range enabled {
 		var status v1alpha1.SyncStatus
-		for gvk := range syncermanager.GroupVersionKinds(sync) {
+		for gk := range sync.GroupKinds(e) {
 			statusGroupKind := v1alpha1.SyncGroupVersionKindStatus{
-				Group:   gvk.Group,
-				Version: gvk.Version,
-				Kind:    gvk.Kind,
-				Status:  v1alpha1.Syncing,
+				Group:  gk.Group,
+				Kind:   gk.Kind,
+				Status: v1alpha1.Syncing,
 			}
 			status.GroupVersionKinds = append(status.GroupVersionKinds, statusGroupKind)
 		}
@@ -146,13 +165,13 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 			return lgk.Kind < rgk.Kind
 		})
 		// Check if status changed before updating.
-		if !reflect.DeepEqual(sync.Status, status) {
+		if !reflect.DeepEqual(e.Status, status) {
 			updateFn := func(obj runtime.Object) (runtime.Object, error) {
 				s := obj.(*v1alpha1.Sync)
 				s.Status = status
 				return s, nil
 			}
-			_, err := r.client.UpdateStatus(ctx, sync, updateFn)
+			_, err := r.client.UpdateStatus(ctx, e, updateFn)
 			errBuilder.Add(errors.Wrap(err, "could not update sync status"))
 		}
 	}
@@ -165,20 +184,30 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	return reconcile.Result{}, bErr
 }
 
-func (r *MetaReconciler) gcResources(ctx context.Context, gvks map[schema.GroupVersionKind]bool, errBuilder multierror.Builder) {
+func (r *MetaReconciler) gcResources(ctx context.Context, gvks map[schema.GroupVersionKind]bool,
+	errBuilder multierror.Builder) {
 	managed := labels.SelectorFromSet(labels.Set{labeling.ResourceManagementKey: labeling.Enabled})
-	for gvk := range gvks {
-		gvk.Kind += "List"
-		ul := &unstructured.UnstructuredList{}
-		ul.SetGroupVersionKind(gvk)
-		if err := r.client.List(ctx, &client.ListOptions{LabelSelector: managed}, ul); err != nil {
-			errBuilder.Add(errors.Wrapf(err, "could not list %s resources", gvk))
-			continue
-		}
-		for _, u := range ul.Items {
-			if err := r.client.Delete(ctx, &u); err != nil {
-				errBuilder.Add(errors.Wrapf(err, "could not delete %s resource: %v", gvk, u))
-			}
+	// It doesn't matter which version we choose when deleting.
+	// Deletes to a resource of a particular version affect all versions with the same group and kind.
+	var gvk schema.GroupVersionKind
+	for k := range gvks {
+		gvk = k
+		break
+	}
+	if gvk.Empty() {
+		errBuilder.Add(errors.New("could not extract a GroupVersionKind from Syncs"))
+		return
+	}
+	gvk.Kind += "List"
+	ul := &unstructured.UnstructuredList{}
+	ul.SetGroupVersionKind(gvk)
+	if err := r.client.List(ctx, &client.ListOptions{LabelSelector: managed}, ul); err != nil {
+		errBuilder.Add(errors.Wrapf(err, "could not list %s resources", gvk))
+		return
+	}
+	for _, u := range ul.Items {
+		if err := r.client.Delete(ctx, &u); err != nil {
+			errBuilder.Add(errors.Wrapf(err, "could not delete %s resource: %v", gvk, u))
 		}
 	}
 }

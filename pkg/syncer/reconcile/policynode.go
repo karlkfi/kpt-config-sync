@@ -284,19 +284,8 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 	}
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
-		for _, decl := range declaredInstances {
-			decl.SetNamespace(name)
-			// Label the resource as Nomos managed.
-			decl.SetLabels(labeling.ManageResource.AddDeepCopy(decl.GetLabels()))
-			// Annotate the resource with the current version token.
-			a := decl.GetAnnotations()
-			if a == nil {
-				a = map[string]string{v1alpha1.SyncTokenAnnotationKey: node.Spec.ImportToken}
-			} else {
-				a[v1alpha1.SyncTokenAnnotationKey] = node.Spec.ImportToken
-			}
-			decl.SetAnnotations(a)
-		}
+		decorateAsManaged(declaredInstances, node)
+		allDeclaredVersions := allVersionNames(grs, gvk.GroupKind())
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, name)
 		if err != nil {
@@ -305,7 +294,7 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 			continue
 		}
 
-		diffs := differ.Diffs(declaredInstances, actualInstances)
+		diffs := differ.Diffs(declaredInstances, allDeclaredVersions, actualInstances)
 		for _, diff := range diffs {
 			if updated, err := r.handleDiff(ctx, diff); err != nil {
 				errBuilder.Add(err)
@@ -328,6 +317,22 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 			"policy node was successfully reconciled: %d changes", reconcileCount)
 	}
 	return errBuilder.Build()
+}
+
+func decorateAsManaged(declaredInstances []*unstructured.Unstructured, node *v1.PolicyNode) {
+	for _, decl := range declaredInstances {
+		decl.SetNamespace(node.GetName())
+		// Label the resource as Nomos managed.
+		decl.SetLabels(labeling.ManageResource.AddDeepCopy(decl.GetLabels()))
+		// Annotate the resource with the current version token.
+		a := decl.GetAnnotations()
+		if a == nil {
+			a = map[string]string{v1alpha1.SyncTokenAnnotationKey: node.Spec.ImportToken}
+		} else {
+			a[v1alpha1.SyncTokenAnnotationKey] = node.Spec.ImportToken
+		}
+		decl.SetAnnotations(a)
+	}
 }
 
 func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *v1.PolicyNode,

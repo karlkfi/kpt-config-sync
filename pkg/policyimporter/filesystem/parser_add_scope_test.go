@@ -8,9 +8,9 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/policyimporter/meta"
+	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 )
 
@@ -38,8 +38,8 @@ func newFakeDiscoveryClient(resources []*v1.APIResourceList) discovery.ServerRes
 	return &fakeDiscoveryClient{resources: resources}
 }
 
-func ToAPIInfo(t *testing.T, resources []*v1.APIResourceList) *meta.APIInfo {
-	result, err := meta.NewAPIInfo(resources)
+func ToAPIInfo(t *testing.T, resources []*v1.APIResourceList) *utildiscovery.APIInfo {
+	result, err := utildiscovery.NewAPIInfo(resources)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestAddScope(t *testing.T) {
 	testCases := []struct {
 		name      string
 		resources []*v1.APIResourceList
-		expected  *meta.APIInfo
+		expected  *utildiscovery.APIInfo
 	}{
 		{
 			name:     "no server resources returns ephemeral resources",
@@ -87,9 +87,9 @@ func TestAddScope(t *testing.T) {
 				t.Fatal(errors.Wrap(err, "should have succeeded"))
 			}
 
-			actual := meta.GetAPIInfo(root)
+			actual := utildiscovery.GetAPIInfo(root)
 
-			if diff := cmp.Diff(tc.expected, actual, cmp.AllowUnexported(meta.APIInfo{})); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual, cmp.AllowUnexported(utildiscovery.APIInfo{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})

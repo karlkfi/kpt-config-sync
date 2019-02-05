@@ -66,11 +66,12 @@ func (ti TestItems) Objects(t *testing.T) []*unstructured.Unstructured {
 }
 
 type TestCase struct {
-	name        string
-	decls       TestItems
-	actuals     TestItems
-	expect      []*Diff
-	expectPanic bool
+	name              string
+	decls             TestItems
+	otherVersionDecls TestItems
+	actuals           TestItems
+	expect            []*Diff
+	expectPanic       bool
 }
 
 func TestComparator(t *testing.T) {
@@ -104,6 +105,17 @@ func TestComparator(t *testing.T) {
 					Declared: nil,
 					Actual:   TestItem{name: "foo", value: "2"}.Object(t),
 				},
+			},
+		},
+		{
+			name: "Don't delete resources declared in other versions",
+			otherVersionDecls: TestItems{
+				TestItem{name: "foo", value: "2"},
+				TestItem{name: "bar", value: "4"},
+			},
+			actuals: TestItems{
+				TestItem{name: "foo", value: "2"},
+				TestItem{name: "bar", value: "2"},
 			},
 		},
 		{
@@ -187,8 +199,12 @@ func TestComparator(t *testing.T) {
 
 			declared := testcase.decls.Objects(t)
 			actuals := testcase.actuals.Objects(t)
+			allVersionsDeclared := map[string]bool{}
+			for _, r := range append(declared, testcase.otherVersionDecls.Objects(t)...) {
+				allVersionsDeclared[r.GetName()] = true
+			}
 
-			diff := Diffs(declared, actuals)
+			diff := Diffs(declared, allVersionsDeclared, actuals)
 
 			for _, expect := range testcase.expect {
 				var found bool

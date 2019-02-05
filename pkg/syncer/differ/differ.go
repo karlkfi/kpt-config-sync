@@ -69,25 +69,20 @@ func (d Diff) ActualResourceIsManaged() bool {
 	return value == labeling.Enabled
 }
 
-// Diffs returns the diffs between declared and actual state. The diffs will be returned in an
-// arbitrary order.
-func Diffs(declared []*unstructured.Unstructured, existing []*unstructured.Unstructured) []*Diff {
-	var diffs []*Diff
+// Diffs returns the diffs between declared and actual state. We generate a diff for each GroupVersionKind.
+// The actual resources are for all versions of a GroupKind and the declared resources are for a particular GroupKind.
+// We need to ensure there is not a declared resource across all possible versions before we delete it.
+// The diffs will be returned in an arbitrary order.
+func Diffs(declared []*unstructured.Unstructured, allDeclaredVersions map[string]bool,
+	existing []*unstructured.Unstructured) []*Diff {
 
-	decls := map[string]*unstructured.Unstructured{}
-	for _, decl := range declared {
-		name := decl.GetName()
-		if _, found := decls[name]; found {
-			panic(invalidInput{desc: fmt.Sprintf("Got duplicate decl for %q", name)})
-		}
-		decls[name] = decl
-	}
-
+	decls := asMap(declared)
 	actuals := map[string]*unstructured.Unstructured{}
 	for _, item := range existing {
 		actuals[item.GetName()] = item
 	}
 
+	var diffs []*Diff
 	for name, decl := range decls {
 		if actual, found := actuals[name]; !found {
 			// in decl, not in actual
@@ -109,8 +104,8 @@ func Diffs(declared []*unstructured.Unstructured, existing []*unstructured.Unstr
 	}
 
 	for name, actual := range actuals {
-		if _, found := decls[name]; !found {
-			// Not in declared, in actuals
+		if !allDeclaredVersions[name] {
+			// Not in any declared version, in actuals
 			diffs = append(diffs, &Diff{
 				Name:     name,
 				Type:     Delete,
@@ -120,6 +115,18 @@ func Diffs(declared []*unstructured.Unstructured, existing []*unstructured.Unstr
 		}
 	}
 	return diffs
+}
+
+func asMap(us []*unstructured.Unstructured) map[string]*unstructured.Unstructured {
+	m := map[string]*unstructured.Unstructured{}
+	for _, u := range us {
+		name := u.GetName()
+		if _, found := m[name]; found {
+			panic(invalidInput{desc: fmt.Sprintf("Got duplicate decl for %q", name)})
+		}
+		m[name] = u
+	}
+	return m
 }
 
 type invalidInput struct {

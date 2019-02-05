@@ -8,7 +8,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/sync"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
-	"github.com/google/nomos/pkg/policyimporter/meta"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/multierror"
 )
 
@@ -59,7 +59,7 @@ func validateSystem(root *ast.Root, objects []ast.FileObject, errorBuilder *mult
 
 	syncs := fileObjects(objects).syncs()
 	sync.KindValidatorFactory.New(syncs).Validate(errorBuilder)
-	sync.KnownResourceValidatorFactory(meta.GetAPIInfo(root)).New(syncs).Validate(errorBuilder)
+	sync.KnownResourceValidatorFactory(discovery.GetAPIInfo(root)).New(syncs).Validate(errorBuilder)
 	sync.NewInheritanceValidatorFactory().New(syncs).Validate(errorBuilder)
 	sync.VersionValidatorFactory{}.New(syncs).Validate(errorBuilder)
 }

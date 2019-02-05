@@ -6,7 +6,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
-	"github.com/google/nomos/pkg/policyimporter/meta"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/multierror"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,7 +38,7 @@ var knownResourceValidatorTestCases = []knownResourceValidatorTestCase{
 	},
 }
 
-func toAPIInfo(known []schema.GroupVersionKind) (*meta.APIInfo, error) {
+func toAPIInfo(known []schema.GroupVersionKind) (*discovery.APIInfo, error) {
 	resources := make([]*metav1.APIResourceList, len(known))
 
 	for i, gvk := range known {
@@ -48,7 +48,7 @@ func toAPIInfo(known []schema.GroupVersionKind) (*meta.APIInfo, error) {
 		}
 	}
 
-	return meta.NewAPIInfo(resources)
+	return discovery.NewAPIInfo(resources)
 }
 
 func (tc knownResourceValidatorTestCase) Run(t *testing.T) {

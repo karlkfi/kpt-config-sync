@@ -2,11 +2,11 @@ package sync
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/policyimporter/meta"
+	"github.com/google/nomos/pkg/util/discovery"
 )
 
 // KnownResourceValidatorFactory adds errors for unknown resources which are not explicitly unsupported.
-func KnownResourceValidatorFactory(apiInfo *meta.APIInfo) ValidatorFactory {
+func KnownResourceValidatorFactory(apiInfo *discovery.APIInfo) ValidatorFactory {
 	return ValidatorFactory{fn: func(sync FileGroupVersionKindHierarchySync) error {
 		gvk := sync.GroupVersionKind()
 		if !apiInfo.Exists(gvk) {

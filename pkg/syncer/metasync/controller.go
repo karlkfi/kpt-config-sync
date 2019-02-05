@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachinerytypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -44,9 +45,13 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 	// Set up Scheme for nomos resources.
 	nomosapischeme.AddToScheme(mgr.GetScheme())
 
+	dc, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	if err != nil {
+		return errors.Wrapf(err, "failed to create discoveryclient")
+	}
 	// Set up a meta controller that restarts GenericResource controllers when Syncs change.
 	startErrCh := make(chan error)
-	reconciler, err := NewMetaReconciler(client.New(mgr.GetClient()), mgr.GetCache(), mgr.GetConfig(), startErrCh)
+	reconciler, err := NewMetaReconciler(client.New(mgr.GetClient()), mgr.GetCache(), mgr.GetConfig(), dc, startErrCh)
 	if err != nil {
 		return errors.Wrap(err, "could not create meta reconciler")
 	}

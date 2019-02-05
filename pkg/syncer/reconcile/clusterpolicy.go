@@ -118,18 +118,8 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1
 	reconcileCount := 0
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
-		for _, decl := range declaredInstances {
-			// Label the resource as Nomos managed.
-			decl.SetLabels(labeling.ManageResource.AddDeepCopy(decl.GetLabels()))
-			// Annotate the resource with the current version token.
-			a := decl.GetAnnotations()
-			if a == nil {
-				a = map[string]string{v1alpha1.SyncTokenAnnotationKey: policy.Spec.ImportToken}
-			} else {
-				a[v1alpha1.SyncTokenAnnotationKey] = policy.Spec.ImportToken
-			}
-			decl.SetAnnotations(a)
-		}
+		decorateAsClusterManaged(declaredInstances, policy)
+		allDeclaredVersions := allVersionNames(grs, gvk.GroupKind())
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, "")
 		if err != nil {
@@ -138,7 +128,7 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1
 			continue
 		}
 
-		diffs := differ.Diffs(declaredInstances, actualInstances)
+		diffs := differ.Diffs(declaredInstances, allDeclaredVersions, actualInstances)
 		for _, diff := range diffs {
 			if updated, err := r.handleDiff(ctx, diff); err != nil {
 				errBuilder.Add(err)
@@ -160,6 +150,21 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1
 			"cluster policy was successfully reconciled: %d changes", reconcileCount)
 	}
 	return errBuilder.Build()
+}
+
+func decorateAsClusterManaged(declaredInstances []*unstructured.Unstructured, policy *v1.ClusterPolicy) {
+	for _, decl := range declaredInstances {
+		// Label the resource as Nomos managed.
+		decl.SetLabels(labeling.ManageResource.AddDeepCopy(decl.GetLabels()))
+		// Annotate the resource with the current version token.
+		a := decl.GetAnnotations()
+		if a == nil {
+			a = map[string]string{v1alpha1.SyncTokenAnnotationKey: policy.Spec.ImportToken}
+		} else {
+			a[v1alpha1.SyncTokenAnnotationKey] = policy.Spec.ImportToken
+		}
+		decl.SetAnnotations(a)
+	}
 }
 
 func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, policy *v1.ClusterPolicy,

@@ -34,7 +34,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
-	"github.com/google/nomos/pkg/policyimporter/meta"
+	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -267,11 +267,11 @@ func addScope(root *ast.Root, client discovery.ServerResourcesInterface) error {
 	}
 
 	resources = append(resources, transform.EphemeralResources()...)
-	apiInfo, err := meta.NewAPIInfo(resources)
+	apiInfo, err := utildiscovery.NewAPIInfo(resources)
 	if err != nil {
 		return err
 	}
-	meta.AddAPIInfo(root, apiInfo)
+	utildiscovery.AddAPIInfo(root, apiInfo)
 	return nil
 }
 

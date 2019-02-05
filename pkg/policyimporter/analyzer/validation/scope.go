@@ -20,7 +20,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/policyimporter/meta"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
 )
@@ -30,7 +30,7 @@ import (
 type Scope struct {
 	*visitor.Base
 	errs    multierror.Builder
-	apiInfo *meta.APIInfo
+	apiInfo *discovery.APIInfo
 }
 
 // NewScope returns a validator that checks if objects are in the correct scope in terms of namespace
@@ -51,7 +51,7 @@ func (p *Scope) Error() error {
 
 // VisitRoot implement ast.Visitor.
 func (p *Scope) VisitRoot(r *ast.Root) *ast.Root {
-	p.apiInfo = meta.GetAPIInfo(r)
+	p.apiInfo = discovery.GetAPIInfo(r)
 	return p.Base.VisitRoot(r)
 }
 
@@ -60,7 +60,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	gvk := o.Object.GetObjectKind().GroupVersionKind()
 
 	switch p.apiInfo.GetScope(gvk) {
-	case meta.Namespace:
+	case discovery.NamespaceScope:
 		p.errs.Add(errors.Errorf(
 			"Namespace scoped object %s with Name %q in file %q cannot be declared in %q "+
 				"directory.  Move declaration to the appropriate %q directory.",
@@ -70,7 +70,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 			repo.ClusterDir,
 			repo.NamespacesDir,
 		))
-	case meta.NotFound:
+	case discovery.UnknownScope:
 		p.errs.Add(vet.UnknownObjectError{Resource: &o.FileObject})
 	}
 
@@ -82,7 +82,7 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	gvk := o.Object.GetObjectKind().GroupVersionKind()
 
 	switch p.apiInfo.GetScope(gvk) {
-	case meta.Cluster:
+	case discovery.ClusterScope:
 		p.errs.Add(errors.Errorf(
 			"Cluster scoped object %s with Name %q from file %s cannot be declared inside "+
 				"%q directory.  Move declaration to the %q directory.",
@@ -92,7 +92,7 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 			repo.NamespacesDir,
 			repo.ClusterDir,
 		))
-	case meta.NotFound:
+	case discovery.UnknownScope:
 		p.errs.Add(vet.UnknownObjectError{Resource: &o.FileObject})
 	}
 
