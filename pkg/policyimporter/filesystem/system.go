@@ -51,7 +51,6 @@ func processSystem(
 // validateSystem validates objects in system/
 func validateSystem(root *ast.Root, objects []ast.FileObject, errorBuilder *multierror.Builder) {
 	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(objects)).Validate(errorBuilder)
-	syntax.FlatDirectoryValidator.Validate(ast.ToRelative(objects), errorBuilder)
 	syntax.RepoVersionValidator.Validate(objects, errorBuilder)
 	syntax.SystemKindValidator.Validate(objects, errorBuilder)
 

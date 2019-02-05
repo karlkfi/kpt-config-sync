@@ -27,6 +27,7 @@ func (n NomosVisitorProvider) Visitors(
 	vet bool) []ast.Visitor {
 	specs := toInheritanceSpecs(syncs)
 	v := []ast.Visitor{
+		syntax.NewFlatNodeValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Namespace()),
 		syntax.NewDisallowSystemObjectsValidator(),
 		metadata.NewNameValidator(),

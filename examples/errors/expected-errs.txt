@@ -1,12 +1,7 @@
-Found issues: 3 error(s)
+Found issues: 2 error(s)
 
 
-[1] KNV1018: cluster/ directory MUST NOT have subdirectories.
-
-path: cluster/illegal-cluster-subdir
-
-
-[2] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
+[1] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
 
 source: namespaces/dev/alice-rolebinding.yaml
 metadata.name: alice-rolebinding
@@ -21,7 +16,7 @@ version: v1
 kind: RoleBinding
 
 
-[3] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
+[2] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
 
 source: namespaces/prod/prod-namespace/namespace-1.yaml
 metadata.name: prod-namespace

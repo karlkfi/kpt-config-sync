@@ -136,7 +136,6 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 
 	// processing for <root>/cluster/*
 	clusterInfos := p.readClusterResources(errorBuilder)
-	validateCluster(clusterInfos, errorBuilder)
 	astRoot.Accept(tree.NewClusterBuilderVisitor(clusterInfos))
 
 	// processing for <root>/clusterregistry/*
@@ -153,6 +152,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	nsInfos := p.readNamespaceResources(errorBuilder)
 
 	// TODO: Move to after transforms.
+	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(clusterInfos)).Validate(errorBuilder)
 	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(nsInfos)).Validate(errorBuilder)
 
 	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos)}

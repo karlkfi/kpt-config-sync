@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/util/multierror"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -93,4 +94,10 @@ func validateNameCollisions(name string, metas []id.Resource, eb *multierror.Bui
 		// There's no need to have multiple errors when more than two objects collide.
 		i += 1 + len(duplicates)
 	}
+}
+
+// ResourceMeta provides a Resource's identifier and its metadata.
+type ResourceMeta interface {
+	id.Resource
+	MetaObject() metav1.Object
 }
