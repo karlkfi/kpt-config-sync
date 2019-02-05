@@ -8,7 +8,7 @@ import (
 )
 
 // NewUniqueIAMValidator returns a UniqueIAMValidator.
-func NewUniqueIAMValidator() *visitor.ValidatorVisitor {
+func NewUniqueIAMValidator() ast.Visitor {
 	return visitor.NewTreeNodeValidator(validateUniqueIAM)
 }
 

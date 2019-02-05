@@ -20,7 +20,7 @@ type MaxFolderDepthValidator struct {
 var _ ast.Visitor = &MaxFolderDepthValidator{}
 
 // NewMaxFolderDepthValidator initializes a MaxFolderDepthValidator.
-func NewMaxFolderDepthValidator() *MaxFolderDepthValidator {
+func NewMaxFolderDepthValidator() ast.Visitor {
 	v := &MaxFolderDepthValidator{Base: visitor.NewBase()}
 	v.SetImpl(v)
 	return v
