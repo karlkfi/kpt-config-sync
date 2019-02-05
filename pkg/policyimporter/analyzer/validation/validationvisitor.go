@@ -25,7 +25,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
-	"github.com/google/nomos/pkg/util/namespaceutil"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -93,11 +92,6 @@ func (v *InputValidator) Error() error {
 
 // VisitTreeNode implements Visitor
 func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	if name := n.Base(); namespaceutil.IsReserved(name) {
-		// The node's name must not be a reserved namespace name.
-		v.errs.Add(vet.ReservedDirectoryNameError{Dir: n.Relative})
-	}
-
 	// Namespaces may not have children.
 	if len(v.nodes) > 1 {
 		// Recall that v.nodes are this node's ancestors in the tree of directories.
@@ -143,6 +137,7 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterOb
 
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
+	// TODO: Move each individual check here to its own Visitor.
 	gvk := o.GroupVersionKind()
 	if !v.syncdGVKs[gvk] && !transform.IsEphemeral(gvk) {
 		if !syntax.IsSystemOnly(gvk) {
@@ -154,7 +149,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	n := v.nodes[len(v.nodes)-1]
 	if n.Type == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[gvk.GroupKind()]
-		if (!found || spec.Mode == v1alpha1.HierarchyModeNone) && !transform.IsEphemeral(gvk) {
+		if (!found || spec.Mode == v1alpha1.HierarchyModeNone) && !transform.IsEphemeral(gvk) && !syntax.IsSystemOnly(gvk) {
 			v.errs.Add(vet.IllegalAbstractNamespaceObjectKindError{Resource: o})
 		}
 	}

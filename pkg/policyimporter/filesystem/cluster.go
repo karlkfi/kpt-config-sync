@@ -8,9 +8,7 @@ import (
 )
 
 func validateCluster(objects []ast.FileObject, errorBuilder *multierror.Builder) {
-	metadata.Validate(toResourceMetas(objects), errorBuilder)
-
-	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
+	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(objects)).Validate(errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(ast.ToRelative(objects), errorBuilder)
 }
 

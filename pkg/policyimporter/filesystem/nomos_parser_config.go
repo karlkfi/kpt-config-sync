@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/visitors"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
@@ -25,8 +26,14 @@ func (n NomosVisitorProvider) Visitors(
 	selectors []v1alpha1.ClusterSelector,
 	vet bool) []ast.Visitor {
 	specs := toInheritanceSpecs(syncs)
-	visitors := []ast.Visitor{
+	v := []ast.Visitor{
 		semantic.NewSingletonResourceValidator(kinds.Namespace()),
+		syntax.NewDisallowSystemObjectsValidator(),
+		metadata.NewNameValidator(),
+		metadata.NewNamespaceAnnotationValidator(),
+		metadata.NewNamespaceValidator(),
+		syntax.NewDirectoryNameValidator(),
+		visitors.NewUniqueDirectoryValidator(),
 		syntax.NewNamespaceKindValidator(),
 		metadata.NewAnnotationValidator(),
 		metadata.NewLabelValidator(),
@@ -39,12 +46,12 @@ func (n NomosVisitorProvider) Visitors(
 		transform.NewEphemeralResourceRemover(),
 	}
 	if spec, found := specs[kinds.ResourceQuota().GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
-		visitors = append(visitors, validation.NewQuotaValidator())
-		visitors = append(visitors, transform.NewQuotaVisitor())
+		v = append(v, validation.NewQuotaValidator())
+		v = append(v, transform.NewQuotaVisitor())
 	}
-	visitors = append(visitors, validation.NewNameValidator())
-	visitors = append(visitors, transform.NewUnarySync())
-	return visitors
+	v = append(v, validation.NewNameValidator())
+	v = append(v, transform.NewUnarySync())
+	return v
 }
 
 // SyncResources implements ParserConfig

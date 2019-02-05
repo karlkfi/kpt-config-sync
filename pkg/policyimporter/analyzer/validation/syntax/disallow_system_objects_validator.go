@@ -1,29 +1,45 @@
 package syntax
 
 import (
-	"strings"
-
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// DisallowSystemObjectsValidator validates that the resources which may appear in system/ and nowhere
-// else only appear in system/.
-var DisallowSystemObjectsValidator = &FileObjectValidator{
-	ValidateFn: func(fileObject ast.FileObject) error {
-		if IsSystemOnly(fileObject.GroupVersionKind()) && !isInSystemDir(fileObject) {
-			return vet.IllegalSystemResourcePlacementError{Resource: &fileObject}
-		}
-		return nil
-	},
+type disallowSystemObjectsValidator struct {
+	visitor.ValidatorBase
 }
 
-// isInSystemDir returns true if the Resource is currently placed in system/.
-func isInSystemDir(o ast.FileObject) bool {
-	return strings.HasPrefix(o.RelativeSlashPath(), repo.SystemDir)
+// ValidateClusterRegistryObject implements visitor.Validator.
+func (v *disallowSystemObjectsValidator) ValidateClusterRegistryObject(o *ast.ClusterRegistryObject) error {
+	if IsSystemOnly(o.GroupVersionKind()) {
+		return vet.IllegalSystemResourcePlacementError{Resource: o}
+	}
+	return nil
+}
+
+// ValidateClusterObject implements visitor.Validator.
+func (v *disallowSystemObjectsValidator) ValidateClusterObject(o *ast.ClusterObject) error {
+	if IsSystemOnly(o.GroupVersionKind()) {
+		return vet.IllegalSystemResourcePlacementError{Resource: o}
+	}
+	return nil
+}
+
+// ValidateObject implements visitor.Validator.
+func (v *disallowSystemObjectsValidator) ValidateObject(o *ast.NamespaceObject) error {
+	if IsSystemOnly(o.GroupVersionKind()) {
+		return vet.IllegalSystemResourcePlacementError{Resource: o}
+	}
+	return nil
+}
+
+// NewDisallowSystemObjectsValidator validates that the resources which may appear in system/ and nowhere
+// else only appear in system/.
+func NewDisallowSystemObjectsValidator() *visitor.ValidatorVisitor {
+	return visitor.NewValidator(&disallowSystemObjectsValidator{})
 }
 
 // IsSystemOnly returns true if the GVK is only allowed in the system/ directory.

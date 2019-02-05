@@ -923,7 +923,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.InvalidNamespaceNameErrorCode},
+		expectedErrorCodes: []string{vet.InvalidNamespaceNameErrorCode, vet.MultipleNamespacesErrorCode},
 	},
 	{
 		testName: "Namespace dir with Namespace mismatch and ignored file",
@@ -1363,7 +1363,6 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedErrorCodes: []string{
 			vet.MetadataNameCollisionErrorCode,
-			vet.InvalidNamespaceNameErrorCode,
 		},
 	},
 	{
@@ -1667,19 +1666,19 @@ spec:
 		testName: "Dir name reserved 2",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":              aRepo,
-			"namespaces/kube-system/ns.yaml": templateData{Name: "default"}.apply(aNamespace),
+			"system/nomos.yaml":          aRepo,
+			"namespaces/default/ns.yaml": templateData{Name: "default"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode, vet.InvalidNamespaceNameErrorCode},
+		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode},
 	},
 	{
 		testName: "Dir name reserved 3",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":              aRepo,
-			"namespaces/kube-system/ns.yaml": templateData{Name: "nomos-system"}.apply(aNamespace),
+			"system/nomos.yaml":               aRepo,
+			"namespaces/nomos-system/ns.yaml": templateData{Name: "nomos-system"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode, vet.InvalidNamespaceNameErrorCode},
+		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode},
 	},
 	{
 		testName: "Dir name invalid",
@@ -1795,7 +1794,7 @@ spec:
   version: "0.0.0"
 `,
 		},
-		expectedErrorCodes: []string{vet.UnsupportedRepoSpecVersionCode, vet.MissingObjectNameErrorCode},
+		expectedErrorCodes: []string{vet.UnsupportedRepoSpecVersionCode},
 	},
 	{
 		testName: "Sync contains resource w/o a CRD applied",
@@ -1956,9 +1955,9 @@ spec:
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aRepo,
-			"system/sync.yaml":  templateData{Group: "nomos.dev", Version: "v1alpha1", Kind: "Sync", Name: "Sync"}.apply(aNamedSync),
+			"system/sync.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role", Name: "RBAC"}.apply(aNamedSync),
 		},
-		expectedErrorCodes: []string{vet.InvalidMetadataNameErrorCode, vet.UnsupportedResourceInSyncErrorCode},
+		expectedErrorCodes: []string{vet.InvalidMetadataNameErrorCode},
 	},
 	{
 		testName: "Illegal Namespace in clusterregistry/",
@@ -2968,13 +2967,9 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			clusterName: "cluster-1",
 			vet:         true,
 			testFiles: fstesting.FileContentMap{
-				"system/nomos.yaml":  aRepo,
 				"system/sub/rb.yaml": aRepo,
 			},
-			expectedErrorCodes: []string{
-				vet.IllegalSubdirectoryErrorCode,
-				vet.MultipleRepoDefinitionsErrorCode,
-				vet.MetadataNameCollisionErrorCode},
+			expectedErrorCodes: []string{vet.IllegalSubdirectoryErrorCode},
 		},
 		{
 			testName:    "Objects in non-namespaces/ with an invalid label is an error",

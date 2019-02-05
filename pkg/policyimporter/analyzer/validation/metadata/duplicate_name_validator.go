@@ -12,18 +12,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func init() {
-	Register(DuplicateNameValidatorFactory{})
-}
-
 // DuplicateNameValidatorFactory ensures passed ResourceMetas do not have name conflicts.
 //
 // Specifically no two Resources share the same metadata.name if they are the same GroupKind and either
 // 1) they are in the same directory, or
 // 2) one is in a parent directory of the other.
 type DuplicateNameValidatorFactory struct{}
-
-var _ ValidatorFactory = DuplicateNameValidatorFactory{}
 
 // New returns a DuplicateNameValidator on a specific set of ResourceMetas.
 func (v DuplicateNameValidatorFactory) New(metas []ResourceMeta) validator.Validator {

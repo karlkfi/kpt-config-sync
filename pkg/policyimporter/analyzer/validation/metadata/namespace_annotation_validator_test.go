@@ -5,59 +5,60 @@ import (
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
-	"github.com/google/nomos/pkg/util/multierror"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	visitortesting "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 )
 
-type namespaceAnnotationTestCase struct {
-	name        string
-	gvk         schema.GroupVersionKind
-	annotations map[string]string
-	error       []string
-}
-
-func (tc namespaceAnnotationTestCase) Run(t *testing.T) {
-	meta := resourceMeta{groupVersionKind: tc.gvk, meta: &v1.ObjectMeta{Annotations: tc.annotations}}
-
-	eb := multierror.Builder{}
-	NamespaceAnnotationValidatorFactory.New([]ResourceMeta{meta}).Validate(&eb)
-	vettesting.ExpectErrors(tc.error, eb.Build(), t)
-}
-
-var namespaceAnnotationTestCases = []namespaceAnnotationTestCase{
-	{
-		name: "empty annotations",
-		gvk:  kinds.Namespace(),
-	},
-	{
-		name:        "legal annotation on Namespace",
-		annotations: map[string]string{"annotation": "stuff"},
-		gvk:         kinds.Namespace(),
-	},
-	{
-		name:        "namespaceselector annotation on Namespace",
-		annotations: map[string]string{v1alpha1.NamespaceSelectorAnnotationKey: "not legal"},
-		gvk:         kinds.Namespace(),
-		error:       []string{vet.IllegalNamespaceAnnotationErrorCode},
-	},
-	{
-		name:        "namespaceselector annotation on Role",
-		annotations: map[string]string{v1alpha1.NamespaceSelectorAnnotationKey: "fine since not namespace"},
-		gvk:         kinds.Role(),
-	},
-	{
-		name:        "legal and namespaceselector annotations on Namespace",
-		annotations: map[string]string{"annotation": "stuff", v1alpha1.NamespaceSelectorAnnotationKey: "not legal"},
-		gvk:         kinds.Namespace(),
-		error:       []string{vet.IllegalNamespaceAnnotationErrorCode},
-	},
-}
-
-func TestNamespaceAnnotationValidator_Validate(t *testing.T) {
-	for _, tc := range namespaceAnnotationTestCases {
-		t.Run(tc.name, tc.Run)
+func fakeAnnotatedRole(annotations ...string) ast.FileObject {
+	object := asttesting.NewFakeObject(kinds.Role())
+	object.Annotations = make(map[string]string)
+	for _, annotation := range annotations {
+		object.Annotations[annotation] = ""
 	}
+	return ast.FileObject{Object: object, Relative: nomospath.NewFakeRelative("namespaces/role.yaml")}
+}
+
+func fakeAnnotatedNamespace(annotations ...string) ast.FileObject {
+	object := asttesting.NewFakeObject(kinds.Namespace())
+	object.Annotations = make(map[string]string)
+	for _, annotation := range annotations {
+		object.Annotations[annotation] = ""
+	}
+	return ast.FileObject{Object: object, Relative: nomospath.NewFakeRelative("namespaces/namespace.yaml")}
+}
+
+func TestNamespaceAnnotationValidator(t *testing.T) {
+	test := visitortesting.ObjectValidatorTest{
+		Validator: NewNamespaceAnnotationValidator,
+		ErrorCode: vet.IllegalNamespaceAnnotationErrorCode,
+		TestCases: []visitortesting.ObjectValidatorTestCase{
+			{
+				Name:   "empty annotations",
+				Object: fakeAnnotatedNamespace(),
+			},
+			{
+				Name:   "legal annotation on Namespace",
+				Object: fakeAnnotatedNamespace("legal"),
+			},
+			{
+				Name:       "namespaceselector annotation on Namespace",
+				Object:     fakeAnnotatedNamespace(v1alpha1.NamespaceSelectorAnnotationKey),
+				ShouldFail: true,
+			},
+			{
+				Name:   "namespaceselector annotation on Role",
+				Object: fakeAnnotatedRole(v1alpha1.NamespaceSelectorAnnotationKey),
+			},
+			{
+				Name:       "legal and namespaceselector annotations on Namespace",
+				Object:     fakeAnnotatedNamespace("legal", v1alpha1.NamespaceSelectorAnnotationKey),
+				ShouldFail: true,
+			},
+		},
+	}
+
+	test.RunAll(t)
 }

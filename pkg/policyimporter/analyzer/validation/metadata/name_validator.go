@@ -4,41 +4,40 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
-func init() {
-	Register(NameValidatorFactory)
-}
+// NewNameValidator validates the value of metadata.name
+func NewNameValidator() *visitor.ValidatorVisitor {
+	return visitor.NewAllObjectValidator(
+		func(o ast.FileObject) error {
+			gvk := o.GroupVersionKind()
 
-// NameValidatorFactory validates the value of metadata.name
-var NameValidatorFactory = SyntaxValidatorFactory{
-	fn: func(meta ResourceMeta) error {
-		gvk := meta.GroupVersionKind()
-
-		if meta.Name() == "" {
-			// Name MUST NOT be empty
-			return vet.MissingObjectNameError{Resource: meta}
-		} else if isDefaultCrdAllowedInNomos(gvk) {
-			// If CRD, then name must be a valid DNS1123 subdomain
-			errs := validation.IsDNS1123Subdomain(meta.Name())
-			if errs != nil {
-				return vet.InvalidMetadataNameError{Resource: meta}
+			if o.Name() == "" {
+				// Name MUST NOT be empty
+				return vet.MissingObjectNameError{Resource: &o}
+			} else if isDefaultCrdAllowedInNomos(gvk) {
+				// If CRD, then name must be a valid DNS1123 subdomain
+				errs := validation.IsDNS1123Subdomain(o.Name())
+				if errs != nil {
+					return vet.InvalidMetadataNameError{Resource: &o}
+				}
+			} else if gvk == kinds.Namespace() {
+				// TODO(willbeason) Move this to its own Validator.
+				expectedName := o.Dir().Base()
+				if expectedName == repo.NamespacesDir {
+					return vet.IllegalTopLevelNamespaceError{Resource: &o}
+				}
+				if o.Name() != expectedName {
+					return vet.InvalidNamespaceNameError{Resource: &o, Expected: expectedName}
+				}
 			}
-		} else if gvk == kinds.Namespace() {
-			// TODO(willbeason) Move this to Namespace-specific package.
-			expectedName := meta.Dir().Base()
-			if expectedName == repo.NamespacesDir {
-				return vet.IllegalTopLevelNamespaceError{Resource: meta}
-			}
-			if meta.Name() != expectedName {
-				return vet.InvalidNamespaceNameError{Resource: meta, Expected: expectedName}
-			}
-		}
-		return nil
-	},
+			return nil
+		})
 }
 
 // isDefaultCrdAllowedInNomos checks if a Resource is a CRD that comes with a default Nomos installation.

@@ -37,6 +37,8 @@ func (vt *ObjectValidatorTest) RunAll(t *testing.T) {
 
 	for _, tc := range vt.TestCases {
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Helper()
+
 			validator := vt.Validator()
 			root := treetesting.BuildTree(t, tc.Object)
 			root.Accept(validator)
@@ -79,6 +81,8 @@ func (vt *ObjectsValidatorTest) RunAll(t *testing.T) {
 
 	for _, tc := range vt.TestCases {
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Helper()
+
 			validator := vt.Validator()
 
 			root := treetesting.BuildTree(t, tc.Objects...)

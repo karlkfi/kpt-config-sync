@@ -3,41 +3,36 @@ package metadata
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
-	"github.com/google/nomos/pkg/util/multierror"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	visitortesting "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 )
 
-type namespaceTestCase struct {
-	name      string
-	namespace string
-	error     []string
-}
-
-var namespaceTestCases = []namespaceTestCase{
-	{
-		name:      "no namespace",
-		namespace: "",
-	},
-	{
-		name:      "has namespace",
-		namespace: "bar",
-		error:     []string{vet.IllegalMetadataNamespaceDeclarationErrorCode},
-	},
-}
-
-func (tc namespaceTestCase) Run(t *testing.T) {
-	meta := resourceMeta{meta: &v1.ObjectMeta{Namespace: tc.namespace}}
-
-	eb := multierror.Builder{}
-	NamespaceValidatorFactory.New([]ResourceMeta{meta}).Validate(&eb)
-
-	vettesting.ExpectErrors(tc.error, eb.Build(), t)
+func fakeObjectWithNamespace(namespace string) ast.FileObject {
+	object := asttesting.NewFakeObject(kinds.Role())
+	object.SetNamespace(namespace)
+	return ast.FileObject{Object: object, Relative: nomospath.NewFakeRelative("namespaces/role.yaml")}
 }
 
 func TestNamespaceValidator(t *testing.T) {
-	for _, tc := range namespaceTestCases {
-		t.Run(tc.name, tc.Run)
+	test := visitortesting.ObjectValidatorTest{
+		Validator: NewNamespaceValidator,
+		ErrorCode: vet.IllegalMetadataNamespaceDeclarationErrorCode,
+		TestCases: []visitortesting.ObjectValidatorTestCase{
+			{
+				Name:   "no metadata.namespace",
+				Object: fakeObjectWithNamespace(""),
+			},
+			{
+				Name:       "has metadata.namespace",
+				Object:     fakeObjectWithNamespace("bar"),
+				ShouldFail: true,
+			},
+		},
 	}
+
+	test.RunAll(t)
 }

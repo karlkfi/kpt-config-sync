@@ -3,7 +3,6 @@ package filesystem
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/sync"
 )
 
@@ -22,12 +21,4 @@ func (objects fileObjects) syncs() []sync.FileSync {
 	}
 
 	return result
-}
-
-func toResourceMetas(objects []ast.FileObject) []metadata.ResourceMeta {
-	metas := make([]metadata.ResourceMeta, len(objects))
-	for i := range objects {
-		metas[i] = &objects[i]
-	}
-	return metas
 }

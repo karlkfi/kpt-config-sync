@@ -1,19 +1,18 @@
 package metadata
 
 import (
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 )
 
-func init() {
-	Register(NamespaceValidatorFactory)
-}
-
-// NamespaceValidatorFactory validates the value of metadata.namespace
-var NamespaceValidatorFactory = SyntaxValidatorFactory{
-	fn: func(meta ResourceMeta) error {
-		if meta.MetaObject().GetNamespace() != "" {
-			return vet.IllegalMetadataNamespaceDeclarationError{Resource: meta}
-		}
-		return nil
-	},
+// NewNamespaceValidator validates the value of metadata.namespace
+func NewNamespaceValidator() *visitor.ValidatorVisitor {
+	return visitor.NewAllObjectValidator(
+		func(o ast.FileObject) error {
+			if o.MetaObject().GetNamespace() != "" {
+				return vet.IllegalMetadataNamespaceDeclarationError{Resource: &o}
+			}
+			return nil
+		})
 }

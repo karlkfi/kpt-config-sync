@@ -19,7 +19,6 @@ package filesystem
 
 import (
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -32,6 +31,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/meta"
@@ -151,11 +151,10 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
 	sel.SetClusterSelector(cs, astRoot)
 
-	nsDir := p.root.Join(p.opts.Extension.NamespacesDir())
-	nsDirsOrdered := p.allDirs(nsDir, errorBuilder)
+	nsInfos := p.readNamespaceResources(errorBuilder)
 
-	nsInfos := p.readResources(nsDir, errorBuilder)
-	validateNamespaces(nsInfos, nsDirsOrdered, errorBuilder)
+	// TODO: Move to after transforms.
+	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(nsInfos)).Validate(errorBuilder)
 
 	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos)}
 	visitors = append(visitors, p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet)...)
@@ -187,6 +186,18 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 		return nil, errorBuilder.Build()
 	}
 	return policies, nil
+}
+
+func toResourceMetas(objects []ast.FileObject) []metadata.ResourceMeta {
+	metas := make([]metadata.ResourceMeta, len(objects))
+	for i := range objects {
+		metas[i] = &objects[i]
+	}
+	return metas
+}
+
+func (p *Parser) readNamespaceResources(eb *multierror.Builder) []ast.FileObject {
+	return p.readResources(p.root.Join(p.opts.Extension.NamespacesDir()), eb)
 }
 
 // readRequiredResources walks dir recursively, looking for resources, and builds FileInfos from them.
@@ -283,28 +294,4 @@ func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.
 		}
 	}
 	return specs
-}
-
-// allDirs returns absolute paths of all directories in root, in lexicographic (depth-first) order.
-func (p *Parser) allDirs(nsDir nomospath.Relative, errorBuilder *multierror.Builder) []nomospath.Relative {
-	var paths []nomospath.Relative
-	err := filepath.Walk(nsDir.AbsoluteOSPath(), func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			rel, err := p.root.Rel(path)
-			if err != nil {
-				return err
-			}
-			paths = append(paths, rel)
-		}
-		return nil
-	})
-
-	if err != nil && !os.IsNotExist(err) {
-		errorBuilder.Add(err)
-		return nil
-	}
-	return paths
 }
