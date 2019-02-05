@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -25,6 +26,7 @@ func (n NomosVisitorProvider) Visitors(
 	vet bool) []ast.Visitor {
 	specs := toInheritanceSpecs(syncs)
 	visitors := []ast.Visitor{
+		semantic.NewSingletonResourceValidator(kinds.Namespace()),
 		syntax.NewNamespaceKindValidator(),
 		metadata.NewAnnotationValidator(),
 		metadata.NewLabelValidator(),

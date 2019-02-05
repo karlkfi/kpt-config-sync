@@ -913,7 +913,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.MultipleNamespacesErrorCode, vet.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces with different names",
@@ -923,10 +923,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{
-			vet.MultipleNamespacesErrorCode,
-			vet.InvalidNamespaceNameErrorCode,
-		},
+		expectedErrorCodes: []string{vet.InvalidNamespaceNameErrorCode},
 	},
 	{
 		testName: "Namespace dir with Namespace mismatch and ignored file",

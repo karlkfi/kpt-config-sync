@@ -21,5 +21,4 @@ func validateNamespaces(
 	syntax.DisallowSystemObjectsValidator.Validate(objects, errorBuilder)
 
 	semantic.DuplicateDirectoryValidator{Dirs: dirs}.Validate(errorBuilder)
-	semantic.DuplicateNamespaceValidator{Objects: objects}.Validate(errorBuilder)
 }

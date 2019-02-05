@@ -1,4 +1,4 @@
-Found issues: 12 error(s)
+Found issues: 11 error(s)
 
 
 [1] KNV1002: Directory names MUST be unique. Rename one of these directories:
@@ -87,22 +87,7 @@ version: v1
 kind: Namespace
 
 
-[10] KNV1030: A directory may declare at most one Namespace Resource:
-
-source: namespaces/prod/prod-namespace/namespace-1.yaml
-metadata.name: prod-namespace
-group:
-version: v1
-kind: Namespace
-
-source: namespaces/prod/prod-namespace/namespace-2.yaml
-metadata.name: prod-namespace
-group:
-version: v1
-kind: Namespace
-
-
-[11] KNV1031: Resources must declare metadata.name:
+[10] KNV1031: Resources must declare metadata.name:
 
 source: namespaces/prod/prod-namespace/nameless-rolebinding.yaml
 metadata.name:
@@ -111,7 +96,7 @@ version: v1
 kind: RoleBinding
 
 
-[12] KNV1033: Resources of the below kind MUST NOT be declared outside system/:
+[11] KNV1033: Resources of the below kind MUST NOT be declared outside system/:
 source: namespaces/prod/prod-namespace/illegal-sync.yaml
 metadata.name: illegal-sync
 group: nomos.dev
