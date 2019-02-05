@@ -8,7 +8,7 @@ to bless a release candidate at the very end.
 
 Set up a nomos repo.
 
-Ensure that your remote is named `origin`. `make bless-autorelease` assumes
+Ensure that your remote is named `origin`. `make bless-release` assumes
 that.
 
 ## Basic manual test
@@ -92,7 +92,7 @@ A blessed release consists of three distinct pieces:
 First, bless the Nomos binary release candidate.
 
 ```console
-make -f Makefile.release bless-autorelease
+make -f Makefile.release bless-release
 ```
 
 -   The above command line launches an interactive prompt that shows the latest
@@ -121,10 +121,10 @@ make -f Makefile.release bless-autorelease
 -   The blessing process will promote the release candidate `v1.2.3-rc.4` to the
     release `v1.2.3`.
 
-A sample session with `make bless-autorelease` is shown below.
+A sample session with `make bless-release` is shown below.
 
 ```console
-$ make -f Makefile.release bless-autorelease
+$ make -f Makefile.release bless-release
 +++
 +++ Bless an automated release from go/nomos-releaser
 +++

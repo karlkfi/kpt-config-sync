@@ -21,13 +21,18 @@
 # This file contains all the specific workflow and configuration to create
 # a nomos release.
 #
-# make release - will clean, build, package and push the entire code set to our
+# make autorelease - Used by our automated prow job.
+#       will clean, build, package and push the entire code set to our
 # 			release location and move the 'latest' image tag to
-# 			the release just built. This must be run from clean
-# 			git client.
+# 			the release just built.
+#
+# make release - Same as autorelease but works from your local workstation.
+# 			Should only be used if there are issues with the autoreleaser.
+#      	Must be run on a clean git client and with a clean
+#      	cluster in stolos-dev named <user>-cluster-1.
 #
 # make bless-release - will move the 'stable' image tag to the release that
-# 			was just built.
+# 			was built using one of the above 2 targets.
 
 ##### CONFIG #####
 
@@ -172,29 +177,6 @@ upload-release:
 			$(RELEASE_BUCKET)/$(VERSION) \
 			$(RELEASE_BUCKET)/latest
 
-# Uploads the release artifacts to a versioned GCS release bucket. Also uploads
-# the artifacts to a GCS release bucket with version name "latest".
-release: \
-		clean \
-		test \
-		ci-test-e2e \
-		push-to-gcr-nomos \
-		kubectl-plugin-staging \
-		docs-package \
-		upload-release
-
-# For releases we attach the :stable tag to the latest image
-# built and update the stable docs package.  Dirty package releases  are not
-# allowed.
-bless-release: check-dirty
-	@echo "+++ Marking release $(IMAGE_TAG) as 'stable'"
-	gcloud container images add-tag --quiet \
-		gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG) \
-		gcr.io/$(GCR_PREFIX)/nomos:stable
-	gsutil -m rsync -r -d -p \
-		$(RELEASE_BUCKET)/$(VERSION) \
-		$(RELEASE_BUCKET)/stable
-
 ##### Git operations as make targets #####
 
 # Where the "origin" remote is not defined, define it.   go/prow jobs don't have
@@ -257,7 +239,7 @@ __internal-autorelease: \
 endif
 
 # Same as 'autorelease', except rigged so that it works on a local machine.
-autorelease-local: \
+release: \
 		__internal-autorelease-local
 
 ifeq ($(LAST_RC_GIT_HASH), $(HEAD_GIT_HASH))
@@ -297,9 +279,9 @@ define bless_autorelease_instructions =
 endef
 
 # Promote the latest release candidate
-bless-autorelease: NEXT_RELEASE=$(shell \
+bless-release: NEXT_RELEASE=$(shell \
 		docker run --rm $(BUILDENV_IMAGE) sembump $(LAST_RC))
-bless-autorelease:
+bless-release:
 	$(info $(bless_autorelease_instructions))
 	TZ=America/Los_Angeles \
   	  git log \
