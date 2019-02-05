@@ -2,25 +2,24 @@ package metadata
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 )
 
-func init() {
-	Register(LabelValidatorFactory)
-}
-
-// LabelValidatorFactory validates the labels declared in metadata
-var LabelValidatorFactory = SyntaxValidatorFactory{
-	fn: func(meta ResourceMeta) error {
-		var errors []string
-		for l := range meta.MetaObject().GetLabels() {
-			if v1alpha1.HasNomosPrefix(l) {
-				errors = append(errors, l)
+// NewLabelValidator validates the labels declared in metadata
+func NewLabelValidator() *visitor.ValidatorVisitor {
+	return visitor.NewAllObjectValidator(
+		func(o ast.FileObject) error {
+			var errors []string
+			for l := range o.MetaObject().GetLabels() {
+				if v1alpha1.HasNomosPrefix(l) {
+					errors = append(errors, l)
+				}
 			}
-		}
-		if errors != nil {
-			return vet.IllegalLabelDefinitionError{Resource: meta, Labels: errors}
-		}
-		return nil
-	},
+			if errors != nil {
+				return vet.IllegalLabelDefinitionError{Resource: &o, Labels: errors}
+			}
+			return nil
+		})
 }

@@ -1,4 +1,4 @@
-Found issues: 14 error(s)
+Found issues: 12 error(s)
 
 
 [1] KNV1002: Directory names MUST be unique. Rename one of these directories:
@@ -25,30 +25,12 @@ version: v1
 kind: RoleBinding
 
 
-[4] KNV1010: Resources MUST NOT declare unsupported annotations starting with "nomos.dev". Resource has offending annotations: "nomos.dev/unsupported"
-
-source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
-metadata.name: kesim-rolebinding
-group: rbac.authorization.k8s.io
-version: v1
-kind: RoleBinding
-
-
-[5] KNV1011: Resources MUST NOT declare labels starting with "nomos.dev". Below Resource declares these offending labels: "nomos.dev/illegal-label", "nomos.dev/illegal-label-2"
-
-source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
-metadata.name: kesim-rolebinding
-group: rbac.authorization.k8s.io
-version: v1
-kind: RoleBinding
-
-
-[6] KNV1018: cluster/ directory MUST NOT have subdirectories.
+[4] KNV1018: cluster/ directory MUST NOT have subdirectories.
 
 path: cluster/illegal-cluster-subdir
 
 
-[7] KNV1019: Namespaces MUST be declared in subdirectories of namespaces/. Create a subdirectory for Namespaces declared in:
+[5] KNV1019: Namespaces MUST be declared in subdirectories of namespaces/. Create a subdirectory for Namespaces declared in:
 
 source: namespaces/namespace.yaml
 metadata.name: namespaces
@@ -57,7 +39,7 @@ version: v1
 kind: Namespace
 
 
-[8] KNV1020: A Namespace MUST declare metadata.name that matches the name of its directory.
+[6] KNV1020: A Namespace MUST declare metadata.name that matches the name of its directory.
 
 source: namespaces/dev/dev-namespace/namespace.yaml
 metadata.name: incorrect-name
@@ -69,13 +51,13 @@ expected metadata.name: dev-namespace
 
 
 
-[9] KNV1028: Directories MUST be a valid RFC1123 DNS label. Rename or remove directory:
+[7] KNV1028: Directories MUST be a valid RFC1123 DNS label. Rename or remove directory:
 
 path: namespaces/illegal.dir.name
 name: illegal.dir.name
 
 
-[10] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
+[8] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
 
 source: namespaces/dev/alice-rolebinding.yaml
 metadata.name: alice-rolebinding
@@ -90,7 +72,7 @@ version: v1
 kind: RoleBinding
 
 
-[11] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
+[9] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
 
 source: namespaces/prod/prod-namespace/namespace-1.yaml
 metadata.name: prod-namespace
@@ -105,7 +87,7 @@ version: v1
 kind: Namespace
 
 
-[12] KNV1030: A directory may declare at most one Namespace Resource:
+[10] KNV1030: A directory may declare at most one Namespace Resource:
 
 source: namespaces/prod/prod-namespace/namespace-1.yaml
 metadata.name: prod-namespace
@@ -120,7 +102,7 @@ version: v1
 kind: Namespace
 
 
-[13] KNV1031: Resources must declare metadata.name:
+[11] KNV1031: Resources must declare metadata.name:
 
 source: namespaces/prod/prod-namespace/nameless-rolebinding.yaml
 metadata.name:
@@ -129,7 +111,7 @@ version: v1
 kind: RoleBinding
 
 
-[14] KNV1033: Resources of the below kind MUST NOT be declared outside system/:
+[12] KNV1033: Resources of the below kind MUST NOT be declared outside system/:
 source: namespaces/prod/prod-namespace/illegal-sync.yaml
 metadata.name: illegal-sync
 group: nomos.dev

@@ -160,3 +160,34 @@ func (v *objectValidator) ValidateObject(o *ast.NamespaceObject) error {
 func NewObjectValidator(validate func(o *ast.NamespaceObject) error) *ValidatorVisitor {
 	return NewValidator(&objectValidator{validate: validate})
 }
+
+type allObjectValidator struct {
+	ValidatorBase
+	validate func(o ast.FileObject) error
+}
+
+// NewAllObjectValidator returns a ValidatorVisitor which validates every Resource's metadata fields.
+// Validates every SystemObject, ClusterRegistryObject, ClusterObject, and NamespaceObject.
+func NewAllObjectValidator(validate func(o ast.FileObject) error) *ValidatorVisitor {
+	return NewValidator(&allObjectValidator{validate: validate})
+}
+
+// ValidateSystemObject implements Validator.
+func (v *allObjectValidator) ValidateSystemObject(o *ast.SystemObject) error {
+	return v.validate(o.FileObject)
+}
+
+// ValidateClusterRegistryObject implements Validator.
+func (v *allObjectValidator) ValidateClusterRegistryObject(o *ast.ClusterRegistryObject) error {
+	return v.validate(o.FileObject)
+}
+
+// ValidateClusterObject implements Validator.
+func (v *allObjectValidator) ValidateClusterObject(o *ast.ClusterObject) error {
+	return v.validate(o.FileObject)
+}
+
+// ValidateObject implements Validator.
+func (v *allObjectValidator) ValidateObject(o *ast.NamespaceObject) error {
+	return v.validate(o.FileObject)
+}

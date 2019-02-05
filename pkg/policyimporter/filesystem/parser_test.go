@@ -1731,6 +1731,7 @@ spec:
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aRepo,
+			"system/rb.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/rb.yaml": templateData{
 				Name: "cluster-1",
 				Annotations: map[string]string{
@@ -1747,6 +1748,7 @@ spec:
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aRepo,
+			"system/rb.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/rb.yaml": templateData{
 				Name: "cluster-1",
 				Labels: map[string]string{

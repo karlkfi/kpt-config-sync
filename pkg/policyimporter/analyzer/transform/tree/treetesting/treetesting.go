@@ -36,7 +36,6 @@ func BuildTree(t *testing.T, objects ...ast.FileObject) *ast.Root {
 			}
 			root.Cluster.Objects = append(root.Cluster.Objects, &ast.ClusterObject{FileObject: object})
 		case repo.NamespacesDir:
-			// TODO: When changing to Visitors, allow changing hierarchy folder.
 			namespaceObjects = append(namespaceObjects, object)
 		default:
 			t.Fatalf("test resource not in known top-level directory: %s", object.RelativeSlashPath())
