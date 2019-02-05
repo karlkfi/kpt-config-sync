@@ -9,6 +9,7 @@ import (
 	"k8s.io/api/rbac/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
 // Namespace returns a Kubernetes Namespace resource at the specified path.
@@ -61,6 +62,27 @@ func ClusterRole(path string) ast.FileObject {
 		Relative: nomospath.NewFakeRelative(path),
 		Object: &v1alpha1.ClusterRole{
 			TypeMeta: toTypeMeta(kinds.ClusterRole()),
+		},
+	}
+}
+
+
+// ClusterSelector returns a Nomos ClusterSelector at the specified path.
+func ClusterSelector(path string) ast.FileObject {
+	return ast.FileObject{
+		Relative: nomospath.NewFakeRelative(path),
+		Object: &nomos.ClusterSelector{
+			TypeMeta: toTypeMeta(kinds.ClusterSelector()),
+		},
+	}
+}
+
+// Cluster returns a K8S Cluster resource at the specified path.
+func Cluster(path string) ast.FileObject {
+	return ast.FileObject{
+		Relative: nomospath.NewFakeRelative(path),
+		Object: &clusterregistry.Cluster{
+			TypeMeta: toTypeMeta(kinds.Cluster()),
 		},
 	}
 }

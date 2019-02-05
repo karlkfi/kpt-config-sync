@@ -140,7 +140,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 
 	// processing for <root>/clusterregistry/*
 	clusterregistryInfos := p.readResources(p.root.Join(repo.ClusterRegistryDir), errorBuilder)
-	validateClusterRegistry(clusterregistryInfos, errorBuilder)
+
 	clusters := getClusters(clusterregistryInfos)
 	selectors := getSelectors(clusterregistryInfos)
 	astRoot.ClusterRegistry = getClusterRegistry(clusterregistryInfos)
@@ -153,6 +153,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 
 	// TODO: Move to after transforms.
 	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(clusterInfos)).Validate(errorBuilder)
+	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(clusterregistryInfos)).Validate(errorBuilder)
 	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(nsInfos)).Validate(errorBuilder)
 
 	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos)}

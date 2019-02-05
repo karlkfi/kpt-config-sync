@@ -3,16 +3,8 @@ package filesystem
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
-	"github.com/google/nomos/pkg/util/multierror"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
-
-func validateClusterRegistry(objects []ast.FileObject, errorBuilder *multierror.Builder) {
-	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(objects)).Validate(errorBuilder)
-	syntax.ClusterregistryKindValidator.Validate(objects, errorBuilder)
-}
 
 func getClusters(objects []ast.FileObject) []clusterregistry.Cluster {
 	var clusters []clusterregistry.Cluster
