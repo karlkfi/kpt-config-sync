@@ -1976,7 +1976,7 @@ spec:
 			"namespaces/foo/namespace.yaml":         templateData{Name: "foo"}.apply(aNamespace),
 			"namespaces/foo/namespaceselector.yaml": templateData{}.apply(aNamespaceSelector),
 		},
-		expectedErrorCodes: []string{vet.UndocumentedErrorCode},
+		expectedErrorCodes: []string{vet.IllegalKindInNamespacesErrorCode},
 	},
 }
 

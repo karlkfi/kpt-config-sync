@@ -61,9 +61,8 @@ func (v *BuilderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 				n.Selectors = make(map[string]*v1alpha1.NamespaceSelector)
 			}
 			n.Selectors[o.Name] = o
-		default:
-			n.Objects = append(n.Objects, &ast.NamespaceObject{FileObject: object})
 		}
+		n.Objects = append(n.Objects, &ast.NamespaceObject{FileObject: object})
 	}
 	return v.Base.VisitTreeNode(n)
 }

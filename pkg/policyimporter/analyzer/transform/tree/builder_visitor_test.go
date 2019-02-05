@@ -171,12 +171,14 @@ func TestBuilderVisitor(t *testing.T) {
 								{
 									Relative: nomospath.NewFakeRelative("namespaces/foo/bar"),
 									Type:     node.Namespace,
+									Objects:  []*ast.NamespaceObject{{FileObject: namespace("namespaces/foo/bar/namespace.yaml")}},
 								},
 							},
 						},
 						{
 							Relative: nomospath.NewFakeRelative("namespaces/qux"),
 							Type:     node.Namespace,
+							Objects:  []*ast.NamespaceObject{{FileObject: namespace("namespaces/qux/namespace.yaml")}},
 						},
 					},
 				},

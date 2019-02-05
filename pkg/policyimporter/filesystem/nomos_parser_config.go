@@ -33,6 +33,7 @@ func (n NomosVisitorProvider) Visitors(
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
 		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(specs),
+		transform.NewEphemeralResourceRemover(),
 	}
 	if spec, found := specs[kinds.ResourceQuota().GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
 		visitors = append(visitors, validation.NewQuotaValidator())

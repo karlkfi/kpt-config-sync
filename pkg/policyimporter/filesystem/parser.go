@@ -127,6 +127,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	if discoveryErr != nil {
 		return nil, errors.Wrap(discoveryErr, "failed to get server resources")
 	}
+	resources = append(resources, transform.EphemeralResources()...)
 	apiInfo, err := meta.NewAPIInfo(resources)
 	if err != nil {
 		return nil, err

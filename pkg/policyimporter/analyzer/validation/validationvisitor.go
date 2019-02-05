@@ -38,7 +38,7 @@ type InputValidator struct {
 	*visitor.Base
 	errs             multierror.Builder
 	nodes            []*ast.TreeNode
-	allowedGVKs      map[schema.GroupVersionKind]bool
+	syncdGVKs        map[schema.GroupVersionKind]bool
 	coverage         *coverage.ForCluster
 	inheritanceSpecs map[schema.GroupKind]*transform.InheritanceSpec
 }
@@ -46,7 +46,7 @@ type InputValidator struct {
 // InputValidator implements ast.Visitor
 var _ ast.Visitor = &InputValidator{}
 
-// NewInputValidator creates a new validator.  allowedGVKs represents the set
+// NewInputValidator creates a new validator.  syncdGVKs represents the set
 // of valid group-version-kinds for objects in the namespaces and cluster
 // directories.  Objects of other types will be treated as an error. clusters
 // is the list of clusters defined in the source of truth, and cs is the list
@@ -60,7 +60,7 @@ func NewInputValidator(
 	vet bool) *InputValidator {
 	v := &InputValidator{
 		Base:             visitor.NewBase(),
-		allowedGVKs:      toAllowedGVKs(syncs),
+		syncdGVKs:        toSyncdGVKs(syncs),
 		inheritanceSpecs: specs,
 	}
 	v.Base.SetImpl(v)
@@ -71,19 +71,19 @@ func NewInputValidator(
 	return v
 }
 
-func toAllowedGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
-	allowedGVKs := make(map[schema.GroupVersionKind]bool)
+func toSyncdGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
+	syncdGVKs := make(map[schema.GroupVersionKind]bool)
 	for _, sync := range syncs {
 		for _, sg := range sync.Spec.Groups {
 			for _, k := range sg.Kinds {
 				for _, v := range k.Versions {
 					gvk := schema.GroupVersionKind{Group: sg.Group, Kind: k.Kind, Version: v.Version}
-					allowedGVKs[gvk] = true
+					syncdGVKs[gvk] = true
 				}
 			}
 		}
 	}
-	return allowedGVKs
+	return syncdGVKs
 }
 
 // Error returns any errors encountered during processing
@@ -132,7 +132,7 @@ func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.Namespace
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	gvk := o.GroupVersionKind()
-	if !v.allowedGVKs[gvk] {
+	if !v.syncdGVKs[gvk] && !transform.IsEphemeral(gvk) {
 		v.errs.Add(vet.UnsyncableClusterObjectError{Resource: o})
 	}
 	if v.coverage != nil {
@@ -143,8 +143,9 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterOb
 
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
-	if !v.allowedGVKs[o.GroupVersionKind()] {
-		if !syntax.IsSystemOnly(o.GroupVersionKind()) {
+	gvk := o.GroupVersionKind()
+	if !v.syncdGVKs[gvk] && !transform.IsEphemeral(gvk) {
+		if !syntax.IsSystemOnly(gvk) {
 			// This is already checked elsewhere.
 			v.errs.Add(vet.UnsyncableNamespaceObjectError{Resource: o})
 		}
@@ -152,8 +153,8 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 
 	n := v.nodes[len(v.nodes)-1]
 	if n.Type == node.AbstractNamespace {
-		spec, found := v.inheritanceSpecs[o.GroupVersionKind().GroupKind()]
-		if !found || spec.Mode == v1alpha1.HierarchyModeNone {
+		spec, found := v.inheritanceSpecs[gvk.GroupKind()]
+		if (!found || spec.Mode == v1alpha1.HierarchyModeNone) && !transform.IsEphemeral(gvk) {
 			v.errs.Add(vet.IllegalAbstractNamespaceObjectKindError{Resource: o})
 		}
 	}
