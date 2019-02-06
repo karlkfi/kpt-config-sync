@@ -126,6 +126,10 @@ func TestClusterPolicyReconcile(t *testing.T) {
 				},
 			},
 			wantStatusUpdate: &v1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterPolicy",
+					APIVersion: "nomos.dev/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterPolicyName,
 				},
@@ -228,6 +232,10 @@ func TestClusterPolicyReconcile(t *testing.T) {
 				},
 			},
 			wantStatusUpdate: &v1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterPolicy",
+					APIVersion: "nomos.dev/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterPolicyName,
 				},
@@ -334,6 +342,10 @@ func TestClusterPolicyReconcile(t *testing.T) {
 				},
 			},
 			wantStatusUpdate: &v1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterPolicy",
+					APIVersion: "nomos.dev/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterPolicyName,
 				},
@@ -415,6 +427,10 @@ func TestClusterPolicyReconcile(t *testing.T) {
 			},
 			declared: []runtime.Object{},
 			wantStatusUpdate: &v1.ClusterPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterPolicy",
+					APIVersion: "nomos.dev/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "some-incorrect-name",
 				},

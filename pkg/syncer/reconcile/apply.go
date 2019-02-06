@@ -196,7 +196,8 @@ func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedStat
 	if _, err := resourceClient.Patch(name, patchType, patch); err != nil {
 		return errors.Wrapf(err, "could not patch %s", resourceDescription)
 	}
-	glog.V(3).Infof("Patching %s with %s", resourceDescription, patch)
+	glog.V(1).Infof("Patched %s", resourceDescription)
+	glog.V(3).Infof("Patched with %s", patch)
 
 	return nil
 }

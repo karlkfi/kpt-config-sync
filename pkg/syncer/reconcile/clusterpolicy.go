@@ -185,6 +185,7 @@ func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, po
 		} else {
 			newPolicy.Status.SyncState = v1.StateSynced
 		}
+		newPolicy.SetGroupVersionKind(kinds.ClusterPolicy())
 		return newPolicy, nil
 	}
 	_, err := r.client.UpdateStatus(ctx, policy, updateFn)

@@ -213,6 +213,10 @@ func TestReconcile(t *testing.T) {
 
 func makeSync(group, kind string, state nomosv1alpha1.SyncState) nomosv1alpha1.Sync {
 	s := nomosv1alpha1.Sync{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Sync",
+			APIVersion: "nomos.dev/v1alpha1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Finalizers: []string{},
 		},

@@ -353,6 +353,7 @@ func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *v1
 		} else {
 			newPN.Status.SyncState = v1.StateSynced
 		}
+		newPN.SetGroupVersionKind(kinds.PolicyNode())
 		return newPN, nil
 	}
 	_, err := r.client.UpdateStatus(ctx, node, updateFn)

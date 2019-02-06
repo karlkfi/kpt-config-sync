@@ -23,6 +23,7 @@ import (
 
 	"github.com/golang/glog"
 	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/kinds"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	syncermanager "github.com/google/nomos/pkg/syncer/manager"
@@ -164,6 +165,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 			updateFn := func(obj runtime.Object) (runtime.Object, error) {
 				s := obj.(*v1alpha1.Sync)
 				s.Status = status
+				s.SetGroupVersionKind(kinds.Sync())
 				return s, nil
 			}
 			_, err := r.client.UpdateStatus(ctx, e, updateFn)

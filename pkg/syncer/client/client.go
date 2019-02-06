@@ -110,6 +110,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
 			return nil, errors.Wrapf(err, "could not update %s; it does not exist", description)
 		}
+		oldV := resourceVersion(workingObj)
 
 		newObj, err := updateFn(workingObj)
 		if err != nil {
@@ -124,8 +125,12 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 		err = clientUpdateFn(ctx, newObj)
 		timer.ObserveDuration()
 		if err == nil {
-			oldV, newV := resourceVersion(workingObj), resourceVersion(newObj)
-			glog.V(1).Infof("Update OK for %s from ResourceVersion %s to %s", description, oldV, newV)
+			newV := resourceVersion(newObj)
+			if oldV == newV {
+				glog.V(1).Infof("Update not needed for %s", description)
+			} else {
+				glog.V(1).Infof("Update OK for %s from ResourceVersion %s to %s", description, oldV, newV)
+			}
 			return newObj, nil
 		}
 		if !apierrors.IsConflict(err) {
