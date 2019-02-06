@@ -22,12 +22,16 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/labeling"
 	syncermanager "github.com/google/nomos/pkg/syncer/manager"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -77,20 +81,20 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
-	syncs := &nomosv1alpha1.SyncList{}
+	syncs := &v1alpha1.SyncList{}
 	err := r.cache.List(ctx, &client.ListOptions{}, syncs)
 	if err != nil {
 		panic(errors.Wrap(err, "could not list all Syncs"))
 	}
 
-	var toFinalize []*nomosv1alpha1.Sync
-	var enabled []*nomosv1alpha1.Sync
+	var toFinalize []*v1alpha1.Sync
+	var enabled []*v1alpha1.Sync
 	for _, s := range syncs.Items {
 		if s.GetDeletionTimestamp() != nil {
 			// Check if Syncer finalizer is present, before including it in the list of syncs to finalize.
 			finalizers := sets.NewString(s.GetFinalizers()...)
-			if finalizers.Has(nomosv1alpha1.SyncFinalizer) {
-				finalizers.Delete(nomosv1alpha1.SyncFinalizer)
+			if finalizers.Has(v1alpha1.SyncFinalizer) {
+				finalizers.Delete(v1alpha1.SyncFinalizer)
 				s.SetFinalizers(finalizers.UnsortedList())
 				toFinalize = append(toFinalize, &s)
 			}
@@ -111,18 +115,25 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	var errBuilder multierror.Builder
 	// Finalize Syncs that have not already been finalized.
 	for _, tf := range toFinalize {
+		// Make sure to delete all Sync-managed resource before finalizing the Sync.
+		r.gcResources(ctx, syncermanager.GroupVersionKinds(tf), errBuilder)
+		if errBuilder.HasErrors() {
+			bErr := errBuilder.Build()
+			glog.Errorf("Could not remove managed resources before sync finalization: %v", bErr)
+			return reconcile.Result{}, bErr
+		}
 		errBuilder.Add(errors.Wrap(r.client.Upsert(ctx, tf), "could not finalize sync pending delete"))
 	}
 
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
 	for _, sync := range enabled {
-		var status nomosv1alpha1.SyncStatus
+		var status v1alpha1.SyncStatus
 		for gvk := range syncermanager.GroupVersionKinds(sync) {
-			statusGroupKind := nomosv1alpha1.SyncGroupVersionKindStatus{
+			statusGroupKind := v1alpha1.SyncGroupVersionKindStatus{
 				Group:   gvk.Group,
 				Version: gvk.Version,
 				Kind:    gvk.Kind,
-				Status:  nomosv1alpha1.Syncing,
+				Status:  v1alpha1.Syncing,
 			}
 			status.GroupVersionKinds = append(status.GroupVersionKinds, statusGroupKind)
 		}
@@ -137,7 +148,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 		// Check if status changed before updating.
 		if !reflect.DeepEqual(sync.Status, status) {
 			updateFn := func(obj runtime.Object) (runtime.Object, error) {
-				s := obj.(*nomosv1alpha1.Sync)
+				s := obj.(*v1alpha1.Sync)
 				s.Status = status
 				return s, nil
 			}
@@ -152,4 +163,22 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	return reconcile.Result{}, bErr
+}
+
+func (r *MetaReconciler) gcResources(ctx context.Context, gvks map[schema.GroupVersionKind]bool, errBuilder multierror.Builder) {
+	managed := labels.SelectorFromSet(labels.Set{labeling.ResourceManagementKey: labeling.Enabled})
+	for gvk := range gvks {
+		gvk.Kind += "List"
+		ul := &unstructured.UnstructuredList{}
+		ul.SetGroupVersionKind(gvk)
+		if err := r.client.List(ctx, &client.ListOptions{LabelSelector: managed}, ul); err != nil {
+			errBuilder.Add(errors.Wrapf(err, "could not list %s resources", gvk))
+			continue
+		}
+		for _, u := range ul.Items {
+			if err := r.client.Delete(ctx, &u); err != nil {
+				errBuilder.Add(errors.Wrapf(err, "could not delete %s resource: %v", gvk, u))
+			}
+		}
+	}
 }

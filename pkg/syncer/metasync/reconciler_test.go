@@ -21,18 +21,28 @@ import (
 
 	"github.com/golang/mock/gomock"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/syncer/client"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/labeling"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+type updateList struct {
+	update nomosv1alpha1.Sync
+	list   unstructured.UnstructuredList
+}
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
 		name              string
 		actualSyncs       nomosv1alpha1.SyncList
-		wantUpdates       []nomosv1alpha1.Sync
 		wantStatusUpdates []nomosv1alpha1.Sync
+		wantUpdateList    []updateList
 	}{
 		{
 			name: "update state for one sync",
@@ -46,130 +56,18 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "update state for multiple Group/Kinds in one sync",
+			name: "update state for multiple syncs",
 			actualSyncs: nomosv1alpha1.SyncList{
 				Items: []nomosv1alpha1.Sync{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Finalizers: []string{},
-						},
-						Spec: nomosv1alpha1.SyncSpec{
-							Groups: []nomosv1alpha1.SyncGroup{
-								{
-									Group: "",
-									Kinds: []nomosv1alpha1.SyncKind{
-										{
-											Kind: "ConfigMap",
-											Versions: []nomosv1alpha1.SyncVersion{
-												{
-													Version: "v1",
-												},
-											},
-										},
-									},
-								},
-								{
-									Group: "",
-									Kinds: []nomosv1alpha1.SyncKind{
-										{
-											Kind: "Deployment",
-											Versions: []nomosv1alpha1.SyncVersion{
-												{
-													Version: "v1",
-												},
-											},
-										},
-									},
-								},
-								{
-									Group: "rbac.authorization.k8s.io",
-									Kinds: []nomosv1alpha1.SyncKind{
-										{
-											Kind: "Role",
-											Versions: []nomosv1alpha1.SyncVersion{
-												{
-													Version: "v1",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
+					sync("rbac.authorization.k8s.io", "v1", "Role", ""),
+					sync("", "v1", "Deployment", ""),
+					sync("", "v1", "ConfigMap", ""),
 				},
 			},
 			wantStatusUpdates: []nomosv1alpha1.Sync{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Finalizers: []string{},
-					},
-					Spec: nomosv1alpha1.SyncSpec{
-						Groups: []nomosv1alpha1.SyncGroup{
-							{
-								Group: "",
-								Kinds: []nomosv1alpha1.SyncKind{
-									{
-										Kind: "ConfigMap",
-										Versions: []nomosv1alpha1.SyncVersion{
-											{
-												Version: "v1",
-											},
-										},
-									},
-								},
-							},
-							{
-								Group: "",
-								Kinds: []nomosv1alpha1.SyncKind{
-									{
-										Kind: "Deployment",
-										Versions: []nomosv1alpha1.SyncVersion{
-											{
-												Version: "v1",
-											},
-										},
-									},
-								},
-							},
-							{
-								Group: "rbac.authorization.k8s.io",
-								Kinds: []nomosv1alpha1.SyncKind{
-									{
-										Kind: "Role",
-										Versions: []nomosv1alpha1.SyncVersion{
-											{
-												Version: "v1",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					Status: nomosv1alpha1.SyncStatus{
-						GroupVersionKinds: []nomosv1alpha1.SyncGroupVersionKindStatus{
-							{
-								Group:   "",
-								Version: "v1",
-								Kind:    "ConfigMap",
-								Status:  nomosv1alpha1.Syncing,
-							},
-							{
-								Group:   "",
-								Version: "v1",
-								Kind:    "Deployment",
-								Status:  nomosv1alpha1.Syncing,
-							},
-							{
-								Group:   "rbac.authorization.k8s.io",
-								Version: "v1",
-								Kind:    "Role",
-								Status:  nomosv1alpha1.Syncing,
-							},
-						},
-					},
-				},
+				sync("rbac.authorization.k8s.io", "v1", "Role", nomosv1alpha1.Syncing),
+				sync("", "v1", "Deployment", nomosv1alpha1.Syncing),
+				sync("", "v1", "ConfigMap", nomosv1alpha1.Syncing),
 			},
 		},
 		{
@@ -181,79 +79,12 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "don't update state for multiple Group/Kinds in one sync when unnecessary",
+			name: "don't update state for multiple syncs when unnecessary",
 			actualSyncs: nomosv1alpha1.SyncList{
 				Items: []nomosv1alpha1.Sync{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Finalizers: []string{},
-						},
-						Spec: nomosv1alpha1.SyncSpec{
-							Groups: []nomosv1alpha1.SyncGroup{
-								{
-									Group: "",
-									Kinds: []nomosv1alpha1.SyncKind{
-										{
-											Kind: "ConfigMap",
-											Versions: []nomosv1alpha1.SyncVersion{
-												{
-													Version: "v1",
-												},
-											},
-										},
-									},
-								},
-								{
-									Group: "",
-									Kinds: []nomosv1alpha1.SyncKind{
-										{
-											Kind: "Deployment",
-											Versions: []nomosv1alpha1.SyncVersion{
-												{
-													Version: "v1",
-												},
-											},
-										},
-									},
-								},
-								{
-									Group: "rbac.authorization.k8s.io",
-									Kinds: []nomosv1alpha1.SyncKind{
-										{
-											Kind: "Role",
-											Versions: []nomosv1alpha1.SyncVersion{
-												{
-													Version: "v1",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						Status: nomosv1alpha1.SyncStatus{
-							GroupVersionKinds: []nomosv1alpha1.SyncGroupVersionKindStatus{
-								{
-									Group:   "",
-									Version: "v1",
-									Kind:    "ConfigMap",
-									Status:  nomosv1alpha1.Syncing,
-								},
-								{
-									Group:   "",
-									Version: "v1",
-									Kind:    "Deployment",
-									Status:  nomosv1alpha1.Syncing,
-								},
-								{
-									Group:   "rbac.authorization.k8s.io",
-									Version: "v1",
-									Kind:    "Role",
-									Status:  nomosv1alpha1.Syncing,
-								},
-							},
-						},
-					},
+					sync("rbac.authorization.k8s.io", "v1", "Role", nomosv1alpha1.Syncing),
+					sync("", "v1", "Deployment", nomosv1alpha1.Syncing),
+					sync("", "v1", "ConfigMap", nomosv1alpha1.Syncing),
 				},
 			},
 		},
@@ -277,8 +108,11 @@ func TestReconcile(t *testing.T) {
 					withDeleteTimestamp(withFinalizer(sync("", "v1", "Deployment", nomosv1alpha1.Syncing))),
 				},
 			},
-			wantUpdates: []nomosv1alpha1.Sync{
-				withDeleteTimestamp(sync("", "v1", "Deployment", nomosv1alpha1.Syncing)),
+			wantUpdateList: []updateList{
+				{
+					update: withDeleteTimestamp(sync("", "v1", "Deployment", nomosv1alpha1.Syncing)),
+					list:   unstructuredList(schema.GroupVersionKind{Version: "v1", Kind: "DeploymentList"}),
+				},
 			},
 		},
 	}
@@ -294,7 +128,7 @@ func TestReconcile(t *testing.T) {
 			mockManager := syncertesting.NewMockRestartableManager(mockCtrl)
 
 			testReconciler := &MetaReconciler{
-				client:                 client.New(mockClient),
+				client:                 syncerclient.New(mockClient),
 				cache:                  mockCache,
 				genericResourceManager: mockManager,
 			}
@@ -304,21 +138,26 @@ func TestReconcile(t *testing.T) {
 				SetArg(2, tc.actualSyncs)
 
 			mockManager.EXPECT().UpdateSyncResources(gomock.Any(), gomock.Any())
-			for _, wantUpdate := range tc.wantUpdates {
+			for _, wantUpdateListDelete := range tc.wantUpdateList {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockClient.EXPECT().
-					Update(gomock.Any(), gomock.Eq(&wantUpdate))
+					Update(gomock.Any(), gomock.Eq(&wantUpdateListDelete.update))
+
+				managed := labels.SelectorFromSet(labels.Set{labeling.ResourceManagementKey: labeling.Enabled})
+				listOptions := &client.ListOptions{LabelSelector: managed}
+				mockClient.EXPECT().
+					List(gomock.Any(), gomock.Eq(listOptions), gomock.Eq(&wantUpdateListDelete.list))
 			}
 
 			mockClient.EXPECT().Status().Times(len(tc.wantStatusUpdates)).Return(mockStatusClient)
-			for _, wantStatusUpdate := range tc.wantStatusUpdates {
+			for i := range tc.wantStatusUpdates {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockStatusClient.EXPECT().
-					Update(gomock.Any(), gomock.Eq(&wantStatusUpdate))
+					Update(gomock.Any(), gomock.Eq(&tc.wantStatusUpdates[i]))
 			}
 
 			_, err := testReconciler.Reconcile(reconcile.Request{})
@@ -376,4 +215,10 @@ func withDeleteTimestamp(sync nomosv1alpha1.Sync) nomosv1alpha1.Sync {
 	t := metav1.NewTime(time.Unix(0, 0))
 	sync.SetDeletionTimestamp(&t)
 	return sync
+}
+
+func unstructuredList(gvk schema.GroupVersionKind) unstructured.UnstructuredList {
+	ul := unstructured.UnstructuredList{}
+	ul.SetGroupVersionKind(gvk)
+	return ul
 }
