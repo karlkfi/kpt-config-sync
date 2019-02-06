@@ -36,10 +36,9 @@ type Scope struct {
 // NewScope returns a validator that checks if objects are in the correct scope in terms of namespace
 // vs cluster.
 // resourceLists is the list of supported types from the discovery client.
-func NewScope(apiInfo *meta.APIInfo) *Scope {
+func NewScope() *Scope {
 	pv := &Scope{
-		Base:    visitor.NewBase(),
-		apiInfo: apiInfo,
+		Base: visitor.NewBase(),
 	}
 	pv.SetImpl(pv)
 	return pv
@@ -48,6 +47,12 @@ func NewScope(apiInfo *meta.APIInfo) *Scope {
 // Error returns any errors encountered during processing
 func (p *Scope) Error() error {
 	return p.errs.Build()
+}
+
+// VisitRoot implement ast.Visitor.
+func (p *Scope) VisitRoot(r *ast.Root) *ast.Root {
+	p.apiInfo = meta.GetAPIInfo(r)
+	return p.Base.VisitRoot(r)
 }
 
 // VisitClusterObject implements Visitor

@@ -17,9 +17,10 @@ import (
 // - Syncs
 // - Reserved Namespaces
 func processSystem(
+	root *ast.Root,
 	objects []ast.FileObject,
 	opts ParserOpt,
-	apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) (*ast.System, *v1alpha1.Repo, []*v1alpha1.Sync) {
+	errorBuilder *multierror.Builder) (*ast.System, *v1alpha1.Repo, []*v1alpha1.Sync) {
 	var syncs []*v1alpha1.Sync
 	var repo *v1alpha1.Repo
 	sys := &ast.System{}
@@ -33,7 +34,7 @@ func processSystem(
 		sys.Objects = append(sys.Objects, &ast.SystemObject{FileObject: object})
 	}
 
-	validateSystem(objects, apiInfo, errorBuilder)
+	validateSystem(root, objects, errorBuilder)
 
 	for _, s := range opts.Extension.SyncResources() {
 		syncs = append(syncs, s)
@@ -48,7 +49,7 @@ func processSystem(
 }
 
 // validateSystem validates objects in system/
-func validateSystem(objects []ast.FileObject, apiInfo *meta.APIInfo, errorBuilder *multierror.Builder) {
+func validateSystem(root *ast.Root, objects []ast.FileObject, errorBuilder *multierror.Builder) {
 	metadata.Validate(toResourceMetas(objects), errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(ast.ToRelative(objects), errorBuilder)
 	syntax.RepoVersionValidator.Validate(objects, errorBuilder)
@@ -58,7 +59,7 @@ func validateSystem(objects []ast.FileObject, apiInfo *meta.APIInfo, errorBuilde
 
 	syncs := fileObjects(objects).syncs()
 	sync.KindValidatorFactory.New(syncs).Validate(errorBuilder)
-	sync.KnownResourceValidatorFactory(apiInfo).New(syncs).Validate(errorBuilder)
+	sync.KnownResourceValidatorFactory(meta.GetAPIInfo(root)).New(syncs).Validate(errorBuilder)
 	sync.NewInheritanceValidatorFactory().New(syncs).Validate(errorBuilder)
 	sync.VersionValidatorFactory{}.New(syncs).Validate(errorBuilder)
 }

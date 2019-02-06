@@ -123,20 +123,12 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 
 	// Always make sure we're getting the freshest data.
 	p.discoveryClient.Invalidate()
-	resources, discoveryErr := p.discoveryClient.ServerResources()
-	if discoveryErr != nil {
-		return nil, errors.Wrap(discoveryErr, "failed to get server resources")
-	}
-	resources = append(resources, transform.EphemeralResources()...)
-	apiInfo, err := meta.NewAPIInfo(resources)
-	if err != nil {
-		return nil, err
-	}
+	errorBuilder.Add(addScope(astRoot, p.discoveryClient))
 
 	// processing for <root>/system/*
 	var syncs []*v1alpha1.Sync
 	systemInfos := p.readRequiredResources(p.root.Join(repo.SystemDir), errorBuilder)
-	astRoot.System, astRoot.Repo, syncs = processSystem(systemInfos, p.opts, apiInfo, errorBuilder)
+	astRoot.System, astRoot.Repo, syncs = processSystem(astRoot, systemInfos, p.opts, errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
 		return nil, errorBuilder.Build()
@@ -166,7 +158,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	validateNamespaces(nsInfos, nsDirsOrdered, errorBuilder)
 
 	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos)}
-	visitors = append(visitors, p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet, apiInfo)...)
+	visitors = append(visitors, p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet)...)
 	for _, visitor := range visitors {
 		if errorBuilder.HasErrors() && visitor.RequiresValidState() {
 			return nil, errorBuilder.Build()
@@ -255,6 +247,21 @@ func (p *Parser) readResources(dir nomospath.Relative, errorBuilder *multierror.
 		}
 	}
 	return fileObjects
+}
+
+func addScope(root *ast.Root, client discovery.ServerResourcesInterface) error {
+	resources, discoveryErr := client.ServerResources()
+	if discoveryErr != nil {
+		return vet.UndocumentedWrapf(discoveryErr, "failed to get server resources")
+	}
+
+	resources = append(resources, transform.EphemeralResources()...)
+	apiInfo, err := meta.NewAPIInfo(resources)
+	if err != nil {
+		return err
+	}
+	meta.AddAPIInfo(root, apiInfo)
+	return nil
 }
 
 // toInheritanceSpecs converts Syncs to InheritanceSpecs. It also evaluates defaults so that later

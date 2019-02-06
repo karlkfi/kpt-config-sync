@@ -24,60 +24,65 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/meta"
 )
 
+func withAPIInfos(root *ast.Root) *ast.Root {
+	apiInfos, err := meta.NewAPIInfo(ft.TestAPIResourceList(ft.TestDynamicResources()))
+	if err != nil {
+		panic("testdata error")
+	}
+	meta.AddAPIInfo(root, apiInfos)
+	return root
+}
+
 var scopeTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.Visitor {
-		apiInfos, err := meta.NewAPIInfo(ft.TestAPIResourceList(ft.TestDynamicResources()))
-		if err != nil {
-			panic("testdata error")
-		}
 
-		return NewScope(apiInfos)
+		return NewScope()
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
 			Name:       "empty",
-			Input:      vt.Helper.EmptyRoot(),
+			Input:      withAPIInfos(vt.Helper.EmptyRoot()),
 			ExpectNoop: true,
 		},
 		{
 			Name:       "acme",
-			Input:      vt.Helper.AcmeRoot(),
+			Input:      withAPIInfos(vt.Helper.AcmeRoot()),
 			ExpectNoop: true,
 		},
 		{
 			Name: "cluster resource at namespace scope",
-			Input: &ast.Root{
+			Input: withAPIInfos(&ast.Root{
 				Tree: &ast.TreeNode{
 					Objects: vt.ObjectSets(vt.Helper.NomosAdminClusterRole()),
 				},
-			},
+			}),
 			ExpectErr: true,
 		},
 		{
 			Name: "namespace resource at cluster scope",
-			Input: &ast.Root{
+			Input: withAPIInfos(&ast.Root{
 				Cluster: &ast.Cluster{
 					Objects: vt.ClusterObjectSets(vt.Helper.AdminRoleBinding()),
 				},
-			},
+			}),
 			ExpectErr: true,
 		},
 		{
 			Name: "unknown namespace resource",
-			Input: &ast.Root{
+			Input: withAPIInfos(&ast.Root{
 				Tree: &ast.TreeNode{
 					Objects: vt.ObjectSets(vt.Helper.UnknownResource()),
 				},
-			},
+			}),
 			ExpectErr: true,
 		},
 		{
 			Name: "unknown cluster resource",
-			Input: &ast.Root{
+			Input: withAPIInfos(&ast.Root{
 				Cluster: &ast.Cluster{
 					Objects: vt.ClusterObjectSets(vt.Helper.UnknownResource()),
 				},
-			},
+			}),
 			ExpectErr: true,
 		},
 	},

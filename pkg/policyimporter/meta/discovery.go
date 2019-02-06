@@ -16,6 +16,7 @@ limitations under the License.
 package meta
 
 import (
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,6 +33,19 @@ const (
 	// NotFound is returned if the object does not exist in APIInfo
 	NotFound = ObjectScope("notFound")
 )
+
+type apiInfoKey struct{}
+
+// AddAPIInfo returns a copy of the Extension with the APIInfo set.
+// The value is only accessible with GetAPIInfo.
+func AddAPIInfo(r *ast.Root, apiInfo *APIInfo) {
+	r.Data = r.Data.Add(apiInfoKey{}, apiInfo)
+}
+
+// GetAPIInfo gets the APIInfo from the Extension.
+func GetAPIInfo(r *ast.Root) *APIInfo {
+	return r.Data.Get(apiInfoKey{}).(*APIInfo)
+}
 
 // APIInfo allows for looking up the discovery metav1.APIResource information by group version kind
 type APIInfo struct {

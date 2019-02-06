@@ -3,7 +3,6 @@ package filesystem
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/meta"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
@@ -19,10 +18,9 @@ type ParserConfig interface {
 		syncs []*v1alpha1.Sync,
 		clusters []clusterregistry.Cluster,
 		selectors []v1alpha1.ClusterSelector,
-		vet bool,
-		apiInfo *meta.APIInfo) []ast.Visitor
+		vet bool) []ast.Visitor
 
-	// ImplicitSyncResources *appends* sync resources to the normal Nomos sync resources.  This is
+	// SyncResources *appends* sync resources to the normal Nomos sync resources.  This is
 	// done prior to input type validation, so any type that the user is allowed to specify by default
 	// must be returned by this function.
 	SyncResources() []*v1alpha1.Sync
