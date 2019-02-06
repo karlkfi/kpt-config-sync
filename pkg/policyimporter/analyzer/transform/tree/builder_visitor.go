@@ -16,6 +16,12 @@ import (
 type BuilderVisitor struct {
 	*visitor.Base
 	objects map[nomospath.Relative][]ast.FileObject
+
+	// dirs holds all directories
+	// we have to maintain these as we treat these two cases differently
+	//   1. directory exists but has no resources
+	//   2. directory does not exist
+	dirs []nomospath.Relative
 }
 
 // NewBuilderVisitor initializes an BuilderVisitor with the set of objects to use to
@@ -37,12 +43,25 @@ func NewBuilderVisitor(objects []ast.FileObject) *BuilderVisitor {
 	return v
 }
 
+// WithDirs adds the specified directories to the Builder.
+func (v *BuilderVisitor) WithDirs(dirs []nomospath.Relative) *BuilderVisitor {
+	v.dirs = dirs
+	return v
+}
+
 // VisitRoot creates nodes for the policy hierarchy.
 func (v *BuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	treeBuilder := newDirectoryTree()
 	for dir := range v.objects {
 		treeBuilder.addDir(dir)
 	}
+
+	// Preserves behavior that distinguishes between directories that have no resources or children
+	// and directories that do not exist.
+	for _, dir := range v.dirs {
+		treeBuilder.addDir(dir)
+	}
+
 	r.Tree = treeBuilder.build()
 	return v.Base.VisitRoot(r)
 }
