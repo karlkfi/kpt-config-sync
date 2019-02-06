@@ -61,28 +61,6 @@ function teardown() {
   namespace::check_warning $ns
 }
 
-@test "Namespace has enabled label and declared as policyspace" {
-  local ns=decl-policyspace-label-enabled
-  namespace::create $ns -l "nomos.dev/managed=enabled"
-  namespace::declare_policyspace $ns
-  git::commit
-  wait::for kubectl get pn "$ns"
-
-  namespace::check_not_found $ns
-}
-
-@test "Namespace exists and declared as policyspace" {
-  local ns=decl-policyspace-label-none
-  namespace::create $ns
-  namespace::declare_policyspace $ns
-  git::commit
-
-  wait::for kubectl get pn "$ns"
-
-  namespace::check_exists $ns
-  namespace::check_warning $ns
-}
-
 @test "Namespace warn on invalid management label" {
   local ns=decl-invalid-label
   namespace::create $ns -l "nomos.dev/namespace-management=a-garbage-label"
