@@ -1492,6 +1492,8 @@ spec:
 												},
 												Spec: v1alpha1.HierarchicalQuotaSpec{
 													Hierarchy: v1alpha1.HierarchicalQuotaNode{
+														ResourceQuotaV1: createResourceQuota(
+															"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, nil),
 														Children: []v1alpha1.HierarchicalQuotaNode{
 															{
 																Namespace: "bar",

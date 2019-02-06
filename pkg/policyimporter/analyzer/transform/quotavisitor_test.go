@@ -87,6 +87,13 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: vt.Helper.AcmeRoot(),
 			ExpectOutput: &ast.Root{
 				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					ResourceQuotaV1: modQuota(
+						vt.Helper.AcmeResourceQuota(),
+						resourcequota.ResourceQuotaObjectName,
+						nil,
+						corev1.ResourceList{
+							corev1.ResourceCPU: resource.MustParse("5"),
+						}),
 					Children: []v1alpha1.HierarchicalQuotaNode{
 						{
 							ResourceQuotaV1: modQuota(
@@ -193,6 +200,13 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					ResourceQuotaV1: modQuota(
+						vt.Helper.AcmeResourceQuota(),
+						resourcequota.ResourceQuotaObjectName,
+						nil,
+						corev1.ResourceList{
+							corev1.ResourceCPU: resource.MustParse("5"),
+						}),
 					Children: []v1alpha1.HierarchicalQuotaNode{
 						{
 							Children: []v1alpha1.HierarchicalQuotaNode{
@@ -295,6 +309,13 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					ResourceQuotaV1: modQuota(
+						vt.Helper.AcmeResourceQuota(),
+						resourcequota.ResourceQuotaObjectName,
+						nil,
+						corev1.ResourceList{
+							corev1.ResourceCPU: resource.MustParse("5"),
+						}),
 					Children: []v1alpha1.HierarchicalQuotaNode{
 						{
 							Children: []v1alpha1.HierarchicalQuotaNode{
