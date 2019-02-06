@@ -1182,10 +1182,6 @@ var parserTestCases = []parserTestCase{
 			"system/nomos.yaml":     aRepo,
 			"namespaces/bar/ignore": "",
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar":                 createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
-		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
@@ -1435,9 +1431,6 @@ spec:
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml": aRepo,
 			"namespaces/ignore": "",
-		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(&Policies{}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -3063,9 +3056,7 @@ func TestEmptyDirectories(t *testing.T) {
 				t.Fatalf("unexpected error: %#v", err)
 			}
 			expectedPolicies := &v1.AllPolicies{
-				PolicyNodes: map[string]v1.PolicyNode{
-					v1.RootPolicyNodeName: createRootPN(nil),
-				},
+				PolicyNodes:   map[string]v1.PolicyNode{},
 				ClusterPolicy: createClusterPolicy(),
 				Syncs:         map[string]v1alpha1.Sync{},
 			}

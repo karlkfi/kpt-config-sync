@@ -165,7 +165,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	nsInfos := p.readResources(nsDir, errorBuilder)
 	validateNamespaces(nsInfos, nsDirsOrdered, errorBuilder)
 
-	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos).WithDirs(nsDirsOrdered)}
+	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos)}
 	visitors = append(visitors, p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet, apiInfo)...)
 	for _, visitor := range visitors {
 		if errorBuilder.HasErrors() && visitor.RequiresValidState() {
