@@ -26,6 +26,10 @@ type ClusterSelectorListerExpansion interface{}
 // HierarchicalQuotaLister.
 type HierarchicalQuotaListerExpansion interface{}
 
+// HierarchyConfigListerExpansion allows custom methods to be added to
+// HierarchyConfigLister.
+type HierarchyConfigListerExpansion interface{}
+
 // NamespaceSelectorListerExpansion allows custom methods to be added to
 // NamespaceSelectorLister.
 type NamespaceSelectorListerExpansion interface{}

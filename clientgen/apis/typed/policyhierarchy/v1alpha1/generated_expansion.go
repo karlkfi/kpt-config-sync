@@ -22,6 +22,8 @@ type ClusterSelectorExpansion interface{}
 
 type HierarchicalQuotaExpansion interface{}
 
+type HierarchyConfigExpansion interface{}
+
 type NamespaceSelectorExpansion interface{}
 
 type RepoExpansion interface{}

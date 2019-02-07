@@ -104,7 +104,7 @@ type NamespaceSelectorList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// Items is a list of policy nodes that apply.
+	// Items is a list of NamespaceSelectors.
 	Items []NamespaceSelector `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
@@ -266,7 +266,7 @@ type HierarchicalQuotaList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// Items is a list of policy nodes that apply.
+	// Items is a list of HierarchicalQuotas.
 	Items []HierarchicalQuota `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
@@ -288,4 +288,57 @@ type HierarchicalQuotaNode struct {
 	// Children are the child nodes of this node.  This will be populated for abstract namespaces.
 	// +optional
 	Children []HierarchicalQuotaNode `json:"children,omitempty"`
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// HierarchyConfig is used for configuring the HierarchyModeType for managed resources.
+type HierarchyConfig struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// +optional
+	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Spec is the standard spec field.
+	Spec HierarchyConfigSpec `json:"spec"`
+
+	// Status is the status for the HierarchyConfig.
+	Status SyncStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// HierarchyConfigList holds a list of HierarchyConfig resources.
+type HierarchyConfigList struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Items is a list of HierarchyConfigs.
+	Items []HierarchyConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// HierarchyConfigSpec specifies the HierarchyConfigResources.
+type HierarchyConfigSpec struct {
+	Resources []HierarchyConfigResource `json:"resources" protobuf:"bytes,2,rep,name=resources"`
+}
+
+// HierarchyConfigResource specifies the HierarchyModeType based on the matching Groups and Kinds enabled.
+type HierarchyConfigResource struct {
+	// Group is the name of the APIGroup that contains the resources.
+	// +optional
+	Group string `json:"group,omitempty" protobuf:"bytes,1,rep,name=group"`
+	// Kinds is a list of kinds this rule applies to.
+	// +optional
+	Kinds []string `json:"kinds,omitempty" protobuf:"bytes,2,rep,name=kinds"`
+	// HierarchyMode specifies how the object is treated when it appears in an abstract namespace.
+	// The default is off, meaning objects cannot appear in an abstract namespace. For RoleBinding,
+	// the default is "inherit". For ResourceQuota, the default is "hierarchicalQuota".
+	// +optional
+	HierarchyMode HierarchyModeType `json:"hierarchyMode,omitempty" protobuf:"bytes,3,opt,name=hierarchyMode"`
 }
