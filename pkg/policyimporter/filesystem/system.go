@@ -3,6 +3,7 @@ package filesystem
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/sync"
@@ -20,32 +21,30 @@ func processSystem(
 	root *ast.Root,
 	objects []ast.FileObject,
 	opts ParserOpt,
-	errorBuilder *multierror.Builder) (*ast.System, *v1alpha1.Repo, []*v1alpha1.Sync) {
+	errorBuilder *multierror.Builder,
+) []*v1alpha1.Sync {
+	root.Accept(tree.NewSystemBuilderVisitor(objects))
+
 	var syncs []*v1alpha1.Sync
-	var repo *v1alpha1.Repo
-	sys := &ast.System{}
 	for _, object := range objects {
 		switch o := object.Object.(type) {
-		case *v1alpha1.Repo:
-			repo = o
 		case *v1alpha1.Sync:
 			syncs = append(syncs, o)
 		}
-		sys.Objects = append(sys.Objects, &ast.SystemObject{FileObject: object})
 	}
 
 	validateSystem(root, objects, errorBuilder)
 
 	for _, s := range opts.Extension.SyncResources() {
 		syncs = append(syncs, s)
-		sys.Objects = append(sys.Objects, &ast.SystemObject{
+		root.System.Objects = append(root.System.Objects, &ast.SystemObject{
 			FileObject: ast.FileObject{
 				Relative: nomospath.NewFakeRelative("<builtin>"),
 				Object:   s,
 			},
 		})
 	}
-	return sys, repo, syncs
+	return syncs
 }
 
 // validateSystem validates objects in system/

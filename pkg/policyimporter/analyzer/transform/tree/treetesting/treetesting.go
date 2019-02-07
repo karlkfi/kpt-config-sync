@@ -18,23 +18,19 @@ func BuildTree(t *testing.T, objects ...ast.FileObject) *ast.Root {
 
 	// TODO: Move this to transforming visitors.
 	var namespaceObjects []ast.FileObject
+	var sytemObjects []ast.FileObject
+	var clusterObjects []ast.FileObject
 	for _, object := range objects {
 		switch object.Relative.Split()[0] {
 		case repo.SystemDir:
-			if root.System == nil {
-				root.System = &ast.System{}
-			}
-			root.System.Objects = append(root.System.Objects, &ast.SystemObject{FileObject: object})
+			sytemObjects = append(sytemObjects, object)
 		case repo.ClusterRegistryDir:
 			if root.ClusterRegistry == nil {
 				root.ClusterRegistry = &ast.ClusterRegistry{}
 			}
 			root.ClusterRegistry.Objects = append(root.ClusterRegistry.Objects, &ast.ClusterRegistryObject{FileObject: object})
 		case repo.ClusterDir:
-			if root.Cluster == nil {
-				root.Cluster = &ast.Cluster{}
-			}
-			root.Cluster.Objects = append(root.Cluster.Objects, &ast.ClusterObject{FileObject: object})
+			clusterObjects = append(clusterObjects, object)
 		case repo.NamespacesDir:
 			namespaceObjects = append(namespaceObjects, object)
 		default:
@@ -42,6 +38,8 @@ func BuildTree(t *testing.T, objects ...ast.FileObject) *ast.Root {
 		}
 	}
 
+	root.Accept(tree.NewSystemBuilderVisitor(sytemObjects))
+	root.Accept(tree.NewClusterBuilderVisitor(clusterObjects))
 	root.Accept(tree.NewBuilderVisitor(namespaceObjects))
 
 	return root

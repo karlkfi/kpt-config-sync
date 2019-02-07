@@ -66,7 +66,6 @@ func ClusterRole(path string) ast.FileObject {
 	}
 }
 
-
 // ClusterSelector returns a Nomos ClusterSelector at the specified path.
 func ClusterSelector(path string) ast.FileObject {
 	return ast.FileObject{
@@ -83,6 +82,26 @@ func Cluster(path string) ast.FileObject {
 		Relative: nomospath.NewFakeRelative(path),
 		Object: &clusterregistry.Cluster{
 			TypeMeta: toTypeMeta(kinds.Cluster()),
+		},
+	}
+}
+
+// Repo returns a nomos Repo at the specified path.
+func Repo(path string) ast.FileObject {
+	return ast.FileObject{
+		Relative: nomospath.NewFakeRelative(path),
+		Object: &nomos.Repo{
+			TypeMeta: toTypeMeta(kinds.Repo()),
+		},
+	}
+}
+
+// HierarchyConfig returns a nomos Repo at the specified path.
+func HierarchyConfig(path string) ast.FileObject {
+	return ast.FileObject{
+		Relative: nomospath.NewFakeRelative(path),
+		Object: &nomos.HierarchyConfig{
+			TypeMeta: toTypeMeta(kinds.HierarchyConfig()),
 		},
 	}
 }

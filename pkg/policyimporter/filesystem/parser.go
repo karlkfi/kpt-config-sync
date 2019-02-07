@@ -126,9 +126,8 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	errorBuilder.Add(addScope(astRoot, p.discoveryClient))
 
 	// processing for <root>/system/*
-	var syncs []*v1alpha1.Sync
 	systemInfos := p.readRequiredResources(p.root.Join(repo.SystemDir), errorBuilder)
-	astRoot.System, astRoot.Repo, syncs = processSystem(astRoot, systemInfos, p.opts, errorBuilder)
+	syncs := processSystem(astRoot, systemInfos, p.opts, errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
 		return nil, errorBuilder.Build()

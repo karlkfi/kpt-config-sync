@@ -90,3 +90,8 @@ func Cluster() schema.GroupVersionKind {
 func ClientID() schema.GroupVersionKind {
 	return oidcconfig.SchemeGroupVersion.WithKind("ClientID")
 }
+
+// HierarchyConfig returns the canonical HierarchyConfig GroupVersionKind
+func HierarchyConfig() schema.GroupVersionKind {
+	return v1alpha1.SchemeGroupVersion.WithKind("HierarchyConfig")
+}
