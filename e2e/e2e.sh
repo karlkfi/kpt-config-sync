@@ -143,6 +143,7 @@ DOCKER_FLAGS+=(
     -u "$(id -u):$(id -g)"
     -v "${TEMP_OUTPUT_DIR}:/tmp"
     -v "${OUTPUT_DIR}/e2e":/opt/testing/e2e
+    -v "${OUTPUT_DIR}/go/bin":/opt/testing/go/bin
     -e "NOMOS_REPO=$(pwd)"
     "${EXTRA_ARGS[@]}"
     "gcr.io/stolos-dev/e2e-tests:test-e2e-latest"

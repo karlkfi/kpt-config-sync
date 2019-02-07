@@ -86,6 +86,8 @@ test-e2e-dev-git: e2e-staging
 
 # Runs nomos vet locally for example repos.
 # Requires kubeconfig set up properly with Nomos cluster.
+# This is now a duplicate of cli.bats from the e2e tests framework,
+# but can run locally without any of the setup.
 test-nomos-vet-local: build
 	@echo "Running test-nomos-vet-local..."
 	$(NOMOS_LOCAL) --validate vet --path=./examples/acme
