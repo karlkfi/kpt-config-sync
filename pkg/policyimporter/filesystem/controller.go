@@ -18,7 +18,6 @@ package filesystem
 import (
 	"flag"
 	"path/filepath"
-	"reflect"
 	"time"
 
 	"github.com/golang/glog"
@@ -27,7 +26,6 @@ import (
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter"
@@ -204,9 +202,6 @@ func (c *Controller) updatePolicies(current, desired *v1.AllPolicies) error {
 	if err := c.syncDeletes(current, desired); err != nil {
 		return err
 	}
-	if err := c.syncReductions(current, desired); err != nil {
-		return err
-	}
 	// Calculate the sequence of actions needed to transition from current to desired state.
 	a := c.differ.Diff(*current, *desired)
 	return applyActions(a)
@@ -248,54 +243,6 @@ func (c *Controller) syncDeletes(current, desired *v1.AllPolicies) error {
 		}
 	}
 	return nil
-}
-
-// syncReductions gets a list of Syncs to be updated during the Delete Syncs phase
-func (c *Controller) syncReductions(current, desired *v1.AllPolicies) error {
-	toReduce := c.differ.SyncReductions(current.Syncs, desired.Syncs)
-	for _, sr := range toReduce {
-		if _, err := c.client.PolicyHierarchy().NomosV1alpha1().Syncs().Update(&sr); err != nil {
-			return err
-		}
-	}
-	for _, sr := range toReduce {
-		expectedStatus := v1alpha1.SyncStatus{}
-		for _, g := range sr.Spec.Groups {
-			for _, k := range g.Kinds {
-				for _, v := range k.Versions {
-					expectedStatus.GroupVersionKinds =
-						append(expectedStatus.GroupVersionKinds,
-							v1alpha1.SyncGroupVersionKindStatus{Group: g.Group, Kind: k.Kind, Version: v.Version})
-				}
-			}
-		}
-		deadline := time.Now().Add(*syncDeleteMaxWait)
-		var actualStatus *v1alpha1.SyncStatus
-		for !statusEqual(&expectedStatus, actualStatus) {
-			if time.Now().After(deadline) {
-				return errors.Errorf("timeout waiting for statuses to converge for Sync %q", sr.Name)
-			}
-			time.Sleep(500 * time.Millisecond)
-			actualSync, err := c.client.PolicyHierarchy().NomosV1alpha1().Syncs().Get(sr.Name, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			actualStatus = &actualSync.Status
-		}
-	}
-	return nil
-}
-
-func statusEqual(expected, actual *v1alpha1.SyncStatus) bool {
-	expectedSet := make(map[v1alpha1.SyncGroupVersionKindStatus]struct{})
-	for _, e := range expected.GroupVersionKinds {
-		expectedSet[e] = struct{}{}
-	}
-	actualSet := make(map[v1alpha1.SyncGroupVersionKindStatus]struct{})
-	for _, e := range actual.GroupVersionKinds {
-		actualSet[e] = struct{}{}
-	}
-	return reflect.DeepEqual(expectedSet, actualSet)
 }
 
 func applyActions(actions []action.Interface) error {
