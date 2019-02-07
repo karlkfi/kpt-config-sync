@@ -353,6 +353,11 @@ func (t *TestHelper) AcmeCluster() *ast.Cluster {
 	}
 }
 
+// AcmeTree returns a tree of nodes for testing.
+func (t *TestHelper) AcmeTree() *ast.TreeNode {
+	return t.acmeTree()
+}
+
 func (t *TestHelper) acmeTree() *ast.TreeNode {
 	return &ast.TreeNode{
 		Type:     node.AbstractNamespace,
