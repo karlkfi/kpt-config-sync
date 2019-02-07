@@ -11,11 +11,3 @@ func validateCluster(objects []ast.FileObject, errorBuilder *multierror.Builder)
 	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(objects)).Validate(errorBuilder)
 	syntax.FlatDirectoryValidator.Validate(ast.ToRelative(objects), errorBuilder)
 }
-
-func processCluster(
-	objects []ast.FileObject,
-	fsRoot *ast.Root) {
-	for _, i := range objects {
-		fsRoot.Cluster.Objects = append(fsRoot.Cluster.Objects, &ast.ClusterObject{FileObject: i})
-	}
-}

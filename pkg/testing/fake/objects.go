@@ -55,6 +55,16 @@ func RoleBinding(path string) ast.FileObject {
 	}
 }
 
+// ClusterRole returns an RBAC ClusterRole at the specified path.
+func ClusterRole(path string) ast.FileObject {
+	return ast.FileObject{
+		Relative: nomospath.NewFakeRelative(path),
+		Object: &v1alpha1.ClusterRole{
+			TypeMeta: toTypeMeta(kinds.ClusterRole()),
+		},
+	}
+}
+
 func toTypeMeta(gvk schema.GroupVersionKind) v1.TypeMeta {
 	return v1.TypeMeta{
 		APIVersion: gvk.GroupVersion().String(),

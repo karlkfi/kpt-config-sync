@@ -135,10 +135,9 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	}
 
 	// processing for <root>/cluster/*
-	clusterDir := p.root.Join(repo.ClusterDir)
-	clusterInfos := p.readResources(clusterDir, errorBuilder)
+	clusterInfos := p.readClusterResources(errorBuilder)
 	validateCluster(clusterInfos, errorBuilder)
-	processCluster(clusterInfos, astRoot)
+	astRoot.Accept(tree.NewClusterBuilderVisitor(clusterInfos))
 
 	// processing for <root>/clusterregistry/*
 	clusterregistryInfos := p.readResources(p.root.Join(repo.ClusterRegistryDir), errorBuilder)
@@ -198,6 +197,10 @@ func toResourceMetas(objects []ast.FileObject) []metadata.ResourceMeta {
 
 func (p *Parser) readNamespaceResources(eb *multierror.Builder) []ast.FileObject {
 	return p.readResources(p.root.Join(p.opts.Extension.NamespacesDir()), eb)
+}
+
+func (p *Parser) readClusterResources(eb *multierror.Builder) []ast.FileObject {
+	return p.readResources(p.root.Join(repo.ClusterDir), eb)
 }
 
 // readRequiredResources walks dir recursively, looking for resources, and builds FileInfos from them.
