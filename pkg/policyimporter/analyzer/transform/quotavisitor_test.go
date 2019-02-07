@@ -104,7 +104,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 									corev1.ResourceCPU:    resource.MustParse("5"),
 									corev1.ResourceMemory: resource.MustParse("5"),
 								}),
-							Namespace: "frontend",
+							Name: "frontend",
 						},
 						{
 							ResourceQuotaV1: modQuota(
@@ -114,7 +114,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 								corev1.ResourceList{
 									corev1.ResourceCPU: resource.MustParse("5"),
 								}),
-							Namespace: "frontend-test",
+							Name: "frontend-test",
 						},
 					}}),
 					vt.Helper.AcmeCluster()),
@@ -219,7 +219,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 											corev1.ResourceCPU:    resource.MustParse("5"),
 											corev1.ResourceMemory: resource.MustParse("5"),
 										}),
-									Namespace: "frontend",
+									Name: "frontend",
 								},
 							},
 						}}}),
@@ -329,7 +329,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 											corev1.ResourceMemory:  resource.MustParse("2"),
 											corev1.ResourceStorage: resource.MustParse("6"),
 										}),
-									Namespace: "frontend",
+									Name: "frontend",
 								},
 							},
 						}}}),

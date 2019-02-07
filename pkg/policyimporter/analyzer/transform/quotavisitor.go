@@ -167,7 +167,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 				quota = quota.DeepCopy()
 				quota.Labels = resourcequota.NewNomosQuotaLabels()
 
-				context.hNode.Namespace = n.Name()
+				context.hNode.Name = n.Name()
 			}
 			context.hNode.ResourceQuotaV1 = quota
 			newNode.Objects = append(newNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: quota}})

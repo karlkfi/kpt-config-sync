@@ -1485,7 +1485,7 @@ spec:
 															"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, nil),
 														Children: []v1alpha1.HierarchicalQuotaNode{
 															{
-																Namespace: "bar",
+																Name: "bar",
 																ResourceQuotaV1: createResourceQuota(
 																	"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 															},

@@ -277,11 +277,12 @@ type HierarchicalQuotaSpec struct {
 
 // HierarchicalQuotaNode is an element of a quota hierarchy.
 type HierarchicalQuotaNode struct {
-	// Namespace is the name of the namespace, this is only populated if the HierarchicalQuotaNode
-	// represents a namespace.
+	// Name is the name of the namespace or abstract namespace
 	// +optional
-	Namespace string `json:"namespace,omitempty"`
+	Name string `json:"name,omitempty"`
 
+	// Type is the type of the hierarchical quota node.
+	Type HierarchyNodeType `json:"type,omitempty"`
 	// +optional
 	ResourceQuotaV1 *corev1.ResourceQuota `json:"resourceQuotaV1,omitempty"`
 

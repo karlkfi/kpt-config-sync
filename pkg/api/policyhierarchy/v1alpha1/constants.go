@@ -53,3 +53,6 @@ const (
 	// HierarchyModeDefault is the default value. Default behavior is type-specific.
 	HierarchyModeDefault = HierarchyModeType("")
 )
+
+// HierarchyNodeType represents the types of hierarchical nodes that can exist.
+type HierarchyNodeType string

@@ -73,11 +73,6 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// NomosV1alpha1 retrieves the NomosV1alpha1Client
-func (c *Clientset) NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface {
-	return &fakenomosv1alpha1.FakeNomosV1alpha1{Fake: &c.Fake}
-}
-
 // NomosV1 retrieves the NomosV1Client
 func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
 	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
@@ -86,4 +81,9 @@ func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
 // Nomos retrieves the NomosV1Client
 func (c *Clientset) Nomos() nomosv1.NomosV1Interface {
 	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
+}
+
+// NomosV1alpha1 retrieves the NomosV1alpha1Client
+func (c *Clientset) NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface {
+	return &fakenomosv1alpha1.FakeNomosV1alpha1{Fake: &c.Fake}
 }
