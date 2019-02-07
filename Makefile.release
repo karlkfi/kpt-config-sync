@@ -202,6 +202,10 @@ git-relnotes-rc:
 	git log $(LAST_RC)..$(NEXT_RC)
 	$(info +++ ----)
 
+git-cookies:
+	$(info +++ Configuring gitcookies for Prow)
+	git config http.cookiefile /secrets/cookiefile/cookies
+
 # Release target used by automated releaser on go/prow.  It keeps building
 # ever-newer release candidates from the HEAD rev of master.
 #
@@ -211,6 +215,7 @@ git-relnotes-rc:
 # release candidates.  This doesn't seem to be a big problem though.
 # TODO(filmil): Remove the repetition in this target and the -local one.
 autorelease: \
+	   git-cookies \
 		__internal-autorelease
 
 ifeq ($(LAST_RC_GIT_HASH), $(HEAD_GIT_HASH))
