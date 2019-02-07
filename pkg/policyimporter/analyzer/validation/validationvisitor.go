@@ -158,7 +158,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	n := v.nodes[len(v.nodes)-1]
 	if n.Type == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[gvk.GroupKind()]
-		if (!found || spec.Mode == v1alpha1.HierarchyModeNone) && !transform.IsEphemeral(gvk) && !syntax.IsSystemOnly(gvk) {
+		if (found && spec.Mode == v1alpha1.HierarchyModeNone) && !transform.IsEphemeral(gvk) && !syntax.IsSystemOnly(gvk) {
 			v.errs.Add(vet.IllegalAbstractNamespaceObjectKindError{Resource: o})
 		}
 	}
