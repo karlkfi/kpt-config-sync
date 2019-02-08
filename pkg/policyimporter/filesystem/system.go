@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/sync"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/system"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -50,7 +51,11 @@ func processSystem(
 // validateSystem validates objects in system/
 func validateSystem(root *ast.Root, objects []ast.FileObject, errorBuilder *multierror.Builder) {
 	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(objects)).Validate(errorBuilder)
-	syntax.RepoVersionValidator.Validate(objects, errorBuilder)
+
+	repoValidator := system.NewRepoVersionValidator()
+	root.Accept(repoValidator)
+	errorBuilder.Add(repoValidator.Error())
+
 	syntax.SystemKindValidator.Validate(objects, errorBuilder)
 
 	semantic.RepoCountValidator{Objects: objects}.Validate(errorBuilder)
