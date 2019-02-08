@@ -56,3 +56,10 @@ const (
 
 // HierarchyNodeType represents the types of hierarchical nodes that can exist.
 type HierarchyNodeType string
+
+const (
+	// HierarchyNodeNamespace indicates that the node represents a namespace.
+	HierarchyNodeNamespace = HierarchyNodeType("namespace")
+	// HierarchyNodeAbstractNamespace indicates that the node represents an abstract namespace.
+	HierarchyNodeAbstractNamespace = HierarchyNodeType("abstractNamespace")
+)

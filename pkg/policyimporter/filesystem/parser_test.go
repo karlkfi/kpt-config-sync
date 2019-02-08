@@ -1481,11 +1481,14 @@ spec:
 												},
 												Spec: v1alpha1.HierarchicalQuotaSpec{
 													Hierarchy: v1alpha1.HierarchicalQuotaNode{
+														Name: "namespaces",
+														Type: "abstractNamespace",
 														ResourceQuotaV1: createResourceQuota(
 															"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, nil),
 														Children: []v1alpha1.HierarchicalQuotaNode{
 															{
 																Name: "bar",
+																Type: "namespace",
 																ResourceQuotaV1: createResourceQuota(
 																	"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 															},

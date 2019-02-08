@@ -161,13 +161,19 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.ctx = context
 	newNode := v.Copying.VisitTreeNode(n)
 
+	if n.Type == node.Namespace {
+		context.hNode.Name = n.Name()
+		context.hNode.Type = v1alpha1.HierarchyNodeNamespace
+	} else {
+		context.hNode.Name = n.RelativeSlashPath()
+		context.hNode.Type = v1alpha1.HierarchyNodeAbstractNamespace
+	}
+
 	if (n.Type == node.AbstractNamespace && context.quota != nil) || (n.Type == node.Namespace) {
 		if quota := context.aggregated(); quota != nil {
 			if n.Type == node.Namespace {
 				quota = quota.DeepCopy()
 				quota.Labels = resourcequota.NewNomosQuotaLabels()
-
-				context.hNode.Name = n.Name()
 			}
 			context.hNode.ResourceQuotaV1 = quota
 			newNode.Objects = append(newNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: quota}})

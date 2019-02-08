@@ -87,6 +87,8 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: vt.Helper.AcmeRoot(),
 			ExpectOutput: &ast.Root{
 				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					Name: "namespaces",
+					Type: "abstractNamespace",
 					ResourceQuotaV1: modQuota(
 						vt.Helper.AcmeResourceQuota(),
 						resourcequota.ResourceQuotaObjectName,
@@ -105,6 +107,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 									corev1.ResourceMemory: resource.MustParse("5"),
 								}),
 							Name: "frontend",
+							Type: "namespace",
 						},
 						{
 							ResourceQuotaV1: modQuota(
@@ -115,6 +118,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 									corev1.ResourceCPU: resource.MustParse("5"),
 								}),
 							Name: "frontend-test",
+							Type: "namespace",
 						},
 					}}),
 					vt.Helper.AcmeCluster()),
@@ -200,6 +204,8 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					Name: "namespaces",
+					Type: "abstractNamespace",
 					ResourceQuotaV1: modQuota(
 						vt.Helper.AcmeResourceQuota(),
 						resourcequota.ResourceQuotaObjectName,
@@ -209,6 +215,8 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						}),
 					Children: []v1alpha1.HierarchicalQuotaNode{
 						{
+							Name: "namespaces/eng",
+							Type: "abstractNamespace",
 							Children: []v1alpha1.HierarchicalQuotaNode{
 								{
 									ResourceQuotaV1: modQuota(
@@ -220,6 +228,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 											corev1.ResourceMemory: resource.MustParse("5"),
 										}),
 									Name: "frontend",
+									Type: "namespace",
 								},
 							},
 						}}}),
@@ -309,6 +318,8 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					Name: "namespaces",
+					Type: "abstractNamespace",
 					ResourceQuotaV1: modQuota(
 						vt.Helper.AcmeResourceQuota(),
 						resourcequota.ResourceQuotaObjectName,
@@ -318,6 +329,8 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						}),
 					Children: []v1alpha1.HierarchicalQuotaNode{
 						{
+							Name: "namespaces/eng",
+							Type: "abstractNamespace",
 							Children: []v1alpha1.HierarchicalQuotaNode{
 								{
 									ResourceQuotaV1: modQuota(
@@ -330,6 +343,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 											corev1.ResourceStorage: resource.MustParse("6"),
 										}),
 									Name: "frontend",
+									Type: "namespace",
 								},
 							},
 						}}}),
@@ -396,8 +410,16 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+					Name: "namespaces",
+					Type: "abstractNamespace",
 					Children: []v1alpha1.HierarchicalQuotaNode{
-						v1alpha1.HierarchicalQuotaNode{}, v1alpha1.HierarchicalQuotaNode{}},
+						v1alpha1.HierarchicalQuotaNode{
+							Name: "frontend",
+							Type: "namespace",
+						}, v1alpha1.HierarchicalQuotaNode{
+							Name: "frontend-test",
+							Type: "namespace",
+						}},
 				}), &ast.Cluster{}),
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
