@@ -56,16 +56,16 @@ has milestone releases that we want to hop on.
 *   Edit `gkectl/pkg/bundle/versions.go` and update `gcr.io/%s/Nomos:<version>`
     to the latest blessed version of the Nomos binary.
 *   Ensure that the contents of `gkectl/pkg/bundle/addonsdata.go` match the
-    contents of `nomos-operator.yaml`. This file rarely changes, only if we
-    modify TheNomos CRD or the operator deployment spec. The contents should
-    match with the following exceptions:
-    *   Omit the `applications.app.k8s.io` CRD
-    *   Add to Deployment.spec.template.spec.containers.command:
-        `--private-registry={{.RegistryServer}}
-        --image-pull-secret={{.RegistryCredentialsSecretName}}`
-    *   Update Deployment.spec.template.spec.containers.image to `image:
-        {{.NomosOperatorImage}}`
-    *   Remove the comments
+    contents of `nomos-operator.yaml`:
+    *   Check out and cd to the
+        [Operator repo](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/+/master/nomos-operator).
+    *   `make
+        ADDONS_FILE=<path-to>/gkectl/pkg/bundle/addonsdata.go
+        compare-to-addons-file || echo failed`. This regenerates the nomos
+        manifests and searches the supplied `addons.go` for a match.
+    *   If `compare-to-addons-file` fails, patch the newly generated nomos
+        manifests - located at `.output/nomos-operator-syllogi.yaml` - into
+        `addons.go`.
 
 ## E2E Test
 
