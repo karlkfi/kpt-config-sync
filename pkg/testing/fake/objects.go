@@ -51,7 +51,7 @@ func RoleBinding(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewFakeRelative(path),
 		Object: &rbacv1alpha1.RoleBinding{
-			TypeMeta: toTypeMeta(kinds.Role()),
+			TypeMeta: toTypeMeta(kinds.RoleBinding()),
 		},
 	}
 }

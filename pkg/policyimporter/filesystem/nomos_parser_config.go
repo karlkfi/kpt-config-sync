@@ -51,12 +51,12 @@ func (n NomosVisitorProvider) Visitors(
 		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(specs),
 		transform.NewEphemeralResourceRemover(),
+		metadata.NewDuplicateNameValidator(),
 	}
 	if spec, found := specs[kinds.ResourceQuota().GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
 		v = append(v, validation.NewQuotaValidator())
 		v = append(v, transform.NewQuotaVisitor())
 	}
-	v = append(v, validation.NewNameValidator())
 	v = append(v, transform.NewUnarySync())
 	return v
 }

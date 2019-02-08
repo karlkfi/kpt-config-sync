@@ -1,32 +1,132 @@
-Found issues: 2 error(s)
+Found issues: 16 error(s)
 
 
-[1] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
+[1] KNV1004: A Namespace MUST NOT use the annotation nomos.dev/namespace-selector. Remove metadata.annotations.nomos.dev/namespace-selector from:
 
-source: namespaces/dev/alice-rolebinding.yaml
-metadata.name: alice-rolebinding
-group: rbac.authorization.k8s.io
-version: v1
-kind: RoleBinding
-
-source: namespaces/dev/dev-namespace/alice-rolebinding-2.yaml
-metadata.name: alice-rolebinding
-group: rbac.authorization.k8s.io
-version: v1
-kind: RoleBinding
-
-
-[2] KNV1029: Resources of the same Kind MUST have unique names in the same Namespace and their parent Abstract Namespaces:
-
-source: namespaces/prod/prod-namespace/namespace-1.yaml
-metadata.name: prod-namespace
+source: namespaces/dev/dev-namespace/namespace.yaml
+metadata.name: incorrect-name
 group:
 version: v1
 kind: Namespace
 
-source: namespaces/prod/prod-namespace/namespace-2.yaml
-metadata.name: prod-namespace
+
+[2] KNV1005: Unable to sync Resource. Enable sync for this Resource's kind.
+
+source: cluster/not-syncable-clusterrolebinding.yaml
+metadata.name: not-syncable-clusterrolebinding
+group: rbac.authorization.k8s.io
+version: v1
+kind: ClusterRoleBinding
+
+
+[3] KNV1006: Unable to sync Resource. Enable sync for this Resource's kind.
+
+source: namespaces/prod/prod-namespace/jamal-clusterrolebinding.yaml
+metadata.name: jamal-rolebinding
+group: rbac.authorization.k8s.io
+version: v1
+kind: ClusterRoleBinding
+
+
+[4] KNV1007: Resource "illegal-clusterrole" illegally declared in an Abstract Namespace directory. Move this Resource to a Namespace directory:
+
+source: namespaces/prod/illegal-resource-kind.yaml
+metadata.name: illegal-clusterrole
+group: rbac.authorization.k8s.io
+version: v1
+kind: ClusterRole
+
+
+[5] KNV1009: Resources MUST NOT declare metadata.namespace:
+
+source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+metadata.name: kesim-rolebinding
+group: rbac.authorization.k8s.io
+version: v1
+kind: RoleBinding
+
+
+[6] KNV1010: Resources MUST NOT declare unsupported annotations starting with "nomos.dev". Resource has offending annotations: "nomos.dev/unsupported"
+
+source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+metadata.name: kesim-rolebinding
+group: rbac.authorization.k8s.io
+version: v1
+kind: RoleBinding
+
+
+[7] KNV1011: Resources MUST NOT declare labels starting with "nomos.dev". Below Resource declares these offending labels: "nomos.dev/illegal-label", "nomos.dev/illegal-label-2"
+
+source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+metadata.name: kesim-rolebinding
+group: rbac.authorization.k8s.io
+version: v1
+kind: RoleBinding
+
+
+[8] KNV1012: The NamespaceSelector Resource "sre-supported" MUST NOT have ClusterSelector annotation
+
+
+[9] KNV1013: Resource "no-such-cluster-selector" MUST refer to an existing ClusterSelector, but has annotation nomos.dev/cluster-selector="nonexistent-selector" which maps to no declared ClusterSelector
+
+
+[10] KNV1013: Resource "sre-supported" MUST refer to an existing ClusterSelector, but has annotation nomos.dev/cluster-selector="illegal-cluster-selector-annotation" which maps to no declared ClusterSelector
+
+
+[11] KNV1018: cluster/ directory MUST NOT have subdirectories.
+
+path: cluster/illegal-cluster-subdir
+
+
+[12] KNV1019: Namespaces MUST be declared in subdirectories of namespaces/. Create a subdirectory for Namespaces declared in:
+
+source: namespaces/namespace.yaml
+metadata.name: namespaces
 group:
 version: v1
 kind: Namespace
+
+
+[13] KNV1020: A Namespace MUST declare metadata.name that matches the name of its directory.
+
+source: namespaces/dev/dev-namespace/namespace.yaml
+metadata.name: incorrect-name
+group:
+version: v1
+kind: Namespace
+
+expected metadata.name: dev-namespace
+
+
+
+[14] KNV1030: A directory may declare at most one "rbac.authorization.k8s.io/v1, Kind=RoleBinding" Resource:
+
+source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+metadata.name: kesim-rolebinding
+group: rbac.authorization.k8s.io
+version: v1
+kind: RoleBinding
+
+source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+metadata.name: kesim-rolebinding
+group: rbac.authorization.k8s.io
+version: v1
+kind: RoleBinding
+
+
+[15] KNV1031: Resources must declare metadata.name:
+
+source: namespaces/prod/prod-namespace/nameless-rolebinding.yaml
+metadata.name:
+group: rbac.authorization.k8s.io
+version: v1
+kind: RoleBinding
+
+
+[16] KNV1033: Resources of the below kind MUST NOT be declared outside system/:
+source: namespaces/prod/prod-namespace/illegal-sync.yaml
+metadata.name: illegal-sync
+group: nomos.dev
+version: v1alpha1
+kind: Sync
 

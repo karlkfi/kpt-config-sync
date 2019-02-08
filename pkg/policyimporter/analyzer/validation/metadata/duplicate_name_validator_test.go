@@ -4,127 +4,134 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
+	testing2 "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
-	"github.com/google/nomos/pkg/util/multierror"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/google/nomos/pkg/testing/fake"
+	"k8s.io/api/rbac/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type duplicateNameTestCase struct {
-	name  string
-	metas []ResourceMeta
-	error []string
+func namedRole(name string, path string) ast.FileObject {
+	role := fake.Role(path)
+	role.Object.(*v1alpha1.Role).SetName(name)
+	return role
 }
 
-var duplicateNameTestCases = []duplicateNameTestCase{
-	{
-		name: "empty",
-	},
-	{
-		name: "one resource",
-		metas: []ResourceMeta{
-			resourceMeta{name: "rb", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb.yaml"},
-		},
-	},
-	{
-		name: "two resources name collision",
-		metas: []ResourceMeta{
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb1.yaml"},
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb2.yaml"},
-		},
-		error: []string{vet.MetadataNameCollisionErrorCode},
-	},
-	{
-		name: "three resources name collision",
-		metas: []ResourceMeta{
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb1.yaml"},
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb2.yaml"},
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb3.yaml"},
-		},
-		error: []string{vet.MetadataNameCollisionErrorCode},
-	},
-	{
-		name: "two resources different name",
-		metas: []ResourceMeta{
-			resourceMeta{name: "name-1", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb1.yaml"},
-			resourceMeta{name: "name-2", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb2.yaml"},
-		},
-	},
-	{
-		name: "two resources different directory",
-		metas: []ResourceMeta{
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/foo/rb1.yaml"},
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/bar/rb2.yaml"},
-		},
-	},
-	{
-		name: "two resources different GroupKind",
-		metas: []ResourceMeta{
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb1.yaml"},
-			resourceMeta{name: "name", groupVersionKind: kinds.Role(), source: "namespaces/rb2.yaml"},
-		},
-	},
-	{
-		name: "two resources different Version",
-		metas: []ResourceMeta{
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding().GroupKind().WithVersion("v1"), source: "namespaces/rb1.yaml"},
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding().GroupKind().WithVersion("v2"), source: "namespaces/rb2.yaml"},
-		},
-		error: []string{vet.MetadataNameCollisionErrorCode},
-	},
-	{
-		name: "parent directory name collision",
-		metas: []ResourceMeta{
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/rb1.yaml"},
-			resourceMeta{name: "name", groupVersionKind: kinds.RoleBinding(), source: "namespaces/bar/rb2.yaml"},
-		},
-		error: []string{vet.MetadataNameCollisionErrorCode},
-	},
-	{
-		name: "parent directory name collision not possible for ResourceQuotas",
-		metas: []ResourceMeta{
-			resourceMeta{name: "name", groupVersionKind: kinds.ResourceQuota(), source: "namespaces/rq1.yaml"},
-			resourceMeta{name: "name", groupVersionKind: kinds.ResourceQuota(), source: "namespaces/bar/rq2.yaml"},
-		},
-	},
+func namedRoleBinding(name string, path string) ast.FileObject {
+	role := fake.RoleBinding(path)
+	role.Object.(*v1alpha1.RoleBinding).SetName(name)
+	return role
 }
 
-func (tc duplicateNameTestCase) Run(t *testing.T) {
-	eb := multierror.Builder{}
-	DuplicateNameValidatorFactory{}.New(tc.metas).Validate(&eb)
+func namedRoleWithGroup(name string, group string, path string) ast.FileObject {
+	o := asttesting.NewFakeObject(schema.GroupVersionKind{
+		Group:   group,
+		Version: kinds.Role().Version,
+		Kind:    kinds.Role().Kind,
+	})
+	o.SetName(name)
+	return ast.NewFileObject(o, nomospath.NewFakeRelative(path))
+}
 
-	vettesting.ExpectErrors(tc.error, eb.Build(), t)
+func namedRoleWithVersion(name string, version string, path string) ast.FileObject {
+	o := asttesting.NewFakeObject(schema.GroupVersionKind{
+		Group:   kinds.Role().Group,
+		Version: version,
+		Kind:    kinds.Role().Kind,
+	})
+	o.SetName(name)
+	return ast.NewFileObject(o, nomospath.NewFakeRelative(path))
 }
 
 func TestDuplicateNameValidator(t *testing.T) {
-	for _, tc := range duplicateNameTestCases {
-		t.Run(tc.name, tc.Run)
+	test := testing2.ObjectsValidatorTest{
+		Validator: NewDuplicateNameValidator,
+		ErrorCode: vet.MetadataNameCollisionErrorCode,
+		TestCases: []testing2.ObjectsValidatorTestCase{
+			{
+				Name: "no objects passes",
+			},
+			{
+				Name: "one object passes validation",
+				Objects: []ast.FileObject{
+					fake.Namespace("namespaces/foo/ns.yaml"),
+					namedRole("a", "namespaces/role.yaml"),
+				},
+			},
+			{
+				Name: "two colliding objects",
+				Objects: []ast.FileObject{
+					fake.Namespace("namespaces/foo/ns.yaml"),
+					namedRole("a", "namespaces/foo/role.yaml"),
+					namedRole("a", "namespaces/foo/role.yaml"),
+				},
+				ShouldFail: true,
+			},
+			{
+				Name: "two colliding objects",
+				Objects: []ast.FileObject{
+					fake.Namespace("namespaces/foo/ns.yaml"),
+					namedRole("a", "namespaces/foo/role.yaml"),
+					namedRole("a", "namespaces/foo/role.yaml"),
+				},
+				ShouldFail: true,
+			},
+			{
+				Name: "two colliding objects different version",
+				Objects: []ast.FileObject{
+					fake.Namespace("namespaces/foo/ns.yaml"),
+					namedRoleWithVersion("a", "v1", "namespaces/foo/role.yaml"),
+					namedRoleWithVersion("a", "v2", "namespaces/foo/role.yaml"),
+				},
+				ShouldFail: true,
+			},
+			{
+				Name: "two objects different group",
+				Objects: []ast.FileObject{
+					fake.Namespace("namespaces/foo/ns.yaml"),
+					namedRoleWithGroup("a", "foo", "namespaces/foo/role.yaml"),
+					namedRoleWithGroup("a", "bar", "namespaces/foo/role.yaml"),
+				},
+			},
+			{
+				Name: "two objects different Kind",
+				Objects: []ast.FileObject{
+					fake.Namespace("namespaces/foo/ns.yaml"),
+					namedRole("a", "namespaces/foo/role.yaml"),
+					namedRoleBinding("a", "namespaces/foo/rolebinding.yaml"),
+				},
+			},
+			{
+				Name: "two colliding objects in abstract namespace",
+				Objects: []ast.FileObject{
+					namedRole("a", "namespaces/foo/role.yaml"),
+					namedRole("a", "namespaces/foo/role.yaml"),
+				},
+			},
+			{
+				Name: "two objects different namespaces",
+				Objects: []ast.FileObject{
+					// foo
+					fake.Namespace("namespaces/foo/ns.yaml"),
+					namedRole("a", "namespaces/foo/role.yaml"),
+					// bar
+					fake.Namespace("namespaces/bar/ns.yaml"),
+					namedRole("a", "namespaces/bar/role.yaml"),
+				},
+			},
+			{
+				Name: "two colliding cluster/ objects",
+				Objects: []ast.FileObject{
+					namedRole("a", "cluster/role.yaml"),
+					namedRole("a", "cluster/role.yaml"),
+				},
+				ShouldFail: true,
+			},
+		},
 	}
+
+	test.RunAll(t)
 }
-
-// resourceMeta is a minimal implementation of ResourceMeta for use in tests.
-type resourceMeta struct {
-	source           string
-	name             string
-	groupVersionKind schema.GroupVersionKind
-	meta             metav1.Object
-}
-
-var _ ResourceMeta = resourceMeta{}
-
-// RelativeSlashPath implements ResourceMeta
-func (m resourceMeta) RelativeSlashPath() string { return m.source }
-
-// Dir implements ResourceMeta
-func (m resourceMeta) Dir() nomospath.Relative { return nomospath.NewFakeRelative(m.source).Dir() }
-
-// Name implements ResourceMeta
-func (m resourceMeta) Name() string { return m.name }
-
-// GroupVersionKind implements ResourceMeta
-func (m resourceMeta) GroupVersionKind() schema.GroupVersionKind { return m.groupVersionKind }
-
-// MetaObject implements ResourceMeta
-func (m resourceMeta) MetaObject() metav1.Object { return m.meta }

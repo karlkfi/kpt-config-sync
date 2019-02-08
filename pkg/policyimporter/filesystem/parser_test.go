@@ -913,7 +913,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MultipleSingletonsErrorCode},
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces with different names",
@@ -1356,9 +1356,9 @@ var parserTestCases = []parserTestCase{
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":         aRepo,
-			"system/depl.yaml":          templateData{Group: "apps", Version: "v1", Kind: "Deployment", HierarchyMode: "none"}.apply(aHierarchicalSync),
+			"system/depl.yaml":          templateData{Group: "apps", Version: "v1", Kind: "Deployment"}.apply(aHierarchicalSync),
 			"namespaces/depl1.yaml":     aDeploymentTemplate,
-			"namespaces/bar/ns.yaml":    templateData{Name: "baz"}.apply(aNamespace),
+			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/depl1.yaml": aDeploymentTemplate,
 		},
 		expectedErrorCodes: []string{
@@ -1604,27 +1604,6 @@ spec:
 		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
-		testName: "Clusterregistry dir with duplicate Cluster names",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aRepo,
-			"system/cr.yaml":    templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}.apply(aSync),
-			"clusterregistry/cluster-1.yaml": templateData{
-				Name: "cluster",
-				Labels: map[string]string{
-					"environment": "prod",
-				},
-			}.apply(aClusterRegistryCluster),
-			"clusterregistry/cluster-2.yaml": templateData{
-				Name: "cluster",
-				Labels: map[string]string{
-					"environment": "prod",
-				},
-			}.apply(aClusterRegistryCluster),
-		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
-	},
-	{
 		testName: "Cluster dir with duplicate PodSecurityPolicy names",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
@@ -1784,7 +1763,7 @@ spec:
 			"system/nomos-1.yaml": aRepo,
 			"system/nomos-2.yaml": aRepo,
 		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MultipleSingletonsErrorCode},
 	},
 	{
 		testName: "Unsupported repo version is an error",
@@ -1813,11 +1792,12 @@ metadata:
 		expectedErrorCodes: []string{vet.UnknownResourceInSyncErrorCode, vet.UndefinedErrorCode},
 	},
 	{
-		testName: "Name collision in node",
+		testName: "Name collision in namespace",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/nomos.yaml":        aRepo,
 			"system/rb.yaml":           templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
+			"namespaces/foo/ns.yaml":   templateData{Name: "foo"}.apply(aNamespace),
 			"namespaces/foo/rb-1.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/rb-2.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
 		},
@@ -1846,6 +1826,7 @@ metadata:
 			"system/nomos.yaml":            aRepo,
 			"system/rb.yaml":               templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/foo/rb-1.yaml":     templateData{ID: "alice"}.apply(aRoleBinding),
+			"namespaces/foo/bar/ns.yaml":   templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/foo/bar/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
 		},
 		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
@@ -1857,6 +1838,7 @@ metadata:
 			"system/nomos.yaml":                aRepo,
 			"system/rb.yaml":                   templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"}.apply(aSync),
 			"namespaces/foo/rb-1.yaml":         templateData{ID: "alice"}.apply(aRoleBinding),
+			"namespaces/foo/bar/qux/ns.yaml":   templateData{Name: "qux"}.apply(aNamespace),
 			"namespaces/foo/bar/qux/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
 		},
 		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
@@ -1890,16 +1872,6 @@ metadata:
 			"namespaces/foo/bar/role1.yaml": templateData{}.apply(aNamedRole),
 		},
 		expectedErrorCodes: []string{vet.MissingObjectNameErrorCode},
-	},
-	{
-		testName: "Name collision in system/ is an error",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml": aRepo,
-			"system/rb-1.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", Name: "sync"}.apply(aNamedSync),
-			"system/rb-2.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role", Name: "sync"}.apply(aNamedSync),
-		},
-		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Repo outside system/ is an error",

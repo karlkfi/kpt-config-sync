@@ -31,7 +31,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
@@ -150,12 +149,6 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 
 	nsInfos := p.readNamespaceResources(errorBuilder)
 
-	// TODO: Move to after transforms.
-	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(systemInfos)).Validate(errorBuilder)
-	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(clusterInfos)).Validate(errorBuilder)
-	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(clusterregistryInfos)).Validate(errorBuilder)
-	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(nsInfos)).Validate(errorBuilder)
-
 	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos)}
 	visitors = append(visitors, p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet)...)
 	for _, visitor := range visitors {
@@ -186,14 +179,6 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 		return nil, errorBuilder.Build()
 	}
 	return policies, nil
-}
-
-func toResourceMetas(objects []ast.FileObject) []metadata.ResourceMeta {
-	metas := make([]metadata.ResourceMeta, len(objects))
-	for i := range objects {
-		metas[i] = &objects[i]
-	}
-	return metas
 }
 
 func (p *Parser) readSystemResources(eb *multierror.Builder) []ast.FileObject {
