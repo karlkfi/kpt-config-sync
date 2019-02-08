@@ -106,6 +106,16 @@ func HierarchyConfig(path string) ast.FileObject {
 	}
 }
 
+// Sync returns a nomos Sync at the specified path.
+func Sync(path string) ast.FileObject {
+	return ast.FileObject{
+		Relative: nomospath.NewFakeRelative(path),
+		Object: &nomos.Sync{
+			TypeMeta: toTypeMeta(kinds.Sync()),
+		},
+	}
+}
+
 func toTypeMeta(gvk schema.GroupVersionKind) v1.TypeMeta {
 	return v1.TypeMeta{
 		APIVersion: gvk.GroupVersion().String(),

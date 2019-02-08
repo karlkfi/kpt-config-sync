@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/sync"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/system"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/util/discovery"
@@ -56,7 +55,9 @@ func validateSystem(root *ast.Root, objects []ast.FileObject, errorBuilder *mult
 	root.Accept(repoValidator)
 	errorBuilder.Add(repoValidator.Error())
 
-	syntax.SystemKindValidator.Validate(objects, errorBuilder)
+	kindValidator := system.NewKindValidator()
+	root.Accept(kindValidator)
+	errorBuilder.Add(kindValidator.Error())
 
 	semantic.RepoCountValidator{Objects: objects}.Validate(errorBuilder)
 
