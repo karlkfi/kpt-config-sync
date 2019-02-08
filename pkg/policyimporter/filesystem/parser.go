@@ -126,7 +126,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	errorBuilder.Add(addScope(astRoot, p.discoveryClient))
 
 	// processing for <root>/system/*
-	systemInfos := p.readRequiredResources(p.root.Join(repo.SystemDir), errorBuilder)
+	systemInfos := p.readSystemResources(errorBuilder)
 	syncs := processSystem(astRoot, systemInfos, p.opts, errorBuilder)
 	if errorBuilder.HasErrors() {
 		// Don't continue processing if any errors encountered processing system/
@@ -195,22 +195,16 @@ func toResourceMetas(objects []ast.FileObject) []metadata.ResourceMeta {
 	return metas
 }
 
+func (p *Parser) readSystemResources(eb *multierror.Builder) []ast.FileObject {
+	return p.readResources(p.root.Join(repo.SystemDir), eb)
+}
+
 func (p *Parser) readNamespaceResources(eb *multierror.Builder) []ast.FileObject {
 	return p.readResources(p.root.Join(p.opts.Extension.NamespacesDir()), eb)
 }
 
 func (p *Parser) readClusterResources(eb *multierror.Builder) []ast.FileObject {
 	return p.readResources(p.root.Join(repo.ClusterDir), eb)
-}
-
-// readRequiredResources walks dir recursively, looking for resources, and builds FileInfos from them.
-// Returns an error if the directory is missing.
-func (p *Parser) readRequiredResources(dir nomospath.Relative, errorBuilder *multierror.Builder) []ast.FileObject {
-	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
-		errorBuilder.Add(vet.MissingDirectoryError{})
-		return nil
-	}
-	return p.readResources(dir, errorBuilder)
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.

@@ -2938,7 +2938,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			clusterName:        "cluster-1",
 			vet:                true,
 			testFiles:          fstesting.FileContentMap{},
-			expectedErrorCodes: []string{vet.MissingDirectoryErrorCode},
+			expectedErrorCodes: []string{vet.MissingRepoErrorCode},
 		},
 		{
 			testName:    "A system directory defining no Repo object is an error",
