@@ -204,7 +204,8 @@ git-relnotes-rc:
 
 git-cookies:
 	$(info +++ Configuring gitcookies for Prow)
-	git config http.cookiefile /secrets/cookiefile/cookies
+	git config http.cookiefile /etc/cookies/cookies
+
 
 # Release target used by automated releaser on go/prow.  It keeps building
 # ever-newer release candidates from the HEAD rev of master.
