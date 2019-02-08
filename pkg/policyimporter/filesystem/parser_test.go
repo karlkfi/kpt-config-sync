@@ -923,7 +923,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.InvalidNamespaceNameErrorCode, vet.MultipleNamespacesErrorCode},
+		expectedErrorCodes: []string{vet.InvalidNamespaceNameErrorCode, vet.MultipleSingletonsErrorCode},
 	},
 	{
 		testName: "Namespace dir with Namespace mismatch and ignored file",
@@ -1781,7 +1781,7 @@ spec:
 			"system/nomos-1.yaml": aRepo,
 			"system/nomos-2.yaml": aRepo,
 		},
-		expectedErrorCodes: []string{vet.MultipleRepoDefinitionsErrorCode, vet.MetadataNameCollisionErrorCode},
+		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
 		testName: "Unsupported repo version is an error",
@@ -2938,7 +2938,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			clusterName:        "cluster-1",
 			vet:                true,
 			testFiles:          fstesting.FileContentMap{},
-			expectedErrorCodes: []string{vet.MissingDirectoryErrorCode, vet.MissingRepoErrorCode},
+			expectedErrorCodes: []string{vet.MissingDirectoryErrorCode},
 		},
 		{
 			testName:    "A system directory defining no Repo object is an error",

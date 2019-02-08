@@ -25,9 +25,11 @@ func (n NomosVisitorProvider) Visitors(
 	syncs []*v1alpha1.Sync,
 	clusters []clusterregistry.Cluster,
 	selectors []v1alpha1.ClusterSelector,
-	vet bool) []ast.Visitor {
+	vetEnabled bool) []ast.Visitor {
 	specs := toInheritanceSpecs(syncs)
 	v := []ast.Visitor{
+		system.NewMissingRepoValidator(),
+		semantic.NewSingletonResourceValidator(kinds.Repo()),
 		system.NewRepoVersionValidator(),
 		syntax.NewClusterRegistryKindValidator(),
 		syntax.NewFlatNodeValidator(),
@@ -41,7 +43,7 @@ func (n NomosVisitorProvider) Visitors(
 		syntax.NewNamespaceKindValidator(),
 		metadata.NewAnnotationValidator(),
 		metadata.NewLabelValidator(),
-		validation.NewInputValidator(syncs, specs, clusters, selectors, vet),
+		validation.NewInputValidator(syncs, specs, clusters, selectors, vetEnabled),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree

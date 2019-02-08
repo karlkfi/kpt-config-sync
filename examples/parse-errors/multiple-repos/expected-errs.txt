@@ -1,11 +1,17 @@
 Found issues: 1 error(s)
 
 
-[1] KNV1025: There MUST NOT be more than one Repo declaration in system/
-
-source: system/repo-1.yaml
-name: repo-1
+[1] KNV1030: A directory may declare at most one "nomos.dev/v1alpha1, Kind=Repo" Resource:
 
 source: system/repo-2.yaml
-name: repo-2
+metadata.name: repo-2
+group: nomos.dev
+version: v1alpha1
+kind: Repo
+
+source: system/repo-2.yaml
+metadata.name: repo-2
+group: nomos.dev
+version: v1alpha1
+kind: Repo
 

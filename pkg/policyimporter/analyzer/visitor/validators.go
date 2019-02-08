@@ -191,3 +191,51 @@ func (v *allObjectValidator) ValidateClusterObject(o *ast.ClusterObject) error {
 func (v *allObjectValidator) ValidateObject(o *ast.NamespaceObject) error {
 	return v.validate(o.FileObject)
 }
+
+type allNodesValidator struct {
+	ValidatorBase
+	validate func(os []ast.FileObject) error
+}
+
+// NewAllNodesValidator returns a validator which applies the same validation to every node,
+// including the non-hierarchical policies. For now this is just the objects in each nodes, as
+// that is the single unifying similarity.
+func NewAllNodesValidator(validate func(os []ast.FileObject) error) *ValidatorVisitor {
+	return NewValidator(&allNodesValidator{validate: validate})
+}
+
+// ValidateSystem implements Validator.
+func (v *allNodesValidator) ValidateSystem(o *ast.System) error {
+	objects := make([]ast.FileObject, len(o.Objects))
+	for i, o := range o.Objects {
+		objects[i] = o.FileObject
+	}
+	return v.validate(objects)
+}
+
+// ValidateClusterRegistry implements Validator.
+func (v *allNodesValidator) ValidateClusterRegistry(o *ast.ClusterRegistry) error {
+	objects := make([]ast.FileObject, len(o.Objects))
+	for i, o := range o.Objects {
+		objects[i] = o.FileObject
+	}
+	return v.validate(objects)
+}
+
+// ValidateCluster implements Validator.
+func (v *allNodesValidator) ValidateCluster(o *ast.Cluster) error {
+	objects := make([]ast.FileObject, len(o.Objects))
+	for i, o := range o.Objects {
+		objects[i] = o.FileObject
+	}
+	return v.validate(objects)
+}
+
+// ValidateTreeNode implements Validator.
+func (v *allNodesValidator) ValidateTreeNode(o *ast.TreeNode) error {
+	objects := make([]ast.FileObject, len(o.Objects))
+	for i, o := range o.Objects {
+		objects[i] = o.FileObject
+	}
+	return v.validate(objects)
+}

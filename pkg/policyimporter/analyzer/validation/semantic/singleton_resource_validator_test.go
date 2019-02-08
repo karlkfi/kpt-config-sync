@@ -13,7 +13,7 @@ import (
 func TestUniqueNamespaceValidator(t *testing.T) {
 	test := visitortesting.ObjectsValidatorTest{
 		Validator: func() ast.Visitor { return NewSingletonResourceValidator(kinds.Namespace()) },
-		ErrorCode: vet.MultipleNamespacesErrorCode,
+		ErrorCode: vet.MultipleSingletonsErrorCode,
 		TestCases: []visitortesting.ObjectsValidatorTestCase{
 			{
 				Name: "empty",
