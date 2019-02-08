@@ -29,11 +29,3 @@ func getSelectors(objects []ast.FileObject) []v1alpha1.ClusterSelector {
 	}
 	return selectors
 }
-
-func getClusterRegistry(objects []ast.FileObject) *ast.ClusterRegistry {
-	cr := &ast.ClusterRegistry{}
-	for _, o := range objects {
-		cr.Objects = append(cr.Objects, &ast.ClusterRegistryObject{FileObject: o})
-	}
-	return cr
-}

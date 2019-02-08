@@ -142,7 +142,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 
 	clusters := getClusters(clusterregistryInfos)
 	selectors := getSelectors(clusterregistryInfos)
-	astRoot.ClusterRegistry = getClusterRegistry(clusterregistryInfos)
+	astRoot.Accept(tree.NewClusterRegistryBuilderVisitor(clusterregistryInfos))
 	cs, err := sel.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
 	// TODO(b/120229144): To be factored into KNV Error.
 	errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
