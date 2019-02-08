@@ -51,12 +51,14 @@ func GetAPIInfo(r *ast.Root) *APIInfo {
 
 // APIInfo allows for looking up the discovery metav1.APIResource information by group version kind
 type APIInfo struct {
-	resources map[schema.GroupVersionKind]metav1.APIResource
+	groupKindVersions map[schema.GroupKind][]string
+	resources         map[schema.GroupVersionKind]metav1.APIResource
 }
 
 // NewAPIInfo returns a new APIInfo object
 func NewAPIInfo(resourceLists []*metav1.APIResourceList) (*APIInfo, error) {
 	resources := map[schema.GroupVersionKind]metav1.APIResource{}
+	groupKindVersions := map[schema.GroupKind][]string{}
 	for _, resourceList := range resourceLists {
 		groupVersion, err := schema.ParseGroupVersion(resourceList.GroupVersion)
 		if err != nil {
@@ -64,9 +66,11 @@ func NewAPIInfo(resourceLists []*metav1.APIResourceList) (*APIInfo, error) {
 		}
 		for _, resource := range resourceList.APIResources {
 			resources[groupVersion.WithKind(resource.Kind)] = resource
+			gk := groupVersion.WithKind(resource.Kind).GroupKind()
+			groupKindVersions[gk] = append(groupKindVersions[gk], groupVersion.Version)
 		}
 	}
-	return &APIInfo{resources: resources}, nil
+	return &APIInfo{resources: resources, groupKindVersions: groupKindVersions}, nil
 }
 
 // GetScope returns the scope for the object.  If not found, UnknownScope will be returned.
@@ -87,15 +91,15 @@ func (a *APIInfo) Exists(gvk schema.GroupVersionKind) bool {
 	return exists
 }
 
-// AllowedVersions returns a list of the versions allowed for the passed Group/Kind
+// GroupKindExists returns true if the GroupKind is in the APIResources.
+func (a *APIInfo) GroupKindExists(gk schema.GroupKind) bool {
+	_, ok := a.groupKindVersions[gk]
+	return ok
+}
+
+// AllowedVersions returns a list of the versions allowed for the passed Group/Kind.
 func (a *APIInfo) AllowedVersions(gk schema.GroupKind) []string {
-	var results []string
-	for gvk := range a.resources {
-		if gvk.GroupKind() == gk {
-			results = append(results, gvk.Version)
-		}
-	}
-	return results
+	return a.groupKindVersions[gk]
 }
 
 // GroupVersionKinds returns a set of GroupVersionKinds represented by the slice of Syncs with only Group and Kind specified.

@@ -1,13 +1,13 @@
 package fake
 
 import (
-	nomos "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/api/rbac/v1alpha1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -30,7 +30,7 @@ func Namespace(path string) ast.FileObject {
 func NamespaceSelector(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewFakeRelative(path),
-		Object: &nomos.NamespaceSelector{
+		Object: &v1alpha1.NamespaceSelector{
 			TypeMeta: toTypeMeta(kinds.NamespaceSelector()),
 		},
 	}
@@ -40,7 +40,7 @@ func NamespaceSelector(path string) ast.FileObject {
 func Role(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewFakeRelative(path),
-		Object: &v1alpha1.Role{
+		Object: &rbacv1alpha1.Role{
 			TypeMeta: toTypeMeta(kinds.Role()),
 		},
 	}
@@ -50,7 +50,7 @@ func Role(path string) ast.FileObject {
 func RoleBinding(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewFakeRelative(path),
-		Object: &v1alpha1.RoleBinding{
+		Object: &rbacv1alpha1.RoleBinding{
 			TypeMeta: toTypeMeta(kinds.Role()),
 		},
 	}
@@ -60,7 +60,7 @@ func RoleBinding(path string) ast.FileObject {
 func ClusterRole(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewFakeRelative(path),
-		Object: &v1alpha1.ClusterRole{
+		Object: &rbacv1alpha1.ClusterRole{
 			TypeMeta: toTypeMeta(kinds.ClusterRole()),
 		},
 	}
@@ -70,7 +70,7 @@ func ClusterRole(path string) ast.FileObject {
 func ClusterSelector(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewFakeRelative(path),
-		Object: &nomos.ClusterSelector{
+		Object: &v1alpha1.ClusterSelector{
 			TypeMeta: toTypeMeta(kinds.ClusterSelector()),
 		},
 	}
@@ -90,19 +90,28 @@ func Cluster(path string) ast.FileObject {
 func Repo(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewFakeRelative(path),
-		Object: &nomos.Repo{
+		Object: &v1alpha1.Repo{
 			TypeMeta: toTypeMeta(kinds.Repo()),
 		},
 	}
 }
 
-// HierarchyConfig returns a nomos Repo at the specified path.
+// HierarchyConfig returns an empty HierarchyConfig at the specified path.
 func HierarchyConfig(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewFakeRelative(path),
-		Object: &nomos.HierarchyConfig{
+		Object: &v1alpha1.HierarchyConfig{
 			TypeMeta: toTypeMeta(kinds.HierarchyConfig()),
 		},
+	}
+}
+
+// HierarchyConfigSpecified returns the specified HierarchyConfig at the specified path.
+func HierarchyConfigSpecified(path string, hk *v1alpha1.HierarchyConfig) ast.FileObject {
+	hk.TypeMeta = toTypeMeta(kinds.HierarchyConfig())
+	return ast.FileObject{
+		Relative: nomospath.NewFakeRelative(path),
+		Object:   hk,
 	}
 }
 
@@ -110,7 +119,7 @@ func HierarchyConfig(path string) ast.FileObject {
 func Sync(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewFakeRelative(path),
-		Object: &nomos.Sync{
+		Object: &v1alpha1.Sync{
 			TypeMeta: toTypeMeta(kinds.Sync()),
 		},
 	}

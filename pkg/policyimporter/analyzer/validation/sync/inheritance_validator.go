@@ -36,7 +36,7 @@ func errIfNotAllowed(sync FileGroupVersionKindHierarchySync, allowed map[v1alpha
 	if allowed[sync.HierarchyMode] {
 		return nil
 	}
-	return vet.IllegalHierarchyModeError{
+	return vet.IllegalSyncHierarchyModeError{
 		Sync:          sync,
 		HierarchyMode: sync.HierarchyMode,
 		Allowed:       allowed,

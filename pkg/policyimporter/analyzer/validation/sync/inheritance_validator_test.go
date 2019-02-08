@@ -32,7 +32,7 @@ var testCases = []testCase{
 	{
 		name:   "inheritance rolebinding quota error",
 		fgvkhs: withMode(kinds.RoleBinding(), v1alpha1.HierarchyModeHierarchicalQuota),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
+		error:  []string{vet.IllegalSyncHierarchyModeErrorCode},
 	},
 	{
 		name:   "inheritance rolebinding inherit",
@@ -65,7 +65,7 @@ var testCases = []testCase{
 	{
 		name:   "inheritance resourcequota v2 quota error",
 		fgvkhs: withMode(kinds.ResourceQuota().GroupKind().WithVersion("v2"), v1alpha1.HierarchyModeHierarchicalQuota),
-		error:  []string{vet.IllegalHierarchyModeErrorCode},
+		error:  []string{vet.IllegalSyncHierarchyModeErrorCode},
 	},
 	{
 		name:   "inheritance resourcequota v2 inherit",

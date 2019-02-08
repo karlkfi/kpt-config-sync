@@ -1199,7 +1199,7 @@ var parserTestCases = []parserTestCase{
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchicalSync),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{vet.IllegalHierarchyModeErrorCode},
+		expectedErrorCodes: []string{vet.IllegalSyncHierarchyModeErrorCode},
 	},
 	{
 		testName: "Policyspace dir with RoleBinding, inheritance off",
