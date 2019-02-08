@@ -139,18 +139,15 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	// processing for <root>/clusterregistry/*
 	clusterregistryInfos := p.readClusterRegistryResources(errorBuilder)
 
-	clusters := getClusters(clusterregistryInfos)
-	selectors := getSelectors(clusterregistryInfos)
 	astRoot.Accept(tree.NewClusterRegistryBuilderVisitor(clusterregistryInfos))
-	cs, err := sel.NewClusterSelectors(clusters, selectors, os.Getenv("CLUSTER_NAME"))
-	// TODO(b/120229144): To be factored into KNV Error.
-	errorBuilder.Add(errors.Wrapf(err, "could not create cluster selectors"))
-	sel.SetClusterSelector(cs, astRoot)
+	selectorAdder := sel.NewClusterSelectorAdder()
+	astRoot.Accept(selectorAdder)
+	errorBuilder.Add(selectorAdder.Error())
 
 	nsInfos := p.readNamespaceResources(errorBuilder)
 
 	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos)}
-	visitors = append(visitors, p.opts.Extension.Visitors(syncs, clusters, selectors, p.opts.Vet)...)
+	visitors = append(visitors, p.opts.Extension.Visitors(syncs, p.opts.Vet)...)
 	for _, visitor := range visitors {
 		if errorBuilder.HasErrors() && visitor.RequiresValidState() {
 			return nil, errorBuilder.Build()

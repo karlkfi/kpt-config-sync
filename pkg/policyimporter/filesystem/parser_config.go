@@ -3,7 +3,6 @@ package filesystem
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
 // ParserConfig extends the functionality of the parser by allowing the override of visitors or addition
@@ -16,8 +15,6 @@ type ParserConfig interface {
 	// Visitors *overrides* the normal visitor functionality of the parser.
 	Visitors(
 		syncs []*v1alpha1.Sync,
-		clusters []clusterregistry.Cluster,
-		selectors []v1alpha1.ClusterSelector,
 		vet bool) []ast.Visitor
 
 	// SyncResources *appends* sync resources to the normal Nomos sync resources.  This is

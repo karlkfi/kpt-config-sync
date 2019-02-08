@@ -20,13 +20,13 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
 // InputValidator checks various filesystem constraints after loading into the tree format.
@@ -38,6 +38,7 @@ type InputValidator struct {
 	errs             multierror.Builder
 	nodes            []*ast.TreeNode
 	syncdGVKs        map[schema.GroupVersionKind]bool
+	vet              bool
 	coverage         *coverage.ForCluster
 	inheritanceSpecs map[schema.GroupKind]*transform.InheritanceSpec
 }
@@ -54,19 +55,15 @@ var _ ast.Visitor = &InputValidator{}
 func NewInputValidator(
 	syncs []*v1alpha1.Sync,
 	specs map[schema.GroupKind]*transform.InheritanceSpec,
-	clusters []clusterregistry.Cluster,
-	cs []v1alpha1.ClusterSelector,
 	vet bool) *InputValidator {
 	v := &InputValidator{
 		Base:             visitor.NewBase(),
 		syncdGVKs:        toSyncdGVKs(syncs),
 		inheritanceSpecs: specs,
+		vet:              vet,
 	}
 	v.Base.SetImpl(v)
 
-	if vet {
-		v.coverage = coverage.NewForCluster(clusters, cs, &v.errs)
-	}
 	return v
 }
 
@@ -88,6 +85,18 @@ func toSyncdGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
 // Error returns any errors encountered during processing
 func (v *InputValidator) Error() error {
 	return v.errs.Build()
+}
+
+// VisitRoot gets the clusters and selectors stored in Root.Data and constructs coverage if vet is
+// enabled.
+func (v *InputValidator) VisitRoot(r *ast.Root) *ast.Root {
+	if v.vet {
+		clusters := selectors.GetClusters(r)
+		sels := selectors.GetSelectors(r)
+		v.coverage = coverage.NewForCluster(clusters, sels, &v.errs)
+	}
+
+	return v.Base.VisitRoot(r)
 }
 
 // VisitTreeNode implements Visitor

@@ -20,6 +20,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 )
 
 // Base implements visiting all children for a visitor (like a base class).
@@ -91,6 +92,9 @@ func NewBase() *Base {
 // it would lead to a circular dependency and it makes the most sense for the upper most
 // object to set the impl value.
 func (vb *Base) SetImpl(impl ast.Visitor) {
+	if vb == nil {
+		panic(vet.InternalError("Base is nil. Allocate Base before using it."))
+	}
 	vb.impl = impl
 }
 

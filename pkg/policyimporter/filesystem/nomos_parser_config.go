@@ -12,7 +12,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/system"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/visitors"
-	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
 // NomosVisitorProvider is the default visitor provider.  It handles
@@ -23,8 +22,6 @@ type NomosVisitorProvider struct {
 // Visitors implements ParserConfig
 func (n NomosVisitorProvider) Visitors(
 	syncs []*v1alpha1.Sync,
-	clusters []clusterregistry.Cluster,
-	selectors []v1alpha1.ClusterSelector,
 	vetEnabled bool) []ast.Visitor {
 	specs := toInheritanceSpecs(syncs)
 	v := []ast.Visitor{
@@ -44,7 +41,7 @@ func (n NomosVisitorProvider) Visitors(
 		syntax.NewNamespaceKindValidator(),
 		metadata.NewAnnotationValidator(),
 		metadata.NewLabelValidator(),
-		validation.NewInputValidator(syncs, specs, clusters, selectors, vetEnabled),
+		validation.NewInputValidator(syncs, specs, vetEnabled),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
