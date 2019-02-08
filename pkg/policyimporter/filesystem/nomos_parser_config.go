@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/hierarchyconfig"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
@@ -34,6 +35,7 @@ func (n NomosVisitorProvider) Visitors(
 		specs = syncsToInheritanceSpecs(syncs)
 	}
 	v := []ast.Visitor{
+		selectors.NewClusterSelectorAdder(),
 		system.NewRepoVersionValidator(),
 		system.NewKindValidator(),
 		system.NewMissingRepoValidator(),

@@ -15,7 +15,10 @@ func processSyncs(
 	root *ast.Root,
 	objects []ast.FileObject,
 	opts ParserOpt,
+	eb *multierror.Builder,
 ) []*v1alpha1.Sync {
+	validateSyncs(root, objects, eb)
+
 	var syncs []*v1alpha1.Sync
 	for _, object := range objects {
 		switch o := object.Object.(type) {

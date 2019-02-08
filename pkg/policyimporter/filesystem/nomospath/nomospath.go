@@ -124,3 +124,8 @@ func (p Relative) Split() []string {
 func (p Relative) Equal(that Relative) bool {
 	return p.path == that.path && cmp.Equal(p.root, that.root)
 }
+
+// Root returns a copy of the underlying root path this Relative is based from.
+func (p Relative) Root() Root {
+	return Root{path: p.root.path}
+}

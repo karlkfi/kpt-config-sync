@@ -29,7 +29,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
-	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
@@ -60,8 +59,7 @@ type Parser struct {
 	opts            ParserOpt
 	factory         cmdutil.Factory
 	discoveryClient discovery.CachedDiscoveryInterface
-	// root is the path to Nomos root.
-	root nomospath.Root
+	errors          *multierror.Builder
 }
 
 // ParserOpt has often customized parser options. Use for example in NewParser.
@@ -107,111 +105,92 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
 func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1.AllPolicies, error) {
-	r, err := nomospath.NewRoot(root)
+	p.errors = &multierror.Builder{}
+	rootPath, err := nomospath.NewRoot(root)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to use as Nomos root")
 	}
-	p.root = r
 
 	astRoot := &ast.Root{
-		Cluster:     &ast.Cluster{},
 		ImportToken: importToken,
 		LoadTime:    loadTime,
 	}
-	errorBuilder := &multierror.Builder{}
-
 	// Always make sure we're getting the freshest data.
 	p.discoveryClient.Invalidate()
-	errorBuilder.Add(addScope(astRoot, p.discoveryClient))
+	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources(rootPath))
+	p.errors.Add(addScope(astRoot, p.discoveryClient))
 
-	// processing for <root>/system/*
-	systemInfos := p.readSystemResources(errorBuilder)
-	astRoot.Accept(tree.NewSystemBuilderVisitor(systemInfos))
-
-	hierarchyConfigs := extractHierarchyConfigs(systemInfos)
-
-	// TODO: Delete these lines once syncs are defunct.
-	validateSyncs(astRoot, systemInfos, errorBuilder)
-	syncs := processSyncs(astRoot, systemInfos, p.opts)
-
-	// processing for <root>/cluster/*
-	clusterInfos := p.readClusterResources(errorBuilder)
-	astRoot.Accept(tree.NewClusterBuilderVisitor(clusterInfos))
-
-	// processing for <root>/clusterregistry/*
-	clusterregistryInfos := p.readClusterRegistryResources(errorBuilder)
-
-	astRoot.Accept(tree.NewClusterRegistryBuilderVisitor(clusterregistryInfos))
-	selectorAdder := sel.NewClusterSelectorAdder()
-	astRoot.Accept(selectorAdder)
-	errorBuilder.Add(selectorAdder.Error())
-
-	nsInfos := p.readNamespaceResources(errorBuilder)
-
-	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos)}
+	visitors := []ast.Visitor{
+		tree.NewSystemBuilderVisitor(p.readSystemResources(rootPath)),
+		tree.NewClusterBuilderVisitor(p.readClusterResources(rootPath)),
+		tree.NewClusterRegistryBuilderVisitor(p.readClusterRegistryResources(rootPath)),
+		tree.NewBuilderVisitor(p.readNamespaceResources(rootPath)),
+	}
+	// TODO: Delete below line once syncs are defunct.
+	syncs := processSyncs(astRoot, p.readSystemResources(rootPath), p.opts, p.errors)
 	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, syncs, p.opts.Vet)...)
-	for _, visitor := range visitors {
-		if errorBuilder.HasErrors() && visitor.RequiresValidState() {
-			return nil, errorBuilder.Build()
-		}
-		astRoot = astRoot.Accept(visitor)
-		errorBuilder.Add(visitor.Error())
-		if visitor.Fatal() {
-			return nil, errorBuilder.Build()
-		}
-	}
-
 	outputVisitor := backend.NewOutputVisitor()
-	astRoot.Accept(outputVisitor)
-	policies := outputVisitor.AllPolicies()
-
-	if errorBuilder.HasErrors() {
-		return nil, errorBuilder.Build()
+	visitors = append(visitors, outputVisitor)
+	err = p.runVisitors(astRoot, visitors)
+	if err != nil {
+		return nil, err
 	}
 
+	policies := outputVisitor.AllPolicies()
 	if glog.V(8) {
 		// REALLY useful when debugging.
 		glog.Warningf("allPolicies: %v", spew.Sdump(policies))
-		glog.Warningf("all errors: %v", spew.Sdump(errorBuilder.Build()))
-	}
-	if errorBuilder.HasErrors() {
-		return nil, errorBuilder.Build()
+		glog.Warningf("all errors: %v", spew.Sdump(p.errors.Build()))
 	}
 	return policies, nil
 }
 
-func (p *Parser) readSystemResources(eb *multierror.Builder) []ast.FileObject {
-	return p.readResources(p.root.Join(repo.SystemDir), eb)
+func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) error {
+	for _, visitor := range visitors {
+		if p.errors.HasErrors() && visitor.RequiresValidState() {
+			return p.errors.Build()
+		}
+		root = root.Accept(visitor)
+		p.errors.Add(visitor.Error())
+		if visitor.Fatal() {
+			return p.errors.Build()
+		}
+	}
+	return nil
 }
 
-func (p *Parser) readNamespaceResources(eb *multierror.Builder) []ast.FileObject {
-	return p.readResources(p.root.Join(p.opts.Extension.NamespacesDir()), eb)
+func (p *Parser) readSystemResources(root nomospath.Root) []ast.FileObject {
+	return p.readResources(root.Join(repo.SystemDir))
 }
 
-func (p *Parser) readClusterResources(eb *multierror.Builder) []ast.FileObject {
-	return p.readResources(p.root.Join(repo.ClusterDir), eb)
+func (p *Parser) readNamespaceResources(root nomospath.Root) []ast.FileObject {
+	return p.readResources(root.Join(p.opts.Extension.NamespacesDir()))
 }
 
-func (p *Parser) readClusterRegistryResources(eb *multierror.Builder) []ast.FileObject {
-	return p.readResources(p.root.Join(repo.ClusterRegistryDir), eb)
+func (p *Parser) readClusterResources(root nomospath.Root) []ast.FileObject {
+	return p.readResources(root.Join(repo.ClusterDir))
+}
+
+func (p *Parser) readClusterRegistryResources(root nomospath.Root) []ast.FileObject {
+	return p.readResources(root.Join(repo.ClusterRegistryDir))
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) readResources(dir nomospath.Relative, errorBuilder *multierror.Builder) []ast.FileObject {
+func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
 	// If there aren't any resources, skip builder, because builder treats that as an error.
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		// Return empty list if unable to read directory
 		return nil
 	} else if err != nil {
 		// If there was another error reading the directory, give up parsing the dir
-		errorBuilder.Add(err)
+		p.errors.Add(err)
 		return nil
 	}
 
 	visitors, err := resource.ExpandPathsToFileVisitors(
 		nil, dir.AbsoluteOSPath(), true, resource.FileExtensions, kubevalidation.NullSchema{})
 	if err != nil {
-		errorBuilder.Add(err)
+		p.errors.Add(err)
 		return nil
 	}
 
@@ -219,7 +198,7 @@ func (p *Parser) readResources(dir nomospath.Relative, errorBuilder *multierror.
 	if len(visitors) > 0 {
 		s, err := p.factory.Validator(p.opts.Validate)
 		if err != nil {
-			errorBuilder.Add(errors.Wrap(err, "failed to get schema"))
+			p.errors.Add(errors.Wrap(err, "failed to get schema"))
 			return nil
 		}
 		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
@@ -230,11 +209,11 @@ func (p *Parser) readResources(dir nomospath.Relative, errorBuilder *multierror.
 			FilenameParam(false, options).
 			Do()
 		fileInfos, err := result.Infos()
-		errorBuilder.Add(err)
+		p.errors.Add(err)
 		for _, info := range fileInfos {
 			// Assign relative path since that's what we actually need.
-			source, err := p.root.Rel(info.Source)
-			errorBuilder.Add(err)
+			source, err := dir.Root().Rel(info.Source)
+			p.errors.Add(err)
 			if err != nil {
 				continue
 			}

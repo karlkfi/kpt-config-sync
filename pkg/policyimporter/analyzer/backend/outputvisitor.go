@@ -213,3 +213,8 @@ func appendResource(resources []v1.GenericResources, o runtime.Object) []v1.Gene
 func (v *OutputVisitor) Error() error {
 	return nil
 }
+
+// RequiresValidState returns true because we don't want to output policies if there are problems.
+func (v *OutputVisitor) RequiresValidState() bool {
+	return true
+}
