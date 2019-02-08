@@ -1795,6 +1795,8 @@ kind: Repo
 apiVersion: nomos.dev/v1alpha1
 spec:
   version: "0.0.0"
+metadata:
+  name: repo
 `,
 		},
 		expectedErrorCodes: []string{vet.UnsupportedRepoSpecVersionCode},
@@ -1808,7 +1810,7 @@ spec:
 			"namespaces/bar/undefined.yaml": templateData{}.apply(anUndefinedResource),
 			"namespaces/bar/ns.yaml":        templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.UnknownResourceInSyncErrorCode},
+		expectedErrorCodes: []string{vet.UnknownResourceInSyncErrorCode, vet.UndefinedErrorCode},
 	},
 	{
 		testName: "Name collision in node",

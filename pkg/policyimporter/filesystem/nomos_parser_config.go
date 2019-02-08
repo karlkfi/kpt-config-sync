@@ -28,9 +28,10 @@ func (n NomosVisitorProvider) Visitors(
 	vetEnabled bool) []ast.Visitor {
 	specs := toInheritanceSpecs(syncs)
 	v := []ast.Visitor{
+		system.NewRepoVersionValidator(),
+		system.NewKindValidator(),
 		system.NewMissingRepoValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Repo()),
-		system.NewRepoVersionValidator(),
 		syntax.NewClusterRegistryKindValidator(),
 		syntax.NewFlatNodeValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Namespace()),

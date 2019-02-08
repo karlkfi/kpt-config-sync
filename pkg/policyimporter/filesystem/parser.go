@@ -127,18 +127,18 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 
 	// processing for <root>/system/*
 	systemInfos := p.readSystemResources(errorBuilder)
-	syncs := processSystem(astRoot, systemInfos, p.opts, errorBuilder)
-	if errorBuilder.HasErrors() {
-		// Don't continue processing if any errors encountered processing system/
-		return nil, errorBuilder.Build()
-	}
+	astRoot.Accept(tree.NewSystemBuilderVisitor(systemInfos))
+
+	// TODO: Delete these lines once syncs are defunct.
+	validateSyncs(astRoot, systemInfos, errorBuilder)
+	syncs := processSyncs(astRoot, systemInfos, p.opts)
 
 	// processing for <root>/cluster/*
 	clusterInfos := p.readClusterResources(errorBuilder)
 	astRoot.Accept(tree.NewClusterBuilderVisitor(clusterInfos))
 
 	// processing for <root>/clusterregistry/*
-	clusterregistryInfos := p.readResources(p.root.Join(repo.ClusterRegistryDir), errorBuilder)
+	clusterregistryInfos := p.readClusterRegistryResources(errorBuilder)
 
 	clusters := getClusters(clusterregistryInfos)
 	selectors := getSelectors(clusterregistryInfos)
@@ -151,6 +151,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	nsInfos := p.readNamespaceResources(errorBuilder)
 
 	// TODO: Move to after transforms.
+	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(systemInfos)).Validate(errorBuilder)
 	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(clusterInfos)).Validate(errorBuilder)
 	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(clusterregistryInfos)).Validate(errorBuilder)
 	metadata.DuplicateNameValidatorFactory{}.New(toResourceMetas(nsInfos)).Validate(errorBuilder)
@@ -205,6 +206,10 @@ func (p *Parser) readNamespaceResources(eb *multierror.Builder) []ast.FileObject
 
 func (p *Parser) readClusterResources(eb *multierror.Builder) []ast.FileObject {
 	return p.readResources(p.root.Join(repo.ClusterDir), eb)
+}
+
+func (p *Parser) readClusterRegistryResources(eb *multierror.Builder) []ast.FileObject {
+	return p.readResources(p.root.Join(repo.ClusterRegistryDir), eb)
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.
