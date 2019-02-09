@@ -3,7 +3,8 @@ package resourcequota
 import (
 	"testing"
 
-	pnv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,34 +16,39 @@ import (
 func TestQuotaAuthorize(t *testing.T) {
 	// Initial setup of quotas
 	// Limits and structure
-	policyNodes := []runtime.Object{
-		&pnv1.PolicyNode{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "kitties",
+	hierarchicalQuota := []runtime.Object{
+		&v1alpha1.HierarchicalQuota{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Kind:       "HierarchicalQuota",
 			},
-			Spec: pnv1.PolicyNodeSpec{
-				Parent: "bigkitties",
-				ResourceQuotaV1: &corev1.ResourceQuota{
-					Spec: corev1.ResourceQuotaSpec{
-						Hard: corev1.ResourceList{
-							"pods":    resource.MustParse("1"),
-							"secrets": resource.MustParse("0"),
+			ObjectMeta: metav1.ObjectMeta{
+				Name: resourcequota.ResourceQuotaHierarchyName,
+			},
+			Spec: v1alpha1.HierarchicalQuotaSpec{
+				Hierarchy: v1alpha1.HierarchicalQuotaNode{
+					Name: "bigkitties",
+					Type: v1alpha1.HierarchyNodeAbstractNamespace,
+					ResourceQuotaV1: &corev1.ResourceQuota{
+						Spec: corev1.ResourceQuotaSpec{
+							Hard: corev1.ResourceList{
+								"pods":    resource.MustParse("1"),
+								"secrets": resource.MustParse("0"),
+							},
 						},
 					},
-				},
-			},
-		},
-		&pnv1.PolicyNode{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bigkitties",
-			},
-			Spec: pnv1.PolicyNodeSpec{
-				Parent: "",
-				ResourceQuotaV1: &corev1.ResourceQuota{
-					Spec: corev1.ResourceQuotaSpec{
-						Hard: corev1.ResourceList{
-							"pods":    resource.MustParse("1"),
-							"secrets": resource.MustParse("0"),
+					Children: []v1alpha1.HierarchicalQuotaNode{
+						{
+							Name: "kitties",
+							Type: v1alpha1.HierarchyNodeNamespace,
+							ResourceQuotaV1: &corev1.ResourceQuota{
+								Spec: corev1.ResourceQuotaSpec{
+									Hard: corev1.ResourceList{
+										"pods":    resource.MustParse("1"),
+										"secrets": resource.MustParse("0"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -50,10 +56,10 @@ func TestQuotaAuthorize(t *testing.T) {
 		},
 	}
 
-	policyNodeInformer := fakeinformers.NewPolicyNodeInformer(policyNodes...)
 	resourceQuotaInformer := fakeinformers.NewResourceQuotaInformer()
+	hierarchicalQuotaInformer := fakeinformers.NewHierarchicalQuotaInformer(hierarchicalQuota...)
 
-	admitter := NewAdmitter(policyNodeInformer, resourceQuotaInformer)
+	admitter := NewAdmitter(resourceQuotaInformer, hierarchicalQuotaInformer)
 
 	pod := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: "mypod", Namespace: "kitties"},

@@ -4,7 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	pnv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -22,18 +23,30 @@ type CacheTestCase struct {
 func TestCanAdmit(t *testing.T) {
 
 	// Limits and structure
-	policyNodes := []runtime.Object{
-		makePolicyNode("kittiesandponies", "", corev1.ResourceList{
+	root := makeHierarchicalQuotaNode("kittiesandponies",
+		corev1.ResourceList{
 			"hay":  resource.MustParse("10"),
 			"milk": resource.MustParse("5"),
-		}, true),
-		makePolicyNode("kitties", "kittiesandponies", corev1.ResourceList{
-			"hay": resource.MustParse("5"),
-		}, false),
-		makePolicyNode("ponies", "kittiesandponies", corev1.ResourceList{
-			"hay":  resource.MustParse("15"),
-			"milk": resource.MustParse("5"),
-		}, false),
+		},
+		true)
+
+	root.Children = []v1alpha1.HierarchicalQuotaNode{
+		*makeHierarchicalQuotaNode(
+			"kitties",
+			corev1.ResourceList{
+				"hay": resource.MustParse("5"),
+			},
+			false),
+		*makeHierarchicalQuotaNode(
+			"ponies",
+			corev1.ResourceList{
+				"hay":  resource.MustParse("15"),
+				"milk": resource.MustParse("5"),
+			},
+			false),
+	}
+	hierarchyQuota := []runtime.Object{
+		makeHierarchicalQuota(root),
 	}
 
 	// Starting usages
@@ -47,9 +60,9 @@ func TestCanAdmit(t *testing.T) {
 		}),
 	}
 
-	policyNodeInformer := fakeinformers.NewPolicyNodeInformer(policyNodes...)
 	resourceQuotaInformer := fakeinformers.NewResourceQuotaInformer(quotas...)
-	cache, err := NewHierarchicalQuotaCache(policyNodeInformer, resourceQuotaInformer)
+	hierarchicalQuotaInformer := fakeinformers.NewHierarchicalQuotaInformer(hierarchyQuota...)
+	cache, err := NewHierarchicalQuotaCache(resourceQuotaInformer, hierarchicalQuotaInformer)
 	if err != nil {
 		t.Error(err)
 		return
@@ -123,81 +136,32 @@ func TestCanAdmit(t *testing.T) {
 	}
 }
 
-func TestUpdateLeaf(t *testing.T) {
-
-	// Limits and structure
-	policyNodes := []runtime.Object{
-		makePolicyNode("kittiesandponies", "", corev1.ResourceList{
-			"hay":  resource.MustParse("10"),
-			"milk": resource.MustParse("5"),
-		}, true),
-		makePolicyNode("kitties", "kittiesandponies", corev1.ResourceList{
-			"hay": resource.MustParse("5"),
-		}, false),
-		makePolicyNode("ponies", "kittiesandponies", corev1.ResourceList{
-			"hay":  resource.MustParse("15"),
-			"milk": resource.MustParse("5"),
-		}, false),
-	}
-
-	// Starting usages
-	quotas := []runtime.Object{
-		makeResourceQuota("kitties", corev1.ResourceList{
-			"hay": resource.MustParse("2"),
-		}),
-		makeResourceQuota("ponies", corev1.ResourceList{
-			"hay":  resource.MustParse("2"),
-			"milk": resource.MustParse("2"),
-		}),
-	}
-
-	policyNodeInformer := fakeinformers.NewPolicyNodeInformer(policyNodes...)
-	resourceQuotaInformer := fakeinformers.NewResourceQuotaInformer(quotas...)
-	cache, err := NewHierarchicalQuotaCache(policyNodeInformer, resourceQuotaInformer)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	// Remove milk and change hay to 3.
-	namespaces, err := cache.UpdateLeaf(*makeResourceQuota("ponies", corev1.ResourceList{
-		"hay": resource.MustParse("3"),
-	}))
-
-	if err != nil {
-		t.Errorf("Unexpected error %s", err)
-	}
-
-	if len(namespaces) != 1 || namespaces[0] != "kittiesandponies" {
-		t.Errorf("Unexpected namespaces to updated %s", namespaces)
-	}
-
-	expectedNewUsage := corev1.ResourceList{
-		"hay":  resource.MustParse("5"),
-		"milk": resource.MustParse("0"),
-	}
-
-	if !resourceListEqual(cache.quotas["kittiesandponies"].quota.Status.Used, expectedNewUsage) {
-		t.Errorf("Unexpected new usage %#v", cache.quotas["kittiesandponies"].quota.Status.Used)
+func makeHierarchicalQuota(root *v1alpha1.HierarchicalQuotaNode) *v1alpha1.HierarchicalQuota {
+	return &v1alpha1.HierarchicalQuota{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			Kind:       "HierarchicalQuota",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: ResourceQuotaHierarchyName,
+		},
+		Spec: v1alpha1.HierarchicalQuotaSpec{
+			Hierarchy: *root,
+		},
 	}
 }
 
-func makePolicyNode(name string, parent string, limits corev1.ResourceList, policyspace bool) *pnv1.PolicyNode {
-	pnt := pnv1.Namespace
-	if policyspace {
-		pnt = pnv1.Policyspace
+func makeHierarchicalQuotaNode(name string, limits corev1.ResourceList, abstract bool) *v1alpha1.HierarchicalQuotaNode {
+	pnt := v1alpha1.HierarchyNodeNamespace
+	if abstract {
+		pnt = v1alpha1.HierarchyNodeAbstractNamespace
 	}
-	return &pnv1.PolicyNode{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: pnv1.PolicyNodeSpec{
-			Parent: parent,
-			Type:   pnt,
-			ResourceQuotaV1: &corev1.ResourceQuota{
-				Spec: corev1.ResourceQuotaSpec{
-					Hard: limits,
-				},
+	return &v1alpha1.HierarchicalQuotaNode{
+		Name: name,
+		Type: pnt,
+		ResourceQuotaV1: &corev1.ResourceQuota{
+			Spec: corev1.ResourceQuotaSpec{
+				Hard: limits,
 			},
 		},
 	}

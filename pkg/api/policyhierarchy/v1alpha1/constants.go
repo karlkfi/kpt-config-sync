@@ -63,3 +63,7 @@ const (
 	// HierarchyNodeAbstractNamespace indicates that the node represents an abstract namespace.
 	HierarchyNodeAbstractNamespace = HierarchyNodeType("abstractNamespace")
 )
+
+// NoParentNamespace is the constant we use (empty string) for indicating that no parent exists
+// for the hierarchy node.  Only one hierarchy node node should have a parent with this value.
+const NoParentNamespace = ""

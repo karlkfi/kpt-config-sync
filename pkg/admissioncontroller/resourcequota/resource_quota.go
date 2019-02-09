@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"time"
 
-	informerspolicynodev1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	informersv1alpha1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/admissioncontroller"
 	"github.com/google/nomos/pkg/resourcequota"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -38,17 +38,18 @@ import (
 
 // Admitter is the struct for the resource quota admitter
 type Admitter struct {
-	policyNodeInformer    informerspolicynodev1.PolicyNodeInformer
-	resourceQuotaInformer informerscorev1.ResourceQuotaInformer
-	quotaRegistry         quota.Registry
-	decoder               runtime.Decoder
+	resourceQuotaInformer     informerscorev1.ResourceQuotaInformer
+	hierarchicalQuotaInformer informersv1alpha1.HierarchicalQuotaInformer
+	quotaRegistry             quota.Registry
+	decoder                   runtime.Decoder
 }
 
 var _ admissioncontroller.Admitter = (*Admitter)(nil)
 
 // NewAdmitter returns the resource quota admitter
-func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
-	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) admissioncontroller.Admitter {
+func NewAdmitter(
+	resourceQuotaInformer informerscorev1.ResourceQuotaInformer,
+	hierarchicalQuotaInformer informersv1alpha1.HierarchicalQuotaInformer) admissioncontroller.Admitter {
 	quotaConfiguration := quotainstall.NewQuotaConfigurationForAdmission()
 	quotaRegistry := generic.NewRegistry(quotaConfiguration.Evaluators())
 
@@ -60,10 +61,10 @@ func NewAdmitter(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
 	decoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
 
 	return &Admitter{
-		policyNodeInformer:    policyNodeInformer,
-		resourceQuotaInformer: resourceQuotaInformer,
-		quotaRegistry:         quotaRegistry,
-		decoder:               decoder,
+		resourceQuotaInformer:     resourceQuotaInformer,
+		hierarchicalQuotaInformer: hierarchicalQuotaInformer,
+		quotaRegistry:             quotaRegistry,
+		decoder:                   decoder,
 	}
 }
 
@@ -82,7 +83,7 @@ func (r *Admitter) Admit(review admissionv1beta1.AdmissionReview) *admissionv1be
 }
 
 func (r *Admitter) internalAdmit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
-	cache, err := resourcequota.NewHierarchicalQuotaCache(r.policyNodeInformer, r.resourceQuotaInformer)
+	cache, err := resourcequota.NewHierarchicalQuotaCache(r.resourceQuotaInformer, r.hierarchicalQuotaInformer)
 	counter := admissioncontroller.Metrics.ErrorTotal.WithLabelValues("resource_quota", review.Request.Namespace)
 	if err != nil {
 		counter.Inc()

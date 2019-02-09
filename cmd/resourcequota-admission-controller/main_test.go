@@ -32,7 +32,7 @@ import (
 // nolint:deadcode
 func TestRequest(t *testing.T) {
 	ts := httptest.NewTLSServer(admissioncontroller.ServeFunc(resourcequota.NewAdmitter(
-		fakeinformers.NewPolicyNodeInformer(), fakeinformers.NewResourceQuotaInformer())))
+		fakeinformers.NewResourceQuotaInformer(), fakeinformers.NewHierarchicalQuotaInformer())))
 	defer ts.Close()
 
 	request := admissionv1beta1.AdmissionReview{

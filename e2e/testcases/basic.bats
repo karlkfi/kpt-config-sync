@@ -108,7 +108,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   run kubectl create configmap map2 -n newer-prj
   assert::contains "created"
   run kubectl create configmap map3 -n new-prj
-  assert::contains "exceeded quota in policyspace rnd"
+  assert::contains "exceeded quota in policyspace namespaces/rnd"
   clean_test_configmaps
 }
 

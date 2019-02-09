@@ -25,7 +25,7 @@ import (
 
 	"github.com/golang/glog"
 	policynodeversions "github.com/google/nomos/clientgen/informer"
-	informerspolicynodev1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	informersv1alpha1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1alpha1"
 	policynodemeta "github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/service"
 	"github.com/pkg/errors"
@@ -177,18 +177,19 @@ func ServeFunc(controller Admitter) http.HandlerFunc {
 	return service.WithStrictTransport(service.NoCache(Serve(controller)))
 }
 
-// SetupPolicyNodeInformer returns a newly configured PolicyNodeInformer.
-func SetupPolicyNodeInformer(config *rest.Config) (informerspolicynodev1.PolicyNodeInformer, error) {
-	policyNodeClient, err := policynodemeta.NewForConfig(config)
+// SetupHierarchicalQuotaInformer returns a newly configured HierarchicalQuotaInformer.
+func SetupHierarchicalQuotaInformer(config *rest.Config) (informersv1alpha1.HierarchicalQuotaInformer, error) {
+	hierarchicalQuotaClient, err := policynodemeta.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 	policyNodeFactory := policynodeversions.NewSharedInformerFactory(
-		policyNodeClient.PolicyHierarchy(), time.Minute,
+		hierarchicalQuotaClient.PolicyHierarchy(), time.Minute,
 	)
-	policyNodeInformer := policyNodeFactory.Nomos().V1().PolicyNodes()
-	policyNodeInformer.Informer()
+
+	hierarchicalQuotaInformer := policyNodeFactory.Nomos().V1alpha1().HierarchicalQuotas()
+	hierarchicalQuotaInformer.Informer()
 	policyNodeFactory.Start(nil)
 
-	return policyNodeInformer, nil
+	return hierarchicalQuotaInformer, nil
 }

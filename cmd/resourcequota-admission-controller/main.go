@@ -157,16 +157,17 @@ func main() {
 			glog.Fatalf("Failed to get client cert: %+v", err)
 		}
 	}
-	policyNodeInformer, err := admissioncontroller.SetupPolicyNodeInformer(config)
+	hierarchicalQuotaInformer, err := admissioncontroller.SetupHierarchicalQuotaInformer(config)
 	if err != nil {
-		glog.Fatalf("Failed setting up policyNode informer: %+v", err)
+		glog.Fatalf("Failed setting up hierarchicalQuota informer: %+v", err)
 	}
 	resourceQuotaInformer, err := setupResourceQuotaInformer(config)
 	if err != nil {
 		glog.Fatalf("Failed setting up resourceQuota informer: %+v", err)
 	}
+
 	glog.Info("Waiting for informers to sync...")
-	if !cache.WaitForCacheSync(nil, policyNodeInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
+	if !cache.WaitForCacheSync(nil, hierarchicalQuotaInformer.Informer().HasSynced, resourceQuotaInformer.Informer().HasSynced) {
 		glog.Fatal("Failure while waiting for informers to sync")
 	}
 
@@ -174,7 +175,7 @@ func main() {
 
 	server := service.Server(
 		admissioncontroller.ServeFunc(
-			resourcequota.NewAdmitter(policyNodeInformer, resourceQuotaInformer)),
+			resourcequota.NewAdmitter(resourceQuotaInformer, hierarchicalQuotaInformer)),
 		clientCert)
 
 	stopChannel := make(chan struct{})

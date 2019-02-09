@@ -17,8 +17,10 @@ package resourcequota
 
 import (
 	"github.com/golang/glog"
-	informerspolicynodev1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
-	pnv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+
+	informersv1alpha1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -30,8 +32,8 @@ import (
 // the whole namespace tree. The limits and structure are fed from the policyNode informer
 // The usage is based on the ResourceQuota informer which has the usage on the leaf nodes
 type HierarchicalQuotaCache struct {
-	policyNodeInformer    informerspolicynodev1.PolicyNodeInformer
-	resourceQuotaInformer informerscorev1.ResourceQuotaInformer
+	resourceQuotaInformer     informerscorev1.ResourceQuotaInformer
+	hierarchicalQuotaInformer informersv1alpha1.HierarchicalQuotaInformer
 
 	// Map of namespaces to quota objects
 	quotas map[string]*QuotaNode
@@ -39,21 +41,51 @@ type HierarchicalQuotaCache struct {
 
 // QuotaNode contains information about a quota, mainly the resource quota itself, but also its place in the hierarchy.
 type QuotaNode struct {
-	quota       *corev1.ResourceQuota // The quota itself, both hard and used.
-	parent      string                // The parent of the namespace for this quota based on the policyNode
-	policyspace bool                  // Whether this is a leaf namespace or a non-leaf policynode
+	quota  *corev1.ResourceQuota // The quota itself, both hard and used.
+	parent string                // The parent of the namespace for this quota based on the policyNode
 }
 
 // NewHierarchicalQuotaCache returns the hierarchical quota cache
-func NewHierarchicalQuotaCache(policyNodeInformer informerspolicynodev1.PolicyNodeInformer,
-	resourceQuotaInformer informerscorev1.ResourceQuotaInformer) (*HierarchicalQuotaCache, error) {
+func NewHierarchicalQuotaCache(
+	resourceQuotaInformer informerscorev1.ResourceQuotaInformer,
+	hierarchicalQuotaInformer informersv1alpha1.HierarchicalQuotaInformer) (*HierarchicalQuotaCache, error) {
 	cache := &HierarchicalQuotaCache{
-		policyNodeInformer:    policyNodeInformer,
-		resourceQuotaInformer: resourceQuotaInformer,
+		resourceQuotaInformer:     resourceQuotaInformer,
+		hierarchicalQuotaInformer: hierarchicalQuotaInformer,
 	}
 	err := cache.initCache()
 
 	return cache, err
+}
+
+// initQuotaLimits populates the quota limits set by the HierarchicalQuota object from the repo.
+func (c *HierarchicalQuotaCache) initQuotaLimits(node *v1alpha1.HierarchicalQuotaNode, parent string) {
+	quota := &corev1.ResourceQuota{
+		Status: corev1.ResourceQuotaStatus{
+			Used: corev1.ResourceList{},
+		},
+	}
+
+	if node.ResourceQuotaV1 != nil {
+		quota = &corev1.ResourceQuota{
+			Spec: *node.ResourceQuotaV1.Spec.DeepCopy(),
+			Status: corev1.ResourceQuotaStatus{
+				Hard: node.ResourceQuotaV1.Spec.Hard,
+				Used: corev1.ResourceList{},
+			},
+		}
+	}
+
+	c.quotas[node.Name] = &QuotaNode{
+		quota:  quota,
+		parent: parent,
+	}
+
+	if node.Type == v1alpha1.HierarchyNodeAbstractNamespace {
+		for _, child := range node.Children {
+			c.initQuotaLimits(&child, node.Name)
+		}
+	}
 }
 
 // initCache populates the quotas and parents maps using the current state of the informers.
@@ -65,33 +97,18 @@ func (c *HierarchicalQuotaCache) initCache() error {
 	if err != nil {
 		return err
 	}
-	policyNodes, err := c.policyNodeInformer.Lister().List(labels.Everything())
-	if err != nil {
-		return err
-	}
 	c.quotas = map[string]*QuotaNode{}
 
-	for _, policyNode := range policyNodes {
-		quota := &corev1.ResourceQuota{
-			Status: corev1.ResourceQuotaStatus{
-				Used: corev1.ResourceList{},
-			},
+	hierarchicalQuota, err := c.hierarchicalQuotaInformer.Lister().Get(ResourceQuotaHierarchyName)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			glog.Warningf("Hierarchical Quota object %s does not exist", ResourceQuotaObjectName)
+			return nil
 		}
-		if policyNode.Spec.ResourceQuotaV1 != nil {
-			quota = &corev1.ResourceQuota{
-				Spec: *policyNode.Spec.ResourceQuotaV1.Spec.DeepCopy(),
-				Status: corev1.ResourceQuotaStatus{
-					Hard: policyNode.Spec.ResourceQuotaV1.Spec.Hard,
-					Used: corev1.ResourceList{},
-				},
-			}
-		}
-		c.quotas[policyNode.Name] = &QuotaNode{
-			quota:       quota,
-			parent:      policyNode.Spec.Parent,
-			policyspace: policyNode.Spec.Type.IsPolicyspace(),
-		}
+		return err
 	}
+	// Set the quota limits from the repo definition
+	c.initQuotaLimits(&hierarchicalQuota.Spec.Hierarchy, v1alpha1.NoParentNamespace)
 
 	// Set the usage based on the quota informer
 	for _, resourceQuota := range resourceQuotas {
@@ -109,7 +126,7 @@ func (c *HierarchicalQuotaCache) initCache() error {
 
 		// For all the parents, add up quantities
 		parent := quotaNode.parent
-		for parent != pnv1.NoParentNamespace {
+		for parent != v1alpha1.NoParentNamespace {
 			quotaNode, exists := c.quotas[parent]
 			if !exists {
 				glog.Warningf("Parent namespace %s not defined in policy nodes for child namespace %s",
@@ -142,7 +159,7 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList corev1.Res
 	namespace = namespaceQuota.parent
 
 	// For each level of the hierarchy going up from the direct parent
-	for namespace != pnv1.NoParentNamespace {
+	for namespace != v1alpha1.NoParentNamespace {
 		namespaceQuota, exists := c.quotas[namespace]
 		if !exists {
 			// No namespace defined in policy nodes so this is not a namespace controlled by nomos.
@@ -170,43 +187,4 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList corev1.Res
 		namespace = namespaceQuota.parent
 	}
 	return nil
-}
-
-// UpdateLeaf updates the usage quota on a leaf quota namespace and propagates the changes up the tree
-// to reflect the new usage in all the parent quotas as well. The function returns a list of namespaces
-// that had their quota changed.
-func (c *HierarchicalQuotaCache) UpdateLeaf(newQuota corev1.ResourceQuota) ([]string, error) {
-	updatedNamespaces := []string{}
-	namespace := newQuota.Namespace
-	currentQuota, exists := c.quotas[namespace]
-	if !exists {
-		return nil, errors.Errorf("Namespace %q does not have a quota in cache", newQuota.Namespace)
-	}
-
-	usageDiffs := diffResourceLists(currentQuota.quota.Status.Used, newQuota.Status.Used)
-
-	if len(usageDiffs) == 0 {
-		return updatedNamespaces, nil // No diffs, nothing to do.
-	}
-	// We have diffs, let's update the cache
-	for namespace != pnv1.NoParentNamespace {
-		quotaNode, exists := c.quotas[namespace]
-		if !exists {
-			return nil, errors.Errorf("Parent namespace %q does not have a quota in cache", namespace)
-		}
-
-		for resourceName, usageDiff := range usageDiffs {
-			if current, exists := quotaNode.quota.Status.Used[resourceName]; exists {
-				current.Add(usageDiff)
-				quotaNode.quota.Status.Used[resourceName] = current
-			} else {
-				quotaNode.quota.Status.Used[resourceName] = usageDiff
-			}
-		}
-		if quotaNode.policyspace {
-			updatedNamespaces = append(updatedNamespaces, namespace)
-		}
-		namespace = quotaNode.parent
-	}
-	return updatedNamespaces, nil
 }
