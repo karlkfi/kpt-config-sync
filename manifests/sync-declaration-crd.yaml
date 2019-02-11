@@ -47,28 +47,9 @@ spec:
                       type: object
                       required:
                       - kind
-                      - versions
                       properties:
                         kind:
                           type: string
-                        hierarchyMode:
-                          type: string
-                          enum:
-                          - ""
-                          - "hierarchicalQuota"
-                          - "inherit"
-                          - "none"
-                        versions:
-                          type: array
-                          items:
-                            # SyncVersion
-                            type: object
-                            required:
-                            - version
-                            properties:
-                              version:
-                                type: string
-                            # /SyncVersion
                       # /SyncKind
                 # /SyncGroup
           # /SyncSpec
