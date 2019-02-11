@@ -110,6 +110,7 @@ func TestDuplicateNameValidator(t *testing.T) {
 					namedRole("a", "namespaces/foo/role.yaml"),
 					namedRole("a", "namespaces/foo/role.yaml"),
 				},
+				ShouldFail: true,
 			},
 			{
 				Name: "two objects different namespaces",
