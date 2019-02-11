@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func makeSync(group, version, kind string, hMode v1alpha1.HierarchyModeType) *v1alpha1.Sync {
+func makeSync(group, kind string) *v1alpha1.Sync {
 	name := strings.ToLower(kind)
 	if group != "" {
 		name += "." + group
@@ -29,13 +29,7 @@ func makeSync(group, version, kind string, hMode v1alpha1.HierarchyModeType) *v1
 					Group: group,
 					Kinds: []v1alpha1.SyncKind{
 						{
-							Kind:          kind,
-							HierarchyMode: hMode,
-							Versions: []v1alpha1.SyncVersion{
-								{
-									Version: version,
-								},
-							},
+							Kind: kind,
 						},
 					},
 				},
@@ -146,14 +140,14 @@ var unarySyncTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: &ast.Root{
 				System: &ast.System{
 					Objects: vt.SystemObjectSets(
-						makeSync("", "v1", "ResourceQuota", v1alpha1.HierarchyModeDefault),
-						makeSync("bespin.dev", "v1", "Folder", v1alpha1.HierarchyModeDefault),
-						makeSync("bespin.dev", "v1", "Organization", v1alpha1.HierarchyModeDefault),
-						makeSync("bespin.dev", "v1", "Project", v1alpha1.HierarchyModeDefault),
-						makeSync("bespin.dev", "v1", "IAMPolicy", v1alpha1.HierarchyModeDefault),
-						makeSync("bespin.dev", "v1", "ClusterIAMPolicy", v1alpha1.HierarchyModeDefault),
-						makeSync("bespin.dev", "v1", "OrganizationPolicy", v1alpha1.HierarchyModeDefault),
-						makeSync("bespin.dev", "v1", "ClusterOrganizationPolicy", v1alpha1.HierarchyModeDefault),
+						makeSync("", "ResourceQuota"),
+						makeSync("bespin.dev", "Folder"),
+						makeSync("bespin.dev", "Organization"),
+						makeSync("bespin.dev", "Project"),
+						makeSync("bespin.dev", "IAMPolicy"),
+						makeSync("bespin.dev", "ClusterIAMPolicy"),
+						makeSync("bespin.dev", "OrganizationPolicy"),
+						makeSync("bespin.dev", "ClusterOrganizationPolicy"),
 					),
 				},
 			},
@@ -195,7 +189,7 @@ var unarySyncTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: &ast.Root{
 				System: &ast.System{
 					Objects: vt.SystemObjectSets(
-						makeSync("", "v1", "ResourceQuota", v1alpha1.HierarchyModeHierarchicalQuota),
+						makeSync("", "ResourceQuota"),
 					),
 				},
 			},
