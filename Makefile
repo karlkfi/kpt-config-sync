@@ -142,7 +142,7 @@ DOCKER_RUN_ARGS = \
 
 ##### SETUP #####
 
-.DEFAULT_GOAL := test-local
+.DEFAULT_GOAL := test
 
 .PHONY: $(OUTPUT_DIR)
 $(OUTPUT_DIR):
@@ -186,12 +186,9 @@ test-unit: $(OUTPUT_DIR) pull-buildenv
 # Runs unit tests and linter.
 test: test-unit lint
 
-# Runs tests and local nomos vet tests.
-test-local: test test-nomos-vet-local
-
 # Runs all tests.
 # This only runs on local dev environment not CI environment.
-test-all-local: test test-nomos-vet-local test-e2e-all
+test-all-local: test test-e2e-all
 
 goimports:
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
