@@ -1,12 +1,15 @@
 package transform
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 )
 
-// UnarySync transforms Sync objects so they only contain one group kind.
+// UnarySync transforms Sync objects so they only contain one group version.
 type UnarySync struct {
 	// Copying is used for copying parts of the ast.Root tree and continuing underlying visitor iteration.
 	*visitor.Copying
@@ -62,7 +65,30 @@ func (v *UnarySync) expand(s *v1alpha1.Sync) []*v1alpha1.Sync {
 	var syncs []*v1alpha1.Sync
 	for _, groupInfo := range s.Spec.Groups {
 		for _, kindInfo := range groupInfo.Kinds {
-			syncs = append(syncs, v1alpha1.NewSync(groupInfo.Group, kindInfo.Kind))
+			sync := &v1alpha1.Sync{
+				TypeMeta:   s.TypeMeta,
+				ObjectMeta: s.ObjectMeta,
+				Spec: v1alpha1.SyncSpec{
+					Groups: []v1alpha1.SyncGroup{
+						{
+							Group: groupInfo.Group,
+							Kinds: []v1alpha1.SyncKind{
+								{
+									Kind:          kindInfo.Kind,
+									HierarchyMode: kindInfo.HierarchyMode,
+									Versions:      kindInfo.Versions,
+								},
+							},
+						},
+					},
+				},
+			}
+			if groupInfo.Group == "" {
+				sync.Name = strings.ToLower(kindInfo.Kind)
+			} else {
+				sync.Name = fmt.Sprintf("%s.%s", strings.ToLower(kindInfo.Kind), groupInfo.Group)
+			}
+			syncs = append(syncs, sync)
 		}
 	}
 	return syncs

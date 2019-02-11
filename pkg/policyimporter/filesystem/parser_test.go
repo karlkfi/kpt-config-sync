@@ -718,14 +718,84 @@ func toInt32Pointer(i int32) *int32 {
 	return &i
 }
 
-func makeSync(group, kind string) v1alpha1.Sync {
-	s := *v1alpha1.NewSync(group, kind)
-	s.Finalizers = append(s.Finalizers, "syncer.nomos.dev")
-	return s
+func makeSync(group, version, kind string) v1alpha1.Sync {
+	name := strings.ToLower(kind)
+	if group != "" {
+		name += "." + group
+	}
+	return v1alpha1.Sync{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "nomos.dev/v1alpha1",
+			Kind:       "Sync",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       name,
+			Finalizers: []string{v1alpha1.SyncFinalizer},
+		},
+		Spec: v1alpha1.SyncSpec{
+			Groups: []v1alpha1.SyncGroup{
+				{
+					Group: group,
+					Kinds: []v1alpha1.SyncKind{
+						{
+							Kind: kind,
+							Versions: []v1alpha1.SyncVersion{
+								{
+									Version: version,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
-func singleSyncMap(group, kind string) map[string]v1alpha1.Sync {
-	return syncMap(makeSync(group, kind))
+func mapOfSingleSync(group, kind string, versions ...string) map[string]v1alpha1.Sync {
+	return mapOfSingleSyncHierarchyMode(group, kind, "", versions...)
+}
+
+func makeSyncHierarchyMode(name, group, kind string, hierarchyMode v1alpha1.HierarchyModeType, versions ...string) v1alpha1.Sync {
+	var sv []v1alpha1.SyncVersion
+	for _, v := range versions {
+		sv = append(sv, v1alpha1.SyncVersion{Version: v})
+	}
+	return v1alpha1.Sync{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "nomos.dev/v1alpha1",
+			Kind:       "Sync",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       name,
+			Finalizers: []string{v1alpha1.SyncFinalizer},
+		},
+		Spec: v1alpha1.SyncSpec{
+			Groups: []v1alpha1.SyncGroup{
+				{
+					Group: group,
+					Kinds: []v1alpha1.SyncKind{
+						{
+							Kind:          kind,
+							Versions:      sv,
+							HierarchyMode: hierarchyMode,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func mapOfSingleSyncHierarchyMode(group, kind string, hierarchyMode v1alpha1.HierarchyModeType,
+	versions ...string) map[string]v1alpha1.Sync {
+	name := strings.ToLower(kind)
+	if group != "" {
+		name += "." + group
+	}
+	return map[string]v1alpha1.Sync{
+		name: makeSyncHierarchyMode(name, group, kind, hierarchyMode, versions...),
+	}
 }
 
 func syncMap(syncs ...v1alpha1.Sync) map[string]v1alpha1.Sync {
@@ -902,7 +972,7 @@ var parserTestCases = []parserTestCase{
 			),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
+		expectedSyncs:         mapOfSingleSync("", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "ResourceQuota without declared Sync",
@@ -965,7 +1035,7 @@ var parserTestCases = []parserTestCase{
 			),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
+		expectedSyncs:         mapOfSingleSync("", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Namespace dir with multiple Roles",
@@ -997,7 +1067,7 @@ var parserTestCases = []parserTestCase{
 				}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         singleSyncMap("apps", "Deployment"),
+		expectedSyncs:         mapOfSingleSync("apps", "Deployment", "v1"),
 	},
 	{
 		testName: "Namespace dir with CRD",
@@ -1160,7 +1230,8 @@ var parserTestCases = []parserTestCase{
 				}})}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         singleSyncMap(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
+		expectedSyncs: mapOfSingleSyncHierarchyMode(kinds.RoleBinding().Group, kinds.RoleBinding().Kind,
+			v1alpha1.HierarchyModeInherit, kinds.RoleBinding().Version),
 	},
 	{
 		testName: "Namespaces dir with ResourceQuota, default inheritance",
@@ -1177,7 +1248,7 @@ var parserTestCases = []parserTestCase{
 				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", "pod-quota", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
+		expectedSyncs:         mapOfSingleSync("", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Policyspace dir with ResourceQuota, inheritance off",
@@ -1202,7 +1273,8 @@ var parserTestCases = []parserTestCase{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar":                 createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName, &Policies{}),
 		},
-		expectedSyncs: singleSyncMap("", "ResourceQuota"),
+		expectedSyncs: mapOfSingleSyncHierarchyMode("", "ResourceQuota",
+			v1alpha1.HierarchyModeInherit, "v1"),
 	},
 	{
 		testName: "Policyspace dir with multiple Rolebindings",
@@ -1309,7 +1381,7 @@ var parserTestCases = []parserTestCase{
 			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
+		expectedSyncs:         mapOfSingleSync("", "ResourceQuota", "v1"),
 	},
 	{
 		testName: "Multiple Syncs",
@@ -1321,8 +1393,8 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs: syncMap(
-			makeSync("", "ResourceQuota"),
-			makeSync("rbac.authorization.k8s.io", "Role"),
+			makeSync("", "v1", "ResourceQuota"),
+			makeSync("rbac.authorization.k8s.io", "v1", "Role"),
 		),
 	},
 	{
@@ -1428,8 +1500,9 @@ spec:
 								},
 							}}}}}),
 		expectedSyncs: syncMap(
-			makeSync("nomos.dev", "HierarchicalQuota"),
-			makeSync("", "ResourceQuota"),
+			makeSync("nomos.dev", "v1alpha1", "HierarchicalQuota"),
+			makeSyncHierarchyMode("resourcequota", "", "ResourceQuota",
+				v1alpha1.HierarchyModeHierarchicalQuota, "v1"),
 		),
 	},
 	{
@@ -2160,9 +2233,10 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			),
 		},
 		{
@@ -2262,7 +2336,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
 					}),
 			},
-			expectedSyncs: singleSyncMap(corev1.SchemeGroupVersion.Group, "ConfigMap"),
+			expectedSyncs: mapOfSingleSyncHierarchyMode(
+				corev1.SchemeGroupVersion.Group,
+				"ConfigMap",
+				v1alpha1.HierarchyModeInherit,
+				corev1.SchemeGroupVersion.Version,
+			),
 		},
 		{
 			// When cluster selector doesn't match, nothing (except for top-level dir) is created.
@@ -2320,9 +2399,10 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			),
 		},
 		{
@@ -2417,9 +2497,10 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			),
 		},
 		{
@@ -2503,9 +2584,10 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			),
 		},
 		{
@@ -2582,9 +2664,10 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			),
 		},
 		{
@@ -2667,9 +2750,10 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			),
 		},
 		{
@@ -2761,10 +2845,12 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					nil),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.ResourceQuota().Group, kinds.ResourceQuota().Kind),
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
+				makeSync(kinds.ResourceQuota().Group, kinds.ResourceQuota().Version,
+					kinds.ResourceQuota().Kind),
+				makeSync(kinds.Role().Group, kinds.Role().Version, kinds.Role().Kind),
+				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Version, kinds.RoleBinding().Kind),
+				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Version,
+					kinds.ClusterRoleBinding().Kind),
 			),
 		},
 	}
