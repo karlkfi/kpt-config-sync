@@ -41,8 +41,13 @@ function install() {
     kubectl apply -f defined-operator-bundle.yaml
     kubectl create secret generic git-creds -n=nomos-system \
       --from-file=ssh="$HOME"/.ssh/id_rsa.nomos || true
-    kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
-
+    if $stable_channel; then
+      echo "+++++ Applying Nomos using stable channel"
+      kubectl apply -f "${TEST_DIR}/operator-config-git-stable.yaml"
+    else
+      echo "+++++ Applying Nomos using dev channel"
+      kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
+    fi
     echo "+++++   Waiting for nomos-system deployments to be up"
     wait::for -s -t 180 -- install::nomos_running
 
@@ -250,6 +255,7 @@ file_filter=".*"
 preclean=false
 run_tests=false
 setup=false
+stable_channel=false
 tap=false
 
 # If set, the tests will skip the installation.
@@ -294,6 +300,10 @@ while [[ $# -gt 0 ]]; do
     --timing)
       timing=true
       tap=true
+    ;;
+
+    --stable_channel)
+      stable_channel=true
     ;;
 
     --test_filter)

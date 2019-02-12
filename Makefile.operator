@@ -16,6 +16,15 @@ GIT_SYNC_TAG := v3.0.1-gke.1__linux_amd64
 GIT_SYNC := git-sync:$(GIT_SYNC_TAG)
 GIT_SYNC_SRC := gcr.io/nomos-release/$(GIT_SYNC)
 
+# Download the current latest or stable operator manifest from cloud storage
+# into the location where other targets can use it.
+download-operator-latest:
+	@echo "+++ Downloading latest operator manifest"
+	@rm -rf ${OPERATOR_STAGING_DIR}
+	@mkdir -p ${OPERATOR_STAGING_DIR}
+	curl -o ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml \
+		https://storage.googleapis.com/nomos-release/operator-latest/nomos-operator.yaml
+
 # Operator manifest places all generated and static yaml files into a known
 # directory so the operator can pick them up for manifest generation.
 # TODO: have this depend on actual yaml instead of the gen-yaml-all rule then

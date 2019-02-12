@@ -58,12 +58,6 @@ echo "+++ Environment: "
 env
 
 DOCKER_FLAGS=()
-
-if [[ "${gcs_prober_cred}" != "" ]]; then
-  echo "+++ Downloading GCS credentials: ${gcs_prober_cred}"
-  gsutil cp "${gcs_prober_cred}" "${TEMP_OUTPUT_DIR}/config/prober_runner_client_key.json"
-fi
-
 if [[ "${mounted_prober_cred}" != "" ]]; then
   echo "+++ Mounting creds from: ${mounted_prober_cred}"
   DOCKER_FLAGS+=(-v "${mounted_prober_cred}:${mounted_prober_cred}")
@@ -132,6 +126,12 @@ else
   EXTRA_ARGS+=(-v "${HOME}:/home/user")
   EXTRA_ARGS+=(-e "NOMOS_REPO=$(pwd)")
 fi
+
+if [[ "${gcs_prober_cred}" != "" ]]; then
+  echo "+++ Downloading GCS credentials: ${gcs_prober_cred}"
+  gsutil cp "${gcs_prober_cred}" "${TEMP_OUTPUT_DIR}/config/prober_runner_client_key.json"
+fi
+
 
 DOCKER_FLAGS+=("--interactive")
 if [ -t 0 ]; then

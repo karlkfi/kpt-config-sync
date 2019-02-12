@@ -35,3 +35,33 @@ ci-test-e2e-local:
 		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json \
 	 " \
      ci-test-e2e
+
+# Run ci setup locally against latest
+ci-test-e2e-local-latest:
+	$(MAKE) $(E2E_PARAMS) \
+		OPERATOR_TARGET:=download-operator-latest \
+		E2E_FLAGS="\
+		--gcp-prober-cred /tmp/config/prober_runner_client_key.json \
+		--stable_channel --preclean --setup --test --clean $(E2E_FLAGS) \
+		" \
+		TEST_E2E_RUN_FLAGS="\
+		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json \
+		" \
+		download-cli image-e2e-tests test-e2e-run-git
+
+# Run CI in Prow against latest
+ci-test-e2e-latest:
+	$(MAKE) $(E2E_PARAMS) \
+		OPERATOR_TARGET:=download-operator-latest \
+		E2E_FLAGS="\
+		--tap \
+		--create-ssh-key \
+		--gcp-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
+		--stable_channel --preclean --setup --test --clean $(E2E_FLAGS) \
+		" \
+		TEST_E2E_RUN_FLAGS="\
+		--hermetic \
+		--mounted-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
+		" \
+		download-cli image-e2e-tests test-e2e-run-git
+
