@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -97,6 +98,16 @@ func (d *FakeCachedDiscoveryClient) Invalidate() {
 // ServerResources returns the stubbed list of available resources.
 func (d *FakeCachedDiscoveryClient) ServerResources() ([]*metav1.APIResourceList, error) {
 	return d.APIGroupResources, nil
+}
+
+// ServerResourcesForGroupVersion returns the stubbed list of available resources in a given groupVersion.
+func (d *FakeCachedDiscoveryClient) ServerResourcesForGroupVersion(groupVersion string) (*metav1.APIResourceList, error) {
+	for _, list := range d.APIGroupResources {
+		if list.GroupVersion == groupVersion {
+			return list, nil
+		}
+	}
+	return nil, vet.InternalErrorf("%T wasn't given any %s resources", d, groupVersion)
 }
 
 // TestFactory is a cmdutil.Factory that can be used in tests to avoid requiring talking

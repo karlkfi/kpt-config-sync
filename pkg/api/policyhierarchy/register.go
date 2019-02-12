@@ -19,4 +19,7 @@ package policyhierarchy
 const (
 	// GroupName is the name of the group of policyhierarchy resources.
 	GroupName = "nomos.dev"
+
+	// ProductName is what we call Nomos externally.
+	ProductName = "GKE Policy Management"
 )

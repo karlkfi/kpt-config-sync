@@ -107,9 +107,7 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1.AllPolicies, error) {
 	p.errors = &multierror.Builder{}
 	rootPath, err := nomospath.NewRoot(root)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to use as Nomos root")
-	}
+	p.errors.Add(err)
 
 	astRoot := &ast.Root{
 		ImportToken: importToken,
@@ -117,6 +115,11 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	}
 	// Always make sure we're getting the freshest data.
 	p.discoveryClient.Invalidate()
+	validateInstallation(p.discoveryClient, p.errors)
+	if p.errors.Build() != nil {
+		return nil, p.errors.Build()
+	}
+
 	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources(rootPath))
 	p.errors.Add(addScope(astRoot, p.discoveryClient))
 
@@ -280,4 +283,14 @@ func toInheritanceSpecs(configs []*v1alpha1.HierarchyConfig) map[schema.GroupKin
 		}
 	}
 	return specs
+}
+
+// validateInstallation checks to see if Nomos is installed properly.
+// TODO(b/123598820): Server-side validation for this check.
+func validateInstallation(resources discovery.ServerResourcesInterface, eb *multierror.Builder) {
+	gv := v1alpha1.SchemeGroupVersion.String()
+	_, err := resources.ServerResourcesForGroupVersion(gv)
+	if err != nil {
+		eb.Add(vet.PolicyManagementNotInstalledError{Err: errors.Wrapf(err, "unable to read required %s resources from cluster", gv)})
+	}
 }

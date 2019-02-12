@@ -23,7 +23,6 @@ import (
 
 var codes = map[string]bool{
 	// Obsolete error codes. Do not reuse.
-	"1016": true,
 	"1023": true,
 
 	// The unknown error code.

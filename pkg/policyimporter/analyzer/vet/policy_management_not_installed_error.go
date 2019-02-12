@@ -1,0 +1,29 @@
+package vet
+
+import (
+	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/pkg/errors"
+)
+
+// PolicyManagementNotInstalledErrorCode is the error code for PolicyManagementNotInstalledError
+const PolicyManagementNotInstalledErrorCode = "1016"
+
+func init() {
+	register(PolicyManagementNotInstalledErrorCode, nil, "")
+}
+
+// PolicyManagementNotInstalledError reports that Nomos has not been installed properly.
+type PolicyManagementNotInstalledError struct {
+	Err error
+}
+
+// Error implements error.
+func (e PolicyManagementNotInstalledError) Error() string {
+	return format(e, errors.Wrapf(e.Err, "%s is not properly installed. Apply a Nomos config to enable config management.",
+		policyhierarchy.ProductName).Error())
+}
+
+// Code implements Error.
+func (e PolicyManagementNotInstalledError) Code() string {
+	return PolicyManagementNotInstalledErrorCode
+}
