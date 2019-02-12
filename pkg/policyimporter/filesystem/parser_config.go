@@ -14,6 +14,7 @@ import (
 type ParserConfig interface {
 	// Visitors *overrides* the normal visitor functionality of the parser.
 	Visitors(
+		configs []*v1alpha1.HierarchyConfig,
 		syncs []*v1alpha1.Sync,
 		vet bool) []ast.Visitor
 

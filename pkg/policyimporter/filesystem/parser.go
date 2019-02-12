@@ -128,6 +128,8 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	systemInfos := p.readSystemResources(errorBuilder)
 	astRoot.Accept(tree.NewSystemBuilderVisitor(systemInfos))
 
+	hierarchyConfigs := extractHierarchyConfigs(systemInfos)
+
 	// TODO: Delete these lines once syncs are defunct.
 	validateSyncs(astRoot, systemInfos, errorBuilder)
 	syncs := processSyncs(astRoot, systemInfos, p.opts)
@@ -147,7 +149,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	nsInfos := p.readNamespaceResources(errorBuilder)
 
 	visitors := []ast.Visitor{tree.NewBuilderVisitor(nsInfos)}
-	visitors = append(visitors, p.opts.Extension.Visitors(syncs, p.opts.Vet)...)
+	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, syncs, p.opts.Vet)...)
 	for _, visitor := range visitors {
 		if errorBuilder.HasErrors() && visitor.RequiresValidState() {
 			return nil, errorBuilder.Build()
@@ -259,9 +261,9 @@ func addScope(root *ast.Root, client discovery.ServerResourcesInterface) error {
 	return nil
 }
 
-// toInheritanceSpecs converts Syncs to InheritanceSpecs. It also evaluates defaults so that later
+// syncsToInheritanceSpecs converts Syncs to InheritanceSpecs. It also evaluates defaults so that later
 // code doesn't have to.
-func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.InheritanceSpec {
+func syncsToInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.InheritanceSpec {
 	specs := map[schema.GroupKind]*transform.InheritanceSpec{}
 	for _, sync := range syncs {
 		for _, sg := range sync.Spec.Groups {
@@ -272,6 +274,27 @@ func toInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.
 					effectiveMode = v1alpha1.HierarchyModeInherit
 				} else {
 					effectiveMode = k.HierarchyMode
+				}
+				specs[gk] = &transform.InheritanceSpec{Mode: effectiveMode}
+			}
+		}
+	}
+	return specs
+}
+
+// toInheritanceSpecs converts HierarchyConfigs to InheritanceSpecs. It also evaluates defaults so that later
+// code doesn't have to.
+func toInheritanceSpecs(configs []*v1alpha1.HierarchyConfig) map[schema.GroupKind]*transform.InheritanceSpec {
+	specs := map[schema.GroupKind]*transform.InheritanceSpec{}
+	for _, config := range configs {
+		for _, r := range config.Spec.Resources {
+			for _, k := range r.Kinds {
+				gk := schema.GroupKind{Group: r.Group, Kind: k}
+				var effectiveMode v1alpha1.HierarchyModeType
+				if r.HierarchyMode == v1alpha1.HierarchyModeDefault {
+					effectiveMode = v1alpha1.HierarchyModeInherit
+				} else {
+					effectiveMode = r.HierarchyMode
 				}
 				specs[gk] = &transform.InheritanceSpec{Mode: effectiveMode}
 			}

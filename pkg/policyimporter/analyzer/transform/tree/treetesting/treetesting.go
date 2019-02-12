@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
+	"github.com/google/nomos/pkg/util/discovery"
 )
 
 // BuildTree creates and populates an ast.Root with the provided objects.
@@ -14,8 +15,20 @@ import (
 func BuildTree(t *testing.T, objects ...ast.FileObject) *ast.Root {
 	t.Helper()
 
-	root := &ast.Root{}
+	return buildTree(t, &ast.Root{}, objects...)
+}
 
+// BuildTreeWithAPIInfo builds the tree and sets the APIInfo in the root node.
+func BuildTreeWithAPIInfo(t *testing.T, apiInfo *discovery.APIInfo, objects ...ast.FileObject) *ast.Root {
+	t.Helper()
+
+	root := &ast.Root{}
+	discovery.AddAPIInfo(root, apiInfo)
+
+	return buildTree(t, root, objects...)
+}
+
+func buildTree(t *testing.T, root *ast.Root, objects ...ast.FileObject) *ast.Root {
 	// TODO: Move this to transforming visitors.
 	var namespaceObjects []ast.FileObject
 	var sytemObjects []ast.FileObject

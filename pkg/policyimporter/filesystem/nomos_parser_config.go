@@ -7,11 +7,13 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/hierarchyconfig"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/system"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/visitors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // NomosVisitorProvider is the default visitor provider.  It handles
@@ -21,14 +23,24 @@ type NomosVisitorProvider struct {
 
 // Visitors implements ParserConfig
 func (n NomosVisitorProvider) Visitors(
+	configs []*v1alpha1.HierarchyConfig,
 	syncs []*v1alpha1.Sync,
 	vetEnabled bool) []ast.Visitor {
-	specs := toInheritanceSpecs(syncs)
+
+	var specs map[schema.GroupKind]*transform.InheritanceSpec
+	if len(configs) > 0 {
+		specs = toInheritanceSpecs(configs)
+	} else {
+		specs = syncsToInheritanceSpecs(syncs)
+	}
 	v := []ast.Visitor{
 		system.NewRepoVersionValidator(),
 		system.NewKindValidator(),
 		system.NewMissingRepoValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Repo()),
+		hierarchyconfig.NewHierarchyConfigKindValidator(),
+		hierarchyconfig.NewKnownResourceValidator(),
+		hierarchyconfig.NewInheritanceValidator(),
 		syntax.NewClusterRegistryKindValidator(),
 		syntax.NewFlatNodeValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Namespace()),

@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	visitortesting "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
@@ -32,16 +31,13 @@ func TestKnownResourceValidator(t *testing.T) {
 		t.Fatalf("unexpected error forming APIInfo: %v", err)
 	}
 
-	vfn := func() *visitor.ValidatorVisitor {
-		return NewKnownResourceValidator(apiInfo)
-	}
-
 	test := visitortesting.ObjectValidatorTest{
-		Validator: vfn,
+		Validator: NewKnownResourceValidator,
 		ErrorCode: vet.UnknownResourceInHierarchyConfigErrorCode,
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{
-				Name: "ResourceQuota throws error if not known",
+				Name:    "ResourceQuota throws error if not known",
+				APIInfo: apiInfo,
 				Object: fake.HierarchyConfigSpecified(
 					"system/hc.yaml",
 					hierarchyConfig(
@@ -52,7 +48,8 @@ func TestKnownResourceValidator(t *testing.T) {
 				ShouldFail: true,
 			},
 			{
-				Name: "RoleBinding valid if known",
+				Name:    "RoleBinding valid if known",
+				APIInfo: apiInfo,
 				Object: fake.HierarchyConfigSpecified(
 					"system/hc.yaml",
 					hierarchyConfig(

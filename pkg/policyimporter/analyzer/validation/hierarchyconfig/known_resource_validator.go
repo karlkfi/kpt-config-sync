@@ -8,18 +8,33 @@ import (
 	"github.com/google/nomos/pkg/util/discovery"
 )
 
-// NewKnownResourceValidator returns a Visitor that adds errors for resources that cannot be looked up using Discovery API.
-func NewKnownResourceValidator(apiInfo *discovery.APIInfo) *visitor.ValidatorVisitor {
-	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) error {
-		switch h := o.Object.(type) {
-		case *v1alpha1.HierarchyConfig:
-			for _, gkc := range NewFileHierarchyConfig(h, o.Relative).flatten() {
-				gk := gkc.GroupKind()
-				if !apiInfo.GroupKindExists(gk) {
-					return vet.UnknownResourceInHierarchyConfigError{HierarchyConfig: gkc}
-				}
+// KnownResourceValidator validates that HierarchyConfig resources can be looked up using Discovery API.
+type KnownResourceValidator struct {
+	*visitor.ValidatorBase
+	apiInfo *discovery.APIInfo
+}
+
+// NewKnownResourceValidator returns a new KnownResourceValidator.
+func NewKnownResourceValidator() *visitor.ValidatorVisitor {
+	return visitor.NewValidator(&KnownResourceValidator{})
+}
+
+// ValidateRoot implement ast.Visitor.
+func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) error {
+	k.apiInfo = discovery.GetAPIInfo(r)
+	return nil
+}
+
+// ValidateSystemObject implements Visitor.
+func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) error {
+	switch h := o.Object.(type) {
+	case *v1alpha1.HierarchyConfig:
+		for _, gkc := range NewFileHierarchyConfig(h, o.Relative).flatten() {
+			gk := gkc.GroupKind()
+			if !k.apiInfo.GroupKindExists(gk) {
+				return vet.UnknownResourceInHierarchyConfigError{HierarchyConfig: gkc}
 			}
 		}
-		return nil
-	})
+	}
+	return nil
 }

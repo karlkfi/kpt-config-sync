@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/util/discovery"
 )
 
 // ObjectValidatorTestCase defines an individual FileObject to validate with the validator, and
@@ -15,6 +16,7 @@ type ObjectValidatorTestCase struct {
 	Name       string
 	ShouldFail bool
 	Object     ast.FileObject
+	APIInfo    *discovery.APIInfo
 }
 
 // ObjectValidatorTest defines a Validator which is initialized and run on each of the provided test
@@ -40,7 +42,12 @@ func (vt *ObjectValidatorTest) RunAll(t *testing.T) {
 			t.Helper()
 
 			validator := vt.Validator()
-			root := treetesting.BuildTree(t, tc.Object)
+			var root *ast.Root
+			if tc.APIInfo != nil {
+				root = treetesting.BuildTreeWithAPIInfo(t, tc.APIInfo, tc.Object)
+			} else {
+				root = treetesting.BuildTree(t, tc.Object)
+			}
 			root.Accept(validator)
 
 			if tc.ShouldFail {
