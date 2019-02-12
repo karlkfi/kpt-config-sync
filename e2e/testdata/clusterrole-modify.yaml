@@ -2,6 +2,8 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: e2e-test-clusterrole
+  labels:
+    foo: bar
 rules:
 - apiGroups: [""]
   resources: ["deployments"]

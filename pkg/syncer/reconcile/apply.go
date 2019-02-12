@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	"k8s.io/apimachinery/pkg/api/meta"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,12 +28,14 @@ import (
 
 // Applier updates a resource from its current state to its intended state using apply operations.
 type Applier interface {
-	Create(ctx context.Context, obj runtime.Object) error
-	ApplyCluster(intendedState, currentState runtime.Object) error
-	ApplyNamespace(namespace string, intendedState, currentState runtime.Object) error
+	Create(ctx context.Context, obj *unstructured.Unstructured) error
+	ApplyCluster(intendedState, currentState *unstructured.Unstructured) error
+	ApplyNamespace(namespace string, intendedState, currentState *unstructured.Unstructured) error
 }
 
 // ClientApplier does apply operations on resources, client-side, using the same approach as running `kubectl apply`.
+// When generating the last applied annotation, we omit all the labels. This makes it so users will not inadvertently
+// remove the label when `kubectl apply`ing a change that does not include the label.
 type ClientApplier struct {
 	dynamicClient    dynamic.Interface
 	discoveryClient  *discovery.DiscoveryClient
@@ -66,18 +69,15 @@ func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error)
 }
 
 // Create creates the resource with the last-applied annotation set.
-func (c *ClientApplier) Create(ctx context.Context, obj runtime.Object) error {
+func (c *ClientApplier) Create(ctx context.Context, obj *unstructured.Unstructured) error {
 	gvk := obj.GetObjectKind().GroupVersionKind()
-	if err := kubectl.CreateApplyAnnotation(obj, unstructured.UnstructuredJSONScheme); err != nil {
-		return errors.Wrapf(err, "could not populate resource %q with apply annotation", gvk)
-	}
 
-	_, resourceDescription, rErr := c.nameDescription(obj)
-	if rErr != nil {
-		return rErr
+	if _, err := lastAppliedConfiguration(obj); err != nil {
+		return errors.Wrapf(err, "could not generate apply annotation for resource %q", gvk)
 	}
 
 	if err := c.client.Create(ctx, obj); err != nil {
+		_, resourceDescription := nameDescription(obj)
 		return errors.Wrapf(err, "could not create %q", resourceDescription)
 	}
 
@@ -85,18 +85,18 @@ func (c *ClientApplier) Create(ctx context.Context, obj runtime.Object) error {
 }
 
 // ApplyCluster applies a patch to the cluster-scoped resource to move from currentState to intendedState.
-func (c *ClientApplier) ApplyCluster(intendedState, currentState runtime.Object) error {
+func (c *ClientApplier) ApplyCluster(intendedState, currentState *unstructured.Unstructured) error {
 	return c.apply("", false, intendedState, currentState)
 }
 
 // ApplyNamespace applies a patch to the namespace-scoped resource to move from currentState to intendedState.
-func (c *ClientApplier) ApplyNamespace(namespace string, intendedState, currentState runtime.Object) error {
+func (c *ClientApplier) ApplyNamespace(namespace string, intendedState, currentState *unstructured.Unstructured) error {
 	return c.apply(namespace, true, intendedState, currentState)
 }
 
 // apply updates a resource using the same approach as running `kubectl apply`.
 // The implementation here has been mostly extracted from the apply command: k8s.io/kubernetes/pkg/kubectl/cmd/apply.go
-func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedState, currentState runtime.Object) error {
+func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedState, currentState *unstructured.Unstructured) error {
 	// Serialize the current configuration of the object.
 	current, cErr := runtime.Encode(unstructured.UnstructuredJSONScheme, currentState)
 	if cErr != nil {
@@ -110,7 +110,7 @@ func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedStat
 	}
 
 	// Serialize the modified configuration of the object, populating the last applied annotation as well.
-	modified, mErr := kubectl.GetModifiedConfiguration(intendedState, true, unstructured.UnstructuredJSONScheme)
+	modified, mErr := lastAppliedConfiguration(intendedState)
 	if mErr != nil {
 		return errors.Errorf("could not serialize intended configuration from %v", intendedState)
 	}
@@ -129,14 +129,10 @@ func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedStat
 		resourceClient = c.dynamicClient.Resource(gvr)
 	}
 
-	name, resourceDescription, rErr := c.nameDescription(intendedState)
-	if rErr != nil {
-		return rErr
-	}
-
 	var patch []byte
 	var patchType types.PatchType
 
+	name, resourceDescription := nameDescription(intendedState)
 	versionedObject, sErr := scheme.Scheme.New(gvk)
 	_, unversioned := scheme.Scheme.IsUnversioned(intendedState)
 	switch {
@@ -202,14 +198,6 @@ func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedStat
 	return nil
 }
 
-func (c *ClientApplier) nameDescription(obj runtime.Object) (string, string, error) {
-	name, err := meta.NewAccessor().Name(obj)
-	if err != nil {
-		return "", "", errors.Wrapf(err, "could not extract name from %s", obj)
-	}
-	return name, fmt.Sprintf("%s, %s", obj.GetObjectKind().GroupVersionKind(), name), nil
-}
-
 // resource retrieves the plural resource name for the GroupVersionKind.
 func (c *ClientApplier) resource(gvk schema.GroupVersionKind) (string, error) {
 	apiResources, err := c.discoveryClient.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
@@ -224,4 +212,31 @@ func (c *ClientApplier) resource(gvk schema.GroupVersionKind) (string, error) {
 	}
 
 	return "", errors.Errorf("could not find resource for %s", gvk)
+}
+
+func nameDescription(u *unstructured.Unstructured) (string, string) {
+	name := u.GetName()
+	return name, fmt.Sprintf("%s, %s", u.GetObjectKind().GroupVersionKind(), name)
+}
+
+// lastAppliedConfiguration generates the last applied annotation from the object.
+// It removes the entire labels field, if present, from the generated annotation.
+// It populates the object with this annotation as well.
+func lastAppliedConfiguration(original *unstructured.Unstructured) ([]byte, error) {
+	// Create a copy of the object, since we will be deleting the management annotation.
+	c := original.DeepCopy()
+	l := c.GetAnnotations()
+	delete(l, v1alpha1.ResourceManagementKey)
+	c.SetAnnotations(l)
+
+	annotation, err := kubectl.GetModifiedConfiguration(c, false, unstructured.UnstructuredJSONScheme)
+	if err != nil {
+		return nil, errors.Errorf("could not serialize resource into json: %v", c)
+	}
+
+	// Set the annotation on the passed in object.
+	annots := original.GetAnnotations()
+	annots[v1.LastAppliedConfigAnnotation] = string(annotation)
+	original.SetAnnotations(annots)
+	return annotation, nil
 }

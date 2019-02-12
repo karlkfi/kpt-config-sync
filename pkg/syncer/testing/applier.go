@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // MockApplier is a mock of Applier interface
@@ -36,7 +36,7 @@ func (m *MockApplier) EXPECT() *MockApplierMockRecorder {
 }
 
 // ApplyCluster mocks base method
-func (m *MockApplier) ApplyCluster(arg0, arg1 runtime.Object) error {
+func (m *MockApplier) ApplyCluster(arg0, arg1 *unstructured.Unstructured) error {
 	ret := m.ctrl.Call(m, "ApplyCluster", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -48,7 +48,7 @@ func (mr *MockApplierMockRecorder) ApplyCluster(arg0, arg1 interface{}) *gomock.
 }
 
 // ApplyNamespace mocks base method
-func (m *MockApplier) ApplyNamespace(arg0 string, arg1, arg2 runtime.Object) error {
+func (m *MockApplier) ApplyNamespace(arg0 string, arg1, arg2 *unstructured.Unstructured) error {
 	ret := m.ctrl.Call(m, "ApplyNamespace", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -60,7 +60,7 @@ func (mr *MockApplierMockRecorder) ApplyNamespace(arg0, arg1, arg2 interface{}) 
 }
 
 // Create mocks base method
-func (m *MockApplier) Create(arg0 context.Context, arg1 runtime.Object) error {
+func (m *MockApplier) Create(arg0 context.Context, arg1 *unstructured.Unstructured) error {
 	ret := m.ctrl.Call(m, "Create", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0

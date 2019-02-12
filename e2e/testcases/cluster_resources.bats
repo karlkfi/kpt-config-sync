@@ -2,6 +2,8 @@
 
 set -u
 
+load "../lib/clusterrole"
+load "../lib/debug"
 load "../lib/git"
 load "../lib/resource"
 load "../lib/setup"
@@ -78,6 +80,23 @@ function check_cluster_scoped_resource() {
 
   # check removed
   wait::for -f -- kubectl get ${res} ${resname}
+}
+
+@test "Local kubectl apply to clusterroles gets reverted" {
+  local clusterrole_name
+  clusterrole_name="e2e-test-clusterrole"
+  debug::log "Add initial clusterrole"
+  git::add ${YAML_DIR}/clusterrole-modify.yaml acme/cluster/clusterrole.yaml
+  git::commit -m "Adds an initial clusterrole"
+
+  debug::log "Check initial state of the object"
+  wait::for -o "[get list create]" -t 10 -- \
+    kubectl get clusterroles "${clusterrole_name}" -o jsonpath='{.rules[0].verbs}'
+  debug::log "Modify the clusterrole on the apiserver to remove 'create' verb from the role"
+  kubectl apply --filename="${YAML_DIR}/clusterrole-create.yaml"
+  debug::log "Nomos should revert the permission to what it is in the source of truth"
+  wait::for -t 10 -- \
+    clusterrole::validate_management_selection ${clusterrole_name} '.rules[0].verbs' '["get","list","create"]'
 }
 
 @test "Lifecycle for clusterroles" {
