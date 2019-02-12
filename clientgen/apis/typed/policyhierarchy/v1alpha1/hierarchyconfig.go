@@ -37,7 +37,6 @@ type HierarchyConfigsGetter interface {
 type HierarchyConfigInterface interface {
 	Create(*v1alpha1.HierarchyConfig) (*v1alpha1.HierarchyConfig, error)
 	Update(*v1alpha1.HierarchyConfig) (*v1alpha1.HierarchyConfig, error)
-	UpdateStatus(*v1alpha1.HierarchyConfig) (*v1alpha1.HierarchyConfig, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v1alpha1.HierarchyConfig, error)
@@ -108,21 +107,6 @@ func (c *hierarchyConfigs) Update(hierarchyConfig *v1alpha1.HierarchyConfig) (re
 	err = c.client.Put().
 		Resource("hierarchyconfigs").
 		Name(hierarchyConfig.Name).
-		Body(hierarchyConfig).
-		Do().
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *hierarchyConfigs) UpdateStatus(hierarchyConfig *v1alpha1.HierarchyConfig) (result *v1alpha1.HierarchyConfig, err error) {
-	result = &v1alpha1.HierarchyConfig{}
-	err = c.client.Put().
-		Resource("hierarchyconfigs").
-		Name(hierarchyConfig.Name).
-		SubResource("status").
 		Body(hierarchyConfig).
 		Do().
 		Into(result)

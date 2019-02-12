@@ -94,17 +94,6 @@ func (c *FakeHierarchyConfigs) Update(hierarchyConfig *v1alpha1.HierarchyConfig)
 	return obj.(*v1alpha1.HierarchyConfig), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeHierarchyConfigs) UpdateStatus(hierarchyConfig *v1alpha1.HierarchyConfig) (*v1alpha1.HierarchyConfig, error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(hierarchyconfigsResource, "status", hierarchyConfig), &v1alpha1.HierarchyConfig{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.HierarchyConfig), err
-}
-
 // Delete takes name of the hierarchyConfig and deletes it. Returns an error if one occurs.
 func (c *FakeHierarchyConfigs) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

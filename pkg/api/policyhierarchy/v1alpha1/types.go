@@ -305,9 +305,6 @@ type HierarchyConfig struct {
 
 	// Spec is the standard spec field.
 	Spec HierarchyConfigSpec `json:"spec"`
-
-	// Status is the status for the HierarchyConfig.
-	Status SyncStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
