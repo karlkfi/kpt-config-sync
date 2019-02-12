@@ -13,22 +13,34 @@ load "../lib/setup"
 setup() {
   setup::common
   setup::git::initialize
-  setup::git::init_acme
 }
 
 teardown() {
   setup::common_teardown
 }
 
+FOOCORP_NAMESPACES=(
+  audit
+  shipping-dev
+  shipping-prod
+  shipping-staging
+)
+
 @test "All foo-corp created" {
-  git::rm acme
   # TODO(frankf): POLICY_DIR is currently set to "acme" during installation.
   # This should be resolved with new repo format.
   git::add /opt/testing/e2e/examples/foo-corp-example/foo-corp acme
   git::commit
 
-  # TODO(117440556): Wait for reconciliation to be complete.
-  sleep 15
+  local ns
+  local commit_hash
+  commit_hash="$(git::hash)"
+  for ns in "${FOOCORP_NAMESPACES[@]}"; do
+    wait::for -- policynode::sync_token_eq "${ns}" "${commit_hash}"
+  done
+  for ns in "${ACME_NAMESPACES[@]}"; do
+    wait::for -f -- kubectl get ns "${ns}"
+  done
 
   # Cluster-scoped resources
   namespace::check_exists audit \
