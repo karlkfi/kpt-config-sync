@@ -160,7 +160,6 @@ func (v *testVisitor) Check(t *testing.T) {
 	expectOrder := []string{
 		"Root",
 		"System",
-		"SystemObject nomos.dev/v1alpha1, Kind=Sync sync",
 		"SystemObject nomos.dev/v1alpha1, Kind=Repo nomos",
 		"ClusterRegistry",
 		"ClusterRegistryObject /, Kind= ",
