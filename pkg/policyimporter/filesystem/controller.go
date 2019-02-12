@@ -16,9 +16,10 @@ limitations under the License.
 package filesystem
 
 import (
-	"flag"
 	"path/filepath"
 	"time"
+
+	"github.com/google/nomos/pkg/client/action"
 
 	"github.com/golang/glog"
 	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
@@ -26,23 +27,17 @@ import (
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/policyimporter/git"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
 const resync = time.Minute * 15
-
-var syncDeleteMaxWait = flag.Duration("sync_delete_max_wait", 15*time.Second,
-	"Number of seconds to wait for Syncer to acknowledge Sync deletion")
 
 // Controller is controller for managing Nomos CRDs by importing policies from a filesystem tree.
 type Controller struct {
@@ -199,50 +194,9 @@ func (c *Controller) pollDir() {
 // If the same resource and Sync are added again in a subsequent commit, the ordering ensures that
 // the resource is restored in policy before the Syncer starts managing that type.
 func (c *Controller) updatePolicies(current, desired *v1.AllPolicies) error {
-	if err := c.syncDeletes(current, desired); err != nil {
-		return err
-	}
 	// Calculate the sequence of actions needed to transition from current to desired state.
 	a := c.differ.Diff(*current, *desired)
 	return applyActions(a)
-}
-
-// syncDeletes gets a list of Syncs to be deleted from the differ. It deletes them, and waits for
-// the deletes to be finalized.
-//
-// Failure to wait for the deletes to finalize could lead to a Sync delete racing with actions for
-// resources of the Sync's specified type. In that case, some resources actions might apply before
-// the Sync is deleted, and some after. Once the Sync is gone, Syncer will stop watching resources
-// of that type. So by not waiting, Syncer's response to those actions would be non-deterministic.
-func (c *Controller) syncDeletes(current, desired *v1.AllPolicies) error {
-	syncDeletes := c.differ.SyncDeletes(current.Syncs, desired.Syncs)
-	for _, sd := range syncDeletes {
-		if err := c.client.PolicyHierarchy().NomosV1alpha1().Syncs().Delete(sd, &metav1.DeleteOptions{}); err != nil {
-			return err
-		}
-	}
-	for _, sd := range syncDeletes {
-		exists := true
-		deadline := time.Now().Add(*syncDeleteMaxWait)
-		for exists {
-			if time.Now().After(deadline) {
-				return errors.Errorf("timeout waiting for deleted Sync %s to finalize", sd)
-			}
-
-			glog.V(1).Infof("Polling for deleted Sync %s", sd)
-			_, err := c.client.PolicyHierarchy().NomosV1alpha1().Syncs().Get(sd, metav1.GetOptions{})
-			if err == nil {
-				time.Sleep(50 * time.Millisecond)
-			} else {
-				if apierrors.IsNotFound(err) {
-					exists = false
-				} else {
-					return errors.Wrapf(err, "while polling for deleted Sync %s: ", sd)
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func applyActions(actions []action.Interface) error {

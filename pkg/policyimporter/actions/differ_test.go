@@ -355,7 +355,9 @@ func TestDiffer(t *testing.T) {
 				makeSync("", "ResourceQuota", "v1"),
 			},
 			newSyncs: []v1alpha1.Sync{},
-			expected: []string{}, // deletes are exposed through SyncDeletes method, not Diff.
+			expected: []string{
+				"nomos.dev/v1alpha1/Syncs/ResourceQuota/delete",
+			},
 		},
 	} {
 		t.Run(test.testName, func(t *testing.T) {

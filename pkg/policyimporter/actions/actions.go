@@ -16,11 +16,13 @@ limitations under the License.
 package actions
 
 import (
+	"time"
+
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
 	typedv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
@@ -145,6 +147,6 @@ func (f syncActionFactory) NewUpdate(sync v1alpha1.Sync) action.Interface {
 	return action.NewReflectiveUpdateAction("", sync.Name, updateSync, f.ReflectiveActionSpec)
 }
 
-func (f syncActionFactory) NewDelete(syncName string) action.Interface {
-	return action.NewReflectiveDeleteAction("", syncName, f.ReflectiveActionSpec)
+func (f syncActionFactory) NewDelete(syncName string, timeout time.Duration) action.Interface {
+	return action.NewBlockingReflectiveDeleteAction("", syncName, timeout, f.ReflectiveActionSpec)
 }

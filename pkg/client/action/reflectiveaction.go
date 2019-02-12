@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -428,6 +429,7 @@ func (s *ReflectiveActionBase) doUpsert() error {
 // ReflectiveDeleteAction implements a delete action for all generated client stubs.
 type ReflectiveDeleteAction struct {
 	ReflectiveActionBase
+	timeout time.Duration
 }
 
 var _ Interface = &ReflectiveDeleteAction{}
@@ -443,6 +445,21 @@ func NewReflectiveDeleteAction(
 			operation: DeleteOperation,
 			spec:      spec,
 		},
+	}
+}
+
+// NewBlockingReflectiveDeleteAction creates a new delete action given a namespace, name and spec. Note that
+// for cluster level resources namespace MUST be the empty string.
+func NewBlockingReflectiveDeleteAction(
+	namespace, name string, timeout time.Duration, spec *ReflectiveActionSpec) *ReflectiveDeleteAction {
+	return &ReflectiveDeleteAction{
+		ReflectiveActionBase: ReflectiveActionBase{
+			namespace: namespace,
+			name:      name,
+			operation: DeleteOperation,
+			spec:      spec,
+		},
+		timeout: timeout,
 	}
 }
 
@@ -480,6 +497,30 @@ func (s *ReflectiveDeleteAction) Execute() error {
 		}
 		return errors.Wrapf(err, "delete failed for %s", s)
 	}
+
+	if err := s.waitForDelete(); err != nil {
+		return err
+	}
+
 	glog.V(1).Infof("OK: %s", s)
 	return nil
+}
+
+func (s *ReflectiveDeleteAction) waitForDelete() error {
+	if s.timeout == 0 {
+		return nil
+	}
+
+	deadline := time.Now().Add(s.timeout)
+	for time.Now().Before(deadline) {
+		_, err := s.listerGet()
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			return errors.Wrapf(err, "failed to list object while waiting for delete")
+		}
+		time.Sleep(time.Millisecond * 25)
+	}
+	return errors.Errorf("%s deadline exceeded (%s)", s, s.timeout)
 }
