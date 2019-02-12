@@ -47,6 +47,12 @@ func modCluster(h *v1alpha1.HierarchicalQuota, c *ast.Cluster) *ast.Cluster {
 	return &nc
 }
 
+func addQuotaSync(s *ast.System) *ast.System {
+	ns := *s
+	ns.Objects = append(ns.Objects, &ast.SystemObject{FileObject: ast.FileObject{Object: HierarchicalQuotaSync}})
+	return &ns
+}
+
 func makeHierarchicalQuota(h *v1alpha1.HierarchicalQuotaNode) *v1alpha1.HierarchicalQuota {
 	return &v1alpha1.HierarchicalQuota{
 		TypeMeta: metav1.TypeMeta{
@@ -116,7 +122,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						},
 					}}),
 					vt.Helper.AcmeCluster()),
-				System:          vt.Helper.System(),
+				System:          addQuotaSync(vt.Helper.System()),
 				ClusterRegistry: vt.Helper.ClusterRegistry(),
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,

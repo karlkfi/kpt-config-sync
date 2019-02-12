@@ -39,6 +39,35 @@ type QuotaVisitor struct {
 
 var _ ast.Visitor = &QuotaVisitor{}
 
+// HierarchicalQuotaSync is the sync object for HierarchicalQuota.
+var HierarchicalQuotaSync = &v1alpha1.Sync{
+	TypeMeta: metav1.TypeMeta{
+		APIVersion: v1alpha1.SchemeGroupVersion.String(),
+		Kind:       "Sync",
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Name:       "hierarchicalquota",
+		Finalizers: []string{},
+	},
+	Spec: v1alpha1.SyncSpec{
+		Groups: []v1alpha1.SyncGroup{
+			{
+				Group: v1alpha1.SchemeGroupVersion.Group,
+				Kinds: []v1alpha1.SyncKind{
+					{
+						Kind: "HierarchicalQuota",
+						Versions: []v1alpha1.SyncVersion{
+							{
+								Version: v1alpha1.SchemeGroupVersion.Version,
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+}
+
 // quotaContext keeps track of the ancestry's quota policies.
 type quotaContext struct {
 	prev  *quotaContext         // previous context
@@ -115,6 +144,13 @@ func (v *QuotaVisitor) VisitRoot(c *ast.Root) *ast.Root {
 		FileObject: ast.FileObject{Object: h},
 	})
 	return newRoot
+}
+
+// VisitSystem implements Visitor.
+func (v *QuotaVisitor) VisitSystem(s *ast.System) *ast.System {
+	ns := v.Copying.VisitSystem(s)
+	ns.Objects = append(ns.Objects, &ast.SystemObject{FileObject: ast.FileObject{Object: HierarchicalQuotaSync}})
+	return ns
 }
 
 // VisitTreeNode implements Visitor
