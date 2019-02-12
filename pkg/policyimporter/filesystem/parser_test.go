@@ -1202,7 +1202,7 @@ var parserTestCases = []parserTestCase{
 			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar":                 createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName, &Policies{}),
 		},
-		expectedSyncs: singleSyncMap("", "ResourceQuota"),
+		expectedSyncs: syncMap(),
 	},
 	{
 		testName: "Policyspace dir with multiple Rolebindings",
@@ -1309,7 +1309,7 @@ var parserTestCases = []parserTestCase{
 			"system/rq.yaml":    templateData{Version: "v1", Kind: "ResourceQuota"}.apply(aSync),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
+		expectedSyncs:         syncMap(),
 	},
 	{
 		testName: "Multiple Syncs",
@@ -1320,10 +1320,7 @@ var parserTestCases = []parserTestCase{
 			"system/role.yaml":  templateData{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"}.apply(aSync),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedSyncs: syncMap(
-			makeSync("", "ResourceQuota"),
-			makeSync("rbac.authorization.k8s.io", "Role"),
-		),
+		expectedSyncs:         syncMap(),
 	},
 	{
 		testName: "Sync declares multiple versions",
@@ -2132,7 +2129,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
 				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),
@@ -2291,11 +2287,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1alpha1.ClusterNameAnnotationKey: "cluster-2",
 					}),
 			},
-			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
-			),
+			expectedSyncs: syncMap(),
 		},
 		{
 			// This shows how a namespace scoped resource doesn't get synced if
@@ -2389,8 +2381,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),
 		},
@@ -2475,8 +2465,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),
 		},
@@ -2554,9 +2542,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
 				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),
 		},
 		{
@@ -2639,7 +2625,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					}),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
 				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),
@@ -2733,9 +2718,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					nil),
 			},
 			expectedSyncs: syncMap(
-				makeSync(kinds.ResourceQuota().Group, kinds.ResourceQuota().Kind),
-				makeSync(kinds.Role().Group, kinds.Role().Kind),
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),
 		},
