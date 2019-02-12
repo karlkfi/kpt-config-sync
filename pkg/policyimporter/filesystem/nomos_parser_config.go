@@ -68,7 +68,11 @@ func (n NomosVisitorProvider) Visitors(
 		v = append(v, validation.NewQuotaValidator())
 		v = append(v, transform.NewQuotaVisitor())
 	}
-	v = append(v, transform.NewUnarySync())
+	v = append(v,
+		// TODO: remove NewSyncRemover once syncs are disallowed in system/
+		transform.NewSyncRemover(),
+		transform.NewSyncGenerator(),
+	)
 	return v
 }
 
