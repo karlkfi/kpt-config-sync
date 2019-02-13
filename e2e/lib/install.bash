@@ -15,16 +15,40 @@ function install::create_keypair() {
   ln -s "/opt/testing/e2e/id_rsa.nomos" "${HOME}/.ssh/id_rsa.nomos"
 }
 
+# Returns the number of available replicas in a deployment.
+#
+# Use this method to figure out whether a Deployment is running or not rather
+# than inspecting the underlying ReplicaSet or Pods, to avoid racing with the
+# Deployment controller.  A Deployment may remain in the "unavailable" state
+# long after underlying Pods are running.
+#
+# Args:
+#   $1: namespace
+#   $2: deployment name
+function install::available_replicas() {
+  local namespace
+  namespace="${1}"
+  local deployment
+  deployment="${2}"
 
+  kubectl get deployments --ignore-not-found \
+    -n="${namespace}" "${deployment}" \
+    -o 'jsonpath={.status.availableReplicas}'
+}
+
+# Returns 0 if the nomos deployment is up and running. Returns non-zero
+# otherwise.
 function install::nomos_running() {
-  if ! kubectl get pods -n nomos-system | grep git-policy-importer | grep Running; then
-    echo "Importer not yet running"
-    return 1
-  fi
-  if ! kubectl get pods -n nomos-system | grep syncer | grep Running; then
-    echo "Syncer not yet running"
-    return 1
-  fi
+  local deployments
+  deployments=("git-policy-importer" "syncer")
+  for deployment in "${deployments[@]}"; do
+    local res
+    res="$(install::available_replicas nomos-system "${deployment}")"
+    if [[ "${res}" == "0" ]] || [[ -z "${res}" ]]; then
+      echo "${deployment} not yet running"
+      return 1
+    fi
+  done
   return 0
 }
 
