@@ -9,9 +9,9 @@ import (
 	visitortesting "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 )
 
-func TestInheritanceValidator(t *testing.T) {
+func TestSupportedClusterResourcesValidator(t *testing.T) {
 	test := visitortesting.ObjectValidatorTest{
-		Validator: NewSupportedResourcesValidator,
+		Validator: NewSupportedClusterResourcesValidator,
 		ErrorCode: vet.UnsupportedObjectErrorCode,
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{

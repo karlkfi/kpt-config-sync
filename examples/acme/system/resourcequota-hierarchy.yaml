@@ -1,0 +1,9 @@
+kind: HierarchyConfig
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: resourcequotas
+spec:
+  resources:
+  - group: ""
+    kinds: [ "ResourceQuota" ]
+    hierarchyMode: hierarchicalQuota

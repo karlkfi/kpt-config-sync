@@ -46,7 +46,7 @@ func NewDisallowSystemObjectsValidator() *visitor.ValidatorVisitor {
 // It returns true iff the object is allowed in system/, but no other directories.
 func IsSystemOnly(gvk schema.GroupVersionKind) bool {
 	switch gvk {
-	case kinds.Repo(), kinds.Sync():
+	case kinds.Repo(), kinds.HierarchyConfig():
 		return true
 	default:
 		return false

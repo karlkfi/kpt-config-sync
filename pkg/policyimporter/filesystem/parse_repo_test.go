@@ -8,10 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/google/go-cmp/cmp"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
+	"github.com/pkg/errors"
 )
 
 type testCase string
@@ -24,11 +23,10 @@ func TestParse(t *testing.T) {
 	tests := []testCase{
 		"examples/errors",
 		"examples/parse-errors/empty-system-dir",
-		"examples/parse-errors/illegal-namespace-sync",
+		"examples/parse-errors/illegal-namespace-hierarchyconfig",
 		"examples/parse-errors/illegal-system-kind",
 		"examples/parse-errors/invalid-crd-name",
-		"examples/parse-errors/invalid-resources-sync",
-		"examples/parse-errors/kind-with-multiple-versions",
+		"examples/parse-errors/invalid-resources-hierarchyconfig",
 		"examples/parse-errors/missing-repo",
 		"examples/parse-errors/missing-system-dir",
 		"examples/parse-errors/multiple-repos",

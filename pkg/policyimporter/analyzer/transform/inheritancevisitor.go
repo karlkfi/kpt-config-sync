@@ -104,7 +104,8 @@ func (v *InheritanceVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceO
 	gk := o.GroupVersionKind().GroupKind()
 	if context.nodeType == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[gk]
-		if found && spec.Mode == v1alpha1.HierarchyModeInherit {
+		// If the mode is explicitly set to default or is omitted from the HierarchyConfig, use inherit.
+		if !found || (found && spec.Mode == v1alpha1.HierarchyModeInherit) {
 			context.inherited = append(context.inherited, o)
 			return nil
 		}

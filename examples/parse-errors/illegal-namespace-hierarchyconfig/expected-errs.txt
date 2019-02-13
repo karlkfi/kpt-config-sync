@@ -1,0 +1,9 @@
+Found issues: 1 error(s)
+
+
+[1] KNV1041: This Resource Kind MUST NOT be declared in a HierarchyConfig:
+
+source: system/config.yaml
+group:
+kind: Namespace
+

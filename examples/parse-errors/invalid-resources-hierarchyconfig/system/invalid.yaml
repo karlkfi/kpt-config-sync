@@ -1,0 +1,12 @@
+kind: HierarchyConfig
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: invalid
+spec:
+  resources:
+  - group: "nomos.dev"
+    kinds: [ "PolicyNode", "Sync" ]
+  - group: "unknown.group.com"
+    kinds: [ "Unknown" ]
+  - group: "extensions"
+    kinds: [ "CustomResourceDefinition" ]

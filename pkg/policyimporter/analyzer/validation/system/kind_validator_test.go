@@ -18,8 +18,13 @@ func TestKindValidator(t *testing.T) {
 				Object: fake.Repo("system/repo.yaml"),
 			},
 			{
-				Name:   "Sync passes",
-				Object: fake.Sync("system/sync.yaml"),
+				Name:   "HierarchyConfig passes",
+				Object: fake.HierarchyConfig("system/config.yaml"),
+			},
+			{
+				Name:       "Sync fails",
+				Object:     fake.Sync("system/sync.yaml"),
+				ShouldFail: true,
 			},
 			{
 				Name:   "HierarchyConfig passes",

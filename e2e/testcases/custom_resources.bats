@@ -38,8 +38,7 @@ function teardown() {
   resource::check crd anvils.acme.com
   resource::check crd clusteranvils.acme.com
 
-  debug::log "Creating custom resource and sync"
-  git::add "${YAML_DIR}/customresources/acme-sync.yaml" acme/system/acme-sync.yaml
+  debug::log "Creating custom resource"
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/eng/backend/anvil.yaml
   git::commit
 
@@ -50,7 +49,6 @@ function teardown() {
   kubectl delete crd anvils.acme.com --ignore-not-found=true || true
 
   debug::log "Removing anvil from repo"
-  git::rm acme/system/acme-sync.yaml
   git::rm acme/namespaces/eng/backend/anvil.yaml
   git::commit
 
@@ -67,8 +65,7 @@ function teardown() {
   resource::check crd anvils.acme.com
   resource::check crd clusteranvils.acme.com
 
-  debug::log "Updating repo with sync and custom resource"
-  git::add "${YAML_DIR}/customresources/acme-sync.yaml" acme/system/acme-sync.yaml
+  debug::log "Updating repo with custom resource"
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/eng/backend/anvil.yaml
   git::commit
 
@@ -131,8 +128,7 @@ function teardown() {
   kubectl get clusteranvil -w -oyaml > clusteranvil.log &
   WATCH_PID=$!
 
-  debug::log "Updating repo with sync and custom cluster resource"
-  git::add "${YAML_DIR}/customresources/acme-sync.yaml" acme/system/acme-sync.yaml
+  debug::log "Updating repo with custom cluster resource"
   git::add "${YAML_DIR}/customresources/clusteranvil.yaml" acme/cluster/clusteranvil.yaml
   git::commit
 

@@ -62,9 +62,6 @@ func Initialize(dir repo.FilePath) error {
 	repoDir.createDir(v1repo.SystemDir)
 	repoDir.createSystemFile(readmeFile, systemReadmeContents)
 	repoDir.createSystemFile(repoFile, repoContents)
-	repoDir.createSystemFile(rbacSyncFile, rbacSyncContents)
-	repoDir.createSystemFile(resourceQuotaSyncFile, resourceQuotaSyncContents)
-	repoDir.createSystemFile(podSecuritySyncFile, podSecuritySyncContents)
 
 	// Create cluster/
 	repoDir.createDir(v1repo.ClusterDir)

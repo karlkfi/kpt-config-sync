@@ -131,9 +131,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 		tree.NewClusterRegistryBuilderVisitor(p.readClusterRegistryResources(rootPath)),
 		tree.NewBuilderVisitor(p.readNamespaceResources(rootPath)),
 	}
-	// TODO: Delete below line once syncs are defunct.
-	syncs := processSyncs(astRoot, p.readSystemResources(rootPath), p.opts, p.errors)
-	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, syncs, p.opts.Vet)...)
+	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet)...)
 	outputVisitor := backend.NewOutputVisitor()
 	visitors = append(visitors, outputVisitor)
 	err = p.runVisitors(astRoot, visitors)
@@ -243,27 +241,6 @@ func addScope(root *ast.Root, client discovery.ServerResourcesInterface) error {
 	}
 	utildiscovery.AddAPIInfo(root, apiInfo)
 	return nil
-}
-
-// syncsToInheritanceSpecs converts Syncs to InheritanceSpecs. It also evaluates defaults so that later
-// code doesn't have to.
-func syncsToInheritanceSpecs(syncs []*v1alpha1.Sync) map[schema.GroupKind]*transform.InheritanceSpec {
-	specs := map[schema.GroupKind]*transform.InheritanceSpec{}
-	for _, sync := range syncs {
-		for _, sg := range sync.Spec.Groups {
-			for _, k := range sg.Kinds {
-				var effectiveMode v1alpha1.HierarchyModeType
-				gk := schema.GroupKind{Group: sg.Group, Kind: k.Kind}
-				if k.HierarchyMode == v1alpha1.HierarchyModeDefault {
-					effectiveMode = v1alpha1.HierarchyModeInherit
-				} else {
-					effectiveMode = k.HierarchyMode
-				}
-				specs[gk] = &transform.InheritanceSpec{Mode: effectiveMode}
-			}
-		}
-	}
-	return specs
 }
 
 // toInheritanceSpecs converts HierarchyConfigs to InheritanceSpecs. It also evaluates defaults so that later

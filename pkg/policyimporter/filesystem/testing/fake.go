@@ -399,6 +399,7 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 				Name: "nomos.dev",
 				Versions: []metav1.GroupVersionForDiscovery{
 					{Version: "v1alpha1"},
+					{Version: "v1"},
 				},
 				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1alpha1"},
 			},
@@ -408,6 +409,11 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 					{Name: "namespaceselectors", Namespaced: false, Kind: "NamespaceSelector"},
 					{Name: "repos", Namespaced: false, Kind: "Repo"},
 					{Name: "syncs", Namespaced: false, Kind: "Sync"},
+					{Name: "hierarchyconfigs", Namespaced: false, Kind: "HierarchyConfig"},
+					{Name: "policynodes", Namespaced: false, Kind: "PolicyNode"},
+				},
+				"v1": {
+					{Name: "policynodes", Namespaced: false, Kind: "PolicyNode"},
 				},
 			},
 		},

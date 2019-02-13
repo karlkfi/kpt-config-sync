@@ -37,7 +37,6 @@ type InputValidator struct {
 	*visitor.Base
 	errs             multierror.Builder
 	nodes            []*ast.TreeNode
-	syncdGVKs        map[schema.GroupVersionKind]bool
 	vet              bool
 	coverage         *coverage.ForCluster
 	inheritanceSpecs map[schema.GroupKind]*transform.InheritanceSpec
@@ -53,33 +52,16 @@ var _ ast.Visitor = &InputValidator{}
 // of selectors.  vet turns on "vetting mode", a mode of stricter control for use
 // in nomos vet.
 func NewInputValidator(
-	syncs []*v1alpha1.Sync,
 	specs map[schema.GroupKind]*transform.InheritanceSpec,
 	vet bool) *InputValidator {
 	v := &InputValidator{
 		Base:             visitor.NewBase(),
-		syncdGVKs:        toSyncdGVKs(syncs),
 		inheritanceSpecs: specs,
 		vet:              vet,
 	}
 	v.Base.SetImpl(v)
 
 	return v
-}
-
-func toSyncdGVKs(syncs []*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
-	syncdGVKs := make(map[schema.GroupVersionKind]bool)
-	for _, sync := range syncs {
-		for _, sg := range sync.Spec.Groups {
-			for _, k := range sg.Kinds {
-				for _, v := range k.Versions {
-					gvk := schema.GroupVersionKind{Group: sg.Group, Kind: k.Kind, Version: v.Version}
-					syncdGVKs[gvk] = true
-				}
-			}
-		}
-	}
-	return syncdGVKs
 }
 
 // Error returns any errors encountered during processing
@@ -134,10 +116,6 @@ func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.Namespace
 
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
-	gvk := o.GroupVersionKind()
-	if !v.syncdGVKs[gvk] && !transform.IsEphemeral(gvk) {
-		v.errs.Add(vet.UnsyncableClusterObjectError{Resource: o})
-	}
 	if v.coverage != nil {
 		v.coverage.ValidateObject(o.MetaObject(), &v.errs)
 	}
@@ -148,12 +126,6 @@ func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterOb
 func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	// TODO: Move each individual check here to its own Visitor.
 	gvk := o.GroupVersionKind()
-	if !v.syncdGVKs[gvk] && !transform.IsEphemeral(gvk) {
-		if !syntax.IsSystemOnly(gvk) {
-			// This is already checked elsewhere.
-			v.errs.Add(vet.UnsyncableNamespaceObjectError{Resource: o})
-		}
-	}
 
 	n := v.nodes[len(v.nodes)-1]
 	if n.Type == node.AbstractNamespace {

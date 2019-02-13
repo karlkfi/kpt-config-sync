@@ -1,0 +1,16 @@
+Found issues: 2 error(s)
+
+
+[1] KNV1040: HierarchyConfig defines a Resource Kind that does not exist on cluster. Ensure the Group and Kind are spelled correctly.
+
+source: system/invalid.yaml
+group: unknown.group.com
+kind: Unknown
+
+
+[2] KNV1041: This Resource Kind MUST NOT be declared in a HierarchyConfig:
+
+source: system/invalid.yaml
+group: nomos.dev
+kind: PolicyNode
+

@@ -9,53 +9,6 @@ metadata:
 spec:
   version: "0.1.0"
 `
-	rbacSyncFile     = "rbac-sync.yaml"
-	rbacSyncContents = `kind: Sync
-apiVersion: nomos.dev/v1alpha1
-metadata:
-  name: rbac
-spec:
-  groups:
-  - group: rbac.authorization.k8s.io
-    kinds:
-    - kind: ClusterRole
-      versions:
-      - version: v1
-    - kind: ClusterRoleBinding
-      versions:
-      - version: v1
-    - kind: Role
-      versions:
-      - version: v1
-    - kind: RoleBinding
-      versions:
-      - version: v1
-`
-	resourceQuotaSyncFile     = "resourcequota-sync.yaml"
-	resourceQuotaSyncContents = `kind: Sync
-apiVersion: nomos.dev/v1alpha1
-metadata:
-  name: resourcequota
-spec:
-  groups:
-  - kinds:
-    - kind: ResourceQuota
-      versions:
-      - version: v1
-`
-	podSecuritySyncFile     = "podsecuritypolicy-sync.yaml"
-	podSecuritySyncContents = `kind: Sync
-apiVersion: nomos.dev/v1alpha1
-metadata:
-  name: podsecuritypolicies
-spec:
-  groups:
-  - group: extensions
-    kinds:
-    - kind: PodSecurityPolicy
-      versions:
-      - version: v1beta1
-`
 	readmeFile         = "README.md"
 	rootReadmeContents = `# GKE Policy Management Directory
 

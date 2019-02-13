@@ -26,7 +26,6 @@ teardown() {
   local resname="e2e-test-service"
 
   debug::log "Adding service to repo"
-  git::add "${YAML_DIR}/preservefields/service-sync.yaml" acme/system/service-sync.yaml
   git::add "${YAML_DIR}/preservefields/service.yaml" acme/namespaces/eng/backend/service.yaml
   git::commit
 

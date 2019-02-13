@@ -13,7 +13,6 @@ func NewKindValidator() *visitor.ValidatorVisitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) error {
 		switch o.Object.(type) {
 		case *v1alpha1.Repo:
-		case *v1alpha1.Sync:
 		case *v1alpha1.HierarchyConfig:
 		default:
 			return vet.IllegalKindInSystemError{Resource: o}

@@ -7,9 +7,9 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 )
 
-// NewSupportedResourcesValidator initializes a ValidatorVisitor that ensures all ClusterObjects are supported
+// NewSupportedClusterResourcesValidator initializes a ValidatorVisitor that ensures all ClusterObjects are supported
 // resources.
-func NewSupportedResourcesValidator() *visitor.ValidatorVisitor {
+func NewSupportedClusterResourcesValidator() *visitor.ValidatorVisitor {
 	ensureSupported := func(o *ast.ClusterObject) error {
 		if !hierarchyconfig.AllowedInHierarchyConfigs(o.GroupVersionKind().GroupKind()) {
 			return vet.UnsupportedObjectError{Resource: o}

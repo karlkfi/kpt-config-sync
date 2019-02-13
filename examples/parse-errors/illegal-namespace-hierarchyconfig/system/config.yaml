@@ -1,0 +1,8 @@
+kind: HierarchyConfig
+apiVersion: nomos.dev/v1alpha1
+metadata:
+  name: namespace
+spec:
+  resources:
+  - group: ""
+    kinds: [ "Namespace" ]

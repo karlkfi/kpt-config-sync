@@ -5,5 +5,5 @@ metadata:
 spec:
   resources:
   - group: rbac.authorization.k8s.io
-    kinds: [ "ClusterRole" ]
-    hierarchyMode: none
+    kinds: [ "RoleBinding" ]
+    hierarchyMode: inherit
