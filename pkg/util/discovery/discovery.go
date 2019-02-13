@@ -103,7 +103,7 @@ func (a *APIInfo) AllowedVersions(gk schema.GroupKind) []string {
 }
 
 // GroupVersionKinds returns a set of GroupVersionKinds represented by the slice of Syncs with only Group and Kind specified.
-func (a *APIInfo) GroupVersionKinds(syncs ...*v1alpha1.Sync) (map[schema.GroupVersionKind]bool, error) {
+func (a *APIInfo) GroupVersionKinds(syncs ...*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
 	gvks := make(map[schema.GroupVersionKind]bool)
 	for gk := range sync.GroupKinds(syncs...) {
 		for _, v := range a.AllowedVersions(gk) {
@@ -115,5 +115,5 @@ func (a *APIInfo) GroupVersionKinds(syncs ...*v1alpha1.Sync) (map[schema.GroupVe
 			gvks[gvk] = true
 		}
 	}
-	return gvks, nil
+	return gvks
 }

@@ -72,10 +72,7 @@ func NewGenericResourceManager(mgr manager.Manager, cfg *rest.Config) *GenericRe
 // UpdateSyncResources implements RestartableManager.
 func (r *GenericResourceManager) UpdateSyncResources(syncs []*nomosv1alpha1.Sync, apirs *discovery.APIInfo,
 	startErrCh chan error) error {
-	actual, err := apirs.GroupVersionKinds(syncs...)
-	if err != nil {
-		return errors.Wrapf(err, "could not look up GroupVersionKinds of Syncs")
-	}
+	actual := apirs.GroupVersionKinds(syncs...)
 	if reflect.DeepEqual(actual, r.syncEnabled) {
 		// The set of sync-enabled resources hasn't changed. There is no need to restart.
 		return nil
@@ -84,6 +81,7 @@ func (r *GenericResourceManager) UpdateSyncResources(syncs []*nomosv1alpha1.Sync
 	r.stopCh = make(chan struct{})
 	glog.Info("Stopping GenericResourceManager")
 
+	var err error
 	r.Manager, err = manager.New(rest.CopyConfig(r.baseCfg), manager.Options{})
 	if err != nil {
 		return errors.Wrap(err, "could not start GenericResourceManager")
@@ -104,10 +102,7 @@ func (r *GenericResourceManager) Clear() {
 func (r *GenericResourceManager) register(apirs *discovery.APIInfo, syncs []*nomosv1alpha1.Sync) error {
 	scheme := r.GetScheme()
 	nomosapischeme.AddToScheme(scheme)
-	enabled, err := apirs.GroupVersionKinds(syncs...)
-	if err != nil {
-		return err
-	}
+	enabled := apirs.GroupVersionKinds(syncs...)
 	r.syncEnabled = enabled
 	for gvk := range r.syncEnabled {
 		if !scheme.Recognizes(gvk) {

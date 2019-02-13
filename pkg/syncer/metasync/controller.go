@@ -26,6 +26,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachinerytypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/kubernetes/scheme"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -51,7 +54,18 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 	}
 	// Set up a meta controller that restarts GenericResource controllers when Syncs change.
 	startErrCh := make(chan error)
-	reconciler, err := NewMetaReconciler(client.New(mgr.GetClient()), mgr.GetCache(), mgr.GetConfig(), dc, startErrCh)
+	clientFactory := func() (runtimeclient.Client, error) {
+		cfg := mgr.GetConfig()
+		mapper, err2 := apiutil.NewDiscoveryRESTMapper(cfg)
+		if err2 != nil {
+			return nil, errors.Wrapf(err2, "failed to create mapper during gc")
+		}
+		return runtimeclient.New(cfg, runtimeclient.Options{
+			Scheme: scheme.Scheme,
+			Mapper: mapper,
+		})
+	}
+	reconciler, err := NewMetaReconciler(client.New(mgr.GetClient()), mgr.GetCache(), mgr.GetConfig(), dc, clientFactory, startErrCh)
 	if err != nil {
 		return errors.Wrap(err, "could not create meta reconciler")
 	}

@@ -22,11 +22,40 @@ setup() {
 function teardown() {
   kubectl delete crd anvils.acme.com --ignore-not-found=true || true
   kubectl delete crd clusteranvils.acme.com --ignore-not-found=true || true
+  wait::for -f -t 30 -- kubectl get crd anvils.acme.com
+  wait::for -f -t 30 -- kubectl get crd clusteranvils.acme.com
   if [[ "$WATCH_PID" != "" ]]; then
     kill $WATCH_PID || true
     WATCH_PID=""
   fi
   setup::common_teardown
+}
+
+@test "CRD deleted before repo update" {
+  local resname="e2e-test-anvil"
+  kubectl apply -f "${YAML_DIR}/customresources/anvil-crd.yaml"
+  kubectl apply -f "${YAML_DIR}/customresources/clusteranvil-crd.yaml"
+  resource::check crd anvils.acme.com
+  resource::check crd clusteranvils.acme.com
+
+  debug::log "Creating custom resource and sync"
+  git::add "${YAML_DIR}/customresources/acme-sync.yaml" acme/system/acme-sync.yaml
+  git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/eng/backend/anvil.yaml
+  git::commit
+
+  debug::log "Custom resource exists on cluster"
+  wait::for -t 30 -- kubectl get anvil ${resname} -n backend
+
+  debug::log "Removing CRD for custom resource"
+  kubectl delete crd anvils.acme.com --ignore-not-found=true || true
+
+  debug::log "Removing anvil from repo"
+  git::rm acme/system/acme-sync.yaml
+  git::rm acme/namespaces/eng/backend/anvil.yaml
+  git::commit
+
+  debug::log "Waiting for sync removal"
+  wait::for -f -t 10 -- kubectl get sync anvils.acme.com
 }
 
 @test "Sync custom namespace scoped resource" {
@@ -84,7 +113,7 @@ function teardown() {
   debug::log "Remove all custom resource from cluster"
   git::rm acme/namespaces/rnd/new-prj/anvil.yaml
   git::commit
-  kubectl delete anvil ${resname} -n newer-prj
+  #kubectl delete anvil ${resname} -n newer-prj
 
   debug::log "Checking that no custom resources exist on cluster"
   wait::for -t 30 -f -- kubectl get anvil ${resname} --all-namespaces

@@ -133,6 +133,9 @@ func TestReconcile(t *testing.T) {
 				cache:                  mockCache,
 				discoveryClient:        mockDiscovery,
 				genericResourceManager: mockManager,
+				clientFactory: func() (client.Client, error) {
+					return mockClient, nil
+				},
 			}
 
 			mockCache.EXPECT().

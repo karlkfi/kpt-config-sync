@@ -47,6 +47,9 @@ const reconcileTimeout = time.Minute * 5
 
 var _ reconcile.Reconciler = &MetaReconciler{}
 
+// ClientFactory is a function used for creating new controller-runtime clients.
+type ClientFactory func() (client.Client, error)
+
 // MetaReconciler reconciles Syncs. It responds to changes in Syncs and causes genericResourceManager to stop and start
 // controllers based on the resources that are presently sync-enabled.
 type MetaReconciler struct {
@@ -61,12 +64,18 @@ type MetaReconciler struct {
 	genericResourceManager syncermanager.RestartableManager
 	// mgrStartErrCh is used to listen for errors when (re)starting genericResourceManager.
 	mgrStartErrCh chan error
+	// clientFactory returns a new dynamic client.
+	clientFactory ClientFactory
 }
 
 // NewMetaReconciler returns a new MetaReconciler that reconciles changes in Syncs.
-func NewMetaReconciler(client *syncerclient.Client, cache cache.Cache, cfg *rest.Config,
-	dc discovery.DiscoveryInterface, errCh chan error) (*MetaReconciler,
-	error) {
+func NewMetaReconciler(
+	client *syncerclient.Client,
+	cache cache.Cache,
+	cfg *rest.Config,
+	dc discovery.DiscoveryInterface,
+	clientFactory ClientFactory,
+	errCh chan error) (*MetaReconciler, error) {
 	mgr, err := manager.New(cfg, manager.Options{})
 	if err != nil {
 		return nil, err
@@ -75,6 +84,7 @@ func NewMetaReconciler(client *syncerclient.Client, cache cache.Cache, cfg *rest
 	return &MetaReconciler{
 		client:                 client,
 		cache:                  cache,
+		clientFactory:          clientFactory,
 		genericResourceManager: syncermanager.NewGenericResourceManager(mgr, cfg),
 		discoveryClient:        dc,
 		mgrStartErrCh:          errCh,
@@ -96,15 +106,10 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	var toFinalize []*v1alpha1.Sync
 	var enabled []*v1alpha1.Sync
-	for _, s := range syncs.Items {
+	for idx, s := range syncs.Items {
 		if s.GetDeletionTimestamp() != nil {
-			// Check if Syncer finalizer is present, before including it in the list of syncs to finalize.
-			finalizers := sets.NewString(s.GetFinalizers()...)
-			if finalizers.Has(v1alpha1.SyncFinalizer) {
-				finalizers.Delete(v1alpha1.SyncFinalizer)
-				s.SetFinalizers(finalizers.UnsortedList())
-				toFinalize = append(toFinalize, &s)
-			}
+			// Check for finalizer then finalize if needed.
+			toFinalize = append(toFinalize, &syncs.Items[idx])
 		} else {
 			// Anything not pending delete should be enabled in GenericResourceManager.
 			enabled = append(enabled, s.DeepCopy())
@@ -132,17 +137,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	// Finalize Syncs that have not already been finalized.
 	for _, tf := range toFinalize {
 		// Make sure to delete all Sync-managed resource before finalizing the Sync.
-		gvks, err := apirs.GroupVersionKinds(tf)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		r.gcResources(ctx, gvks, errBuilder)
-		if errBuilder.HasErrors() {
-			bErr := errBuilder.Build()
-			glog.Errorf("Could not remove managed resources before sync finalization: %v", bErr)
-			return reconcile.Result{}, bErr
-		}
-		errBuilder.Add(errors.Wrap(r.client.Upsert(ctx, tf), "could not finalize sync pending delete"))
+		errBuilder.Add(r.finalizeSync(ctx, tf, apirs))
 	}
 
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
@@ -184,30 +179,57 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	return reconcile.Result{}, bErr
 }
 
-func (r *MetaReconciler) gcResources(ctx context.Context, gvks map[schema.GroupVersionKind]bool,
-	errBuilder multierror.Builder) {
+func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1alpha1.Sync, apiInfo *utildiscovery.APIInfo) error {
+	// Check if Syncer finalizer is present before finalize.
+	finalizers := sets.NewString(sync.GetFinalizers()...)
+	if !finalizers.Has(v1alpha1.SyncFinalizer) {
+		glog.V(2).Infof("Sync %s already finalized", sync.Name)
+		return nil
+	}
+
+	sync = sync.DeepCopy()
+	finalizers.Delete(v1alpha1.SyncFinalizer)
+	sync.SetFinalizers(finalizers.UnsortedList())
+
+	glog.Infof("Beginning Sync finalize for %s", sync.Name)
+	if err := r.gcResources(ctx, sync, apiInfo); err != nil {
+		return err
+	}
+	return errors.Wrap(r.client.Upsert(ctx, sync), "could not finalize sync pending delete")
+}
+
+func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1alpha1.Sync, apiInfo *utildiscovery.APIInfo) error {
 	managed := labels.SelectorFromSet(labels.Set{labeling.ResourceManagementKey: labeling.Enabled})
+
 	// It doesn't matter which version we choose when deleting.
 	// Deletes to a resource of a particular version affect all versions with the same group and kind.
+	gvks := apiInfo.GroupVersionKinds(sync)
+	if len(gvks) == 0 {
+		glog.Warningf("Could not find a gvk for %s, CRD may have been deleted, skipping garbage collection.", sync.Name)
+		return nil
+	}
 	var gvk schema.GroupVersionKind
 	for k := range gvks {
 		gvk = k
 		break
 	}
-	if gvk.Empty() {
-		errBuilder.Add(errors.New("could not extract a GroupVersionKind from Syncs"))
-		return
+	// Create a new dynamic client since it's possible that the manager client is reading from the
+	// cache.
+	cl, err := r.clientFactory()
+	if err != nil {
+		return errors.Wrapf(err, "failed to create dynamic client during gc")
 	}
 	gvk.Kind += "List"
 	ul := &unstructured.UnstructuredList{}
 	ul.SetGroupVersionKind(gvk)
-	if err := r.client.List(ctx, &client.ListOptions{LabelSelector: managed}, ul); err != nil {
-		errBuilder.Add(errors.Wrapf(err, "could not list %s resources", gvk))
-		return
+	if err := cl.List(ctx, &client.ListOptions{LabelSelector: managed}, ul); err != nil {
+		return errors.Wrapf(err, "could not list %s resources", gvk)
 	}
+	errBuilder := &multierror.Builder{}
 	for _, u := range ul.Items {
-		if err := r.client.Delete(ctx, &u); err != nil {
+		if err := cl.Delete(ctx, &u); err != nil {
 			errBuilder.Add(errors.Wrapf(err, "could not delete %s resource: %v", gvk, u))
 		}
 	}
+	return errBuilder.Build()
 }
