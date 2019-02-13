@@ -44,6 +44,7 @@ function cleanup() {
   pkill -f "kubectl -n=nomos-system-test port-forward.*2222:22" || true
   echo "taking down nomos-system-test namespace"
   kubectl delete --ignore-not-found ns nomos-system-test
+  wait::for -f -t 100 -- kubectl get ns nomos-system-test
   kubectl delete --ignore-not-found secrets git-creds -n nomos-system
 
   echo "Nomos test resources uninstalled"
@@ -55,7 +56,7 @@ cleanup
 
 install
 
-trap cleanup EXIT
+trap cleanup SIGTERM SIGINT EXIT
 exitcode=0
 echo "Starting Nomos tests"
 result_file="${REPORT_DIR}/results.bats"

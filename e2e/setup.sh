@@ -109,11 +109,7 @@ function clean_up_test_resources() {
   pkill -f "kubectl -n=nomos-system-test port-forward.*${FWD_SSH_PORT}:22" || true
   echo "  taking down nomos-system-test namespace"
   kubectl delete --ignore-not-found ns nomos-system-test
-  while kubectl get ns nomos-system-test > /dev/null 2>&1
-  do
-    sleep 3
-    echo -n "."
-  done
+  wait::for -f -t 100 -- kubectl get ns nomos-system-test
 }
 
 function clean_up() {
@@ -357,7 +353,7 @@ else
 fi
 
 # Always run clean_up before exit at this point
-trap post_clean EXIT
+trap post_clean SIGTERM SIGINT EXIT
 
 if $run_tests; then
   main "${file_filter}"
