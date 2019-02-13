@@ -3,10 +3,7 @@
 # framework. The script that actually runs this image is in the Syllogi repo at
 # https://gke-internal.googlesource.com/syllogi/cluster-management/+/master/test-infra/scripts/
 
-# TODO(b/123344431): The git server image must be publicly visible right now due to this bug.
-# Change this to project `syllogi-ci` once the bug is resolved.
-image-e2e-syllogi: E2E_GIT_PROJECT=syllogi-ci
-image-e2e-syllogi: E2E_GIT_IMAGE_SECRET=-\ name:\ private-registry-creds
+image-e2e-syllogi: E2E_GIT_PROJECT=nomos-release
 image-e2e-syllogi: image-e2e-tests build/e2e-tests/Dockerfile.syllogi
 	@echo "+++ Building the e2e syllogi image"
 	@docker build \
