@@ -28,7 +28,7 @@ func NewHierarchyConfigKindValidator() *visitor.ValidatorVisitor {
 
 // ValidateKinds ensures that only supported Resource Kinds are declared in HierarchyConfigs.
 func ValidateKinds(config FileGroupKindHierarchyConfig) error {
-	if allowedInHierarchyConfigs(config.GroupKind()) {
+	if AllowedInHierarchyConfigs(config.GroupKind()) {
 		return nil
 	}
 	return vet.UnsupportedResourceInHierarchyConfigError{
@@ -36,8 +36,8 @@ func ValidateKinds(config FileGroupKindHierarchyConfig) error {
 	}
 }
 
-// allowedInHierarchyConfigs returns true if the passed GroupKind is allowed to be declared in HierarchyConfigs.
-func allowedInHierarchyConfigs(gk schema.GroupKind) bool {
+// AllowedInHierarchyConfigs returns true if the passed GroupKind is allowed to be declared in HierarchyConfigs.
+func AllowedInHierarchyConfigs(gk schema.GroupKind) bool {
 	return !unsupportedHierarchyConfigResources()[gk] && gk.Group != policyhierarchy.GroupName && gk.Kind != ""
 }
 

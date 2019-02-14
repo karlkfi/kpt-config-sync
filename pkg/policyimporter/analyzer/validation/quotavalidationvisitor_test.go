@@ -1,6 +1,8 @@
 package validation
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -8,12 +10,9 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"testing"
 )
 
 func makeQuota(includeScopes bool, includeScopeSelector bool) *corev1.ResourceQuota {
@@ -85,7 +84,6 @@ var testcases = []quotaValidationVisitorTestCase{
 	{
 		name:  "no scoping",
 		input: makeTree(makeQuota(false, false)),
-		//error: []string{veterrors.UnknownResourceVersionInSyncErrorCode},
 	},
 	{
 		name:  "set Scopes",
