@@ -101,8 +101,10 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   clean_test_configmaps
   git::add /opt/testing/e2e/examples/acme/namespaces/rnd acme/namespaces/rnd/
   git::commit
-  wait::for kubectl get ns new-prj
-  wait::for kubectl get ns newer-prj
+
+  wait::for -- kubectl get -n new-prj resourcequota nomos-resource-quota
+  wait::for -- kubectl get -n newer-prj resourcequota nomos-resource-quota
+
   run kubectl create configmap map1 -n new-prj
   assert::contains "created"
   run kubectl create configmap map2 -n newer-prj
