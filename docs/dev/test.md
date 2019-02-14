@@ -44,6 +44,32 @@ Or by file name:
 make test-e2e-git E2E_FLAGS="--file_filter acme"
 ```
 
+## E2E Tests with a custom Operator
+
+The e2e tests install Nomos using the Nomos operator, the code for which lives in the
+[nomos-operator
+repo](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/).
+By default, e2e tests run against the latest release of the operator. However,
+you can run e2e tests against your own build of the operator by doing the
+following:
+
+Check out the `cluster-operators` repo. Instructions can be found in
+[the nomos-operator readme](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/+/master/nomos-operator/README.md#clone-the-git-repo)
+
+Once you have made the changes you wish to test in that repository, run
+
+```console
+make release-user
+```
+
+This pushes your repo's version of the nomos-operator to a user-private
+location in GCR.
+
+Then, return to the main nomos repo and run tests with the `-user` target:
+```console
+make test-e2e-git-user E2E_FLAGS="--file_filter acme"
+```
+
 ## Isolating setup, tests, and cleanup.
 
 The e2e test suite starts with a suite setup, then runs tests, and finally does a cleanup.

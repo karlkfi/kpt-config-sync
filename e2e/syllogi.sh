@@ -56,7 +56,16 @@ cleanup
 
 install
 
-trap cleanup SIGTERM SIGINT EXIT
+# Always clean up on exit
+trap cleanup EXIT
+
+# Trapping EXIT without trapping SIGTERM/SIGINT causes the docker container
+# running the tests to fail to exit.
+# More detail from our experience report here:
+# https://stackoverflow.com/questions/54699272/docker-hangs-on-sigint-when-script-traps-exit
+# Note that ":" is the bashism for no-op; it evals to true.
+trap : SIGTERM SIGINT
+
 exitcode=0
 echo "Starting Nomos tests"
 result_file="${REPORT_DIR}/results.bats"
