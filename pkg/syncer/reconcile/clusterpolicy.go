@@ -153,14 +153,16 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1
 func decorateAsClusterManaged(declaredInstances []*unstructured.Unstructured, policy *v1.ClusterPolicy) {
 	for _, decl := range declaredInstances {
 		// Label the resource as Nomos managed.
+		// TODO(124386983): No longer label managed resources with the nomos-managed label.
 		decl.SetLabels(labeling.ManageResource.AddDeepCopy(decl.GetLabels()))
-		// Annotate the resource with the current version token.
 		a := decl.GetAnnotations()
 		if a == nil {
-			a = map[string]string{v1alpha1.SyncTokenAnnotationKey: policy.Spec.ImportToken}
-		} else {
-			a[v1alpha1.SyncTokenAnnotationKey] = policy.Spec.ImportToken
+			a = map[string]string{}
 		}
+		// Annotate the resource with the current version token.
+		a[v1alpha1.SyncTokenAnnotationKey] = policy.Spec.ImportToken
+		// Annotate the resource as Nomos managed.
+		a[v1alpha1.ResourceManagementKey] = v1alpha1.ResourceManagementValue
 		decl.SetAnnotations(a)
 	}
 }

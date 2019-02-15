@@ -21,6 +21,7 @@ package differ
 import (
 	"fmt"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -55,12 +56,12 @@ func (d Diff) ActualResourceIsManaged() bool {
 		return false
 	}
 
-	labels := d.Actual.GetLabels()
-	if labels == nil {
+	annots := d.Actual.GetAnnotations()
+	if annots == nil {
 		return false
 	}
 
-	value, ok := labels[labeling.ResourceManagementKey]
+	value, ok := annots[v1alpha1.ResourceManagementKey]
 	if !ok {
 		return false
 	}

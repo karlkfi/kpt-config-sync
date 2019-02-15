@@ -86,6 +86,9 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:   "my-persistentvolume",
 						Labels: labeling.ManageResource.New(),
+						Annotations: map[string]string{
+							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
 						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimDelete,
@@ -104,6 +107,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 							Labels: labeling.ManageResource.New(),
 							Annotations: map[string]string{
 								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
 							},
 						},
 						Spec: corev1.PersistentVolumeSpec{
@@ -118,6 +122,9 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:   "my-persistentvolume",
 							Labels: labeling.ManageResource.New(),
+							Annotations: map[string]string{
+								v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+							},
 						},
 						Spec: corev1.PersistentVolumeSpec{
 							PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimDelete,
@@ -188,6 +195,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						Labels: labeling.ManageResource.New(),
 						Annotations: map[string]string{
 							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
 						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
@@ -207,6 +215,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 							Labels: labeling.ManageResource.New(),
 							Annotations: map[string]string{
 								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
 							},
 						},
 						Spec: corev1.PersistentVolumeSpec{
@@ -223,6 +232,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 							Labels: labeling.ManageResource.New(),
 							Annotations: map[string]string{
 								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
 							},
 						},
 						Spec: corev1.PersistentVolumeSpec{
@@ -334,6 +344,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						Labels: labeling.ManageResource.New(),
 						Annotations: map[string]string{
 							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
 						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
@@ -386,6 +397,9 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:   "my-persistentvolume",
 						Labels: labeling.ManageResource.New(),
+						Annotations: map[string]string{
+							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
 						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
@@ -401,6 +415,9 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:   "my-persistentvolume",
 						Labels: labeling.ManageResource.New(),
+						Annotations: map[string]string{
+							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						},
 					},
 					Spec: corev1.PersistentVolumeSpec{
 						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,

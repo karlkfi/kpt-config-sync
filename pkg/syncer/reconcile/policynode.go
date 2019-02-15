@@ -152,12 +152,12 @@ func (r *PolicyNodeReconciler) getNamespaceState(
 		return namespaceStateNotFound, nil, errors.Wrapf(err, "got unhandled lister error")
 	}
 
-	value, found := ns.Labels[labeling.ResourceManagementKey]
+	value, found := ns.Annotations[v1alpha1.ResourceManagementKey]
 	if !found {
 		return namespaceStateExists, ns, nil
 	}
 
-	if value == labeling.Enabled {
+	if value == v1alpha1.ResourceManagementValue {
 		return namespaceStateManageFull, ns, nil
 	}
 
@@ -171,8 +171,8 @@ func (r *PolicyNodeReconciler) getNamespaceState(
 	)
 	*syncErrs = append(*syncErrs, v1.PolicyNodeSyncError{
 		ErrorMessage: fmt.Sprintf("Namespace has invalid management label %s=%s should be %s=%s or unset",
-			labeling.ResourceManagementKey, value,
-			labeling.ResourceManagementKey, labeling.Enabled),
+			v1alpha1.ResourceManagementKey, value,
+			v1alpha1.ResourceManagementKey, v1alpha1.ResourceManagementValue),
 	})
 	return namespaceStateExists, ns, nil
 }
@@ -196,6 +196,11 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 		switch nsState {
 		case namespaceStateNotFound: // noop
 		case namespaceStateExists:
+			if err := r.cleanUpLabel(ctx, ns); err != nil {
+				syncErrs = append(syncErrs, v1.PolicyNodeSyncError{
+					ErrorMessage: fmt.Sprintf("Failed to remove management label from namespace: %s", err.Error()),
+				})
+			}
 			r.warnUndeclaredNamespace(ns)
 		case namespaceStateManageFull:
 			return r.deleteNamespace(ctx, ns)
@@ -273,6 +278,22 @@ func (r *PolicyNodeReconciler) warnNoLabelResource(u *unstructured.Unstructured)
 		"%q is declared in the source of truth but does not have a management label", gvk)
 }
 
+// cleanUpLabel removes the nomos managed label from the namespace, if present.
+func (r *PolicyNodeReconciler) cleanUpLabel(ctx context.Context, ns *corev1.Namespace) error {
+	if _, ok := ns.GetLabels()[v1alpha1.ResourceManagementKey]; !ok {
+		return nil
+	}
+
+	_, err := r.client.Update(ctx, ns, func(o runtime.Object) (runtime.Object, error) {
+		nso := o.(*corev1.Namespace)
+		ls := nso.GetLabels()
+		delete(ls, v1alpha1.ResourceManagementKey)
+		nso.SetLabels(ls)
+		return nso, nil
+	})
+	return err
+}
+
 func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, node *v1.PolicyNode, syncErrs []v1.PolicyNodeSyncError) error {
 	var errBuilder multierror.Builder
 	reconcileCount := 0
@@ -321,14 +342,16 @@ func decorateAsManaged(declaredInstances []*unstructured.Unstructured, node *v1.
 	for _, decl := range declaredInstances {
 		decl.SetNamespace(node.GetName())
 		// Label the resource as Nomos managed.
+		// TODO(124386983): No longer label managed resources with the nomos-managed label.
 		decl.SetLabels(labeling.ManageResource.AddDeepCopy(decl.GetLabels()))
-		// Annotate the resource with the current version token.
 		a := decl.GetAnnotations()
 		if a == nil {
-			a = map[string]string{v1alpha1.SyncTokenAnnotationKey: node.Spec.ImportToken}
-		} else {
-			a[v1alpha1.SyncTokenAnnotationKey] = node.Spec.ImportToken
+			a = map[string]string{}
 		}
+		// Annotate the resource with the current version token.
+		a[v1alpha1.SyncTokenAnnotationKey] = node.Spec.ImportToken
+		// Annotate the resource as Nomos managed.
+		a[v1alpha1.ResourceManagementKey] = v1alpha1.ResourceManagementValue
 		decl.SetAnnotations(a)
 	}
 }
@@ -411,7 +434,12 @@ func asNamespace(policyNode *v1.PolicyNode) *corev1.Namespace {
 func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *v1.PolicyNode) *corev1.Namespace {
 	labels := labeling.ManageResource.AddDeepCopy(policyNode.Labels)
 	namespace.Labels = labels
-	namespace.Annotations = policyNode.Annotations
+	if as := policyNode.Annotations; as == nil {
+		namespace.Annotations = map[string]string{}
+	} else {
+		namespace.Annotations = policyNode.Annotations
+	}
+	namespace.Annotations[v1alpha1.ResourceManagementKey] = v1alpha1.ResourceManagementValue
 	namespace.Name = policyNode.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())
 	return namespace

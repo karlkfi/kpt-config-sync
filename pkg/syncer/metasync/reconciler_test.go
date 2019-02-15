@@ -22,11 +22,9 @@ import (
 	"github.com/golang/mock/gomock"
 	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/labeling"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -188,10 +186,8 @@ func TestReconcile(t *testing.T) {
 				mockClient.EXPECT().
 					Update(gomock.Any(), gomock.Eq(&wantUpdateListDelete.update))
 
-				managed := labels.SelectorFromSet(labels.Set{labeling.ResourceManagementKey: labeling.Enabled})
-				listOptions := &client.ListOptions{LabelSelector: managed}
 				mockClient.EXPECT().
-					List(gomock.Any(), gomock.Eq(listOptions), gomock.Eq(&wantUpdateListDelete.list))
+					List(gomock.Any(), gomock.Eq(&client.ListOptions{}), gomock.Eq(&wantUpdateListDelete.list))
 			}
 
 			mockClient.EXPECT().Status().Times(len(tc.wantStatusUpdates)).Return(mockStatusClient)

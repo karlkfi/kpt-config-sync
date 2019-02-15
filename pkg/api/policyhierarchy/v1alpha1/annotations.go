@@ -45,6 +45,13 @@ const (
 	// SyncTokenAnnotationKey is the annotation key representing the last version token that a Nomos-
 	// managed resource was successfully synced from.
 	SyncTokenAnnotationKey = NomosPrefix + "sync-token"
+
+	// ResourceManagementKey indicates if Nomos will manage the content and lifecycle for the resource.
+	ResourceManagementKey = NomosPrefix + "managed"
+
+	// ResourceManagementValue is the value corresponding to ResourceManagementKey indicating that
+	// Nomos will manage content and lifecycle for the given resource.
+	ResourceManagementValue = "enabled"
 )
 
 // HasNomosPrefix returns true if the string begins with the Nomos annotation prefix.
@@ -70,6 +77,7 @@ var nomosAnnotations = map[string]bool{
 	NamespaceSelectorAnnotationKey: true,
 	SourcePathAnnotationKey:        true,
 	SyncTokenAnnotationKey:         true,
+	ResourceManagementKey:          true,
 }
 
 // IsAnnotation returns true if the annotation is a nomos system annotation.

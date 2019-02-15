@@ -24,13 +24,11 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/labeling"
 	syncermanager "github.com/google/nomos/pkg/syncer/manager"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
@@ -191,8 +189,6 @@ func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1alpha1.Sync, 
 }
 
 func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1alpha1.Sync, apiInfo *utildiscovery.APIInfo) error {
-	managed := labels.SelectorFromSet(labels.Set{labeling.ResourceManagementKey: labeling.Enabled})
-
 	// It doesn't matter which version we choose when deleting.
 	// Deletes to a resource of a particular version affect all versions with the same group and kind.
 	gvks := apiInfo.GroupVersionKinds(sync)
@@ -214,11 +210,15 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1alpha1.Sync, a
 	gvk.Kind += "List"
 	ul := &unstructured.UnstructuredList{}
 	ul.SetGroupVersionKind(gvk)
-	if err := cl.List(ctx, &client.ListOptions{LabelSelector: managed}, ul); err != nil {
+	if err := cl.List(ctx, &client.ListOptions{}, ul); err != nil {
 		return errors.Wrapf(err, "could not list %s resources", gvk)
 	}
 	errBuilder := &multierror.Builder{}
 	for _, u := range ul.Items {
+		annots := u.GetAnnotations()
+		if v, ok := annots[v1alpha1.ResourceManagementKey]; !ok || v != v1alpha1.ResourceManagementValue {
+			continue
+		}
 		if err := cl.Delete(ctx, &u); err != nil {
 			errBuilder.Add(errors.Wrapf(err, "could not delete %s resource: %v", gvk, u))
 		}

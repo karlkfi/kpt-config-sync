@@ -229,10 +229,12 @@ function resource::check_count() {
 # Flags:
 #  -n [namespace] get the count for a namespaced resource
 #  -l [selector] use a selector during list
+#  -a [annotation] filter by annotation
 #  -r [resource] the resource, eg clusterrole
 function resource::count() {
   local namespace=""
   local selector=""
+  local annotation=""
   local resource=""
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
@@ -244,6 +246,10 @@ function resource::count() {
       ;;
       -l)
         selector=${1:-}
+        shift
+      ;;
+      -a)
+        annotation=${1:-}
         shift
       ;;
       -r)
@@ -258,7 +264,7 @@ function resource::count() {
   done
   [ -n "$resource" ] || (echo "Must specify -r [resource]" >&3; return 1)
 
-  local cmd=("kubectl" "get" "$resource")
+  local cmd=("kubectl" "get" "$resource" "-o" "json")
   if [[ "$namespace" != "" ]]; then
     cmd+=(-n "$namespace")
   fi
@@ -273,9 +279,17 @@ function resource::count() {
     debug::error "Command" "${cmd[@]}" "failed, output ${output}"
     return 1
   fi
+
   local count=0
-  if [[ "$output" != "No resources found." ]]; then
-    count=$(( $(echo "$output" | wc -l) - 1 ))
+  if [[ "$annotation" != "" ]]; then
+    local key=""
+    local value=""
+    key=$(cut -d'=' -f1 <<<"${annotation}")
+    value=$(cut -d'=' -f2 <<<"${annotation}")
+    count=$(echo "$output" | jq -c ".items | select( .[].metadata.annotations.\"${key}\" == \"${value}\" )" | wc -l)
+  else
+    count=$(echo "$output" | jq '.items | length')
   fi
-  echo $count
+
+  echo "$count"
 }

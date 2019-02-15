@@ -33,7 +33,6 @@ var converter = runtime.DefaultUnstructuredConverter
 type TestItem struct {
 	name        string
 	value       string
-	labels      map[string]string
 	annotations map[string]string
 }
 
@@ -41,7 +40,6 @@ func (ti TestItem) Object(t *testing.T) *unstructured.Unstructured {
 	obj := &nomosv1.ClusterPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        ti.name,
-			Labels:      ti.labels,
 			Annotations: ti.annotations,
 		},
 		Spec: nomosv1.ClusterPolicySpec{
@@ -227,10 +225,10 @@ func TestComparator(t *testing.T) {
 
 func TestActualResourceIsManaged(t *testing.T) {
 	testcases := []struct {
-		name      string
-		actualNil bool
-		labels    map[string]string
-		want      bool
+		name        string
+		actualNil   bool
+		annotations map[string]string
+		want        bool
 	}{
 		{
 			name:      "nil actual",
@@ -238,30 +236,30 @@ func TestActualResourceIsManaged(t *testing.T) {
 			want:      false,
 		},
 		{
-			name: "nil labels",
+			name: "nil annotations",
 			want: false,
 		},
 		{
-			name:   "invalid value",
-			labels: map[string]string{"nomos.dev/managed": "invalid"},
-			want:   false,
+			name:        "invalid value",
+			annotations: map[string]string{"nomos.dev/managed": "invalid"},
+			want:        false,
 		},
 		{
-			name:   "disabled value",
-			labels: map[string]string{"nomos.dev/managed": "disabled"},
-			want:   false,
+			name:        "disabled value",
+			annotations: map[string]string{"nomos.dev/managed": "disabled"},
+			want:        false,
 		},
 		{
-			name:   "enabled value",
-			labels: map[string]string{"nomos.dev/managed": "enabled"},
-			want:   true,
+			name:        "enabled value",
+			annotations: map[string]string{"nomos.dev/managed": "enabled"},
+			want:        true,
 		},
 	}
 
 	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
 			d := Diff{
-				Actual: TestItem{labels: testcase.labels}.Object(t),
+				Actual: TestItem{annotations: testcase.annotations}.Object(t),
 			}
 			if testcase.actualNil {
 				d.Actual = nil

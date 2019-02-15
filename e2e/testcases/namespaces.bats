@@ -58,9 +58,9 @@ function teardown() {
   namespace::check_no_warning $ns
 }
 
-@test "Namespace has enabled label with no declarations" {
+@test "Namespace has enabled annotation with no declarations" {
   local ns=undeclared-label-enabled
-  namespace::create $ns -l "nomos.dev/managed=enabled"
+  namespace::create $ns -a "nomos.dev/managed=enabled"
   namespace::check_not_found $ns
 }
 
