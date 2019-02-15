@@ -90,8 +90,6 @@ func (r *PolicyNodeReconciler) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, nil
 	}
 
-	// TODO(sbochins): Make use of reconcile.Result.RequeueAfter when we don't want exponential backoff for retries when
-	// using newer version of controller-runtime.
 	err := r.reconcilePolicyNode(ctx, name)
 	if err != nil {
 		glog.Errorf("Could not reconcile policynode %q: %v", name, err)
