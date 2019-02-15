@@ -8,7 +8,7 @@ import (
 )
 
 // NewLabelValidator validates the labels declared in metadata
-func NewLabelValidator() *visitor.ValidatorVisitor {
+func NewLabelValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
 		func(o ast.FileObject) error {
 			var errors []string

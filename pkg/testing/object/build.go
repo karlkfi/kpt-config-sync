@@ -56,13 +56,6 @@ func Build(gvk schema.GroupVersionKind, opts ...BuildOpt) ast.FileObject {
 	return object
 }
 
-// Name replaces the metadata.name of the FileObject under test.
-func Name(name string) BuildOpt {
-	return func(o *ast.FileObject) {
-		o.MetaObject().SetName(name)
-	}
-}
-
 // Path replaces the path with the provided slash-delimited path from nomos root.
 func Path(path string) BuildOpt {
 	return func(o *ast.FileObject) {

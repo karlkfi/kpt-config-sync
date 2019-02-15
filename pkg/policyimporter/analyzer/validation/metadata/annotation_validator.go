@@ -8,7 +8,7 @@ import (
 )
 
 // NewAnnotationValidator validates the annotations of every object.
-func NewAnnotationValidator() *visitor.ValidatorVisitor {
+func NewAnnotationValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
 		func(o ast.FileObject) error {
 			var errors []string
