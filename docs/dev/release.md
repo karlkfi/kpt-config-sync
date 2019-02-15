@@ -170,6 +170,30 @@ e15b4b28 Thu Sep 6 .. Erik Kitson             Fix broken links in documentation 
 
 ### Nomos Operator
 
+
+#### Prerequisites
+
+You will need the following to properly bless the release:
+
+* dep 0.5.0.
+* a checked out [`nomos-operator` repository](https://g3doc.corp.google.com/company/teams/nomos-team/dev_guide.md#operator)
+
+Here's how to check:
+
+```console
+$ dep version
+dep:
+ version     : v0.5.0
+ build date  : 2018-07-26
+ git hash    : 224a564
+ go version  : go1.10.3
+ go compiler : gc
+ platform    : linux/amd64
+ features    : ImportDuringSolve=false
+```
+
+#### Bless relase process
+
 Switch to the `nomos-operator`
 [repository](https://g3doc.corp.google.com/company/teams/nomos-team/dev_guide.md#operator).
 Before blessing, take note of whether the new release should have be a new
@@ -178,15 +202,6 @@ patch set, so to bless a new version with just a patch increment run:
 
 ```console
 make bless-release
-```
-
-NOTE: You will need go version 1.11.4 or above to properly bless the release.
-You may also need to run go clean -modcache if you get errors.
-
-```console
-$ go version
-go version go1.11.4 linux/amd64
-$ go clean -modcache
 ```
 
 If you would instead like to increment the minor version, run: `console
@@ -198,6 +213,27 @@ for other options available for this target.
 
 The `bless-release` target is interactive; please ensure the version name
 proposed by the target is what you expect before continuing.
+
+#### NOTE: In case your release attempt fails
+
+Due to an as of yet unknown cause, running `dep ensure -v` which is part of the
+release process fails very often. This is a collection of steps that *may* help
+you stop the bleeding while we figure out what actually is going on.
+
+A confounding factor is that the errors you may see seem nondeterministic.
+
+If you encounter the error `fatal: failed to unpack tree object` you will need
+to clean up the repository manually as follows.  Once you clean up the
+repository you can re-attempt `make bless-release`.
+
+```console
+$ git add -A
+$ git reset --hard HEAD  # this and above command will clean up the git index
+$ rm -fr ../.vendor-new  # this removes a dep artifact
+```
+
+You might need to remove also the directory `$GOPATH/pkg/dep/sources` which
+contains the packages cached by dep.
 
 ## Check the build artifacts (optional)
 
