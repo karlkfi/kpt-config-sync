@@ -26,61 +26,61 @@ spec:
         spec:
           # SyncSpec
           type: object
-          required:
-          - groups
-          properties:
-            groups:
-              type: array
-              items:
-                # SyncGroup
-                type: object
-                required:
-                - group
-                - kinds
-                properties:
-                  group:
-                    type: string
-                  kinds:
-                    type: array
-                    items:
-                      # SyncKind
-                      type: object
-                      required:
-                      - kind
-                      properties:
-                        kind:
-                          type: string
+          #required:
+          #- groups
+          #properties:
+          #  groups:
+          #    type: array
+          #    items:
+          #      # SyncGroup
+          #      type: object
+          #      required:
+          #      - group
+          #      - kinds
+          #      properties:
+          #        group:
+          #          type: string
+          #        kinds:
+          #          type: array
+          #          items:
+          #            # SyncKind
+          #            type: object
+          #            required:
+          #            - kind
+          #            properties:
+          #              kind:
+          #                type: string
                       # /SyncKind
                 # /SyncGroup
           # /SyncSpec
         status:
           # SyncStatus
           type: object
-          properties:
-            groupVersionKinds:
-              type: array
-              items:
-                # SyncGroupVersionKindStatus
-                type: object
-                required:
-                - group
-                - version
-                - kind
-                - status
-                properties:
-                  group:
-                    type: string
-                  version:
-                    type: string
-                  kind:
-                    type: string
-                  status:
-                    type: string
-                    enum:
-                    - "syncing"
-                    - "error"
-                  message:
-                    type: string
+          #properties:
+          #  groupVersionKinds:
+          #    type: array
+          #    items:
+          #      # SyncGroupVersionKindStatus
+          #      type: object
+          #      required:
+          #      - group
+          #      - version
+          #      - kind
+          #      - status
+          #      properties:
+          #        group:
+          #          type: string
+          #        version:
+          #          type: string
+          #        kind:
+          #          type: string
+          #        status:
+          #          type: string
+          #          enum:
+          #          - "syncing"
+          #          - "error"
+          #        message:
+          #          type: string
                 # /SyncGroupVersionKindStatus
           # /SyncStatus
 status:
