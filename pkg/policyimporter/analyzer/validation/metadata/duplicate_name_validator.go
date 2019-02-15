@@ -14,14 +14,14 @@ type groupKindName struct {
 	name  string
 }
 
-type duplciateNameValidator struct {
+type duplicateNameValidator struct {
 	visitor.ValidatorBase
 }
 
 // NewDuplicateNameValidator ensures the flattened policy output contains no resources in the same
 // policy node which share the same group, kind, and name.
 func NewDuplicateNameValidator() ast.Visitor {
-	return visitor.NewValidator(&duplciateNameValidator{})
+	return visitor.NewValidator(&duplicateNameValidator{})
 }
 
 func checkDuplicates(objects []id.Resource) []error {
@@ -46,7 +46,7 @@ func checkDuplicates(objects []id.Resource) []error {
 }
 
 // ValidateTreeNode ensures Namespace policy nodes contain no duplicates.
-func (v *duplciateNameValidator) ValidateTreeNode(n *ast.TreeNode) error {
+func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) error {
 	resources := make([]id.Resource, len(n.Objects))
 	for i, object := range n.Objects {
 		resources[i] = object
@@ -56,7 +56,7 @@ func (v *duplciateNameValidator) ValidateTreeNode(n *ast.TreeNode) error {
 }
 
 // ValidateCluster ensures the Cluster policy node contains no duplicates.
-func (v *duplciateNameValidator) ValidateCluster(c *ast.Cluster) error {
+func (v *duplicateNameValidator) ValidateCluster(c *ast.Cluster) error {
 	resources := make([]id.Resource, len(c.Objects))
 	for i, object := range c.Objects {
 		resources[i] = object
