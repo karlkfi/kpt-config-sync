@@ -112,6 +112,8 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 	astRoot := &ast.Root{
 		ImportToken: importToken,
 		LoadTime:    loadTime,
+		System:      &ast.System{},
+		Cluster:     &ast.Cluster{},
 	}
 	// Always make sure we're getting the freshest data.
 	p.discoveryClient.Invalidate()
