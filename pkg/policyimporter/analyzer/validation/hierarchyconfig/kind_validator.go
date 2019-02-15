@@ -12,7 +12,7 @@ import (
 
 // NewHierarchyConfigKindValidator returns a Visitor that ensures only supported Resource Kinds are declared in
 // HierarchyConfigs.
-func NewHierarchyConfigKindValidator() *visitor.ValidatorVisitor {
+func NewHierarchyConfigKindValidator() ast.Visitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) error {
 		switch h := o.Object.(type) {
 		case *v1alpha1.HierarchyConfig:

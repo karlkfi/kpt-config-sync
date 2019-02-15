@@ -24,7 +24,7 @@ var (
 
 // NewInheritanceValidator returns a visitor that validates the inheritance setting
 // of all GroupKinds defined across HierarchyConfigs.
-func NewInheritanceValidator() *visitor.ValidatorVisitor {
+func NewInheritanceValidator() ast.Visitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) error {
 		switch h := o.Object.(type) {
 		case *v1alpha1.HierarchyConfig:

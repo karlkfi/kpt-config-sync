@@ -106,15 +106,6 @@ func HierarchyConfig(path string) ast.FileObject {
 	}
 }
 
-// HierarchyConfigSpecified returns the specified HierarchyConfig at the specified path.
-func HierarchyConfigSpecified(path string, hk *v1alpha1.HierarchyConfig) ast.FileObject {
-	hk.TypeMeta = toTypeMeta(kinds.HierarchyConfig())
-	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative(path),
-		Object:   hk,
-	}
-}
-
 // Sync returns a nomos Sync at the specified path.
 func Sync(path string) ast.FileObject {
 	return ast.FileObject{

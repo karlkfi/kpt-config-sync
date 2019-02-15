@@ -3,10 +3,12 @@ package hierarchyconfig
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	visitortesting "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/testing/asttest"
+	"github.com/google/nomos/pkg/testing/object"
 	"github.com/google/nomos/pkg/util/discovery"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -25,41 +27,35 @@ func toAPIInfo(known ...schema.GroupVersionKind) (*discovery.APIInfo, error) {
 	return discovery.NewAPIInfo(resources)
 }
 
+// APIInfo adds an APIInfo to the AST.
+func APIInfo(apiInfo *discovery.APIInfo) ast.BuildOpt {
+	return func(root *ast.Root) error {
+		if apiInfo == nil {
+			return nil
+		}
+		discovery.AddAPIInfo(root, apiInfo)
+		return nil
+	}
+}
+
 func TestKnownResourceValidator(t *testing.T) {
 	apiInfo, err := toAPIInfo(kinds.RoleBinding())
 	if err != nil {
 		t.Fatalf("unexpected error forming APIInfo: %v", err)
 	}
 
-	test := visitortesting.ObjectValidatorTest{
-		Validator: NewKnownResourceValidator,
-		ErrorCode: vet.UnknownResourceInHierarchyConfigErrorCode,
-		TestCases: []visitortesting.ObjectValidatorTestCase{
-			{
-				Name:    "ResourceQuota throws error if not known",
-				APIInfo: apiInfo,
-				Object: fake.HierarchyConfigSpecified(
-					"system/hc.yaml",
-					hierarchyConfig(
-						kinds.ResourceQuota().Group,
-						kinds.ResourceQuota().Kind,
-					),
-				),
-				ShouldFail: true,
-			},
-			{
-				Name:    "RoleBinding valid if known",
-				APIInfo: apiInfo,
-				Object: fake.HierarchyConfigSpecified(
-					"system/hc.yaml",
-					hierarchyConfig(
-						kinds.RoleBinding().Group,
-						kinds.RoleBinding().Kind,
-					),
-				),
-			},
-		},
-	}
+	test := asttest.Validator(NewKnownResourceValidator,
+		vet.UnknownResourceInHierarchyConfigErrorCode,
+
+		asttest.Fail("ResourceQuota throws error if not known",
+			object.Build(kinds.HierarchyConfig(),
+				HierarchyConfigResource(kinds.ResourceQuota(), v1alpha1.HierarchyModeDefault)),
+		),
+		asttest.Pass("RoleBinding valid if known",
+			object.Build(kinds.HierarchyConfig(),
+				HierarchyConfigResource(kinds.RoleBinding(), v1alpha1.HierarchyModeDefault)),
+		),
+	).With(APIInfo(apiInfo))
 
 	test.RunAll(t)
 }

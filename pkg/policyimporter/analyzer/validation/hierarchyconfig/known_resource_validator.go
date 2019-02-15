@@ -15,7 +15,7 @@ type KnownResourceValidator struct {
 }
 
 // NewKnownResourceValidator returns a new KnownResourceValidator.
-func NewKnownResourceValidator() *visitor.ValidatorVisitor {
+func NewKnownResourceValidator() ast.Visitor {
 	return visitor.NewValidator(&KnownResourceValidator{})
 }
 
