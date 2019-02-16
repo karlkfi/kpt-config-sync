@@ -1,0 +1,12 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: v1beta1user
+subjects:
+- kind: User
+  name: v1beta1user@acme.com
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: admin
+  apiGroup: rbac.authorization.k8s.io
