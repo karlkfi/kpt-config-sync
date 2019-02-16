@@ -132,8 +132,11 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*v1
 		tree.NewBuilderVisitor(p.readNamespaceResources(rootPath)),
 	}
 	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet)...)
+
 	outputVisitor := backend.NewOutputVisitor()
-	visitors = append(visitors, outputVisitor)
+	visitors = append(visitors,
+		transform.NewSyncGenerator(),
+		outputVisitor)
 	err = p.runVisitors(astRoot, visitors)
 	if err != nil {
 		return nil, err

@@ -62,9 +62,6 @@ func (n NomosVisitorProvider) Visitors(
 		v = append(v, validation.NewQuotaValidator())
 		v = append(v, transform.NewQuotaVisitor())
 	}
-	v = append(v,
-		transform.NewSyncGenerator(),
-	)
 	return v
 }
 
