@@ -19,12 +19,12 @@ teardown() {
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/multiversion
 
 @test "Multiple versions of RoleBindings" {
-  git::add ${YAML_DIR}/v1beta1.yaml acme/namespaces/eng/backend/v1beta1.yaml
+  git::add "${YAML_DIR}/v1beta1.yaml" acme/namespaces/eng/backend/v1beta1.yaml
   git::commit
 
   wait::for -t 30 -- kubectl get rolebinding -n backend v1beta1user
 
-  git::add ${YAML_DIR}/v1.yaml acme/namespaces/eng/backend/v1.yaml
+  git::add "${YAML_DIR}/v1.yaml" acme/namespaces/eng/backend/v1.yaml
   git::commit
 
   wait::for -t 30 -- kubectl get rolebinding -n backend v1user
