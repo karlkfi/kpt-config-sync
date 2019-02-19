@@ -154,11 +154,6 @@ func (r *PolicyNodeReconciler) getNamespaceState(
 
 	value, found := ns.Labels[labeling.ResourceManagementKey]
 	if !found {
-		r.warnNoLabel(ns)
-		*syncErrs = append(*syncErrs, v1.PolicyNodeSyncError{
-			ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s=%s)",
-				labeling.ResourceManagementKey, labeling.Enabled),
-		})
 		return namespaceStateExists, ns, nil
 	}
 
@@ -220,6 +215,11 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 			}
 			return r.managePolicies(ctx, name, node, syncErrs)
 		case namespaceStateExists:
+			r.warnNoLabel(ns)
+			syncErrs = append(syncErrs, v1.PolicyNodeSyncError{
+				ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s=%s)",
+					labeling.ResourceManagementKey, labeling.Enabled),
+			})
 			return r.managePolicies(ctx, name, node, syncErrs)
 		case namespaceStateManageFull:
 			if err := r.updateNamespace(ctx, node); err != nil {
