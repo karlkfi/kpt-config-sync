@@ -11,7 +11,14 @@ load "../lib/wait"
 
 setup() {
   setup::common
-  kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found=true
+  local active=()
+  mapfile -t active < <(kubectl get ns -l "nomos.dev/testdata=true" | grep Active)
+  if (( ${#active[@]} != 0 )); then
+    local ns
+    for ns in "${active[@]}"; do
+      kubectl delete ns $ns
+    done
+  fi
   setup::git::initialize
   setup::git::init_acme
 }
