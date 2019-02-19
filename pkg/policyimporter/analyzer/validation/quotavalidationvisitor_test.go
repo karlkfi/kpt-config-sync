@@ -53,16 +53,16 @@ func makeTree(rq *corev1.ResourceQuota) *ast.Root {
 	return &ast.Root{
 		Tree: &ast.TreeNode{
 			Type:     node.AbstractNamespace,
-			Relative: nomospath.NewFakeRelative("namespaces"),
+			Relative: nomospath.NewRelative("namespaces"),
 			Objects:  vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 			Children: []*ast.TreeNode{
 				{
 					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewFakeRelative("namespaces/eng"),
+					Relative: nomospath.NewRelative("namespaces/eng"),
 					Children: []*ast.TreeNode{
 						{
 							Type:     node.Namespace,
-							Relative: nomospath.NewFakeRelative("namespaces/eng/frontend"),
+							Relative: nomospath.NewRelative("namespaces/eng/frontend"),
 							Objects: vt.ObjectSets(
 								rq,
 							),

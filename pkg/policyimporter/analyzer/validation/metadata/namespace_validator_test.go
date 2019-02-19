@@ -14,7 +14,7 @@ import (
 func fakeObjectWithNamespace(namespace string) ast.FileObject {
 	object := asttesting.NewFakeObject(kinds.Role())
 	object.SetNamespace(namespace)
-	return ast.FileObject{Object: object, Relative: nomospath.NewFakeRelative("namespaces/role.yaml")}
+	return ast.FileObject{Object: object, Relative: nomospath.NewRelative("namespaces/role.yaml")}
 }
 
 func TestNamespaceValidator(t *testing.T) {

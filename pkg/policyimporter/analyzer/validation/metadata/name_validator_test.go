@@ -16,7 +16,7 @@ func fakeNamedObject(gvk schema.GroupVersionKind, name string) ast.FileObject {
 	object := asttesting.NewFakeObject(gvk)
 	object.SetName(name)
 	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative("namespaces/role.yaml"),
+		Relative: nomospath.NewRelative("namespaces/role.yaml"),
 		Object:   object,
 	}
 }

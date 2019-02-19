@@ -15,7 +15,7 @@ import (
 // Namespace returns a Kubernetes Namespace resource at the specified path.
 // Initializes with metadata.name set to the correct name.
 func Namespace(path string) ast.FileObject {
-	relative := nomospath.NewFakeRelative(path)
+	relative := nomospath.NewRelative(path)
 	return ast.FileObject{
 		Relative: relative,
 		Object: &corev1.Namespace{
@@ -29,7 +29,7 @@ func Namespace(path string) ast.FileObject {
 // NamespaceSelector returns a Nomos NamespaceSelector at the specified path.
 func NamespaceSelector(path string) ast.FileObject {
 	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 		Object: &v1alpha1.NamespaceSelector{
 			TypeMeta: toTypeMeta(kinds.NamespaceSelector()),
 		},
@@ -39,7 +39,7 @@ func NamespaceSelector(path string) ast.FileObject {
 // Role returns an RBAC Role at the specified path.
 func Role(path string) ast.FileObject {
 	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 		Object: &rbacv1alpha1.Role{
 			TypeMeta: toTypeMeta(kinds.Role()),
 		},
@@ -49,7 +49,7 @@ func Role(path string) ast.FileObject {
 // RoleBinding returns an RBAC RoleBinding at the specified path.
 func RoleBinding(path string) ast.FileObject {
 	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 		Object: &rbacv1alpha1.RoleBinding{
 			TypeMeta: toTypeMeta(kinds.RoleBinding()),
 		},
@@ -59,7 +59,7 @@ func RoleBinding(path string) ast.FileObject {
 // ClusterRole returns an RBAC ClusterRole at the specified path.
 func ClusterRole(path string) ast.FileObject {
 	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 		Object: &rbacv1alpha1.ClusterRole{
 			TypeMeta: toTypeMeta(kinds.ClusterRole()),
 		},
@@ -69,7 +69,7 @@ func ClusterRole(path string) ast.FileObject {
 // ClusterSelector returns a Nomos ClusterSelector at the specified path.
 func ClusterSelector(path string) ast.FileObject {
 	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 		Object: &v1alpha1.ClusterSelector{
 			TypeMeta: toTypeMeta(kinds.ClusterSelector()),
 		},
@@ -79,7 +79,7 @@ func ClusterSelector(path string) ast.FileObject {
 // Cluster returns a K8S Cluster resource at the specified path.
 func Cluster(path string) ast.FileObject {
 	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 		Object: &clusterregistry.Cluster{
 			TypeMeta: toTypeMeta(kinds.Cluster()),
 		},
@@ -89,7 +89,7 @@ func Cluster(path string) ast.FileObject {
 // Repo returns a nomos Repo at the specified path.
 func Repo(path string) ast.FileObject {
 	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 		Object: &v1alpha1.Repo{
 			TypeMeta: toTypeMeta(kinds.Repo()),
 		},
@@ -99,7 +99,7 @@ func Repo(path string) ast.FileObject {
 // HierarchyConfig returns an empty HierarchyConfig at the specified path.
 func HierarchyConfig(path string) ast.FileObject {
 	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 		Object: &v1alpha1.HierarchyConfig{
 			TypeMeta: toTypeMeta(kinds.HierarchyConfig()),
 		},
@@ -109,7 +109,7 @@ func HierarchyConfig(path string) ast.FileObject {
 // Sync returns a nomos Sync at the specified path.
 func Sync(path string) ast.FileObject {
 	return ast.FileObject{
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 		Object: &v1alpha1.Sync{
 			TypeMeta: toTypeMeta(kinds.Sync()),
 		},

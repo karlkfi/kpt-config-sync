@@ -36,7 +36,7 @@ type directoryTreeTestcase struct {
 func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	tg := newDirectoryTree()
 	for _, dir := range tc.inputs {
-		tg.addDir(nomospath.NewFakeRelative(dir))
+		tg.addDir(nomospath.NewRelative(dir))
 	}
 	eb := multierror.Builder{}
 	tr := tg.build()
@@ -56,7 +56,7 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "only root",
 			inputs: []string{"a"},
 			expect: &ast.TreeNode{
-				Relative: nomospath.NewFakeRelative("a"),
+				Relative: nomospath.NewRelative("a"),
 				Type:     node.AbstractNamespace,
 			},
 		},
@@ -64,11 +64,11 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "root second",
 			inputs: []string{"a/b", "a"},
 			expect: &ast.TreeNode{
-				Relative: nomospath.NewFakeRelative("a"),
+				Relative: nomospath.NewRelative("a"),
 				Type:     node.AbstractNamespace,
 				Children: []*ast.TreeNode{
 					{
-						Relative: nomospath.NewFakeRelative("a/b"),
+						Relative: nomospath.NewRelative("a/b"),
 						Type:     node.AbstractNamespace,
 					},
 				},
@@ -78,11 +78,11 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "missing root",
 			inputs: []string{"a/b"},
 			expect: &ast.TreeNode{
-				Relative: nomospath.NewFakeRelative("a"),
+				Relative: nomospath.NewRelative("a"),
 				Type:     node.AbstractNamespace,
 				Children: []*ast.TreeNode{
 					{
-						Relative: nomospath.NewFakeRelative("a/b"),
+						Relative: nomospath.NewRelative("a/b"),
 						Type:     node.AbstractNamespace,
 					},
 				},
@@ -92,15 +92,15 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "small out of order tree",
 			inputs: []string{"a", "a/b/c", "a/b"},
 			expect: &ast.TreeNode{
-				Relative: nomospath.NewFakeRelative("a"),
+				Relative: nomospath.NewRelative("a"),
 				Type:     node.AbstractNamespace,
 				Children: []*ast.TreeNode{
 					{
-						Relative: nomospath.NewFakeRelative("a/b"),
+						Relative: nomospath.NewRelative("a/b"),
 						Type:     node.AbstractNamespace,
 						Children: []*ast.TreeNode{
 							{
-								Relative: nomospath.NewFakeRelative("a/b/c"),
+								Relative: nomospath.NewRelative("a/b/c"),
 								Type:     node.AbstractNamespace,
 							},
 						},
@@ -112,15 +112,15 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "two children",
 			inputs: []string{"a", "a/b", "a/c"},
 			expect: &ast.TreeNode{
-				Relative: nomospath.NewFakeRelative("a"),
+				Relative: nomospath.NewRelative("a"),
 				Type:     node.AbstractNamespace,
 				Children: []*ast.TreeNode{
 					{
-						Relative: nomospath.NewFakeRelative("a/b"),
+						Relative: nomospath.NewRelative("a/b"),
 						Type:     node.AbstractNamespace,
 					},
 					{
-						Relative: nomospath.NewFakeRelative("a/c"),
+						Relative: nomospath.NewRelative("a/c"),
 						Type:     node.AbstractNamespace,
 					},
 				},
@@ -130,15 +130,15 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "missing node",
 			inputs: []string{"a", "a/b/c"},
 			expect: &ast.TreeNode{
-				Relative: nomospath.NewFakeRelative("a"),
+				Relative: nomospath.NewRelative("a"),
 				Type:     node.AbstractNamespace,
 				Children: []*ast.TreeNode{
 					{
-						Relative: nomospath.NewFakeRelative("a/b"),
+						Relative: nomospath.NewRelative("a/b"),
 						Type:     node.AbstractNamespace,
 						Children: []*ast.TreeNode{
 							{
-								Relative: nomospath.NewFakeRelative("a/b/c"),
+								Relative: nomospath.NewRelative("a/b/c"),
 								Type:     node.AbstractNamespace,
 							},
 						},

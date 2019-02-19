@@ -59,6 +59,6 @@ func Build(gvk schema.GroupVersionKind, opts ...BuildOpt) ast.FileObject {
 // Path replaces the path with the provided slash-delimited path from nomos root.
 func Path(path string) BuildOpt {
 	return func(o *ast.FileObject) {
-		o.Relative = nomospath.NewFakeRelative(path)
+		o.Relative = nomospath.NewRelative(path)
 	}
 }

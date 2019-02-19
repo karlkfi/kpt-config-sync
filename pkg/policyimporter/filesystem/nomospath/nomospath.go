@@ -83,10 +83,10 @@ type Relative struct {
 	root Root
 }
 
-// NewFakeRelative returns a fake Relative which is not actually relative to
+// NewRelative returns a fake Relative which is not actually relative to
 // a real Nomos root. For testing and documentation.
 // path MUST be OS-independent.
-func NewFakeRelative(path string) Relative {
+func NewRelative(path string) Relative {
 	return Relative{path: filepath.Clean(filepath.FromSlash(path))}
 }
 

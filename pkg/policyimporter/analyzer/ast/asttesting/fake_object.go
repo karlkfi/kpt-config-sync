@@ -15,7 +15,7 @@ import (
 func NewFakeFileObject(gvk schema.GroupVersionKind, path string) ast.FileObject {
 	return ast.FileObject{
 		Object:   NewFakeObject(gvk),
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 	}
 }
 

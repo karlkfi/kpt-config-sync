@@ -170,7 +170,7 @@ func TestCmpNomosRelative(t *testing.T) {
 
 func TestNewFakeNomosRelative(t *testing.T) {
 	foo := "foo"
-	fake := NewFakeRelative(foo)
+	fake := NewRelative(foo)
 
 	if diff := cmp.Diff(foo, fake.RelativeSlashPath()); diff != "" {
 		t.Fatal(diff)

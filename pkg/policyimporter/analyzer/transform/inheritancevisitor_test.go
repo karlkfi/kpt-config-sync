@@ -64,11 +64,11 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 				ClusterRegistry: vt.Helper.ClusterRegistry(),
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 					Children: []*ast.TreeNode{
 						{
 							Type:        node.Namespace,
-							Relative:    nomospath.NewFakeRelative("namespaces/frontend"),
+							Relative:    nomospath.NewRelative("namespaces/frontend"),
 							Labels:      map[string]string{"environment": "prod"},
 							Annotations: map[string]string{"has-waffles": "true"},
 							Objects: vt.ObjectSets(
@@ -81,7 +81,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 						},
 						{
 							Type:        node.Namespace,
-							Relative:    nomospath.NewFakeRelative("namespaces/frontend-test"),
+							Relative:    nomospath.NewRelative("namespaces/frontend-test"),
 							Labels:      map[string]string{"environment": "test"},
 							Annotations: map[string]string{"has-waffles": "false"},
 							Objects: vt.ObjectSets(
@@ -106,12 +106,12 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 					Children: []*ast.TreeNode{
 						{
 							Type:     node.Namespace,
-							Relative: nomospath.NewFakeRelative("namespaces/frontend"),
+							Relative: nomospath.NewRelative("namespaces/frontend"),
 							Labels:   map[string]string{"env": "prod"},
 						},
 						{
 							Type:     node.Namespace,
-							Relative: nomospath.NewFakeRelative("namespaces/frontend-test"),
+							Relative: nomospath.NewRelative("namespaces/frontend-test"),
 							Labels:   map[string]string{"env": "test"},
 						},
 					},
@@ -123,7 +123,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 					Children: []*ast.TreeNode{
 						{
 							Type:     node.Namespace,
-							Relative: nomospath.NewFakeRelative("namespaces/frontend"),
+							Relative: nomospath.NewRelative("namespaces/frontend"),
 							Labels:   map[string]string{"env": "prod"},
 							Objects: vt.ObjectSets(
 								withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
@@ -131,7 +131,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 						},
 						{
 							Type:     node.Namespace,
-							Relative: nomospath.NewFakeRelative("namespaces/frontend-test"),
+							Relative: nomospath.NewRelative("namespaces/frontend-test"),
 							Labels:   map[string]string{"env": "test"},
 						},
 					},

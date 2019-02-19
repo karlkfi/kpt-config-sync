@@ -312,7 +312,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				Objects: []*ast.SystemObject{
 					{
 						FileObject: ast.FileObject{
-							Relative: nomospath.NewFakeRelative("<builtin>"),
+							Relative: nomospath.NewRelative("<builtin>"),
 							Object: &v1alpha1.Sync{
 								TypeMeta: metav1.TypeMeta{
 									APIVersion: v1alpha1.SchemeGroupVersion.String(),

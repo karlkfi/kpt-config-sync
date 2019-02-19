@@ -14,10 +14,10 @@ const DuplicateDirectoryNameErrorCode = "1002"
 
 var duplicateDirectoryNameErrorExamples = []Error{
 	DuplicateDirectoryNameError{
-		Duplicates: []nomospath.Relative{nomospath.NewFakeRelative("foo/bar"), nomospath.NewFakeRelative("qux/bar")},
+		Duplicates: []nomospath.Relative{nomospath.NewRelative("foo/bar"), nomospath.NewRelative("qux/bar")},
 	},
 	DuplicateDirectoryNameError{
-		Duplicates: []nomospath.Relative{nomospath.NewFakeRelative("bar"), nomospath.NewFakeRelative("bar/foo/bar")},
+		Duplicates: []nomospath.Relative{nomospath.NewRelative("bar"), nomospath.NewRelative("bar/foo/bar")},
 	},
 }
 

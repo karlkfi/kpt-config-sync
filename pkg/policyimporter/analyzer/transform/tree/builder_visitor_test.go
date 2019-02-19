@@ -36,22 +36,22 @@ func TestBuilderVisitor(t *testing.T) {
 			},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 					Type:     node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Relative: nomospath.NewFakeRelative("namespaces/foo"),
+							Relative: nomospath.NewRelative("namespaces/foo"),
 							Type:     node.AbstractNamespace,
 							Children: []*ast.TreeNode{
 								{
-									Relative: nomospath.NewFakeRelative("namespaces/foo/bar"),
+									Relative: nomospath.NewRelative("namespaces/foo/bar"),
 									Type:     node.AbstractNamespace,
 									Objects:  []*ast.NamespaceObject{{FileObject: fake.Role("namespaces/foo/bar/role.yaml")}},
 								},
 							},
 						},
 						{
-							Relative: nomospath.NewFakeRelative("namespaces/qux"),
+							Relative: nomospath.NewRelative("namespaces/qux"),
 							Type:     node.AbstractNamespace,
 							Objects:  []*ast.NamespaceObject{{FileObject: fake.Role("namespaces/qux/role.yaml")}},
 						},
@@ -69,22 +69,22 @@ func TestBuilderVisitor(t *testing.T) {
 			},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 					Type:     node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Relative: nomospath.NewFakeRelative("namespaces/foo"),
+							Relative: nomospath.NewRelative("namespaces/foo"),
 							Type:     node.AbstractNamespace,
 							Children: []*ast.TreeNode{
 								{
-									Relative: nomospath.NewFakeRelative("namespaces/foo/bar"),
+									Relative: nomospath.NewRelative("namespaces/foo/bar"),
 									Type:     node.AbstractNamespace,
 									Objects:  []*ast.NamespaceObject{{FileObject: fake.Role("namespaces/foo/bar/role.yaml")}},
 								},
 							},
 						},
 						{
-							Relative: nomospath.NewFakeRelative("namespaces/qux"),
+							Relative: nomospath.NewRelative("namespaces/qux"),
 							Type:     node.AbstractNamespace,
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Role("namespaces/qux/role.yaml")},
@@ -108,23 +108,23 @@ func TestBuilderVisitor(t *testing.T) {
 			},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 					Type:     node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Relative: nomospath.NewFakeRelative("namespaces/foo"),
+							Relative: nomospath.NewRelative("namespaces/foo"),
 							Type:     node.AbstractNamespace,
 							Objects:  []*ast.NamespaceObject{{FileObject: fake.Role("namespaces/foo/role.yaml")}},
 							Children: []*ast.TreeNode{
 								{
-									Relative: nomospath.NewFakeRelative("namespaces/foo/bar"),
+									Relative: nomospath.NewRelative("namespaces/foo/bar"),
 									Type:     node.AbstractNamespace,
 									Objects:  []*ast.NamespaceObject{{FileObject: fake.Role("namespaces/foo/bar/role.yaml")}},
 								},
 							},
 						},
 						{
-							Relative: nomospath.NewFakeRelative("namespaces/qux"),
+							Relative: nomospath.NewRelative("namespaces/qux"),
 							Type:     node.AbstractNamespace,
 							Objects:  []*ast.NamespaceObject{{FileObject: fake.RoleBinding("namespaces/qux/rolebinding.yaml")}},
 						},
@@ -144,22 +144,22 @@ func TestBuilderVisitor(t *testing.T) {
 			},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 					Type:     node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Relative: nomospath.NewFakeRelative("namespaces/foo"),
+							Relative: nomospath.NewRelative("namespaces/foo"),
 							Type:     node.AbstractNamespace,
 							Children: []*ast.TreeNode{
 								{
-									Relative: nomospath.NewFakeRelative("namespaces/foo/bar"),
+									Relative: nomospath.NewRelative("namespaces/foo/bar"),
 									Type:     node.Namespace,
 									Objects:  []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/foo/bar/namespace.yaml")}},
 								},
 							},
 						},
 						{
-							Relative: nomospath.NewFakeRelative("namespaces/qux"),
+							Relative: nomospath.NewRelative("namespaces/qux"),
 							Type:     node.Namespace,
 							Objects:  []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/qux/namespace.yaml")}},
 						},

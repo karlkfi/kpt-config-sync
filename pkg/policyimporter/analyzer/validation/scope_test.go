@@ -31,7 +31,7 @@ import (
 func withPath(o runtime.Object, path string) ast.FileObject {
 	return ast.FileObject{
 		Object:   o,
-		Relative: nomospath.NewFakeRelative(path),
+		Relative: nomospath.NewRelative(path),
 	}
 }
 

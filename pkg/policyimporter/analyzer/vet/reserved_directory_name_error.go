@@ -7,7 +7,7 @@ import (
 // ReservedDirectoryNameErrorCode is the error code for ReservedDirectoryNameError
 const ReservedDirectoryNameErrorCode = "1001"
 
-var reservedDirectoryNameErrorExamples = []Error{ReservedDirectoryNameError{Dir: nomospath.NewFakeRelative("namespaces/default")}}
+var reservedDirectoryNameErrorExamples = []Error{ReservedDirectoryNameError{Dir: nomospath.NewRelative("namespaces/default")}}
 
 var reservedDirectoryNameExplanation = `
 GKE Policy Management defines several

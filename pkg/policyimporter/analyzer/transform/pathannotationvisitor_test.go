@@ -56,13 +56,13 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:        node.AbstractNamespace,
-					Relative:    nomospath.NewFakeRelative("namespaces"),
+					Relative:    nomospath.NewRelative("namespaces"),
 					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
 				},
 			},
@@ -72,13 +72,13 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:     node.Namespace,
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:        node.Namespace,
-					Relative:    nomospath.NewFakeRelative("namespaces"),
+					Relative:    nomospath.NewRelative("namespaces"),
 					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
 				},
 			},
@@ -88,18 +88,18 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(vt.Helper.AdminRoleBinding(), nomospath.NewFakeRelative("acme/admin.yaml")),
+						ast.NewFileObject(vt.Helper.AdminRoleBinding(), nomospath.NewRelative("acme/admin.yaml")),
 					),
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), nomospath.NewFakeRelative("acme/admin.yaml")),
+						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), nomospath.NewRelative("acme/admin.yaml")),
 					),
 					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
 				},
@@ -110,18 +110,18 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:     node.Namespace,
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(vt.Helper.AdminRoleBinding(), nomospath.NewFakeRelative("acme/admin.yaml")),
+						ast.NewFileObject(vt.Helper.AdminRoleBinding(), nomospath.NewRelative("acme/admin.yaml")),
 					),
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:     node.Namespace,
-					Relative: nomospath.NewFakeRelative("namespaces"),
+					Relative: nomospath.NewRelative("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), nomospath.NewFakeRelative("acme/admin.yaml")),
+						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), nomospath.NewRelative("acme/admin.yaml")),
 					),
 					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
 				},
@@ -132,20 +132,20 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:        node.Namespace,
-					Relative:    nomospath.NewFakeRelative("namespaces"),
+					Relative:    nomospath.NewRelative("namespaces"),
 					Annotations: map[string]string{"color": "orange"},
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(adminRoleBindingWithAnnotation(), nomospath.NewFakeRelative("acme/admin.yaml")),
+						ast.NewFileObject(adminRoleBindingWithAnnotation(), nomospath.NewRelative("acme/admin.yaml")),
 					),
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:        node.Namespace,
-					Relative:    nomospath.NewFakeRelative("namespaces"),
+					Relative:    nomospath.NewRelative("namespaces"),
 					Annotations: map[string]string{"color": "orange", v1alpha1.SourcePathAnnotationKey: "namespaces"},
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/admin.yaml"), nomospath.NewFakeRelative("acme/admin.yaml")),
+						ast.NewFileObject(withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/admin.yaml"), nomospath.NewRelative("acme/admin.yaml")),
 					),
 				},
 			},

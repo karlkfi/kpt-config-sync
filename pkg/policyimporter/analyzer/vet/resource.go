@@ -23,7 +23,7 @@ func (r resourceID) RelativeSlashPath() string {
 
 // Dir implements Resource
 func (r resourceID) Dir() nomospath.Relative {
-	return nomospath.NewFakeRelative(r.source).Dir()
+	return nomospath.NewRelative(r.source).Dir()
 }
 
 // Name implements Resource
@@ -52,7 +52,7 @@ func (s syncID) RelativeSlashPath() string {
 
 // Dir implements Sync
 func (s syncID) Dir() nomospath.Relative {
-	return nomospath.NewFakeRelative(s.source).Dir()
+	return nomospath.NewRelative(s.source).Dir()
 }
 
 // GroupVersionKind implements Sync
