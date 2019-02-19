@@ -429,10 +429,100 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 			},
+		},
+
+		{
+			name: "invalid management label on managed resource",
+			policyNode: &v1.PolicyNode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eng",
+				},
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+				},
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
+				},
+			},
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "eng",
+					Annotations: labeling.ManageResource.New(),
+					Labels:      labeling.ManageResource.New(),
+				},
+			},
+			declared: []runtime.Object{
+				&appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-deployment",
+					},
+					Spec: appsv1.DeploymentSpec{
+						Strategy: appsv1.DeploymentStrategy{
+							Type: appsv1.RecreateDeploymentStrategyType,
+						},
+					},
+				},
+			},
+			actual: []runtime.Object{
+				&appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "my-deployment",
+						Namespace:   "eng",
+						Annotations: map[string]string{v1alpha1.ResourceManagementKey: "invalid"},
+					},
+					Spec: appsv1.DeploymentSpec{
+						Strategy: appsv1.DeploymentStrategy{
+							Type: appsv1.RollingUpdateDeploymentStrategyType,
+						},
+					},
+				},
+			},
+			wantNamespaceUpdate: &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Namespace",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eng",
+					Annotations: map[string]string{
+						labeling.ResourceManagementKey: labeling.Enabled,
+					},
+					Labels: map[string]string{
+						labeling.ResourceManagementKey: labeling.Enabled,
+					},
+				},
+			},
+			wantStatusUpdate: &v1.PolicyNode{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "PolicyNode",
+					APIVersion: "nomos.dev/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eng",
+				},
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+				},
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
+					SyncTime:  now(),
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+				},
+			},
 			wantEvents: []event{
 				{
 					kind:    corev1.EventTypeWarning,
-					reason:  "UnmanagedResource",
+					reason:  "InvalidAnnotation",
 					varargs: true,
 				},
 			},

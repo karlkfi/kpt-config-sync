@@ -197,11 +197,8 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 		case namespaceStateNotFound: // noop
 		case namespaceStateExists:
 			if err := r.cleanUpLabel(ctx, ns); err != nil {
-				syncErrs = append(syncErrs, v1.PolicyNodeSyncError{
-					ErrorMessage: fmt.Sprintf("Failed to remove management label from namespace: %s", err.Error()),
-				})
+				glog.Warningf("Failed to remove management label from namespace: %s", err.Error())
 			}
-			r.warnUndeclaredNamespace(ns)
 		case namespaceStateManageFull:
 			return r.deleteNamespace(ctx, ns)
 		}
@@ -233,33 +230,17 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 				})
 			}
 			return r.managePolicies(ctx, name, node, syncErrs)
-
 		}
 
 	case policyNodeStatePolicyspace:
 		switch nsState {
 		case namespaceStateNotFound: // noop
 		case namespaceStateExists:
-			r.warnPolicyspaceHasNamespace(ns)
 		case namespaceStateManageFull:
 			return r.handlePolicyspace(ctx, node)
 		}
 	}
 	return nil
-}
-
-func (r *PolicyNodeReconciler) warnUndeclaredNamespace(ns *corev1.Namespace) {
-	glog.Warningf("namespace %q exists but is not declared in the source of truth", ns.Name)
-	r.recorder.Event(
-		ns, corev1.EventTypeWarning, "UnmanagedNamespace",
-		"namespace is not declared in the source of truth")
-}
-
-func (r *PolicyNodeReconciler) warnPolicyspaceHasNamespace(ns *corev1.Namespace) {
-	glog.Warningf("namespace %q exists but is declared as a policyspace in the source of truth", ns.Name)
-	r.recorder.Event(
-		ns, corev1.EventTypeWarning, "NamespaceInPolicySpace",
-		"namespace is declared as a policyspace in the source of truth")
 }
 
 func (r *PolicyNodeReconciler) warnNoLabel(ns *corev1.Namespace) {
@@ -269,13 +250,14 @@ func (r *PolicyNodeReconciler) warnNoLabel(ns *corev1.Namespace) {
 		"namespace is declared in the source of truth but does not have a management label")
 }
 
-func (r *PolicyNodeReconciler) warnNoLabelResource(u *unstructured.Unstructured) {
+func (r *PolicyNodeReconciler) warnInvalidAnnotationResource(u *unstructured.Unstructured, msg string) {
 	gvk := u.GroupVersionKind()
-	glog.Warningf("%q with name %q is declared in the source of truth but does not have a management label",
-		gvk, u.GetName())
+	value := u.GetAnnotations()[v1alpha1.ResourceManagementKey]
+	glog.Warningf("%q with name %q is %s in the source of truth but has invalid management annotation %s=%s",
+		gvk, u.GetName(), msg, v1alpha1.ResourceManagementKey, value)
 	r.recorder.Eventf(
-		u, corev1.EventTypeWarning, "UnmanagedResource",
-		"%q is declared in the source of truth but does not have a management label", gvk)
+		u, corev1.EventTypeWarning, "InvalidAnnotation",
+		"%q is %s in the source of truth but has invalid management annotation %s=%s", gvk, v1alpha1.ResourceManagementKey, value)
 }
 
 // cleanUpLabel removes the nomos managed label from the namespace, if present.
@@ -402,8 +384,12 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 			return false, errors.Wrapf(err, "could not create resource %q", diff.Name)
 		}
 	case differ.Update:
-		if !diff.ActualResourceIsManaged() {
-			r.warnNoLabelResource(diff.Actual)
+		switch diff.ActualResourceIsManaged() {
+		case differ.Managed:
+		case differ.Unmanaged:
+			return false, nil
+		case differ.Invalid:
+			r.warnInvalidAnnotationResource(diff.Actual, "declared")
 			return false, nil
 		}
 		ns := diff.Declared.GetNamespace()
@@ -412,8 +398,12 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 			return false, err
 		}
 	case differ.Delete:
-		if !diff.ActualResourceIsManaged() {
-			r.warnNoLabelResource(diff.Actual)
+		switch diff.ActualResourceIsManaged() {
+		case differ.Managed:
+		case differ.Unmanaged:
+			return false, nil
+		case differ.Invalid:
+			r.warnInvalidAnnotationResource(diff.Actual, "not declared")
 			return false, nil
 		}
 		toDelete := diff.Actual

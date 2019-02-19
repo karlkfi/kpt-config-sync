@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/syncer/labeling"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -38,6 +37,18 @@ const (
 	Delete = Type("delete")
 )
 
+// ManagementState indicates the state of the resource with regard to nomos-management.
+type ManagementState string
+
+const (
+	// Unmanaged indicates that the resource has no management annotation
+	Unmanaged = ManagementState("unmanaged")
+	// Managed indicates that the resoure has hte proper management annotation
+	Managed = ManagementState("managed")
+	// Invalid indicates that the resource has a management annotation with an invalid value.
+	Invalid = ManagementState("invalid")
+)
+
 // Equals is a function that takes two objects then compares them while ignoring the object meta
 // labels and annotations.
 type Equals func(*unstructured.Unstructured, *unstructured.Unstructured) bool
@@ -51,23 +62,29 @@ type Diff struct {
 }
 
 // ActualResourceIsManaged returns true if the Actual resource in the Diff has a management label.
-func (d Diff) ActualResourceIsManaged() bool {
+func (d Diff) ActualResourceIsManaged() ManagementState {
 	if d.Actual == nil {
-		return false
+		return Unmanaged
 	}
 
 	annots := d.Actual.GetAnnotations()
 	if annots == nil {
-		return false
+		return Unmanaged
 	}
 
-	value, ok := annots[v1alpha1.ResourceManagementKey]
-	if !ok {
-		return false
+	value, found := annots[v1alpha1.ResourceManagementKey]
+	if !found {
+		return Unmanaged
 	}
 
-	// TODO(120490008): return value for indicating invalid label value.
-	return value == labeling.Enabled
+	switch value {
+	case v1alpha1.ResourceManagementValue:
+		return Managed
+	case v1alpha1.ResourceManagementDisabledValue:
+		return Unmanaged
+	default:
+		return Invalid
+	}
 }
 
 // Diffs returns the diffs between declared and actual state. We generate a diff for each GroupVersionKind.

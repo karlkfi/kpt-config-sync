@@ -216,18 +216,30 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 			return false, errors.Wrapf(err, "could not create resource %q", diff.Name)
 		}
 	case differ.Update:
-		if diff.Actual.Object != nil && !diff.ActualResourceIsManaged() {
+		switch diff.ActualResourceIsManaged() {
+		case differ.Managed:
+		case differ.Unmanaged:
+			return false, nil
+		case differ.Invalid:
+			r.warnInvalidAnnotationResource(diff.Actual, "declared")
 			return false, nil
 		}
+
 		removeEmptyRulesField(diff.Declared)
 		if err := r.applier.ApplyCluster(diff.Declared, diff.Actual); err != nil {
 			metrics.ErrTotal.WithLabelValues("", diff.Declared.GroupVersionKind().Kind, "patch").Inc()
 			return false, err
 		}
 	case differ.Delete:
-		if !diff.ActualResourceIsManaged() {
+		switch diff.ActualResourceIsManaged() {
+		case differ.Managed:
+		case differ.Unmanaged:
+			return false, nil
+		case differ.Invalid:
+			r.warnInvalidAnnotationResource(diff.Actual, "not declared")
 			return false, nil
 		}
+
 		toDelete := diff.Actual
 		if err := r.client.Delete(ctx, toDelete); err != nil {
 			metrics.ErrTotal.WithLabelValues("", toDelete.GroupVersionKind().Kind, "delete").Inc()
@@ -237,6 +249,16 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 		panic(fmt.Errorf("programmatic error, unhandled syncer diff type: %v", t))
 	}
 	return true, nil
+}
+
+func (r *ClusterPolicyReconciler) warnInvalidAnnotationResource(u *unstructured.Unstructured, msg string) {
+	gvk := u.GroupVersionKind()
+	value := u.GetAnnotations()[v1alpha1.ResourceManagementKey]
+	glog.Warningf("%q with name %q is %s in the source of truth but has invalid management annotation %s=%s",
+		gvk, u.GetName(), msg, v1alpha1.ResourceManagementKey, value)
+	r.recorder.Eventf(
+		u, corev1.EventTypeWarning, "InvalidAnnotation",
+		"%q is %s in the source of truth but has invalid management annotation %s=%s", gvk, v1alpha1.ResourceManagementKey, value)
 }
 
 // removeEmptyRulesField removes the Rules field from ClusterRole when it's an empty list.

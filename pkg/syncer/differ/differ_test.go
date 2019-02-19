@@ -228,31 +228,31 @@ func TestActualResourceIsManaged(t *testing.T) {
 		name        string
 		actualNil   bool
 		annotations map[string]string
-		want        bool
+		want        ManagementState
 	}{
 		{
 			name:      "nil actual",
 			actualNil: true,
-			want:      false,
+			want:      Unmanaged,
 		},
 		{
 			name: "nil annotations",
-			want: false,
+			want: Unmanaged,
 		},
 		{
 			name:        "invalid value",
 			annotations: map[string]string{"nomos.dev/managed": "invalid"},
-			want:        false,
+			want:        Invalid,
 		},
 		{
 			name:        "disabled value",
 			annotations: map[string]string{"nomos.dev/managed": "disabled"},
-			want:        false,
+			want:        Unmanaged,
 		},
 		{
 			name:        "enabled value",
 			annotations: map[string]string{"nomos.dev/managed": "enabled"},
-			want:        true,
+			want:        Managed,
 		},
 	}
 
@@ -266,7 +266,7 @@ func TestActualResourceIsManaged(t *testing.T) {
 			}
 			got := d.ActualResourceIsManaged()
 			if got != testcase.want {
-				t.Errorf("want actual is managed %t, got %t", testcase.want, got)
+				t.Errorf("want actual is %s, got %s", testcase.want, got)
 			}
 		})
 	}
