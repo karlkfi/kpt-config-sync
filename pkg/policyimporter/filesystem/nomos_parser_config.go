@@ -65,11 +65,6 @@ func (n NomosVisitorProvider) Visitors(
 	return v
 }
 
-// SyncResources implements ParserConfig
-func (n NomosVisitorProvider) SyncResources() []*v1alpha1.Sync {
-	return nil
-}
-
 // NamespacesDir implements ParserConfig
 func (n NomosVisitorProvider) NamespacesDir() string {
 	return repo.NamespacesDir

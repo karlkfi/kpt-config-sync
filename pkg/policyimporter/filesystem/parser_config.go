@@ -17,11 +17,6 @@ type ParserConfig interface {
 		configs []*v1alpha1.HierarchyConfig,
 		vet bool) []ast.Visitor
 
-	// SyncResources *appends* sync resources to the normal Nomos sync resources.  This is
-	// done prior to input type validation, so any type that the user is allowed to specify by default
-	// must be returned by this function.
-	SyncResources() []*v1alpha1.Sync
-
 	// NamespacesDir returns the name of the namespaces dir.
 	NamespacesDir() string
 }
