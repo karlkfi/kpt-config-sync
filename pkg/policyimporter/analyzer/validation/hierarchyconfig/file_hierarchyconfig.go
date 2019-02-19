@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// FileHierarchyConfig extends v1alpha1.Sync to include the path to the file in the repo.
+// FileHierarchyConfig extends v1alpha1.HierarchyConfig to include the path to the file in the repo.
 type FileHierarchyConfig struct {
 	*v1alpha1.HierarchyConfig
 	// Source is the OS-agnostic slash-separated path to the source file from the root.

@@ -35,27 +35,3 @@ func (r resourceID) Name() string {
 func (r resourceID) GroupVersionKind() schema.GroupVersionKind {
 	return r.groupVersionKind
 }
-
-// syncID implements Sync in a minimal way. This enables directly instantiating errors for
-// documentation or testing.
-type syncID struct {
-	source           string
-	groupVersionKind schema.GroupVersionKind
-}
-
-var _ id.Sync = syncID{}
-
-// RelativeSlashPath implements Sync
-func (s syncID) RelativeSlashPath() string {
-	return s.source
-}
-
-// Dir implements Sync
-func (s syncID) Dir() nomospath.Relative {
-	return nomospath.NewRelative(s.source).Dir()
-}
-
-// GroupVersionKind implements Sync
-func (s syncID) GroupVersionKind() schema.GroupVersionKind {
-	return s.groupVersionKind
-}
