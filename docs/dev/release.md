@@ -87,6 +87,13 @@ A blessed release consists of three distinct pieces:
     are packaged inside the Nomos Operator image specify which version of this
     image to use.
 
+### Verify the Release Candidate
+
+Before blessing, visit
+[go/nomos-verify-release](http://go/nomos-verify-release) and verify that the
+most recent test run (at 11PM last night) ran and ran successfully. If it did
+not, the corresponding release should not be blessed. 
+
 ### Nomos binary
 
 First, bless the Nomos binary release candidate.
