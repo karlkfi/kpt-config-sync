@@ -18,7 +18,8 @@ gcs_prober_cred=""
 # If set, we will mount the prober creds path into the test runner from here.
 mounted_prober_cred=""
 
-EXTRA_ARGS=()
+OUTPUT_DIR=""
+TEMP_OUTPUT_DIR=""
 while (( $# > 0 )); do
   arg=${1}
   shift
@@ -54,6 +55,15 @@ while (( $# > 0 )); do
   esac
 done
 
+if [[ "$OUTPUT_DIR" == "" ]]; then
+  pushd "$(readlink -f "$(dirname "$0")/..")" > /dev/null
+  OUTPUT_DIR="$(make print-OUTPUT_DIR)"
+  popd > /dev/null
+fi
+if [[ "$TEMP_OUTPUT_DIR" == "" ]]; then
+  TEMP_OUTPUT_DIR="$OUTPUT_DIR/tmp"
+fi
+
 echo "+++ Environment: "
 env
 
@@ -67,6 +77,7 @@ fi
 # define $ARTIFACTS.
 if [[ -n "${WORKSPACE+x}" && ! -n "${ARTIFACTS+x}" ]]; then
   ARTIFACTS="${WORKSPACE}/_artifacts"
+  echo "+++ Got legacy artifacts directory from workspace: ${ARTIFACTS}"
 fi
 
 # The ARTIFACTS env variable has the name of the directory that the test artifacts
@@ -95,11 +106,11 @@ if "${hermetic}"; then
   mkdir -p "${TEMP_OUTPUT_DIR}/user"
 
   # Place the user's home in a writable directory.
-  EXTRA_ARGS+=(-e "HOME=/tmp/user")
+  DOCKER_FLAGS+=(-e "HOME=/tmp/user")
 
   # Make the currently checked out directory available.
-  EXTRA_ARGS+=(-e "NOMOS_REPO=/tmp/nomos")
-  EXTRA_ARGS+=(-v "$(pwd):/tmp/nomos")
+  DOCKER_FLAGS+=(-e "NOMOS_REPO=/tmp/nomos")
+  DOCKER_FLAGS+=(-v "$(pwd):/tmp/nomos")
 
 else
   # Copy the gcloud and kubectl configuration into a separate directory then
@@ -116,15 +127,14 @@ else
   mkdir -p "$TEMP_OUTPUT_DIR/config"
   rsync -a ~/.kube "$TEMP_OUTPUT_DIR/config"
   rsync -a ~/.config/gcloud "$TEMP_OUTPUT_DIR/config"
-  EXTRA_ARGS+=(-v "$TEMP_OUTPUT_DIR/config/.kube:${HOME}/.kube")
-  EXTRA_ARGS+=(-v "$TEMP_OUTPUT_DIR/config/gcloud:${HOME}/.config/gcloud")
+  DOCKER_FLAGS+=(-v "$TEMP_OUTPUT_DIR/config/.kube:${HOME}/.kube")
+  DOCKER_FLAGS+=(-v "$TEMP_OUTPUT_DIR/config/gcloud:${HOME}/.config/gcloud")
   sed -i -e \
     's|cmd-path:.*gcloud$|cmd-path: /opt/gcloud/google-cloud-sdk/bin/gcloud|' \
     "$TEMP_OUTPUT_DIR/config/.kube/config"
-  EXTRA_ARGS+=(-e "HOME=${HOME}")
-  EXTRA_ARGS+=(-v "${HOME}:${HOME}")
-  EXTRA_ARGS+=(-v "${HOME}:/home/user")
-  EXTRA_ARGS+=(-e "NOMOS_REPO=$(pwd)")
+  DOCKER_FLAGS+=(-e "HOME=${HOME}")
+  DOCKER_FLAGS+=(-v "${HOME}:${HOME}")
+  DOCKER_FLAGS+=(-e "NOMOS_REPO=$(pwd)")
 fi
 
 if [[ "${gcs_prober_cred}" != "" ]]; then
@@ -144,8 +154,6 @@ DOCKER_FLAGS+=(
     -v "${TEMP_OUTPUT_DIR}:/tmp"
     -v "${OUTPUT_DIR}/e2e":/opt/testing/e2e
     -v "${OUTPUT_DIR}/go/bin":/opt/testing/go/bin
-    -e "NOMOS_REPO=$(pwd)"
-    "${EXTRA_ARGS[@]}"
     "gcr.io/stolos-dev/e2e-tests:test-e2e-latest"
 )
 

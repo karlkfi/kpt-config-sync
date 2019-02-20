@@ -209,3 +209,6 @@ clientgen:
 	@echo "+++ Generating clientgen directory"
 	./scripts/generate-clientset.sh
 
+# Print the value of a variable
+print-%:
+	@echo $($*)
