@@ -113,7 +113,15 @@ function set_up_env_minimal() {
 
 function clean_up_test_resources() {
   kubectl delete --ignore-not-found ns -l "nomos.dev/testdata=true"
+  # TODO: update this to filter by annotation
   kubectl delete --ignore-not-found ns -l "nomos.dev/managed=enabled"
+
+  # TODO: this is to work around the label to annotation switch, delete this
+  # sometime after 2018-02-28
+  local i
+  for i in clusterrolebinding clusterrole podsecuritypolicy; do
+    kubectl delete -l nomos.dev/managed=enabled $i
+  done
 
   echo "killing kubectl port forward..."
   pkill -f "kubectl -n=nomos-system-test port-forward.*${FWD_SSH_PORT}:22" || true
