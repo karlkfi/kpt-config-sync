@@ -1614,8 +1614,8 @@ spec:
 		testName: "Duplicate Repo definitions is an error",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/nomos-1.yaml": aRepo,
-			"system/nomos-2.yaml": aRepo,
+			"system/repo-1.yaml": aRepo,
+			"system/repo-2.yaml": aRepo,
 		},
 		expectedErrorCodes: []string{vet.MultipleSingletonsErrorCode},
 	},
@@ -1731,8 +1731,8 @@ metadata:
 		testName: "Repo outside system/ is an error",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":          aRepo,
-			"namespaces/foo/nomos.yaml": aRepo,
+			"system/repo.yaml":         aRepo,
+			"namespaces/foo/repo.yaml": aRepo,
 		},
 		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode},
 	},

@@ -23,8 +23,8 @@ const (
 	// MetricsNamespace is the namespace that metrics are held in.
 	MetricsNamespace = "nomos"
 
-	// NomosKind is the Kind of the Nomos object.
-	NomosKind = "Nomos"
+	// OperatorKind is the Kind of the Operator object.
+	OperatorKind = "Nomos"
 
 	// GroupName is the name of the group of policyhierarchy resources.
 	GroupName = "nomos.dev"

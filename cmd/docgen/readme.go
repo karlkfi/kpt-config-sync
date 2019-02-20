@@ -5,6 +5,7 @@ import (
 	"sort"
 	"text/template"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 )
 
@@ -12,7 +13,7 @@ const (
 	readmeTmplString = `
 # Validation Errors
 
-Errors ` + "`nomos vet`" + ` may throw while analyzing a GKE Policy Management directory.
+Errors ` + "`" + policyhierarchy.CLIName + " vet" + "`" + ` may throw while analyzing a GKE Policy Management directory.
 
 {{ range $index, $err := . }}*   [KNV{{$err.Code}}: {{$err.Aka}}]({{.ErrorFileBase}})
 {{ end }}`
