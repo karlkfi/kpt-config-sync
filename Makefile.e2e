@@ -7,6 +7,9 @@ E2E_PARAMS := \
 	GCP_PROJECT=$(GCP_PROJECT) \
 	GCR_PREFIX=$(GCR_PREFIX) \
 
+# The directory for e2e test related files
+E2E_DIR := $(OUTPUT_DIR)/e2e
+
 # Create a staging directory for e2e
 .PHONY: e2e-staging
 e2e-staging: \
@@ -14,19 +17,18 @@ e2e-staging: \
 	$(OPERATOR_TARGET) \
 	$(TEST_GEN_YAML_DIR)/git-server.yaml \
 	$(wildcard ./e2e/*)
-	@echo "+++ Creating staging directory for building e2e docker image"
-	@rm -rf $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
-	@mkdir -p $(STAGING_DIR)/e2e-tests $(OUTPUT_DIR)/e2e
-	@cp -r ./build/e2e-tests/* $(STAGING_DIR)/e2e-tests
-	@cp -r ./third_party/bats-core $(OUTPUT_DIR)/e2e/bats
+	@echo "+++ Creating staging directory for e2e tests"
+	@rm -rf $(E2E_DIR)
+	@mkdir -p $(E2E_DIR)
+	@cp -r ./third_party/bats-core $(E2E_DIR)/bats
 	@cp -r ./examples $(OUTPUT_DIR)/e2e
 	@if [ -f $(HOME)/.ssh/id_rsa.nomos ]; then \
-	  cp -n $(HOME)/.ssh/id_rsa.nomos $(OUTPUT_DIR)/e2e/id_rsa.nomos; \
-	  cp $(HOME)/.ssh/id_rsa.nomos.pub $(OUTPUT_DIR)/e2e/id_rsa.nomos.pub; \
+	  cp -n $(HOME)/.ssh/id_rsa.nomos $(E2E_DIR)/id_rsa.nomos; \
+	  cp $(HOME)/.ssh/id_rsa.nomos.pub $(E2E_DIR)/id_rsa.nomos.pub; \
 	fi
-	@cp ./scripts/init-git-server.sh $(OUTPUT_DIR)/e2e/
-	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(OUTPUT_DIR)/e2e/
-	@cp ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml $(OUTPUT_DIR)/e2e/
+	@cp ./scripts/init-git-server.sh $(E2E_DIR)
+	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(E2E_DIR)
+	@cp ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml $(E2E_DIR)
 	@cp -r ./e2e $(OUTPUT_DIR)
 
 # Some e2e targets may wish to skip building the nomos CLI and download the latest remote one instead
