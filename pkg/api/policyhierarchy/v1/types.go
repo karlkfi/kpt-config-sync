@@ -18,7 +18,6 @@ package v1
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -150,13 +149,6 @@ type PolicyNode struct {
 type PolicyNodeSpec struct {
 	// The type of the PolicyNode.
 	Type PolicyNodeType `json:"type,omitempty" protobuf:"varint,1,opt,name=type"`
-
-	// The parent org unit
-	// +optional
-	Parent string `json:"parent,omitempty" protobuf:"bytes,2,opt,name=parent"`
-
-	// +optional
-	ResourceQuotaV1 *corev1.ResourceQuota `json:"resourceQuotaV1,omitempty" protobuf:"bytes,5,opt,name=resourceQuotaV1"`
 
 	// ImportToken indicates the version of the PolicyNode last imported from the source of truth.
 	// +optional

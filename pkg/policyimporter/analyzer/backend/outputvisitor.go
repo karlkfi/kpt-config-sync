@@ -22,7 +22,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -113,19 +112,16 @@ func (v *OutputVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
 func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.context = contextNode
 	origLen := len(v.policyNode)
-	var name, parent string
+	var name string
 
 	switch origLen {
 	case 0:
 		// root
 		name = v1.RootPolicyNodeName
-		parent = v1.NoParentNamespace
 	case 1:
 		name = n.Base()
-		parent = v1.RootPolicyNodeName
 	default:
 		name = n.Base()
-		parent = v.policyNode[origLen-1].Name
 	}
 
 	pn := &v1.PolicyNode{
@@ -139,7 +135,6 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 			Labels:      n.Labels,
 		},
 		Spec: v1.PolicyNodeSpec{
-			Parent:      parent,
 			ImportToken: v.importToken,
 			ImportTime:  v.loadTime,
 		},
@@ -166,10 +161,6 @@ func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObj
 // VisitObject implements Visitor
 func (v *OutputVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	spec := &v.policyNode[len(v.policyNode)-1].Spec
-	switch obj := o.FileObject.Object.(type) {
-	case *corev1.ResourceQuota:
-		spec.ResourceQuotaV1 = obj
-	}
 	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }

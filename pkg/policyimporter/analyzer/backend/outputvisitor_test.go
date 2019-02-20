@@ -184,11 +184,9 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Name: v1.RootPolicyNodeName,
 					},
 					Spec: v1.PolicyNodeSpec{
-						Type:            v1.Policyspace,
-						Parent:          "",
-						ResourceQuotaV1: helper.AcmeResourceQuota(),
-						ImportToken:     vt.ImportToken,
-						ImportTime:      metav1.NewTime(vt.ImportTime),
+						Type:        v1.Policyspace,
+						ImportToken: vt.ImportToken,
+						ImportTime:  metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",
@@ -224,11 +222,9 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Annotations: map[string]string{"has-waffles": "true"},
 					},
 					Spec: v1.PolicyNodeSpec{
-						Type:            v1.Namespace,
-						Parent:          v1.RootPolicyNodeName,
-						ResourceQuotaV1: helper.FrontendResourceQuota(),
-						ImportToken:     vt.ImportToken,
-						ImportTime:      metav1.NewTime(vt.ImportTime),
+						Type:        v1.Namespace,
+						ImportToken: vt.ImportToken,
+						ImportTime:  metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",
@@ -275,7 +271,6 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					},
 					Spec: v1.PolicyNodeSpec{
 						Type:        v1.Namespace,
-						Parent:      v1.RootPolicyNodeName,
 						ImportToken: vt.ImportToken,
 						ImportTime:  metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{

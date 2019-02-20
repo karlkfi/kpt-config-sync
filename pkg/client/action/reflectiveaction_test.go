@@ -568,7 +568,6 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 		Resource:  clusterPolicyNodeX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
 			policyNode := obj.(*v1.PolicyNode).DeepCopy()
-			policyNode.Spec.Parent = "some-other-node"
 			return policyNode
 		},
 	},
@@ -614,8 +613,7 @@ var clusterPolicyNodeBaseTestObject = &v1.PolicyNode{
 		Annotations: map[string]string{"api.foo.future/deny": "*"},
 	},
 	Spec: v1.PolicyNodeSpec{
-		Type:   v1.Policyspace,
-		Parent: "does-not-exist",
+		Type: v1.Policyspace,
 	},
 }
 

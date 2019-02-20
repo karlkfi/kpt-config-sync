@@ -485,11 +485,7 @@ type Policies struct {
 }
 
 // createPolicyNode constructs a PolicyNode based on a Policies struct.
-func createPolicyNode(
-	name string,
-	parent string,
-	nodeType v1.PolicyNodeType,
-	policies *Policies) v1.PolicyNode {
+func createPolicyNode(name string, nodeType v1.PolicyNodeType, policies *Policies) v1.PolicyNode {
 	pn := &v1.PolicyNode{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PolicyNode",
@@ -499,16 +495,12 @@ func createPolicyNode(
 			Name: name,
 		},
 		Spec: v1.PolicyNodeSpec{
-			Type:   nodeType,
-			Parent: parent,
+			Type: nodeType,
 		},
 	}
 	if policies == nil {
 		return *pn
 	}
-
-	// The ResourceQuotaV1 field is still being used for hierarchical quota.
-	pn.Spec.ResourceQuotaV1 = policies.ResourceQuotaV1
 
 	if len(policies.RolesV1) > 0 {
 		var roleObjects []runtime.Object
@@ -580,7 +572,7 @@ func createPNWithMeta(
 		annotations = map[string]string{}
 	}
 	annotations["nomos.dev/source-path"] = path
-	pn := createPolicyNode(filepath.Base(path), parent, t, policies)
+	pn := createPolicyNode(filepath.Base(path), t, policies)
 	pn.Labels = labels
 	pn.Annotations = annotations
 	return pn
@@ -588,13 +580,13 @@ func createPNWithMeta(
 
 func createRootPN(
 	policies *Policies) v1.PolicyNode {
-	pn := createPolicyNode(v1.RootPolicyNodeName, v1.NoParentNamespace, v1.Policyspace, policies)
+	pn := createPolicyNode(v1.RootPolicyNodeName, v1.Policyspace, policies)
 	pn.Annotations = map[string]string{"nomos.dev/source-path": "namespaces"}
 	return pn
 }
 
 func createAnnotatedRootPN(policies *Policies, annotations map[string]string) v1.PolicyNode {
-	pn := createPolicyNode(v1.RootPolicyNodeName, v1.NoParentNamespace, v1.Policyspace, policies)
+	pn := createPolicyNode(v1.RootPolicyNodeName, v1.Policyspace, policies)
 	pn.Annotations = annotations
 	pn.Annotations[v1alpha1.SourcePathAnnotationKey] = "namespaces"
 	return pn

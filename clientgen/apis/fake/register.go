@@ -51,6 +51,6 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	nomosv1alpha1.AddToScheme(scheme)
 	nomosv1.AddToScheme(scheme)
+	nomosv1alpha1.AddToScheme(scheme)
 }

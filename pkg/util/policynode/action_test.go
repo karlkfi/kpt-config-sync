@@ -5,9 +5,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -72,61 +70,6 @@ var policyNodeEqualTestcases = []policyNodeEqualTestcase{
 			},
 		},
 		wantEqual: true,
-	},
-	{
-		name: "populated resource quota",
-		lhs: &v1.PolicyNode{
-			Spec: v1.PolicyNodeSpec{
-				ResourceQuotaV1: &corev1.ResourceQuota{
-					Spec: corev1.ResourceQuotaSpec{
-						Hard: corev1.ResourceList{
-							corev1.ResourceCPU:     resource.MustParse("5.0"),
-							corev1.ResourceMemory:  resource.MustParse("5M"),
-							corev1.ResourceStorage: resource.MustParse("5M"),
-						},
-					},
-				},
-			},
-		},
-		rhs: &v1.PolicyNode{
-			Spec: v1.PolicyNodeSpec{
-				ResourceQuotaV1: &corev1.ResourceQuota{
-					Spec: corev1.ResourceQuotaSpec{
-						Hard: corev1.ResourceList{
-							corev1.ResourceCPU:     resource.MustParse("5.0"),
-							corev1.ResourceMemory:  resource.MustParse("5M"),
-							corev1.ResourceStorage: resource.MustParse("5M"),
-						},
-					},
-				},
-			},
-		},
-		wantEqual: true,
-	},
-	{
-		name: "populated resource quota not equal",
-		lhs: &v1.PolicyNode{
-			Spec: v1.PolicyNodeSpec{
-				ResourceQuotaV1: &corev1.ResourceQuota{
-					Spec: corev1.ResourceQuotaSpec{
-						Hard: corev1.ResourceList{
-							corev1.ResourceCPU: resource.MustParse("5.0"),
-						},
-					},
-				},
-			},
-		},
-		rhs: &v1.PolicyNode{
-			Spec: v1.PolicyNodeSpec{
-				ResourceQuotaV1: &corev1.ResourceQuota{
-					Spec: corev1.ResourceQuotaSpec{
-						Hard: corev1.ResourceList{
-							corev1.ResourceCPU: resource.MustParse("6.0"),
-						},
-					},
-				},
-			},
-		},
 	},
 }
 

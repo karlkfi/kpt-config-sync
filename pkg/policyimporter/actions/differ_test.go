@@ -54,14 +54,14 @@ func TestDiffer(t *testing.T) {
 			testName: "One node Create",
 			oldNodes: []v1.PolicyNode{},
 			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
+				policyNode("r", v1.Policyspace),
 			},
 			expected: []string{"nomos.dev/v1/PolicyNodes/r/create"},
 		},
 		{
 			testName: "One node delete",
 			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
+				policyNode("r", v1.Policyspace),
 			},
 			newNodes: []v1.PolicyNode{},
 			expected: []string{"nomos.dev/v1/PolicyNodes/r/delete"},
@@ -69,10 +69,10 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Rename root node",
 			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
+				policyNode("r", v1.Policyspace),
 			},
 			newNodes: []v1.PolicyNode{
-				policyNode("r2", "", v1.Policyspace),
+				policyNode("r2", v1.Policyspace),
 			},
 			expected: []string{
 				"nomos.dev/v1/PolicyNodes/r2/create",
@@ -80,35 +80,14 @@ func TestDiffer(t *testing.T) {
 			},
 		},
 		{
-			testName: "Rename policyspace with children",
-			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c1", "r", v1.Policyspace),
-				policyNode("c2", "c1", v1.Namespace),
-				policyNode("c3", "c1", v1.Namespace),
-			},
-			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c4", "r", v1.Policyspace),
-				policyNode("c2", "c4", v1.Namespace),
-				policyNode("c3", "c4", v1.Namespace),
-			},
-			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c4/create",
-				"nomos.dev/v1/PolicyNodes/c2/update",
-				"nomos.dev/v1/PolicyNodes/c3/update",
-				"nomos.dev/v1/PolicyNodes/c1/delete",
-			},
-		},
-		{
 			testName: "Create 2 nodes",
 			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
+				policyNode("r", v1.Policyspace),
 			},
 			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c1", "r", v1.Policyspace),
-				policyNode("c2", "c1", v1.Namespace),
+				policyNode("r", v1.Policyspace),
+				policyNode("c1", v1.Policyspace),
+				policyNode("c2", v1.Namespace),
 			},
 			expected: []string{
 				"nomos.dev/v1/PolicyNodes/c1/create",
@@ -118,152 +97,20 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Create 2 nodes and delete 2",
 			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("co1", "r", v1.Policyspace),
-				policyNode("co2", "co1", v1.Namespace),
+				policyNode("r", v1.Policyspace),
+				policyNode("co1", v1.Policyspace),
+				policyNode("co2", v1.Namespace),
 			},
 			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c2", "c1", v1.Namespace),
-				policyNode("c1", "r", v1.Policyspace),
+				policyNode("r", v1.Policyspace),
+				policyNode("c2", v1.Namespace),
+				policyNode("c1", v1.Policyspace),
 			},
 			expected: []string{
 				"nomos.dev/v1/PolicyNodes/c1/create",
 				"nomos.dev/v1/PolicyNodes/c2/create",
 				"nomos.dev/v1/PolicyNodes/co2/delete",
 				"nomos.dev/v1/PolicyNodes/co1/delete",
-			},
-		},
-		{
-			testName: "Move a grandchild under root and create a new child under it",
-			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("co1", "r", v1.Policyspace),
-				policyNode("co2", "co1", v1.Namespace),
-			},
-			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("co2", "r", v1.Policyspace),
-				policyNode("c3", "co2", v1.Namespace),
-			},
-			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c3/create",
-				"nomos.dev/v1/PolicyNodes/co2/update",
-				"nomos.dev/v1/PolicyNodes/co1/delete",
-			},
-		},
-		{
-			testName: "Re-parent namespace node",
-			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c1", "r", v1.Policyspace),
-				policyNode("c2", "r", v1.Policyspace),
-				policyNode("c3", "c1", v1.Namespace),
-			},
-			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c1", "r", v1.Policyspace),
-				policyNode("c2", "r", v1.Policyspace),
-				policyNode("c3", "c2", v1.Namespace),
-			},
-			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c3/update",
-			},
-		},
-		{
-			testName: "Re-parent policyspace node",
-			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c1", "r", v1.Policyspace),
-				policyNode("c2", "c1", v1.Policyspace),
-				policyNode("c3", "c2", v1.Namespace),
-			},
-			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c1", "r", v1.Policyspace),
-				policyNode("c2", "r", v1.Policyspace),
-				policyNode("c3", "c2", v1.Namespace),
-			},
-			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c2/update",
-			},
-		},
-		{
-			testName: "Re-parent and delete",
-			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c1", "r", v1.Policyspace),
-				policyNode("c2", "c1", v1.Namespace),
-			},
-			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c2", "r", v1.Policyspace),
-				policyNode("c3", "r", v1.Policyspace),
-				policyNode("c3.1", "c3", v1.Namespace),
-			},
-			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c3/create",
-				"nomos.dev/v1/PolicyNodes/c3.1/create",
-				"nomos.dev/v1/PolicyNodes/c2/update",
-				"nomos.dev/v1/PolicyNodes/c1/delete",
-			},
-		},
-		{
-			testName: "Swap nodes with parent-child relationship",
-			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c1", "r", v1.Policyspace),
-				policyNode("c2", "c1", v1.Namespace),
-			},
-			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c2", "r", v1.Policyspace),
-				policyNode("c1", "c2", v1.Namespace),
-			},
-			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c2/update",
-				"nomos.dev/v1/PolicyNodes/c1/update",
-			},
-		},
-		{
-			testName: "Swap nodes with parent-child relationship and create grandchild",
-			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c1", "r", v1.Policyspace),
-				policyNode("c2", "c1", v1.Namespace),
-			},
-			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c2", "r", v1.Policyspace),
-				policyNode("c1", "c2", v1.Policyspace),
-				policyNode("c3", "c1", v1.Namespace),
-			},
-			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c3/create",
-				"nomos.dev/v1/PolicyNodes/c2/update",
-				"nomos.dev/v1/PolicyNodes/c1/update",
-			},
-		},
-		{
-			testName: "Swap namespace child with aunt policyspace",
-			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c1", "r", v1.Policyspace),
-				policyNode("c2", "r", v1.Policyspace),
-				policyNode("c3", "c1", v1.Namespace),
-				policyNode("c4", "c2", v1.Namespace),
-			},
-			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c4", "r", v1.Policyspace),
-				policyNode("c2", "r", v1.Policyspace),
-				policyNode("c3", "c4", v1.Namespace),
-				policyNode("c1", "c2", v1.Namespace),
-			},
-			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c4/update",
-				"nomos.dev/v1/PolicyNodes/c1/update",
-				"nomos.dev/v1/PolicyNodes/c3/update",
 			},
 		},
 		{
@@ -297,12 +144,12 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Create 2 nodes and a ClusterPolicy",
 			oldNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
+				policyNode("r", v1.Policyspace),
 			},
 			newNodes: []v1.PolicyNode{
-				policyNode("r", "", v1.Policyspace),
-				policyNode("c2", "c1", v1.Namespace),
-				policyNode("c1", "r", v1.Policyspace),
+				policyNode("r", v1.Policyspace),
+				policyNode("c2", v1.Namespace),
+				policyNode("c1", v1.Policyspace),
 			},
 			newClusterPolicy: clusterPolicy("foo", true),
 			expected: []string{
@@ -392,7 +239,7 @@ func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.PolicyN
 	case action.CreateOperation:
 		r := a.(*action.ReflectiveCreateAction).Item()
 		pn := r.(*v1.PolicyNode)
-		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Parent, pn.Spec.Type)
+		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Type)
 	case action.UpdateOperation:
 		upAct := a.(*action.ReflectiveUpdateAction)
 		old := nodes[upAct.Resource()]
@@ -401,11 +248,11 @@ func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.PolicyN
 			t.Fatalf("Failed to update resource: %v", err)
 		}
 		pn := r.(*v1.PolicyNode)
-		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Parent, pn.Spec.Type)
+		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Type)
 	case action.UpsertOperation:
 		r := a.(*action.ReflectiveUpsertAction).UpsertedResouce()
 		pn := r.(*v1.PolicyNode)
-		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Parent, pn.Spec.Type)
+		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Type)
 	case action.DeleteOperation:
 		delete(nodes, a.Name())
 	default:
@@ -413,14 +260,13 @@ func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.PolicyN
 	}
 }
 
-func policyNode(name, parent string, t v1.PolicyNodeType) v1.PolicyNode {
+func policyNode(name string, t v1.PolicyNodeType) v1.PolicyNode {
 	return v1.PolicyNode{
 		ObjectMeta: meta.ObjectMeta{
 			Name: name,
 		},
 		Spec: v1.PolicyNodeSpec{
-			Parent: parent,
-			Type:   t,
+			Type: t,
 		},
 	}
 }
