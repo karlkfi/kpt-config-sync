@@ -8,6 +8,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Build intermediate image for tools
+FROM golang:1.11-alpine AS build-base
+RUN apk add bash ca-certificates git gcc g++ libc-dev
+
+ENV TAP2JUNIT_RELEASE=master
+RUN go get github.com/filmil/tap2junit/...
+WORKDIR /go/src/github.com/filmil/tap2junit
+RUN git checkout ${TAP2JUNIT_RELEASE}
+
+# Produce a binary tap2junit in /go/bin/...
+RUN CGO_ENABLED=0 go install github.com/filmil/tap2junit/...
+
 # Build intermediate image for gcloud / kubectl
 FROM ubuntu:16.04 as gcloud-install
 
@@ -34,7 +46,6 @@ RUN apt-get update \
   curl \
   git \
   jq \
-  libtap-formatter-junit-perl \
   python \
   software-properties-common
 
@@ -61,6 +72,8 @@ RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add 
 # Copy installed gcloud into image
 COPY --from=gcloud-install /opt/gcloud/google-cloud-sdk /opt/gcloud/google-cloud-sdk
 ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
+
+COPY --from=build-base /go/bin/tap2junit /opt
 
 ENV GIT_CONFIG_NOGLOBAL 1
 ENV GIT_CONFIG_NOSYSTEM 1

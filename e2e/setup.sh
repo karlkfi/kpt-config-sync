@@ -212,10 +212,9 @@ function main() {
 
     if "${has_artifacts}"; then
       echo "+++ Converting test results from TAP format to jUnit"
-      tap2junit --name "git_tests" "${result_file}"
-      # Testgrid requires this particular file name, and tap2junit doesn't allow
-      # renames. So...
-      mv "${result_file}".xml "${ARTIFACTS}/junit_git.xml"
+      /opt/tap2junit -reorder_duration -test_name="git_tests" \
+        < "${result_file}" \
+        > "${ARTIFACTS}/junit_git.xml"
     fi
   else
     echo "No files to test!"

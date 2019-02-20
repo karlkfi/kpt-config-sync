@@ -136,6 +136,6 @@ setup::common_teardown() {
   ((runtime="$end - $START_TIME"))
 
   if [ -n "${TIMING:+1}" ]; then
-    echo "# total time: ${runtime}ms" >&3
+    echo "# TAP2JUNIT: Duration: ${runtime}ms" >&3
   fi
 }
