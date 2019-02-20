@@ -78,13 +78,15 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 }
 
 @test "RoleBindings enforced" {
+  git::add /opt/testing/e2e/examples/acme/cluster/admin-clusterrole.yaml acme/cluster/admin-clusterrole.yaml
   git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/namespace.yaml acme/namespaces/eng/backend/namespace.yaml
   git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
-  git::add /opt/testing/e2e/examples/acme/namespaces/eng/alice-rolebinding.yaml acme/namespaces/eng/backend/ar.yaml
+  git::add /opt/testing/e2e/examples/acme/namespaces/eng/alice-rolebinding.yaml acme/namespaces/eng/ar.yaml
   git::add /opt/testing/e2e/examples/acme/namespaces/eng/frontend/namespace.yaml acme/namespaces/eng/frontend/namespace.yaml
   git::commit
   wait::for -- kubectl get rolebinding -n backend bob-rolebinding
   wait::for -- kubectl get rolebinding -n backend alice-rolebinding
+  wait::for -- kubectl get clusterrole acme-admin
 
   run kubectl get pods -n backend --as bob@acme.com
   assert::contains "No resources"
