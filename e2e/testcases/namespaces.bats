@@ -31,11 +31,11 @@ function teardown() {
 
 @test "Namespace has enabled label and declared" {
   local ns=decl-namespace-label-enabled
-  namespace::create $ns -l "nomos.dev/managed=enabled"
+  namespace::create $ns -l "nomos.dev/managed=enabled" -a "nomos.dev/managed=enabled"
   namespace::declare $ns
   git::commit
 
-  namespace::check_exists $ns -l "nomos.dev/managed=enabled"
+  namespace::check_exists $ns -l "nomos.dev/managed=enabled" -a "nomos.dev/managed=enabled"
   namespace::check_no_warning $ns
 }
 
@@ -54,7 +54,7 @@ function teardown() {
   namespace::declare $ns
   git::commit
 
-  namespace::check_exists $ns -l "nomos.dev/managed=enabled"
+  namespace::check_exists $ns -l "nomos.dev/managed=enabled" -a "nomos.dev/managed=enabled"
   namespace::check_no_warning $ns
 }
 
