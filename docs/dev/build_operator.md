@@ -2,8 +2,8 @@
 
 The instructions for configuring and installing Nomos with an operator are
 described in the [Operator Installation Guide](../user/installation.md).
-*However*, the `operator-bundle.yaml` uses a released version of Nomos. In order
-to deploy your local version run
+*However*, `nomos-operator.yaml` uses a released build of Nomos. In order
+to deploy your local tree with the latest operator release candidate run
 
 ```$bash
 $ make deploy-operator
@@ -11,7 +11,7 @@ $ make deploy-operator
 
 And add the following to `nomos.yaml`:
 
-```
+```$bash
 spec:
   channel: dev
 ```
@@ -22,16 +22,27 @@ steps
 and [Deploy the Operator](../user/installation.md#deploy-the-operator) in the
 installation guide).
 
-The `deploy-operator` target assembles and applies a bundle that will deploy
-images pushed from your local tree.
+If wish to test with your own dev build of the operator, check out the operator
+repository, cd into the `nomos-operator` directory, then run
 
-If you work in a project shared with other developers and you wish to test with
-a build of the operator other than the project-shared version `deploy-operator`
-uses, check out the operator source and run `make release-user` there, then run
-`make deploy-operator-user` in this repo.
+```$bash
+make release-user
+```
+
+then change back to this directory and run
+
+```$bash
+make deploy-operator-user
+```
+
+This will use the operator build in the `nomos-operator` tree where
+you last ran `release-user`. Note that if you have never run
+`release-user` this will be non-existent.
 
 ### Troubleshooting
 
 *Nomos Deployments are stuck in ImagePullBackoff*
 
-This happens when you don't add `channel: dev` to the Nomos.
+If you did not add `channel: dev` to the `nomos.yaml` you applied, kubernetes will
+attempt to retrieve images from the incorrect location, resulting in ImagePullBackoff.
+To fix this, add `channel: dev` to your `nomos.yaml` and re-apply.
