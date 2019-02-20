@@ -15,13 +15,16 @@ limitations under the License.
 
 package action
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/prometheus/client_golang/prometheus"
+)
 
 // Actions is a counter for the number of actions executed.
 var Actions = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Help:      "The total count of actions created",
-		Namespace: "nomos",
+		Namespace: policyhierarchy.MetricsNamespace,
 		Subsystem: "action",
 		Name:      "executed",
 	},
@@ -32,7 +35,7 @@ var Actions = prometheus.NewCounterVec(
 var APICalls = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Help:      "The total count of actual API calls (actions will elide noop API calls)",
-		Namespace: "nomos",
+		Namespace: policyhierarchy.MetricsNamespace,
 		Subsystem: "action",
 		Name:      "api_calls",
 	},
@@ -43,7 +46,7 @@ var APICalls = prometheus.NewCounterVec(
 var APICallDuration = prometheus.NewHistogramVec(
 	prometheus.HistogramOpts{
 		Help:      "Client action duration distributions",
-		Namespace: "nomos",
+		Namespace: policyhierarchy.MetricsNamespace,
 		Subsystem: "action",
 		Name:      "api_duration_seconds",
 		Buckets:   []float64{.001, .01, .1, 1},

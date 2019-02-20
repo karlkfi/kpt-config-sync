@@ -9,13 +9,14 @@ import (
 	"github.com/google/nomos/cmd/nomos/initialize"
 	"github.com/google/nomos/cmd/nomos/vet"
 	"github.com/google/nomos/cmd/nomos/view"
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 var (
 	rootCmd = &cobra.Command{
-		Use:   "nomos",
+		Use:   policyhierarchy.CLIName,
 		Short: "Set up and manage a GKE Policy Management directory",
 	}
 )

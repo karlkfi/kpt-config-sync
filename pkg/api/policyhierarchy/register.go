@@ -17,9 +17,21 @@ limitations under the License.
 package policyhierarchy
 
 const (
+	// CLIName is the short name of the CLI.
+	CLIName = "nomos"
+
+	// MetricsNamespace is the namespace that metrics are held in.
+	MetricsNamespace = "nomos"
+
+	// NomosKind is the Kind of the Nomos object.
+	NomosKind = "Nomos"
+
 	// GroupName is the name of the group of policyhierarchy resources.
 	GroupName = "nomos.dev"
 
 	// ProductName is what we call Nomos externally.
 	ProductName = "GKE Policy Management"
+
+	// ControllerNamespace is the Namespace used for Nomos controllers
+	ControllerNamespace = "nomos-system"
 )

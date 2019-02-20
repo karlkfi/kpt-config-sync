@@ -15,14 +15,17 @@ limitations under the License.
 
 package metrics
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/prometheus/client_golang/prometheus"
+)
 
 // Prometheus metrics
 var (
 	ErrTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total errors that occurred when executing syncer actions",
-			Namespace: "nomos",
+			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "syncer",
 			Name:      "error_total",
 		},
@@ -31,7 +34,7 @@ var (
 	EventTimes = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Help:      "Timestamps when syncer events occurred",
-			Namespace: "nomos",
+			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "syncer",
 			Name:      "event_timestamps",
 		},
@@ -40,7 +43,7 @@ var (
 	ClusterReconcileDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Help:      "Syncer cluster reconciliation duration distributions",
-			Namespace: "nomos",
+			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "syncer",
 			Name:      "syncer_clusterpolicy_reconcile_seconds",
 			Buckets:   []float64{.001, .01, .1, 1, 10, 100},
@@ -50,7 +53,7 @@ var (
 	NamespaceReconcileDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Help:      "Syncer namespace reconcile duration distributions",
-			Namespace: "nomos",
+			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "syncer",
 			Name:      "namespace_reconcile_duration_seconds",
 			Buckets:   []float64{.001, .01, .1, 1, 10, 100},

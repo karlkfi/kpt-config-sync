@@ -16,6 +16,7 @@ limitations under the License.
 package resourcequota
 
 import (
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -27,7 +28,7 @@ var Metrics = struct {
 	Usage: prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Help:      "Policyspace quota usage per resource type",
-			Namespace: "nomos",
+			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "admission_controller",
 			Name:      "usage",
 		},
@@ -37,7 +38,7 @@ var Metrics = struct {
 	Violations: prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Policyspace quota violations per resource type",
-			Namespace: "nomos",
+			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "admission_controller",
 			Name:      "violations_total",
 		},

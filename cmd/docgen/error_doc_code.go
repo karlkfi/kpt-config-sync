@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -94,17 +95,17 @@ func (e errorDocCode) Examples() []vet.Error {
 
 // Aka returns the type of error in a near-human-readable format
 func (e errorDocCode) Aka() string {
-	return strings.Split(fmt.Sprintf("%T", e.Examples()[0]), "veterrors.")[1]
+	return strings.Split(fmt.Sprintf("%T", e.Examples()[0]), "vet.")[1]
 }
 
 // Nomos returns `nomos`
 func (e errorDocCode) Nomos() string {
-	return "`nomos`"
+	return e.Q(policyhierarchy.CLIName)
 }
 
 // Nomosvet returns `nomos vet`
 func (e errorDocCode) Nomosvet() string {
-	return "`nomos vet`"
+	return e.Q(fmt.Sprintf("%s vet", policyhierarchy.CLIName))
 }
 
 // Namespace returns the Namespace object string

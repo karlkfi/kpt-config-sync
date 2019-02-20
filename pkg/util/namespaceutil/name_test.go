@@ -17,6 +17,8 @@ package namespaceutil
 
 import (
 	"testing"
+
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 )
 
 type reservedOrInvalidNamespaceTestcase struct {
@@ -55,7 +57,7 @@ func TestIsReserved(t *testing.T) {
 		{"kube-public", true},
 		{"kube-foo", true},
 		{"default", true},
-		{"nomos-system", true},
+		{policyhierarchy.ControllerNamespace, true},
 	} {
 		reserved := IsReserved(testcase.name)
 		if reserved != testcase.reserved {

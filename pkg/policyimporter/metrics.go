@@ -15,7 +15,10 @@ limitations under the License.
 
 package policyimporter
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/prometheus/client_golang/prometheus"
+)
 
 // Metrics contains the Prometheus metrics common to all PolicyImporters.
 var Metrics = struct {
@@ -26,7 +29,7 @@ var Metrics = struct {
 	prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total operations that have been performed to keep policy node hierarchy up-to-date with source of truth",
-			Namespace: "nomos",
+			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "policy_importer",
 			Name:      "policy_node_operations_total",
 		},
@@ -36,7 +39,7 @@ var Metrics = struct {
 	prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Help:      "Number of policy nodes in current state",
-			Namespace: "nomos",
+			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "policy_importer",
 			Name:      "policy_nodes",
 		},
@@ -44,7 +47,7 @@ var Metrics = struct {
 	prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total number of policy state transitions (A state transition can include changes to multiple resources)",
-			Namespace: "nomos",
+			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "policy_importer",
 			Name:      "policy_state_transitions_total",
 		},

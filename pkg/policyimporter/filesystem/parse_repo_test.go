@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/pkg/errors"
 )
@@ -85,6 +86,6 @@ func (tc *testCase) Run(t *testing.T) {
 		t.Errorf("diff:\n%v", diff)
 		t.Errorf(`If this change is correct, run:
 make build
-nomos vet --path=%[1]v --validate=false 2> %[1]v/expected-errs.txt`, *tc)
+%s vet --path=%[1]v --validate=false 2> %[1]v/expected-errs.txt`, policyhierarchy.CLIName, *tc)
 	}
 }

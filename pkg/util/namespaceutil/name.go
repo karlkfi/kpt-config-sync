@@ -18,14 +18,15 @@ package namespaceutil
 import (
 	"strings"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 var (
 	// Namespaces that either exist on the kubernetes cluster by default or are reserved by Nomos.
 	reservedNamespaces = map[string]bool{
-		"default":      true,
-		"nomos-system": true,
+		"default":                           true,
+		policyhierarchy.ControllerNamespace: true,
 	}
 
 	reservedPrefix = "kube-"

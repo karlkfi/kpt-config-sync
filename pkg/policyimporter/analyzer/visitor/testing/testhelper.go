@@ -35,9 +35,18 @@ import (
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
-var (
+const (
 	// ImportToken defines a default token to use for testing.
 	ImportToken = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+
+	// ClusterAdmin is the name of the test cluster admin role.
+	ClusterAdmin = "cluster-admin"
+
+	// ClusterAdminBinding is the name of the test cluster admin role binding.
+	ClusterAdminBinding = "cluster-admin-binding"
+)
+
+var (
 	// ImportTime defines a default time to use for testing.
 	ImportTime = time.Date(2017, 8, 10, 5, 16, 00, 0, time.FixedZone("PDT", -7*60*60))
 )
@@ -113,7 +122,7 @@ func (t *TestHelper) NomosAdminClusterRole() *rbacv1.ClusterRole {
 			Kind:       "ClusterRole",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "nomos:admin",
+			Name: ClusterAdmin,
 		},
 		Rules: []rbacv1.PolicyRule{{
 			Verbs:     []string{rbacv1.VerbAll},
@@ -131,7 +140,7 @@ func (t *TestHelper) NomosAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 			Kind:       "ClusterRoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "nomos:admin",
+			Name: ClusterAdminBinding,
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -143,7 +152,7 @@ func (t *TestHelper) NomosAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     "nomos:admin",
+			Name:     ClusterAdmin,
 		},
 	}
 }
@@ -412,7 +421,7 @@ func (t *TestHelper) System() *ast.System {
 					Kind:       "Repo",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "nomos",
+					Name: "repo",
 				},
 				Spec: v1alpha1.RepoSpec{
 					Version: "0.1.0",

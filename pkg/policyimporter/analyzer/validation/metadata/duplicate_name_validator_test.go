@@ -27,7 +27,7 @@ func TestDuplicateNameValidator(t *testing.T) {
 		asttest.Pass("two objects different group",
 			object.Build(object.GVK(kinds.Role(), object.Group("rbac")),
 				object.Name("role"), object.Path("namespaces/foo/role.yaml")),
-			object.Build(object.GVK(kinds.Role(), object.Group("nomos")),
+			object.Build(object.GVK(kinds.Role(), object.Group("google")),
 				object.Name("role"), object.Path("namespaces/foo/role.yaml")),
 		),
 		asttest.Fail("two colliding objects different version",

@@ -19,8 +19,8 @@ type PolicyManagementNotInstalledError struct {
 
 // Error implements error.
 func (e PolicyManagementNotInstalledError) Error() string {
-	return format(e, errors.Wrapf(e.Err, "%s is not properly installed. Apply a Nomos config to enable config management.",
-		policyhierarchy.ProductName).Error())
+	return format(e, errors.Wrapf(e.Err, "%s is not properly installed. Apply a %s config to enable config management.",
+		policyhierarchy.ProductName, policyhierarchy.NomosKind).Error())
 }
 
 // Code implements Error.

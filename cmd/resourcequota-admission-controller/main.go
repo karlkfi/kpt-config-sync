@@ -24,6 +24,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/admissioncontroller"
 	"github.com/google/nomos/pkg/admissioncontroller/resourcequota"
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/util/log"
@@ -41,7 +42,7 @@ import (
 
 const (
 	externalAdmissionHookConfigName = "resource-quota.nomos.dev"
-	controllerNamespace             = "nomos-system"
+	controllerNamespace             = policyhierarchy.ControllerNamespace
 	controllerName                  = "resourcequota-admission-controller"
 )
 

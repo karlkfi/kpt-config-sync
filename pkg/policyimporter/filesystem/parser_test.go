@@ -1525,15 +1525,6 @@ spec:
 		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode},
 	},
 	{
-		testName: "Dir name reserved 3",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/nomos.yaml":               aRepo,
-			"namespaces/nomos-system/ns.yaml": templateData{Name: "nomos-system"}.apply(aNamespace),
-		},
-		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode},
-	},
-	{
 		testName: "Dir name invalid",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
@@ -2827,7 +2818,7 @@ func TestEmptyDirectories(t *testing.T) {
 	defer d.remove()
 
 	// Create required repo definition.
-	d.createTestFile(filepath.Join(repo.SystemDir, "nomos.yaml"), aRepo)
+	d.createTestFile(filepath.Join(repo.SystemDir, "repo.yaml"), aRepo)
 
 	for _, path := range []string{
 		filepath.Join(d.rootDir, repo.NamespacesDir),
