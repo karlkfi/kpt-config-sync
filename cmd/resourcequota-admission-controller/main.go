@@ -121,9 +121,9 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{
-							Key:      labeling.ResourceManagementKey,
+							Key:      labeling.NomosQuotaKey,
 							Operator: metav1.LabelSelectorOpIn,
-							Values:   []string{labeling.Enabled},
+							Values:   []string{labeling.NomosQuotaValue},
 						},
 					},
 				},

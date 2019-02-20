@@ -4,6 +4,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	oidcconfig "github.com/google/nomos/pkg/oidc/config"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -89,6 +90,11 @@ func Cluster() schema.GroupVersionKind {
 // ClientID returns the canonical ClientID GroupVersionKind
 func ClientID() schema.GroupVersionKind {
 	return oidcconfig.SchemeGroupVersion.WithKind("ClientID")
+}
+
+// Deployment returns the canonical Deployment GroupVersionKind
+func Deployment() schema.GroupVersionKind {
+	return appsv1.SchemeGroupVersion.WithKind("Deployment")
 }
 
 // HierarchyConfig returns the canonical HierarchyConfig GroupVersionKind

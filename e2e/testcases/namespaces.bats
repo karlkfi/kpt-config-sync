@@ -29,18 +29,18 @@ function teardown() {
   setup::common_teardown
 }
 
-@test "Namespace has enabled label and declared" {
-  local ns=decl-namespace-label-enabled
-  namespace::create $ns -l "nomos.dev/managed=enabled" -a "nomos.dev/managed=enabled"
+@test "Namespace has enabled annotation and declared" {
+  local ns=decl-namespace-annotation-enabled
+  namespace::create $ns -a "nomos.dev/managed=enabled"
   namespace::declare $ns
   git::commit
 
-  namespace::check_exists $ns -l "nomos.dev/managed=enabled" -a "nomos.dev/managed=enabled"
+  wait::for -t 10 -- namespace::check_exists $ns -l "nomos.dev/quota=true" -a "nomos.dev/managed=enabled"
   namespace::check_no_warning $ns
 }
 
 @test "Namespace exists and declared" {
-  local ns=decl-namespace-label-none
+  local ns=decl-namespace-annotation-none
   namespace::create $ns
   namespace::declare $ns
   git::commit
@@ -54,32 +54,32 @@ function teardown() {
   namespace::declare $ns
   git::commit
 
-  namespace::check_exists $ns -l "nomos.dev/managed=enabled" -a "nomos.dev/managed=enabled"
+  namespace::check_exists $ns -l "nomos.dev/quota=true" -a "nomos.dev/managed=enabled"
   namespace::check_no_warning $ns
 }
 
 @test "Namespace has enabled annotation with no declarations" {
-  local ns=undeclared-label-enabled
+  local ns=undeclared-annotation-enabled
   namespace::create $ns -a "nomos.dev/managed=enabled"
   namespace::check_not_found $ns
 }
 
 @test "Namespace exists with no declaration" {
-  local ns=undeclared-label-none
+  local ns=undeclared-annotation-none
   namespace::create $ns
   namespace::check_warning $ns
 }
 
-@test "Namespace warn on invalid management label" {
-  local ns=decl-invalid-label
-  namespace::create $ns -l "nomos.dev/namespace-management=a-garbage-label"
+@test "Namespace warn on invalid management annotation" {
+  local ns=decl-invalid-annotation
+  namespace::create $ns -a "nomos.dev/namespace-management=a-garbage-annotation"
   namespace::declare $ns
   git::commit
 
   wait::for -t 30 -- policynode::sync_token_eq "$ns" "$(git::hash)"
   selection=$(kubectl get pn ${ns} -ojson | jq -c ".status.syncState")
   [[ "${selection}" == "\"error\"" ]] || debug::error "policy node status should be error, not ${selection}"
-  namespace::check_exists $ns -l "nomos.dev/namespace-management=a-garbage-label"
+  namespace::check_exists $ns -a "nomos.dev/namespace-management=a-garbage-annotation"
   namespace::check_warning $ns
 }
 

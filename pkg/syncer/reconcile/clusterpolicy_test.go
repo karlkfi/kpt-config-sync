@@ -24,7 +24,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/labeling"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -84,8 +83,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "my-persistentvolume",
-						Labels: labeling.ManageResource.New(),
+						Name: "my-persistentvolume",
 						Annotations: map[string]string{
 							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 						},
@@ -103,8 +101,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 							APIVersion: "v1",
 						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "my-persistentvolume",
-							Labels: labeling.ManageResource.New(),
+							Name: "my-persistentvolume",
 							Annotations: map[string]string{
 								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -120,8 +117,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 							APIVersion: "v1",
 						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "my-persistentvolume",
-							Labels: labeling.ManageResource.New(),
+							Name: "my-persistentvolume",
 							Annotations: map[string]string{
 								v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 							},
@@ -191,8 +187,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "my-persistentvolume",
-						Labels: labeling.ManageResource.New(),
+						Name: "my-persistentvolume",
 						Annotations: map[string]string{
 							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 							v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -211,8 +206,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 							APIVersion: "v1",
 						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "my-persistentvolume",
-							Labels: labeling.ManageResource.New(),
+							Name: "my-persistentvolume",
 							Annotations: map[string]string{
 								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -228,8 +222,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 							APIVersion: "v1",
 						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "my-persistentvolume",
-							Labels: labeling.ManageResource.New(),
+							Name: "my-persistentvolume",
 							Annotations: map[string]string{
 								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -340,8 +333,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "my-persistentvolume",
-						Labels: labeling.ManageResource.New(),
+						Name: "my-persistentvolume",
 						Annotations: map[string]string{
 							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 							v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -395,8 +387,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "my-persistentvolume",
-						Labels: labeling.ManageResource.New(),
+						Name: "my-persistentvolume",
 						Annotations: map[string]string{
 							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 						},
@@ -413,8 +404,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "my-persistentvolume",
-						Labels: labeling.ManageResource.New(),
+						Name: "my-persistentvolume",
 						Annotations: map[string]string{
 							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 						},

@@ -10,6 +10,8 @@ readonly FWD_SSH_PORT=2222
 source "$TEST_DIR/lib/wait.bash"
 # shellcheck source=e2e/lib/install.bash
 source "$TEST_DIR/lib/install.bash"
+# shellcheck source=e2e/lib/resource.bash
+source "$TEST_DIR/lib/resource.bash"
 
 NOMOS_REPO="${NOMOS_REPO:-.}"
 
@@ -113,8 +115,7 @@ function set_up_env_minimal() {
 
 function clean_up_test_resources() {
   kubectl delete --ignore-not-found ns -l "nomos.dev/testdata=true"
-  # TODO: update this to filter by annotation
-  kubectl delete --ignore-not-found ns -l "nomos.dev/managed=enabled"
+  resource::delete -r ns -a nomos.dev/managed=enabled
 
   # TODO: this is to work around the label to annotation switch, delete this
   # sometime after 2018-02-28

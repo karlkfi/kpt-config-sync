@@ -13,6 +13,8 @@ readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$TEST_DIR/lib/wait.bash"
 # shellcheck source=e2e/lib/install.bash
 source "$TEST_DIR/lib/install.bash"
+# shellcheck source=e2e/lib/resource.bash
+source "$TEST_DIR/lib/resource.bash"
 
 function install() {
   # Setup git
@@ -38,7 +40,7 @@ function cleanup() {
   echo "Nomos uninstalled"
 
   kubectl delete --ignore-not-found ns -l "nomos.dev/testdata=true"
-  kubectl delete --ignore-not-found ns -l "nomos.dev/managed=enabled"
+  resource::delete -r ns -a nomos.dev/managed=enabled
 
   echo "killing kubectl port forward..."
   pkill -f "kubectl -n=nomos-system-test port-forward.*2222:22" || true

@@ -26,13 +26,10 @@ const (
 	NomosSystemValue = "true"
 )
 
-// Labels that Nomos uses for determining how to manage resources.
+// Labels that Nomos uses to determine which namespaces to enforce hierarchical quota limits on.
 const (
-	// ResourceManagementKey indicates if Nomos will manage the content and lifecycle for the resource.
-	ResourceManagementKey = "nomos.dev/managed"
-
-	// Enabled indicates that Nomos will manage content and lifecycle for the given resource.
-	Enabled = "enabled"
+	NomosQuotaKey   = "nomos.dev/quota"
+	NomosQuotaValue = "true"
 )
 
 // Label helps manage applying labels to objects.
@@ -70,10 +67,10 @@ func (l *Label) IsSet(object metav1.Object) bool {
 	return objectLabels[l.key] == l.value
 }
 
-// ManageResource is the label indicating that Nomos manages the lifecycle for a resource.
-var ManageResource = Label{
-	key:   ResourceManagementKey,
-	value: Enabled,
+// ManageQuota is the label indicating that Nomos manages hierarchical quota in this namespace.
+var ManageQuota = Label{
+	key:   NomosQuotaKey,
+	value: NomosQuotaValue,
 }
 
 // NomosSystem indicates that this resource is part of the nomos install.

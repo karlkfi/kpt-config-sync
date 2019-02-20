@@ -27,7 +27,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/syncer/differ"
-	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
@@ -152,9 +151,7 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1
 
 func decorateAsClusterManaged(declaredInstances []*unstructured.Unstructured, policy *v1.ClusterPolicy) {
 	for _, decl := range declaredInstances {
-		// Label the resource as Nomos managed.
-		// TODO(124386983): No longer label managed resources with the nomos-managed label.
-		decl.SetLabels(labeling.ManageResource.AddDeepCopy(decl.GetLabels()))
+		// Annotate the resource with the current version token.
 		a := decl.GetAnnotations()
 		if a == nil {
 			a = map[string]string{}

@@ -24,11 +24,13 @@ import (
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/conversion"
@@ -84,7 +86,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "eng",
-					Labels: labeling.ManageResource.New(),
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
 						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
@@ -115,7 +117,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-deployment",
 						Namespace: "eng",
-						Labels:    labeling.ManageResource.New(),
 						Annotations: map[string]string{
 							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 						},
@@ -133,10 +134,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-					Labels: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
-					},
+					Name:   "eng",
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
 						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
@@ -152,7 +151,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "my-deployment",
 							Namespace: "eng",
-							Labels:    labeling.ManageResource.New(),
 							Annotations: map[string]string{
 								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -172,7 +170,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "my-deployment",
 							Namespace: "eng",
-							Labels:    labeling.ManageResource.New(),
 							Annotations: map[string]string{
 								v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 							},
@@ -229,7 +226,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "eng",
-					Labels: labeling.ManageResource.New(),
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
 						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
@@ -260,7 +257,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-deployment",
 						Namespace: "eng",
-						Labels:    labeling.ManageResource.New(),
 						Annotations: map[string]string{
 							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 							v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -283,7 +279,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "my-deployment",
 							Namespace: "eng",
-							Labels:    labeling.ManageResource.New(),
 							Annotations: map[string]string{
 								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -303,7 +298,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "my-deployment",
 							Namespace: "eng",
-							Labels:    labeling.ManageResource.New(),
 							Annotations: map[string]string{
 								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -323,10 +317,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-					Labels: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
-					},
+					Name:   "eng",
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
 						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
@@ -337,6 +329,166 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					kind:    corev1.EventTypeNormal,
 					reason:  "ReconcileComplete",
 					varargs: true,
+				},
+			},
+		},
+		{
+			name: "clean up label for unmanaged namespace",
+			policyNode: &v1.PolicyNode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eng",
+				},
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+				},
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateSynced,
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+				},
+			},
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "eng",
+					Labels: labeling.ManageQuota.New(),
+				},
+			},
+			declared: []runtime.Object{
+				&appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-deployment",
+					},
+					Spec: appsv1.DeploymentSpec{
+						Strategy: appsv1.DeploymentStrategy{
+							Type: appsv1.RollingUpdateDeploymentStrategyType,
+						},
+					},
+				},
+			},
+			actual: []runtime.Object{
+				&appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-deployment",
+						Namespace: "eng",
+						Annotations: map[string]string{
+							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+						},
+					},
+					Spec: appsv1.DeploymentSpec{
+						Strategy: appsv1.DeploymentStrategy{
+							Type: appsv1.RollingUpdateDeploymentStrategyType,
+						},
+					},
+				},
+			},
+			wantApplies: []application{
+				{
+					intended: &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-deployment",
+							Namespace: "eng",
+							Annotations: map[string]string{
+								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+							},
+						},
+						Spec: appsv1.DeploymentSpec{
+							Strategy: appsv1.DeploymentStrategy{
+								Type: appsv1.RollingUpdateDeploymentStrategyType,
+							},
+						},
+					},
+					current: &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-deployment",
+							Namespace: "eng",
+							Annotations: map[string]string{
+								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+							},
+						},
+						Spec: appsv1.DeploymentSpec{
+							Strategy: appsv1.DeploymentStrategy{
+								Type: appsv1.RollingUpdateDeploymentStrategyType,
+							},
+						},
+					},
+				},
+			},
+			wantStatusUpdate: &v1.PolicyNode{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "PolicyNode",
+					APIVersion: "nomos.dev/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eng",
+				},
+				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
+					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+				},
+				Status: v1.PolicyNodeStatus{
+					SyncState: v1.StateError,
+					SyncTime:  now(),
+					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+					SyncErrors: []v1.PolicyNodeSyncError{
+						{
+							ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
+								v1alpha1.ResourceManagementKey, v1alpha1.ResourceManagementValue),
+						},
+					},
+				},
+			},
+			wantNamespaceUpdate: &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Namespace",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "eng",
+					Labels: map[string]string{},
+				},
+			},
+			wantEvents: []event{
+				{
+					kind:   corev1.EventTypeWarning,
+					reason: "UnmanagedNamespace",
+				},
+			},
+		},
+		{
+			name: "clean up label for unmanaged namespace without a corresponding policynode",
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "eng",
+					Labels: labeling.ManageQuota.New(),
+				},
+			},
+			wantNamespaceUpdate: &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Namespace",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "eng",
+					Labels: map[string]string{},
 				},
 			},
 		},
@@ -357,7 +509,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "eng",
-					Labels: labeling.ManageResource.New(),
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
 						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
@@ -402,10 +554,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-					Labels: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
-					},
+					Name:   "eng",
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
 						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
@@ -447,9 +597,11 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			},
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "eng",
-					Annotations: labeling.ManageResource.New(),
-					Labels:      labeling.ManageResource.New(),
+					Name:   "eng",
+					Labels: labeling.ManageQuota.New(),
+					Annotations: map[string]string{
+						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+					},
 				},
 			},
 			declared: []runtime.Object{
@@ -492,12 +644,10 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
+					Name:   "eng",
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						labeling.ResourceManagementKey: labeling.Enabled,
-					},
-					Labels: map[string]string{
-						labeling.ResourceManagementKey: labeling.Enabled,
+						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
 				},
 			},
@@ -544,7 +694,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "eng",
-					Labels: labeling.ManageResource.New(),
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
 						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
@@ -573,10 +723,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-					Labels: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
-					},
+					Name:   "eng",
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
 						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
@@ -591,7 +739,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-deployment",
 						Namespace: "eng",
-						Labels:    labeling.ManageResource.New(),
 						Annotations: map[string]string{
 							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 							v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -647,7 +794,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			namespace: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "eng",
-					Labels: labeling.ManageResource.New(),
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
 						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
@@ -663,7 +810,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-deployment",
 						Namespace: "eng",
-						Labels:    labeling.ManageResource.New(),
 						Annotations: map[string]string{
 							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 						},
@@ -681,10 +827,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-					Labels: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
-					},
+					Name:   "eng",
+					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
 						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 					},
@@ -699,7 +843,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-deployment",
 						Namespace: "eng",
-						Labels:    labeling.ManageResource.New(),
 						Annotations: map[string]string{
 							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 						},
@@ -781,7 +924,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-deployment",
 						Namespace: "eng",
-						Labels:    labeling.ManageResource.New(),
 						Annotations: map[string]string{
 							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 						},
@@ -811,7 +953,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 					SyncErrors: []v1.PolicyNodeSyncError{
 						{
-							ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s=%s)",
+							ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
 								v1alpha1.ResourceManagementKey, v1alpha1.ResourceManagementValue),
 						},
 					},
@@ -833,7 +975,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "my-deployment",
 							Namespace: "eng",
-							Labels:    labeling.ManageResource.New(),
 							Annotations: map[string]string{
 								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
@@ -853,7 +994,6 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "my-deployment",
 							Namespace: "eng",
-							Labels:    labeling.ManageResource.New(),
 							Annotations: map[string]string{
 								v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
 							},
@@ -870,12 +1010,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 	}
 
 	converter := runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
-	gvk := schema.GroupVersionKind{
-		Group:   "apps",
-		Version: "v1",
-		Kind:    "Deployment",
-	}
-	toSync := []schema.GroupVersionKind{gvk}
+	toSync := []schema.GroupVersionKind{kinds.Deployment()}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -891,10 +1026,19 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			testReconciler := NewPolicyNodeReconciler(
 				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, toSync)
 
+			var name string
 			// Get PolicyNode from cache.
-			mockCache.EXPECT().
-				Get(gomock.Any(), gomock.Any(), gomock.Any()).
-				SetArg(2, *tc.policyNode)
+			if tc.policyNode == nil {
+				name = tc.namespace.GetName()
+				mockCache.EXPECT().
+					Get(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(errors.NewNotFound(schema.GroupResource{}, ""))
+			} else {
+				name = tc.policyNode.GetName()
+				mockCache.EXPECT().
+					Get(gomock.Any(), gomock.Any(), gomock.Any()).
+					SetArg(2, *tc.policyNode)
+			}
 			// Get Namespace from cache.
 			mockCache.EXPECT().
 				Get(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -957,7 +1101,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
-						Name: tc.policyNode.Name,
+						Name: name,
 					},
 				})
 			if err != nil {

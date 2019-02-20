@@ -95,7 +95,7 @@ function teardown() {
   resource::check_count -n new-prj -r anvil -c 1
   resource::check -n new-prj anvil ${resname} -a "nomos.dev/managed=enabled"
 
-  debug::log "Add custom resource without managed label to custom resource and update repo with the same resource"
+  debug::log "Add custom resource without managed annotation to custom resource and update repo with the same resource"
   kubectl apply -f "${YAML_DIR}/customresources/anvil-heavier.yaml" -n newer-prj
   wait::for -t 30 -- kubectl get anvil ${resname} -n newer-prj
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/rnd/newer-prj/anvil.yaml

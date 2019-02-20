@@ -217,10 +217,15 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 			}
 			return r.managePolicies(ctx, name, node, syncErrs)
 		case namespaceStateExists:
-			r.warnNoLabel(ns)
+			if err := r.cleanUpLabel(ctx, ns); err != nil {
+				syncErrs = append(syncErrs, v1.PolicyNodeSyncError{
+					ErrorMessage: fmt.Sprintf("Failed to remove quota label from namespace: %s", err.Error()),
+				})
+			}
+			r.warnNoAnnotation(ns)
 			syncErrs = append(syncErrs, v1.PolicyNodeSyncError{
-				ErrorMessage: fmt.Sprintf("Namespace is missing proper management label (%s=%s)",
-					labeling.ResourceManagementKey, labeling.Enabled),
+				ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
+					v1alpha1.ResourceManagementKey, v1alpha1.ResourceManagementValue),
 			})
 			return r.managePolicies(ctx, name, node, syncErrs)
 		case namespaceStateManageFull:
@@ -243,11 +248,11 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 	return nil
 }
 
-func (r *PolicyNodeReconciler) warnNoLabel(ns *corev1.Namespace) {
-	glog.Warningf("namespace %q is declared in the source of truth but does not have a management label", ns.Name)
+func (r *PolicyNodeReconciler) warnNoAnnotation(ns *corev1.Namespace) {
+	glog.Warningf("namespace %q is declared in the source of truth but does not have a management annotation", ns.Name)
 	r.recorder.Event(
 		ns, corev1.EventTypeWarning, "UnmanagedNamespace",
-		"namespace is declared in the source of truth but does not have a management label")
+		"namespace is declared in the source of truth but does not have a management annotation")
 }
 
 func (r *PolicyNodeReconciler) warnInvalidAnnotationResource(u *unstructured.Unstructured, msg string) {
@@ -260,16 +265,17 @@ func (r *PolicyNodeReconciler) warnInvalidAnnotationResource(u *unstructured.Uns
 		"%q is %s in the source of truth but has invalid management annotation %s=%s", gvk, v1alpha1.ResourceManagementKey, value)
 }
 
-// cleanUpLabel removes the nomos managed label from the namespace, if present.
+// cleanUpLabel removes the nomos quota label from the namespace, if present.
 func (r *PolicyNodeReconciler) cleanUpLabel(ctx context.Context, ns *corev1.Namespace) error {
-	if _, ok := ns.GetLabels()[v1alpha1.ResourceManagementKey]; !ok {
+	if _, ok := ns.GetLabels()[labeling.NomosQuotaKey]; !ok {
 		return nil
 	}
 
 	_, err := r.client.Update(ctx, ns, func(o runtime.Object) (runtime.Object, error) {
 		nso := o.(*corev1.Namespace)
+		nso.SetGroupVersionKind(kinds.Namespace())
 		ls := nso.GetLabels()
-		delete(ls, v1alpha1.ResourceManagementKey)
+		delete(ls, labeling.NomosQuotaKey)
 		nso.SetLabels(ls)
 		return nso, nil
 	})
@@ -320,12 +326,10 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 	return errBuilder.Build()
 }
 
+// TODO(sbochins): consolidate common functionality with decorateAsClusterManaged.
 func decorateAsManaged(declaredInstances []*unstructured.Unstructured, node *v1.PolicyNode) {
 	for _, decl := range declaredInstances {
 		decl.SetNamespace(node.GetName())
-		// Label the resource as Nomos managed.
-		// TODO(124386983): No longer label managed resources with the nomos-managed label.
-		decl.SetLabels(labeling.ManageResource.AddDeepCopy(decl.GetLabels()))
 		a := decl.GetAnnotations()
 		if a == nil {
 			a = map[string]string{}
@@ -422,7 +426,8 @@ func asNamespace(policyNode *v1.PolicyNode) *corev1.Namespace {
 }
 
 func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *v1.PolicyNode) *corev1.Namespace {
-	labels := labeling.ManageResource.AddDeepCopy(policyNode.Labels)
+	// Mark the namespace as supporting the management of hierarchical quota.
+	labels := labeling.ManageQuota.AddDeepCopy(policyNode.Labels)
 	namespace.Labels = labels
 	if as := policyNode.Annotations; as == nil {
 		namespace.Annotations = map[string]string{}

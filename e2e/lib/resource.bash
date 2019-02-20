@@ -293,3 +293,89 @@ function resource::count() {
 
   echo "$count"
 }
+
+# Delete the given resources.
+#
+# Flags:
+#  -n [namespace] the namespace the resource resides in
+#  -l [selector] use a selector during list
+#  -a [annotation] filter by annotation
+#  -r [resource] the resource, eg clusterrole
+function resource::delete() {
+  local namespace=""
+  local selector=""
+  local annotation=""
+  local resource=""
+  while [[ $# -gt 0 ]]; do
+    local arg="${1:-}"
+    shift
+    case $arg in
+      -n)
+        namespace=${1:-}
+        shift
+      ;;
+      -l)
+        selector=${1:-}
+        shift
+      ;;
+      -a)
+        annotation=${1:-}
+        shift
+      ;;
+      -r)
+        resource=${1:-}
+        shift
+      ;;
+      *)
+        echo "Unexpected arg $arg" >&3
+        return 1
+      ;;
+    esac
+  done
+  [ -n "$resource" ] || (echo "Must specify -r [resource]" >&3; return 1)
+
+  local cmd=("kubectl" "get" "$resource" "-o" "json")
+  if [[ "$namespace" != "" ]]; then
+    cmd+=(-n "$namespace")
+  fi
+  if [[ "$selector" != "" ]]; then
+    cmd+=(-l "$selector")
+  fi
+
+  local output
+  local status=0
+  output="$("${cmd[@]}")" || status=$?
+  if (( status != 0 )); then
+    debug::error "Command" "${cmd[@]}" "failed, output ${output}"
+    return 1
+  fi
+
+  local names=""
+  if [[ "$annotation" != "" ]]; then
+    local key=""
+    local value=""
+    key=$(cut -d'=' -f1 <<<"${annotation}")
+    value=$(cut -d'=' -f2 <<<"${annotation}")
+    mapfile -t names < <(echo "$output" | jq -r ".items[] | select( .metadata.annotations.\"${key}\" == \"${value}\" ) | .metadata.name")
+  else
+    mapfile -t names < <(echo "$output" | jq -r '.items[] | .metadata.name')
+  fi
+
+  if [ ${#names[@]} -eq 0 ]; then
+    return 0
+  fi
+
+  local deletecmd=("kubectl" "delete" "$resource")
+  if [[ "$namespace" != "" ]]; then
+    deletecmd+=(-n "$namespace")
+  fi
+  deletecmd+=("${names[@]}")
+
+  local output
+  local status=0
+  output="$("${deletecmd[@]}")" || status=$?
+  if (( status != 0 )); then
+    debug::error "Command" "${deletecmd[@]}" "failed, output ${output}"
+    return 1
+  fi
+}

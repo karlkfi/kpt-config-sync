@@ -42,23 +42,23 @@ function check_metrics_pages() {
 @test "All acme corp created" {
   local ns
 
-  resource::check_count -r namespace -l "nomos.dev/managed=enabled" -a "nomos.dev/managed=enabled" -c ${#ACME_NAMESPACES[@]}
+  resource::check_count -r namespace -a "nomos.dev/managed=enabled" -c ${#ACME_NAMESPACES[@]}
 
   # Cluster-scoped resources
   namespace::check_exists analytics \
-    -l "nomos.dev/managed=enabled" \
+    -l "nomos.dev/quota=true" \
     -a "nomos.dev/managed=enabled"
   namespace::check_exists backend \
-    -l "nomos.dev/managed=enabled" \
+    -l "nomos.dev/quota=true" \
     -a "nomos.dev/managed=enabled"
   namespace::check_exists frontend \
-    -l "nomos.dev/managed=enabled" \
+    -l "nomos.dev/quota=true" \
     -a "nomos.dev/managed=enabled"
   namespace::check_exists new-prj \
-    -l "nomos.dev/managed=enabled" \
+    -l "nomos.dev/quota=true" \
     -a "nomos.dev/managed=enabled"
   namespace::check_exists newer-prj \
-    -l "nomos.dev/managed=enabled" \
+    -l "nomos.dev/quota=true" \
     -a "nomos.dev/managed=enabled"
   resource::check_count -r validatingwebhookconfigurations -c 1
   resource::check validatingwebhookconfigurations resource-quota.nomos.dev

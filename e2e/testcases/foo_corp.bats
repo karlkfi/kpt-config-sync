@@ -44,18 +44,18 @@ FOOCORP_NAMESPACES=(
 
   # Cluster-scoped resources
   namespace::check_exists audit \
-    -l "nomos.dev/managed=enabled" \
+    -l "nomos.dev/quota=true" \
     -a "nomos.dev/managed=enabled"
   namespace::check_exists shipping-dev \
-    -l "nomos.dev/managed=enabled" \
+    -l "nomos.dev/quota=true" \
     -a "nomos.dev/managed=enabled"
   namespace::check_exists shipping-staging \
-    -l "nomos.dev/managed=enabled" \
+    -l "nomos.dev/quota=true" \
     -a "nomos.dev/managed=enabled"
   namespace::check_exists shipping-prod \
-    -l "nomos.dev/managed=enabled" \
+    -l "nomos.dev/quota=true" \
     -a "nomos.dev/managed=enabled"
-  resource::check_count -r namespace -l "nomos.dev/managed=enabled" -a "nomos.dev/managed=enabled" -c 4
+  resource::check_count -r namespace -l "nomos.dev/quota=true" -a "nomos.dev/managed=enabled" -c 4
   resource::check_count -a "nomos.dev/managed=enabled" -r clusterrole -c 2
   resource::check clusterrole namespace-reader -a "nomos.dev/managed=enabled"
   resource::check clusterrole pod-creator -a "nomos.dev/managed=enabled"
