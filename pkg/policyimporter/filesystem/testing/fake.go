@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -396,7 +397,7 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 	r = append(r, []*restmapper.APIGroupResources{
 		{
 			Group: metav1.APIGroup{
-				Name: "nomos.dev",
+				Name: policyhierarchy.GroupName,
 				Versions: []metav1.GroupVersionForDiscovery{
 					{Version: "v1alpha1"},
 					{Version: "v1"},

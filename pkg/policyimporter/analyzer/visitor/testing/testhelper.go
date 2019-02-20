@@ -19,6 +19,7 @@ package testing
 import (
 	"time"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
@@ -126,7 +127,7 @@ func (t *TestHelper) NomosAdminClusterRole() *rbacv1.ClusterRole {
 		},
 		Rules: []rbacv1.PolicyRule{{
 			Verbs:     []string{rbacv1.VerbAll},
-			APIGroups: []string{"nomos.dev"},
+			APIGroups: []string{policyhierarchy.GroupName},
 			Resources: []string{rbacv1.ResourceAll},
 		}},
 	}
