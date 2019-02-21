@@ -129,3 +129,8 @@ func (p Relative) Equal(that Relative) bool {
 func (p Relative) Root() Root {
 	return Root{path: p.root.path}
 }
+
+// Join returns a copy of the underlying Relative with the additional path element appended.
+func (p Relative) Join(elem string) Relative {
+	return Relative{root: p.root, path: filepath.Join(p.path, elem)}
+}
