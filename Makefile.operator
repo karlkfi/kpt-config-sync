@@ -83,7 +83,7 @@ prepare-operator-user: push-to-gcr-nomos pull-git-sync
 	@gsutil cp ${DEV_BUCKET_USER}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
 	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
-	@IMAGE=gcr.io/${GCP_PROJECT}/${USER}:${IMAGE_TAG} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
+	@IMAGE=gcr.io/${GCP_PROJECT}/${USER}/nomos-operator:${IMAGE_TAG} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
 
 # deploy-operator-user installs the operator prepared with prepare-operator-user
