@@ -4,15 +4,17 @@
 
 # Creates a public-private ssh key pair.
 function install::create_keypair() {
-  echo "+++ Creating keypair at: ${HOME}/.ssh"
-  mkdir -p "$HOME/.ssh"
+  echo "+++ Creating keypair at: $TEST_DIR"
+  if [ -f "$TEST_DIR/id_rsa.nomos" ]; then
+    echo "+++ Keypair already exists"
+    return
+  fi
   # Skipping confirmation in keygen returns nonzero code even if it was a
   # success.
   (yes | ssh-keygen \
         -t rsa -b 4096 \
         -C "your_email@example.com" \
-        -N '' -f "/opt/testing/e2e/id_rsa.nomos") || echo "Key created here."
-  ln -s "/opt/testing/e2e/id_rsa.nomos" "${HOME}/.ssh/id_rsa.nomos"
+        -N '' -f "$TEST_DIR/id_rsa.nomos") || echo "Key created here."
 }
 
 # Returns the number of available replicas in a deployment.

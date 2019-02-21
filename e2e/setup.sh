@@ -13,8 +13,6 @@ source "$TEST_DIR/lib/install.bash"
 # shellcheck source=e2e/lib/resource.bash
 source "$TEST_DIR/lib/resource.bash"
 
-NOMOS_REPO="${NOMOS_REPO:-.}"
-
 function apply_cluster_admin_binding() {
   local account="${1:-}"
   kubectl apply -f - <<EOF
@@ -38,11 +36,10 @@ function install() {
   if $do_installation; then
     echo "+++++ Installing..."
     # Linter says this is better than "cd -"
-    cd "${NOMOS_REPO}/.output/e2e"
     apply_cluster_admin_binding "$(gcloud config get-value account)"
-    kubectl apply -f defined-operator-bundle.yaml
+    kubectl apply -f "${TEST_DIR}/defined-operator-bundle.yaml"
     kubectl create secret generic git-creds -n=nomos-system \
-      --from-file=ssh="$HOME"/.ssh/id_rsa.nomos || true
+      --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
     if $stable_channel; then
       echo "+++++ Applying Nomos using stable channel"
       kubectl apply -f "${TEST_DIR}/operator-config-git-stable.yaml"

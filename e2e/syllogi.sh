@@ -20,8 +20,9 @@ function install() {
   # Setup git
   install::create_keypair
   /opt/testing/e2e/init-git-server.sh
-  export GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"
-  kubectl create secret generic git-creds -n=nomos-system --from-file=ssh="$HOME/.ssh/id_rsa.nomos" || true
+  export GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i $TEST_DIR/id_rsa.nomos"
+  kubectl create secret generic git-creds \
+    -n=nomos-system --from-file=ssh="$TEST_DIR/id_rsa.nomos" || true
 
   # Install Nomos
   kubectl apply -f "${TEST_DIR}/operator-config-syllogi.yaml"
