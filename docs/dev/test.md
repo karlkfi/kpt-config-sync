@@ -59,7 +59,7 @@ Check out the `cluster-operators` repo. Instructions can be found in
 Once you have made the changes you wish to test in that repository, run
 
 ```console
-make release-user
+make release-user PROJECT_NAME=stolos-dev
 ```
 
 This pushes your repo's version of the nomos-operator to a user-private
