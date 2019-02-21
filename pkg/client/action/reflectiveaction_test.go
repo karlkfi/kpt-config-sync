@@ -617,7 +617,7 @@ var clusterPolicyNodeBaseTestObject = &v1.PolicyNode{
 	},
 }
 
-func clusterPolicyNodeX(namespace, name string) runtime.Object {
+func clusterPolicyNodeX(_, name string) runtime.Object {
 	testObject := clusterPolicyNodeBaseTestObject.DeepCopy()
 	testObject.Name = name
 	return testObject

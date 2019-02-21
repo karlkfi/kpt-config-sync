@@ -551,14 +551,12 @@ func resourcesFromObjects(objects []runtime.Object, gv schema.GroupVersion, kind
 
 func createNamespacePN(
 	path string,
-	parent string,
 	policies *Policies) v1.PolicyNode {
-	return createPNWithMeta(path, parent, v1.Namespace, policies, nil, nil)
+	return createPNWithMeta(path, v1.Namespace, policies, nil, nil)
 }
 
 func createPNWithMeta(
 	path string,
-	parent string,
 	t v1.PolicyNodeType,
 	policies *Policies,
 	labels, annotations map[string]string,
@@ -693,7 +691,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+			"bar": createNamespacePN("namespaces/bar", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -705,7 +703,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.json": templateData{Name: "bar"}.apply(aNamespaceJSON),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+			"bar": createNamespacePN("namespaces/bar", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -717,7 +715,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespaceWithLabelsAndAnnotations),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace, nil,
+			"bar": createPNWithMeta("namespaces/bar", v1.Namespace, nil,
 				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -731,7 +729,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ignore":  "",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+			"bar": createNamespacePN("namespaces/bar", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -745,7 +743,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ignore2": "blah blah blah",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+			"bar": createNamespacePN("namespaces/bar", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -758,7 +756,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ignore":  "",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+			"bar": createNamespacePN("namespaces/bar", nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -820,7 +818,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
+			"bar": createNamespacePN("namespaces/bar",
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
 						"namespaces/bar/rq.yaml", "pod-quota", nil),
@@ -839,7 +837,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
+			"bar": createNamespacePN("namespaces/bar",
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
 						"namespaces/bar/rq.yaml", "pod-quota", nil),
@@ -882,7 +880,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/combo.yaml": templateData{Name: "bar"}.apply(aNamespace) + "\n---\n" + templateData{}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
+			"bar": createNamespacePN("namespaces/bar",
 				&Policies{ResourceQuotaV1: createResourceQuota(
 					"namespaces/bar/combo.yaml", "pod-quota", nil),
 				},
@@ -913,7 +911,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/deployment.yaml": aDeploymentTemplate,
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
+			"bar": createNamespacePN("namespaces/bar",
 				&Policies{Resources: []v1.GenericResources{
 					createDeployment(),
 				},
@@ -1074,7 +1072,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
+			"bar": createNamespacePN("namespaces/bar",
 				&Policies{RoleBindingsV1: rbs(templateData{Annotations: map[string]string{
 					v1.SourcePathAnnotationKey: "namespaces/rb.yaml",
 				}})}),
@@ -1092,7 +1090,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
+			"bar": createNamespacePN("namespaces/bar",
 				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", "pod-quota", nil)}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -1286,7 +1284,7 @@ spec:
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
+			"bar": createNamespacePN("namespaces/bar",
 				&Policies{ResourceQuotaV1: createResourceQuota(
 					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 				}),
@@ -1954,7 +1952,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
+				"bar": createPNWithMeta("namespaces/bar", v1.Namespace,
 					&Policies{
 						RoleBindingsV1: []rbacv1.RoleBinding{
 							{
@@ -2043,7 +2041,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			},
 			expectedClusterPolicy: createClusterPolicy(),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				"bar": createPNWithMeta("namespaces/foo/bar", "foo", v1.Namespace,
+				"bar": createPNWithMeta("namespaces/foo/bar", v1.Namespace,
 					&Policies{
 						Resources: []v1.GenericResources{
 							{
@@ -2211,7 +2209,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
+				"bar": createPNWithMeta("namespaces/bar", v1.Namespace,
 					&Policies{},
 					/* Labels */
 					nil,
@@ -2353,7 +2351,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				// The cluster-scoped policy with mismatching selector was filtered out.
 				&v1.ClusterPolicySpec{}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
+				"bar": createPNWithMeta("namespaces/bar", v1.Namespace,
 					&Policies{
 						RoleBindingsV1: rbs(
 							templateData{
@@ -2435,7 +2433,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
+				"bar": createPNWithMeta("namespaces/bar", v1.Namespace,
 					&Policies{
 						RoleBindingsV1: rbs(
 							templateData{Name: "job-creators",

@@ -81,7 +81,7 @@ type loginFlow struct {
 }
 
 // login implements the "kubectl plugin oidc login" command.
-func login(cmd *cobra.Command, _ []string) {
+func login(_ *cobra.Command, _ []string) {
 	var l loginFlow
 
 	result, cid := l.LoadKubeConfig(clusterConfig)

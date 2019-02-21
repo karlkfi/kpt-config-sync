@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func fakeEqual(lhs runtime.Object, rhs runtime.Object) bool {
+func fakeEqual(_ runtime.Object, _ runtime.Object) bool {
 	return true
 }
 

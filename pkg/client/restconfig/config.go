@@ -46,7 +46,7 @@ func customGetCurrentUser() (*user.User, error) {
 // the error to be reported.  This makes the tests independent of CGO for
 // user.Current() that depend on CGO. Set the user to nil to revert to the
 // default way of getting the current user.
-func SetCurrentUserForTest(u *user.User, err error) {
+func SetCurrentUserForTest(u *user.User) {
 	if u == nil {
 		userCurrentTestHook = defaultGetCurrentUser
 		return
@@ -80,34 +80,6 @@ func newConfigFromPath(path string) (*rest.Config, error) {
 		return nil, err
 	}
 	return config, nil
-}
-
-// AllKubectlConfigs creates a config for every context available in the kubeconfig. The configs are
-// mapped by context name.
-func AllKubectlConfigs() (map[string]*rest.Config, error) {
-	configPath, err := newConfigPath()
-	if err != nil {
-		return nil, errors.Wrap(err, "while getting config path")
-	}
-	rules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath}
-	clientCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, nil)
-
-	apiCfg, err := clientCfg.RawConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "while building client config")
-	}
-
-	configs := map[string]*rest.Config{}
-	for ctxName := range apiCfg.Contexts {
-		cfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			rules, &clientcmd.ConfigOverrides{CurrentContext: ctxName})
-		restCfg, err := cfg.ClientConfig()
-		if err != nil {
-			return nil, errors.Wrapf(err, "while building config for %q context", ctxName)
-		}
-		configs[ctxName] = restCfg
-	}
-	return configs, nil
 }
 
 // NewKubectlConfig creates a config for whichever context is active in kubectl.

@@ -27,7 +27,7 @@ var getCredentialsCmd = &cobra.Command{
 	PreRunE: getCredsCheck,
 }
 
-func getCredsCheck(cmd *cobra.Command, _ []string) error {
+func getCredsCheck(_ *cobra.Command, _ []string) error {
 	if cluster == "" {
 		return fmt.Errorf("value for flag --cluster=... is required")
 	}
@@ -68,7 +68,7 @@ type credsFlow struct {
 	err error
 }
 
-func getCreds(cmd *cobra.Command, _ []string) {
+func getCreds(_ *cobra.Command, _ []string) {
 	var f credsFlow
 
 	cid := f.GetClientID()
