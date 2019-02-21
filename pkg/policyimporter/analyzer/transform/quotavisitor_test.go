@@ -273,11 +273,11 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Relative: nomospath.NewRelative("namespaces"),
 					Objects:  vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:     node.AbstractNamespace,
 							Relative: nomospath.NewRelative("namespaces/eng"),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type:     node.Namespace,
 									Relative: nomospath.NewRelative("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
@@ -355,11 +355,11 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 							}),
 					),
 					Children: []*ast.TreeNode{
-						&ast.TreeNode{
+						{
 							Type:     node.AbstractNamespace,
 							Relative: nomospath.NewRelative("namespaces/eng"),
 							Children: []*ast.TreeNode{
-								&ast.TreeNode{
+								{
 									Type:     node.Namespace,
 									Relative: nomospath.NewRelative("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
@@ -407,10 +407,10 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Name: "namespaces",
 					Type: "abstractNamespace",
 					Children: []v1alpha1.HierarchicalQuotaNode{
-						v1alpha1.HierarchicalQuotaNode{
+						{
 							Name: "frontend",
 							Type: "namespace",
-						}, v1alpha1.HierarchicalQuotaNode{
+						}, {
 							Name: "frontend-test",
 							Type: "namespace",
 						}},
