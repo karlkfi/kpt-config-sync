@@ -298,10 +298,36 @@ func testK8SResources() []*restmapper.APIGroupResources {
 			},
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1beta1": {
+					{Name: "customresourcedefinitions", Namespaced: false, Kind: "CustomResourceDefinition"},
+				},
+			},
+		},
+		{
+			Group: metav1.APIGroup{
+				Name: "policy",
+				Versions: []metav1.GroupVersionForDiscovery{
+					{Version: "v1beta1"},
+				},
+				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1beta1"},
+			},
+			VersionedResources: map[string][]metav1.APIResource{
+				"v1beta1": {
+					{Name: "podsecuritypolicyies", Namespaced: false, Kind: "PodSecurityPolicy"},
+				},
+			},
+		},
+		{
+			Group: metav1.APIGroup{
+				Name: "apps",
+				Versions: []metav1.GroupVersionForDiscovery{
+					{Version: "v1beta2"},
+				},
+				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1beta2"},
+			},
+			VersionedResources: map[string][]metav1.APIResource{
+				"v1beta2": {
 					{Name: "deployments", Namespaced: true, Kind: "Deployment"},
 					{Name: "replicasets", Namespaced: true, Kind: "ReplicaSet"},
-					{Name: "podsecuritypolicyies", Namespaced: false, Kind: "PodSecurityPolicy"},
-					{Name: "customresourcedefinitions", Namespaced: false, Kind: "CustomResourceDefinition"},
 				},
 			},
 		},

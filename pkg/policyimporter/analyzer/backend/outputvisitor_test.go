@@ -142,7 +142,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 							},
 						},
 						{
-							Group: "extensions",
+							Group: "policy",
 							Kind:  "PodSecurityPolicy",
 							Versions: []v1.GenericVersionResources{
 								{

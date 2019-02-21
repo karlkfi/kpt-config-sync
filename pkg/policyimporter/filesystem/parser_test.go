@@ -195,7 +195,7 @@ roleRef:
 `
 
 	aPodSecurityPolicyTemplate = `
-apiVersion: extensions/v1beta1
+apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
   name: psp{{.ID}}
@@ -1007,7 +1007,7 @@ var parserTestCases = []parserTestCase{
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":        aRepo,
-			"system/psp.yaml":         templateData{Group: "extensions", Kind: "PodSecurityPolicy"}.apply(aHierarchyConfig),
+			"system/psp.yaml":         templateData{Group: "policy", Kind: "PodSecurityPolicy"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
@@ -1156,7 +1156,7 @@ var parserTestCases = []parserTestCase{
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":        aRepo,
-			"system/psp.yaml":         templateData{Group: "extensions", Kind: "PodSecurityPolicy", HierarchyMode: "none"}.apply(aHierarchyConfig),
+			"system/psp.yaml":         templateData{Group: "policy", Kind: "PodSecurityPolicy", HierarchyMode: "none"}.apply(aHierarchyConfig),
 			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
 		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
@@ -1375,7 +1375,7 @@ spec:
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":  aRepo,
-			"system/psp.yaml":   templateData{Group: "extensions", Kind: "PodSecurityPolicy"}.apply(aHierarchyConfig),
+			"system/psp.yaml":   templateData{Group: "policy", Kind: "PodSecurityPolicy"}.apply(aHierarchyConfig),
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "2"}.apply(aPodSecurityPolicy),
 		},
@@ -1418,7 +1418,7 @@ spec:
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":  aRepo,
-			"system/psp.yaml":   templateData{Group: "extensions", Kind: "PodSecurityPolicy"}.apply(aHierarchyConfig),
+			"system/psp.yaml":   templateData{Group: "policy", Kind: "PodSecurityPolicy"}.apply(aHierarchyConfig),
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 		},

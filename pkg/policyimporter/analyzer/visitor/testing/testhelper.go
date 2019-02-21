@@ -26,7 +26,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -159,19 +159,19 @@ func (t *TestHelper) NomosAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 }
 
 // NomosPodSecurityPolicy returns a PodSecurityPolicy for testing.
-func (t *TestHelper) NomosPodSecurityPolicy() *extensionsv1beta1.PodSecurityPolicy {
-	return &extensionsv1beta1.PodSecurityPolicy{
+func (t *TestHelper) NomosPodSecurityPolicy() *policyv1beta1.PodSecurityPolicy {
+	return &policyv1beta1.PodSecurityPolicy{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: extensionsv1beta1.SchemeGroupVersion.String(),
+			APIVersion: policyv1beta1.SchemeGroupVersion.String(),
 			Kind:       "PodSecurityPolicy",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "example",
 		},
-		Spec: extensionsv1beta1.PodSecurityPolicySpec{
+		Spec: policyv1beta1.PodSecurityPolicySpec{
 			Privileged: false,
-			RunAsUser: extensionsv1beta1.RunAsUserStrategyOptions{
-				Rule: extensionsv1beta1.RunAsUserStrategyRunAsAny,
+			RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
+				Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
 			},
 		},
 	}

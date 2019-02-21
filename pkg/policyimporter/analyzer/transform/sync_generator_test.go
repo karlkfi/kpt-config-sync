@@ -26,7 +26,7 @@ var syncGeneratorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.SystemObjectSets(
 						v1alpha1.NewSync("rbac.authorization.k8s.io", "ClusterRole"),
 						v1alpha1.NewSync("rbac.authorization.k8s.io", "ClusterRoleBinding"),
-						v1alpha1.NewSync("extensions", "PodSecurityPolicy"),
+						v1alpha1.NewSync("policy", "PodSecurityPolicy"),
 						v1alpha1.NewSync("", "ResourceQuota"),
 						v1alpha1.NewSync("rbac.authorization.k8s.io", "Role"),
 						v1alpha1.NewSync("rbac.authorization.k8s.io", "RoleBinding"),

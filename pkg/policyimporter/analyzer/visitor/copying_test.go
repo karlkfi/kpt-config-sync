@@ -167,7 +167,7 @@ func (v *testVisitor) Check(t *testing.T) {
 		"Cluster",
 		fmt.Sprintf("ClusterObject rbac.authorization.k8s.io/v1, Kind=ClusterRole %s", vt.ClusterAdmin),
 		fmt.Sprintf("ClusterObject rbac.authorization.k8s.io/v1, Kind=ClusterRoleBinding %s", vt.ClusterAdminBinding),
-		"ClusterObject extensions/v1beta1, Kind=PodSecurityPolicy example",
+		"ClusterObject policy/v1beta1, Kind=PodSecurityPolicy example",
 		"TreeNode namespaces",
 		"NamespaceObject rbac.authorization.k8s.io/v1, Kind=RoleBinding admin",
 		"NamespaceObject /v1, Kind=ResourceQuota quota",
