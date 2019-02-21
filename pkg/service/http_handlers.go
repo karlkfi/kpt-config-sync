@@ -37,15 +37,6 @@ func NoCache(handler http.Handler) http.HandlerFunc {
 	}
 }
 
-// WithRequestLogging decorates handler with a log statement that prints the
-// method and the URL requested.
-func WithRequestLogging(handler http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		glog.Infof("Method: %v, URL: %v", req.Method, req.URL)
-		handler.ServeHTTP(w, req)
-	}
-}
-
 // WithStrictTransport decorates handler to require strict transport security
 // when serving HTTPS request.
 func WithStrictTransport(handler http.Handler) http.HandlerFunc {

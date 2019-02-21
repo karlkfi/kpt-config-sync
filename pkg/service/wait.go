@@ -62,19 +62,3 @@ func WaitForShutdownSignalCb(stopChannel chan<- struct{}) {
 	WaitForShutdownSignal(
 		NewStopper(func() { close(stopChannel) }))
 }
-
-// WaitForShutdownWithChannel will wait until SIGINT or SIGTERM signal arrives or stopChannel is
-// closed then return.
-func WaitForShutdownWithChannel(stopChannel chan struct{}) {
-	// wait for signal
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
-	glog.Infof("Waiting for shutdown signal INT/TERM...")
-	select {
-	case s := <-c:
-		glog.Infof("Got signal %v, shutting down", s)
-	case <-stopChannel:
-		glog.Info("Stop channel closed, shutting down")
-	}
-}

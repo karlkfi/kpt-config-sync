@@ -90,23 +90,3 @@ func (s *Action) String() string {
 		s.Name(),
 		s.Operation())
 }
-
-// NewDelete creates a new test delete action
-func NewDelete(namespace, name, resource string) action.Interface {
-	return &Action{
-		namespace: namespace,
-		name:      name,
-		resource:  resource,
-		operation: action.DeleteOperation,
-	}
-}
-
-// NewUpsert creates a new test upsert action
-func NewUpsert(namespace, name, resource string) action.Interface {
-	return &Action{
-		namespace: namespace,
-		name:      name,
-		resource:  resource,
-		operation: action.UpsertOperation,
-	}
-}

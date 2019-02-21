@@ -65,15 +65,6 @@ func (o *FileObject) Name() string {
 	return o.MetaObject().GetName()
 }
 
-// ToRelative returns an array of nomospath.Sourced from the provided list of FileObjects.
-func ToRelative(os []FileObject) []nomospath.Relative {
-	result := make([]nomospath.Relative, len(os))
-	for i, o := range os {
-		result[i] = o.Relative
-	}
-	return result
-}
-
 // Root represents a set of declared policies, configuration for how those policies will be
 // interpreted, and information regarding where those policies came from.
 type Root struct {

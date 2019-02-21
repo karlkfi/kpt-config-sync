@@ -16,29 +16,22 @@ limitations under the License.
 package restconfig
 
 import (
-	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
-	"k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	certutil "k8s.io/client-go/util/cert"
 )
 
 const kubectlConfigPath = ".kube/config"
-const masterSecretsDir = "/etc/nomos/secrets/master/"
 
 var (
 	// The function to use to get default current user.  Can be changed for tests
 	// using SetCurrentUserForTest.
 	userCurrentTestHook = defaultGetCurrentUser
 	currentUser         = &user.User{}
-	currentError        error
 )
 
 func defaultGetCurrentUser() (*user.User, error) {
@@ -60,7 +53,6 @@ func SetCurrentUserForTest(u *user.User, err error) {
 	}
 	userCurrentTestHook = customGetCurrentUser
 	currentUser = u
-	currentError = err
 }
 
 // newConfigPath returns the correct kubeconfig file path to use, depending on
@@ -167,30 +159,4 @@ func NewClientConfigWithOverrides(o *clientcmd.ConfigOverrides) (clientcmd.Clien
 // NewLocalClusterConfig creates a config for connecting to the local cluster API server.
 func NewLocalClusterConfig() (*rest.Config, error) {
 	return rest.InClusterConfig()
-}
-
-// NewRemoteClusterConfig creates a config for connecting to a remote cluster API server.
-func NewRemoteClusterConfig() (*rest.Config, error) {
-	host := os.Getenv("REMOTE_KUBERNETES_API_SERVER_URL")
-	if len(host) == 0 {
-		return nil, fmt.Errorf("unable to load remote-cluster configuration, REMOTE_KUBERNETES_API_SERVER_URL must be defined")
-	}
-
-	token, err := ioutil.ReadFile(masterSecretsDir + v1.ServiceAccountTokenKey)
-	if err != nil {
-		return nil, err
-	}
-	tlsClientConfig := rest.TLSClientConfig{}
-	rootCAFile := masterSecretsDir + v1.ServiceAccountRootCAKey
-	if _, err := certutil.NewPool(rootCAFile); err != nil {
-		glog.Errorf("Expected to load root CA config from %s, but got err: %v", rootCAFile, err)
-	} else {
-		tlsClientConfig.CAFile = rootCAFile
-	}
-
-	return &rest.Config{
-		Host:            host,
-		BearerToken:     string(token),
-		TLSClientConfig: tlsClientConfig,
-	}, nil
 }

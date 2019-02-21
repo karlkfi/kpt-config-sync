@@ -11,11 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	// ValidateFlag is the value used to set and retrieve the validate flag
-	ValidateFlag = "validate"
-)
-
 // VetCmd is the Cobra object representing the nomos vet command.
 var VetCmd = &cobra.Command{
 	Use:   "vet",
