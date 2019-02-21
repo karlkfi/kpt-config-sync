@@ -14,6 +14,13 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// logging returns whether to add the logging flags to the binary.
+func logging() bool {
+	// Set to true to enable logging for internal developer use.
+	// Do not check in or release to customers if set to true.
+	return false
+}
+
 var (
 	rootCmd = &cobra.Command{
 		Use:   policyhierarchy.CLIName,
@@ -34,10 +41,12 @@ func init() {
 	rootCmd.PersistentFlags().Var(&flags.Path, flags.PathFlag,
 		`The path to use as a GKE Policy Management directory. Defaults to the working directory.
 `)
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 }
 
 func main() {
+	if logging() {
+		pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	}
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
