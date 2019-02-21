@@ -12,7 +12,7 @@
 FROM golang:1.11-alpine AS build-base
 RUN apk add bash ca-certificates git gcc g++ libc-dev
 
-ENV TAP2JUNIT_RELEASE=master
+ENV TAP2JUNIT_RELEASE=v0.0.4
 RUN go get github.com/filmil/tap2junit/...
 WORKDIR /go/src/github.com/filmil/tap2junit
 RUN git checkout ${TAP2JUNIT_RELEASE}
