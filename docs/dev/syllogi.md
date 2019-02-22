@@ -59,8 +59,7 @@ has milestone releases that we want to hop on.
     contents of `nomos-operator.yaml`:
     *   Check out and cd to the
         [Operator repo](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/+/master/nomos-operator).
-    *   `make
-        ADDONS_FILE=<path-to>/gkectl/pkg/bundle/addonsdata.go
+    *   `make ADDONS_FILE=<path-to>/gkectl/pkg/bundle/addonsdata.go
         compare-to-addons-file || echo failed`. This regenerates the nomos
         manifests and searches the supplied `addons.go` for a match.
     *   If `compare-to-addons-file` fails, patch the newly generated nomos
@@ -81,3 +80,15 @@ test in syllogi.sh.
 
 The result of the test can be viewed in Syllogi's testgrid
 [here](https://testgrid.corp.google.com/syllogi-periodic#cluster-create-ipam-privatereg)
+
+To run the test locally without syllogi:
+
+*   Download and apply the latest stable operator according to installation
+    instructions. The test assumes the operator is running.
+*   Generate the test image by making `image-e2e-syllogi`.
+*   Run the test:
+
+    ```
+    docker run --rm -i -v $HOME:/host -e KUBECONFIG=/host/.kube/config \
+      -e REPORT_DIR=/host -u root gcr.io/syllogi-ci/e2e-nomos-syllogi:latest
+    ```

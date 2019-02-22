@@ -8,8 +8,7 @@ to bless a release candidate at the very end.
 
 Set up a nomos repo.
 
-Ensure that your remote is named `origin`. `make bless-release` assumes
-that.
+Ensure that your remote is named `origin`. `make bless-release` assumes that.
 
 ## Basic manual test
 
@@ -89,10 +88,9 @@ A blessed release consists of three distinct pieces:
 
 ### Verify the Release Candidate
 
-Before blessing, visit
-[go/nomos-verify-release](http://go/nomos-verify-release) and verify that the
-most recent test run (at 11PM last night) ran and ran successfully. If it did
-not, the corresponding release should not be blessed.
+Before blessing, visit [go/nomos-verify-release](http://go/nomos-verify-release)
+and verify that the most recent test run (at 11PM last night) ran and ran
+successfully. If it did not, the corresponding release should not be blessed.
 
 ### Nomos binary
 
@@ -177,13 +175,13 @@ e15b4b28 Thu Sep 6 .. Erik Kitson             Fix broken links in documentation 
 
 ### Nomos Operator
 
-
 #### Prerequisites
 
 You will need the following to properly bless the release:
 
-* dep 0.5.0.
-* a checked out [`nomos-operator` repository](https://g3doc.corp.google.com/company/teams/nomos-team/dev_guide.md#operator)
+*   dep 0.5.0.
+*   a checked out
+    [`nomos-operator` repository](https://g3doc.corp.google.com/company/teams/nomos-team/dev_guide.md#operator)
 
 Here's how to check:
 
@@ -230,8 +228,8 @@ you stop the bleeding while we figure out what actually is going on.
 A confounding factor is that the errors you may see seem nondeterministic.
 
 If you encounter the error `fatal: failed to unpack tree object` you will need
-to clean up the repository manually as follows.  Once you clean up the
-repository you can re-attempt `make bless-release`.
+to clean up the repository manually as follows. Once you clean up the repository
+you can re-attempt `make bless-release`.
 
 ```console
 $ git add -A

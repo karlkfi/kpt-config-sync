@@ -32,23 +32,19 @@ This requires a Nomos cluster configured and in your kubeconfig context.
 
 ## e2e test filters
 
-It's possible to filter which e2e tests are run, rather than running the whole suite.
+It's possible to filter which e2e tests are run, rather than running the whole
+suite.
 
-You can restrict by test name:
-```console
-make test-e2e-git E2E_FLAGS="--test_filter acme"
-```
+You can restrict by test name: `console make test-e2e-git
+E2E_FLAGS="--test_filter acme"`
 
-Or by file name:
-```console
-make test-e2e-git E2E_FLAGS="--file_filter acme"
-```
+Or by file name: `console make test-e2e-git E2E_FLAGS="--file_filter acme"`
 
 ## E2E Tests with a custom Operator
 
-The e2e tests install Nomos using the Nomos operator, the code for which lives in the
-[nomos-operator
-repo](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/).
+The e2e tests install Nomos using the Nomos operator, the code for which lives
+in the
+[nomos-operator repo](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/).
 By default, e2e tests run against the latest release of the operator. However,
 you can run e2e tests against your own build of the operator by doing the
 following:
@@ -62,19 +58,17 @@ Once you have made the changes you wish to test in that repository, run
 make release-user PROJECT_NAME=stolos-dev
 ```
 
-This pushes your repo's version of the nomos-operator to a user-private
-location in GCR.
+This pushes your repo's version of the nomos-operator to a user-private location
+in GCR.
 
 Then, return to the main nomos repo and run tests with the `-user` target:
-```console
-make test-e2e-git-user E2E_FLAGS="--file_filter acme"
-```
+`console make test-e2e-git-user E2E_FLAGS="--file_filter acme"`
 
 ## Isolating setup, tests, and cleanup.
 
-The e2e test suite starts with a suite setup, then runs tests, and finally does a cleanup.
-(The setup also contains a clean step.) You can run these stages individually using the
-`test-e2e-dev-git` target.
+The e2e test suite starts with a suite setup, then runs tests, and finally does
+a cleanup. (The setup also contains a clean step.) You can run these stages
+individually using the `test-e2e-dev-git` target.
 
 1- Build GKE Policy Management and end to end images. You must do this each time
 you make changes to .go code.
@@ -90,7 +84,8 @@ make e2e-image-all
 make test-e2e-dev-git E2E_FLAGS="--setup"
 ```
 
-3- Run tests with `--test`. This example runs a filtered set of tests with full debug output.
+3- Run tests with `--test`. This example runs a filtered set of tests with full
+debug output.
 
 ```console
 # git

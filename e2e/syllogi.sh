@@ -71,6 +71,10 @@ trap : SIGTERM SIGINT
 exitcode=0
 echo "Starting Nomos tests"
 result_file="${REPORT_DIR}/results.bats"
+
+# Compute test times
+export TIMING=true
+
 # We only run the foo-corp test to have a minimal sanity test that the version that
 # comes with syllogi works. Detailed functionality tests are left to our own tests.
 run_bats_tests=("${TEST_DIR}/bats/bin/bats" "--tap" "${TEST_DIR}/testcases/foo_corp.bats")
@@ -80,10 +84,10 @@ if ! "${run_bats_tests[@]}" | tee "${result_file}"; then
 fi
 
 echo "Converting test results from TAP format to jUnit"
-# The tap2junit util cleans up the test name and doesn't allow []s, but all syllogi tests
-# start with "[test name]", so doing this silly thing here.
-tap2junit --name "ZZPREFIX" "${result_file}"
-sed "s/ZZPREFIX/[Nomos Addon] /" "${result_file}".xml > "${REPORT_DIR}/junit_nomos.xml"
+/opt/tap2junit -reorder_duration -test_name "[Nomos Addon]" \
+  < "${result_file}" \
+  > "${REPORT_DIR}/junit_nomos.xml"
+
 echo "Results at ${REPORT_DIR}/junit_nomos.xml"
 
 exit ${exitcode}

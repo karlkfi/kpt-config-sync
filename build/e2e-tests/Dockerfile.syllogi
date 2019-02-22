@@ -14,5 +14,5 @@ ARG GID
 ENV HOME /tmp/home/user
 ENV USER nomos-syllogi
 ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
-
+WORKDIR /opt/testing/e2e
 ENTRYPOINT ["/opt/testing/e2e/syllogi.sh"]
