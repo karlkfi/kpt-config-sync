@@ -73,9 +73,21 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.
 	action.APICalls.WithLabelValues(resource, operation).Inc()
 	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(resource, operation))
 	defer timer.ObserveDuration()
+	_, namespacedName := metaNamespacedName(obj)
+	if err := c.Client.Get(ctx, namespacedName, obj); err != nil {
+		if apierrors.IsNotFound(err) {
+			// Object is already deleted
+			return nil
+		}
+		if action.IsFinalizing(obj.(metav1.Object)) {
+			glog.V(3).Infof("Delete skipped, resource is finalizing %s", description)
+			return nil
+		}
+		return errors.Wrapf(err, "could not look up object we're deleting %s", description)
+	}
 	if err := c.Client.Delete(ctx, obj, opts...); err != nil {
 		if apierrors.IsNotFound(err) {
-			glog.V(5).Infof("not found during delete %s", description)
+			glog.V(3).Infof("Not found during attempted delete %s", description)
 			return nil
 		}
 		return errors.Wrapf(err, "delete failed for %s", description)

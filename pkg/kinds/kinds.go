@@ -37,6 +37,11 @@ func Repo() schema.GroupVersionKind {
 	return v1alpha1.SchemeGroupVersion.WithKind("Repo")
 }
 
+// PersistentVolume returns the canonical PersistentVolume GroupVersionKind
+func PersistentVolume() schema.GroupVersionKind {
+	return corev1.SchemeGroupVersion.WithKind("PersistentVolume")
+}
+
 // PolicyNode returns the canonical PolicyNode GroupVersionKind
 func PolicyNode() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind("PolicyNode")

@@ -23,6 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/client"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	corev1 "k8s.io/api/core/v1"
@@ -463,12 +464,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 	}
 
 	converter := runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
-	gvk := schema.GroupVersionKind{
-		Group:   "",
-		Version: "v1",
-		Kind:    "PersistentVolume",
-	}
-	toSync := []schema.GroupVersionKind{gvk}
+	toSync := []schema.GroupVersionKind{kinds.PersistentVolume()}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -508,6 +504,8 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						gomock.Eq(toUnstructured(t, converter, wantApply.current)))
 			}
 			for _, wantDelete := range tc.wantDeletes {
+				mockClient.EXPECT().
+					Get(gomock.Any(), gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantDelete)))
 				mockClient.EXPECT().
 					Delete(gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantDelete)))
 			}

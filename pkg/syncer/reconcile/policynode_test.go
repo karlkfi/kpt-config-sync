@@ -1074,6 +1074,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			}
 			for _, wantDelete := range tc.wantDeletes {
 				mockClient.EXPECT().
+					Get(gomock.Any(), gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantDelete)))
+				mockClient.EXPECT().
 					Delete(gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantDelete)))
 			}
 
