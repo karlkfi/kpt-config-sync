@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -15,8 +14,8 @@ import (
 
 func HierarchyConfigResource(gvk schema.GroupVersionKind, mode v1.HierarchyModeType) object.BuildOpt {
 	return func(o *ast.FileObject) {
-		o.Object.(*v1alpha1.HierarchyConfig).Spec.Resources = append(o.Object.(*v1alpha1.HierarchyConfig).Spec.Resources,
-			v1alpha1.HierarchyConfigResource{
+		o.Object.(*v1.HierarchyConfig).Spec.Resources = append(o.Object.(*v1.HierarchyConfig).Spec.Resources,
+			v1.HierarchyConfigResource{
 				Group:         gvk.Group,
 				Kinds:         []string{gvk.Kind},
 				HierarchyMode: mode,

@@ -20,7 +20,7 @@ package metasync
 import (
 	"github.com/golang/glog"
 	nomosapischeme "github.com/google/nomos/clientgen/apis/scheme"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,7 +78,7 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 	}
 
 	// Watch all changes to Syncs.
-	if err = c.Watch(&source.Kind{Type: &v1alpha1.Sync{}}, unaryHandler); err != nil {
+	if err = c.Watch(&source.Kind{Type: &v1.Sync{}}, unaryHandler); err != nil {
 		return errors.Wrap(err, "could not watch Syncs in the controller")
 	}
 

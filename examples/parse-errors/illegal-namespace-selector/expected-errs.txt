@@ -5,6 +5,6 @@ Found issues: 1 error(s)
 
 source: namespaces/my-namespace/illegal-namespace-selector.yaml
 group: nomos.dev
-version: v1alpha1
+version: v1
 kind: NamespaceSelector
 

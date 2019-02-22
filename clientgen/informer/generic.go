@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -56,22 +55,18 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=nomos.dev, Version=v1
 	case v1.SchemeGroupVersion.WithResource("clusterpolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().ClusterPolicies().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("clusterselectors"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().ClusterSelectors().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("hierarchicalquotas"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().HierarchicalQuotas().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("hierarchyconfigs"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().HierarchyConfigs().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("namespaceselectors"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().NamespaceSelectors().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("policynodes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().PolicyNodes().Informer()}, nil
-
-		// Group=nomos.dev, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithResource("clusterselectors"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1alpha1().ClusterSelectors().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("hierarchicalquotas"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1alpha1().HierarchicalQuotas().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("hierarchyconfigs"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1alpha1().HierarchyConfigs().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("namespaceselectors"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1alpha1().NamespaceSelectors().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("repos"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1alpha1().Repos().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("syncs"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1alpha1().Syncs().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("syncs"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().Syncs().Informer()}, nil
 
 	}
 

@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -26,7 +25,7 @@ type ForCluster struct {
 // NewForCluster creates a new cluster coverage examiner.
 func NewForCluster(
 	clusters []clusterregistry.Cluster,
-	selectors []v1alpha1.ClusterSelector,
+	selectors []v1.ClusterSelector,
 	errs *multierror.Builder,
 ) *ForCluster {
 	cov := ForCluster{

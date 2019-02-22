@@ -21,7 +21,6 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
@@ -85,7 +84,7 @@ func (v *AnnotationInlinerVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	// Add inliner map for cluster annotations.
 	t := annotationTransformer{}
 	m := valueMap{}
-	cs.ForEachSelector(func(name string, annotation v1alpha1.ClusterSelector) {
+	cs.ForEachSelector(func(name string, annotation v1.ClusterSelector) {
 		content, err := json.Marshal(annotation)
 		if err != nil {
 			// TODO(b/122739070) ast.Root should store the ClusterSelectors rather than having to transform them every time.

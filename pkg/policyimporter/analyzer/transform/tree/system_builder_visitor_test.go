@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree/treetesting"
@@ -48,7 +48,7 @@ func TestSystemBuilderVisitor(t *testing.T) {
 				System: &ast.System{
 					Objects: []*ast.SystemObject{{FileObject: fake.Repo("system/repo.yaml")}},
 				},
-				Repo: fake.Repo("system/repo.yaml").Object.(*v1alpha1.Repo),
+				Repo: fake.Repo("system/repo.yaml").Object.(*v1.Repo),
 			},
 		},
 	}

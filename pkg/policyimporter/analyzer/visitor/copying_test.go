@@ -161,7 +161,7 @@ func (v *testVisitor) Check(t *testing.T) {
 	expectOrder := []string{
 		"Root",
 		"System",
-		fmt.Sprintf("SystemObject %s/v1alpha1, Kind=Repo repo", policyhierarchy.GroupName),
+		fmt.Sprintf("SystemObject %s/v1, Kind=Repo repo", policyhierarchy.GroupName),
 		"ClusterRegistry",
 		"ClusterRegistryObject /, Kind= ",
 		"Cluster",

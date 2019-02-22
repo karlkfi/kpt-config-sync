@@ -32,8 +32,28 @@ func (c *FakeNomosV1) ClusterPolicies() v1.ClusterPolicyInterface {
 	return &FakeClusterPolicies{c}
 }
 
+func (c *FakeNomosV1) ClusterSelectors() v1.ClusterSelectorInterface {
+	return &FakeClusterSelectors{c}
+}
+
+func (c *FakeNomosV1) HierarchicalQuotas() v1.HierarchicalQuotaInterface {
+	return &FakeHierarchicalQuotas{c}
+}
+
+func (c *FakeNomosV1) HierarchyConfigs() v1.HierarchyConfigInterface {
+	return &FakeHierarchyConfigs{c}
+}
+
+func (c *FakeNomosV1) NamespaceSelectors() v1.NamespaceSelectorInterface {
+	return &FakeNamespaceSelectors{c}
+}
+
 func (c *FakeNomosV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
+}
+
+func (c *FakeNomosV1) Syncs() v1.SyncInterface {
+	return &FakeSyncs{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -2,7 +2,6 @@ package hierarchyconfig
 
 import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -10,14 +9,14 @@ import (
 
 // FileHierarchyConfig extends v1alpha1.HierarchyConfig to include the path to the file in the repo.
 type FileHierarchyConfig struct {
-	*v1alpha1.HierarchyConfig
+	*v1.HierarchyConfig
 	// Source is the OS-agnostic slash-separated path to the source file from the root.
 	nomospath.Relative
 }
 
 // NewFileHierarchyConfig creates a new FileHierarchyConfig from a HierarchyConfig Resource and the source file declaring
 // the HierarchyConfig.
-func NewFileHierarchyConfig(config *v1alpha1.HierarchyConfig, source nomospath.Relative) FileHierarchyConfig {
+func NewFileHierarchyConfig(config *v1.HierarchyConfig, source nomospath.Relative) FileHierarchyConfig {
 	return FileHierarchyConfig{HierarchyConfig: config, Relative: source}
 }
 

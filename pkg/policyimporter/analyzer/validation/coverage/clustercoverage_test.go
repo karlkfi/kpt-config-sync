@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/util/multierror"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -15,14 +14,14 @@ func TestValidateObject(t *testing.T) {
 	tests := []struct {
 		name      string
 		clusters  []clusterregistry.Cluster
-		selectors []v1alpha1.ClusterSelector
+		selectors []v1.ClusterSelector
 		errors    []error
 		objects   []metav1.Object
 	}{
 		{
 			name:      "basic",
 			clusters:  []clusterregistry.Cluster{},
-			selectors: []v1alpha1.ClusterSelector{},
+			selectors: []v1.ClusterSelector{},
 		},
 		{
 			name: "the two clusters",
@@ -46,12 +45,12 @@ func TestValidateObject(t *testing.T) {
 					Spec: clusterregistry.ClusterSpec{},
 				},
 			},
-			selectors: []v1alpha1.ClusterSelector{
+			selectors: []v1.ClusterSelector{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sel-1",
 					},
-					Spec: v1alpha1.ClusterSelectorSpec{
+					Spec: v1.ClusterSelectorSpec{
 						Selector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"env": "prod",
@@ -95,14 +94,14 @@ func TestMapToClusters(t *testing.T) {
 	tests := []struct {
 		name      string
 		clusters  []clusterregistry.Cluster
-		selectors []v1alpha1.ClusterSelector
+		selectors []v1.ClusterSelector
 		object    metav1.Object
 		expected  []string
 	}{
 		{
 			name:      "basic",
 			clusters:  []clusterregistry.Cluster{},
-			selectors: []v1alpha1.ClusterSelector{},
+			selectors: []v1.ClusterSelector{},
 			object:    &metav1.ObjectMeta{},
 			expected:  []string{""},
 		},
@@ -128,12 +127,12 @@ func TestMapToClusters(t *testing.T) {
 					Spec: clusterregistry.ClusterSpec{},
 				},
 			},
-			selectors: []v1alpha1.ClusterSelector{
+			selectors: []v1.ClusterSelector{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sel-1",
 					},
-					Spec: v1alpha1.ClusterSelectorSpec{
+					Spec: v1.ClusterSelectorSpec{
 						Selector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"env": "prod",
@@ -172,12 +171,12 @@ func TestMapToClusters(t *testing.T) {
 					Spec: clusterregistry.ClusterSpec{},
 				},
 			},
-			selectors: []v1alpha1.ClusterSelector{
+			selectors: []v1.ClusterSelector{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sel-1",
 					},
-					Spec: v1alpha1.ClusterSelectorSpec{
+					Spec: v1.ClusterSelectorSpec{
 						Selector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"env": "prod",

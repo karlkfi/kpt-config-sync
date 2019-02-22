@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -18,16 +17,16 @@ func TestQuotaAuthorize(t *testing.T) {
 	// Initial setup of quotas
 	// Limits and structure
 	hierarchicalQuota := []runtime.Object{
-		&v1alpha1.HierarchicalQuota{
+		&v1.HierarchicalQuota{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				APIVersion: v1.SchemeGroupVersion.String(),
 				Kind:       "HierarchicalQuota",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: resourcequota.ResourceQuotaHierarchyName,
 			},
-			Spec: v1alpha1.HierarchicalQuotaSpec{
-				Hierarchy: v1alpha1.HierarchicalQuotaNode{
+			Spec: v1.HierarchicalQuotaSpec{
+				Hierarchy: v1.HierarchicalQuotaNode{
 					Name: "bigkitties",
 					Type: v1.HierarchyNodeAbstractNamespace,
 					ResourceQuotaV1: &corev1.ResourceQuota{
@@ -38,7 +37,7 @@ func TestQuotaAuthorize(t *testing.T) {
 							},
 						},
 					},
-					Children: []v1alpha1.HierarchicalQuotaNode{
+					Children: []v1.HierarchicalQuotaNode{
 						{
 							Name: "kitties",
 							Type: v1.HierarchyNodeNamespace,

@@ -23,7 +23,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
@@ -60,7 +59,7 @@ var clusters = []clusterregistry.Cluster{
 		"env": "prod",
 	}),
 }
-var selectors = []v1alpha1.ClusterSelector{
+var selectors = []v1.ClusterSelector{
 	// Matches the cluster.
 	seltest.Selector("sel-1",
 		metav1.LabelSelector{
@@ -109,7 +108,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 						),
-						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+						Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 					},
 				},
 				ExpectOutput: &ast.Root{
@@ -119,7 +118,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 						),
-						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+						Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 					},
 				},
 			},
@@ -134,7 +133,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 							withNamespaceSelector(vt.Helper.PodReaderRole(), "prod"),
 							withNamespaceSelector(vt.Helper.AcmeResourceQuota(), "sensitive"),
 						),
-						Selectors: map[string]*v1alpha1.NamespaceSelector{
+						Selectors: map[string]*v1.NamespaceSelector{
 							"prod":      &seltest.ProdNamespaceSelector,
 							"sensitive": &seltest.SensitiveNamespaceSelector,
 						},
@@ -149,7 +148,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 							withNamespaceSelector(vt.Helper.PodReaderRole(), toJSON(seltest.ProdNamespaceSelector)),
 							withNamespaceSelector(vt.Helper.AcmeResourceQuota(), toJSON(seltest.SensitiveNamespaceSelector)),
 						),
-						Selectors: map[string]*v1alpha1.NamespaceSelector{
+						Selectors: map[string]*v1.NamespaceSelector{
 							"prod":      &seltest.ProdNamespaceSelector,
 							"sensitive": &seltest.SensitiveNamespaceSelector,
 						},
@@ -165,7 +164,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 						),
-						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+						Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 						Children: []*ast.TreeNode{
 							{
 								Type:     node.AbstractNamespace,
@@ -173,7 +172,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 								Objects: vt.ObjectSets(
 									withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 								),
-								Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+								Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 							},
 						},
 					},
@@ -185,7 +184,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 						),
-						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+						Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 						Children: []*ast.TreeNode{
 							{
 								Type:     node.AbstractNamespace,
@@ -193,7 +192,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 								Objects: vt.ObjectSets(
 									withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 								),
-								Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+								Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 							},
 						},
 					},
@@ -218,7 +217,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 					Tree: &ast.TreeNode{
 						Type:      node.AbstractNamespace,
 						Relative:  nomospath.NewRelative("namespaces"),
-						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+						Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 						Children: []*ast.TreeNode{
 							{
 								Type:     node.AbstractNamespace,
@@ -245,7 +244,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 							{
 								Type:      node.AbstractNamespace,
 								Relative:  nomospath.NewRelative("namespaces/frontend"),
-								Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+								Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 							},
 						},
 					},
@@ -261,7 +260,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						Objects: vt.ObjectSets(
 							vt.Helper.AdminRoleBinding(),
 						),
-						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+						Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 					},
 				},
 				ExpectOutput: &ast.Root{
@@ -271,7 +270,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						Objects: vt.ObjectSets(
 							vt.Helper.AdminRoleBinding(),
 						),
-						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+						Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 					},
 				},
 			},
@@ -284,7 +283,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 						),
-						Selectors: map[string]*v1alpha1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
+						Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 					},
 				},
 				ExpectErr: true,

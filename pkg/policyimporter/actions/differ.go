@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -133,7 +133,7 @@ func (d *Differ) syncActions(current, desired policynode.AllPolicies) []action.I
 // SyncDeletes returns a list of names of Syncs to be deleted.
 // The caller must delete all these syncs and wait for them to be finalized before processing other
 // actions.
-func (d *Differ) SyncDeletes(current, desired map[string]v1alpha1.Sync) []string {
+func (d *Differ) SyncDeletes(current, desired map[string]v1.Sync) []string {
 	var toDelete []string
 	for _, sync := range current {
 		if _, exists := desired[sync.Name]; !exists {

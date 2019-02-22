@@ -18,7 +18,6 @@ package transform
 
 import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -35,7 +34,7 @@ type QuotaVisitor struct {
 	*visitor.Copying // The copying base class
 	// For adding cluster scoped Hierarchical Quota.
 	ctx   *quotaContext // The context list for the hierarchy
-	hNode *v1alpha1.HierarchicalQuotaNode
+	hNode *v1.HierarchicalQuotaNode
 }
 
 var _ ast.Visitor = &QuotaVisitor{}
@@ -44,7 +43,7 @@ var _ ast.Visitor = &QuotaVisitor{}
 type quotaContext struct {
 	prev  *quotaContext         // previous context
 	quota *corev1.ResourceQuota // ResourceQuota from directory
-	hNode *v1alpha1.HierarchicalQuotaNode
+	hNode *v1.HierarchicalQuotaNode
 }
 
 // merge takes two resource quota objects and produces a merged output that represents the union
@@ -92,18 +91,18 @@ func (v *QuotaVisitor) Error() error {
 
 // VisitRoot implements Visitor.
 func (v *QuotaVisitor) VisitRoot(c *ast.Root) *ast.Root {
-	v.hNode = &v1alpha1.HierarchicalQuotaNode{}
+	v.hNode = &v1.HierarchicalQuotaNode{}
 	newRoot := v.Copying.VisitRoot(c)
 
-	h := &v1alpha1.HierarchicalQuota{
+	h := &v1.HierarchicalQuota{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			APIVersion: v1.SchemeGroupVersion.String(),
 			Kind:       "HierarchicalQuota",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: resourcequota.ResourceQuotaHierarchyName,
 		},
-		Spec: v1alpha1.HierarchicalQuotaSpec{
+		Spec: v1.HierarchicalQuotaSpec{
 			Hierarchy: *v.hNode,
 		},
 	}
@@ -123,7 +122,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// create/push context
 	context := &quotaContext{
 		prev:  v.ctx,
-		hNode: &v1alpha1.HierarchicalQuotaNode{},
+		hNode: &v1.HierarchicalQuotaNode{},
 	}
 
 	v.ctx = context

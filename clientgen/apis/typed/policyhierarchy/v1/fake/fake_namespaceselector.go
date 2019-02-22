@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,27 +30,27 @@ import (
 
 // FakeNamespaceSelectors implements NamespaceSelectorInterface
 type FakeNamespaceSelectors struct {
-	Fake *FakeNomosV1alpha1
+	Fake *FakeNomosV1
 }
 
-var namespaceselectorsResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1alpha1", Resource: "namespaceselectors"}
+var namespaceselectorsResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "namespaceselectors"}
 
-var namespaceselectorsKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1alpha1", Kind: "NamespaceSelector"}
+var namespaceselectorsKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "NamespaceSelector"}
 
 // Get takes name of the namespaceSelector, and returns the corresponding namespaceSelector object, and an error if there is any.
-func (c *FakeNamespaceSelectors) Get(name string, options v1.GetOptions) (result *v1alpha1.NamespaceSelector, err error) {
+func (c *FakeNamespaceSelectors) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.NamespaceSelector, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(namespaceselectorsResource, name), &v1alpha1.NamespaceSelector{})
+		Invokes(testing.NewRootGetAction(namespaceselectorsResource, name), &policyhierarchy_v1.NamespaceSelector{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.NamespaceSelector), err
+	return obj.(*policyhierarchy_v1.NamespaceSelector), err
 }
 
 // List takes label and field selectors, and returns the list of NamespaceSelectors that match those selectors.
-func (c *FakeNamespaceSelectors) List(opts v1.ListOptions) (result *v1alpha1.NamespaceSelectorList, err error) {
+func (c *FakeNamespaceSelectors) List(opts v1.ListOptions) (result *policyhierarchy_v1.NamespaceSelectorList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(namespaceselectorsResource, namespaceselectorsKind, opts), &v1alpha1.NamespaceSelectorList{})
+		Invokes(testing.NewRootListAction(namespaceselectorsResource, namespaceselectorsKind, opts), &policyhierarchy_v1.NamespaceSelectorList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func (c *FakeNamespaceSelectors) List(opts v1.ListOptions) (result *v1alpha1.Nam
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.NamespaceSelectorList{ListMeta: obj.(*v1alpha1.NamespaceSelectorList).ListMeta}
-	for _, item := range obj.(*v1alpha1.NamespaceSelectorList).Items {
+	list := &policyhierarchy_v1.NamespaceSelectorList{ListMeta: obj.(*policyhierarchy_v1.NamespaceSelectorList).ListMeta}
+	for _, item := range obj.(*policyhierarchy_v1.NamespaceSelectorList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -75,29 +75,29 @@ func (c *FakeNamespaceSelectors) Watch(opts v1.ListOptions) (watch.Interface, er
 }
 
 // Create takes the representation of a namespaceSelector and creates it.  Returns the server's representation of the namespaceSelector, and an error, if there is any.
-func (c *FakeNamespaceSelectors) Create(namespaceSelector *v1alpha1.NamespaceSelector) (result *v1alpha1.NamespaceSelector, err error) {
+func (c *FakeNamespaceSelectors) Create(namespaceSelector *policyhierarchy_v1.NamespaceSelector) (result *policyhierarchy_v1.NamespaceSelector, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(namespaceselectorsResource, namespaceSelector), &v1alpha1.NamespaceSelector{})
+		Invokes(testing.NewRootCreateAction(namespaceselectorsResource, namespaceSelector), &policyhierarchy_v1.NamespaceSelector{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.NamespaceSelector), err
+	return obj.(*policyhierarchy_v1.NamespaceSelector), err
 }
 
 // Update takes the representation of a namespaceSelector and updates it. Returns the server's representation of the namespaceSelector, and an error, if there is any.
-func (c *FakeNamespaceSelectors) Update(namespaceSelector *v1alpha1.NamespaceSelector) (result *v1alpha1.NamespaceSelector, err error) {
+func (c *FakeNamespaceSelectors) Update(namespaceSelector *policyhierarchy_v1.NamespaceSelector) (result *policyhierarchy_v1.NamespaceSelector, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(namespaceselectorsResource, namespaceSelector), &v1alpha1.NamespaceSelector{})
+		Invokes(testing.NewRootUpdateAction(namespaceselectorsResource, namespaceSelector), &policyhierarchy_v1.NamespaceSelector{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.NamespaceSelector), err
+	return obj.(*policyhierarchy_v1.NamespaceSelector), err
 }
 
 // Delete takes name of the namespaceSelector and deletes it. Returns an error if one occurs.
 func (c *FakeNamespaceSelectors) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(namespaceselectorsResource, name), &v1alpha1.NamespaceSelector{})
+		Invokes(testing.NewRootDeleteAction(namespaceselectorsResource, name), &policyhierarchy_v1.NamespaceSelector{})
 	return err
 }
 
@@ -105,16 +105,16 @@ func (c *FakeNamespaceSelectors) Delete(name string, options *v1.DeleteOptions) 
 func (c *FakeNamespaceSelectors) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(namespaceselectorsResource, listOptions)
 
-	_, err := c.Fake.Invokes(action, &v1alpha1.NamespaceSelectorList{})
+	_, err := c.Fake.Invokes(action, &policyhierarchy_v1.NamespaceSelectorList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched namespaceSelector.
-func (c *FakeNamespaceSelectors) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.NamespaceSelector, err error) {
+func (c *FakeNamespaceSelectors) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *policyhierarchy_v1.NamespaceSelector, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(namespaceselectorsResource, name, data, subresources...), &v1alpha1.NamespaceSelector{})
+		Invokes(testing.NewRootPatchSubresourceAction(namespaceselectorsResource, name, data, subresources...), &policyhierarchy_v1.NamespaceSelector{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.NamespaceSelector), err
+	return obj.(*policyhierarchy_v1.NamespaceSelector), err
 }

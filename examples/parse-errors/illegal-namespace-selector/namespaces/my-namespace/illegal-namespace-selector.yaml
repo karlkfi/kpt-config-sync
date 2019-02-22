@@ -1,5 +1,5 @@
 kind: NamespaceSelector # can't be in a namespace directory
-apiVersion: nomos.dev/v1alpha1
+apiVersion: nomos.dev/v1
 metadata:
   name: illegal-namespace-selector
 spec:

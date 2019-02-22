@@ -21,7 +21,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
@@ -37,7 +36,7 @@ func allPolicies(cp v1.ClusterPolicy, pns []v1.PolicyNode) *policynode.AllPolici
 	ap := &policynode.AllPolicies{
 		ClusterPolicy: &cp,
 		PolicyNodes:   map[string]v1.PolicyNode{},
-		Syncs:         map[string]v1alpha1.Sync{},
+		Syncs:         map[string]v1.Sync{},
 	}
 	for _, pn := range pns {
 		ap.PolicyNodes[pn.Name] = pn
@@ -270,9 +269,9 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					{
 						FileObject: ast.FileObject{
 							Relative: nomospath.NewRelative("<builtin>"),
-							Object: &v1alpha1.Sync{
+							Object: &v1.Sync{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: v1alpha1.SchemeGroupVersion.String(),
+									APIVersion: v1.SchemeGroupVersion.String(),
 									Kind:       "Sync",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -295,10 +294,10 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Name: v1.ClusterPolicyName,
 				},
 			},
-			Syncs: map[string]v1alpha1.Sync{
+			Syncs: map[string]v1.Sync{
 				"stuff": {
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1alpha1.SchemeGroupVersion.String(),
+						APIVersion: v1.SchemeGroupVersion.String(),
 						Kind:       "Sync",
 					},
 					ObjectMeta: metav1.ObjectMeta{

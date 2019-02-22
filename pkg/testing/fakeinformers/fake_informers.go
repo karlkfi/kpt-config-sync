@@ -6,7 +6,7 @@ import (
 	"github.com/golang/glog"
 	pnfake "github.com/google/nomos/clientgen/apis/fake"
 	"github.com/google/nomos/clientgen/informer"
-	informersv1alpha1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1alpha1"
+	informersv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	corev1 "k8s.io/client-go/informers/core/v1"
@@ -17,11 +17,11 @@ import (
 // NewHierarchicalQuotaInformer creates a fake SharedIndexInformer, injecting 'content'
 // into the backing store.  Later calls on the client will pretend as if those
 // objects were already inserted.
-func NewHierarchicalQuotaInformer(content ...runtime.Object) informersv1alpha1.HierarchicalQuotaInformer {
+func NewHierarchicalQuotaInformer(content ...runtime.Object) informersv1.HierarchicalQuotaInformer {
 	fakeClientSet := pnfake.NewSimpleClientset(content...)
 	factory := informer.NewSharedInformerFactory(
 		fakeClientSet, 1*time.Minute)
-	informer := factory.Nomos().V1alpha1().HierarchicalQuotas()
+	informer := factory.Nomos().V1().HierarchicalQuotas()
 	informer.Informer()
 	factory.Start(nil)
 	glog.Infof("cache sync...")

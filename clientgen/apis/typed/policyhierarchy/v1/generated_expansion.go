@@ -20,4 +20,14 @@ package v1
 
 type ClusterPolicyExpansion interface{}
 
+type ClusterSelectorExpansion interface{}
+
+type HierarchicalQuotaExpansion interface{}
+
+type HierarchyConfigExpansion interface{}
+
+type NamespaceSelectorExpansion interface{}
+
 type PolicyNodeExpansion interface{}
+
+type SyncExpansion interface{}

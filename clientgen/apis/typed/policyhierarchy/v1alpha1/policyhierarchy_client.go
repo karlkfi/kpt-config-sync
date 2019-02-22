@@ -20,48 +20,18 @@ package v1alpha1
 
 import (
 	"github.com/google/nomos/clientgen/apis/scheme"
-	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
-	rest "k8s.io/client-go/rest"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/rest"
 )
 
 type NomosV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	ClusterSelectorsGetter
-	HierarchicalQuotasGetter
-	HierarchyConfigsGetter
-	NamespaceSelectorsGetter
-	ReposGetter
-	SyncsGetter
 }
 
 // NomosV1alpha1Client is used to interact with features provided by the nomos.dev group.
 type NomosV1alpha1Client struct {
 	restClient rest.Interface
-}
-
-func (c *NomosV1alpha1Client) ClusterSelectors() ClusterSelectorInterface {
-	return newClusterSelectors(c)
-}
-
-func (c *NomosV1alpha1Client) HierarchicalQuotas() HierarchicalQuotaInterface {
-	return newHierarchicalQuotas(c)
-}
-
-func (c *NomosV1alpha1Client) HierarchyConfigs() HierarchyConfigInterface {
-	return newHierarchyConfigs(c)
-}
-
-func (c *NomosV1alpha1Client) NamespaceSelectors() NamespaceSelectorInterface {
-	return newNamespaceSelectors(c)
-}
-
-func (c *NomosV1alpha1Client) Repos() RepoInterface {
-	return newRepos(c)
-}
-
-func (c *NomosV1alpha1Client) Syncs() SyncInterface {
-	return newSyncs(c)
 }
 
 // NewForConfig creates a new NomosV1alpha1Client for the given config.
@@ -93,7 +63,7 @@ func New(c rest.Interface) *NomosV1alpha1Client {
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v1alpha1.SchemeGroupVersion
+	gv := v1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}

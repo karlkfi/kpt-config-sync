@@ -22,7 +22,6 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	syncermanager "github.com/google/nomos/pkg/syncer/manager"
@@ -95,14 +94,14 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
-	syncs := &v1alpha1.SyncList{}
+	syncs := &v1.SyncList{}
 	err := r.cache.List(ctx, &client.ListOptions{}, syncs)
 	if err != nil {
 		panic(errors.Wrap(err, "could not list all Syncs"))
 	}
 
-	var toFinalize []*v1alpha1.Sync
-	var enabled []*v1alpha1.Sync
+	var toFinalize []*v1.Sync
+	var enabled []*v1.Sync
 	for idx, s := range syncs.Items {
 		if s.GetDeletionTimestamp() != nil {
 			// Check for finalizer then finalize if needed.
@@ -139,13 +138,13 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
 	for _, sync := range enabled {
-		var status v1alpha1.SyncStatus
+		var status v1.SyncStatus
 		status.Status = v1.Syncing
 
 		// Check if status changed before updating.
 		if !reflect.DeepEqual(sync.Status, status) {
 			updateFn := func(obj runtime.Object) (runtime.Object, error) {
-				s := obj.(*v1alpha1.Sync)
+				s := obj.(*v1.Sync)
 				s.Status = status
 				return s, nil
 			}
@@ -163,7 +162,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	return reconcile.Result{}, bErr
 }
 
-func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1alpha1.Sync, apiInfo *utildiscovery.APIInfo) error {
+func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) error {
 	var newFinalizers []string
 	var needsFinalize bool
 	for _, f := range sync.Finalizers {
@@ -189,7 +188,7 @@ func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1alpha1.Sync, 
 	return errors.Wrap(r.client.Upsert(ctx, sync), "could not finalize sync pending delete")
 }
 
-func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1alpha1.Sync, apiInfo *utildiscovery.APIInfo) error {
+func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) error {
 	// It doesn't matter which version we choose when deleting.
 	// Deletes to a resource of a particular version affect all versions with the same group and kind.
 	gvks := apiInfo.GroupVersionKinds(sync)

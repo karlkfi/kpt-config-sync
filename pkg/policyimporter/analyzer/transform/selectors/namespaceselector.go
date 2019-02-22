@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -33,7 +32,7 @@ func IsPolicyApplicableToNamespace(namespaceLabels map[string]string, policy met
 	if !exists {
 		return true, nil
 	}
-	var ns v1alpha1.NamespaceSelector
+	var ns v1.NamespaceSelector
 	if err := json.Unmarshal([]byte(ls), &ns); err != nil {
 		// TODO(b/122738890)
 		return false, vet.UndocumentedWrapf(err, "failed to unmarshal NamespaceSelector in object %q", policy.GetName())

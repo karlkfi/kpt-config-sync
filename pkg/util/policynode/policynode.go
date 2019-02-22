@@ -20,16 +20,14 @@ import (
 	"github.com/pkg/errors"
 
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 // ListPolicies returns all policies from API server.
 func ListPolicies(policyNodeLister listersv1.PolicyNodeLister,
 	clusterPolicyLister listersv1.ClusterPolicyLister,
-	syncLister listersv1alpha1.SyncLister) (*AllPolicies, error) {
+	syncLister listersv1.SyncLister) (*AllPolicies, error) {
 	policies := AllPolicies{
 		PolicyNodes: make(map[string]v1.PolicyNode),
 	}
@@ -67,7 +65,7 @@ func ListPolicies(policyNodeLister listersv1.PolicyNodeLister,
 		return nil, errors.Wrap(err, "failed to list Syncs")
 	}
 	if len(syncs) > 0 {
-		policies.Syncs = make(map[string]v1alpha1.Sync)
+		policies.Syncs = make(map[string]v1.Sync)
 	}
 	for _, s := range syncs {
 		policies.Syncs[s.Name] = *s.DeepCopy()

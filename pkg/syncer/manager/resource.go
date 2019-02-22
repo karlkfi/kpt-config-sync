@@ -19,11 +19,12 @@ package manager
 import (
 	"reflect"
 
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+
 	"github.com/google/nomos/pkg/util/discovery"
 
 	"github.com/golang/glog"
 	nomosapischeme "github.com/google/nomos/clientgen/apis/scheme"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/syncer/controller"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/pkg/errors"
@@ -39,7 +40,7 @@ import (
 type RestartableManager interface {
 	// UpdateSyncResources checks if the resources in Syncs have changed since last time we checked.
 	// If they have, we stop the old manager and brings up a new one with controllers for sync-enabled resources.
-	UpdateSyncResources(syncs []*v1alpha1.Sync, apirs *discovery.APIInfo, startErrCh chan error) error
+	UpdateSyncResources(syncs []*v1.Sync, apirs *discovery.APIInfo, startErrCh chan error) error
 	// Clear clears out the set of resource types ResourceManger is managing, without restarting the manager.
 	Clear()
 }
@@ -70,7 +71,7 @@ func NewGenericResourceManager(mgr manager.Manager, cfg *rest.Config) *GenericRe
 }
 
 // UpdateSyncResources implements RestartableManager.
-func (r *GenericResourceManager) UpdateSyncResources(syncs []*v1alpha1.Sync, apirs *discovery.APIInfo,
+func (r *GenericResourceManager) UpdateSyncResources(syncs []*v1.Sync, apirs *discovery.APIInfo,
 	startErrCh chan error) error {
 	actual := apirs.GroupVersionKinds(syncs...)
 	if reflect.DeepEqual(actual, r.syncEnabled) {
@@ -99,7 +100,7 @@ func (r *GenericResourceManager) Clear() {
 
 // register updates the scheme with resources declared in Syncs.
 // This is needed to generate informers/listers for resources that are sync enabled.
-func (r *GenericResourceManager) register(apirs *discovery.APIInfo, syncs []*v1alpha1.Sync) error {
+func (r *GenericResourceManager) register(apirs *discovery.APIInfo, syncs []*v1.Sync) error {
 	scheme := r.GetScheme()
 	nomosapischeme.AddToScheme(scheme)
 	enabled := apirs.GroupVersionKinds(syncs...)
@@ -120,7 +121,7 @@ func (r *GenericResourceManager) register(apirs *discovery.APIInfo, syncs []*v1a
 }
 
 // startControllers starts all the controllers watching sync-enabled resources.
-func (r *GenericResourceManager) startControllers(apirs *discovery.APIInfo, syncs []*v1alpha1.Sync,
+func (r *GenericResourceManager) startControllers(apirs *discovery.APIInfo, syncs []*v1.Sync,
 	startErrCh chan error) error {
 	namespace, cluster, err := r.resourceScopes(apirs)
 	if err != nil {

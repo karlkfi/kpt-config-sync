@@ -2,7 +2,6 @@ package kinds
 
 import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	oidcconfig "github.com/google/nomos/pkg/oidc/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +13,7 @@ import (
 
 // Sync returns the canonical Sync GroupVersionKind
 func Sync() schema.GroupVersionKind {
-	return v1alpha1.SchemeGroupVersion.WithKind("Sync")
+	return v1.SchemeGroupVersion.WithKind("Sync")
 }
 
 // RoleBinding returns the canonical RoleBinding GroupVersionKind
@@ -34,7 +33,7 @@ func ResourceQuota() schema.GroupVersionKind {
 
 // Repo returns the canonical Repo GroupVersionKind
 func Repo() schema.GroupVersionKind {
-	return v1alpha1.SchemeGroupVersion.WithKind("Repo")
+	return v1.SchemeGroupVersion.WithKind("Repo")
 }
 
 // PersistentVolume returns the canonical PersistentVolume GroupVersionKind
@@ -54,7 +53,7 @@ func PodSecurityPolicy() schema.GroupVersionKind {
 
 // NamespaceSelector returns the canonical NamespaceSelector GroupVersionKind
 func NamespaceSelector() schema.GroupVersionKind {
-	return v1alpha1.SchemeGroupVersion.WithKind("NamespaceSelector")
+	return v1.SchemeGroupVersion.WithKind("NamespaceSelector")
 }
 
 // Namespace returns the canonical Namespace GroupVersionKind
@@ -69,7 +68,7 @@ func CustomResourceDefinition() schema.GroupVersionKind {
 
 // ClusterSelector returns the canonical ClusterSelector GroupVersionKind
 func ClusterSelector() schema.GroupVersionKind {
-	return v1alpha1.SchemeGroupVersion.WithKind("ClusterSelector")
+	return v1.SchemeGroupVersion.WithKind("ClusterSelector")
 }
 
 // ClusterRoleBinding returns the canonical ClusterRoleBinding GroupVersionKind
@@ -104,5 +103,5 @@ func Deployment() schema.GroupVersionKind {
 
 // HierarchyConfig returns the canonical HierarchyConfig GroupVersionKind
 func HierarchyConfig() schema.GroupVersionKind {
-	return v1alpha1.SchemeGroupVersion.WithKind("HierarchyConfig")
+	return v1.SchemeGroupVersion.WithKind("HierarchyConfig")
 }

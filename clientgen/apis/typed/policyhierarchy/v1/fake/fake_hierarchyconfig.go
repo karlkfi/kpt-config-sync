@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,27 +30,27 @@ import (
 
 // FakeHierarchyConfigs implements HierarchyConfigInterface
 type FakeHierarchyConfigs struct {
-	Fake *FakeNomosV1alpha1
+	Fake *FakeNomosV1
 }
 
-var hierarchyconfigsResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1alpha1", Resource: "hierarchyconfigs"}
+var hierarchyconfigsResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "hierarchyconfigs"}
 
-var hierarchyconfigsKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1alpha1", Kind: "HierarchyConfig"}
+var hierarchyconfigsKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "HierarchyConfig"}
 
 // Get takes name of the hierarchyConfig, and returns the corresponding hierarchyConfig object, and an error if there is any.
-func (c *FakeHierarchyConfigs) Get(name string, options v1.GetOptions) (result *v1alpha1.HierarchyConfig, err error) {
+func (c *FakeHierarchyConfigs) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.HierarchyConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(hierarchyconfigsResource, name), &v1alpha1.HierarchyConfig{})
+		Invokes(testing.NewRootGetAction(hierarchyconfigsResource, name), &policyhierarchy_v1.HierarchyConfig{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.HierarchyConfig), err
+	return obj.(*policyhierarchy_v1.HierarchyConfig), err
 }
 
 // List takes label and field selectors, and returns the list of HierarchyConfigs that match those selectors.
-func (c *FakeHierarchyConfigs) List(opts v1.ListOptions) (result *v1alpha1.HierarchyConfigList, err error) {
+func (c *FakeHierarchyConfigs) List(opts v1.ListOptions) (result *policyhierarchy_v1.HierarchyConfigList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(hierarchyconfigsResource, hierarchyconfigsKind, opts), &v1alpha1.HierarchyConfigList{})
+		Invokes(testing.NewRootListAction(hierarchyconfigsResource, hierarchyconfigsKind, opts), &policyhierarchy_v1.HierarchyConfigList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func (c *FakeHierarchyConfigs) List(opts v1.ListOptions) (result *v1alpha1.Hiera
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.HierarchyConfigList{ListMeta: obj.(*v1alpha1.HierarchyConfigList).ListMeta}
-	for _, item := range obj.(*v1alpha1.HierarchyConfigList).Items {
+	list := &policyhierarchy_v1.HierarchyConfigList{ListMeta: obj.(*policyhierarchy_v1.HierarchyConfigList).ListMeta}
+	for _, item := range obj.(*policyhierarchy_v1.HierarchyConfigList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -75,29 +75,29 @@ func (c *FakeHierarchyConfigs) Watch(opts v1.ListOptions) (watch.Interface, erro
 }
 
 // Create takes the representation of a hierarchyConfig and creates it.  Returns the server's representation of the hierarchyConfig, and an error, if there is any.
-func (c *FakeHierarchyConfigs) Create(hierarchyConfig *v1alpha1.HierarchyConfig) (result *v1alpha1.HierarchyConfig, err error) {
+func (c *FakeHierarchyConfigs) Create(hierarchyConfig *policyhierarchy_v1.HierarchyConfig) (result *policyhierarchy_v1.HierarchyConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(hierarchyconfigsResource, hierarchyConfig), &v1alpha1.HierarchyConfig{})
+		Invokes(testing.NewRootCreateAction(hierarchyconfigsResource, hierarchyConfig), &policyhierarchy_v1.HierarchyConfig{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.HierarchyConfig), err
+	return obj.(*policyhierarchy_v1.HierarchyConfig), err
 }
 
 // Update takes the representation of a hierarchyConfig and updates it. Returns the server's representation of the hierarchyConfig, and an error, if there is any.
-func (c *FakeHierarchyConfigs) Update(hierarchyConfig *v1alpha1.HierarchyConfig) (result *v1alpha1.HierarchyConfig, err error) {
+func (c *FakeHierarchyConfigs) Update(hierarchyConfig *policyhierarchy_v1.HierarchyConfig) (result *policyhierarchy_v1.HierarchyConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(hierarchyconfigsResource, hierarchyConfig), &v1alpha1.HierarchyConfig{})
+		Invokes(testing.NewRootUpdateAction(hierarchyconfigsResource, hierarchyConfig), &policyhierarchy_v1.HierarchyConfig{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.HierarchyConfig), err
+	return obj.(*policyhierarchy_v1.HierarchyConfig), err
 }
 
 // Delete takes name of the hierarchyConfig and deletes it. Returns an error if one occurs.
 func (c *FakeHierarchyConfigs) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(hierarchyconfigsResource, name), &v1alpha1.HierarchyConfig{})
+		Invokes(testing.NewRootDeleteAction(hierarchyconfigsResource, name), &policyhierarchy_v1.HierarchyConfig{})
 	return err
 }
 
@@ -105,16 +105,16 @@ func (c *FakeHierarchyConfigs) Delete(name string, options *v1.DeleteOptions) er
 func (c *FakeHierarchyConfigs) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(hierarchyconfigsResource, listOptions)
 
-	_, err := c.Fake.Invokes(action, &v1alpha1.HierarchyConfigList{})
+	_, err := c.Fake.Invokes(action, &policyhierarchy_v1.HierarchyConfigList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched hierarchyConfig.
-func (c *FakeHierarchyConfigs) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.HierarchyConfig, err error) {
+func (c *FakeHierarchyConfigs) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *policyhierarchy_v1.HierarchyConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(hierarchyconfigsResource, name, data, subresources...), &v1alpha1.HierarchyConfig{})
+		Invokes(testing.NewRootPatchSubresourceAction(hierarchyconfigsResource, name, data, subresources...), &policyhierarchy_v1.HierarchyConfig{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.HierarchyConfig), err
+	return obj.(*policyhierarchy_v1.HierarchyConfig), err
 }

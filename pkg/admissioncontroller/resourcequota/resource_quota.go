@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"time"
 
-	informersv1alpha1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1alpha1"
+	informersv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/admissioncontroller"
 	"github.com/google/nomos/pkg/resourcequota"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -39,7 +39,7 @@ import (
 // Admitter is the struct for the resource quota admitter
 type Admitter struct {
 	resourceQuotaInformer     informerscorev1.ResourceQuotaInformer
-	hierarchicalQuotaInformer informersv1alpha1.HierarchicalQuotaInformer
+	hierarchicalQuotaInformer informersv1.HierarchicalQuotaInformer
 	quotaRegistry             quota.Registry
 	decoder                   runtime.Decoder
 }
@@ -49,7 +49,7 @@ var _ admissioncontroller.Admitter = (*Admitter)(nil)
 // NewAdmitter returns the resource quota admitter
 func NewAdmitter(
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer,
-	hierarchicalQuotaInformer informersv1alpha1.HierarchicalQuotaInformer) admissioncontroller.Admitter {
+	hierarchicalQuotaInformer informersv1.HierarchicalQuotaInformer) admissioncontroller.Admitter {
 	quotaConfiguration := quotainstall.NewQuotaConfigurationForAdmission()
 	quotaRegistry := generic.NewRegistry(quotaConfiguration.Evaluators())
 

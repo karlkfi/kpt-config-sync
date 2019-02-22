@@ -18,7 +18,6 @@ package backend
 
 import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -40,7 +39,7 @@ type OutputVisitor struct {
 	allPolicies *policynode.AllPolicies
 	context     string
 	policyNode  []*v1.PolicyNode
-	syncs       []*v1alpha1.Sync
+	syncs       []*v1.Sync
 }
 
 var _ ast.Visitor = &OutputVisitor{}
@@ -61,8 +60,8 @@ func (v *OutputVisitor) AllPolicies() *policynode.AllPolicies {
 	return v.allPolicies
 }
 
-func mapByName(syncs []*v1alpha1.Sync) map[string]v1alpha1.Sync {
-	m := make(map[string]v1alpha1.Sync)
+func mapByName(syncs []*v1.Sync) map[string]v1.Sync {
+	m := make(map[string]v1.Sync)
 	for _, sync := range syncs {
 		m[sync.Name] = *sync
 	}
@@ -96,7 +95,7 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 // VisitSystemObject implements Visitor
 func (v *OutputVisitor) VisitSystemObject(o *ast.SystemObject) *ast.SystemObject {
 	switch obj := o.FileObject.Object.(type) {
-	case *v1alpha1.Sync:
+	case *v1.Sync:
 		v.syncs = append(v.syncs, obj)
 	}
 	return o

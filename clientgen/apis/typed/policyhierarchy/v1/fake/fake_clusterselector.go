@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,27 +30,27 @@ import (
 
 // FakeClusterSelectors implements ClusterSelectorInterface
 type FakeClusterSelectors struct {
-	Fake *FakeNomosV1alpha1
+	Fake *FakeNomosV1
 }
 
-var clusterselectorsResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1alpha1", Resource: "clusterselectors"}
+var clusterselectorsResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "clusterselectors"}
 
-var clusterselectorsKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1alpha1", Kind: "ClusterSelector"}
+var clusterselectorsKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "ClusterSelector"}
 
 // Get takes name of the clusterSelector, and returns the corresponding clusterSelector object, and an error if there is any.
-func (c *FakeClusterSelectors) Get(name string, options v1.GetOptions) (result *v1alpha1.ClusterSelector, err error) {
+func (c *FakeClusterSelectors) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.ClusterSelector, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(clusterselectorsResource, name), &v1alpha1.ClusterSelector{})
+		Invokes(testing.NewRootGetAction(clusterselectorsResource, name), &policyhierarchy_v1.ClusterSelector{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.ClusterSelector), err
+	return obj.(*policyhierarchy_v1.ClusterSelector), err
 }
 
 // List takes label and field selectors, and returns the list of ClusterSelectors that match those selectors.
-func (c *FakeClusterSelectors) List(opts v1.ListOptions) (result *v1alpha1.ClusterSelectorList, err error) {
+func (c *FakeClusterSelectors) List(opts v1.ListOptions) (result *policyhierarchy_v1.ClusterSelectorList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(clusterselectorsResource, clusterselectorsKind, opts), &v1alpha1.ClusterSelectorList{})
+		Invokes(testing.NewRootListAction(clusterselectorsResource, clusterselectorsKind, opts), &policyhierarchy_v1.ClusterSelectorList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func (c *FakeClusterSelectors) List(opts v1.ListOptions) (result *v1alpha1.Clust
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.ClusterSelectorList{ListMeta: obj.(*v1alpha1.ClusterSelectorList).ListMeta}
-	for _, item := range obj.(*v1alpha1.ClusterSelectorList).Items {
+	list := &policyhierarchy_v1.ClusterSelectorList{ListMeta: obj.(*policyhierarchy_v1.ClusterSelectorList).ListMeta}
+	for _, item := range obj.(*policyhierarchy_v1.ClusterSelectorList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -75,29 +75,29 @@ func (c *FakeClusterSelectors) Watch(opts v1.ListOptions) (watch.Interface, erro
 }
 
 // Create takes the representation of a clusterSelector and creates it.  Returns the server's representation of the clusterSelector, and an error, if there is any.
-func (c *FakeClusterSelectors) Create(clusterSelector *v1alpha1.ClusterSelector) (result *v1alpha1.ClusterSelector, err error) {
+func (c *FakeClusterSelectors) Create(clusterSelector *policyhierarchy_v1.ClusterSelector) (result *policyhierarchy_v1.ClusterSelector, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(clusterselectorsResource, clusterSelector), &v1alpha1.ClusterSelector{})
+		Invokes(testing.NewRootCreateAction(clusterselectorsResource, clusterSelector), &policyhierarchy_v1.ClusterSelector{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.ClusterSelector), err
+	return obj.(*policyhierarchy_v1.ClusterSelector), err
 }
 
 // Update takes the representation of a clusterSelector and updates it. Returns the server's representation of the clusterSelector, and an error, if there is any.
-func (c *FakeClusterSelectors) Update(clusterSelector *v1alpha1.ClusterSelector) (result *v1alpha1.ClusterSelector, err error) {
+func (c *FakeClusterSelectors) Update(clusterSelector *policyhierarchy_v1.ClusterSelector) (result *policyhierarchy_v1.ClusterSelector, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(clusterselectorsResource, clusterSelector), &v1alpha1.ClusterSelector{})
+		Invokes(testing.NewRootUpdateAction(clusterselectorsResource, clusterSelector), &policyhierarchy_v1.ClusterSelector{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.ClusterSelector), err
+	return obj.(*policyhierarchy_v1.ClusterSelector), err
 }
 
 // Delete takes name of the clusterSelector and deletes it. Returns an error if one occurs.
 func (c *FakeClusterSelectors) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(clusterselectorsResource, name), &v1alpha1.ClusterSelector{})
+		Invokes(testing.NewRootDeleteAction(clusterselectorsResource, name), &policyhierarchy_v1.ClusterSelector{})
 	return err
 }
 
@@ -105,16 +105,16 @@ func (c *FakeClusterSelectors) Delete(name string, options *v1.DeleteOptions) er
 func (c *FakeClusterSelectors) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(clusterselectorsResource, listOptions)
 
-	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterSelectorList{})
+	_, err := c.Fake.Invokes(action, &policyhierarchy_v1.ClusterSelectorList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched clusterSelector.
-func (c *FakeClusterSelectors) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ClusterSelector, err error) {
+func (c *FakeClusterSelectors) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *policyhierarchy_v1.ClusterSelector, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(clusterselectorsResource, name, data, subresources...), &v1alpha1.ClusterSelector{})
+		Invokes(testing.NewRootPatchSubresourceAction(clusterselectorsResource, name, data, subresources...), &policyhierarchy_v1.ClusterSelector{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.ClusterSelector), err
+	return obj.(*policyhierarchy_v1.ClusterSelector), err
 }

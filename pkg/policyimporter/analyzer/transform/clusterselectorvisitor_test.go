@@ -22,7 +22,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
@@ -39,7 +38,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 			"env": "prod",
 		}),
 	}
-	selectors := []v1alpha1.ClusterSelector{
+	selectors := []v1.ClusterSelector{
 		// Matches the cluster.
 		seltest.Selector("sel-1",
 			metav1.LabelSelector{

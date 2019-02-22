@@ -5,11 +5,12 @@
 package testing
 
 import (
-	reflect "reflect"
+	"reflect"
 
-	gomock "github.com/golang/mock/gomock"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	discovery "github.com/google/nomos/pkg/util/discovery"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+
+	"github.com/golang/mock/gomock"
+	"github.com/google/nomos/pkg/util/discovery"
 )
 
 // MockRestartableManager is a mock of RestartableManager interface
@@ -46,7 +47,7 @@ func (mr *MockRestartableManagerMockRecorder) Clear() *gomock.Call {
 }
 
 // UpdateSyncResources mocks base method
-func (m *MockRestartableManager) UpdateSyncResources(arg0 []*v1alpha1.Sync, arg1 *discovery.APIInfo, arg2 chan error) error {
+func (m *MockRestartableManager) UpdateSyncResources(arg0 []*v1.Sync, arg1 *discovery.APIInfo, arg2 chan error) error {
 	ret := m.ctrl.Call(m, "UpdateSyncResources", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0

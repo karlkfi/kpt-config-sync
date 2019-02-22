@@ -25,7 +25,6 @@ import (
 	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter"
@@ -49,7 +48,7 @@ type Controller struct {
 	informerFactory     informer.SharedInformerFactory
 	policyNodeLister    listersv1.PolicyNodeLister
 	clusterPolicyLister listersv1.ClusterPolicyLister
-	syncLister          listersv1alpha1.SyncLister
+	syncLister          listersv1.SyncLister
 	stopChan            chan struct{}
 	client              meta.Interface
 }
@@ -63,10 +62,10 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 	differ := actions.NewDiffer(
 		actions.NewFactories(
 			client.PolicyHierarchy().NomosV1(),
-			client.PolicyHierarchy().NomosV1alpha1(),
+			client.PolicyHierarchy().NomosV1(),
 			informerFactory.Nomos().V1().PolicyNodes().Lister(),
 			informerFactory.Nomos().V1().ClusterPolicies().Lister(),
-			informerFactory.Nomos().V1alpha1().Syncs().Lister()))
+			informerFactory.Nomos().V1().Syncs().Lister()))
 
 	return &Controller{
 		policyDir:           policyDir,
@@ -77,7 +76,7 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		informerFactory:     informerFactory,
 		policyNodeLister:    informerFactory.Nomos().V1().PolicyNodes().Lister(),
 		clusterPolicyLister: informerFactory.Nomos().V1().ClusterPolicies().Lister(),
-		syncLister:          informerFactory.Nomos().V1alpha1().Syncs().Lister(),
+		syncLister:          informerFactory.Nomos().V1().Syncs().Lister(),
 		stopChan:            stopChan,
 		client:              client,
 	}

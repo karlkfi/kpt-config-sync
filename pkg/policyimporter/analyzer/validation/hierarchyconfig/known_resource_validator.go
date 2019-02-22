@@ -1,7 +1,7 @@
 package hierarchyconfig
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -28,7 +28,7 @@ func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) error {
 // ValidateSystemObject implements Visitor.
 func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) error {
 	switch h := o.Object.(type) {
-	case *v1alpha1.HierarchyConfig:
+	case *v1.HierarchyConfig:
 		for _, gkc := range NewFileHierarchyConfig(h, o.Relative).flatten() {
 			gk := gkc.GroupKind()
 			if !k.apiInfo.GroupKindExists(gk) {

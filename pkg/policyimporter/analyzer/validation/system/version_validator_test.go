@@ -3,7 +3,7 @@ package system
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	testing2 "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
@@ -14,7 +14,7 @@ const notAllowedRepoVersion = "0.0.0"
 
 func repo(version string) ast.FileObject {
 	result := fake.Repo("system/repo.yaml")
-	result.Object.(*v1alpha1.Repo).Spec.Version = version
+	result.Object.(*v1.Repo).Spec.Version = version
 	return result
 }
 

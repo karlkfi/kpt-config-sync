@@ -16,7 +16,7 @@ limitations under the License.
 package discovery
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -103,7 +103,7 @@ func (a *APIInfo) AllowedVersions(gk schema.GroupKind) []string {
 
 // GroupVersionKinds returns a set of GroupVersionKinds represented by the slice of Syncs with only
 // Group and Kind specified.
-func (a *APIInfo) GroupVersionKinds(syncs ...*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
+func (a *APIInfo) GroupVersionKinds(syncs ...*v1.Sync) map[schema.GroupVersionKind]bool {
 	allGvk := make(map[schema.GroupVersionKind]bool)
 	for _, s := range syncs {
 		gk := schema.GroupKind{Group: s.Spec.Group, Kind: s.Spec.Kind}

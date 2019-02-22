@@ -22,6 +22,26 @@ package v1
 // ClusterPolicyLister.
 type ClusterPolicyListerExpansion interface{}
 
+// ClusterSelectorListerExpansion allows custom methods to be added to
+// ClusterSelectorLister.
+type ClusterSelectorListerExpansion interface{}
+
+// HierarchicalQuotaListerExpansion allows custom methods to be added to
+// HierarchicalQuotaLister.
+type HierarchicalQuotaListerExpansion interface{}
+
+// HierarchyConfigListerExpansion allows custom methods to be added to
+// HierarchyConfigLister.
+type HierarchyConfigListerExpansion interface{}
+
+// NamespaceSelectorListerExpansion allows custom methods to be added to
+// NamespaceSelectorLister.
+type NamespaceSelectorListerExpansion interface{}
+
 // PolicyNodeListerExpansion allows custom methods to be added to
 // PolicyNodeLister.
 type PolicyNodeListerExpansion interface{}
+
+// SyncListerExpansion allows custom methods to be added to
+// SyncLister.
+type SyncListerExpansion interface{}

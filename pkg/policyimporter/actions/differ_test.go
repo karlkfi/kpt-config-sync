@@ -21,7 +21,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/policynode"
 	"k8s.io/api/policy/v1beta1"
@@ -33,7 +32,7 @@ type testCase struct {
 	testName                           string
 	oldNodes, newNodes                 []v1.PolicyNode
 	oldClusterPolicy, newClusterPolicy *v1.ClusterPolicy
-	oldSyncs, newSyncs                 []v1alpha1.Sync
+	oldSyncs, newSyncs                 []v1.Sync
 	// String representation of expected actions
 	expected []string
 }
@@ -160,38 +159,38 @@ func TestDiffer(t *testing.T) {
 		},
 		{
 			testName: "Empty Syncs",
-			oldSyncs: []v1alpha1.Sync{},
-			newSyncs: []v1alpha1.Sync{},
+			oldSyncs: []v1.Sync{},
+			newSyncs: []v1.Sync{},
 			expected: []string{},
 		},
 		{
 			testName: "Sync create",
-			oldSyncs: []v1alpha1.Sync{},
-			newSyncs: []v1alpha1.Sync{
-				*v1alpha1.NewSync("", "ResourceQuota"),
+			oldSyncs: []v1.Sync{},
+			newSyncs: []v1.Sync{
+				*v1.NewSync("", "ResourceQuota"),
 			},
 			expected: []string{
-				"nomos.dev/v1alpha1/Syncs/resourcequota/create",
+				"nomos.dev/v1/Syncs/resourcequota/create",
 			},
 		},
 		{
 			testName: "Sync update no change",
-			oldSyncs: []v1alpha1.Sync{
-				*v1alpha1.NewSync("", "ResourceQuota"),
+			oldSyncs: []v1.Sync{
+				*v1.NewSync("", "ResourceQuota"),
 			},
-			newSyncs: []v1alpha1.Sync{
-				*v1alpha1.NewSync("", "ResourceQuota"),
+			newSyncs: []v1.Sync{
+				*v1.NewSync("", "ResourceQuota"),
 			},
 			expected: []string{},
 		},
 		{
 			testName: "Sync delete",
-			oldSyncs: []v1alpha1.Sync{
-				*v1alpha1.NewSync("", "ResourceQuota"),
+			oldSyncs: []v1.Sync{
+				*v1.NewSync("", "ResourceQuota"),
 			},
-			newSyncs: []v1alpha1.Sync{},
+			newSyncs: []v1.Sync{},
 			expected: []string{
-				"nomos.dev/v1alpha1/Syncs/resourcequota/delete",
+				"nomos.dev/v1/Syncs/resourcequota/delete",
 			},
 		},
 	} {
@@ -282,7 +281,7 @@ func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
 	}
 }
 
-func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy, syncs []v1alpha1.Sync) policynode.AllPolicies {
+func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy, syncs []v1.Sync) policynode.AllPolicies {
 	policies := policynode.AllPolicies{
 		ClusterPolicy: clusterPolicy,
 	}
@@ -295,7 +294,7 @@ func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy, syncs [
 	}
 
 	if len(syncs) > 0 {
-		policies.Syncs = make(map[string]v1alpha1.Sync)
+		policies.Syncs = make(map[string]v1.Sync)
 	}
 	for _, s := range syncs {
 		policies.Syncs[s.Name] = s

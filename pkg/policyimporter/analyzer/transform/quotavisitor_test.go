@@ -19,8 +19,7 @@ package transform
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
@@ -39,7 +38,7 @@ func modQuota(q *corev1.ResourceQuota, name string, labels map[string]string, li
 	return nq
 }
 
-func modCluster(h *v1alpha1.HierarchicalQuota, c *ast.Cluster) *ast.Cluster {
+func modCluster(h *v1.HierarchicalQuota, c *ast.Cluster) *ast.Cluster {
 	nc := *c
 	nc.Objects = append(nc.Objects, &ast.ClusterObject{
 		FileObject: ast.FileObject{Object: h},
@@ -47,16 +46,16 @@ func modCluster(h *v1alpha1.HierarchicalQuota, c *ast.Cluster) *ast.Cluster {
 	return &nc
 }
 
-func makeHierarchicalQuota(h *v1alpha1.HierarchicalQuotaNode) *v1alpha1.HierarchicalQuota {
-	return &v1alpha1.HierarchicalQuota{
+func makeHierarchicalQuota(h *v1.HierarchicalQuotaNode) *v1.HierarchicalQuota {
+	return &v1.HierarchicalQuota{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			APIVersion: v1.SchemeGroupVersion.String(),
 			Kind:       "HierarchicalQuota",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: resourcequota.ResourceQuotaHierarchyName,
 		},
-		Spec: v1alpha1.HierarchicalQuotaSpec{
+		Spec: v1.HierarchicalQuotaSpec{
 			Hierarchy: *h,
 		},
 	}
@@ -71,7 +70,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name:  "preserve cluster policies",
 			Input: vt.Helper.ClusterPolicies(),
 			ExpectOutput: &ast.Root{
-				Cluster:     modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{}), vt.Helper.AcmeCluster()),
+				Cluster:     modCluster(makeHierarchicalQuota(&v1.HierarchicalQuotaNode{}), vt.Helper.AcmeCluster()),
 				ImportToken: vt.Helper.ImportToken,
 				LoadTime:    vt.Helper.ImportTime,
 			},
@@ -80,7 +79,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name:  "acme",
 			Input: vt.Helper.AcmeRoot(),
 			ExpectOutput: &ast.Root{
-				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+				Cluster: modCluster(makeHierarchicalQuota(&v1.HierarchicalQuotaNode{
 					Name: "namespaces",
 					Type: "abstractNamespace",
 					ResourceQuotaV1: modQuota(
@@ -90,7 +89,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						corev1.ResourceList{
 							corev1.ResourceCPU: resource.MustParse("5"),
 						}),
-					Children: []v1alpha1.HierarchicalQuotaNode{
+					Children: []v1.HierarchicalQuotaNode{
 						{
 							ResourceQuotaV1: modQuota(
 								vt.Helper.AcmeResourceQuota(),
@@ -197,7 +196,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				},
 			},
 			ExpectOutput: &ast.Root{
-				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+				Cluster: modCluster(makeHierarchicalQuota(&v1.HierarchicalQuotaNode{
 					Name: "namespaces",
 					Type: "abstractNamespace",
 					ResourceQuotaV1: modQuota(
@@ -207,11 +206,11 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						corev1.ResourceList{
 							corev1.ResourceCPU: resource.MustParse("5"),
 						}),
-					Children: []v1alpha1.HierarchicalQuotaNode{
+					Children: []v1.HierarchicalQuotaNode{
 						{
 							Name: "namespaces/eng",
 							Type: "abstractNamespace",
-							Children: []v1alpha1.HierarchicalQuotaNode{
+							Children: []v1.HierarchicalQuotaNode{
 								{
 									ResourceQuotaV1: modQuota(
 										vt.Helper.AcmeResourceQuota(),
@@ -311,7 +310,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				},
 			},
 			ExpectOutput: &ast.Root{
-				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+				Cluster: modCluster(makeHierarchicalQuota(&v1.HierarchicalQuotaNode{
 					Name: "namespaces",
 					Type: "abstractNamespace",
 					ResourceQuotaV1: modQuota(
@@ -321,11 +320,11 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						corev1.ResourceList{
 							corev1.ResourceCPU: resource.MustParse("5"),
 						}),
-					Children: []v1alpha1.HierarchicalQuotaNode{
+					Children: []v1.HierarchicalQuotaNode{
 						{
 							Name: "namespaces/eng",
 							Type: "abstractNamespace",
-							Children: []v1alpha1.HierarchicalQuotaNode{
+							Children: []v1.HierarchicalQuotaNode{
 								{
 									ResourceQuotaV1: modQuota(
 										vt.Helper.AcmeResourceQuota(),
@@ -403,10 +402,10 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				},
 			},
 			ExpectOutput: &ast.Root{
-				Cluster: modCluster(makeHierarchicalQuota(&v1alpha1.HierarchicalQuotaNode{
+				Cluster: modCluster(makeHierarchicalQuota(&v1.HierarchicalQuotaNode{
 					Name: "namespaces",
 					Type: "abstractNamespace",
-					Children: []v1alpha1.HierarchicalQuotaNode{
+					Children: []v1.HierarchicalQuotaNode{
 						{
 							Name: "frontend",
 							Type: "namespace",

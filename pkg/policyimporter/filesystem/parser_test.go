@@ -31,7 +31,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -226,7 +225,7 @@ metadata:
 
 	aNamespaceSelectorTemplate = `
 kind: NamespaceSelector
-apiVersion: nomos.dev/v1alpha1
+apiVersion: nomos.dev/v1
 metadata:
   name: sre-supported
 {{- if .Namespace}}
@@ -240,7 +239,7 @@ spec:
 
 	aRepo = `
 kind: Repo
-apiVersion: nomos.dev/v1alpha1
+apiVersion: nomos.dev/v1
 spec:
   version: "0.1.0"
 metadata:
@@ -249,7 +248,7 @@ metadata:
 
 	aHierarchyConfigTemplate = `
 kind: HierarchyConfig
-apiVersion: nomos.dev/v1alpha1
+apiVersion: nomos.dev/v1
 metadata:
 {{- if .Name}}
   name: {{.Name}}
@@ -299,7 +298,7 @@ metadata:
 `
 
 	aClusterSelectorTemplate = `
-apiVersion: nomos.dev/v1alpha1
+apiVersion: nomos.dev/v1
 kind: ClusterSelector
 metadata:
   name: {{.Name}}
@@ -310,7 +309,7 @@ spec:
 `
 
 	aClusterSelectorWithEnvTemplate = `
-apiVersion: nomos.dev/v1alpha1
+apiVersion: nomos.dev/v1
 kind: ClusterSelector
 metadata:
   name: {{.Name}}
@@ -436,7 +435,7 @@ func decoder() runtime.Decoder {
 	corev1.AddToScheme(scheme)
 	rbacv1.AddToScheme(scheme)
 	v1.AddToScheme(scheme)
-	v1alpha1.AddToScheme(scheme)
+	v1.AddToScheme(scheme)
 
 	cf := serializer.NewCodecFactory(scheme)
 	return cf.UniversalDeserializer()
@@ -647,18 +646,18 @@ func toInt32Pointer(i int32) *int32 {
 	return &i
 }
 
-func makeSync(group, kind string) v1alpha1.Sync {
-	s := *v1alpha1.NewSync(group, kind)
+func makeSync(group, kind string) v1.Sync {
+	s := *v1.NewSync(group, kind)
 	s.Finalizers = append(s.Finalizers, "syncer.nomos.dev")
 	return s
 }
 
-func singleSyncMap(group, kind string) map[string]v1alpha1.Sync {
+func singleSyncMap(group, kind string) map[string]v1.Sync {
 	return syncMap(makeSync(group, kind))
 }
 
-func syncMap(syncs ...v1alpha1.Sync) map[string]v1alpha1.Sync {
-	sm := map[string]v1alpha1.Sync{}
+func syncMap(syncs ...v1.Sync) map[string]v1.Sync {
+	sm := map[string]v1.Sync{}
 	for _, sync := range syncs {
 		sm[sync.Name] = sync
 	}
@@ -674,7 +673,7 @@ type parserTestCase struct {
 	expectedNumPolicies        map[string]int
 	expectedClusterPolicy      *v1.ClusterPolicy
 	expectedNumClusterPolicies *int
-	expectedSyncs              map[string]v1alpha1.Sync
+	expectedSyncs              map[string]v1.Sync
 	expectedErrorCodes         []string
 	// Installation side cluster name.
 	clusterName string
@@ -1242,7 +1241,7 @@ var parserTestCases = []parserTestCase{
 			"system/repo.yaml": aRepo,
 			"system/config.yaml": `
 kind: HierarchyConfig
-apiVersion: nomos.dev/v1alpha1
+apiVersion: nomos.dev/v1
 metadata:
   name: config
 spec:
@@ -1296,25 +1295,25 @@ spec:
 						Kind:  "HierarchicalQuota",
 						Versions: []v1.GenericVersionResources{
 							{
-								Version: "v1alpha1",
+								Version: "v1",
 								Objects: []runtime.RawExtension{
 									{
 										Object: runtime.Object(
-											&v1alpha1.HierarchicalQuota{
+											&v1.HierarchicalQuota{
 												TypeMeta: metav1.TypeMeta{
-													APIVersion: v1alpha1.SchemeGroupVersion.String(),
+													APIVersion: v1.SchemeGroupVersion.String(),
 													Kind:       "HierarchicalQuota",
 												},
 												ObjectMeta: metav1.ObjectMeta{
 													Name: resourcequota.ResourceQuotaHierarchyName,
 												},
-												Spec: v1alpha1.HierarchicalQuotaSpec{
-													Hierarchy: v1alpha1.HierarchicalQuotaNode{
+												Spec: v1.HierarchicalQuotaSpec{
+													Hierarchy: v1.HierarchicalQuotaNode{
 														Name: "namespaces",
 														Type: "abstractNamespace",
 														ResourceQuotaV1: createResourceQuota(
 															"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, nil),
-														Children: []v1alpha1.HierarchicalQuotaNode{
+														Children: []v1.HierarchicalQuotaNode{
 															{
 																Name: "bar",
 																Type: "namespace",
@@ -1560,7 +1559,7 @@ spec:
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml": `
 kind: Repo
-apiVersion: nomos.dev/v1alpha1
+apiVersion: nomos.dev/v1
 spec:
   version: "0.0.0"
 metadata:
@@ -1829,7 +1828,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			tc.expectedPolicyNodes = map[string]v1.PolicyNode{}
 		}
 		if tc.expectedSyncs == nil {
-			tc.expectedSyncs = map[string]v1alpha1.Sync{}
+			tc.expectedSyncs = map[string]v1.Sync{}
 		}
 
 		expectedPolicies := &policynode.AllPolicies{
@@ -1926,7 +1925,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 														Annotations: map[string]string{
 															v1.ClusterNameAnnotationKey:     "cluster-1",
 															v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 														},
 													},
 													Subjects: []rbacv1.Subject{{
@@ -1962,7 +1961,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 									Name: "job-creators",
 									Annotations: map[string]string{
 										v1.ClusterNameAnnotationKey:     "cluster-1",
-										v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+										v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 										v1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
 									},
 								},
@@ -1985,7 +1984,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					/* Annotations */
 					map[string]string{
 						v1.ClusterNameAnnotationKey:     "cluster-1",
-						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
 			expectedSyncs: syncMap(
@@ -2058,7 +2057,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 														Annotations: map[string]string{
 															v1.ClusterNameAnnotationKey:     "cluster-1",
 															v1.SourcePathAnnotationKey:      "namespaces/foo/configmap.yaml",
-															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 														},
 													}),
 												),
@@ -2195,7 +2194,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 													Annotations: map[string]string{
 														v1.ClusterNameAnnotationKey:     "cluster-1",
 														v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 													},
 												}),
 											),
@@ -2214,7 +2213,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					/* Annotations */
 					map[string]string{
 						v1.ClusterNameAnnotationKey:     "cluster-1",
-						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
 			expectedSyncs: syncMap(
@@ -2284,7 +2283,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 													Annotations: map[string]string{
 														v1.ClusterNameAnnotationKey:     "cluster-1",
 														v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 													},
 												}),
 											),
@@ -2356,7 +2355,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 								Name: "job-creators",
 								Annotations: map[string]string{
 									v1.ClusterNameAnnotationKey:     "cluster-1",
-									v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+									v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 									v1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
 								},
 							}),
@@ -2366,7 +2365,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					/* Annotations */
 					map[string]string{
 						v1.ClusterNameAnnotationKey:     "cluster-1",
-						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
 			expectedSyncs: syncMap(
@@ -2667,7 +2666,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			testFiles: fstesting.FileContentMap{
 				"system/repo.yaml": `
 kind: Repo
-apiVersion: nomos.dev/v1alpha1
+apiVersion: nomos.dev/v1
 spec:
   version: "0.1.0"
 metadata:
@@ -2684,7 +2683,7 @@ metadata:
 			testFiles: fstesting.FileContentMap{
 				"system/repo.yaml": `
 kind: Repo
-apiVersion: nomos.dev/v1alpha1
+apiVersion: nomos.dev/v1
 spec:
   version: "0.1.0"
 metadata:
@@ -2741,7 +2740,7 @@ func TestEmptyDirectories(t *testing.T) {
 			expectedPolicies := &policynode.AllPolicies{
 				PolicyNodes:   map[string]v1.PolicyNode{},
 				ClusterPolicy: createClusterPolicy(),
-				Syncs:         map[string]v1alpha1.Sync{},
+				Syncs:         map[string]v1.Sync{},
 			}
 			if !cmp.Equal(actualPolicies, expectedPolicies) {
 				t.Errorf("actual and expected AllPolicies didn't match: %v", cmp.Diff(actualPolicies, expectedPolicies))

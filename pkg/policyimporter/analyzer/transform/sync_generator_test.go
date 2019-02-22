@@ -3,7 +3,7 @@ package transform
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
@@ -24,12 +24,12 @@ var syncGeneratorTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: &ast.Root{
 				System: &ast.System{
 					Objects: vt.SystemObjectSets(
-						v1alpha1.NewSync("rbac.authorization.k8s.io", "ClusterRole"),
-						v1alpha1.NewSync("rbac.authorization.k8s.io", "ClusterRoleBinding"),
-						v1alpha1.NewSync("policy", "PodSecurityPolicy"),
-						v1alpha1.NewSync("", "ResourceQuota"),
-						v1alpha1.NewSync("rbac.authorization.k8s.io", "Role"),
-						v1alpha1.NewSync("rbac.authorization.k8s.io", "RoleBinding"),
+						v1.NewSync("rbac.authorization.k8s.io", "ClusterRole"),
+						v1.NewSync("rbac.authorization.k8s.io", "ClusterRoleBinding"),
+						v1.NewSync("policy", "PodSecurityPolicy"),
+						v1.NewSync("", "ResourceQuota"),
+						v1.NewSync("rbac.authorization.k8s.io", "Role"),
+						v1.NewSync("rbac.authorization.k8s.io", "RoleBinding"),
 					),
 				},
 				Cluster: vt.Helper.AcmeCluster(),

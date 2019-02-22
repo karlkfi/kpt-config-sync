@@ -44,6 +44,17 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&PolicyNodeList{},
 		&ClusterPolicy{},
 		&ClusterPolicyList{},
+		&ClusterSelector{},
+		&HierarchicalQuota{},
+		&HierarchicalQuotaList{},
+		&NamespaceSelector{},
+		&NamespaceSelectorList{},
+		&Repo{},
+		&RepoList{},
+		&Sync{},
+		&SyncList{},
+		&HierarchyConfig{},
+		&HierarchyConfigList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

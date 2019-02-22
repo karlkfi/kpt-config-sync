@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
@@ -98,7 +97,7 @@ func createPolicyAnnotation(annotation string) metav1.Object {
 	return o
 }
 
-func createPolicy(s *v1alpha1.NamespaceSelector) metav1.Object {
+func createPolicy(s *v1.NamespaceSelector) metav1.Object {
 	rb := &rbacv1.RoleBinding{}
 	rb.SetName("rb")
 	if s != nil {

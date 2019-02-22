@@ -1,7 +1,7 @@
 package tree
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 )
@@ -29,7 +29,7 @@ func NewSystemBuilderVisitor(objects []ast.FileObject) *SystemBuilderVisitor {
 func (v *SystemBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	for _, object := range v.objects {
 		switch o := object.Object.(type) {
-		case *v1alpha1.Repo:
+		case *v1.Repo:
 			r.Repo = o
 		}
 	}

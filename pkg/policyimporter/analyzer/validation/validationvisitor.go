@@ -17,7 +17,6 @@ package validation
 
 import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
@@ -107,7 +106,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 
 // checkNamespaceSelectorAnnotations ensures that a NamespaceSelector object has no
 // ClusterSelector annotation on it.
-func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.NamespaceSelector) {
+func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1.NamespaceSelector) {
 	if a := s.GetAnnotations(); a != nil {
 		if _, ok := a[v1.ClusterSelectorAnnotationKey]; ok {
 			v.errs.Add(vet.NamespaceSelectorMayNotHaveAnnotation{Object: s})

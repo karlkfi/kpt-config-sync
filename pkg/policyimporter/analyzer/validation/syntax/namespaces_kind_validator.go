@@ -1,7 +1,7 @@
 package syntax
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -17,7 +17,7 @@ func NewNamespaceKindValidator() *visitor.ValidatorVisitor {
 		if n.Type == node.Namespace {
 			for _, object := range n.Objects {
 				switch object.Object.(type) {
-				case *v1alpha1.NamespaceSelector:
+				case *v1.NamespaceSelector:
 					eb.Add(vet.IllegalKindInNamespacesError{Resource: object})
 				}
 			}

@@ -19,11 +19,8 @@ import (
 	"time"
 
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
-	typedv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	listersv1alpha1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1alpha1"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/util/clusterpolicy"
 	"github.com/google/nomos/pkg/util/policynode"
@@ -40,9 +37,9 @@ type Factories struct {
 
 // NewFactories creates a new Factories.
 func NewFactories(
-	v1client typedv1.NomosV1Interface, v1alpha1client typedv1alpha1.NomosV1alpha1Interface,
+	v1client typedv1.NomosV1Interface, v1alpha1client typedv1.NomosV1Interface,
 	pnLister listersv1.PolicyNodeLister, cpLister listersv1.ClusterPolicyLister,
-	syncLister listersv1alpha1.SyncLister) Factories {
+	syncLister listersv1.SyncLister) Factories {
 	return Factories{newPolicyNodeActionFactory(v1client, pnLister),
 		newClusterPolicyActionFactory(v1client, cpLister),
 		newSyncActionFactory(v1alpha1client, syncLister)}
@@ -128,19 +125,19 @@ type syncActionFactory struct {
 }
 
 func newSyncActionFactory(
-	client typedv1alpha1.NomosV1alpha1Interface,
-	lister listersv1alpha1.SyncLister) syncActionFactory {
+	client typedv1.NomosV1Interface,
+	lister listersv1.SyncLister) syncActionFactory {
 	return syncActionFactory{sync.NewActionSpec(client, lister)}
 }
 
-func (f syncActionFactory) NewCreate(sync v1alpha1.Sync) action.Interface {
+func (f syncActionFactory) NewCreate(sync v1.Sync) action.Interface {
 	return action.NewReflectiveCreateAction("", sync.Name, &sync, f.ReflectiveActionSpec)
 }
 
-func (f syncActionFactory) NewUpdate(sync v1alpha1.Sync) action.Interface {
+func (f syncActionFactory) NewUpdate(sync v1.Sync) action.Interface {
 	updateSync := func(old runtime.Object) (runtime.Object, error) {
 		newSync := sync.DeepCopy()
-		oldSync := old.(*v1alpha1.Sync)
+		oldSync := old.(*v1.Sync)
 		newSync.ResourceVersion = oldSync.ResourceVersion
 		return newSync, nil
 	}

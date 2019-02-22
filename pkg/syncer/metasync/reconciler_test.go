@@ -21,7 +21,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,38 +31,38 @@ import (
 )
 
 type updateList struct {
-	update v1alpha1.Sync
+	update v1.Sync
 	list   unstructured.UnstructuredList
 }
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
 		name              string
-		actualSyncs       v1alpha1.SyncList
-		wantStatusUpdates []v1alpha1.Sync
+		actualSyncs       v1.SyncList
+		wantStatusUpdates []v1.Sync
 		wantUpdateList    []updateList
 	}{
 		{
 			name: "update state for one sync",
-			actualSyncs: v1alpha1.SyncList{
-				Items: []v1alpha1.Sync{
+			actualSyncs: v1.SyncList{
+				Items: []v1.Sync{
 					makeSync("", "Deployment", ""),
 				},
 			},
-			wantStatusUpdates: []v1alpha1.Sync{
+			wantStatusUpdates: []v1.Sync{
 				makeSync("", "Deployment", v1.Syncing),
 			},
 		},
 		{
 			name: "update state for multiple syncs",
-			actualSyncs: v1alpha1.SyncList{
-				Items: []v1alpha1.Sync{
+			actualSyncs: v1.SyncList{
+				Items: []v1.Sync{
 					makeSync("rbac.authorization.k8s.io", "Role", ""),
 					makeSync("", "Deployment", ""),
 					makeSync("", "ConfigMap", ""),
 				},
 			},
-			wantStatusUpdates: []v1alpha1.Sync{
+			wantStatusUpdates: []v1.Sync{
 				makeSync("rbac.authorization.k8s.io", "Role", v1.Syncing),
 				makeSync("", "Deployment", v1.Syncing),
 				makeSync("", "ConfigMap", v1.Syncing),
@@ -71,16 +70,16 @@ func TestReconcile(t *testing.T) {
 		},
 		{
 			name: "don't update state for one sync when unnecessary",
-			actualSyncs: v1alpha1.SyncList{
-				Items: []v1alpha1.Sync{
+			actualSyncs: v1.SyncList{
+				Items: []v1.Sync{
 					makeSync("", "Deployment", v1.Syncing),
 				},
 			},
 		},
 		{
 			name: "don't update state for multiple syncs when unnecessary",
-			actualSyncs: v1alpha1.SyncList{
-				Items: []v1alpha1.Sync{
+			actualSyncs: v1.SyncList{
+				Items: []v1.Sync{
 					makeSync("rbac.authorization.k8s.io", "Role", v1.Syncing),
 					makeSync("", "Deployment", v1.Syncing),
 					makeSync("", "ConfigMap", v1.Syncing),
@@ -89,21 +88,21 @@ func TestReconcile(t *testing.T) {
 		},
 		{
 			name: "only update syncs with state change",
-			actualSyncs: v1alpha1.SyncList{
-				Items: []v1alpha1.Sync{
+			actualSyncs: v1.SyncList{
+				Items: []v1.Sync{
 					makeSync("", "Secret", v1.Syncing),
 					makeSync("", "Service", v1.Syncing),
 					makeSync("", "Deployment", ""),
 				},
 			},
-			wantStatusUpdates: []v1alpha1.Sync{
+			wantStatusUpdates: []v1.Sync{
 				makeSync("", "Deployment", v1.Syncing),
 			},
 		},
 		{
 			name: "finalize sync that is pending delete",
-			actualSyncs: v1alpha1.SyncList{
-				Items: []v1alpha1.Sync{
+			actualSyncs: v1.SyncList{
+				Items: []v1.Sync{
 					withDeleteTimestamp(withFinalizer(makeSync("", "Deployment", v1.Syncing))),
 				},
 			},
@@ -208,20 +207,20 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func makeSync(group, kind string, state v1.SyncState) v1alpha1.Sync {
-	s := *v1alpha1.NewSync(group, kind)
+func makeSync(group, kind string, state v1.SyncState) v1.Sync {
+	s := *v1.NewSync(group, kind)
 	if state != "" {
-		s.Status = v1alpha1.SyncStatus{Status: state}
+		s.Status = v1.SyncStatus{Status: state}
 	}
 	return s
 }
 
-func withFinalizer(sync v1alpha1.Sync) v1alpha1.Sync {
+func withFinalizer(sync v1.Sync) v1.Sync {
 	sync.SetFinalizers([]string{v1.SyncFinalizer})
 	return sync
 }
 
-func withDeleteTimestamp(sync v1alpha1.Sync) v1alpha1.Sync {
+func withDeleteTimestamp(sync v1.Sync) v1.Sync {
 	t := metav1.NewTime(time.Unix(0, 0))
 	sync.SetDeletionTimestamp(&t)
 	return sync

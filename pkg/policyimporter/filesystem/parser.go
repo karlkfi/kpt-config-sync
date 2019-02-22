@@ -24,7 +24,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
@@ -51,7 +50,7 @@ func init() {
 	// Add Nomos types to the Scheme used by util.AsDefaultVersionedOrOriginal for
 	// converting Unstructured to specific types.
 	utilruntime.Must(v1.AddToScheme(legacyscheme.Scheme))
-	utilruntime.Must(v1alpha1.AddToScheme(legacyscheme.Scheme))
+	utilruntime.Must(v1.AddToScheme(legacyscheme.Scheme))
 	utilruntime.Must(clusterregistry.AddToScheme(legacyscheme.Scheme))
 }
 
@@ -249,7 +248,7 @@ func addScope(root *ast.Root, client discovery.ServerResourcesInterface) error {
 
 // toInheritanceSpecs converts HierarchyConfigs to InheritanceSpecs. It also evaluates defaults so that later
 // code doesn't have to.
-func toInheritanceSpecs(configs []*v1alpha1.HierarchyConfig) map[schema.GroupKind]*transform.InheritanceSpec {
+func toInheritanceSpecs(configs []*v1.HierarchyConfig) map[schema.GroupKind]*transform.InheritanceSpec {
 	specs := map[schema.GroupKind]*transform.InheritanceSpec{}
 	for _, config := range configs {
 		for _, r := range config.Spec.Resources {
@@ -271,7 +270,7 @@ func toInheritanceSpecs(configs []*v1alpha1.HierarchyConfig) map[schema.GroupKin
 // validateInstallation checks to see if Nomos is installed properly.
 // TODO(b/123598820): Server-side validation for this check.
 func validateInstallation(resources discovery.ServerResourcesInterface, eb *multierror.Builder) {
-	gv := v1alpha1.SchemeGroupVersion.String()
+	gv := v1.SchemeGroupVersion.String()
 	_, err := resources.ServerResourcesForGroupVersion(gv)
 	if err != nil {
 		eb.Add(vet.PolicyManagementNotInstalledError{Err: errors.Wrapf(err, "unable to read required %s resources from cluster", gv)})

@@ -20,8 +20,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
-	informersv1alpha1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1alpha1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	informersv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -34,7 +33,7 @@ import (
 // The usage is based on the ResourceQuota informer which has the usage on the leaf nodes
 type HierarchicalQuotaCache struct {
 	resourceQuotaInformer     informerscorev1.ResourceQuotaInformer
-	hierarchicalQuotaInformer informersv1alpha1.HierarchicalQuotaInformer
+	hierarchicalQuotaInformer informersv1.HierarchicalQuotaInformer
 
 	// Map of namespaces to quota objects
 	quotas map[string]*QuotaNode
@@ -49,7 +48,7 @@ type QuotaNode struct {
 // NewHierarchicalQuotaCache returns the hierarchical quota cache
 func NewHierarchicalQuotaCache(
 	resourceQuotaInformer informerscorev1.ResourceQuotaInformer,
-	hierarchicalQuotaInformer informersv1alpha1.HierarchicalQuotaInformer) (*HierarchicalQuotaCache, error) {
+	hierarchicalQuotaInformer informersv1.HierarchicalQuotaInformer) (*HierarchicalQuotaCache, error) {
 	cache := &HierarchicalQuotaCache{
 		resourceQuotaInformer:     resourceQuotaInformer,
 		hierarchicalQuotaInformer: hierarchicalQuotaInformer,
@@ -60,7 +59,7 @@ func NewHierarchicalQuotaCache(
 }
 
 // initQuotaLimits populates the quota limits set by the HierarchicalQuota object from the repo.
-func (c *HierarchicalQuotaCache) initQuotaLimits(node *v1alpha1.HierarchicalQuotaNode, parent string) {
+func (c *HierarchicalQuotaCache) initQuotaLimits(node *v1.HierarchicalQuotaNode, parent string) {
 	quota := &corev1.ResourceQuota{
 		Status: corev1.ResourceQuotaStatus{
 			Used: corev1.ResourceList{},

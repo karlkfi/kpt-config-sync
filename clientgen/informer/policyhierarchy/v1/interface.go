@@ -26,8 +26,18 @@ import (
 type Interface interface {
 	// ClusterPolicies returns a ClusterPolicyInformer.
 	ClusterPolicies() ClusterPolicyInformer
+	// ClusterSelectors returns a ClusterSelectorInformer.
+	ClusterSelectors() ClusterSelectorInformer
+	// HierarchicalQuotas returns a HierarchicalQuotaInformer.
+	HierarchicalQuotas() HierarchicalQuotaInformer
+	// HierarchyConfigs returns a HierarchyConfigInformer.
+	HierarchyConfigs() HierarchyConfigInformer
+	// NamespaceSelectors returns a NamespaceSelectorInformer.
+	NamespaceSelectors() NamespaceSelectorInformer
 	// PolicyNodes returns a PolicyNodeInformer.
 	PolicyNodes() PolicyNodeInformer
+	// Syncs returns a SyncInformer.
+	Syncs() SyncInformer
 }
 
 type version struct {
@@ -46,7 +56,32 @@ func (v *version) ClusterPolicies() ClusterPolicyInformer {
 	return &clusterPolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
+// ClusterSelectors returns a ClusterSelectorInformer.
+func (v *version) ClusterSelectors() ClusterSelectorInformer {
+	return &clusterSelectorInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// HierarchicalQuotas returns a HierarchicalQuotaInformer.
+func (v *version) HierarchicalQuotas() HierarchicalQuotaInformer {
+	return &hierarchicalQuotaInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// HierarchyConfigs returns a HierarchyConfigInformer.
+func (v *version) HierarchyConfigs() HierarchyConfigInformer {
+	return &hierarchyConfigInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// NamespaceSelectors returns a NamespaceSelectorInformer.
+func (v *version) NamespaceSelectors() NamespaceSelectorInformer {
+	return &namespaceSelectorInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
 // PolicyNodes returns a PolicyNodeInformer.
 func (v *version) PolicyNodes() PolicyNodeInformer {
 	return &policyNodeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// Syncs returns a SyncInformer.
+func (v *version) Syncs() SyncInformer {
+	return &syncInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

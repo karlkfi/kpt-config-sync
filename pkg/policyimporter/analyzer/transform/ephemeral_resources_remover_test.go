@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree/treetesting"
@@ -45,8 +45,8 @@ func TestEphemeralResourceRemover(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Relative: nomospath.NewRelative("namespaces"),
 					Type:     node.AbstractNamespace,
-					Selectors: map[string]*v1alpha1.NamespaceSelector{
-						"": fake.NamespaceSelector("namespaces/ns.yaml").Object.(*v1alpha1.NamespaceSelector),
+					Selectors: map[string]*v1.NamespaceSelector{
+						"": fake.NamespaceSelector("namespaces/ns.yaml").Object.(*v1.NamespaceSelector),
 					},
 				},
 			},

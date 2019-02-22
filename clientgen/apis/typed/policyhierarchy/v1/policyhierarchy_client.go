@@ -28,7 +28,12 @@ import (
 type NomosV1Interface interface {
 	RESTClient() rest.Interface
 	ClusterPoliciesGetter
+	ClusterSelectorsGetter
+	HierarchicalQuotasGetter
+	HierarchyConfigsGetter
+	NamespaceSelectorsGetter
 	PolicyNodesGetter
+	SyncsGetter
 }
 
 // NomosV1Client is used to interact with features provided by the nomos.dev group.
@@ -40,8 +45,28 @@ func (c *NomosV1Client) ClusterPolicies() ClusterPolicyInterface {
 	return newClusterPolicies(c)
 }
 
+func (c *NomosV1Client) ClusterSelectors() ClusterSelectorInterface {
+	return newClusterSelectors(c)
+}
+
+func (c *NomosV1Client) HierarchicalQuotas() HierarchicalQuotaInterface {
+	return newHierarchicalQuotas(c)
+}
+
+func (c *NomosV1Client) HierarchyConfigs() HierarchyConfigInterface {
+	return newHierarchyConfigs(c)
+}
+
+func (c *NomosV1Client) NamespaceSelectors() NamespaceSelectorInterface {
+	return newNamespaceSelectors(c)
+}
+
 func (c *NomosV1Client) PolicyNodes() PolicyNodeInterface {
 	return newPolicyNodes(c)
+}
+
+func (c *NomosV1Client) Syncs() SyncInterface {
+	return newSyncs(c)
 }
 
 // NewForConfig creates a new NomosV1Client for the given config.

@@ -1,7 +1,7 @@
 package system
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -14,7 +14,7 @@ const allowedRepoVersion = "0.1.0"
 func NewRepoVersionValidator() *visitor.ValidatorVisitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) error {
 		switch repo := o.Object.(type) {
-		case *v1alpha1.Repo:
+		case *v1.Repo:
 			if version := repo.Spec.Version; version != allowedRepoVersion {
 				return vet.UnsupportedRepoSpecVersion{
 					Resource: o,

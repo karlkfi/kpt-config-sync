@@ -1,7 +1,7 @@
 package filesystem
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 
@@ -14,7 +14,7 @@ import (
 type ParserConfig interface {
 	// Visitors *overrides* the normal visitor functionality of the parser.
 	Visitors(
-		configs []*v1alpha1.HierarchyConfig,
+		configs []*v1.HierarchyConfig,
 		vet bool) []ast.Visitor
 
 	// NamespacesDir returns the name of the namespaces dir.

@@ -1,7 +1,7 @@
 package fake
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v12 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
@@ -30,7 +30,7 @@ func Namespace(path string) ast.FileObject {
 func NamespaceSelector(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewRelative(path),
-		Object: &v1alpha1.NamespaceSelector{
+		Object: &v12.NamespaceSelector{
 			TypeMeta: toTypeMeta(kinds.NamespaceSelector()),
 		},
 	}
@@ -70,7 +70,7 @@ func ClusterRole(path string) ast.FileObject {
 func ClusterSelector(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewRelative(path),
-		Object: &v1alpha1.ClusterSelector{
+		Object: &v12.ClusterSelector{
 			TypeMeta: toTypeMeta(kinds.ClusterSelector()),
 		},
 	}
@@ -90,7 +90,7 @@ func Cluster(path string) ast.FileObject {
 func Repo(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewRelative(path),
-		Object: &v1alpha1.Repo{
+		Object: &v12.Repo{
 			TypeMeta: toTypeMeta(kinds.Repo()),
 		},
 	}
@@ -100,7 +100,7 @@ func Repo(path string) ast.FileObject {
 func HierarchyConfig(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewRelative(path),
-		Object: &v1alpha1.HierarchyConfig{
+		Object: &v12.HierarchyConfig{
 			TypeMeta: toTypeMeta(kinds.HierarchyConfig()),
 		},
 	}
@@ -110,7 +110,7 @@ func HierarchyConfig(path string) ast.FileObject {
 func Sync(path string) ast.FileObject {
 	return ast.FileObject{
 		Relative: nomospath.NewRelative(path),
-		Object: &v1alpha1.Sync{
+		Object: &v12.Sync{
 			TypeMeta: toTypeMeta(kinds.Sync()),
 		},
 	}

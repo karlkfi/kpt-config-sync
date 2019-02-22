@@ -3,7 +3,8 @@ package transform
 import (
 	"sort"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -66,6 +67,6 @@ func (v *SyncGenerator) VisitSystem(s *ast.System) *ast.System {
 	return v.system
 }
 
-func (v *SyncGenerator) genSync(gk schema.GroupKind) *v1alpha1.Sync {
-	return v1alpha1.NewSync(gk.Group, gk.Kind)
+func (v *SyncGenerator) genSync(gk schema.GroupKind) *v1.Sync {
+	return v1.NewSync(gk.Group, gk.Kind)
 }

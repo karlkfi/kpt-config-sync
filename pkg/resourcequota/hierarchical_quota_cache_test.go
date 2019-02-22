@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -31,7 +29,7 @@ func TestCanAdmit(t *testing.T) {
 		},
 		true)
 
-	root.Children = []v1alpha1.HierarchicalQuotaNode{
+	root.Children = []v1.HierarchicalQuotaNode{
 		*makeHierarchicalQuotaNode(
 			"kitties",
 			corev1.ResourceList{
@@ -137,27 +135,27 @@ func TestCanAdmit(t *testing.T) {
 	}
 }
 
-func makeHierarchicalQuota(root *v1alpha1.HierarchicalQuotaNode) *v1alpha1.HierarchicalQuota {
-	return &v1alpha1.HierarchicalQuota{
+func makeHierarchicalQuota(root *v1.HierarchicalQuotaNode) *v1.HierarchicalQuota {
+	return &v1.HierarchicalQuota{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			APIVersion: v1.SchemeGroupVersion.String(),
 			Kind:       "HierarchicalQuota",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ResourceQuotaHierarchyName,
 		},
-		Spec: v1alpha1.HierarchicalQuotaSpec{
+		Spec: v1.HierarchicalQuotaSpec{
 			Hierarchy: *root,
 		},
 	}
 }
 
-func makeHierarchicalQuotaNode(name string, limits corev1.ResourceList, abstract bool) *v1alpha1.HierarchicalQuotaNode {
+func makeHierarchicalQuotaNode(name string, limits corev1.ResourceList, abstract bool) *v1.HierarchicalQuotaNode {
 	pnt := v1.HierarchyNodeNamespace
 	if abstract {
 		pnt = v1.HierarchyNodeAbstractNamespace
 	}
-	return &v1alpha1.HierarchicalQuotaNode{
+	return &v1.HierarchicalQuotaNode{
 		Name: name,
 		Type: pnt,
 		ResourceQuotaV1: &corev1.ResourceQuota{

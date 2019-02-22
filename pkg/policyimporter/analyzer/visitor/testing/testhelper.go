@@ -19,9 +19,9 @@ package testing
 import (
 	"time"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 
+	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
@@ -416,15 +416,15 @@ func (t *TestHelper) ClusterRegistry() *ast.ClusterRegistry {
 func (t *TestHelper) System() *ast.System {
 	return &ast.System{
 		Objects: SystemObjectSets(
-			&v1alpha1.Repo{
+			&v1.Repo{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: v1alpha1.SchemeGroupVersion.String(),
+					APIVersion: v1.SchemeGroupVersion.String(),
 					Kind:       "Repo",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "repo",
 				},
-				Spec: v1alpha1.RepoSpec{
+				Spec: v1.RepoSpec{
 					Version: "0.1.0",
 				},
 			},

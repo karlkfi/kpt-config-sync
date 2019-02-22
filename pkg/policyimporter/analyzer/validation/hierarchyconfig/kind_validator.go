@@ -2,7 +2,7 @@ package hierarchyconfig
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -15,7 +15,7 @@ import (
 func NewHierarchyConfigKindValidator() ast.Visitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) error {
 		switch h := o.Object.(type) {
-		case *v1alpha1.HierarchyConfig:
+		case *v1.HierarchyConfig:
 			for _, gkc := range NewFileHierarchyConfig(h, o.Relative).flatten() {
 				if err := ValidateKinds(gkc); err != nil {
 					return err

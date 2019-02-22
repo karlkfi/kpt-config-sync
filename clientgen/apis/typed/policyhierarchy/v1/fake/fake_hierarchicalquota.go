@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	policyhierarchy_v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,27 +30,27 @@ import (
 
 // FakeHierarchicalQuotas implements HierarchicalQuotaInterface
 type FakeHierarchicalQuotas struct {
-	Fake *FakeNomosV1alpha1
+	Fake *FakeNomosV1
 }
 
-var hierarchicalquotasResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1alpha1", Resource: "hierarchicalquotas"}
+var hierarchicalquotasResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "hierarchicalquotas"}
 
-var hierarchicalquotasKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1alpha1", Kind: "HierarchicalQuota"}
+var hierarchicalquotasKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "HierarchicalQuota"}
 
 // Get takes name of the hierarchicalQuota, and returns the corresponding hierarchicalQuota object, and an error if there is any.
-func (c *FakeHierarchicalQuotas) Get(name string, options v1.GetOptions) (result *v1alpha1.HierarchicalQuota, err error) {
+func (c *FakeHierarchicalQuotas) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.HierarchicalQuota, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(hierarchicalquotasResource, name), &v1alpha1.HierarchicalQuota{})
+		Invokes(testing.NewRootGetAction(hierarchicalquotasResource, name), &policyhierarchy_v1.HierarchicalQuota{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.HierarchicalQuota), err
+	return obj.(*policyhierarchy_v1.HierarchicalQuota), err
 }
 
 // List takes label and field selectors, and returns the list of HierarchicalQuotas that match those selectors.
-func (c *FakeHierarchicalQuotas) List(opts v1.ListOptions) (result *v1alpha1.HierarchicalQuotaList, err error) {
+func (c *FakeHierarchicalQuotas) List(opts v1.ListOptions) (result *policyhierarchy_v1.HierarchicalQuotaList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(hierarchicalquotasResource, hierarchicalquotasKind, opts), &v1alpha1.HierarchicalQuotaList{})
+		Invokes(testing.NewRootListAction(hierarchicalquotasResource, hierarchicalquotasKind, opts), &policyhierarchy_v1.HierarchicalQuotaList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func (c *FakeHierarchicalQuotas) List(opts v1.ListOptions) (result *v1alpha1.Hie
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.HierarchicalQuotaList{ListMeta: obj.(*v1alpha1.HierarchicalQuotaList).ListMeta}
-	for _, item := range obj.(*v1alpha1.HierarchicalQuotaList).Items {
+	list := &policyhierarchy_v1.HierarchicalQuotaList{ListMeta: obj.(*policyhierarchy_v1.HierarchicalQuotaList).ListMeta}
+	for _, item := range obj.(*policyhierarchy_v1.HierarchicalQuotaList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -75,29 +75,29 @@ func (c *FakeHierarchicalQuotas) Watch(opts v1.ListOptions) (watch.Interface, er
 }
 
 // Create takes the representation of a hierarchicalQuota and creates it.  Returns the server's representation of the hierarchicalQuota, and an error, if there is any.
-func (c *FakeHierarchicalQuotas) Create(hierarchicalQuota *v1alpha1.HierarchicalQuota) (result *v1alpha1.HierarchicalQuota, err error) {
+func (c *FakeHierarchicalQuotas) Create(hierarchicalQuota *policyhierarchy_v1.HierarchicalQuota) (result *policyhierarchy_v1.HierarchicalQuota, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(hierarchicalquotasResource, hierarchicalQuota), &v1alpha1.HierarchicalQuota{})
+		Invokes(testing.NewRootCreateAction(hierarchicalquotasResource, hierarchicalQuota), &policyhierarchy_v1.HierarchicalQuota{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.HierarchicalQuota), err
+	return obj.(*policyhierarchy_v1.HierarchicalQuota), err
 }
 
 // Update takes the representation of a hierarchicalQuota and updates it. Returns the server's representation of the hierarchicalQuota, and an error, if there is any.
-func (c *FakeHierarchicalQuotas) Update(hierarchicalQuota *v1alpha1.HierarchicalQuota) (result *v1alpha1.HierarchicalQuota, err error) {
+func (c *FakeHierarchicalQuotas) Update(hierarchicalQuota *policyhierarchy_v1.HierarchicalQuota) (result *policyhierarchy_v1.HierarchicalQuota, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(hierarchicalquotasResource, hierarchicalQuota), &v1alpha1.HierarchicalQuota{})
+		Invokes(testing.NewRootUpdateAction(hierarchicalquotasResource, hierarchicalQuota), &policyhierarchy_v1.HierarchicalQuota{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.HierarchicalQuota), err
+	return obj.(*policyhierarchy_v1.HierarchicalQuota), err
 }
 
 // Delete takes name of the hierarchicalQuota and deletes it. Returns an error if one occurs.
 func (c *FakeHierarchicalQuotas) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(hierarchicalquotasResource, name), &v1alpha1.HierarchicalQuota{})
+		Invokes(testing.NewRootDeleteAction(hierarchicalquotasResource, name), &policyhierarchy_v1.HierarchicalQuota{})
 	return err
 }
 
@@ -105,16 +105,16 @@ func (c *FakeHierarchicalQuotas) Delete(name string, options *v1.DeleteOptions) 
 func (c *FakeHierarchicalQuotas) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(hierarchicalquotasResource, listOptions)
 
-	_, err := c.Fake.Invokes(action, &v1alpha1.HierarchicalQuotaList{})
+	_, err := c.Fake.Invokes(action, &policyhierarchy_v1.HierarchicalQuotaList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched hierarchicalQuota.
-func (c *FakeHierarchicalQuotas) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.HierarchicalQuota, err error) {
+func (c *FakeHierarchicalQuotas) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *policyhierarchy_v1.HierarchicalQuota, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(hierarchicalquotasResource, name, data, subresources...), &v1alpha1.HierarchicalQuota{})
+		Invokes(testing.NewRootPatchSubresourceAction(hierarchicalquotasResource, name, data, subresources...), &policyhierarchy_v1.HierarchicalQuota{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.HierarchicalQuota), err
+	return obj.(*policyhierarchy_v1.HierarchicalQuota), err
 }

@@ -6,6 +6,6 @@ Found issues: 1 error(s)
 source: system/repo.yaml
 metadata.name: InvalidRepoName
 group: nomos.dev
-version: v1alpha1
+version: v1
 kind: Repo
 

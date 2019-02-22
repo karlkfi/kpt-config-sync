@@ -19,37 +19,12 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
 type FakeNomosV1alpha1 struct {
 	*testing.Fake
-}
-
-func (c *FakeNomosV1alpha1) ClusterSelectors() v1alpha1.ClusterSelectorInterface {
-	return &FakeClusterSelectors{c}
-}
-
-func (c *FakeNomosV1alpha1) HierarchicalQuotas() v1alpha1.HierarchicalQuotaInterface {
-	return &FakeHierarchicalQuotas{c}
-}
-
-func (c *FakeNomosV1alpha1) HierarchyConfigs() v1alpha1.HierarchyConfigInterface {
-	return &FakeHierarchyConfigs{c}
-}
-
-func (c *FakeNomosV1alpha1) NamespaceSelectors() v1alpha1.NamespaceSelectorInterface {
-	return &FakeNamespaceSelectors{c}
-}
-
-func (c *FakeNomosV1alpha1) Repos() v1alpha1.RepoInterface {
-	return &FakeRepos{c}
-}
-
-func (c *FakeNomosV1alpha1) Syncs() v1alpha1.SyncInterface {
-	return &FakeSyncs{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -3,7 +3,8 @@ package tree
 import (
 	"sort"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -56,9 +57,9 @@ func (v *BuilderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 			metaObj := object.Object.(metav1.Object)
 			n.Labels = metaObj.GetLabels()
 			n.Annotations = metaObj.GetAnnotations()
-		case *v1alpha1.NamespaceSelector:
+		case *v1.NamespaceSelector:
 			if n.Selectors == nil {
-				n.Selectors = make(map[string]*v1alpha1.NamespaceSelector)
+				n.Selectors = make(map[string]*v1.NamespaceSelector)
 			}
 			n.Selectors[o.Name] = o
 		}
