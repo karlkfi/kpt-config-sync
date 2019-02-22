@@ -83,6 +83,7 @@ func (r *ClusterPolicyReconciler) Reconcile(request reconcile.Request) (reconcil
 		glog.Error(err)
 		return reconcile.Result{}, err
 	}
+	clusterPolicy.SetGroupVersionKind(kinds.ClusterPolicy())
 
 	name := request.Name
 	if request.Name != v1.ClusterPolicyName {
@@ -181,7 +182,6 @@ func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, po
 		} else {
 			newPolicy.Status.SyncState = v1.StateSynced
 		}
-		newPolicy.SetGroupVersionKind(kinds.ClusterPolicy())
 		return newPolicy, nil
 	}
 	_, err := r.client.UpdateStatus(ctx, policy, updateFn)

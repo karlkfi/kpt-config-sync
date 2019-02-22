@@ -147,9 +147,9 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 			updateFn := func(obj runtime.Object) (runtime.Object, error) {
 				s := obj.(*v1alpha1.Sync)
 				s.Status = status
-				s.SetGroupVersionKind(kinds.Sync())
 				return s, nil
 			}
+			sync.SetGroupVersionKind(kinds.Sync())
 			_, err := r.client.UpdateStatus(ctx, sync, updateFn)
 			errBuilder.Add(errors.Wrap(err, "could not update sync status"))
 		}

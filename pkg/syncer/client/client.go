@@ -51,12 +51,12 @@ type clientUpdateFn func(ctx context.Context, obj runtime.Object) error
 
 // Create saves the object obj in the Kubernetes cluster and records prometheus metrics.
 func (c *Client) Create(ctx context.Context, obj runtime.Object) error {
-	description, resource := resourceInfo(obj)
+	description, kind := resourceInfo(obj)
 	glog.V(1).Infof("Creating %s", description)
 	operation := string(action.CreateOperation)
-	action.Actions.WithLabelValues(resource, operation).Inc()
-	action.APICalls.WithLabelValues(resource, operation).Inc()
-	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(resource, operation))
+	action.Actions.WithLabelValues(kind, operation).Inc()
+	action.APICalls.WithLabelValues(kind, operation).Inc()
+	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
 	defer timer.ObserveDuration()
 	if err := c.Client.Create(ctx, obj); err != nil {
 		return errors.Wrapf(err, "failed to create %s", description)
@@ -67,11 +67,11 @@ func (c *Client) Create(ctx context.Context, obj runtime.Object) error {
 
 // Delete deletes the given obj from Kubernetes cluster and records prometheus metrics.
 func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
-	description, resource := resourceInfo(obj)
+	description, kind := resourceInfo(obj)
 	operation := string(action.DeleteOperation)
-	action.Actions.WithLabelValues(resource, operation).Inc()
-	action.APICalls.WithLabelValues(resource, operation).Inc()
-	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(resource, operation))
+	action.Actions.WithLabelValues(kind, operation).Inc()
+	action.APICalls.WithLabelValues(kind, operation).Inc()
+	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
 	defer timer.ObserveDuration()
 	_, namespacedName := metaNamespacedName(obj)
 	if err := c.Client.Get(ctx, namespacedName, obj); err != nil {
@@ -114,9 +114,9 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 	clientUpdateFn clientUpdateFn) (runtime.Object, error) {
 	// We only want to modify the argument after successfully making an update to API Server.
 	workingObj := obj.DeepCopyObject()
-	description, resource := resourceInfo(workingObj)
+	description, kind := resourceInfo(workingObj)
 	operation := string(action.UpdateOperation)
-	action.Actions.WithLabelValues(resource, operation).Inc()
+	action.Actions.WithLabelValues(kind, operation).Inc()
 	_, namespacedName := metaNamespacedName(workingObj)
 	for tryNum := 0; tryNum < c.MaxTries; tryNum++ {
 		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
@@ -132,14 +132,14 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 			return nil, err
 		}
 
-		action.APICalls.WithLabelValues(resource, operation).Inc()
-		timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(resource, operation))
+		action.APICalls.WithLabelValues(kind, operation).Inc()
+		timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
 		err = clientUpdateFn(ctx, newObj)
 		timer.ObserveDuration()
 		if err == nil {
 			newV := resourceVersion(newObj)
 			if oldV == newV {
-				glog.V(1).Infof("Update not needed for %s", description)
+				glog.V(3).Infof("Update not needed for %s", description)
 			} else {
 				glog.V(1).Infof("Update OK for %s from ResourceVersion %s to %s", description, oldV, newV)
 			}
@@ -155,7 +155,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 // Upsert creates or updates the given obj in the Kubernetes cluster and records prometheus metrics.
 // This operation always involves retrieving the resource from API Server before actually creating or updating it.
 func (c *Client) Upsert(ctx context.Context, obj runtime.Object) error {
-	description, resource := resourceInfo(obj)
+	description, kind := resourceInfo(obj)
 	_, namespacedName := metaNamespacedName(obj)
 	if err := c.Client.Get(ctx, namespacedName, obj.DeepCopyObject()); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -165,9 +165,9 @@ func (c *Client) Upsert(ctx context.Context, obj runtime.Object) error {
 	}
 
 	operation := string(action.UpdateOperation)
-	action.Actions.WithLabelValues(resource, operation).Inc()
-	action.APICalls.WithLabelValues(resource, operation).Inc()
-	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(resource, operation))
+	action.Actions.WithLabelValues(kind, operation).Inc()
+	action.APICalls.WithLabelValues(kind, operation).Inc()
+	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
 	defer timer.ObserveDuration()
 	if err := c.Client.Update(ctx, obj); err != nil {
 		return errors.Wrapf(err, "upsert failed for %s", description)
@@ -176,10 +176,10 @@ func (c *Client) Upsert(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 
-// resourceInfo returns a description of the object (its GroupVersionKind and NamespacedName), as well as its plural name.
-func resourceInfo(obj runtime.Object) (description string, resource string) {
+// resourceInfo returns a description of the object (its GroupVersionKind and NamespacedName), as well as its Kind.
+func resourceInfo(obj runtime.Object) (description string, kind string) {
 	gvk := obj.GetObjectKind().GroupVersionKind()
-	resource = action.LowerPlural(gvk.Kind)
+	kind = gvk.Kind
 
 	_, n := metaNamespacedName(obj)
 	description = fmt.Sprintf("%q, %q", gvk, n)

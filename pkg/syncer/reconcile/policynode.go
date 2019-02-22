@@ -117,6 +117,7 @@ func (r *PolicyNodeReconciler) getPolicyNodeState(ctx context.Context, name stri
 		}
 		panic(errors.Wrap(err, "cache returned error other than not found, this should not happen"))
 	}
+	node.SetGroupVersionKind(kinds.PolicyNode())
 
 	return policyNodeStateNamespace, node, nil
 }
@@ -419,6 +420,7 @@ func asNamespace(policyNode *v1.PolicyNode) *corev1.Namespace {
 }
 
 func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *v1.PolicyNode) *corev1.Namespace {
+	namespace.SetGroupVersionKind(kinds.Namespace())
 	// Mark the namespace as supporting the management of hierarchical quota.
 	labels := labeling.ManageQuota.AddDeepCopy(policyNode.Labels)
 	namespace.Labels = labels

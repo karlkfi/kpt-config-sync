@@ -447,6 +447,8 @@ func TestClusterPolicyReconcile(t *testing.T) {
 					SyncErrors: []v1.ClusterPolicySyncError{
 						{
 							ResourceName: "some-incorrect-name",
+							ResourceKind: "ClusterPolicy",
+							ResourceAPI:  "nomos.dev/v1",
 							ErrorMessage: `ClusterPolicy resource has invalid name "some-incorrect-name"`,
 						},
 					},
