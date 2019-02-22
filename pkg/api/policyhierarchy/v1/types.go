@@ -146,8 +146,6 @@ type PolicyNode struct {
 // PolicyNodeSpec contains all the information about a policy linkage.
 // +protobuf=true
 type PolicyNodeSpec struct {
-	// The type of the PolicyNode.
-	Type PolicyNodeType `json:"type,omitempty" protobuf:"varint,1,opt,name=type"`
 
 	// ImportToken indicates the version of the PolicyNode last imported from the source of truth.
 	// +optional

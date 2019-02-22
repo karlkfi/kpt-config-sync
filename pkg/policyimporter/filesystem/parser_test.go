@@ -487,7 +487,7 @@ type Policies struct {
 }
 
 // createPolicyNode constructs a PolicyNode based on a Policies struct.
-func createPolicyNode(name string, nodeType v1.PolicyNodeType, policies *Policies) v1.PolicyNode {
+func createPolicyNode(name string, policies *Policies) v1.PolicyNode {
 	pn := &v1.PolicyNode{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PolicyNode",
@@ -496,9 +496,7 @@ func createPolicyNode(name string, nodeType v1.PolicyNodeType, policies *Policie
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1.PolicyNodeSpec{
-			Type: nodeType,
-		},
+		Spec: v1.PolicyNodeSpec{},
 	}
 	if policies == nil {
 		return *pn
@@ -565,7 +563,7 @@ func createPNWithMeta(
 		annotations = map[string]string{}
 	}
 	annotations["nomos.dev/source-path"] = path
-	pn := createPolicyNode(filepath.Base(path), t, policies)
+	pn := createPolicyNode(filepath.Base(path), policies)
 	pn.Labels = labels
 	pn.Annotations = annotations
 	return pn
