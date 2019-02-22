@@ -181,42 +181,6 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Kind:       "PolicyNode",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: v1.RootPolicyNodeName,
-					},
-					Spec: v1.PolicyNodeSpec{
-						Type:        v1.Policyspace,
-						ImportToken: vt.ImportToken,
-						ImportTime:  metav1.NewTime(vt.ImportTime),
-						Resources: []v1.GenericResources{
-							{
-								Group: "rbac.authorization.k8s.io",
-								Kind:  "RoleBinding",
-								Versions: []v1.GenericVersionResources{
-									{
-										Version: "v1",
-										Objects: []runtime.RawExtension{{Object: helper.AdminRoleBinding()}},
-									},
-								},
-							},
-							{
-								Group: "",
-								Kind:  "ResourceQuota",
-								Versions: []v1.GenericVersionResources{
-									{
-										Version: "v1",
-										Objects: []runtime.RawExtension{{Object: helper.AcmeResourceQuota()}},
-									},
-								},
-							},
-						},
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "PolicyNode",
-					},
-					ObjectMeta: metav1.ObjectMeta{
 						Name:        "frontend",
 						Labels:      map[string]string{"environment": "prod"},
 						Annotations: map[string]string{"has-waffles": "true"},

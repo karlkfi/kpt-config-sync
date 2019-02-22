@@ -141,13 +141,13 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	}
 	if n.Type == node.Namespace {
 		pn.Spec.Type = v1.Namespace
-	} else {
-		pn.Spec.Type = v1.Policyspace
 	}
 	v.policyNode = append(v.policyNode, pn)
 	v.Base.VisitTreeNode(n)
 	v.policyNode = v.policyNode[:origLen]
-	v.allPolicies.PolicyNodes[pn.Name] = *pn
+	if n.Type == node.Namespace {
+		v.allPolicies.PolicyNodes[pn.Name] = *pn
+	}
 	return nil
 }
 

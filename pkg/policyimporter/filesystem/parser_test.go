@@ -555,13 +555,6 @@ func createNamespacePN(
 	return createPNWithMeta(path, parent, v1.Namespace, policies, nil, nil)
 }
 
-func createPolicyspacePN(
-	path string,
-	parent string,
-	policies *Policies) v1.PolicyNode {
-	return createPNWithMeta(path, parent, v1.Policyspace, policies, nil, nil)
-}
-
 func createPNWithMeta(
 	path string,
 	parent string,
@@ -576,20 +569,6 @@ func createPNWithMeta(
 	pn := createPolicyNode(filepath.Base(path), t, policies)
 	pn.Labels = labels
 	pn.Annotations = annotations
-	return pn
-}
-
-func createRootPN(
-	policies *Policies) v1.PolicyNode {
-	pn := createPolicyNode(v1.RootPolicyNodeName, v1.Policyspace, policies)
-	pn.Annotations = map[string]string{"nomos.dev/source-path": "namespaces"}
-	return pn
-}
-
-func createAnnotatedRootPN(policies *Policies, annotations map[string]string) v1.PolicyNode {
-	pn := createPolicyNode(v1.RootPolicyNodeName, v1.Policyspace, policies)
-	pn.Annotations = annotations
-	pn.Annotations[v1alpha1.SourcePathAnnotationKey] = "namespaces"
 	return pn
 }
 
@@ -713,8 +692,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -726,8 +704,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.json": templateData{Name: "bar"}.apply(aNamespaceJSON),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -739,7 +716,6 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespaceWithLabelsAndAnnotations),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace, nil,
 				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
@@ -754,8 +730,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ignore":  "",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -769,8 +744,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ignore2": "blah blah blah",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -783,8 +757,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ignore":  "",
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar":                 createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
+			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName, nil),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
@@ -846,7 +819,6 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
@@ -866,7 +838,6 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
@@ -887,8 +858,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rq.yaml": templateData{ID: "1", Scope: true, ScopeSelector: true}.apply(aQuota),
 		},
 		expectedNumPolicies: map[string]int{
-			v1.RootPolicyNodeName: 0,
-			"bar":                 1,
+			"bar": 1,
 		},
 	},
 	{
@@ -911,7 +881,6 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/combo.yaml": templateData{Name: "bar"}.apply(aNamespace) + "\n---\n" + templateData{}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{ResourceQuotaV1: createResourceQuota(
 					"namespaces/bar/combo.yaml", "pod-quota", nil),
@@ -931,7 +900,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/role1.yaml": templateData{ID: "1"}.apply(aRole),
 			"namespaces/bar/role2.yaml": templateData{ID: "2"}.apply(aRole),
 		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 2},
+		expectedNumPolicies: map[string]int{"bar": 2},
 	},
 	{
 		testName: "Namespace dir with deployment",
@@ -943,7 +912,6 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/deployment.yaml": aDeploymentTemplate,
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{Resources: []v1.GenericResources{
 					createDeployment(),
@@ -962,7 +930,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/philo.yaml": templateData{ID: "1"}.apply(aPhilo),
 		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 1},
+		expectedNumPolicies: map[string]int{"bar": 1},
 	},
 	{
 		testName: "Namespace dir with duplicate Roles",
@@ -986,7 +954,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 2},
+		expectedNumPolicies: map[string]int{"bar": 2},
 	},
 	{
 		testName: "Namespace dir with duplicate RoleBindings",
@@ -1073,7 +1041,7 @@ var parserTestCases = []parserTestCase{
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
+		expectedNumPolicies: map[string]int{},
 	},
 	{
 		testName: "Policyspace dir with RoleBinding, hierarchicalQuota mode specified",
@@ -1105,8 +1073,6 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(
-				&Policies{}),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{RoleBindingsV1: rbs(templateData{Annotations: map[string]string{
 					v1alpha1.SourcePathAnnotationKey: "namespaces/rb.yaml",
@@ -1125,7 +1091,6 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", "pod-quota", nil)}),
 		},
@@ -1151,11 +1116,8 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
-		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(nil),
-			"bar":                 createPolicyspacePN("namespaces/bar", v1.RootPolicyNodeName, &Policies{}),
-		},
-		expectedSyncs: syncMap(),
+		expectedPolicyNodes:   map[string]v1.PolicyNode{},
+		expectedSyncs:         syncMap(),
 	},
 	{
 		testName: "Policyspace dir with multiple Rolebindings",
@@ -1166,7 +1128,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/rb2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
+		expectedNumPolicies: map[string]int{},
 	},
 	{
 		testName: "Policyspace dir with ClusterRole",
@@ -1206,7 +1168,7 @@ var parserTestCases = []parserTestCase{
 			"system/repo.yaml":                aRepo,
 			"namespaces/bar/ns-selector.yaml": templateData{}.apply(aNamespaceSelector),
 		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0},
+		expectedNumPolicies: map[string]int{},
 	},
 	{
 		testName: "Policyspace dir with NamespaceSelector CRD and object",
@@ -1219,7 +1181,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/prod-ns/ns.yaml":  templateData{Name: "prod-ns", Labels: map[string]string{"environment": "prod"}}.apply(aNamespace),
 			"namespaces/bar/test-ns/ns.yaml":  templateData{Name: "test-ns"}.apply(aNamespace),
 		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 0, "prod-ns": 1, "test-ns": 0},
+		expectedNumPolicies: map[string]int{"prod-ns": 1, "test-ns": 0},
 	},
 	{
 		testName: "Policyspace and Namespace dir have duplicate RoleBindings",
@@ -1323,9 +1285,6 @@ spec:
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			v1.RootPolicyNodeName: createRootPN(
-				&Policies{ResourceQuotaV1: createResourceQuota(
-					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, nil)}),
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{ResourceQuotaV1: createResourceQuota(
 					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
@@ -1378,27 +1337,6 @@ spec:
 		),
 	},
 	{
-		testName: "Namespaces dir with Roles",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":     aRepo,
-			"system/role.yaml":     templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
-			"namespaces/role.yaml": templateData{}.apply(aRole),
-		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0},
-	},
-	{
-		testName: "Namespaces dir with multiple Rolebindings",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":    aRepo,
-			"system/rb.yaml":      templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-			"namespaces/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
-			"namespaces/rb2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
-		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0},
-	},
-	{
 		testName: "Namespaces dir with multiple inherited Rolebindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
@@ -1408,7 +1346,7 @@ spec:
 			"namespaces/rb2.yaml":    templateData{ID: "2"}.apply(aRoleBinding),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedNumPolicies: map[string]int{v1.RootPolicyNodeName: 0, "bar": 2},
+		expectedNumPolicies: map[string]int{"bar": 2},
 	},
 	{
 		testName: "Cluster dir with multiple ClusterRoles",
@@ -1669,8 +1607,7 @@ metadata:
 			"namespaces/foo/ns.yaml":   templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedNumPolicies: map[string]int{
-			v1.RootPolicyNodeName: 0,
-			"foo":                 2,
+			"foo": 2,
 		},
 	},
 	{
@@ -2016,10 +1953,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
-					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-					}),
 				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
 					&Policies{
 						RoleBindingsV1: []rbacv1.RoleBinding{
@@ -2109,20 +2042,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			},
 			expectedClusterPolicy: createClusterPolicy(),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
-					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-					}),
-				"foo": createPNWithMeta(
-					"namespaces/foo",
-					v1.RootPolicyNodeName,
-					v1.Policyspace,
-					&Policies{},
-					nil,
-					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-					},
-				),
 				"bar": createPNWithMeta("namespaces/foo/bar", "foo", v1.Namespace,
 					&Policies{
 						Resources: []v1.GenericResources{
@@ -2211,13 +2130,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			expectedClusterPolicy: createClusterPolicyWithSpec(
 				v1.ClusterPolicyName,
 				&v1.ClusterPolicySpec{}),
-			expectedPolicyNodes: map[string]v1.PolicyNode{
-				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
-					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-2",
-					}),
-			},
-			expectedSyncs: syncMap(),
+			expectedPolicyNodes: map[string]v1.PolicyNode{},
+			expectedSyncs:       syncMap(),
 		},
 		{
 			// This shows how a namespace scoped resource doesn't get synced if
@@ -2296,10 +2210,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
-					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-					}),
 				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
 					&Policies{},
 					/* Labels */
@@ -2388,12 +2298,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
-			expectedPolicyNodes: map[string]v1.PolicyNode{
-				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
-					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-					}),
-			},
+			expectedPolicyNodes: map[string]v1.PolicyNode{},
 			expectedSyncs: syncMap(
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),
@@ -2447,10 +2352,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				// The cluster-scoped policy with mismatching selector was filtered out.
 				&v1.ClusterPolicySpec{}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
-					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-					}),
 				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
 					&Policies{
 						RoleBindingsV1: rbs(
@@ -2533,10 +2434,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				v1.RootPolicyNodeName: createAnnotatedRootPN(&Policies{},
-					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-					}),
 				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Namespace,
 					&Policies{
 						RoleBindingsV1: rbs(
@@ -2638,15 +2535,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
-			expectedPolicyNodes: map[string]v1.PolicyNode{
-				v1.RootPolicyNodeName: createRootPN(&Policies{}),
-				"bar": createPNWithMeta("namespaces/bar", v1.RootPolicyNodeName, v1.Policyspace,
-					&Policies{},
-					/* Labels */
-					nil,
-					/* Annotations */
-					nil),
-			},
+			expectedPolicyNodes: map[string]v1.PolicyNode{},
 			expectedSyncs: syncMap(
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),
