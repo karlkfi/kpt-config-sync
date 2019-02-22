@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+	"strings"
+
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,6 +129,30 @@ type Sync struct {
 
 	// Status is the status for the sync declaration.
 	Status SyncStatus `json:"status,omitempty"`
+}
+
+// NewSync creates a sync object for consumption by the syncer, this will only populate the
+// group and kind as those are the only fields the syncer presently consumes.
+func NewSync(group, kind string) *Sync {
+	var name string
+	if group == "" {
+		name = strings.ToLower(kind)
+	} else {
+		name = fmt.Sprintf("%s.%s", strings.ToLower(kind), group)
+	}
+	return &Sync{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: SchemeGroupVersion.String(),
+			Kind:       "Sync",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: SyncSpec{
+			Group: group,
+			Kind:  kind,
+		},
+	}
 }
 
 // SyncSpec specifies the sync declaration which corresponds to an API Group and contained

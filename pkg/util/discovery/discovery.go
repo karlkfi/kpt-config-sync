@@ -106,7 +106,7 @@ func (a *APIInfo) AllowedVersions(gk schema.GroupKind) []string {
 func (a *APIInfo) GroupVersionKinds(syncs ...*v1alpha1.Sync) map[schema.GroupVersionKind]bool {
 	allGvk := make(map[schema.GroupVersionKind]bool)
 	for _, s := range syncs {
-		gk := s.Spec.GroupKind()
+		gk := schema.GroupKind{Group: s.Spec.Group, Kind: s.Spec.Kind}
 		for _, v := range a.AllowedVersions(gk) {
 			allGvk[gk.WithVersion(v)] = true
 		}
