@@ -29,8 +29,8 @@ import (
 // ListPolicies returns all policies from API server.
 func ListPolicies(policyNodeLister listersv1.PolicyNodeLister,
 	clusterPolicyLister listersv1.ClusterPolicyLister,
-	syncLister listersv1alpha1.SyncLister) (*v1.AllPolicies, error) {
-	policies := v1.AllPolicies{
+	syncLister listersv1alpha1.SyncLister) (*AllPolicies, error) {
+	policies := AllPolicies{
 		PolicyNodes: make(map[string]v1.PolicyNode),
 	}
 

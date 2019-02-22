@@ -17,7 +17,6 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -247,17 +246,4 @@ type GenericVersionResources struct {
 
 	// Objects is the list of objects of a single Group Version and Kind.
 	Objects []runtime.RawExtension `json:"objects" protobuf:"bytes,2,opt,name=object"`
-}
-
-// AllPolicies holds things that Importer wants to sync. It is only used in-process, not written
-// directly as a Kubernetes resource.
-type AllPolicies struct {
-	// Map of names to PolicyNodes.
-	// +optional
-	PolicyNodes map[string]PolicyNode `protobuf:"bytes,1,rep,name=policyNodes"`
-	// +optional
-	ClusterPolicy *ClusterPolicy `protobuf:"bytes,2,opt,name=clusterPolicy"`
-	// Map of names to Syncs.
-	// +optional
-	Syncs map[string]v1alpha1.Sync `protobuf:"bytes,3,rep,name=syncs"`
 }

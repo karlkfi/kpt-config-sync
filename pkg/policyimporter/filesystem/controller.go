@@ -193,7 +193,7 @@ func (c *Controller) pollDir() {
 //
 // If the same resource and Sync are added again in a subsequent commit, the ordering ensures that
 // the resource is restored in policy before the Syncer starts managing that type.
-func (c *Controller) updatePolicies(current, desired *v1.AllPolicies) error {
+func (c *Controller) updatePolicies(current, desired *policynode.AllPolicies) error {
 	// Calculate the sequence of actions needed to transition from current to desired state.
 	a := c.differ.Diff(*current, *desired)
 	return applyActions(a)

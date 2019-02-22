@@ -19,14 +19,14 @@ import (
 	"sort"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/util/policynode"
 	"k8s.io/api/policy/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type testCase struct {
@@ -299,8 +299,8 @@ func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
 	}
 }
 
-func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy, syncs []v1alpha1.Sync) v1.AllPolicies {
-	policies := v1.AllPolicies{
+func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy, syncs []v1alpha1.Sync) policynode.AllPolicies {
+	policies := policynode.AllPolicies{
 		ClusterPolicy: clusterPolicy,
 	}
 

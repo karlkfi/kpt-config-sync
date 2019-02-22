@@ -20,10 +20,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter"
+	"github.com/google/nomos/pkg/util/policynode"
 )
 
 var syncDeleteMaxWait = flag.Duration("sync_delete_max_wait", 30*time.Second,
@@ -52,7 +52,7 @@ func NewDiffer(factories Factories) *Differ {
 //
 // This list does not include Sync delete actions, because those are handled differently. The caller
 // must call SyncDeletes and process those actions before processing these actions.
-func (d *Differ) Diff(current, desired v1.AllPolicies) []action.Interface {
+func (d *Differ) Diff(current, desired policynode.AllPolicies) []action.Interface {
 	var actions []action.Interface
 	actions = append(actions, d.policyNodeActions(current, desired)...)
 	actions = append(actions, d.clusterPolicyActions(current, desired)...)
@@ -60,7 +60,7 @@ func (d *Differ) Diff(current, desired v1.AllPolicies) []action.Interface {
 	return actions
 }
 
-func (d *Differ) policyNodeActions(current, desired v1.AllPolicies) []action.Interface {
+func (d *Differ) policyNodeActions(current, desired policynode.AllPolicies) []action.Interface {
 	var actions []action.Interface
 	var deletes, creates, updates int
 	for name := range desired.PolicyNodes {
@@ -89,7 +89,7 @@ func (d *Differ) policyNodeActions(current, desired v1.AllPolicies) []action.Int
 	return actions
 }
 
-func (d *Differ) clusterPolicyActions(current, desired v1.AllPolicies) []action.Interface {
+func (d *Differ) clusterPolicyActions(current, desired policynode.AllPolicies) []action.Interface {
 	var actions []action.Interface
 	if current.ClusterPolicy == nil && desired.ClusterPolicy == nil {
 		return actions
@@ -104,7 +104,7 @@ func (d *Differ) clusterPolicyActions(current, desired v1.AllPolicies) []action.
 	return actions
 }
 
-func (d *Differ) syncActions(current, desired v1.AllPolicies) []action.Interface {
+func (d *Differ) syncActions(current, desired policynode.AllPolicies) []action.Interface {
 	var actions []action.Interface
 	var creates, updates, deletes int
 	for name, newSync := range desired.Syncs {

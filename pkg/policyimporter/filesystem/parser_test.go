@@ -38,6 +38,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
+	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -1835,7 +1836,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			tc.expectedSyncs = map[string]v1alpha1.Sync{}
 		}
 
-		expectedPolicies := &v1.AllPolicies{
+		expectedPolicies := &policynode.AllPolicies{
 			PolicyNodes:   tc.expectedPolicyNodes,
 			ClusterPolicy: tc.expectedClusterPolicy,
 			Syncs:         tc.expectedSyncs,
@@ -2741,7 +2742,7 @@ func TestEmptyDirectories(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %#v", err)
 			}
-			expectedPolicies := &v1.AllPolicies{
+			expectedPolicies := &policynode.AllPolicies{
 				PolicyNodes:   map[string]v1.PolicyNode{},
 				ClusterPolicy: createClusterPolicy(),
 				Syncs:         map[string]v1alpha1.Sync{},

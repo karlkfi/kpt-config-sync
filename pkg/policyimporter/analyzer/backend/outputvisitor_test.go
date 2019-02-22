@@ -19,22 +19,22 @@ package backend
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
-
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/resourcequota"
+	"github.com/google/nomos/pkg/util/policynode"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var helper = vt.NewTestHelper()
 
-func allPolicies(cp v1.ClusterPolicy, pns []v1.PolicyNode) *v1.AllPolicies {
-	ap := &v1.AllPolicies{
+func allPolicies(cp v1.ClusterPolicy, pns []v1.PolicyNode) *policynode.AllPolicies {
+	ap := &policynode.AllPolicies{
 		ClusterPolicy: &cp,
 		PolicyNodes:   map[string]v1.PolicyNode{},
 		Syncs:         map[string]v1alpha1.Sync{},
@@ -48,7 +48,7 @@ func allPolicies(cp v1.ClusterPolicy, pns []v1.PolicyNode) *v1.AllPolicies {
 type OutputVisitorTestcase struct {
 	name   string
 	input  *ast.Root
-	expect *v1.AllPolicies
+	expect *policynode.AllPolicies
 }
 
 func (tc *OutputVisitorTestcase) Run(t *testing.T) {
@@ -286,7 +286,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 			},
 		},
-		expect: &v1.AllPolicies{
+		expect: &policynode.AllPolicies{
 			PolicyNodes: map[string]v1.PolicyNode{},
 			ClusterPolicy: &v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{

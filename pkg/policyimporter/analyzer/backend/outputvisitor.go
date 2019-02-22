@@ -22,6 +22,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/util/policynode"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -36,7 +37,7 @@ type OutputVisitor struct {
 	*visitor.Base
 	importToken string
 	loadTime    metav1.Time
-	allPolicies *v1.AllPolicies
+	allPolicies *policynode.AllPolicies
 	context     string
 	policyNode  []*v1.PolicyNode
 	syncs       []*v1alpha1.Sync
@@ -52,7 +53,7 @@ func NewOutputVisitor() *OutputVisitor {
 }
 
 // AllPolicies returns the AllPolicies object created by the visitor.
-func (v *OutputVisitor) AllPolicies() *v1.AllPolicies {
+func (v *OutputVisitor) AllPolicies() *policynode.AllPolicies {
 	for _, s := range v.syncs {
 		s.SetFinalizers(append(s.GetFinalizers(), v1alpha1.SyncFinalizer))
 	}
@@ -72,7 +73,7 @@ func mapByName(syncs []*v1alpha1.Sync) map[string]v1alpha1.Sync {
 func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 	v.importToken = g.ImportToken
 	v.loadTime = metav1.NewTime(g.LoadTime)
-	v.allPolicies = &v1.AllPolicies{
+	v.allPolicies = &policynode.AllPolicies{
 		PolicyNodes: map[string]v1.PolicyNode{},
 		ClusterPolicy: &v1.ClusterPolicy{
 			TypeMeta: metav1.TypeMeta{
