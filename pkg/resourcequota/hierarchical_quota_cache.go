@@ -17,6 +17,7 @@ package resourcequota
 
 import (
 	"github.com/golang/glog"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	informersv1alpha1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1alpha1"
@@ -81,7 +82,7 @@ func (c *HierarchicalQuotaCache) initQuotaLimits(node *v1alpha1.HierarchicalQuot
 		parent: parent,
 	}
 
-	if node.Type == v1alpha1.HierarchyNodeAbstractNamespace {
+	if node.Type == v1.HierarchyNodeAbstractNamespace {
 		for _, child := range node.Children {
 			c.initQuotaLimits(&child, node.Name)
 		}
@@ -108,7 +109,7 @@ func (c *HierarchicalQuotaCache) initCache() error {
 		return err
 	}
 	// Set the quota limits from the repo definition
-	c.initQuotaLimits(&hierarchicalQuota.Spec.Hierarchy, v1alpha1.NoParentNamespace)
+	c.initQuotaLimits(&hierarchicalQuota.Spec.Hierarchy, v1.NoParentNamespace)
 
 	// Set the usage based on the quota informer
 	for _, resourceQuota := range resourceQuotas {
@@ -126,7 +127,7 @@ func (c *HierarchicalQuotaCache) initCache() error {
 
 		// For all the parents, add up quantities
 		parent := quotaNode.parent
-		for parent != v1alpha1.NoParentNamespace {
+		for parent != v1.NoParentNamespace {
 			quotaNode, exists := c.quotas[parent]
 			if !exists {
 				glog.Warningf("Parent namespace %s not defined in policy nodes for child namespace %s",
@@ -159,7 +160,7 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList corev1.Res
 	namespace = namespaceQuota.parent
 
 	// For each level of the hierarchy going up from the direct parent
-	for namespace != v1alpha1.NoParentNamespace {
+	for namespace != v1.NoParentNamespace {
 		namespaceQuota, exists := c.quotas[namespace]
 		if !exists {
 			// No namespace defined in policy nodes so this is not a namespace controlled by nomos.

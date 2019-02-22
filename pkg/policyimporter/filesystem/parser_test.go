@@ -620,7 +620,7 @@ func createDeployment() v1.GenericResources {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "nginx-deployment",
 			Annotations: map[string]string{
-				v1alpha1.SourcePathAnnotationKey: "namespaces/bar/deployment.yaml",
+				v1.SourcePathAnnotationKey: "namespaces/bar/deployment.yaml",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -1076,7 +1076,7 @@ var parserTestCases = []parserTestCase{
 		expectedPolicyNodes: map[string]v1.PolicyNode{
 			"bar": createNamespacePN("namespaces/bar", v1.RootPolicyNodeName,
 				&Policies{RoleBindingsV1: rbs(templateData{Annotations: map[string]string{
-					v1alpha1.SourcePathAnnotationKey: "namespaces/rb.yaml",
+					v1.SourcePathAnnotationKey: "namespaces/rb.yaml",
 				}})}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -1281,7 +1281,7 @@ spec:
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":       aRepo,
-			"system/rq.yaml":         templateData{Kind: "ResourceQuota", HierarchyMode: string(v1alpha1.HierarchyModeHierarchicalQuota)}.apply(aHierarchyConfig),
+			"system/rq.yaml":         templateData{Kind: "ResourceQuota", HierarchyMode: string(v1.HierarchyModeHierarchicalQuota)}.apply(aHierarchyConfig),
 			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -1479,7 +1479,7 @@ spec:
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml": aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar", Annotations: map[string]string{
-				v1alpha1.NamespaceSelectorAnnotationKey: "prod"},
+				v1.NamespaceSelectorAnnotationKey: "prod"},
 			}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.IllegalNamespaceAnnotationErrorCode},
@@ -1491,7 +1491,7 @@ spec:
 			"system/repo.yaml": aRepo,
 			"namespaces/bar/ns-selector.yaml": templateData{
 				Annotations: map[string]string{
-					v1alpha1.ClusterSelectorAnnotationKey: "something",
+					v1.ClusterSelectorAnnotationKey: "something",
 				},
 			}.apply(aNamespaceSelector),
 		},
@@ -1928,9 +1928,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 													ObjectMeta: metav1.ObjectMeta{
 														Name: "job-creators1",
 														Annotations: map[string]string{
-															v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-															v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-															v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+															v1.ClusterNameAnnotationKey:     "cluster-1",
+															v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
+															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 														},
 													},
 													Subjects: []rbacv1.Subject{{
@@ -1965,9 +1965,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 								ObjectMeta: metav1.ObjectMeta{
 									Name: "job-creators",
 									Annotations: map[string]string{
-										v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-										v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-										v1alpha1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
+										v1.ClusterNameAnnotationKey:     "cluster-1",
+										v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+										v1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
 									},
 								},
 								Subjects: []rbacv1.Subject{{
@@ -1988,8 +1988,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					nil,
 					/* Annotations */
 					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+						v1.ClusterNameAnnotationKey:     "cluster-1",
+						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
 			expectedSyncs: syncMap(
@@ -2060,9 +2060,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 														Namespace: "key",
 														Attribute: "value",
 														Annotations: map[string]string{
-															v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-															v1alpha1.SourcePathAnnotationKey:      "namespaces/foo/configmap.yaml",
-															v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+															v1.ClusterNameAnnotationKey:     "cluster-1",
+															v1.SourcePathAnnotationKey:      "namespaces/foo/configmap.yaml",
+															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 														},
 													}),
 												),
@@ -2077,7 +2077,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					nil,
 					/* Annotations */
 					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+						v1.ClusterNameAnnotationKey: "cluster-1",
 					}),
 			},
 			expectedSyncs: singleSyncMap(corev1.SchemeGroupVersion.Group, "ConfigMap"),
@@ -2197,9 +2197,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 												crbPtr(templateData{
 													ID: "1",
 													Annotations: map[string]string{
-														v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-														v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-														v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+														v1.ClusterNameAnnotationKey:     "cluster-1",
+														v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
+														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 													},
 												}),
 											),
@@ -2217,8 +2217,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					nil,
 					/* Annotations */
 					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+						v1.ClusterNameAnnotationKey:     "cluster-1",
+						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
 			expectedSyncs: syncMap(
@@ -2286,9 +2286,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 												crbPtr(templateData{
 													ID: "1",
 													Annotations: map[string]string{
-														v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-														v1alpha1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-														v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+														v1.ClusterNameAnnotationKey:     "cluster-1",
+														v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
+														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 													},
 												}),
 											),
@@ -2359,9 +2359,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 							templateData{
 								Name: "job-creators",
 								Annotations: map[string]string{
-									v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-									v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-									v1alpha1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
+									v1.ClusterNameAnnotationKey:     "cluster-1",
+									v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+									v1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
 								},
 							}),
 					},
@@ -2369,8 +2369,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					nil,
 					/* Annotations */
 					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
-						v1alpha1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+						v1.ClusterNameAnnotationKey:     "cluster-1",
+						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1alpha1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
 			expectedSyncs: syncMap(
@@ -2422,8 +2422,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 												crbPtr(templateData{
 													ID: "1",
 													Annotations: map[string]string{
-														v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-														v1alpha1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
+														v1.ClusterNameAnnotationKey: "cluster-1",
+														v1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
 													},
 												}),
 											),
@@ -2440,8 +2440,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						RoleBindingsV1: rbs(
 							templateData{Name: "job-creators",
 								Annotations: map[string]string{
-									v1alpha1.ClusterNameAnnotationKey: "cluster-1",
-									v1alpha1.SourcePathAnnotationKey:  "namespaces/bar/rolebinding.yaml",
+									v1.ClusterNameAnnotationKey: "cluster-1",
+									v1.SourcePathAnnotationKey:  "namespaces/bar/rolebinding.yaml",
 								},
 							}),
 					},
@@ -2449,7 +2449,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					nil,
 					/* Annotations */
 					map[string]string{
-						v1alpha1.ClusterNameAnnotationKey: "cluster-1",
+						v1.ClusterNameAnnotationKey: "cluster-1",
 					}),
 			},
 			expectedSyncs: syncMap(
@@ -2496,13 +2496,13 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"namespaces/bar/quota-1.yaml": templateData{
 					ID: "1",
 					Annotations: map[string]string{
-						v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+						v1.ClusterSelectorAnnotationKey: "sel-1",
 					},
 				}.apply(aQuota),
 				"namespaces/bar/quota-2.yaml": templateData{
 					ID: "2",
 					Annotations: map[string]string{
-						v1alpha1.ClusterSelectorAnnotationKey: "sel-2",
+						v1.ClusterSelectorAnnotationKey: "sel-2",
 					},
 				}.apply(aQuota),
 
@@ -2525,7 +2525,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 												crbPtr(templateData{
 													ID: "1",
 													Annotations: map[string]string{
-														v1alpha1.SourcePathAnnotationKey: "cluster/crb1.yaml",
+														v1.SourcePathAnnotationKey: "cluster/crb1.yaml",
 													},
 												}),
 											),
@@ -2578,7 +2578,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				"namespaces/bar/rolebinding.yaml": templateData{
 					Name: "role",
 					Annotations: map[string]string{
-						v1alpha1.ClusterSelectorAnnotationKey: "unknown-selector",
+						v1.ClusterSelectorAnnotationKey: "unknown-selector",
 					},
 				}.apply(aRoleBinding),
 
@@ -2619,7 +2619,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1",
 					Annotations: map[string]string{
-						v1alpha1.ClusterSelectorAnnotationKey: "unknown-selector",
+						v1.ClusterSelectorAnnotationKey: "unknown-selector",
 					},
 				}.apply(aClusterRoleBinding),
 			},

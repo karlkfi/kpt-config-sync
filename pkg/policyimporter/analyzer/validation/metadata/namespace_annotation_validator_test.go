@@ -3,7 +3,7 @@ package metadata
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
@@ -45,16 +45,16 @@ func TestNamespaceAnnotationValidator(t *testing.T) {
 			},
 			{
 				Name:       "namespaceselector annotation on Namespace",
-				Object:     fakeAnnotatedNamespace(v1alpha1.NamespaceSelectorAnnotationKey),
+				Object:     fakeAnnotatedNamespace(v1.NamespaceSelectorAnnotationKey),
 				ShouldFail: true,
 			},
 			{
 				Name:   "namespaceselector annotation on Role",
-				Object: fakeAnnotatedRole(v1alpha1.NamespaceSelectorAnnotationKey),
+				Object: fakeAnnotatedRole(v1.NamespaceSelectorAnnotationKey),
 			},
 			{
 				Name:       "legal and namespaceselector annotations on Namespace",
-				Object:     fakeAnnotatedNamespace("legal", v1alpha1.NamespaceSelectorAnnotationKey),
+				Object:     fakeAnnotatedNamespace("legal", v1.NamespaceSelectorAnnotationKey),
 				ShouldFail: true,
 			},
 		},

@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
@@ -123,12 +124,12 @@ func TestVisitor(t *testing.T) {
 			expectedMatches: []ast.Annotated{
 				seltest.Annotated(map[string]string{}),
 				seltest.Annotated(map[string]string{
-					v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+					v1.ClusterSelectorAnnotationKey: "sel-1",
 				}),
 			},
 			expectedMismatches: []ast.Annotated{
 				seltest.Annotated(map[string]string{
-					v1alpha1.ClusterSelectorAnnotationKey: "sel-2",
+					v1.ClusterSelectorAnnotationKey: "sel-2",
 				}),
 			},
 		},
@@ -159,13 +160,13 @@ func TestVisitor(t *testing.T) {
 			},
 			expectedMismatches: []ast.Annotated{
 				seltest.Annotated(map[string]string{
-					v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+					v1.ClusterSelectorAnnotationKey: "sel-1",
 				}),
 				seltest.Annotated(map[string]string{
-					v1alpha1.ClusterSelectorAnnotationKey: "sel-2",
+					v1.ClusterSelectorAnnotationKey: "sel-2",
 				}),
 				seltest.Annotated(map[string]string{
-					v1alpha1.ClusterSelectorAnnotationKey: "unknown-selector",
+					v1.ClusterSelectorAnnotationKey: "unknown-selector",
 				}),
 			},
 		},

@@ -16,6 +16,7 @@ limitations under the License.
 package validation
 
 import (
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -108,7 +109,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 // ClusterSelector annotation on it.
 func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1alpha1.NamespaceSelector) {
 	if a := s.GetAnnotations(); a != nil {
-		if _, ok := a[v1alpha1.ClusterSelectorAnnotationKey]; ok {
+		if _, ok := a[v1.ClusterSelectorAnnotationKey]; ok {
 			v.errs.Add(vet.NamespaceSelectorMayNotHaveAnnotation{Object: s})
 		}
 	}
@@ -130,7 +131,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	n := v.nodes[len(v.nodes)-1]
 	if n.Type == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[gvk.GroupKind()]
-		if (found && spec.Mode == v1alpha1.HierarchyModeNone) && !transform.IsEphemeral(gvk) && !syntax.IsSystemOnly(gvk) {
+		if (found && spec.Mode == v1.HierarchyModeNone) && !transform.IsEphemeral(gvk) && !syntax.IsSystemOnly(gvk) {
 			v.errs.Add(vet.IllegalAbstractNamespaceObjectKindError{Resource: o})
 		}
 	}

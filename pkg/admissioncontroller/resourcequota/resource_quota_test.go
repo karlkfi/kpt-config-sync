@@ -3,6 +3,7 @@ package resourcequota
 import (
 	"testing"
 
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
@@ -28,7 +29,7 @@ func TestQuotaAuthorize(t *testing.T) {
 			Spec: v1alpha1.HierarchicalQuotaSpec{
 				Hierarchy: v1alpha1.HierarchicalQuotaNode{
 					Name: "bigkitties",
-					Type: v1alpha1.HierarchyNodeAbstractNamespace,
+					Type: v1.HierarchyNodeAbstractNamespace,
 					ResourceQuotaV1: &corev1.ResourceQuota{
 						Spec: corev1.ResourceQuotaSpec{
 							Hard: corev1.ResourceList{
@@ -40,7 +41,7 @@ func TestQuotaAuthorize(t *testing.T) {
 					Children: []v1alpha1.HierarchicalQuotaNode{
 						{
 							Name: "kitties",
-							Type: v1alpha1.HierarchyNodeNamespace,
+							Type: v1.HierarchyNodeNamespace,
 							ResourceQuotaV1: &corev1.ResourceQuota{
 								Spec: corev1.ResourceQuotaSpec{
 									Hard: corev1.ResourceList{

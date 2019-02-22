@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
@@ -50,7 +51,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			wantStatusUpdates: []v1alpha1.Sync{
-				makeSync("", "Deployment", v1alpha1.Syncing),
+				makeSync("", "Deployment", v1.Syncing),
 			},
 		},
 		{
@@ -63,16 +64,16 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			wantStatusUpdates: []v1alpha1.Sync{
-				makeSync("rbac.authorization.k8s.io", "Role", v1alpha1.Syncing),
-				makeSync("", "Deployment", v1alpha1.Syncing),
-				makeSync("", "ConfigMap", v1alpha1.Syncing),
+				makeSync("rbac.authorization.k8s.io", "Role", v1.Syncing),
+				makeSync("", "Deployment", v1.Syncing),
+				makeSync("", "ConfigMap", v1.Syncing),
 			},
 		},
 		{
 			name: "don't update state for one sync when unnecessary",
 			actualSyncs: v1alpha1.SyncList{
 				Items: []v1alpha1.Sync{
-					makeSync("", "Deployment", v1alpha1.Syncing),
+					makeSync("", "Deployment", v1.Syncing),
 				},
 			},
 		},
@@ -80,9 +81,9 @@ func TestReconcile(t *testing.T) {
 			name: "don't update state for multiple syncs when unnecessary",
 			actualSyncs: v1alpha1.SyncList{
 				Items: []v1alpha1.Sync{
-					makeSync("rbac.authorization.k8s.io", "Role", v1alpha1.Syncing),
-					makeSync("", "Deployment", v1alpha1.Syncing),
-					makeSync("", "ConfigMap", v1alpha1.Syncing),
+					makeSync("rbac.authorization.k8s.io", "Role", v1.Syncing),
+					makeSync("", "Deployment", v1.Syncing),
+					makeSync("", "ConfigMap", v1.Syncing),
 				},
 			},
 		},
@@ -90,25 +91,25 @@ func TestReconcile(t *testing.T) {
 			name: "only update syncs with state change",
 			actualSyncs: v1alpha1.SyncList{
 				Items: []v1alpha1.Sync{
-					makeSync("", "Secret", v1alpha1.Syncing),
-					makeSync("", "Service", v1alpha1.Syncing),
+					makeSync("", "Secret", v1.Syncing),
+					makeSync("", "Service", v1.Syncing),
 					makeSync("", "Deployment", ""),
 				},
 			},
 			wantStatusUpdates: []v1alpha1.Sync{
-				makeSync("", "Deployment", v1alpha1.Syncing),
+				makeSync("", "Deployment", v1.Syncing),
 			},
 		},
 		{
 			name: "finalize sync that is pending delete",
 			actualSyncs: v1alpha1.SyncList{
 				Items: []v1alpha1.Sync{
-					withDeleteTimestamp(withFinalizer(makeSync("", "Deployment", v1alpha1.Syncing))),
+					withDeleteTimestamp(withFinalizer(makeSync("", "Deployment", v1.Syncing))),
 				},
 			},
 			wantUpdateList: []updateList{
 				{
-					update: withDeleteTimestamp(makeSync("", "Deployment", v1alpha1.Syncing)),
+					update: withDeleteTimestamp(makeSync("", "Deployment", v1.Syncing)),
 					list:   unstructuredList(schema.GroupVersionKind{Version: "v1", Kind: "DeploymentList"}),
 				},
 			},
@@ -207,7 +208,7 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func makeSync(group, kind string, state v1alpha1.SyncState) v1alpha1.Sync {
+func makeSync(group, kind string, state v1.SyncState) v1alpha1.Sync {
 	s := *v1alpha1.NewSync(group, kind)
 	if state != "" {
 		s.Status = v1alpha1.SyncStatus{Status: state}
@@ -216,7 +217,7 @@ func makeSync(group, kind string, state v1alpha1.SyncState) v1alpha1.Sync {
 }
 
 func withFinalizer(sync v1alpha1.Sync) v1alpha1.Sync {
-	sync.SetFinalizers([]string{v1alpha1.SyncFinalizer})
+	sync.SetFinalizers([]string{v1.SyncFinalizer})
 	return sync
 }
 

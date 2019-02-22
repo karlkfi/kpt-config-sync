@@ -1,6 +1,7 @@
 package hierarchyconfig
 
 import (
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
@@ -9,16 +10,16 @@ import (
 )
 
 var (
-	resourceQuotaModes = map[v1alpha1.HierarchyModeType]bool{
-		v1alpha1.HierarchyModeDefault:           true,
-		v1alpha1.HierarchyModeHierarchicalQuota: true,
-		v1alpha1.HierarchyModeInherit:           true,
-		v1alpha1.HierarchyModeNone:              true,
+	resourceQuotaModes = map[v1.HierarchyModeType]bool{
+		v1.HierarchyModeDefault:           true,
+		v1.HierarchyModeHierarchicalQuota: true,
+		v1.HierarchyModeInherit:           true,
+		v1.HierarchyModeNone:              true,
 	}
-	otherTypesModes = map[v1alpha1.HierarchyModeType]bool{
-		v1alpha1.HierarchyModeDefault: true,
-		v1alpha1.HierarchyModeInherit: true,
-		v1alpha1.HierarchyModeNone:    true,
+	otherTypesModes = map[v1.HierarchyModeType]bool{
+		v1.HierarchyModeDefault: true,
+		v1.HierarchyModeInherit: true,
+		v1.HierarchyModeNone:    true,
 	}
 )
 
@@ -48,7 +49,7 @@ func ValidateInheritance(config FileGroupKindHierarchyConfig) error {
 }
 
 // errIfNotAllowed returns an error if the kindHierarchyConfig has an inheritance mode which is not allowed for that Kind.
-func errIfNotAllowed(config FileGroupKindHierarchyConfig, allowed map[v1alpha1.HierarchyModeType]bool) error {
+func errIfNotAllowed(config FileGroupKindHierarchyConfig, allowed map[v1.HierarchyModeType]bool) error {
 	if allowed[config.HierarchyMode] {
 		return nil
 	}

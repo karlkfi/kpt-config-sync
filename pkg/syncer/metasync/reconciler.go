@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -139,7 +140,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
 	for _, sync := range enabled {
 		var status v1alpha1.SyncStatus
-		status.Status = v1alpha1.Syncing
+		status.Status = v1.Syncing
 
 		// Check if status changed before updating.
 		if !reflect.DeepEqual(sync.Status, status) {
@@ -166,7 +167,7 @@ func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1alpha1.Sync, 
 	var newFinalizers []string
 	var needsFinalize bool
 	for _, f := range sync.Finalizers {
-		if f == v1alpha1.SyncFinalizer {
+		if f == v1.SyncFinalizer {
 			needsFinalize = true
 		} else {
 			newFinalizers = append(newFinalizers, f)
@@ -216,7 +217,7 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1alpha1.Sync, a
 	errBuilder := &multierror.Builder{}
 	for _, u := range ul.Items {
 		annots := u.GetAnnotations()
-		if v, ok := annots[v1alpha1.ResourceManagementKey]; !ok || v != v1alpha1.ResourceManagementValue {
+		if v, ok := annots[v1.ResourceManagementKey]; !ok || v != v1.ResourceManagementValue {
 			continue
 		}
 		if err := cl.Delete(ctx, &u); err != nil {

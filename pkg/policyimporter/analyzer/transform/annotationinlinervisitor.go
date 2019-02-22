@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 
 	"github.com/golang/glog"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -93,7 +94,7 @@ func (v *AnnotationInlinerVisitor) VisitRoot(r *ast.Root) *ast.Root {
 		}
 		m[name] = string(content)
 	})
-	t.addMappingForKey(v1alpha1.ClusterSelectorAnnotationKey, m)
+	t.addMappingForKey(v1.ClusterSelectorAnnotationKey, m)
 	v.clusterSelectorTransformer = t
 	return v.Copying.VisitRoot(r)
 }
@@ -124,10 +125,10 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 		m[k] = string(content)
 	}
 	v.nsTransformer = annotationTransformer{}
-	v.nsTransformer.addMappingForKey(v1alpha1.NamespaceSelectorAnnotationKey, m)
+	v.nsTransformer.addMappingForKey(v1.NamespaceSelectorAnnotationKey, m)
 
 	v.errs.Add(vet.UndocumentedWrapf(v.clusterSelectorTransformer.transform(n), "failed to inline ClusterSelector for node %q", n.RelativeSlashPath()))
-	annotatePopulated(n, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
+	annotatePopulated(n, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return v.Copying.VisitTreeNode(n)
 }
 
@@ -141,7 +142,7 @@ func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) *ast.Name
 		"failed to inline annotation for object %q", m.GetName()))
 	v.errs.Add(vet.UndocumentedWrapf(v.clusterSelectorTransformer.transform(m),
 		"failed to inline cluster selector annotations for object %q", m.GetName()))
-	annotatePopulated(m, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
+	annotatePopulated(m, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject
 }
 
@@ -153,6 +154,6 @@ func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) *ast
 	m := newObject.MetaObject()
 	v.errs.Add(vet.InternalWrapf(v.clusterSelectorTransformer.transform(m),
 		"failed to inline cluster selector annotations for object %q", m.GetName()))
-	annotatePopulated(m, v1alpha1.ClusterNameAnnotationKey, v.selectors.ClusterName())
+	annotatePopulated(m, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject
 }

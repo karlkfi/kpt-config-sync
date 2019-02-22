@@ -255,9 +255,9 @@ func toInheritanceSpecs(configs []*v1alpha1.HierarchyConfig) map[schema.GroupKin
 		for _, r := range config.Spec.Resources {
 			for _, k := range r.Kinds {
 				gk := schema.GroupKind{Group: r.Group, Kind: k}
-				var effectiveMode v1alpha1.HierarchyModeType
-				if r.HierarchyMode == v1alpha1.HierarchyModeDefault {
-					effectiveMode = v1alpha1.HierarchyModeInherit
+				var effectiveMode v1.HierarchyModeType
+				if r.HierarchyMode == v1.HierarchyModeDefault {
+					effectiveMode = v1.HierarchyModeInherit
 				} else {
 					effectiveMode = r.HierarchyMode
 				}

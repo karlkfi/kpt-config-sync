@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -78,7 +79,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -87,7 +88,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -125,7 +126,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-1"),
 						),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -141,7 +142,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 								vt.Helper.AdminRoleBinding(),
 								"sel-1")),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -156,7 +157,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 							vt.Helper.AdminRoleBinding(),
 						),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -167,7 +168,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 						Objects: vt.ObjectSets(
 							vt.Helper.AdminRoleBinding()),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -185,7 +186,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-2"),
 						),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -195,7 +196,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -210,7 +211,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-1"),
 						),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-2",
+							v1.ClusterSelectorAnnotationKey: "sel-2",
 						},
 					},
 				},

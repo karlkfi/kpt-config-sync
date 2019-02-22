@@ -21,7 +21,7 @@ package differ
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -72,15 +72,15 @@ func (d Diff) ActualResourceIsManaged() ManagementState {
 		return Unmanaged
 	}
 
-	value, found := annots[v1alpha1.ResourceManagementKey]
+	value, found := annots[v1.ResourceManagementKey]
 	if !found {
 		return Unmanaged
 	}
 
 	switch value {
-	case v1alpha1.ResourceManagementValue:
+	case v1.ResourceManagementValue:
 		return Managed
-	case v1alpha1.ResourceManagementDisabledValue:
+	case v1.ResourceManagementDisabledValue:
 		return Unmanaged
 	default:
 		return Invalid

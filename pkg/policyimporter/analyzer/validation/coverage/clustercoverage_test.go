@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/util/multierror"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,7 +64,7 @@ func TestValidateObject(t *testing.T) {
 				&metav1.ObjectMeta{
 					Name: "object",
 					Annotations: map[string]string{
-						v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+						v1.ClusterSelectorAnnotationKey: "sel-1",
 					},
 				},
 			},
@@ -144,7 +145,7 @@ func TestMapToClusters(t *testing.T) {
 			object: &metav1.ObjectMeta{
 				Name: "object",
 				Annotations: map[string]string{
-					v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+					v1.ClusterSelectorAnnotationKey: "sel-1",
 				},
 			},
 			expected: []string{"cluster-1", "cluster-2"},
@@ -188,7 +189,7 @@ func TestMapToClusters(t *testing.T) {
 			object: &metav1.ObjectMeta{
 				Name: "object",
 				Annotations: map[string]string{
-					v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+					v1.ClusterSelectorAnnotationKey: "sel-1",
 				},
 			},
 			expected: []string{"cluster-2"},

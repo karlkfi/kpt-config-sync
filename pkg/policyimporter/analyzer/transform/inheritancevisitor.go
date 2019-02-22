@@ -17,7 +17,7 @@ limitations under the License.
 package transform
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
@@ -36,7 +36,7 @@ type nodeContext struct {
 
 // InheritanceSpec defines the spec for inherited resources.
 type InheritanceSpec struct {
-	Mode v1alpha1.HierarchyModeType
+	Mode v1.HierarchyModeType
 }
 
 // InheritanceVisitor aggregates hierarchical quota.
@@ -105,7 +105,7 @@ func (v *InheritanceVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceO
 	if context.nodeType == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[gk]
 		// If the mode is explicitly set to default or is omitted from the HierarchyConfig, use inherit.
-		if !found || (found && spec.Mode == v1alpha1.HierarchyModeInherit) {
+		if !found || (found && spec.Mode == v1.HierarchyModeInherit) {
 			context.inherited = append(context.inherited, o)
 			return nil
 		}

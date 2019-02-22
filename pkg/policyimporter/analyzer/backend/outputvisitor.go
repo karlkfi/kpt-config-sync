@@ -55,7 +55,7 @@ func NewOutputVisitor() *OutputVisitor {
 // AllPolicies returns the AllPolicies object created by the visitor.
 func (v *OutputVisitor) AllPolicies() *policynode.AllPolicies {
 	for _, s := range v.syncs {
-		s.SetFinalizers(append(s.GetFinalizers(), v1alpha1.SyncFinalizer))
+		s.SetFinalizers(append(s.GetFinalizers(), v1.SyncFinalizer))
 	}
 	v.allPolicies.Syncs = mapByName(v.syncs)
 	return v.allPolicies

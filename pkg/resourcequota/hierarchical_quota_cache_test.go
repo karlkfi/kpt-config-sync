@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 
 	"github.com/google/nomos/pkg/testing/fakeinformers"
@@ -152,9 +153,9 @@ func makeHierarchicalQuota(root *v1alpha1.HierarchicalQuotaNode) *v1alpha1.Hiera
 }
 
 func makeHierarchicalQuotaNode(name string, limits corev1.ResourceList, abstract bool) *v1alpha1.HierarchicalQuotaNode {
-	pnt := v1alpha1.HierarchyNodeNamespace
+	pnt := v1.HierarchyNodeNamespace
 	if abstract {
-		pnt = v1alpha1.HierarchyNodeAbstractNamespace
+		pnt = v1.HierarchyNodeAbstractNamespace
 	}
 	return &v1alpha1.HierarchicalQuotaNode{
 		Name: name,

@@ -1,8 +1,8 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v12 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ObjectHasUnknownClusterSelectorCode is the error code for ObjectHasUnknownClusterSelector
@@ -20,7 +20,7 @@ type ObjectHasUnknownClusterSelector struct {
 
 // Error implements error.
 func (e ObjectHasUnknownClusterSelector) Error() string {
-	return format(e, "Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector", e.Object.GetName(), v1alpha1.ClusterSelectorAnnotationKey, e.Annotation)
+	return format(e, "Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector", e.Object.GetName(), v12.ClusterSelectorAnnotationKey, e.Annotation)
 }
 
 // Code implements Error

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -89,7 +90,7 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 func createPolicyAnnotation(annotation string) metav1.Object {
 	rb := &rbacv1.RoleBinding{}
 	rb.SetName("rb")
-	rb.SetAnnotations(map[string]string{v1alpha1.NamespaceSelectorAnnotationKey: annotation})
+	rb.SetAnnotations(map[string]string{v1.NamespaceSelectorAnnotationKey: annotation})
 	o, err := meta.Accessor(rb)
 	if err != nil {
 		panic(err)
@@ -105,7 +106,7 @@ func createPolicy(s *v1alpha1.NamespaceSelector) metav1.Object {
 		if err != nil {
 			panic(err)
 		}
-		rb.SetAnnotations(map[string]string{v1alpha1.NamespaceSelectorAnnotationKey: string(j)})
+		rb.SetAnnotations(map[string]string{v1.NamespaceSelectorAnnotationKey: string(j)})
 	}
 	o, err := meta.Accessor(rb)
 	if err != nil {

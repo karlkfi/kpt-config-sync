@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -139,14 +140,14 @@ type SyncSpec struct {
 	// The default is off, meaning objects cannot appear in an abstract namespace. For RoleBinding,
 	// the default is "inherit". For ResourceQuota, the default is "hierarchicalQuota".
 	// +optional
-	HierarchyMode HierarchyModeType `json:"hierarchyMode,omitempty"`
+	HierarchyMode v1.HierarchyModeType `json:"hierarchyMode,omitempty"`
 }
 
 // SyncStatus represents the status for a sync declaration
 type SyncStatus struct {
 	// Status indicates the state of the sync.  One of "syncing", or "error".  If "error" is specified
 	// then Error will be populated with a message regarding the error.
-	Status SyncState `json:"status"`
+	Status v1.SyncState `json:"status"`
 	// Message indicates a message associated with the status.
 	// +optional
 	Message string `json:"message,omitempty"`
@@ -249,7 +250,7 @@ type HierarchicalQuotaNode struct {
 	Name string `json:"name,omitempty"`
 
 	// Type is the type of the hierarchical quota node.
-	Type HierarchyNodeType `json:"type,omitempty"`
+	Type v1.HierarchyNodeType `json:"type,omitempty"`
 	// +optional
 	ResourceQuotaV1 *corev1.ResourceQuota `json:"resourceQuotaV1,omitempty"`
 
@@ -305,5 +306,5 @@ type HierarchyConfigResource struct {
 	// The default is off, meaning objects cannot appear in an abstract namespace. For RoleBinding,
 	// the default is "inherit". For ResourceQuota, the default is "hierarchicalQuota".
 	// +optional
-	HierarchyMode HierarchyModeType `json:"hierarchyMode,omitempty" protobuf:"bytes,3,opt,name=hierarchyMode"`
+	HierarchyMode v1.HierarchyModeType `json:"hierarchyMode,omitempty" protobuf:"bytes,3,opt,name=hierarchyMode"`
 }

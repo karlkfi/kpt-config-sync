@@ -17,6 +17,7 @@ limitations under the License.
 package transform
 
 import (
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
@@ -130,10 +131,10 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 
 	if n.Type == node.Namespace {
 		context.hNode.Name = n.Name()
-		context.hNode.Type = v1alpha1.HierarchyNodeNamespace
+		context.hNode.Type = v1.HierarchyNodeNamespace
 	} else {
 		context.hNode.Name = n.RelativeSlashPath()
-		context.hNode.Type = v1alpha1.HierarchyNodeAbstractNamespace
+		context.hNode.Type = v1.HierarchyNodeAbstractNamespace
 	}
 
 	if (n.Type == node.AbstractNamespace && context.quota != nil) || (n.Type == node.Namespace) {

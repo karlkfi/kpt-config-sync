@@ -1,7 +1,7 @@
 package transform
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +30,7 @@ func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	if newNode.Annotations == nil {
 		newNode.Annotations = map[string]string{}
 	}
-	newNode.Annotations[v1alpha1.SourcePathAnnotationKey] = n.RelativeSlashPath()
+	newNode.Annotations[v1.SourcePathAnnotationKey] = n.RelativeSlashPath()
 	return newNode
 }
 
@@ -57,5 +57,5 @@ func applyPathAnnotation(fo ast.FileObject) {
 		a = map[string]string{}
 		metaObj.SetAnnotations(a)
 	}
-	a[v1alpha1.SourcePathAnnotationKey] = fo.RelativeSlashPath()
+	a[v1.SourcePathAnnotationKey] = fo.RelativeSlashPath()
 }

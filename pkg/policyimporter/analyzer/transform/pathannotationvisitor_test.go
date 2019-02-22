@@ -19,7 +19,7 @@ package transform
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
@@ -35,7 +35,7 @@ func withSourceAnnotation(o runtime.Object, annotation string) runtime.Object {
 	if a == nil {
 		a = make(map[string]string)
 	}
-	a[v1alpha1.SourcePathAnnotationKey] = annotation
+	a[v1.SourcePathAnnotationKey] = annotation
 	m.SetAnnotations(a)
 	return o
 }
@@ -63,7 +63,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 				Tree: &ast.TreeNode{
 					Type:        node.AbstractNamespace,
 					Relative:    nomospath.NewRelative("namespaces"),
-					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
+					Annotations: map[string]string{v1.SourcePathAnnotationKey: "namespaces"},
 				},
 			},
 		},
@@ -79,7 +79,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 				Tree: &ast.TreeNode{
 					Type:        node.Namespace,
 					Relative:    nomospath.NewRelative("namespaces"),
-					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
+					Annotations: map[string]string{v1.SourcePathAnnotationKey: "namespaces"},
 				},
 			},
 		},
@@ -101,7 +101,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), nomospath.NewRelative("acme/admin.yaml")),
 					),
-					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
+					Annotations: map[string]string{v1.SourcePathAnnotationKey: "namespaces"},
 				},
 			},
 		},
@@ -123,7 +123,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), nomospath.NewRelative("acme/admin.yaml")),
 					),
-					Annotations: map[string]string{v1alpha1.SourcePathAnnotationKey: "namespaces"},
+					Annotations: map[string]string{v1.SourcePathAnnotationKey: "namespaces"},
 				},
 			},
 		},
@@ -143,7 +143,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 				Tree: &ast.TreeNode{
 					Type:        node.Namespace,
 					Relative:    nomospath.NewRelative("namespaces"),
-					Annotations: map[string]string{"color": "orange", v1alpha1.SourcePathAnnotationKey: "namespaces"},
+					Annotations: map[string]string{"color": "orange", v1.SourcePathAnnotationKey: "namespaces"},
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/admin.yaml"), nomospath.NewRelative("acme/admin.yaml")),
 					),

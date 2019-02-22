@@ -19,6 +19,7 @@ package selectors
 import (
 	"encoding/json"
 
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +29,7 @@ import (
 // annotation on the given policy object matches the given labels on a
 // namespace.  The policy is applicable if it has no such annotation.
 func IsPolicyApplicableToNamespace(namespaceLabels map[string]string, policy metav1.Object) (bool, vet.Error) {
-	ls, exists := policy.GetAnnotations()[v1alpha1.NamespaceSelectorAnnotationKey]
+	ls, exists := policy.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
 	if !exists {
 		return true, nil
 	}

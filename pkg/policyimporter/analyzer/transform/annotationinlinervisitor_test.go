@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
@@ -35,15 +36,15 @@ import (
 )
 
 func withNamespaceSelector(o runtime.Object, selector string) runtime.Object {
-	return annotate(o.(metav1.Object), v1alpha1.NamespaceSelectorAnnotationKey, selector).(runtime.Object)
+	return annotate(o.(metav1.Object), v1.NamespaceSelectorAnnotationKey, selector).(runtime.Object)
 }
 
 func withClusterSelector(o runtime.Object, selector string) runtime.Object {
-	return annotate(o.(metav1.Object), v1alpha1.ClusterSelectorAnnotationKey, selector).(runtime.Object)
+	return annotate(o.(metav1.Object), v1.ClusterSelectorAnnotationKey, selector).(runtime.Object)
 }
 
 func withClusterName(o runtime.Object, name string) runtime.Object {
-	return annotate(o.(metav1.Object), v1alpha1.ClusterNameAnnotationKey, name).(runtime.Object)
+	return annotate(o.(metav1.Object), v1.ClusterNameAnnotationKey, name).(runtime.Object)
 }
 
 func toJSON(s interface{}) string {
@@ -322,7 +323,7 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -331,8 +332,8 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: toJSON(selectors[0]),
-							v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+							v1.ClusterSelectorAnnotationKey: toJSON(selectors[0]),
+							v1.ClusterNameAnnotationKey:     "cluster-1",
 						},
 					},
 				},
@@ -347,7 +348,7 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-1"),
 						),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -363,8 +364,8 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 								"cluster-1"),
 						),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: toJSON(selectors[0]),
-							v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+							v1.ClusterSelectorAnnotationKey: toJSON(selectors[0]),
+							v1.ClusterNameAnnotationKey:     "cluster-1",
 						},
 					},
 				},
@@ -380,7 +381,7 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 							withClusterSelector(vt.Helper.PodReaderRole(), "sel-1"),
 						),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: "sel-1",
+							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
 					},
 				},
@@ -395,8 +396,8 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 								vt.Helper.PodReaderRole(), toJSON(selectors[0])), "cluster-1"),
 						),
 						Annotations: map[string]string{
-							v1alpha1.ClusterSelectorAnnotationKey: toJSON(selectors[0]),
-							v1alpha1.ClusterNameAnnotationKey:     "cluster-1",
+							v1.ClusterSelectorAnnotationKey: toJSON(selectors[0]),
+							v1.ClusterNameAnnotationKey:     "cluster-1",
 						},
 					},
 				},

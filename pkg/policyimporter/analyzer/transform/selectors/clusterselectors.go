@@ -20,6 +20,7 @@ import (
 	"reflect"
 
 	"github.com/golang/glog"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
@@ -110,7 +111,7 @@ func (stc *ClusterSelectors) Matches(o ast.Annotated) bool {
 	if glog.V(7) {
 		glog.Infof("annotations: %+v", a)
 	}
-	selector, ok := a[v1alpha1.ClusterSelectorAnnotationKey]
+	selector, ok := a[v1.ClusterSelectorAnnotationKey]
 	if !ok {
 		// An object that is not annotated always matches.
 		return true

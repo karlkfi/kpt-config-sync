@@ -21,7 +21,6 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -157,9 +156,9 @@ func decorateAsClusterManaged(declaredInstances []*unstructured.Unstructured, po
 			a = map[string]string{}
 		}
 		// Annotate the resource with the current version token.
-		a[v1alpha1.SyncTokenAnnotationKey] = policy.Spec.ImportToken
+		a[v1.SyncTokenAnnotationKey] = policy.Spec.ImportToken
 		// Annotate the resource as Nomos managed.
-		a[v1alpha1.ResourceManagementKey] = v1alpha1.ResourceManagementValue
+		a[v1.ResourceManagementKey] = v1.ResourceManagementValue
 		decl.SetAnnotations(a)
 	}
 }
@@ -250,12 +249,12 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 
 func (r *ClusterPolicyReconciler) warnInvalidAnnotationResource(u *unstructured.Unstructured, msg string) {
 	gvk := u.GroupVersionKind()
-	value := u.GetAnnotations()[v1alpha1.ResourceManagementKey]
+	value := u.GetAnnotations()[v1.ResourceManagementKey]
 	glog.Warningf("%q with name %q is %s in the source of truth but has invalid management annotation %s=%s",
-		gvk, u.GetName(), msg, v1alpha1.ResourceManagementKey, value)
+		gvk, u.GetName(), msg, v1.ResourceManagementKey, value)
 	r.recorder.Eventf(
 		u, corev1.EventTypeWarning, "InvalidAnnotation",
-		"%q is %s in the source of truth but has invalid management annotation %s=%s", gvk, v1alpha1.ResourceManagementKey, value)
+		"%q is %s in the source of truth but has invalid management annotation %s=%s", gvk, v1.ResourceManagementKey, value)
 }
 
 // removeEmptyRulesField removes the Rules field from ClusterRole when it's an empty list.

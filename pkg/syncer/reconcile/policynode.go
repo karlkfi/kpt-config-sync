@@ -22,7 +22,6 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -152,12 +151,12 @@ func (r *PolicyNodeReconciler) getNamespaceState(
 		return namespaceStateNotFound, nil, errors.Wrapf(err, "got unhandled lister error")
 	}
 
-	value, found := ns.Annotations[v1alpha1.ResourceManagementKey]
+	value, found := ns.Annotations[v1.ResourceManagementKey]
 	if !found {
 		return namespaceStateExists, ns, nil
 	}
 
-	if value == v1alpha1.ResourceManagementValue {
+	if value == v1.ResourceManagementValue {
 		return namespaceStateManageFull, ns, nil
 	}
 
@@ -171,8 +170,8 @@ func (r *PolicyNodeReconciler) getNamespaceState(
 	)
 	*syncErrs = append(*syncErrs, v1.PolicyNodeSyncError{
 		ErrorMessage: fmt.Sprintf("Namespace has invalid management label %s=%s should be %s=%s or unset",
-			v1alpha1.ResourceManagementKey, value,
-			v1alpha1.ResourceManagementKey, v1alpha1.ResourceManagementValue),
+			v1.ResourceManagementKey, value,
+			v1.ResourceManagementKey, v1.ResourceManagementValue),
 	})
 	return namespaceStateExists, ns, nil
 }
@@ -225,7 +224,7 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 			r.warnNoAnnotation(ns)
 			syncErrs = append(syncErrs, v1.PolicyNodeSyncError{
 				ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
-					v1alpha1.ResourceManagementKey, v1alpha1.ResourceManagementValue),
+					v1.ResourceManagementKey, v1.ResourceManagementValue),
 			})
 			return r.managePolicies(ctx, name, node, syncErrs)
 		case namespaceStateManageFull:
@@ -257,12 +256,12 @@ func (r *PolicyNodeReconciler) warnNoAnnotation(ns *corev1.Namespace) {
 
 func (r *PolicyNodeReconciler) warnInvalidAnnotationResource(u *unstructured.Unstructured, msg string) {
 	gvk := u.GroupVersionKind()
-	value := u.GetAnnotations()[v1alpha1.ResourceManagementKey]
+	value := u.GetAnnotations()[v1.ResourceManagementKey]
 	glog.Warningf("%q with name %q is %s in the source of truth but has invalid management annotation %s=%s",
-		gvk, u.GetName(), msg, v1alpha1.ResourceManagementKey, value)
+		gvk, u.GetName(), msg, v1.ResourceManagementKey, value)
 	r.recorder.Eventf(
 		u, corev1.EventTypeWarning, "InvalidAnnotation",
-		"%q is %s in the source of truth but has invalid management annotation %s=%s", gvk, v1alpha1.ResourceManagementKey, value)
+		"%q is %s in the source of truth but has invalid management annotation %s=%s", gvk, v1.ResourceManagementKey, value)
 }
 
 // cleanUpLabel removes the nomos quota label from the namespace, if present.
@@ -335,9 +334,9 @@ func decorateAsManaged(declaredInstances []*unstructured.Unstructured, node *v1.
 			a = map[string]string{}
 		}
 		// Annotate the resource with the current version token.
-		a[v1alpha1.SyncTokenAnnotationKey] = node.Spec.ImportToken
+		a[v1.SyncTokenAnnotationKey] = node.Spec.ImportToken
 		// Annotate the resource as Nomos managed.
-		a[v1alpha1.ResourceManagementKey] = v1alpha1.ResourceManagementValue
+		a[v1.ResourceManagementKey] = v1.ResourceManagementValue
 		decl.SetAnnotations(a)
 	}
 }
@@ -434,7 +433,7 @@ func withPolicyNodeMeta(namespace *corev1.Namespace, policyNode *v1.PolicyNode) 
 	} else {
 		namespace.Annotations = policyNode.Annotations
 	}
-	namespace.Annotations[v1alpha1.ResourceManagementKey] = v1alpha1.ResourceManagementValue
+	namespace.Annotations[v1.ResourceManagementKey] = v1.ResourceManagementValue
 	namespace.Name = policyNode.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())
 	return namespace

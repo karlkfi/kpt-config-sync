@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/kinds"
@@ -58,7 +59,7 @@ func (n NomosVisitorProvider) Visitors(
 		transform.NewEphemeralResourceRemover(),
 		metadata.NewDuplicateNameValidator(),
 	}
-	if spec, found := specs[kinds.ResourceQuota().GroupKind()]; found && spec.Mode == v1alpha1.HierarchyModeHierarchicalQuota {
+	if spec, found := specs[kinds.ResourceQuota().GroupKind()]; found && spec.Mode == v1.HierarchyModeHierarchicalQuota {
 		v = append(v, validation.NewQuotaValidator())
 		v = append(v, transform.NewQuotaVisitor())
 	}

@@ -1,6 +1,7 @@
 package hierarchyconfig
 
 import (
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/id"
@@ -48,7 +49,7 @@ type FileGroupKindHierarchyConfig struct {
 	// groupKind is the Group/Kind which the HierarchyConfig defined.
 	groupKind schema.GroupKind
 	// HierarchyMode is the hierarchy mode which the HierarchyConfig defined for the Kind.
-	HierarchyMode v1alpha1.HierarchyModeType
+	HierarchyMode v1.HierarchyModeType
 	// Source is the OS-agnostic slash-separated path to the source file from the root.
 	nomospath.Relative
 }

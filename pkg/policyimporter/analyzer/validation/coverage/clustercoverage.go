@@ -5,6 +5,7 @@ package coverage
 import (
 	"sort"
 
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -60,7 +61,7 @@ func NewForCluster(
 // may not have an annotation, but if it does, it has to map to a valid selector.  Also if an
 // object has a selector in the annotation, that annotation must refer to a valid selector.
 func (c ForCluster) ValidateObject(o metav1.Object, errs *multierror.Builder) {
-	a := v1alpha1.GetClusterSelectorAnnotation(o.GetAnnotations())
+	a := v1.GetClusterSelectorAnnotation(o.GetAnnotations())
 	if a == "" {
 		return
 	}
@@ -73,7 +74,7 @@ func (c ForCluster) ValidateObject(o metav1.Object, errs *multierror.Builder) {
 // "" in the returned slice means "all clusters".  The output ordering is
 // stable.
 func (c ForCluster) MapToClusters(o metav1.Object) []string {
-	a := v1alpha1.GetClusterSelectorAnnotation(o.GetAnnotations())
+	a := v1.GetClusterSelectorAnnotation(o.GetAnnotations())
 	if a == "" {
 		return []string{""}
 	}

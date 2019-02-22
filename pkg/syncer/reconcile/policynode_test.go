@@ -23,7 +23,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/labeling"
@@ -88,7 +87,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -118,7 +117,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Name:      "my-deployment",
 						Namespace: "eng",
 						Annotations: map[string]string{
-							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+							v1.ResourceManagementKey: v1.ResourceManagementValue,
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -137,7 +136,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -152,8 +151,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 							Name:      "my-deployment",
 							Namespace: "eng",
 							Annotations: map[string]string{
-								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1.ResourceManagementKey:  v1.ResourceManagementValue,
 							},
 						},
 						Spec: appsv1.DeploymentSpec{
@@ -171,7 +170,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 							Name:      "my-deployment",
 							Namespace: "eng",
 							Annotations: map[string]string{
-								v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+								v1.ResourceManagementKey: v1.ResourceManagementValue,
 							},
 						},
 						Spec: appsv1.DeploymentSpec{
@@ -228,7 +227,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -258,8 +257,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Name:      "my-deployment",
 						Namespace: "eng",
 						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-							v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+							v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							v1.ResourceManagementKey:  v1.ResourceManagementValue,
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -280,8 +279,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 							Name:      "my-deployment",
 							Namespace: "eng",
 							Annotations: map[string]string{
-								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1.ResourceManagementKey:  v1.ResourceManagementValue,
 							},
 						},
 						Spec: appsv1.DeploymentSpec{
@@ -299,8 +298,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 							Name:      "my-deployment",
 							Namespace: "eng",
 							Annotations: map[string]string{
-								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1.ResourceManagementKey:  v1.ResourceManagementValue,
 							},
 						},
 						Spec: appsv1.DeploymentSpec{
@@ -320,7 +319,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -379,8 +378,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Name:      "my-deployment",
 						Namespace: "eng",
 						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-							v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+							v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							v1.ResourceManagementKey:  v1.ResourceManagementValue,
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -401,8 +400,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 							Name:      "my-deployment",
 							Namespace: "eng",
 							Annotations: map[string]string{
-								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1.ResourceManagementKey:  v1.ResourceManagementValue,
 							},
 						},
 						Spec: appsv1.DeploymentSpec{
@@ -420,8 +419,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 							Name:      "my-deployment",
 							Namespace: "eng",
 							Annotations: map[string]string{
-								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1.ResourceManagementKey:  v1.ResourceManagementValue,
 							},
 						},
 						Spec: appsv1.DeploymentSpec{
@@ -451,7 +450,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					SyncErrors: []v1.PolicyNodeSyncError{
 						{
 							ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
-								v1alpha1.ResourceManagementKey, v1alpha1.ResourceManagementValue),
+								v1.ResourceManagementKey, v1.ResourceManagementValue),
 						},
 					},
 				},
@@ -511,7 +510,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -557,7 +556,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -600,7 +599,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -629,7 +628,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "my-deployment",
 						Namespace:   "eng",
-						Annotations: map[string]string{v1alpha1.ResourceManagementKey: "invalid"},
+						Annotations: map[string]string{v1.ResourceManagementKey: "invalid"},
 					},
 					Spec: appsv1.DeploymentSpec{
 						Strategy: appsv1.DeploymentStrategy{
@@ -647,7 +646,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -696,7 +695,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -726,7 +725,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -740,8 +739,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Name:      "my-deployment",
 						Namespace: "eng",
 						Annotations: map[string]string{
-							v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-							v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+							v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+							v1.ResourceManagementKey:  v1.ResourceManagementValue,
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -796,7 +795,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -811,7 +810,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Name:      "my-deployment",
 						Namespace: "eng",
 						Annotations: map[string]string{
-							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+							v1.ResourceManagementKey: v1.ResourceManagementValue,
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -830,7 +829,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name:   "eng",
 					Labels: labeling.ManageQuota.New(),
 					Annotations: map[string]string{
-						v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+						v1.ResourceManagementKey: v1.ResourceManagementValue,
 					},
 				},
 			},
@@ -844,7 +843,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Name:      "my-deployment",
 						Namespace: "eng",
 						Annotations: map[string]string{
-							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+							v1.ResourceManagementKey: v1.ResourceManagementValue,
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -925,7 +924,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 						Name:      "my-deployment",
 						Namespace: "eng",
 						Annotations: map[string]string{
-							v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+							v1.ResourceManagementKey: v1.ResourceManagementValue,
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -954,7 +953,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					SyncErrors: []v1.PolicyNodeSyncError{
 						{
 							ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
-								v1alpha1.ResourceManagementKey, v1alpha1.ResourceManagementValue),
+								v1.ResourceManagementKey, v1.ResourceManagementValue),
 						},
 					},
 				},
@@ -976,8 +975,8 @@ func TestPolicyNodeReconcile(t *testing.T) {
 							Name:      "my-deployment",
 							Namespace: "eng",
 							Annotations: map[string]string{
-								v1alpha1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1alpha1.ResourceManagementKey:  v1alpha1.ResourceManagementValue,
+								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
+								v1.ResourceManagementKey:  v1.ResourceManagementValue,
 							},
 						},
 						Spec: appsv1.DeploymentSpec{
@@ -995,7 +994,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 							Name:      "my-deployment",
 							Namespace: "eng",
 							Annotations: map[string]string{
-								v1alpha1.ResourceManagementKey: v1alpha1.ResourceManagementValue,
+								v1.ResourceManagementKey: v1.ResourceManagementValue,
 							},
 						},
 						Spec: appsv1.DeploymentSpec{

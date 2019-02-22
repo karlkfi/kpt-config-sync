@@ -3,7 +3,7 @@ package metadata
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/testing/asttest"
@@ -12,8 +12,8 @@ import (
 
 const (
 	legalLabel    = "label"
-	illegalLabel  = v1alpha1.NomosPrefix + "unsupported"
-	illegalLabel2 = v1alpha1.NomosPrefix + "unsupported2"
+	illegalLabel  = v1.NomosPrefix + "unsupported"
+	illegalLabel2 = v1.NomosPrefix + "unsupported2"
 )
 
 func TestLabelValidator(t *testing.T) {
@@ -43,11 +43,11 @@ func TestLabelValidator(t *testing.T) {
 		),
 		asttest.Fail("namespaceselector label",
 			object.Build(kinds.Role(),
-				object.Label(v1alpha1.NamespaceSelectorAnnotationKey, "")),
+				object.Label(v1.NamespaceSelectorAnnotationKey, "")),
 		),
 		asttest.Fail("clusterselector label",
 			object.Build(kinds.Role(),
-				object.Label(v1alpha1.ClusterSelectorAnnotationKey, "")),
+				object.Label(v1.ClusterSelectorAnnotationKey, "")),
 		),
 	)
 

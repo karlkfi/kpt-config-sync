@@ -3,7 +3,7 @@ package hierarchyconfig
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/testing/asttest"
@@ -16,27 +16,27 @@ func TestKindValidator(t *testing.T) {
 
 		asttest.Pass("RoleBinding supported",
 			object.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.RoleBinding(), v1alpha1.HierarchyModeDefault)),
+				HierarchyConfigResource(kinds.RoleBinding(), v1.HierarchyModeDefault)),
 		),
 		asttest.Fail("CRD not supported",
 			object.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.CustomResourceDefinition(), v1alpha1.HierarchyModeDefault)),
+				HierarchyConfigResource(kinds.CustomResourceDefinition(), v1.HierarchyModeDefault)),
 		),
 		asttest.Fail("Namespace not supported",
 			object.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.Namespace(), v1alpha1.HierarchyModeDefault)),
+				HierarchyConfigResource(kinds.Namespace(), v1.HierarchyModeDefault)),
 		),
 		asttest.Fail("omitting kind not supported",
 			object.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(object.GVK(kinds.RoleBinding(), object.Kind("")), v1alpha1.HierarchyModeDefault)),
+				HierarchyConfigResource(object.GVK(kinds.RoleBinding(), object.Kind("")), v1.HierarchyModeDefault)),
 		),
 		asttest.Pass("omitting group supported",
 			object.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(object.GVK(kinds.RoleBinding(), object.Group("")), v1alpha1.HierarchyModeDefault)),
+				HierarchyConfigResource(object.GVK(kinds.RoleBinding(), object.Group("")), v1.HierarchyModeDefault)),
 		),
 		asttest.Fail("nomos.dev group not supported",
 			object.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.Sync(), v1alpha1.HierarchyModeDefault))),
+				HierarchyConfigResource(kinds.Sync(), v1.HierarchyModeDefault))),
 	)
 
 	test.RunAll(t)

@@ -1,7 +1,7 @@
 package metadata
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
@@ -13,7 +13,7 @@ func NewAnnotationValidator() ast.Visitor {
 		func(o ast.FileObject) error {
 			var errors []string
 			for a := range o.MetaObject().GetAnnotations() {
-				if !v1alpha1.IsInputAnnotation(a) && v1alpha1.HasNomosPrefix(a) {
+				if !v1.IsInputAnnotation(a) && v1.HasNomosPrefix(a) {
 					errors = append(errors, a)
 				}
 			}

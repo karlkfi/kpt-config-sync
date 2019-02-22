@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v12 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/pkg/errors"
@@ -226,7 +226,7 @@ func lastAppliedConfiguration(original *unstructured.Unstructured) ([]byte, erro
 	// Create a copy of the object, since we will be deleting the management annotation.
 	c := original.DeepCopy()
 	l := c.GetAnnotations()
-	delete(l, v1alpha1.ResourceManagementKey)
+	delete(l, v12.ResourceManagementKey)
 	c.SetAnnotations(l)
 
 	annotation, err := kubectl.GetModifiedConfiguration(c, false, unstructured.UnstructuredJSONScheme)

@@ -3,7 +3,7 @@ package hierarchyconfig
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -49,11 +49,11 @@ func TestKnownResourceValidator(t *testing.T) {
 
 		asttest.Fail("ResourceQuota throws error if not known",
 			object.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.ResourceQuota(), v1alpha1.HierarchyModeDefault)),
+				HierarchyConfigResource(kinds.ResourceQuota(), v1.HierarchyModeDefault)),
 		),
 		asttest.Pass("RoleBinding valid if known",
 			object.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.RoleBinding(), v1alpha1.HierarchyModeDefault)),
+				HierarchyConfigResource(kinds.RoleBinding(), v1.HierarchyModeDefault)),
 		),
 	).With(APIInfo(apiInfo))
 
