@@ -142,13 +142,6 @@ if [[ "${gcs_prober_cred}" != "" ]]; then
   gsutil cp "${gcs_prober_cred}" "${TEMP_OUTPUT_DIR}/config/prober_runner_client_key.json"
 fi
 
-
-DOCKER_FLAGS+=("--interactive")
-if [ -t 0 ]; then
-  echo "+++ Docker will use a terminal."
-  DOCKER_FLAGS+=("--tty")
-fi
-
 DOCKER_FLAGS+=(
     -u "$(id -u):$(id -g)"
     -v "${TEMP_OUTPUT_DIR}:/tmp"
@@ -157,4 +150,4 @@ DOCKER_FLAGS+=(
     "gcr.io/stolos-dev/e2e-tests:test-e2e-latest"
 )
 
-docker run "${DOCKER_FLAGS[@]}" "$@"
+docker run "${DOCKER_FLAGS[@]}" "/opt/testing/e2e/setup.sh" "$@"

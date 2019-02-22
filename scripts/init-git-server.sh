@@ -60,7 +60,7 @@ echo "Setting up remote git repo"
 mkdir -p ${TEST_LOG_REPO}
 kubectl -n="${GIT_SERVER_NS}" port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > "${TEST_LOG_REPO}/port-forward.log" &
 # shellcheck disable=SC2191
-REMOTE_GIT=(kubectl exec -n="${GIT_SERVER_NS}" -it "${POD_ID}" -- git)
+REMOTE_GIT=(kubectl exec -n="${GIT_SERVER_NS}" "${POD_ID}" -- git)
 "${REMOTE_GIT[@]}" init --bare --shared /git-server/repos/sot.git
 "${REMOTE_GIT[@]}" \
   -C /git-server/repos/sot.git config receive.denyNonFastforwards false

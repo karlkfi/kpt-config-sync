@@ -50,6 +50,11 @@ RUN apt-get update \
   python \
   software-properties-common
 
+# Add Tini
+ENV TINI_VERSION v0.18.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+
 ARG UNAME
 ARG UID
 ARG GID
@@ -83,5 +88,8 @@ ENV USER $UNAME
 USER $UNAME
 
 WORKDIR /opt/testing/e2e
-ENTRYPOINT ["/opt/testing/e2e/setup.sh"]
 
+# tini (especially with -g) does correct handling of signals (like Ctrl+C) that you don't
+# get by running a shell script as the entrypoint. If this were removed, Ctrl+C wouldn't
+# work.
+ENTRYPOINT ["/tini", "-g", "--"]

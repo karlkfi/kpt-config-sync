@@ -378,13 +378,6 @@ fi
 # Always run clean_up before exit at this point
 trap post_clean EXIT
 
-# Trapping EXIT without trapping SIGTERM/SIGINT causes the docker container
-# running the tests to fail to exit.
-# More detail from our experience report here:
-# https://stackoverflow.com/questions/54699272/docker-hangs-on-sigint-when-script-traps-exit
-# Note that ":" is the bashism for no-op; it evals to true.
-trap : SIGTERM SIGINT
-
 if $run_tests; then
   main "${file_filter}"
 else
