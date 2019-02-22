@@ -3,7 +3,7 @@ package selectors
 import (
 	"os"
 
-	nomos "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
@@ -19,7 +19,7 @@ type ClusterSelectorAdder struct {
 	*visitor.Base
 
 	clusters  []clusterregistry.Cluster
-	selectors []nomos.ClusterSelector
+	selectors []v1alpha1.ClusterSelector
 
 	errs multierror.Builder
 }
@@ -30,8 +30,8 @@ func GetClusters(r *ast.Root) []clusterregistry.Cluster {
 }
 
 // GetSelectors retrieves the selectors stored in Root.Data.
-func GetSelectors(r *ast.Root) []nomos.ClusterSelector {
-	return r.Data.Get(selectorsKey{}).([]nomos.ClusterSelector)
+func GetSelectors(r *ast.Root) []v1alpha1.ClusterSelector {
+	return r.Data.Get(selectorsKey{}).([]v1alpha1.ClusterSelector)
 }
 
 // NewClusterSelectorAdder initializes a ClusterSelectorAdder.
@@ -83,11 +83,11 @@ func getClusters(objects []*ast.ClusterRegistryObject) []clusterregistry.Cluster
 
 // processClusterRegistryDir looks at all files in <root>/clusterregistry and
 // extracts Cluster and ClusterSelector objects out.
-func getSelectors(objects []*ast.ClusterRegistryObject) []nomos.ClusterSelector {
-	var selectors []nomos.ClusterSelector
+func getSelectors(objects []*ast.ClusterRegistryObject) []v1alpha1.ClusterSelector {
+	var selectors []v1alpha1.ClusterSelector
 	for _, object := range objects {
 		switch o := object.Object.(type) {
-		case *nomos.ClusterSelector:
+		case *v1alpha1.ClusterSelector:
 			selectors = append(selectors, *o)
 		}
 	}

@@ -20,7 +20,7 @@ import (
 	"reflect"
 
 	"github.com/golang/glog"
-	policyhierarchy "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -32,7 +32,7 @@ type ClusterSelectors struct {
 	// The cluster registry object corresponding to this cluster.
 	cluster clusterregistry.Cluster
 	// A set of selectors matching this cluster
-	selectors map[string]policyhierarchy.ClusterSelector
+	selectors map[string]v1alpha1.ClusterSelector
 	// The name of the current cluster, if a name is known.
 	clusterName string
 }
@@ -63,7 +63,7 @@ func GetClusterSelectors(root *ast.Root) *ClusterSelectors {
 
 // ForEachSelector runs f on each name and selector pair in this collection of
 // selectors.
-func (stc *ClusterSelectors) ForEachSelector(f func(name string, selector policyhierarchy.ClusterSelector)) {
+func (stc *ClusterSelectors) ForEachSelector(f func(name string, selector v1alpha1.ClusterSelector)) {
 	for name, selector := range stc.selectors {
 		f(name, selector)
 	}
@@ -72,12 +72,12 @@ func (stc *ClusterSelectors) ForEachSelector(f func(name string, selector policy
 // NewClusterSelectors returns a new cluster selection object.
 func NewClusterSelectors(
 	clusters []clusterregistry.Cluster,
-	selectors []policyhierarchy.ClusterSelector,
+	selectors []v1alpha1.ClusterSelector,
 	clusterName string,
 ) (*ClusterSelectors, error) {
 	glog.V(2).Infof("Cluster name: %q", clusterName)
 	cc := &ClusterSelectors{
-		selectors:   make(map[string]policyhierarchy.ClusterSelector),
+		selectors:   make(map[string]v1alpha1.ClusterSelector),
 		clusterName: clusterName,
 	}
 	for _, cl := range clusters {
@@ -110,7 +110,7 @@ func (stc *ClusterSelectors) Matches(o ast.Annotated) bool {
 	if glog.V(7) {
 		glog.Infof("annotations: %+v", a)
 	}
-	selector, ok := a[policyhierarchy.ClusterSelectorAnnotationKey]
+	selector, ok := a[v1alpha1.ClusterSelectorAnnotationKey]
 	if !ok {
 		// An object that is not annotated always matches.
 		return true

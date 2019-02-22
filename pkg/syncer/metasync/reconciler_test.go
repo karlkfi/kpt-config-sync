@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	nomosv1alpha1 "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,84 +31,84 @@ import (
 )
 
 type updateList struct {
-	update nomosv1alpha1.Sync
+	update v1alpha1.Sync
 	list   unstructured.UnstructuredList
 }
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
 		name              string
-		actualSyncs       nomosv1alpha1.SyncList
-		wantStatusUpdates []nomosv1alpha1.Sync
+		actualSyncs       v1alpha1.SyncList
+		wantStatusUpdates []v1alpha1.Sync
 		wantUpdateList    []updateList
 	}{
 		{
 			name: "update state for one sync",
-			actualSyncs: nomosv1alpha1.SyncList{
-				Items: []nomosv1alpha1.Sync{
+			actualSyncs: v1alpha1.SyncList{
+				Items: []v1alpha1.Sync{
 					makeSync("", "Deployment", ""),
 				},
 			},
-			wantStatusUpdates: []nomosv1alpha1.Sync{
-				makeSync("", "Deployment", nomosv1alpha1.Syncing),
+			wantStatusUpdates: []v1alpha1.Sync{
+				makeSync("", "Deployment", v1alpha1.Syncing),
 			},
 		},
 		{
 			name: "update state for multiple syncs",
-			actualSyncs: nomosv1alpha1.SyncList{
-				Items: []nomosv1alpha1.Sync{
+			actualSyncs: v1alpha1.SyncList{
+				Items: []v1alpha1.Sync{
 					makeSync("rbac.authorization.k8s.io", "Role", ""),
 					makeSync("", "Deployment", ""),
 					makeSync("", "ConfigMap", ""),
 				},
 			},
-			wantStatusUpdates: []nomosv1alpha1.Sync{
-				makeSync("rbac.authorization.k8s.io", "Role", nomosv1alpha1.Syncing),
-				makeSync("", "Deployment", nomosv1alpha1.Syncing),
-				makeSync("", "ConfigMap", nomosv1alpha1.Syncing),
+			wantStatusUpdates: []v1alpha1.Sync{
+				makeSync("rbac.authorization.k8s.io", "Role", v1alpha1.Syncing),
+				makeSync("", "Deployment", v1alpha1.Syncing),
+				makeSync("", "ConfigMap", v1alpha1.Syncing),
 			},
 		},
 		{
 			name: "don't update state for one sync when unnecessary",
-			actualSyncs: nomosv1alpha1.SyncList{
-				Items: []nomosv1alpha1.Sync{
-					makeSync("", "Deployment", nomosv1alpha1.Syncing),
+			actualSyncs: v1alpha1.SyncList{
+				Items: []v1alpha1.Sync{
+					makeSync("", "Deployment", v1alpha1.Syncing),
 				},
 			},
 		},
 		{
 			name: "don't update state for multiple syncs when unnecessary",
-			actualSyncs: nomosv1alpha1.SyncList{
-				Items: []nomosv1alpha1.Sync{
-					makeSync("rbac.authorization.k8s.io", "Role", nomosv1alpha1.Syncing),
-					makeSync("", "Deployment", nomosv1alpha1.Syncing),
-					makeSync("", "ConfigMap", nomosv1alpha1.Syncing),
+			actualSyncs: v1alpha1.SyncList{
+				Items: []v1alpha1.Sync{
+					makeSync("rbac.authorization.k8s.io", "Role", v1alpha1.Syncing),
+					makeSync("", "Deployment", v1alpha1.Syncing),
+					makeSync("", "ConfigMap", v1alpha1.Syncing),
 				},
 			},
 		},
 		{
 			name: "only update syncs with state change",
-			actualSyncs: nomosv1alpha1.SyncList{
-				Items: []nomosv1alpha1.Sync{
-					makeSync("", "Secret", nomosv1alpha1.Syncing),
-					makeSync("", "Service", nomosv1alpha1.Syncing),
+			actualSyncs: v1alpha1.SyncList{
+				Items: []v1alpha1.Sync{
+					makeSync("", "Secret", v1alpha1.Syncing),
+					makeSync("", "Service", v1alpha1.Syncing),
 					makeSync("", "Deployment", ""),
 				},
 			},
-			wantStatusUpdates: []nomosv1alpha1.Sync{
-				makeSync("", "Deployment", nomosv1alpha1.Syncing),
+			wantStatusUpdates: []v1alpha1.Sync{
+				makeSync("", "Deployment", v1alpha1.Syncing),
 			},
 		},
 		{
 			name: "finalize sync that is pending delete",
-			actualSyncs: nomosv1alpha1.SyncList{
-				Items: []nomosv1alpha1.Sync{
-					withDeleteTimestamp(withFinalizer(makeSync("", "Deployment", nomosv1alpha1.Syncing))),
+			actualSyncs: v1alpha1.SyncList{
+				Items: []v1alpha1.Sync{
+					withDeleteTimestamp(withFinalizer(makeSync("", "Deployment", v1alpha1.Syncing))),
 				},
 			},
 			wantUpdateList: []updateList{
 				{
-					update: withDeleteTimestamp(makeSync("", "Deployment", nomosv1alpha1.Syncing)),
+					update: withDeleteTimestamp(makeSync("", "Deployment", v1alpha1.Syncing)),
 					list:   unstructuredList(schema.GroupVersionKind{Version: "v1", Kind: "DeploymentList"}),
 				},
 			},
@@ -207,20 +207,20 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func makeSync(group, kind string, state nomosv1alpha1.SyncState) nomosv1alpha1.Sync {
-	s := *nomosv1alpha1.NewSync(group, kind)
+func makeSync(group, kind string, state v1alpha1.SyncState) v1alpha1.Sync {
+	s := *v1alpha1.NewSync(group, kind)
 	if state != "" {
-		s.Status = nomosv1alpha1.SyncStatus{Status: state}
+		s.Status = v1alpha1.SyncStatus{Status: state}
 	}
 	return s
 }
 
-func withFinalizer(sync nomosv1alpha1.Sync) nomosv1alpha1.Sync {
-	sync.SetFinalizers([]string{nomosv1alpha1.SyncFinalizer})
+func withFinalizer(sync v1alpha1.Sync) v1alpha1.Sync {
+	sync.SetFinalizers([]string{v1alpha1.SyncFinalizer})
 	return sync
 }
 
-func withDeleteTimestamp(sync nomosv1alpha1.Sync) nomosv1alpha1.Sync {
+func withDeleteTimestamp(sync v1alpha1.Sync) v1alpha1.Sync {
 	t := metav1.NewTime(time.Unix(0, 0))
 	sync.SetDeletionTimestamp(&t)
 	return sync

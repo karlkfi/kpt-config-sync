@@ -3,7 +3,6 @@ package seltest
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
-	policyhierarchy "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -32,12 +31,12 @@ func Cluster(name string, labels map[string]string) clusterregistry.Cluster {
 }
 
 // Selector creates a named cluster selector object for test.
-func Selector(name string, selector metav1.LabelSelector) policyhierarchy.ClusterSelector {
-	return policyhierarchy.ClusterSelector{
+func Selector(name string, selector metav1.LabelSelector) v1alpha1.ClusterSelector {
+	return v1alpha1.ClusterSelector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: policyhierarchy.ClusterSelectorSpec{
+		Spec: v1alpha1.ClusterSelectorSpec{
 			Selector: selector,
 		},
 	}
