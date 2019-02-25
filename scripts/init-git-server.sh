@@ -27,7 +27,7 @@ TEST_LOG_REPO=/tmp/nomos-test
 
 FWD_SSH_PORT=2222
 
-GIT_SERVER_NS=nomos-system-test
+GIT_SERVER_NS=config-management-system-test
 
 rm -rf "${TEST_LOG_REPO}"
 
