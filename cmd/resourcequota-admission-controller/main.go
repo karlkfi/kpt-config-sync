@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	externalAdmissionHookConfigName = "resource-quota.nomos.dev"
+	externalAdmissionHookConfigName = "resource-quota." + policyhierarchy.GroupName
 	controllerNamespace             = policyhierarchy.ControllerNamespace
 	controllerName                  = "resourcequota-admission-controller"
 )

@@ -16,6 +16,8 @@ limitations under the License.
 
 package v1
 
+import "github.com/google/nomos/pkg/api/policyhierarchy"
+
 // ClusterPolicyName is the name of the singleton ClusterPolicy resource.
 const ClusterPolicyName = "nomos-cluster-policy"
 
@@ -88,7 +90,7 @@ const (
 
 // SyncFinalizer is a finalizer handled by Syncer to ensure Sync deletions complete before Importer writes ClusterPolicy
 // and PolicyNode resources.
-const SyncFinalizer = "syncer.nomos.dev"
+const SyncFinalizer = "syncer." + policyhierarchy.GroupName
 
 // HierarchyModeType defines hierarchical behavior for namespaced objects.
 type HierarchyModeType string

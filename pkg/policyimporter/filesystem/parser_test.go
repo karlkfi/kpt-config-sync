@@ -648,7 +648,7 @@ func toInt32Pointer(i int32) *int32 {
 
 func makeSync(group, kind string) v1.Sync {
 	s := *v1.NewSync(group, kind)
-	s.Finalizers = append(s.Finalizers, "syncer.nomos.dev")
+	s.Finalizers = append(s.Finalizers, v1.SyncFinalizer)
 	return s
 }
 
