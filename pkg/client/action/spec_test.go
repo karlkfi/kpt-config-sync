@@ -56,7 +56,7 @@ func TestSpecListNamespaced(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to list roles")
 	}
-	names := []string{}
+	var names []string
 	for _, obj := range listObjs {
 		names = append(names, obj.(metav1.Object).GetName())
 	}
@@ -89,7 +89,7 @@ func TestSpecListCluster(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to list ClusterRoles")
 	}
-	names := []string{}
+	var names []string
 	for _, obj := range listObjs {
 		names = append(names, obj.(metav1.Object).GetName())
 	}

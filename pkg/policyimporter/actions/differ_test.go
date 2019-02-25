@@ -41,13 +41,11 @@ func TestDiffer(t *testing.T) {
 	for _, test := range []testCase{
 		{
 			testName: "Nil",
-			expected: []string{},
 		},
 		{
 			testName: "All Empty",
 			oldNodes: []v1.PolicyNode{},
 			newNodes: []v1.PolicyNode{},
-			expected: []string{},
 		},
 		{
 			testName: "One node Create",
@@ -131,7 +129,6 @@ func TestDiffer(t *testing.T) {
 			testName:         "ClusterPolicy update no change",
 			oldClusterPolicy: clusterPolicy("foo", true),
 			newClusterPolicy: clusterPolicy("foo", true),
-			expected:         []string{},
 		},
 		{
 			testName:         "ClusterPolicy delete",
@@ -161,7 +158,6 @@ func TestDiffer(t *testing.T) {
 			testName: "Empty Syncs",
 			oldSyncs: []v1.Sync{},
 			newSyncs: []v1.Sync{},
-			expected: []string{},
 		},
 		{
 			testName: "Sync create",
@@ -181,7 +177,6 @@ func TestDiffer(t *testing.T) {
 			newSyncs: []v1.Sync{
 				*v1.NewSync("", "ResourceQuota"),
 			},
-			expected: []string{},
 		},
 		{
 			testName: "Sync delete",
@@ -207,7 +202,7 @@ func TestDiffer(t *testing.T) {
 					len(gotActions), len(test.expected))
 			}
 
-			actual := []string{}
+			var actual []string
 			for _, a := range gotActions {
 				actual = append(actual, a.String())
 			}
@@ -221,8 +216,8 @@ func TestDiffer(t *testing.T) {
 			for _, pn := range test.oldNodes {
 				policyNodes[pn.Name] = pn
 			}
-			for _, action := range gotActions {
-				executeAction(t, action, policyNodes)
+			for _, a := range gotActions {
+				executeAction(t, a, policyNodes)
 			}
 		})
 	}
