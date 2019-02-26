@@ -8,14 +8,31 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// pather assigns default unique relative paths to objects with no path yet on a disk.
+// Pather assigns default unique relative paths to objects with no path yet on a disk.
+type Pather struct {
+	namespaced map[schema.GroupVersionKind]bool
+}
+
+// NewPather creates a pather from the list of APIResources on the server.
 // Temporarily unused until cloner written.
 // nolint: deadcode
-type pather struct {
-	namespaced map[schema.GroupVersionKind]bool
+func NewPather(resources ...metav1.APIResource) Pather {
+	result := Pather{
+		namespaced: make(map[schema.GroupVersionKind]bool),
+	}
+	for _, resource := range resources {
+		gvk := schema.GroupVersionKind{
+			Group:   resource.Group,
+			Version: resource.Version,
+			Kind:    resource.Kind,
+		}
+		result.namespaced[gvk] = resource.Namespaced
+	}
+	return result
 }
 
 const (
@@ -66,7 +83,7 @@ func longBase(o ast.FileObject) string {
 }
 
 // directory returns the relative directory to write the object to.
-func (p pather) directory(o ast.FileObject) nomospath.Relative {
+func (p Pather) directory(o ast.FileObject) nomospath.Relative {
 	gvk := o.GroupVersionKind()
 	switch {
 	case systemKinds[gvk]:
@@ -82,11 +99,11 @@ func (p pather) directory(o ast.FileObject) nomospath.Relative {
 	}
 }
 
-// addPaths adds the expected relative paths to write the files to. Paths are guaranteed to be
+// AddPaths adds the expected relative paths to write the files to. Paths are guaranteed to be
 // unique for a valid collection of objects. Behavior undefined for collections of objects which
 // could not validly be in a single cluster.
-func (p pather) addPaths(objects []ast.FileObject) {
-	pathCounts := make(map[nomospath.Relative]int)
+func (p Pather) AddPaths(objects []ast.FileObject) {
+	shortPathCounts := make(map[nomospath.Relative]int)
 
 	for i, object := range objects {
 		if object.Object == nil {
@@ -94,11 +111,11 @@ func (p pather) addPaths(objects []ast.FileObject) {
 		}
 		objectPath := p.directory(object).Join(shortBase(object))
 		objects[i].Relative = objectPath
-		pathCounts[objectPath]++
+		shortPathCounts[objectPath]++
 	}
 
 	for i, object := range objects {
-		if pathCounts[object.Relative] > 1 {
+		if shortPathCounts[object.Relative] > 1 {
 			objects[i].Relative = p.directory(object).Join(longBase(object))
 		}
 	}

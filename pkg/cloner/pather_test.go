@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/testing/apiresource"
 	"github.com/google/nomos/pkg/testing/object"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -39,7 +40,7 @@ func TestPatherSingleObject(t *testing.T) {
 			expected: nomospath.NewRelative(repo.SystemDir).Join(strings.ToLower(kinds.HierarchyConfig().Kind) + "_hc.yaml"),
 		},
 		{
-			name:     "Cluster",
+			name:     "Clusters",
 			object:   object.Build(kinds.Cluster(), object.Name("us-east-1"), withoutPath()),
 			expected: nomospath.NewRelative(repo.ClusterRegistryDir).Join(strings.ToLower(kinds.Cluster().Kind) + "_us-east-1.yaml"),
 		},
@@ -64,7 +65,7 @@ func TestPatherSingleObject(t *testing.T) {
 			expected: nomospath.NewRelative(repo.NamespacesDir).Join("dev").Join("role_admin.yaml"),
 		},
 		{
-			name:     "Cluster kind",
+			name:     "Clusters kind",
 			object:   object.Build(kinds.ClusterRole(), object.Name("admin"), withoutPath()),
 			expected: nomospath.NewRelative(repo.ClusterDir).Join("clusterrole_admin.yaml"),
 		},
@@ -72,15 +73,10 @@ func TestPatherSingleObject(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			p := pather{
-				namespaced: map[schema.GroupVersionKind]bool{
-					kinds.Role():        true,
-					kinds.ClusterRole(): false,
-				},
-			}
+			p := NewPather(apiresource.Roles(), apiresource.ClusterRoles())
 
 			objects := []ast.FileObject{tc.object}
-			p.addPaths(objects)
+			p.AddPaths(objects)
 
 			if diff := cmp.Diff(tc.expected, objects[0].Relative); diff != "" {
 				t.Fatal(diff)
@@ -119,7 +115,7 @@ func TestPatherMultipleObjects(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			p := pather{
+			p := Pather{
 				namespaced: map[schema.GroupVersionKind]bool{
 					object.GVK(kinds.Role(), object.Group("bar")):        true,
 					object.GVK(kinds.Role(), object.Group("foo")):        true,
@@ -128,7 +124,7 @@ func TestPatherMultipleObjects(t *testing.T) {
 			}
 
 			objects := []ast.FileObject{tc.object, other}
-			p.addPaths(objects)
+			p.AddPaths(objects)
 
 			if diff := cmp.Diff(tc.expected, objects[0].Relative); diff != "" {
 				t.Fatal(diff)
