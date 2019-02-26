@@ -612,7 +612,9 @@ var clusterPolicyNodeBaseTestObject = &v1.PolicyNode{
 		Labels:      map[string]string{"fuzzy": "true"},
 		Annotations: map[string]string{"api.foo.future/deny": "*"},
 	},
-	Spec: v1.PolicyNodeSpec{},
+	Spec: v1.PolicyNodeSpec{
+		Type: v1.Policyspace,
+	},
 }
 
 func clusterPolicyNodeX(_, name string) runtime.Object {

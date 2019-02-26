@@ -75,6 +75,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -189,6 +190,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -212,6 +214,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -335,6 +338,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -436,6 +440,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -493,6 +498,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -563,6 +569,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -580,6 +587,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -651,6 +659,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -674,6 +683,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -749,6 +759,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -772,6 +783,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -850,6 +862,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -873,6 +886,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{
@@ -929,6 +943,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 					Name: "eng",
 				},
 				Spec: v1.PolicyNodeSpec{
+					Type:        v1.Namespace,
 					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
 				},
 				Status: v1.PolicyNodeStatus{

@@ -185,6 +185,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Annotations: map[string]string{"has-waffles": "true"},
 					},
 					Spec: v1.PolicyNodeSpec{
+						Type:        v1.Namespace,
 						ImportToken: vt.ImportToken,
 						ImportTime:  metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
@@ -232,6 +233,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Annotations: map[string]string{"has-waffles": "false"},
 					},
 					Spec: v1.PolicyNodeSpec{
+						Type:        v1.Namespace,
 						ImportToken: vt.ImportToken,
 						ImportTime:  metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
