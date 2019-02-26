@@ -443,6 +443,60 @@ type RepoSpec struct {
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 }
 
+// RepoStatus contains status fields for Repo.
+// +protobuf=true
+type RepoStatus struct {
+	// +optional
+	Source RepoSourceStatus `json:"source,omitempty"`
+
+	// +optional
+	Import RepoImportStatus `json:"import,omitempty"`
+
+	// +optional
+	Sync RepoSyncStatus `json:"sync,omitempty"`
+}
+
+// RepoSourceStatus contains status fields for the Repo's source of truth.
+// +protobuf=true
+type RepoSourceStatus struct {
+	// Most recent version token seen in the source of truth (eg the repo). This token is updated as
+	// soon as the policy importer sees a new change in the repo.
+	// +optional
+	Token string `json:"token,omitempty"`
+}
+
+// RepoImportStatus contains status fields for the import of the Repo.
+// +protobuf=true
+type RepoImportStatus struct {
+	// Most recent version token imported from the source of truth into Nomos CRs. This token is
+	// updated once the importer finishes processing a change, whether or not there were errors
+	// during the import.
+	// +optional
+	Token string `json:"token,omitempty"`
+
+	// LastUpdate is the timestamp of when this status was updated by the Importer.
+	// +optional
+	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
+
+	// TODO(ekitson): add importer errors
+}
+
+// RepoSyncStatus contains status fields for the sync of the Repo.
+// +protobuf=true
+type RepoSyncStatus struct {
+	// Most recent version token synced from Nomos CRs to Nomos-managed resources. This token is
+	// updated  once the syncer finishes processing a change, whether or not there were errors during
+	// the sync.
+	// +optional
+	Token string `json:"token,omitempty"`
+
+	// LastUpdate is the timestamp of when this status was updated by the Importer.
+	// +optional
+	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
+
+	// TODO(ekitson): add syncer errors
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // RepoList holds a list of Repo resources.
