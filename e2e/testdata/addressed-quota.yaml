@@ -3,7 +3,7 @@ apiVersion: v1
 metadata:
   name: nomos-resource-quota
   annotations:
-    nomos.dev/cluster-selector: selector-env-prod
+    config.gke.io/cluster-selector: selector-env-prod
 spec:
   hard:
     # Magic value that can be tested to prove that the quota has been applied.
@@ -14,7 +14,7 @@ apiVersion: v1
 metadata:
   name: nomos-resource-quota
   annotations:
-    nomos.dev/cluster-selector: selector-env-other
+    config.gke.io/cluster-selector: selector-env-other
 spec:
   hard:
     # Magic value that can be tested to prove that the quota has been applied.

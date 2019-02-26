@@ -5,7 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+
 	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
@@ -35,7 +36,7 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 		"Resources MUST NOT declare unsupported annotations starting with %[3]q. "+
 			"Resource has offending annotations: %[1]s\n\n"+
 			"%[2]s",
-		a, id.PrintResource(e), policyhierarchy.GroupName)
+		a, id.PrintResource(e), v1.NomosPrefix)
 }
 
 // Code implements Error

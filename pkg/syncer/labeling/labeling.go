@@ -22,13 +22,15 @@ import (
 
 // Labels that are used to indicate that the resource is part of the nomos install.
 const (
-	NomosSystemKey   = "nomos.dev/system"
+	// TODO(125862145): use policyhierarchy.GroupName below after resource groups are updated to config.gke.io
+	NomosSystemKey   = "config.gke.io/system"
 	NomosSystemValue = "true"
 )
 
 // Labels that Nomos uses to determine which namespaces to enforce hierarchical quota limits on.
 const (
-	NomosQuotaKey   = "nomos.dev/quota"
+	// TODO(125862145): use policyhierarchy.GroupName below after resource groups are updated to config.gke.io
+	NomosQuotaKey   = "config.gke.io/quota"
 	NomosQuotaValue = "true"
 )
 

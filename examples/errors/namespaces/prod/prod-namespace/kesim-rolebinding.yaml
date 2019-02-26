@@ -4,10 +4,10 @@ metadata:
   name: kesim-rolebinding
   namespace: illegal-namespace # illegal metadata.namespace declataion
   annotations:
-    nomos.dev/unsupported: "true" # unsupported nomos.dev annotation
+    config.gke.io/unsupported: "true" # unsupported config.gke.io annotation
   labels:
-    nomos.dev/illegal-label: "true" # illegal label definition
-    nomos.dev/illegal-label-2: "true" # illegal label definition
+    config.gke.io/illegal-label: "true" # illegal label definition
+    config.gke.io/illegal-label-2: "true" # illegal label definition
 subjects:
 - kind: User
   name: alice@acme.com

@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   name: incorrect-name
   annotations:
-    nomos.dev/namespace-selector: "true" # illegal namespace selector definition
+    config.gke.io/namespace-selector: "true" # illegal namespace selector definition

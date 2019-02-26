@@ -6,7 +6,7 @@ kind: CustomResourceDefinition
 metadata:
   name: hierarchyconfigs.nomos.dev
   labels:
-    nomos.dev/system: "true"
+    config.gke.io/system: "true"
 spec:
   group: nomos.dev
   version: v1

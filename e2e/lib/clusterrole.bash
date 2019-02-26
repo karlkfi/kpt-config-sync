@@ -29,7 +29,7 @@ function clusterrole::validate_management_selection() {
   local resource
   resource=$(kubectl get clusterrole "${name}" -ojson)
 
-  annot_value=$(echo "${resource}" | jq -r '.metadata.annotations."nomos.dev/managed"')
+  annot_value=$(echo "${resource}" | jq -r '.metadata.annotations."config.gke.io/managed"')
   if [[ $annot_value != "enabled" ]]; then
     echo "clusterrole does not have a valid management annotation"
     return 1

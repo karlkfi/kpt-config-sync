@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: bob-rolebinding
   annotations:
-    nomos.dev/cluster-selector: selector-env-prod
+    config.gke.io/cluster-selector: selector-env-prod
 subjects:
 - kind: User
   name: bob@acme.com

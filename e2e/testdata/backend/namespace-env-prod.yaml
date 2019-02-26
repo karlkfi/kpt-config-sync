@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   name: backend
   annotations:
-    nomos.dev/cluster-selector: selector-env-prod
+    config.gke.io/cluster-selector: selector-env-prod

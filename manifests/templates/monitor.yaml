@@ -5,7 +5,7 @@ metadata:
   namespace: nomos-system
   labels:
     monitored: "true"
-    nomos.dev/system: "true"
+    config.gke.io/system: "true"
 spec:
   selector:
     app: monitor
@@ -21,7 +21,7 @@ metadata:
   namespace: nomos-system
   labels:
     app: monitor
-    nomos.dev/system: "true"
+    config.gke.io/system: "true"
 spec:
   minReadySeconds: 1
   replicas: 1

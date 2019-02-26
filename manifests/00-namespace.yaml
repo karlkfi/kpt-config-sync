@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   name: nomos-system
   labels:
-    nomos.dev/system: "true"
+    config.gke.io/system: "true"

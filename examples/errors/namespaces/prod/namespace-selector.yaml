@@ -3,4 +3,4 @@ apiVersion: nomos.dev/v1
 metadata:
   name: sre-supported
   annotations:
-    nomos.dev/cluster-selector: illegal-cluster-selector-annotation
+    config.gke.io/cluster-selector: illegal-cluster-selector-annotation

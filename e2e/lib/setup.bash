@@ -114,7 +114,7 @@ function setup::check_stable() {
   fi
 
   local ns_count
-  ns_count=$(resource::count -r ns -a nomos.dev/managed)
+  ns_count=$(resource::count -r ns -a config.gke.io/managed)
   if (( ns_count != ${#ACME_NAMESPACES[@]} )); then
     debug::log "count mismatch $ns_count != ${#ACME_NAMESPACES[@]}"
     return 1

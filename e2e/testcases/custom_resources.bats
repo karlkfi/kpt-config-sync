@@ -72,7 +72,7 @@ function teardown() {
   debug::log "Checking that custom resource appears on cluster"
   wait::for -t 30 -- kubectl get anvil ${resname} -n backend
   resource::check_count -n backend -r anvil -c 1
-  resource::check -n backend anvil ${resname} -a "nomos.dev/managed=enabled"
+  resource::check -n backend anvil ${resname} -a "config.gke.io/managed=enabled"
 
   debug::log "Modify custom resource in repo"
   oldresver=$(resource::resource_version anvil ${resname} -n backend)
@@ -93,7 +93,7 @@ function teardown() {
   wait::for -t 30 -- kubectl get anvil ${resname} -n new-prj
   wait::for -f -t 30 -- kubectl get anvil ${resname} -n backend
   resource::check_count -n new-prj -r anvil -c 1
-  resource::check -n new-prj anvil ${resname} -a "nomos.dev/managed=enabled"
+  resource::check -n new-prj anvil ${resname} -a "config.gke.io/managed=enabled"
 
   debug::log "Add custom resource without managed annotation to custom resource and update repo with the same resource"
   kubectl apply -f "${YAML_DIR}/customresources/anvil-heavier.yaml" -n newer-prj
@@ -135,7 +135,7 @@ function teardown() {
   debug::log "Checking that custom cluster resource appears on cluster"
   wait::for -t 30 -- kubectl get clusteranvil ${resname}
   resource::check_count -r clusteranvil -c 1
-  resource::check clusteranvil ${resname} -a "nomos.dev/managed=enabled"
+  resource::check clusteranvil ${resname} -a "config.gke.io/managed=enabled"
   selection=$(kubectl get clusteranvil ${resname} -ojson | jq -c ".spec.lbs")
   [[ "${selection}" == "10" ]] || debug::error "custom resource weight should be 10, not ${selection}"
 

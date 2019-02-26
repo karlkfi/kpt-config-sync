@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/id"
 )
 
@@ -35,7 +35,7 @@ func (e IllegalLabelDefinitionError) Error() string {
 		"Resources MUST NOT declare labels starting with %[3]q. "+
 			"Below Resource declares these offending labels: %[1]s\n\n"+
 			"%[2]s",
-		l, id.PrintResource(e), policyhierarchy.GroupName)
+		l, id.PrintResource(e), v1.NomosPrefix)
 }
 
 // Code implements Error

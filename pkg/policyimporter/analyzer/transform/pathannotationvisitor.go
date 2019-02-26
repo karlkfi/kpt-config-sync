@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PathAnnotationVisitor sets "nomos.dev/source-path" annotation on CRDs and native objects.
+// PathAnnotationVisitor sets "config.gke.io/source-path" annotation on CRDs and native objects.
 type PathAnnotationVisitor struct {
 	// Copying is used for copying parts of the ast.Root tree and continuing underlying visitor iteration.
 	*visitor.Copying

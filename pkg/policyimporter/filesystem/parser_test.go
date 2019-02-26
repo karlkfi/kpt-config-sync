@@ -153,7 +153,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creators{{.ID}}
   annotations:
-    nomos.dev/namespace-selector: {{.LBPName}}
+    config.gke.io/namespace-selector: {{.LBPName}}
 subjects:
 - kind: Group
   name: bob@acme.com
@@ -561,7 +561,7 @@ func createPNWithMeta(
 	if annotations == nil {
 		annotations = map[string]string{}
 	}
-	annotations["nomos.dev/source-path"] = path
+	annotations["config.gke.io/source-path"] = path
 	pn := createPolicyNode(filepath.Base(path), policies)
 	pn.Labels = labels
 	pn.Annotations = annotations
@@ -601,7 +601,7 @@ func createResourceQuota(path, name string, labels map[string]string) *corev1.Re
 		},
 	}
 	if path != "" {
-		rq.ObjectMeta.Annotations = map[string]string{"nomos.dev/source-path": path}
+		rq.ObjectMeta.Annotations = map[string]string{"config.gke.io/source-path": path}
 	}
 	return rq
 }
@@ -1510,7 +1510,7 @@ spec:
 			"namespaces/rb.yaml": templateData{
 				Name: "cluster-1",
 				Annotations: map[string]string{
-					"nomos.dev/stuff": "prod",
+					"config.gke.io/stuff": "prod",
 				},
 			}.apply(aRoleBinding),
 		},
@@ -1527,7 +1527,7 @@ spec:
 			"namespaces/rb.yaml": templateData{
 				Name: "cluster-1",
 				Labels: map[string]string{
-					"nomos.dev/stuff": "prod",
+					"config.gke.io/stuff": "prod",
 				},
 			}.apply(aRoleBinding),
 		},
@@ -1884,13 +1884,13 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"namespaces/bar/bar.yaml": templateData{
 					Name: "bar",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
 					Name: "role",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aRoleBinding),
 
@@ -1898,7 +1898,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"cluster/crb1.yaml": templateData{
 					ID: "1",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aClusterRoleBinding),
 			},
@@ -2024,7 +2024,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					Namespace: "key",
 					Attribute: "value",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aConfigMap),
 				"namespaces/foo/configmap2.yaml": templateData{
@@ -2032,7 +2032,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					Namespace: "key",
 					Attribute: "value",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-2",
+						"config.gke.io/cluster-selector": "sel-2",
 					},
 				}.apply(aConfigMap),
 			},
@@ -2105,13 +2105,13 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"namespaces/bar/bar.yaml": templateData{
 					Name: "bar",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
 					Name: "role",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aRoleBinding),
 
@@ -2119,7 +2119,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"cluster/crb1.yaml": templateData{
 					ID: "1",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aClusterRoleBinding),
 			},
@@ -2157,14 +2157,14 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"namespaces/bar/bar.yaml": templateData{
 					Name: "bar",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aNamespace),
 				// This role binding is targeted to a different selector.
 				"namespaces/bar/rolebinding.yaml": templateData{
 					Name: "role",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-2",
+						"config.gke.io/cluster-selector": "sel-2",
 					},
 				}.apply(aRoleBinding),
 
@@ -2172,7 +2172,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"cluster/crb1.yaml": templateData{
 					ID: "1",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aClusterRoleBinding),
 			},
@@ -2247,13 +2247,13 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"namespaces/bar/bar.yaml": templateData{
 					Name: "bar",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-2",
+						"config.gke.io/cluster-selector": "sel-2",
 					},
 				}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
 					Name: "role",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aRoleBinding),
 
@@ -2261,7 +2261,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"cluster/crb1.yaml": templateData{
 					ID: "1",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aClusterRoleBinding),
 			},
@@ -2325,13 +2325,13 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"namespaces/bar/bar.yaml": templateData{
 					Name: "bar",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
 					Name: "role",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-1",
+						"config.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aRoleBinding),
 
@@ -2339,7 +2339,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"cluster/crb1.yaml": templateData{
 					ID: "1",
 					Annotations: map[string]string{
-						"nomos.dev/cluster-selector": "sel-2",
+						"config.gke.io/cluster-selector": "sel-2",
 					},
 				}.apply(aClusterRoleBinding),
 			},
@@ -2672,7 +2672,7 @@ spec:
 metadata:
   name: repo
   labels:
-    nomos.dev/illegal-label: "true"`,
+    config.gke.io/illegal-label: "true"`,
 			},
 			expectedErrorCodes: []string{vet.IllegalLabelDefinitionErrorCode},
 		},
@@ -2689,7 +2689,7 @@ spec:
 metadata:
   name: repo
   annotations:
-    nomos.dev/unsupported: "true"`,
+    config.gke.io/unsupported: "true"`,
 			},
 			expectedErrorCodes: []string{vet.IllegalAnnotationDefinitionErrorCode},
 		},

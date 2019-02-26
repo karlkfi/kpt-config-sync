@@ -2,13 +2,12 @@ package v1
 
 import (
 	"strings"
-
-	"github.com/google/nomos/pkg/api/policyhierarchy"
 )
 
 const (
 	// NomosPrefix is the prefix for all Nomos annotations.
-	NomosPrefix = policyhierarchy.GroupName + "/"
+	// TODO(125862145): use policyhierarchy.GroupName below after resource groups are updated to config.gke.io
+	NomosPrefix = "config.gke.io" + "/"
 
 	// ClusterNameAnnotationKey is the annotation key set on Nomos-managed resources that refers to
 	// the name of the cluster that the selectors are applied for.

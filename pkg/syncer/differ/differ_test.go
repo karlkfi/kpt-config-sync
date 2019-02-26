@@ -241,17 +241,17 @@ func TestActualResourceIsManaged(t *testing.T) {
 		},
 		{
 			name:        "invalid value",
-			annotations: map[string]string{"nomos.dev/managed": "invalid"},
+			annotations: map[string]string{"config.gke.io/managed": "invalid"},
 			want:        Invalid,
 		},
 		{
 			name:        "disabled value",
-			annotations: map[string]string{"nomos.dev/managed": "disabled"},
+			annotations: map[string]string{"config.gke.io/managed": "disabled"},
 			want:        Unmanaged,
 		},
 		{
 			name:        "enabled value",
-			annotations: map[string]string{"nomos.dev/managed": "enabled"},
+			annotations: map[string]string{"config.gke.io/managed": "enabled"},
 			want:        Managed,
 		},
 	}

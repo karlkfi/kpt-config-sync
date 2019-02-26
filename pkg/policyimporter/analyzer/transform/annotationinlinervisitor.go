@@ -34,14 +34,14 @@ import (
 // matches the annotation value.
 //
 // Replaces the following annotations:
-// - nomos.dev/namespace-selector: sre-supported
-// - nomos.dev/cluster-selector: production
+// - config.gke.io/namespace-selector: sre-supported
+// - config.gke.io/cluster-selector: production
 //
-// nomos.dev/namespace-selector: sre-supported
+// config.gke.io/namespace-selector: sre-supported
 //
 // Would be inlined to:
 //
-// nomos.dev/namespace-selector: {\"kind\": \"NamespaceSelector\",..}
+// config.gke.io/namespace-selector: {\"kind\": \"NamespaceSelector\",..}
 // where the replacement is the NamespaceSelector named "sre-supported", in
 // JSON format.
 type AnnotationInlinerVisitor struct {

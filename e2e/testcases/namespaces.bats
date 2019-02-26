@@ -31,11 +31,11 @@ function teardown() {
 
 @test "Namespace has enabled annotation and declared" {
   local ns=decl-namespace-annotation-enabled
-  namespace::create $ns -a "nomos.dev/managed=enabled"
+  namespace::create $ns -a "config.gke.io/managed=enabled"
   namespace::declare $ns
   git::commit
 
-  wait::for -t 10 -- namespace::check_exists $ns -l "nomos.dev/quota=true" -a "nomos.dev/managed=enabled"
+  wait::for -t 10 -- namespace::check_exists $ns -l "config.gke.io/quota=true" -a "config.gke.io/managed=enabled"
   namespace::check_no_warning $ns
 }
 
@@ -54,13 +54,13 @@ function teardown() {
   namespace::declare $ns
   git::commit
 
-  namespace::check_exists $ns -l "nomos.dev/quota=true" -a "nomos.dev/managed=enabled"
+  namespace::check_exists $ns -l "config.gke.io/quota=true" -a "config.gke.io/managed=enabled"
   namespace::check_no_warning $ns
 }
 
 @test "Namespace has enabled annotation with no declarations" {
   local ns=undeclared-annotation-enabled
-  namespace::create $ns -a "nomos.dev/managed=enabled"
+  namespace::create $ns -a "config.gke.io/managed=enabled"
   namespace::check_not_found $ns
 }
 
