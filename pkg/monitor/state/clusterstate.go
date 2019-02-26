@@ -70,14 +70,6 @@ func (c *ClusterState) ProcessPolicyNode(pn *v1.PolicyNode) error {
 
 	c.updateTimes(pn.Spec.ImportTime, pn.Status.SyncTime)
 
-	if !pn.Spec.Type.IsNamespace() {
-		return nil
-	}
-	c.recordLatency(pn.Name, pn.Status.SyncState, pn.Spec.ImportTime, pn.Status.SyncTime)
-
-	if err := c.updateState(pn.Name, pn.Status.SyncState); err != nil {
-		return errors.Wrap(err, "while processing policy node state")
-	}
 	return nil
 }
 

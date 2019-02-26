@@ -100,8 +100,9 @@ func (r *PolicyNodeReconciler) Reconcile(request reconcile.Request) (reconcile.R
 type policyNodeState string
 
 const (
-	policyNodeStateNotFound    = policyNodeState("notFound")    // the policy node does not exist
-	policyNodeStateNamespace   = policyNodeState("namespace")   // the policy node is declared as a namespace
+	policyNodeStateNotFound  = policyNodeState("notFound")  // the policy node does not exist
+	policyNodeStateNamespace = policyNodeState("namespace") // the policy node is declared as a namespace
+	// TODO(cslink) remove this and do further cleanup
 	policyNodeStatePolicyspace = policyNodeState("policyspace") // the policy node is declared as a policyspace
 )
 
@@ -118,14 +119,7 @@ func (r *PolicyNodeReconciler) getPolicyNodeState(ctx context.Context, name stri
 	}
 	node.SetGroupVersionKind(kinds.PolicyNode())
 
-	switch node.Spec.Type {
-	case v1.Policyspace:
-		return policyNodeStatePolicyspace, node, nil
-	case v1.Namespace:
-		return policyNodeStateNamespace, node, nil
-	default:
-		return policyNodeStateNotFound, nil, errors.Errorf("invalid node type %q", node.Spec.Type)
-	}
+	return policyNodeStateNamespace, node, nil
 }
 
 // namespaceState enumerates possible states for the namespace

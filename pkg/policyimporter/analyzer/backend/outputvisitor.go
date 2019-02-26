@@ -139,9 +139,6 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 			ImportTime:  v.loadTime,
 		},
 	}
-	if n.Type == node.Namespace {
-		pn.Spec.Type = v1.Namespace
-	}
 	v.policyNode = append(v.policyNode, pn)
 	v.Base.VisitTreeNode(n)
 	v.policyNode = v.policyNode[:origLen]

@@ -53,14 +53,14 @@ func TestDiffer(t *testing.T) {
 			testName: "One node Create",
 			oldNodes: []v1.PolicyNode{},
 			newNodes: []v1.PolicyNode{
-				policyNode("r", v1.Policyspace),
+				policyNode("r"),
 			},
 			expected: []string{"nomos.dev/v1/PolicyNodes/r/create"},
 		},
 		{
 			testName: "One node delete",
 			oldNodes: []v1.PolicyNode{
-				policyNode("r", v1.Policyspace),
+				policyNode("r"),
 			},
 			newNodes: []v1.PolicyNode{},
 			expected: []string{"nomos.dev/v1/PolicyNodes/r/delete"},
@@ -68,10 +68,10 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Rename root node",
 			oldNodes: []v1.PolicyNode{
-				policyNode("r", v1.Policyspace),
+				policyNode("r"),
 			},
 			newNodes: []v1.PolicyNode{
-				policyNode("r2", v1.Policyspace),
+				policyNode("r2"),
 			},
 			expected: []string{
 				"nomos.dev/v1/PolicyNodes/r2/create",
@@ -81,12 +81,12 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Create 2 nodes",
 			oldNodes: []v1.PolicyNode{
-				policyNode("r", v1.Policyspace),
+				policyNode("r"),
 			},
 			newNodes: []v1.PolicyNode{
-				policyNode("r", v1.Policyspace),
-				policyNode("c1", v1.Policyspace),
-				policyNode("c2", v1.Namespace),
+				policyNode("r"),
+				policyNode("c1"),
+				policyNode("c2"),
 			},
 			expected: []string{
 				"nomos.dev/v1/PolicyNodes/c1/create",
@@ -96,14 +96,14 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Create 2 nodes and delete 2",
 			oldNodes: []v1.PolicyNode{
-				policyNode("r", v1.Policyspace),
-				policyNode("co1", v1.Policyspace),
-				policyNode("co2", v1.Namespace),
+				policyNode("r"),
+				policyNode("co1"),
+				policyNode("co2"),
 			},
 			newNodes: []v1.PolicyNode{
-				policyNode("r", v1.Policyspace),
-				policyNode("c2", v1.Namespace),
-				policyNode("c1", v1.Policyspace),
+				policyNode("r"),
+				policyNode("c2"),
+				policyNode("c1"),
 			},
 			expected: []string{
 				"nomos.dev/v1/PolicyNodes/c1/create",
@@ -143,12 +143,12 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Create 2 nodes and a ClusterPolicy",
 			oldNodes: []v1.PolicyNode{
-				policyNode("r", v1.Policyspace),
+				policyNode("r"),
 			},
 			newNodes: []v1.PolicyNode{
-				policyNode("r", v1.Policyspace),
-				policyNode("c2", v1.Namespace),
-				policyNode("c1", v1.Policyspace),
+				policyNode("r"),
+				policyNode("c2"),
+				policyNode("c1"),
 			},
 			newClusterPolicy: clusterPolicy("foo", true),
 			expected: []string{
@@ -235,23 +235,8 @@ func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.PolicyN
 	}
 	op := a.Operation()
 	switch op {
-	case action.CreateOperation:
-		r := a.(*action.ReflectiveCreateAction).Item()
-		pn := r.(*v1.PolicyNode)
-		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Type)
-	case action.UpdateOperation:
-		upAct := a.(*action.ReflectiveUpdateAction)
-		old := nodes[upAct.Resource()]
-		r, err := upAct.UpdatedResource(&old)
-		if err != nil {
-			t.Fatalf("Failed to update resource: %v", err)
-		}
-		pn := r.(*v1.PolicyNode)
-		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Type)
-	case action.UpsertOperation:
-		r := a.(*action.ReflectiveUpsertAction).UpsertedResouce()
-		pn := r.(*v1.PolicyNode)
-		nodes[a.Name()] = policyNode(a.Name(), pn.Spec.Type)
+	case action.CreateOperation, action.UpdateOperation, action.UpsertOperation:
+		nodes[a.Name()] = policyNode(a.Name())
 	case action.DeleteOperation:
 		delete(nodes, a.Name())
 	default:
@@ -259,14 +244,12 @@ func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.PolicyN
 	}
 }
 
-func policyNode(name string, t v1.PolicyNodeType) v1.PolicyNode {
+func policyNode(name string) v1.PolicyNode {
 	return v1.PolicyNode{
 		ObjectMeta: meta.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1.PolicyNodeSpec{
-			Type: t,
-		},
+		Spec: v1.PolicyNodeSpec{},
 	}
 }
 
