@@ -30,17 +30,7 @@ spec:
           spec:
             # PolicyNodeSpec
             type: object
-            required:
-            - type
             properties:
-              type:
-                type: string
-                enum:
-                - "namespace"
-                - "policyspace"
-                - "reservedNamespace"
-              parent:
-                type: string
               importToken:
                 type: string
               importTime: # metav1.Time
