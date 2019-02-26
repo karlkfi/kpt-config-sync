@@ -6,7 +6,7 @@ metadata:
   namespace: config-management-system
 spec:
   channel: stable
-  enableHierarchicalResourceQuota: true
+  enableAggregateNamespaceQuotas: true
   clusterName: e2e-test-cluster
   git:
     syncRepo: git@test-git-server.config-management-system-test:/git-server/repos/sot.git
