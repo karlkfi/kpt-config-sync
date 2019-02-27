@@ -16,7 +16,7 @@ func NewHierarchyConfigKindValidator() ast.Visitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) error {
 		switch h := o.Object.(type) {
 		case *v1.HierarchyConfig:
-			for _, gkc := range NewFileHierarchyConfig(h, o.Relative).flatten() {
+			for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
 				if err := ValidateKinds(gkc); err != nil {
 					return err
 				}

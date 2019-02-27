@@ -29,7 +29,7 @@ func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) error {
 func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) error {
 	switch h := o.Object.(type) {
 	case *v1.HierarchyConfig:
-		for _, gkc := range NewFileHierarchyConfig(h, o.Relative).flatten() {
+		for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
 			gk := gkc.GroupKind()
 			if !k.apiInfo.GroupKindExists(gk) {
 				return vet.UnknownResourceInHierarchyConfigError{HierarchyConfig: gkc}

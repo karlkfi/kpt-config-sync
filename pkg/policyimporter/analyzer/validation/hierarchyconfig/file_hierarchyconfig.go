@@ -1,8 +1,7 @@
 package hierarchyconfig
 
 import (
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -10,14 +9,14 @@ import (
 // FileHierarchyConfig extends v1alpha1.HierarchyConfig to include the path to the file in the repo.
 type FileHierarchyConfig struct {
 	*v1.HierarchyConfig
-	// Source is the OS-agnostic slash-separated path to the source file from the root.
-	nomospath.Relative
+	// Resource is the source file defining the HierarchyConfig.
+	id.Resource
 }
 
 // NewFileHierarchyConfig creates a new FileHierarchyConfig from a HierarchyConfig Resource and the source file declaring
 // the HierarchyConfig.
-func NewFileHierarchyConfig(config *v1.HierarchyConfig, source nomospath.Relative) FileHierarchyConfig {
-	return FileHierarchyConfig{HierarchyConfig: config, Relative: source}
+func NewFileHierarchyConfig(config *v1.HierarchyConfig, resource id.Resource) FileHierarchyConfig {
+	return FileHierarchyConfig{HierarchyConfig: config, Resource: resource}
 }
 
 // flatten returns a list of all GroupKinds defined in the HierarchyConfig and their hierarchy modes.
@@ -28,14 +27,14 @@ func (c FileHierarchyConfig) flatten() []FileGroupKindHierarchyConfig {
 			result = append(result, FileGroupKindHierarchyConfig{
 				groupKind:     schema.GroupKind{Group: resource.Group},
 				HierarchyMode: resource.HierarchyMode,
-				Relative:      c.Relative,
+				Resource:      c.Resource,
 			})
 		} else {
 			for _, kind := range resource.Kinds {
 				result = append(result, FileGroupKindHierarchyConfig{
 					groupKind:     schema.GroupKind{Group: resource.Group, Kind: kind},
 					HierarchyMode: resource.HierarchyMode,
-					Relative:      c.Relative,
+					Resource:      c.Resource,
 				})
 			}
 		}
@@ -49,8 +48,8 @@ type FileGroupKindHierarchyConfig struct {
 	groupKind schema.GroupKind
 	// HierarchyMode is the hierarchy mode which the HierarchyConfig defined for the Kind.
 	HierarchyMode v1.HierarchyModeType
-	// Source is the OS-agnostic slash-separated path to the source file from the root.
-	nomospath.Relative
+	// Resource is the source file defining the HierarchyConfig.
+	id.Resource
 }
 
 var _ id.HierarchyConfig = FileGroupKindHierarchyConfig{}
