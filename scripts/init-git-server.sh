@@ -49,6 +49,7 @@ done
 if [ $NEXT_WAIT_TIME -eq 10 ]
 then
   echo "timeout waiting for test-git-server to come up expired"
+  kubectl get events -n "${GIT_SERVER_NS}"
   exit 1
 fi
 
