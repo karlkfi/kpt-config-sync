@@ -1,6 +1,8 @@
 package cloner
 
 import (
+	"fmt"
+
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,11 +33,11 @@ func NewResourceLister(resourcer Resourcer) ResourceLister {
 }
 
 // List returns all resources on the cluster of a given APIResource. If the APIResource is not
-// listable, silently returns the empty list. Returns an error if any were encountered listing the
-// APIResource.
-func (l ResourceLister) List(apiResource metav1.APIResource) ([]ast.FileObject, error) {
+// listable, silently returns the empty list. Returns an error and the empty list if any were
+// encountered listing the APIResource.
+func (l ResourceLister) List(apiResource metav1.APIResource, errs ErrorAdder) []ast.FileObject {
 	if !listable(apiResource) {
-		return nil, nil
+		return nil
 	}
 
 	gvr := schema.GroupVersionResource{
@@ -45,9 +47,13 @@ func (l ResourceLister) List(apiResource metav1.APIResource) ([]ast.FileObject, 
 	}
 
 	resources, err := l.resourcer.Resource(gvr).List(metav1.ListOptions{})
-	// TODO(b/126702932): Check for resources.GetContinue value since there could be >500 resources.
+	errs.Add(errors.Wrapf(err, "unable to read %q resources from cluster", gvr.String()))
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to read %q resources from cluster", gvr.String())
+		return nil
+	}
+	// TODO(b/126702932): Check for resources.GetContinue value since there could be >500 resources.
+	if resources.GetContinue() != "" {
+		errs.Add(fmt.Errorf("more than 500 %q resources; only exporting first 500", gvr.String()))
 	}
 
 	var result []ast.FileObject
@@ -55,7 +61,7 @@ func (l ResourceLister) List(apiResource metav1.APIResource) ([]ast.FileObject, 
 		o := ast.FileObject{Object: r.DeepCopyObject()}
 		result = append(result, o)
 	}
-	return result, nil
+	return result
 }
 
 // listable returns true if it is valid to use the "list" verb on the APIResource.
