@@ -25,4 +25,4 @@ $ kubectl port-forward -n monitoring $(kubectl get pods -n monitoring -l app=pro
 Now you can use the
 [HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/) to send
 queries. For example try
-http://localhost:9090/api/v1/query?query=nomos_policy_importer_policy_nodes.
+http://localhost:9090/api/v1/query?query=gkeconfig_policy_importer_policy_nodes.

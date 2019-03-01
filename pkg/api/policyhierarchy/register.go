@@ -21,7 +21,7 @@ const (
 	CLIName = "nomos"
 
 	// MetricsNamespace is the namespace that metrics are held in.
-	MetricsNamespace = "nomos"
+	MetricsNamespace = "gkeconfig"
 
 	// OperatorKind is the Kind of the Operator object.
 	OperatorKind = "Nomos"
