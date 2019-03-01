@@ -381,8 +381,8 @@ func NewSync(group, kind string) *Sync {
 // SyncSpec specifies the sync declaration which corresponds to an API Group and contained
 // kinds and versions.
 type SyncSpec struct {
-	// Group is the group, for example nomos.dev or rbac.authorization.k8s.io
-	Group string `json:"group"` // group, eg nomos.dev
+	// Group is the group, for example configmanagement.gke.io or rbac.authorization.k8s.io
+	Group string `json:"group"` // group, eg configmanagement.gke.io
 	// Kind is the string that represents the Kind for the object as given in TypeMeta, for example
 	// ClusterRole, Namespace or Deployment.
 	Kind string `json:"kind"`

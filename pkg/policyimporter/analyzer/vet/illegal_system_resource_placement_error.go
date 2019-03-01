@@ -1,7 +1,7 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -13,7 +13,7 @@ func init() {
 	register(IllegalSystemResourcePlacementErrorCode, nil, "")
 }
 
-// IllegalSystemResourcePlacementError reports that a nomos.dev object has been defined outside of system/
+// IllegalSystemResourcePlacementError reports that a configmanagement.gke.io object has been defined outside of system/
 type IllegalSystemResourcePlacementError struct {
 	id.Resource
 }

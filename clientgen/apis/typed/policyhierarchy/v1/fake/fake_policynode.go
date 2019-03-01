@@ -30,12 +30,12 @@ import (
 
 // FakePolicyNodes implements PolicyNodeInterface
 type FakePolicyNodes struct {
-	Fake *FakeNomosV1
+	Fake *FakeConfigmanagementV1
 }
 
-var policynodesResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "policynodes"}
+var policynodesResource = schema.GroupVersionResource{Group: "configmanagement.gke.io", Version: "v1", Resource: "policynodes"}
 
-var policynodesKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "PolicyNode"}
+var policynodesKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "PolicyNode"}
 
 // Get takes name of the policyNode, and returns the corresponding policyNode object, and an error if there is any.
 func (c *FakePolicyNodes) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.PolicyNode, err error) {

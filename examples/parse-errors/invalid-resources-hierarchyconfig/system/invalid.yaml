@@ -1,10 +1,10 @@
 kind: HierarchyConfig
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 metadata:
   name: invalid
 spec:
   resources:
-  - group: "nomos.dev"
+  - group: "configmanagement.gke.io"
     kinds: [ "PolicyNode", "Sync" ]
   - group: "unknown.group.com"
     kinds: [ "Unknown" ]

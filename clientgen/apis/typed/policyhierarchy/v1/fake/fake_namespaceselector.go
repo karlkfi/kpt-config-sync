@@ -30,12 +30,12 @@ import (
 
 // FakeNamespaceSelectors implements NamespaceSelectorInterface
 type FakeNamespaceSelectors struct {
-	Fake *FakeNomosV1
+	Fake *FakeConfigmanagementV1
 }
 
-var namespaceselectorsResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "namespaceselectors"}
+var namespaceselectorsResource = schema.GroupVersionResource{Group: "configmanagement.gke.io", Version: "v1", Resource: "namespaceselectors"}
 
-var namespaceselectorsKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "NamespaceSelector"}
+var namespaceselectorsKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "NamespaceSelector"}
 
 // Get takes name of the namespaceSelector, and returns the corresponding namespaceSelector object, and an error if there is any.
 func (c *FakeNamespaceSelectors) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.NamespaceSelector, err error) {

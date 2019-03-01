@@ -21,7 +21,7 @@ func NewHierarchicalQuotaInformer(content ...runtime.Object) informersv1.Hierarc
 	fakeClientSet := pnfake.NewSimpleClientset(content...)
 	factory := informer.NewSharedInformerFactory(
 		fakeClientSet, 1*time.Minute)
-	informer := factory.Nomos().V1().HierarchicalQuotas()
+	informer := factory.Configmanagement().V1().HierarchicalQuotas()
 	informer.Informer()
 	factory.Start(nil)
 	glog.Infof("cache sync...")

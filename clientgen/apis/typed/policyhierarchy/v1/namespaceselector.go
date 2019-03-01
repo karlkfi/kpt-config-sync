@@ -52,7 +52,7 @@ type namespaceSelectors struct {
 }
 
 // newNamespaceSelectors returns a NamespaceSelectors
-func newNamespaceSelectors(c *NomosV1Client) *namespaceSelectors {
+func newNamespaceSelectors(c *ConfigmanagementV1Client) *namespaceSelectors {
 	return &namespaceSelectors{
 		client: c.RESTClient(),
 	}

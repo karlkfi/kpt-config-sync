@@ -52,7 +52,7 @@ type clusterSelectors struct {
 }
 
 // newClusterSelectors returns a ClusterSelectors
-func newClusterSelectors(c *NomosV1Client) *clusterSelectors {
+func newClusterSelectors(c *ConfigmanagementV1Client) *clusterSelectors {
 	return &clusterSelectors{
 		client: c.RESTClient(),
 	}

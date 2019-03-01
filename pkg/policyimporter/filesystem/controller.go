@@ -61,11 +61,11 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		client.PolicyHierarchy(), resync)
 	differ := actions.NewDiffer(
 		actions.NewFactories(
-			client.PolicyHierarchy().NomosV1(),
-			client.PolicyHierarchy().NomosV1(),
-			informerFactory.Nomos().V1().PolicyNodes().Lister(),
-			informerFactory.Nomos().V1().ClusterPolicies().Lister(),
-			informerFactory.Nomos().V1().Syncs().Lister()))
+			client.PolicyHierarchy().ConfigmanagementV1(),
+			client.PolicyHierarchy().ConfigmanagementV1(),
+			informerFactory.Configmanagement().V1().PolicyNodes().Lister(),
+			informerFactory.Configmanagement().V1().ClusterPolicies().Lister(),
+			informerFactory.Configmanagement().V1().Syncs().Lister()))
 
 	return &Controller{
 		policyDir:           policyDir,
@@ -74,9 +74,9 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		differ:              differ,
 		discoveryClient:     client.Kubernetes().Discovery(),
 		informerFactory:     informerFactory,
-		policyNodeLister:    informerFactory.Nomos().V1().PolicyNodes().Lister(),
-		clusterPolicyLister: informerFactory.Nomos().V1().ClusterPolicies().Lister(),
-		syncLister:          informerFactory.Nomos().V1().Syncs().Lister(),
+		policyNodeLister:    informerFactory.Configmanagement().V1().PolicyNodes().Lister(),
+		clusterPolicyLister: informerFactory.Configmanagement().V1().ClusterPolicies().Lister(),
+		syncLister:          informerFactory.Configmanagement().V1().Syncs().Lister(),
 		stopChan:            stopChan,
 		client:              client,
 	}

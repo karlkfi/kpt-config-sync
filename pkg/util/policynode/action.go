@@ -12,7 +12,7 @@ import (
 )
 
 // NewActionSpec returns a ReflectiveActionSpec appropriate for PolicyNode objects.
-func NewActionSpec(client typedv1.NomosV1Interface, lister listersv1.PolicyNodeLister) *action.ReflectiveActionSpec {
+func NewActionSpec(client typedv1.ConfigmanagementV1Interface, lister listersv1.PolicyNodeLister) *action.ReflectiveActionSpec {
 	return action.NewSpec(
 		new(v1.PolicyNode),
 		v1.SchemeGroupVersion,

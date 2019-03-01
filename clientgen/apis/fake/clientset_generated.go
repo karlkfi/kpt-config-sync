@@ -20,10 +20,8 @@ package fake
 
 import (
 	clientset "github.com/google/nomos/clientgen/apis"
-	nomosv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
-	fakenomosv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1/fake"
-	nomosv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1"
-	fakenomosv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1/fake"
+	configmanagementv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
+	fakeconfigmanagementv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -73,17 +71,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// NomosV1alpha1 retrieves the NomosV1alpha1Client
-func (c *Clientset) NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface {
-	return &fakenomosv1alpha1.FakeNomosV1alpha1{Fake: &c.Fake}
+// ConfigmanagementV1 retrieves the ConfigmanagementV1Client
+func (c *Clientset) ConfigmanagementV1() configmanagementv1.ConfigmanagementV1Interface {
+	return &fakeconfigmanagementv1.FakeConfigmanagementV1{Fake: &c.Fake}
 }
 
-// NomosV1 retrieves the NomosV1Client
-func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
-	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
-}
-
-// Nomos retrieves the NomosV1Client
-func (c *Clientset) Nomos() nomosv1.NomosV1Interface {
-	return &fakenomosv1.FakeNomosV1{Fake: &c.Fake}
+// Configmanagement retrieves the ConfigmanagementV1Client
+func (c *Clientset) Configmanagement() configmanagementv1.ConfigmanagementV1Interface {
+	return &fakeconfigmanagementv1.FakeConfigmanagementV1{Fake: &c.Fake}
 }

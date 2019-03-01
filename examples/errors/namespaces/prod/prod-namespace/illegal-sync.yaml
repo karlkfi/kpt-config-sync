@@ -1,4 +1,4 @@
 kind: Sync # should be in system/
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 metadata:
   name: illegal-sync

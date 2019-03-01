@@ -55,7 +55,7 @@ func TestDiffer(t *testing.T) {
 			newNodes: []v1.PolicyNode{
 				policyNode("r"),
 			},
-			expected: []string{"nomos.dev/v1/PolicyNodes/r/create"},
+			expected: []string{"configmanagement.gke.io/v1/PolicyNodes/r/create"},
 		},
 		{
 			testName: "One node delete",
@@ -63,7 +63,7 @@ func TestDiffer(t *testing.T) {
 				policyNode("r"),
 			},
 			newNodes: []v1.PolicyNode{},
-			expected: []string{"nomos.dev/v1/PolicyNodes/r/delete"},
+			expected: []string{"configmanagement.gke.io/v1/PolicyNodes/r/delete"},
 		},
 		{
 			testName: "Rename root node",
@@ -74,8 +74,8 @@ func TestDiffer(t *testing.T) {
 				policyNode("r2"),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/r2/create",
-				"nomos.dev/v1/PolicyNodes/r/delete",
+				"configmanagement.gke.io/v1/PolicyNodes/r2/create",
+				"configmanagement.gke.io/v1/PolicyNodes/r/delete",
 			},
 		},
 		{
@@ -89,8 +89,8 @@ func TestDiffer(t *testing.T) {
 				policyNode("c2"),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c1/create",
-				"nomos.dev/v1/PolicyNodes/c2/create",
+				"configmanagement.gke.io/v1/PolicyNodes/c1/create",
+				"configmanagement.gke.io/v1/PolicyNodes/c2/create",
 			},
 		},
 		{
@@ -106,17 +106,17 @@ func TestDiffer(t *testing.T) {
 				policyNode("c1"),
 			},
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c1/create",
-				"nomos.dev/v1/PolicyNodes/c2/create",
-				"nomos.dev/v1/PolicyNodes/co2/delete",
-				"nomos.dev/v1/PolicyNodes/co1/delete",
+				"configmanagement.gke.io/v1/PolicyNodes/c1/create",
+				"configmanagement.gke.io/v1/PolicyNodes/c2/create",
+				"configmanagement.gke.io/v1/PolicyNodes/co2/delete",
+				"configmanagement.gke.io/v1/PolicyNodes/co1/delete",
 			},
 		},
 		{
 			testName:         "ClusterPolicy create",
 			newClusterPolicy: clusterPolicy("foo", true),
 			expected: []string{
-				"nomos.dev/v1/ClusterPolicies/foo/create",
+				"configmanagement.gke.io/v1/ClusterPolicies/foo/create",
 			},
 		},
 		{
@@ -124,7 +124,7 @@ func TestDiffer(t *testing.T) {
 			oldClusterPolicy: clusterPolicy("foo", true),
 			newClusterPolicy: clusterPolicy("foo", false),
 			expected: []string{
-				"nomos.dev/v1/ClusterPolicies/foo/update",
+				"configmanagement.gke.io/v1/ClusterPolicies/foo/update",
 			},
 		},
 		{
@@ -137,7 +137,7 @@ func TestDiffer(t *testing.T) {
 			testName:         "ClusterPolicy delete",
 			oldClusterPolicy: clusterPolicy("foo", true),
 			expected: []string{
-				"nomos.dev/v1/ClusterPolicies/foo/delete",
+				"configmanagement.gke.io/v1/ClusterPolicies/foo/delete",
 			},
 		},
 		{
@@ -152,9 +152,9 @@ func TestDiffer(t *testing.T) {
 			},
 			newClusterPolicy: clusterPolicy("foo", true),
 			expected: []string{
-				"nomos.dev/v1/PolicyNodes/c1/create",
-				"nomos.dev/v1/PolicyNodes/c2/create",
-				"nomos.dev/v1/ClusterPolicies/foo/create",
+				"configmanagement.gke.io/v1/PolicyNodes/c1/create",
+				"configmanagement.gke.io/v1/PolicyNodes/c2/create",
+				"configmanagement.gke.io/v1/ClusterPolicies/foo/create",
 			},
 		},
 		{
@@ -170,7 +170,7 @@ func TestDiffer(t *testing.T) {
 				*v1.NewSync("", "ResourceQuota"),
 			},
 			expected: []string{
-				"nomos.dev/v1/Syncs/resourcequota/create",
+				"configmanagement.gke.io/v1/Syncs/resourcequota/create",
 			},
 		},
 		{
@@ -190,7 +190,7 @@ func TestDiffer(t *testing.T) {
 			},
 			newSyncs: []v1.Sync{},
 			expected: []string{
-				"nomos.dev/v1/Syncs/resourcequota/delete",
+				"configmanagement.gke.io/v1/Syncs/resourcequota/delete",
 			},
 		},
 	} {

@@ -600,7 +600,7 @@ func PolicyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
 }
 
 func ClusterPolicyNodeGetter(client *fake.Client, _, name string) (runtime.Object, error) {
-	return client.PolicyHierarchy().NomosV1().PolicyNodes().Get(name, metav1.GetOptions{})
+	return client.PolicyHierarchy().ConfigmanagementV1().PolicyNodes().Get(name, metav1.GetOptions{})
 }
 
 var clusterPolicyNodeBaseTestObject = &v1.PolicyNode{
@@ -631,8 +631,8 @@ func TestReflectiveActionPolicyNode(t *testing.T) {
 	spec := &ReflectiveActionSpec{
 		KindPlural: "PolicyNodes",
 		EqualSpec:  PolicyNodesEqual,
-		Client:     test.client.PolicyHierarchy().NomosV1(),
-		Lister:     factory.Nomos().V1().PolicyNodes().Lister(),
+		Client:     test.client.PolicyHierarchy().ConfigmanagementV1(),
+		Lister:     factory.Configmanagement().V1().PolicyNodes().Lister(),
 	}
 
 	factory.Start(nil)

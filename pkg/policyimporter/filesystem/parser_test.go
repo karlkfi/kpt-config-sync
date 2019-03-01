@@ -31,7 +31,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
@@ -226,7 +226,7 @@ metadata:
 
 	aNamespaceSelectorTemplate = `
 kind: NamespaceSelector
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 metadata:
   name: sre-supported
 {{- if .Namespace}}
@@ -240,7 +240,7 @@ spec:
 
 	aRepo = `
 kind: Repo
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 spec:
   version: "0.1.0"
 metadata:
@@ -249,7 +249,7 @@ metadata:
 
 	aHierarchyConfigTemplate = `
 kind: HierarchyConfig
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 metadata:
 {{- if .Name}}
   name: {{.Name}}
@@ -299,7 +299,7 @@ metadata:
 `
 
 	aClusterSelectorTemplate = `
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 kind: ClusterSelector
 metadata:
   name: {{.Name}}
@@ -310,7 +310,7 @@ spec:
 `
 
 	aClusterSelectorWithEnvTemplate = `
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 kind: ClusterSelector
 metadata:
   name: {{.Name}}
@@ -1241,7 +1241,7 @@ var parserTestCases = []parserTestCase{
 			"system/repo.yaml": aRepo,
 			"system/config.yaml": `
 kind: HierarchyConfig
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 metadata:
   name: config
 spec:
@@ -1559,7 +1559,7 @@ spec:
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml": `
 kind: Repo
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 spec:
   version: "0.0.0"
 metadata:
@@ -1925,7 +1925,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 														Annotations: map[string]string{
 															v1.ClusterNameAnnotationKey:     "cluster-1",
 															v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 														},
 													},
 													Subjects: []rbacv1.Subject{{
@@ -1961,7 +1961,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 									Name: "job-creators",
 									Annotations: map[string]string{
 										v1.ClusterNameAnnotationKey:     "cluster-1",
-										v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+										v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 										v1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
 									},
 								},
@@ -1984,7 +1984,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					/* Annotations */
 					map[string]string{
 						v1.ClusterNameAnnotationKey:     "cluster-1",
-						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
 			expectedSyncs: syncMap(
@@ -2057,7 +2057,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 														Annotations: map[string]string{
 															v1.ClusterNameAnnotationKey:     "cluster-1",
 															v1.SourcePathAnnotationKey:      "namespaces/foo/configmap.yaml",
-															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 														},
 													}),
 												),
@@ -2194,7 +2194,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 													Annotations: map[string]string{
 														v1.ClusterNameAnnotationKey:     "cluster-1",
 														v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 													},
 												}),
 											),
@@ -2213,7 +2213,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					/* Annotations */
 					map[string]string{
 						v1.ClusterNameAnnotationKey:     "cluster-1",
-						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
 			expectedSyncs: syncMap(
@@ -2283,7 +2283,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 													Annotations: map[string]string{
 														v1.ClusterNameAnnotationKey:     "cluster-1",
 														v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 													},
 												}),
 											),
@@ -2355,7 +2355,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 								Name: "job-creators",
 								Annotations: map[string]string{
 									v1.ClusterNameAnnotationKey:     "cluster-1",
-									v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+									v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 									v1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
 								},
 							}),
@@ -2365,7 +2365,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					/* Annotations */
 					map[string]string{
 						v1.ClusterNameAnnotationKey:     "cluster-1",
-						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"nomos.dev/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
+						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
 					}),
 			},
 			expectedSyncs: syncMap(
@@ -2666,7 +2666,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			testFiles: fstesting.FileContentMap{
 				"system/repo.yaml": `
 kind: Repo
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 spec:
   version: "0.1.0"
 metadata:
@@ -2683,7 +2683,7 @@ metadata:
 			testFiles: fstesting.FileContentMap{
 				"system/repo.yaml": `
 kind: Repo
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 spec:
   version: "0.1.0"
 metadata:

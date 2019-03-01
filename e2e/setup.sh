@@ -113,7 +113,7 @@ function set_up_env_minimal() {
 }
 
 function clean_up_test_resources() {
-  kubectl delete --ignore-not-found ns -l "nomos.dev/testdata=true"
+  kubectl delete --ignore-not-found ns -l "configmanagement.gke.io/testdata=true"
   # TODO(125862145): Remove as part of rename cleanup
   resource::delete -r ns -a nomos.dev/managed=enabled
   resource::delete -r ns -a configmanagement.gke.io/managed=enabled

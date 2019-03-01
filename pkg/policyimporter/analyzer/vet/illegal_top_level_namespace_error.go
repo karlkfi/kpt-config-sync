@@ -1,7 +1,7 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"

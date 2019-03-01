@@ -11,6 +11,6 @@ kind: Unknown
 [2] KNV1041: This Resource Kind MUST NOT be declared in a HierarchyConfig:
 
 source: system/invalid.yaml
-group: nomos.dev
+group: configmanagement.gke.io
 kind: PolicyNode
 

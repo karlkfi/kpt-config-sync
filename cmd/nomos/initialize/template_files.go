@@ -3,7 +3,7 @@ package initialize
 const (
 	repoFile     = "repo.yaml"
 	repoContents = `kind: Repo
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 metadata:
   name: repo
 spec:

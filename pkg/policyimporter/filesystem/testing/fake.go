@@ -113,7 +113,7 @@ func (d *FakeCachedDiscoveryClient) ServerResourcesForGroupVersion(groupVersion 
 
 // TestFactory is a cmdutil.Factory that can be used in tests to avoid requiring talking
 // to the API server for Discovery (need for RESTMapping) and downloading OpenAPI spec.
-// Additional resources can be added to TestDynamicTypes (e.g. kinds in nomos.dev group).
+// Additional resources can be added to TestDynamicTypes (e.g. kinds in configmanagement.gke.io group).
 type TestFactory struct {
 	cmdutil.Factory
 

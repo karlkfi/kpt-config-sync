@@ -60,13 +60,13 @@ func NewFilteredHierarchyConfigInformer(client apis.Interface, resyncPeriod time
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().HierarchyConfigs().List(options)
+				return client.ConfigmanagementV1().HierarchyConfigs().List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().HierarchyConfigs().Watch(options)
+				return client.ConfigmanagementV1().HierarchyConfigs().Watch(options)
 			},
 		},
 		&policyhierarchy_v1.HierarchyConfig{},

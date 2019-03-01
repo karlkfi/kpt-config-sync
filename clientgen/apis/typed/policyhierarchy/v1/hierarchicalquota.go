@@ -52,7 +52,7 @@ type hierarchicalQuotas struct {
 }
 
 // newHierarchicalQuotas returns a HierarchicalQuotas
-func newHierarchicalQuotas(c *NomosV1Client) *hierarchicalQuotas {
+func newHierarchicalQuotas(c *ConfigmanagementV1Client) *hierarchicalQuotas {
 	return &hierarchicalQuotas{
 		client: c.RESTClient(),
 	}

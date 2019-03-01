@@ -60,13 +60,13 @@ func NewFilteredClusterPolicyInformer(client apis.Interface, resyncPeriod time.D
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().ClusterPolicies().List(options)
+				return client.ConfigmanagementV1().ClusterPolicies().List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().ClusterPolicies().Watch(options)
+				return client.ConfigmanagementV1().ClusterPolicies().Watch(options)
 			},
 		},
 		&policyhierarchy_v1.ClusterPolicy{},

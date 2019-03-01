@@ -187,7 +187,7 @@ func SetupHierarchicalQuotaInformer(config *rest.Config) (informersv1.Hierarchic
 		hierarchicalQuotaClient.PolicyHierarchy(), time.Minute,
 	)
 
-	hierarchicalQuotaInformer := policyNodeFactory.Nomos().V1().HierarchicalQuotas()
+	hierarchicalQuotaInformer := policyNodeFactory.Configmanagement().V1().HierarchicalQuotas()
 	hierarchicalQuotaInformer.Informer()
 	policyNodeFactory.Start(nil)
 

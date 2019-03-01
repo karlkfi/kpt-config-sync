@@ -5,7 +5,7 @@ Found issues: 1 error(s)
 
 source: system/repo.yaml
 metadata.name: repo
-group: nomos.dev
+group: configmanagement.gke.io
 version: v1
 kind: Repo
 

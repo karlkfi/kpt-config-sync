@@ -27,7 +27,7 @@ const (
 	OperatorKind = "Nomos"
 
 	// GroupName is the name of the group of policyhierarchy resources.
-	GroupName = "nomos.dev"
+	GroupName = "configmanagement.gke.io"
 
 	// ProductName is what we call Nomos externally.
 	ProductName = "GKE Policy Management"

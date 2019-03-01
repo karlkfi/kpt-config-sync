@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/status"
@@ -100,7 +100,7 @@ func (e errorDocCode) Aka() string {
 }
 
 // Nomos returns `nomos`
-func (e errorDocCode) Nomos() string {
+func (e errorDocCode) Configmanagement() string {
 	return e.Q(policyhierarchy.CLIName)
 }
 

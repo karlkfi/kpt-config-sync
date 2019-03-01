@@ -61,7 +61,7 @@ function check_metrics_pages() {
     -l "configmanagement.gke.io/quota=true" \
     -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -r validatingwebhookconfigurations -c 1
-  resource::check validatingwebhookconfigurations resource-quota.nomos.dev
+  resource::check validatingwebhookconfigurations resource-quota.configmanagement.gke.io
   resource::check_count -a "configmanagement.gke.io/managed=enabled" -r clusterrole -c 3
   resource::check clusterrole acme-admin -a "configmanagement.gke.io/managed=enabled"
   resource::check clusterrole namespace-viewer -a "configmanagement.gke.io/managed=enabled"

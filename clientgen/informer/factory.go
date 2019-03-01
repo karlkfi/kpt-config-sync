@@ -172,9 +172,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Nomos() policyhierarchy.Interface
+	Configmanagement() policyhierarchy.Interface
 }
 
-func (f *sharedInformerFactory) Nomos() policyhierarchy.Interface {
+func (f *sharedInformerFactory) Configmanagement() policyhierarchy.Interface {
 	return policyhierarchy.New(f, f.namespace, f.tweakListOptions)
 }

@@ -53,7 +53,7 @@ type clusterPolicies struct {
 }
 
 // newClusterPolicies returns a ClusterPolicies
-func newClusterPolicies(c *NomosV1Client) *clusterPolicies {
+func newClusterPolicies(c *ConfigmanagementV1Client) *clusterPolicies {
 	return &clusterPolicies{
 		client: c.RESTClient(),
 	}

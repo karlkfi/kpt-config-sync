@@ -60,13 +60,13 @@ func NewFilteredPolicyNodeInformer(client apis.Interface, resyncPeriod time.Dura
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().PolicyNodes().List(options)
+				return client.ConfigmanagementV1().PolicyNodes().List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().PolicyNodes().Watch(options)
+				return client.ConfigmanagementV1().PolicyNodes().Watch(options)
 			},
 		},
 		&policyhierarchy_v1.PolicyNode{},

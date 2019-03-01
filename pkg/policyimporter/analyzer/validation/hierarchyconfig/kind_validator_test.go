@@ -34,7 +34,7 @@ func TestKindValidator(t *testing.T) {
 			object.Build(kinds.HierarchyConfig(),
 				HierarchyConfigResource(object.GVK(kinds.RoleBinding(), object.Group("")), v1.HierarchyModeDefault)),
 		),
-		asttest.Fail("nomos.dev group not supported",
+		asttest.Fail("configmanagement.gke.io group not supported",
 			object.Build(kinds.HierarchyConfig(),
 				HierarchyConfigResource(kinds.Sync(), v1.HierarchyModeDefault))),
 	)

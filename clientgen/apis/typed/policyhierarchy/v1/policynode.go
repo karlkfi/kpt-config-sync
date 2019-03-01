@@ -53,7 +53,7 @@ type policyNodes struct {
 }
 
 // newPolicyNodes returns a PolicyNodes
-func newPolicyNodes(c *NomosV1Client) *policyNodes {
+func newPolicyNodes(c *ConfigmanagementV1Client) *policyNodes {
 	return &policyNodes{
 		client: c.RESTClient(),
 	}

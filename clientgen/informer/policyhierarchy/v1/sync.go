@@ -60,13 +60,13 @@ func NewFilteredSyncInformer(client apis.Interface, resyncPeriod time.Duration, 
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().Syncs().List(options)
+				return client.ConfigmanagementV1().Syncs().List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().Syncs().Watch(options)
+				return client.ConfigmanagementV1().Syncs().Watch(options)
 			},
 		},
 		&policyhierarchy_v1.Sync{},

@@ -60,13 +60,13 @@ func NewFilteredHierarchicalQuotaInformer(client apis.Interface, resyncPeriod ti
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().HierarchicalQuotas().List(options)
+				return client.ConfigmanagementV1().HierarchicalQuotas().List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.NomosV1().HierarchicalQuotas().Watch(options)
+				return client.ConfigmanagementV1().HierarchicalQuotas().Watch(options)
 			},
 		},
 		&policyhierarchy_v1.HierarchicalQuota{},

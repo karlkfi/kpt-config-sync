@@ -132,7 +132,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ClusterPolicy",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterPolicyName,
@@ -238,7 +238,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ClusterPolicy",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterPolicyName,
@@ -348,7 +348,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ClusterPolicy",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterPolicyName,
@@ -437,7 +437,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ClusterPolicy",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "some-incorrect-name",
@@ -449,7 +449,7 @@ func TestClusterPolicyReconcile(t *testing.T) {
 						{
 							ResourceName: "some-incorrect-name",
 							ResourceKind: "ClusterPolicy",
-							ResourceAPI:  "nomos.dev/v1",
+							ResourceAPI:  "configmanagement.gke.io/v1",
 							ErrorMessage: `ClusterPolicy resource has invalid name "some-incorrect-name"`,
 						},
 					},

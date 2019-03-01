@@ -37,7 +37,7 @@ type Factories struct {
 
 // NewFactories creates a new Factories.
 func NewFactories(
-	v1client typedv1.NomosV1Interface, v1alpha1client typedv1.NomosV1Interface,
+	v1client typedv1.ConfigmanagementV1Interface, v1alpha1client typedv1.ConfigmanagementV1Interface,
 	pnLister listersv1.PolicyNodeLister, cpLister listersv1.ClusterPolicyLister,
 	syncLister listersv1.SyncLister) Factories {
 	return Factories{newPolicyNodeActionFactory(v1client, pnLister),
@@ -49,7 +49,7 @@ type policyNodeActionFactory struct {
 	*action.ReflectiveActionSpec
 }
 
-func newPolicyNodeActionFactory(client typedv1.NomosV1Interface, lister listersv1.PolicyNodeLister) policyNodeActionFactory {
+func newPolicyNodeActionFactory(client typedv1.ConfigmanagementV1Interface, lister listersv1.PolicyNodeLister) policyNodeActionFactory {
 	return policyNodeActionFactory{policynode.NewActionSpec(client, lister)}
 }
 
@@ -86,7 +86,7 @@ type clusterPolicyActionFactory struct {
 }
 
 func newClusterPolicyActionFactory(
-	client typedv1.NomosV1Interface,
+	client typedv1.ConfigmanagementV1Interface,
 	lister listersv1.ClusterPolicyLister) clusterPolicyActionFactory {
 	return clusterPolicyActionFactory{clusterpolicy.NewActionSpec(client, lister)}
 }
@@ -125,7 +125,7 @@ type syncActionFactory struct {
 }
 
 func newSyncActionFactory(
-	client typedv1.NomosV1Interface,
+	client typedv1.ConfigmanagementV1Interface,
 	lister listersv1.SyncLister) syncActionFactory {
 	return syncActionFactory{sync.NewActionSpec(client, lister)}
 }

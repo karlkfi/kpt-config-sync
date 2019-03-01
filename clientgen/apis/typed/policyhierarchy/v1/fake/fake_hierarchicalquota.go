@@ -30,12 +30,12 @@ import (
 
 // FakeHierarchicalQuotas implements HierarchicalQuotaInterface
 type FakeHierarchicalQuotas struct {
-	Fake *FakeNomosV1
+	Fake *FakeConfigmanagementV1
 }
 
-var hierarchicalquotasResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "hierarchicalquotas"}
+var hierarchicalquotasResource = schema.GroupVersionResource{Group: "configmanagement.gke.io", Version: "v1", Resource: "hierarchicalquotas"}
 
-var hierarchicalquotasKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "HierarchicalQuota"}
+var hierarchicalquotasKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "HierarchicalQuota"}
 
 // Get takes name of the hierarchicalQuota, and returns the corresponding hierarchicalQuota object, and an error if there is any.
 func (c *FakeHierarchicalQuotas) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.HierarchicalQuota, err error) {

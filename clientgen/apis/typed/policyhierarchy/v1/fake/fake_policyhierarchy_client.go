@@ -24,41 +24,41 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeNomosV1 struct {
+type FakeConfigmanagementV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeNomosV1) ClusterPolicies() v1.ClusterPolicyInterface {
+func (c *FakeConfigmanagementV1) ClusterPolicies() v1.ClusterPolicyInterface {
 	return &FakeClusterPolicies{c}
 }
 
-func (c *FakeNomosV1) ClusterSelectors() v1.ClusterSelectorInterface {
+func (c *FakeConfigmanagementV1) ClusterSelectors() v1.ClusterSelectorInterface {
 	return &FakeClusterSelectors{c}
 }
 
-func (c *FakeNomosV1) HierarchicalQuotas() v1.HierarchicalQuotaInterface {
+func (c *FakeConfigmanagementV1) HierarchicalQuotas() v1.HierarchicalQuotaInterface {
 	return &FakeHierarchicalQuotas{c}
 }
 
-func (c *FakeNomosV1) HierarchyConfigs() v1.HierarchyConfigInterface {
+func (c *FakeConfigmanagementV1) HierarchyConfigs() v1.HierarchyConfigInterface {
 	return &FakeHierarchyConfigs{c}
 }
 
-func (c *FakeNomosV1) NamespaceSelectors() v1.NamespaceSelectorInterface {
+func (c *FakeConfigmanagementV1) NamespaceSelectors() v1.NamespaceSelectorInterface {
 	return &FakeNamespaceSelectors{c}
 }
 
-func (c *FakeNomosV1) PolicyNodes() v1.PolicyNodeInterface {
+func (c *FakeConfigmanagementV1) PolicyNodes() v1.PolicyNodeInterface {
 	return &FakePolicyNodes{c}
 }
 
-func (c *FakeNomosV1) Syncs() v1.SyncInterface {
+func (c *FakeConfigmanagementV1) Syncs() v1.SyncInterface {
 	return &FakeSyncs{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeNomosV1) RESTClient() rest.Interface {
+func (c *FakeConfigmanagementV1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // NewActionSpec returns a ReflectiveActionSpec appropriate for Sync objects.
-func NewActionSpec(client typedv1.NomosV1Interface, lister listersv1.SyncLister) *action.ReflectiveActionSpec {
+func NewActionSpec(client typedv1.ConfigmanagementV1Interface, lister listersv1.SyncLister) *action.ReflectiveActionSpec {
 	return action.NewSpec(
 		new(v1.Sync),
 		v1.SchemeGroupVersion,

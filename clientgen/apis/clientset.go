@@ -19,8 +19,7 @@ limitations under the License.
 package apis
 
 import (
-	nomosv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
-	nomosv1alpha1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1alpha1"
+	configmanagementv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -28,34 +27,27 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface
-	NomosV1() nomosv1.NomosV1Interface
+	ConfigmanagementV1() configmanagementv1.ConfigmanagementV1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Nomos() nomosv1.NomosV1Interface
+	Configmanagement() configmanagementv1.ConfigmanagementV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	nomosV1alpha1 *nomosv1alpha1.NomosV1alpha1Client
-	nomosV1       *nomosv1.NomosV1Client
+	configmanagementV1 *configmanagementv1.ConfigmanagementV1Client
 }
 
-// NomosV1alpha1 retrieves the NomosV1alpha1Client
-func (c *Clientset) NomosV1alpha1() nomosv1alpha1.NomosV1alpha1Interface {
-	return c.nomosV1alpha1
+// ConfigmanagementV1 retrieves the ConfigmanagementV1Client
+func (c *Clientset) ConfigmanagementV1() configmanagementv1.ConfigmanagementV1Interface {
+	return c.configmanagementV1
 }
 
-// NomosV1 retrieves the NomosV1Client
-func (c *Clientset) NomosV1() nomosv1.NomosV1Interface {
-	return c.nomosV1
-}
-
-// Deprecated: Nomos retrieves the default version of NomosClient.
+// Deprecated: Configmanagement retrieves the default version of ConfigmanagementClient.
 // Please explicitly pick a version.
-func (c *Clientset) Nomos() nomosv1.NomosV1Interface {
-	return c.nomosV1
+func (c *Clientset) Configmanagement() configmanagementv1.ConfigmanagementV1Interface {
+	return c.configmanagementV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -74,11 +66,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.nomosV1alpha1, err = nomosv1alpha1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
-	cs.nomosV1, err = nomosv1.NewForConfig(&configShallowCopy)
+	cs.configmanagementV1, err = configmanagementv1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +82,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.nomosV1alpha1 = nomosv1alpha1.NewForConfigOrDie(c)
-	cs.nomosV1 = nomosv1.NewForConfigOrDie(c)
+	cs.configmanagementV1 = configmanagementv1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -104,8 +91,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.nomosV1alpha1 = nomosv1alpha1.New(c)
-	cs.nomosV1 = nomosv1.New(c)
+	cs.configmanagementV1 = configmanagementv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

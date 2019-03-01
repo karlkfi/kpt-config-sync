@@ -52,21 +52,21 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=nomos.dev, Version=v1
+	// Group=configmanagement.gke.io, Version=v1
 	case v1.SchemeGroupVersion.WithResource("clusterpolicies"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().ClusterPolicies().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().ClusterPolicies().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("clusterselectors"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().ClusterSelectors().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().ClusterSelectors().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("hierarchicalquotas"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().HierarchicalQuotas().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().HierarchicalQuotas().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("hierarchyconfigs"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().HierarchyConfigs().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().HierarchyConfigs().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("namespaceselectors"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().NamespaceSelectors().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().NamespaceSelectors().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("policynodes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().PolicyNodes().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().PolicyNodes().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("syncs"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Nomos().V1().Syncs().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().Syncs().Informer()}, nil
 
 	}
 

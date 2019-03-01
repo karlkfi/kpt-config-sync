@@ -184,7 +184,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.PolicyNode{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "PolicyNode",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
@@ -431,7 +431,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.PolicyNode{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "PolicyNode",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
@@ -558,7 +558,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.PolicyNode{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "PolicyNode",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
@@ -646,7 +646,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.PolicyNode{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "PolicyNode",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
@@ -744,7 +744,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.PolicyNode{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "PolicyNode",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
@@ -845,7 +845,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.PolicyNode{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "PolicyNode",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
@@ -924,7 +924,7 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			wantStatusUpdate: &v1.PolicyNode{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "PolicyNode",
-					APIVersion: "nomos.dev/v1",
+					APIVersion: "configmanagement.gke.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",

@@ -30,12 +30,12 @@ import (
 
 // FakeSyncs implements SyncInterface
 type FakeSyncs struct {
-	Fake *FakeNomosV1
+	Fake *FakeConfigmanagementV1
 }
 
-var syncsResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "syncs"}
+var syncsResource = schema.GroupVersionResource{Group: "configmanagement.gke.io", Version: "v1", Resource: "syncs"}
 
-var syncsKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "Sync"}
+var syncsKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "Sync"}
 
 // Get takes name of the sync, and returns the corresponding sync object, and an error if there is any.
 func (c *FakeSyncs) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.Sync, err error) {

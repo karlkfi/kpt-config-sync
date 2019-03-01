@@ -302,7 +302,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "stuff",
-						Finalizers: []string{"syncer.nomos.dev"},
+						Finalizers: []string{v1.SyncFinalizer},
 					},
 				},
 			},

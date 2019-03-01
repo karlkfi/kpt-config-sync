@@ -24,5 +24,5 @@ limitations under the License.
 // DO NOT MOVE THESE OUT OF THE PACKAGE DOCSTRING, GENERATING CODE PROPERLY DEPENDS ON THEM BEING HERE.
 // +k8s:deepcopy-gen=package,register
 // +k8s:openapi-gen=true
-// +groupName=nomos.dev
+// +groupName=configmanagement.gke.io
 package v1

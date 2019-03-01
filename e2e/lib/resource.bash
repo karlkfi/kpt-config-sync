@@ -116,8 +116,8 @@ function resource::wait_for_update() {
 #  [name] the resource name, eg, cluster-admin
 # Example:
 #  - Check that the namespace backend exists and has the label
-#    "nomos.dev/marked=true"
-#    resource::check ns backend -l "nomos.dev/marked=true"
+#    "configmanagement.gke.io/marked=true"
+#    resource::check ns backend -l "configmanagement.gke.io/marked=true"
 #  - Check that the role pod-editor exists in the frontend namespace
 #    resource::check -n frontend role pod-editor
 function resource::check() {

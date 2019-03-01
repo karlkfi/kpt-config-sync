@@ -52,7 +52,7 @@ type hierarchyConfigs struct {
 }
 
 // newHierarchyConfigs returns a HierarchyConfigs
-func newHierarchyConfigs(c *NomosV1Client) *hierarchyConfigs {
+func newHierarchyConfigs(c *ConfigmanagementV1Client) *hierarchyConfigs {
 	return &hierarchyConfigs{
 		client: c.RESTClient(),
 	}

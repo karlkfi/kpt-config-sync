@@ -25,7 +25,7 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type NomosV1Interface interface {
+type ConfigmanagementV1Interface interface {
 	RESTClient() rest.Interface
 	ClusterPoliciesGetter
 	ClusterSelectorsGetter
@@ -36,41 +36,41 @@ type NomosV1Interface interface {
 	SyncsGetter
 }
 
-// NomosV1Client is used to interact with features provided by the nomos.dev group.
-type NomosV1Client struct {
+// ConfigmanagementV1Client is used to interact with features provided by the configmanagement.gke.io group.
+type ConfigmanagementV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *NomosV1Client) ClusterPolicies() ClusterPolicyInterface {
+func (c *ConfigmanagementV1Client) ClusterPolicies() ClusterPolicyInterface {
 	return newClusterPolicies(c)
 }
 
-func (c *NomosV1Client) ClusterSelectors() ClusterSelectorInterface {
+func (c *ConfigmanagementV1Client) ClusterSelectors() ClusterSelectorInterface {
 	return newClusterSelectors(c)
 }
 
-func (c *NomosV1Client) HierarchicalQuotas() HierarchicalQuotaInterface {
+func (c *ConfigmanagementV1Client) HierarchicalQuotas() HierarchicalQuotaInterface {
 	return newHierarchicalQuotas(c)
 }
 
-func (c *NomosV1Client) HierarchyConfigs() HierarchyConfigInterface {
+func (c *ConfigmanagementV1Client) HierarchyConfigs() HierarchyConfigInterface {
 	return newHierarchyConfigs(c)
 }
 
-func (c *NomosV1Client) NamespaceSelectors() NamespaceSelectorInterface {
+func (c *ConfigmanagementV1Client) NamespaceSelectors() NamespaceSelectorInterface {
 	return newNamespaceSelectors(c)
 }
 
-func (c *NomosV1Client) PolicyNodes() PolicyNodeInterface {
+func (c *ConfigmanagementV1Client) PolicyNodes() PolicyNodeInterface {
 	return newPolicyNodes(c)
 }
 
-func (c *NomosV1Client) Syncs() SyncInterface {
+func (c *ConfigmanagementV1Client) Syncs() SyncInterface {
 	return newSyncs(c)
 }
 
-// NewForConfig creates a new NomosV1Client for the given config.
-func NewForConfig(c *rest.Config) (*NomosV1Client, error) {
+// NewForConfig creates a new ConfigmanagementV1Client for the given config.
+func NewForConfig(c *rest.Config) (*ConfigmanagementV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -79,12 +79,12 @@ func NewForConfig(c *rest.Config) (*NomosV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &NomosV1Client{client}, nil
+	return &ConfigmanagementV1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new NomosV1Client for the given config and
+// NewForConfigOrDie creates a new ConfigmanagementV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *NomosV1Client {
+func NewForConfigOrDie(c *rest.Config) *ConfigmanagementV1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -92,9 +92,9 @@ func NewForConfigOrDie(c *rest.Config) *NomosV1Client {
 	return client
 }
 
-// New creates a new NomosV1Client for the given RESTClient.
-func New(c rest.Interface) *NomosV1Client {
-	return &NomosV1Client{c}
+// New creates a new ConfigmanagementV1Client for the given RESTClient.
+func New(c rest.Interface) *ConfigmanagementV1Client {
+	return &ConfigmanagementV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -112,7 +112,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *NomosV1Client) RESTClient() rest.Interface {
+func (c *ConfigmanagementV1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

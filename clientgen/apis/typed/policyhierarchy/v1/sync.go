@@ -53,7 +53,7 @@ type syncs struct {
 }
 
 // newSyncs returns a Syncs
-func newSyncs(c *NomosV1Client) *syncs {
+func newSyncs(c *ConfigmanagementV1Client) *syncs {
 	return &syncs{
 		client: c.RESTClient(),
 	}

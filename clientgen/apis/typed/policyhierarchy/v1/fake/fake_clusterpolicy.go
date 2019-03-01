@@ -30,12 +30,12 @@ import (
 
 // FakeClusterPolicies implements ClusterPolicyInterface
 type FakeClusterPolicies struct {
-	Fake *FakeNomosV1
+	Fake *FakeConfigmanagementV1
 }
 
-var clusterpoliciesResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "clusterpolicies"}
+var clusterpoliciesResource = schema.GroupVersionResource{Group: "configmanagement.gke.io", Version: "v1", Resource: "clusterpolicies"}
 
-var clusterpoliciesKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "ClusterPolicy"}
+var clusterpoliciesKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "ClusterPolicy"}
 
 // Get takes name of the clusterPolicy, and returns the corresponding clusterPolicy object, and an error if there is any.
 func (c *FakeClusterPolicies) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.ClusterPolicy, err error) {

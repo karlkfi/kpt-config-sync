@@ -1,5 +1,5 @@
 kind: ClusterSelector
-apiVersion: nomos.dev/v1
+apiVersion: configmanagement.gke.io/v1
 metadata:
   name: selector-env-prod
 spec:

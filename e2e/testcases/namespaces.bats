@@ -12,7 +12,7 @@ load "../lib/wait"
 setup() {
   setup::common
   local active=()
-  mapfile -t active < <(kubectl get ns -l "nomos.dev/testdata=true" | grep Active)
+  mapfile -t active < <(kubectl get ns -l "configmanagement.gke.io/testdata=true" | grep Active)
   if (( ${#active[@]} != 0 )); then
     local ns
     for ns in "${active[@]}"; do
@@ -25,7 +25,7 @@ setup() {
 
 # This cleans up any namespaces that were created by a testcase
 function teardown() {
-  kubectl delete ns -l "nomos.dev/testdata=true" --ignore-not-found=true
+  kubectl delete ns -l "configmanagement.gke.io/testdata=true" --ignore-not-found=true
   setup::common_teardown
 }
 
@@ -72,14 +72,14 @@ function teardown() {
 
 @test "Namespace warn on invalid management annotation" {
   local ns=decl-invalid-annotation
-  namespace::create $ns -a "nomos.dev/namespace-management=a-garbage-annotation"
+  namespace::create $ns -a "configmanagement.gke.io/namespace-management=a-garbage-annotation"
   namespace::declare $ns
   git::commit
 
   wait::for -t 30 -- policynode::sync_token_eq "$ns" "$(git::hash)"
   selection=$(kubectl get pn ${ns} -ojson | jq -c ".status.syncState")
   [[ "${selection}" == "\"error\"" ]] || debug::error "policy node status should be error, not ${selection}"
-  namespace::check_exists $ns -a "nomos.dev/namespace-management=a-garbage-annotation"
+  namespace::check_exists $ns -a "configmanagement.gke.io/namespace-management=a-garbage-annotation"
   namespace::check_warning $ns
 }
 

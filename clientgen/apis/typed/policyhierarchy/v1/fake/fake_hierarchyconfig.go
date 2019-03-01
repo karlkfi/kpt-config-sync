@@ -30,12 +30,12 @@ import (
 
 // FakeHierarchyConfigs implements HierarchyConfigInterface
 type FakeHierarchyConfigs struct {
-	Fake *FakeNomosV1
+	Fake *FakeConfigmanagementV1
 }
 
-var hierarchyconfigsResource = schema.GroupVersionResource{Group: "nomos.dev", Version: "v1", Resource: "hierarchyconfigs"}
+var hierarchyconfigsResource = schema.GroupVersionResource{Group: "configmanagement.gke.io", Version: "v1", Resource: "hierarchyconfigs"}
 
-var hierarchyconfigsKind = schema.GroupVersionKind{Group: "nomos.dev", Version: "v1", Kind: "HierarchyConfig"}
+var hierarchyconfigsKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "HierarchyConfig"}
 
 // Get takes name of the hierarchyConfig, and returns the corresponding hierarchyConfig object, and an error if there is any.
 func (c *FakeHierarchyConfigs) Get(name string, options v1.GetOptions) (result *policyhierarchy_v1.HierarchyConfig, err error) {

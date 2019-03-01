@@ -24,7 +24,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/backend"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
