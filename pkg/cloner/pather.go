@@ -18,8 +18,6 @@ type Pather struct {
 }
 
 // NewPather creates a pather from the list of APIResources on the server.
-// Temporarily unused until cloner written.
-// nolint: deadcode
 func NewPather(resources ...metav1.APIResource) Pather {
 	result := Pather{
 		namespaced: make(map[schema.GroupVersionKind]bool),

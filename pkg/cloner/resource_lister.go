@@ -26,7 +26,6 @@ type ResourceLister struct {
 }
 
 // NewResourceLister initializes a ResourceLister from a Resourcer.
-// nolint: deadcode
 func NewResourceLister(resourcer Resourcer) ResourceLister {
 	return ResourceLister{resourcer: resourcer}
 }

@@ -22,7 +22,6 @@ type APIResourcesLister interface {
 // APIResources which support the "list" verb.
 //
 // Currently unused; will be used once `clone` is implemented.
-// nolint: deadcode
 func ListResources(lister APIResourcesLister) ([]metav1.APIResource, error) {
 	apiResources, err := lister.ServerResources()
 	if err != nil {

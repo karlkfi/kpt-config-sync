@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/google/nomos/cmd/nomos/flags"
+	"github.com/google/nomos/cmd/nomos/importer"
 	"github.com/google/nomos/cmd/nomos/initialize"
 	"github.com/google/nomos/cmd/nomos/vet"
 	"github.com/google/nomos/cmd/nomos/view"
@@ -32,6 +33,7 @@ func init() {
 	rootCmd.AddCommand(initialize.InitCmd)
 	rootCmd.AddCommand(vet.VetCmd)
 	rootCmd.AddCommand(view.PrintCmd)
+	rootCmd.AddCommand(importer.Cmd)
 }
 
 func init() {
