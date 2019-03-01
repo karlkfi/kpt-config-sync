@@ -1,13 +1,10 @@
 package vet
 
 import (
-	"path/filepath"
-
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -25,11 +22,8 @@ returns a non-zero error code if any issues are found.
   nomos vet --path=/path/to/my/directory`,
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		dir, err := filepath.Abs(flags.Path.String())
-		if err != nil {
-			util.PrintErrAndDie(errors.Wrap(err, "Failed to get absolute path"))
-		}
-		_, err = parse.Parse(
+		dir := flags.Path.String()
+		_, err := parse.Parse(
 			dir,
 			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}})
 		if err != nil {

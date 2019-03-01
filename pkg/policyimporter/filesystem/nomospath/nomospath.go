@@ -2,6 +2,7 @@ package nomospath
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -63,13 +64,23 @@ func (p Root) Equal(that Root) bool {
 
 // makeCleanAbsolute returns the cleaned, absolute path.
 func makeCleanAbsolute(path string) (string, error) {
-	if !filepath.IsAbs(path) {
-		wd, err := os.Getwd()
+	if path == "~" || strings.HasPrefix(path, "~/") {
+		// path is relative to home directory.
+		// filepath.Abs does not cover this case.
+		usr, err := user.Current()
 		if err != nil {
 			return "", err
 		}
-		// Recall that filepath.Join cleans the resulting path.
-		return filepath.Join(wd, path), nil
+		home := usr.HomeDir
+		if path == "~" {
+			return home, nil
+		}
+		return filepath.Join(home, path[2:]), nil
+	}
+
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
 	}
 	return filepath.Clean(path), nil
 }

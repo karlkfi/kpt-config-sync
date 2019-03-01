@@ -3,7 +3,6 @@ package view
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
@@ -27,10 +26,7 @@ non-zero error code.`,
   nomos view --path=/path/to/my/directory`,
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		dir, err := filepath.Abs(flags.Path.String())
-		if err != nil {
-			util.PrintErrAndDie(errors.Wrap(err, "Failed to get absolute path"))
-		}
+		dir := flags.Path.String()
 		resources, err := parse.Parse(
 			dir,
 			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}})
