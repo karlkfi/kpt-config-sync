@@ -21,32 +21,6 @@ import "github.com/google/nomos/pkg/api/policyhierarchy"
 // ClusterPolicyName is the name of the singleton ClusterPolicy resource.
 const ClusterPolicyName = "nomos-cluster-policy"
 
-// RootPolicyNodeName is the name of the root PolicyNode object.
-const RootPolicyNodeName = "nomos-root-node"
-
-// PolicyNodeType represents the types of policynodes that can exist.
-type PolicyNodeType string
-
-// IsNamespace returns true if the type corresponds to a namespace type.
-func (p PolicyNodeType) IsNamespace() bool {
-	return p == Namespace
-}
-
-// IsPolicyspace returns true if the type corresponds to a policyspace type.
-func (p PolicyNodeType) IsPolicyspace() bool {
-	return p == Policyspace
-}
-
-const (
-	// Policyspace indicates that the PolicyNode is for a Policyspace and should not be manifested
-	// into a namespace
-	Policyspace = PolicyNodeType("policyspace")
-
-	// Namespace indicates that the PolicyNode is represents a Namespace that should be created
-	// and managed on the cluster.
-	Namespace = PolicyNodeType("namespace")
-)
-
 // PolicySyncState represents the states that a policynode or clusterpolicy can be in with regards
 // to the source of truth.
 type PolicySyncState string

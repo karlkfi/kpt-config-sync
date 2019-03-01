@@ -549,12 +549,11 @@ func resourcesFromObjects(objects []runtime.Object, gv schema.GroupVersion, kind
 func createNamespacePN(
 	path string,
 	policies *Policies) v1.PolicyNode {
-	return createPNWithMeta(path, v1.Namespace, policies, nil, nil)
+	return createPNWithMeta(path, policies, nil, nil)
 }
 
 func createPNWithMeta(
 	path string,
-	t v1.PolicyNodeType,
 	policies *Policies,
 	labels, annotations map[string]string,
 ) v1.PolicyNode {
@@ -712,7 +711,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespaceWithLabelsAndAnnotations),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
-			"bar": createPNWithMeta("namespaces/bar", v1.Namespace, nil,
+			"bar": createPNWithMeta("namespaces/bar", nil,
 				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
@@ -1949,7 +1948,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				"bar": createPNWithMeta("namespaces/bar", v1.Namespace,
+				"bar": createPNWithMeta("namespaces/bar",
 					&Policies{
 						RoleBindingsV1: []rbacv1.RoleBinding{
 							{
@@ -2038,7 +2037,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			},
 			expectedClusterPolicy: createClusterPolicy(),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				"bar": createPNWithMeta("namespaces/foo/bar", v1.Namespace,
+				"bar": createPNWithMeta("namespaces/foo/bar",
 					&Policies{
 						Resources: []v1.GenericResources{
 							{
@@ -2206,7 +2205,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				"bar": createPNWithMeta("namespaces/bar", v1.Namespace,
+				"bar": createPNWithMeta("namespaces/bar",
 					&Policies{},
 					/* Labels */
 					nil,
@@ -2348,7 +2347,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				// The cluster-scoped policy with mismatching selector was filtered out.
 				&v1.ClusterPolicySpec{}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				"bar": createPNWithMeta("namespaces/bar", v1.Namespace,
+				"bar": createPNWithMeta("namespaces/bar",
 					&Policies{
 						RoleBindingsV1: rbs(
 							templateData{
@@ -2430,7 +2429,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}),
 			expectedPolicyNodes: map[string]v1.PolicyNode{
-				"bar": createPNWithMeta("namespaces/bar", v1.Namespace,
+				"bar": createPNWithMeta("namespaces/bar",
 					&Policies{
 						RoleBindingsV1: rbs(
 							templateData{Name: "job-creators",

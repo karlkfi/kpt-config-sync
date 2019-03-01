@@ -116,8 +116,6 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 
 	switch origLen {
 	case 0:
-		// root
-		name = v1.RootPolicyNodeName
 	case 1:
 		name = n.Base()
 	default:

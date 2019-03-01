@@ -102,8 +102,6 @@ type policyNodeState string
 const (
 	policyNodeStateNotFound  = policyNodeState("notFound")  // the policy node does not exist
 	policyNodeStateNamespace = policyNodeState("namespace") // the policy node is declared as a namespace
-	// TODO(cslink) remove this and do further cleanup
-	policyNodeStatePolicyspace = policyNodeState("policyspace") // the policy node is declared as a policyspace
 )
 
 // getPolicyNodeState normalizes the state of the policy node and returns the node.
@@ -229,14 +227,6 @@ func (r *PolicyNodeReconciler) reconcilePolicyNode(
 				})
 			}
 			return r.managePolicies(ctx, name, node, syncErrs)
-		}
-
-	case policyNodeStatePolicyspace:
-		switch nsState {
-		case namespaceStateNotFound: // noop
-		case namespaceStateExists:
-		case namespaceStateManageFull:
-			return r.handlePolicyspace(ctx, node)
 		}
 	}
 	return nil
@@ -469,18 +459,5 @@ func (r *PolicyNodeReconciler) deleteNamespace(ctx context.Context, namespace *c
 		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GroupVersionKind().Kind, "delete").Inc()
 		return errors.Wrapf(err, "failed to delete namespace %q", namespace.GetName())
 	}
-	return nil
-}
-
-func (r *PolicyNodeReconciler) handlePolicyspace(ctx context.Context, policyNode *v1.PolicyNode) error {
-	namespace := asNamespace(policyNode)
-	if err := r.client.Delete(ctx, namespace); err != nil {
-		metrics.ErrTotal.WithLabelValues("", namespace.GroupVersionKind().Kind, "delete").Inc()
-		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceDeleteFailed",
-			"failed to delete matching namespace for policyspace: %v", err)
-		return errors.Wrapf(err, "failed to delete policyspace %q", policyNode.Name)
-	}
-	r.recorder.Event(policyNode, corev1.EventTypeNormal, "NamespaceDeleted",
-		"removed matching namespace for policyspace")
 	return nil
 }
