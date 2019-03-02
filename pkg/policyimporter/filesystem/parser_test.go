@@ -964,7 +964,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
-		testName: "Policyspace dir with duplicate RoleBindings",
+		testName: "Abstract Namespace dir with duplicate RoleBindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":           aRepo,
@@ -1009,7 +1009,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.IllegalKindInNamespacesErrorCode},
 	},
 	{
-		testName: "Namespace dir with policyspace child",
+		testName: "Namespace dir with Abstract Namespace child",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":             aRepo,
@@ -1020,7 +1020,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.IllegalNamespaceSubdirectoryErrorCode},
 	},
 	{
-		testName: "Policyspace dir with ignored file",
+		testName: "Abstract Namespace dir with ignored file",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":      aRepo,
@@ -1029,7 +1029,7 @@ var parserTestCases = []parserTestCase{
 		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
-		testName: "Policyspace dir with RoleBinding, default inheritance",
+		testName: "Abstract Namespace dir with RoleBinding, default inheritance",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":        aRepo,
@@ -1039,7 +1039,7 @@ var parserTestCases = []parserTestCase{
 		expectedNumPolicies: map[string]int{},
 	},
 	{
-		testName: "Policyspace dir with RoleBinding, hierarchicalQuota mode specified",
+		testName: "Abstract Namespace dir with RoleBinding, hierarchicalQuota mode specified",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":        aRepo,
@@ -1049,7 +1049,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
-		testName: "Policyspace dir with RoleBinding, inheritance off",
+		testName: "Abstract Namespace dir with RoleBinding, inheritance off",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":        aRepo,
@@ -1093,7 +1093,7 @@ var parserTestCases = []parserTestCase{
 		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
 	},
 	{
-		testName: "Policyspace dir with ResourceQuota, inheritance off",
+		testName: "Abstract Namespace dir with ResourceQuota, inheritance off",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":       aRepo,
@@ -1103,7 +1103,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
-		testName: "Policyspace dir with ResourceQuota, inherit specified",
+		testName: "Abstract Namespace dir with ResourceQuota, inherit specified",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":       aRepo,
@@ -1115,7 +1115,7 @@ var parserTestCases = []parserTestCase{
 		expectedSyncs:         syncMap(),
 	},
 	{
-		testName: "Policyspace dir with multiple Rolebindings",
+		testName: "Abstract Namespace dir with multiple Rolebindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":        aRepo,
@@ -1126,7 +1126,7 @@ var parserTestCases = []parserTestCase{
 		expectedNumPolicies: map[string]int{},
 	},
 	{
-		testName: "Policyspace dir with ClusterRole",
+		testName: "Abstract Namespace dir with ClusterRole",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml": aRepo,
@@ -1137,7 +1137,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
-		testName: "Policyspace dir with ClusterRoleBinding",
+		testName: "Abstract Namespace dir with ClusterRoleBinding",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":        aRepo,
@@ -1147,7 +1147,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
-		testName: "Policyspace dir with PodSecurityPolicy",
+		testName: "Abstract Namespace dir with PodSecurityPolicy",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":        aRepo,
@@ -1157,7 +1157,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
-		testName: "Policyspace dir with NamespaceSelector CRD",
+		testName: "Abstract Namespace dir with NamespaceSelector CRD",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":                aRepo,
@@ -1166,7 +1166,7 @@ var parserTestCases = []parserTestCase{
 		expectedNumPolicies: map[string]int{},
 	},
 	{
-		testName: "Policyspace dir with NamespaceSelector CRD and object",
+		testName: "Abstract Namespace dir with NamespaceSelector CRD and object",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":                aRepo,
@@ -1179,7 +1179,7 @@ var parserTestCases = []parserTestCase{
 		expectedNumPolicies: map[string]int{"prod-ns": 1, "test-ns": 0},
 	},
 	{
-		testName: "Policyspace and Namespace dir have duplicate RoleBindings",
+		testName: "Abstract Namespace and Namespace dir have duplicate RoleBindings",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":            aRepo,
@@ -1191,7 +1191,7 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
-		testName: "Policyspace and Namespace dir have duplicate Deployments",
+		testName: "Abstract Namespace and Namespace dir have duplicate Deployments",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":          aRepo,
@@ -1433,7 +1433,7 @@ spec:
 		testName: "Dir name not unique 2",
 		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			// Two policyspace dirs with same name.
+			// Two Abstract Namespace dirs with same name.
 			"system/repo.yaml":                 aRepo,
 			"namespaces/bar/baz/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
 			"namespaces/qux/baz/waldo/ns.yaml": templateData{Name: "waldo"}.apply(aNamespace),
@@ -1992,7 +1992,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			),
 		},
 		{
-			testName:    "Generic resource in abstract namespace",
+			testName:    "Generic resource in Abstract Namespace",
 			root:        "foo",
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{

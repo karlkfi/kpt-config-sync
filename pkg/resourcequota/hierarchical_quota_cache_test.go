@@ -83,7 +83,7 @@ func TestCanAdmit(t *testing.T) {
 			},
 			canAdmitExpected: true,
 		},
-		{ // violate at leaf but not at the policyspace
+		{ // violate at leaf but not at the abstract namespace
 			namespace: "kitties",
 			newUsageList: corev1.ResourceList{
 				"hay": resource.MustParse("6"),
@@ -96,7 +96,7 @@ func TestCanAdmit(t *testing.T) {
 				"milk": resource.MustParse("7"),
 			},
 			canAdmitExpected:       false,
-			expectedErrorSubstring: "policyspace kittiesandponies, requested: milk",
+			expectedErrorSubstring: "kittiesandponies, requested: milk",
 		},
 		{ // violate at top (higher limit at leaf)
 			namespace: "ponies",
@@ -104,7 +104,7 @@ func TestCanAdmit(t *testing.T) {
 				"hay": resource.MustParse("12"),
 			},
 			canAdmitExpected:       false,
-			expectedErrorSubstring: "policyspace kittiesandponies, requested: hay",
+			expectedErrorSubstring: "kittiesandponies, requested: hay",
 		},
 		{ // violate counting starting usage at leaf
 			namespace: "ponies",
@@ -112,7 +112,7 @@ func TestCanAdmit(t *testing.T) {
 				"milk": resource.MustParse("4"),
 			},
 			canAdmitExpected:       false,
-			expectedErrorSubstring: "policyspace kittiesandponies, requested: milk",
+			expectedErrorSubstring: "kittiesandponies, requested: milk",
 		},
 		{ // violate counting starting usage at top (current = 2 + 2, limit at top = 10)
 			namespace: "ponies",
@@ -120,7 +120,7 @@ func TestCanAdmit(t *testing.T) {
 				"hay": resource.MustParse("7"),
 			},
 			canAdmitExpected:       false,
-			expectedErrorSubstring: "policyspace kittiesandponies, requested: hay",
+			expectedErrorSubstring: "kittiesandponies, requested: hay",
 		},
 	} {
 		err := cache.Admit(tt.namespace, tt.newUsageList)

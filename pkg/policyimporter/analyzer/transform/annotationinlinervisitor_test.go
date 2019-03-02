@@ -156,7 +156,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				},
 			},
 			{
-				Name: "multiple policyspaces",
+				Name: "multiple abstract namespaces",
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type:     node.AbstractNamespace,

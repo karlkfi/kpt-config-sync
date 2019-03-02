@@ -12,7 +12,7 @@ source "$DIR/resource.bash"
 # shellcheck source=e2e/lib/wait.bash
 source "$DIR/wait.bash"
 
-# Helpers for creating namespaces/policyspaces in git.
+# Helpers for creating namespaces/abstract namespaces in git.
 
 # Directly creates a namespace on the cluster with optional label for nomos management.
 #
@@ -31,7 +31,7 @@ function namespace::create() {
   kubectl apply -f "${tmp}"
 }
 
-# Creates a namespace directory and yaml in the git repo.  If policyspaces are
+# Creates a namespace directory and yaml in the git repo.  If abstract namespaces are
 # required based on the path they will be implicitly created as well.
 #
 # Arguments

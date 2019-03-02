@@ -52,7 +52,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
-			Name: "annotate policyspace",
+			Name: "annotate abstract namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,
@@ -84,7 +84,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 		},
 		{
-			Name: "annotate RoleBinding in policyspace",
+			Name: "annotate RoleBinding in abstract namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:     node.AbstractNamespace,

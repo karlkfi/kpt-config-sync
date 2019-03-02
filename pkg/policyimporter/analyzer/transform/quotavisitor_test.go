@@ -171,7 +171,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 		},
 		{
-			Name: "skip policyspace",
+			Name: "skip abstract namespace",
 			Input: &ast.Root{
 				Cluster: &ast.Cluster{},
 				Tree: &ast.TreeNode{

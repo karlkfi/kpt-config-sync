@@ -164,8 +164,7 @@ type PolicyNodeSpec struct {
 	Resources []GenericResources `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
 }
 
-// PolicyNodeStatus contains fields that define the status of a PolicyNode. The fields related to Syncer
-// will never be populated for PolicySpaces since they are flattened down to child Namespaces.
+// PolicyNodeStatus contains fields that define the status of a PolicyNode.
 // +protobuf=true
 type PolicyNodeStatus struct {
 	// SyncToken indicates the version of that policy that the Syncer last attempted to update from.

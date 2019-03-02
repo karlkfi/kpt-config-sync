@@ -430,7 +430,7 @@ func (r *PolicyNodeReconciler) createNamespace(ctx context.Context, policyNode *
 	if err := r.client.Create(ctx, namespace); err != nil {
 		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GroupVersionKind().Kind, "create").Inc()
 		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceCreateFailed",
-			"failed to create matching namespace for policyspace: %q", err)
+			"failed to create namespace: %q", err)
 		return errors.Wrapf(err, "failed to create namespace %q", policyNode.Name)
 	}
 	return nil
@@ -447,7 +447,7 @@ func (r *PolicyNodeReconciler) updateNamespace(ctx context.Context, policyNode *
 	if _, err := r.client.Update(ctx, namespace, updateFn); err != nil {
 		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GroupVersionKind().Kind, "update").Inc()
 		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceUpdateFailed",
-			"failed to update matching namespace for policyspace: %q", err)
+			"failed to update namespace: %q", err)
 		return errors.Wrapf(err, "failed to update namespace %q", policyNode.Name)
 	}
 	return nil

@@ -176,7 +176,7 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList corev1.Res
 				newTotalUsage.Add(newUsage)
 				if newTotalUsage.Cmp(limit) > 0 {
 					Metrics.Violations.WithLabelValues("resource_quota", namespace, resourceName.String()).Inc()
-					return errors.Errorf("exceeded quota in policyspace %s, requested: %s=%d, limit: %s=%d",
+					return errors.Errorf("exceeded quota in %s, requested: %s=%d, limit: %s=%d",
 						namespace, resourceName, newTotalUsage.Value(), resourceName, limit.Value())
 				}
 
