@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/vet"
 	"github.com/google/nomos/cmd/nomos/view"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -24,8 +25,9 @@ func logging() bool {
 
 var (
 	rootCmd = &cobra.Command{
-		Use:   policyhierarchy.CLIName,
-		Short: "Set up and manage a GKE Policy Management directory",
+		Use: policyhierarchy.CLIName,
+		Short: fmt.Sprintf(
+			"Set up and manage a GKE Policy Management directory (version %v)", version.VERSION),
 	}
 )
 
