@@ -55,6 +55,16 @@ VERSION = $(shell git describe --tags --always --dirty)
 # repository.
 NOMOS_GIT_REPO := https://team.googlesource.com/gke-kubernetes-enterprise-control/prototype
 
+# b/125003511 Until Nomos Beta completes we are restricting access to
+# Nomos binaries to a small set of google groups and the google.com
+# domain.  Once we are GA, we should replace this value with a simple
+# allUsers, e.g. user:allUsers:legacyObjectReader
+READ_ACCESS_LIST ?= group:gke-on-prem-release-readers-external@googlegroups.com:legacyObjectReader \
+	group:gke-on-prem-docs-readers-external@googlegroups.com:legacyObjectReader \
+	group:gke-hub-eap-users-external@google.com:legacyObjectReader \
+	group:kpm-external@google.com:legacyObjectReader \
+	domain:google.com:legacyObjectReader
+
 ##### SETUP ######
 
 include Makefile
@@ -169,7 +179,7 @@ upload-release:
 		$(STAGING_DIR)/nomos-docs.zip  \
 		$(STAGING_DIR)/kubectl-oidc/kubectl-oidc-plugin.zip  \
 		$(RELEASE_BUCKET)/$(VERSION)
-	gsutil acl ch -r -u AllUsers:R $(RELEASE_BUCKET)/$(VERSION)
+	gsutil -m iam ch -R $(READ_ACCESS_LIST) $(RELEASE_BUCKET)/$(VERSION)
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG) \
 		gcr.io/$(GCR_PREFIX)/nomos:latest
@@ -290,7 +300,7 @@ bless-release: NEXT_RELEASE=$(shell \
 bless-release:
 	$(info $(bless_autorelease_instructions))
 	TZ=America/Los_Angeles \
-  	  git log \
+	  git log \
 	     --pretty="format:%C(yellow)%h %C(cyan)%>(12,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" \
 	  --date=local \
 	  $(LAST_RELEASE)..$(LAST_RC)
