@@ -1,7 +1,7 @@
 apiVersion: addons.sigs.k8s.io/v1alpha1
-kind: Nomos
+kind: ConfigManagement
 metadata:
-  name: nomos
+  name: config-management
   namespace: config-management-system
 spec:
   channel: dev

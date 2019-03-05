@@ -63,10 +63,10 @@ function uninstall() {
   if $do_installation; then
     # If we did the installation, then we should uninstall as well.
     echo "+++++ Uninstalling..."
-    if kubectl get nomos &> /dev/null; then
+    if kubectl get configmanagement &> /dev/null; then
       # TODO(125862145): Clean up after naming changes complete.
-      kubectl -n=nomos-system delete nomos --all
-      kubectl -n=config-management-system delete nomos --all
+      kubectl -n=nomos-system delete configmanagement --all
+      kubectl -n=config-management-system delete configmanagement --all
     fi
     wait::for -s -t 300 -- install::nomos_uninstalled
     kubectl delete --ignore-not-found -f defined-operator-bundle.yaml
