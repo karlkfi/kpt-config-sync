@@ -20,9 +20,9 @@ import (
 	"reflect"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/pkg/errors"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
@@ -74,7 +74,7 @@ func NewClusterSelectors(
 	clusters []clusterregistry.Cluster,
 	selectors []v1.ClusterSelector,
 	clusterName string,
-) (*ClusterSelectors, error) {
+) (*ClusterSelectors, vet.Error) {
 	glog.V(2).Infof("Cluster name: %q", clusterName)
 	cc := &ClusterSelectors{
 		selectors:   make(map[string]v1.ClusterSelector),
@@ -90,7 +90,7 @@ func NewClusterSelectors(
 		name := cs.ObjectMeta.Name
 		s, err := AsPopulatedSelector(&cs.Spec.Selector)
 		if err != nil {
-			return nil, errors.Wrapf(err, "while populating cluster selector: %q", name)
+			return nil, vet.InvalidSelectorError{Name: name, Cause: err}
 		}
 		if IsSelected(cc.cluster.ObjectMeta.Labels, s) {
 			cc.selectors[name] = cs
