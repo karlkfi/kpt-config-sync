@@ -16,13 +16,11 @@ limitations under the License.
 package validation
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/multierror"
-	"github.com/pkg/errors"
 )
 
 // Scope runs after all transforms have completed.  This will verify that the final state of
@@ -61,15 +59,7 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 
 	switch p.apiInfo.GetScope(gvk) {
 	case discovery.NamespaceScope:
-		p.errs.Add(errors.Errorf(
-			"Namespace scoped object %s with Name %q in file %q cannot be declared in %q "+
-				"directory.  Move declaration to the appropriate %q directory.",
-			gvk,
-			o.MetaObject().GetName(),
-			o.RelativeSlashPath(),
-			repo.ClusterDir,
-			repo.NamespacesDir,
-		))
+		p.errs.Add(vet.IllegalKindInClusterError{Resource: o})
 	case discovery.UnknownScope:
 		p.errs.Add(vet.UnknownObjectError{Resource: &o.FileObject})
 	}
@@ -83,15 +73,7 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 
 	switch p.apiInfo.GetScope(gvk) {
 	case discovery.ClusterScope:
-		p.errs.Add(errors.Errorf(
-			"Cluster scoped object %s with Name %q from file %s cannot be declared inside "+
-				"%q directory.  Move declaration to the %q directory.",
-			gvk,
-			o.MetaObject().GetName(),
-			o.RelativeSlashPath(),
-			repo.NamespacesDir,
-			repo.ClusterDir,
-		))
+		p.errs.Add(vet.IllegalKindInNamespacesError{Resource: o})
 	case discovery.UnknownScope:
 		p.errs.Add(vet.UnknownObjectError{Resource: &o.FileObject})
 	}

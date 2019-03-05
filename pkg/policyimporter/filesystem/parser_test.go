@@ -984,7 +984,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
 		},
-		expectedErrorCodes: []string{vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.IllegalKindInNamespacesErrorCode},
 	},
 	{
 		testName: "Namespace dir with ClusterRoleBinding",
@@ -995,7 +995,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
 		},
-		expectedErrorCodes: []string{vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.IllegalKindInNamespacesErrorCode},
 	},
 	{
 		testName: "Namespace dir with PodSecurityPolicy",
@@ -1006,7 +1006,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
-		expectedErrorCodes: []string{vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.IllegalKindInNamespacesErrorCode},
 	},
 	{
 		testName: "Namespace dir with policyspace child",
@@ -1498,7 +1498,7 @@ spec:
 			"system/repo.yaml": aRepo,
 			"cluster/rb.yaml":  templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedErrorCodes: []string{vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.IllegalKindInClusterErrorCode},
 	},
 	{
 		testName: "Illegal annotation definition is an error",

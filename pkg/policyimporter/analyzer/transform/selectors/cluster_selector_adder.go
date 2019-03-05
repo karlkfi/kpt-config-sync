@@ -3,11 +3,10 @@ package selectors
 import (
 	"os"
 
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/util/multierror"
-	"github.com/pkg/errors"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
@@ -51,8 +50,7 @@ func (v *ClusterSelectorAdder) VisitRoot(r *ast.Root) *ast.Root {
 	r.Data = r.Data.Add(selectorsKey{}, v.selectors)
 
 	cs, err := NewClusterSelectors(v.clusters, v.selectors, os.Getenv("CLUSTER_NAME"))
-	// TODO(b/120229144): To be factored into KNV Error.
-	v.errs.Add(errors.Wrapf(err, "could not create cluster selectors"))
+	v.errs.Add(err)
 	SetClusterSelector(cs, r)
 
 	return r
