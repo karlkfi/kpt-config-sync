@@ -10,7 +10,7 @@ import (
 const ObjectHasUnknownClusterSelectorCode = "1013"
 
 func init() {
-	register(ObjectHasUnknownClusterSelectorCode, nil, "")
+	register(ObjectHasUnknownClusterSelectorCode)
 }
 
 // ObjectHasUnknownClusterSelector is an error denoting an object that has an unknown annotation.

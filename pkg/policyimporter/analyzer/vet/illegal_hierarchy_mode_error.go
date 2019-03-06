@@ -12,7 +12,7 @@ import (
 const IllegalHierarchyModeErrorCode = "1042"
 
 func init() {
-	register(IllegalHierarchyModeErrorCode, nil, "")
+	register(IllegalHierarchyModeErrorCode)
 }
 
 // IllegalHierarchyModeError reports that a HierarchyConfig is defined with a disallowed hierarchyMode.

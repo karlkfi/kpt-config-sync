@@ -11,7 +11,7 @@ import (
 const IllegalNamespaceAnnotationErrorCode = "1004"
 
 func init() {
-	register(IllegalNamespaceAnnotationErrorCode, nil, "")
+	register(IllegalNamespaceAnnotationErrorCode)
 }
 
 // IllegalNamespaceAnnotationError represents an illegal usage of the namespace selector annotation.

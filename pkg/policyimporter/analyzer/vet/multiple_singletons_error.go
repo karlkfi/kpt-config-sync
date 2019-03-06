@@ -13,7 +13,7 @@ import (
 const MultipleSingletonsErrorCode = "1030"
 
 func init() {
-	register(MultipleSingletonsErrorCode, nil, "")
+	register(MultipleSingletonsErrorCode)
 }
 
 // MultipleSingletonsError reports that multiple singletons are defined in the same directory.

@@ -11,7 +11,7 @@ import (
 const IllegalTopLevelNamespaceErrorCode = "1019"
 
 func init() {
-	register(IllegalTopLevelNamespaceErrorCode, nil, "")
+	register(IllegalTopLevelNamespaceErrorCode)
 }
 
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/

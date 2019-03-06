@@ -13,7 +13,7 @@ import (
 const MetadataNameCollisionErrorCode = "1029"
 
 func init() {
-	register(MetadataNameCollisionErrorCode, nil, "")
+	register(MetadataNameCollisionErrorCode)
 }
 
 // MetadataNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.

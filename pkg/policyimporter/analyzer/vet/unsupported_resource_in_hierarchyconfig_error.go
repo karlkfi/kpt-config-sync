@@ -9,7 +9,7 @@ import (
 const UnsupportedResourceInHierarchyConfigErrorCode = "1041"
 
 func init() {
-	register(UnsupportedResourceInHierarchyConfigErrorCode, nil, "")
+	register(UnsupportedResourceInHierarchyConfigErrorCode)
 }
 
 // UnsupportedResourceInHierarchyConfigError reports that policy management is unsupported for a Resource defined in a HierarchyConfig.

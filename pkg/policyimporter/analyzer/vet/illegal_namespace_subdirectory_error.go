@@ -10,7 +10,7 @@ import (
 const IllegalNamespaceSubdirectoryErrorCode = "1003"
 
 func init() {
-	register(IllegalNamespaceSubdirectoryErrorCode, nil, "")
+	register(IllegalNamespaceSubdirectoryErrorCode)
 }
 
 // IllegalNamespaceSubdirectoryError represents an illegal child directory of a namespace directory.

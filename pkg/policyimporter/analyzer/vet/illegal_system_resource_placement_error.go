@@ -10,7 +10,7 @@ import (
 const IllegalSystemResourcePlacementErrorCode = "1033"
 
 func init() {
-	register(IllegalSystemResourcePlacementErrorCode, nil, "")
+	register(IllegalSystemResourcePlacementErrorCode)
 }
 
 // IllegalSystemResourcePlacementError reports that a configmanagement.gke.io object has been defined outside of system/

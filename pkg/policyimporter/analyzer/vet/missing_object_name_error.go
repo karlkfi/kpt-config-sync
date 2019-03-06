@@ -9,7 +9,7 @@ import (
 const MissingObjectNameErrorCode = "1031"
 
 func init() {
-	register(MissingObjectNameErrorCode, nil, "")
+	register(MissingObjectNameErrorCode)
 }
 
 // MissingObjectNameError reports that an object has no name.

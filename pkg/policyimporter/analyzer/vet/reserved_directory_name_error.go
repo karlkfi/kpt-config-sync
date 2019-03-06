@@ -8,23 +8,8 @@ import (
 // ReservedDirectoryNameErrorCode is the error code for ReservedDirectoryNameError
 const ReservedDirectoryNameErrorCode = "1001"
 
-var reservedDirectoryNameErrorExamples = []status.Error{ReservedDirectoryNameError{Dir: nomospath.NewRelative("namespaces/default")}}
-
-var reservedDirectoryNameExplanation = `
-GKE Policy Management defines several
-[Reserved Namespaces](../management_flow.md#namespaces).
-Namespace and Abstract Namespace directories MUST NOT use these reserved names.
-To fix, rename or remove the directory mentioned in the error.
-
-Sample Error Message:
-
-{{.CodeMode}}
-{{index .Examples 0}}
-{{.CodeMode}}
-`
-
 func init() {
-	register(ReservedDirectoryNameErrorCode, reservedDirectoryNameErrorExamples, reservedDirectoryNameExplanation)
+	register(ReservedDirectoryNameErrorCode)
 }
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.

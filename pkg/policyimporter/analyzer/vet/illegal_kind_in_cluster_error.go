@@ -10,7 +10,7 @@ import (
 const IllegalKindInClusterErrorCode = "1039"
 
 func init() {
-	register(IllegalKindInClusterErrorCode, nil, "")
+	register(IllegalKindInClusterErrorCode)
 }
 
 // IllegalKindInClusterError reports that an object has been illegally defined in cluster/

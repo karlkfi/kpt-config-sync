@@ -9,7 +9,7 @@ import (
 const UnknownObjectErrorCode = "1021" // Impossible to create consistent example.
 
 func init() {
-	register(UnknownObjectErrorCode, nil, "")
+	register(UnknownObjectErrorCode)
 }
 
 // UnknownObjectError reports that an object declared in the repo does not have a definition in the cluster.

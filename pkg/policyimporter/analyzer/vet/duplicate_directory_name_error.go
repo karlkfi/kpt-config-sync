@@ -13,58 +13,8 @@ import (
 // DuplicateDirectoryNameErrorCode is the error code for DuplicateDirectoryNameError
 const DuplicateDirectoryNameErrorCode = "1002"
 
-var duplicateDirectoryNameErrorExamples = []status.Error{
-	DuplicateDirectoryNameError{
-		Duplicates: []nomospath.Relative{nomospath.NewRelative("foo/bar"), nomospath.NewRelative("qux/bar")},
-	},
-	DuplicateDirectoryNameError{
-		Duplicates: []nomospath.Relative{nomospath.NewRelative("bar"), nomospath.NewRelative("bar/foo/bar")},
-	},
-}
-
-var duplicateDirectoryNameErrorExplanation = `
-The name of every directory in a repository MUST be distinct within the entire repo.
-
-To fix, rename one of the conflicting directories.
-If the renamed directory contains a Namespace, you also need to update {{.Q "metadata.name"}} to reflect the new directory name.
-
-# Examples
-
-This can happen if two directories with different paths share the same name.
-For instance, a directory structure that includes both foo/bar and baz/bar generates this error.
-
-{{.CodeMode}}
-namespaces/
-├── foo/
-│   └── bar/
-└── qux/
-    └── bar/
-{{.CodeMode}}
-
-The above would produce this error:
-
-{{.CodeMode}}
-{{index .Examples 0}}
-{{.CodeMode}}
-
-Another way to cause is error is a directory structure such as foo/foo/ or foo/bar/foo/.
-
-{{.CodeMode}}
-namespaces/
-└── bar/
-    └── foo/
-        └── bar/
-{{.CodeMode}}
-
-The above would produce this error:
-
-{{.CodeMode}}
-{{index .Examples 1}}
-{{.CodeMode}}
-`
-
 func init() {
-	register(DuplicateDirectoryNameErrorCode, duplicateDirectoryNameErrorExamples, duplicateDirectoryNameErrorExplanation)
+	register(DuplicateDirectoryNameErrorCode)
 }
 
 // DuplicateDirectoryNameError represents an illegal duplication of directory names.

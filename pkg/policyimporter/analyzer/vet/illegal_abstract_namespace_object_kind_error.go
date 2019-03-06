@@ -10,7 +10,7 @@ import (
 const IllegalAbstractNamespaceObjectKindErrorCode = "1007"
 
 func init() {
-	register(IllegalAbstractNamespaceObjectKindErrorCode, nil, "")
+	register(IllegalAbstractNamespaceObjectKindErrorCode)
 }
 
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.

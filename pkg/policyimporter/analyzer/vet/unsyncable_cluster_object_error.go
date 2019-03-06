@@ -9,7 +9,7 @@ import (
 const UnsyncableClusterObjectErrorCode = "1005"
 
 func init() {
-	register(UnsyncableClusterObjectErrorCode, nil, "")
+	register(UnsyncableClusterObjectErrorCode)
 }
 
 // UnsyncableClusterObjectError represents an illegal usage of a cluster object kind which has not be explicitly declared.

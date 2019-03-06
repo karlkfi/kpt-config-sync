@@ -16,7 +16,6 @@ limitations under the License.
 package vet
 
 import (
-	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
 
@@ -25,24 +24,9 @@ var codes = map[string]bool{
 	"1023": true,
 }
 
-// Examples is the canonical example errors for each code.
-var Examples = make(map[string][]status.Error)
-
-// Explanations is the error documentation for each code.
-var Explanations = make(map[string]string)
-
-func register(code string, examples []status.Error, explanation string) {
+func register(code string) {
 	if codes[code] {
 		panic(errors.Errorf("duplicate error code: %q", code))
 	}
 	codes[code] = true
-
-	for _, example := range examples {
-		if example.Code() != code {
-			panic(errors.Errorf("supplied error code %q does not match code of example %q", code, example.Code()))
-		}
-	}
-
-	Examples[code] = examples
-	Explanations[code] = explanation
 }

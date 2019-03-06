@@ -15,7 +15,7 @@ type UnsupportedRepoSpecVersion struct {
 const UnsupportedRepoSpecVersionCode = "1027"
 
 func init() {
-	register(UnsupportedRepoSpecVersionCode, nil, "")
+	register(UnsupportedRepoSpecVersionCode)
 }
 
 // Error implements error

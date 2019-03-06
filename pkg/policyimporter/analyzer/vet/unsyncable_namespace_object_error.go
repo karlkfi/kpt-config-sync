@@ -9,7 +9,7 @@ import (
 const UnsyncableNamespaceObjectErrorCode = "1006"
 
 func init() {
-	register(UnsyncableNamespaceObjectErrorCode, nil, "")
+	register(UnsyncableNamespaceObjectErrorCode)
 }
 
 // UnsyncableNamespaceObjectError represents an illegal usage of a Resource which has not been defined for use in namespaces/.
