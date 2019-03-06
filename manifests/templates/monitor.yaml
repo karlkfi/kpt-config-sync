@@ -5,7 +5,7 @@ metadata:
   namespace: config-management-system
   labels:
     monitored: "true"
-    config.gke.io/system: "true"
+    configmanagement.gke.io/system: "true"
 spec:
   selector:
     app: monitor
@@ -21,7 +21,7 @@ metadata:
   namespace: config-management-system
   labels:
     app: monitor
-    config.gke.io/system: "true"
+    configmanagement.gke.io/system: "true"
 spec:
   minReadySeconds: 1
   replicas: 1

@@ -5,7 +5,7 @@ metadata:
   namespace: config-management-system
   labels:
     monitored: "true"
-    config.gke.io/system: "true"
+    configmanagement.gke.io/system: "true"
 spec:
   selector:
     app: resourcequota-admission-controller
@@ -24,7 +24,7 @@ metadata:
   namespace: config-management-system
   labels:
     app: resourcequota-admission-controller
-    config.gke.io/system: "true"
+    configmanagement.gke.io/system: "true"
 spec:
   minReadySeconds: 2
   replicas: 1

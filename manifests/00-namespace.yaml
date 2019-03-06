@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   name: config-management-system
   labels:
-    config.gke.io/system: "true"
+    configmanagement.gke.io/system: "true"

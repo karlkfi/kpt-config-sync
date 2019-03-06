@@ -11,8 +11,8 @@ spec:
         kind: ResourceQuota
         metadata:
           annotations:
-            config.gke.io/cluster-name: e2e-test-cluster
-            config.gke.io/source-path: namespaces/rnd/quota.yaml
+            configmanagement.gke.io/cluster-name: e2e-test-cluster
+            configmanagement.gke.io/source-path: namespaces/rnd/quota.yaml
           creationTimestamp: null
           name: nomos-resource-quota
         spec:

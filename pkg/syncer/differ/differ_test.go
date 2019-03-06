@@ -241,17 +241,17 @@ func TestActualResourceIsManaged(t *testing.T) {
 		},
 		{
 			name:        "invalid value",
-			annotations: map[string]string{"config.gke.io/managed": "invalid"},
+			annotations: map[string]string{"configmanagement.gke.io/managed": "invalid"},
 			want:        Invalid,
 		},
 		{
 			name:        "disabled value",
-			annotations: map[string]string{"config.gke.io/managed": "disabled"},
+			annotations: map[string]string{"configmanagement.gke.io/managed": "disabled"},
 			want:        Unmanaged,
 		},
 		{
 			name:        "enabled value",
-			annotations: map[string]string{"config.gke.io/managed": "enabled"},
+			annotations: map[string]string{"configmanagement.gke.io/managed": "enabled"},
 			want:        Managed,
 		},
 	}

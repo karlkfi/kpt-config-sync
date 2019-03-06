@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   name: hierarchicalquotas.nomos.dev
   labels:
-    config.gke.io/system: "true"
+    configmanagement.gke.io/system: "true"
 spec:
   group: nomos.dev
   version: v1

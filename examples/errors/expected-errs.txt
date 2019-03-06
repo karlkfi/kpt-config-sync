@@ -1,7 +1,7 @@
 Found issues: 13 error(s)
 
 
-[1] KNV1004: A Namespace MUST NOT use the annotation config.gke.io/namespace-selector. Remove metadata.annotations.config.gke.io/namespace-selector from:
+[1] KNV1004: A Namespace MUST NOT use the annotation configmanagement.gke.io/namespace-selector. Remove metadata.annotations.configmanagement.gke.io/namespace-selector from:
 
 source: namespaces/dev/dev-namespace/namespace.yaml
 metadata.name: incorrect-name
@@ -28,7 +28,7 @@ version: v1
 kind: RoleBinding
 
 
-[4] KNV1010: Resources MUST NOT declare unsupported annotations starting with "config.gke.io/". Resource has offending annotations: "config.gke.io/unsupported"
+[4] KNV1010: Resources MUST NOT declare unsupported annotations starting with "configmanagement.gke.io/". Resource has offending annotations: "configmanagement.gke.io/unsupported"
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
 metadata.name: kesim-rolebinding
@@ -37,7 +37,7 @@ version: v1
 kind: RoleBinding
 
 
-[5] KNV1011: Resources MUST NOT declare labels starting with "config.gke.io/". Below Resource declares these offending labels: "config.gke.io/illegal-label", "config.gke.io/illegal-label-2"
+[5] KNV1011: Resources MUST NOT declare labels starting with "configmanagement.gke.io/". Below Resource declares these offending labels: "configmanagement.gke.io/illegal-label", "configmanagement.gke.io/illegal-label-2"
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
 metadata.name: kesim-rolebinding
@@ -49,10 +49,10 @@ kind: RoleBinding
 [6] KNV1012: The NamespaceSelector Resource "sre-supported" MUST NOT have ClusterSelector annotation
 
 
-[7] KNV1013: Resource "no-such-cluster-selector" MUST refer to an existing ClusterSelector, but has annotation config.gke.io/cluster-selector="nonexistent-selector" which maps to no declared ClusterSelector
+[7] KNV1013: Resource "no-such-cluster-selector" MUST refer to an existing ClusterSelector, but has annotation configmanagement.gke.io/cluster-selector="nonexistent-selector" which maps to no declared ClusterSelector
 
 
-[8] KNV1013: Resource "sre-supported" MUST refer to an existing ClusterSelector, but has annotation config.gke.io/cluster-selector="illegal-cluster-selector-annotation" which maps to no declared ClusterSelector
+[8] KNV1013: Resource "sre-supported" MUST refer to an existing ClusterSelector, but has annotation configmanagement.gke.io/cluster-selector="illegal-cluster-selector-annotation" which maps to no declared ClusterSelector
 
 
 [9] KNV1018: cluster/ directory MUST NOT have subdirectories.

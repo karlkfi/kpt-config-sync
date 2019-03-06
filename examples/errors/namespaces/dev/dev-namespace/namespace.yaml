@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   name: incorrect-name
   annotations:
-    config.gke.io/namespace-selector: "true" # illegal namespace selector definition
+    configmanagement.gke.io/namespace-selector: "true" # illegal namespace selector definition

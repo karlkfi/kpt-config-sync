@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   name: backend
   annotations:
-    config.gke.io/cluster-selector: selector-env-test
+    configmanagement.gke.io/cluster-selector: selector-env-test

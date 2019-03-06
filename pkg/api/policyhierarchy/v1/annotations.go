@@ -6,8 +6,8 @@ import (
 
 const (
 	// NomosPrefix is the prefix for all Nomos annotations.
-	// TODO(125862145): use policyhierarchy.GroupName below after resource groups are updated to config.gke.io
-	NomosPrefix = "config.gke.io" + "/"
+	// TODO(125862145): use policyhierarchy.GroupName below after resource groups are updated to configmanagement.gke.io
+	NomosPrefix = "configmanagement.gke.io" + "/"
 
 	// ClusterNameAnnotationKey is the annotation key set on Nomos-managed resources that refers to
 	// the name of the cluster that the selectors are applied for.

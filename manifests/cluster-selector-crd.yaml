@@ -6,7 +6,7 @@ kind: CustomResourceDefinition
 metadata:
   name: clusterselectors.nomos.dev
   labels:
-    config.gke.io/system: "true"
+    configmanagement.gke.io/system: "true"
 spec:
   group: nomos.dev
   version: v1

@@ -116,7 +116,7 @@ function clean_up_test_resources() {
   kubectl delete --ignore-not-found ns -l "nomos.dev/testdata=true"
   # TODO(125862145): Remove as part of rename cleanup
   resource::delete -r ns -a nomos.dev/managed=enabled
-  resource::delete -r ns -a config.gke.io/managed=enabled
+  resource::delete -r ns -a configmanagement.gke.io/managed=enabled
 
   # TODO: this is to work around the label to annotation switch, delete this
   # sometime after 2018-02-28
@@ -124,7 +124,7 @@ function clean_up_test_resources() {
   for i in clusterrolebinding clusterrole podsecuritypolicy; do
     # TODO(125862145): Remove as part of rename cleanup
     resource::delete -r $i -a nomos.dev/managed=enabled
-    resource::delete -r $i -a config.gke.io/managed=enabled
+    resource::delete -r $i -a configmanagement.gke.io/managed=enabled
     kubectl delete -l nomos.dev/managed=enabled $i
   done
 
