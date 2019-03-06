@@ -1576,7 +1576,7 @@ metadata:
 			"namespaces/bar/undefined.yaml": templateData{}.apply(anUndefinedResource),
 			"namespaces/bar/ns.yaml":        templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.UndefinedErrorCode},
+		expectedErrorCodes: []string{vet.UndocumentedErrorCode},
 	},
 	{
 		testName: "Name collision in namespace",
@@ -2646,7 +2646,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				"system/repo.yaml":        aRepo,
 				"namespaces/invalid.yaml": "This is not valid yaml.",
 			},
-			expectedErrorCodes: []string{vet.UndefinedErrorCode},
+			expectedErrorCodes: []string{vet.UndocumentedErrorCode},
 		},
 		{
 			testName:    "A subdir of system is an error",

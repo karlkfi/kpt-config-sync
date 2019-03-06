@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -27,12 +28,20 @@ import (
 //
 //     b := &multierror.Builder{}
 type Builder struct {
-	errs []error
+	errs []vet.Error
 }
 
 // From returns a MultiError with the array of errors.
 func From(errs []error) MultiError {
-	return MultiError{errs: errs}
+	b := Builder{}
+	for _, err := range errs {
+		b.Add(err)
+	}
+	result := b.Build()
+	if result == nil {
+		return MultiError{}
+	}
+	return *result.(*MultiError)
 }
 
 // Add adds error to the builder.
@@ -42,12 +51,16 @@ func (b *Builder) Add(err error) {
 	switch e := err.(type) {
 	case nil:
 		// No error to add if nil.
+	case vet.Error:
+		b.errs = append(b.errs, e)
 	case utilerrors.Aggregate:
-		b.errs = append(b.errs, e.Errors()...)
+		b.Add(From(e.Errors()))
+	case MultiError:
+		b.errs = append(b.errs, e.errs...)
 	case *MultiError:
 		b.errs = append(b.errs, e.errs...)
 	default:
-		b.errs = append(b.errs, err)
+		b.Add(vet.UndocumentedWrapf(err, ""))
 	}
 }
 
@@ -69,9 +82,13 @@ func (b *Builder) HasErrors() bool {
 	return b.Len() > 0
 }
 
+func (b *Builder) Error() string {
+	return b.Build().Error()
+}
+
 // MultiError is an error that contains multiple errors.
 type MultiError struct {
-	errs []error
+	errs []vet.Error
 }
 
 // Error implements error
@@ -100,6 +117,6 @@ func (m MultiError) Error() string {
 }
 
 // Errors returns a list of the contained errors
-func (m MultiError) Errors() []error {
+func (m MultiError) Errors() []vet.Error {
 	return m.errs
 }
