@@ -56,10 +56,12 @@ type PolicyNodeReconciler struct {
 	recorder record.EventRecorder
 	decoder  decode.Decoder
 	toSync   []schema.GroupVersionKind
+	// A cancelable ambient context for all reconciler operations.
+	ctx context.Context
 }
 
 // NewPolicyNodeReconciler returns a new PolicyNodeReconciler.
-func NewPolicyNodeReconciler(client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
+func NewPolicyNodeReconciler(ctx context.Context, client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
 	decoder decode.Decoder, toSync []schema.GroupVersionKind) *PolicyNodeReconciler {
 	return &PolicyNodeReconciler{
 		client:   client,
@@ -68,6 +70,7 @@ func NewPolicyNodeReconciler(client *client.Client, applier Applier, cache cache
 		recorder: recorder,
 		decoder:  decoder,
 		toSync:   toSync,
+		ctx:      ctx,
 	}
 }
 
@@ -78,7 +81,7 @@ func (r *PolicyNodeReconciler) Reconcile(request reconcile.Request) (reconcile.R
 		metrics.NamespaceReconcileDuration.WithLabelValues(request.Name))
 	defer reconcileTimer.ObserveDuration()
 
-	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	ctx, cancel := context.WithTimeout(r.ctx, reconcileTimeout)
 	defer cancel()
 
 	name := request.Name
@@ -301,11 +304,11 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 		errBuilder.Add(errors.Wrapf(err, "failed to set status for %q", name))
 		metrics.ErrTotal.WithLabelValues(node.GetName(), node.GroupVersionKind().Kind, "update").Inc()
 		r.recorder.Eventf(node, corev1.EventTypeWarning, "StatusUpdateFailed",
-			"failed to update policy node status: %q", err)
+			"failed to update policy node status: %s", err)
 	}
 	if errBuilder.Len() == 0 && reconcileCount > 0 && len(syncErrs) == 0 {
 		r.recorder.Eventf(node, corev1.EventTypeNormal, "ReconcileComplete",
-			"policy node was successfully reconciled: %d changes", reconcileCount)
+			"policy node %q was successfully reconciled: %d changes", name, reconcileCount)
 	}
 	return errBuilder.Build()
 }

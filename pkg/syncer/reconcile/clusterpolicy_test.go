@@ -17,6 +17,7 @@ limitations under the License.
 package reconcile
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -478,7 +479,9 @@ func TestClusterPolicyReconcile(t *testing.T) {
 			mockRecorder := syncertesting.NewMockEventRecorder(mockCtrl)
 			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, tc.declared))
 
-			testReconciler := NewClusterPolicyReconciler(
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			testReconciler := NewClusterPolicyReconciler(ctx,
 				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, toSync)
 
 			// Get ClusterPolicy from cache.

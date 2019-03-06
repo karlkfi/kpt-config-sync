@@ -16,6 +16,8 @@ limitations under the License.
 package controller
 
 import (
+	"context"
+
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -37,7 +39,7 @@ import (
 const policyNodeControllerName = "policynode-resources"
 
 // AddPolicyNode adds PolicyNode sync controllers to the Manager.
-func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder,
+func AddPolicyNode(ctx context.Context, mgr manager.Manager, decoder decode.Decoder,
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
 	genericClient := client.New(mgr.GetClient())
 	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
@@ -47,10 +49,11 @@ func AddPolicyNode(mgr manager.Manager, decoder decode.Decoder,
 
 	pnc, err := controller.New(policyNodeControllerName, mgr, controller.Options{
 		Reconciler: genericreconcile.NewPolicyNodeReconciler(
+			ctx,
 			genericClient,
 			applier,
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
-			mgr.GetRecorder(policyNodeControllerName),
+			&CancelFilteringRecorder{mgr.GetRecorder(policyNodeControllerName)},
 			decoder,
 			extractGVKs(resourceTypes),
 		),

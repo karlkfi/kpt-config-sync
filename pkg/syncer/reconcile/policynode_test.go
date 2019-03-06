@@ -16,6 +16,7 @@ limitations under the License.
 package reconcile
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -1007,7 +1008,9 @@ func TestPolicyNodeReconcile(t *testing.T) {
 			mockRecorder := syncertesting.NewMockEventRecorder(mockCtrl)
 			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, tc.declared))
 
-			testReconciler := NewPolicyNodeReconciler(
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			testReconciler := NewPolicyNodeReconciler(ctx,
 				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, toSync)
 
 			var name string

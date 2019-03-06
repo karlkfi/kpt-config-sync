@@ -17,6 +17,7 @@ limitations under the License.
 package manager
 
 import (
+	"context"
 	"reflect"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
@@ -56,18 +57,29 @@ type GenericResourceManager struct {
 	baseCfg *rest.Config
 	// syncEnabled are the resources that have sync enabled.
 	syncEnabled map[schema.GroupVersionKind]bool
-	// stopCh is closed when we want to stop the embedded manager and its controllers.
-	stopCh chan struct{}
+	// ctx is a cancelable ambient context used where necessary
+	ctx context.Context
+	// cancel is a cancelation function for ctx. May be nil if ctx is unavailable
+	cancel context.CancelFunc
 }
 
 // NewGenericResourceManager returns a new GenericResourceManager for managing resources with sync enabled.
 func NewGenericResourceManager(mgr manager.Manager, cfg *rest.Config) *GenericResourceManager {
-	return &GenericResourceManager{
+	r := &GenericResourceManager{
 		Manager:     mgr,
 		baseCfg:     cfg,
-		stopCh:      make(chan struct{}),
 		syncEnabled: make(map[schema.GroupVersionKind]bool),
 	}
+	r.initCtx()
+	return r
+}
+
+func (r *GenericResourceManager) initCtx() {
+	if r.cancel != nil {
+		r.cancel()
+	}
+	// There doesn't seem to be a good other context to pass in here.
+	r.ctx, r.cancel = context.WithCancel(context.Background())
 }
 
 // UpdateSyncResources implements RestartableManager.
@@ -78,8 +90,7 @@ func (r *GenericResourceManager) UpdateSyncResources(syncs []*v1.Sync, apirs *di
 		// The set of sync-enabled resources hasn't changed. There is no need to restart.
 		return nil
 	}
-	close(r.stopCh)
-	r.stopCh = make(chan struct{})
+	r.initCtx()
 	glog.Info("Stopping GenericResourceManager")
 
 	var err error
@@ -90,7 +101,7 @@ func (r *GenericResourceManager) UpdateSyncResources(syncs []*v1.Sync, apirs *di
 	if err := r.register(apirs, syncs); err != nil {
 		return errors.Wrap(err, "could not start GenericResourceManager")
 	}
-	return r.startControllers(apirs, syncs, startErrCh)
+	return r.startControllers(r.ctx, apirs, syncs, startErrCh)
 }
 
 // Clear implements RestartableManager.
@@ -121,7 +132,7 @@ func (r *GenericResourceManager) register(apirs *discovery.APIInfo, syncs []*v1.
 }
 
 // startControllers starts all the controllers watching sync-enabled resources.
-func (r *GenericResourceManager) startControllers(apirs *discovery.APIInfo, syncs []*v1.Sync,
+func (r *GenericResourceManager) startControllers(ctx context.Context, apirs *discovery.APIInfo, syncs []*v1.Sync,
 	startErrCh chan error) error {
 	namespace, cluster, err := r.resourceScopes(apirs)
 	if err != nil {
@@ -129,17 +140,17 @@ func (r *GenericResourceManager) startControllers(apirs *discovery.APIInfo, sync
 	}
 
 	decoder := decode.NewGenericResourceDecoder(r.GetScheme())
-	if err := controller.AddPolicyNode(r, decoder, namespace); err != nil {
+	if err := controller.AddPolicyNode(ctx, r, decoder, namespace); err != nil {
 		return errors.Wrap(err, "could not create PolicyNode controller")
 	}
-	if err := controller.AddClusterPolicy(r, decoder, cluster); err != nil {
+	if err := controller.AddClusterPolicy(ctx, r, decoder, cluster); err != nil {
 		return errors.Wrap(err, "could not create ClusterPolicy controller")
 	}
 
 	go func() {
 		// Propagate errors with starting genericResourceManager up to the meta controller, so we can restart
 		// genericResourceManager.
-		startErrCh <- r.Start(r.stopCh)
+		startErrCh <- r.Start(ctx.Done())
 	}()
 
 	glog.Info("Starting GenericResourceManager")

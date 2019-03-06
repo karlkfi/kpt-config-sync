@@ -20,8 +20,10 @@ package client
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -118,13 +120,14 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 	operation := string(action.UpdateOperation)
 	action.Actions.WithLabelValues(kind, operation).Inc()
 	_, namespacedName := metaNamespacedName(workingObj)
+	var lastErr error
+	var oldObj runtime.Object
 	for tryNum := 0; tryNum < c.MaxTries; tryNum++ {
 		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
 			return nil, errors.Wrapf(err, "could not update %s; it does not exist", description)
 		}
 		oldV := resourceVersion(workingObj)
-
-		newObj, err := updateFn(workingObj)
+		newObj, err := updateFn(workingObj.DeepCopyObject())
 		if err != nil {
 			if action.IsNoUpdateNeeded(err) {
 				return newObj, nil
@@ -134,6 +137,14 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 
 		action.APICalls.WithLabelValues(kind, operation).Inc()
 		timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
+		if glog.V(3) {
+			glog.Warningf("update: %q: try: %v diff old..new:\n%v",
+				namespacedName, tryNum, cmp.Diff(workingObj, newObj))
+			if oldObj != nil {
+				glog.Warningf("update: %q: prev..old:\n%v",
+					namespacedName, cmp.Diff(oldObj, workingObj))
+			}
+		}
 		err = clientUpdateFn(ctx, newObj)
 		timer.ObserveDuration()
 		if err == nil {
@@ -145,11 +156,18 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 			}
 			return newObj, nil
 		}
+		lastErr = err
+		if glog.V(3) {
+			glog.Warningf("error in clientUpdateFn(...) for %q: %v", namespacedName, err)
+			// Skip the expensive copy if we're not going to use it.
+			oldObj = workingObj.DeepCopyObject()
+		}
 		if !apierrors.IsConflict(err) {
 			return nil, err
 		}
+		<-time.After(100 * time.Millisecond) // Back off on retry a bit.
 	}
-	return nil, errors.Errorf("max tries exceeded for %s", description)
+	return nil, errors.Errorf("%v tries exceeded for %s, last error: %v", c.MaxTries, description, lastErr)
 }
 
 // Upsert creates or updates the given obj in the Kubernetes cluster and records prometheus metrics.

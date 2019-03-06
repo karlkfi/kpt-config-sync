@@ -52,10 +52,13 @@ type ClusterPolicyReconciler struct {
 	recorder record.EventRecorder
 	decoder  decode.Decoder
 	toSync   []schema.GroupVersionKind
+	// A cancelable ambient context for all reconciler operations.
+	ctx context.Context
 }
 
-// NewClusterPolicyReconciler returns a new ClusterPolicyReconciler.
-func NewClusterPolicyReconciler(client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
+// NewClusterPolicyReconciler returns a new ClusterPolicyReconciler.  ctx is the ambient context
+// to use for all reconciler operations.
+func NewClusterPolicyReconciler(ctx context.Context, client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
 	decoder decode.Decoder, toSync []schema.GroupVersionKind) *ClusterPolicyReconciler {
 	return &ClusterPolicyReconciler{
 		client:   client,
@@ -64,6 +67,7 @@ func NewClusterPolicyReconciler(client *client.Client, applier Applier, cache ca
 		recorder: recorder,
 		decoder:  decoder,
 		toSync:   toSync,
+		ctx:      ctx,
 	}
 }
 
@@ -73,7 +77,7 @@ func (r *ClusterPolicyReconciler) Reconcile(request reconcile.Request) (reconcil
 	timer := prometheus.NewTimer(metrics.ClusterReconcileDuration.WithLabelValues())
 	defer timer.ObserveDuration()
 
-	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	ctx, cancel := context.WithTimeout(r.ctx, reconcileTimeout)
 	defer cancel()
 
 	clusterPolicy := &v1.ClusterPolicy{}
@@ -140,7 +144,7 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1
 	if err := r.setClusterPolicyStatus(ctx, policy, syncErrs...); err != nil {
 		errBuilder.Add(errors.Wrapf(err, "failed to set status for %q", name))
 		r.recorder.Eventf(policy, corev1.EventTypeWarning, "StatusUpdateFailed",
-			"failed to update cluster policy status: %q", err)
+			"failed to update cluster policy status: %v", err)
 	}
 	if errBuilder.Len() == 0 && reconcileCount > 0 {
 		r.recorder.Eventf(policy, corev1.EventTypeNormal, "ReconcileComplete",
