@@ -78,22 +78,45 @@ test-e2e-all: banner e2e-image-all
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
 		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
 
+
+# Internal test target that passes flags through, should not be ran directly
+# but rather througn one of the options below.
+__internal_test_e2e_git-noflags: e2e-image-all
+	$(MAKE) test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="$(E2E_FLAGS)"
+
 # Clean, build, and run e2e tests for a particular importer.
 # Clean cluster after running.
-test-e2e-git: e2e-image-all
-	$(MAKE) test-e2e-run-git \
+test-e2e-git:
+	$(MAKE) \
 		$(E2E_PARAMS) \
-		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)"
+		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
+		__internal_test_e2e_git-noflags
 
 test-e2e-git-user:
-	$(MAKE) IMAGE_TAG=${IMAGE_TAG} OPERATOR_TARGET=prepare-operator-user test-e2e-git
+	$(MAKE) \
+		IMAGE_TAG=${IMAGE_TAG} \
+		OPERATOR_TARGET=prepare-operator-user \
+		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
+		test-e2e-git
+
+# Dev mode allows for specifying the args manually via E2E_FLAGS, see e2e/setup.sh for
+# allowed flags.  This command assumes you will run "make e2e-staging" separately.
+#
+# Example:
+#     make test-e2e-dev-git-user E2E_FLAGS="--clean"
+test-e2e-dev-git-user:
+	$(MAKE) \
+		IMAGE_TAG=${IMAGE_TAG} \
+		OPERATOR_TARGET=prepare-operator-user \
+		E2E_FLAGS="$(E2E_FLAGS)" \
+		__internal_test_e2e_git-noflags
 
 # Dev mode allows for specifying the args manually via E2E_FLAGS, see e2e/setup.sh for
 # allowed flags.  This command assumes you will run "make e2e-staging" separately.
 test-e2e-dev-git: e2e-staging
 	$(MAKE) test-e2e-run-git \
-		GCP_PROJECT=$(GCP_PROJECT)
-
+		GCP_PROJECT=$(GCP_PROJECT) \
+		E2E_FLAGS="$(E2E_FLAGS)"
 
 # Runs nomos vet locally for example repos.
 # Requires kubeconfig set up properly with Nomos cluster.
