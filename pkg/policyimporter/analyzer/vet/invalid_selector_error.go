@@ -17,7 +17,7 @@ type InvalidSelectorError struct {
 
 // Error implements error.
 func (e InvalidSelectorError) Error() string {
-	return format(e, errors.Wrapf(e.Cause, "Label selector for %q has validation errors that must be corrected", e.Name).Error())
+	return format(e, errors.Wrapf(e.Cause, "Selector for %q has validation errors that must be corrected", e.Name).Error())
 }
 
 // Code implements Error
