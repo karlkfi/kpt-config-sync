@@ -86,6 +86,6 @@ func (tc *testCase) Run(t *testing.T) {
 		t.Errorf("diff:\n%v", diff)
 		t.Errorf(`If this change is correct, run:
 make build
-%s vet --path=%[1]v --validate=false 2> %[1]v/expected-errs.txt`, policyhierarchy.CLIName, *tc)
+%[1]s vet --path=%[2]v --validate=false 2> %[2]v/expected-errs.txt`, policyhierarchy.CLIName, *tc)
 	}
 }

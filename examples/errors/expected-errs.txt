@@ -19,7 +19,7 @@ version: v1
 kind: ClusterRole
 
 
-[3] KNV1009: Resources MUST NOT declare metadata.namespace:
+[3] KNV1009: A config MUST either declare a metadata.namespace field exactly matching the directory containing the config, "prod-namespace", or leave the field blank:
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
 metadata.name: kesim-rolebinding

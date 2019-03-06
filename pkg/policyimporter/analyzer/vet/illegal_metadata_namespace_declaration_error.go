@@ -19,11 +19,11 @@ type IllegalMetadataNamespaceDeclarationError struct {
 
 // Error implements error.
 func (e IllegalMetadataNamespaceDeclarationError) Error() string {
-	// TODO(willbeason): Error unused until b/118715158
 	return status.Format(e,
-		"Resources MUST NOT declare metadata.namespace:\n\n"+
-			"%[1]s",
-		id.PrintResource(e))
+		"A config MUST either declare a metadata.namespace field exactly matching the directory "+
+			"containing the config, %[1]q, or leave the field blank:\n\n"+
+			"%[2]s",
+		e.Resource.Dir().Base(), id.PrintResource(e))
 }
 
 // Code implements Error

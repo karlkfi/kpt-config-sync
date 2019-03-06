@@ -8,10 +8,12 @@ import (
 )
 
 // NewNamespaceValidator validates the value of metadata.namespace
-func NewNamespaceValidator() *visitor.ValidatorVisitor {
+func NewNamespaceValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
 		func(o ast.FileObject) *status.MultiError {
-			if o.MetaObject().GetNamespace() != "" {
+			expected := o.Dir().Base()
+			actual := o.MetaObject().GetNamespace()
+			if actual != "" && actual != expected {
 				return status.From(vet.IllegalMetadataNamespaceDeclarationError{Resource: &o})
 			}
 			return nil
