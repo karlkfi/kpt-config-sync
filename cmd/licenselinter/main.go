@@ -32,7 +32,6 @@ import (
 	"strings"
 
 	"github.com/golang/dep"
-	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/pkg/errors"
 )
 
@@ -217,7 +216,7 @@ func classifyLicense(f string) (licenseType, []byte, error) {
 
 func aggregateLicenses(metas []*metadata) string {
 	var out strings.Builder
-	out.WriteString(fmt.Sprintf("THE FOLLOWING SETS FORTH ATTRIBUTION NOTICES FOR THIRD PARTY SOFTWARE THAT MAY BE CONTAINED IN PORTIONS OF THE GKE POLICY MANAGEMENT (%s) PRODUCT.\n", strings.ToUpper(policyhierarchy.CLIName)))
+	out.WriteString("THE FOLLOWING SETS FORTH ATTRIBUTION NOTICES FOR THIRD PARTY SOFTWARE THAT MAY BE CONTAINED IN PORTIONS OF THE CSP CONFIG MANAGEMENT PRODUCT.\n")
 	for _, m := range metas {
 		for _, t := range m.LicenseText {
 			out.WriteString("\n-----\n\n")
