@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: monitor
-  namespace: config-management-system
+  namespace: nomos-system
   labels:
     monitored: "true"
     config.gke.io/system: "true"
@@ -18,7 +18,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: monitor
-  namespace: config-management-system
+  namespace: nomos-system
   labels:
     app: monitor
     config.gke.io/system: "true"

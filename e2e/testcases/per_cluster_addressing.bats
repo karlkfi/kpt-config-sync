@@ -40,11 +40,11 @@ function add_clusterregistry_data() {
 function get_cluster_name() {
   local cluster_name_config_map_name
   cluster_name_config_map_name=$(kubectl get deployments \
-    -n=config-management-system git-policy-importer -o yaml \
+    -n=nomos-system git-policy-importer -o yaml \
     --output='jsonpath={.spec.template.spec.containers[0].envFrom[1].configMapRef.name}')
   local cluster_name
   cluster_name=$(kubectl get configmaps \
-    -n=config-management-system "${cluster_name_config_map_name}" \
+    -n=nomos-system "${cluster_name_config_map_name}" \
     --output='jsonpath={.data.CLUSTER_NAME}')
   echo "${cluster_name}"
 }
@@ -71,7 +71,7 @@ function get_cluster_name() {
 
 @test "ClusterSelector: Object reacts to per-cluster annotations" {
   debug::log "Require that the cluster name exists on the cluster"
-  wait::for -t 10 -- kubectl get configmaps -n config-management-system cluster-name
+  wait::for -t 10 -- kubectl get configmaps -n nomos-system cluster-name
 
   add_clusterregistry_data
 
@@ -164,7 +164,7 @@ function get_cluster_name() {
 
 @test "ClusterSelector: Cluster reacts to CLUSTER_NAME change" {
   debug::log "Require that the cluster name exists on the cluster"
-  wait::for -t 10 -- kubectl get configmaps -n config-management-system cluster-name
+  wait::for -t 10 -- kubectl get configmaps -n nomos-system cluster-name
 
   add_clusterregistry_data
 
@@ -187,7 +187,7 @@ function get_cluster_name() {
   wait::for -f -- kubectl get rolebindings -n backend bob-rolebinding
 
   debug::log "Change the cluster name"
-  wait::for -- kubectl patch nomos -n=config-management-system nomos --type=merge \
+  wait::for -- kubectl patch nomos -n=nomos-system nomos --type=merge \
     -p '{"spec":{"clusterName": "test-cluster-env-test"}}'
 
   debug::log "Change the cluster and selector to point to test"
@@ -210,7 +210,7 @@ function get_cluster_name() {
 #   $1: new cluster name (string)
 function rename_cluster() {
   local new_name="${1}"
-  kubectl patch nomos -n=config-management-system nomos --type=merge \
+  kubectl patch nomos -n=nomos-system nomos --type=merge \
     -p "{\"spec\":{\"clusterName\": \"${new_name}\"}}"
 }
 
@@ -223,7 +223,7 @@ function expect_rename_to() {
   wait::for -t 20 -- rename_cluster "${expected_cluster_name}"
   debug::log "Expect cluster name to be ${expected_cluster_name}"
   wait::for -t 40 -o "${expected_cluster_name}" -- get_cluster_name
-  wait::for -t 10 -- configmaps::check_one_exists ${configMapPrefix} config-management-system
+  wait::for -t 10 -- configmaps::check_one_exists ${configMapPrefix} nomos-system
 }
 
 @test "Operator: Cluster rename load test" {

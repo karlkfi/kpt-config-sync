@@ -30,7 +30,7 @@ function teardown() {
 function check_metrics_pages() {
   local service="${1:-}"
 
-  local base_url="localhost:8001/api/v1/namespaces/config-management-system/services"
+  local base_url="localhost:8001/api/v1/namespaces/nomos-system/services"
   local port="metrics/proxy"
   local output
   output="$(curl ${base_url}/${service}:${port}/threads 2>&1)" \

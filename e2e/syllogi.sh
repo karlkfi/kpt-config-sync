@@ -22,7 +22,7 @@ function install() {
   /opt/testing/e2e/init-git-server.sh
   export GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i $TEST_DIR/id_rsa.nomos"
   kubectl create secret generic git-creds \
-    -n=config-management-system --from-file=ssh="$TEST_DIR/id_rsa.nomos" || true
+    -n=nomos-system --from-file=ssh="$TEST_DIR/id_rsa.nomos" || true
 
   # Install Nomos
   kubectl apply -f "${TEST_DIR}/operator-config-syllogi.yaml"
@@ -30,13 +30,13 @@ function install() {
   echo "Waiting for Nomos to come up"
   wait::for -s -t 180 -- install::nomos_running
   local image
-  image="$(kubectl get pods -n config-management-system -l app=syncer -ojsonpath='{.items[0].spec.containers[0].image}')"
+  image="$(kubectl get pods -n nomos-system -l app=syncer -ojsonpath='{.items[0].spec.containers[0].image}')"
   echo "Nomos $image up and running"
 }
 
 function cleanup() {
   echo "cleaning up"
-  kubectl delete nomos nomos --ignore-not-found -n config-management-system
+  kubectl delete nomos nomos --ignore-not-found -n nomos-system
   wait::for -s -t 180 -- install::nomos_uninstalled
   echo "Nomos uninstalled"
 
@@ -46,11 +46,11 @@ function cleanup() {
   resource::delete -r ns -a config.gke.io/managed=enabled
 
   echo "killing kubectl port forward..."
-  pkill -f "kubectl -n=config-management-system-test port-forward.*2222:22" || true
-  echo "taking down config-management-system-test namespace"
-  kubectl delete --ignore-not-found ns config-management-system-test
-  wait::for -f -t 100 -- kubectl get ns config-management-system-test
-  kubectl delete --ignore-not-found secrets git-creds -n config-management-system
+  pkill -f "kubectl -n=nomos-system-test port-forward.*2222:22" || true
+  echo "taking down nomos-system-test namespace"
+  kubectl delete --ignore-not-found ns nomos-system-test
+  wait::for -f -t 100 -- kubectl get ns nomos-system-test
+  kubectl delete --ignore-not-found secrets git-creds -n nomos-system
 
   echo "Nomos test resources uninstalled"
 }

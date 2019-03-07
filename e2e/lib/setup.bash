@@ -32,8 +32,8 @@ SYS_NAMESPACES=(
   default
   kube-public
   kube-system
-  config-management-system
-  config-management-system-test
+  nomos-system
+  nomos-system-test
 )
 
 # Git-specific repository initialization.

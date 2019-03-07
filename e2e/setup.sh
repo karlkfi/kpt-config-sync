@@ -38,7 +38,7 @@ function install() {
     # Linter says this is better than "cd -"
     apply_cluster_admin_binding "$(gcloud config get-value account)"
     kubectl apply -f "${TEST_DIR}/defined-operator-bundle.yaml"
-    kubectl create secret generic git-creds -n=config-management-system \
+    kubectl create secret generic git-creds -n=nomos-system \
       --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
     if $stable_channel; then
       echo "+++++ Applying Nomos using stable channel"
@@ -47,11 +47,11 @@ function install() {
       echo "+++++ Applying Nomos using dev channel"
       kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
     fi
-    echo "+++++   Waiting for config-management-system deployments to be up"
+    echo "+++++   Waiting for nomos-system deployments to be up"
     wait::for -s -t 180 -- install::nomos_running
 
     local image
-    image="$(kubectl get pods -n config-management-system \
+    image="$(kubectl get pods -n nomos-system \
       -l app=syncer \
       -ojsonpath='{.items[0].spec.containers[0].image}')"
     echo "Nomos $image up and running"
@@ -64,16 +64,14 @@ function uninstall() {
     # If we did the installation, then we should uninstall as well.
     echo "+++++ Uninstalling..."
     if kubectl get nomos &> /dev/null; then
-      # TODO(125862145): Clean up after naming changes complete.
       kubectl -n=nomos-system delete nomos --all
-      kubectl -n=config-management-system delete nomos --all
     fi
     wait::for -s -t 300 -- install::nomos_uninstalled
     kubectl delete --ignore-not-found -f defined-operator-bundle.yaml
 
-    # make sure that config-management-system is no longer existant
-    if kubectl delete ns config-management-system &> /dev/null; then
-      echo "Error: config-management-system was not deleted during operator removal."
+    # make sure that nomos-system is no longer extant
+    if kubectl delete ns nomos-system &> /dev/null; then
+      echo "Error: nomos-system was not deleted during operator removal."
     fi
     echo clean
   fi
@@ -91,9 +89,9 @@ function set_up_env_minimal() {
 
   echo "Starting port forwarding"
   TEST_LOG_REPO=/tmp/nomos-test
-  POD_ID=$(kubectl get pods -n=config-management-system-test -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
+  POD_ID=$(kubectl get pods -n=nomos-system-test -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
   mkdir -p ${TEST_LOG_REPO}
-  kubectl -n=config-management-system-test port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > ${TEST_LOG_REPO}/port-forward.log &
+  kubectl -n=nomos-system-test port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > ${TEST_LOG_REPO}/port-forward.log &
   local pid=$!
   local start_time
   start_time=$(date +%s)
@@ -129,10 +127,10 @@ function clean_up_test_resources() {
   done
 
   echo "killing kubectl port forward..."
-  pkill -f "kubectl -n=config-management-system-test port-forward.*${FWD_SSH_PORT}:22" || true
-  echo "  taking down config-management-system-test namespace"
-  kubectl delete --ignore-not-found ns config-management-system-test
-  wait::for -f -t 100 -- kubectl get ns config-management-system-test
+  pkill -f "kubectl -n=nomos-system-test port-forward.*${FWD_SSH_PORT}:22" || true
+  echo "  taking down nomos-system-test namespace"
+  kubectl delete --ignore-not-found ns nomos-system-test
+  wait::for -f -t 100 -- kubectl get ns nomos-system-test
 }
 
 function clean_up() {

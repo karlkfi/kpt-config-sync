@@ -31,15 +31,15 @@ After installation completes, check that the foo-corp namespaces are installed:
 
 ```console
 $ kubectl get ns
-NAME                      STATUS    AGE
-audit                     Active    1m
-default                   Active    2d
-kube-public               Active    2d
-kube-system               Active    2d
-config-management-system  Active    1m
-shipping-dev              Active    1m
-shipping-prod             Active    1m
-shipping-staging          Active    1m
+NAME               STATUS    AGE
+audit              Active    1m
+default            Active    2d
+kube-public        Active    2d
+kube-system        Active    2d
+nomos-system       Active    1m
+shipping-dev       Active    1m
+shipping-prod      Active    1m
+shipping-staging   Active    1m
 ```
 
 Check that rolebindings are applied:

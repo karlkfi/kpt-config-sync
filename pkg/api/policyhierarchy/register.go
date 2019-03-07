@@ -33,5 +33,5 @@ const (
 	ProductName = "GKE Policy Management"
 
 	// ControllerNamespace is the Namespace used for Nomos controllers
-	ControllerNamespace = "config-management-system"
+	ControllerNamespace = "nomos-system"
 )
