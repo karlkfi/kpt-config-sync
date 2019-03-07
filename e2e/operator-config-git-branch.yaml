@@ -2,13 +2,13 @@ apiVersion: addons.sigs.k8s.io/v1alpha1
 kind: Nomos
 metadata:
   name: nomos
-  namespace: nomos-system
+  namespace: config-management-system
 spec:
   channel: dev
   enableHierarchicalResourceQuota: true
   clusterName: e2e-test-cluster
   git:
-    syncRepo: git@test-git-server.nomos-system-test:/git-server/repos/sot.git
+    syncRepo: git@test-git-server.config-management-system-test:/git-server/repos/sot.git
     syncBranch: branch
     syncWait: 1
     secretType: ssh

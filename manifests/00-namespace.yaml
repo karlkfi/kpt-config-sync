@@ -1,6 +1,6 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: nomos-system
+  name: config-management-system
   labels:
     config.gke.io/system: "true"

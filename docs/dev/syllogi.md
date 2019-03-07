@@ -5,8 +5,8 @@
 Syllogi (GKE On Prem) is a version of GKE that customers can install on their
 on-prem VMs. Syllogi comes with the Nomos Operator pre-bundled, meaning that
 when users install Syllogi, the nomos-operator is already running, and the
-nomos-system namespace exists. You might recognize that as essentially the
-`nomos-operator.yaml` artifact deployed
+config-management-system namespace exists. You might recognize that as
+essentially the `nomos-operator.yaml` artifact deployed
 [here](release.md#anatomy-of-a-blessed-release).
 
 # Integration

@@ -45,7 +45,7 @@ function install::nomos_running() {
   deployments=("git-policy-importer" "syncer")
   for deployment in "${deployments[@]}"; do
     local res
-    res="$(install::available_replicas nomos-system "${deployment}")"
+    res="$(install::available_replicas config-management-system "${deployment}")"
     if [[ "${res}" == "0" ]] || [[ -z "${res}" ]]; then
       echo "${deployment} not yet running"
       return 1
@@ -55,7 +55,7 @@ function install::nomos_running() {
 }
 
 function install::nomos_uninstalled() {
-  if [ "$(kubectl get pods -n nomos-system | wc -l)" -ne 0 ]; then
+  if [ "$(kubectl get pods -n config-management-system | wc -l)" -ne 0 ]; then
     echo "Nomos pods not yet uninstalled"
     return 1
   fi
