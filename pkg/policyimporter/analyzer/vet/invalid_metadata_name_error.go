@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/policyimporter/id"
+import (
+	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
+)
 
 // InvalidMetadataNameErrorCode is the error code for InvalidMetadataNameError
 const InvalidMetadataNameErrorCode = "1036"
@@ -16,7 +19,7 @@ type InvalidMetadataNameError struct {
 
 // Error implements error.
 func (e InvalidMetadataNameError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"Resources MUST define a metadata.name which is a valid RFC1123 DNS subdomain. Rename or remove the Resource:\n\n"+
 			"%[1]s",
 		id.PrintResource(e))

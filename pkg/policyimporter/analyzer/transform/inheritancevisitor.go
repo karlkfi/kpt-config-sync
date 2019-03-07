@@ -23,7 +23,7 @@ import (
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -48,7 +48,7 @@ type InheritanceVisitor struct {
 	// treeContext is a stack that tracks ancestry and inherited objects during the tree traversal.
 	treeContext []nodeContext
 	// cumulative errors encountered by the visitor
-	errs multierror.Builder
+	errs status.ErrorBuilder
 }
 
 var _ ast.Visitor = &InheritanceVisitor{}

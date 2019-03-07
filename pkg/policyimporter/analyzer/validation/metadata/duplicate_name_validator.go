@@ -5,7 +5,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/id"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 )
 
 type groupKindName struct {
@@ -24,7 +24,7 @@ func NewDuplicateNameValidator() ast.Visitor {
 	return visitor.NewValidator(&duplicateNameValidator{})
 }
 
-func checkDuplicates(objects []id.Resource) []error {
+func checkDuplicates(objects []id.Resource) error {
 	duplicateMap := make(map[groupKindName][]id.Resource)
 
 	for _, o := range objects {
@@ -36,13 +36,13 @@ func checkDuplicates(objects []id.Resource) []error {
 		duplicateMap[gkn] = append(duplicateMap[gkn], o)
 	}
 
-	var errs []error
+	errs := &status.ErrorBuilder{}
 	for _, duplicates := range duplicateMap {
 		if len(duplicates) > 1 {
-			errs = append(errs, vet.MetadataNameCollisionError{Duplicates: duplicates})
+			errs.Add(vet.MetadataNameCollisionError{Duplicates: duplicates})
 		}
 	}
-	return errs
+	return errs.Build()
 }
 
 // ValidateTreeNode ensures Namespace policy nodes contain no duplicates.
@@ -52,7 +52,7 @@ func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) error {
 		resources[i] = object
 	}
 
-	return multierror.From(checkDuplicates(resources))
+	return checkDuplicates(resources)
 }
 
 // ValidateCluster ensures the Cluster policy node contains no duplicates.
@@ -62,5 +62,5 @@ func (v *duplicateNameValidator) ValidateCluster(c *ast.Cluster) error {
 		resources[i] = object
 	}
 
-	return multierror.From(checkDuplicates(resources))
+	return checkDuplicates(resources)
 }

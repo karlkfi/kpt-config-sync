@@ -4,12 +4,13 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // InvalidNamespaceNameErrorCode is the error code for InvalidNamespaceNameError
 const InvalidNamespaceNameErrorCode = "1020"
 
-var invalidNamespaceNameErrorExamples = []Error{
+var invalidNamespaceNameErrorExamples = []status.Error{
 	InvalidNamespaceNameError{
 		Resource: &resourceID{
 			source:           "namespaces/foo/namespace.yaml",
@@ -43,7 +44,7 @@ type InvalidNamespaceNameError struct {
 
 // Error implements error
 func (e InvalidNamespaceNameError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"A %[1]s MUST declare metadata.name that matches the name of its directory.\n\n"+
 			"%[2]s\n\n"+
 			"expected metadata.name: %[3]s\n",

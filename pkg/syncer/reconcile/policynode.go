@@ -23,13 +23,13 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/syncer/metrics"
-	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -267,7 +267,7 @@ func (r *PolicyNodeReconciler) cleanUpLabel(ctx context.Context, ns *corev1.Name
 }
 
 func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, node *v1.PolicyNode, syncErrs []v1.PolicyNodeSyncError) error {
-	var errBuilder multierror.Builder
+	var errBuilder status.ErrorBuilder
 	reconcileCount := 0
 	grs, err := r.decoder.DecodeResources(node.Spec.Resources...)
 	if err != nil {

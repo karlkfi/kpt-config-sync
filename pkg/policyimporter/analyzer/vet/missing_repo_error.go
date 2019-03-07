@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+import (
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
+	"github.com/google/nomos/pkg/status"
+)
 
 // MissingRepoErrorCode is the error code for MissingRepoError
 const MissingRepoErrorCode = "1017"
@@ -14,7 +17,7 @@ type MissingRepoError struct{}
 
 // Error implements error
 func (e MissingRepoError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"%s/ directory must declare a Repo Resource.", repo.SystemDir)
 }
 

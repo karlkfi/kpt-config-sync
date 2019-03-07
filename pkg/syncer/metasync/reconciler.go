@@ -23,10 +23,10 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	syncermanager "github.com/google/nomos/pkg/syncer/manager"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -129,7 +129,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	var errBuilder multierror.Builder
+	var errBuilder status.ErrorBuilder
 	// Finalize Syncs that have not already been finalized.
 	for _, tf := range toFinalize {
 		// Make sure to delete all Sync-managed resource before finalizing the Sync.
@@ -213,7 +213,7 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo
 	if err := cl.List(ctx, &client.ListOptions{}, ul); err != nil {
 		return errors.Wrapf(err, "could not list %s resources", gvk)
 	}
-	errBuilder := &multierror.Builder{}
+	errBuilder := &status.ErrorBuilder{}
 	for _, u := range ul.Items {
 		annots := u.GetAnnotations()
 		if v, ok := annots[v1.ResourceManagementKey]; !ok || v != v1.ResourceManagementValue {

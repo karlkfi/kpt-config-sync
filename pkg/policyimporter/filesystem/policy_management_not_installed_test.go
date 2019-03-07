@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 )
@@ -44,7 +44,7 @@ func TestPolicyManagementNotInstalled(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			eb := multierror.Builder{}
+			eb := status.ErrorBuilder{}
 			validateInstallation(tc.resources, &eb)
 
 			if tc.shouldFail {

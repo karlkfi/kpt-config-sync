@@ -23,6 +23,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/status"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
@@ -74,7 +75,7 @@ func NewClusterSelectors(
 	clusters []clusterregistry.Cluster,
 	selectors []v1.ClusterSelector,
 	clusterName string,
-) (*ClusterSelectors, vet.Error) {
+) (*ClusterSelectors, status.Error) {
 	glog.V(2).Infof("Cluster name: %q", clusterName)
 	cc := &ClusterSelectors{
 		selectors:   make(map[string]v1.ClusterSelector),

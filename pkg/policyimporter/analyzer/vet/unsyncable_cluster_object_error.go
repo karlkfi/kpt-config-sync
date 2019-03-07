@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/policyimporter/id"
+import (
+	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
+)
 
 // UnsyncableClusterObjectErrorCode is the error code for UnsyncableClusterObjectErrorCode
 const UnsyncableClusterObjectErrorCode = "1005"
@@ -16,7 +19,7 @@ type UnsyncableClusterObjectError struct {
 
 // Error implements error.
 func (e UnsyncableClusterObjectError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"Unable to sync Resource. Enable sync for this Resource's kind.\n\n"+
 			"%[1]s",
 		id.PrintResource(e))

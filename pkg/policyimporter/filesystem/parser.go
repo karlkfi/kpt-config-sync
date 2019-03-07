@@ -31,8 +31,8 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -59,7 +59,7 @@ type Parser struct {
 	opts            ParserOpt
 	factory         cmdutil.Factory
 	discoveryClient discovery.CachedDiscoveryInterface
-	errors          *multierror.Builder
+	errors          *status.ErrorBuilder
 }
 
 // ParserOpt has often customized parser options. Use for example in NewParser.
@@ -105,7 +105,7 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
 func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*policynode.AllPolicies, error) {
-	p.errors = &multierror.Builder{}
+	p.errors = &status.ErrorBuilder{}
 	rootPath, err := nomospath.NewRoot(root)
 	p.errors.Add(err)
 
@@ -234,7 +234,7 @@ func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
 func addScope(root *ast.Root, client discovery.ServerResourcesInterface) error {
 	resources, discoveryErr := client.ServerResources()
 	if discoveryErr != nil {
-		return vet.UndocumentedWrapf(discoveryErr, "failed to get server resources")
+		return status.UndocumentedWrapf(discoveryErr, "failed to get server resources")
 	}
 
 	resources = append(resources, transform.EphemeralResources()...)
@@ -269,7 +269,7 @@ func toInheritanceSpecs(configs []*v1.HierarchyConfig) map[schema.GroupKind]*tra
 
 // validateInstallation checks to see if Nomos is installed properly.
 // TODO(b/123598820): Server-side validation for this check.
-func validateInstallation(resources discovery.ServerResourcesInterface, eb *multierror.Builder) {
+func validateInstallation(resources discovery.ServerResourcesInterface, eb *status.ErrorBuilder) {
 	gv := v1.SchemeGroupVersion.String()
 	_, err := resources.ServerResourcesForGroupVersion(gv)
 	if err != nil {

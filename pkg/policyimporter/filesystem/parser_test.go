@@ -37,6 +37,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -1576,7 +1577,7 @@ metadata:
 			"namespaces/bar/undefined.yaml": templateData{}.apply(anUndefinedResource),
 			"namespaces/bar/ns.yaml":        templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.UndocumentedErrorCode},
+		expectedErrorCodes: []string{status.UndocumentedErrorCode},
 	},
 	{
 		testName: "Name collision in namespace",
@@ -2646,7 +2647,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				"system/repo.yaml":        aRepo,
 				"namespaces/invalid.yaml": "This is not valid yaml.",
 			},
-			expectedErrorCodes: []string{vet.UndocumentedErrorCode},
+			expectedErrorCodes: []string{status.UndocumentedErrorCode},
 		},
 		{
 			testName:    "A subdir of system is an error",

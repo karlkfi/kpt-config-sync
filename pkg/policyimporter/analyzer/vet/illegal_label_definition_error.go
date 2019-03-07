@@ -7,6 +7,7 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // IllegalLabelDefinitionErrorCode is the error code for IllegalLabelDefinitionError
@@ -31,7 +32,7 @@ func (e IllegalLabelDefinitionError) Error() string {
 		labels2[i] = fmt.Sprintf("%q", label)
 	}
 	l := strings.Join(labels2, ", ")
-	return format(e,
+	return status.Format(e,
 		"Resources MUST NOT declare labels starting with %[3]q. "+
 			"Below Resource declares these offending labels: %[1]s\n\n"+
 			"%[2]s",

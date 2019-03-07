@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/status"
 
 	"github.com/google/nomos/pkg/policyimporter/id"
 )
@@ -32,7 +33,7 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 		annotations2[i] = fmt.Sprintf("%q", annotation)
 	}
 	a := strings.Join(annotations2, ", ")
-	return format(e,
+	return status.Format(e,
 		"Resources MUST NOT declare unsupported annotations starting with %[3]q. "+
 			"Resource has offending annotations: %[1]s\n\n"+
 			"%[2]s",

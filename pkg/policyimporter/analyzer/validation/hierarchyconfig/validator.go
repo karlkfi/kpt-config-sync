@@ -2,7 +2,7 @@ package hierarchyconfig
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/validator"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 )
 
 // ValidatorFactory is a function that returns an error if the supplied
@@ -26,7 +26,7 @@ var _ validator.Validator = Validator{}
 
 // Validate adds errors for each misconfigured Kind defined in a HierarchyConfig.
 // It abstracts out the deeply-nested logic for extracting every Kind defined in every HierarchyConfig.
-func (v Validator) Validate(errorBuilder *multierror.Builder) {
+func (v Validator) Validate(errorBuilder *status.ErrorBuilder) {
 	for _, config := range v.configs {
 		for _, k := range config.flatten() {
 			errorBuilder.Add(v.fn(k))

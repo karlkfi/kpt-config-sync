@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/policyimporter/id"
+import (
+	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
+)
 
 // MissingObjectNameErrorCode is the error code for MissingObjectNameError
 const MissingObjectNameErrorCode = "1031"
@@ -16,7 +19,7 @@ type MissingObjectNameError struct {
 
 // Error implements error
 func (e MissingObjectNameError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"Resources must declare metadata.name:\n\n"+
 			"%[1]s",
 		id.PrintResource(e))

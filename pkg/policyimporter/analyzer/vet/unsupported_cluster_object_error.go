@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/policyimporter/id"
+import (
+	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
+)
 
 // UnsupportedObjectErrorCode is the error code for UnsupportedObjectError
 const UnsupportedObjectErrorCode = "1043"
@@ -16,7 +19,7 @@ type UnsupportedObjectError struct {
 
 // Error implements error.
 func (e UnsupportedObjectError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"Syncing is not supported for this resource. To fix, remove this resource from the repo.\n\n"+
 			"%[1]s",
 		id.PrintResource(e))

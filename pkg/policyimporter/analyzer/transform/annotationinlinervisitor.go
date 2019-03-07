@@ -26,7 +26,7 @@ import (
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 )
 
 // AnnotationInlinerVisitor inlines annotation values. Inlining replaces the
@@ -51,7 +51,7 @@ type AnnotationInlinerVisitor struct {
 	// created anew for each TreeNode.
 	nsTransformer annotationTransformer
 	// cumulative errors encountered by the visitor
-	errs multierror.Builder
+	errs status.ErrorBuilder
 	// Used to inline cluster selector annotations.  It is created anew for each traversal.
 	clusterSelectorTransformer annotationTransformer
 	// selectors contains the cluster selection data.
@@ -88,7 +88,7 @@ func (v *AnnotationInlinerVisitor) VisitRoot(r *ast.Root) *ast.Root {
 		content, err := json.Marshal(annotation)
 		if err != nil {
 			// TODO(b/122739070) ast.Root should store the ClusterSelectors rather than having to transform them every time.
-			v.errs.Add(vet.UndocumentedWrapf(err, "failed to marshal ClusterSelector %q", name))
+			v.errs.Add(status.UndocumentedWrapf(err, "failed to marshal ClusterSelector %q", name))
 			return
 		}
 		m[name] = string(content)
@@ -107,7 +107,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 	for k, s := range n.Selectors {
 		if n.Type == node.Namespace {
 			// TODO(b/122739070) This should already be validated in parser.
-			v.errs.Add(vet.UndocumentedErrorf("NamespaceSelector must not be in namespace directories, found in %q", n.RelativeSlashPath()))
+			v.errs.Add(status.UndocumentedErrorf("NamespaceSelector must not be in namespace directories, found in %q", n.RelativeSlashPath()))
 			return n
 		}
 		if _, err := sel.AsPopulatedSelector(&s.Spec.Selector); err != nil {
@@ -118,7 +118,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 		content, err := json.Marshal(s)
 		if err != nil {
 			// TODO(b/122739070) This should already be validated in parser.
-			v.errs.Add(vet.UndocumentedWrapf(err, "failed to marshal NamespaceSelector %q", s.Name))
+			v.errs.Add(status.UndocumentedWrapf(err, "failed to marshal NamespaceSelector %q", s.Name))
 			continue
 		}
 		m[k] = string(content)
@@ -126,7 +126,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 	v.nsTransformer = annotationTransformer{}
 	v.nsTransformer.addMappingForKey(v1.NamespaceSelectorAnnotationKey, m)
 
-	v.errs.Add(vet.UndocumentedWrapf(v.clusterSelectorTransformer.transform(n), "failed to inline ClusterSelector for node %q", n.RelativeSlashPath()))
+	v.errs.Add(status.UndocumentedWrapf(v.clusterSelectorTransformer.transform(n), "failed to inline ClusterSelector for node %q", n.RelativeSlashPath()))
 	annotatePopulated(n, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return v.Copying.VisitTreeNode(n)
 }
@@ -137,9 +137,9 @@ func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) *ast.Name
 	defer glog.V(6).Infof("VisitObject(): EXIT")
 	newObject := v.Copying.VisitObject(o)
 	m := newObject.MetaObject()
-	v.errs.Add(vet.UndocumentedWrapf(v.nsTransformer.transform(m),
+	v.errs.Add(status.UndocumentedWrapf(v.nsTransformer.transform(m),
 		"failed to inline annotation for object %q", m.GetName()))
-	v.errs.Add(vet.UndocumentedWrapf(v.clusterSelectorTransformer.transform(m),
+	v.errs.Add(status.UndocumentedWrapf(v.clusterSelectorTransformer.transform(m),
 		"failed to inline cluster selector annotations for object %q", m.GetName()))
 	annotatePopulated(m, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject

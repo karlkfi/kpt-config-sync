@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+import (
+	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/status"
+)
 
 // IllegalSubdirectoryErrorCode is the error code for IllegalSubdirectoryError
 const IllegalSubdirectoryErrorCode = "1018"
@@ -17,7 +20,7 @@ type IllegalSubdirectoryError struct {
 
 // Error implements error
 func (e IllegalSubdirectoryError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"%s/ directory MUST NOT have subdirectories.\n\n"+
 			"path: %[2]s", e.BaseDir, e.SubDir.RelativeSlashPath())
 }

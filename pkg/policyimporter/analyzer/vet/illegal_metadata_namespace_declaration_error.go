@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/policyimporter/id"
+import (
+	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
+)
 
 // IllegalMetadataNamespaceDeclarationErrorCode is the error code for IllegalNamespaceDeclarationError
 const IllegalMetadataNamespaceDeclarationErrorCode = "1009"
@@ -17,7 +20,7 @@ type IllegalMetadataNamespaceDeclarationError struct {
 // Error implements error.
 func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 	// TODO(willbeason): Error unused until b/118715158
-	return format(e,
+	return status.Format(e,
 		"Resources MUST NOT declare metadata.namespace:\n\n"+
 			"%[1]s",
 		id.PrintResource(e))

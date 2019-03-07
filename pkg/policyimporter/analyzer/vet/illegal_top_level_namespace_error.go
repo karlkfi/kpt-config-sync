@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // IllegalTopLevelNamespaceErrorCode is the error code for IllegalTopLevelNamespaceError
@@ -20,7 +21,7 @@ type IllegalTopLevelNamespaceError struct {
 
 // Error implements error
 func (e IllegalTopLevelNamespaceError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:\n\n"+
 			"%[3]s",
 		repo.NamespacesDir, node.Namespace, id.PrintResource(e))

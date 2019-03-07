@@ -16,26 +16,22 @@ limitations under the License.
 package vet
 
 import (
-	"fmt"
-
+	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
 
 var codes = map[string]bool{
 	// Obsolete error codes. Do not reuse.
 	"1023": true,
-
-	// The unknown error code.
-	UndefinedErrorCode: true,
 }
 
 // Examples is the canonical example errors for each code.
-var Examples = make(map[string][]Error)
+var Examples = make(map[string][]status.Error)
 
 // Explanations is the error documentation for each code.
 var Explanations = make(map[string]string)
 
-func register(code string, examples []Error, explanation string) {
+func register(code string, examples []status.Error, explanation string) {
 	if codes[code] {
 		panic(errors.Errorf("duplicate error code: %q", code))
 	}
@@ -49,19 +45,4 @@ func register(code string, examples []Error, explanation string) {
 
 	Examples[code] = examples
 	Explanations[code] = explanation
-}
-
-// UndefinedErrorCode is the code representing an unregistered error. These should be eliminated.
-const UndefinedErrorCode = "????"
-
-// Error Defines a Kubernetes Nomos Vet error
-// These are GKE Policy Management directory errors which are shown to the user and documented.
-type Error interface {
-	Error() string
-	Code() string
-}
-
-// withPrefix formats the start of error messages consistently.
-func format(err Error, format string, a ...interface{}) string {
-	return fmt.Sprintf("KNV%s: ", err.Code()) + fmt.Sprintf(format, a...)
 }

@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/policyimporter/id"
+import (
+	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
+)
 
 // UnknownObjectErrorCode is the error code for UnknownObjectError
 const UnknownObjectErrorCode = "1021" // Impossible to create consistent example.
@@ -16,7 +19,7 @@ type UnknownObjectError struct {
 
 // Error implements error
 func (e UnknownObjectError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"No CustomResourceDefinition is defined for the resource in the cluster. "+
 			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.\n\n%s",
 		id.PrintResource(e))

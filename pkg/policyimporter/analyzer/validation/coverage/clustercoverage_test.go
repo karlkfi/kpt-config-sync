@@ -5,8 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -16,7 +15,7 @@ func TestValidateObject(t *testing.T) {
 		name      string
 		clusters  []clusterregistry.Cluster
 		selectors []v1.ClusterSelector
-		errors    []vet.Error
+		errors    []status.Error
 		objects   []metav1.Object
 	}{
 		{
@@ -73,15 +72,15 @@ func TestValidateObject(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var b multierror.Builder
+			var b status.ErrorBuilder
 			cov := NewForCluster(test.clusters, test.selectors, &b)
 			for _, o := range test.objects {
 				cov.ValidateObject(o, &b)
 			}
 			rawE := b.Build()
-			var actual []vet.Error
+			var actual []status.Error
 			if rawE != nil {
-				actual = rawE.(multierror.MultiError).Errors()
+				actual = rawE.(status.MultiError).Errors()
 			}
 			if !cmp.Equal(actual, test.errors) {
 				t.Errorf("cov.Errors()=%v, want:\n%v,diff:\n%v",
@@ -198,7 +197,7 @@ func TestMapToClusters(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var b multierror.Builder
+			var b status.ErrorBuilder
 			cov := NewForCluster(test.clusters, test.selectors, &b)
 			if b.Build() != nil {
 				t.Fatalf("unexpected error: %v", b.Build())

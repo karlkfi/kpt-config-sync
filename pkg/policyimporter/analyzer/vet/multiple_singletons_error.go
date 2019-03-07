@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -30,7 +31,7 @@ func (e MultipleSingletonsError) Error() string {
 	}
 	sort.Strings(strs)
 
-	return format(e,
+	return status.Format(e,
 		"A directory may declare at most one %[1]q Resource:\n\n"+
 			"%[2]s",
 		gvk.String(), strings.Join(strs, "\n\n"))

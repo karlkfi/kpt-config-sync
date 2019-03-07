@@ -25,7 +25,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -35,7 +35,7 @@ import (
 // and what is required to fix it.
 type InputValidator struct {
 	*visitor.Base
-	errs             multierror.Builder
+	errs             status.ErrorBuilder
 	nodes            []*ast.TreeNode
 	vet              bool
 	coverage         *coverage.ForCluster

@@ -10,7 +10,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/repo"
 	"github.com/google/nomos/cmd/nomos/util"
 	v1repo "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -55,7 +55,7 @@ func Initialize(dir repo.FilePath) error {
 		}
 	}
 
-	repoDir := repoDirectoryBuilder{dir, multierror.Builder{}}
+	repoDir := repoDirectoryBuilder{dir, status.ErrorBuilder{}}
 	repoDir.createFile("", readmeFile, rootReadmeContents)
 
 	// Create system/
@@ -76,7 +76,7 @@ func Initialize(dir repo.FilePath) error {
 
 type repoDirectoryBuilder struct {
 	root   repo.FilePath
-	errors multierror.Builder
+	errors status.ErrorBuilder
 }
 
 func (d repoDirectoryBuilder) createDir(dir string) {

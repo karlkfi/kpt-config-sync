@@ -4,8 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 )
 
 // ExpectErrors adds an error to testing if the expected and actual errors don't match.
@@ -42,9 +41,9 @@ func ErrorCodes(err error) []string {
 	switch e := err.(type) {
 	case nil:
 		return []string{}
-	case vet.Error:
+	case status.Error:
 		return []string{e.Code()}
-	case *multierror.MultiError:
+	case *status.MultiError:
 		var result []string
 		for _, er := range e.Errors() {
 			result = append(result, ErrorCodes(er)...)
@@ -52,6 +51,9 @@ func ErrorCodes(err error) []string {
 		return result
 	default:
 		// For errors without a specific code
-		return []string{vet.UndefinedErrorCode}
+		return []string{UndefinedErrorCode}
 	}
 }
+
+// UndefinedErrorCode is the code representing an unregistered error. These should be eliminated.
+const UndefinedErrorCode = "????"

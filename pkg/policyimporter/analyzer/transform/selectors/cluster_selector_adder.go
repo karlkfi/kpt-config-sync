@@ -6,7 +6,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
@@ -20,7 +20,7 @@ type ClusterSelectorAdder struct {
 	clusters  []clusterregistry.Cluster
 	selectors []v1.ClusterSelector
 
-	errs multierror.Builder
+	errs status.ErrorBuilder
 }
 
 // GetClusters retrieves the selectors stored in Root.Data.

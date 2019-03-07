@@ -20,14 +20,14 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // QuotaValidator checks that ResourceQuota doesn't set scope related fields.
 type QuotaValidator struct {
 	*visitor.Base
-	errs multierror.Builder
+	errs status.ErrorBuilder
 }
 
 var _ ast.Visitor = &QuotaValidator{}

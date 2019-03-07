@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
 
@@ -89,7 +90,7 @@ func (e errorDocCode) Code() string {
 }
 
 // Examples returns the example errors
-func (e errorDocCode) Examples() []vet.Error {
+func (e errorDocCode) Examples() []status.Error {
 	return vet.Examples[e.Code()]
 }
 

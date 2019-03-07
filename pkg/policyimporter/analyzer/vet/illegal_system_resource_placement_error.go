@@ -3,6 +3,7 @@ package vet
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // IllegalSystemResourcePlacementErrorCode is the error code for IllegalSystemResourcePlacementError
@@ -19,7 +20,7 @@ type IllegalSystemResourcePlacementError struct {
 
 // Error implements error
 func (e IllegalSystemResourcePlacementError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"Resources of the below kind MUST NOT be declared outside %[1]s/:\n"+
 			"%[2]s",
 		repo.SystemDir, id.PrintResource(e))

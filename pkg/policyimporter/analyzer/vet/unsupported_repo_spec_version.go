@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/policyimporter/id"
+import (
+	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
+)
 
 // UnsupportedRepoSpecVersion reports that the repo version is not supported.
 type UnsupportedRepoSpecVersion struct {
@@ -17,7 +20,7 @@ func init() {
 
 // Error implements error
 func (e UnsupportedRepoSpecVersion) Error() string {
-	return format(e,
+	return status.Format(e,
 		"Unsupported Repo spec.version: %[2]q. Must use version \"0.1.0\"\n\n"+
 			"%[1]s",
 		id.PrintResource(e), e.Version)

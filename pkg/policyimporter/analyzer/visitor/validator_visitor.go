@@ -2,7 +2,7 @@ package visitor
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 )
 
 // ValidatorVisitor provides the basic necessary functionality for validators.
@@ -14,7 +14,7 @@ import (
 //    var MyExample1 = visitor.NewObjectValidator(
 //      func(o *ast.NamespaceObject) error {
 //        if o.Name() != "correct name" {
-//          return vet.UndocumentedError("Incorrect name %q", o.Name())
+//          return repo.UndocumentedError("Incorrect name %q", o.Name())
 //        }
 //        return nil
 //      }
@@ -31,7 +31,7 @@ import (
 //          }
 //        }
 //        if len(roles) > 1 {
-//          return vet.UndocumentedError("Multiple roles defined in %q", n.RelativeSlashPath())
+//          return repo.UndocumentedError("Multiple roles defined in %q", n.RelativeSlashPath())
 //        }
 //        return nil
 //      }
@@ -40,7 +40,7 @@ type ValidatorVisitor struct {
 	*Base
 	prerequisites []ast.Visitor
 	validator     Validator
-	errors        multierror.Builder
+	errors        status.ErrorBuilder
 }
 
 var _ ast.Visitor = &ValidatorVisitor{}

@@ -5,9 +5,9 @@ import (
 
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/apiresource"
 	"github.com/google/nomos/pkg/testing/object"
-	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -126,7 +126,7 @@ func TestResourceLister(t *testing.T) {
 
 			resourceLister := NewResourceLister(tc.resourcer)
 
-			eb := &multierror.Builder{}
+			eb := &status.ErrorBuilder{}
 			actual := resourceLister.List(tc.apiResource, eb)
 
 			err := eb.Build()

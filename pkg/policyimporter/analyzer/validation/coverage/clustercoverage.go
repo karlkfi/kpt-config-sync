@@ -8,7 +8,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -26,7 +26,7 @@ type ForCluster struct {
 func NewForCluster(
 	clusters []clusterregistry.Cluster,
 	selectors []v1.ClusterSelector,
-	errs *multierror.Builder,
+	errs *status.ErrorBuilder,
 ) *ForCluster {
 	cov := ForCluster{
 		selectorNames:     strSet{},
@@ -59,7 +59,7 @@ func NewForCluster(
 // ValidateObject validates the coverage of the object with clusters and selectors. An object
 // may not have an annotation, but if it does, it has to map to a valid selector.  Also if an
 // object has a selector in the annotation, that annotation must refer to a valid selector.
-func (c ForCluster) ValidateObject(o metav1.Object, errs *multierror.Builder) {
+func (c ForCluster) ValidateObject(o metav1.Object, errs *status.ErrorBuilder) {
 	a := v1.GetClusterSelectorAnnotation(o.GetAnnotations())
 	if a == "" {
 		return

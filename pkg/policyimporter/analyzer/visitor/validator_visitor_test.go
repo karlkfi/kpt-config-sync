@@ -6,11 +6,11 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/status"
 )
 
 func testError() error {
-	return vet.UndocumentedError("error")
+	return status.UndocumentedError("error")
 }
 
 func fakeObject() ast.FileObject {

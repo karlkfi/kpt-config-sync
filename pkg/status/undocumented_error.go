@@ -1,13 +1,11 @@
-package vet
+package status
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+)
 
 // UndocumentedErrorCode is the error code for Undocumented.
 const UndocumentedErrorCode = "9999"
-
-func init() {
-	register(UndocumentedErrorCode, nil, "")
-}
 
 // Undocumented errors represent error conditions which we should document but have not yet.
 // These should be avoided in changes that are adding a new error condition. This is purely for
@@ -18,7 +16,7 @@ type Undocumented struct {
 
 // Error implements error
 func (i Undocumented) Error() string {
-	s := format(i, "error: %s", i.err.Error())
+	s := Format(i, "error: %s", i.err.Error())
 	return s
 }
 

@@ -1,6 +1,7 @@
 package vet
 
 import (
+	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
 
@@ -23,7 +24,7 @@ type Internal struct {
 
 // Error implements error
 func (i Internal) Error() string {
-	return format(i, "internal error: %s", i.err.Error())
+	return status.Format(i, "internal error: %s", i.err.Error())
 }
 
 // Code implements Error
@@ -32,17 +33,17 @@ func (i Internal) Code() string {
 }
 
 // InternalError returns an Internal with the string representation of the passed object.
-func InternalError(message string) Error {
+func InternalError(message string) status.Error {
 	return Internal{err: errors.New(message)}
 }
 
 // InternalErrorf returns an Internal with a formatted message.
-func InternalErrorf(format string, args ...interface{}) Error {
+func InternalErrorf(format string, args ...interface{}) status.Error {
 	return Internal{err: errors.Errorf(format, args...)}
 }
 
 // InternalWrapf returns an Internal wrapping an error with a formatted message.
-func InternalWrapf(err error, format string, args ...interface{}) Error {
+func InternalWrapf(err error, format string, args ...interface{}) status.Error {
 	if err == nil {
 		return nil
 	}

@@ -22,8 +22,8 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
+	"github.com/google/nomos/pkg/status"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,7 +71,7 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 		{
 			testName: "Unmarshallable",
 			policy:   createPolicyAnnotation("{"),
-			errors:   []string{vet.UndocumentedErrorCode},
+			errors:   []string{status.UndocumentedErrorCode},
 		},
 	}
 

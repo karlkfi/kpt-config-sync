@@ -3,6 +3,7 @@ package vet
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // IllegalNamespaceSubdirectoryErrorCode is the error code for IllegalNamespaceSubdirectoryError
@@ -20,7 +21,7 @@ type IllegalNamespaceSubdirectoryError struct {
 
 // Error implements error.
 func (e IllegalNamespaceSubdirectoryError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"A %[1]s directory MUST NOT have subdirectories. "+
 			"Restructure %[4]q so that it does not have subdirectory %[2]q:\n\n"+
 			"%[3]s",

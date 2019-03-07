@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/policyimporter/id"
+import (
+	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
+)
 
 // UnsupportedResourceInHierarchyConfigErrorCode is the error code for UnsupportedResourceInHierarchyConfigError
 const UnsupportedResourceInHierarchyConfigErrorCode = "1041"
@@ -16,7 +19,7 @@ type UnsupportedResourceInHierarchyConfigError struct {
 
 // Error implements error
 func (e UnsupportedResourceInHierarchyConfigError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"This Resource Kind MUST NOT be declared in a HierarchyConfig:\n\n"+
 			"%[1]s",
 		id.PrintHierarchyConfig(e))

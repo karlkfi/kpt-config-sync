@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // MetadataNameCollisionErrorCode is the error code for ObjectNameCollisionError
@@ -29,7 +30,7 @@ func (e MetadataNameCollisionError) Error() string {
 	}
 	sort.Strings(strs)
 
-	return format(e,
+	return status.Format(e,
 		"Resources of the same Kind MUST have unique names in the same %[1]s and their parent %[3]ss:\n\n"+
 			"%[2]s",
 		node.Namespace, strings.Join(strs, "\n\n"), node.AbstractNamespace)

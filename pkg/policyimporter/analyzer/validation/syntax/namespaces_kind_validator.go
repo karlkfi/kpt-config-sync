@@ -6,14 +6,14 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 )
 
 // NewNamespaceKindValidator returns a Validator that ensures only the allowed set of Kinds appear
 // in Namespaces.
 func NewNamespaceKindValidator() *visitor.ValidatorVisitor {
 	return visitor.NewTreeNodeValidator(func(n *ast.TreeNode) error {
-		eb := multierror.Builder{}
+		eb := status.ErrorBuilder{}
 		if n.Type == node.Namespace {
 			for _, object := range n.Objects {
 				switch object.Object.(type) {

@@ -22,12 +22,12 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
-	"github.com/google/nomos/pkg/util/multierror"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
@@ -111,7 +111,7 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1
 
 	name := policy.GetName()
 	var syncErrs []v1.ClusterPolicySyncError
-	var errBuilder multierror.Builder
+	var errBuilder status.ErrorBuilder
 	reconcileCount := 0
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]

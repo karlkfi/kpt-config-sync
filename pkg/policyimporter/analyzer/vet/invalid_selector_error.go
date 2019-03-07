@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/pkg/errors"
+import (
+	"github.com/google/nomos/pkg/status"
+	"github.com/pkg/errors"
+)
 
 // InvalidSelectorErrorCode is the error code for InvalidSelectorError
 const InvalidSelectorErrorCode = "1014" // TODO: Must refactor to use properly
@@ -17,7 +20,7 @@ type InvalidSelectorError struct {
 
 // Error implements error.
 func (e InvalidSelectorError) Error() string {
-	return format(e, errors.Wrapf(e.Cause, "Selector for %q has validation errors that must be corrected", e.Name).Error())
+	return status.Format(e, errors.Wrapf(e.Cause, "Selector for %q has validation errors that must be corrected", e.Name).Error())
 }
 
 // Code implements Error

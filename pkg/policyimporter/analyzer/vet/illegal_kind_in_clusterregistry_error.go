@@ -3,6 +3,7 @@ package vet
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // IllegalKindInClusterregistryErrorCode is the error code for IllegalKindInClusterregistryError
@@ -19,7 +20,7 @@ type IllegalKindInClusterregistryError struct {
 
 // Error implements error
 func (e IllegalKindInClusterregistryError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"Resources of the below Kind may not be declared in %[2]s/:\n\n"+
 			"%[1]s",
 		id.PrintResource(e), repo.ClusterRegistryDir)

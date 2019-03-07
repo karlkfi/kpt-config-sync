@@ -19,15 +19,15 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/util/multierror"
 )
 
 // Scope runs after all transforms have completed.  This will verify that the final state of
 // the tree meets various conditions before we set it on the API server.
 type Scope struct {
 	*visitor.Base
-	errs    multierror.Builder
+	errs    status.ErrorBuilder
 	apiInfo *discovery.APIInfo
 }
 

@@ -3,6 +3,7 @@ package vet
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1/repo"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // IllegalKindInSystemErrorCode is the error code for IllegalKindInSystemError
@@ -19,7 +20,7 @@ type IllegalKindInSystemError struct {
 
 // Error implements error
 func (e IllegalKindInSystemError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"Resources of this Kind may not be declared in %[2]s/:\n\n"+
 			"%[1]s",
 		id.PrintResource(e), repo.SystemDir, e.RelativeSlashPath)

@@ -7,12 +7,13 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/status"
 )
 
 // DuplicateDirectoryNameErrorCode is the error code for DuplicateDirectoryNameError
 const DuplicateDirectoryNameErrorCode = "1002"
 
-var duplicateDirectoryNameErrorExamples = []Error{
+var duplicateDirectoryNameErrorExamples = []status.Error{
 	DuplicateDirectoryNameError{
 		Duplicates: []nomospath.Relative{nomospath.NewRelative("foo/bar"), nomospath.NewRelative("qux/bar")},
 	},
@@ -79,7 +80,7 @@ func (e DuplicateDirectoryNameError) Error() string {
 		duplicates[i] = duplicate.RelativeSlashPath()
 	}
 	sort.Strings(duplicates)
-	return format(e,
+	return status.Format(e,
 		"Directory names MUST be unique. Rename one of these directories:\n\n"+
 			"%[1]s",
 		strings.Join(duplicates, "\n"))

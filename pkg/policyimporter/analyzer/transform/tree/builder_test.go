@@ -24,7 +24,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
-	"github.com/google/nomos/pkg/util/multierror"
+	"github.com/google/nomos/pkg/status"
 )
 
 type directoryTreeTestcase struct {
@@ -38,7 +38,7 @@ func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	for _, dir := range tc.inputs {
 		tg.addDir(nomospath.NewRelative(dir))
 	}
-	eb := multierror.Builder{}
+	eb := status.ErrorBuilder{}
 	tr := tg.build()
 
 	vettesting.ExpectErrors(nil, eb.Build(), t)

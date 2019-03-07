@@ -2,6 +2,7 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/api/core/v1"
 )
 
@@ -24,7 +25,7 @@ type IllegalResourceQuotaFieldError struct {
 
 // Error implements error.
 func (e IllegalResourceQuotaFieldError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"ResourceQuota objects MUST NOT set scope when hierarchyMode is set to hierarchicalQuota. "+
 			"Remove illegal field %[1]s from object %[2]s located at directory %[3]q.",
 		e.Field, e.ResourceQuota.GetObjectMeta().GetName(), e.Path.RelativeSlashPath())

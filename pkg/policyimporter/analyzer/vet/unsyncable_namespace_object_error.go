@@ -1,6 +1,9 @@
 package vet
 
-import "github.com/google/nomos/pkg/policyimporter/id"
+import (
+	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
+)
 
 // UnsyncableNamespaceObjectErrorCode is the error code for UnsyncableNamespaceObjectErrorCode
 const UnsyncableNamespaceObjectErrorCode = "1006"
@@ -16,7 +19,7 @@ type UnsyncableNamespaceObjectError struct {
 
 // Error implements error.
 func (e UnsyncableNamespaceObjectError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"Unable to sync Resource. "+
 			"Enable sync for this Resource's kind.\n\n"+
 			"%[1]s",

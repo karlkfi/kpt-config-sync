@@ -3,6 +3,7 @@ package vet
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // IllegalAbstractNamespaceObjectKindErrorCode is the error code for IllegalAbstractNamespaceObjectKindError
@@ -19,7 +20,7 @@ type IllegalAbstractNamespaceObjectKindError struct {
 
 // Error implements error.
 func (e IllegalAbstractNamespaceObjectKindError) Error() string {
-	return format(e,
+	return status.Format(e,
 		"Resource %[4]q illegally declared in an %[1]s directory. "+
 			"Move this Resource to a %[2]s directory:\n\n"+
 			"%[3]s",
