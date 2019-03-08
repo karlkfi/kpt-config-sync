@@ -155,6 +155,11 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	bErr := errBuilder.Build()
+	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
+	if bErr == nil {
+		return reconcile.Result{}, nil
+	}
+	// end
 	if bErr != nil {
 		glog.Errorf("Could not reconcile syncs: %v", bErr)
 	}
@@ -223,5 +228,10 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo
 			errBuilder.Add(errors.Wrapf(err, "could not delete %s resource: %v", gvk, u))
 		}
 	}
-	return errBuilder.Build()
+	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
+	bErr := errBuilder.Build()
+	if bErr == nil {
+		return nil
+	}
+	return bErr
 }

@@ -150,7 +150,12 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1
 		r.recorder.Eventf(policy, corev1.EventTypeNormal, "ReconcileComplete",
 			"cluster policy was successfully reconciled: %d changes", reconcileCount)
 	}
-	return errBuilder.Build()
+	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
+	bErr := errBuilder.Build()
+	if bErr == nil {
+		return nil
+	}
+	return bErr
 }
 
 func decorateAsClusterManaged(declaredInstances []*unstructured.Unstructured, policy *v1.ClusterPolicy) {

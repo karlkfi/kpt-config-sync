@@ -21,6 +21,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/policynode"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -196,7 +197,7 @@ func appendResource(resources []v1.GenericResources, o runtime.Object) []v1.Gene
 	return resources
 }
 
-func (v *OutputVisitor) Error() error {
+func (v *OutputVisitor) Error() *status.MultiError {
 	return nil
 }
 

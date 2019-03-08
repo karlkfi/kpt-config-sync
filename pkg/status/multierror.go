@@ -30,17 +30,9 @@ type ErrorBuilder struct {
 	errs []Error
 }
 
-// from returns a MultiError with the array of errors.
-func from(errs []error) MultiError {
-	b := ErrorBuilder{}
-	for _, err := range errs {
-		b.Add(err)
-	}
-	result := b.Build()
-	if result == nil {
-		return MultiError{}
-	}
-	return *result.(*MultiError)
+// From returns a MultiError from one or more Errors.
+func From(errors ...Error) *MultiError {
+	return &MultiError{errs: errors}
 }
 
 // Add adds error to the builder.
@@ -53,18 +45,24 @@ func (b *ErrorBuilder) Add(err error) {
 	case Error:
 		b.errs = append(b.errs, e)
 	case utilerrors.Aggregate:
-		b.Add(from(e.Errors()))
+		for _, err := range e.Errors() {
+			b.Add(err)
+		}
 	case MultiError:
 		b.errs = append(b.errs, e.errs...)
 	case *MultiError:
+		if e == nil {
+			// No error to add if nil, and Go handling of nil is insane.
+			return
+		}
 		b.errs = append(b.errs, e.errs...)
 	default:
-		b.Add(UndocumentedWrapf(err, ""))
+		b.errs = append(b.errs, UndocumentedWrapf(err, ""))
 	}
 }
 
 // Build builds the error or returns nil if no errors were added
-func (b *ErrorBuilder) Build() error {
+func (b *ErrorBuilder) Build() *MultiError {
 	if len(b.errs) == 0 {
 		return nil
 	}

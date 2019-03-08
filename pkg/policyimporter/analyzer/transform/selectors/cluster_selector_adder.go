@@ -23,6 +23,8 @@ type ClusterSelectorAdder struct {
 	errs status.ErrorBuilder
 }
 
+var _ ast.Visitor = &ClusterSelectorAdder{}
+
 // GetClusters retrieves the selectors stored in Root.Data.
 func GetClusters(r *ast.Root) []clusterregistry.Cluster {
 	return r.Data.Get(clustersKey{}).([]clusterregistry.Cluster)
@@ -64,7 +66,7 @@ func (v *ClusterSelectorAdder) VisitClusterRegistry(c *ast.ClusterRegistry) *ast
 	return v.Base.VisitClusterRegistry(c)
 }
 
-func (v *ClusterSelectorAdder) Error() error {
+func (v *ClusterSelectorAdder) Error() *status.MultiError {
 	return v.errs.Build()
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/status"
 )
 
 // Build creates and populates an ast.Root with the provided objects.
@@ -26,7 +27,7 @@ func Build(t *testing.T, opts ...ast.BuildOpt) *ast.Root {
 // recognized top-level directory.
 func Objects(objects ...ast.FileObject) ast.BuildOpt {
 	var systemObjects []ast.FileObject
-	return func(root *ast.Root) error {
+	return func(root *ast.Root) *status.MultiError {
 		var clusterObjects []ast.FileObject
 		var clusterRegistryObjects []ast.FileObject
 		var namespaceObjects []ast.FileObject
@@ -41,7 +42,7 @@ func Objects(objects ...ast.FileObject) ast.BuildOpt {
 			case repo.NamespacesDir:
 				namespaceObjects = append(namespaceObjects, object)
 			default:
-				return vet.InternalErrorf("test resource not in known top-level directory: %s", object.RelativeSlashPath())
+				return status.From(vet.InternalErrorf("test resource not in known top-level directory: %s", object.RelativeSlashPath()))
 			}
 		}
 

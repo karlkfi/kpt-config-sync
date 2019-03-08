@@ -21,6 +21,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/status"
 )
 
 // Base implements visiting all children for a visitor (like a base class).
@@ -82,6 +83,8 @@ type Base struct {
 	// to return control to the top object in the visitor chain.
 	impl ast.Visitor
 }
+
+var _ ast.Visitor = &Base{}
 
 // NewBase creates a new VisitorBase.
 func NewBase() *Base {
@@ -178,7 +181,7 @@ func (vb *Base) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 }
 
 // Error implements Visitor.
-func (vb *Base) Error() error {
+func (vb *Base) Error() *status.MultiError {
 	return nil
 }
 

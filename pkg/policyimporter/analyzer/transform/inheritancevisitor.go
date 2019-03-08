@@ -64,7 +64,7 @@ func NewInheritanceVisitor(specs map[schema.GroupKind]*InheritanceSpec) *Inherit
 }
 
 // Error implements Visitor
-func (v *InheritanceVisitor) Error() error {
+func (v *InheritanceVisitor) Error() *status.MultiError {
 	return nil
 }
 

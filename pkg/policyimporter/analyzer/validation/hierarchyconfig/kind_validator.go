@@ -7,13 +7,14 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // NewHierarchyConfigKindValidator returns a Visitor that ensures only supported Resource Kinds are declared in
 // HierarchyConfigs.
 func NewHierarchyConfigKindValidator() ast.Visitor {
-	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) error {
+	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) *status.MultiError {
 		switch h := o.Object.(type) {
 		case *v1.HierarchyConfig:
 			for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
@@ -27,13 +28,13 @@ func NewHierarchyConfigKindValidator() ast.Visitor {
 }
 
 // ValidateKinds ensures that only supported Resource Kinds are declared in HierarchyConfigs.
-func ValidateKinds(config FileGroupKindHierarchyConfig) error {
+func ValidateKinds(config FileGroupKindHierarchyConfig) *status.MultiError {
 	if AllowedInHierarchyConfigs(config.GroupKind()) {
 		return nil
 	}
-	return vet.UnsupportedResourceInHierarchyConfigError{
+	return status.From(vet.UnsupportedResourceInHierarchyConfigError{
 		HierarchyConfig: config,
-	}
+	})
 }
 
 // AllowedInHierarchyConfigs returns true if the passed GroupKind is allowed to be declared in HierarchyConfigs.

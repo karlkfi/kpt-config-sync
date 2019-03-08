@@ -71,7 +71,7 @@ func NewAnnotationInlinerVisitor() *AnnotationInlinerVisitor {
 }
 
 // Error implements Visitor
-func (v *AnnotationInlinerVisitor) Error() error {
+func (v *AnnotationInlinerVisitor) Error() *status.MultiError {
 	return v.errs.Build()
 }
 

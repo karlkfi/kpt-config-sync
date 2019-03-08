@@ -310,7 +310,12 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 		r.recorder.Eventf(node, corev1.EventTypeNormal, "ReconcileComplete",
 			"policy node %q was successfully reconciled: %d changes", name, reconcileCount)
 	}
-	return errBuilder.Build()
+	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
+	bErr := errBuilder.Build()
+	if bErr == nil {
+		return nil
+	}
+	return bErr
 }
 
 // TODO(sbochins): consolidate common functionality with decorateAsClusterManaged.

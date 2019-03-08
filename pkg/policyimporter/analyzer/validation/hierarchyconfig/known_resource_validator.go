@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 )
 
@@ -20,19 +21,19 @@ func NewKnownResourceValidator() ast.Visitor {
 }
 
 // ValidateRoot implement ast.Visitor.
-func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) error {
+func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) *status.MultiError {
 	k.apiInfo = discovery.GetAPIInfo(r)
 	return nil
 }
 
 // ValidateSystemObject implements Visitor.
-func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) error {
+func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) *status.MultiError {
 	switch h := o.Object.(type) {
 	case *v1.HierarchyConfig:
 		for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
 			gk := gkc.GroupKind()
 			if !k.apiInfo.GroupKindExists(gk) {
-				return vet.UnknownResourceInHierarchyConfigError{HierarchyConfig: gkc}
+				return status.From(vet.UnknownResourceInHierarchyConfigError{HierarchyConfig: gkc})
 			}
 		}
 	}

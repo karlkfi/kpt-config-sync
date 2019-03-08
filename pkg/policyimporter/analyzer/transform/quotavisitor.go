@@ -23,6 +23,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/resourcequota"
+	"github.com/google/nomos/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -85,7 +86,7 @@ func NewQuotaVisitor() *QuotaVisitor {
 }
 
 // Error implements Visitor
-func (v *QuotaVisitor) Error() error {
+func (v *QuotaVisitor) Error() *status.MultiError {
 	return nil
 }
 

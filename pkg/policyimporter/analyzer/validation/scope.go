@@ -31,6 +31,8 @@ type Scope struct {
 	apiInfo *discovery.APIInfo
 }
 
+var _ ast.Visitor = &Scope{}
+
 // NewScope returns a validator that checks if objects are in the correct scope in terms of namespace
 // vs cluster.
 // resourceLists is the list of supported types from the discovery client.
@@ -43,7 +45,7 @@ func NewScope() *Scope {
 }
 
 // Error returns any errors encountered during processing
-func (p *Scope) Error() error {
+func (p *Scope) Error() *status.MultiError {
 	return p.errs.Build()
 }
 

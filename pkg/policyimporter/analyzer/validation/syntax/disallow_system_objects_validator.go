@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -13,25 +14,25 @@ type disallowSystemObjectsValidator struct {
 }
 
 // ValidateClusterRegistryObject implements visitor.Validator.
-func (v *disallowSystemObjectsValidator) ValidateClusterRegistryObject(o *ast.ClusterRegistryObject) error {
+func (v *disallowSystemObjectsValidator) ValidateClusterRegistryObject(o *ast.ClusterRegistryObject) *status.MultiError {
 	if IsSystemOnly(o.GroupVersionKind()) {
-		return vet.IllegalSystemResourcePlacementError{Resource: o}
+		return status.From(vet.IllegalSystemResourcePlacementError{Resource: o})
 	}
 	return nil
 }
 
 // ValidateClusterObject implements visitor.Validator.
-func (v *disallowSystemObjectsValidator) ValidateClusterObject(o *ast.ClusterObject) error {
+func (v *disallowSystemObjectsValidator) ValidateClusterObject(o *ast.ClusterObject) *status.MultiError {
 	if IsSystemOnly(o.GroupVersionKind()) {
-		return vet.IllegalSystemResourcePlacementError{Resource: o}
+		return status.From(vet.IllegalSystemResourcePlacementError{Resource: o})
 	}
 	return nil
 }
 
 // ValidateObject implements visitor.Validator.
-func (v *disallowSystemObjectsValidator) ValidateObject(o *ast.NamespaceObject) error {
+func (v *disallowSystemObjectsValidator) ValidateObject(o *ast.NamespaceObject) *status.MultiError {
 	if IsSystemOnly(o.GroupVersionKind()) {
-		return vet.IllegalSystemResourcePlacementError{Resource: o}
+		return status.From(vet.IllegalSystemResourcePlacementError{Resource: o})
 	}
 	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
@@ -14,26 +15,26 @@ import (
 // NewNameValidator validates the value of metadata.name
 func NewNameValidator() *visitor.ValidatorVisitor {
 	return visitor.NewAllObjectValidator(
-		func(o ast.FileObject) error {
+		func(o ast.FileObject) *status.MultiError {
 			gvk := o.GroupVersionKind()
 
 			if o.Name() == "" {
 				// Name MUST NOT be empty
-				return vet.MissingObjectNameError{Resource: &o}
+				return status.From(vet.MissingObjectNameError{Resource: &o})
 			} else if isDefaultCrdAllowedInNomos(gvk) {
 				// If CRD, then name must be a valid DNS1123 subdomain
 				errs := validation.IsDNS1123Subdomain(o.Name())
 				if errs != nil {
-					return vet.InvalidMetadataNameError{Resource: &o}
+					return status.From(vet.InvalidMetadataNameError{Resource: &o})
 				}
 			} else if gvk == kinds.Namespace() {
 				// TODO(willbeason) Move this to its own Validator.
 				expectedName := o.Dir().Base()
 				if expectedName == repo.NamespacesDir {
-					return vet.IllegalTopLevelNamespaceError{Resource: &o}
+					return status.From(vet.IllegalTopLevelNamespaceError{Resource: &o})
 				}
 				if o.Name() != expectedName {
-					return vet.InvalidNamespaceNameError{Resource: &o, Expected: expectedName}
+					return status.From(vet.InvalidNamespaceNameError{Resource: &o, Expected: expectedName})
 				}
 			}
 			return nil

@@ -12,7 +12,7 @@ import (
 // NewNamespaceKindValidator returns a Validator that ensures only the allowed set of Kinds appear
 // in Namespaces.
 func NewNamespaceKindValidator() *visitor.ValidatorVisitor {
-	return visitor.NewTreeNodeValidator(func(n *ast.TreeNode) error {
+	return visitor.NewTreeNodeValidator(func(n *ast.TreeNode) *status.MultiError {
 		eb := status.ErrorBuilder{}
 		if n.Type == node.Namespace {
 			for _, object := range n.Objects {

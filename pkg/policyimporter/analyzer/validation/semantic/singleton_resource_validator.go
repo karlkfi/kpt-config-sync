@@ -5,13 +5,14 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // NewSingletonResourceValidator returns a ValidatorVisitor which ensures every TreeNode has
 // at most one of the passed GroupVersionKind.
 func NewSingletonResourceValidator(gvk schema.GroupVersionKind) *visitor.ValidatorVisitor {
-	return visitor.NewAllNodesValidator(func(objects []ast.FileObject) error {
+	return visitor.NewAllNodesValidator(func(objects []ast.FileObject) *status.MultiError {
 		var duplicates []id.Resource
 		for _, object := range objects {
 			if object.GroupVersionKind() == gvk {
@@ -19,7 +20,7 @@ func NewSingletonResourceValidator(gvk schema.GroupVersionKind) *visitor.Validat
 			}
 		}
 		if len(duplicates) > 1 {
-			return vet.MultipleSingletonsError{Duplicates: duplicates}
+			return status.From(vet.MultipleSingletonsError{Duplicates: duplicates})
 		}
 		return nil
 	})

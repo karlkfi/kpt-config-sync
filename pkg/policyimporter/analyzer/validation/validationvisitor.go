@@ -65,7 +65,7 @@ func NewInputValidator(
 }
 
 // Error returns any errors encountered during processing
-func (v *InputValidator) Error() error {
+func (v *InputValidator) Error() *status.MultiError {
 	return v.errs.Build()
 }
 

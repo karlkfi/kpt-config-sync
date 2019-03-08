@@ -43,7 +43,7 @@ func NewQuotaValidator() *QuotaValidator {
 }
 
 // Error returns any errors encountered during processing
-func (v *QuotaValidator) Error() error {
+func (v *QuotaValidator) Error() *status.MultiError {
 	return v.errs.Build()
 }
 

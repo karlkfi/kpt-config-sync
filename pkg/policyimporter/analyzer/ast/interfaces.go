@@ -16,6 +16,8 @@ limitations under the License.
 
 package ast
 
+import "github.com/google/nomos/pkg/status"
+
 // Visitor allows for writing transforms on the GitContext.  The various visit methods
 // will visit each type.  The return values for each Visit[Type] function are implementation dependant.
 //
@@ -39,7 +41,7 @@ type Visitor interface {
 	VisitObject(o *NamespaceObject) *NamespaceObject
 
 	// Error allows the visitor to emit errors that may have occurred while operating.
-	Error() error
+	Error() *status.MultiError
 
 	// Fatal returns if the Visitor has determined that Parser should stop processing immediately.
 	Fatal() bool

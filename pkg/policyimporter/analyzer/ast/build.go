@@ -1,7 +1,9 @@
 package ast
 
+import "github.com/google/nomos/pkg/status"
+
 // BuildOpt performs some operation on Root, returning error if some problem is found.
-type BuildOpt func(root *Root) error
+type BuildOpt func(root *Root) *status.MultiError
 
 // Build constructs a Root by starting with an empty Root and performing the supplied BuildOpts it,
 // returning the result. If any errors are encountered, returns error.

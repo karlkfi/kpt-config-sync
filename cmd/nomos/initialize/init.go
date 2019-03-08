@@ -71,7 +71,12 @@ func Initialize(dir repo.FilePath) error {
 	repoDir.createDir(v1repo.NamespacesDir)
 	repoDir.createFile(v1repo.NamespacesDir, readmeFile, namespacesReadmeContents)
 
-	return repoDir.errors.Build()
+	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
+	bErr := repoDir.errors.Build()
+	if bErr == nil {
+		return nil
+	}
+	return bErr
 }
 
 type repoDirectoryBuilder struct {

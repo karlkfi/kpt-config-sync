@@ -121,6 +121,6 @@ func (v *ValidatorVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 }
 
 // Error implements Visitor.
-func (v *ValidatorVisitor) Error() error {
+func (v *ValidatorVisitor) Error() *status.MultiError {
 	return v.errors.Build()
 }

@@ -80,7 +80,7 @@ func TestValidateObject(t *testing.T) {
 			rawE := b.Build()
 			var actual []status.Error
 			if rawE != nil {
-				actual = rawE.(status.MultiError).Errors()
+				actual = rawE.Errors()
 			}
 			if !cmp.Equal(actual, test.errors) {
 				t.Errorf("cov.Errors()=%v, want:\n%v,diff:\n%v",

@@ -3,6 +3,8 @@ package visitor_test
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/status"
+
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
@@ -12,8 +14,8 @@ import (
 )
 
 func newFailAll() *visitor.ValidatorVisitor {
-	return visitor.NewAllObjectValidator(func(o ast.FileObject) error {
-		return vet.InternalError("test error")
+	return visitor.NewAllObjectValidator(func(o ast.FileObject) *status.MultiError {
+		return status.From(vet.InternalError("test error"))
 	})
 }
 

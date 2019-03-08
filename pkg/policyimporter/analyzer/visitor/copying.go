@@ -16,7 +16,10 @@ limitations under the License.
 
 package visitor
 
-import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+import (
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/status"
+)
 
 // Copying is a Visitor implementation that creates and returns a copy of the
 // tree.  Member functions can be overridden in order to facilitate other transforms.
@@ -56,7 +59,7 @@ func (v *Copying) SetImpl(impl ast.Visitor) {
 }
 
 // Error implements Visitor
-func (v *Copying) Error() error {
+func (v *Copying) Error() *status.MultiError {
 	return nil
 }
 

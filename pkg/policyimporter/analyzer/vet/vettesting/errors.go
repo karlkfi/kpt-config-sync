@@ -44,6 +44,9 @@ func ErrorCodes(err error) []string {
 	case status.Error:
 		return []string{e.Code()}
 	case *status.MultiError:
+		if e == nil {
+			return []string{}
+		}
 		var result []string
 		for _, er := range e.Errors() {
 			result = append(result, ErrorCodes(er)...)
