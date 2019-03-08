@@ -21,7 +21,7 @@ func failRoot(_ *ast.Root) *status.MultiError {
 	return testError()
 }
 
-func failSystem(_ *ast.System) *status.MultiError {
+func failSystem(_ []*ast.SystemObject) *status.MultiError {
 	return testError()
 }
 
@@ -29,7 +29,7 @@ func failSystemObject(_ *ast.SystemObject) *status.MultiError {
 	return testError()
 }
 
-func failClusterRegistry(_ *ast.ClusterRegistry) *status.MultiError {
+func failClusterRegistry(_ []*ast.ClusterRegistryObject) *status.MultiError {
 	return testError()
 }
 
@@ -37,7 +37,7 @@ func failClusterRegistryObject(_ *ast.ClusterRegistryObject) *status.MultiError 
 	return testError()
 }
 
-func failCluster(_ *ast.Cluster) *status.MultiError {
+func failCluster(_ []*ast.ClusterObject) *status.MultiError {
 	return testError()
 }
 

@@ -57,7 +57,7 @@ Example usage:
 	}
 
 	// VisitCluster re-uses the previous ast.Cluster without making a copy or modification
-	func (v *AnnotationAdder) VisitCluster(c *ast.Cluster) {
+	func (v *AnnotationAdder) VisitCluster(c []*ast.ClusterObject) {
 		return c
 	}
 

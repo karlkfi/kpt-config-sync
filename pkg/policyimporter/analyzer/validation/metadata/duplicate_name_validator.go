@@ -60,9 +60,9 @@ func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) *status.Multi
 }
 
 // ValidateCluster ensures the Cluster policy node contains no duplicates.
-func (v *duplicateNameValidator) ValidateCluster(c *ast.Cluster) *status.MultiError {
-	resources := make([]id.Resource, len(c.Objects))
-	for i, object := range c.Objects {
+func (v *duplicateNameValidator) ValidateCluster(c []*ast.ClusterObject) *status.MultiError {
+	resources := make([]id.Resource, len(c))
+	for i, object := range c {
 		resources[i] = object
 	}
 

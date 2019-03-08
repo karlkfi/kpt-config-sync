@@ -69,9 +69,9 @@ func (v *ValidatorVisitor) VisitRoot(g *ast.Root) *ast.Root {
 		g.Accept(prerequisite)
 	}
 	v.errors.Add(v.validator.ValidateRoot(g))
-	v.errors.Add(v.validator.ValidateSystem(&ast.System{Objects: g.SystemObjects}))
-	v.errors.Add(v.validator.ValidateCluster(&ast.Cluster{Objects: g.ClusterObjects}))
-	v.errors.Add(v.validator.ValidateClusterRegistry(&ast.ClusterRegistry{Objects: g.ClusterRegistryObjects}))
+	v.errors.Add(v.validator.ValidateSystem(g.SystemObjects))
+	v.errors.Add(v.validator.ValidateCluster(g.ClusterObjects))
+	v.errors.Add(v.validator.ValidateClusterRegistry(g.ClusterRegistryObjects))
 	return v.Base.VisitRoot(g)
 }
 

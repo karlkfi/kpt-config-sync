@@ -89,11 +89,6 @@ func (c *Root) Accept(visitor Visitor) *Root {
 	return visitor.VisitRoot(c)
 }
 
-// System represents cluster scoped policies.
-type System struct {
-	Objects []*SystemObject
-}
-
 // SystemObject extends FileObject to implement Visitable for cluster scoped objects.
 //
 // A SystemObject represents a cluster scoped resource from the cluster directory.
@@ -114,11 +109,6 @@ func (o *SystemObject) DeepCopy() *SystemObject {
 	return &SystemObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
 }
 
-// ClusterRegistry represents cluster scoped policies.
-type ClusterRegistry struct {
-	Objects []*ClusterRegistryObject
-}
-
 // ClusterRegistryObject extends FileObject to implement Visitable for cluster scoped objects.
 //
 // A ClusterRegistryObject represents a cluster scoped resource from the cluster directory.
@@ -137,11 +127,6 @@ func (o *ClusterRegistryObject) Accept(visitor Visitor) *ClusterRegistryObject {
 // DeepCopy creates a deep copy of the object
 func (o *ClusterRegistryObject) DeepCopy() *ClusterRegistryObject {
 	return &ClusterRegistryObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
-}
-
-// Cluster represents cluster scoped policies.
-type Cluster struct {
-	Objects []*ClusterObject
 }
 
 // ClusterObject extends FileObject to implement Visitable for cluster scoped objects.

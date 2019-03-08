@@ -68,11 +68,6 @@ func (v *InheritanceVisitor) Error() *status.MultiError {
 	return nil
 }
 
-// VisitCluster implements Visitor
-func (v *InheritanceVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
-	return c
-}
-
 // VisitTreeNode implements Visitor
 func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.treeContext = append(v.treeContext, nodeContext{

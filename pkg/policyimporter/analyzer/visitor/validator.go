@@ -14,19 +14,19 @@ type Validator interface {
 	ValidateRoot(r *ast.Root) *status.MultiError
 
 	// ValidateSystem defines validation that happens on the system/ directory.
-	ValidateSystem(s *ast.System) *status.MultiError
+	ValidateSystem(s []*ast.SystemObject) *status.MultiError
 
 	// ValidateSystemObject defines validation that happens on each object in the system/ directory.
 	ValidateSystemObject(o *ast.SystemObject) *status.MultiError
 
 	// ValidateClusterRegistry defines validation that happens on the clusterregistry/ directory.
-	ValidateClusterRegistry(c *ast.ClusterRegistry) *status.MultiError
+	ValidateClusterRegistry(c []*ast.ClusterRegistryObject) *status.MultiError
 
 	// ValidateClusterRegistryObject defines validation that happens on each object in the clusterregistry/ directory.
 	ValidateClusterRegistryObject(o *ast.ClusterRegistryObject) *status.MultiError
 
 	// ValidateCluster defines validation that happens on the cluster/ directory.
-	ValidateCluster(c *ast.Cluster) *status.MultiError
+	ValidateCluster(c []*ast.ClusterObject) *status.MultiError
 
 	// ValidateClusterObject defines validation that happens on each object in the cluster/ directory.
 	ValidateClusterObject(o *ast.ClusterObject) *status.MultiError

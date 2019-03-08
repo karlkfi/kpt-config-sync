@@ -36,17 +36,17 @@ func NewTreeNodesValidator(validate func(ns []*ast.TreeNode) *status.MultiError)
 // systemValidator validates System.
 type systemValidator struct {
 	ValidatorBase
-	validate func(s *ast.System) *status.MultiError
+	validate func(s []*ast.SystemObject) *status.MultiError
 }
 
 // ValidateSystem implements Validator.
-func (v *systemValidator) ValidateSystem(s *ast.System) *status.MultiError {
+func (v *systemValidator) ValidateSystem(s []*ast.SystemObject) *status.MultiError {
 	return v.validate(s)
 }
 
 // NewSystemValidator returns a ValidatorVisitor which validates System with the passed validation function.
 // Errors returned by validate during visiting will be returned by Error().
-func NewSystemValidator(validate func(s *ast.System) *status.MultiError) *ValidatorVisitor {
+func NewSystemValidator(validate func(s []*ast.SystemObject) *status.MultiError) *ValidatorVisitor {
 	return NewValidator(&systemValidator{validate: validate})
 }
 
@@ -68,17 +68,17 @@ func NewSystemObjectValidator(validate func(o *ast.SystemObject) *status.MultiEr
 
 type clusterRegistryValidator struct {
 	ValidatorBase
-	validate func(s *ast.ClusterRegistry) *status.MultiError
+	validate func(s []*ast.ClusterRegistryObject) *status.MultiError
 }
 
 // ValidateClusterRegistry implements Validator.
-func (v *clusterRegistryValidator) ValidateClusterRegistry(c *ast.ClusterRegistry) *status.MultiError {
+func (v *clusterRegistryValidator) ValidateClusterRegistry(c []*ast.ClusterRegistryObject) *status.MultiError {
 	return v.validate(c)
 }
 
 // NewClusterRegistryValidator returns a ValidatorVisitor which validates ClusterRegistry with the passed validation function.
 // Errors returned by validate during visiting will be returned by Error().
-func NewClusterRegistryValidator(validate func(s *ast.ClusterRegistry) *status.MultiError) *ValidatorVisitor {
+func NewClusterRegistryValidator(validate func(s []*ast.ClusterRegistryObject) *status.MultiError) *ValidatorVisitor {
 	return NewValidator(&clusterRegistryValidator{validate: validate})
 }
 
@@ -100,17 +100,17 @@ func NewClusterRegistryObjectValidator(validate func(o *ast.ClusterRegistryObjec
 
 type clusterValidator struct {
 	ValidatorBase
-	validate func(s *ast.Cluster) *status.MultiError
+	validate func(s []*ast.ClusterObject) *status.MultiError
 }
 
 // ValidateCluster implements Validator.
-func (v *clusterValidator) ValidateCluster(c *ast.Cluster) *status.MultiError {
+func (v *clusterValidator) ValidateCluster(c []*ast.ClusterObject) *status.MultiError {
 	return v.validate(c)
 }
 
 // NewClusterValidator returns a ValidatorVisitor which validates Cluster with the passed validation function.
 // Errors returned by validate during visiting will be returned by Error().
-func NewClusterValidator(validate func(c *ast.Cluster) *status.MultiError) *ValidatorVisitor {
+func NewClusterValidator(validate func(c []*ast.ClusterObject) *status.MultiError) *ValidatorVisitor {
 	return NewValidator(&clusterValidator{validate: validate})
 }
 
@@ -206,27 +206,27 @@ func NewAllNodesValidator(validate func(os []ast.FileObject) *status.MultiError)
 }
 
 // ValidateSystem implements Validator.
-func (v *allNodesValidator) ValidateSystem(o *ast.System) *status.MultiError {
-	objects := make([]ast.FileObject, len(o.Objects))
-	for i, o := range o.Objects {
+func (v *allNodesValidator) ValidateSystem(o []*ast.SystemObject) *status.MultiError {
+	objects := make([]ast.FileObject, len(o))
+	for i, o := range o {
 		objects[i] = o.FileObject
 	}
 	return v.validate(objects)
 }
 
 // ValidateClusterRegistry implements Validator.
-func (v *allNodesValidator) ValidateClusterRegistry(o *ast.ClusterRegistry) *status.MultiError {
-	objects := make([]ast.FileObject, len(o.Objects))
-	for i, o := range o.Objects {
+func (v *allNodesValidator) ValidateClusterRegistry(o []*ast.ClusterRegistryObject) *status.MultiError {
+	objects := make([]ast.FileObject, len(o))
+	for i, o := range o {
 		objects[i] = o.FileObject
 	}
 	return v.validate(objects)
 }
 
 // ValidateCluster implements Validator.
-func (v *allNodesValidator) ValidateCluster(o *ast.Cluster) *status.MultiError {
-	objects := make([]ast.FileObject, len(o.Objects))
-	for i, o := range o.Objects {
+func (v *allNodesValidator) ValidateCluster(o []*ast.ClusterObject) *status.MultiError {
+	objects := make([]ast.FileObject, len(o))
+	for i, o := range o {
 		objects[i] = o.FileObject
 	}
 	return v.validate(objects)

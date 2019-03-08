@@ -16,7 +16,7 @@ func (vb *ValidatorBase) ValidateRoot(g *ast.Root) *status.MultiError {
 }
 
 // ValidateSystem implements Validator.
-func (vb *ValidatorBase) ValidateSystem(c *ast.System) *status.MultiError {
+func (vb *ValidatorBase) ValidateSystem(c []*ast.SystemObject) *status.MultiError {
 	return nil
 }
 
@@ -26,7 +26,7 @@ func (vb *ValidatorBase) ValidateSystemObject(o *ast.SystemObject) *status.Multi
 }
 
 // ValidateClusterRegistry implements Validator.
-func (vb *ValidatorBase) ValidateClusterRegistry(c *ast.ClusterRegistry) *status.MultiError {
+func (vb *ValidatorBase) ValidateClusterRegistry(c []*ast.ClusterRegistryObject) *status.MultiError {
 	return nil
 }
 
@@ -36,7 +36,7 @@ func (vb *ValidatorBase) ValidateClusterRegistryObject(o *ast.ClusterRegistryObj
 }
 
 // ValidateCluster implements Validator.
-func (vb *ValidatorBase) ValidateCluster(c *ast.Cluster) *status.MultiError {
+func (vb *ValidatorBase) ValidateCluster(c []*ast.ClusterObject) *status.MultiError {
 	return nil
 }
 
