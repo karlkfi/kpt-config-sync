@@ -30,7 +30,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
-	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 var (

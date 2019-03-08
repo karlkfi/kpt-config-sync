@@ -91,6 +91,11 @@ func (spec *AdmissionReviewSpec) AddAnnotation(key, value string) error {
 	return nil
 }
 
+// IsDryRun implements admission.Attributes. Since k8s v1.12.3
+func (spec *AdmissionReviewSpec) IsDryRun() bool {
+	return false
+}
+
 // GetAttributes returns admissions attributes initialized from the given request and decoder.
 func GetAttributes(decoder runtime.Decoder, request v1beta1.AdmissionRequest) admission.Attributes {
 	unpackedSpec := unpackRawSpec(decoder, request)

@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -189,7 +190,7 @@ func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedStat
 	action.APICalls.WithLabelValues(name, "patch").Inc()
 	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(name, "patch"))
 	defer timer.ObserveDuration()
-	if _, err := resourceClient.Patch(name, patchType, patch); err != nil {
+	if _, err := resourceClient.Patch(name, patchType, patch, metav1.UpdateOptions{}); err != nil {
 		return errors.Wrapf(err, "could not patch %s", resourceDescription)
 	}
 	glog.V(1).Infof("Patched %s", resourceDescription)

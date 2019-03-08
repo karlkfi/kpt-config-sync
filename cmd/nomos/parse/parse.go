@@ -7,9 +7,9 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/filesystem"
 	"github.com/google/nomos/pkg/util/policynode"
 	"github.com/pkg/errors"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 )
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.

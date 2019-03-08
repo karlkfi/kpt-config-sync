@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/cli-runtime/pkg/genericclioptions/resource"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	restclient "k8s.io/client-go/rest"
@@ -44,7 +45,6 @@ import (
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
 	openapitesting "k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi/testing"
-	"k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource"
 	"k8s.io/kubernetes/pkg/kubectl/validation"
 	"k8s.io/kubernetes/pkg/printers"
 )
@@ -68,6 +68,9 @@ func (g *FakeRESTClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInt
 
 // ToRESTMapper returns a restmapper
 func (g *FakeRESTClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
+	if g.RestMapper == nil {
+		panic("omg is nil")
+	}
 	return g.RestMapper, nil
 }
 
@@ -136,12 +139,13 @@ func NewTestFactory(t *testing.T, extraResources ...*restmapper.APIGroupResource
 	// to avoid polluting an existing user Config.
 	config, configFile := defaultFakeClientConfig(t)
 	rConfig, _ := config.ClientConfig()
+	cg := &FakeRESTClientGetter{
+		Config:          config,
+		DiscoveryClient: NewFakeCachedDiscoveryClient(TestAPIResourceList(TestDynamicResources(extraResources...))),
+		RestMapper:      RestMapper(),
+	}
 	return &TestFactory{
-		Factory: cmdutil.NewFactory(
-			&FakeRESTClientGetter{
-				Config:          config,
-				DiscoveryClient: NewFakeCachedDiscoveryClient(TestAPIResourceList(TestDynamicResources(extraResources...))),
-			}),
+		Factory:         cmdutil.NewFactory(cg),
 		Client:          &fake.RESTClient{},
 		tempConfigFile:  configFile,
 		ClientConfigVal: rConfig,
@@ -213,9 +217,11 @@ func (f *TestFactory) NewBuilder() *resource.Builder {
 	fn := func(version schema.GroupVersion) (resource.RESTClient, error) {
 		return f.ClientForMapping(nil)
 	}
-	mapper := f.RestMapper()
-	dc := &fakediscovery.FakeDiscovery{}
-	return resource.NewFakeBuilder(fn, mapper, restmapper.NewDiscoveryCategoryExpander(dc))
+	ef := func() (restmapper.CategoryExpander, error) {
+		dc := &fakediscovery.FakeDiscovery{}
+		return restmapper.NewDiscoveryCategoryExpander(dc), nil
+	}
+	return resource.NewFakeBuilder(fn, f.ToRESTMapper, ef)
 }
 
 // RESTClient returns a rest client.
@@ -241,7 +247,7 @@ func (f *TestFactory) DiscoveryClient() (discovery.CachedDiscoveryInterface, err
 }
 
 // RestMapper returns a RESTMapper.
-func (f *TestFactory) RestMapper() meta.RESTMapper {
+func RestMapper() meta.RESTMapper {
 	return restmapper.NewDiscoveryRESTMapper(TestDynamicResources())
 }
 
