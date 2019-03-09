@@ -23,17 +23,8 @@ func NewClusterRegistryBuilderVisitor(objects []ast.FileObject) *ClusterRegistry
 
 // VisitRoot adds ClusterRegistry to Root if there are any objects to add.
 func (v *ClusterRegistryBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
-	if (r.ClusterRegistry == nil) && (len(v.objects) > 0) {
-		r.ClusterRegistry = &ast.ClusterRegistry{}
-	}
-
-	return v.Base.VisitRoot(r)
-}
-
-// VisitClusterRegistry adds the cluster objects to ClusterRegistry.
-func (v *ClusterRegistryBuilderVisitor) VisitClusterRegistry(c *ast.ClusterRegistry) *ast.ClusterRegistry {
 	for _, o := range v.objects {
-		c.Objects = append(c.Objects, &ast.ClusterRegistryObject{FileObject: o})
+		r.ClusterRegistryObjects = append(r.ClusterRegistryObjects, &ast.ClusterRegistryObject{FileObject: o})
 	}
-	return c
+	return r
 }

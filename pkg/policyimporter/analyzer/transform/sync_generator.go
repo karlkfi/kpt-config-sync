@@ -15,8 +15,7 @@ type SyncGenerator struct {
 	// Copying is used for copying parts of the ast.Root tree and continuing underlying visitor iteration.
 	*visitor.Copying
 
-	system *ast.System
-	allGk  map[schema.GroupKind]struct{}
+	allGk map[schema.GroupKind]struct{}
 }
 
 // NewSyncGenerator returns a new SyncGenerator transform.
@@ -40,7 +39,7 @@ func (v *SyncGenerator) VisitRoot(r *ast.Root) *ast.Root {
 		return gkList[i].String() < gkList[j].String()
 	})
 	for _, gk := range gkList {
-		v.system.Objects = append(v.system.Objects, &ast.SystemObject{
+		nr.SystemObjects = append(nr.SystemObjects, &ast.SystemObject{
 			FileObject: ast.FileObject{
 				Object: v.genSync(gk),
 			},
@@ -59,12 +58,6 @@ func (v *SyncGenerator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObj
 func (v *SyncGenerator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	v.allGk[o.GroupVersionKind().GroupKind()] = struct{}{}
 	return o
-}
-
-// VisitSystem implements Visitor
-func (v *SyncGenerator) VisitSystem(s *ast.System) *ast.System {
-	v.system = v.Copying.VisitSystem(s)
-	return v.system
 }
 
 func (v *SyncGenerator) genSync(gk schema.GroupKind) *v1.Sync {

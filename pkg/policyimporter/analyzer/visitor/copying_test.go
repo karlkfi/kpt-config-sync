@@ -75,16 +75,6 @@ func (v *testVisitor) VisitRoot(c *ast.Root) *ast.Root {
 	return got
 }
 
-// VisitSystem implements Visitor
-func (v *testVisitor) VisitSystem(c *ast.System) *ast.System {
-	v.visits = append(v.visits, "System")
-	got := v.Visitor.VisitSystem(c)
-	if (c == got) == v.wantEq {
-		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
-	}
-	return got
-}
-
 // VisitSystemObject implements Visitor
 func (v *testVisitor) VisitSystemObject(c *ast.SystemObject) *ast.SystemObject {
 	v.visits = append(v.visits, fmt.Sprintf("SystemObject %s %s", c.GroupVersionKind(), c.Name()))
@@ -95,30 +85,10 @@ func (v *testVisitor) VisitSystemObject(c *ast.SystemObject) *ast.SystemObject {
 	return got
 }
 
-// VisitClusterRegistry implements Visitor
-func (v *testVisitor) VisitClusterRegistry(c *ast.ClusterRegistry) *ast.ClusterRegistry {
-	v.visits = append(v.visits, "ClusterRegistry")
-	got := v.Visitor.VisitClusterRegistry(c)
-	if (c == got) == v.wantEq {
-		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
-	}
-	return got
-}
-
 // VisitClusterRegistryObject implements Visitor
 func (v *testVisitor) VisitClusterRegistryObject(c *ast.ClusterRegistryObject) *ast.ClusterRegistryObject {
 	v.visits = append(v.visits, fmt.Sprintf("ClusterRegistryObject %s %s", c.GroupVersionKind(), c.Name()))
 	got := v.Visitor.VisitClusterRegistryObject(c)
-	if (c == got) == v.wantEq {
-		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
-	}
-	return got
-}
-
-// VisitCluster implements Visitor
-func (v *testVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
-	v.visits = append(v.visits, "Cluster")
-	got := v.Visitor.VisitCluster(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
 	}
@@ -160,11 +130,8 @@ func (v *testVisitor) Check(t *testing.T) {
 
 	expectOrder := []string{
 		"Root",
-		"System",
 		fmt.Sprintf("SystemObject %s/v1, Kind=Repo repo", policyhierarchy.GroupName),
-		"ClusterRegistry",
 		"ClusterRegistryObject /, Kind= ",
-		"Cluster",
 		fmt.Sprintf("ClusterObject rbac.authorization.k8s.io/v1, Kind=ClusterRole %s", vt.ClusterAdmin),
 		fmt.Sprintf("ClusterObject rbac.authorization.k8s.io/v1, Kind=ClusterRoleBinding %s", vt.ClusterAdminBinding),
 		"ClusterObject policy/v1beta1, Kind=PodSecurityPolicy example",

@@ -3,7 +3,7 @@ package selectors
 import (
 	"os"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/status"
@@ -46,6 +46,8 @@ func NewClusterSelectorAdder() *ClusterSelectorAdder {
 
 // VisitRoot stores the clusters and selectors in Root.Data.
 func (v *ClusterSelectorAdder) VisitRoot(r *ast.Root) *ast.Root {
+	v.clusters = getClusters(r.ClusterRegistryObjects)
+	v.selectors = getSelectors(r.ClusterRegistryObjects)
 	v.Base.VisitRoot(r)
 
 	r.Data = r.Data.Add(clustersKey{}, v.clusters)
@@ -56,14 +58,6 @@ func (v *ClusterSelectorAdder) VisitRoot(r *ast.Root) *ast.Root {
 	SetClusterSelector(cs, r)
 
 	return r
-}
-
-// VisitClusterRegistry records the clusters and selectors in clusterregistry/.
-func (v *ClusterSelectorAdder) VisitClusterRegistry(c *ast.ClusterRegistry) *ast.ClusterRegistry {
-	v.clusters = getClusters(c.Objects)
-	v.selectors = getSelectors(c.Objects)
-
-	return v.Base.VisitClusterRegistry(c)
 }
 
 func (v *ClusterSelectorAdder) Error() *status.MultiError {

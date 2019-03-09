@@ -38,10 +38,7 @@ func buildTree(t *testing.T, root *ast.Root, objects ...ast.FileObject) *ast.Roo
 		case repo.SystemDir:
 			sytemObjects = append(sytemObjects, object)
 		case repo.ClusterRegistryDir:
-			if root.ClusterRegistry == nil {
-				root.ClusterRegistry = &ast.ClusterRegistry{}
-			}
-			root.ClusterRegistry.Objects = append(root.ClusterRegistry.Objects, &ast.ClusterRegistryObject{FileObject: object})
+			root.ClusterRegistryObjects = append(root.ClusterRegistryObjects, &ast.ClusterRegistryObject{FileObject: object})
 		case repo.ClusterDir:
 			clusterObjects = append(clusterObjects, object)
 		case repo.NamespacesDir:

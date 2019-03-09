@@ -67,14 +67,14 @@ type Root struct {
 	LoadTime    time.Time // Time at which the context was generated
 	Repo        *v1.Repo  // Nomos repo
 
-	// Cluster represents resources that are cluster scoped.
-	Cluster *Cluster
+	// ClusterObjects represents resources that are cluster scoped.
+	ClusterObjects []*ClusterObject
 
-	// ClusterRegistry represents resources that are related to multi-cluster.
-	ClusterRegistry *ClusterRegistry
+	// ClusterRegistryObjects represents resources that are related to multi-cluster.
+	ClusterRegistryObjects []*ClusterRegistryObject
 
-	// System represents resources regarding nomos configuration.
-	System *System
+	// SystemObjects represents resources regarding nomos configuration.
+	SystemObjects []*SystemObject
 
 	// Tree represents the directory hierarchy containing namespace scoped resources.
 	Tree *TreeNode
@@ -92,14 +92,6 @@ func (c *Root) Accept(visitor Visitor) *Root {
 // System represents cluster scoped policies.
 type System struct {
 	Objects []*SystemObject
-}
-
-// Accept invokes VisitSystem on the visitor.
-func (s *System) Accept(visitor Visitor) *System {
-	if s == nil {
-		return nil
-	}
-	return visitor.VisitSystem(s)
 }
 
 // SystemObject extends FileObject to implement Visitable for cluster scoped objects.
@@ -127,14 +119,6 @@ type ClusterRegistry struct {
 	Objects []*ClusterRegistryObject
 }
 
-// Accept invokes VisitClusterRegistry on the visitor.
-func (c *ClusterRegistry) Accept(visitor Visitor) *ClusterRegistry {
-	if c == nil {
-		return nil
-	}
-	return visitor.VisitClusterRegistry(c)
-}
-
 // ClusterRegistryObject extends FileObject to implement Visitable for cluster scoped objects.
 //
 // A ClusterRegistryObject represents a cluster scoped resource from the cluster directory.
@@ -158,14 +142,6 @@ func (o *ClusterRegistryObject) DeepCopy() *ClusterRegistryObject {
 // Cluster represents cluster scoped policies.
 type Cluster struct {
 	Objects []*ClusterObject
-}
-
-// Accept invokes VisitCluster on the visitor.
-func (c *Cluster) Accept(visitor Visitor) *Cluster {
-	if c == nil {
-		return nil
-	}
-	return visitor.VisitCluster(c)
 }
 
 // ClusterObject extends FileObject to implement Visitable for cluster scoped objects.

@@ -77,49 +77,37 @@ func TestEphemeralResourceRemover(t *testing.T) {
 			name:    "role in System returns same",
 			objects: []ast.FileObject{fake.Role("system/role.yaml")},
 			expected: &ast.Root{
-				System: &ast.System{
-					Objects: []*ast.SystemObject{{FileObject: fake.Role("system/role.yaml")}},
-				},
+				SystemObjects: []*ast.SystemObject{{FileObject: fake.Role("system/role.yaml")}},
 			},
 		},
 		{
 			name:    "role in ClusterRegistry returns same",
 			objects: []ast.FileObject{fake.Role("clusterregistry/role.yaml")},
 			expected: &ast.Root{
-				ClusterRegistry: &ast.ClusterRegistry{
-					Objects: []*ast.ClusterRegistryObject{{FileObject: fake.Role("clusterregistry/role.yaml")}},
-				},
+				ClusterRegistryObjects: []*ast.ClusterRegistryObject{{FileObject: fake.Role("clusterregistry/role.yaml")}},
 			},
 		},
 		{
 			name:    "role in Cluster returns same",
 			objects: []ast.FileObject{fake.Role("cluster/role.yaml")},
 			expected: &ast.Root{
-				Cluster: &ast.Cluster{
-					Objects: []*ast.ClusterObject{{FileObject: fake.Role("cluster/role.yaml")}},
-				},
+				ClusterObjects: []*ast.ClusterObject{{FileObject: fake.Role("cluster/role.yaml")}},
 			},
 		},
 		{
-			name:    "namespace in System returns empty",
-			objects: []ast.FileObject{fake.Namespace("system/ns.yaml")},
-			expected: &ast.Root{
-				System: &ast.System{},
-			},
+			name:     "namespace in System returns empty",
+			objects:  []ast.FileObject{fake.Namespace("system/ns.yaml")},
+			expected: &ast.Root{},
 		},
 		{
-			name:    "namespace in ClusterRegistry returns empty",
-			objects: []ast.FileObject{fake.Namespace("clusterregistry/ns.yaml")},
-			expected: &ast.Root{
-				ClusterRegistry: &ast.ClusterRegistry{},
-			},
+			name:     "namespace in ClusterRegistry returns empty",
+			objects:  []ast.FileObject{fake.Namespace("clusterregistry/ns.yaml")},
+			expected: &ast.Root{},
 		},
 		{
-			name:    "namespace in Cluster returns empty",
-			objects: []ast.FileObject{fake.Namespace("cluster/ns.yaml")},
-			expected: &ast.Root{
-				Cluster: &ast.Cluster{},
-			},
+			name:     "namespace in Cluster returns empty",
+			objects:  []ast.FileObject{fake.Namespace("cluster/ns.yaml")},
+			expected: &ast.Root{},
 		},
 	}
 

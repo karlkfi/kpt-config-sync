@@ -109,10 +109,7 @@ func (v *QuotaVisitor) VisitRoot(c *ast.Root) *ast.Root {
 	}
 
 	// Add completed hierarchical quota tree to cluster objects.
-	if newRoot.Cluster == nil {
-		newRoot.Cluster = &ast.Cluster{}
-	}
-	newRoot.Cluster.Objects = append(newRoot.Cluster.Objects, &ast.ClusterObject{
+	newRoot.ClusterObjects = append(newRoot.ClusterObjects, &ast.ClusterObject{
 		FileObject: ast.FileObject{Object: h},
 	})
 	return newRoot

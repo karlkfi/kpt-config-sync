@@ -46,9 +46,8 @@ func TestClusterBuilderVisitor(t *testing.T) {
 			actual := &ast.Root{}
 
 			if tc.initial != nil {
-				actual.Cluster = &ast.Cluster{}
 				for _, o := range tc.initial {
-					actual.Cluster.Objects = append(actual.Cluster.Objects, &ast.ClusterObject{FileObject: o})
+					actual.ClusterObjects = append(actual.ClusterObjects, &ast.ClusterObject{FileObject: o})
 				}
 			}
 

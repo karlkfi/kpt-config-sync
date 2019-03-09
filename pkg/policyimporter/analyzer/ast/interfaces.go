@@ -31,11 +31,8 @@ import "github.com/google/nomos/pkg/status"
 //   Deleted: the visitor should return nil to indicate deleted.
 type Visitor interface {
 	VisitRoot(g *Root) *Root
-	VisitCluster(c *Cluster) *Cluster
 	VisitClusterObject(o *ClusterObject) *ClusterObject
-	VisitClusterRegistry(c *ClusterRegistry) *ClusterRegistry
 	VisitClusterRegistryObject(o *ClusterRegistryObject) *ClusterRegistryObject
-	VisitSystem(c *System) *System
 	VisitSystemObject(o *SystemObject) *SystemObject
 	VisitTreeNode(n *TreeNode) *TreeNode
 	VisitObject(o *NamespaceObject) *NamespaceObject

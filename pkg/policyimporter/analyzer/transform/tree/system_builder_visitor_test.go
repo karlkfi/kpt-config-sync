@@ -45,10 +45,8 @@ func TestSystemBuilderVisitor(t *testing.T) {
 			objects: []ast.FileObject{fake.Repo("system/repo.yaml")},
 			// BuildTree does do this now. This is for illustrative purposes.
 			expected: &ast.Root{
-				System: &ast.System{
-					Objects: []*ast.SystemObject{{FileObject: fake.Repo("system/repo.yaml")}},
-				},
-				Repo: fake.Repo("system/repo.yaml").Object.(*v1.Repo),
+				SystemObjects: []*ast.SystemObject{{FileObject: fake.Repo("system/repo.yaml")}},
+				Repo:          fake.Repo("system/repo.yaml").Object.(*v1.Repo),
 			},
 		},
 	}
@@ -58,9 +56,8 @@ func TestSystemBuilderVisitor(t *testing.T) {
 			actual := &ast.Root{}
 
 			if tc.initial != nil {
-				actual.System = &ast.System{}
 				for _, o := range tc.initial {
-					actual.System.Objects = append(actual.System.Objects, &ast.SystemObject{FileObject: o})
+					actual.SystemObjects = append(actual.SystemObjects, &ast.SystemObject{FileObject: o})
 				}
 			}
 

@@ -188,9 +188,9 @@ func (t *TestHelper) EmptyRoot() *ast.Root {
 // ClusterPolicies returns a Root with only cluster policies.
 func (t *TestHelper) ClusterPolicies() *ast.Root {
 	return &ast.Root{
-		Cluster:     t.AcmeCluster(),
-		ImportToken: t.ImportToken,
-		LoadTime:    t.ImportTime,
+		ClusterObjects: t.AcmeCluster(),
+		ImportToken:    t.ImportToken,
+		LoadTime:       t.ImportTime,
 	}
 }
 
@@ -353,14 +353,12 @@ func (t *TestHelper) FrontendResourceQuota() *corev1.ResourceQuota {
 }
 
 // AcmeCluster returns the cluster info for Acme corp.
-func (t *TestHelper) AcmeCluster() *ast.Cluster {
-	return &ast.Cluster{
-		Objects: ClusterObjectSets(
-			t.NomosAdminClusterRole(),
-			t.NomosAdminClusterRoleBinding(),
-			t.NomosPodSecurityPolicy(),
-		),
-	}
+func (t *TestHelper) AcmeCluster() []*ast.ClusterObject {
+	return ClusterObjectSets(
+		t.NomosAdminClusterRole(),
+		t.NomosAdminClusterRoleBinding(),
+		t.NomosPodSecurityPolicy(),
+	)
 }
 
 // AcmeTree returns a tree of nodes for testing.
@@ -404,38 +402,33 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 }
 
 // ClusterRegistry returns the contents of a test cluster registry directory.
-func (t *TestHelper) ClusterRegistry() *ast.ClusterRegistry {
-	return &ast.ClusterRegistry{
-		Objects: ClusterRegistryObjectSets(
-			&clusterregistry.Cluster{},
-		),
-	}
+func (t *TestHelper) ClusterRegistry() []*ast.ClusterRegistryObject {
+	return ClusterRegistryObjectSets(
+		&clusterregistry.Cluster{},
+	)
 }
 
 // System returns the contents of a test system directory.
-func (t *TestHelper) System() *ast.System {
-	return &ast.System{
-		Objects: SystemObjectSets(
-			&v1.Repo{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "Repo",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "repo",
-				},
-				Spec: v1.RepoSpec{
-					Version: "0.1.0",
-				},
+func (t *TestHelper) System() []*ast.SystemObject {
+	return SystemObjectSets(
+		&v1.Repo{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1.SchemeGroupVersion.String(),
+				Kind:       "Repo",
 			},
-		),
-	}
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "repo",
+			},
+			Spec: v1.RepoSpec{
+				Version: "0.1.0",
+			},
+		},
+	)
 }
 
 // NamespacePolicies returns a Root with an example hierarchy.
 func (t *TestHelper) NamespacePolicies() *ast.Root {
 	return &ast.Root{
-		Cluster:     &ast.Cluster{},
 		Tree:        t.acmeTree(),
 		ImportToken: t.ImportToken,
 		LoadTime:    t.ImportTime,
@@ -445,11 +438,11 @@ func (t *TestHelper) NamespacePolicies() *ast.Root {
 // AcmeRoot returns a Root with an example hierarchy.
 func (t *TestHelper) AcmeRoot() *ast.Root {
 	return &ast.Root{
-		ClusterRegistry: t.ClusterRegistry(),
-		System:          t.System(),
-		Cluster:         t.AcmeCluster(),
-		Tree:            t.acmeTree(),
-		ImportToken:     t.ImportToken,
-		LoadTime:        t.ImportTime,
+		ClusterRegistryObjects: t.ClusterRegistry(),
+		SystemObjects:          t.System(),
+		ClusterObjects:         t.AcmeCluster(),
+		Tree:                   t.acmeTree(),
+		ImportToken:            t.ImportToken,
+		LoadTime:               t.ImportTime,
 	}
 }

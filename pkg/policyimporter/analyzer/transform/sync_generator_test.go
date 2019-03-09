@@ -17,23 +17,20 @@ var syncGeneratorTestcases = vt.MutatingVisitorTestcases{
 		{
 			Name: "basic",
 			Input: &ast.Root{
-				System:  &ast.System{},
-				Cluster: vt.Helper.AcmeCluster(),
-				Tree:    vt.Helper.AcmeTree(),
+				ClusterObjects: vt.Helper.AcmeCluster(),
+				Tree:           vt.Helper.AcmeTree(),
 			},
 			ExpectOutput: &ast.Root{
-				System: &ast.System{
-					Objects: vt.SystemObjectSets(
-						v1.NewSync("rbac.authorization.k8s.io", "ClusterRole"),
-						v1.NewSync("rbac.authorization.k8s.io", "ClusterRoleBinding"),
-						v1.NewSync("policy", "PodSecurityPolicy"),
-						v1.NewSync("", "ResourceQuota"),
-						v1.NewSync("rbac.authorization.k8s.io", "Role"),
-						v1.NewSync("rbac.authorization.k8s.io", "RoleBinding"),
-					),
-				},
-				Cluster: vt.Helper.AcmeCluster(),
-				Tree:    vt.Helper.AcmeTree(),
+				SystemObjects: vt.SystemObjectSets(
+					v1.NewSync("rbac.authorization.k8s.io", "ClusterRole"),
+					v1.NewSync("rbac.authorization.k8s.io", "ClusterRoleBinding"),
+					v1.NewSync("policy", "PodSecurityPolicy"),
+					v1.NewSync("", "ResourceQuota"),
+					v1.NewSync("rbac.authorization.k8s.io", "Role"),
+					v1.NewSync("rbac.authorization.k8s.io", "RoleBinding"),
+				),
+				ClusterObjects: vt.Helper.AcmeCluster(),
+				Tree:           vt.Helper.AcmeTree(),
 			},
 		},
 	},

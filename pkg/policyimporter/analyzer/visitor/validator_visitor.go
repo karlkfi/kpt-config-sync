@@ -69,13 +69,10 @@ func (v *ValidatorVisitor) VisitRoot(g *ast.Root) *ast.Root {
 		g.Accept(prerequisite)
 	}
 	v.errors.Add(v.validator.ValidateRoot(g))
+	v.errors.Add(v.validator.ValidateSystem(&ast.System{Objects: g.SystemObjects}))
+	v.errors.Add(v.validator.ValidateCluster(&ast.Cluster{Objects: g.ClusterObjects}))
+	v.errors.Add(v.validator.ValidateClusterRegistry(&ast.ClusterRegistry{Objects: g.ClusterRegistryObjects}))
 	return v.Base.VisitRoot(g)
-}
-
-// VisitSystem implements Visitor.
-func (v *ValidatorVisitor) VisitSystem(c *ast.System) *ast.System {
-	v.errors.Add(v.validator.ValidateSystem(c))
-	return v.Base.VisitSystem(c)
 }
 
 // VisitSystemObject implements Visitor.
@@ -84,22 +81,10 @@ func (v *ValidatorVisitor) VisitSystemObject(o *ast.SystemObject) *ast.SystemObj
 	return v.Base.VisitSystemObject(o)
 }
 
-// VisitClusterRegistry implements Visitor.
-func (v *ValidatorVisitor) VisitClusterRegistry(c *ast.ClusterRegistry) *ast.ClusterRegistry {
-	v.errors.Add(v.validator.ValidateClusterRegistry(c))
-	return v.Base.VisitClusterRegistry(c)
-}
-
 // VisitClusterRegistryObject implements Visitor.
 func (v *ValidatorVisitor) VisitClusterRegistryObject(o *ast.ClusterRegistryObject) *ast.ClusterRegistryObject {
 	v.errors.Add(v.validator.ValidateClusterRegistryObject(o))
 	return v.Base.VisitClusterRegistryObject(o)
-}
-
-// VisitCluster implements Visitor.
-func (v *ValidatorVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
-	v.errors.Add(v.validator.ValidateCluster(c))
-	return v.Base.VisitCluster(c)
 }
 
 // VisitClusterObject implements Visitor.

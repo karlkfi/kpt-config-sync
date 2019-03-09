@@ -120,8 +120,6 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*po
 	astRoot := &ast.Root{
 		ImportToken: importToken,
 		LoadTime:    loadTime,
-		System:      &ast.System{},
-		Cluster:     &ast.Cluster{},
 	}
 	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources(rootPath))
 	p.errors.Add(addScope(astRoot, p.discoveryClient))

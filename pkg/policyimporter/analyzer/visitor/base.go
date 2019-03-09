@@ -107,19 +107,17 @@ func (vb *Base) VisitRoot(g *ast.Root) *ast.Root {
 		glog.Infof("VisitRoot(): ENTER: %v", spew.Sdump(g))
 	}
 	defer glog.V(6).Infof("VisitRoot(): EXIT")
-	g.System.Accept(vb.impl)
-	g.ClusterRegistry.Accept(vb.impl)
-	g.Cluster.Accept(vb.impl)
-	g.Tree.Accept(vb.impl)
-	return g
-}
-
-// VisitSystem implements Visitor
-func (vb *Base) VisitSystem(c *ast.System) *ast.System {
-	for _, o := range c.Objects {
+	for _, o := range g.SystemObjects {
 		o.Accept(vb.impl)
 	}
-	return c
+	for _, o := range g.ClusterRegistryObjects {
+		o.Accept(vb.impl)
+	}
+	for _, o := range g.ClusterObjects {
+		o.Accept(vb.impl)
+	}
+	g.Tree.Accept(vb.impl)
+	return g
 }
 
 // VisitSystemObject implements Visitor
@@ -128,26 +126,10 @@ func (vb *Base) VisitSystemObject(o *ast.SystemObject) *ast.SystemObject {
 	return o
 }
 
-// VisitClusterRegistry implements Visitor
-func (vb *Base) VisitClusterRegistry(c *ast.ClusterRegistry) *ast.ClusterRegistry {
-	for _, o := range c.Objects {
-		o.Accept(vb.impl)
-	}
-	return c
-}
-
 // VisitClusterRegistryObject implements Visitor
 func (vb *Base) VisitClusterRegistryObject(o *ast.ClusterRegistryObject) *ast.ClusterRegistryObject {
 	// leaf - noop
 	return o
-}
-
-// VisitCluster implements Visitor
-func (vb *Base) VisitCluster(c *ast.Cluster) *ast.Cluster {
-	for _, o := range c.Objects {
-		o.Accept(vb.impl)
-	}
-	return c
 }
 
 // VisitClusterObject implements Visitor

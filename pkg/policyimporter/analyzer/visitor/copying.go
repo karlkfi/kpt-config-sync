@@ -66,22 +66,25 @@ func (v *Copying) Error() *status.MultiError {
 // VisitRoot implements Visitor
 func (v *Copying) VisitRoot(c *ast.Root) *ast.Root {
 	nc := *c
-	nc.System = c.System.Accept(v.impl)
-	nc.ClusterRegistry = c.ClusterRegistry.Accept(v.impl)
-	nc.Cluster = c.Cluster.Accept(v.impl)
-	nc.Tree = c.Tree.Accept(v.impl)
-	return &nc
-}
-
-// VisitSystem implements Visitor
-func (v *Copying) VisitSystem(c *ast.System) *ast.System {
-	nc := *c
-	nc.Objects = nil
-	for _, obj := range c.Objects {
+	nc.SystemObjects = nil
+	nc.ClusterRegistryObjects = nil
+	nc.ClusterObjects = nil
+	for _, obj := range c.SystemObjects {
 		if newObj := obj.Accept(v.impl); newObj != nil {
-			nc.Objects = append(nc.Objects, newObj)
+			nc.SystemObjects = append(nc.SystemObjects, newObj)
 		}
 	}
+	for _, obj := range c.ClusterRegistryObjects {
+		if newObj := obj.Accept(v.impl); newObj != nil {
+			nc.ClusterRegistryObjects = append(nc.ClusterRegistryObjects, newObj)
+		}
+	}
+	for _, obj := range c.ClusterObjects {
+		if newObj := obj.Accept(v.impl); newObj != nil {
+			nc.ClusterObjects = append(nc.ClusterObjects, newObj)
+		}
+	}
+	nc.Tree = c.Tree.Accept(v.impl)
 	return &nc
 }
 
@@ -90,33 +93,9 @@ func (v *Copying) VisitSystemObject(o *ast.SystemObject) *ast.SystemObject {
 	return o.DeepCopy()
 }
 
-// VisitClusterRegistry implements Visitor
-func (v *Copying) VisitClusterRegistry(c *ast.ClusterRegistry) *ast.ClusterRegistry {
-	nc := *c
-	nc.Objects = nil
-	for _, obj := range c.Objects {
-		if newObj := obj.Accept(v.impl); newObj != nil {
-			nc.Objects = append(nc.Objects, newObj)
-		}
-	}
-	return &nc
-}
-
 // VisitClusterRegistryObject implements Visitor
 func (v *Copying) VisitClusterRegistryObject(o *ast.ClusterRegistryObject) *ast.ClusterRegistryObject {
 	return o.DeepCopy()
-}
-
-// VisitCluster implements Visitor
-func (v *Copying) VisitCluster(c *ast.Cluster) *ast.Cluster {
-	nc := *c
-	nc.Objects = nil
-	for _, obj := range c.Objects {
-		if newObj := obj.Accept(v.impl); newObj != nil {
-			nc.Objects = append(nc.Objects, newObj)
-		}
-	}
-	return &nc
 }
 
 // VisitClusterObject implements Visitor

@@ -95,16 +95,14 @@ func TestClusterSelectorVisitor(t *testing.T) {
 			{
 				Name: "retain namespace without annotation",
 				Input: &ast.Root{
-					Cluster: &ast.Cluster{
-						Objects: vt.ClusterObjectSets(vt.Helper.NomosAdminClusterRole())},
+					ClusterObjects: vt.ClusterObjectSets(vt.Helper.NomosAdminClusterRole()),
 					Tree: &ast.TreeNode{
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),
 					},
 				},
 				ExpectOutput: &ast.Root{
-					Cluster: &ast.Cluster{
-						Objects: vt.ClusterObjectSets(vt.Helper.NomosAdminClusterRole())},
+					ClusterObjects: vt.ClusterObjectSets(vt.Helper.NomosAdminClusterRole()),
 					Tree: &ast.TreeNode{
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),
@@ -114,10 +112,9 @@ func TestClusterSelectorVisitor(t *testing.T) {
 			{
 				Name: "retain objects",
 				Input: &ast.Root{
-					Cluster: &ast.Cluster{
-						Objects: vt.ClusterObjectSets(
-							withClusterSelector(vt.Helper.NomosAdminClusterRole(), "sel-1"),
-						)},
+					ClusterObjects: vt.ClusterObjectSets(
+						withClusterSelector(vt.Helper.NomosAdminClusterRole(), "sel-1"),
+					),
 					Tree: &ast.TreeNode{
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),
@@ -130,9 +127,9 @@ func TestClusterSelectorVisitor(t *testing.T) {
 					},
 				},
 				ExpectOutput: &ast.Root{
-					Cluster: &ast.Cluster{Objects: vt.ClusterObjectSets(
+					ClusterObjects: vt.ClusterObjectSets(
 						withClusterSelector(vt.Helper.NomosAdminClusterRole(), "sel-1"),
-					)},
+					),
 					Tree: &ast.TreeNode{
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),
@@ -175,9 +172,9 @@ func TestClusterSelectorVisitor(t *testing.T) {
 			{
 				Name: "filter out mis-targeted object",
 				Input: &ast.Root{
-					Cluster: &ast.Cluster{Objects: vt.ClusterObjectSets(
+					ClusterObjects: vt.ClusterObjectSets(
 						withClusterSelector(vt.Helper.NomosAdminClusterRole(), "sel-2"),
-					)},
+					),
 					Tree: &ast.TreeNode{
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),
@@ -190,7 +187,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 					},
 				},
 				ExpectOutput: &ast.Root{
-					Cluster: &ast.Cluster{}, // "sel-2" annotation not applied.
+					// "sel-2" annotation not applied.
 					Tree: &ast.TreeNode{
 						Type:     node.AbstractNamespace,
 						Relative: nomospath.NewRelative("namespaces"),

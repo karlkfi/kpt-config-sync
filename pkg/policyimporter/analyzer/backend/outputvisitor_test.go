@@ -85,7 +85,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		input: &ast.Root{
 			ImportToken: vt.ImportToken,
 			LoadTime:    vt.ImportTime,
-			Cluster:     &ast.Cluster{}},
+		},
 		expect: allPolicies(
 			v1.ClusterPolicy{
 				TypeMeta: metav1.TypeMeta{
@@ -263,19 +263,17 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 	{
 		name: "syncs",
 		input: &ast.Root{
-			System: &ast.System{
-				Objects: []*ast.SystemObject{
-					{
-						FileObject: ast.FileObject{
-							Relative: nomospath.NewRelative("<builtin>"),
-							Object: &v1.Sync{
-								TypeMeta: metav1.TypeMeta{
-									APIVersion: v1.SchemeGroupVersion.String(),
-									Kind:       "Sync",
-								},
-								ObjectMeta: metav1.ObjectMeta{
-									Name: "stuff",
-								},
+			SystemObjects: []*ast.SystemObject{
+				{
+					FileObject: ast.FileObject{
+						Relative: nomospath.NewRelative("<builtin>"),
+						Object: &v1.Sync{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: v1.SchemeGroupVersion.String(),
+								Kind:       "Sync",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "stuff",
 							},
 						},
 					},

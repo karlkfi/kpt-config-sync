@@ -46,9 +46,8 @@ func TestClusterRegistryBuilderVisitor(t *testing.T) {
 			actual := &ast.Root{}
 
 			if tc.initial != nil {
-				actual.ClusterRegistry = &ast.ClusterRegistry{}
 				for _, o := range tc.initial {
-					actual.ClusterRegistry.Objects = append(actual.ClusterRegistry.Objects, &ast.ClusterRegistryObject{FileObject: o})
+					actual.ClusterRegistryObjects = append(actual.ClusterRegistryObjects, &ast.ClusterRegistryObject{FileObject: o})
 				}
 			}
 

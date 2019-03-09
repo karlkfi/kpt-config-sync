@@ -27,18 +27,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-const (
-	contextCluster = "cluster"
-	contextNode    = "node"
-)
-
 // OutputVisitor converts the AST into PolicyNode and ClusterPolicy objects.
 type OutputVisitor struct {
 	*visitor.Base
 	importToken string
 	loadTime    metav1.Time
 	allPolicies *policynode.AllPolicies
-	context     string
 	policyNode  []*v1.PolicyNode
 	syncs       []*v1.Sync
 }
@@ -102,16 +96,8 @@ func (v *OutputVisitor) VisitSystemObject(o *ast.SystemObject) *ast.SystemObject
 	return o
 }
 
-// VisitCluster implements Visitor
-func (v *OutputVisitor) VisitCluster(c *ast.Cluster) *ast.Cluster {
-	v.context = contextCluster
-	v.Base.VisitCluster(c)
-	return nil
-}
-
 // VisitTreeNode implements Visitor
 func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	v.context = contextNode
 	origLen := len(v.policyNode)
 	var name string
 

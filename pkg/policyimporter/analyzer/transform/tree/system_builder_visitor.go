@@ -34,17 +34,9 @@ func (v *SystemBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 		}
 	}
 
-	if (r.System == nil) && (len(v.objects) > 0) {
-		r.System = &ast.System{}
-	}
-
-	return v.Base.VisitRoot(r)
-}
-
-// VisitSystem adds the System objects to System.
-func (v *SystemBuilderVisitor) VisitSystem(c *ast.System) *ast.System {
 	for _, o := range v.objects {
-		c.Objects = append(c.Objects, &ast.SystemObject{FileObject: o})
+		r.SystemObjects = append(r.SystemObjects, &ast.SystemObject{FileObject: o})
 	}
-	return c
+
+	return r
 }

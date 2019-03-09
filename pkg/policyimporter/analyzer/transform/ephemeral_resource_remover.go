@@ -54,43 +54,33 @@ func NewEphemeralResourceRemover() *EphemeralResourceRemover {
 	return v
 }
 
-// VisitSystem implements ast.Visitor.
-func (r *EphemeralResourceRemover) VisitSystem(n *ast.System) *ast.System {
-	var nonEphemeral []*ast.SystemObject
-	for _, o := range n.Objects {
+// VisitRoot implements ast.Visitor.
+func (r *EphemeralResourceRemover) VisitRoot(n *ast.Root) *ast.Root {
+	var nonEphemeralSystem []*ast.SystemObject
+	for _, o := range n.SystemObjects {
 		if !IsEphemeral(o.GroupVersionKind()) {
-			nonEphemeral = append(nonEphemeral, o)
+			nonEphemeralSystem = append(nonEphemeralSystem, o)
 		}
 	}
-	n.Objects = nonEphemeral
+	n.SystemObjects = nonEphemeralSystem
 
-	return r.Base.VisitSystem(n)
-}
-
-// VisitClusterRegistry implements ast.Visitor.
-func (r *EphemeralResourceRemover) VisitClusterRegistry(n *ast.ClusterRegistry) *ast.ClusterRegistry {
-	var nonEphemeral []*ast.ClusterRegistryObject
-	for _, o := range n.Objects {
+	var nonEphemeralCluserRegistry []*ast.ClusterRegistryObject
+	for _, o := range n.ClusterRegistryObjects {
 		if !IsEphemeral(o.GroupVersionKind()) {
-			nonEphemeral = append(nonEphemeral, o)
+			nonEphemeralCluserRegistry = append(nonEphemeralCluserRegistry, o)
 		}
 	}
-	n.Objects = nonEphemeral
+	n.ClusterRegistryObjects = nonEphemeralCluserRegistry
 
-	return r.Base.VisitClusterRegistry(n)
-}
-
-// VisitCluster implements ast.Visitor.
-func (r *EphemeralResourceRemover) VisitCluster(n *ast.Cluster) *ast.Cluster {
-	var nonEphemeral []*ast.ClusterObject
-	for _, o := range n.Objects {
+	var nonEphemeralCluster []*ast.ClusterObject
+	for _, o := range n.ClusterObjects {
 		if !IsEphemeral(o.GroupVersionKind()) {
-			nonEphemeral = append(nonEphemeral, o)
+			nonEphemeralCluster = append(nonEphemeralCluster, o)
 		}
 	}
-	n.Objects = nonEphemeral
+	n.ClusterObjects = nonEphemeralCluster
 
-	return r.Base.VisitCluster(n)
+	return r.Base.VisitRoot(n)
 }
 
 // VisitTreeNode implements ast.Visitor.
@@ -102,6 +92,5 @@ func (r *EphemeralResourceRemover) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 		}
 	}
 	n.Objects = nonEphemeral
-
 	return r.Base.VisitTreeNode(n)
 }
