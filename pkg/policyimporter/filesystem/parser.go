@@ -189,14 +189,14 @@ func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
 		return nil
 	} else if err != nil {
 		// If there was another error reading the directory, give up parsing the dir
-		p.errors.Add(err)
+		p.errors.Add(status.PathWrapf(err, dir.AbsoluteOSPath()))
 		return nil
 	}
 
 	visitors, err := resource.ExpandPathsToFileVisitors(
 		nil, dir.AbsoluteOSPath(), true, resource.FileExtensions, kubevalidation.NullSchema{})
 	if err != nil {
-		p.errors.Add(err)
+		p.errors.Add(status.PathWrapf(err, dir.AbsoluteOSPath()))
 		return nil
 	}
 
@@ -219,7 +219,7 @@ func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
 		for _, info := range fileInfos {
 			// Assign relative path since that's what we actually need.
 			source, err := dir.Root().Rel(info.Source)
-			p.errors.Add(err)
+			p.errors.Add(status.PathWrapf(err, dir.AbsoluteOSPath(), info.Source))
 			if err != nil {
 				continue
 			}
