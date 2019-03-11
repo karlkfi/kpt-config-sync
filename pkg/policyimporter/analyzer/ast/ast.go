@@ -21,11 +21,9 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/policyimporter/id"
-	"github.com/google/nomos/pkg/resourcequota"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -44,11 +42,6 @@ var _ id.Resource = &FileObject{}
 // designated source file.
 func NewFileObject(object runtime.Object, source nomospath.Relative) FileObject {
 	return FileObject{Object: object, Relative: source}
-}
-
-// Equal returns true if the underlying objects and paths relative to the Nomos repo are identical.
-func (o FileObject) Equal(that FileObject) bool {
-	return cmp.Equal(o.Relative, that.Relative) && cmp.Equal(o.Object, that.Object, resourcequota.ResourceQuantityEqual())
 }
 
 // MetaObject converts the underlying object to a metav1.Object

@@ -28,7 +28,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
@@ -1836,7 +1835,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			ClusterPolicy: tc.expectedClusterPolicy,
 			Syncs:         tc.expectedSyncs,
 		}
-		if d := cmp.Diff(expectedPolicies, actualPolicies, cmpopts.IgnoreUnexported(resource.Quantity{})); d != "" {
+		if d := cmp.Diff(expectedPolicies, actualPolicies, resourcequota.ResourceQuantityEqual()); d != "" {
 			t.Errorf("Actual and expected policies didn't match: diff\n%v", d)
 		}
 	}

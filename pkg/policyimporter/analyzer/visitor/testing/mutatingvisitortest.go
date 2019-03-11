@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	visitorpkg "github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
+	"github.com/google/nomos/pkg/resourcequota"
 )
 
 // MutatingVisitorTestcase is a struct that halps for testing
@@ -41,7 +42,7 @@ func (tc *MutatingVisitorTestcase) Runf(
 	visitor ast.Visitor,
 	initRoot func(*ast.Root),
 	options func() []cmp.Option) func(t *testing.T) {
-	var opts []cmp.Option
+	opts := []cmp.Option{resourcequota.ResourceQuantityEqual()}
 	if options != nil {
 		opts = append(opts, options()...)
 	}

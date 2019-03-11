@@ -54,9 +54,8 @@ func (tc *OutputVisitorTestcase) Run(t *testing.T) {
 	ov := NewOutputVisitor()
 	tc.input.Accept(ov)
 	actual := ov.AllPolicies()
-	if !cmp.Equal(actual, tc.expect, resourcequota.ResourceQuantityEqual()) {
-		t.Errorf("mismatch on expected vs actual: %s",
-			cmp.Diff(tc.expect, actual, resourcequota.ResourceQuantityEqual()))
+	if diff := cmp.Diff(tc.expect, actual, resourcequota.ResourceQuantityEqual()); diff != "" {
+		t.Errorf("mismatch on expected vs actual: %s", diff)
 	}
 }
 
