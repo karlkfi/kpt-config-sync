@@ -396,25 +396,20 @@ func (d templateData) KindLower() string {
 }
 
 type testDir struct {
-	tmpDir  string
 	rootDir string
 	*testing.T
 }
 
-func newTestDir(t *testing.T, root string) *testDir {
-	tmp, err := ioutil.TempDir("", "test_dir")
+func newTestDir(t *testing.T) *testDir {
+	root, err := ioutil.TempDir("", "test_dir")
 	if err != nil {
 		t.Fatalf("Failed to create test dir %v", err)
 	}
-	root = filepath.Join(tmp, root)
-	if err = os.Mkdir(root, 0750); err != nil {
-		t.Fatalf("Failed to create test dir %v", err)
-	}
-	return &testDir{tmp, root, t}
+	return &testDir{root, t}
 }
 
 func (d testDir) remove() {
-	os.RemoveAll(d.tmpDir)
+	os.RemoveAll(d.rootDir)
 }
 
 func (d testDir) createTestFile(path, contents string) {
@@ -665,7 +660,6 @@ func syncMap(syncs ...v1.Sync) map[string]v1.Sync {
 
 type parserTestCase struct {
 	testName                   string
-	root                       string
 	testFiles                  fstesting.FileContentMap
 	vet                        bool
 	expectedPolicyNodes        map[string]v1.PolicyNode
@@ -678,12 +672,37 @@ type parserTestCase struct {
 	clusterName string
 }
 
+func TestParseRepo(t *testing.T) {
+	testCases := []parserTestCase{
+		{
+			testName:           "missing Repo",
+			expectedErrorCodes: []string{vet.MissingRepoErrorCode},
+		},
+		{
+			testName: "Unsupported repo version is an error",
+			testFiles: fstesting.FileContentMap{
+				"system/repo.yaml": `
+kind: Repo
+apiVersion: configmanagement.gke.io/v1
+spec:
+  version: "0.0.0"
+metadata:
+  name: repo
+`,
+			},
+			expectedErrorCodes: []string{vet.UnsupportedRepoSpecVersionCode},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc.Run(t)
+	}
+}
+
 var parserTestCases = []parserTestCase{
 	{
 		testName: "Namespace dir with YAML Namespace",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -693,9 +712,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with JSON Namespace",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"namespaces/bar/ns.json": templateData{Name: "bar"}.apply(aNamespaceJSON),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -705,9 +722,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with Namespace with labels/annotations",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespaceWithLabelsAndAnnotations),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -718,9 +733,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with ignored files",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 		},
@@ -731,9 +744,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with 2 ignored files",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 			"namespaces/bar/ignore2": "blah blah blah",
@@ -745,9 +756,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Empty namespace dir",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 		},
@@ -758,9 +767,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces with same name",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":        aRepo,
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -768,9 +775,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces with different names",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":        aRepo,
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ns2.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
@@ -778,9 +783,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with Namespace mismatch and ignored file",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"namespaces/bar/ignore":  "",
 			"namespaces/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
@@ -788,28 +791,21 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with namespace mismatch",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.InvalidNamespaceNameErrorCode},
 	},
 	{
 		testName: "Namespace dir with invalid name",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"namespaces/baR/ns.yaml": templateData{Name: "baR"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.InvalidDirectoryNameErrorCode},
 	},
 	{
 		testName: "Namespace dir with single ResourceQuota",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
-			"system/rq.yaml":         templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
@@ -826,9 +822,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "ResourceQuota without declared HierarchyConfig",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
@@ -845,9 +839,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "ResourceQuota with scope and no hierarchical quota",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"system/rq.yaml":         templateData{Kind: "ResourceQuota", HierarchyMode: "none"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{ID: "1", Scope: true, ScopeSelector: true}.apply(aQuota),
@@ -858,9 +850,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "ResourceQuota with scope and hierarchical quota",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"system/rq.yaml":         templateData{Kind: "ResourceQuota", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{ID: "1", Scope: true, ScopeSelector: true}.apply(aQuota),
@@ -869,10 +859,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespaces dir with single ResourceQuota single file",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":          aRepo,
-			"system/rq.yaml":            templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
 			"namespaces/bar/combo.yaml": templateData{Name: "bar"}.apply(aNamespace) + "\n---\n" + templateData{}.apply(aQuota),
 		},
 		expectedPolicyNodes: map[string]v1.PolicyNode{
@@ -887,10 +874,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with multiple Roles",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":          aRepo,
-			"system/role.yaml":          templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/role1.yaml": templateData{ID: "1"}.apply(aRole),
 			"namespaces/bar/role2.yaml": templateData{ID: "2"}.apply(aRole),
@@ -899,10 +883,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with deployment",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":               aRepo,
-			"system/depl.yaml":               templateData{Group: "apps", Kind: "Deployment"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml":         templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/deployment.yaml": aDeploymentTemplate,
 		},
@@ -918,10 +899,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with CRD",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":          aRepo,
-			"system/eng.yaml":           templateData{Group: "employees", Kind: "Engineer"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/philo.yaml": templateData{ID: "1"}.apply(aPhilo),
 		},
@@ -929,10 +907,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with duplicate Roles",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":          aRepo,
-			"system/role.yaml":          templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/role1.yaml": templateData{}.apply(aRole),
 			"namespaces/bar/role2.yaml": templateData{}.apply(aRole),
@@ -941,10 +916,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with multiple RoleBindings",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
-			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
@@ -953,10 +925,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with duplicate RoleBindings",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
-			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml": templateData{ID: "1"}.apply(aRoleBinding),
@@ -965,10 +934,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Abstract Namespace dir with duplicate RoleBindings",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":           aRepo,
-			"system/rb.yaml":             templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/bar/r1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
@@ -977,10 +943,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with ClusterRole",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
-			"system/cr.yaml":         templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
 		},
@@ -988,10 +951,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with ClusterRoleBinding",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":        aRepo,
-			"system/crb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
 		},
@@ -999,10 +959,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with PodSecurityPolicy",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":        aRepo,
-			"system/psp.yaml":         templateData{Group: "policy", Kind: "PodSecurityPolicy"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml":  templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
 		},
@@ -1010,10 +967,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespace dir with Abstract Namespace child",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":             aRepo,
-			"system/role.yaml":             templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns.yaml":       templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/baz/role.yaml": templateData{Name: "role"}.apply(aRole),
 		},
@@ -1021,28 +975,21 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Abstract Namespace dir with ignored file",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":      aRepo,
 			"namespaces/bar/ignore": "",
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Abstract Namespace dir with RoleBinding, default inheritance",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":        aRepo,
-			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
 		expectedNumPolicies: map[string]int{},
 	},
 	{
 		testName: "Abstract Namespace dir with RoleBinding, hierarchicalQuota mode specified",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":        aRepo,
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchyConfig),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
@@ -1050,9 +997,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Abstract Namespace dir with RoleBinding, inheritance off",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":        aRepo,
 			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", HierarchyMode: "none"}.apply(aHierarchyConfig),
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
@@ -1060,9 +1005,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespaces dir with RoleBinding, inherit specified",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"system/rb.yaml":         templateData{Kind: kinds.RoleBinding().Kind, Group: kinds.RoleBinding().Group, HierarchyMode: "inherit"}.apply(aHierarchyConfig),
 			"namespaces/rb.yaml":     templateData{}.apply(aRoleBinding),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
@@ -1078,10 +1021,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Namespaces dir with ResourceQuota, default inheritance",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
-			"system/rq.yaml":         templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
 			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -1093,10 +1033,8 @@ var parserTestCases = []parserTestCase{
 		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
 	},
 	{
-		testName: "Abstract Namespace dir with ResourceQuota, inheritance off",
-		root:     "foo",
+		testName: "Abstract Namespace dir with uninheritable ResourceQuota, inheritance off",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"system/rq.yaml":         templateData{Kind: "ResourceQuota", HierarchyMode: "none"}.apply(aHierarchyConfig),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
@@ -1104,9 +1042,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Abstract Namespace dir with ResourceQuota, inherit specified",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"system/rq.yaml":         templateData{Kind: "ResourceQuota", HierarchyMode: "inherit"}.apply(aHierarchyConfig),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
@@ -1115,62 +1051,23 @@ var parserTestCases = []parserTestCase{
 		expectedSyncs:         syncMap(),
 	},
 	{
-		testName: "Abstract Namespace dir with multiple Rolebindings",
-		root:     "foo",
+		testName: "Abstract Namespace dir with uninheritable Rolebinding",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":        aRepo,
-			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
-			"namespaces/bar/rb2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
-		},
-		expectedNumPolicies: map[string]int{},
-	},
-	{
-		testName: "Abstract Namespace dir with ClusterRole",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
-			"system/cr.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole",
-				HierarchyMode: "none"}.apply(aHierarchyConfig),
-			"namespaces/bar/cr.yaml": templateData{}.apply(aClusterRole),
-		},
-		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
-	},
-	{
-		testName: "Abstract Namespace dir with ClusterRoleBinding",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":        aRepo,
-			"system/crb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding", HierarchyMode: "none"}.apply(aHierarchyConfig),
-			"namespaces/bar/crb.yaml": templateData{}.apply(aClusterRoleBinding),
-		},
-		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
-	},
-	{
-		testName: "Abstract Namespace dir with PodSecurityPolicy",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":        aRepo,
-			"system/psp.yaml":         templateData{Group: "policy", Kind: "PodSecurityPolicy", HierarchyMode: "none"}.apply(aHierarchyConfig),
-			"namespaces/bar/psp.yaml": templateData{}.apply(aPodSecurityPolicy),
+			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", HierarchyMode: "none"}.apply(aHierarchyConfig),
+			"namespaces/bar/rb.yaml": templateData{}.apply(aRoleBinding),
 		},
 		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Abstract Namespace dir with NamespaceSelector CRD",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":                aRepo,
 			"namespaces/bar/ns-selector.yaml": templateData{}.apply(aNamespaceSelector),
 		},
 		expectedNumPolicies: map[string]int{},
 	},
 	{
 		testName: "Abstract Namespace dir with NamespaceSelector CRD and object",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":                aRepo,
-			"system/crb.yaml":                 templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/bar/ns-selector.yaml": templateData{}.apply(aNamespaceSelector),
 			"namespaces/bar/rb.yaml":          templateData{ID: "1", LBPName: "sre-supported"}.apply(aLBPRoleBinding),
 			"namespaces/bar/prod-ns/ns.yaml":  templateData{Name: "prod-ns", Labels: map[string]string{"environment": "prod"}}.apply(aNamespace),
@@ -1180,10 +1077,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Abstract Namespace and Namespace dir have duplicate RoleBindings",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":            aRepo,
-			"system/rb.yaml":              templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/bar/rb1.yaml":     templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/baz/ns.yaml":  templateData{Name: "baz"}.apply(aNamespace),
 			"namespaces/bar/baz/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
@@ -1192,10 +1086,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Abstract Namespace and Namespace dir have duplicate Deployments",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":          aRepo,
-			"system/depl.yaml":          templateData{Group: "apps", Kind: "Deployment"}.apply(aHierarchyConfig),
 			"namespaces/depl1.yaml":     aDeploymentTemplate,
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/depl1.yaml": aDeploymentTemplate,
@@ -1205,28 +1096,21 @@ var parserTestCases = []parserTestCase{
 		},
 	},
 	{
-		testName: "Minimal repo",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
-		},
+		testName:              "Minimal repo",
+		testFiles:             fstesting.FileContentMap{},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
-		testName: "Only system dir with valid HiearchyConfig",
-		root:     "foo",
+		testName: "Only system dir with valid HierarchyConfig",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
-			"system/rq.yaml":   templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
+			"system/rq.yaml": templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 		expectedSyncs:         syncMap(),
 	},
 	{
-		testName: "Multiple resources",
-		root:     "foo",
+		testName: "Multiple resources with HierarchyConfigs",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
 			"system/rq.yaml":   templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
 			"system/role.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
 		},
@@ -1235,9 +1119,7 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "HierarchyConfig with multiple Kinds",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
 			"system/config.yaml": `
 kind: HierarchyConfig
 apiVersion: configmanagement.gke.io/v1
@@ -1254,27 +1136,21 @@ spec:
 	},
 	{
 		testName: "Namespaces dir with ignored file",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":  aRepo,
 			"namespaces/ignore": "",
 		},
 		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Namespaces dir with Namespace",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":   aRepo,
 			"namespaces/ns.yaml": templateData{Name: "namespaces"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.IllegalTopLevelNamespaceErrorCode},
 	},
 	{
 		testName: "Namespaces dir with ResourceQuota and hierarchical quota inheritance",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
 			"system/rq.yaml":         templateData{Kind: "ResourceQuota", HierarchyMode: string(v1.HierarchyModeHierarchicalQuota)}.apply(aHierarchyConfig),
 			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
@@ -1333,10 +1209,7 @@ spec:
 	},
 	{
 		testName: "Namespaces dir with multiple inherited Rolebindings",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":       aRepo,
-			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/rb1.yaml":    templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/rb2.yaml":    templateData{ID: "2"}.apply(aRoleBinding),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
@@ -1345,10 +1218,7 @@ spec:
 	},
 	{
 		testName: "Cluster dir with multiple ClusterRoles",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
-			"system/cr.yaml":   templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"}.apply(aHierarchyConfig),
 			"cluster/cr1.yaml": templateData{ID: "1"}.apply(aClusterRole),
 			"cluster/cr2.yaml": templateData{ID: "2"}.apply(aClusterRole),
 		},
@@ -1356,10 +1226,7 @@ spec:
 	},
 	{
 		testName: "Cluster dir with multiple ClusterRoleBindings",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":  aRepo,
-			"system/crb.yaml":   templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			"cluster/crb2.yaml": templateData{ID: "2"}.apply(aClusterRoleBinding),
 		},
@@ -1367,10 +1234,7 @@ spec:
 	},
 	{
 		testName: "Cluster dir with multiple PodSecurityPolicies",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":  aRepo,
-			"system/psp.yaml":   templateData{Group: "policy", Kind: "PodSecurityPolicy"}.apply(aHierarchyConfig),
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "2"}.apply(aPodSecurityPolicy),
 		},
@@ -1378,20 +1242,14 @@ spec:
 	},
 	{
 		testName: "Cluster dir with deployment",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":  aRepo,
-			"system/node.yaml":  templateData{Kind: "Node"}.apply(aHierarchyConfig),
 			"cluster/node.yaml": templateData{}.apply(aNode),
 		},
 		expectedNumClusterPolicies: toIntPointer(1),
 	},
 	{
 		testName: "Cluster dir with duplicate ClusterRole names",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
-			"system/cr.yaml":   templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"}.apply(aHierarchyConfig),
 			"cluster/cr1.yaml": templateData{ID: "1"}.apply(aClusterRole),
 			"cluster/cr2.yaml": templateData{ID: "1"}.apply(aClusterRole),
 		},
@@ -1399,10 +1257,7 @@ spec:
 	},
 	{
 		testName: "Cluster dir with duplicate ClusterRoleBinding names",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":  aRepo,
-			"system/crb.yaml":   templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			"cluster/crb2.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 		},
@@ -1410,10 +1265,7 @@ spec:
 	},
 	{
 		testName: "Cluster dir with duplicate PodSecurityPolicy names",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":  aRepo,
-			"system/psp.yaml":   templateData{Group: "policy", Kind: "PodSecurityPolicy"}.apply(aHierarchyConfig),
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 		},
@@ -1421,9 +1273,7 @@ spec:
 	},
 	{
 		testName: "Dir name not unique 1",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":           aRepo,
 			"namespaces/baz/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/qux/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -1431,10 +1281,9 @@ spec:
 	},
 	{
 		testName: "Dir name not unique 2",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			// Two Abstract Namespace dirs with same name.
-			"system/repo.yaml":                 aRepo,
+
 			"namespaces/bar/baz/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
 			"namespaces/qux/baz/waldo/ns.yaml": templateData{Name: "waldo"}.apply(aNamespace),
 		},
@@ -1442,36 +1291,28 @@ spec:
 	},
 	{
 		testName: "Dir name reserved 1",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":               aRepo,
 			"namespaces/kube-system/ns.yaml": templateData{Name: "kube-system"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode},
 	},
 	{
 		testName: "Dir name reserved 2",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":           aRepo,
 			"namespaces/default/ns.yaml": templateData{Name: "default"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode},
 	},
 	{
 		testName: "Dir name invalid",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":           aRepo,
 			"namespaces/foo bar/ns.yaml": templateData{Name: "foo bar"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.InvalidDirectoryNameErrorCode},
 	},
 	{
 		testName: "Namespace with NamespaceSelector label is invalid",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
 			"namespaces/bar/ns.yaml": templateData{Name: "bar", Annotations: map[string]string{
 				v1.NamespaceSelectorAnnotationKey: "prod"},
 			}.apply(aNamespace),
@@ -1480,9 +1321,7 @@ spec:
 	},
 	{
 		testName: "NamespaceSelector may not have ClusterSelector annotations",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
 			"namespaces/bar/ns-selector.yaml": templateData{
 				Annotations: map[string]string{
 					v1.ClusterSelectorAnnotationKey: "something",
@@ -1493,19 +1332,14 @@ spec:
 	},
 	{
 		testName: "Namespace-scoped object in cluster/ dir",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
-			"cluster/rb.yaml":  templateData{ID: "1"}.apply(aRoleBinding),
+			"cluster/rb.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
 		expectedErrorCodes: []string{vet.IllegalKindInClusterErrorCode},
 	},
 	{
 		testName: "Illegal annotation definition is an error",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
-			"system/rb.yaml":   templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/rb.yaml": templateData{
 				Name: "cluster-1",
 				Annotations: map[string]string{
@@ -1519,10 +1353,7 @@ spec:
 	},
 	{
 		testName: "Illegal label definition is an error",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": aRepo,
-			"system/rb.yaml":   templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/rb.yaml": templateData{
 				Name: "cluster-1",
 				Labels: map[string]string{
@@ -1536,16 +1367,13 @@ spec:
 	},
 	{
 		testName: "Illegal object declaration in system/ is an error",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":    aRepo,
 			"system/configs.yaml": templateData{Name: "myname"}.apply(aRole),
 		},
 		expectedErrorCodes: []string{vet.IllegalKindInSystemErrorCode},
 	},
 	{
 		testName: "Duplicate Repo definitions is an error",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo-1.yaml": aRepo,
 			"system/repo-2.yaml": aRepo,
@@ -1553,26 +1381,8 @@ spec:
 		expectedErrorCodes: []string{vet.MultipleSingletonsErrorCode},
 	},
 	{
-		testName: "Unsupported repo version is an error",
-		root:     "foo",
-		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml": `
-kind: Repo
-apiVersion: configmanagement.gke.io/v1
-spec:
-  version: "0.0.0"
-metadata:
-  name: repo
-`,
-		},
-		expectedErrorCodes: []string{vet.UnsupportedRepoSpecVersionCode},
-	},
-	{
 		testName: "custom resource w/o a CRD applied",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":              aRepo,
-			"system/unknown.yaml":           templateData{Group: "does.not.exist", Kind: "Nonexistent"}.apply(aHierarchyConfig),
 			"namespaces/bar/undefined.yaml": templateData{}.apply(anUndefinedResource),
 			"namespaces/bar/ns.yaml":        templateData{Name: "bar"}.apply(aNamespace),
 		},
@@ -1580,10 +1390,7 @@ metadata:
 	},
 	{
 		testName: "Name collision in namespace",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":         aRepo,
-			"system/rb.yaml":           templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/foo/ns.yaml":   templateData{Name: "foo"}.apply(aNamespace),
 			"namespaces/foo/rb-1.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/rb-2.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
@@ -1592,11 +1399,7 @@ metadata:
 	},
 	{
 		testName: "No name collision if types different",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":         aRepo,
-			"system/rb.yaml":           templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-			"system/rq.yaml":           templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
 			"namespaces/foo/rb-1.yaml": templateData{Name: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/rb-2.yaml": templateData{Name: "alice"}.apply(aQuota),
 			"namespaces/foo/ns.yaml":   templateData{Name: "foo"}.apply(aNamespace),
@@ -1607,10 +1410,7 @@ metadata:
 	},
 	{
 		testName: "Name collision in child node",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":             aRepo,
-			"system/rb.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/foo/rb-1.yaml":     templateData{ID: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/bar/ns.yaml":   templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/foo/bar/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
@@ -1619,10 +1419,7 @@ metadata:
 	},
 	{
 		testName: "Name collision in grandchild node",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":                 aRepo,
-			"system/rb.yaml":                   templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/foo/rb-1.yaml":         templateData{ID: "alice"}.apply(aRoleBinding),
 			"namespaces/foo/bar/qux/ns.yaml":   templateData{Name: "qux"}.apply(aNamespace),
 			"namespaces/foo/bar/qux/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
@@ -1631,111 +1428,84 @@ metadata:
 	},
 	{
 		testName: "No name collision in sibling nodes",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":             aRepo,
-			"system/rb.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
 			"namespaces/fox/bar/rb-1.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
 			"namespaces/fox/qux/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
 		},
 	},
 	{
 		testName: "Empty string name is an error",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":              aRepo,
-			"system/rb.yaml":                templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
 			"namespaces/foo/bar/role1.yaml": templateData{Name: ""}.apply(aNamedRole),
 		},
 		expectedErrorCodes: []string{vet.MissingObjectNameErrorCode},
 	},
 	{
 		testName: "No name is an error",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":              aRepo,
-			"system/rb.yaml":                templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
 			"namespaces/foo/bar/role1.yaml": templateData{}.apply(aNamedRole),
 		},
 		expectedErrorCodes: []string{vet.MissingObjectNameErrorCode},
 	},
 	{
 		testName: "Repo outside system/ is an error",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":         aRepo,
 			"namespaces/foo/repo.yaml": aRepo,
 		},
 		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode},
 	},
 	{
 		testName: "HierarchyConfig outside system/ is an error",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":           aRepo,
 			"namespaces/foo/config.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode},
 	},
 	{
 		testName: "HierarchyConfig contains a CRD",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":   aRepo,
 			"system/config.yaml": templateData{Group: "extensions", Kind: "CustomResourceDefinition"}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
 	},
 	{
 		testName: "HierarchyConfig contains a Namespace",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":   aRepo,
 			"system/config.yaml": templateData{Kind: "Namespace"}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
 	},
 	{
 		testName: "HierarchyConfig contains a PolicyNode",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":   aRepo,
 			"system/config.yaml": templateData{Group: policyhierarchy.GroupName, Kind: "PolicyNode"}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
 	},
 	{
 		testName: "HierarchyConfig contains a Sync",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":   aRepo,
 			"system/config.yaml": templateData{Group: policyhierarchy.GroupName, Kind: "Sync"}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
 	},
 	{
 		testName: "Invalid name for HierarchyConfig",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":   aRepo,
 			"system/config.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "Role", Name: "RBAC"}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{vet.InvalidMetadataNameErrorCode},
 	},
 	{
 		testName: "Illegal Namespace in clusterregistry/",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":               aRepo,
 			"clusterregistry/namespace.yaml": templateData{Name: "clusterregistry"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.IllegalKindInClusterregistryErrorCode},
 	},
 	{
 		testName: "Illegal NamespaceSelector in Namespace directory.",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
-			"system/repo.yaml":                      aRepo,
 			"namespaces/foo/namespace.yaml":         templateData{Name: "foo"}.apply(aNamespace),
 			"namespaces/foo/namespaceselector.yaml": templateData{}.apply(aNamespaceSelector),
 		},
@@ -1744,7 +1514,7 @@ metadata:
 }
 
 func (tc *parserTestCase) Run(t *testing.T) {
-	d := newTestDir(t, tc.root)
+	d := newTestDir(t)
 	defer d.remove()
 
 	// Used in per-cluster addressing tests.  If undefined should mean
@@ -1843,6 +1613,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 
 func TestParser(t *testing.T) {
 	for _, tc := range parserTestCases {
+		tc.testFiles["system/repo.yaml"] = aRepo
 		t.Run(tc.testName, tc.Run)
 	}
 }
@@ -1859,15 +1630,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			// a set of policy documents that are all present and all fully
 			// annotated as appropriate.
 			testName:    "Cluster filter, all resources selected",
-			root:        "foo",
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
-				// System dir
-				"system/repo.yaml":               aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
-
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
 					Name: "cluster-1",
@@ -1878,7 +1642,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"clusterregistry/sel-1.yaml": templateData{
 					Name: "sel-1",
 				}.apply(aClusterSelector),
-
 				// Tree dir
 				"namespaces/bar/bar.yaml": templateData{
 					Name: "bar",
@@ -1892,7 +1655,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						"configmanagement.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aRoleBinding),
-
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{
 					ID: "1",
@@ -1993,16 +1755,14 @@ func TestParserPerClusterAddressing(t *testing.T) {
 		},
 		{
 			testName:    "Generic resource in Abstract Namespace",
-			root:        "foo",
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
 				// System dir
-				"system/repo.yaml": aRepo,
+
 				"system/configmap-config.yaml": templateData{
 					Kind:          "ConfigMap",
 					HierarchyMode: "inherit",
 				}.apply(aHierarchyConfig),
-
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
 					Name: "cluster-1",
@@ -2013,7 +1773,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"clusterregistry/sel-1.yaml": templateData{
 					Name: "sel-1",
 				}.apply(aClusterSelector),
-
 				// Tree dir
 				"namespaces/foo/bar/bar.yaml": templateData{
 					Name: "bar",
@@ -2079,16 +1838,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 		{
 			// When cluster selector doesn't match, nothing (except for top-level dir) is created.
 			testName: "Cluster filter, no resources selected",
-			root:     "foo",
 			// Note that cluster-2 is not part of the selector.
 			clusterName: "cluster-2",
 			testFiles: fstesting.FileContentMap{
-				// System dir
-				"system/repo.yaml":               aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
-
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
 					Name: "cluster-1",
@@ -2099,7 +1851,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"clusterregistry/sel-1.yaml": templateData{
 					Name: "sel-1",
 				}.apply(aClusterSelector),
-
 				// Tree dir
 				"namespaces/bar/bar.yaml": templateData{
 					Name: "bar",
@@ -2113,7 +1864,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						"configmanagement.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aRoleBinding),
-
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{
 					ID: "1",
@@ -2132,15 +1882,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			// This shows how a namespace scoped resource doesn't get synced if
 			// its selector does not match.
 			testName:    "Namespace resource selector does not match",
-			root:        "foo",
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
-				// System dir
-				"system/repo.yaml":               aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
-
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
 					Name: "cluster-1",
@@ -2151,7 +1894,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"clusterregistry/sel-1.yaml": templateData{
 					Name: "sel-1",
 				}.apply(aClusterSelector),
-
 				// Tree dir
 				"namespaces/bar/bar.yaml": templateData{
 					Name: "bar",
@@ -2166,7 +1908,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						"configmanagement.gke.io/cluster-selector": "sel-2",
 					},
 				}.apply(aRoleBinding),
-
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{
 					ID: "1",
@@ -2221,15 +1962,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 		},
 		{
 			testName:    "If namespace is not selected, its resources are not selected either.",
-			root:        "foo",
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
-				// System dir
-				"system/repo.yaml":               aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
-
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
 					Name: "cluster-1",
@@ -2240,7 +1974,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"clusterregistry/sel-1.yaml": templateData{
 					Name: "sel-1",
 				}.apply(aClusterSelector),
-
 				// Tree dir
 				// Note the whole namespace won't match selector "sel-2".
 				"namespaces/bar/bar.yaml": templateData{
@@ -2255,7 +1988,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						"configmanagement.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aRoleBinding),
-
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{
 					ID: "1",
@@ -2300,15 +2032,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 		},
 		{
 			testName:    "Cluster resources not matching selector",
-			root:        "foo",
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
-				// System dir
-				"system/repo.yaml":               aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
-
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
 					Name: "cluster-1",
@@ -2319,7 +2044,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"clusterregistry/sel-1.yaml": templateData{
 					Name: "sel-1",
 				}.apply(aClusterSelector),
-
 				// Tree dir
 				"namespaces/bar/bar.yaml": templateData{
 					Name: "bar",
@@ -2333,7 +2057,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						"configmanagement.gke.io/cluster-selector": "sel-1",
 					},
 				}.apply(aRoleBinding),
-
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{
 					ID: "1",
@@ -2373,15 +2096,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 		},
 		{
 			testName:    "Resources without cluster selectors are never filtered out",
-			root:        "foo",
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
-				// System dir
-				"system/repo.yaml":               aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
-
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
 					Name: "cluster-1",
@@ -2392,11 +2108,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				"clusterregistry/sel-1.yaml": templateData{
 					Name: "sel-1",
 				}.apply(aClusterSelector),
-
 				// Tree dir
 				"namespaces/bar/bar.yaml":         templateData{Name: "bar"}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{Name: "role"}.apply(aRoleBinding),
-
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			},
@@ -2454,15 +2168,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 		{
 			// Look at Tree dir below for the meat of the test.
 			testName: "Quotas targeted to different clusters may coexist in a namespace",
-			root:     "foo",
 			testFiles: fstesting.FileContentMap{
-				// System dir
-				"system/rq.yaml":                 templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
-				"system/repo.yaml":               aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
-
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
 					Name: "cluster-1",
@@ -2484,7 +2190,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					Name:        "sel-2",
 					Environment: "test",
 				}.apply(aClusterSelectorWithEnv),
-
 				// Tree dir  The quota resources below are in the same directory,
 				// but targeted to a different cluster.
 				"namespaces/bar/quota-1.yaml": templateData{
@@ -2499,7 +2204,6 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1.ClusterSelectorAnnotationKey: "sel-2",
 					},
 				}.apply(aQuota),
-
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			},
@@ -2537,6 +2241,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test.testFiles["system/repo.yaml"] = aRepo
 		t.Run(test.testName, test.Run)
 	}
 }
@@ -2546,16 +2251,9 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 	tests := []parserTestCase{
 		{
 			testName:    "An object that has a cluster selector annotation for nonexistent cluster is an error",
-			root:        "foo",
 			clusterName: "cluster-1",
 			vet:         true,
 			testFiles: fstesting.FileContentMap{
-				// System dir
-				"system/repo.yaml":               aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
-
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
 					Name: "cluster-1",
@@ -2566,7 +2264,6 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				"clusterregistry/sel-1.yaml": templateData{
 					Name: "sel-1",
 				}.apply(aClusterSelector),
-
 				// Tree dir
 				"namespaces/bar/bar.yaml": templateData{Name: "bar"}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
@@ -2575,7 +2272,6 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 						v1.ClusterSelectorAnnotationKey: "unknown-selector",
 					},
 				}.apply(aRoleBinding),
-
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			},
@@ -2583,16 +2279,9 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 		},
 		{
 			testName:    "A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
-			root:        "foo",
 			clusterName: "cluster-1",
 			vet:         true,
 			testFiles: fstesting.FileContentMap{
-				// System dir
-				"system/repo.yaml":               aRepo,
-				"system/role.yaml":               templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
-				"system/rolebinding.yaml":        templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
-				"system/clusterrolebinding.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"}.apply(aHierarchyConfig),
-
 				// Cluster registry dir
 				"clusterregistry/cluster-1.yaml": templateData{
 					Name: "cluster-1",
@@ -2603,13 +2292,11 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 				"clusterregistry/sel-1.yaml": templateData{
 					Name: "sel-1",
 				}.apply(aClusterSelector),
-
 				// Tree dir
 				"namespaces/bar/bar.yaml": templateData{Name: "bar"}.apply(aNamespace),
 				"namespaces/bar/rolebinding.yaml": templateData{
 					Name: "role",
 				}.apply(aRoleBinding),
-
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1",
 					Annotations: map[string]string{
@@ -2620,56 +2307,35 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			expectedErrorCodes: []string{vet.ObjectHasUnknownClusterSelectorCode},
 		},
 		{
-			testName:           "A dir with no system directory is an error",
-			root:               "foo",
-			clusterName:        "cluster-1",
-			vet:                true,
-			testFiles:          fstesting.FileContentMap{},
-			expectedErrorCodes: []string{vet.MissingRepoErrorCode},
-		},
-		{
-			testName:    "A system directory defining no Repo object is an error",
-			root:        "foo",
-			clusterName: "cluster-1",
-			vet:         true,
-			testFiles: fstesting.FileContentMap{
-				"system/repo.yaml": "",
-			},
-			expectedErrorCodes: []string{vet.MissingRepoErrorCode},
-		},
-		{
 			testName:    "Defining invalid yaml is an error.",
-			root:        "foo",
 			clusterName: "cluster-1",
 			vet:         true,
 			testFiles: fstesting.FileContentMap{
-				"system/repo.yaml":        aRepo,
 				"namespaces/invalid.yaml": "This is not valid yaml.",
 			},
 			expectedErrorCodes: []string{status.UndocumentedErrorCode},
 		},
 		{
 			testName:    "A subdir of system is an error",
-			root:        "foo",
 			clusterName: "cluster-1",
 			vet:         true,
 			testFiles: fstesting.FileContentMap{
-				"system/sub/rb.yaml": aRepo,
+				"system/sub/rb.yaml": templateData{
+					Kind:          "ConfigMap",
+					HierarchyMode: "inherit",
+				}.apply(aHierarchyConfig),
 			},
 			expectedErrorCodes: []string{vet.IllegalSubdirectoryErrorCode},
 		},
 		{
 			testName:    "Objects in non-namespaces/ with an invalid label is an error",
-			root:        "foo",
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
-				"system/repo.yaml": `
-kind: Repo
+				"system/hc.yaml": `
+kind: HierarchyConfig
 apiVersion: configmanagement.gke.io/v1
-spec:
-  version: "0.1.0"
 metadata:
-  name: repo
+  name: hc
   labels:
     configmanagement.gke.io/illegal-label: "true"`,
 			},
@@ -2677,16 +2343,13 @@ metadata:
 		},
 		{
 			testName:    "Objects in non-namespaces/ with an invalid annotation is an error",
-			root:        "foo",
 			clusterName: "cluster-1",
 			testFiles: fstesting.FileContentMap{
-				"system/repo.yaml": `
-kind: Repo
+				"system/hc.yaml": `
+kind: HierarchyConfig
 apiVersion: configmanagement.gke.io/v1
-spec:
-  version: "0.1.0"
 metadata:
-  name: repo
+  name: hc
   annotations:
     configmanagement.gke.io/unsupported: "true"`,
 			},
@@ -2694,12 +2357,13 @@ metadata:
 		},
 	}
 	for _, test := range tests {
+		test.testFiles["system/repo.yaml"] = aRepo
 		t.Run(test.testName, test.Run)
 	}
 }
 
 func TestEmptyDirectories(t *testing.T) {
-	d := newTestDir(t, "foo")
+	d := newTestDir(t)
 	defer d.remove()
 
 	// Create required repo definition.
