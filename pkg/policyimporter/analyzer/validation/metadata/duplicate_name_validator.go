@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/id"
@@ -47,6 +48,9 @@ func checkDuplicates(objects []id.Resource) *status.MultiError {
 
 // ValidateTreeNode ensures Namespace policy nodes contain no duplicates.
 func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) *status.MultiError {
+	if n.Type != node.Namespace {
+		return nil
+	}
 	resources := make([]id.Resource, len(n.Objects))
 	for i, object := range n.Objects {
 		resources[i] = object

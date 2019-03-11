@@ -942,6 +942,16 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.MetadataNameCollisionErrorCode},
 	},
 	{
+		testName: "Abstract Namespace dir with duplicate unmaterialized RoleBindings",
+		root:     "foo",
+		testFiles: fstesting.FileContentMap{
+			"system/repo.yaml":       aRepo,
+			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
+			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+			"namespaces/bar/r2.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+		},
+	},
+	{
 		testName: "Namespace dir with ClusterRole",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
