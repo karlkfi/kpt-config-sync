@@ -943,7 +943,6 @@ var parserTestCases = []parserTestCase{
 	},
 	{
 		testName: "Abstract Namespace dir with duplicate unmaterialized RoleBindings",
-		root:     "foo",
 		testFiles: fstesting.FileContentMap{
 			"system/repo.yaml":       aRepo,
 			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"}.apply(aHierarchyConfig),
