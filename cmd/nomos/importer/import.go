@@ -6,9 +6,11 @@ import (
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/cloner"
 	"github.com/google/nomos/pkg/cloner/filter"
+	"github.com/google/nomos/pkg/cloner/mutate"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
@@ -68,6 +70,12 @@ var Cmd = &cobra.Command{
 			ignoreKubernetesSystemLabels,
 			ignoreCriticalPriorityClasses,
 		))
+
+		mutate.ApplyAll(objects,
+			removeNomosLables,
+			removeNomosAnnotations,
+			removeAppliedConfig,
+		)
 
 		pather := cloner.NewPather(apiResources...)
 		pather.AddPaths(objects)
@@ -167,3 +175,13 @@ var ignoreCriticalPriorityClasses = filter.All(
 	filter.GroupKind(schema.GroupKind{Group: "scheduling.k8s.io", Kind: "PriorityClass"}),
 	filter.Any(filter.Name("system-cluster-critical"), filter.Name("system-node-critical")),
 )
+
+// removeNomosLables removes all Nomos labels.
+var removeNomosLables = mutate.RemoveLabelGroup("config.gke.io")
+
+// removeNomosAnnotations removes non-input Nomos annotations.
+var removeNomosAnnotations = mutate.RemoveAnnotationGroup(v1.NomosPrefix)
+
+// removeAppliedConfig removes the annotation holding a JSON representation of the last call to
+// kubectl apply on the resource.
+var removeAppliedConfig = mutate.RemoveAnnotation("kubectl.kubernetes.io/last-applied-configuration")

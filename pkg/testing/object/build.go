@@ -48,6 +48,11 @@ func Build(gvk schema.GroupVersionKind, opts ...BuildOpt) ast.FileObject {
 	if object.Name() == "" {
 		Name(strings.ToLower(gvk.Kind))(&object)
 	}
+	// Underlying implementations of meta.v1.Object inconsistently implement SetAnnotations and
+	// SetLabels behavior on nil and when being initialized, so this guarantees tests will always
+	// operate from the same state.
+	object.MetaObject().SetAnnotations(map[string]string{})
+	object.MetaObject().SetLabels(map[string]string{})
 
 	for _, opt := range opts {
 		opt(&object)
