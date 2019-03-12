@@ -30,9 +30,14 @@ func (m Mutator) If(p filter.Predicate) Mutator {
 	}
 }
 
-// ApplyAll mutates the list of objects with the Mutator.
-func ApplyAll(objects []ast.FileObject, ms ...Mutator) {
-	for _, m := range ms {
-		m.Apply(objects)
+// Build returns a Mutator that applies all underlying mutations.
+func Build(ms ...Mutator) Mutator {
+	return func(object *ast.FileObject) {
+		for _, m := range ms {
+			if m == nil {
+				continue
+			}
+			m(object)
+		}
 	}
 }

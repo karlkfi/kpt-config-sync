@@ -74,7 +74,7 @@ func TestObjects(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := []ast.FileObject{tc.object}
-			ApplyAll(actual, tc.mutators...)
+			Build(tc.mutators...).Apply(actual)
 
 			if diff := cmp.Diff(tc.expected, actual[0]); diff != "" {
 				t.Fatal(diff)

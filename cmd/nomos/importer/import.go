@@ -71,12 +71,14 @@ var Cmd = &cobra.Command{
 			ignoreCriticalPriorityClasses,
 		))
 
-		mutate.ApplyAll(objects,
+		mutate.Build(
 			mutate.Unapply(),
 			removeNomosLables,
 			removeNomosAnnotations,
 			removeAppliedConfig,
-		)
+			cleanNamespaces,
+			exportObjectMeta,
+		).Apply(objects)
 
 		pather := cloner.NewPather(apiResources...)
 		pather.AddPaths(objects)
@@ -184,3 +186,30 @@ var removeNomosAnnotations = mutate.RemoveAnnotationGroup(v1.NomosPrefix)
 // removeAppliedConfig removes the annotation holding a JSON representation of the last call to
 // kubectl apply on the resource.
 var removeAppliedConfig = mutate.RemoveAnnotation(mutate.AppliedConfiguration)
+
+// cleanNamespaces removes the kubernetes finalizer and the status.phase from Namespaces.
+var cleanNamespaces = mutate.Build(
+	// Kubernetes manages this finalizer on Namespaces.
+	mutate.Remove(mutate.Key("spec", "finalizers").Value("kubernetes")),
+	// transient Namespace state managed by Kubernetes
+	mutate.Remove(mutate.Key("status", "phase")),
+).If(filter.GroupKind(kinds.Namespace().GroupKind()))
+
+// exportObjectMeta mimics the behavior of exportObjectMeta() from
+// kubernetes/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go.
+// Simply setting them to empty string in the meta object doesn't remove them; we have to directly
+// modify the underlying Unstructured.
+var exportObjectMeta = mutate.Build(
+	// creationTimestamp tracks when an object was creates in Kubernetes, and shouldn't be managed by Nomos.
+	mutate.Remove(mutate.Key("metadata", "creationTimestamp")),
+	// deletionTimestamp tracks when the request to delete the resources was received, and shouldn't be managed in version control.
+	mutate.Remove(mutate.Key("metadata", "deletionTimestamp")),
+	// namespace is valid on resources, but we automatically infer it so it is better to not declare the field.
+	mutate.Remove(mutate.Key("metadata", "namespace")),
+	// resourceVersion is automatically generated and managed by Kubernetes.
+	mutate.Remove(mutate.Key("metadata", "resourceVersion")),
+	// selfLink is automatically generated and managed by Kubernetes.
+	mutate.Remove(mutate.Key("metadata", "selfLink")),
+	// uid is automatically generated and managed by Kubernetes.
+	mutate.Remove(mutate.Key("metadata", "uid")),
+)

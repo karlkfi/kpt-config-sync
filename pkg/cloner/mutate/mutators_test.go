@@ -34,7 +34,7 @@ func TestRemoveAnnotation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := []ast.FileObject{tc.object}
 
-			ApplyAll(actual, RemoveAnnotation(tc.annotation))
+			RemoveAnnotation(tc.annotation).Apply(actual)
 
 			if diff := cmp.Diff(tc.expected, actual[0]); diff != "" {
 				t.Fatal(diff)
@@ -68,7 +68,7 @@ func TestRemoveAnnotationGroup(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := []ast.FileObject{tc.object}
 
-			ApplyAll(actual, RemoveAnnotationGroup(tc.group))
+			RemoveAnnotationGroup(tc.group).Apply(actual)
 
 			if diff := cmp.Diff(tc.expected, actual[0]); diff != "" {
 				t.Fatal(diff)
@@ -102,7 +102,7 @@ func TestRemoveLabel(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := []ast.FileObject{tc.object}
 
-			ApplyAll(actual, RemoveLabel(tc.label))
+			RemoveLabel(tc.label).Apply(actual)
 
 			if diff := cmp.Diff(tc.expected, actual[0]); diff != "" {
 				t.Fatal(diff)
@@ -136,7 +136,7 @@ func TestRemoveLabelGroup(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := []ast.FileObject{tc.object}
 
-			ApplyAll(actual, RemoveLabelGroup(tc.group))
+			RemoveLabelGroup(tc.group).Apply(actual)
 
 			if diff := cmp.Diff(tc.expected, actual[0]); diff != "" {
 				t.Fatal(diff)
