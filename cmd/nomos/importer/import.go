@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -23,15 +24,18 @@ import (
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
+var force bool
 var silent bool
 
 func init() {
 	Cmd.Flags().BoolVar(&silent, "silent", false, "Only print errors")
+	Cmd.Flags().BoolVar(&force, "force", false, "Overwrite existing files")
 }
 
 // Cmd exports resources in the current kubectl context into the specified directory.
 var Cmd = &cobra.Command{
-	Use: "import",
+	Use:   "import",
+	Short: `Downloads all resources from the current kubectl context and formats them into a valid Config Management repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		infoOut := cloner.NewStdOutput()
 		if silent {
@@ -102,6 +106,17 @@ var Cmd = &cobra.Command{
 
 		infoOut.Printfln("Writing %d resources to disk", len(objects))
 		printer := &printers.YAMLPrinter{}
+		for _, object := range objects {
+			if _, err := os.Stat(object.AbsoluteOSPath()); os.IsNotExist(err) {
+				// We want this; do nothing.
+			} else if err != nil {
+				errOutput.AddAndDie(err)
+			} else {
+				if !force {
+					errOutput.AddAndDie(errors.New(fmt.Sprintf("import would overwrite existing file %s\nUse --force to proceed.", object.AbsoluteOSPath())))
+				}
+			}
+		}
 		for _, object := range objects {
 			err2 := writeObject(printer, dir, object)
 			errOutput.Add(err2)
