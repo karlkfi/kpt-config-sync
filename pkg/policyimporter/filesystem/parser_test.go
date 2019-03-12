@@ -1395,7 +1395,7 @@ spec:
 			"namespaces/bar/undefined.yaml": templateData{}.apply(anUndefinedResource),
 			"namespaces/bar/ns.yaml":        templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{status.UndocumentedErrorCode},
+		expectedErrorCodes: []string{status.APIServerErrorCode},
 	},
 	{
 		testName: "Name collision in namespace",
@@ -2322,7 +2322,7 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 			testFiles: fstesting.FileContentMap{
 				"namespaces/invalid.yaml": "This is not valid yaml.",
 			},
-			expectedErrorCodes: []string{status.UndocumentedErrorCode},
+			expectedErrorCodes: []string{status.APIServerErrorCode},
 		},
 		{
 			testName:    "A subdir of system is an error",

@@ -204,7 +204,7 @@ func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
 	if len(visitors) > 0 {
 		s, err := p.factory.Validator(p.opts.Validate)
 		if err != nil {
-			p.errors.Add(errors.Wrap(err, "failed to get schema"))
+			p.errors.Add(status.APIServerWrapf(err))
 			return nil
 		}
 		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
@@ -215,7 +215,7 @@ func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
 			FilenameParam(false, options).
 			Do()
 		fileInfos, err := result.Infos()
-		p.errors.Add(err)
+		p.errors.Add(status.APIServerWrapf(err))
 		for _, info := range fileInfos {
 			// Assign relative path since that's what we actually need.
 			source, err := dir.Root().Rel(info.Source)
@@ -231,7 +231,7 @@ func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
 	return fileObjects
 }
 
-func addScope(root *ast.Root, client discovery.ServerResourcesInterface) error {
+func addScope(root *ast.Root, client discovery.ServerResourcesInterface) status.Error {
 	resources, discoveryErr := client.ServerResources()
 	if discoveryErr != nil {
 		return status.UndocumentedWrapf(discoveryErr, "failed to get server resources")
@@ -240,7 +240,7 @@ func addScope(root *ast.Root, client discovery.ServerResourcesInterface) error {
 	resources = append(resources, transform.EphemeralResources()...)
 	apiInfo, err := utildiscovery.NewAPIInfo(resources)
 	if err != nil {
-		return err
+		return status.APIServerWrapf(err)
 	}
 	utildiscovery.AddAPIInfo(root, apiInfo)
 	return nil

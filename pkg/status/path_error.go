@@ -3,6 +3,7 @@ package status
 // PathErrorCode is the error code for a generic PathError.
 const PathErrorCode = "2001"
 
+// pathError almost always results from an OS-level function involving the file system.
 type pathError struct {
 	err      error
 	relPaths []string
@@ -10,14 +11,17 @@ type pathError struct {
 
 var _ PathError = &pathError{}
 
+// Error implements Error.
 func (p pathError) Error() string {
-	return Format(p, "error: %s", p.err.Error())
+	return Format(p, p.err.Error())
 }
 
+// Code implements Error.
 func (p pathError) Code() string {
 	return PathErrorCode
 }
 
+// RelativePaths implements PathError.
 func (p pathError) RelativePaths() []string {
 	return p.relPaths
 }
