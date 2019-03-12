@@ -78,6 +78,7 @@ var Cmd = &cobra.Command{
 			removeAppliedConfig,
 			cleanNamespaces,
 			exportObjectMeta,
+			mutate.Prune(),
 		).Apply(objects)
 
 		pather := cloner.NewPather(apiResources...)
@@ -158,7 +159,7 @@ var ignoreKubernetesSystemLabels = filter.Any(
 	// addonmanager.kubernetes.io/mode indicates the resource is managed by an addon.
 	filter.Label("addonmanager.kubernetes.io/mode"),
 	//config.gke.io/system indicates the resource is part of the Nomos installation
-	filter.Label("config.gke.io/system"),
+	filter.Label(policyhierarchy.GroupName+"/system"),
 	// k8s-app indicates the resource is part of a Kubernetes app.
 	filter.Label("k8s-app"),
 	// kube-aggregator.kubernetes.io/automanaged indicates the resource is automatically managed by Kubernetes.
@@ -178,7 +179,7 @@ var ignoreCriticalPriorityClasses = filter.All(
 )
 
 // removeNomosLables removes all Nomos labels.
-var removeNomosLables = mutate.RemoveLabelGroup("config.gke.io")
+var removeNomosLables = mutate.RemoveLabelGroup(policyhierarchy.GroupName)
 
 // removeNomosAnnotations removes non-input Nomos annotations.
 var removeNomosAnnotations = mutate.RemoveAnnotationGroup(v1.NomosPrefix)
