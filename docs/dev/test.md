@@ -44,13 +44,13 @@ Or by file name: `console make test-e2e-git E2E_FLAGS="--file_filter acme"`
 
 The e2e tests install Nomos using the Nomos operator, the code for which lives
 in the
-[nomos-operator repo](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/).
+[nomos-operator repo](https://team.git.corp.google.com/nomos-team/nomos-operator).
 By default, e2e tests run against the latest release of the operator. However,
 you can run e2e tests against your own build of the operator by doing the
 following:
 
-Check out the `cluster-operators` repo. Instructions can be found in
-[the nomos-operator readme](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/+/master/nomos-operator/README.md#clone-the-git-repo)
+Check out the `nomos-operator` repo. Instructions can be found in
+[the nomos-operator readme](https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/nomos-operator/README.md#clone-the-git-repo)
 
 Once you have made the changes you wish to test in that repository, run
 

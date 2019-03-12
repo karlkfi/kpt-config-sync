@@ -213,7 +213,7 @@ If you would instead like to increment the minor version, run: `console
 MINOR=true make bless-release`
 
 See the comments on this target in the
-[Makefile](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/+/master/nomos-operator/Makefile#186)
+[Makefile](https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/nomos-operator/Makefile#186)
 for other options available for this target.
 
 The `bless-release` target is interactive; please ensure the version name

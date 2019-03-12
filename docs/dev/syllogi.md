@@ -23,7 +23,7 @@ The Nomos integration is currently located in the following places:
     [here](https://gke-release.appspot.com/flow-detail/ag1zfmdrZS1yZWxlYXNlchELEgRGbG93GICAgNCcqocKDA).
     It's called "Cluster-Operators CI" under the flow list, in case the URL
     changes. This build runs daily and pulls the latest code from our usual
-    [Operator Repo](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/+/master/nomos-operator)
+    [Operator Repo](https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/nomos-operator)
 
 *   The version of the Nomos binary specified in
     https://gke-internal.git.corp.google.com/syllogi/cluster-management/+/master/gkectl/pkg/bundle/versions.go
@@ -58,7 +58,7 @@ has milestone releases that we want to hop on.
 *   Ensure that the contents of `gkectl/pkg/bundle/addonsdata.go` match the
     contents of `nomos-operator.yaml`:
     *   Check out and cd to the
-        [Operator repo](https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/+/master/nomos-operator).
+        [Operator repo](https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/nomos-operator).
     *   `make ADDONS_FILE=<path-to>/gkectl/pkg/bundle/addonsdata.go
         compare-to-addons-file || echo failed`. This regenerates the nomos
         manifests and searches the supplied `addons.go` for a match.

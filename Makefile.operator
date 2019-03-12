@@ -1,7 +1,7 @@
 # Rules for deploying the nomos via the operator-based installer.
 # Note that the rules for creating and deploying the operator-bundle.yaml
 # and operator image are in the nomos-operator repo, available at:
-# https://gke-internal.git.corp.google.com/cluster-lifecycle/cluster-operators/+/master/nomos-operator
+# https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/nomos-operator/
 
 ifndef GCP_PROJECT
 $(error GCP_PROJECT must be set, but is not)
