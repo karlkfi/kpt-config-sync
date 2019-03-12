@@ -104,10 +104,18 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 // * cluster/ (flat, optional)
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
-func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*policynode.AllPolicies, error) {
+func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*policynode.AllPolicies, *status.MultiError) {
 	p.errors = &status.ErrorBuilder{}
 	rootPath, err := nomospath.NewRoot(root)
 	p.errors.Add(err)
+
+	// Always make sure we're getting the freshest data.
+	p.discoveryClient.Invalidate()
+	validateInstallation(p.discoveryClient, p.errors)
+
+	if p.errors.HasErrors() {
+		return nil, p.errors.Build()
+	}
 
 	astRoot := &ast.Root{
 		ImportToken: importToken,
@@ -115,15 +123,11 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*po
 		System:      &ast.System{},
 		Cluster:     &ast.Cluster{},
 	}
-	// Always make sure we're getting the freshest data.
-	p.discoveryClient.Invalidate()
-	validateInstallation(p.discoveryClient, p.errors)
-	if p.errors.Build() != nil {
-		return nil, p.errors.Build()
-	}
-
 	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources(rootPath))
 	p.errors.Add(addScope(astRoot, p.discoveryClient))
+	if p.errors.HasErrors() {
+		return nil, p.errors.Build()
+	}
 
 	visitors := []ast.Visitor{
 		tree.NewSystemBuilderVisitor(p.readSystemResources(rootPath)),
@@ -137,32 +141,31 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*po
 	visitors = append(visitors,
 		transform.NewSyncGenerator(),
 		outputVisitor)
-	err = p.runVisitors(astRoot, visitors)
-	if err != nil {
-		return nil, err
+
+	p.runVisitors(astRoot, visitors)
+	if p.errors.HasErrors() {
+		return nil, p.errors.Build()
 	}
 
 	policies := outputVisitor.AllPolicies()
 	if glog.V(8) {
 		// REALLY useful when debugging.
 		glog.Warningf("allPolicies: %v", spew.Sdump(policies))
-		glog.Warningf("all errors: %v", spew.Sdump(p.errors.Build()))
 	}
 	return policies, nil
 }
 
-func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) error {
+func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) {
 	for _, visitor := range visitors {
 		if p.errors.HasErrors() && visitor.RequiresValidState() {
-			return p.errors.Build()
+			return
 		}
 		root = root.Accept(visitor)
 		p.errors.Add(visitor.Error())
 		if visitor.Fatal() {
-			return p.errors.Build()
+			return
 		}
 	}
-	return nil
 }
 
 func (p *Parser) readSystemResources(root nomospath.Root) []ast.FileObject {
@@ -219,7 +222,7 @@ func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
 		for _, info := range fileInfos {
 			// Assign relative path since that's what we actually need.
 			source, err := dir.Root().Rel(info.Source)
-			p.errors.Add(status.PathWrapf(err, dir.AbsoluteOSPath(), info.Source))
+			p.errors.Add(err)
 			if err != nil {
 				continue
 			}

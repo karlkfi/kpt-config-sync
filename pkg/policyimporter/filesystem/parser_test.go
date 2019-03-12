@@ -1560,10 +1560,10 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		t.Fatalf("unexpected error: %#v", err)
 	}
 
-	actualPolicies, err := p.Parse(d.rootDir, "", time.Time{})
+	actualPolicies, mErr := p.Parse(d.rootDir, "", time.Time{})
 
-	vettesting.ExpectErrors(tc.expectedErrorCodes, err, t)
-	if err != nil {
+	vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
+	if mErr != nil {
 		// We expected there to be an error, so no need to do policy validation
 		return
 	}
@@ -2402,12 +2402,12 @@ func TestEmptyDirectories(t *testing.T) {
 				},
 			)
 			if err != nil {
-				t.Fatalf("unexpected error: %#v", err)
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			actualPolicies, err := p.Parse(d.rootDir, "", time.Time{})
-			if err != nil {
-				t.Fatalf("unexpected error: %#v", err)
+			actualPolicies, mErr := p.Parse(d.rootDir, "", time.Time{})
+			if mErr != nil {
+				t.Fatalf("unexpected error: %v", mErr)
 			}
 			expectedPolicies := &policynode.AllPolicies{
 				PolicyNodes:   map[string]v1.PolicyNode{},

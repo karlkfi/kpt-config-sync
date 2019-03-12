@@ -145,9 +145,9 @@ func (c *Controller) pollDir() {
 
 			loadTime := time.Now()
 			// Parse filesystem tree into in-memory PolicyNode and ClusterPolicy objects.
-			desiredPolicies, err := c.parser.Parse(newDir, token, loadTime)
-			if err != nil {
-				glog.Warningf("Failed to parse: %v", err)
+			desiredPolicies, mErr := c.parser.Parse(newDir, token, loadTime)
+			if mErr != nil {
+				glog.Warningf("Failed to parse: %v", mErr)
 				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
 				continue
 			}

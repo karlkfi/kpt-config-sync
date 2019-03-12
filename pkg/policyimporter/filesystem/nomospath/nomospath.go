@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
+	"github.com/google/nomos/pkg/status"
 )
 
 // Sourced represents an object associated with a path in a Nomos repository.
@@ -37,19 +37,19 @@ func (p Root) Join(elem string) Relative {
 }
 
 // Rel breaks the passed target path into a Relative
-func (p Root) Rel(targpath string) (Relative, error) {
-	relpath, err := filepath.Rel(p.path, targpath)
+func (p Root) Rel(targPath string) (Relative, status.PathError) {
+	relPath, err := filepath.Rel(p.path, targPath)
 	if err != nil {
-		return Relative{}, errors.Wrapf(err, "unable to get relative path in repo")
+		return Relative{}, status.PathWrapf(err, p.path, targPath)
 	}
-	return Relative{path: relpath, root: p}, nil
+	return Relative{path: relPath, root: p}, nil
 }
 
 // NewRoot creates a new Root.
 // path is either the path to Nomos relative to system root or the path relative to the working
 //   directory.
 // Returns error if path is not absolute and the program is unable to retrieve the working directory.
-func NewRoot(path string) (Root, error) {
+func NewRoot(path string) (Root, status.Error) {
 	absolutePath, err := makeCleanAbsolute(path)
 	if err != nil {
 		return Root{}, err
@@ -63,13 +63,13 @@ func (p Root) Equal(that Root) bool {
 }
 
 // makeCleanAbsolute returns the cleaned, absolute path.
-func makeCleanAbsolute(path string) (string, error) {
+func makeCleanAbsolute(path string) (string, status.Error) {
 	if path == "~" || strings.HasPrefix(path, "~/") {
 		// path is relative to home directory.
 		// filepath.Abs does not cover this case.
 		usr, err := user.Current()
 		if err != nil {
-			return "", err
+			return "", status.OSWrapf(err)
 		}
 		home := usr.HomeDir
 		if path == "~" {
@@ -78,11 +78,11 @@ func makeCleanAbsolute(path string) (string, error) {
 		return filepath.Join(home, path[2:]), nil
 	}
 
-	path, err := filepath.Abs(path)
+	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return "", err
+		return "", status.PathWrapf(err, path)
 	}
-	return filepath.Clean(path), nil
+	return filepath.Clean(absPath), nil
 }
 
 // Relative is a path relative to a Root.

@@ -32,9 +32,9 @@ func Parse(dir string, parserOpt filesystem.ParserOpt) (*policynode.AllPolicies,
 		return nil, errors.Wrap(err, "Failed to create parser")
 	}
 
-	resources, err := p.Parse(dir, "", time.Time{})
-	if err != nil {
-		return nil, errors.Wrap(err, "Found issues")
+	resources, mErr := p.Parse(dir, "", time.Time{})
+	if mErr != nil {
+		return nil, errors.Wrap(mErr, "Found issues")
 	}
 
 	return resources, nil

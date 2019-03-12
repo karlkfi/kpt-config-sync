@@ -1,5 +1,9 @@
 package status
 
+import (
+	"strings"
+)
+
 // PathErrorCode is the error code for a generic PathError.
 const PathErrorCode = "2001"
 
@@ -13,7 +17,7 @@ var _ PathError = &pathError{}
 
 // Error implements Error.
 func (p pathError) Error() string {
-	return Format(p, p.err.Error())
+	return Format(p, "%[1]s\nPotential causes:\n%[2]s", p.err.Error(), strings.Join(p.relPaths, "\n"))
 }
 
 // Code implements Error.
