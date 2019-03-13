@@ -72,6 +72,7 @@ var Cmd = &cobra.Command{
 		))
 
 		mutate.ApplyAll(objects,
+			mutate.Unapply(),
 			removeNomosLables,
 			removeNomosAnnotations,
 			removeAppliedConfig,
@@ -119,8 +120,6 @@ var ignoredGroupKinds = map[schema.GroupKind]bool{
 	schema.GroupKind{Kind: "PodMetrics", Group: "metrics.k8s.io"}: true,
 	// Secrets hold data that shouldn't be shared by default.
 	schema.GroupKind{Kind: "Secret"}: true,
-	// Services are configured automatically per-cluster.
-	schema.GroupKind{Kind: "Service"}: true,
 	// ClusterPolicy is an internal Nomos type we don't support syncing.
 	kinds.ClusterPolicy().GroupKind(): true,
 	// PolicyNode is an internal Nomos type we don't support syncing.
@@ -184,4 +183,4 @@ var removeNomosAnnotations = mutate.RemoveAnnotationGroup(v1.NomosPrefix)
 
 // removeAppliedConfig removes the annotation holding a JSON representation of the last call to
 // kubectl apply on the resource.
-var removeAppliedConfig = mutate.RemoveAnnotation("kubectl.kubernetes.io/last-applied-configuration")
+var removeAppliedConfig = mutate.RemoveAnnotation(mutate.AppliedConfiguration)
