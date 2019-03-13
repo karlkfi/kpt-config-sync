@@ -14,9 +14,6 @@ import (
 type Sourced interface {
 	// RelativeSlashPath returns the slash-delimited path relative to Nomos root.
 	RelativeSlashPath() string
-
-	// Dir returns a Relative of the directory containing the path this object is associated with.
-	Dir() Relative
 }
 
 // Root is a path to a directory holding a Nomos repository.

@@ -15,6 +15,7 @@ func init() {
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
 type IllegalMetadataNamespaceDeclarationError struct {
 	id.Resource
+	ExpectedNamespace string
 }
 
 // Error implements error.
@@ -23,7 +24,7 @@ func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 		"A config MUST either declare a metadata.namespace field exactly matching the directory "+
 			"containing the config, %[1]q, or leave the field blank:\n\n"+
 			"%[2]s",
-		e.Resource.Dir().Base(), id.PrintResource(e))
+		e.ExpectedNamespace, id.PrintResource(e))
 }
 
 // Code implements Error

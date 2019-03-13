@@ -19,6 +19,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/nomos/pkg/policyimporter/id"
+
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
@@ -124,7 +126,7 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, "")
 		if err != nil {
-			errBuilder.Add(errors.Wrapf(err, "failed to list from policy controller for %q", gvk))
+			errBuilder.Add(status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
 			syncErrs = append(syncErrs, NewClusterPolicySyncError(name, gvk, err))
 			continue
 		}
@@ -142,7 +144,7 @@ func (r *ClusterPolicyReconciler) managePolicies(ctx context.Context, policy *v1
 		}
 	}
 	if err := r.setClusterPolicyStatus(ctx, policy, syncErrs...); err != nil {
-		errBuilder.Add(errors.Wrapf(err, "failed to set status for %q", name))
+		errBuilder.Add(err)
 		r.recorder.Eventf(policy, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update cluster policy status: %v", err)
 	}
@@ -174,7 +176,7 @@ func decorateAsClusterManaged(declaredInstances []*unstructured.Unstructured, po
 }
 
 func (r *ClusterPolicyReconciler) setClusterPolicyStatus(ctx context.Context, policy *v1.ClusterPolicy,
-	errs ...v1.ClusterPolicySyncError) error {
+	errs ...v1.ClusterPolicySyncError) id.ResourceError {
 	freshSyncToken := policy.Status.SyncToken == policy.Spec.ImportToken
 	if policy.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for ClusterPolicy %q is already up-to-date.", policy.Name)
@@ -212,13 +214,13 @@ func NewClusterPolicySyncError(name string, gvk schema.GroupVersionKind, err err
 
 // handleDiff updates the API Server according to changes reflected in the diff.
 // It returns whether or not an update occurred and the error encountered.
-func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.Diff) (bool, error) {
+func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
 	switch t := diff.Type; t {
 	case differ.Add:
 		toCreate := diff.Declared
 		if err := r.applier.Create(ctx, toCreate); err != nil {
 			metrics.ErrTotal.WithLabelValues(toCreate.GetNamespace(), toCreate.GetKind(), "create").Inc()
-			return false, errors.Wrapf(err, "could not create resource %q", diff.Name)
+			return false, id.ResourceWrap(err, fmt.Sprintf("failed to create %q", diff.Name), id.ParseResource(toCreate))
 		}
 	case differ.Update:
 		switch diff.ActualResourceIsManaged() {
@@ -233,7 +235,7 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 		removeEmptyRulesField(diff.Declared)
 		if err := r.applier.ApplyCluster(diff.Declared, diff.Actual); err != nil {
 			metrics.ErrTotal.WithLabelValues("", diff.Declared.GroupVersionKind().Kind, "patch").Inc()
-			return false, err
+			return false, id.ResourceWrap(err, fmt.Sprintf("failed to patch %q", diff.Name), id.ParseResource(diff.Declared))
 		}
 	case differ.Delete:
 		switch diff.ActualResourceIsManaged() {
@@ -248,7 +250,7 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 		toDelete := diff.Actual
 		if err := r.client.Delete(ctx, toDelete); err != nil {
 			metrics.ErrTotal.WithLabelValues("", toDelete.GroupVersionKind().Kind, "delete").Inc()
-			return false, errors.Wrapf(err, "could not delete resource %q", diff.Name)
+			return false, id.ResourceWrap(err, fmt.Sprintf("failed to delete %q", diff.Name), id.ParseResource(toDelete))
 		}
 	default:
 		panic(fmt.Errorf("programmatic error, unhandled syncer diff type: %v", t))
