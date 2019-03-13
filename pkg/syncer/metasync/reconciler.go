@@ -138,36 +138,32 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
 	for _, sync := range enabled {
-		var status v1.SyncStatus
-		status.Status = v1.Syncing
+		var ss v1.SyncStatus
+		ss.Status = v1.Syncing
 
 		// Check if status changed before updating.
-		if !reflect.DeepEqual(sync.Status, status) {
+		if !reflect.DeepEqual(sync.Status, ss) {
 			updateFn := func(obj runtime.Object) (runtime.Object, error) {
 				s := obj.(*v1.Sync)
-				s.Status = status
+				s.Status = ss
 				return s, nil
 			}
 			sync.SetGroupVersionKind(kinds.Sync())
 			_, err := r.client.UpdateStatus(ctx, sync, updateFn)
-			errBuilder.Add(errors.Wrap(err, "could not update sync status"))
+			errBuilder.Add(status.APIServerWrapf(err, "could not update sync status"))
 		}
 	}
 
-	bErr := errBuilder.Build()
-	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
-	if bErr == nil {
-		return reconcile.Result{}, nil
+	if errBuilder.HasErrors() {
+		err := errBuilder.Build()
+		glog.Errorf("Could not reconcile syncs: %v", err)
+		return reconcile.Result{}, err
 	}
-	// end
-	if bErr != nil {
-		glog.Errorf("Could not reconcile syncs: %v", bErr)
-	}
-
-	return reconcile.Result{}, bErr
+	// We need to return an explicit nil here to avoid Golang's nil-type-interface insanity.
+	return reconcile.Result{}, nil
 }
 
-func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) error {
+func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) *status.MultiError {
 	var newFinalizers []string
 	var needsFinalize bool
 	for _, f := range sync.Finalizers {
@@ -190,10 +186,11 @@ func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, apiInf
 	if err := r.gcResources(ctx, sync, apiInfo); err != nil {
 		return err
 	}
-	return errors.Wrap(r.client.Upsert(ctx, sync), "could not finalize sync pending delete")
+	err := r.client.Upsert(ctx, sync)
+	return status.From(status.APIServerWrapf(err, "could not finalize sync pending delete"))
 }
 
-func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) error {
+func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) *status.MultiError {
 	// It doesn't matter which version we choose when deleting.
 	// Deletes to a resource of a particular version affect all versions with the same group and kind.
 	gvks := apiInfo.GroupVersionKinds(sync)
@@ -206,32 +203,29 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo
 		gvk = k
 		break
 	}
+	var errBuilder status.ErrorBuilder
 	// Create a new dynamic client since it's possible that the manager client is reading from the
 	// cache.
 	cl, err := r.clientFactory()
 	if err != nil {
-		return errors.Wrapf(err, "failed to create dynamic client during gc")
+		errBuilder.Add(status.APIServerWrapf(err, "failed to create dynamic client during gc"))
+		return errBuilder.Build()
 	}
 	gvk.Kind += "List"
 	ul := &unstructured.UnstructuredList{}
 	ul.SetGroupVersionKind(gvk)
 	if err := cl.List(ctx, &client.ListOptions{}, ul); err != nil {
-		return errors.Wrapf(err, "could not list %s resources", gvk)
+		errBuilder.Add(status.APIServerWrapf(err, "could not list %s resources", gvk))
+		return errBuilder.Build()
 	}
-	errBuilder := &status.ErrorBuilder{}
 	for _, u := range ul.Items {
 		annots := u.GetAnnotations()
 		if v, ok := annots[v1.ResourceManagementKey]; !ok || v != v1.ResourceManagementValue {
 			continue
 		}
 		if err := cl.Delete(ctx, &u); err != nil {
-			errBuilder.Add(errors.Wrapf(err, "could not delete %s resource: %v", gvk, u))
+			errBuilder.Add(status.APIServerWrapf(err, "could not delete %s resource: %v", gvk, u))
 		}
 	}
-	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
-	bErr := errBuilder.Build()
-	if bErr == nil {
-		return nil
-	}
-	return bErr
+	return errBuilder.Build()
 }

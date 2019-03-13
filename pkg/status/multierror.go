@@ -32,7 +32,11 @@ type ErrorBuilder struct {
 
 // From returns a MultiError from one or more Errors.
 func From(errors ...Error) *MultiError {
-	return &MultiError{errs: errors}
+	var builder ErrorBuilder
+	for _, err := range errors {
+		builder.Add(err)
+	}
+	return builder.Build()
 }
 
 // Add adds error to the builder.

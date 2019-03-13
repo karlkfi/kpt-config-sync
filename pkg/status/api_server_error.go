@@ -1,5 +1,7 @@
 package status
 
+import "github.com/pkg/errors"
+
 // APIServerErrorCode is the error code for a status Error originating from the kubernetes API server.
 const APIServerErrorCode = "2002"
 
@@ -21,9 +23,9 @@ func (p apiServerError) Code() string {
 }
 
 // APIServerWrapf returns an Error wrapping a kubernetes API server error.
-func APIServerWrapf(err error) Error {
+func APIServerWrapf(err error, format string, args ...interface{}) Error {
 	if err == nil {
 		return nil
 	}
-	return apiServerError{err: err}
+	return apiServerError{err: errors.Wrapf(err, format, args...)}
 }
