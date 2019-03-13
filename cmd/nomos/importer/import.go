@@ -23,10 +23,22 @@ import (
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
+var silent bool
+
+func init() {
+	Cmd.Flags().BoolVar(&silent, "silent", false, "Only print errors")
+}
+
 // Cmd exports resources in the current kubectl context into the specified directory.
 var Cmd = &cobra.Command{
 	Use: "import",
 	Run: func(cmd *cobra.Command, args []string) {
+		infoOut := cloner.NewStdOutput()
+		if silent {
+			infoOut = cloner.NewNilOutput()
+		}
+		infoOut.Printfln("Importing resources from current kubectl context")
+
 		// TODO: Allow other outputs than os.Stderr.
 		errOutput := cloner.NewStandardErrorOutput()
 		dir, err := filepath.Abs(flags.Path.String())
@@ -46,6 +58,7 @@ var Cmd = &cobra.Command{
 		discoveryClient, err := factory.ToDiscoveryClient()
 		errOutput.AddAndDie(errors.Wrap(err, "failed to get discovery client"))
 
+		infoOut.Printfln("Listing available APIResources")
 		apiResources := cloner.ListResources(discoveryClient, errOutput)
 		errOutput.DieIfPrintedErrors("failed to list available API objects")
 
@@ -54,25 +67,28 @@ var Cmd = &cobra.Command{
 
 		lister := cloner.NewResourceLister(cloner.DynamicResourcer{Interface: dynamicClient})
 
+		infoOut.Printfln("Listing resources for each APIResource")
 		var objects []ast.FileObject
 		for _, apiResource := range apiResources {
 			gk := schema.GroupKind{Group: apiResource.Group, Kind: apiResource.Kind}
 			if ignoredGroupKinds[gk] {
+				infoOut.Printfln("  Ignoring %s", gk.String())
 				continue
 			}
 			resources := lister.List(apiResource, errOutput)
 			objects = append(objects, resources...)
 		}
 
+		infoOut.Printfln("Filtering out system resources")
 		objects = filter.Objects(objects, filter.Any(
 			ignoreSystemNameGroups,
-			ignoreSystemNamespaces,
+			ignoreSystemNamespaces(infoOut),
 			ignoreKubernetesSystemLabels,
 			ignoreCriticalPriorityClasses,
 		))
 
 		mutate.Build(
-			mutate.Unapply(),
+			mutate.Unapply(infoOut),
 			removeNomosLables,
 			removeNomosAnnotations,
 			removeAppliedConfig,
@@ -84,12 +100,14 @@ var Cmd = &cobra.Command{
 		pather := cloner.NewPather(apiResources...)
 		pather.AddPaths(objects)
 
+		infoOut.Printfln("Writing %d resources to disk", len(objects))
 		printer := &printers.YAMLPrinter{}
 		for _, object := range objects {
 			err2 := writeObject(printer, dir, object)
 			errOutput.Add(err2)
 		}
 		errOutput.DieIfPrintedErrors("encountered errors writing resources to files")
+		infoOut.Printfln("Done")
 	},
 }
 
@@ -146,12 +164,16 @@ var ignoreSystemNameGroups = filter.Any(
 
 // ignoreSystemNamespaces ignores all of the Namespaces which have internal Kubernetes and Nomos
 // resources. We don't support syncing any of these namespaces.
-var ignoreSystemNamespaces = filter.Any(
-	filter.Namespace("default"),
-	filter.Namespace("kube-public"),
-	filter.Namespace("kube-system"),
-	filter.Namespace(policyhierarchy.ControllerNamespace),
-)
+func ignoreSystemNamespaces(out cloner.InfoOutput) filter.Predicate {
+	ignoredNamespaces := []string{"default", "kube-public", "kube-system", policyhierarchy.ControllerNamespace}
+	var namespaceFilters []filter.Predicate
+	for _, n := range ignoredNamespaces {
+		out.Printfln("  Ignoring %s Namespace", n)
+		namespaceFilters = append(namespaceFilters, filter.Namespace(n))
+	}
+
+	return filter.Any(namespaceFilters...)
+}
 
 // ignoreKubernetesSystemLabels returns true for resources which have Kubernetes system labels
 // set.

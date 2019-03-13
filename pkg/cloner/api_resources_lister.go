@@ -33,7 +33,7 @@ func ListResources(lister APIResourcesLister, errs ErrorAdder) []metav1.APIResou
 // flatten returns a list of the listable APIResources contained in the list of list of
 // APIResources. If a given group/resource has multiple versions, returns the most recent.
 func flatten(lists []*metav1.APIResourceList, errs ErrorAdder) []metav1.APIResource {
-	grs := make(map[schema.GroupResource][]metav1.APIResource)
+	grs := make(map[schema.GroupKind][]metav1.APIResource)
 
 	for _, list := range lists {
 		gv, err := schema.ParseGroupVersion(list.GroupVersion)
@@ -47,11 +47,11 @@ func flatten(lists []*metav1.APIResourceList, errs ErrorAdder) []metav1.APIResou
 			// The server is not guaranteed to populate Group and Version, so this ensures it happens.
 			resource.Group = gv.Group
 			resource.Version = gv.Version
-			gr := schema.GroupResource{
-				Group:    gv.Group,
-				Resource: resource.Name,
+			gk := schema.GroupKind{
+				Group: gv.Group,
+				Kind:  resource.Kind,
 			}
-			grs[gr] = append(grs[gr], resource)
+			grs[gk] = append(grs[gk], resource)
 		}
 	}
 
