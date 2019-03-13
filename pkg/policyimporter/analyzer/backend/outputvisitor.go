@@ -127,8 +127,9 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.policyNode = append(v.policyNode, pn)
 	v.Base.VisitTreeNode(n)
 	v.policyNode = v.policyNode[:origLen]
+	// PolicyNodes are emitted only for leaf nodes.
 	if n.Type == node.Namespace {
-		v.allPolicies.PolicyNodes[pn.Name] = *pn
+		v.allPolicies.PolicyNodes[name] = *pn
 	}
 	return nil
 }

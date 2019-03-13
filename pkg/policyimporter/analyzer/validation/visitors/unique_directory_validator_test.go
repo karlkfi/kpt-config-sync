@@ -26,23 +26,40 @@ func TestUniqueDirectoryValidator(t *testing.T) {
 				Objects: []ast.FileObject{fake.Role("namespaces/foo/role.yaml")},
 			},
 			{
-				Name:       "subdirectory of self",
-				Objects:    []ast.FileObject{fake.Role("namespaces/foo/foo/role.yaml")},
+				Name:    "subdirectory of self",
+				Objects: []ast.FileObject{fake.Role("namespaces/foo/foo/role.yaml")},
+			},
+			{
+				Name:    "deep subdirectory of self",
+				Objects: []ast.FileObject{fake.Role("namespaces/foo/bar/foo/role.yaml")},
+			},
+			{
+				Name: "two leaf namespaces may not have the same name",
+				Objects: []ast.FileObject{
+					fake.Namespace("namespaces/bar/foo/ns.yaml"),
+					fake.Namespace("namespaces/qux/foo/ns.yaml"),
+					fake.Role("namespaces/bar/foo/role.yaml"),
+					fake.Role("namespaces/qux/foo/role.yaml")},
 				ShouldFail: true,
 			},
 			{
-				Name:       "deep subdirectory of self",
-				Objects:    []ast.FileObject{fake.Role("namespaces/foo/bar/foo/role.yaml")},
-				ShouldFail: true,
+				Name: "an abstract namespace may have the short name as a leaf namespace",
+				Objects: []ast.FileObject{
+					fake.Namespace("namespaces/foo"),
+					fake.Namespace("namespaces/bar/foo"),
+					fake.Role("namespaces/bar/foo/role.yaml")},
 			},
 			{
-				Name:       "child of different directories",
-				Objects:    []ast.FileObject{fake.Role("namespaces/bar/foo/role.yaml"), fake.Role("namespaces/qux/foo/role.yaml")},
-				ShouldFail: true,
+				Name: "two directories corresponding to abstract namespaces",
+				Objects: []ast.FileObject{
+					fake.Role("namespaces/foo/bar/baz/role.yaml"),
+					fake.Role("namespaces/qux/bar/quux/role.yaml")},
 			},
 			{
-				Name:    "directory with two children",
-				Objects: []ast.FileObject{fake.Role("namespaces/bar/foo/role.yaml"), fake.Role("namespaces/bar/qux/role.yaml")},
+				Name: "directory with two children",
+				Objects: []ast.FileObject{
+					fake.Role("namespaces/bar/foo/role.yaml"),
+					fake.Role("namespaces/bar/qux/role.yaml")},
 			},
 		},
 	}

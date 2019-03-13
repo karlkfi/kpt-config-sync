@@ -2,14 +2,15 @@ package visitors
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/status"
 )
 
-// NewUniqueDirectoryValidator initializes a ValidatorVisitor that checks that directory names are globally
-// unique.
+// NewUniqueDirectoryValidator initializes a ValidatorVisitor that checks that
+// directory names corresponding to leaf namespaces are globally unique.
 func NewUniqueDirectoryValidator() ast.Visitor {
 	return visitor.NewTreeNodesValidator(func(ns []*ast.TreeNode) *status.MultiError {
 		eb := status.ErrorBuilder{}
@@ -20,9 +21,13 @@ func NewUniqueDirectoryValidator() ast.Visitor {
 
 func validateUniqueDirectories(nodes []*ast.TreeNode, eb *status.ErrorBuilder) {
 	names := make(map[string][]nomospath.Relative, len(nodes))
-	for _, node := range nodes {
-		name := node.Name()
-		names[name] = append(names[name], node.Relative)
+	for _, n := range nodes {
+		if n.Type == node.AbstractNamespace {
+			continue
+		}
+		// Only do this check on leaf nodes and their base names.
+		name := n.Base()
+		names[name] = append(names[name], n.Relative)
 	}
 
 	for _, dirs := range names {

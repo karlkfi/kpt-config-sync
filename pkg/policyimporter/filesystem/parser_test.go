@@ -1289,14 +1289,32 @@ spec:
 		expectedErrorCodes: []string{vet.DuplicateDirectoryNameErrorCode},
 	},
 	{
-		testName: "Dir name not unique 2",
+		testName: "Two abstract Namespace dirs with non-unique names are allowed.",
 		testFiles: fstesting.FileContentMap{
-			// Two Abstract Namespace dirs with same name.
-
 			"namespaces/bar/baz/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
 			"namespaces/qux/baz/waldo/ns.yaml": templateData{Name: "waldo"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.DuplicateDirectoryNameErrorCode},
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			"corge": createNamespacePN("namespaces/bar/baz/corge",
+				&Policies{}),
+			"waldo": createNamespacePN("namespaces/qux/baz/waldo",
+				&Policies{}),
+		},
+		expectedClusterPolicy: createClusterPolicy(),
+	},
+	{
+		testName: "An abstract namespace and a leaf namespace may share a name",
+		testFiles: fstesting.FileContentMap{
+			"namespaces/waldo/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
+			"namespaces/bar/waldo/ns.yaml":   templateData{Name: "waldo"}.apply(aNamespace),
+		},
+		expectedPolicyNodes: map[string]v1.PolicyNode{
+			"corge": createNamespacePN("namespaces/waldo/corge",
+				&Policies{}),
+			"waldo": createNamespacePN("namespaces/bar/waldo",
+				&Policies{}),
+		},
+		expectedClusterPolicy: createClusterPolicy(),
 	},
 	{
 		testName: "Dir name reserved 1",

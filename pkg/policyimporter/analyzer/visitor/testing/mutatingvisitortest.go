@@ -79,7 +79,7 @@ func (tc *MutatingVisitorTestcase) Runf(
 		}
 		if !cmp.Equal(tc.ExpectOutput, actual, opts...) {
 			t.Errorf("mismatch on expected vs actual:\ndiff:\n%s",
-				cmp.Diff(tc.ExpectOutput, actual))
+				cmp.Diff(tc.ExpectOutput, actual, opts...))
 		}
 	}
 }
@@ -97,6 +97,7 @@ type MutatingVisitorTestcases struct {
 
 // Run runs all testcases.
 func (tcs *MutatingVisitorTestcases) Run(t *testing.T) {
+	t.Helper()
 	for _, testcase := range tcs.Testcases {
 		t.Run(testcase.Name, testcase.Runf(tcs.VisitorCtor(), tcs.InitRoot, tcs.Options))
 	}
