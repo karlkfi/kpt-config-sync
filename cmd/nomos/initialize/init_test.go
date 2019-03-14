@@ -61,13 +61,19 @@ func runTestCase(t *testing.T, tc testCase) {
 	tc.before(testDir)
 
 	// Cleanup test dir before starting.
-	os.Remove(filepath.Join(testDir.Root(), "tree"))
+	err := os.Remove(filepath.Join(testDir.Root(), "tree"))
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
 
 	dir := repo.FilePath{}
-	dir.Set(testDir.Root())
+	err = dir.Set(testDir.Root())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Run Initialize
-	err := Initialize(dir)
+	err = Initialize(dir)
 	if err != nil {
 		if !tc.expectError {
 			t.Error(errors.Wrapf(err, "(Test: %s): did not expect error but got", tc.name))

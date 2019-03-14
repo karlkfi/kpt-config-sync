@@ -1,6 +1,7 @@
 package initialize
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericclioptions/printers"
 )
 
 // InitCmd is the Cobra object representing the nomos init command
@@ -61,15 +63,23 @@ func Initialize(dir repo.FilePath) error {
 	// Create system/
 	repoDir.createDir(v1repo.SystemDir)
 	repoDir.createSystemFile(readmeFile, systemReadmeContents)
-	repoDir.createSystemFile(repoFile, repoContents)
+	err = util.WriteObject(&printers.YAMLPrinter{}, dir.String(), defaultRepo)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	// Create cluster/
+	// TODO: Add readme.
 	repoDir.createDir(v1repo.ClusterDir)
-	repoDir.createFile(v1repo.ClusterDir, readmeFile, clusterReadmeContents)
+
+	// Create clusterregistry/
+	// TODO: Add readme.
+	repoDir.createDir(v1repo.ClusterRegistryDir)
 
 	// Create namespaces/
+	// TODO: Add readme.
 	repoDir.createDir(v1repo.NamespacesDir)
-	repoDir.createFile(v1repo.NamespacesDir, readmeFile, namespacesReadmeContents)
 
 	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
 	bErr := repoDir.errors.Build()

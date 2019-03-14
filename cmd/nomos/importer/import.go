@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/nomos/cmd/nomos/flags"
+	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/cloner"
@@ -118,25 +119,12 @@ var Cmd = &cobra.Command{
 			}
 		}
 		for _, object := range objects {
-			err2 := writeObject(printer, dir, object)
+			err2 := util.WriteObject(printer, dir, object)
 			errOutput.Add(err2)
 		}
 		errOutput.DieIfPrintedErrors("encountered errors writing resources to files")
 		infoOut.Printfln("Done")
 	},
-}
-
-func writeObject(printer printers.ResourcePrinter, dir string, object ast.FileObject) error {
-	if err := os.MkdirAll(filepath.Join(dir, object.Dir().OSPath()), 0750); err != nil {
-		return err
-	}
-
-	file, err := os.Create(filepath.Join(dir, object.OSPath()))
-	if err != nil {
-		return err
-	}
-
-	return printer.PrintObj(object.Object, file)
 }
 
 var ignoredGroupKinds = map[schema.GroupKind]bool{
