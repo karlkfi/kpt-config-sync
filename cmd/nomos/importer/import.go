@@ -107,13 +107,14 @@ var Cmd = &cobra.Command{
 		infoOut.Printfln("Writing %d resources to disk", len(objects))
 		printer := &printers.YAMLPrinter{}
 		for _, object := range objects {
-			if _, err := os.Stat(object.AbsoluteOSPath()); os.IsNotExist(err) {
+			if _, err := os.Stat(object.OSPath()); os.IsNotExist(err) {
 				// We want this; do nothing.
 			} else if err != nil {
 				errOutput.AddAndDie(err)
 			} else {
 				if !force {
-					errOutput.AddAndDie(errors.New(fmt.Sprintf("import would overwrite existing file %s\nUse --force to proceed.", object.AbsoluteOSPath())))
+					fmt.Printf("  Import would overwrite existing file %s\n  Use --force to proceed\n", object.OSPath())
+					os.Exit(1)
 				}
 			}
 		}
