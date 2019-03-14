@@ -17,6 +17,8 @@ type UnknownObjectError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &UnknownObjectError{}
+
 // Error implements error
 func (e UnknownObjectError) Error() string {
 	return status.Format(e,
@@ -27,3 +29,8 @@ func (e UnknownObjectError) Error() string {
 
 // Code implements Error
 func (e UnknownObjectError) Code() string { return UnknownObjectErrorCode }
+
+// Resources implements ResourceError
+func (e UnknownObjectError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
+}

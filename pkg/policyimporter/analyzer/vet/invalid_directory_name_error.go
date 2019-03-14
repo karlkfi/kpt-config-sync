@@ -17,6 +17,8 @@ type InvalidDirectoryNameError struct {
 	Dir nomospath.Path
 }
 
+var _ status.PathError = &InvalidDirectoryNameError{}
+
 // Error implements error.
 func (e InvalidDirectoryNameError) Error() string {
 	return status.Format(e,
@@ -28,3 +30,8 @@ func (e InvalidDirectoryNameError) Error() string {
 
 // Code implements Error
 func (e InvalidDirectoryNameError) Code() string { return InvalidDirectoryNameErrorCode }
+
+// RelativePaths implements PathError
+func (e InvalidDirectoryNameError) RelativePaths() []string {
+	return []string{e.Dir.SlashPath()}
+}

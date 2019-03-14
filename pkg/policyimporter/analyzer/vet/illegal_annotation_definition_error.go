@@ -5,10 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/status"
-
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // IllegalAnnotationDefinitionErrorCode is the error code for IllegalAnnotationDefinitionError
@@ -23,6 +22,8 @@ type IllegalAnnotationDefinitionError struct {
 	id.Resource
 	Annotations []string
 }
+
+var _ id.ResourceError = &IllegalAnnotationDefinitionError{}
 
 // Error implements error.
 func (e IllegalAnnotationDefinitionError) Error() string {
@@ -42,3 +43,8 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 
 // Code implements Error
 func (e IllegalAnnotationDefinitionError) Code() string { return IllegalAnnotationDefinitionErrorCode }
+
+// Resources implements ResourceError
+func (e IllegalAnnotationDefinitionError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
+}

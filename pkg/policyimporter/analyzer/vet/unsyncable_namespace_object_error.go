@@ -17,6 +17,8 @@ type UnsyncableNamespaceObjectError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &UnsyncableNamespaceObjectError{}
+
 // Error implements error.
 func (e UnsyncableNamespaceObjectError) Error() string {
 	return status.Format(e,
@@ -28,3 +30,8 @@ func (e UnsyncableNamespaceObjectError) Error() string {
 
 // Code implements Error
 func (e UnsyncableNamespaceObjectError) Code() string { return UnsyncableNamespaceObjectErrorCode }
+
+// Resources implements ResourceError
+func (e UnsyncableNamespaceObjectError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
+}

@@ -18,6 +18,8 @@ type IllegalKindInNamespacesError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &IllegalKindInNamespacesError{}
+
 // Error implements error
 func (e IllegalKindInNamespacesError) Error() string {
 	return status.Format(e,
@@ -29,4 +31,9 @@ func (e IllegalKindInNamespacesError) Error() string {
 // Code implements Error
 func (e IllegalKindInNamespacesError) Code() string {
 	return IllegalKindInNamespacesErrorCode
+}
+
+// Resources implements ResourceError
+func (e IllegalKindInNamespacesError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
 }

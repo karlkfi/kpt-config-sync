@@ -19,6 +19,8 @@ type IllegalTopLevelNamespaceError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &IllegalTopLevelNamespaceError{}
+
 // Error implements error
 func (e IllegalTopLevelNamespaceError) Error() string {
 	return status.Format(e,
@@ -29,3 +31,8 @@ func (e IllegalTopLevelNamespaceError) Error() string {
 
 // Code implements Error
 func (e IllegalTopLevelNamespaceError) Code() string { return IllegalTopLevelNamespaceErrorCode }
+
+// Resources implements ResourceError
+func (e IllegalTopLevelNamespaceError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
+}

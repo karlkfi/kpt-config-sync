@@ -17,6 +17,8 @@ type ReservedDirectoryNameError struct {
 	Dir nomospath.Path
 }
 
+var _ status.PathError = &ReservedDirectoryNameError{}
+
 // Error implements error.
 func (e ReservedDirectoryNameError) Error() string {
 	return status.Format(e,
@@ -28,3 +30,8 @@ func (e ReservedDirectoryNameError) Error() string {
 
 // Code implements Error
 func (e ReservedDirectoryNameError) Code() string { return ReservedDirectoryNameErrorCode }
+
+// RelativePaths implements PathError
+func (e ReservedDirectoryNameError) RelativePaths() []string {
+	return []string{e.Dir.SlashPath()}
+}

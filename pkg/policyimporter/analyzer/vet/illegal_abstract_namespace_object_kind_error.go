@@ -18,6 +18,8 @@ type IllegalAbstractNamespaceObjectKindError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &IllegalAbstractNamespaceObjectKindError{}
+
 // Error implements error.
 func (e IllegalAbstractNamespaceObjectKindError) Error() string {
 	return status.Format(e,
@@ -30,4 +32,9 @@ func (e IllegalAbstractNamespaceObjectKindError) Error() string {
 // Code implements Error
 func (e IllegalAbstractNamespaceObjectKindError) Code() string {
 	return IllegalAbstractNamespaceObjectKindErrorCode
+}
+
+// Resources implements ResourceError
+func (e IllegalAbstractNamespaceObjectKindError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
 }

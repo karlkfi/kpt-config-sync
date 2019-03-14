@@ -22,6 +22,8 @@ type MetadataNameCollisionError struct {
 	Duplicates []id.Resource
 }
 
+var _ id.ResourceError = &MetadataNameCollisionError{}
+
 // Error implements error
 func (e MetadataNameCollisionError) Error() string {
 	var strs []string
@@ -38,3 +40,8 @@ func (e MetadataNameCollisionError) Error() string {
 
 // Code implements Error
 func (e MetadataNameCollisionError) Code() string { return MetadataNameCollisionErrorCode }
+
+// Resources implements ResourceError
+func (e MetadataNameCollisionError) Resources() []id.Resource {
+	return e.Duplicates
+}

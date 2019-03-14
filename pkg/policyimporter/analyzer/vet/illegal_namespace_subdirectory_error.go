@@ -19,6 +19,8 @@ type IllegalNamespaceSubdirectoryError struct {
 	Parent id.TreeNode
 }
 
+var _ status.PathError = &IllegalNamespaceSubdirectoryError{}
+
 // Error implements error.
 func (e IllegalNamespaceSubdirectoryError) Error() string {
 	return status.Format(e,
@@ -30,3 +32,8 @@ func (e IllegalNamespaceSubdirectoryError) Error() string {
 
 // Code implements Error
 func (e IllegalNamespaceSubdirectoryError) Code() string { return IllegalNamespaceSubdirectoryErrorCode }
+
+// RelativePaths implements PathError
+func (e IllegalNamespaceSubdirectoryError) RelativePaths() []string {
+	return []string{e.Child.SlashPath(), e.Parent.SlashPath()}
+}

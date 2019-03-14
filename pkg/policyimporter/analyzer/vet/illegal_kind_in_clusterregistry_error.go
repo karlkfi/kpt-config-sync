@@ -18,6 +18,8 @@ type IllegalKindInClusterregistryError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &IllegalKindInClusterregistryError{}
+
 // Error implements error
 func (e IllegalKindInClusterregistryError) Error() string {
 	return status.Format(e,
@@ -29,4 +31,9 @@ func (e IllegalKindInClusterregistryError) Error() string {
 // Code implements Error
 func (e IllegalKindInClusterregistryError) Code() string {
 	return IllegalKindInClusterregistryErrorCode
+}
+
+// Resources implements ResourceError
+func (e IllegalKindInClusterregistryError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
 }

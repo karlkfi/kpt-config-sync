@@ -15,6 +15,8 @@ func init() {
 // MissingRepoError reports that there is no Repo definition in system/
 type MissingRepoError struct{}
 
+var _ status.PathError = &MissingRepoError{}
+
 // Error implements error
 func (e MissingRepoError) Error() string {
 	return status.Format(e,
@@ -23,3 +25,8 @@ func (e MissingRepoError) Error() string {
 
 // Code implements Error
 func (e MissingRepoError) Code() string { return MissingRepoErrorCode }
+
+// RelativePaths implements PathError
+func (e MissingRepoError) RelativePaths() []string {
+	return []string{repo.SystemDir}
+}

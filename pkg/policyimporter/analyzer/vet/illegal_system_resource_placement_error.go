@@ -18,6 +18,8 @@ type IllegalSystemResourcePlacementError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &IllegalSystemResourcePlacementError{}
+
 // Error implements error
 func (e IllegalSystemResourcePlacementError) Error() string {
 	return status.Format(e,
@@ -29,4 +31,9 @@ func (e IllegalSystemResourcePlacementError) Error() string {
 // Code implements Error
 func (e IllegalSystemResourcePlacementError) Code() string {
 	return IllegalSystemResourcePlacementErrorCode
+}
+
+// Resources implements ResourceError
+func (e IllegalSystemResourcePlacementError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
 }

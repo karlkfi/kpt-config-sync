@@ -17,6 +17,8 @@ type UnsyncableClusterObjectError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &UnsyncableClusterObjectError{}
+
 // Error implements error.
 func (e UnsyncableClusterObjectError) Error() string {
 	return status.Format(e,
@@ -27,3 +29,8 @@ func (e UnsyncableClusterObjectError) Error() string {
 
 // Code implements Error
 func (e UnsyncableClusterObjectError) Code() string { return UnsyncableClusterObjectErrorCode }
+
+// Resources implements ResourceError
+func (e UnsyncableClusterObjectError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
+}

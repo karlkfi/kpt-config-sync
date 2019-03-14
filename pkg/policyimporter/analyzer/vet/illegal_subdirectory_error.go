@@ -18,6 +18,8 @@ type IllegalSubdirectoryError struct {
 	SubDir  nomospath.Path
 }
 
+var _ status.PathError = &IllegalSubdirectoryError{}
+
 // Error implements error
 func (e IllegalSubdirectoryError) Error() string {
 	return status.Format(e,
@@ -27,3 +29,8 @@ func (e IllegalSubdirectoryError) Error() string {
 
 // Code implements Error
 func (e IllegalSubdirectoryError) Code() string { return IllegalSubdirectoryErrorCode }
+
+// RelativePaths implements PathError
+func (e IllegalSubdirectoryError) RelativePaths() []string {
+	return []string{e.BaseDir, e.SubDir.SlashPath()}
+}

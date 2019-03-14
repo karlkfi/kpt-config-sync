@@ -17,6 +17,8 @@ type UnsupportedResourceInHierarchyConfigError struct {
 	id.HierarchyConfig
 }
 
+var _ id.ResourceError = &UnsupportedResourceInHierarchyConfigError{}
+
 // Error implements error
 func (e UnsupportedResourceInHierarchyConfigError) Error() string {
 	return status.Format(e,
@@ -28,4 +30,9 @@ func (e UnsupportedResourceInHierarchyConfigError) Error() string {
 // Code implements Error
 func (e UnsupportedResourceInHierarchyConfigError) Code() string {
 	return UnsupportedResourceInHierarchyConfigErrorCode
+}
+
+// Resources implements ResourceError
+func (e UnsupportedResourceInHierarchyConfigError) Resources() []id.Resource {
+	return []id.Resource{e.HierarchyConfig}
 }

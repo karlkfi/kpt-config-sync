@@ -1,7 +1,9 @@
 package vet
 
 import (
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/api/core/v1"
 )
@@ -33,3 +35,9 @@ func (e IllegalResourceQuotaFieldError) Error() string {
 
 // Code implements Error
 func (e IllegalResourceQuotaFieldError) Code() string { return IllegalResourceQuotaFieldErrorCode }
+
+// Resources implements ResourceError
+func (e IllegalResourceQuotaFieldError) Resources() []id.Resource {
+	fo := ast.NewFileObject(&e.ResourceQuota, e.Path)
+	return []id.Resource{&fo}
+}

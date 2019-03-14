@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -22,6 +22,8 @@ type IllegalLabelDefinitionError struct {
 	id.Resource
 	Labels []string
 }
+
+var _ id.ResourceError = &IllegalLabelDefinitionError{}
 
 // Error implements error.
 func (e IllegalLabelDefinitionError) Error() string {
@@ -41,3 +43,8 @@ func (e IllegalLabelDefinitionError) Error() string {
 
 // Code implements Error
 func (e IllegalLabelDefinitionError) Code() string { return IllegalLabelDefinitionErrorCode }
+
+// Resources implements ResourceError
+func (e IllegalLabelDefinitionError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
+}

@@ -3,7 +3,7 @@ package vet
 import (
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -22,6 +22,8 @@ type IllegalHierarchyModeError struct {
 	Allowed       map[v1.HierarchyModeType]bool
 }
 
+var _ id.ResourceError = &IllegalHierarchyModeError{}
+
 // Error implements error
 func (e IllegalHierarchyModeError) Error() string {
 	var allowedStr []string
@@ -36,3 +38,8 @@ func (e IllegalHierarchyModeError) Error() string {
 
 // Code implements Error
 func (e IllegalHierarchyModeError) Code() string { return IllegalHierarchyModeErrorCode }
+
+// Resources implements ResourceError
+func (e IllegalHierarchyModeError) Resources() []id.Resource {
+	return []id.Resource{e.HierarchyConfig}
+}

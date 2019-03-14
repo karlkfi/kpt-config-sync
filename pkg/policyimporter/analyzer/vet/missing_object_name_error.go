@@ -17,6 +17,8 @@ type MissingObjectNameError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &MissingObjectNameError{}
+
 // Error implements error
 func (e MissingObjectNameError) Error() string {
 	return status.Format(e,
@@ -27,3 +29,8 @@ func (e MissingObjectNameError) Error() string {
 
 // Code implements Error
 func (e MissingObjectNameError) Code() string { return MissingObjectNameErrorCode }
+
+// Resources implements ResourceError
+func (e MissingObjectNameError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
+}

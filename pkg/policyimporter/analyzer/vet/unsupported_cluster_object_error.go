@@ -17,6 +17,8 @@ type UnsupportedObjectError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &UnsupportedObjectError{}
+
 // Error implements error.
 func (e UnsupportedObjectError) Error() string {
 	return status.Format(e,
@@ -27,3 +29,8 @@ func (e UnsupportedObjectError) Error() string {
 
 // Code implements Error
 func (e UnsupportedObjectError) Code() string { return UnsupportedObjectErrorCode }
+
+// Resources implements ResourceError
+func (e UnsupportedObjectError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
+}

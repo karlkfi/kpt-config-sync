@@ -1,7 +1,5 @@
 package vet
 
-// TODO(b/77981474) Remove this error.
-
 import (
 	"sort"
 	"strings"
@@ -22,6 +20,8 @@ type DuplicateDirectoryNameError struct {
 	Duplicates []nomospath.Path
 }
 
+var _ status.PathError = &DuplicateDirectoryNameError{}
+
 // Error implements error.
 func (e DuplicateDirectoryNameError) Error() string {
 	// Ensure deterministic node printing order.
@@ -38,3 +38,12 @@ func (e DuplicateDirectoryNameError) Error() string {
 
 // Code implements Error
 func (e DuplicateDirectoryNameError) Code() string { return DuplicateDirectoryNameErrorCode }
+
+// RelativePaths implements PathError
+func (e DuplicateDirectoryNameError) RelativePaths() []string {
+	paths := make([]string, len(e.Duplicates))
+	for i, dup := range e.Duplicates {
+		paths[i] = dup.SlashPath()
+	}
+	return paths
+}

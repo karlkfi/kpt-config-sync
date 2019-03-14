@@ -18,6 +18,8 @@ func init() {
 	register(UnsupportedRepoSpecVersionCode)
 }
 
+var _ id.ResourceError = &UnsupportedRepoSpecVersion{}
+
 // Error implements error
 func (e UnsupportedRepoSpecVersion) Error() string {
 	return status.Format(e,
@@ -28,3 +30,8 @@ func (e UnsupportedRepoSpecVersion) Error() string {
 
 // Code implements Error
 func (e UnsupportedRepoSpecVersion) Code() string { return UnsupportedRepoSpecVersionCode }
+
+// Resources implements ResourceError
+func (e UnsupportedRepoSpecVersion) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
+}

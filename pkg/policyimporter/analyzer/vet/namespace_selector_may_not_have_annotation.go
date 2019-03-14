@@ -2,7 +2,7 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/status"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // NamespaceSelectorMayNotHaveAnnotationCode is the error code for NamespaceSelectorMayNotHaveAnnotation
@@ -15,7 +15,7 @@ func init() {
 // NamespaceSelectorMayNotHaveAnnotation reports that a namespace selector has
 // an annotation that is not allowed.
 type NamespaceSelectorMayNotHaveAnnotation struct {
-	Object v1.Object
+	Object metav1.Object
 }
 
 // Error implements error.

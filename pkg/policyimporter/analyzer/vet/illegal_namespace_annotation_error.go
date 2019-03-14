@@ -19,6 +19,8 @@ type IllegalNamespaceAnnotationError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &IllegalNamespaceAnnotationError{}
+
 // Error implements error.
 func (e IllegalNamespaceAnnotationError) Error() string {
 	return status.Format(e,
@@ -31,4 +33,9 @@ func (e IllegalNamespaceAnnotationError) Error() string {
 // Code implements Error
 func (e IllegalNamespaceAnnotationError) Code() string {
 	return IllegalNamespaceAnnotationErrorCode
+}
+
+// Resources implements ResourceError
+func (e IllegalNamespaceAnnotationError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
 }

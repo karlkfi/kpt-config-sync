@@ -18,6 +18,8 @@ type IllegalMetadataNamespaceDeclarationError struct {
 	ExpectedNamespace string
 }
 
+var _ id.ResourceError = &IllegalMetadataNamespaceDeclarationError{}
+
 // Error implements error.
 func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 	return status.Format(e,
@@ -30,4 +32,9 @@ func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 // Code implements Error
 func (e IllegalMetadataNamespaceDeclarationError) Code() string {
 	return IllegalMetadataNamespaceDeclarationErrorCode
+}
+
+// Resources implements ResourceError
+func (e IllegalMetadataNamespaceDeclarationError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
 }

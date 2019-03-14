@@ -21,6 +21,8 @@ type MultipleSingletonsError struct {
 	Duplicates []id.Resource
 }
 
+var _ id.ResourceError = &MultipleSingletonsError{}
+
 // Error implements error
 func (e MultipleSingletonsError) Error() string {
 	var strs []string
@@ -39,3 +41,8 @@ func (e MultipleSingletonsError) Error() string {
 
 // Code implements Error
 func (e MultipleSingletonsError) Code() string { return MultipleSingletonsErrorCode }
+
+// Resources implements ResourceError
+func (e MultipleSingletonsError) Resources() []id.Resource {
+	return e.Duplicates
+}

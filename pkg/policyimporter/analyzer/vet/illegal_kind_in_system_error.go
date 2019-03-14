@@ -18,6 +18,8 @@ type IllegalKindInSystemError struct {
 	id.Resource
 }
 
+var _ id.ResourceError = &IllegalKindInSystemError{}
+
 // Error implements error
 func (e IllegalKindInSystemError) Error() string {
 	return status.Format(e,
@@ -29,4 +31,9 @@ func (e IllegalKindInSystemError) Error() string {
 // Code implements Error
 func (e IllegalKindInSystemError) Code() string {
 	return IllegalKindInSystemErrorCode
+}
+
+// Resources implements ResourceError
+func (e IllegalKindInSystemError) Resources() []id.Resource {
+	return []id.Resource{e.Resource}
 }
