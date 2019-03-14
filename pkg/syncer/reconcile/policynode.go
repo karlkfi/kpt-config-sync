@@ -21,8 +21,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -283,7 +285,7 @@ func (r *PolicyNodeReconciler) managePolicies(ctx context.Context, name string, 
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, name)
 		if err != nil {
-			errBuilder.Add(errors.Wrapf(err, "failed to list from policy controller for %q", gvk))
+			errBuilder.Add(status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
 			syncErrs = append(syncErrs, NewSyncError(name, gvk, err))
 			continue
 		}
@@ -335,7 +337,7 @@ func decorateAsManaged(declaredInstances []*unstructured.Unstructured, node *v1.
 }
 
 func (r *PolicyNodeReconciler) setPolicyNodeStatus(ctx context.Context, node *v1.PolicyNode,
-	errs []v1.PolicyNodeSyncError) error {
+	errs []v1.PolicyNodeSyncError) id.ResourceError {
 	freshSyncToken := node.Status.SyncToken == node.Spec.ImportToken
 	if node.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for PolicyNode %q is already up-to-date.", node.Name)
@@ -371,13 +373,13 @@ func NewSyncError(name string, gvk schema.GroupVersionKind, err error) v1.Policy
 
 // handleDiff updates the API Server according to changes reflected in the diff.
 // It returns whether or not an update occurred and the error encountered.
-func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff) (bool, error) {
+func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
 	switch t := diff.Type; t {
 	case differ.Add:
 		toCreate := diff.Declared
 		if err := r.applier.Create(ctx, toCreate); err != nil {
 			metrics.ErrTotal.WithLabelValues(toCreate.GetNamespace(), toCreate.GetKind(), "create").Inc()
-			return false, errors.Wrapf(err, "could not create resource %q", diff.Name)
+			return false, id.ResourceWrap(err, fmt.Sprintf("failed to create %q", diff.Name), ast.ParseFileObject(toCreate))
 		}
 	case differ.Update:
 		switch diff.ActualResourceIsManaged() {
@@ -391,7 +393,7 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 		ns := diff.Declared.GetNamespace()
 		if err := r.applier.ApplyNamespace(ns, diff.Declared, diff.Actual); err != nil {
 			metrics.ErrTotal.WithLabelValues(ns, diff.Declared.GetKind(), "patch").Inc()
-			return false, err
+			return false, id.ResourceWrap(err, fmt.Sprintf("failed to patch %q", diff.Name), ast.ParseFileObject(diff.Declared))
 		}
 	case differ.Delete:
 		switch diff.ActualResourceIsManaged() {
@@ -405,7 +407,7 @@ func (r *PolicyNodeReconciler) handleDiff(ctx context.Context, diff *differ.Diff
 		toDelete := diff.Actual
 		if err := r.client.Delete(ctx, toDelete); err != nil {
 			metrics.ErrTotal.WithLabelValues(toDelete.GetNamespace(), toDelete.GetKind(), "delete").Inc()
-			return false, errors.Wrapf(err, "could not delete resource %q", diff.Name)
+			return false, id.ResourceWrap(err, fmt.Sprintf("failed to delete %q", diff.Name), ast.ParseFileObject(toDelete))
 		}
 	default:
 		panic(fmt.Errorf("programmatic error, unhandled syncer diff type: %v", t))
