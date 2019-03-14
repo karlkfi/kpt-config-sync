@@ -3,7 +3,7 @@ package cloner
 import (
 	"sort"
 
-	"github.com/pkg/errors"
+	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -22,7 +22,7 @@ type APIResourcesLister interface {
 // Currently unused; will be used once `clone` is implemented.
 func ListResources(lister APIResourcesLister, errs ErrorAdder) []metav1.APIResource {
 	apiResources, err := lister.ServerResources()
-	errs.Add(errors.Wrapf(err, "unable to list supported API resources"))
+	errs.Add(status.APIServerWrapf(err, "unable to list supported API resources"))
 	if err != nil {
 		return nil
 	}
@@ -37,7 +37,7 @@ func flatten(lists []*metav1.APIResourceList, errs ErrorAdder) []metav1.APIResou
 
 	for _, list := range lists {
 		gv, err := schema.ParseGroupVersion(list.GroupVersion)
-		errs.Add(errors.Wrap(err, "error parsing apiVersion"))
+		errs.Add(status.APIServerWrapf(err, "error parsing apiVersion"))
 		if err != nil {
 			// Encountering an error parsing this list doesn't prevent parsing the other lists.
 			continue

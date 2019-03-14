@@ -1,10 +1,8 @@
 package cloner
 
 import (
-	"fmt"
-
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/pkg/errors"
+	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -47,13 +45,13 @@ func (l ResourceLister) List(apiResource metav1.APIResource, errs ErrorAdder) []
 	}
 
 	resources, err := l.resourcer.Resource(gvr).List(metav1.ListOptions{})
-	errs.Add(errors.Wrapf(err, "unable to read %q resources from cluster", gvr.String()))
+	errs.Add(status.APIServerWrapf(err, "unable to read %q resources", gvr.String()))
 	if err != nil {
 		return nil
 	}
 	// TODO(b/126702932): Check for resources.GetContinue value since there could be >500 resources.
 	if resources.GetContinue() != "" {
-		errs.Add(fmt.Errorf("more than 500 %q resources; only exporting first 500", gvr.String()))
+		errs.Add(status.APIServerWrapf(err, "more than 500 %q resources; only exporting first 500", gvr.String()))
 	}
 
 	var result []ast.FileObject
