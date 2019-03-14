@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/id"
 
 	"github.com/golang/glog"
@@ -126,7 +127,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 	var oldObj runtime.Object
 	for tryNum := 0; tryNum < c.MaxTries; tryNum++ {
 		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
-			return nil, id.MissingResourceWrap(err, "failed to update "+description, id.ParseResource(obj))
+			return nil, id.MissingResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
 		}
 		oldV := resourceVersion(workingObj)
 		newObj, err := updateFn(workingObj.DeepCopyObject())
@@ -134,7 +135,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 			if action.IsNoUpdateNeeded(err) {
 				return newObj, nil
 			}
-			return nil, id.ResourceWrap(err, "failed to update "+description, id.ParseResource(obj))
+			return nil, id.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
 		}
 
 		action.APICalls.WithLabelValues(kind, operation).Inc()
@@ -165,11 +166,11 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 			oldObj = workingObj.DeepCopyObject()
 		}
 		if !apierrors.IsConflict(err) {
-			return nil, id.ResourceWrap(err, "failed to update "+description, id.ParseResource(obj))
+			return nil, id.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
 		}
 		<-time.After(100 * time.Millisecond) // Back off on retry a bit.
 	}
-	return nil, id.ResourceWrap(lastErr, "exceeded max tries to update "+description, id.ParseResource(obj))
+	return nil, id.ResourceWrap(lastErr, "exceeded max tries to update "+description, ast.ParseFileObject(obj))
 }
 
 // Upsert creates or updates the given obj in the Kubernetes cluster and records prometheus metrics.

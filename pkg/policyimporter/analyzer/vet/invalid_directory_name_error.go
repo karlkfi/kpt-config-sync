@@ -14,7 +14,7 @@ func init() {
 
 // InvalidDirectoryNameError represents an illegal usage of a reserved name.
 type InvalidDirectoryNameError struct {
-	Dir nomospath.Relative
+	Dir nomospath.Path
 }
 
 // Error implements error.
@@ -23,7 +23,7 @@ func (e InvalidDirectoryNameError) Error() string {
 		"Directories MUST be a valid RFC1123 DNS label. Rename or remove directory:\n\n"+
 			"path: %[1]s\n"+
 			"name: %[2]s",
-		e.Dir.RelativeSlashPath(), e.Dir.Base())
+		e.Dir.SlashPath(), e.Dir.Base())
 }
 
 // Code implements Error

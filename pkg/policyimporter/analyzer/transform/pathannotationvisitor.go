@@ -30,7 +30,7 @@ func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	if newNode.Annotations == nil {
 		newNode.Annotations = map[string]string{}
 	}
-	newNode.Annotations[v1.SourcePathAnnotationKey] = n.RelativeSlashPath()
+	newNode.Annotations[v1.SourcePathAnnotationKey] = n.SlashPath()
 	return newNode
 }
 
@@ -57,5 +57,5 @@ func applyPathAnnotation(fo ast.FileObject) {
 		a = map[string]string{}
 		metaObj.SetAnnotations(a)
 	}
-	a[v1.SourcePathAnnotationKey] = fo.RelativeSlashPath()
+	a[v1.SourcePathAnnotationKey] = fo.SlashPath()
 }

@@ -32,16 +32,24 @@ import (
 // FileObject extends runtime.FileObject to include the path to the file in the repo.
 type FileObject struct {
 	runtime.Object
-	// Relative is the path this object has relative to a nomospath.Root.
-	nomospath.Relative
+	// Path is the path this object has relative to Nomos Root, if known.
+	nomospath.Path
 }
 
 var _ id.Resource = &FileObject{}
 
 // NewFileObject returns an ast.FileObject with the specified underlying runtime.Object and the
 // designated source file.
-func NewFileObject(object runtime.Object, source nomospath.Relative) FileObject {
-	return FileObject{Object: object, Relative: source}
+func NewFileObject(object runtime.Object, source nomospath.Path) FileObject {
+	return FileObject{Object: object, Path: source}
+}
+
+// ParseFileObject returns a FileObject initialized from the given runtime.Object and a valid source
+// path parsed from its annotations.
+func ParseFileObject(object runtime.Object) *FileObject {
+	mo := object.(metav1.Object)
+	srcPath := nomospath.FromSlash(mo.GetAnnotations()[v1.SourcePathAnnotationKey])
+	return &FileObject{Object: object, Path: srcPath}
 }
 
 // MetaObject converts the underlying object to a metav1.Object
@@ -106,7 +114,7 @@ func (o *SystemObject) Accept(visitor Visitor) *SystemObject {
 
 // DeepCopy creates a deep copy of the object
 func (o *SystemObject) DeepCopy() *SystemObject {
-	return &SystemObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
+	return &SystemObject{FileObject{Object: o.DeepCopyObject(), Path: o.Path}}
 }
 
 // ClusterRegistryObject extends FileObject to implement Visitable for cluster scoped objects.
@@ -126,7 +134,7 @@ func (o *ClusterRegistryObject) Accept(visitor Visitor) *ClusterRegistryObject {
 
 // DeepCopy creates a deep copy of the object
 func (o *ClusterRegistryObject) DeepCopy() *ClusterRegistryObject {
-	return &ClusterRegistryObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
+	return &ClusterRegistryObject{FileObject{Object: o.DeepCopyObject(), Path: o.Path}}
 }
 
 // ClusterObject extends FileObject to implement Visitable for cluster scoped objects.
@@ -146,13 +154,13 @@ func (o *ClusterObject) Accept(visitor Visitor) *ClusterObject {
 
 // DeepCopy creates a deep copy of the object
 func (o *ClusterObject) DeepCopy() *ClusterObject {
-	return &ClusterObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
+	return &ClusterObject{FileObject{Object: o.DeepCopyObject(), Path: o.Path}}
 }
 
 // TreeNode is analogous to a directory in the policy hierarchy.
 type TreeNode struct {
-	// Relative is the path this node has relative to a nomospath.Root.
-	nomospath.Relative
+	// Path is the path this node has relative to a nomos Root.
+	nomospath.Path
 
 	// The type of the HierarchyNode
 	Type        node.Type
@@ -249,5 +257,5 @@ func (o *NamespaceObject) Accept(visitor Visitor) *NamespaceObject {
 
 // DeepCopy creates a deep copy of the object
 func (o *NamespaceObject) DeepCopy() *NamespaceObject {
-	return &NamespaceObject{FileObject{Object: o.DeepCopyObject(), Relative: o.Relative}}
+	return &NamespaceObject{FileObject{Object: o.DeepCopyObject(), Path: o.Path}}
 }

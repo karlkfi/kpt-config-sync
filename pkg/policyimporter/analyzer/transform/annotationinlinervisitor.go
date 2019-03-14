@@ -107,7 +107,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 	for k, s := range n.Selectors {
 		if n.Type == node.Namespace {
 			// TODO(b/122739070) This should already be validated in parser.
-			v.errs.Add(status.UndocumentedErrorf("NamespaceSelector must not be in namespace directories, found in %q", n.RelativeSlashPath()))
+			v.errs.Add(status.UndocumentedErrorf("NamespaceSelector must not be in namespace directories, found in %q", n.SlashPath()))
 			return n
 		}
 		if _, err := sel.AsPopulatedSelector(&s.Spec.Selector); err != nil {
@@ -126,7 +126,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 	v.nsTransformer = annotationTransformer{}
 	v.nsTransformer.addMappingForKey(v1.NamespaceSelectorAnnotationKey, m)
 
-	v.errs.Add(status.UndocumentedWrapf(v.clusterSelectorTransformer.transform(n), "failed to inline ClusterSelector for node %q", n.RelativeSlashPath()))
+	v.errs.Add(status.UndocumentedWrapf(v.clusterSelectorTransformer.transform(n), "failed to inline ClusterSelector for node %q", n.SlashPath()))
 	annotatePopulated(n, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return v.Copying.VisitTreeNode(n)
 }

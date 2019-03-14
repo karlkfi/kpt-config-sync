@@ -52,17 +52,17 @@ func makeQuota(includeScopes bool, includeScopeSelector bool) *corev1.ResourceQu
 func makeTree(rq *corev1.ResourceQuota) *ast.Root {
 	return &ast.Root{
 		Tree: &ast.TreeNode{
-			Type:     node.AbstractNamespace,
-			Relative: nomospath.NewRelative("namespaces"),
-			Objects:  vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
+			Type:    node.AbstractNamespace,
+			Path:    nomospath.FromSlash("namespaces"),
+			Objects: vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 			Children: []*ast.TreeNode{
 				{
-					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewRelative("namespaces/eng"),
+					Type: node.AbstractNamespace,
+					Path: nomospath.FromSlash("namespaces/eng"),
 					Children: []*ast.TreeNode{
 						{
-							Type:     node.Namespace,
-							Relative: nomospath.NewRelative("namespaces/eng/frontend"),
+							Type: node.Namespace,
+							Path: nomospath.FromSlash("namespaces/eng/frontend"),
 							Objects: vt.ObjectSets(
 								rq,
 							),

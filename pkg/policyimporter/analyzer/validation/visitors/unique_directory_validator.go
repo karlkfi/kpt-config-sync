@@ -20,14 +20,14 @@ func NewUniqueDirectoryValidator() ast.Visitor {
 }
 
 func validateUniqueDirectories(nodes []*ast.TreeNode, eb *status.ErrorBuilder) {
-	names := make(map[string][]nomospath.Relative, len(nodes))
+	names := make(map[string][]nomospath.Path, len(nodes))
 	for _, n := range nodes {
 		if n.Type == node.AbstractNamespace {
 			continue
 		}
 		// Only do this check on leaf nodes and their base names.
 		name := n.Base()
-		names[name] = append(names[name], n.Relative)
+		names[name] = append(names[name], n.Path)
 	}
 
 	for _, dirs := range names {

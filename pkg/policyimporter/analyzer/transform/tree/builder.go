@@ -28,25 +28,25 @@ type builder struct {
 	// root is the root node of the tree
 	root *ast.TreeNode
 	// namespaceDirs is a map of relative UNIX-style directory path to node
-	nodes map[nomospath.Relative]*ast.TreeNode
+	nodes map[nomospath.Path]*ast.TreeNode
 }
 
 // newDirectoryTree returns a new tree generator
 func newDirectoryTree() *builder {
-	return &builder{nodes: map[nomospath.Relative]*ast.TreeNode{}}
+	return &builder{nodes: map[nomospath.Path]*ast.TreeNode{}}
 }
 
-func newNode(p nomospath.Relative) *ast.TreeNode {
+func newNode(p nomospath.Path) *ast.TreeNode {
 	return &ast.TreeNode{
-		Relative: p,
-		Type:     node.AbstractNamespace,
+		Path: p,
+		Type: node.AbstractNamespace,
 	}
 }
 
 // addDir adds a node at the the given path.
 // p is the nomospath.Relative of the new ast.TreeNode.
 // Recursively adds parent nodes as necessary until it reaches the policy hierarchy root.
-func (t *builder) addDir(dir nomospath.Relative) {
+func (t *builder) addDir(dir nomospath.Path) {
 	if t.nodes[dir] != nil {
 		return
 	}
@@ -82,7 +82,7 @@ func (t *builder) build() *ast.TreeNode {
 	for _, n := range t.nodes {
 		// Sort the children by their paths to ensure deterministic tree structure.
 		sort.Slice(n.Children, func(i, j int) bool {
-			return n.Children[i].RelativeSlashPath() < n.Children[j].RelativeSlashPath()
+			return n.Children[i].SlashPath() < n.Children[j].SlashPath()
 		})
 	}
 	return t.root

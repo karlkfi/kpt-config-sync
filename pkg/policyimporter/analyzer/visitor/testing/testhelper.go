@@ -368,8 +368,8 @@ func (t *TestHelper) AcmeTree() *ast.TreeNode {
 
 func (t *TestHelper) acmeTree() *ast.TreeNode {
 	return &ast.TreeNode{
-		Type:     node.AbstractNamespace,
-		Relative: nomospath.NewRelative("namespaces"),
+		Type: node.AbstractNamespace,
+		Path: nomospath.FromSlash("namespaces"),
 		Objects: ObjectSets(
 			// TODO: remove RoleBinding once flattening transform is written.
 			t.AdminRoleBinding(),
@@ -378,7 +378,7 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 		Children: []*ast.TreeNode{
 			{
 				Type:        node.Namespace,
-				Relative:    nomospath.NewRelative("namespaces/frontend"),
+				Path:        nomospath.FromSlash("namespaces/frontend"),
 				Labels:      map[string]string{"environment": "prod"},
 				Annotations: map[string]string{"has-waffles": "true"},
 				Objects: ObjectSets(
@@ -389,7 +389,7 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 			},
 			{
 				Type:        node.Namespace,
-				Relative:    nomospath.NewRelative("namespaces/frontend-test"),
+				Path:        nomospath.FromSlash("namespaces/frontend-test"),
 				Labels:      map[string]string{"environment": "test"},
 				Annotations: map[string]string{"has-waffles": "false"},
 				Objects: ObjectSets(

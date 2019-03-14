@@ -106,7 +106,7 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 // * namespaces/ (recursive, optional)
 func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*policynode.AllPolicies, *status.MultiError) {
 	p.errors = &status.ErrorBuilder{}
-	rootPath, err := nomospath.NewRoot(root)
+	rootPath, err := nomospath.NewRoot(nomospath.FromOS(root))
 	p.errors.Add(err)
 
 	// Always make sure we're getting the freshest data.
@@ -167,19 +167,19 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) {
 }
 
 func (p *Parser) readSystemResources(root nomospath.Root) []ast.FileObject {
-	return p.readResources(root.Join(repo.SystemDir))
+	return p.readResources(root.Join(nomospath.FromSlash(repo.SystemDir)))
 }
 
 func (p *Parser) readNamespaceResources(root nomospath.Root) []ast.FileObject {
-	return p.readResources(root.Join(p.opts.Extension.NamespacesDir()))
+	return p.readResources(root.Join(nomospath.FromSlash(p.opts.Extension.NamespacesDir())))
 }
 
 func (p *Parser) readClusterResources(root nomospath.Root) []ast.FileObject {
-	return p.readResources(root.Join(repo.ClusterDir))
+	return p.readResources(root.Join(nomospath.FromSlash(repo.ClusterDir)))
 }
 
 func (p *Parser) readClusterRegistryResources(root nomospath.Root) []ast.FileObject {
-	return p.readResources(root.Join(repo.ClusterRegistryDir))
+	return p.readResources(root.Join(nomospath.FromSlash(repo.ClusterRegistryDir)))
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.
@@ -219,13 +219,13 @@ func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
 		p.errors.Add(status.APIServerWrapf(err, "failed to get resource infos"))
 		for _, info := range fileInfos {
 			// Assign relative path since that's what we actually need.
-			source, err := dir.Root().Rel(info.Source)
+			source, err := dir.Root().Rel(nomospath.FromOS(info.Source))
 			p.errors.Add(err)
 			if err != nil {
 				continue
 			}
 			object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
-			fileObject := ast.NewFileObject(object, source)
+			fileObject := ast.NewFileObject(object, source.Path())
 			fileObjects = append(fileObjects, fileObject)
 		}
 	}

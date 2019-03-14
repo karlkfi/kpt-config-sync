@@ -31,7 +31,7 @@ import (
 //          }
 //        }
 //        if len(roles) > 1 {
-//          return repo.UndocumentedError("Multiple roles defined in %q", n.RelativeSlashPath())
+//          return repo.UndocumentedError("Multiple roles defined in %q", n.SlashPath())
 //        }
 //        return nil
 //      }

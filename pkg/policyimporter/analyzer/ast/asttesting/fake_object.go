@@ -14,8 +14,8 @@ import (
 // path is the desired slash path relative to nomos root.
 func NewFakeFileObject(gvk schema.GroupVersionKind, path string) ast.FileObject {
 	return ast.FileObject{
-		Object:   NewFakeObject(gvk),
-		Relative: nomospath.NewRelative(path),
+		Object: NewFakeObject(gvk),
+		Path:   nomospath.FromSlash(path),
 	}
 }
 

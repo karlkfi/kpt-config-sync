@@ -1,8 +1,8 @@
 package nomospath
 
 import (
-	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -12,8 +12,11 @@ import (
 
 // Sourced represents an object associated with a path in a Nomos repository.
 type Sourced interface {
-	// RelativeSlashPath returns the slash-delimited path relative to Nomos root.
-	RelativeSlashPath() string
+	// SlashPath returns the slash-delimited path.
+	SlashPath() string
+
+	// OSPath returns the OS-specific path.
+	OSPath() string
 }
 
 // Root is a path to a directory holding a Nomos repository.
@@ -23,31 +26,26 @@ type Root struct {
 	path string
 }
 
-// AbsoluteOSPath returns the absolute OS-specific path.
-func (p Root) AbsoluteOSPath() string {
-	return p.path
-}
-
 // Join joins a path element to the existing Root, returning a Relative.
-func (p Root) Join(elem string) Relative {
-	return Relative{path: filepath.Clean(elem), root: p}
+func (p Root) Join(rel Path) Relative {
+	return Relative{path: rel, root: p}
 }
 
 // Rel breaks the passed target path into a Relative
-func (p Root) Rel(targPath string) (Relative, status.PathError) {
-	relPath, err := filepath.Rel(p.path, targPath)
+func (p Root) Rel(targPath Path) (Relative, status.PathError) {
+	relPath, err := filepath.Rel(p.path, targPath.OSPath())
 	if err != nil {
-		return Relative{}, status.PathWrapf(err, p.path, targPath)
+		return Relative{}, status.PathWrapf(err, p.path, targPath.SlashPath())
 	}
-	return Relative{path: relPath, root: p}, nil
+	return Relative{path: FromOS(relPath), root: p}, nil
 }
 
 // NewRoot creates a new Root.
 // path is either the path to Nomos relative to system root or the path relative to the working
 //   directory.
 // Returns error if path is not absolute and the program is unable to retrieve the working directory.
-func NewRoot(path string) (Root, status.Error) {
-	absolutePath, err := makeCleanAbsolute(path)
+func NewRoot(path Path) (Root, status.Error) {
+	absolutePath, err := makeCleanAbsolute(path.OSPath())
 	if err != nil {
 		return Root{}, err
 	}
@@ -84,48 +82,21 @@ func makeCleanAbsolute(path string) (string, status.Error) {
 
 // Relative is a path relative to a Root.
 type Relative struct {
-	// The OS-specific path relative to the Nomos repository root.
-	path string
+	// The path relative to the Nomos repository root.
+	path Path
 
 	// The underlying Nomos repository this path is relative to.
 	root Root
 }
 
-// NewRelative returns a fake Relative which is not actually relative to
-// a real Nomos root. For testing and documentation.
-// path MUST be OS-independent.
-func NewRelative(path string) Relative {
-	return Relative{path: filepath.Clean(filepath.FromSlash(path))}
+// Path returns a copy of the underlying Path relative to the Nomos root.
+func (p Relative) Path() Path {
+	return p.path
 }
 
 // AbsoluteOSPath returns the absolute OS-specific path.
 func (p Relative) AbsoluteOSPath() string {
-	return filepath.Join(p.root.path, p.path)
-}
-
-// RelativeSlashPath returns the OS-independent path relative to the Nomos root.
-func (p Relative) RelativeSlashPath() string {
-	return filepath.ToSlash(p.path)
-}
-
-// Dir returns the directory containing this Relative.
-func (p Relative) Dir() Relative {
-	return Relative{path: filepath.Dir(p.path), root: p.root}
-}
-
-// Base returns the Base path of this location.
-func (p Relative) Base() string {
-	return filepath.Base(p.path)
-}
-
-// IsRoot returns true if the path is the Nomos root directory.
-func (p Relative) IsRoot() bool {
-	return p.path == "."
-}
-
-// Split returns the path elements relative to Nomos root.
-func (p Relative) Split() []string {
-	return strings.Split(p.path, string(os.PathSeparator))
+	return filepath.Join(p.root.path, p.path.OSPath())
 }
 
 // Equal returns true if the underlying relative path and root directories are identical.
@@ -140,5 +111,64 @@ func (p Relative) Root() Root {
 
 // Join returns a copy of the underlying Relative with the additional path element appended.
 func (p Relative) Join(elem string) Relative {
-	return Relative{root: p.root, path: filepath.Join(p.path, elem)}
+	return Relative{root: p.root, path: p.path.Join(elem)}
+}
+
+// Path is a path in a filesystem.
+type Path struct {
+	// path is a slash-delimited path.
+	path string
+}
+
+var _ Sourced = Path{}
+
+// FromSlash returns a Path from a slash-delimited path.
+func FromSlash(p string) Path {
+	return Path{path: path.Clean(p)}
+}
+
+// FromOS constructs a Path from an OS-dependent path.
+func FromOS(p string) Path {
+	return Path{path: filepath.ToSlash(filepath.Clean(p))}
+}
+
+// Join appends elem to the Path.
+func (p Path) Join(elem string) Path {
+	return Path{path: path.Join(p.path, elem)}
+}
+
+// SlashPath returns an os-independent representation of this Path.
+func (p Path) SlashPath() string {
+	return p.path
+}
+
+// OSPath returns an os-specific representation of this Path.
+func (p Path) OSPath() string {
+	return filepath.FromSlash(p.path)
+}
+
+// Dir returns the directory containing this Path.
+func (p Path) Dir() Path {
+	return Path{path: filepath.Dir(p.path)}
+}
+
+// Base returns the Base of this Path.
+func (p Path) Base() string {
+	return filepath.Base(p.path)
+}
+
+// IsRoot returns true if the path is the Nomos root directory.
+func (p Path) IsRoot() bool {
+	return p.path == "."
+}
+
+// Split returns a slice of the path elements.
+func (p Path) Split() []string {
+	return strings.Split(p.path, "/")
+}
+
+// Equal returns true if the underlying paths are equal.
+func (p Path) Equal(other Path) bool {
+	// Assumes Path was constructed or altered via exported methods.
+	return p.path == other.path
 }

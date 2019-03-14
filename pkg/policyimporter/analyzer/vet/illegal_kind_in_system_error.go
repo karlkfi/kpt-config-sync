@@ -23,7 +23,7 @@ func (e IllegalKindInSystemError) Error() string {
 	return status.Format(e,
 		"Resources of this Kind may not be declared in %[2]s/:\n\n"+
 			"%[1]s",
-		id.PrintResource(e), repo.SystemDir, e.RelativeSlashPath)
+		id.PrintResource(e), repo.SystemDir, e.SlashPath)
 }
 
 // Code implements Error

@@ -18,5 +18,5 @@ type TreeNode interface {
 func PrintTreeNode(n TreeNode) string {
 	return fmt.Sprintf("path: %[1]s\n"+
 		"name: %[2]s",
-		n.RelativeSlashPath(), n.Name())
+		n.SlashPath(), n.Name())
 }

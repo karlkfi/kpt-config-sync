@@ -15,14 +15,14 @@ func init() {
 // IllegalSubdirectoryError reports that the directory has an illegal subdirectory.
 type IllegalSubdirectoryError struct {
 	BaseDir string
-	SubDir  nomospath.Relative
+	SubDir  nomospath.Path
 }
 
 // Error implements error
 func (e IllegalSubdirectoryError) Error() string {
 	return status.Format(e,
 		"%s/ directory MUST NOT have subdirectories.\n\n"+
-			"path: %[2]s", e.BaseDir, e.SubDir.RelativeSlashPath())
+			"path: %[2]s", e.BaseDir, e.SubDir.SlashPath())
 }
 
 // Code implements Error

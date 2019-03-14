@@ -30,7 +30,7 @@ import (
 // nodeContext keeps track of objects during the tree traversal for purposes of inheriting values.
 type nodeContext struct {
 	nodeType  node.Type              // the type of node being processed
-	nodePath  nomospath.Relative     // the node's path, used for annotating inherited objects
+	nodePath  nomospath.Path         // the node's path, used for annotating inherited objects
 	inherited []*ast.NamespaceObject // the objects that are inherited from the node.
 }
 
@@ -72,7 +72,7 @@ func (v *InheritanceVisitor) Error() *status.MultiError {
 func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.treeContext = append(v.treeContext, nodeContext{
 		nodeType: n.Type,
-		nodePath: n.Relative,
+		nodePath: n.Path,
 	})
 	newNode := v.Copying.VisitTreeNode(n)
 	v.treeContext = v.treeContext[:len(v.treeContext)-1]

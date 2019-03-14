@@ -19,7 +19,7 @@ func init() {
 
 // DuplicateDirectoryNameError represents an illegal duplication of directory names.
 type DuplicateDirectoryNameError struct {
-	Duplicates []nomospath.Relative
+	Duplicates []nomospath.Path
 }
 
 // Error implements error.
@@ -27,7 +27,7 @@ func (e DuplicateDirectoryNameError) Error() string {
 	// Ensure deterministic node printing order.
 	duplicates := make([]string, len(e.Duplicates))
 	for i, duplicate := range e.Duplicates {
-		duplicates[i] = duplicate.RelativeSlashPath()
+		duplicates[i] = duplicate.SlashPath()
 	}
 	sort.Strings(duplicates)
 	return status.Format(e,

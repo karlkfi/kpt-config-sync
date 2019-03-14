@@ -27,12 +27,12 @@ func TestEphemeralResourceRemover(t *testing.T) {
 			objects: []ast.FileObject{fake.Namespace("namespaces/bar/ns.yaml")},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Relative: nomospath.NewRelative("namespaces"),
-					Type:     node.AbstractNamespace,
+					Path: nomospath.FromSlash("namespaces"),
+					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Relative: nomospath.NewRelative("namespaces/bar"),
-							Type:     node.Namespace,
+							Path: nomospath.FromSlash("namespaces/bar"),
+							Type: node.Namespace,
 						},
 					},
 				},
@@ -43,8 +43,8 @@ func TestEphemeralResourceRemover(t *testing.T) {
 			objects: []ast.FileObject{fake.NamespaceSelector("namespaces/ns.yaml")},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Relative: nomospath.NewRelative("namespaces"),
-					Type:     node.AbstractNamespace,
+					Path: nomospath.FromSlash("namespaces"),
+					Type: node.AbstractNamespace,
 					Selectors: map[string]*v1.NamespaceSelector{
 						"": fake.NamespaceSelector("namespaces/ns.yaml").Object.(*v1.NamespaceSelector),
 					},
@@ -61,13 +61,13 @@ func TestEphemeralResourceRemover(t *testing.T) {
 			objects: []ast.FileObject{fake.Namespace("namespaces/bar/ns.yaml"), fake.Role("namespaces/bar/role.yaml")},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Relative: nomospath.NewRelative("namespaces"),
-					Type:     node.AbstractNamespace,
+					Path: nomospath.FromSlash("namespaces"),
+					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Relative: nomospath.NewRelative("namespaces/bar"),
-							Type:     node.Namespace,
-							Objects:  []*ast.NamespaceObject{{FileObject: fake.Role("namespaces/bar/role.yaml")}},
+							Path:    nomospath.FromSlash("namespaces/bar"),
+							Type:    node.Namespace,
+							Objects: []*ast.NamespaceObject{{FileObject: fake.Role("namespaces/bar/role.yaml")}},
 						},
 					},
 				},

@@ -32,7 +32,7 @@ var nomosRootTestCases = []nomosRootTestCase{
 }
 
 func (tc nomosRootTestCase) Run(t *testing.T) {
-	r, err := NewRoot(tc.root)
+	r, err := NewRoot(FromSlash(tc.root))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestNewNomosRootPath(t *testing.T) {
 }
 
 func toRoot(root string, t *testing.T) Root {
-	r, err := NewRoot(root)
+	r, err := NewRoot(FromSlash(root))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,13 +78,13 @@ var nomosRelativeTestCases = []nomosRelativeTestCase{
 }
 
 func (tc nomosRelativeTestCase) Run(t *testing.T) {
-	actual := toRoot(".", t).Join(tc.relative)
-	expected := toRoot(".", t).Join(tc.expected)
+	actual := toRoot(".", t).Join(FromSlash(tc.relative))
+	expected := toRoot(".", t).Join(FromSlash(tc.expected))
 
 	if diff := cmp.Diff(actual, expected); diff != "" {
 		t.Fatal(diff)
 	}
-	if diff := cmp.Diff(actual.RelativeSlashPath(), tc.expected); diff != "" {
+	if diff := cmp.Diff(actual.path.SlashPath(), tc.expected); diff != "" {
 		t.Fatal(diff)
 	}
 }
@@ -148,8 +148,8 @@ var cmpNomosRelativeTestCases = []cmpNomosRelativeTestCase{
 }
 
 func (tc cmpNomosRelativeTestCase) Run(t *testing.T) {
-	path1 := toRoot(tc.root1, t).Join(tc.path1)
-	path2 := toRoot(tc.root2, t).Join(tc.path2)
+	path1 := toRoot(tc.root1, t).Join(FromSlash(tc.path1))
+	path2 := toRoot(tc.root2, t).Join(FromSlash(tc.path2))
 
 	if tc.equal {
 		if diff := cmp.Diff(path1, path2); diff != "" {
@@ -170,9 +170,9 @@ func TestCmpNomosRelative(t *testing.T) {
 
 func TestNewFakeNomosRelative(t *testing.T) {
 	foo := "foo"
-	fake := NewRelative(foo)
+	fake := FromSlash(foo)
 
-	if diff := cmp.Diff(foo, fake.RelativeSlashPath()); diff != "" {
+	if diff := cmp.Diff(foo, fake.SlashPath()); diff != "" {
 		t.Fatal(diff)
 	}
 }
@@ -205,11 +205,11 @@ func (tc relTestCase) Run(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	path, err := root.Rel(abs)
+	path, err := root.Rel(FromOS(abs))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(tc.expected, path.RelativeSlashPath()); diff != "" {
+	if diff := cmp.Diff(tc.expected, path.path.SlashPath()); diff != "" {
 		t.Fatal(diff)
 	}
 }

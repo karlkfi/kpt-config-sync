@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/id"
 
 	"github.com/golang/glog"
@@ -220,7 +221,7 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 		toCreate := diff.Declared
 		if err := r.applier.Create(ctx, toCreate); err != nil {
 			metrics.ErrTotal.WithLabelValues(toCreate.GetNamespace(), toCreate.GetKind(), "create").Inc()
-			return false, id.ResourceWrap(err, fmt.Sprintf("failed to create %q", diff.Name), id.ParseResource(toCreate))
+			return false, id.ResourceWrap(err, fmt.Sprintf("failed to create %q", diff.Name), ast.ParseFileObject(toCreate))
 		}
 	case differ.Update:
 		switch diff.ActualResourceIsManaged() {
@@ -235,7 +236,7 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 		removeEmptyRulesField(diff.Declared)
 		if err := r.applier.ApplyCluster(diff.Declared, diff.Actual); err != nil {
 			metrics.ErrTotal.WithLabelValues("", diff.Declared.GroupVersionKind().Kind, "patch").Inc()
-			return false, id.ResourceWrap(err, fmt.Sprintf("failed to patch %q", diff.Name), id.ParseResource(diff.Declared))
+			return false, id.ResourceWrap(err, fmt.Sprintf("failed to patch %q", diff.Name), ast.ParseFileObject(diff.Declared))
 		}
 	case differ.Delete:
 		switch diff.ActualResourceIsManaged() {
@@ -250,7 +251,7 @@ func (r *ClusterPolicyReconciler) handleDiff(ctx context.Context, diff *differ.D
 		toDelete := diff.Actual
 		if err := r.client.Delete(ctx, toDelete); err != nil {
 			metrics.ErrTotal.WithLabelValues("", toDelete.GroupVersionKind().Kind, "delete").Inc()
-			return false, id.ResourceWrap(err, fmt.Sprintf("failed to delete %q", diff.Name), id.ParseResource(toDelete))
+			return false, id.ResourceWrap(err, fmt.Sprintf("failed to delete %q", diff.Name), ast.ParseFileObject(toDelete))
 		}
 	default:
 		panic(fmt.Errorf("programmatic error, unhandled syncer diff type: %v", t))

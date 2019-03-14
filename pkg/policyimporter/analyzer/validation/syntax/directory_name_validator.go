@@ -14,9 +14,9 @@ func NewDirectoryNameValidator() *visitor.ValidatorVisitor {
 		func(n *ast.TreeNode) *status.MultiError {
 			name := n.Base()
 			if namespaceutil.IsInvalid(name) {
-				return status.From(vet.InvalidDirectoryNameError{Dir: n.Relative})
+				return status.From(vet.InvalidDirectoryNameError{Dir: n.Path})
 			} else if namespaceutil.IsReserved(name) {
-				return status.From(vet.ReservedDirectoryNameError{Dir: n.Relative})
+				return status.From(vet.ReservedDirectoryNameError{Dir: n.Path})
 			}
 			return nil
 		})

@@ -130,7 +130,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		context.hNode.Name = n.Name()
 		context.hNode.Type = v1.HierarchyNodeNamespace
 	} else {
-		context.hNode.Name = n.RelativeSlashPath()
+		context.hNode.Name = n.SlashPath()
 		context.hNode.Type = v1.HierarchyNodeAbstractNamespace
 	}
 

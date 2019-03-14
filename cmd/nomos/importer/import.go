@@ -127,11 +127,11 @@ var Cmd = &cobra.Command{
 }
 
 func writeObject(printer printers.ResourcePrinter, dir string, object ast.FileObject) error {
-	if err := os.MkdirAll(filepath.Join(dir, filepath.FromSlash(object.Dir().RelativeSlashPath())), 0750); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, object.Dir().OSPath()), 0750); err != nil {
 		return err
 	}
 
-	file, err := os.Create(filepath.Join(dir, filepath.FromSlash(object.RelativeSlashPath())))
+	file, err := os.Create(filepath.Join(dir, object.OSPath()))
 	if err != nil {
 		return err
 	}

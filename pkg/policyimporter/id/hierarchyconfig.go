@@ -19,5 +19,5 @@ type HierarchyConfig interface {
 func PrintHierarchyConfig(c HierarchyConfig) string {
 	return fmt.Sprintf("source: %[1]s\n"+
 		"%[2]s",
-		c.RelativeSlashPath(), printGroupKind(c.GroupKind()))
+		c.SlashPath(), printGroupKind(c.GroupKind()))
 }

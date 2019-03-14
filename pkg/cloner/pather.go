@@ -81,19 +81,19 @@ func longBase(o ast.FileObject) string {
 }
 
 // directory returns the relative directory to write the object to.
-func (p Pather) directory(o ast.FileObject) nomospath.Relative {
+func (p Pather) directory(o ast.FileObject) nomospath.Path {
 	gvk := o.GroupVersionKind()
 	switch {
 	case systemKinds[gvk]:
-		return nomospath.NewRelative(repo.SystemDir)
+		return nomospath.FromSlash(repo.SystemDir)
 	case clusterRegistryKinds[gvk]:
-		return nomospath.NewRelative(repo.ClusterRegistryDir)
+		return nomospath.FromSlash(repo.ClusterRegistryDir)
 	case gvk == kinds.Namespace():
-		return nomospath.NewRelative(repo.NamespacesDir).Join(o.MetaObject().GetName())
+		return nomospath.FromSlash(repo.NamespacesDir).Join(o.MetaObject().GetName())
 	case p.namespaced[gvk]:
-		return nomospath.NewRelative(repo.NamespacesDir).Join(o.MetaObject().GetNamespace())
+		return nomospath.FromSlash(repo.NamespacesDir).Join(o.MetaObject().GetNamespace())
 	default:
-		return nomospath.NewRelative(repo.ClusterDir)
+		return nomospath.FromSlash(repo.ClusterDir)
 	}
 }
 
@@ -101,20 +101,20 @@ func (p Pather) directory(o ast.FileObject) nomospath.Relative {
 // unique for a valid collection of objects. Behavior undefined for collections of objects which
 // could not validly be in a single cluster.
 func (p Pather) AddPaths(objects []ast.FileObject) {
-	shortPathCounts := make(map[nomospath.Relative]int)
+	shortPathCounts := make(map[nomospath.Path]int)
 
 	for i, object := range objects {
 		if object.Object == nil {
 			continue
 		}
 		objectPath := p.directory(object).Join(shortBase(object))
-		objects[i].Relative = objectPath
+		objects[i].Path = objectPath
 		shortPathCounts[objectPath]++
 	}
 
 	for i, object := range objects {
-		if shortPathCounts[object.Relative] > 1 {
-			objects[i].Relative = p.directory(object).Join(longBase(object))
+		if shortPathCounts[object.Path] > 1 {
+			objects[i].Path = p.directory(object).Join(longBase(object))
 		}
 	}
 }

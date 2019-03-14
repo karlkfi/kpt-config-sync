@@ -117,8 +117,8 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				SystemObjects:          vt.Helper.System(),
 				ClusterRegistryObjects: vt.Helper.ClusterRegistry(),
 				Tree: &ast.TreeNode{
-					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewRelative("namespaces"),
+					Type: node.AbstractNamespace,
+					Path: nomospath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(
 						vt.Helper.AdminRoleBinding(),
 						modQuota(
@@ -132,7 +132,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Children: []*ast.TreeNode{
 						{
 							Type:        node.Namespace,
-							Relative:    nomospath.NewRelative("namespaces/frontend"),
+							Path:        nomospath.FromSlash("namespaces/frontend"),
 							Labels:      map[string]string{"environment": "prod"},
 							Annotations: map[string]string{"has-waffles": "true"},
 							Objects: vt.ObjectSets(
@@ -150,7 +150,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						},
 						{
 							Type:        node.Namespace,
-							Relative:    nomospath.NewRelative("namespaces/frontend-test"),
+							Path:        nomospath.FromSlash("namespaces/frontend-test"),
 							Labels:      map[string]string{"environment": "test"},
 							Annotations: map[string]string{"has-waffles": "false"},
 							Objects: vt.ObjectSets(
@@ -173,17 +173,17 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "skip abstract namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewRelative("namespaces"),
-					Objects:  vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
+					Type:    node.AbstractNamespace,
+					Path:    nomospath.FromSlash("namespaces"),
+					Objects: vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 					Children: []*ast.TreeNode{
 						{
-							Type:     node.AbstractNamespace,
-							Relative: nomospath.NewRelative("namespaces/eng"),
+							Type: node.AbstractNamespace,
+							Path: nomospath.FromSlash("namespaces/eng"),
 							Children: []*ast.TreeNode{
 								{
-									Type:     node.Namespace,
-									Relative: nomospath.NewRelative("namespaces/eng/frontend"),
+									Type: node.Namespace,
+									Path: nomospath.FromSlash("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
 										vt.Helper.FrontendResourceQuota(),
 									),
@@ -225,8 +225,8 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						}}}),
 					nil),
 				Tree: &ast.TreeNode{
-					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewRelative("namespaces"),
+					Type: node.AbstractNamespace,
+					Path: nomospath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(
 						modQuota(
 							vt.Helper.AcmeResourceQuota(),
@@ -238,12 +238,12 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					),
 					Children: []*ast.TreeNode{
 						{
-							Type:     node.AbstractNamespace,
-							Relative: nomospath.NewRelative("namespaces/eng"),
+							Type: node.AbstractNamespace,
+							Path: nomospath.FromSlash("namespaces/eng"),
 							Children: []*ast.TreeNode{
 								{
-									Type:     node.Namespace,
-									Relative: nomospath.NewRelative("namespaces/eng/frontend"),
+									Type: node.Namespace,
+									Path: nomospath.FromSlash("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
 										modQuota(
 											vt.Helper.AcmeResourceQuota(),
@@ -265,17 +265,17 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "merge multiple quotas ",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewRelative("namespaces"),
-					Objects:  vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
+					Type:    node.AbstractNamespace,
+					Path:    nomospath.FromSlash("namespaces"),
+					Objects: vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 					Children: []*ast.TreeNode{
 						{
-							Type:     node.AbstractNamespace,
-							Relative: nomospath.NewRelative("namespaces/eng"),
+							Type: node.AbstractNamespace,
+							Path: nomospath.FromSlash("namespaces/eng"),
 							Children: []*ast.TreeNode{
 								{
-									Type:     node.Namespace,
-									Relative: nomospath.NewRelative("namespaces/eng/frontend"),
+									Type: node.Namespace,
+									Path: nomospath.FromSlash("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
 										modQuota(
 											vt.Helper.FrontendResourceQuota(),
@@ -339,8 +339,8 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						}}}),
 					nil),
 				Tree: &ast.TreeNode{
-					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewRelative("namespaces"),
+					Type: node.AbstractNamespace,
+					Path: nomospath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(
 						modQuota(
 							vt.Helper.AcmeResourceQuota(),
@@ -352,12 +352,12 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					),
 					Children: []*ast.TreeNode{
 						{
-							Type:     node.AbstractNamespace,
-							Relative: nomospath.NewRelative("namespaces/eng"),
+							Type: node.AbstractNamespace,
+							Path: nomospath.FromSlash("namespaces/eng"),
 							Children: []*ast.TreeNode{
 								{
-									Type:     node.Namespace,
-									Relative: nomospath.NewRelative("namespaces/eng/frontend"),
+									Type: node.Namespace,
+									Path: nomospath.FromSlash("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
 										modQuota(
 											vt.Helper.AcmeResourceQuota(),
@@ -380,19 +380,19 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "no quota",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewRelative("namespaces"),
-					Objects:  vt.ObjectSets(vt.Helper.AdminRoleBinding()),
+					Type:    node.AbstractNamespace,
+					Path:    nomospath.FromSlash("namespaces"),
+					Objects: vt.ObjectSets(vt.Helper.AdminRoleBinding()),
 					Children: []*ast.TreeNode{
 						{
-							Type:     node.Namespace,
-							Relative: nomospath.NewRelative("namespaces/frontend"),
-							Objects:  vt.ObjectSets(vt.Helper.PodReaderRoleBinding(), vt.Helper.PodReaderRole()),
+							Type:    node.Namespace,
+							Path:    nomospath.FromSlash("namespaces/frontend"),
+							Objects: vt.ObjectSets(vt.Helper.PodReaderRoleBinding(), vt.Helper.PodReaderRole()),
 						},
 						{
-							Type:     node.Namespace,
-							Relative: nomospath.NewRelative("namespaces/frontend-test"),
-							Objects:  vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
+							Type:    node.Namespace,
+							Path:    nomospath.FromSlash("namespaces/frontend-test"),
+							Objects: vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
 						},
 					},
 				},
@@ -411,19 +411,19 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						}},
 				}), nil),
 				Tree: &ast.TreeNode{
-					Type:     node.AbstractNamespace,
-					Relative: nomospath.NewRelative("namespaces"),
-					Objects:  vt.ObjectSets(vt.Helper.AdminRoleBinding()),
+					Type:    node.AbstractNamespace,
+					Path:    nomospath.FromSlash("namespaces"),
+					Objects: vt.ObjectSets(vt.Helper.AdminRoleBinding()),
 					Children: []*ast.TreeNode{
 						{
-							Type:     node.Namespace,
-							Relative: nomospath.NewRelative("namespaces/frontend"),
-							Objects:  vt.ObjectSets(vt.Helper.PodReaderRoleBinding(), vt.Helper.PodReaderRole()),
+							Type:    node.Namespace,
+							Path:    nomospath.FromSlash("namespaces/frontend"),
+							Objects: vt.ObjectSets(vt.Helper.PodReaderRoleBinding(), vt.Helper.PodReaderRole()),
 						},
 						{
-							Type:     node.Namespace,
-							Relative: nomospath.NewRelative("namespaces/frontend-test"),
-							Objects:  vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
+							Type:    node.Namespace,
+							Path:    nomospath.FromSlash("namespaces/frontend-test"),
+							Objects: vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
 						},
 					},
 				},

@@ -16,22 +16,27 @@ type resourceID struct {
 
 var _ id.Resource = resourceID{}
 
-// RelativeSlashPath implements Resource
-func (r resourceID) RelativeSlashPath() string {
+// SlashPath implements Resource.
+func (r resourceID) SlashPath() string {
 	return r.source
 }
 
-// Dir implements Resource
-func (r resourceID) Dir() nomospath.Relative {
-	return nomospath.NewRelative(r.source).Dir()
+// OSPath implements Resource.
+func (r resourceID) OSPath() string {
+	return nomospath.FromSlash(r.source).OSPath()
 }
 
-// Name implements Resource
+// Dir implements Resource.
+func (r resourceID) Dir() nomospath.Path {
+	return nomospath.FromSlash(r.source).Dir()
+}
+
+// Name implements Resource.
 func (r resourceID) Name() string {
 	return r.name
 }
 
-// GroupVersionKind implements Resource
+// GroupVersionKind implements Resource.
 func (r resourceID) GroupVersionKind() schema.GroupVersionKind {
 	return r.groupVersionKind
 }

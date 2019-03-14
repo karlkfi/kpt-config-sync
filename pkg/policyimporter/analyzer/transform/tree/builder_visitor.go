@@ -16,13 +16,13 @@ import (
 // BuilderVisitor populates the nodes in the hierarchy tree with their corresponding objects.
 type BuilderVisitor struct {
 	*visitor.Base
-	objects map[nomospath.Relative][]ast.FileObject
+	objects map[nomospath.Path][]ast.FileObject
 }
 
 // NewBuilderVisitor initializes an BuilderVisitor with the set of objects to use to
 // populate the policy hierarchy tree.
 func NewBuilderVisitor(objects []ast.FileObject) *BuilderVisitor {
-	v := &BuilderVisitor{Base: visitor.NewBase(), objects: make(map[nomospath.Relative][]ast.FileObject)}
+	v := &BuilderVisitor{Base: visitor.NewBase(), objects: make(map[nomospath.Path][]ast.FileObject)}
 	v.SetImpl(v)
 
 	for _, object := range objects {
@@ -50,7 +50,7 @@ func (v *BuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 
 // VisitTreeNode adds all objects which correspond to the TreeNode in the policy hierarchy.
 func (v *BuilderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	for _, object := range v.objects[n.Relative] {
+	for _, object := range v.objects[n.Path] {
 		switch o := object.Object.(type) {
 		case *corev1.Namespace:
 			n.Type = node.Namespace

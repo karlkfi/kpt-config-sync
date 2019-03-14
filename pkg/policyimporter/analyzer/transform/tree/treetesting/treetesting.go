@@ -34,7 +34,7 @@ func buildTree(t *testing.T, root *ast.Root, objects ...ast.FileObject) *ast.Roo
 	var sytemObjects []ast.FileObject
 	var clusterObjects []ast.FileObject
 	for _, object := range objects {
-		switch object.Relative.Split()[0] {
+		switch object.Path.Split()[0] {
 		case repo.SystemDir:
 			sytemObjects = append(sytemObjects, object)
 		case repo.ClusterRegistryDir:
@@ -44,7 +44,7 @@ func buildTree(t *testing.T, root *ast.Root, objects ...ast.FileObject) *ast.Roo
 		case repo.NamespacesDir:
 			namespaceObjects = append(namespaceObjects, object)
 		default:
-			t.Fatalf("test resource not in known top-level directory: %s", object.RelativeSlashPath())
+			t.Fatalf("test resource not in known top-level directory: %s", object.SlashPath())
 		}
 	}
 
