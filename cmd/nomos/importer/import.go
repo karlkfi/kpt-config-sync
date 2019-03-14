@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/cloner"
 	"github.com/google/nomos/pkg/cloner/filter"
@@ -163,6 +162,8 @@ var ignoredGroupKinds = map[schema.GroupKind]bool{
 	kinds.PolicyNode().GroupKind(): true,
 	// Sync is an internal Nomos type we don't support syncing.
 	kinds.Sync().GroupKind(): true,
+	// HierarchicalQuota is not something users should create directly.
+	kinds.HierarchicalQuota().GroupKind(): true,
 }
 
 // ignoreSystemNameGroups ignores resources in name groups indicating they are a critical part of
@@ -220,7 +221,7 @@ var ignoreCriticalPriorityClasses = filter.All(
 var removeNomosLables = mutate.RemoveLabelGroup(policyhierarchy.GroupName)
 
 // removeNomosAnnotations removes non-input Nomos annotations.
-var removeNomosAnnotations = mutate.RemoveAnnotationGroup(v1.NomosPrefix)
+var removeNomosAnnotations = mutate.RemoveAnnotationGroup(policyhierarchy.GroupName)
 
 // removeAppliedConfig removes the annotation holding a JSON representation of the last call to
 // kubectl apply on the resource.

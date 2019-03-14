@@ -105,3 +105,8 @@ func Deployment() schema.GroupVersionKind {
 func HierarchyConfig() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind("HierarchyConfig")
 }
+
+// HierarchicalQuota returns the canonical HierarchyConfig GroupVersionKind
+func HierarchicalQuota() schema.GroupVersionKind {
+	return v1.SchemeGroupVersion.WithKind("HierarchicalQuota")
+}

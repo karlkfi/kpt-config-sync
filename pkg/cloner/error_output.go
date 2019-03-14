@@ -42,11 +42,11 @@ func (eo *ErrorOutput) Add(err error) {
 // AddAndDie prints an error to the output stream and exits immediately with exit code 1.
 // If err is nil, has no effect.
 func (eo *ErrorOutput) AddAndDie(err error) {
-	if err != nil {
+	if err == nil {
 		return
 	}
 	eo.Add(err)
-	eo.DieIfPrintedErrors("encountered fatal error")
+	eo.DieIfPrintedErrors("Encountered fatal error")
 }
 
 // DieIfPrintedErrors exits if any errors have been printed previously.
