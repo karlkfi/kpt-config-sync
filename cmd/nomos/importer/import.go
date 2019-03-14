@@ -136,6 +136,8 @@ var ignoredGroupKinds = map[schema.GroupKind]bool{
 	schema.GroupKind{Kind: "ControllerRevision", Group: "apps"}: true,
 	// CustomResourceDefinitions are not yet supported for syncing.
 	schema.GroupKind{Kind: "CustomResourceDefinition", Group: "apiextensions.k8s.io"}: true,
+	// Events are transient things that happened on the cluster and shouldn't be synced.
+	schema.GroupKind{Kind: "Event"}: true,
 	// Nodes represent literal worker machine.
 	schema.GroupKind{Kind: "Node"}: true,
 	// NodeMetrics keep track of the transient state of machines in the cluster.
