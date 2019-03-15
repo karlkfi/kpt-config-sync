@@ -1,4 +1,4 @@
-package cloner
+package importer
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"

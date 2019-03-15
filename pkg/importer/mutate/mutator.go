@@ -1,7 +1,7 @@
 package mutate
 
 import (
-	"github.com/google/nomos/pkg/cloner/filter"
+	"github.com/google/nomos/pkg/importer/filter"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 

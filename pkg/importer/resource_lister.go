@@ -1,4 +1,4 @@
-package cloner
+package importer
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"

@@ -1,4 +1,4 @@
-package cloner
+package importer
 
 import (
 	"strings"

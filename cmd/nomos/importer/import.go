@@ -9,9 +9,9 @@ import (
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/cloner"
-	"github.com/google/nomos/pkg/cloner/filter"
-	"github.com/google/nomos/pkg/cloner/mutate"
+	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/importer/filter"
+	"github.com/google/nomos/pkg/importer/mutate"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
@@ -37,14 +37,14 @@ var Cmd = &cobra.Command{
 	Use:   "import",
 	Short: `Downloads all resources from the current kubectl context and formats them into a valid Config Management repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		infoOut := cloner.NewStdOutput()
+		infoOut := importer.NewStdOutput()
 		if silent {
-			infoOut = cloner.NewNilOutput()
+			infoOut = importer.NewNilOutput()
 		}
 		infoOut.Printfln("Importing resources from current kubectl context")
 
 		// TODO: Allow other outputs than os.Stderr.
-		errOutput := cloner.NewStandardErrorOutput()
+		errOutput := importer.NewStandardErrorOutput()
 		dir, err := filepath.Abs(flags.Path.String())
 		errOutput.AddAndDie(errors.Wrap(err, "failed to get absolute path"))
 
@@ -63,13 +63,13 @@ var Cmd = &cobra.Command{
 		errOutput.AddAndDie(errors.Wrap(err, "failed to get discovery client"))
 
 		infoOut.Printfln("Listing available APIResources")
-		apiResources := cloner.ListResources(discoveryClient, errOutput)
+		apiResources := importer.ListResources(discoveryClient, errOutput)
 		errOutput.DieIfPrintedErrors("failed to list available API objects")
 
 		dynamicClient, err := factory.DynamicClient()
 		errOutput.AddAndDie(errors.Wrap(err, "failed to get dynamic client"))
 
-		lister := cloner.NewResourceLister(cloner.DynamicResourcer{Interface: dynamicClient})
+		lister := importer.NewResourceLister(importer.DynamicResourcer{Interface: dynamicClient})
 
 		infoOut.Printfln("Listing resources for each APIResource")
 		var objects []ast.FileObject
@@ -101,7 +101,7 @@ var Cmd = &cobra.Command{
 			mutate.Prune(),
 		).Apply(objects)
 
-		pather := cloner.NewPather(apiResources...)
+		pather := importer.NewPather(apiResources...)
 		pather.AddPaths(objects)
 
 		infoOut.Printfln("Writing %d resources to disk", len(objects))
@@ -171,7 +171,7 @@ var ignoreSystemNameGroups = filter.Any(
 
 // ignoreSystemNamespaces ignores all of the Namespaces which have internal Kubernetes and Nomos
 // resources. We don't support syncing any of these namespaces.
-func ignoreSystemNamespaces(out cloner.InfoOutput) filter.Predicate {
+func ignoreSystemNamespaces(out importer.InfoOutput) filter.Predicate {
 	ignoredNamespaces := []string{"default", "kube-public", "kube-system", policyhierarchy.ControllerNamespace}
 	var namespaceFilters []filter.Predicate
 	for _, n := range ignoredNamespaces {
