@@ -8,7 +8,6 @@ import (
 
 const (
 	// ConfigManagementPrefix is the prefix for all Nomos annotations.
-	// TODO(125862145): use policyhierarchy.GroupName below after resource groups are updated to configmanagement.gke.io
 	ConfigManagementPrefix = policyhierarchy.GroupName + "/"
 
 	// ClusterNameAnnotationKey is the annotation key set on Nomos-managed resources that refers to

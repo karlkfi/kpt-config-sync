@@ -16,21 +16,20 @@ limitations under the License.
 package labeling
 
 import (
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 // Labels that are used to indicate that the resource is part of the nomos install.
 const (
-	// TODO(125862145): use policyhierarchy.GroupName below as part of naming cleanup
-	ConfigManagementSystemKey   = "configmanagement.gke.io/system"
+	ConfigManagementSystemKey   = v1.ConfigManagementPrefix + "/system"
 	ConfigManagementSystemValue = "true"
 )
 
 // Labels that Nomos uses to determine which namespaces to enforce hierarchical quota limits on.
 const (
-	// TODO(125862145): use policyhierarchy.GroupName below s part of naming cleanup
-	ConfigManagementQuotaKey   = "configmanagement.gke.io/quota"
+	ConfigManagementQuotaKey   = v1.ConfigManagementPrefix + "quota"
 	ConfigManagementQuotaValue = "true"
 )
 
