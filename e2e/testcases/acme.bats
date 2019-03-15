@@ -79,7 +79,7 @@ function check_metrics_pages() {
   resource::check -n analytics rolebinding mike-rolebinding -a "configmanagement.gke.io/managed=enabled"
   resource::check -n analytics rolebinding alice-rolebinding -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n analytics -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
-  resource::check -n analytics resourcequota nomos-resource-quota -a "configmanagement.gke.io/managed=enabled"
+  resource::check -n analytics resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
 
   # backend
   resource::check_count -n backend -r role -c 0
@@ -87,7 +87,7 @@ function check_metrics_pages() {
   resource::check -n backend rolebinding bob-rolebinding -a "configmanagement.gke.io/managed=enabled"
   resource::check -n backend rolebinding alice-rolebinding -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n backend -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
-  resource::check -n backend resourcequota nomos-resource-quota -a "configmanagement.gke.io/managed=enabled"
+  resource::check -n backend resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
   run kubectl get quota -n backend -o yaml
   assert::contains 'pods: "1"'
 
@@ -98,20 +98,20 @@ function check_metrics_pages() {
   resource::check -n frontend rolebinding alice-rolebinding -a "configmanagement.gke.io/managed=enabled"
   resource::check -n frontend rolebinding sre-admin -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n frontend -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
-  resource::check -n frontend resourcequota nomos-resource-quota -a "configmanagement.gke.io/managed=enabled"
+  resource::check -n frontend resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
 
   # new-prj
   resource::check_count -n new-prj -r role -c 1
   resource::check -n new-prj role acme-admin -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n new-prj -r rolebinding -c 0
   resource::check_count -n new-prj -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
-  resource::check -n new-prj resourcequota nomos-resource-quota -a "configmanagement.gke.io/managed=enabled"
+  resource::check -n new-prj resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
 
   # newer-prj
   resource::check_count -n newer-prj -r role -c 0
   resource::check_count -n newer-prj -r rolebinding -c 0
   resource::check_count -n newer-prj -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
-  resource::check -n newer-prj resourcequota nomos-resource-quota -a "configmanagement.gke.io/managed=enabled"
+  resource::check -n newer-prj resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
 
   local services=(
     git-policy-importer

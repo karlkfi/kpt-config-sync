@@ -29,7 +29,7 @@ import (
 )
 
 // HierarchicalQuotaCache is A cache of package quotas that keeps usage and limits in memory for
-// the whole namespace tree. The limits and structure are fed from the policyNode informer
+// the whole namespace tree. The limits and structure are fed from the namespaceConfig informer
 // The usage is based on the ResourceQuota informer which has the usage on the leaf nodes
 type HierarchicalQuotaCache struct {
 	resourceQuotaInformer     informerscorev1.ResourceQuotaInformer
@@ -42,7 +42,7 @@ type HierarchicalQuotaCache struct {
 // QuotaNode contains information about a quota, mainly the resource quota itself, but also its place in the hierarchy.
 type QuotaNode struct {
 	quota  *corev1.ResourceQuota // The quota itself, both hard and used.
-	parent string                // The parent of the namespace for this quota based on the policyNode
+	parent string                // The parent of the namespace for this quota based on the namespaceConfig
 }
 
 // NewHierarchicalQuotaCache returns the hierarchical quota cache

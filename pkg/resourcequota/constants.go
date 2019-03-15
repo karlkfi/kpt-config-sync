@@ -24,7 +24,7 @@ const (
 
 // ResourceQuotaObjectName is the resource name for quotas set by nomos.  We only allow one resource
 // quota per namespace, so we hardcode the resource name.
-const ResourceQuotaObjectName = "nomos-resource-quota"
+const ResourceQuotaObjectName = "config-management-resource-quota"
 
 // ResourceQuotaHierarchyName is the resource name for HierarchichalQuota.
 const ResourceQuotaHierarchyName = "nomos-quota-hierarchy"

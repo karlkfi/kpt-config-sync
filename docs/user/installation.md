@@ -59,7 +59,7 @@ On GKE clusters, `<user>` would be the GSuite account (e.g.
 
 ### Deploy the Operator
 
-Apply the operator bundle in order to create the Nomos Operator and nomos-system
+Apply the operator bundle in order to create the Nomos Operator and config-management-system
 namespace into your cluster.
 
 ```console
@@ -73,16 +73,16 @@ $ kubectl -n kube-system get pods | grep nomos
 nomos-operator-6f988f5fdd-4r7tr 1/1 Running 0 26s
 ```
 
-and that the nomos-system namespace was created:
+and that the config-management-system namespace was created:
 
 ```console
 $ kubectl get ns | grep nomos
-nomos-system Active 1m
+config-management-system Active 1m
 ```
 
 ### Create the git-creds Secret
 
-Note that these secrets are deployed into the nomos-system namespace, so it is
+Note that these secrets are deployed into the config-management-system namespace, so it is
 necessary to have that namespace created before creating the secret.
 
 Choose the correct authentication method for your Git repository from the
@@ -113,7 +113,7 @@ Use the same secret you configured in the previous step to create the
 `git-creds` secret in your cluster.
 
 ```console
-$ kubectl create secret generic git-creds -n=nomos-system \
+$ kubectl create secret generic git-creds -n=config-management-system \
     --from-file=ssh=$HOME/.ssh/id_rsa.nomos
 ```
 
@@ -132,7 +132,7 @@ Use the same secret you configured in the previous step to create the
 `git-creds` secret in your cluster.
 
 ```console
-$ kubectl create secret generic git-creds -n=nomos-system \
+$ kubectl create secret generic git-creds -n=config-management-system \
     --from-file=cookie_file=$HOME/.gitcookies
 ```
 
@@ -158,7 +158,7 @@ apiVersion: addons.sigs.k8s.io/v1alpha1
 kind: Nomos
 metadata:
   name: nomos
-  namespace: nomos-system
+  namespace: config-management-system
 spec:
   clusterName: some-cluster-name
   git:
@@ -214,7 +214,7 @@ displayed as "Running."
 Check running components:
 
 ```console
-$ kubectl get pods -n=nomos-system
+$ kubectl get pods -n=config-management-system
 ```
 
 If the above components do not appear, you may find relevant error messages in
@@ -229,12 +229,12 @@ kubectl -n kube-system logs -l k8s-app=nomos-operator
 To uninstall nomos from your cluster, delete the Nomos Resource:
 
 ```console
-$ kubectl -n=nomos-system delete nomos --all
+$ kubectl -n=config-management-system delete nomos --all
 ```
 
 The affected components are:
 
-*   Everything inside namespace `nomos-system`, with the exception of the
+*   Everything inside namespace `config-management-system`, with the exception of the
     created `git-creds` secret.
 *   Any cluster level roles and role bindings installed by GKE Policy
     Management.
@@ -254,19 +254,19 @@ However, if you do wish to completely remove the Operator and associated
 resources, follow this process:
 
 First uninstall Nomos as [above](#uninstalling), and wait until the
-`nomos-system` namespace is empty.
+`config-management-system` namespace is empty.
 
-Make sure that `nomos-system` has no resources before proceeding:
+Make sure that `config-management-system` has no resources before proceeding:
 
 ```console
-$ kubectl -n nomos-system get all
+$ kubectl -n config-management-system get all
 No resources found.
 ```
 
-Delete the `nomos-system` namespace:
+Delete the `config-management-system` namespace:
 
 ```console
-$ kubectl delete ns nomos-system
+$ kubectl delete ns config-management-system
 ```
 
 Then, delete the Nomos CRD:

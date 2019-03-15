@@ -15,7 +15,7 @@ func NewActionSpec(client typedv1.ConfigmanagementV1Interface, lister listersv1.
 	return action.NewSpec(
 		new(v1.ClusterConfig),
 		v1.SchemeGroupVersion,
-		clusterPoliciesEqual,
+		clusterConfigsEqual,
 		client,
 		lister)
 }
@@ -24,7 +24,7 @@ var cpsIgnore = []cmp.Option{
 	cmpopts.IgnoreFields(v1.ClusterConfigSpec{}, "ImportToken", "ImportTime"),
 }
 
-func clusterPoliciesEqual(lhs runtime.Object, rhs runtime.Object) bool {
+func clusterConfigsEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	l := lhs.(*v1.ClusterConfig)
 	r := rhs.(*v1.ClusterConfig)
 	return cmp.Equal(l.Spec, r.Spec, cpsIgnore...)

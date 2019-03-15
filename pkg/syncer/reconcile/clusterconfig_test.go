@@ -41,7 +41,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 	}
 	testCases := []struct {
 		name             string
-		clusterPolicy    *v1.ClusterConfig
+		clusterConfig    *v1.ClusterConfig
 		declared         []runtime.Object
 		actual           []runtime.Object
 		wantApplies      []application
@@ -52,7 +52,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 	}{
 		{
 			name: "update actual resource to declared state",
-			clusterPolicy: &v1.ClusterConfig{
+			clusterConfig: &v1.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
 				},
@@ -156,7 +156,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "actual resource already matches declared state",
-			clusterPolicy: &v1.ClusterConfig{
+			clusterConfig: &v1.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
 				},
@@ -262,7 +262,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "un-managed resource cannot be synced",
-			clusterPolicy: &v1.ClusterConfig{
+			clusterConfig: &v1.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
 				},
@@ -301,7 +301,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "create resource from declared state",
-			clusterPolicy: &v1.ClusterConfig{
+			clusterConfig: &v1.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
 				},
@@ -372,7 +372,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "delete resource according to declared state",
-			clusterPolicy: &v1.ClusterConfig{
+			clusterConfig: &v1.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
 				},
@@ -425,7 +425,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "ignore clusterconfig with invalid name",
-			clusterPolicy: &v1.ClusterConfig{
+			clusterConfig: &v1.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "some-incorrect-name",
 				},
@@ -487,7 +487,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			// Get ClusterConfig from cache.
 			mockCache.EXPECT().
 				Get(gomock.Any(), gomock.Any(), gomock.Any()).
-				SetArg(2, *tc.clusterPolicy)
+				SetArg(2, *tc.clusterConfig)
 
 			// List actual resources on the cluster.
 			if tc.actual != nil {
@@ -538,7 +538,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
-						Name: tc.clusterPolicy.Name,
+						Name: tc.clusterConfig.Name,
 					},
 				})
 			if err != nil {

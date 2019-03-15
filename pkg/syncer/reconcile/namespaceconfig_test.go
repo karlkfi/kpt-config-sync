@@ -58,7 +58,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 	}
 	testCases := []struct {
 		name                string
-		policyNode          *v1.NamespaceConfig
+		namespaceConfig     *v1.NamespaceConfig
 		namespace           *corev1.Namespace
 		declared            []runtime.Object
 		actual              []runtime.Object
@@ -71,7 +71,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 	}{
 		{
 			name: "update actual resource to declared state",
-			policyNode: &v1.NamespaceConfig{
+			namespaceConfig: &v1.NamespaceConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
@@ -208,7 +208,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "actual resource already matches declared state",
-			policyNode: &v1.NamespaceConfig{
+			namespaceConfig: &v1.NamespaceConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
@@ -331,7 +331,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "clean up label for unmanaged namespace",
-			policyNode: &v1.NamespaceConfig{
+			namespaceConfig: &v1.NamespaceConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
@@ -489,7 +489,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "un-managed resource cannot be synced",
-			policyNode: &v1.NamespaceConfig{
+			namespaceConfig: &v1.NamespaceConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
@@ -576,7 +576,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 
 		{
 			name: "invalid management label on managed resource",
-			policyNode: &v1.NamespaceConfig{
+			namespaceConfig: &v1.NamespaceConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
@@ -670,7 +670,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "create resource from declared state",
-			policyNode: &v1.NamespaceConfig{
+			namespaceConfig: &v1.NamespaceConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
@@ -768,7 +768,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "delete resource according to declared state",
-			policyNode: &v1.NamespaceConfig{
+			namespaceConfig: &v1.NamespaceConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
@@ -869,7 +869,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "unmanaged namespace has resources synced",
-			policyNode: &v1.NamespaceConfig{
+			namespaceConfig: &v1.NamespaceConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eng",
 				},
@@ -1015,16 +1015,16 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 
 			var name string
 			// Get NamespaceConfig from cache.
-			if tc.policyNode == nil {
+			if tc.namespaceConfig == nil {
 				name = tc.namespace.GetName()
 				mockCache.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(errors.NewNotFound(schema.GroupResource{}, ""))
 			} else {
-				name = tc.policyNode.GetName()
+				name = tc.namespaceConfig.GetName()
 				mockCache.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any()).
-					SetArg(2, *tc.policyNode)
+					SetArg(2, *tc.namespaceConfig)
 			}
 			// Get Namespace from cache.
 			mockCache.EXPECT().
@@ -1055,7 +1055,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			for _, wantApply := range tc.wantApplies {
 				mockApplier.EXPECT().
 					ApplyNamespace(
-						gomock.Eq(tc.policyNode.Name),
+						gomock.Eq(tc.namespaceConfig.Name),
 						gomock.Eq(toUnstructured(t, converter, wantApply.intended)),
 						gomock.Eq(toUnstructured(t, converter, wantApply.current)))
 			}

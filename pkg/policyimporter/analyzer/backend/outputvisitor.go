@@ -30,11 +30,11 @@ import (
 // OutputVisitor converts the AST into NamespaceConfig and ClusterConfig objects.
 type OutputVisitor struct {
 	*visitor.Base
-	importToken string
-	loadTime    metav1.Time
-	allPolicies *namespaceconfig.AllPolicies
-	policyNode  []*v1.NamespaceConfig
-	syncs       []*v1.Sync
+	importToken     string
+	loadTime        metav1.Time
+	allPolicies     *namespaceconfig.AllPolicies
+	namespaceConfig []*v1.NamespaceConfig
+	syncs           []*v1.Sync
 }
 
 var _ ast.Visitor = &OutputVisitor{}
@@ -98,7 +98,7 @@ func (v *OutputVisitor) VisitSystemObject(o *ast.SystemObject) *ast.SystemObject
 
 // VisitTreeNode implements Visitor
 func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	origLen := len(v.policyNode)
+	origLen := len(v.namespaceConfig)
 	var name string
 
 	switch origLen {
@@ -124,9 +124,9 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 			ImportTime:  v.loadTime,
 		},
 	}
-	v.policyNode = append(v.policyNode, pn)
+	v.namespaceConfig = append(v.namespaceConfig, pn)
 	v.Base.VisitTreeNode(n)
-	v.policyNode = v.policyNode[:origLen]
+	v.namespaceConfig = v.namespaceConfig[:origLen]
 	// NamespaceConfigs are emitted only for leaf nodes.
 	if n.Type == node.Namespace {
 		v.allPolicies.NamespaceConfigs[name] = *pn
@@ -143,7 +143,7 @@ func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObj
 
 // VisitObject implements Visitor
 func (v *OutputVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
-	spec := &v.policyNode[len(v.policyNode)-1].Spec
+	spec := &v.namespaceConfig[len(v.namespaceConfig)-1].Spec
 	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }

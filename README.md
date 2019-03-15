@@ -1,6 +1,6 @@
-# Google Kubernetes Engine Policy Management
+# CSP Configuration Management
 
-GKE Policy Management (aka Nomos) enables policy distribution and hierarchical
+CSP Configuration Management enables policy distribution and hierarchical
 policy enforcement for multi-tenant multi-cluster Kubernetes deployments.
 
 In environments with many users spread across many teams, having multiple

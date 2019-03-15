@@ -134,11 +134,11 @@ $ git commit -am "remove quota"
 $ git push origin master
 $ kubectl get resourcequota --all-namespaces -l nomos.dev/managed
 NAMESPACE   NAME                   AGE
-analytics   nomos-resource-quota   26s
-backend     nomos-resource-quota   27s
-frontend    nomos-resource-quota   29s
-new-prj     nomos-resource-quota   26s
-newer-prj   nomos-resource-quota   25s
+analytics   config-management-resource-quota   26s
+backend     config-management-resource-quota   27s
+frontend    config-management-resource-quota   29s
+new-prj     config-management-resource-quota   26s
+newer-prj   config-management-resource-quota   25s
 ```
 
 If instead we remove all the resources first and then remove the Sync in a
@@ -183,7 +183,7 @@ management. There are three categories of namespaces: Managed, Reserved, and
 Legacy Namespaces.
 
 1.  **Reserved Namespaces** are namespaces that are pre-installed on the
-    kubernetes cluster (`kube-*`, `nomos-system`, `default`). Reserved
+    kubernetes cluster (`kube-*`, `config-management-system`, `default`). Reserved
     namespaces and the resources within them **will not be managed** even if the
     namespace and/or resource has a nomos.dev/managed=enabled label.
 1.  **Managed Namespaces** are namespaces on the cluster that GKE Policy

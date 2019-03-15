@@ -51,14 +51,14 @@ func TestDiffer(t *testing.T) {
 			testName: "One node Create",
 			oldNodes: []v1.NamespaceConfig{},
 			newNodes: []v1.NamespaceConfig{
-				policyNode("r"),
+				namespaceConfig("r"),
 			},
 			expected: []string{"configmanagement.gke.io/v1/NamespaceConfigs/r/create"},
 		},
 		{
 			testName: "One node delete",
 			oldNodes: []v1.NamespaceConfig{
-				policyNode("r"),
+				namespaceConfig("r"),
 			},
 			newNodes: []v1.NamespaceConfig{},
 			expected: []string{"configmanagement.gke.io/v1/NamespaceConfigs/r/delete"},
@@ -66,10 +66,10 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Rename root node",
 			oldNodes: []v1.NamespaceConfig{
-				policyNode("r"),
+				namespaceConfig("r"),
 			},
 			newNodes: []v1.NamespaceConfig{
-				policyNode("r2"),
+				namespaceConfig("r2"),
 			},
 			expected: []string{
 				"configmanagement.gke.io/v1/NamespaceConfigs/r2/create",
@@ -79,12 +79,12 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Create 2 nodes",
 			oldNodes: []v1.NamespaceConfig{
-				policyNode("r"),
+				namespaceConfig("r"),
 			},
 			newNodes: []v1.NamespaceConfig{
-				policyNode("r"),
-				policyNode("c1"),
-				policyNode("c2"),
+				namespaceConfig("r"),
+				namespaceConfig("c1"),
+				namespaceConfig("c2"),
 			},
 			expected: []string{
 				"configmanagement.gke.io/v1/NamespaceConfigs/c1/create",
@@ -94,14 +94,14 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Create 2 nodes and delete 2",
 			oldNodes: []v1.NamespaceConfig{
-				policyNode("r"),
-				policyNode("co1"),
-				policyNode("co2"),
+				namespaceConfig("r"),
+				namespaceConfig("co1"),
+				namespaceConfig("co2"),
 			},
 			newNodes: []v1.NamespaceConfig{
-				policyNode("r"),
-				policyNode("c2"),
-				policyNode("c1"),
+				namespaceConfig("r"),
+				namespaceConfig("c2"),
+				namespaceConfig("c1"),
 			},
 			expected: []string{
 				"configmanagement.gke.io/v1/NamespaceConfigs/c1/create",
@@ -112,27 +112,27 @@ func TestDiffer(t *testing.T) {
 		},
 		{
 			testName:         "ClusterConfig create",
-			newClusterConfig: clusterPolicy("foo", true),
+			newClusterConfig: clusterConfig("foo", true),
 			expected: []string{
 				"configmanagement.gke.io/v1/ClusterConfigs/foo/create",
 			},
 		},
 		{
 			testName:         "ClusterConfig update",
-			oldClusterConfig: clusterPolicy("foo", true),
-			newClusterConfig: clusterPolicy("foo", false),
+			oldClusterConfig: clusterConfig("foo", true),
+			newClusterConfig: clusterConfig("foo", false),
 			expected: []string{
 				"configmanagement.gke.io/v1/ClusterConfigs/foo/update",
 			},
 		},
 		{
 			testName:         "ClusterConfig update no change",
-			oldClusterConfig: clusterPolicy("foo", true),
-			newClusterConfig: clusterPolicy("foo", true),
+			oldClusterConfig: clusterConfig("foo", true),
+			newClusterConfig: clusterConfig("foo", true),
 		},
 		{
 			testName:         "ClusterConfig delete",
-			oldClusterConfig: clusterPolicy("foo", true),
+			oldClusterConfig: clusterConfig("foo", true),
 			expected: []string{
 				"configmanagement.gke.io/v1/ClusterConfigs/foo/delete",
 			},
@@ -140,14 +140,14 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "Create 2 nodes and a ClusterConfig",
 			oldNodes: []v1.NamespaceConfig{
-				policyNode("r"),
+				namespaceConfig("r"),
 			},
 			newNodes: []v1.NamespaceConfig{
-				policyNode("r"),
-				policyNode("c2"),
-				policyNode("c1"),
+				namespaceConfig("r"),
+				namespaceConfig("c2"),
+				namespaceConfig("c1"),
 			},
-			newClusterConfig: clusterPolicy("foo", true),
+			newClusterConfig: clusterConfig("foo", true),
 			expected: []string{
 				"configmanagement.gke.io/v1/NamespaceConfigs/c1/create",
 				"configmanagement.gke.io/v1/NamespaceConfigs/c2/create",
@@ -212,12 +212,12 @@ func TestDiffer(t *testing.T) {
 				t.Fatalf("Exepcted and actual actions differ: %s", cmp.Diff(test.expected, actual))
 			}
 
-			policyNodes := make(map[string]v1.NamespaceConfig)
+			namespaceConfigs := make(map[string]v1.NamespaceConfig)
 			for _, pn := range test.oldNodes {
-				policyNodes[pn.Name] = pn
+				namespaceConfigs[pn.Name] = pn
 			}
 			for _, a := range gotActions {
-				executeAction(t, a, policyNodes)
+				executeAction(t, a, namespaceConfigs)
 			}
 		})
 	}
@@ -231,7 +231,7 @@ func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.Namespa
 	op := a.Operation()
 	switch op {
 	case action.CreateOperation, action.UpdateOperation, action.UpsertOperation:
-		nodes[a.Name()] = policyNode(a.Name())
+		nodes[a.Name()] = namespaceConfig(a.Name())
 	case action.DeleteOperation:
 		delete(nodes, a.Name())
 	default:
@@ -239,7 +239,7 @@ func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.Namespa
 	}
 }
 
-func policyNode(name string) v1.NamespaceConfig {
+func namespaceConfig(name string) v1.NamespaceConfig {
 	return v1.NamespaceConfig{
 		ObjectMeta: meta.ObjectMeta{
 			Name: name,
@@ -248,7 +248,7 @@ func policyNode(name string) v1.NamespaceConfig {
 	}
 }
 
-func clusterPolicy(name string, priviledged bool) *v1.ClusterConfig {
+func clusterConfig(name string, priviledged bool) *v1.ClusterConfig {
 	return &v1.ClusterConfig{
 		ObjectMeta: meta.ObjectMeta{
 			Name: name,
@@ -276,9 +276,9 @@ func clusterPolicy(name string, priviledged bool) *v1.ClusterConfig {
 	}
 }
 
-func allPolicies(nodes []v1.NamespaceConfig, clusterPolicy *v1.ClusterConfig, syncs []v1.Sync) namespaceconfig.AllPolicies {
+func allPolicies(nodes []v1.NamespaceConfig, clusterConfig *v1.ClusterConfig, syncs []v1.Sync) namespaceconfig.AllPolicies {
 	policies := namespaceconfig.AllPolicies{
-		ClusterConfig: clusterPolicy,
+		ClusterConfig: clusterConfig,
 	}
 
 	for i, n := range nodes {

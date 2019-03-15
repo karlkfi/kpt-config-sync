@@ -64,8 +64,6 @@ function uninstall() {
     # If we did the installation, then we should uninstall as well.
     echo "+++++ Uninstalling..."
     if kubectl get configmanagement &> /dev/null; then
-      # TODO(125862145): Clean up after naming changes complete.
-      kubectl -n=nomos-system delete configmanagement --all
       kubectl -n=config-management-system delete configmanagement --all
     fi
     wait::for -s -t 300 -- install::nomos_uninstalled

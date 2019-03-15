@@ -30,8 +30,8 @@ import (
 
 // Factories contains factories for creating actions on Nomos custom resources.
 type Factories struct {
-	NamespaceConfigAction policyNodeActionFactory
-	ClusterConfigAction   clusterPolicyActionFactory
+	NamespaceConfigAction namespaceConfigActionFactory
+	ClusterConfigAction   clusterConfigActionFactory
 	SyncAction            syncActionFactory
 }
 
@@ -45,25 +45,25 @@ func NewFactories(
 		newSyncActionFactory(v1alpha1client, syncLister)}
 }
 
-type policyNodeActionFactory struct {
+type namespaceConfigActionFactory struct {
 	*action.ReflectiveActionSpec
 }
 
-func newNamespaceConfigActionFactory(client typedv1.ConfigmanagementV1Interface, lister listersv1.NamespaceConfigLister) policyNodeActionFactory {
-	return policyNodeActionFactory{namespaceconfig.NewActionSpec(client, lister)}
+func newNamespaceConfigActionFactory(client typedv1.ConfigmanagementV1Interface, lister listersv1.NamespaceConfigLister) namespaceConfigActionFactory {
+	return namespaceConfigActionFactory{namespaceconfig.NewActionSpec(client, lister)}
 }
 
 // NewCreate returns an action for creating NamespaceConfigs.
-func (f policyNodeActionFactory) NewCreate(policyNode *v1.NamespaceConfig) action.Interface {
-	return action.NewReflectiveCreateAction("", policyNode.Name, policyNode, f.ReflectiveActionSpec)
+func (f namespaceConfigActionFactory) NewCreate(namespaceConfig *v1.NamespaceConfig) action.Interface {
+	return action.NewReflectiveCreateAction("", namespaceConfig.Name, namespaceConfig, f.ReflectiveActionSpec)
 }
 
 // NewUpdate returns an action for updating NamespaceConfigs. This action ignores the ResourceVersion of
 // the new NamespaceConfig as well as most of the Status. If Status.SyncState has been set then that will
 // be copied over.
-func (f policyNodeActionFactory) NewUpdate(policyNode *v1.NamespaceConfig) action.Interface {
+func (f namespaceConfigActionFactory) NewUpdate(namespaceConfig *v1.NamespaceConfig) action.Interface {
 	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
-		newPN := policyNode.DeepCopy()
+		newPN := namespaceConfig.DeepCopy()
 		oldPN := old.(*v1.NamespaceConfig)
 		newPN.ResourceVersion = oldPN.ResourceVersion
 		newSyncState := newPN.Status.SyncState
@@ -73,35 +73,35 @@ func (f policyNodeActionFactory) NewUpdate(policyNode *v1.NamespaceConfig) actio
 		}
 		return newPN, nil
 	}
-	return action.NewReflectiveUpdateAction("", policyNode.Name, updatePolicy, f.ReflectiveActionSpec)
+	return action.NewReflectiveUpdateAction("", namespaceConfig.Name, updatePolicy, f.ReflectiveActionSpec)
 }
 
 // NewDelete returns an action for deleting NamespaceConfigs.
-func (f policyNodeActionFactory) NewDelete(nodeName string) action.Interface {
+func (f namespaceConfigActionFactory) NewDelete(nodeName string) action.Interface {
 	return action.NewReflectiveDeleteAction("", nodeName, f.ReflectiveActionSpec)
 }
 
-type clusterPolicyActionFactory struct {
+type clusterConfigActionFactory struct {
 	*action.ReflectiveActionSpec
 }
 
 func newClusterConfigActionFactory(
 	client typedv1.ConfigmanagementV1Interface,
-	lister listersv1.ClusterConfigLister) clusterPolicyActionFactory {
-	return clusterPolicyActionFactory{clusterconfig.NewActionSpec(client, lister)}
+	lister listersv1.ClusterConfigLister) clusterConfigActionFactory {
+	return clusterConfigActionFactory{clusterconfig.NewActionSpec(client, lister)}
 }
 
 // NewCreate returns an action for creating ClusterConfigs.
-func (f clusterPolicyActionFactory) NewCreate(clusterPolicy *v1.ClusterConfig) action.Interface {
-	return action.NewReflectiveCreateAction("", clusterPolicy.Name, clusterPolicy, f.ReflectiveActionSpec)
+func (f clusterConfigActionFactory) NewCreate(clusterConfig *v1.ClusterConfig) action.Interface {
+	return action.NewReflectiveCreateAction("", clusterConfig.Name, clusterConfig, f.ReflectiveActionSpec)
 }
 
 // NewUpdate returns an action for updating ClusterConfigs. This action ignores the ResourceVersion
 // of the new ClusterConfig as well as most of the Status. If Status.SyncState has been set then
 // that will be copied over.
-func (f clusterPolicyActionFactory) NewUpdate(clusterPolicy *v1.ClusterConfig) action.Interface {
+func (f clusterConfigActionFactory) NewUpdate(clusterConfig *v1.ClusterConfig) action.Interface {
 	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
-		newCP := clusterPolicy.DeepCopy()
+		newCP := clusterConfig.DeepCopy()
 		oldCP := old.(*v1.ClusterConfig)
 		newCP.ResourceVersion = oldCP.ResourceVersion
 		newSyncState := newCP.Status.SyncState
@@ -111,13 +111,13 @@ func (f clusterPolicyActionFactory) NewUpdate(clusterPolicy *v1.ClusterConfig) a
 		}
 		return newCP, nil
 	}
-	return action.NewReflectiveUpdateAction("", clusterPolicy.Name, updatePolicy, f.ReflectiveActionSpec)
+	return action.NewReflectiveUpdateAction("", clusterConfig.Name, updatePolicy, f.ReflectiveActionSpec)
 }
 
 // NewDelete returns an action for deleting ClusterConfigs.
-func (f clusterPolicyActionFactory) NewDelete(
-	clusterPolicyName string) action.Interface {
-	return action.NewReflectiveDeleteAction("", clusterPolicyName, f.ReflectiveActionSpec)
+func (f clusterConfigActionFactory) NewDelete(
+	clusterConfigName string) action.Interface {
+	return action.NewReflectiveDeleteAction("", clusterConfigName, f.ReflectiveActionSpec)
 }
 
 type syncActionFactory struct {

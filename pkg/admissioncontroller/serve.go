@@ -183,13 +183,13 @@ func SetupHierarchicalQuotaInformer(config *rest.Config) (informersv1.Hierarchic
 	if err != nil {
 		return nil, err
 	}
-	policyNodeFactory := namespaceconfigversions.NewSharedInformerFactory(
+	namespaceConfigFactory := namespaceconfigversions.NewSharedInformerFactory(
 		hierarchicalQuotaClient.PolicyHierarchy(), time.Minute,
 	)
 
-	hierarchicalQuotaInformer := policyNodeFactory.Configmanagement().V1().HierarchicalQuotas()
+	hierarchicalQuotaInformer := namespaceConfigFactory.Configmanagement().V1().HierarchicalQuotas()
 	hierarchicalQuotaInformer.Informer()
-	policyNodeFactory.Start(nil)
+	namespaceConfigFactory.Start(nil)
 
 	return hierarchicalQuotaInformer, nil
 }

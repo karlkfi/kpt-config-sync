@@ -25,14 +25,14 @@ import (
 )
 
 // ListPolicies returns all policies from API server.
-func ListPolicies(policyNodeLister listersv1.NamespaceConfigLister,
-	clusterPolicyLister listersv1.ClusterConfigLister,
+func ListPolicies(namespaceConfigLister listersv1.NamespaceConfigLister,
+	clusterConfigLister listersv1.ClusterConfigLister,
 	syncLister listersv1.SyncLister) (*AllPolicies, error) {
 	policies := AllPolicies{
 		NamespaceConfigs: make(map[string]v1.NamespaceConfig),
 	}
 
-	pn, err := policyNodeLister.List(labels.Everything())
+	pn, err := namespaceConfigLister.List(labels.Everything())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list NamespaceConfigs")
 	}
@@ -41,7 +41,7 @@ func ListPolicies(policyNodeLister listersv1.NamespaceConfigLister,
 	}
 
 	ls := labels.Everything()
-	cp, err := clusterPolicyLister.List(ls)
+	cp, err := clusterConfigLister.List(ls)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list ClusterConfigs")
 	}

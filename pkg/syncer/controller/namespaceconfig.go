@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const policyNodeControllerName = "namespaceconfig-resources"
+const namespaceConfigControllerName = "namespaceconfig-resources"
 
 // AddNamespaceConfig adds NamespaceConfig sync controllers to the Manager.
 func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode.Decoder,
@@ -47,13 +47,13 @@ func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode
 		return err
 	}
 
-	pnc, err := controller.New(policyNodeControllerName, mgr, controller.Options{
+	pnc, err := controller.New(namespaceConfigControllerName, mgr, controller.Options{
 		Reconciler: genericreconcile.NewNamespaceConfigReconciler(
 			ctx,
 			genericClient,
 			applier,
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
-			&CancelFilteringRecorder{mgr.GetRecorder(policyNodeControllerName)},
+			&CancelFilteringRecorder{mgr.GetRecorder(namespaceConfigControllerName)},
 			decoder,
 			extractGVKs(resourceTypes),
 		),
@@ -66,11 +66,11 @@ func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode
 		ToRequests: handler.ToRequestsFunc(validNamespaceConfigs),
 	}
 	if err = pnc.Watch(&source.Kind{Type: &nomosv1.NamespaceConfig{}}, mapValidNamespaceConfigs); err != nil {
-		return errors.Wrapf(err, "could not watch NamespaceConfigs in the %q controller", policyNodeControllerName)
+		return errors.Wrapf(err, "could not watch NamespaceConfigs in the %q controller", namespaceConfigControllerName)
 	}
 	// Namespaces have the same name as their corresponding NamespaceConfig.
 	if err = pnc.Watch(&source.Kind{Type: &corev1.Namespace{}}, mapValidNamespaceConfigs); err != nil {
-		return errors.Wrapf(err, "could not watch Namespaces in the %q controller", policyNodeControllerName)
+		return errors.Wrapf(err, "could not watch Namespaces in the %q controller", namespaceConfigControllerName)
 	}
 
 	maptoNamespaceConfig := &handler.EnqueueRequestsFromMapFunc{
@@ -80,7 +80,7 @@ func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode
 	// Look up the corresponding NamespaceConfig for the changed resources.
 	for gvk, t := range resourceTypes {
 		if err := pnc.Watch(&source.Kind{Type: t}, maptoNamespaceConfig); err != nil {
-			return errors.Wrapf(err, "could not watch %q in the %q controller", gvk, policyNodeControllerName)
+			return errors.Wrapf(err, "could not watch %q in the %q controller", gvk, namespaceConfigControllerName)
 		}
 	}
 	return nil

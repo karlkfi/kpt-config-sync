@@ -66,7 +66,7 @@ apiVersion: addons.sigs.k8s.io/v1alpha1
 kind: Nomos
 metadata:
   name: nomos
-  namespace: nomos-system
+  namespace: config-management-system
 spec:
   clusterName: cluster-1
   git:
@@ -90,7 +90,7 @@ apiVersion: addons.sigs.k8s.io/v1alpha1
 kind: Nomos
 metadata:
   name: nomos
-  namespace: nomos-system
+  namespace: config-management-system
 spec:
   clusterName: cluster-2
   git:

@@ -87,7 +87,7 @@ func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconc
 	defer cancel()
 
 	name := request.Name
-	glog.Infof("Reconciling Policy Node: %q", name)
+	glog.Infof("Reconciling NamespaceConfig: %q", name)
 	if namespaceutil.IsReserved(name) {
 		glog.Errorf("Trying to reconcile a NamespaceConfig corresponding to a reserved namespace: %q", name)
 		// We don't return an error, because we should never be reconciling these NamespaceConfigs in the first place.
@@ -101,28 +101,28 @@ func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconc
 	return reconcile.Result{}, err
 }
 
-// policyNodeState enumerates possible states for NamespaceConfigs
-type policyNodeState string
+// namespaceConfigState enumerates possible states for NamespaceConfigs
+type namespaceConfigState string
 
 const (
-	policyNodeStateNotFound  = policyNodeState("notFound")  // the policy node does not exist
-	policyNodeStateNamespace = policyNodeState("namespace") // the policy node is declared as a namespace
+	namespaceConfigStateNotFound  = namespaceConfigState("notFound")  // the policy node does not exist
+	namespaceConfigStateNamespace = namespaceConfigState("namespace") // the policy node is declared as a namespace
 )
 
 // getNamespaceConfigState normalizes the state of the policy node and returns the node.
-func (r *NamespaceConfigReconciler) getNamespaceConfigState(ctx context.Context, name string) (policyNodeState, *v1.NamespaceConfig,
+func (r *NamespaceConfigReconciler) getNamespaceConfigState(ctx context.Context, name string) (namespaceConfigState, *v1.NamespaceConfig,
 	error) {
 	node := &v1.NamespaceConfig{}
 	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, node)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return policyNodeStateNotFound, nil, nil
+			return namespaceConfigStateNotFound, nil, nil
 		}
 		panic(errors.Wrap(err, "cache returned error other than not found, this should not happen"))
 	}
 	node.SetGroupVersionKind(kinds.NamespaceConfig())
 
-	return policyNodeStateNamespace, node, nil
+	return namespaceConfigStateNamespace, node, nil
 }
 
 // namespaceState enumerates possible states for the namespace
@@ -189,7 +189,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	}
 
 	switch pnState {
-	case policyNodeStateNotFound:
+	case namespaceConfigStateNotFound:
 		switch nsState {
 		case namespaceStateNotFound: // noop
 		case namespaceStateExists:
@@ -200,7 +200,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 			return r.deleteNamespace(ctx, ns)
 		}
 
-	case policyNodeStateNamespace:
+	case namespaceConfigStateNamespace:
 		switch nsState {
 		case namespaceStateNotFound:
 			if err := r.createNamespace(ctx, node); err != nil {
@@ -415,50 +415,50 @@ func (r *NamespaceConfigReconciler) handleDiff(ctx context.Context, diff *differ
 	return true, nil
 }
 
-func asNamespace(policyNode *v1.NamespaceConfig) *corev1.Namespace {
-	return withNamespaceConfigMeta(&corev1.Namespace{}, policyNode)
+func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
+	return withNamespaceConfigMeta(&corev1.Namespace{}, namespaceConfig)
 }
 
-func withNamespaceConfigMeta(namespace *corev1.Namespace, policyNode *v1.NamespaceConfig) *corev1.Namespace {
+func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 	namespace.SetGroupVersionKind(kinds.Namespace())
 	// Mark the namespace as supporting the management of hierarchical quota.
-	labels := labeling.ManageQuota.AddDeepCopy(policyNode.Labels)
+	labels := labeling.ManageQuota.AddDeepCopy(namespaceConfig.Labels)
 	namespace.Labels = labels
-	if as := policyNode.Annotations; as == nil {
+	if as := namespaceConfig.Annotations; as == nil {
 		namespace.Annotations = map[string]string{}
 	} else {
-		namespace.Annotations = policyNode.Annotations
+		namespace.Annotations = namespaceConfig.Annotations
 	}
 	namespace.Annotations[v1.ResourceManagementKey] = v1.ResourceManagementValue
-	namespace.Name = policyNode.Name
+	namespace.Name = namespaceConfig.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())
 	return namespace
 }
 
-func (r *NamespaceConfigReconciler) createNamespace(ctx context.Context, policyNode *v1.NamespaceConfig) error {
-	namespace := asNamespace(policyNode)
+func (r *NamespaceConfigReconciler) createNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {
+	namespace := asNamespace(namespaceConfig)
 	if err := r.client.Create(ctx, namespace); err != nil {
 		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GroupVersionKind().Kind, "create").Inc()
-		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceCreateFailed",
+		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, "NamespaceCreateFailed",
 			"failed to create namespace: %q", err)
-		return errors.Wrapf(err, "failed to create namespace %q", policyNode.Name)
+		return errors.Wrapf(err, "failed to create namespace %q", namespaceConfig.Name)
 	}
 	return nil
 }
 
-func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, policyNode *v1.NamespaceConfig) error {
-	glog.V(1).Infof("Namespace %q declared in a policy node, updating", policyNode.Name)
+func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {
+	glog.V(1).Infof("Namespace %q declared in a policy node, updating", namespaceConfig.Name)
 
-	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: policyNode.Name}}
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespaceConfig.Name}}
 	namespace.SetGroupVersionKind(kinds.Namespace())
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
-		return withNamespaceConfigMeta(obj.(*corev1.Namespace), policyNode), nil
+		return withNamespaceConfigMeta(obj.(*corev1.Namespace), namespaceConfig), nil
 	}
 	if _, err := r.client.Update(ctx, namespace, updateFn); err != nil {
 		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GroupVersionKind().Kind, "update").Inc()
-		r.recorder.Eventf(policyNode, corev1.EventTypeWarning, "NamespaceUpdateFailed",
+		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, "NamespaceUpdateFailed",
 			"failed to update namespace: %q", err)
-		return errors.Wrapf(err, "failed to update namespace %q", policyNode.Name)
+		return errors.Wrapf(err, "failed to update namespace %q", namespaceConfig.Name)
 	}
 	return nil
 }

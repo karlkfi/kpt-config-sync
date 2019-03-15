@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const clusterPolicyControllerName = "clusterconfig-resources"
+const clusterConfigControllerName = "clusterconfig-resources"
 
 // AddClusterConfig adds ClusterConfig sync controllers to the Manager.
 func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.Decoder,
@@ -45,22 +45,22 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 		return err
 	}
 
-	cpc, err := controller.New(clusterPolicyControllerName, mgr, controller.Options{
+	cpc, err := controller.New(clusterConfigControllerName, mgr, controller.Options{
 		Reconciler: genericreconcile.NewClusterConfigReconciler(
 			ctx,
 			client.New(mgr.GetClient()),
 			applier,
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
-			&CancelFilteringRecorder{mgr.GetRecorder(clusterPolicyControllerName)},
+			&CancelFilteringRecorder{mgr.GetRecorder(clusterConfigControllerName)},
 			decoder,
 			extractGVKs(resourceTypes),
 		),
 	})
 	if err != nil {
-		return errors.Wrapf(err, "could not create %q controller", clusterPolicyControllerName)
+		return errors.Wrapf(err, "could not create %q controller", clusterConfigControllerName)
 	}
 	if err = cpc.Watch(&source.Kind{Type: &nomosv1.ClusterConfig{}}, &handler.EnqueueRequestForObject{}); err != nil {
-		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", clusterPolicyControllerName)
+		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", clusterConfigControllerName)
 	}
 
 	mapToClusterConfig := &handler.EnqueueRequestsFromMapFunc{
@@ -70,7 +70,7 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 	// Look up the corresponding ClusterConfig for the changed resources.
 	for gvk, t := range resourceTypes {
 		if err := cpc.Watch(&source.Kind{Type: t}, mapToClusterConfig); err != nil {
-			return errors.Wrapf(err, "could not watch %q in the %q controller", gvk, clusterPolicyControllerName)
+			return errors.Wrapf(err, "could not watch %q in the %q controller", gvk, clusterConfigControllerName)
 		}
 	}
 	return nil

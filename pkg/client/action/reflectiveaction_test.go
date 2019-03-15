@@ -547,9 +547,9 @@ var clusterNamespaceConfigTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterNamespaceConfigX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*v1.NamespaceConfig).DeepCopy()
-			policyNode.ObjectMeta.Labels["foo"] = "bar"
-			return policyNode
+			namespaceConfig := obj.(*v1.NamespaceConfig).DeepCopy()
+			namespaceConfig.ObjectMeta.Labels["foo"] = "bar"
+			return namespaceConfig
 		},
 	},
 	{
@@ -557,9 +557,9 @@ var clusterNamespaceConfigTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterNamespaceConfigX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*v1.NamespaceConfig).DeepCopy()
-			policyNode.ObjectMeta.Annotations["foo"] = "bar"
-			return policyNode
+			namespaceConfig := obj.(*v1.NamespaceConfig).DeepCopy()
+			namespaceConfig.ObjectMeta.Annotations["foo"] = "bar"
+			return namespaceConfig
 		},
 	},
 	{
@@ -567,8 +567,8 @@ var clusterNamespaceConfigTestCases = []ReflectiveActionTestCase{
 		Operation: "upsert",
 		Resource:  clusterNamespaceConfigX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*v1.NamespaceConfig).DeepCopy()
-			return policyNode
+			namespaceConfig := obj.(*v1.NamespaceConfig).DeepCopy()
+			return namespaceConfig
 		},
 	},
 	{

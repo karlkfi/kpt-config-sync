@@ -82,27 +82,27 @@ func (r *ClusterConfigReconciler) Reconcile(request reconcile.Request) (reconcil
 	ctx, cancel := context.WithTimeout(r.ctx, reconcileTimeout)
 	defer cancel()
 
-	clusterPolicy := &v1.ClusterConfig{}
-	err := r.cache.Get(ctx, request.NamespacedName, clusterPolicy)
+	clusterConfig := &v1.ClusterConfig{}
+	err := r.cache.Get(ctx, request.NamespacedName, clusterConfig)
 	if err != nil {
 		err = errors.Wrapf(err, "could not retrieve clusterconfig %q", request.Name)
 		glog.Error(err)
 		return reconcile.Result{}, err
 	}
-	clusterPolicy.SetGroupVersionKind(kinds.ClusterConfig())
+	clusterConfig.SetGroupVersionKind(kinds.ClusterConfig())
 
 	name := request.Name
 	if request.Name != v1.ClusterConfigName {
-		r.recorder.Eventf(clusterPolicy, corev1.EventTypeWarning, "InvalidClusterConfig",
+		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "InvalidClusterConfig",
 			"ClusterConfig resource has invalid name %q", name)
 		err := errors.Errorf("ClusterConfig resource has invalid name %q", name)
 		glog.Warning(err)
 		// Only return an error if we cannot update the status,
 		// since we don't want kubebuilder to enqueue a retry for this object.
-		return reconcile.Result{}, r.setClusterConfigStatus(ctx, clusterPolicy, NewClusterConfigSyncError(name, clusterPolicy.GroupVersionKind(), err))
+		return reconcile.Result{}, r.setClusterConfigStatus(ctx, clusterConfig, NewClusterConfigSyncError(name, clusterConfig.GroupVersionKind(), err))
 	}
 
-	rErr := r.managePolicies(ctx, clusterPolicy)
+	rErr := r.managePolicies(ctx, clusterConfig)
 	if rErr != nil {
 		glog.Errorf("Could not reconcile clusterconfig: %v", rErr)
 	}

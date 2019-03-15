@@ -40,17 +40,17 @@ const resync = time.Minute * 15
 
 // Controller is controller for managing Nomos CRDs by importing policies from a filesystem tree.
 type Controller struct {
-	policyDir           string
-	pollPeriod          time.Duration
-	parser              *Parser
-	differ              *actions.Differ
-	discoveryClient     discovery.ServerResourcesInterface
-	informerFactory     informer.SharedInformerFactory
-	policyNodeLister    listersv1.NamespaceConfigLister
-	clusterPolicyLister listersv1.ClusterConfigLister
-	syncLister          listersv1.SyncLister
-	stopChan            chan struct{}
-	client              meta.Interface
+	policyDir             string
+	pollPeriod            time.Duration
+	parser                *Parser
+	differ                *actions.Differ
+	discoveryClient       discovery.ServerResourcesInterface
+	informerFactory       informer.SharedInformerFactory
+	namespaceConfigLister listersv1.NamespaceConfigLister
+	clusterConfigLister   listersv1.ClusterConfigLister
+	syncLister            listersv1.SyncLister
+	stopChan              chan struct{}
+	client                meta.Interface
 }
 
 // NewController returns a new Controller.
@@ -68,17 +68,17 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 			informerFactory.Configmanagement().V1().Syncs().Lister()))
 
 	return &Controller{
-		policyDir:           policyDir,
-		pollPeriod:          pollPeriod,
-		parser:              parser,
-		differ:              differ,
-		discoveryClient:     client.Kubernetes().Discovery(),
-		informerFactory:     informerFactory,
-		policyNodeLister:    informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
-		clusterPolicyLister: informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
-		syncLister:          informerFactory.Configmanagement().V1().Syncs().Lister(),
-		stopChan:            stopChan,
-		client:              client,
+		policyDir:             policyDir,
+		pollPeriod:            pollPeriod,
+		parser:                parser,
+		differ:                differ,
+		discoveryClient:       client.Kubernetes().Discovery(),
+		informerFactory:       informerFactory,
+		namespaceConfigLister: informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
+		clusterConfigLister:   informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
+		syncLister:            informerFactory.Configmanagement().V1().Syncs().Lister(),
+		stopChan:              stopChan,
+		client:                client,
 	}
 }
 
@@ -128,7 +128,7 @@ func (c *Controller) pollDir() {
 			}
 			glog.Infof("Resolved policy dir: %s. Polling policy dir: %s", newDir, c.policyDir)
 
-			currentPolicies, err := namespaceconfig.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
+			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
 			if err != nil {
 				glog.Errorf("failed to list current policies: %v", err)
 				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()

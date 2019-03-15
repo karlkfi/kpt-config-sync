@@ -9,15 +9,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type policyNodeEqualTestcase struct {
+type namespaceConfigEqualTestcase struct {
 	name      string
 	lhs       *v1.NamespaceConfig
 	rhs       *v1.NamespaceConfig
 	wantEqual bool
 }
 
-func (t *policyNodeEqualTestcase) Run(tt *testing.T) {
-	equal := policyNodesEqual(t.lhs, t.rhs)
+func (t *namespaceConfigEqualTestcase) Run(tt *testing.T) {
+	equal := namespaceConfigsEqual(t.lhs, t.rhs)
 	if t.wantEqual == equal {
 		return
 	}
@@ -32,7 +32,7 @@ func (t *policyNodeEqualTestcase) Run(tt *testing.T) {
 
 var time1 = time.Now()
 
-var policyNodeEqualTestcases = []policyNodeEqualTestcase{
+var namespaceConfigEqualTestcases = []namespaceConfigEqualTestcase{
 	{
 		name: "basic",
 		lhs: &v1.NamespaceConfig{
@@ -74,7 +74,7 @@ var policyNodeEqualTestcases = []policyNodeEqualTestcase{
 }
 
 func TestNamespaceConfigEqual(t *testing.T) {
-	for _, tc := range policyNodeEqualTestcases {
+	for _, tc := range namespaceConfigEqualTestcases {
 		t.Run(tc.name, tc.Run)
 	}
 }

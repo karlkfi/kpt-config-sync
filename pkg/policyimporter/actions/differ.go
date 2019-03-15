@@ -54,13 +54,13 @@ func NewDiffer(factories Factories) *Differ {
 // must call SyncDeletes and process those actions before processing these actions.
 func (d *Differ) Diff(current, desired namespaceconfig.AllPolicies) []action.Interface {
 	var actions []action.Interface
-	actions = append(actions, d.policyNodeActions(current, desired)...)
-	actions = append(actions, d.clusterPolicyActions(current, desired)...)
+	actions = append(actions, d.namespaceConfigActions(current, desired)...)
+	actions = append(actions, d.clusterConfigActions(current, desired)...)
 	actions = append(actions, d.syncActions(current, desired)...)
 	return actions
 }
 
-func (d *Differ) policyNodeActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
+func (d *Differ) namespaceConfigActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
 	var actions []action.Interface
 	var deletes, creates, updates int
 	for name := range desired.NamespaceConfigs {
@@ -89,7 +89,7 @@ func (d *Differ) policyNodeActions(current, desired namespaceconfig.AllPolicies)
 	return actions
 }
 
-func (d *Differ) clusterPolicyActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
+func (d *Differ) clusterConfigActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
 	var actions []action.Interface
 	if current.ClusterConfig == nil && desired.ClusterConfig == nil {
 		return actions
