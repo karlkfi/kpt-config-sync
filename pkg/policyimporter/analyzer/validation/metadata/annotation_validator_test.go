@@ -12,8 +12,8 @@ import (
 
 const (
 	legalAnnotation    = "annotation"
-	illegalAnnotation  = v1.NomosPrefix + "unsupported"
-	illegalAnnotation2 = v1.NomosPrefix + "unsupported2"
+	illegalAnnotation  = v1.ConfigManagementPrefix + "unsupported"
+	illegalAnnotation2 = v1.ConfigManagementPrefix + "unsupported2"
 )
 
 func TestAnnotationValidator(t *testing.T) {

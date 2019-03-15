@@ -7,32 +7,32 @@ import (
 )
 
 const (
-	// NomosPrefix is the prefix for all Nomos annotations.
+	// ConfigManagementPrefix is the prefix for all Nomos annotations.
 	// TODO(125862145): use policyhierarchy.GroupName below after resource groups are updated to configmanagement.gke.io
-	NomosPrefix = policyhierarchy.GroupName + "/"
+	ConfigManagementPrefix = policyhierarchy.GroupName + "/"
 
 	// ClusterNameAnnotationKey is the annotation key set on Nomos-managed resources that refers to
 	// the name of the cluster that the selectors are applied for.
-	ClusterNameAnnotationKey = NomosPrefix + "cluster-name"
+	ClusterNameAnnotationKey = ConfigManagementPrefix + "cluster-name"
 
 	// ClusterSelectorAnnotationKey is the annotation key set on Nomos-managed resources that refers
 	// to the name of the ClusterSelector resource.
-	ClusterSelectorAnnotationKey = NomosPrefix + "cluster-selector"
+	ClusterSelectorAnnotationKey = ConfigManagementPrefix + "cluster-selector"
 
 	// NamespaceSelectorAnnotationKey is the annotation key set on Nomos-managed resources that refers
 	// to name of NamespaceSelector resource.
-	NamespaceSelectorAnnotationKey = NomosPrefix + "namespace-selector"
+	NamespaceSelectorAnnotationKey = ConfigManagementPrefix + "namespace-selector"
 
 	// SourcePathAnnotationKey is the annotation key representing the relative path from POLICY_DIR
 	// where the object was originally declared. Paths are slash-separated and OS-agnostic.
-	SourcePathAnnotationKey = NomosPrefix + "source-path"
+	SourcePathAnnotationKey = ConfigManagementPrefix + "source-path"
 
 	// SyncTokenAnnotationKey is the annotation key representing the last version token that a Nomos-
 	// managed resource was successfully synced from.
-	SyncTokenAnnotationKey = NomosPrefix + "sync-token"
+	SyncTokenAnnotationKey = ConfigManagementPrefix + "sync-token"
 
 	// ResourceManagementKey indicates if Nomos will manage the content and lifecycle for the resource.
-	ResourceManagementKey = NomosPrefix + "managed"
+	ResourceManagementKey = ConfigManagementPrefix + "managed"
 
 	// ResourceManagementValue is the value corresponding to ResourceManagementKey indicating that
 	// Nomos will manage content and lifecycle for the given resource.
@@ -43,9 +43,9 @@ const (
 	ResourceManagementDisabledValue = "disabled"
 )
 
-// HasNomosPrefix returns true if the string begins with the Nomos annotation prefix.
-func HasNomosPrefix(s string) bool {
-	return strings.HasPrefix(s, NomosPrefix)
+// HasConfigManagementPrefix returns true if the string begins with the Nomos annotation prefix.
+func HasConfigManagementPrefix(s string) bool {
+	return strings.HasPrefix(s, ConfigManagementPrefix)
 }
 
 // inputAnnotations is a map of annotations that are valid to exist on objects when imported from

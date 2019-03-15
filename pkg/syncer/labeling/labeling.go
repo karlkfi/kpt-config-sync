@@ -23,15 +23,15 @@ import (
 // Labels that are used to indicate that the resource is part of the nomos install.
 const (
 	// TODO(125862145): use policyhierarchy.GroupName below as part of naming cleanup
-	NomosSystemKey   = "configmanagement.gke.io/system"
-	NomosSystemValue = "true"
+	ConfigManagementSystemKey   = "configmanagement.gke.io/system"
+	ConfigManagementSystemValue = "true"
 )
 
 // Labels that Nomos uses to determine which namespaces to enforce hierarchical quota limits on.
 const (
 	// TODO(125862145): use policyhierarchy.GroupName below s part of naming cleanup
-	NomosQuotaKey   = "configmanagement.gke.io/quota"
-	NomosQuotaValue = "true"
+	ConfigManagementQuotaKey   = "configmanagement.gke.io/quota"
+	ConfigManagementQuotaValue = "true"
 )
 
 // Label helps manage applying labels to objects.
@@ -71,12 +71,12 @@ func (l *Label) IsSet(object metav1.Object) bool {
 
 // ManageQuota is the label indicating that Nomos manages hierarchical quota in this namespace.
 var ManageQuota = Label{
-	key:   NomosQuotaKey,
-	value: NomosQuotaValue,
+	key:   ConfigManagementQuotaKey,
+	value: ConfigManagementQuotaValue,
 }
 
-// NomosSystem indicates that this resource is part of the nomos install.
-var NomosSystem = Label{
-	key:   NomosSystemKey,
-	value: NomosSystemValue,
+// ConfigManagementSystem indicates that this resource is part of the nomos install.
+var ConfigManagementSystem = Label{
+	key:   ConfigManagementSystemKey,
+	value: ConfigManagementSystemValue,
 }

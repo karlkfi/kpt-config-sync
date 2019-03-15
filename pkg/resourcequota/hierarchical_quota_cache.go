@@ -93,7 +93,7 @@ func (c *HierarchicalQuotaCache) initQuotaLimits(node *v1.HierarchicalQuotaNode,
 //                 cache each time we want to do an admission decision. This might add unnecessary complexity for
 //                 not that much performance gain.
 func (c *HierarchicalQuotaCache) initCache() error {
-	resourceQuotas, err := c.resourceQuotaInformer.Lister().List(labels.SelectorFromSet(NomosQuotaLabels))
+	resourceQuotas, err := c.resourceQuotaInformer.Lister().List(labels.SelectorFromSet(ConfigManagementQuotaLabels))
 	if err != nil {
 		return err
 	}

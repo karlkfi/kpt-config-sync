@@ -93,7 +93,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 							ResourceQuotaV1: modQuota(
 								vt.Helper.AcmeResourceQuota(),
 								resourcequota.ResourceQuotaObjectName,
-								resourcequota.NewNomosQuotaLabels(),
+								resourcequota.NewConfigManagementQuotaLabels(),
 								corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("5"),
 									corev1.ResourceMemory: resource.MustParse("5"),
@@ -105,7 +105,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 							ResourceQuotaV1: modQuota(
 								vt.Helper.AcmeResourceQuota(),
 								resourcequota.ResourceQuotaObjectName,
-								resourcequota.NewNomosQuotaLabels(),
+								resourcequota.NewConfigManagementQuotaLabels(),
 								corev1.ResourceList{
 									corev1.ResourceCPU: resource.MustParse("5"),
 								}),
@@ -141,7 +141,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 								modQuota(
 									vt.Helper.AcmeResourceQuota(),
 									resourcequota.ResourceQuotaObjectName,
-									resourcequota.NewNomosQuotaLabels(),
+									resourcequota.NewConfigManagementQuotaLabels(),
 									corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("5"),
 										corev1.ResourceMemory: resource.MustParse("5"),
@@ -159,7 +159,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 								modQuota(
 									vt.Helper.AcmeResourceQuota(),
 									resourcequota.ResourceQuotaObjectName,
-									resourcequota.NewNomosQuotaLabels(),
+									resourcequota.NewConfigManagementQuotaLabels(),
 									corev1.ResourceList{
 										corev1.ResourceCPU: resource.MustParse("5"),
 									}),
@@ -213,7 +213,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 									ResourceQuotaV1: modQuota(
 										vt.Helper.AcmeResourceQuota(),
 										resourcequota.ResourceQuotaObjectName,
-										resourcequota.NewNomosQuotaLabels(),
+										resourcequota.NewConfigManagementQuotaLabels(),
 										corev1.ResourceList{
 											corev1.ResourceCPU:    resource.MustParse("5"),
 											corev1.ResourceMemory: resource.MustParse("5"),
@@ -248,7 +248,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 										modQuota(
 											vt.Helper.AcmeResourceQuota(),
 											resourcequota.ResourceQuotaObjectName,
-											resourcequota.NewNomosQuotaLabels(),
+											resourcequota.NewConfigManagementQuotaLabels(),
 											corev1.ResourceList{
 												corev1.ResourceCPU:    resource.MustParse("5"),
 												corev1.ResourceMemory: resource.MustParse("5"),
@@ -280,7 +280,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 										modQuota(
 											vt.Helper.FrontendResourceQuota(),
 											"quota1",
-											resourcequota.NewNomosQuotaLabels(),
+											resourcequota.NewConfigManagementQuotaLabels(),
 											corev1.ResourceList{
 												corev1.ResourceCPU:     resource.MustParse("4"),
 												corev1.ResourceStorage: resource.MustParse("6"),
@@ -288,14 +288,14 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 										modQuota(
 											vt.Helper.FrontendResourceQuota(),
 											"quota2",
-											resourcequota.NewNomosQuotaLabels(),
+											resourcequota.NewConfigManagementQuotaLabels(),
 											corev1.ResourceList{
 												corev1.ResourceMemory:  resource.MustParse("2"),
 												corev1.ResourceStorage: resource.MustParse("7"),
 											}),
 										modQuota(vt.Helper.FrontendResourceQuota(),
 											"quota3",
-											resourcequota.NewNomosQuotaLabels(),
+											resourcequota.NewConfigManagementQuotaLabels(),
 											corev1.ResourceList{
 												corev1.ResourceCPU: resource.MustParse("3"),
 											}),
@@ -326,7 +326,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 									ResourceQuotaV1: modQuota(
 										vt.Helper.AcmeResourceQuota(),
 										resourcequota.ResourceQuotaObjectName,
-										resourcequota.NewNomosQuotaLabels(),
+										resourcequota.NewConfigManagementQuotaLabels(),
 										corev1.ResourceList{
 											corev1.ResourceCPU:     resource.MustParse("3"),
 											corev1.ResourceMemory:  resource.MustParse("2"),
@@ -362,7 +362,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 										modQuota(
 											vt.Helper.AcmeResourceQuota(),
 											resourcequota.ResourceQuotaObjectName,
-											resourcequota.NewNomosQuotaLabels(),
+											resourcequota.NewConfigManagementQuotaLabels(),
 											corev1.ResourceList{
 												corev1.ResourceCPU:     resource.MustParse("3"),
 												corev1.ResourceMemory:  resource.MustParse("2"),

@@ -1167,7 +1167,7 @@ spec:
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
 				&Policies{ResourceQuotaV1: createResourceQuota(
-					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
+					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewConfigManagementQuotaLabels()),
 				}),
 		},
 		expectedClusterConfig: createClusterConfigWithSpec(
@@ -1202,7 +1202,7 @@ spec:
 																Name: "bar",
 																Type: "namespace",
 																ResourceQuotaV1: createResourceQuota(
-																	"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
+																	"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewConfigManagementQuotaLabels()),
 															},
 														},
 													},

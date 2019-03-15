@@ -83,7 +83,7 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	webhookConfig := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   externalAdmissionHookConfigName,
-			Labels: labeling.NomosSystem.New(),
+			Labels: labeling.ConfigManagementSystem.New(),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: gvk.GroupVersion().String(),
@@ -121,9 +121,9 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{
-							Key:      labeling.NomosQuotaKey,
+							Key:      labeling.ConfigManagementQuotaKey,
 							Operator: metav1.LabelSelectorOpIn,
-							Values:   []string{labeling.NomosQuotaValue},
+							Values:   []string{labeling.ConfigManagementQuotaValue},
 						},
 					},
 				},

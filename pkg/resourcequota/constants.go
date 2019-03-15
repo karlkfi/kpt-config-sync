@@ -29,10 +29,10 @@ const ResourceQuotaObjectName = "config-management-resource-quota"
 // ResourceQuotaHierarchyName is the resource name for HierarchichalQuota.
 const ResourceQuotaHierarchyName = "nomos-quota-hierarchy"
 
-// NomosQuotaLabels are the labels applied to a workload namespace's quota object
-var NomosQuotaLabels = NewNomosQuotaLabels()
+// ConfigManagementQuotaLabels are the labels applied to a workload namespace's quota object
+var ConfigManagementQuotaLabels = NewConfigManagementQuotaLabels()
 
-// NewNomosQuotaLabels returns a new map of nomos quota labels since NomosQuotaLabels is mutable.
-func NewNomosQuotaLabels() map[string]string {
+// NewConfigManagementQuotaLabels returns a new map of nomos quota labels since ConfigManagementQuotaLabels is mutable.
+func NewConfigManagementQuotaLabels() map[string]string {
 	return map[string]string{NamespaceTypeLabel: NamespaceTypeWorkload}
 }

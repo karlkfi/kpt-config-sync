@@ -171,7 +171,7 @@ func makeResourceQuota(namespace string, used corev1.ResourceList) *corev1.Resou
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ResourceQuotaObjectName,
 			Namespace: namespace,
-			Labels:    NomosQuotaLabels,
+			Labels:    ConfigManagementQuotaLabels,
 		},
 		Status: corev1.ResourceQuotaStatus{
 			Used: used,

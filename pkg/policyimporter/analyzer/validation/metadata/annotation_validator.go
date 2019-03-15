@@ -14,7 +14,7 @@ func NewAnnotationValidator() ast.Visitor {
 		func(o ast.FileObject) *status.MultiError {
 			var errors []string
 			for a := range o.MetaObject().GetAnnotations() {
-				if !v1.IsInputAnnotation(a) && v1.HasNomosPrefix(a) {
+				if !v1.IsInputAnnotation(a) && v1.HasConfigManagementPrefix(a) {
 					errors = append(errors, a)
 				}
 			}

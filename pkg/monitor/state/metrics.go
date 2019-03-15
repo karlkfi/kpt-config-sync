@@ -14,7 +14,7 @@ var Metrics = struct {
 }{
 	prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Help:      "Total number of policies (cluster and node) grouped by their sync status; should be similar to nomos_policy_importer_policy_nodes metric",
+			Help:      "Total number of policies (cluster and node) grouped by their sync status; should be similar to config_management_policy_importer_policy_nodes metric",
 			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "monitor",
 			Name:      "policies",

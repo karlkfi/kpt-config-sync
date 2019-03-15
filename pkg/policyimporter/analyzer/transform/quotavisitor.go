@@ -138,7 +138,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		if quota := context.aggregated(); quota != nil {
 			if n.Type == node.Namespace {
 				quota = quota.DeepCopy()
-				quota.Labels = resourcequota.NewNomosQuotaLabels()
+				quota.Labels = resourcequota.NewConfigManagementQuotaLabels()
 			}
 			context.hNode.ResourceQuotaV1 = quota
 			newNode.Objects = append(newNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: quota}})

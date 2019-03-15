@@ -14,7 +14,7 @@ func NewLabelValidator() ast.Visitor {
 		func(o ast.FileObject) *status.MultiError {
 			var errors []string
 			for l := range o.MetaObject().GetLabels() {
-				if v1.HasNomosPrefix(l) {
+				if v1.HasConfigManagementPrefix(l) {
 					errors = append(errors, l)
 				}
 			}

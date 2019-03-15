@@ -256,7 +256,7 @@ func (r *NamespaceConfigReconciler) warnInvalidAnnotationResource(u *unstructure
 
 // cleanUpLabel removes the nomos quota label from the namespace, if present.
 func (r *NamespaceConfigReconciler) cleanUpLabel(ctx context.Context, ns *corev1.Namespace) error {
-	if _, ok := ns.GetLabels()[labeling.NomosQuotaKey]; !ok {
+	if _, ok := ns.GetLabels()[labeling.ConfigManagementQuotaKey]; !ok {
 		return nil
 	}
 
@@ -264,7 +264,7 @@ func (r *NamespaceConfigReconciler) cleanUpLabel(ctx context.Context, ns *corev1
 		nso := o.(*corev1.Namespace)
 		nso.SetGroupVersionKind(kinds.Namespace())
 		ls := nso.GetLabels()
-		delete(ls, labeling.NomosQuotaKey)
+		delete(ls, labeling.ConfigManagementQuotaKey)
 		nso.SetLabels(ls)
 		return nso, nil
 	})

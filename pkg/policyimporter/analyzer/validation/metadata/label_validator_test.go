@@ -12,8 +12,8 @@ import (
 
 const (
 	legalLabel    = "label"
-	illegalLabel  = v1.NomosPrefix + "unsupported"
-	illegalLabel2 = v1.NomosPrefix + "unsupported2"
+	illegalLabel  = v1.ConfigManagementPrefix + "unsupported"
+	illegalLabel2 = v1.ConfigManagementPrefix + "unsupported2"
 )
 
 func TestLabelValidator(t *testing.T) {

@@ -38,7 +38,7 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 		"Resources MUST NOT declare unsupported annotations starting with %[3]q. "+
 			"Resource has offending annotations: %[1]s\n\n"+
 			"%[2]s",
-		a, id.PrintResource(e), v1.NomosPrefix)
+		a, id.PrintResource(e), v1.ConfigManagementPrefix)
 }
 
 // Code implements Error
