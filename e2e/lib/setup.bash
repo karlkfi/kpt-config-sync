@@ -11,8 +11,8 @@ source "$DIR/git.bash"
 source "$DIR/ignore.bash"
 # shellcheck source=e2e/lib/namespace.bash
 source "$DIR/namespace.bash"
-# shellcheck source=e2e/lib/policynode.bash
-source "$DIR/policynode.bash"
+# shellcheck source=e2e/lib/namespaceconfig.bash
+source "$DIR/namespaceconfig.bash"
 # shellcheck source=e2e/lib/resource.bash
 source "$DIR/resource.bash"
 # shellcheck source=e2e/lib/wait.bash
@@ -73,7 +73,7 @@ setup::git::init_acme() {
   local commit_hash
   commit_hash="$(git::hash)"
   for ns in "${ACME_NAMESPACES[@]}"; do
-    wait::for -- policynode::sync_token_eq "${ns}" "${commit_hash}"
+    wait::for -- namespaceconfig::sync_token_eq "${ns}" "${commit_hash}"
   done
 }
 

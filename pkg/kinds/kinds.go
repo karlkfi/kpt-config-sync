@@ -41,9 +41,9 @@ func PersistentVolume() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("PersistentVolume")
 }
 
-// PolicyNode returns the canonical PolicyNode GroupVersionKind
-func PolicyNode() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("PolicyNode")
+// NamespaceConfig returns the canonical NamespaceConfig GroupVersionKind
+func NamespaceConfig() schema.GroupVersionKind {
+	return v1.SchemeGroupVersion.WithKind("NamespaceConfig")
 }
 
 // PodSecurityPolicy returns the canonical PodSecurityPolicy GroupVersionKind
@@ -81,9 +81,9 @@ func ClusterRole() schema.GroupVersionKind {
 	return rbacv1.SchemeGroupVersion.WithKind("ClusterRole")
 }
 
-// ClusterPolicy returns the canonical ClusterPolicy GroupVersionKind
-func ClusterPolicy() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("ClusterPolicy")
+// ClusterConfig returns the canonical ClusterConfig GroupVersionKind
+func ClusterConfig() schema.GroupVersionKind {
+	return v1.SchemeGroupVersion.WithKind("ClusterConfig")
 }
 
 // Cluster returns the canonical Cluster GroupVersionKind

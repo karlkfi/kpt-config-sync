@@ -48,7 +48,7 @@ type RestartableManager interface {
 
 var _ RestartableManager = &GenericResourceManager{}
 
-// GenericResourceManager is the Manager that is responsible for PolicyNode and ClusterPolicy controllers.
+// GenericResourceManager is the Manager that is responsible for NamespaceConfig and ClusterConfig controllers.
 // Its controllers are responsible for reconciling declared state in sync-enabled resources with the
 // actual state of K8S in the cluster.
 type GenericResourceManager struct {
@@ -140,11 +140,11 @@ func (r *GenericResourceManager) startControllers(ctx context.Context, apirs *di
 	}
 
 	decoder := decode.NewGenericResourceDecoder(r.GetScheme())
-	if err := controller.AddPolicyNode(ctx, r, decoder, namespace); err != nil {
-		return errors.Wrap(err, "could not create PolicyNode controller")
+	if err := controller.AddNamespaceConfig(ctx, r, decoder, namespace); err != nil {
+		return errors.Wrap(err, "could not create NamespaceConfig controller")
 	}
-	if err := controller.AddClusterPolicy(ctx, r, decoder, cluster); err != nil {
-		return errors.Wrap(err, "could not create ClusterPolicy controller")
+	if err := controller.AddClusterConfig(ctx, r, decoder, cluster); err != nil {
+		return errors.Wrap(err, "could not create ClusterConfig controller")
 	}
 
 	go func() {

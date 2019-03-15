@@ -30,7 +30,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/policyimporter/git"
-	"github.com/google/nomos/pkg/util/policynode"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -46,8 +46,8 @@ type Controller struct {
 	differ              *actions.Differ
 	discoveryClient     discovery.ServerResourcesInterface
 	informerFactory     informer.SharedInformerFactory
-	policyNodeLister    listersv1.PolicyNodeLister
-	clusterPolicyLister listersv1.ClusterPolicyLister
+	policyNodeLister    listersv1.NamespaceConfigLister
+	clusterPolicyLister listersv1.ClusterConfigLister
 	syncLister          listersv1.SyncLister
 	stopChan            chan struct{}
 	client              meta.Interface
@@ -63,8 +63,8 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		actions.NewFactories(
 			client.PolicyHierarchy().ConfigmanagementV1(),
 			client.PolicyHierarchy().ConfigmanagementV1(),
-			informerFactory.Configmanagement().V1().PolicyNodes().Lister(),
-			informerFactory.Configmanagement().V1().ClusterPolicies().Lister(),
+			informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
+			informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
 			informerFactory.Configmanagement().V1().Syncs().Lister()))
 
 	return &Controller{
@@ -74,8 +74,8 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		differ:              differ,
 		discoveryClient:     client.Kubernetes().Discovery(),
 		informerFactory:     informerFactory,
-		policyNodeLister:    informerFactory.Configmanagement().V1().PolicyNodes().Lister(),
-		clusterPolicyLister: informerFactory.Configmanagement().V1().ClusterPolicies().Lister(),
+		policyNodeLister:    informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
+		clusterPolicyLister: informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
 		syncLister:          informerFactory.Configmanagement().V1().Syncs().Lister(),
 		stopChan:            stopChan,
 		client:              client,
@@ -128,7 +128,7 @@ func (c *Controller) pollDir() {
 			}
 			glog.Infof("Resolved policy dir: %s. Polling policy dir: %s", newDir, c.policyDir)
 
-			currentPolicies, err := policynode.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
+			currentPolicies, err := namespaceconfig.ListPolicies(c.policyNodeLister, c.clusterPolicyLister, c.syncLister)
 			if err != nil {
 				glog.Errorf("failed to list current policies: %v", err)
 				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
@@ -144,7 +144,7 @@ func (c *Controller) pollDir() {
 			}
 
 			loadTime := time.Now()
-			// Parse filesystem tree into in-memory PolicyNode and ClusterPolicy objects.
+			// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
 			desiredPolicies, mErr := c.parser.Parse(newDir, token, loadTime)
 			if mErr != nil {
 				glog.Warningf("Failed to parse: %v", mErr)
@@ -153,12 +153,12 @@ func (c *Controller) pollDir() {
 			}
 
 			// Update the SyncState for all policy nodes and cluster policy.
-			for n := range desiredPolicies.PolicyNodes {
-				pn := desiredPolicies.PolicyNodes[n]
+			for n := range desiredPolicies.NamespaceConfigs {
+				pn := desiredPolicies.NamespaceConfigs[n]
 				pn.Status.SyncState = v1.StateStale
-				desiredPolicies.PolicyNodes[n] = pn
+				desiredPolicies.NamespaceConfigs[n] = pn
 			}
-			desiredPolicies.ClusterPolicy.Status.SyncState = v1.StateStale
+			desiredPolicies.ClusterConfig.Status.SyncState = v1.StateStale
 
 			if err := c.updatePolicies(currentPolicies, desiredPolicies); err != nil {
 				glog.Warningf("Failed to apply actions: %v", err)
@@ -168,7 +168,7 @@ func (c *Controller) pollDir() {
 
 			currentDir = newDir
 			policyimporter.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
-			policyimporter.Metrics.Nodes.Set(float64(len(desiredPolicies.PolicyNodes)))
+			policyimporter.Metrics.Nodes.Set(float64(len(desiredPolicies.NamespaceConfigs)))
 
 		case <-c.stopChan:
 			glog.Info("Stop polling")
@@ -182,7 +182,7 @@ func (c *Controller) pollDir() {
 //   1. Delete Syncs. This includes any Syncs that are deleted outright, as well as any Syncs that
 //      are present in both current and desired, but which lose one or more SyncVersions in the
 //      transition.
-//   2. Apply PolicyNode and ClusterPolicy updates.
+//   2. Apply NamespaceConfig and ClusterConfig updates.
 //   3. Apply remaining Sync updates.
 //
 // This careful ordering matters in the case where both a Sync and a Resource of the same type are
@@ -192,7 +192,7 @@ func (c *Controller) pollDir() {
 //
 // If the same resource and Sync are added again in a subsequent commit, the ordering ensures that
 // the resource is restored in policy before the Syncer starts managing that type.
-func (c *Controller) updatePolicies(current, desired *policynode.AllPolicies) error {
+func (c *Controller) updatePolicies(current, desired *namespaceconfig.AllPolicies) error {
 	// Calculate the sequence of actions needed to transition from current to desired state.
 	a := c.differ.Diff(*current, *desired)
 	return applyActions(a)

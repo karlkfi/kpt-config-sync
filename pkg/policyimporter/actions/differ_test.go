@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/util/policynode"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"k8s.io/api/policy/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,8 +30,8 @@ import (
 
 type testCase struct {
 	testName                           string
-	oldNodes, newNodes                 []v1.PolicyNode
-	oldClusterPolicy, newClusterPolicy *v1.ClusterPolicy
+	oldNodes, newNodes                 []v1.NamespaceConfig
+	oldClusterConfig, newClusterConfig *v1.ClusterConfig
 	oldSyncs, newSyncs                 []v1.Sync
 	// String representation of expected actions
 	expected []string
@@ -44,114 +44,114 @@ func TestDiffer(t *testing.T) {
 		},
 		{
 			testName: "All Empty",
-			oldNodes: []v1.PolicyNode{},
-			newNodes: []v1.PolicyNode{},
+			oldNodes: []v1.NamespaceConfig{},
+			newNodes: []v1.NamespaceConfig{},
 		},
 		{
 			testName: "One node Create",
-			oldNodes: []v1.PolicyNode{},
-			newNodes: []v1.PolicyNode{
+			oldNodes: []v1.NamespaceConfig{},
+			newNodes: []v1.NamespaceConfig{
 				policyNode("r"),
 			},
-			expected: []string{"configmanagement.gke.io/v1/PolicyNodes/r/create"},
+			expected: []string{"configmanagement.gke.io/v1/NamespaceConfigs/r/create"},
 		},
 		{
 			testName: "One node delete",
-			oldNodes: []v1.PolicyNode{
+			oldNodes: []v1.NamespaceConfig{
 				policyNode("r"),
 			},
-			newNodes: []v1.PolicyNode{},
-			expected: []string{"configmanagement.gke.io/v1/PolicyNodes/r/delete"},
+			newNodes: []v1.NamespaceConfig{},
+			expected: []string{"configmanagement.gke.io/v1/NamespaceConfigs/r/delete"},
 		},
 		{
 			testName: "Rename root node",
-			oldNodes: []v1.PolicyNode{
+			oldNodes: []v1.NamespaceConfig{
 				policyNode("r"),
 			},
-			newNodes: []v1.PolicyNode{
+			newNodes: []v1.NamespaceConfig{
 				policyNode("r2"),
 			},
 			expected: []string{
-				"configmanagement.gke.io/v1/PolicyNodes/r2/create",
-				"configmanagement.gke.io/v1/PolicyNodes/r/delete",
+				"configmanagement.gke.io/v1/NamespaceConfigs/r2/create",
+				"configmanagement.gke.io/v1/NamespaceConfigs/r/delete",
 			},
 		},
 		{
 			testName: "Create 2 nodes",
-			oldNodes: []v1.PolicyNode{
+			oldNodes: []v1.NamespaceConfig{
 				policyNode("r"),
 			},
-			newNodes: []v1.PolicyNode{
+			newNodes: []v1.NamespaceConfig{
 				policyNode("r"),
 				policyNode("c1"),
 				policyNode("c2"),
 			},
 			expected: []string{
-				"configmanagement.gke.io/v1/PolicyNodes/c1/create",
-				"configmanagement.gke.io/v1/PolicyNodes/c2/create",
+				"configmanagement.gke.io/v1/NamespaceConfigs/c1/create",
+				"configmanagement.gke.io/v1/NamespaceConfigs/c2/create",
 			},
 		},
 		{
 			testName: "Create 2 nodes and delete 2",
-			oldNodes: []v1.PolicyNode{
+			oldNodes: []v1.NamespaceConfig{
 				policyNode("r"),
 				policyNode("co1"),
 				policyNode("co2"),
 			},
-			newNodes: []v1.PolicyNode{
+			newNodes: []v1.NamespaceConfig{
 				policyNode("r"),
 				policyNode("c2"),
 				policyNode("c1"),
 			},
 			expected: []string{
-				"configmanagement.gke.io/v1/PolicyNodes/c1/create",
-				"configmanagement.gke.io/v1/PolicyNodes/c2/create",
-				"configmanagement.gke.io/v1/PolicyNodes/co2/delete",
-				"configmanagement.gke.io/v1/PolicyNodes/co1/delete",
+				"configmanagement.gke.io/v1/NamespaceConfigs/c1/create",
+				"configmanagement.gke.io/v1/NamespaceConfigs/c2/create",
+				"configmanagement.gke.io/v1/NamespaceConfigs/co2/delete",
+				"configmanagement.gke.io/v1/NamespaceConfigs/co1/delete",
 			},
 		},
 		{
-			testName:         "ClusterPolicy create",
-			newClusterPolicy: clusterPolicy("foo", true),
+			testName:         "ClusterConfig create",
+			newClusterConfig: clusterPolicy("foo", true),
 			expected: []string{
-				"configmanagement.gke.io/v1/ClusterPolicies/foo/create",
+				"configmanagement.gke.io/v1/ClusterConfigs/foo/create",
 			},
 		},
 		{
-			testName:         "ClusterPolicy update",
-			oldClusterPolicy: clusterPolicy("foo", true),
-			newClusterPolicy: clusterPolicy("foo", false),
+			testName:         "ClusterConfig update",
+			oldClusterConfig: clusterPolicy("foo", true),
+			newClusterConfig: clusterPolicy("foo", false),
 			expected: []string{
-				"configmanagement.gke.io/v1/ClusterPolicies/foo/update",
+				"configmanagement.gke.io/v1/ClusterConfigs/foo/update",
 			},
 		},
 		{
-			testName:         "ClusterPolicy update no change",
-			oldClusterPolicy: clusterPolicy("foo", true),
-			newClusterPolicy: clusterPolicy("foo", true),
+			testName:         "ClusterConfig update no change",
+			oldClusterConfig: clusterPolicy("foo", true),
+			newClusterConfig: clusterPolicy("foo", true),
 		},
 		{
-			testName:         "ClusterPolicy delete",
-			oldClusterPolicy: clusterPolicy("foo", true),
+			testName:         "ClusterConfig delete",
+			oldClusterConfig: clusterPolicy("foo", true),
 			expected: []string{
-				"configmanagement.gke.io/v1/ClusterPolicies/foo/delete",
+				"configmanagement.gke.io/v1/ClusterConfigs/foo/delete",
 			},
 		},
 		{
-			testName: "Create 2 nodes and a ClusterPolicy",
-			oldNodes: []v1.PolicyNode{
+			testName: "Create 2 nodes and a ClusterConfig",
+			oldNodes: []v1.NamespaceConfig{
 				policyNode("r"),
 			},
-			newNodes: []v1.PolicyNode{
+			newNodes: []v1.NamespaceConfig{
 				policyNode("r"),
 				policyNode("c2"),
 				policyNode("c1"),
 			},
-			newClusterPolicy: clusterPolicy("foo", true),
+			newClusterConfig: clusterPolicy("foo", true),
 			expected: []string{
-				"configmanagement.gke.io/v1/PolicyNodes/c1/create",
-				"configmanagement.gke.io/v1/PolicyNodes/c2/create",
-				"configmanagement.gke.io/v1/ClusterPolicies/foo/create",
+				"configmanagement.gke.io/v1/NamespaceConfigs/c1/create",
+				"configmanagement.gke.io/v1/NamespaceConfigs/c2/create",
+				"configmanagement.gke.io/v1/ClusterConfigs/foo/create",
 			},
 		},
 		{
@@ -194,8 +194,8 @@ func TestDiffer(t *testing.T) {
 			g.SortDiff = true
 
 			gotActions := g.Diff(
-				allPolicies(test.oldNodes, test.oldClusterPolicy, test.oldSyncs),
-				allPolicies(test.newNodes, test.newClusterPolicy, test.newSyncs))
+				allPolicies(test.oldNodes, test.oldClusterConfig, test.oldSyncs),
+				allPolicies(test.newNodes, test.newClusterConfig, test.newSyncs))
 
 			if len(gotActions) != len(test.expected) {
 				t.Fatalf("Actual number of actions was %d but expected %d",
@@ -212,7 +212,7 @@ func TestDiffer(t *testing.T) {
 				t.Fatalf("Exepcted and actual actions differ: %s", cmp.Diff(test.expected, actual))
 			}
 
-			policyNodes := make(map[string]v1.PolicyNode)
+			policyNodes := make(map[string]v1.NamespaceConfig)
 			for _, pn := range test.oldNodes {
 				policyNodes[pn.Name] = pn
 			}
@@ -223,9 +223,9 @@ func TestDiffer(t *testing.T) {
 	}
 }
 
-func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.PolicyNode) {
-	if a.Kind() != action.Plural(v1.PolicyNode{}) {
-		// We only test transient states for PolicyNodes
+func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.NamespaceConfig) {
+	if a.Kind() != action.Plural(v1.NamespaceConfig{}) {
+		// We only test transient states for NamespaceConfigs
 		return
 	}
 	op := a.Operation()
@@ -239,21 +239,21 @@ func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.PolicyN
 	}
 }
 
-func policyNode(name string) v1.PolicyNode {
-	return v1.PolicyNode{
+func policyNode(name string) v1.NamespaceConfig {
+	return v1.NamespaceConfig{
 		ObjectMeta: meta.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1.PolicyNodeSpec{},
+		Spec: v1.NamespaceConfigSpec{},
 	}
 }
 
-func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
-	return &v1.ClusterPolicy{
+func clusterPolicy(name string, priviledged bool) *v1.ClusterConfig {
+	return &v1.ClusterConfig{
 		ObjectMeta: meta.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1.ClusterPolicySpec{
+		Spec: v1.ClusterConfigSpec{
 			Resources: []v1.GenericResources{
 				{
 					Group: v1beta1.GroupName,
@@ -276,16 +276,16 @@ func clusterPolicy(name string, priviledged bool) *v1.ClusterPolicy {
 	}
 }
 
-func allPolicies(nodes []v1.PolicyNode, clusterPolicy *v1.ClusterPolicy, syncs []v1.Sync) policynode.AllPolicies {
-	policies := policynode.AllPolicies{
-		ClusterPolicy: clusterPolicy,
+func allPolicies(nodes []v1.NamespaceConfig, clusterPolicy *v1.ClusterConfig, syncs []v1.Sync) namespaceconfig.AllPolicies {
+	policies := namespaceconfig.AllPolicies{
+		ClusterConfig: clusterPolicy,
 	}
 
 	for i, n := range nodes {
 		if i == 0 {
-			policies.PolicyNodes = make(map[string]v1.PolicyNode)
+			policies.NamespaceConfigs = make(map[string]v1.NamespaceConfig)
 		}
-		policies.PolicyNodes[n.Name] = n
+		policies.NamespaceConfigs[n.Name] = n
 	}
 
 	if len(syncs) > 0 {

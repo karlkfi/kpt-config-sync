@@ -16,8 +16,8 @@ function setup() {
 # This cleans up any nomos resources that were erroneously written.
 function teardown() {
   kubectl delete syncs invalid || true
-  kubectl delete policynodes invalid || true
-  kubectl delete clusterpolicies invalid || true
+  kubectl delete namespaceconfigs invalid || true
+  kubectl delete clusterconfigs invalid || true
   setup::common_teardown
 }
 
@@ -42,7 +42,7 @@ function test_invalid_yamls_for_resource() {
 # TODO(sbochins): Make these three separate tests after we speed up setup and
 # teardown for tests that do not depend on acme repo.
 @test "Validation prevents invalid Nomos Resource writes" {
-  test_invalid_yamls_for_resource "policynode"
-  test_invalid_yamls_for_resource "clusterpolicy"
+  test_invalid_yamls_for_resource "namespaceconfig"
+  test_invalid_yamls_for_resource "clusterconfig"
   test_invalid_yamls_for_resource "sync"
 }

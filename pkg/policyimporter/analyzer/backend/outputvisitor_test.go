@@ -25,21 +25,21 @@ import (
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/resourcequota"
-	"github.com/google/nomos/pkg/util/policynode"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var helper = vt.NewTestHelper()
 
-func allPolicies(cp v1.ClusterPolicy, pns []v1.PolicyNode) *policynode.AllPolicies {
-	ap := &policynode.AllPolicies{
-		ClusterPolicy: &cp,
-		PolicyNodes:   map[string]v1.PolicyNode{},
-		Syncs:         map[string]v1.Sync{},
+func allPolicies(cp v1.ClusterConfig, pns []v1.NamespaceConfig) *namespaceconfig.AllPolicies {
+	ap := &namespaceconfig.AllPolicies{
+		ClusterConfig:    &cp,
+		NamespaceConfigs: map[string]v1.NamespaceConfig{},
+		Syncs:            map[string]v1.Sync{},
 	}
 	for _, pn := range pns {
-		ap.PolicyNodes[pn.Name] = pn
+		ap.NamespaceConfigs[pn.Name] = pn
 	}
 	return ap
 }
@@ -47,7 +47,7 @@ func allPolicies(cp v1.ClusterPolicy, pns []v1.PolicyNode) *policynode.AllPolici
 type OutputVisitorTestcase struct {
 	name   string
 	input  *ast.Root
-	expect *policynode.AllPolicies
+	expect *namespaceconfig.AllPolicies
 }
 
 func (tc *OutputVisitorTestcase) Run(t *testing.T) {
@@ -64,20 +64,20 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		name:  "empty",
 		input: helper.EmptyRoot(),
 		expect: allPolicies(
-			v1.ClusterPolicy{
+			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterPolicy",
+					Kind:       "ClusterConfig",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterPolicyName,
+					Name: v1.ClusterConfigName,
 				},
-				Spec: v1.ClusterPolicySpec{
+				Spec: v1.ClusterConfigSpec{
 					ImportToken: vt.ImportToken,
 					ImportTime:  metav1.NewTime(vt.ImportTime),
 				},
 			},
-			[]v1.PolicyNode{},
+			[]v1.NamespaceConfig{},
 		),
 	},
 	{
@@ -87,35 +87,35 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			LoadTime:    vt.ImportTime,
 		},
 		expect: allPolicies(
-			v1.ClusterPolicy{
+			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterPolicy",
+					Kind:       "ClusterConfig",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterPolicyName,
+					Name: v1.ClusterConfigName,
 				},
-				Spec: v1.ClusterPolicySpec{
+				Spec: v1.ClusterConfigSpec{
 					ImportToken: vt.ImportToken,
 					ImportTime:  metav1.NewTime(vt.ImportTime),
 				},
 			},
-			[]v1.PolicyNode{},
+			[]v1.NamespaceConfig{},
 		),
 	},
 	{
 		name:  "cluster policies",
-		input: helper.ClusterPolicies(),
+		input: helper.ClusterConfigs(),
 		expect: allPolicies(
-			v1.ClusterPolicy{
+			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterPolicy",
+					Kind:       "ClusterConfig",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterPolicyName,
+					Name: v1.ClusterConfigName,
 				},
-				Spec: v1.ClusterPolicySpec{
+				Spec: v1.ClusterConfigSpec{
 					ImportToken: vt.ImportToken,
 					ImportTime:  metav1.NewTime(vt.ImportTime),
 					Resources: []v1.GenericResources{
@@ -152,38 +152,38 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					},
 				},
 			},
-			[]v1.PolicyNode{},
+			[]v1.NamespaceConfig{},
 		),
 	},
 	{
 		name:  "namespace policies",
 		input: helper.NamespacePolicies(),
 		expect: allPolicies(
-			v1.ClusterPolicy{
+			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterPolicy",
+					Kind:       "ClusterConfig",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterPolicyName,
+					Name: v1.ClusterConfigName,
 				},
-				Spec: v1.ClusterPolicySpec{
+				Spec: v1.ClusterConfigSpec{
 					ImportToken: vt.ImportToken,
 					ImportTime:  metav1.NewTime(vt.ImportTime),
 				},
 			},
-			[]v1.PolicyNode{
+			[]v1.NamespaceConfig{
 				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "PolicyNode",
+						Kind:       "NamespaceConfig",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "frontend",
 						Labels:      map[string]string{"environment": "prod"},
 						Annotations: map[string]string{"has-waffles": "true"},
 					},
-					Spec: v1.PolicyNodeSpec{
+					Spec: v1.NamespaceConfigSpec{
 						ImportToken: vt.ImportToken,
 						ImportTime:  metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
@@ -223,14 +223,14 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "PolicyNode",
+						Kind:       "NamespaceConfig",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "frontend-test",
 						Labels:      map[string]string{"environment": "test"},
 						Annotations: map[string]string{"has-waffles": "false"},
 					},
-					Spec: v1.PolicyNodeSpec{
+					Spec: v1.NamespaceConfigSpec{
 						ImportToken: vt.ImportToken,
 						ImportTime:  metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
@@ -280,15 +280,15 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 			},
 		},
-		expect: &policynode.AllPolicies{
-			PolicyNodes: map[string]v1.PolicyNode{},
-			ClusterPolicy: &v1.ClusterPolicy{
+		expect: &namespaceconfig.AllPolicies{
+			NamespaceConfigs: map[string]v1.NamespaceConfig{},
+			ClusterConfig: &v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterPolicy",
+					Kind:       "ClusterConfig",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterPolicyName,
+					Name: v1.ClusterConfigName,
 				},
 			},
 			Syncs: map[string]v1.Sync{

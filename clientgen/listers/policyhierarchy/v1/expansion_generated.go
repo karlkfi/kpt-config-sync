@@ -18,9 +18,9 @@ limitations under the License.
 
 package v1
 
-// ClusterPolicyListerExpansion allows custom methods to be added to
-// ClusterPolicyLister.
-type ClusterPolicyListerExpansion interface{}
+// ClusterConfigListerExpansion allows custom methods to be added to
+// ClusterConfigLister.
+type ClusterConfigListerExpansion interface{}
 
 // ClusterSelectorListerExpansion allows custom methods to be added to
 // ClusterSelectorLister.
@@ -34,13 +34,13 @@ type HierarchicalQuotaListerExpansion interface{}
 // HierarchyConfigLister.
 type HierarchyConfigListerExpansion interface{}
 
+// NamespaceConfigListerExpansion allows custom methods to be added to
+// NamespaceConfigLister.
+type NamespaceConfigListerExpansion interface{}
+
 // NamespaceSelectorListerExpansion allows custom methods to be added to
 // NamespaceSelectorLister.
 type NamespaceSelectorListerExpansion interface{}
-
-// PolicyNodeListerExpansion allows custom methods to be added to
-// PolicyNodeLister.
-type PolicyNodeListerExpansion interface{}
 
 // SyncListerExpansion allows custom methods to be added to
 // SyncLister.

@@ -18,7 +18,7 @@ limitations under the License.
 
 package v1
 
-type ClusterPolicyExpansion interface{}
+type ClusterConfigExpansion interface{}
 
 type ClusterSelectorExpansion interface{}
 
@@ -26,8 +26,8 @@ type HierarchicalQuotaExpansion interface{}
 
 type HierarchyConfigExpansion interface{}
 
-type NamespaceSelectorExpansion interface{}
+type NamespaceConfigExpansion interface{}
 
-type PolicyNodeExpansion interface{}
+type NamespaceSelectorExpansion interface{}
 
 type SyncExpansion interface{}

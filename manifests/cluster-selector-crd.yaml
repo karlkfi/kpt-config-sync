@@ -31,9 +31,3 @@ spec:
             selector:
               type: object # metav1.LabelSelector
           # /ClusterSelectorSpec
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

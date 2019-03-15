@@ -15,9 +15,3 @@ spec:
     plural: hierarchyconfigs
     singular: hierarchyconfig
     kind: HierarchyConfig
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

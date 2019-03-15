@@ -29,13 +29,13 @@ func TestSupportedClusterResourcesValidator(t *testing.T) {
 				ShouldFail: true,
 			},
 			{
-				Name:       "PolicyNode Object",
-				Object:     asttesting.NewFakeFileObject(kinds.PolicyNode(), "cluster/r.yaml"),
+				Name:       "NamespaceConfig Object",
+				Object:     asttesting.NewFakeFileObject(kinds.NamespaceConfig(), "cluster/r.yaml"),
 				ShouldFail: true,
 			},
 			{
-				Name:       "ClusterPolicy Object",
-				Object:     asttesting.NewFakeFileObject(kinds.ClusterPolicy(), "cluster/r.yaml"),
+				Name:       "ClusterConfig Object",
+				Object:     asttesting.NewFakeFileObject(kinds.ClusterConfig(), "cluster/r.yaml"),
 				ShouldFail: true,
 			},
 			{

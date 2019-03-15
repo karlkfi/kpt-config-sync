@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-// Decoder decodes GenericResources from PolicyNodes / ClusterPolicies to
+// Decoder decodes GenericResources from NamespaceConfigs / ClusterConfigs to
 // Unstructured structs.
 type Decoder interface {
 	// DecodeResources reads the bytes in the RawExtensions representing k8s

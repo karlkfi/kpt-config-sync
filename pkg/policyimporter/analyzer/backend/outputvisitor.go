@@ -22,18 +22,18 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/policynode"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// OutputVisitor converts the AST into PolicyNode and ClusterPolicy objects.
+// OutputVisitor converts the AST into NamespaceConfig and ClusterConfig objects.
 type OutputVisitor struct {
 	*visitor.Base
 	importToken string
 	loadTime    metav1.Time
-	allPolicies *policynode.AllPolicies
-	policyNode  []*v1.PolicyNode
+	allPolicies *namespaceconfig.AllPolicies
+	policyNode  []*v1.NamespaceConfig
 	syncs       []*v1.Sync
 }
 
@@ -47,7 +47,7 @@ func NewOutputVisitor() *OutputVisitor {
 }
 
 // AllPolicies returns the AllPolicies object created by the visitor.
-func (v *OutputVisitor) AllPolicies() *policynode.AllPolicies {
+func (v *OutputVisitor) AllPolicies() *namespaceconfig.AllPolicies {
 	for _, s := range v.syncs {
 		s.SetFinalizers(append(s.GetFinalizers(), v1.SyncFinalizer))
 	}
@@ -67,17 +67,17 @@ func mapByName(syncs []*v1.Sync) map[string]v1.Sync {
 func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 	v.importToken = g.ImportToken
 	v.loadTime = metav1.NewTime(g.LoadTime)
-	v.allPolicies = &policynode.AllPolicies{
-		PolicyNodes: map[string]v1.PolicyNode{},
-		ClusterPolicy: &v1.ClusterPolicy{
+	v.allPolicies = &namespaceconfig.AllPolicies{
+		NamespaceConfigs: map[string]v1.NamespaceConfig{},
+		ClusterConfig: &v1.ClusterConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       "ClusterPolicy",
+				Kind:       "ClusterConfig",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: v1.ClusterPolicyName,
+				Name: v1.ClusterConfigName,
 			},
-			Spec: v1.ClusterPolicySpec{
+			Spec: v1.ClusterConfigSpec{
 				ImportToken: v.importToken,
 				ImportTime:  v.loadTime,
 			},
@@ -109,17 +109,17 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		name = n.Base()
 	}
 
-	pn := &v1.PolicyNode{
+	pn := &v1.NamespaceConfig{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1.SchemeGroupVersion.String(),
-			Kind:       "PolicyNode",
+			Kind:       "NamespaceConfig",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Annotations: n.Annotations,
 			Labels:      n.Labels,
 		},
-		Spec: v1.PolicyNodeSpec{
+		Spec: v1.NamespaceConfigSpec{
 			ImportToken: v.importToken,
 			ImportTime:  v.loadTime,
 		},
@@ -127,16 +127,16 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.policyNode = append(v.policyNode, pn)
 	v.Base.VisitTreeNode(n)
 	v.policyNode = v.policyNode[:origLen]
-	// PolicyNodes are emitted only for leaf nodes.
+	// NamespaceConfigs are emitted only for leaf nodes.
 	if n.Type == node.Namespace {
-		v.allPolicies.PolicyNodes[name] = *pn
+		v.allPolicies.NamespaceConfigs[name] = *pn
 	}
 	return nil
 }
 
 // VisitClusterObject implements Visitor
 func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
-	spec := &v.allPolicies.ClusterPolicy.Spec
+	spec := &v.allPolicies.ClusterConfig.Spec
 	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }

@@ -28,10 +28,10 @@ of 2 containers:
 
 GKE Policy Management defines three custom resources:
 
-*   `PolicyNode`: A resource that stores namespaces-level resources such as
+*   `NamespaceConfig`: A resource that stores namespaces-level resources such as
     Roles and ResourceQuota.
-*   `ClusterPolicy`: A resource that stores cluster-level resources such as
-    ClusterRoles and PodSecurityPolicies. There is only one ClusterPolicy per
+*   `ClusterConfig`: A resource that stores cluster-level resources such as
+    ClusterRoles and PodSecurityPolicies. There is only one ClusterConfig per
     cluster.
 *   `Sync`: A resource that stores the resource types that GKE Policy Management
     will sync from the source of truth.
@@ -51,7 +51,7 @@ controller. This is an optional component if the user chooses not to use
 
 ## monitor
 
-A controller that watches the ClusterPolicy and all PolicyNodes as they get
+A controller that watches the ClusterConfig and all NamespaceConfigs as they get
 updated by the controllers above. It aggregates status such as how many policies
 are synced or stale and the latency between import and sync. All metrics are
 exported as Prometheus metrics and documented on the

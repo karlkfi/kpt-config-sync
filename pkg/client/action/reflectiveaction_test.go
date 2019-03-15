@@ -535,19 +535,19 @@ func TestReflectiveActionCluster(t *testing.T) {
 	test.RunTests(spec, ClusterRoleGetter)
 }
 
-var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
+var clusterNamespaceConfigTestCases = []ReflectiveActionTestCase{
 	{
 		TestName:    "upsert for create",
 		Operation:   "upsert",
-		Resource:    clusterPolicyNodeX,
+		Resource:    clusterNamespaceConfigX,
 		PrePopulate: func(runtime.Object) runtime.Object { return nil },
 	},
 	{
 		TestName:  "upsert to different labels",
 		Operation: "upsert",
-		Resource:  clusterPolicyNodeX,
+		Resource:  clusterNamespaceConfigX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*v1.PolicyNode).DeepCopy()
+			policyNode := obj.(*v1.NamespaceConfig).DeepCopy()
 			policyNode.ObjectMeta.Labels["foo"] = "bar"
 			return policyNode
 		},
@@ -555,9 +555,9 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 	{
 		TestName:  "upsert to different annotations",
 		Operation: "upsert",
-		Resource:  clusterPolicyNodeX,
+		Resource:  clusterNamespaceConfigX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*v1.PolicyNode).DeepCopy()
+			policyNode := obj.(*v1.NamespaceConfig).DeepCopy()
 			policyNode.ObjectMeta.Annotations["foo"] = "bar"
 			return policyNode
 		},
@@ -565,16 +565,16 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 	{
 		TestName:  "upsert to different content",
 		Operation: "upsert",
-		Resource:  clusterPolicyNodeX,
+		Resource:  clusterNamespaceConfigX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
-			policyNode := obj.(*v1.PolicyNode).DeepCopy()
+			policyNode := obj.(*v1.NamespaceConfig).DeepCopy()
 			return policyNode
 		},
 	},
 	{
 		TestName:  "upsert to identical",
 		Operation: "upsert",
-		Resource:  clusterPolicyNodeX,
+		Resource:  clusterNamespaceConfigX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
 			return obj.DeepCopyObject()
 		},
@@ -582,7 +582,7 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 	{
 		TestName:  "delete existing",
 		Operation: "delete",
-		Resource:  clusterPolicyNodeX,
+		Resource:  clusterNamespaceConfigX,
 		PrePopulate: func(obj runtime.Object) runtime.Object {
 			return obj.DeepCopyObject()
 		},
@@ -593,50 +593,50 @@ var clusterPolicyNodeTestCases = []ReflectiveActionTestCase{
 	},
 }
 
-func PolicyNodesEqual(lhs runtime.Object, rhs runtime.Object) bool {
-	lPn := lhs.(*v1.PolicyNode)
-	rPn := rhs.(*v1.PolicyNode)
+func NamespaceConfigsEqual(lhs runtime.Object, rhs runtime.Object) bool {
+	lPn := lhs.(*v1.NamespaceConfig)
+	rPn := rhs.(*v1.NamespaceConfig)
 	return reflect.DeepEqual(lPn.Spec, rPn.Spec)
 }
 
-func ClusterPolicyNodeGetter(client *fake.Client, _, name string) (runtime.Object, error) {
-	return client.PolicyHierarchy().ConfigmanagementV1().PolicyNodes().Get(name, metav1.GetOptions{})
+func ClusterConfigNodeGetter(client *fake.Client, _, name string) (runtime.Object, error) {
+	return client.PolicyHierarchy().ConfigmanagementV1().NamespaceConfigs().Get(name, metav1.GetOptions{})
 }
 
-var clusterPolicyNodeBaseTestObject = &v1.PolicyNode{
+var clusterNamespaceConfigBaseTestObject = &v1.NamespaceConfig{
 	TypeMeta: metav1.TypeMeta{
-		Kind:       "PolicyNode",
+		Kind:       "NamespaceConfig",
 		APIVersion: v1.SchemeGroupVersion.String(),
 	},
 	ObjectMeta: metav1.ObjectMeta{
 		Labels:      map[string]string{"fuzzy": "true"},
 		Annotations: map[string]string{"api.foo.future/deny": "*"},
 	},
-	Spec: v1.PolicyNodeSpec{},
+	Spec: v1.NamespaceConfigSpec{},
 }
 
-func clusterPolicyNodeX(_, name string) runtime.Object {
-	testObject := clusterPolicyNodeBaseTestObject.DeepCopy()
+func clusterNamespaceConfigX(_, name string) runtime.Object {
+	testObject := clusterNamespaceConfigBaseTestObject.DeepCopy()
 	testObject.Name = name
 	return testObject
 }
 
-func TestReflectiveActionPolicyNode(t *testing.T) {
-	test := NewReflectiveActionTest(t, clusterPolicyNodeTestCases)
+func TestReflectiveActionNamespaceConfig(t *testing.T) {
+	test := NewReflectiveActionTest(t, clusterNamespaceConfigTestCases)
 
 	test.PrePopulate()
 
 	factory := informer.NewSharedInformerFactory(test.client.PolicyHierarchy(), time.Second*10)
 
 	spec := &ReflectiveActionSpec{
-		KindPlural: "PolicyNodes",
-		EqualSpec:  PolicyNodesEqual,
+		KindPlural: "NamespaceConfigs",
+		EqualSpec:  NamespaceConfigsEqual,
 		Client:     test.client.PolicyHierarchy().ConfigmanagementV1(),
-		Lister:     factory.Configmanagement().V1().PolicyNodes().Lister(),
+		Lister:     factory.Configmanagement().V1().NamespaceConfigs().Lister(),
 	}
 
 	factory.Start(nil)
 	factory.WaitForCacheSync(nil)
 
-	test.RunTests(spec, ClusterPolicyNodeGetter)
+	test.RunTests(spec, ClusterConfigNodeGetter)
 }

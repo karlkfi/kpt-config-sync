@@ -33,7 +33,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/util/policynode"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -104,7 +104,7 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 // * cluster/ (flat, optional)
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
-func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*policynode.AllPolicies, *status.MultiError) {
+func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*namespaceconfig.AllPolicies, *status.MultiError) {
 	p.errors = &status.ErrorBuilder{}
 	rootPath, err := nomospath.NewRoot(nomospath.FromOS(root))
 	p.errors.Add(err)

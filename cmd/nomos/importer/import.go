@@ -146,10 +146,10 @@ var ignoredGroupKinds = map[schema.GroupKind]bool{
 	schema.GroupKind{Kind: "PodMetrics", Group: "metrics.k8s.io"}: true,
 	// Secrets hold data that shouldn't be shared by default.
 	schema.GroupKind{Kind: "Secret"}: true,
-	// ClusterPolicy is an internal Nomos type we don't support syncing.
-	kinds.ClusterPolicy().GroupKind(): true,
-	// PolicyNode is an internal Nomos type we don't support syncing.
-	kinds.PolicyNode().GroupKind(): true,
+	// ClusterConfig is an internal Nomos type we don't support syncing.
+	kinds.ClusterConfig().GroupKind(): true,
+	// NamespaceConfig is an internal Nomos type we don't support syncing.
+	kinds.NamespaceConfig().GroupKind(): true,
 	// Sync is an internal Nomos type we don't support syncing.
 	kinds.Sync().GroupKind(): true,
 	// HierarchicalQuota is not something users should create directly.

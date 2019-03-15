@@ -42,8 +42,8 @@ var copyingVisitorTestcases = vt.MutatingVisitorTestcases{
 		},
 		{
 			Name:         "cluster policies",
-			Input:        vt.Helper.ClusterPolicies(),
-			ExpectOutput: vt.Helper.ClusterPolicies(),
+			Input:        vt.Helper.ClusterConfigs(),
+			ExpectOutput: vt.Helper.ClusterConfigs(),
 		},
 		{
 			Name:         "acme",

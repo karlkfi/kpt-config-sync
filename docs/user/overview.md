@@ -283,7 +283,7 @@ You can also integrate this into your CI/CD setup, e.g. when using GitHub
 ### view
 
 As discussed in [System Overview](system_overview.md), contents of the Git repo
-are converted to ClusterPolicy and PolicyNode CRDs during the import process. To
+are converted to ClusterConfig and NamespaceConfig CRDs during the import process. To
 print the generated CRD resources in JSON:
 
 ```console

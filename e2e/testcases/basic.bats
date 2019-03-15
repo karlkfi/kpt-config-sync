@@ -33,7 +33,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::rm acme/namespaces/accounting/namespace.yaml
   git::commit
   wait::for -f -t 60 -- kubectl get ns accounting
-  run kubectl get policynodes new-ns
+  run kubectl get namespaceconfigs new-ns
   [ "$status" -eq 1 ]
   assert::contains "not found"
 }
@@ -70,11 +70,11 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   assert::contains "acme-admin"
 
   # verify that importToken has been updated from the commit above
-  local itoken="$(kubectl get policynode backend -ojsonpath='{.spec.importToken}')"
+  local itoken="$(kubectl get namespaceconfig backend -ojsonpath='{.spec.importToken}')"
   git::check_hash "$itoken"
 
   # verify that syncToken has been updated as well
-  wait::for -t 30 -- policynode::sync_token_eq backend "$itoken"
+  wait::for -t 30 -- namespaceconfig::sync_token_eq backend "$itoken"
 }
 
 @test "RoleBindings enforced" {

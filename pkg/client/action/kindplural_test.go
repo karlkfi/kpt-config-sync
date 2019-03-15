@@ -27,14 +27,14 @@ func (s *pluralTestCase) Run(t *testing.T) {
 
 var pluralTestCases = []pluralTestCase{
 	{
-		input:       v1.PolicyNode{},
-		output:      "PolicyNodes",
-		outputLower: "policynodes",
+		input:       v1.NamespaceConfig{},
+		output:      "NamespaceConfigs",
+		outputLower: "namespaceconfigs",
 	},
 	{
-		input:       v1.ClusterPolicy{},
-		output:      "ClusterPolicies",
-		outputLower: "clusterpolicies",
+		input:       v1.ClusterConfig{},
+		output:      "ClusterConfigs",
+		outputLower: "clusterconfigs",
 	},
 	{
 		input:       rbacv1.ClusterRole{},

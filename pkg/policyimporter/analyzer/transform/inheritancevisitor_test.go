@@ -52,8 +52,8 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
 			Name:         "preserve cluster policies",
-			Input:        vt.Helper.ClusterPolicies(),
-			ExpectOutput: vt.Helper.ClusterPolicies(),
+			Input:        vt.Helper.ClusterConfigs(),
+			ExpectOutput: vt.Helper.ClusterConfigs(),
 		},
 		{
 			Name:  "inherit policies",

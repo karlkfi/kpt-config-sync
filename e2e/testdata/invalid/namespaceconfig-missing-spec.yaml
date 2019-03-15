@@ -1,0 +1,4 @@
+apiVersion: configmanagement.gke.io/v1
+kind: NamespaceConfig
+metadata:
+  name: invalid

@@ -37,12 +37,12 @@ type TestItem struct {
 }
 
 func (ti TestItem) Object(t *testing.T) *unstructured.Unstructured {
-	obj := &nomosv1.ClusterPolicy{
+	obj := &nomosv1.ClusterConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        ti.name,
 			Annotations: ti.annotations,
 		},
-		Spec: nomosv1.ClusterPolicySpec{
+		Spec: nomosv1.ClusterConfigSpec{
 			ImportToken: ti.value,
 		},
 	}

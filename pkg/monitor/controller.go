@@ -18,8 +18,8 @@ package monitor
 
 import (
 	"github.com/google/nomos/clientgen/apis/scheme"
-	"github.com/google/nomos/pkg/monitor/clusterpolicy"
-	"github.com/google/nomos/pkg/monitor/policynode"
+	"github.com/google/nomos/pkg/monitor/clusterconfig"
+	"github.com/google/nomos/pkg/monitor/namespaceconfig"
 	"github.com/google/nomos/pkg/monitor/state"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -29,10 +29,10 @@ func AddToManager(mgr manager.Manager) error {
 	scheme.AddToScheme(mgr.GetScheme())
 	cs := state.NewClusterState()
 
-	if err := clusterpolicy.AddController(mgr, cs); err != nil {
+	if err := clusterconfig.AddController(mgr, cs); err != nil {
 		return err
 	}
-	if err := policynode.AddController(mgr, cs); err != nil {
+	if err := namespaceconfig.AddController(mgr, cs); err != nil {
 		return err
 	}
 	return nil

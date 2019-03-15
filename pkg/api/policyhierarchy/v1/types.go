@@ -30,11 +30,11 @@ import (
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ClusterPolicy is the top-level object for the policy node data definition.
+// ClusterConfig is the top-level object for the policy node data definition.
 //
 // It holds a policy defined for a single org unit (namespace).
 // +protobuf=true
-type ClusterPolicy struct {
+type ClusterConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// Standard object's metadata.
@@ -43,21 +43,21 @@ type ClusterPolicy struct {
 
 	// The actual object definition, per K8S object definition style.
 	// +optional
-	Spec ClusterPolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec ClusterConfigSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 
 	// The current status of the object, per K8S object definition style.
 	// +optional
-	Status ClusterPolicyStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Status ClusterConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
-// ClusterPolicySpec defines the policies that will exist at the cluster level.
+// ClusterConfigSpec defines the policies that will exist at the cluster level.
 // +protobuf=true
-type ClusterPolicySpec struct {
-	// ImportToken indicates the version of the ClusterPolicy last imported from the source of truth.
+type ClusterConfigSpec struct {
+	// ImportToken indicates the version of the ClusterConfig last imported from the source of truth.
 	// +optional
 	ImportToken string `json:"importToken,omitempty" protobuf:"bytes,4,opt,name=importToken"`
 
-	// ImportTime is the timestamp of when the ClusterPolicy was updated by the Importer.
+	// ImportTime is the timestamp of when the ClusterConfig was updated by the Importer.
 	// +optional
 	ImportTime metav1.Time `json:"importTime,omitempty" protobuf:"bytes,5,opt,name=importTime"`
 
@@ -66,17 +66,17 @@ type ClusterPolicySpec struct {
 	Resources []GenericResources `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
 }
 
-// ClusterPolicyStatus contains fields that define the status of a ClusterPolicy.
+// ClusterConfigStatus contains fields that define the status of a ClusterConfig.
 // +protobuf=true
-type ClusterPolicyStatus struct {
+type ClusterConfigStatus struct {
 	// SyncToken indicates the version of that policy that the Syncer last attempted to update from.
 	// +optional
 	SyncToken string `json:"syncToken,omitempty" protobuf:"bytes,1,opt,name=syncToken"`
 
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
-	// resources from the ClusterPolicy specs. This field will be empty on success.
+	// resources from the ClusterConfig specs. This field will be empty on success.
 	// +optional
-	SyncErrors []ClusterPolicySyncError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
+	SyncErrors []ClusterConfigSyncError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
 
 	// SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
 	// +optional
@@ -87,9 +87,9 @@ type ClusterPolicyStatus struct {
 	SyncState PolicySyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
 }
 
-// ClusterPolicySyncError represents a failed sync attempt for a ClusterPolicy.
+// ClusterConfigSyncError represents a failed sync attempt for a ClusterConfig.
 // +protobuf=true
-type ClusterPolicySyncError struct {
+type ClusterConfigSyncError struct {
 	// ResourceName is the name of the K8S resource that failed to sync.
 	// +optional
 	ResourceName string `json:"resourceName,omitempty" protobuf:"bytes,1,opt,name=resourceName"`
@@ -109,17 +109,17 @@ type ClusterPolicySyncError struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ClusterPolicyList holds a list of cluster level policies, returned as response to a List
+// ClusterConfigList holds a list of cluster level policies, returned as response to a List
 // call on the cluster policy hierarchy.
 // +protobuf=true
-type ClusterPolicyList struct {
+type ClusterConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Items is a list of policy nodes that apply.
-	Items []ClusterPolicy `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []ClusterConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // These comments must remain outside the package docstring.
@@ -127,11 +127,11 @@ type ClusterPolicyList struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PolicyNode is the top-level object for the policy node data definition.
+// NamespaceConfig is the top-level object for the policy node data definition.
 //
 // It holds a policy defined for a single org unit (namespace).
 // +protobuf=true
-type PolicyNode struct {
+type NamespaceConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// Standard object's metadata. The Name field of the policy node must match the namespace name.
@@ -140,22 +140,22 @@ type PolicyNode struct {
 
 	// The actual object definition, per K8S object definition style.
 	// +optional
-	Spec PolicyNodeSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec NamespaceConfigSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 
 	// The current status of the object, per K8S object definition style.
 	// +optional
-	Status PolicyNodeStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Status NamespaceConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
-// PolicyNodeSpec contains all the information about a policy linkage.
+// NamespaceConfigSpec contains all the information about a policy linkage.
 // +protobuf=true
-type PolicyNodeSpec struct {
+type NamespaceConfigSpec struct {
 
-	// ImportToken indicates the version of the PolicyNode last imported from the source of truth.
+	// ImportToken indicates the version of the NamespaceConfig last imported from the source of truth.
 	// +optional
 	ImportToken string `json:"importToken,omitempty" protobuf:"bytes,6,opt,name=importToken"`
 
-	// ImportTime is the timestamp of when the PolicyNode was updated by the Importer.
+	// ImportTime is the timestamp of when the NamespaceConfig was updated by the Importer.
 	// +optional
 	ImportTime metav1.Time `json:"importTime,omitempty" protobuf:"bytes,7,opt,name=importTime"`
 
@@ -164,17 +164,17 @@ type PolicyNodeSpec struct {
 	Resources []GenericResources `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
 }
 
-// PolicyNodeStatus contains fields that define the status of a PolicyNode.
+// NamespaceConfigStatus contains fields that define the status of a NamespaceConfig.
 // +protobuf=true
-type PolicyNodeStatus struct {
+type NamespaceConfigStatus struct {
 	// SyncToken indicates the version of that policy that the Syncer last attempted to update from.
 	// +optional
 	SyncToken string `json:"syncToken,omitempty" protobuf:"bytes,1,rep,name=syncToken"`
 
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
-	// resources from the PolicyNode specs. This field will be empty on success.
+	// resources from the NamespaceConfig specs. This field will be empty on success.
 	// +optional
-	SyncErrors []PolicyNodeSyncError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
+	SyncErrors []NamespaceConfigSyncError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
 
 	// SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
 	// +optional
@@ -185,10 +185,10 @@ type PolicyNodeStatus struct {
 	SyncState PolicySyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
 }
 
-// PolicyNodeSyncError represents a failed sync attempt for a PolicyNode.
+// NamespaceConfigSyncError represents a failed sync attempt for a NamespaceConfig.
 // +protobuf=true
-type PolicyNodeSyncError struct {
-	// SourceName is the name of the PolicyNode where the resource is defined.
+type NamespaceConfigSyncError struct {
+	// SourceName is the name of the NamespaceConfig where the resource is defined.
 	// +optional
 	SourceName string `json:"sourceName,omitempty" protobuf:"bytes,1,opt,name=sourceName"`
 
@@ -211,10 +211,10 @@ type PolicyNodeSyncError struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PolicyNodeList holds a list of namespace policies, as response to a List
+// NamespaceConfigList holds a list of namespace policies, as response to a List
 // call on the policy hierarchy API.
 // +protobuf=true
-type PolicyNodeList struct {
+type NamespaceConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// Standard object's metadata.
@@ -222,7 +222,7 @@ type PolicyNodeList struct {
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Items is a list of policy nodes that apply.
-	Items []PolicyNode `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []NamespaceConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // GenericResources contains API objects of a specified Group and Kind.
@@ -297,7 +297,7 @@ type ClusterSelectorList struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // NamespaceSelector specifies a LabelSelector applied to namespaces that exist within a
-// PolicyNode hierarchy.
+// NamespaceConfig hierarchy.
 //
 // +protobuf=true
 type NamespaceSelector struct {

@@ -5,7 +5,7 @@ set -u
 load "../lib/debug"
 load "../lib/git"
 load "../lib/namespace"
-load "../lib/policynode"
+load "../lib/namespaceconfig"
 load "../lib/setup"
 load "../lib/wait"
 
@@ -76,8 +76,8 @@ function teardown() {
   namespace::declare $ns
   git::commit
 
-  wait::for -t 30 -- policynode::sync_token_eq "$ns" "$(git::hash)"
-  selection=$(kubectl get pn ${ns} -ojson | jq -c ".status.syncState")
+  wait::for -t 30 -- namespaceconfig::sync_token_eq "$ns" "$(git::hash)"
+  selection=$(kubectl get namespaceconfigs ${ns} -ojson | jq -c ".status.syncState")
   [[ "${selection}" == "\"error\"" ]] || debug::error "policy node status should be error, not ${selection}"
   namespace::check_exists $ns -a "configmanagement.gke.io/namespace-management=a-garbage-annotation"
   namespace::check_warning $ns

@@ -10,7 +10,7 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/util/policynode"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,10 +140,10 @@ const (
 )
 
 // normalizeResources converts all resources in all policies into a slice of Resource
-func normalizeResources(ap *policynode.AllPolicies) []Resource {
+func normalizeResources(ap *namespaceconfig.AllPolicies) []Resource {
 	var objs []Resource
-	objs = append(objs, normalizeGenRes(clusterDir, "", ap.ClusterPolicy.Spec.Resources)...)
-	for namespace, pn := range ap.PolicyNodes {
+	objs = append(objs, normalizeGenRes(clusterDir, "", ap.ClusterConfig.Spec.Resources)...)
+	for namespace, pn := range ap.NamespaceConfigs {
 		path := filepath.Join(namespaceDir, namespace)
 		objs = append(objs, Resource{
 			Path: filepath.Join(path, "namespace.yaml"),

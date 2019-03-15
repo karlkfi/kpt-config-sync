@@ -1,9 +1,6 @@
 # Custom Resource Definition for a NamespaceConfig
 # which is a resource containing information about
-# a namespace/orgunit, its place in the hierarchy,
-# and the policies attached to it.
-# See namespace-syncer/pkg/adapater/policy_node.go
-# for the CRD struct spec.
+# a cluster and the policies attached to it.
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -25,3 +22,86 @@ spec:
   - name: v1
     served: true
     storage: true
+  validation:
+      openAPIV3Schema:
+        required:
+        - spec
+        properties:
+          spec:
+            # NamespaceConfigSpec
+            type: object
+            properties:
+              importToken:
+                type: string
+              importTime: # metav1.Time
+                anyOf:
+                - format: date-time
+                  type: string
+                - {}
+              resources:
+                type: array
+                items:
+                  # GenericResources
+                  type: object
+                  required:
+                  - kind
+                  - versions
+                  properties:
+                    group:
+                      type: string
+                    kind:
+                      type: string
+                    versions:
+                      type: array
+                      items:
+                        # GenericVersionResources
+                        type: object
+                        required:
+                        - objects
+                        - version
+                        properties:
+                          objects:
+                            type: array
+                            items:
+                              type: object # runtime.RawExtension
+                          version:
+                            type: string
+                        # /GenericVersionResources
+                  # /GenericResources
+            # /NamespaceConfigSpec
+          status:
+            # NamespaceConfigStatus
+            type: object
+            properties:
+              syncTokens:
+                type: object # map[string]string
+              syncErrors:
+                type: array
+                items:
+                  # NamespaceConfigSyncError
+                  type: object
+                  properties:
+                    sourceName:
+                      type: string
+                    resourceName:
+                      type: string
+                    resourceKind:
+                      type: string
+                    resourceAPI:
+                      type: string
+                    errorMessage:
+                      type: string
+                  # /NamespaceConfigSyncError
+              syncTime: # metav1.Time
+                anyOf:
+                - format: date-time
+                  type: string
+                - {}
+              syncState:
+                type: string
+                enum:
+                - ""
+                - "synced"
+                - "stale"
+                - "error"
+            # /NamespaceConfigStatus

@@ -67,7 +67,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
 			Name:  "preserve cluster policies",
-			Input: vt.Helper.ClusterPolicies(),
+			Input: vt.Helper.ClusterConfigs(),
 			ExpectOutput: &ast.Root{
 				ClusterObjects: modCluster(makeHierarchicalQuota(&v1.HierarchicalQuotaNode{}), vt.Helper.AcmeCluster()),
 				ImportToken:    vt.Helper.ImportToken,

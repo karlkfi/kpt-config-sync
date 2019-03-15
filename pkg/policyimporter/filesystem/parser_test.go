@@ -37,7 +37,7 @@ import (
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/policynode"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -480,17 +480,17 @@ type Policies struct {
 	Resources       []v1.GenericResources
 }
 
-// createPolicyNode constructs a PolicyNode based on a Policies struct.
-func createPolicyNode(name string, policies *Policies) v1.PolicyNode {
-	pn := &v1.PolicyNode{
+// createNamespaceConfig constructs a NamespaceConfig based on a Policies struct.
+func createNamespaceConfig(name string, policies *Policies) v1.NamespaceConfig {
+	pn := &v1.NamespaceConfig{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "PolicyNode",
+			Kind:       "NamespaceConfig",
 			APIVersion: v1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1.PolicyNodeSpec{},
+		Spec: v1.NamespaceConfigSpec{},
 	}
 	if policies == nil {
 		return *pn
@@ -543,7 +543,7 @@ func resourcesFromObjects(objects []runtime.Object, gv schema.GroupVersion, kind
 
 func createNamespacePN(
 	path string,
-	policies *Policies) v1.PolicyNode {
+	policies *Policies) v1.NamespaceConfig {
 	return createPNWithMeta(path, policies, nil, nil)
 }
 
@@ -551,22 +551,22 @@ func createPNWithMeta(
 	path string,
 	policies *Policies,
 	labels, annotations map[string]string,
-) v1.PolicyNode {
+) v1.NamespaceConfig {
 	if annotations == nil {
 		annotations = map[string]string{}
 	}
 	annotations["configmanagement.gke.io/source-path"] = path
-	pn := createPolicyNode(filepath.Base(path), policies)
+	pn := createNamespaceConfig(filepath.Base(path), policies)
 	pn.Labels = labels
 	pn.Annotations = annotations
 	return pn
 }
 
-// createClusterPolicyWithSpec creates a PolicyNode from the given spec and name.
-func createClusterPolicyWithSpec(name string, spec *v1.ClusterPolicySpec) *v1.ClusterPolicy {
-	return &v1.ClusterPolicy{
+// createClusterConfigWithSpec creates a NamespaceConfig from the given spec and name.
+func createClusterConfigWithSpec(name string, spec *v1.ClusterConfigSpec) *v1.ClusterConfig {
+	return &v1.ClusterConfig{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterPolicy",
+			Kind:       "ClusterConfig",
 			APIVersion: v1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -576,8 +576,8 @@ func createClusterPolicyWithSpec(name string, spec *v1.ClusterPolicySpec) *v1.Cl
 	}
 }
 
-func createClusterPolicy() *v1.ClusterPolicy {
-	return createClusterPolicyWithSpec(v1.ClusterPolicyName, &v1.ClusterPolicySpec{})
+func createClusterConfig() *v1.ClusterConfig {
+	return createClusterConfigWithSpec(v1.ClusterConfigName, &v1.ClusterConfigSpec{})
 }
 
 func createResourceQuota(path, name string, labels map[string]string) *corev1.ResourceQuota {
@@ -659,15 +659,15 @@ func syncMap(syncs ...v1.Sync) map[string]v1.Sync {
 }
 
 type parserTestCase struct {
-	testName                   string
-	testFiles                  fstesting.FileContentMap
-	vet                        bool
-	expectedPolicyNodes        map[string]v1.PolicyNode
-	expectedNumPolicies        map[string]int
-	expectedClusterPolicy      *v1.ClusterPolicy
-	expectedNumClusterPolicies *int
-	expectedSyncs              map[string]v1.Sync
-	expectedErrorCodes         []string
+	testName                  string
+	testFiles                 fstesting.FileContentMap
+	vet                       bool
+	expectedNamespaceConfigs  map[string]v1.NamespaceConfig
+	expectedNumPolicies       map[string]int
+	expectedClusterConfig     *v1.ClusterConfig
+	expectedNumClusterConfigs *int
+	expectedSyncs             map[string]v1.Sync
+	expectedErrorCodes        []string
 	// Installation side cluster name.
 	clusterName string
 }
@@ -705,31 +705,31 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar", nil),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "Namespace dir with JSON Namespace",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.json": templateData{Name: "bar"}.apply(aNamespaceJSON),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar", nil),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "Namespace dir with Namespace with labels/annotations",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespaceWithLabelsAndAnnotations),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createPNWithMeta("namespaces/bar", nil,
 				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "Namespace dir with ignored files",
@@ -737,10 +737,10 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar", nil),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "Namespace dir with 2 ignored files",
@@ -749,10 +749,10 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ignore":  "",
 			"namespaces/bar/ignore2": "blah blah blah",
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar", nil),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "Empty namespace dir",
@@ -760,10 +760,10 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/ignore":  "",
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar", nil),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces with same name",
@@ -809,7 +809,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
@@ -817,7 +817,7 @@ var parserTestCases = []parserTestCase{
 				},
 			),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
 	},
 	{
@@ -826,7 +826,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
 				&Policies{
 					ResourceQuotaV1: createResourceQuota(
@@ -834,7 +834,7 @@ var parserTestCases = []parserTestCase{
 				},
 			),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
 	},
 	{
@@ -862,14 +862,14 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/combo.yaml": templateData{Name: "bar"}.apply(aNamespace) + "\n---\n" + templateData{}.apply(aQuota),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
 				&Policies{ResourceQuotaV1: createResourceQuota(
 					"namespaces/bar/combo.yaml", "pod-quota", nil),
 				},
 			),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
 	},
 	{
@@ -887,14 +887,14 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":         templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/deployment.yaml": aDeploymentTemplate,
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
 				&Policies{Resources: []v1.GenericResources{
 					createDeployment(),
 				},
 				}),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 		expectedSyncs:         singleSyncMap("apps", "Deployment"),
 	},
 	{
@@ -987,7 +987,7 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ignore": "",
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "Abstract Namespace dir with RoleBinding, default inheritance",
@@ -1019,13 +1019,13 @@ var parserTestCases = []parserTestCase{
 			"namespaces/rb.yaml":     templateData{}.apply(aRoleBinding),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
 				&Policies{RoleBindingsV1: rbs(templateData{Annotations: map[string]string{
 					v1.SourcePathAnnotationKey: "namespaces/rb.yaml",
 				}})}),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 		expectedSyncs:         singleSyncMap(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
 	},
 	{
@@ -1034,11 +1034,11 @@ var parserTestCases = []parserTestCase{
 			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
 				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", "pod-quota", nil)}),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
 	},
 	{
@@ -1055,9 +1055,9 @@ var parserTestCases = []parserTestCase{
 			"system/rq.yaml":         templateData{Kind: "ResourceQuota", HierarchyMode: "inherit"}.apply(aHierarchyConfig),
 			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
-		expectedPolicyNodes:   map[string]v1.PolicyNode{},
-		expectedSyncs:         syncMap(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{},
+		expectedSyncs:            syncMap(),
 	},
 	{
 		testName: "Abstract Namespace dir with uninheritable Rolebinding",
@@ -1107,14 +1107,14 @@ var parserTestCases = []parserTestCase{
 	{
 		testName:              "Minimal repo",
 		testFiles:             fstesting.FileContentMap{},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "Only system dir with valid HierarchyConfig",
 		testFiles: fstesting.FileContentMap{
 			"system/rq.yaml": templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 		expectedSyncs:         syncMap(),
 	},
 	{
@@ -1123,7 +1123,7 @@ var parserTestCases = []parserTestCase{
 			"system/rq.yaml":   templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
 			"system/role.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 		expectedSyncs:         syncMap(),
 	},
 	{
@@ -1140,7 +1140,7 @@ spec:
     kinds: [ "Role", "RoleBinding" ]
 `,
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 		expectedSyncs:         syncMap(),
 	},
 	{
@@ -1148,7 +1148,7 @@ spec:
 		testFiles: fstesting.FileContentMap{
 			"namespaces/ignore": "",
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "Namespaces dir with Namespace",
@@ -1164,15 +1164,15 @@ spec:
 			"namespaces/rq.yaml":     templateData{}.apply(aQuota),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
 				&Policies{ResourceQuotaV1: createResourceQuota(
 					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewNomosQuotaLabels()),
 				}),
 		},
-		expectedClusterPolicy: createClusterPolicyWithSpec(
-			v1.ClusterPolicyName,
-			&v1.ClusterPolicySpec{
+		expectedClusterConfig: createClusterConfigWithSpec(
+			v1.ClusterConfigName,
+			&v1.ClusterConfigSpec{
 				Resources: []v1.GenericResources{
 					{
 						Group: policyhierarchy.GroupName,
@@ -1231,7 +1231,7 @@ spec:
 			"cluster/cr1.yaml": templateData{ID: "1"}.apply(aClusterRole),
 			"cluster/cr2.yaml": templateData{ID: "2"}.apply(aClusterRole),
 		},
-		expectedNumClusterPolicies: toIntPointer(2),
+		expectedNumClusterConfigs: toIntPointer(2),
 	},
 	{
 		testName: "Cluster dir with multiple ClusterRoleBindings",
@@ -1239,7 +1239,7 @@ spec:
 			"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			"cluster/crb2.yaml": templateData{ID: "2"}.apply(aClusterRoleBinding),
 		},
-		expectedNumClusterPolicies: toIntPointer(2),
+		expectedNumClusterConfigs: toIntPointer(2),
 	},
 	{
 		testName: "Cluster dir with multiple PodSecurityPolicies",
@@ -1247,14 +1247,14 @@ spec:
 			"cluster/psp1.yaml": templateData{ID: "1"}.apply(aPodSecurityPolicy),
 			"cluster/psp2.yaml": templateData{ID: "2"}.apply(aPodSecurityPolicy),
 		},
-		expectedNumClusterPolicies: toIntPointer(2),
+		expectedNumClusterConfigs: toIntPointer(2),
 	},
 	{
 		testName: "Cluster dir with deployment",
 		testFiles: fstesting.FileContentMap{
 			"cluster/node.yaml": templateData{}.apply(aNode),
 		},
-		expectedNumClusterPolicies: toIntPointer(1),
+		expectedNumClusterConfigs: toIntPointer(1),
 	},
 	{
 		testName: "Cluster dir with duplicate ClusterRole names",
@@ -1294,13 +1294,13 @@ spec:
 			"namespaces/bar/baz/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
 			"namespaces/qux/baz/waldo/ns.yaml": templateData{Name: "waldo"}.apply(aNamespace),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"corge": createNamespacePN("namespaces/bar/baz/corge",
 				&Policies{}),
 			"waldo": createNamespacePN("namespaces/qux/baz/waldo",
 				&Policies{}),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "An abstract namespace and a leaf namespace may share a name",
@@ -1308,13 +1308,13 @@ spec:
 			"namespaces/waldo/corge/ns.yaml": templateData{Name: "corge"}.apply(aNamespace),
 			"namespaces/bar/waldo/ns.yaml":   templateData{Name: "waldo"}.apply(aNamespace),
 		},
-		expectedPolicyNodes: map[string]v1.PolicyNode{
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"corge": createNamespacePN("namespaces/waldo/corge",
 				&Policies{}),
 			"waldo": createNamespacePN("namespaces/bar/waldo",
 				&Policies{}),
 		},
-		expectedClusterPolicy: createClusterPolicy(),
+		expectedClusterConfig: createClusterConfig(),
 	},
 	{
 		testName: "Dir name reserved 1",
@@ -1503,9 +1503,9 @@ spec:
 		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
 	},
 	{
-		testName: "HierarchyConfig contains a PolicyNode",
+		testName: "HierarchyConfig contains a NamespaceConfig",
 		testFiles: fstesting.FileContentMap{
-			"system/config.yaml": templateData{Group: policyhierarchy.GroupName, Kind: "PolicyNode"}.apply(aHierarchyConfig),
+			"system/config.yaml": templateData{Group: policyhierarchy.GroupName, Kind: "NamespaceConfig"}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
 	},
@@ -1592,7 +1592,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 
 	if len(tc.expectedNumPolicies) > 0 {
 		n := make(map[string]int)
-		for k, v := range actualPolicies.PolicyNodes {
+		for k, v := range actualPolicies.NamespaceConfigs {
 			n[k] = 0
 			for _, res := range v.Spec.Resources {
 				for _, version := range res.Versions {
@@ -1605,32 +1605,32 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		}
 	}
 
-	if tc.expectedNumClusterPolicies != nil {
-		actualNumClusterPolicies := 0
-		for _, res := range actualPolicies.ClusterPolicy.Spec.Resources {
+	if tc.expectedNumClusterConfigs != nil {
+		actualNumClusterConfigs := 0
+		for _, res := range actualPolicies.ClusterConfig.Spec.Resources {
 			for _, version := range res.Versions {
-				actualNumClusterPolicies += len(version.Objects)
+				actualNumClusterConfigs += len(version.Objects)
 			}
 		}
 
-		if !cmp.Equal(actualNumClusterPolicies, *tc.expectedNumClusterPolicies) {
-			t.Errorf("Actual and expected number of cluster policies didn't match: %v", cmp.Diff(actualNumClusterPolicies,
-				tc.expectedNumClusterPolicies))
+		if !cmp.Equal(actualNumClusterConfigs, *tc.expectedNumClusterConfigs) {
+			t.Errorf("Actual and expected number of cluster policies didn't match: %v", cmp.Diff(actualNumClusterConfigs,
+				tc.expectedNumClusterConfigs))
 		}
 	}
 
-	if tc.expectedPolicyNodes != nil || tc.expectedClusterPolicy != nil || tc.expectedSyncs != nil {
-		if tc.expectedPolicyNodes == nil {
-			tc.expectedPolicyNodes = map[string]v1.PolicyNode{}
+	if tc.expectedNamespaceConfigs != nil || tc.expectedClusterConfig != nil || tc.expectedSyncs != nil {
+		if tc.expectedNamespaceConfigs == nil {
+			tc.expectedNamespaceConfigs = map[string]v1.NamespaceConfig{}
 		}
 		if tc.expectedSyncs == nil {
 			tc.expectedSyncs = map[string]v1.Sync{}
 		}
 
-		expectedPolicies := &policynode.AllPolicies{
-			PolicyNodes:   tc.expectedPolicyNodes,
-			ClusterPolicy: tc.expectedClusterPolicy,
-			Syncs:         tc.expectedSyncs,
+		expectedPolicies := &namespaceconfig.AllPolicies{
+			NamespaceConfigs: tc.expectedNamespaceConfigs,
+			ClusterConfig:    tc.expectedClusterConfig,
+			Syncs:            tc.expectedSyncs,
 		}
 		if d := cmp.Diff(expectedPolicies, actualPolicies, resourcequota.ResourceQuantityEqual()); d != "" {
 			t.Errorf("Actual and expected policies didn't match: diff\n%v", d)
@@ -1690,9 +1690,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: createClusterPolicyWithSpec(
-				v1.ClusterPolicyName,
-				&v1.ClusterPolicySpec{
+			expectedClusterConfig: createClusterConfigWithSpec(
+				v1.ClusterConfigName,
+				&v1.ClusterConfigSpec{
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -1736,7 +1736,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
-			expectedPolicyNodes: map[string]v1.PolicyNode{
+			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
 					&Policies{
 						RoleBindingsV1: []rbacv1.RoleBinding{
@@ -1821,8 +1821,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aConfigMap),
 			},
-			expectedClusterPolicy: createClusterPolicy(),
-			expectedPolicyNodes: map[string]v1.PolicyNode{
+			expectedClusterConfig: createClusterConfig(),
+			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/foo/bar",
 					&Policies{
 						Resources: []v1.GenericResources{
@@ -1899,11 +1899,11 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: createClusterPolicyWithSpec(
-				v1.ClusterPolicyName,
-				&v1.ClusterPolicySpec{}),
-			expectedPolicyNodes: map[string]v1.PolicyNode{},
-			expectedSyncs:       syncMap(),
+			expectedClusterConfig: createClusterConfigWithSpec(
+				v1.ClusterConfigName,
+				&v1.ClusterConfigSpec{}),
+			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{},
+			expectedSyncs:            syncMap(),
 		},
 		{
 			// This shows how a namespace scoped resource doesn't get synced if
@@ -1943,9 +1943,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: createClusterPolicyWithSpec(
-				v1.ClusterPolicyName,
-				&v1.ClusterPolicySpec{
+			expectedClusterConfig: createClusterConfigWithSpec(
+				v1.ClusterConfigName,
+				&v1.ClusterConfigSpec{
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -1972,7 +1972,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
-			expectedPolicyNodes: map[string]v1.PolicyNode{
+			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
 					&Policies{},
 					/* Labels */
@@ -2023,9 +2023,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: createClusterPolicyWithSpec(
-				v1.ClusterPolicyName,
-				&v1.ClusterPolicySpec{
+			expectedClusterConfig: createClusterConfigWithSpec(
+				v1.ClusterConfigName,
+				&v1.ClusterConfigSpec{
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -2052,7 +2052,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
-			expectedPolicyNodes: map[string]v1.PolicyNode{},
+			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{},
 			expectedSyncs: syncMap(
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),
@@ -2092,11 +2092,11 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: createClusterPolicyWithSpec(
-				v1.ClusterPolicyName,
+			expectedClusterConfig: createClusterConfigWithSpec(
+				v1.ClusterConfigName,
 				// The cluster-scoped policy with mismatching selector was filtered out.
-				&v1.ClusterPolicySpec{}),
-			expectedPolicyNodes: map[string]v1.PolicyNode{
+				&v1.ClusterConfigSpec{}),
+			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
 					&Policies{
 						RoleBindingsV1: rbs(
@@ -2141,9 +2141,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: createClusterPolicyWithSpec(
-				v1.ClusterPolicyName,
-				&v1.ClusterPolicySpec{
+			expectedClusterConfig: createClusterConfigWithSpec(
+				v1.ClusterConfigName,
+				&v1.ClusterConfigSpec{
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -2169,7 +2169,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
-			expectedPolicyNodes: map[string]v1.PolicyNode{
+			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
 					&Policies{
 						RoleBindingsV1: rbs(
@@ -2234,9 +2234,9 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			},
-			expectedClusterPolicy: createClusterPolicyWithSpec(
-				v1.ClusterPolicyName,
-				&v1.ClusterPolicySpec{
+			expectedClusterConfig: createClusterConfigWithSpec(
+				v1.ClusterConfigName,
+				&v1.ClusterConfigSpec{
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -2261,7 +2261,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
-			expectedPolicyNodes: map[string]v1.PolicyNode{},
+			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{},
 			expectedSyncs: syncMap(
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),
@@ -2427,10 +2427,10 @@ func TestEmptyDirectories(t *testing.T) {
 			if mErr != nil {
 				t.Fatalf("unexpected error: %v", mErr)
 			}
-			expectedPolicies := &policynode.AllPolicies{
-				PolicyNodes:   map[string]v1.PolicyNode{},
-				ClusterPolicy: createClusterPolicy(),
-				Syncs:         map[string]v1.Sync{},
+			expectedPolicies := &namespaceconfig.AllPolicies{
+				NamespaceConfigs: map[string]v1.NamespaceConfig{},
+				ClusterConfig:    createClusterConfig(),
+				Syncs:            map[string]v1.Sync{},
 			}
 			if !cmp.Equal(actualPolicies, expectedPolicies) {
 				t.Errorf("actual and expected AllPolicies didn't match: %v", cmp.Diff(actualPolicies, expectedPolicies))

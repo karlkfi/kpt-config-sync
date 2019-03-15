@@ -27,12 +27,12 @@ import (
 
 type ConfigmanagementV1Interface interface {
 	RESTClient() rest.Interface
-	ClusterPoliciesGetter
+	ClusterConfigsGetter
 	ClusterSelectorsGetter
 	HierarchicalQuotasGetter
 	HierarchyConfigsGetter
+	NamespaceConfigsGetter
 	NamespaceSelectorsGetter
-	PolicyNodesGetter
 	SyncsGetter
 }
 
@@ -41,8 +41,8 @@ type ConfigmanagementV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ConfigmanagementV1Client) ClusterPolicies() ClusterPolicyInterface {
-	return newClusterPolicies(c)
+func (c *ConfigmanagementV1Client) ClusterConfigs() ClusterConfigInterface {
+	return newClusterConfigs(c)
 }
 
 func (c *ConfigmanagementV1Client) ClusterSelectors() ClusterSelectorInterface {
@@ -57,12 +57,12 @@ func (c *ConfigmanagementV1Client) HierarchyConfigs() HierarchyConfigInterface {
 	return newHierarchyConfigs(c)
 }
 
-func (c *ConfigmanagementV1Client) NamespaceSelectors() NamespaceSelectorInterface {
-	return newNamespaceSelectors(c)
+func (c *ConfigmanagementV1Client) NamespaceConfigs() NamespaceConfigInterface {
+	return newNamespaceConfigs(c)
 }
 
-func (c *ConfigmanagementV1Client) PolicyNodes() PolicyNodeInterface {
-	return newPolicyNodes(c)
+func (c *ConfigmanagementV1Client) NamespaceSelectors() NamespaceSelectorInterface {
+	return newNamespaceSelectors(c)
 }
 
 func (c *ConfigmanagementV1Client) Syncs() SyncInterface {

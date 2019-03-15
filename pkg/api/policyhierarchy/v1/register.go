@@ -40,10 +40,10 @@ var (
 
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&PolicyNode{},
-		&PolicyNodeList{},
-		&ClusterPolicy{},
-		&ClusterPolicyList{},
+		&NamespaceConfig{},
+		&NamespaceConfigList{},
+		&ClusterConfig{},
+		&ClusterConfigList{},
 		&ClusterSelector{},
 		&HierarchicalQuota{},
 		&HierarchicalQuotaList{},

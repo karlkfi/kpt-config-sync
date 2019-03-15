@@ -443,7 +443,7 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 					{Name: "repos", Namespaced: false, Kind: "Repo"},
 					{Name: "syncs", Namespaced: false, Kind: "Sync"},
 					{Name: "hierarchyconfigs", Namespaced: false, Kind: "HierarchyConfig"},
-					{Name: "policynodes", Namespaced: false, Kind: "PolicyNode"},
+					{Name: "namespaceconfigs", Namespaced: false, Kind: "NamespaceConfig"},
 				},
 				"v1": {
 					{Name: "clusterselectors", Namespaced: false, Kind: "ClusterSelector"},
@@ -451,7 +451,7 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 					{Name: "repos", Namespaced: false, Kind: "Repo"},
 					{Name: "syncs", Namespaced: false, Kind: "Sync"},
 					{Name: "hierarchyconfigs", Namespaced: false, Kind: "HierarchyConfig"},
-					{Name: "policynodes", Namespaced: false, Kind: "PolicyNode"},
+					{Name: "namespaceconfigs", Namespaced: false, Kind: "NamespaceConfig"},
 				},
 			},
 		},

@@ -12,5 +12,5 @@ kind: Unknown
 
 source: system/invalid.yaml
 group: configmanagement.gke.io
-kind: PolicyNode
+kind: NamespaceConfig
 

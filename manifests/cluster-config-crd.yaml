@@ -22,3 +22,84 @@ spec:
   - name: v1
     served: true
     storage: true
+  validation:
+      openAPIV3Schema:
+        required:
+        - spec
+        properties:
+          spec:
+            # ClusterConfigSpec
+            type: object
+            properties:
+              importToken:
+                type: string
+              importTime: # metav1.Time
+                anyOf:
+                - format: date-time
+                  type: string
+                - {}
+              resources:
+                type: array
+                items:
+                  # GenericResources
+                  type: object
+                  required:
+                  - kind
+                  - versions
+                  properties:
+                    group:
+                      type: string
+                    kind:
+                      type: string
+                    versions:
+                      type: array
+                      items:
+                        # GenericVersionResources
+                        type: object
+                        required:
+                        - objects
+                        - version
+                        properties:
+                          objects:
+                            type: array
+                            items:
+                              type: object # runtime.RawExtension
+                          version:
+                            type: string
+                        # /GenericVersionResources
+                  # /GenericResources
+            # /ClusterConfigSpec
+          status:
+            # ClusterConfigStatus
+            type: object
+            properties:
+              syncToken:
+                type: string
+              syncErrors:
+                type: array
+                items:
+                  # ClusterConfigSyncError
+                  type: object
+                  properties:
+                    resourceName:
+                      type: string
+                    resourceKind:
+                      type: string
+                    resourceAPI:
+                      type: string
+                    errorMessage:
+                      type: string
+                  # /ClusterConfigSyncError
+              syncTime: # metav1.Time
+                anyOf:
+                - format: date-time
+                  type: string
+                - {}
+              syncState:
+                type: string
+                enum:
+                - ""
+                - "synced"
+                - "stale"
+                - "error"
+            # /ClusterConfigStatus

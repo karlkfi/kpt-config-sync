@@ -28,8 +28,8 @@ type FakeConfigmanagementV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeConfigmanagementV1) ClusterPolicies() v1.ClusterPolicyInterface {
-	return &FakeClusterPolicies{c}
+func (c *FakeConfigmanagementV1) ClusterConfigs() v1.ClusterConfigInterface {
+	return &FakeClusterConfigs{c}
 }
 
 func (c *FakeConfigmanagementV1) ClusterSelectors() v1.ClusterSelectorInterface {
@@ -44,12 +44,12 @@ func (c *FakeConfigmanagementV1) HierarchyConfigs() v1.HierarchyConfigInterface 
 	return &FakeHierarchyConfigs{c}
 }
 
-func (c *FakeConfigmanagementV1) NamespaceSelectors() v1.NamespaceSelectorInterface {
-	return &FakeNamespaceSelectors{c}
+func (c *FakeConfigmanagementV1) NamespaceConfigs() v1.NamespaceConfigInterface {
+	return &FakeNamespaceConfigs{c}
 }
 
-func (c *FakeConfigmanagementV1) PolicyNodes() v1.PolicyNodeInterface {
-	return &FakePolicyNodes{c}
+func (c *FakeConfigmanagementV1) NamespaceSelectors() v1.NamespaceSelectorInterface {
+	return &FakeNamespaceSelectors{c}
 }
 
 func (c *FakeConfigmanagementV1) Syncs() v1.SyncInterface {

@@ -83,9 +83,3 @@ spec:
           #          type: string
                 # /SyncGroupVersionKindStatus
           # /SyncStatus
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

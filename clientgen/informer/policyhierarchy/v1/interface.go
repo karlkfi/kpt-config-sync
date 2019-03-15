@@ -24,18 +24,18 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// ClusterPolicies returns a ClusterPolicyInformer.
-	ClusterPolicies() ClusterPolicyInformer
+	// ClusterConfigs returns a ClusterConfigInformer.
+	ClusterConfigs() ClusterConfigInformer
 	// ClusterSelectors returns a ClusterSelectorInformer.
 	ClusterSelectors() ClusterSelectorInformer
 	// HierarchicalQuotas returns a HierarchicalQuotaInformer.
 	HierarchicalQuotas() HierarchicalQuotaInformer
 	// HierarchyConfigs returns a HierarchyConfigInformer.
 	HierarchyConfigs() HierarchyConfigInformer
+	// NamespaceConfigs returns a NamespaceConfigInformer.
+	NamespaceConfigs() NamespaceConfigInformer
 	// NamespaceSelectors returns a NamespaceSelectorInformer.
 	NamespaceSelectors() NamespaceSelectorInformer
-	// PolicyNodes returns a PolicyNodeInformer.
-	PolicyNodes() PolicyNodeInformer
 	// Syncs returns a SyncInformer.
 	Syncs() SyncInformer
 }
@@ -51,9 +51,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// ClusterPolicies returns a ClusterPolicyInformer.
-func (v *version) ClusterPolicies() ClusterPolicyInformer {
-	return &clusterPolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+// ClusterConfigs returns a ClusterConfigInformer.
+func (v *version) ClusterConfigs() ClusterConfigInformer {
+	return &clusterConfigInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterSelectors returns a ClusterSelectorInformer.
@@ -71,14 +71,14 @@ func (v *version) HierarchyConfigs() HierarchyConfigInformer {
 	return &hierarchyConfigInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
+// NamespaceConfigs returns a NamespaceConfigInformer.
+func (v *version) NamespaceConfigs() NamespaceConfigInformer {
+	return &namespaceConfigInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
 // NamespaceSelectors returns a NamespaceSelectorInformer.
 func (v *version) NamespaceSelectors() NamespaceSelectorInformer {
 	return &namespaceSelectorInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// PolicyNodes returns a PolicyNodeInformer.
-func (v *version) PolicyNodes() PolicyNodeInformer {
-	return &policyNodeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Syncs returns a SyncInformer.

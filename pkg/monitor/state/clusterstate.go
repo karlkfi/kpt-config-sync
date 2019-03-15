@@ -41,7 +41,7 @@ func NewClusterState() *ClusterState {
 	}
 }
 
-// DeletePolicy removes the ClusterPolicy or PolicyNode with the given name if it is present.
+// DeletePolicy removes the ClusterConfig or NamespaceConfig with the given name if it is present.
 func (c *ClusterState) DeletePolicy(name string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
@@ -49,8 +49,8 @@ func (c *ClusterState) DeletePolicy(name string) {
 	delete(c.syncStates, name)
 }
 
-// ProcessClusterPolicy updates the ClusterState with the current status of the ClusterPolicy.
-func (c *ClusterState) ProcessClusterPolicy(cp *v1.ClusterPolicy) error {
+// ProcessClusterConfig updates the ClusterState with the current status of the ClusterConfig.
+func (c *ClusterState) ProcessClusterConfig(cp *v1.ClusterConfig) error {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
@@ -63,8 +63,8 @@ func (c *ClusterState) ProcessClusterPolicy(cp *v1.ClusterPolicy) error {
 	return nil
 }
 
-// ProcessPolicyNode updates the ClusterState with the current status of the PolicyNode.
-func (c *ClusterState) ProcessPolicyNode(pn *v1.PolicyNode) error {
+// ProcessNamespaceConfig updates the ClusterState with the current status of the NamespaceConfig.
+func (c *ClusterState) ProcessNamespaceConfig(pn *v1.NamespaceConfig) error {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 

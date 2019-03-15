@@ -5,7 +5,7 @@ metadata:
 spec:
   resources:
   - group: "configmanagement.gke.io"
-    kinds: [ "PolicyNode", "Sync" ]
+    kinds: [ "NamespaceConfig", "Sync" ]
   - group: "unknown.group.com"
     kinds: [ "Unknown" ]
   - group: "extensions"

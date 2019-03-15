@@ -1,0 +1,10 @@
+apiVersion: configmanagement.gke.io/v1
+kind: ClusterConfig
+metadata:
+  name: invalid
+spec:
+  resources:
+  - group: rbac.authorization.k8s.io
+    kind: ClusterRole
+    versions:
+    - {}

@@ -24,7 +24,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 function sync_token_eq() {
   local expect="${1:-}"
   local stoken
-  stoken="$(kubectl get clusterpolicy -ojsonpath='{.items[0].status.syncToken}')"
+  stoken="$(kubectl get clusterconfig -ojsonpath='{.items[0].status.syncToken}')"
   if [[ "$stoken" != "$expect" ]]; then
     echo "syncToken is $stoken waiting for $expect"
     return 1
@@ -68,7 +68,7 @@ function check_cluster_scoped_resource() {
   [[ "$selection" == "$modify" ]] || debug::error "$selection != $modify"
 
   # verify that importToken has been updated from the commit above
-  local itoken="$(kubectl get clusterpolicy -ojsonpath='{.items[0].spec.importToken}')"
+  local itoken="$(kubectl get clusterconfig -ojsonpath='{.items[0].spec.importToken}')"
   git::check_hash "$itoken"
 
   # verify that syncToken has been updated as well

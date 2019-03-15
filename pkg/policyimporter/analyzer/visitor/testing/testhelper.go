@@ -185,8 +185,8 @@ func (t *TestHelper) EmptyRoot() *ast.Root {
 	}
 }
 
-// ClusterPolicies returns a Root with only cluster policies.
-func (t *TestHelper) ClusterPolicies() *ast.Root {
+// ClusterConfigs returns a Root with only cluster policies.
+func (t *TestHelper) ClusterConfigs() *ast.Root {
 	return &ast.Root{
 		ClusterObjects: t.AcmeCluster(),
 		ImportToken:    t.ImportToken,

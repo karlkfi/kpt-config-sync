@@ -23,7 +23,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/policyimporter"
-	"github.com/google/nomos/pkg/util/policynode"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 )
 
 var syncDeleteMaxWait = flag.Duration("sync_delete_max_wait", 30*time.Second,
@@ -38,7 +38,7 @@ var syncDeleteMaxWait = flag.Duration("sync_delete_max_wait", 30*time.Second,
 // More details about the algorithm can be found at docs/update-preserving-invariants.md
 type Differ struct {
 	factories Factories
-	// SortDiff is true when we enforce an ordering for iterating over PolicyNode maps.
+	// SortDiff is true when we enforce an ordering for iterating over NamespaceConfig maps.
 	SortDiff bool
 }
 
@@ -52,7 +52,7 @@ func NewDiffer(factories Factories) *Differ {
 //
 // This list does not include Sync delete actions, because those are handled differently. The caller
 // must call SyncDeletes and process those actions before processing these actions.
-func (d *Differ) Diff(current, desired policynode.AllPolicies) []action.Interface {
+func (d *Differ) Diff(current, desired namespaceconfig.AllPolicies) []action.Interface {
 	var actions []action.Interface
 	actions = append(actions, d.policyNodeActions(current, desired)...)
 	actions = append(actions, d.clusterPolicyActions(current, desired)...)
@@ -60,51 +60,51 @@ func (d *Differ) Diff(current, desired policynode.AllPolicies) []action.Interfac
 	return actions
 }
 
-func (d *Differ) policyNodeActions(current, desired policynode.AllPolicies) []action.Interface {
+func (d *Differ) policyNodeActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
 	var actions []action.Interface
 	var deletes, creates, updates int
-	for name := range desired.PolicyNodes {
-		intent := desired.PolicyNodes[name]
-		if actual, found := current.PolicyNodes[name]; found {
-			if !d.factories.PolicyNodeAction.Equal(&intent, &actual) {
-				actions = append(actions, d.factories.PolicyNodeAction.NewUpdate(&intent))
+	for name := range desired.NamespaceConfigs {
+		intent := desired.NamespaceConfigs[name]
+		if actual, found := current.NamespaceConfigs[name]; found {
+			if !d.factories.NamespaceConfigAction.Equal(&intent, &actual) {
+				actions = append(actions, d.factories.NamespaceConfigAction.NewUpdate(&intent))
 				updates++
 			}
 		} else {
-			actions = append(actions, d.factories.PolicyNodeAction.NewCreate(&intent))
+			actions = append(actions, d.factories.NamespaceConfigAction.NewCreate(&intent))
 			creates++
 		}
 	}
-	for name := range current.PolicyNodes {
-		if _, found := desired.PolicyNodes[name]; !found {
-			actions = append(actions, d.factories.PolicyNodeAction.NewDelete(name))
+	for name := range current.NamespaceConfigs {
+		if _, found := desired.NamespaceConfigs[name]; !found {
+			actions = append(actions, d.factories.NamespaceConfigAction.NewDelete(name))
 			deletes++
 		}
 	}
 
-	glog.Infof("PolicyNode operations: create %d, update %d, delete %d", creates, updates, deletes)
+	glog.Infof("NamespaceConfig operations: create %d, update %d, delete %d", creates, updates, deletes)
 	policyimporter.Metrics.Operations.WithLabelValues("create").Add(float64(creates))
 	policyimporter.Metrics.Operations.WithLabelValues("update").Add(float64(updates))
 	policyimporter.Metrics.Operations.WithLabelValues("delete").Add(float64(deletes))
 	return actions
 }
 
-func (d *Differ) clusterPolicyActions(current, desired policynode.AllPolicies) []action.Interface {
+func (d *Differ) clusterPolicyActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
 	var actions []action.Interface
-	if current.ClusterPolicy == nil && desired.ClusterPolicy == nil {
+	if current.ClusterConfig == nil && desired.ClusterConfig == nil {
 		return actions
 	}
-	if current.ClusterPolicy == nil {
-		actions = []action.Interface{d.factories.ClusterPolicyAction.NewCreate(desired.ClusterPolicy)}
-	} else if desired.ClusterPolicy == nil {
-		actions = []action.Interface{d.factories.ClusterPolicyAction.NewDelete(current.ClusterPolicy.Name)}
-	} else if !d.factories.ClusterPolicyAction.Equal(desired.ClusterPolicy, current.ClusterPolicy) {
-		actions = []action.Interface{d.factories.ClusterPolicyAction.NewUpdate(desired.ClusterPolicy)}
+	if current.ClusterConfig == nil {
+		actions = []action.Interface{d.factories.ClusterConfigAction.NewCreate(desired.ClusterConfig)}
+	} else if desired.ClusterConfig == nil {
+		actions = []action.Interface{d.factories.ClusterConfigAction.NewDelete(current.ClusterConfig.Name)}
+	} else if !d.factories.ClusterConfigAction.Equal(desired.ClusterConfig, current.ClusterConfig) {
+		actions = []action.Interface{d.factories.ClusterConfigAction.NewUpdate(desired.ClusterConfig)}
 	}
 	return actions
 }
 
-func (d *Differ) syncActions(current, desired policynode.AllPolicies) []action.Interface {
+func (d *Differ) syncActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
 	var actions []action.Interface
 	var creates, updates, deletes int
 	for name, newSync := range desired.Syncs {

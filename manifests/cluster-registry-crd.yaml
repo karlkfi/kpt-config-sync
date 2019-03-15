@@ -90,9 +90,3 @@ spec:
               type: array
           type: object
   version: v1alpha1
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

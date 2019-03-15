@@ -29,9 +29,3 @@ spec:
             version:
               type: string
           # /RepoSpec
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

@@ -45,7 +45,7 @@ var (
 			Help:      "Syncer cluster reconciliation duration distributions",
 			Namespace: policyhierarchy.MetricsNamespace,
 			Subsystem: "syncer",
-			Name:      "syncer_clusterpolicy_reconcile_seconds",
+			Name:      "syncer_clusterconfig_reconcile_seconds",
 			Buckets:   []float64{.001, .01, .1, 1, 10, 100},
 		},
 		nil,

@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	policynodeversions "github.com/google/nomos/clientgen/informer"
+	namespaceconfigversions "github.com/google/nomos/clientgen/informer"
 	informersv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
-	policynodemeta "github.com/google/nomos/pkg/client/meta"
+	namespaceconfigmeta "github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/service"
 	"github.com/pkg/errors"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -179,11 +179,11 @@ func ServeFunc(controller Admitter) http.HandlerFunc {
 
 // SetupHierarchicalQuotaInformer returns a newly configured HierarchicalQuotaInformer.
 func SetupHierarchicalQuotaInformer(config *rest.Config) (informersv1.HierarchicalQuotaInformer, error) {
-	hierarchicalQuotaClient, err := policynodemeta.NewForConfig(config)
+	hierarchicalQuotaClient, err := namespaceconfigmeta.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-	policyNodeFactory := policynodeversions.NewSharedInformerFactory(
+	policyNodeFactory := namespaceconfigversions.NewSharedInformerFactory(
 		hierarchicalQuotaClient.PolicyHierarchy(), time.Minute,
 	)
 

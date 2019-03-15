@@ -1,0 +1,22 @@
+apiVersion: configmanagement.gke.io/v1
+kind: NamespaceConfig
+metadata:
+  name: invalid
+spec:
+  resources:
+  - kind: ResourceQuota
+    versions:
+    - objects:
+      - apiVersion: v1
+        kind: ResourceQuota
+        metadata:
+          annotations:
+            configmanagement.gke.io/cluster-name: e2e-test-cluster
+            configmanagement.gke.io/source-path: namespaces/rnd/quota.yaml
+          creationTimestamp: null
+          name: nomos-resource-quota
+        spec:
+          hard:
+            configmaps: "2"
+        status: {}
+  type: namespace
