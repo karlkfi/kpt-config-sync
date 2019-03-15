@@ -41,7 +41,6 @@ var Cmd = &cobra.Command{
 		if silent {
 			infoOut = importer.NewNilOutput()
 		}
-		infoOut.Printfln("Importing resources from current kubectl context")
 
 		// TODO: Allow other outputs than os.Stderr.
 		errOutput := importer.NewStandardErrorOutput()
@@ -56,6 +55,10 @@ var Cmd = &cobra.Command{
 
 		// TODO(119066037): Override the host in a way that doesn't involve overwriting defaults set internally in client-go.
 		clientcmd.ClusterDefaults = clientcmdapi.Cluster{Server: restConfig.Host}
+
+		rawConfig, err := clientConfig.RawConfig()
+		errOutput.AddAndDie(errors.Wrap(err, "failed to get raw config"))
+		infoOut.Printfln("\n*** Importing resources from context %s ***\n", rawConfig.CurrentContext)
 
 		factory := cmdutil.NewFactory(&genericclioptions.ConfigFlags{})
 
