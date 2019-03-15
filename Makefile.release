@@ -59,12 +59,13 @@ NOMOS_GIT_REPO := https://team.googlesource.com/gke-kubernetes-enterprise-contro
 # Nomos binaries to a small set of google groups and the google.com
 # domain.  Once we are GA, we should replace this value with a simple
 # allUsers, e.g. user:allUsers:legacyObjectReader
-READ_ACCESS_LIST ?= group:gke-on-prem-release-readers-external@googlegroups.com:legacyObjectReader \
+READ_ACCESS_LIST ?= \
+	group:gke-on-prem-release-readers-external@googlegroups.com:legacyObjectReader \
 	group:gke-on-prem-docs-readers-external@googlegroups.com:legacyObjectReader \
 	group:gke-hub-eap-users-external@google.com:legacyObjectReader \
 	group:kpm-external@google.com:legacyObjectReader \
 	domain:google.com:legacyObjectReader \
-	user:425329972751-compute@developer.gserviceaccount.com:legacyObjectReader #prowbot
+	serviceAccount:425329972751-compute@developer.gserviceaccount.com:legacyObjectReader #prowbot
 
 ##### SETUP ######
 
