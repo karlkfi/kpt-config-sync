@@ -190,7 +190,7 @@ test: test-unit lint
 # This only runs on local dev environment not CI environment.
 test-all-local: test test-e2e-all
 
-goimports:
+goimports: $(OUTPUT_DIR)
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
 
 lint: lint-go lint-bash lint-license
