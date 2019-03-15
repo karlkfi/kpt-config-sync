@@ -1,4 +1,4 @@
-# GKE Policy Management System Configuration
+# CSP Configuration Management System Configuration
 
 ## Overview
 
@@ -29,7 +29,7 @@ spec:
 
 ## Sync
 
-GKE Policy Management allows for syncing arbitrary kubernetes types from Git to
+CSP Configuration Management allows for syncing arbitrary kubernetes types from Git to
 a Kubernetes cluster. Sync is configured by placing a Sync resource in the
 `system/` directory. The following example configures syncing RBAC types.
 
@@ -83,13 +83,13 @@ spec:
 
 ### Inheritance
 
-GKE Policy Management allows `RoleBindings` and `ResourceQuota` to be placed in
+CSP Configuration Management allows `RoleBindings` and `ResourceQuota` to be placed in
 Abstract Namespace directories, and have those policies instantiated in
 descendant Namespaces.
 
 #### RoleBinding inheritance
 
-GKE Policy Management provides inheritance for `RoleBindings` specially,
+CSP Configuration Management provides inheritance for `RoleBindings` specially,
 following these properties:
 
 1.  A `RoleBinding` specified in an Abstract Namespace directory is inherited by
@@ -121,7 +121,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-GKE Policy Management automatically creates inherited RoleBindings in the
+CSP Configuration Management automatically creates inherited RoleBindings in the
 descendant Namespaces:
 
 ```console
@@ -136,14 +136,14 @@ Inheritance is implemented by flattening resources in namespaces. In
 created directly in the namespace.
 
 What happens if a hierarchy contains conflicting `RoleBindings` (i.e. multiple
-`RoleBindings` with the same name)? For simplicity, GKE Policy Management
+`RoleBindings` with the same name)? For simplicity, CSP Configuration Management
 disallows that. I.e., it is an error for a `RoleBinding` to have the same name
 as another `RoleBinding` either in the same directory or in any ancestor
 Abstract Namespace.
 
-Note that GKE Policy Management is intended to be non-destructive to resources
+Note that CSP Configuration Management is intended to be non-destructive to resources
 that are created outside of the system which means a user may be able to edit
-resources outside of GKE Policy Management (e.g. using kubectl) or create
+resources outside of CSP Configuration Management (e.g. using kubectl) or create
 RoleBindings subject to
 [privilege escalation prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping)
 in Kubernetes.
@@ -156,7 +156,7 @@ Like `RoleBindings`, `ResourceQuotas` may also appear in Abstract Namespaces.
 
 #### Custom Resources
 
-GKE Policy Management does not handle syncing
+CSP Configuration Management does not handle syncing
 [CustomResourceDefinitions (CRDS)](https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/).
 However, it does handle syncing the corresponding Custom Resources. This means
 that the CRDs themselves need to be added to the cluster out of band. Deleting a

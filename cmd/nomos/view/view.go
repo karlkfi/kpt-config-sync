@@ -15,9 +15,9 @@ import (
 // PrintCmd is the Cobra object representing the nomos view command.
 var PrintCmd = &cobra.Command{
 	Use:   "view",
-	Short: "View compiled objects from a GKE Policy Management directory",
-	Long: `View compiled objects from a GKE Policy Management directory
-Parses a GKE Policy Management directory and prints a representation of the
+	Short: "View compiled objects from a CSP Configuration Management directory",
+	Long: `View compiled objects from a CSP Configuration Management directory
+Parses a CSP Configuration Management directory and prints a representation of the
 objects it contains.
 If errors are encountered during parsing, prints those errors and returns a
 non-zero error code.`,

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-GKE Policy Management checks for the `nomos.dev/managed=enabled` label to
+CSP Configuration Management checks for the `nomos.dev/managed=enabled` label to
 determine if it should perform management operations on an resource. If the
 resource on cluster differs from the desired state, the cluster state will be
 updated to match the desired state. For resources that are no longer in Git,
@@ -25,11 +25,11 @@ Examples:
     [foo-corp](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0). GKE
     Policy Management is installed for foo-corp and has a
     [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
-    for ClusterRole. GKE Policy Management will not delete or alter
+    for ClusterRole. CSP Configuration Management will not delete or alter
     `pod-accountant`.
-*   GKE Policy Management is installed for foo-corp. Someone adds a new
+*   CSP Configuration Management is installed for foo-corp. Someone adds a new
     ClusterRole `quota-viewer` to Git in
-    `foo-corp/cluster/quota-viewer-clusterrole.yaml`. GKE Policy Management will
+    `foo-corp/cluster/quota-viewer-clusterrole.yaml`. CSP Configuration Management will
     now create the `quota-viewer` ClusterRole matching the one in Git. Time
     passes. Someone deletes the `quota-viewer-clusterrole.yaml` from Git. GKE
     Policy Management will now remove `quota-viewer` from the cluster.
@@ -38,21 +38,21 @@ Examples:
     [foo-corp](https://github.com/frankfarzan/foo-corp-example). GKE Policy
     Management is installed for foo-corp and has a
     [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
-    for Role. GKE Policy Management will now update `job-creator` to match the
+    for Role. CSP Configuration Management will now update `job-creator` to match the
     one declared in
     [job-creator-role.yaml](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-dev/job-creator-role.yaml).
 *   foo-corp has a RoleBinding
     [pod-creators](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/online/shipping-app-backend/pod-creator-rolebinding.yaml)
     in Git and a
     [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
-    for Rolebinding. GKE Policy Management will ensure that all `pod-creator`
+    for Rolebinding. CSP Configuration Management will ensure that all `pod-creator`
     rolebindings in descendants of the `shipping-app-backend` Abstract Namespace
     (`shipping-prod`, `shipping-staging`, `shipping-dev`) exactly match the
     declared `pod-creator` RoleBinding. Time passes and someone modifies the
     [shipping-prod](https://github.com/frankfarzan/foo-corp-example/tree/0.1.0/foo-corp/namespaces/online/shipping-app-backend/shipping-prod)
-    `pod-creator` RoleBinding. GKE Policy Management will notice the change and
+    `pod-creator` RoleBinding. CSP Configuration Management will notice the change and
     update `pod-creator` to match the declaration in Git. Time passes and
-    someone removes `pod-creator` from Git. GKE Policy Management will now
+    someone removes `pod-creator` from Git. CSP Configuration Management will now
     remove the `pod-creator` resource from the descendant namespaces.
 *   Foo-corp has a
     [Sync](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/system/rbac-sync.yaml)
@@ -60,11 +60,11 @@ Examples:
     Policy Management will notice that the Role is not declared in
     `shipping-prod` or any of its ancestors, but will not delete it because it
     does not have a `nomos.dev/managed` label applied on it. Later on, the
-    `nomos.dev/managed` label is added ot it. GKE Policy Management will now
+    `nomos.dev/managed` label is added ot it. CSP Configuration Management will now
     delete the `secret-admin` Role from the namespace.
 *   Namespace
     [audit](https://github.com/frankfarzan/foo-corp-example/blob/0.1.0/foo-corp/namespaces/audit/namespace.yaml)
-    is not on the cluster and is added to Git. GKE Policy Management will create
+    is not on the cluster and is added to Git. CSP Configuration Management will create
     the `audit` Namespace with a `nomos.dev/managed` label even though there is
     no Sync declared for namespaces because Namespace sync is always enabled.
 
@@ -76,7 +76,7 @@ there is subtle interaction with the resources contained within the namespace.
 ### Managed Namespaces
 
 If a namespace object has a `nomos.dev/managed=enabled` label, then deleting the
-namespace from Git will result in GKE Policy Management deleting the namespace
+namespace from Git will result in CSP Configuration Management deleting the namespace
 on the cluster and consequently all objects in the namespace will be deleted
 regardless of whether those objects have a management label. Consider this
 behavior analogous to granting `rwx` UNIX directory permissions where a user
@@ -121,7 +121,7 @@ not have a `nomos.dev/managed` label.
 
 ## Sync and Resource Precedence
 
-GKE Policy Management considers Sync changes to have higher precedence. This is
+CSP Configuration Management considers Sync changes to have higher precedence. This is
 because it leads to less destructive actions on the cluster.
 
 For example, removing a Sync and all the resources it manages will disable
@@ -152,7 +152,7 @@ $ git commit -am "remove quota resources"
 $ git push origin master
 ```
 
-Wait for GKE Policy Management to remove all the ResourceQuotas.
+Wait for CSP Configuration Management to remove all the ResourceQuotas.
 
 ```console
 $ while (( $(kubectl get resourcequota --all-namespaces -l nomos.dev/managed 2> /dev/null | wc -l) != 0 )); do
@@ -193,7 +193,7 @@ Legacy Namespaces.
     Git.
 1.  **Legacy Namespaces** are namespaces on the cluster without the
     nomos.dev/managed=enabled label. They will cause alerts for being in a
-    non-ideal state, however, GKE Policy Management will neither update nor
+    non-ideal state, however, CSP Configuration Management will neither update nor
     delete them. Resources inside of a Legacy Namespace will be managed
     according to their labeling.
 

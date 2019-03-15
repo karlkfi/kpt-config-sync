@@ -1,6 +1,6 @@
 # Overview
 
-GKE Policy Management supports using Git to centrally manage Namespaces and
+CSP Configuration Management supports using Git to centrally manage Namespaces and
 Kubernetes resources across Kubernetes clusters. This *Policy as Code* approach
 ensures policy configurations are:
 
@@ -31,7 +31,7 @@ sophisticated pipelines for vetting and deploying at scale.
 
 ## Filesystem Standard
 
-GKE Policy Management Filesystem Standard defines the directory structure and
+CSP Configuration Management Filesystem Standard defines the directory structure and
 file contents. This is analogous to the Linux Filesystem Hierarchy Standard, and
 is a natural way to operate on hierarchical resources without requiring a
 complicated domain specific language.
@@ -80,7 +80,7 @@ We define the semantics of each directory below:
 namespace-scoped resources (e.g. RBAC RoleBindings).
 
 Kubernetes does not natively provide a hierarchy of namespaces (namespaces are
-flat). GKE Policy Management implements a hierarchy of namespaces to enable
+flat). CSP Configuration Management implements a hierarchy of namespaces to enable
 management of a large number of resources across many teams.
 
 There are two types of sub-directories in `namespaces`:
@@ -152,11 +152,11 @@ The following constraints apply to `cluster` directory and are enforced during
 
 ### system/
 
-`system` directory contains resources for configuring the GKE Policy Management
+`system` directory contains resources for configuring the CSP Configuration Management
 system.
 
 The `system` directory MUST only contain the `nomos.dev` objects. See
-[GKE Policy Management System Configuration](system_config.md).
+[CSP Configuration Management System Configuration](system_config.md).
 
 ## Filesystem Operations
 
@@ -165,7 +165,7 @@ The `system` directory MUST only contain the `nomos.dev` objects. See
 When a valid namespace hierarchy is committed to Git and synced, GKE Policy
 Management controllers automatically create namespaces and corresponding
 Kubernetes resources to enforce hierarchical resource syncing. In the foo-corp
-example, GKE Policy Management automatically creates `audit`, `shipping-dev`,
+example, CSP Configuration Management automatically creates `audit`, `shipping-dev`,
 `shipping-staging` and `shipping-prod` namespaces.
 
 Note that when using Git as source of truth, it is up to the repo owners to set
@@ -200,7 +200,7 @@ resources.
 
 ## Nomos CLI
 
-The `nomos` CLI provides tools for creating and managing a GKE Policy Management
+The `nomos` CLI provides tools for creating and managing a CSP Configuration Management
 directory.
 
 To install nomos:
@@ -234,7 +234,7 @@ $ nomos --help
 
 ### init
 
-Use `nomos init` to begin a new GKE Policy Management directory. Given an empty
+Use `nomos init` to begin a new CSP Configuration Management directory. Given an empty
 directory, populates it with required files and a few commonly-needed objects to
 get you started.
 
@@ -252,10 +252,10 @@ See `nomos init --help` for more.
 Before committing changes to Git and pushing changes to Kubernetes clusters, it
 is critical to validate them first.
 
-`nomos vet` is tool that validates a GKE Policy Management directory by:
+`nomos vet` is tool that validates a CSP Configuration Management directory by:
 
 1.  Enforcing
-    [GKE Policy Management Filesystem Standard](overview.md#filesystem-standard).
+    [CSP Configuration Management Filesystem Standard](overview.md#filesystem-standard).
 2.  Validating resources using the Kubernetes API machinery discovery mechanism
     and OpenAPI spec (Similar to `kubectl apply --dry-run`).
 

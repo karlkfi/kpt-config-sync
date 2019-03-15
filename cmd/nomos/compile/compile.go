@@ -15,8 +15,8 @@ import (
 // Cmd is the Cobra object representing the nomos view command.
 var Cmd = &cobra.Command{
 	Use:   "compile",
-	Short: "Compile objects from a GKE Policy Management directory",
-	Long: `Output compiled objects from a GKE Policy Management directory.  This
+	Short: "Compile objects from a CSP Configuration Management directory",
+	Long: `Output compiled objects from a CSP Configuration Management directory.  This
 parses the directory then outputs YAML as it will be applied to the API server
 sans any implementation specific Custom Resources involved.  If errors are encountered
 during parsing, prints those errors and returns a non-zero error code.`,

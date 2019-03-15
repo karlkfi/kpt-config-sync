@@ -1,4 +1,4 @@
-# GKE Policy Management Developer Guide
+# CSP Configuration Management Developer Guide
 
 *   [Initial Setup](setup.md)
 *   [Making changes](source.md)

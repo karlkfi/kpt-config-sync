@@ -10,9 +10,9 @@ import (
 
 const (
 	readmeFile         = "README.md"
-	rootReadmeContents = `# GKE Policy Management Directory
+	rootReadmeContents = `# CSP Configuration Management Directory
 
-This is the root directory for GKE Policy Management for your cluster.
+This is the root directory for CSP Configuration Management for your cluster.
 
 * See [system/](system/README.md) for system configuration.
 * See [cluster/](cluster/README.md) for cluster-scoped resources.

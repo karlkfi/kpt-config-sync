@@ -1,6 +1,6 @@
-# GKE Policy Management Quickstart
+# CSP Configuration Management Quickstart
 
-This quickstart shows a step-by-step guide to install GKE Policy Management on
+This quickstart shows a step-by-step guide to install CSP Configuration Management on
 Kubernetes clusters and create and synchronize hierarchical policies from a Git
 repository.
 
@@ -11,7 +11,7 @@ Management on one or more Kubernetes clusters.
 
 ## Creating hierarchical policies
 
-Once GKE Policy Management components are deployed and running in a cluster,
+Once CSP Configuration Management components are deployed and running in a cluster,
 namespaces will be automatically created. For the
 [foo-corp example](installation.md#create-the-nomos-config-file):
 
@@ -76,6 +76,6 @@ Try changing the cpu request from `2` to `200m`. This time it should succeed.
 
 ## What's next
 
-[GKE Policy Management User Guide](overview.md)
+[CSP Configuration Management User Guide](overview.md)
 
 [< Back](../../README.md)

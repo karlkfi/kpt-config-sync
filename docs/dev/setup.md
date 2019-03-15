@@ -67,7 +67,7 @@ Install [Helm](https://docs.helm.sh/using_helm/#installing-helm):
 
 1.  Go to the [Helm releases](https://github.com/kubernetes/helm/releases) page,
     find the heading "Installation and Upgrades", and download the binary
-    archive for your OS of choice, e.g. likely Linux for GKE Policy Management
+    archive for your OS of choice, e.g. likely Linux for CSP Configuration Management
     work.
 1.  From the downloaded archive in the previous step, extract the `helm` binary
     to somewhere in your path.

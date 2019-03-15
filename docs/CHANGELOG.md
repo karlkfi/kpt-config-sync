@@ -7,7 +7,7 @@
 #### Action Required
 
 This is a major change from the previous version, and will require installation
-on a clean cluster. An earlier installation of GKE Policy Management will
+on a clean cluster. An earlier installation of CSP Configuration Management will
 interfere with an installation of v0.11.0.
 
 In addition, the format of the policy repository has changed. An example of the

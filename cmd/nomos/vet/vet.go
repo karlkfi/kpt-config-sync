@@ -11,9 +11,9 @@ import (
 // VetCmd is the Cobra object representing the nomos vet command.
 var VetCmd = &cobra.Command{
 	Use:   "vet",
-	Short: "Validate a GKE Policy Management directory",
-	Long: `Validate a GKE Policy Management directory
-Checks for semantic and syntactic errors in a GKE Policy Management directory
+	Short: "Validate a CSP Configuration Management directory",
+	Long: `Validate a CSP Configuration Management directory
+Checks for semantic and syntactic errors in a CSP Configuration Management directory
 that will interfere with applying resources. Prints found errors to STDERR and
 returns a non-zero error code if any issues are found.
 `,

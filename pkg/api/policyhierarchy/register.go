@@ -30,7 +30,7 @@ const (
 	GroupName = "configmanagement.gke.io"
 
 	// ProductName is what we call Nomos externally.
-	ProductName = "GKE Policy Management"
+	ProductName = "CSP Configuration Management"
 
 	// ControllerNamespace is the Namespace used for Nomos controllers
 	ControllerNamespace = "config-management-system"

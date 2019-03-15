@@ -1,11 +1,11 @@
-# Installing GKE Policy Management
+# Installing CSP Configuration Management
 
 The Nomos Operator is a controller that manages an installation of GKE Policy
 Management in a Kubernetes cluster. It consumes a Custom Resource Definition
 (CRD) called Nomos, which specifies the paramaters of an installation of GKE
 Policy Management.
 
-Follow these instructions to install GKE Policy Management into your cluster
+Follow these instructions to install CSP Configuration Management into your cluster
 using the Nomos Operator.
 
 This setup takes about 30 minutes.
@@ -21,10 +21,10 @@ Prerequisites:
 ### Kubernetes
 
 You need to have up and running Kubernetes clusters that you intend to install
-GKE Policy Management on. You must be able to contact these clusters using
+CSP Configuration Management on. You must be able to contact these clusters using
 `kubectl` from the installation environment.
 
-In order to run GKE Policy Management components, the cluster has to meet these
+In order to run CSP Configuration Management components, the cluster has to meet these
 requirements:
 
 Requirement                               | kube-apiserver flag
@@ -37,9 +37,9 @@ Minimum required Kubernetes Server Version: **1.10**
 
 Note that GKE running K8S 1.10 satisfies all these requirements.
 
-**Warning:** In the current release of GKE Policy Management, we require that
-all namespaces be managed by GKE Policy Management. It is recommended to create
-a new cluster for use with GKE Policy Management.
+**Warning:** In the current release of CSP Configuration Management, we require that
+all namespaces be managed by CSP Configuration Management. It is recommended to create
+a new cluster for use with CSP Configuration Management.
 
 The easiest way to get all of these is to follow the
 [GKE quick start guide](https://cloud.google.com/kubernetes-engine/docs/quickstart).
@@ -207,7 +207,7 @@ $ kubectl apply -f nomos2.yaml --context=cluster-2
 
 ### Verify Installation
 
-To verify that GKE Policy Management components are correctly installed, issue
+To verify that CSP Configuration Management components are correctly installed, issue
 the following command and verify that all deployments listed have status
 displayed as "Running."
 
@@ -238,7 +238,7 @@ The affected components are:
     created `git-creds` secret.
 *   Any cluster level roles and role bindings installed by GKE Policy
     Management.
-*   Any admission controller configurations installed by GKE Policy Management.
+*   Any admission controller configurations installed by CSP Configuration Management.
 
 ### Uninstalling the Operator
 

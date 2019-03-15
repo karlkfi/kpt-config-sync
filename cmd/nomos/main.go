@@ -28,7 +28,7 @@ var (
 	rootCmd = &cobra.Command{
 		Use: policyhierarchy.CLIName,
 		Short: fmt.Sprintf(
-			"Set up and manage a GKE Policy Management directory (version %v)", pkgversion.VERSION),
+			"Set up and manage a CSP Configuration Management directory (version %v)", pkgversion.VERSION),
 	}
 )
 
@@ -42,10 +42,10 @@ func init() {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&flags.Validate, flags.ValidateFlag, true,
-		`If true, use a schema to validate the GKE Policy Management directory.
+		`If true, use a schema to validate the CSP Configuration Management directory.
 `)
 	rootCmd.PersistentFlags().Var(&flags.Path, flags.PathFlag,
-		`The path to use as a GKE Policy Management directory. Defaults to the working directory.
+		`The path to use as a CSP Configuration Management directory. Defaults to the working directory.
 `)
 }
 

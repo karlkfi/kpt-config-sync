@@ -20,10 +20,10 @@ import (
 // InitCmd is the Cobra object representing the nomos init command
 var InitCmd = &cobra.Command{
 	Use:   "init DIRECTORY",
-	Short: "Initialize a GKE Policy Management directory",
-	Long: `Initialize a GKE Policy Management directory
+	Short: "Initialize a CSP Configuration Management directory",
+	Long: `Initialize a CSP Configuration Management directory
 
-Given an empty directory, sets up a working GKE Policy Management directory.
+Given an empty directory, sets up a working CSP Configuration Management directory.
 Returns an error if the given directory is non-empty.`,
 	Example: `  nomos init
   nomos init --path=my/directory

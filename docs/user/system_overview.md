@@ -2,7 +2,7 @@
 
 ![drawing](../img/nomos_arch.png)
 
-System diagram above shows all GKE Policy Management components running on
+System diagram above shows all CSP Configuration Management components running on
 multiple Kubernetes clusters. Each component is described below.
 
 ## git-policy-importer
@@ -10,7 +10,7 @@ multiple Kubernetes clusters. Each component is described below.
 A PolicyImporter is an abstraction for a controller that consumes policy
 definitions from an external source of truth and builds a canonical
 representation of the hierarchy using cluster-level CRD(s) defined by GKE Policy
-Management. GKE Policy Management can be extended to support different sources
+Management. CSP Configuration Management can be extended to support different sources
 of truth (e.g. Git, GCS, Active Directory) using different implementations of
 this abstraction. Note that we treat this canonical representation as internal
 implementation which should not be directly consumed by users.
@@ -26,14 +26,14 @@ of 2 containers:
 
 ## CustomResourceDefinitions
 
-GKE Policy Management defines three custom resources:
+CSP Configuration Management defines three custom resources:
 
 *   `NamespaceConfig`: A resource that stores namespaces-level resources such as
     Roles and ResourceQuota.
 *   `ClusterConfig`: A resource that stores cluster-level resources such as
     ClusterRoles and PodSecurityPolicies. There is only one ClusterConfig per
     cluster.
-*   `Sync`: A resource that stores the resource types that GKE Policy Management
+*   `Sync`: A resource that stores the resource types that CSP Configuration Management
     will sync from the source of truth.
 
 ## syncer
