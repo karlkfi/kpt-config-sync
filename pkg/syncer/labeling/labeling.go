@@ -23,7 +23,7 @@ import (
 
 // Labels that are used to indicate that the resource is part of the nomos install.
 const (
-	ConfigManagementSystemKey   = v1.ConfigManagementPrefix + "/system"
+	ConfigManagementSystemKey   = v1.ConfigManagementPrefix + "system"
 	ConfigManagementSystemValue = "true"
 )
 
