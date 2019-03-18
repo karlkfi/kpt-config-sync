@@ -1,8 +1,9 @@
-package system
+package system_test
 
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/system"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -10,7 +11,7 @@ import (
 
 func TestKindValidator(t *testing.T) {
 	test := vt.ObjectValidatorTest{
-		Validator: NewKindValidator,
+		Validator: system.NewKindValidator,
 		ErrorCode: vet.IllegalKindInSystemErrorCode,
 		TestCases: []vt.ObjectValidatorTestCase{
 			{

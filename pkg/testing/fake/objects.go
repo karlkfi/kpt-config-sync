@@ -4,6 +4,7 @@ import (
 	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/system"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
@@ -104,6 +105,9 @@ func Repo(path string) ast.FileObject {
 		Path: nomospath.FromSlash(path),
 		Object: &nomosv1.Repo{
 			TypeMeta: toTypeMeta(kinds.Repo()),
+			Spec: nomosv1.RepoSpec{
+				Version: system.AllowedRepoVersion,
+			},
 		},
 	}
 }

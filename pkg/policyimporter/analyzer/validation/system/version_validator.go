@@ -8,7 +8,8 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
-const allowedRepoVersion = "0.1.0"
+// AllowedRepoVersion is the allowed version for Repo.Spec.Version.
+const AllowedRepoVersion = "0.1.0"
 
 // NewRepoVersionValidator returns a Validator that ensures any Repo objects in sytem/ have the
 // correct version.
@@ -16,7 +17,7 @@ func NewRepoVersionValidator() *visitor.ValidatorVisitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) *status.MultiError {
 		switch repo := o.Object.(type) {
 		case *v1.Repo:
-			if version := repo.Spec.Version; version != allowedRepoVersion {
+			if version := repo.Spec.Version; version != AllowedRepoVersion {
 				return status.From(vet.UnsupportedRepoSpecVersion{
 					Resource: o,
 					Version:  version,

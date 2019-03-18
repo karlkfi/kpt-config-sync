@@ -1,9 +1,10 @@
-package system
+package system_test
 
 import (
 	"testing"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/system"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -11,7 +12,7 @@ import (
 
 func TestMissingRepoValidator(t *testing.T) {
 	test := vt.ObjectsValidatorTest{
-		Validator: NewMissingRepoValidator,
+		Validator: system.NewMissingRepoValidator,
 		ErrorCode: vet.MissingRepoErrorCode,
 		TestCases: []vt.ObjectsValidatorTestCase{
 			{
