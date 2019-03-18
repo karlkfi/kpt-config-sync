@@ -36,6 +36,8 @@ type Interface interface {
 	NamespaceConfigs() NamespaceConfigInformer
 	// NamespaceSelectors returns a NamespaceSelectorInformer.
 	NamespaceSelectors() NamespaceSelectorInformer
+	// Repos returns a RepoInformer.
+	Repos() RepoInformer
 	// Syncs returns a SyncInformer.
 	Syncs() SyncInformer
 }
@@ -79,6 +81,11 @@ func (v *version) NamespaceConfigs() NamespaceConfigInformer {
 // NamespaceSelectors returns a NamespaceSelectorInformer.
 func (v *version) NamespaceSelectors() NamespaceSelectorInformer {
 	return &namespaceSelectorInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// Repos returns a RepoInformer.
+func (v *version) Repos() RepoInformer {
+	return &repoInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Syncs returns a SyncInformer.

@@ -65,6 +65,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().NamespaceConfigs().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("namespaceselectors"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().NamespaceSelectors().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("repos"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().Repos().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("syncs"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().Syncs().Informer()}, nil
 

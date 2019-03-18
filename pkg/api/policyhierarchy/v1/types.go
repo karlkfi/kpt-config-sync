@@ -417,6 +417,8 @@ type SyncList struct {
 	Items []Sync `json:"items"`
 }
 
+// +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Repo holds configuration and status about the Nomos source of truth.

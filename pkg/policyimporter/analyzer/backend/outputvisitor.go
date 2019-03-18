@@ -82,6 +82,7 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 				ImportTime:  v.loadTime,
 			},
 		},
+		Repo: g.Repo,
 	}
 	v.Base.VisitRoot(g)
 	return nil

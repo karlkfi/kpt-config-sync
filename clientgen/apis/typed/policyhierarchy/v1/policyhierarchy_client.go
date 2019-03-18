@@ -33,6 +33,7 @@ type ConfigmanagementV1Interface interface {
 	HierarchyConfigsGetter
 	NamespaceConfigsGetter
 	NamespaceSelectorsGetter
+	ReposGetter
 	SyncsGetter
 }
 
@@ -63,6 +64,10 @@ func (c *ConfigmanagementV1Client) NamespaceConfigs() NamespaceConfigInterface {
 
 func (c *ConfigmanagementV1Client) NamespaceSelectors() NamespaceSelectorInterface {
 	return newNamespaceSelectors(c)
+}
+
+func (c *ConfigmanagementV1Client) Repos() RepoInterface {
+	return newRepos(c)
 }
 
 func (c *ConfigmanagementV1Client) Syncs() SyncInterface {

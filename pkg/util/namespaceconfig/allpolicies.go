@@ -8,11 +8,11 @@ import (
 // directly as a Kubernetes resource.
 type AllPolicies struct {
 	// Map of names to NamespaceConfigs.
-	// +optional
-	NamespaceConfigs map[string]v1.NamespaceConfig `protobuf:"bytes,1,rep,name=namespaceConfigs"`
-	// +optional
-	ClusterConfig *v1.ClusterConfig `protobuf:"bytes,2,opt,name=clusterConfig"`
+	NamespaceConfigs map[string]v1.NamespaceConfig
+	// Singleton config for the cluster.
+	ClusterConfig *v1.ClusterConfig
 	// Map of names to Syncs.
-	// +optional
-	Syncs map[string]v1.Sync `protobuf:"bytes,3,rep,name=syncs"`
+	Syncs map[string]v1.Sync
+	// Singleton Repo for the cluster.
+	Repo *v1.Repo
 }

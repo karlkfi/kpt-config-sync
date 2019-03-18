@@ -52,6 +52,10 @@ func (c *FakeConfigmanagementV1) NamespaceSelectors() v1.NamespaceSelectorInterf
 	return &FakeNamespaceSelectors{c}
 }
 
+func (c *FakeConfigmanagementV1) Repos() v1.RepoInterface {
+	return &FakeRepos{c}
+}
+
 func (c *FakeConfigmanagementV1) Syncs() v1.SyncInterface {
 	return &FakeSyncs{c}
 }

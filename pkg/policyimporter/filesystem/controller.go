@@ -25,7 +25,7 @@ import (
 	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
@@ -49,6 +49,7 @@ type Controller struct {
 	namespaceConfigLister listersv1.NamespaceConfigLister
 	clusterConfigLister   listersv1.ClusterConfigLister
 	syncLister            listersv1.SyncLister
+	repoLister            listersv1.RepoLister
 	stopChan              chan struct{}
 	client                meta.Interface
 }
@@ -77,6 +78,7 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		namespaceConfigLister: informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
 		clusterConfigLister:   informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
 		syncLister:            informerFactory.Configmanagement().V1().Syncs().Lister(),
+		repoLister:            informerFactory.Configmanagement().V1().Repos().Lister(),
 		stopChan:              stopChan,
 		client:                client,
 	}
@@ -128,7 +130,7 @@ func (c *Controller) pollDir() {
 			}
 			glog.Infof("Resolved policy dir: %s. Polling policy dir: %s", newDir, c.policyDir)
 
-			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
+			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister, c.repoLister)
 			if err != nil {
 				glog.Errorf("failed to list current policies: %v", err)
 				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()

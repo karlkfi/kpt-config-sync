@@ -29,7 +29,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -37,6 +37,7 @@ import (
 	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -1631,6 +1632,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			NamespaceConfigs: tc.expectedNamespaceConfigs,
 			ClusterConfig:    tc.expectedClusterConfig,
 			Syncs:            tc.expectedSyncs,
+			Repo:             fake.Repo("").Object.(*v1.Repo),
 		}
 		if d := cmp.Diff(expectedPolicies, actualPolicies, resourcequota.ResourceQuantityEqual()); d != "" {
 			t.Errorf("Actual and expected policies didn't match: diff\n%v", d)
@@ -2431,6 +2433,7 @@ func TestEmptyDirectories(t *testing.T) {
 				NamespaceConfigs: map[string]v1.NamespaceConfig{},
 				ClusterConfig:    createClusterConfig(),
 				Syncs:            map[string]v1.Sync{},
+				Repo:             fake.Repo("").Object.(*v1.Repo),
 			}
 			if !cmp.Equal(actualPolicies, expectedPolicies) {
 				t.Errorf("actual and expected AllPolicies didn't match: %v", cmp.Diff(actualPolicies, expectedPolicies))

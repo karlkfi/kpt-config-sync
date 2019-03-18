@@ -20,18 +20,20 @@ import (
 	"github.com/pkg/errors"
 
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 // ListPolicies returns all policies from API server.
 func ListPolicies(namespaceConfigLister listersv1.NamespaceConfigLister,
 	clusterConfigLister listersv1.ClusterConfigLister,
-	syncLister listersv1.SyncLister) (*AllPolicies, error) {
+	syncLister listersv1.SyncLister,
+	repoLister listersv1.RepoLister) (*AllPolicies, error) {
 	policies := AllPolicies{
 		NamespaceConfigs: make(map[string]v1.NamespaceConfig),
 	}
 
+	// NamespaceConfigs
 	pn, err := namespaceConfigLister.List(labels.Everything())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list NamespaceConfigs")
@@ -40,8 +42,8 @@ func ListPolicies(namespaceConfigLister listersv1.NamespaceConfigLister,
 		policies.NamespaceConfigs[n.Name] = *n.DeepCopy()
 	}
 
-	ls := labels.Everything()
-	cp, err := clusterConfigLister.List(ls)
+	// ClusterConfig
+	cp, err := clusterConfigLister.List(labels.Everything())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list ClusterConfigs")
 	}
@@ -60,6 +62,7 @@ func ListPolicies(namespaceConfigLister listersv1.NamespaceConfigLister,
 		policies.ClusterConfig = cp[0].DeepCopy()
 	}
 
+	// Syncs
 	syncs, err := syncLister.List(labels.Everything())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list Syncs")
@@ -69,6 +72,23 @@ func ListPolicies(namespaceConfigLister listersv1.NamespaceConfigLister,
 	}
 	for _, s := range syncs {
 		policies.Syncs[s.Name] = *s.DeepCopy()
+	}
+
+	// Repo
+	repos, err := repoLister.List(labels.Everything())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list Repos")
+	}
+
+	if len(repos) > 1 {
+		var names []string
+		for _, r := range repos {
+			names = append(names, r.Name)
+		}
+		return nil, errors.Errorf("found more than one Repo object. The cluster may be in an inconsistent state: %v", names)
+	}
+	if len(repos) == 1 {
+		policies.Repo = repos[0].DeepCopy()
 	}
 
 	return &policies, nil

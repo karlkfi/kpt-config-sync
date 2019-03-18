@@ -105,6 +105,9 @@ func Repo(path string) ast.FileObject {
 		Path: nomospath.FromSlash(path),
 		Object: &nomosv1.Repo{
 			TypeMeta: toTypeMeta(kinds.Repo()),
+			ObjectMeta: v1.ObjectMeta{
+				Name: "repo",
+			},
 			Spec: nomosv1.RepoSpec{
 				Version: system.AllowedRepoVersion,
 			},

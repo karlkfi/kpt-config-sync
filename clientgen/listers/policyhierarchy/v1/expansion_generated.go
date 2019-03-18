@@ -42,6 +42,10 @@ type NamespaceConfigListerExpansion interface{}
 // NamespaceSelectorLister.
 type NamespaceSelectorListerExpansion interface{}
 
+// RepoListerExpansion allows custom methods to be added to
+// RepoLister.
+type RepoListerExpansion interface{}
+
 // SyncListerExpansion allows custom methods to be added to
 // SyncLister.
 type SyncListerExpansion interface{}
