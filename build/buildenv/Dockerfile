@@ -27,7 +27,7 @@
 #
 
 # The build environment docker file.
-FROM golang:1.12.1-alpine
+FROM golang:1.11.2-alpine
 
 # Adds support for building dynamically linked libraries.
 RUN apk add --no-cache \
@@ -44,28 +44,19 @@ RUN pip install grip
 # following runs.
 ENV GOCACHE=/go/cache
 
-RUN go get gopkg.in/alecthomas/gometalinter.v2 && \
-	gometalinter.v2 --install
+RUN go get gopkg.in/alecthomas/gometalinter.v2 && gometalinter.v2 --install
 
 # sembump knows how to increment semvers.
 # sembump -kind=minor v1.2.3
 # --> 1.3.0
-RUN cd /go/src && \
-	mkdir -p github.com/jessfraz && \
-	cd github.com/jessfraz && \
-    git clone https://github.com/jessfraz/junk && \
-	cd junk && git checkout c3216bd490bae0e1d8a25ab471aedfdbeee282f1 && \
+RUN go get github.com/jessfraz/junk/sembump && \
     go install github.com/jessfraz/junk/sembump
 
 # semsort knows how to sort semvers.
 # echo "1.1.0 1.0.0" | semsort
 # 1.0.0
 # 1.1.0
-RUN cd /go/src && \
-    mkdir -p github.com/filmil && \
-	cd github.com/filmil && \
-	git clone https://github.com/filmil/semsort && \
-	cd semsort && git checkout v1.0.2 && \
+RUN go get github.com/filmil/semsort/... && \
     go install github.com/filmil/semsort/...
 
 RUN mv /go/bin/* /bin

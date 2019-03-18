@@ -9,7 +9,7 @@
 # limitations under the License.
 
 # Build intermediate image for tools
-FROM golang:1.12.1-alpine AS build-base
+FROM golang:1.11-alpine AS build-base
 RUN apk add bash ca-certificates git gcc g++ libc-dev
 
 ENV TAP2JUNIT_RELEASE=v0.0.4
