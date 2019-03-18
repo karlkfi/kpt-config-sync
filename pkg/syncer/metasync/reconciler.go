@@ -220,7 +220,7 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo
 	}
 	for _, u := range ul.Items {
 		annots := u.GetAnnotations()
-		if v, ok := annots[v1.ResourceManagementKey]; !ok || v != v1.ResourceManagementValue {
+		if v, ok := annots[v1.ResourceManagementKey]; !ok || v != v1.ResourceManagementEnabled {
 			continue
 		}
 		if err := cl.Delete(ctx, &u); err != nil {

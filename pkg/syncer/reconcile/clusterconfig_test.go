@@ -93,6 +93,8 @@ func clusterSyncError(err v1.ClusterConfigSyncError) object.BuildOpt {
 	}
 }
 
+var unmanaged = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
+
 func clusterConfig(state v1.PolicySyncState, opts ...object.BuildOpt) *v1.ClusterConfig {
 	opts = append(opts, func(o *ast.FileObject) {
 		o.Object.(*v1.ClusterConfig).Status.SyncState = state
@@ -109,7 +111,7 @@ func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts .
 
 func managedPersistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.BuildOpt) *corev1.PersistentVolume {
 	opts = append(opts,
-		object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementValue),
+		object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 		object.Annotation(v1.SyncTokenAnnotationKey, token))
 	return persistentVolume(reclaimPolicy, opts...)
 }
@@ -157,7 +159,19 @@ func TestClusterConfigReconcile(t *testing.T) {
 			name:          "un-managed resource cannot be synced",
 			clusterConfig: clusterConfig(v1.StateSynced),
 			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			actual:        persistentVolume(corev1.PersistentVolumeReclaimDelete, unmanaged),
+		},
+		{
+			name:          "sync unlabeled resource in repo",
+			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
+			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			actual:        persistentVolume(corev1.PersistentVolumeReclaimDelete),
+			wantApply: &application{
+				intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
+				current:  persistentVolume(corev1.PersistentVolumeReclaimDelete),
+			},
+			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+			wantEvent:        reconcileComplete,
 		},
 		{
 			name:             "create resource from declared state",
@@ -173,6 +187,11 @@ func TestClusterConfigReconcile(t *testing.T) {
 			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			wantDelete:    managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			wantEvent:     reconcileComplete,
+		},
+		{
+			name:          "don't delete resource with unset management",
+			clusterConfig: clusterConfig(v1.StateSynced),
+			actual:        persistentVolume(corev1.PersistentVolumeReclaimRecycle),
 		},
 		{
 			name:          "error on clusterconfig with invalid name",

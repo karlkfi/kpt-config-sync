@@ -95,19 +95,23 @@ function teardown() {
   resource::check_count -n new-prj -r anvil -c 1
   resource::check -n new-prj anvil ${resname} -a "configmanagement.gke.io/managed=enabled"
 
-  debug::log "Add custom resource without managed annotation to custom resource and update repo with the same resource"
-  kubectl apply -f "${YAML_DIR}/customresources/anvil-heavier.yaml" -n newer-prj
+  debug::log "Add anvil-heavier with management disabled"
+  kubectl apply -f "${YAML_DIR}/customresources/anvil-heavier-management-disabled.yaml" -n newer-prj
   wait::for -t 30 -- kubectl get anvil ${resname} -n newer-prj
+  debug::log "Update repo with new resource"
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/rnd/newer-prj/anvil.yaml
+  debug::log "We don't expect this commit to result in a change on the cluster since management is disabled"
   git::commit
 
-  debug::log "Checking that original resource remains on cluster"
+  debug::log "Verify that anvil-heavier (lbs: 100) is still on cluster, and not anvil (lbs: 10)"
   wait::for -t 30 -- namespaceconfig::sync_token_eq newer-prj "$(git::hash)"
   debug::log "Anvil events: $(kubectl get events | grep "Anvil")"
+  debug::log "Ensure we didn't overwrite the management label"
+  resource::check -n newer-prj anvil ${resname} -a "configmanagement.gke.io/managed=disabled"
   selection=$(kubectl get anvil ${resname} -n newer-prj -ojson | jq -c ".spec.lbs")
   [[ "${selection}" == "100" ]] || debug::error "unmanaged custom resource weight should be 100, not ${selection}"
 
-  debug::log "Remove all custom resource from cluster"
+  debug::log "Remove all custom resources from cluster"
   git::rm acme/namespaces/rnd/new-prj/anvil.yaml
   git::commit
   #kubectl delete anvil ${resname} -n newer-prj
@@ -158,4 +162,27 @@ function teardown() {
 
   debug::log "Checking that custom cluster resource removed from cluster"
   wait::for -t 30 -f -- kubectl get clusteranvil ${resname}
+
+  debug::log "Add clusteranvil-heavier with management disabled"
+  kubectl apply -f "${YAML_DIR}/customresources/clusteranvil-heavier-management-disabled.yaml"
+  wait::for -t 30 -- kubectl get clusteranvil ${resname}
+  debug::log "Update repo with new resource"
+  git::add "${YAML_DIR}/customresources/clusteranvil.yaml" acme/cluster/clusteranvil.yaml
+  debug::log "We don't expect this commit to result in a change on the cluster since management is disabled"
+  git::commit
+
+  debug::log "Verify that clusteranvil-heavier (lbs: 100) is still on cluster, and not clusteranvil (lbs: 10)"
+  wait::for -t 30 -- namespaceconfig::sync_token_eq newer-prj "$(git::hash)"
+  debug::log "ClusterAnvil events: $(kubectl get events | grep "ClusterAnvil")"
+  debug::log "Ensure we didn't overwrite the management label"
+  resource::check clusteranvil ${resname} -a "configmanagement.gke.io/managed=disabled"
+  selection=$(kubectl get clusteranvil ${resname} -ojson | jq -c ".spec.lbs")
+  [[ "${selection}" == "100" ]] || debug::error "unmanaged custom resource weight should be 100, not ${selection}"
+
+  git::rm acme/cluster/clusteranvil.yaml
+  git::commit
+  #kubectl delete clusteranvil ${resname}
+
+  debug::log "Checking that no custom resources exist on cluster"
+  wait::for -t 30 -f -- kubectl get anvil ${resname} --all-namespaces
 }

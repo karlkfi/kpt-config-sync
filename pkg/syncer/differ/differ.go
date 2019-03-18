@@ -41,9 +41,11 @@ const (
 type ManagementState string
 
 const (
-	// Unmanaged indicates that the resource has no management annotation
+	// Unset indicates that the resource has no management annotation.
+	Unset = ManagementState("unset")
+	// Unmanaged indicates that the resource has managed marked as disabled.
 	Unmanaged = ManagementState("unmanaged")
-	// Managed indicates that the resoure has hte proper management annotation
+	// Managed indicates that the resoure has managed marked as enabled.
 	Managed = ManagementState("managed")
 	// Invalid indicates that the resource has a management annotation with an invalid value.
 	Invalid = ManagementState("invalid")
@@ -55,32 +57,31 @@ type Equals func(*unstructured.Unstructured, *unstructured.Unstructured) bool
 
 // Diff is resource where Declared and Actual do not match.
 type Diff struct {
-	Name     string
-	Type     Type
+	Name string
+	Type Type
+	// Declared is the resource as it exists in the repository.
 	Declared *unstructured.Unstructured
-	Actual   *unstructured.Unstructured
+	// Actual is the resource as it exists in the cluster.
+	Actual *unstructured.Unstructured
 }
 
-// ActualResourceIsManaged returns true if the Actual resource in the Diff has a management label.
-func (d Diff) ActualResourceIsManaged() ManagementState {
+// ManagementState returns the state of the resource based on its managed label.
+func (d Diff) ManagementState() ManagementState {
 	if d.Actual == nil {
+		// This means the resource:
+		// 1) does not exist in the repository,
+		// 2) exists on the cluster, and
+		// 3) does not have the management annotation.
+		// In this case, we assume the resource has never been managed and default to unmanaged.
 		return Unmanaged
 	}
 
-	annots := d.Actual.GetAnnotations()
-	if annots == nil {
-		return Unmanaged
-	}
-
-	value, found := annots[v1.ResourceManagementKey]
-	if !found {
-		return Unmanaged
-	}
-
-	switch value {
-	case v1.ResourceManagementValue:
+	switch value, found := d.Actual.GetAnnotations()[v1.ResourceManagementKey]; {
+	case !found:
+		return Unset
+	case value == v1.ResourceManagementEnabled:
 		return Managed
-	case v1.ResourceManagementDisabledValue:
+	case value == v1.ResourceManagementDisabled:
 		return Unmanaged
 	default:
 		return Invalid

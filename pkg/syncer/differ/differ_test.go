@@ -237,21 +237,21 @@ func TestActualResourceIsManaged(t *testing.T) {
 		},
 		{
 			name: "nil annotations",
-			want: Unmanaged,
+			want: Unset,
 		},
 		{
 			name:        "invalid value",
-			annotations: map[string]string{"configmanagement.gke.io/managed": "invalid"},
+			annotations: map[string]string{nomosv1.ResourceManagementKey: "invalid"},
 			want:        Invalid,
 		},
 		{
 			name:        "disabled value",
-			annotations: map[string]string{"configmanagement.gke.io/managed": "disabled"},
+			annotations: map[string]string{nomosv1.ResourceManagementKey: nomosv1.ResourceManagementDisabled},
 			want:        Unmanaged,
 		},
 		{
 			name:        "enabled value",
-			annotations: map[string]string{"configmanagement.gke.io/managed": "enabled"},
+			annotations: map[string]string{nomosv1.ResourceManagementKey: nomosv1.ResourceManagementEnabled},
 			want:        Managed,
 		},
 	}
@@ -264,7 +264,7 @@ func TestActualResourceIsManaged(t *testing.T) {
 			if testcase.actualNil {
 				d.Actual = nil
 			}
-			got := d.ActualResourceIsManaged()
+			got := d.ManagementState()
 			if got != testcase.want {
 				t.Errorf("want actual is %s, got %s", testcase.want, got)
 			}

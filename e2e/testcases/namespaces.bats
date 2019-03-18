@@ -72,14 +72,14 @@ function teardown() {
 
 @test "Namespace warn on invalid management annotation" {
   local ns=decl-invalid-annotation
-  namespace::create $ns -a "configmanagement.gke.io/namespace-management=a-garbage-annotation"
+  namespace::create $ns -a "configmanagement.gke.io/managed=a-garbage-annotation"
   namespace::declare $ns
   git::commit
 
   wait::for -t 30 -- namespaceconfig::sync_token_eq "$ns" "$(git::hash)"
   selection=$(kubectl get namespaceconfigs ${ns} -ojson | jq -c ".status.syncState")
   [[ "${selection}" == "\"error\"" ]] || debug::error "policy node status should be error, not ${selection}"
-  namespace::check_exists $ns -a "configmanagement.gke.io/namespace-management=a-garbage-annotation"
+  namespace::check_exists $ns -a "configmanagement.gke.io/managed=a-garbage-annotation"
   namespace::check_warning $ns
 }
 

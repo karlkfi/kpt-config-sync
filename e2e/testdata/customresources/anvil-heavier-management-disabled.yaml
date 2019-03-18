@@ -1,0 +1,8 @@
+kind: Anvil
+apiVersion: acme.com/v1
+metadata:
+  name: e2e-test-anvil
+  annotations:
+    configmanagement.gke.io/managed: disabled
+spec:
+  lbs: 100

@@ -33,13 +33,13 @@ const (
 	// ResourceManagementKey indicates if Nomos will manage the content and lifecycle for the resource.
 	ResourceManagementKey = ConfigManagementPrefix + "managed"
 
-	// ResourceManagementValue is the value corresponding to ResourceManagementKey indicating that
+	// ResourceManagementEnabled is the value corresponding to ResourceManagementKey indicating that
 	// Nomos will manage content and lifecycle for the given resource.
-	ResourceManagementValue = "enabled"
+	ResourceManagementEnabled = "enabled"
 
-	// ResourceManagementDisabledValue is the value corresponding to ResourceManagementKey indicating that
+	// ResourceManagementDisabled is the value corresponding to ResourceManagementKey indicating that
 	// Nomos will not manage content and lifecycle for the given resource.
-	ResourceManagementDisabledValue = "disabled"
+	ResourceManagementDisabled = "disabled"
 )
 
 // HasConfigManagementPrefix returns true if the string begins with the Nomos annotation prefix.

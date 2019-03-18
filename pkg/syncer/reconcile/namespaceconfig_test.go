@@ -63,7 +63,7 @@ func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...object
 
 func managedDeployment(deploymentStrategy appsv1.DeploymentStrategyType, namespace string, opts ...object.BuildOpt) *appsv1.Deployment {
 	opts = append(opts,
-		object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementValue),
+		object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 		object.Annotation(v1.SyncTokenAnnotationKey, token),
 		object.Namespace(namespace))
 	return deployment(deploymentStrategy, opts...)
@@ -82,7 +82,7 @@ func namespace(name string, opts ...object.BuildOpt) *corev1.Namespace {
 }
 
 func managedNamespace(name string, opts ...object.BuildOpt) *corev1.Namespace {
-	opts = append(opts, object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementValue))
+	opts = append(opts, object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
 	return namespace(name, opts...)
 }
 
@@ -125,7 +125,6 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			wantStatusUpdate: namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
 			wantEvent:        reconcileComplete,
 		},
-
 		{
 			name:            "actual resource already matches declared state",
 			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token), syncToken(token)),
@@ -139,45 +138,45 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
 			wantEvent:           reconcileComplete,
 		},
-
 		{
-			name:            "clean up label for unmanaged namespace",
-			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token), syncToken(token)),
-			namespace:       namespace("eng", managedQuotaLabels),
-			declared:        deployment(appsv1.RollingUpdateDeploymentStrategyType),
-			actual:          managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
-			wantApply: &application{
-				intended: managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
-				current:  managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
-			},
-			wantStatusUpdate: namespaceConfig("eng", v1.StateError, importToken(token), syncTime(now()), syncToken(token), namespaceSyncError(
-				v1.NamespaceConfigSyncError{
-					ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
-						v1.ResourceManagementKey, v1.ResourceManagementValue),
-				})),
-			wantNamespaceUpdate: namespace("eng"),
+			name:                "clean up label for unmanaged namespace",
+			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token), syncToken(token), unmanaged),
+			namespace:           namespace("eng", managedQuotaLabels, unmanaged),
+			wantStatusUpdate:    namespaceConfig("eng", v1.StateError, importToken(token), syncTime(now()), syncToken(token), namespaceSyncError(v1.NamespaceConfigSyncError{ErrorMessage: unmanagedError()}), unmanaged),
+			wantNamespaceUpdate: namespace("eng", unmanaged),
 			wantEvent: &event{
 				kind:   corev1.EventTypeWarning,
 				reason: "UnmanagedNamespace",
 			},
 		},
-
 		{
 			name:                "clean up label for unmanaged namespace without a corresponding namespaceconfig",
 			namespace:           namespace("eng", managedQuotaLabels),
 			wantNamespaceUpdate: namespace("eng"),
 		},
-
 		{
 			name:                "un-managed resource cannot be synced",
 			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
 			namespace:           managedNamespace("eng"),
 			declared:            deployment(appsv1.RecreateDeploymentStrategyType),
-			actual:              deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace("eng")),
+			actual:              deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace("eng"), unmanaged),
 			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
 			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
 		},
-
+		{
+			name:            "sync unlabeled resource in repo",
+			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:       managedNamespace("eng"),
+			declared:        deployment(appsv1.RecreateDeploymentStrategyType),
+			actual:          deployment(appsv1.RollingUpdateDeploymentStrategyType),
+			wantApply: &application{
+				intended: managedDeployment(appsv1.RecreateDeploymentStrategyType, "eng"),
+				current:  deployment(appsv1.RollingUpdateDeploymentStrategyType),
+			},
+			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
+			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+			wantEvent:           reconcileComplete,
+		},
 		{
 			name:            "invalid management label on managed resource",
 			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token)),
@@ -193,7 +192,6 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				varargs: true,
 			},
 		},
-
 		{
 			name:                "create resource from declared state",
 			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
@@ -204,7 +202,6 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
 			wantEvent:           reconcileComplete,
 		},
-
 		{
 			name:                "delete resource according to declared state",
 			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
@@ -215,17 +212,13 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
 			wantEvent:           reconcileComplete,
 		},
-
 		{
-			name:            "unmanaged namespace has resources synced",
-			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token)),
-			namespace:       namespace("eng"),
-			declared:        deployment(appsv1.RecreateDeploymentStrategyType),
-			actual:          managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
-			wantStatusUpdate: namespaceConfig("eng", v1.StateError, importToken(token), syncTime(now()), syncToken(token), namespaceSyncError(v1.NamespaceConfigSyncError{
-				ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
-					v1.ResourceManagementKey, v1.ResourceManagementValue),
-			})),
+			name:             "unmanaged namespace has resources synced but status error",
+			namespaceConfig:  namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:        namespace("eng", unmanaged),
+			declared:         deployment(appsv1.RecreateDeploymentStrategyType),
+			actual:           managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+			wantStatusUpdate: namespaceConfig("eng", v1.StateError, importToken(token), syncTime(now()), syncToken(token), namespaceSyncError(v1.NamespaceConfigSyncError{ErrorMessage: unmanagedError()})),
 			wantEvent: &event{
 				kind:   corev1.EventTypeWarning,
 				reason: "UnmanagedNamespace",
@@ -234,6 +227,21 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				intended: managedDeployment(appsv1.RecreateDeploymentStrategyType, "eng"),
 				current:  managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
 			},
+		},
+		{
+			name:                "sync namespace with managed unset",
+			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:           namespace("eng"),
+			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
+			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+		},
+		{
+			name:                "don't delete resource with unset management",
+			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:           managedNamespace("eng"),
+			actual:              deployment(appsv1.RecreateDeploymentStrategyType),
+			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
+			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
 		},
 	}
 

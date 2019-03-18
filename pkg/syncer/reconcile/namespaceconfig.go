@@ -110,36 +110,39 @@ const (
 )
 
 // getNamespaceConfigState normalizes the state of the policy node and returns the node.
-func (r *NamespaceConfigReconciler) getNamespaceConfigState(ctx context.Context, name string) (namespaceConfigState, *v1.NamespaceConfig,
-	error) {
+func (r *NamespaceConfigReconciler) getNamespaceConfigState(
+	ctx context.Context,
+	name string,
+) (namespaceConfigState, *v1.NamespaceConfig) {
 	node := &v1.NamespaceConfig{}
 	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, node)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return namespaceConfigStateNotFound, nil, nil
+			return namespaceConfigStateNotFound, nil
 		}
 		panic(errors.Wrap(err, "cache returned error other than not found, this should not happen"))
 	}
 	node.SetGroupVersionKind(kinds.NamespaceConfig())
 
-	return namespaceConfigStateNamespace, node, nil
+	return namespaceConfigStateNamespace, node
 }
 
 // namespaceState enumerates possible states for the namespace
 type namespaceState string
 
 const (
-	namespaceStateNotFound   = namespaceState("notFound")   // the namespace does not exist
-	namespaceStateExists     = namespaceState("exists")     // the namespace exists and we should manage policies
-	namespaceStateManageFull = namespaceState("manageFull") // the namespace is labeled for policy and lifecycle management
+	namespaceStateNotFound  = namespaceState("notFound")   // The namespace does not exist.
+	namespaceStateUnset     = namespaceState("exists")     // The namespace exists but the management label is unset.
+	namespaceStateManaged   = namespaceState("manageFull") // Management is enabled for the namespace.
+	namespaceStateUnmanaged = namespaceState("disabled")   // Management is disabled for the Namespace.
 )
 
 // getNamespaceState normalizes the state of the namespace and retrieves the current value.
 func (r *NamespaceConfigReconciler) getNamespaceState(
 	ctx context.Context,
 	name string,
-	syncErrs *[]v1.NamespaceConfigSyncError) (namespaceState, *corev1.Namespace,
-	error) {
+	syncErrs *[]v1.NamespaceConfigSyncError,
+) (namespaceState, *corev1.Namespace, error) {
 	ns := &corev1.Namespace{}
 	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, ns)
 	if err != nil {
@@ -150,12 +153,13 @@ func (r *NamespaceConfigReconciler) getNamespaceState(
 	}
 
 	value, found := ns.Annotations[v1.ResourceManagementKey]
-	if !found {
-		return namespaceStateExists, ns, nil
-	}
-
-	if value == v1.ResourceManagementValue {
-		return namespaceStateManageFull, ns, nil
+	switch {
+	case !found:
+		return namespaceStateUnset, ns, nil
+	case value == v1.ResourceManagementEnabled:
+		return namespaceStateManaged, ns, nil
+	case value == v1.ResourceManagementDisabled:
+		return namespaceStateUnmanaged, ns, nil
 	}
 
 	glog.Warningf("Namespace %q has invalid management label %q", name, value)
@@ -167,36 +171,39 @@ func (r *NamespaceConfigReconciler) getNamespaceState(
 		name, value,
 	)
 	*syncErrs = append(*syncErrs, v1.NamespaceConfigSyncError{
-		ErrorMessage: fmt.Sprintf("Namespace has invalid management label %s=%s should be %s=%s or unset",
-			v1.ResourceManagementKey, value,
-			v1.ResourceManagementKey, v1.ResourceManagementValue),
+		ErrorMessage: invalidManagementLabel(value),
 	})
-	return namespaceStateExists, ns, nil
+	return namespaceStateUnmanaged, ns, nil
+}
+
+func invalidManagementLabel(invalid string) string {
+	return fmt.Sprintf("Namespace has invalid management label %s=%s should be in [%s,%s] or unset",
+		v1.ResourceManagementKey, invalid,
+		v1.ResourceManagementEnabled, v1.ResourceManagementDisabled)
 }
 
 func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	ctx context.Context,
-	name string) error {
+	name string,
+) error {
 	var syncErrs []v1.NamespaceConfigSyncError
-	pnState, node, pnErr := r.getNamespaceConfigState(ctx, name)
-	if pnErr != nil {
-		return pnErr
-	}
+	cfgState, node := r.getNamespaceConfigState(ctx, name)
 
 	nsState, ns, nsErr := r.getNamespaceState(ctx, name, &syncErrs)
 	if nsErr != nil {
 		return nsErr
 	}
 
-	switch pnState {
+	switch cfgState {
 	case namespaceConfigStateNotFound:
 		switch nsState {
 		case namespaceStateNotFound: // noop
-		case namespaceStateExists:
+		case namespaceStateUnmanaged, namespaceStateUnset:
+			// If unmanaged or managed label unset, do not delete.
 			if err := r.cleanUpLabel(ctx, ns); err != nil {
 				glog.Warningf("Failed to remove management label from namespace: %s", err.Error())
 			}
-		case namespaceStateManageFull:
+		case namespaceStateManaged:
 			return r.deleteNamespace(ctx, ns)
 		}
 
@@ -213,35 +220,37 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 				return err
 			}
 			return r.managePolicies(ctx, name, node, syncErrs)
-		case namespaceStateExists:
-			if err := r.cleanUpLabel(ctx, ns); err != nil {
-				syncErrs = append(syncErrs, v1.NamespaceConfigSyncError{
-					ErrorMessage: fmt.Sprintf("Failed to remove quota label from namespace: %s", err.Error()),
-				})
-			}
-			r.warnNoAnnotation(ns)
-			syncErrs = append(syncErrs, v1.NamespaceConfigSyncError{
-				ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
-					v1.ResourceManagementKey, v1.ResourceManagementValue),
-			})
-			return r.managePolicies(ctx, name, node, syncErrs)
-		case namespaceStateManageFull:
+		case namespaceStateManaged, namespaceStateUnset:
 			if err := r.updateNamespace(ctx, node); err != nil {
 				syncErrs = append(syncErrs, v1.NamespaceConfigSyncError{
 					ErrorMessage: fmt.Sprintf("Failed to update namespace: %s", err.Error()),
 				})
 			}
 			return r.managePolicies(ctx, name, node, syncErrs)
+		case namespaceStateUnmanaged:
+			if err := r.cleanUpLabel(ctx, ns); err != nil {
+				syncErrs = append(syncErrs, v1.NamespaceConfigSyncError{
+					ErrorMessage: fmt.Sprintf("Failed to remove quota label from namespace: %s", err.Error()),
+				})
+			}
+			r.warnUnmanaged(ns)
+			syncErrs = append(syncErrs, v1.NamespaceConfigSyncError{ErrorMessage: unmanagedError()})
+			return r.managePolicies(ctx, name, node, syncErrs)
 		}
 	}
 	return nil
 }
 
-func (r *NamespaceConfigReconciler) warnNoAnnotation(ns *corev1.Namespace) {
-	glog.Warningf("namespace %q is declared in the source of truth but does not have a management annotation", ns.Name)
+func unmanagedError() string {
+	return fmt.Sprintf("Namespace is labeled unmanaged (%s=%s). Must be labeled (%s=%s) to manage",
+		v1.ResourceManagementKey, v1.ResourceManagementDisabled, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+}
+
+func (r *NamespaceConfigReconciler) warnUnmanaged(ns *corev1.Namespace) {
+	glog.Warningf("namespace %q is declared in the source of truth but is unmanaged in cluster", ns.Name)
 	r.recorder.Event(
 		ns, corev1.EventTypeWarning, "UnmanagedNamespace",
-		"namespace is declared in the source of truth but does not have a management annotation")
+		"namespace is declared in the source of truth but does is unmanaged")
 }
 
 func (r *NamespaceConfigReconciler) warnInvalidAnnotationResource(u *unstructured.Unstructured, msg string) {
@@ -320,19 +329,10 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 	return bErr
 }
 
-// TODO(sbochins): consolidate common functionality with decorateAsClusterManaged.
 func decorateAsManaged(declaredInstances []*unstructured.Unstructured, node *v1.NamespaceConfig) {
 	for _, decl := range declaredInstances {
 		decl.SetNamespace(node.GetName())
-		a := decl.GetAnnotations()
-		if a == nil {
-			a = map[string]string{}
-		}
-		// Annotate the resource with the current version token.
-		a[v1.SyncTokenAnnotationKey] = node.Spec.ImportToken
-		// Annotate the resource as Nomos managed.
-		a[v1.ResourceManagementKey] = v1.ResourceManagementValue
-		decl.SetAnnotations(a)
+		annotateManaged(decl, node.Spec.ImportToken)
 	}
 }
 
@@ -374,43 +374,60 @@ func NewSyncError(name string, gvk schema.GroupVersionKind, err error) v1.Namesp
 // handleDiff updates the API Server according to changes reflected in the diff.
 // It returns whether or not an update occurred and the error encountered.
 func (r *NamespaceConfigReconciler) handleDiff(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
-	switch t := diff.Type; t {
+	switch diff.Type {
 	case differ.Add:
-		toCreate := diff.Declared
-		if err := r.applier.Create(ctx, toCreate); err != nil {
-			metrics.ErrTotal.WithLabelValues(toCreate.GetNamespace(), toCreate.GetKind(), "create").Inc()
-			return false, id.ResourceWrap(err, fmt.Sprintf("failed to create %q", diff.Name), ast.ParseFileObject(toCreate))
-		}
+		return r.handleAdd(ctx, diff)
 	case differ.Update:
-		switch diff.ActualResourceIsManaged() {
-		case differ.Managed:
+		switch diff.ManagementState() {
+		case differ.Managed, differ.Unset:
+			// Manage if managed or management label is unset.
+			return r.handleUpdate(diff)
 		case differ.Unmanaged:
 			return false, nil
 		case differ.Invalid:
 			r.warnInvalidAnnotationResource(diff.Actual, "declared")
 			return false, nil
 		}
-		ns := diff.Declared.GetNamespace()
-		if err := r.applier.ApplyNamespace(ns, diff.Declared, diff.Actual); err != nil {
-			metrics.ErrTotal.WithLabelValues(ns, diff.Declared.GetKind(), "patch").Inc()
-			return false, id.ResourceWrap(err, fmt.Sprintf("failed to patch %q", diff.Name), ast.ParseFileObject(diff.Declared))
-		}
 	case differ.Delete:
-		switch diff.ActualResourceIsManaged() {
+		switch diff.ManagementState() {
 		case differ.Managed:
-		case differ.Unmanaged:
+			return r.handleDelete(ctx, diff)
+		case differ.Unmanaged, differ.Unset:
+			// Don't delete if unmanaged or management label is unset.
 			return false, nil
 		case differ.Invalid:
 			r.warnInvalidAnnotationResource(diff.Actual, "not declared")
 			return false, nil
 		}
-		toDelete := diff.Actual
-		if err := r.client.Delete(ctx, toDelete); err != nil {
-			metrics.ErrTotal.WithLabelValues(toDelete.GetNamespace(), toDelete.GetKind(), "delete").Inc()
-			return false, id.ResourceWrap(err, fmt.Sprintf("failed to delete %q", diff.Name), ast.ParseFileObject(toDelete))
-		}
 	default:
-		panic(fmt.Errorf("programmatic error, unhandled syncer diff type: %v", t))
+		panic(fmt.Errorf("programmatic error, unhandled syncer diff type: %v", diff.Type))
+	}
+	return true, nil
+}
+
+func (r *NamespaceConfigReconciler) handleAdd(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
+	toCreate := diff.Declared
+	if err := r.applier.Create(ctx, toCreate); err != nil {
+		metrics.ErrTotal.WithLabelValues(toCreate.GetNamespace(), toCreate.GetKind(), "create").Inc()
+		return false, id.ResourceWrap(err, fmt.Sprintf("failed to create %q", diff.Name), ast.ParseFileObject(toCreate))
+	}
+	return true, nil
+}
+
+func (r *NamespaceConfigReconciler) handleUpdate(diff *differ.Diff) (bool, id.ResourceError) {
+	ns := diff.Declared.GetNamespace()
+	if err := r.applier.ApplyNamespace(ns, diff.Declared, diff.Actual); err != nil {
+		metrics.ErrTotal.WithLabelValues(ns, diff.Declared.GetKind(), "patch").Inc()
+		return false, id.ResourceWrap(err, fmt.Sprintf("failed to patch %q", diff.Name), ast.ParseFileObject(diff.Declared))
+	}
+	return true, nil
+}
+
+func (r *NamespaceConfigReconciler) handleDelete(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
+	toDelete := diff.Actual
+	if err := r.client.Delete(ctx, toDelete); err != nil {
+		metrics.ErrTotal.WithLabelValues(toDelete.GetNamespace(), toDelete.GetKind(), "delete").Inc()
+		return false, id.ResourceWrap(err, fmt.Sprintf("failed to delete %q", diff.Name), ast.ParseFileObject(toDelete))
 	}
 	return true, nil
 }
@@ -432,7 +449,7 @@ func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.Na
 		namespace.Annotations[k] = v
 	}
 
-	namespace.Annotations[v1.ResourceManagementKey] = v1.ResourceManagementValue
+	namespace.Annotations[v1.ResourceManagementKey] = v1.ResourceManagementEnabled
 	namespace.Name = namespaceConfig.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())
 	return namespace

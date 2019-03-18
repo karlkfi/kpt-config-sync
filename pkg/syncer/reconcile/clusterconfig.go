@@ -23,6 +23,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/cache"
@@ -121,7 +122,9 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 	reconcileCount := 0
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
-		decorateAsClusterManaged(declaredInstances, policy)
+		for _, decl := range declaredInstances {
+			annotateManaged(decl, policy.Spec.ImportToken)
+		}
 		allDeclaredVersions := allVersionNames(grs, gvk.GroupKind())
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, "")
@@ -158,21 +161,6 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 		return nil
 	}
 	return bErr
-}
-
-func decorateAsClusterManaged(declaredInstances []*unstructured.Unstructured, policy *v1.ClusterConfig) {
-	for _, decl := range declaredInstances {
-		// Annotate the resource with the current version token.
-		a := decl.GetAnnotations()
-		if a == nil {
-			a = map[string]string{}
-		}
-		// Annotate the resource with the current version token.
-		a[v1.SyncTokenAnnotationKey] = policy.Spec.ImportToken
-		// Annotate the resource as Nomos managed.
-		a[v1.ResourceManagementKey] = v1.ResourceManagementValue
-		decl.SetAnnotations(a)
-	}
 }
 
 func (r *ClusterConfigReconciler) setClusterConfigStatus(ctx context.Context, policy *v1.ClusterConfig,
@@ -215,16 +203,17 @@ func NewClusterConfigSyncError(name string, gvk schema.GroupVersionKind, err err
 // handleDiff updates the API Server according to changes reflected in the diff.
 // It returns whether or not an update occurred and the error encountered.
 func (r *ClusterConfigReconciler) handleDiff(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
-	switch t := diff.Type; t {
+	switch diff.Type {
 	case differ.Add:
-		toCreate := diff.Declared
-		if err := r.applier.Create(ctx, toCreate); err != nil {
-			metrics.ErrTotal.WithLabelValues(toCreate.GetNamespace(), toCreate.GetKind(), "create").Inc()
-			return false, id.ResourceWrap(err, fmt.Sprintf("failed to create %q", diff.Name), ast.ParseFileObject(toCreate))
-		}
+		return r.handleAdd(ctx, diff)
+
 	case differ.Update:
-		switch diff.ActualResourceIsManaged() {
-		case differ.Managed:
+		switch diff.ManagementState() {
+		case differ.Managed, differ.Unset:
+			// Update the resource if
+			// - it management annotation is "managed", or
+			// - it exists in the repository and has no managed annotation.
+			return r.handleUpdate(diff)
 		case differ.Unmanaged:
 			return false, nil
 		case differ.Invalid:
@@ -232,28 +221,44 @@ func (r *ClusterConfigReconciler) handleDiff(ctx context.Context, diff *differ.D
 			return false, nil
 		}
 
-		removeEmptyRulesField(diff.Declared)
-		if err := r.applier.ApplyCluster(diff.Declared, diff.Actual); err != nil {
-			metrics.ErrTotal.WithLabelValues("", diff.Declared.GroupVersionKind().Kind, "patch").Inc()
-			return false, id.ResourceWrap(err, fmt.Sprintf("failed to patch %q", diff.Name), ast.ParseFileObject(diff.Declared))
-		}
 	case differ.Delete:
-		switch diff.ActualResourceIsManaged() {
+		switch diff.ManagementState() {
 		case differ.Managed:
-		case differ.Unmanaged:
+			return r.handleDelete(ctx, diff)
+		case differ.Unmanaged, differ.Unset:
+			// Do nothing if managed annotation is unset or explicitly marked "disabled".
 			return false, nil
 		case differ.Invalid:
 			r.warnInvalidAnnotationResource(diff.Actual, "not declared")
 			return false, nil
 		}
+	}
+	panic(vet.InternalErrorf("programmatic error, unhandled syncer diff type combination: %v and %v", diff.Type, diff.ManagementState()))
+}
 
-		toDelete := diff.Actual
-		if err := r.client.Delete(ctx, toDelete); err != nil {
-			metrics.ErrTotal.WithLabelValues("", toDelete.GroupVersionKind().Kind, "delete").Inc()
-			return false, id.ResourceWrap(err, fmt.Sprintf("failed to delete %q", diff.Name), ast.ParseFileObject(toDelete))
-		}
-	default:
-		panic(fmt.Errorf("programmatic error, unhandled syncer diff type: %v", t))
+func (r *ClusterConfigReconciler) handleAdd(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
+	toCreate := diff.Declared
+	if err := r.applier.Create(ctx, toCreate); err != nil {
+		metrics.ErrTotal.WithLabelValues(toCreate.GetNamespace(), toCreate.GetKind(), "create").Inc()
+		return false, id.ResourceWrap(err, fmt.Sprintf("failed to create %q", diff.Name), ast.ParseFileObject(toCreate))
+	}
+	return true, nil
+}
+
+func (r *ClusterConfigReconciler) handleUpdate(diff *differ.Diff) (bool, id.ResourceError) {
+	removeEmptyRulesField(diff.Declared)
+	if err := r.applier.ApplyCluster(diff.Declared, diff.Actual); err != nil {
+		metrics.ErrTotal.WithLabelValues("", diff.Declared.GroupVersionKind().Kind, "patch").Inc()
+		return false, id.ResourceWrap(err, fmt.Sprintf("failed to patch %q", diff.Name), ast.ParseFileObject(diff.Declared))
+	}
+	return true, nil
+}
+
+func (r *ClusterConfigReconciler) handleDelete(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
+	toDelete := diff.Actual
+	if err := r.client.Delete(ctx, toDelete); err != nil {
+		metrics.ErrTotal.WithLabelValues("", toDelete.GroupVersionKind().Kind, "delete").Inc()
+		return false, id.ResourceWrap(err, fmt.Sprintf("failed to delete %q", diff.Name), ast.ParseFileObject(toDelete))
 	}
 	return true, nil
 }
