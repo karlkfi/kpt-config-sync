@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation/system"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -99,6 +100,15 @@ func ClusterConfig() ast.FileObject {
 	}
 }
 
+// NamespaceConfig returns a default NamespaceConfig.
+func NamespaceConfig() ast.FileObject {
+	return ast.FileObject{
+		Object: &nomosv1.NamespaceConfig{
+			TypeMeta: toTypeMeta(kinds.NamespaceConfig()),
+		},
+	}
+}
+
 // Repo returns a nomos Repo at the specified path.
 func Repo(path string) ast.FileObject {
 	return ast.FileObject{
@@ -140,6 +150,15 @@ func PersistentVolume() ast.FileObject {
 	return ast.FileObject{
 		Object: &corev1.PersistentVolume{
 			TypeMeta: toTypeMeta(kinds.PersistentVolume()),
+		},
+	}
+}
+
+// Deployment returns a default Deployment object.
+func Deployment() ast.FileObject {
+	return ast.FileObject{
+		Object: &appsv1.Deployment{
+			TypeMeta: toTypeMeta(kinds.Deployment()),
 		},
 	}
 }

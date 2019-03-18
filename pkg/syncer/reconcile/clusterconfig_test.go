@@ -18,6 +18,7 @@ package reconcile
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ import (
 const token = "b38239ea8f58eaed17af6734bd6a025eeafccda1"
 
 var (
-	reconcileComplete = event{
+	reconcileComplete = &event{
 		kind:    corev1.EventTypeNormal,
 		reason:  "ReconcileComplete",
 		varargs: true,
@@ -49,23 +50,44 @@ var (
 
 func importToken(t string) object.BuildOpt {
 	return func(o *ast.FileObject) {
-		o.Object.(*v1.ClusterConfig).Spec.ImportToken = t
+		switch obj := o.Object.(type) {
+		case *v1.ClusterConfig:
+			obj.Spec.ImportToken = t
+		case *v1.NamespaceConfig:
+			obj.Spec.ImportToken = t
+		default:
+			panic(fmt.Sprintf("Invalid type %T", obj))
+		}
 	}
 }
 
 func syncTime(t metav1.Time) object.BuildOpt {
 	return func(o *ast.FileObject) {
-		o.Object.(*v1.ClusterConfig).Status.SyncTime = t
+		switch obj := o.Object.(type) {
+		case *v1.ClusterConfig:
+			obj.Status.SyncTime = t
+		case *v1.NamespaceConfig:
+			obj.Status.SyncTime = t
+		default:
+			panic(fmt.Sprintf("Invalid type %T", obj))
+		}
 	}
 }
 
 func syncToken(t string) object.BuildOpt {
 	return func(o *ast.FileObject) {
-		o.Object.(*v1.ClusterConfig).Status.SyncToken = t
+		switch obj := o.Object.(type) {
+		case *v1.ClusterConfig:
+			obj.Status.SyncToken = t
+		case *v1.NamespaceConfig:
+			obj.Status.SyncToken = t
+		default:
+			panic(fmt.Sprintf("Invalid type %T", obj))
+		}
 	}
 }
 
-func syncError(err v1.ClusterConfigSyncError) object.BuildOpt {
+func clusterSyncError(err v1.ClusterConfigSyncError) object.BuildOpt {
 	return func(o *ast.FileObject) {
 		o.Object.(*v1.ClusterConfig).Status.SyncErrors = append(o.Object.(*v1.ClusterConfig).Status.SyncErrors, err)
 	}
@@ -101,39 +123,35 @@ func TestClusterConfigReconcile(t *testing.T) {
 		clusterConfig    *v1.ClusterConfig
 		declared         runtime.Object
 		actual           runtime.Object
-		wantApplies      []application
+		wantApply        *application
 		wantCreate       runtime.Object
 		wantDelete       runtime.Object
 		wantStatusUpdate *v1.ClusterConfig
-		wantEvents       []event
+		wantEvent        *event
 	}{
 		{
 			name:          "update actual resource to declared state",
 			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
 			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimDelete),
-			wantApplies: []application{
-				{
-					intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-					current:  managedPersistentVolume(corev1.PersistentVolumeReclaimDelete),
-				},
+			wantApply: &application{
+				intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
+				current:  managedPersistentVolume(corev1.PersistentVolumeReclaimDelete),
 			},
 			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
-			wantEvents:       []event{reconcileComplete},
+			wantEvent:        reconcileComplete,
 		},
 		{
 			name:          "actual resource already matches declared state",
 			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
 			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			wantApplies: []application{
-				{
-					intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-					current:  managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-				},
+			wantApply: &application{
+				intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
+				current:  managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			},
 			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
-			wantEvents:       []event{reconcileComplete},
+			wantEvent:        reconcileComplete,
 		},
 		{
 			name:          "un-managed resource cannot be synced",
@@ -147,14 +165,14 @@ func TestClusterConfigReconcile(t *testing.T) {
 			declared:         persistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			wantCreate:       managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
-			wantEvents:       []event{reconcileComplete},
+			wantEvent:        reconcileComplete,
 		},
 		{
 			name:          "delete resource according to declared state",
 			clusterConfig: clusterConfig(v1.StateSynced),
 			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			wantDelete:    managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			wantEvents:    []event{reconcileComplete},
+			wantEvent:     reconcileComplete,
 		},
 		{
 			name:          "error on clusterconfig with invalid name",
@@ -162,19 +180,17 @@ func TestClusterConfigReconcile(t *testing.T) {
 			wantStatusUpdate: clusterConfig(v1.StateError,
 				object.Name("some-incorrect-name"),
 				syncTime(now()),
-				syncError(v1.ClusterConfigSyncError{
+				clusterSyncError(v1.ClusterConfigSyncError{
 					ResourceName: "some-incorrect-name",
 					ResourceKind: "ClusterConfig",
 					ResourceAPI:  "configmanagement.gke.io/v1",
 					ErrorMessage: `ClusterConfig resource has invalid name "some-incorrect-name"`,
 				}),
 			),
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeWarning,
-					reason:  "InvalidClusterConfig",
-					varargs: true,
-				},
+			wantEvent: &event{
+				kind:    corev1.EventTypeWarning,
+				reason:  "InvalidClusterConfig",
+				varargs: true,
 			},
 		},
 	}
@@ -191,11 +207,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			mockApplier := syncertesting.NewMockApplier(mockCtrl)
 			mockCache := syncertesting.NewMockGenericCache(mockCtrl)
 			mockRecorder := syncertesting.NewMockEventRecorder(mockCtrl)
-			var declared []runtime.Object
-			if tc.declared != nil {
-				declared = append(declared, tc.declared)
-			}
-			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, declared))
+			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, tc.declared))
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -210,31 +222,27 @@ func TestClusterConfigReconcile(t *testing.T) {
 			// List actual resources on the cluster.
 			if tc.clusterConfig.Name == v1.ClusterConfigName {
 				// No call is made if the cluster config's name is incorrect.
-				var expectedActual []runtime.Object
-				if tc.actual != nil {
-					expectedActual = append(expectedActual, tc.actual)
-				}
 				mockCache.EXPECT().
-					UnstructuredList(gomock.Any(), gomock.Eq("")).
-					Return(toUnstructureds(t, converter, expectedActual), nil)
+					UnstructuredList(gomock.Any(), Eq(t, "")).
+					Return(toUnstructureds(t, converter, tc.actual), nil)
 			}
 
 			// Check for expected creates, applies and deletes.
 			if tc.wantCreate != nil {
 				mockApplier.EXPECT().
-					Create(gomock.Any(), NewUnstructuredMatcher(toUnstructured(t, converter, tc.wantCreate)))
+					Create(gomock.Any(), NewUnstructuredMatcher(t, toUnstructured(t, converter, tc.wantCreate)))
 			}
-			for _, wantApply := range tc.wantApplies {
+			if tc.wantApply != nil {
 				mockApplier.EXPECT().
 					ApplyCluster(
-						gomock.Eq(toUnstructured(t, converter, wantApply.intended)),
-						gomock.Eq(toUnstructured(t, converter, wantApply.current)))
+						Eq(t, toUnstructured(t, converter, tc.wantApply.intended)),
+						Eq(t, toUnstructured(t, converter, tc.wantApply.current)))
 			}
 			if tc.wantDelete != nil {
 				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Eq(toUnstructured(t, converter, tc.wantDelete)))
+					Get(gomock.Any(), gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)))
 				mockClient.EXPECT().
-					Delete(gomock.Any(), gomock.Eq(toUnstructured(t, converter, tc.wantDelete)))
+					Delete(gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)))
 			}
 
 			if tc.wantStatusUpdate != nil {
@@ -244,13 +252,13 @@ func TestClusterConfigReconcile(t *testing.T) {
 				mockStatusClient := syncertesting.NewMockStatusWriter(mockCtrl)
 				mockClient.EXPECT().Status().Return(mockStatusClient)
 				mockStatusClient.EXPECT().
-					Update(gomock.Any(), gomock.Eq(tc.wantStatusUpdate))
+					Update(gomock.Any(), Eq(t, tc.wantStatusUpdate))
 			}
 
 			// Check for events with warning or status.
-			for _, wantEvent := range tc.wantEvents {
+			if tc.wantEvent != nil {
 				mockRecorder.EXPECT().
-					Eventf(gomock.Any(), gomock.Eq(wantEvent.kind), gomock.Eq(wantEvent.reason), gomock.Any(), gomock.Any())
+					Eventf(gomock.Any(), Eq(t, tc.wantEvent.kind), Eq(t, tc.wantEvent.reason), gomock.Any(), gomock.Any())
 			}
 
 			_, err := testReconciler.Reconcile(

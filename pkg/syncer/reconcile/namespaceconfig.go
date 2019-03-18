@@ -424,11 +424,14 @@ func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.Na
 	// Mark the namespace as supporting the management of hierarchical quota.
 	labels := labeling.ManageQuota.AddDeepCopy(namespaceConfig.Labels)
 	namespace.Labels = labels
-	if as := namespaceConfig.Annotations; as == nil {
-		namespace.Annotations = map[string]string{}
-	} else {
-		namespace.Annotations = namespaceConfig.Annotations
+
+	if namespace.Annotations == nil {
+		namespace.Annotations = make(map[string]string)
 	}
+	for k, v := range namespaceConfig.Annotations {
+		namespace.Annotations[k] = v
+	}
+
 	namespace.Annotations[v1.ResourceManagementKey] = v1.ResourceManagementValue
 	namespace.Name = namespaceConfig.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())

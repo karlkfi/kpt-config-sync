@@ -18,16 +18,18 @@ package reconcile
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
+	"github.com/google/nomos/pkg/testing/object"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -52,6 +54,46 @@ type application struct {
 	intended, current runtime.Object
 }
 
+func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...object.BuildOpt) *appsv1.Deployment {
+	opts = append(opts, func(o *ast.FileObject) {
+		o.Object.(*appsv1.Deployment).Spec.Strategy.Type = deploymentStrategy
+	})
+	return object.Build(kinds.Deployment(), opts...).Object.(*appsv1.Deployment)
+}
+
+func managedDeployment(deploymentStrategy appsv1.DeploymentStrategyType, namespace string, opts ...object.BuildOpt) *appsv1.Deployment {
+	opts = append(opts,
+		object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementValue),
+		object.Annotation(v1.SyncTokenAnnotationKey, token),
+		object.Namespace(namespace))
+	return deployment(deploymentStrategy, opts...)
+}
+
+func namespaceConfig(name string, state v1.PolicySyncState, opts ...object.BuildOpt) *v1.NamespaceConfig {
+	opts = append(opts, object.Name(name), func(o *ast.FileObject) {
+		o.Object.(*v1.NamespaceConfig).Status.SyncState = state
+	})
+	return object.Build(kinds.NamespaceConfig(), opts...).Object.(*v1.NamespaceConfig)
+}
+
+func namespace(name string, opts ...object.BuildOpt) *corev1.Namespace {
+	opts = append(opts, object.Name(name))
+	return object.Build(kinds.Namespace(), opts...).Object.(*corev1.Namespace)
+}
+
+func managedNamespace(name string, opts ...object.BuildOpt) *corev1.Namespace {
+	opts = append(opts, object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementValue))
+	return namespace(name, opts...)
+}
+
+func namespaceSyncError(err v1.NamespaceConfigSyncError) object.BuildOpt {
+	return func(o *ast.FileObject) {
+		o.Object.(*v1.NamespaceConfig).Status.SyncErrors = append(o.Object.(*v1.NamespaceConfig).Status.SyncErrors, err)
+	}
+}
+
+var managedQuotaLabels = object.Labels(labeling.ManageQuota.New())
+
 func TestNamespaceConfigReconcile(t *testing.T) {
 	now = func() metav1.Time {
 		return metav1.Time{Time: time.Unix(0, 0)}
@@ -60,936 +102,137 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		name                string
 		namespaceConfig     *v1.NamespaceConfig
 		namespace           *corev1.Namespace
-		declared            []runtime.Object
-		actual              []runtime.Object
+		declared            runtime.Object
+		actual              runtime.Object
 		wantNamespaceUpdate *corev1.Namespace
-		wantApplies         []application
-		wantCreates         []runtime.Object
-		wantDeletes         []runtime.Object
+		wantApply           *application
+		wantCreate          runtime.Object
+		wantDelete          runtime.Object
 		wantStatusUpdate    *v1.NamespaceConfig
-		wantEvents          []event
+		wantEvent           *event
 	}{
 		{
-			name: "update actual resource to declared state",
-			namespaceConfig: &v1.NamespaceConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-				},
+			name:                "update actual resource to declared state",
+			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:           managedNamespace("eng"),
+			declared:            deployment(appsv1.RollingUpdateDeploymentStrategyType),
+			actual:              managedDeployment(appsv1.RecreateDeploymentStrategyType, "eng"),
+			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
+			wantApply: &application{
+				intended: managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+				current:  managedDeployment(appsv1.RecreateDeploymentStrategyType, "eng"),
 			},
-			namespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			declared: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-deployment",
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			actual: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-deployment",
-						Namespace: "eng",
-						Annotations: map[string]string{
-							v1.ResourceManagementKey: v1.ResourceManagementValue,
-						},
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RecreateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			wantNamespaceUpdate: &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Namespace",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			wantApplies: []application{
-				{
-					intended: &appsv1.Deployment{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Deployment",
-							APIVersion: "apps/v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-deployment",
-							Namespace: "eng",
-							Annotations: map[string]string{
-								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1.ResourceManagementKey:  v1.ResourceManagementValue,
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							Strategy: appsv1.DeploymentStrategy{
-								Type: appsv1.RollingUpdateDeploymentStrategyType,
-							},
-						},
-					},
-					current: &appsv1.Deployment{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Deployment",
-							APIVersion: "apps/v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-deployment",
-							Namespace: "eng",
-							Annotations: map[string]string{
-								v1.ResourceManagementKey: v1.ResourceManagementValue,
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							Strategy: appsv1.DeploymentStrategy{
-								Type: appsv1.RecreateDeploymentStrategyType,
-							},
-						},
-					},
-				},
-			},
-			wantStatusUpdate: &v1.NamespaceConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "NamespaceConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-					SyncTime:  now(),
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeNormal,
-					reason:  "ReconcileComplete",
-					varargs: true,
-				},
-			},
+			wantStatusUpdate: namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+			wantEvent:        reconcileComplete,
 		},
+
 		{
-			name: "actual resource already matches declared state",
-			namespaceConfig: &v1.NamespaceConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
+			name:            "actual resource already matches declared state",
+			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token), syncToken(token)),
+			namespace:       managedNamespace("eng"),
+			declared:        deployment(appsv1.RollingUpdateDeploymentStrategyType),
+			actual:          managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+			wantApply: &application{
+				intended: managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+				current:  managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
 			},
-			namespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			declared: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-deployment",
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			actual: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-deployment",
-						Namespace: "eng",
-						Annotations: map[string]string{
-							v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-							v1.ResourceManagementKey:  v1.ResourceManagementValue,
-						},
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			wantApplies: []application{
-				{
-					intended: &appsv1.Deployment{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Deployment",
-							APIVersion: "apps/v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-deployment",
-							Namespace: "eng",
-							Annotations: map[string]string{
-								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1.ResourceManagementKey:  v1.ResourceManagementValue,
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							Strategy: appsv1.DeploymentStrategy{
-								Type: appsv1.RollingUpdateDeploymentStrategyType,
-							},
-						},
-					},
-					current: &appsv1.Deployment{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Deployment",
-							APIVersion: "apps/v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-deployment",
-							Namespace: "eng",
-							Annotations: map[string]string{
-								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1.ResourceManagementKey:  v1.ResourceManagementValue,
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							Strategy: appsv1.DeploymentStrategy{
-								Type: appsv1.RollingUpdateDeploymentStrategyType,
-							},
-						},
-					},
-				},
-			},
-			wantNamespaceUpdate: &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Namespace",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeNormal,
-					reason:  "ReconcileComplete",
-					varargs: true,
-				},
-			},
+			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
+			wantEvent:           reconcileComplete,
 		},
+
 		{
-			name: "clean up label for unmanaged namespace",
-			namespaceConfig: &v1.NamespaceConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
+			name:            "clean up label for unmanaged namespace",
+			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token), syncToken(token)),
+			namespace:       namespace("eng", managedQuotaLabels),
+			declared:        deployment(appsv1.RollingUpdateDeploymentStrategyType),
+			actual:          managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+			wantApply: &application{
+				intended: managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+				current:  managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
 			},
-			namespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-				},
-			},
-			declared: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-deployment",
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			actual: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-deployment",
-						Namespace: "eng",
-						Annotations: map[string]string{
-							v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-							v1.ResourceManagementKey:  v1.ResourceManagementValue,
-						},
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			wantApplies: []application{
-				{
-					intended: &appsv1.Deployment{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Deployment",
-							APIVersion: "apps/v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-deployment",
-							Namespace: "eng",
-							Annotations: map[string]string{
-								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1.ResourceManagementKey:  v1.ResourceManagementValue,
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							Strategy: appsv1.DeploymentStrategy{
-								Type: appsv1.RollingUpdateDeploymentStrategyType,
-							},
-						},
-					},
-					current: &appsv1.Deployment{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Deployment",
-							APIVersion: "apps/v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-deployment",
-							Namespace: "eng",
-							Annotations: map[string]string{
-								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1.ResourceManagementKey:  v1.ResourceManagementValue,
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							Strategy: appsv1.DeploymentStrategy{
-								Type: appsv1.RollingUpdateDeploymentStrategyType,
-							},
-						},
-					},
-				},
-			},
-			wantStatusUpdate: &v1.NamespaceConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "NamespaceConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateError,
-					SyncTime:  now(),
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-					SyncErrors: []v1.NamespaceConfigSyncError{
-						{
-							ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
-								v1.ResourceManagementKey, v1.ResourceManagementValue),
-						},
-					},
-				},
-			},
-			wantNamespaceUpdate: &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Namespace",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: map[string]string{},
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:   corev1.EventTypeWarning,
-					reason: "UnmanagedNamespace",
-				},
-			},
-		},
-		{
-			name: "clean up label for unmanaged namespace without a corresponding namespaceconfig",
-			namespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-				},
-			},
-			wantNamespaceUpdate: &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Namespace",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: map[string]string{},
-				},
-			},
-		},
-		{
-			name: "un-managed resource cannot be synced",
-			namespaceConfig: &v1.NamespaceConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-				},
-			},
-			namespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			declared: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-deployment",
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RecreateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			actual: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-deployment",
-						Namespace: "eng",
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			wantNamespaceUpdate: &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Namespace",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			wantStatusUpdate: &v1.NamespaceConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "NamespaceConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-					SyncTime:  now(),
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
+			wantStatusUpdate: namespaceConfig("eng", v1.StateError, importToken(token), syncTime(now()), syncToken(token), namespaceSyncError(
+				v1.NamespaceConfigSyncError{
+					ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
+						v1.ResourceManagementKey, v1.ResourceManagementValue),
+				})),
+			wantNamespaceUpdate: namespace("eng"),
+			wantEvent: &event{
+				kind:   corev1.EventTypeWarning,
+				reason: "UnmanagedNamespace",
 			},
 		},
 
 		{
-			name: "invalid management label on managed resource",
-			namespaceConfig: &v1.NamespaceConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-				},
-			},
-			namespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			declared: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-deployment",
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RecreateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			actual: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "my-deployment",
-						Namespace:   "eng",
-						Annotations: map[string]string{v1.ResourceManagementKey: "invalid"},
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			wantNamespaceUpdate: &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Namespace",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			wantStatusUpdate: &v1.NamespaceConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "NamespaceConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-					SyncTime:  now(),
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeWarning,
-					reason:  "InvalidAnnotation",
-					varargs: true,
-				},
+			name:                "clean up label for unmanaged namespace without a corresponding namespaceconfig",
+			namespace:           namespace("eng", managedQuotaLabels),
+			wantNamespaceUpdate: namespace("eng"),
+		},
+
+		{
+			name:                "un-managed resource cannot be synced",
+			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:           managedNamespace("eng"),
+			declared:            deployment(appsv1.RecreateDeploymentStrategyType),
+			actual:              deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace("eng")),
+			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
+			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+		},
+
+		{
+			name:            "invalid management label on managed resource",
+			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:       managedNamespace("eng", managedQuotaLabels),
+			declared:        deployment(appsv1.RecreateDeploymentStrategyType),
+			actual: deployment(appsv1.RollingUpdateDeploymentStrategyType,
+				object.Annotation(v1.ResourceManagementKey, "invalid")),
+			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
+			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+			wantEvent: &event{
+				kind:    corev1.EventTypeWarning,
+				reason:  "InvalidAnnotation",
+				varargs: true,
 			},
 		},
+
 		{
-			name: "create resource from declared state",
-			namespaceConfig: &v1.NamespaceConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-				},
-			},
-			namespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			declared: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-deployment",
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			actual: []runtime.Object{},
-			wantNamespaceUpdate: &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Namespace",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			wantCreates: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-deployment",
-						Namespace: "eng",
-						Annotations: map[string]string{
-							v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-							v1.ResourceManagementKey:  v1.ResourceManagementValue,
-						},
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			wantStatusUpdate: &v1.NamespaceConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "NamespaceConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-					SyncTime:  now(),
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeNormal,
-					reason:  "ReconcileComplete",
-					varargs: true,
-				},
-			},
+			name:                "create resource from declared state",
+			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:           managedNamespace("eng"),
+			declared:            deployment(appsv1.RollingUpdateDeploymentStrategyType),
+			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
+			wantCreate:          managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+			wantEvent:           reconcileComplete,
 		},
+
 		{
-			name: "delete resource according to declared state",
-			namespaceConfig: &v1.NamespaceConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-				},
-			},
-			namespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			declared: []runtime.Object{},
-			actual: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-deployment",
-						Namespace: "eng",
-						Annotations: map[string]string{
-							v1.ResourceManagementKey: v1.ResourceManagementValue,
-						},
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			wantNamespaceUpdate: &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Namespace",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "eng",
-					Labels: labeling.ManageQuota.New(),
-					Annotations: map[string]string{
-						v1.ResourceManagementKey: v1.ResourceManagementValue,
-					},
-				},
-			},
-			wantDeletes: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-deployment",
-						Namespace: "eng",
-						Annotations: map[string]string{
-							v1.ResourceManagementKey: v1.ResourceManagementValue,
-						},
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			wantStatusUpdate: &v1.NamespaceConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "NamespaceConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-					SyncTime:  now(),
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeNormal,
-					reason:  "ReconcileComplete",
-					varargs: true,
-				},
-			},
+			name:                "delete resource according to declared state",
+			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:           managedNamespace("eng"),
+			actual:              managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
+			wantDelete:          managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+			wantEvent:           reconcileComplete,
 		},
+
 		{
-			name: "unmanaged namespace has resources synced",
-			namespaceConfig: &v1.NamespaceConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateSynced,
-				},
+			name:            "unmanaged namespace has resources synced",
+			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:       namespace("eng"),
+			declared:        deployment(appsv1.RecreateDeploymentStrategyType),
+			actual:          managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+			wantStatusUpdate: namespaceConfig("eng", v1.StateError, importToken(token), syncTime(now()), syncToken(token), namespaceSyncError(v1.NamespaceConfigSyncError{
+				ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
+					v1.ResourceManagementKey, v1.ResourceManagementValue),
+			})),
+			wantEvent: &event{
+				kind:   corev1.EventTypeWarning,
+				reason: "UnmanagedNamespace",
 			},
-			namespace: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-			},
-			declared: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-deployment",
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RecreateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			actual: []runtime.Object{
-				&appsv1.Deployment{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-deployment",
-						Namespace: "eng",
-						Annotations: map[string]string{
-							v1.ResourceManagementKey: v1.ResourceManagementValue,
-						},
-					},
-					Spec: appsv1.DeploymentSpec{
-						Strategy: appsv1.DeploymentStrategy{
-							Type: appsv1.RollingUpdateDeploymentStrategyType,
-						},
-					},
-				},
-			},
-			wantStatusUpdate: &v1.NamespaceConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "NamespaceConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eng",
-				},
-				Spec: v1.NamespaceConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.NamespaceConfigStatus{
-					SyncState: v1.StateError,
-					SyncTime:  now(),
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-					SyncErrors: []v1.NamespaceConfigSyncError{
-						{
-							ErrorMessage: fmt.Sprintf("Namespace is missing proper management annotation (%s=%s)",
-								v1.ResourceManagementKey, v1.ResourceManagementValue),
-						},
-					},
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:   corev1.EventTypeWarning,
-					reason: "UnmanagedNamespace",
-				},
-			},
-			wantApplies: []application{
-				{
-					intended: &appsv1.Deployment{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Deployment",
-							APIVersion: "apps/v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-deployment",
-							Namespace: "eng",
-							Annotations: map[string]string{
-								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1.ResourceManagementKey:  v1.ResourceManagementValue,
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							Strategy: appsv1.DeploymentStrategy{
-								Type: appsv1.RecreateDeploymentStrategyType,
-							},
-						},
-					},
-					current: &appsv1.Deployment{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Deployment",
-							APIVersion: "apps/v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-deployment",
-							Namespace: "eng",
-							Annotations: map[string]string{
-								v1.ResourceManagementKey: v1.ResourceManagementValue,
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							Strategy: appsv1.DeploymentStrategy{
-								Type: appsv1.RollingUpdateDeploymentStrategyType,
-							},
-						},
-					},
-				},
+			wantApply: &application{
+				intended: managedDeployment(appsv1.RecreateDeploymentStrategyType, "eng"),
+				current:  managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
 			},
 		},
 	}
@@ -1037,33 +280,33 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				mockClient.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockClient.EXPECT().
-					Update(gomock.Any(), gomock.Eq(ns))
+					Update(gomock.Any(), Eq(t, ns))
 			}
 
 			// List actual resources on the cluster.
-			if tc.actual != nil {
+			if tc.namespaceConfig != nil {
 				mockCache.EXPECT().
 					UnstructuredList(gomock.Any(), gomock.Any()).
 					Return(toUnstructureds(t, converter, tc.actual), nil)
 			}
 
 			// Check for expected creates, applies and deletes.
-			for _, wantCreate := range tc.wantCreates {
+			if tc.wantCreate != nil {
 				mockApplier.EXPECT().
-					Create(gomock.Any(), NewUnstructuredMatcher(toUnstructured(t, converter, wantCreate)))
+					Create(gomock.Any(), NewUnstructuredMatcher(t, toUnstructured(t, converter, tc.wantCreate)))
 			}
-			for _, wantApply := range tc.wantApplies {
+			if tc.wantApply != nil {
 				mockApplier.EXPECT().
 					ApplyNamespace(
-						gomock.Eq(tc.namespaceConfig.Name),
-						gomock.Eq(toUnstructured(t, converter, wantApply.intended)),
-						gomock.Eq(toUnstructured(t, converter, wantApply.current)))
+						Eq(t, tc.namespaceConfig.Name),
+						Eq(t, toUnstructured(t, converter, tc.wantApply.intended)),
+						Eq(t, toUnstructured(t, converter, tc.wantApply.current)))
 			}
-			for _, wantDelete := range tc.wantDeletes {
+			if tc.wantDelete != nil {
 				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantDelete)))
+					Get(gomock.Any(), gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)))
 				mockClient.EXPECT().
-					Delete(gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantDelete)))
+					Delete(gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)))
 			}
 
 			if tc.wantStatusUpdate != nil {
@@ -1073,17 +316,17 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				mockStatusClient := syncertesting.NewMockStatusWriter(mockCtrl)
 				mockClient.EXPECT().Status().Return(mockStatusClient)
 				mockStatusClient.EXPECT().
-					Update(gomock.Any(), gomock.Eq(tc.wantStatusUpdate))
+					Update(gomock.Any(), Eq(t, tc.wantStatusUpdate))
 			}
 
 			// Check for events with warning or status.
-			for _, wantEvent := range tc.wantEvents {
-				if wantEvent.varargs {
+			if tc.wantEvent != nil {
+				if tc.wantEvent.varargs {
 					mockRecorder.EXPECT().
-						Eventf(gomock.Any(), gomock.Eq(wantEvent.kind), gomock.Eq(wantEvent.reason), gomock.Any(), gomock.Any())
+						Eventf(gomock.Any(), Eq(t, tc.wantEvent.kind), Eq(t, tc.wantEvent.reason), gomock.Any(), gomock.Any())
 				} else {
 					mockRecorder.EXPECT().
-						Event(gomock.Any(), gomock.Eq(wantEvent.kind), gomock.Eq(wantEvent.reason), gomock.Any())
+						Event(gomock.Any(), Eq(t, tc.wantEvent.kind), Eq(t, tc.wantEvent.reason), gomock.Any())
 				}
 			}
 
@@ -1111,21 +354,20 @@ func toUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj r
 	return &unstructured.Unstructured{Object: u}
 }
 
-func toUnstructureds(t *testing.T, converter runtime.UnstructuredConverter,
-	objs []runtime.Object) (us []*unstructured.Unstructured) {
-	for _, obj := range objs {
-		us = append(us, toUnstructured(t, converter, obj))
+func toUnstructureds(t *testing.T, converter runtime.UnstructuredConverter, obj runtime.Object) []*unstructured.Unstructured {
+	if obj == nil {
+		return nil
 	}
-	return
+	return []*unstructured.Unstructured{toUnstructured(t, converter, obj)}
 }
 
 // unstructuredMatcher ignores fields with randomly ordered values in unstructured.Unstructured when comparing.
 type unstructuredMatcher struct {
-	u *unstructured.Unstructured
+	underlying gomock.Matcher
 }
 
-func NewUnstructuredMatcher(u *unstructured.Unstructured) gomock.Matcher {
-	return &unstructuredMatcher{u: u}
+func NewUnstructuredMatcher(t *testing.T, u *unstructured.Unstructured) gomock.Matcher {
+	return &unstructuredMatcher{underlying: Eq(t, u)}
 }
 
 func (m *unstructuredMatcher) Matches(x interface{}) bool {
@@ -1136,9 +378,32 @@ func (m *unstructuredMatcher) Matches(x interface{}) bool {
 	as := u.GetAnnotations()
 	delete(as, corev1.LastAppliedConfigAnnotation)
 	u.SetAnnotations(as)
-	return reflect.DeepEqual(u, m.u)
+	return m.underlying.Matches(x)
 }
 
 func (m *unstructuredMatcher) String() string {
-	return fmt.Sprintf("unstructured.Unstructured Matcher: %v", m.u)
+	return fmt.Sprintf("unstructured.Unstructured Matcher: %v", m.underlying.String())
+}
+
+// cmpDiffMatcher returns true iff cmp.Diff returns empty string.
+// Prints the diff if there is one, as the gomock diff is garbage.
+type cmpDiffMatcher struct {
+	t        *testing.T
+	expected interface{}
+}
+
+func Eq(t *testing.T, expected interface{}) gomock.Matcher {
+	return &cmpDiffMatcher{t: t, expected: expected}
+}
+
+func (m *cmpDiffMatcher) String() string {
+	return fmt.Sprintf("cmpDiffMatcher Matcher: %v", m.expected)
+}
+
+func (m *cmpDiffMatcher) Matches(actual interface{}) bool {
+	if diff := cmp.Diff(m.expected, actual); diff != "" {
+		m.t.Log(diff)
+		return false
+	}
+	return true
 }

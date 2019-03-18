@@ -31,10 +31,14 @@ func Build(gvk schema.GroupVersionKind, opts ...BuildOpt) ast.FileObject {
 		object = fake.ClusterRole("cluster/cr.yaml")
 	case kinds.ClusterSelector():
 		object = fake.ClusterSelector("cluster/cs.yaml")
+	case kinds.Deployment():
+		object = fake.Deployment()
 	case kinds.HierarchyConfig():
 		object = fake.HierarchyConfig("system/hc.yaml")
 	case kinds.Namespace():
 		object = fake.Namespace("namespaces/foo/namespace.yaml")
+	case kinds.NamespaceConfig():
+		object = fake.NamespaceConfig()
 	case kinds.NamespaceSelector():
 		object = fake.NamespaceSelector("namespaces/foo/ns.yaml")
 	case kinds.PersistentVolume():
