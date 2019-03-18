@@ -1,7 +1,7 @@
 package fake
 
 import (
-	v12 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
@@ -30,7 +30,7 @@ func Namespace(path string) ast.FileObject {
 func NamespaceSelector(path string) ast.FileObject {
 	return ast.FileObject{
 		Path: nomospath.FromSlash(path),
-		Object: &v12.NamespaceSelector{
+		Object: &nomosv1.NamespaceSelector{
 			TypeMeta: toTypeMeta(kinds.NamespaceSelector()),
 		},
 	}
@@ -70,7 +70,7 @@ func ClusterRole(path string) ast.FileObject {
 func ClusterSelector(path string) ast.FileObject {
 	return ast.FileObject{
 		Path: nomospath.FromSlash(path),
-		Object: &v12.ClusterSelector{
+		Object: &nomosv1.ClusterSelector{
 			TypeMeta: toTypeMeta(kinds.ClusterSelector()),
 		},
 	}
@@ -86,11 +86,23 @@ func Cluster(path string) ast.FileObject {
 	}
 }
 
+// ClusterConfig returns a ClusterConfig.
+func ClusterConfig() ast.FileObject {
+	return ast.FileObject{
+		Object: &nomosv1.ClusterConfig{
+			TypeMeta: toTypeMeta(kinds.ClusterConfig()),
+			ObjectMeta: v1.ObjectMeta{
+				Name: nomosv1.ClusterConfigName,
+			},
+		},
+	}
+}
+
 // Repo returns a nomos Repo at the specified path.
 func Repo(path string) ast.FileObject {
 	return ast.FileObject{
 		Path: nomospath.FromSlash(path),
-		Object: &v12.Repo{
+		Object: &nomosv1.Repo{
 			TypeMeta: toTypeMeta(kinds.Repo()),
 		},
 	}
@@ -100,7 +112,7 @@ func Repo(path string) ast.FileObject {
 func HierarchyConfig(path string) ast.FileObject {
 	return ast.FileObject{
 		Path: nomospath.FromSlash(path),
-		Object: &v12.HierarchyConfig{
+		Object: &nomosv1.HierarchyConfig{
 			TypeMeta: toTypeMeta(kinds.HierarchyConfig()),
 		},
 	}
@@ -110,8 +122,17 @@ func HierarchyConfig(path string) ast.FileObject {
 func Sync(path string) ast.FileObject {
 	return ast.FileObject{
 		Path: nomospath.FromSlash(path),
-		Object: &v12.Sync{
+		Object: &nomosv1.Sync{
 			TypeMeta: toTypeMeta(kinds.Sync()),
+		},
+	}
+}
+
+// PersistentVolume returns a PersistentVolume Object.
+func PersistentVolume() ast.FileObject {
+	return ast.FileObject{
+		Object: &corev1.PersistentVolume{
+			TypeMeta: toTypeMeta(kinds.PersistentVolume()),
 		},
 	}
 }

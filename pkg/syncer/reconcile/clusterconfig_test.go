@@ -22,10 +22,12 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/syncer/client"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
+	"github.com/google/nomos/pkg/testing/object"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
@@ -35,6 +37,61 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const token = "b38239ea8f58eaed17af6734bd6a025eeafccda1"
+
+var (
+	reconcileComplete = event{
+		kind:    corev1.EventTypeNormal,
+		reason:  "ReconcileComplete",
+		varargs: true,
+	}
+)
+
+func importToken(t string) object.BuildOpt {
+	return func(o *ast.FileObject) {
+		o.Object.(*v1.ClusterConfig).Spec.ImportToken = t
+	}
+}
+
+func syncTime(t metav1.Time) object.BuildOpt {
+	return func(o *ast.FileObject) {
+		o.Object.(*v1.ClusterConfig).Status.SyncTime = t
+	}
+}
+
+func syncToken(t string) object.BuildOpt {
+	return func(o *ast.FileObject) {
+		o.Object.(*v1.ClusterConfig).Status.SyncToken = t
+	}
+}
+
+func syncError(err v1.ClusterConfigSyncError) object.BuildOpt {
+	return func(o *ast.FileObject) {
+		o.Object.(*v1.ClusterConfig).Status.SyncErrors = append(o.Object.(*v1.ClusterConfig).Status.SyncErrors, err)
+	}
+}
+
+func clusterConfig(state v1.PolicySyncState, opts ...object.BuildOpt) *v1.ClusterConfig {
+	opts = append(opts, func(o *ast.FileObject) {
+		o.Object.(*v1.ClusterConfig).Status.SyncState = state
+	})
+	return object.Build(kinds.ClusterConfig(), opts...).Object.(*v1.ClusterConfig)
+}
+
+func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.BuildOpt) *corev1.PersistentVolume {
+	opts = append(opts, func(o *ast.FileObject) {
+		o.Object.(*corev1.PersistentVolume).Spec.PersistentVolumeReclaimPolicy = reclaimPolicy
+	})
+	return object.Build(kinds.PersistentVolume(), opts...).Object.(*corev1.PersistentVolume)
+}
+
+func managedPersistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.BuildOpt) *corev1.PersistentVolume {
+	opts = append(opts,
+		object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementValue),
+		object.Annotation(v1.SyncTokenAnnotationKey, token))
+	return persistentVolume(reclaimPolicy, opts...)
+}
+
 func TestClusterConfigReconcile(t *testing.T) {
 	now = func() metav1.Time {
 		return metav1.Time{Time: time.Unix(0, 0)}
@@ -42,419 +99,76 @@ func TestClusterConfigReconcile(t *testing.T) {
 	testCases := []struct {
 		name             string
 		clusterConfig    *v1.ClusterConfig
-		declared         []runtime.Object
-		actual           []runtime.Object
+		declared         runtime.Object
+		actual           runtime.Object
 		wantApplies      []application
-		wantCreates      []runtime.Object
-		wantDeletes      []runtime.Object
+		wantCreate       runtime.Object
+		wantDelete       runtime.Object
 		wantStatusUpdate *v1.ClusterConfig
 		wantEvents       []event
 	}{
 		{
-			name: "update actual resource to declared state",
-			clusterConfig: &v1.ClusterConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterConfigName,
-				},
-				Spec: v1.ClusterConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.ClusterConfigStatus{
-					SyncState: v1.StateSynced,
-				},
-			},
-			declared: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-persistentvolume",
-					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-					},
-				},
-			},
-			actual: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-persistentvolume",
-						Annotations: map[string]string{
-							v1.ResourceManagementKey: v1.ResourceManagementValue,
-						},
-					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimDelete,
-					},
-				},
-			},
+			name:          "update actual resource to declared state",
+			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
+			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimDelete),
 			wantApplies: []application{
 				{
-					intended: &corev1.PersistentVolume{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "PersistentVolume",
-							APIVersion: "v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "my-persistentvolume",
-							Annotations: map[string]string{
-								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1.ResourceManagementKey:  v1.ResourceManagementValue,
-							},
-						},
-						Spec: corev1.PersistentVolumeSpec{
-							PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-						},
-					},
-					current: &corev1.PersistentVolume{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "PersistentVolume",
-							APIVersion: "v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "my-persistentvolume",
-							Annotations: map[string]string{
-								v1.ResourceManagementKey: v1.ResourceManagementValue,
-							},
-						},
-						Spec: corev1.PersistentVolumeSpec{
-							PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimDelete,
-						},
-					},
+					intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
+					current:  managedPersistentVolume(corev1.PersistentVolumeReclaimDelete),
 				},
 			},
-			wantStatusUpdate: &v1.ClusterConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ClusterConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterConfigName,
-				},
-				Spec: v1.ClusterConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.ClusterConfigStatus{
-					SyncState: v1.StateSynced,
-					SyncTime:  now(),
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeNormal,
-					reason:  "ReconcileComplete",
-					varargs: true,
-				},
-			},
+			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+			wantEvents:       []event{reconcileComplete},
 		},
 		{
-			name: "actual resource already matches declared state",
-			clusterConfig: &v1.ClusterConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterConfigName,
-				},
-				Spec: v1.ClusterConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.ClusterConfigStatus{
-					SyncState: v1.StateSynced,
-				},
-			},
-			declared: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-persistentvolume",
-					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-					},
-				},
-			},
-			actual: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-persistentvolume",
-						Annotations: map[string]string{
-							v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-							v1.ResourceManagementKey:  v1.ResourceManagementValue,
-						},
-					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-					},
-				},
-			},
+			name:          "actual resource already matches declared state",
+			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
+			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			wantApplies: []application{
 				{
-					intended: &corev1.PersistentVolume{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "PersistentVolume",
-							APIVersion: "v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "my-persistentvolume",
-							Annotations: map[string]string{
-								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1.ResourceManagementKey:  v1.ResourceManagementValue,
-							},
-						},
-						Spec: corev1.PersistentVolumeSpec{
-							PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-						},
-					},
-					current: &corev1.PersistentVolume{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "PersistentVolume",
-							APIVersion: "v1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "my-persistentvolume",
-							Annotations: map[string]string{
-								v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-								v1.ResourceManagementKey:  v1.ResourceManagementValue,
-							},
-						},
-						Spec: corev1.PersistentVolumeSpec{
-							PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-						},
-					},
+					intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
+					current:  managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 				},
 			},
-			wantStatusUpdate: &v1.ClusterConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ClusterConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterConfigName,
-				},
-				Spec: v1.ClusterConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.ClusterConfigStatus{
-					SyncState: v1.StateSynced,
-					SyncTime:  now(),
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeNormal,
-					reason:  "ReconcileComplete",
-					varargs: true,
-				},
-			},
+			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+			wantEvents:       []event{reconcileComplete},
 		},
 		{
-			name: "un-managed resource cannot be synced",
-			clusterConfig: &v1.ClusterConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterConfigName,
-				},
-				Status: v1.ClusterConfigStatus{
-					SyncState: v1.StateSynced,
-				},
-			},
-			declared: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-persistentvolume",
-					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-					},
-				},
-			},
-			actual: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-persistentvolume",
-					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimDelete,
-					},
-				},
-			},
+			name:          "un-managed resource cannot be synced",
+			clusterConfig: clusterConfig(v1.StateSynced),
+			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			actual:        persistentVolume(corev1.PersistentVolumeReclaimDelete),
 		},
 		{
-			name: "create resource from declared state",
-			clusterConfig: &v1.ClusterConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterConfigName,
-				},
-				Spec: v1.ClusterConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.ClusterConfigStatus{
-					SyncState: v1.StateSynced,
-				},
-			},
-			declared: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-persistentvolume",
-					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-					},
-				},
-			},
-			actual: []runtime.Object{},
-			wantCreates: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-persistentvolume",
-						Annotations: map[string]string{
-							v1.SyncTokenAnnotationKey: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-							v1.ResourceManagementKey:  v1.ResourceManagementValue,
-						},
-					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-					},
-				},
-			},
-			wantStatusUpdate: &v1.ClusterConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ClusterConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterConfigName,
-				},
-				Spec: v1.ClusterConfigSpec{
-					ImportToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-				Status: v1.ClusterConfigStatus{
-					SyncState: v1.StateSynced,
-					SyncTime:  now(),
-					SyncToken: "b38239ea8f58eaed17af6734bd6a025eeafccda1",
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeNormal,
-					reason:  "ReconcileComplete",
-					varargs: true,
-				},
-			},
+			name:             "create resource from declared state",
+			clusterConfig:    clusterConfig(v1.StateSynced, importToken(token)),
+			declared:         persistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			wantCreate:       managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+			wantEvents:       []event{reconcileComplete},
 		},
 		{
-			name: "delete resource according to declared state",
-			clusterConfig: &v1.ClusterConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterConfigName,
-				},
-				Status: v1.ClusterConfigStatus{
-					SyncState: v1.StateSynced,
-				},
-			},
-			declared: []runtime.Object{},
-			actual: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-persistentvolume",
-						Annotations: map[string]string{
-							v1.ResourceManagementKey: v1.ResourceManagementValue,
-						},
-					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-					},
-				},
-			},
-			wantDeletes: []runtime.Object{
-				&corev1.PersistentVolume{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "PersistentVolume",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-persistentvolume",
-						Annotations: map[string]string{
-							v1.ResourceManagementKey: v1.ResourceManagementValue,
-						},
-					},
-					Spec: corev1.PersistentVolumeSpec{
-						PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRecycle,
-					},
-				},
-			},
-			wantEvents: []event{
-				{
-					kind:    corev1.EventTypeNormal,
-					reason:  "ReconcileComplete",
-					varargs: true,
-				},
-			},
+			name:          "delete resource according to declared state",
+			clusterConfig: clusterConfig(v1.StateSynced),
+			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			wantDelete:    managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			wantEvents:    []event{reconcileComplete},
 		},
 		{
-			name: "ignore clusterconfig with invalid name",
-			clusterConfig: &v1.ClusterConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "some-incorrect-name",
-				},
-				Status: v1.ClusterConfigStatus{
-					SyncState: v1.StateSynced,
-				},
-			},
-			declared: []runtime.Object{},
-			wantStatusUpdate: &v1.ClusterConfig{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ClusterConfig",
-					APIVersion: "configmanagement.gke.io/v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "some-incorrect-name",
-				},
-				Status: v1.ClusterConfigStatus{
-					SyncState: v1.StateError,
-					SyncTime:  now(),
-					SyncErrors: []v1.ClusterConfigSyncError{
-						{
-							ResourceName: "some-incorrect-name",
-							ResourceKind: "ClusterConfig",
-							ResourceAPI:  "configmanagement.gke.io/v1",
-							ErrorMessage: `ClusterConfig resource has invalid name "some-incorrect-name"`,
-						},
-					},
-				},
-			},
+			name:          "error on clusterconfig with invalid name",
+			clusterConfig: clusterConfig(v1.StateSynced, object.Name("some-incorrect-name")),
+			wantStatusUpdate: clusterConfig(v1.StateError,
+				object.Name("some-incorrect-name"),
+				syncTime(now()),
+				syncError(v1.ClusterConfigSyncError{
+					ResourceName: "some-incorrect-name",
+					ResourceKind: "ClusterConfig",
+					ResourceAPI:  "configmanagement.gke.io/v1",
+					ErrorMessage: `ClusterConfig resource has invalid name "some-incorrect-name"`,
+				}),
+			),
 			wantEvents: []event{
 				{
 					kind:    corev1.EventTypeWarning,
@@ -477,7 +191,11 @@ func TestClusterConfigReconcile(t *testing.T) {
 			mockApplier := syncertesting.NewMockApplier(mockCtrl)
 			mockCache := syncertesting.NewMockGenericCache(mockCtrl)
 			mockRecorder := syncertesting.NewMockEventRecorder(mockCtrl)
-			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, tc.declared))
+			var declared []runtime.Object
+			if tc.declared != nil {
+				declared = append(declared, tc.declared)
+			}
+			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, declared))
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -490,16 +208,21 @@ func TestClusterConfigReconcile(t *testing.T) {
 				SetArg(2, *tc.clusterConfig)
 
 			// List actual resources on the cluster.
-			if tc.actual != nil {
+			if tc.clusterConfig.Name == v1.ClusterConfigName {
+				// No call is made if the cluster config's name is incorrect.
+				var expectedActual []runtime.Object
+				if tc.actual != nil {
+					expectedActual = append(expectedActual, tc.actual)
+				}
 				mockCache.EXPECT().
 					UnstructuredList(gomock.Any(), gomock.Eq("")).
-					Return(toUnstructureds(t, converter, tc.actual), nil)
+					Return(toUnstructureds(t, converter, expectedActual), nil)
 			}
 
 			// Check for expected creates, applies and deletes.
-			for _, wantCreate := range tc.wantCreates {
+			if tc.wantCreate != nil {
 				mockApplier.EXPECT().
-					Create(gomock.Any(), NewUnstructuredMatcher(toUnstructured(t, converter, wantCreate)))
+					Create(gomock.Any(), NewUnstructuredMatcher(toUnstructured(t, converter, tc.wantCreate)))
 			}
 			for _, wantApply := range tc.wantApplies {
 				mockApplier.EXPECT().
@@ -507,11 +230,11 @@ func TestClusterConfigReconcile(t *testing.T) {
 						gomock.Eq(toUnstructured(t, converter, wantApply.intended)),
 						gomock.Eq(toUnstructured(t, converter, wantApply.current)))
 			}
-			for _, wantDelete := range tc.wantDeletes {
+			if tc.wantDelete != nil {
 				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantDelete)))
+					Get(gomock.Any(), gomock.Any(), gomock.Eq(toUnstructured(t, converter, tc.wantDelete)))
 				mockClient.EXPECT().
-					Delete(gomock.Any(), gomock.Eq(toUnstructured(t, converter, wantDelete)))
+					Delete(gomock.Any(), gomock.Eq(toUnstructured(t, converter, tc.wantDelete)))
 			}
 
 			if tc.wantStatusUpdate != nil {
@@ -526,13 +249,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 
 			// Check for events with warning or status.
 			for _, wantEvent := range tc.wantEvents {
-				if wantEvent.varargs {
-					mockRecorder.EXPECT().
-						Eventf(gomock.Any(), gomock.Eq(wantEvent.kind), gomock.Eq(wantEvent.reason), gomock.Any(), gomock.Any())
-				} else {
-					mockRecorder.EXPECT().
-						Event(gomock.Any(), gomock.Eq(wantEvent.kind), gomock.Eq(wantEvent.reason), gomock.Any())
-				}
+				mockRecorder.EXPECT().
+					Eventf(gomock.Any(), gomock.Eq(wantEvent.kind), gomock.Eq(wantEvent.reason), gomock.Any(), gomock.Any())
 			}
 
 			_, err := testReconciler.Reconcile(

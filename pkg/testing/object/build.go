@@ -25,6 +25,8 @@ func Build(gvk schema.GroupVersionKind, opts ...BuildOpt) ast.FileObject {
 	switch gvk {
 	case kinds.Cluster():
 		object = fake.Cluster("clusterregistry/cluster.yaml")
+	case kinds.ClusterConfig():
+		object = fake.ClusterConfig()
 	case kinds.ClusterRole():
 		object = fake.ClusterRole("cluster/cr.yaml")
 	case kinds.ClusterSelector():
@@ -35,6 +37,8 @@ func Build(gvk schema.GroupVersionKind, opts ...BuildOpt) ast.FileObject {
 		object = fake.Namespace("namespaces/foo/namespace.yaml")
 	case kinds.NamespaceSelector():
 		object = fake.NamespaceSelector("namespaces/foo/ns.yaml")
+	case kinds.PersistentVolume():
+		object = fake.PersistentVolume()
 	case kinds.Repo():
 		object = fake.Repo("system/repo.yaml")
 	case kinds.Role():
