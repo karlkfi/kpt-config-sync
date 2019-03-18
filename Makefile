@@ -86,7 +86,7 @@ GCR_PREFIX ?= $(GCP_PROJECT)/$(USER)/$(DATE)
 # NOTE: nomos-public is fully accessible publicly, do not use for anything
 # other than buildenv
 BUILDENV_PROJECT ?= nomos-public
-BUILDENV_IMAGE_VERSION ?= v0.1.4
+BUILDENV_IMAGE_VERSION ?= v0.1.5
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
 # When set to "release", enables these optimizations:
