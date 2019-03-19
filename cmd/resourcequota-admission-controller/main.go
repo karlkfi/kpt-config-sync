@@ -49,6 +49,7 @@ const (
 var (
 	caBundleFile = flag.String("ca-cert", "ca.crt", "Webhook server bundle cert used by api-server to authenticate the webhook server.")
 	enablemTLS   = flag.Bool("enable-mutual-tls", false, "If set, enables mTLS verification of the client connecting to the admission controller.")
+	resyncPeriod = flag.Duration("resync-period", time.Minute, "The resync period for the admission controller.")
 )
 
 func setupResourceQuotaInformer(config *rest.Config) (informerscorev1.ResourceQuotaInformer, error) {
@@ -158,7 +159,7 @@ func main() {
 			glog.Fatalf("Failed to get client cert: %+v", err)
 		}
 	}
-	hierarchicalQuotaInformer, err := admissioncontroller.SetupHierarchicalQuotaInformer(config)
+	hierarchicalQuotaInformer, err := admissioncontroller.SetupHierarchicalQuotaInformer(config, resyncPeriod)
 	if err != nil {
 		glog.Fatalf("Failed setting up hierarchicalQuota informer: %+v", err)
 	}
