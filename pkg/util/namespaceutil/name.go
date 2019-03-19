@@ -25,7 +25,6 @@ import (
 var (
 	// Namespaces that either exist on the kubernetes cluster by default or are reserved by Nomos.
 	reservedNamespaces = map[string]bool{
-		"default":                           true,
 		policyhierarchy.ControllerNamespace: true,
 	}
 
@@ -50,4 +49,9 @@ func IsReserved(name string) bool {
 	}
 
 	return false
+}
+
+// IsDefault returns true if ns is the default namespace.
+func IsDefault(ns string) bool {
+	return ns == "default"
 }

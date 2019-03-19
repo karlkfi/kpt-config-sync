@@ -79,3 +79,23 @@ var ConfigManagementSystem = Label{
 	key:   ConfigManagementSystemKey,
 	value: ConfigManagementSystemValue,
 }
+
+// HasNomos returns true if the given map contains at least one Nomos-specific label.
+func HasNomos(a map[string]string) bool {
+	if _, ok := a[ConfigManagementQuotaKey]; ok {
+		return true
+	}
+	if _, ok := a[ConfigManagementSystemKey]; ok {
+		return true
+	}
+	return false
+}
+
+// RemoveNomos removes Nomos system labels from the supplied map.  The map is modified in place.
+func RemoveNomos(a map[string]string) {
+	if a == nil {
+		return
+	}
+	delete(a, ConfigManagementQuotaKey)
+	delete(a, ConfigManagementSystemKey)
+}

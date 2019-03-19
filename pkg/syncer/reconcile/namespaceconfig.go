@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/id"
@@ -48,7 +48,18 @@ import (
 
 const reconcileTimeout = time.Minute * 5
 
-var _ reconcile.Reconciler = &NamespaceConfigReconciler{}
+var (
+	_ reconcile.Reconciler = &NamespaceConfigReconciler{}
+
+	// reservedNamespaceConfig is a dummy namespace config used to represent
+	// the policy content of non-removable namespaces (like "default") when the
+	// corresponding NamespaceConfig is deleted from the repo.  Instead of
+	// deleting the namespace and its resources, we apply a change that removes
+	// all managed resources from the namespace, but does not attempt to delete
+	// the namespace.
+	// TODO(filmil): See if there is an easy way to hide this nil object.
+	reservedNamespaceConfig = &v1.NamespaceConfig{}
+)
 
 // NamespaceConfigReconciler reconciles a NamespaceConfig object.
 type NamespaceConfigReconciler struct {
@@ -194,8 +205,24 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 		return nsErr
 	}
 
+	if glog.V(4) {
+		glog.Warningf("ns:%q: cfgState=%v, nsState=%v", name, cfgState, nsState)
+	}
 	switch cfgState {
 	case namespaceConfigStateNotFound:
+		if namespaceutil.IsDefault(name) {
+			// Special handling for the default namespace: do not remove
+			// the namespace itself as that is not allowed.  Instead,
+			// manage all policies inside as if the namespace has no
+			// managed resources.
+			if err := r.managePolicies(
+				ctx, name, reservedNamespaceConfig, syncErrs); err != nil {
+				return err
+			}
+			// Remove the metadata from the namespace only after the resources
+			// inside have been processed.
+			return r.removeNomosMeta(ctx, ns)
+		}
 		switch nsState {
 		case namespaceStateNotFound: // noop
 		case namespaceStateUnmanaged, namespaceStateUnset:
@@ -261,6 +288,27 @@ func (r *NamespaceConfigReconciler) warnInvalidAnnotationResource(u *unstructure
 	r.recorder.Eventf(
 		u, corev1.EventTypeWarning, "InvalidAnnotation",
 		"%q is %s in the source of truth but has invalid management annotation %s=%s", gvk, v1.ResourceManagementKey, value)
+}
+
+// removeNomosMeta removes Nomos-specific decorations from the given namespace.
+func (r *NamespaceConfigReconciler) removeNomosMeta(ctx context.Context, ns *corev1.Namespace) error {
+	if !v1.HasNomosAnnotation(ns.GetAnnotations()) && !labeling.HasNomos(ns.GetLabels()) {
+		// Skip object update if there is nothing to change.
+		return nil
+	}
+	_, err := r.client.Update(ctx, ns, func(o runtime.Object) (runtime.Object, error) {
+		ns := o.(*corev1.Namespace)
+		// Set GVK for ease of logging.
+		ns.SetGroupVersionKind(kinds.Namespace())
+		a := ns.GetAnnotations()
+		v1.RemoveNomos(a)
+		ns.SetAnnotations(a)
+		l := ns.GetLabels()
+		labeling.RemoveNomos(l)
+		ns.SetLabels(l)
+		return ns, nil
+	})
+	return err
 }
 
 // cleanUpLabel removes the nomos quota label from the namespace, if present.
@@ -329,6 +377,7 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 	return bErr
 }
 
+// TODO(sbochins): consolidate common functionality with decorateAsClusterManaged.
 func decorateAsManaged(declaredInstances []*unstructured.Unstructured, node *v1.NamespaceConfig) {
 	for _, decl := range declaredInstances {
 		decl.SetNamespace(node.GetName())
@@ -336,8 +385,15 @@ func decorateAsManaged(declaredInstances []*unstructured.Unstructured, node *v1.
 	}
 }
 
-func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(ctx context.Context, node *v1.NamespaceConfig,
+// setNamespaceConfigStatus updates the status of the given node.  If the node
+// is nil, it does nothing, and successfully so.
+func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
+	ctx context.Context,
+	node *v1.NamespaceConfig,
 	errs []v1.NamespaceConfigSyncError) id.ResourceError {
+	if node == reservedNamespaceConfig {
+		return nil
+	}
 	freshSyncToken := node.Status.SyncToken == node.Spec.ImportToken
 	if node.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for NamespaceConfig %q is already up-to-date.", node.Name)

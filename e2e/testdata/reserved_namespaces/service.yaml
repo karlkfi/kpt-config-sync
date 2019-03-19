@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: some-service
+spec:
+  sessionAffinity: ClientIP
+  selector:
+    app: some-service
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 9376

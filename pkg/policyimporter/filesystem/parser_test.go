@@ -1325,11 +1325,10 @@ spec:
 		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode},
 	},
 	{
-		testName: "Dir name reserved 2",
+		testName: "Default namespace is allowed",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/default/ns.yaml": templateData{Name: "default"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode},
 	},
 	{
 		testName: "Dir name invalid",

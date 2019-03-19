@@ -56,12 +56,16 @@ func TestIsReserved(t *testing.T) {
 		{"kube-system", true},
 		{"kube-public", true},
 		{"kube-foo", true},
-		{"default", true},
+		{"default", false},
 		{policyhierarchy.ControllerNamespace, true},
 	} {
-		reserved := IsReserved(testcase.name)
-		if reserved != testcase.reserved {
-			t.Errorf("Expected %v got %v testing %v", testcase.reserved, reserved, testcase)
-		}
+		testcase := testcase
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			reserved := IsReserved(testcase.name)
+			if reserved != testcase.reserved {
+				t.Errorf("Expected %v got %v", testcase.reserved, reserved)
+			}
+		})
 	}
 }

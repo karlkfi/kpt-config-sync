@@ -18,7 +18,8 @@ package labeling
 import (
 	"testing"
 
-	"k8s.io/api/rbac/v1"
+	"github.com/google/go-cmp/cmp"
+	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
@@ -50,5 +51,48 @@ func TestLabeling(t *testing.T) {
 	testLabel.AddTo(m)
 	if m[testKey] != testValue {
 		t.Errorf("Wrong key/value for label")
+	}
+}
+
+func TestRemoveNomos(t *testing.T) {
+	tests := []struct {
+		in, out  map[string]string
+		hasNomos bool
+	}{
+		{},
+		{
+			in:  map[string]string{},
+			out: map[string]string{},
+		},
+		{
+			in:  map[string]string{"foo": "bar"},
+			out: map[string]string{"foo": "bar"},
+		},
+		{
+			in: map[string]string{
+				"foo":                            "bar",
+				"configmanagement.gke.io/system": "true",
+				"configmanagement.gke.io/quota":  "true",
+			},
+			out:      map[string]string{"foo": "bar"},
+			hasNomos: true,
+		},
+	}
+	for _, test := range tests {
+		var c map[string]string
+		if test.in != nil {
+			c = map[string]string{}
+			for k, v := range test.in {
+				c[k] = v
+			}
+		}
+		RemoveNomos(c)
+		if !cmp.Equal(test.out, c) {
+			t.Errorf("RemoveNomos(%+v)=%+v, want: %+v\ndiff:%v\n", test.in, c, test.out, cmp.Diff(test.out, c))
+		}
+		actualHas := HasNomos(test.in)
+		if actualHas != test.hasNomos {
+			t.Errorf("HasNomos(%+v)=%v, want: %v", test.in, actualHas, test.hasNomos)
+		}
 	}
 }

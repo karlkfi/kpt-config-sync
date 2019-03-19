@@ -73,9 +73,30 @@ func IsAnnotation(a string) bool {
 	return nomosAnnotations[a]
 }
 
+// HasNomosAnnotation returns true if the given map has at least one Nomos annotation.
+func HasNomosAnnotation(a map[string]string) bool {
+	for k := range nomosAnnotations {
+		if IsAnnotation(k) {
+			return true
+		}
+	}
+	return false
+}
+
 // GetClusterSelectorAnnotation returns the value of the cluster selector annotation
 // among the given annotations.  If the annotation is not there, "" is returned.
 func GetClusterSelectorAnnotation(a map[string]string) string {
 	// Looking up in a nil map will also return "".
 	return a[ClusterSelectorAnnotationKey]
+}
+
+// RemoveNomos removes Nomos system annotations from the given map.  The map is
+// modified in place.
+func RemoveNomos(a map[string]string) {
+	if a == nil {
+		return
+	}
+	for k := range nomosAnnotations {
+		delete(a, k)
+	}
 }

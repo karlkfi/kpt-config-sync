@@ -116,6 +116,34 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   clean_test_configmaps
 }
 
+@test "Namespace default can be managed" {
+  debug::log "Add an unmanaged resource into the namespace as a control"
+  wait::for -t 5 -- \
+    kubectl apply -f ${YAML_DIR}/reserved_namespaces/unmanaged-service.yaml
+
+  debug::log "Start managing the namespace"
+  git::add ${YAML_DIR}/reserved_namespaces/service.yaml \
+    acme/namespaces/default/service.yaml
+  git::add ${YAML_DIR}/reserved_namespaces/namespace.yaml \
+    acme/namespaces/default/namespace.yaml
+  git::commit -m "Start managing the namespace"
+
+  debug::log "Wait until service appears on the cluster"
+  wait::for -t 30 -- kubectl get services "some-service"
+
+  debug::log "Remove the namespace from managed set"
+  git::rm acme/namespaces/default/namespace.yaml
+  git::commit -m "Remove the namespace from the managed set of namespaces"
+
+  debug::log "Wait until the managed resource disappears from the cluster"
+  wait::for -f -t 10 -- kubectl get services "some-service"
+
+  debug::log "Ensure that the unmanaged service remained"
+  wait::for -t 10 -- \
+    kubectl get services "some-other-service"
+  kubectl delete service "some-other-service" --ignore-not-found
+}
+
 function clean_test_configmaps() {
   kubectl delete configmaps -n new-prj --all > /dev/null
   kubectl delete configmaps -n newer-prj --all > /dev/null

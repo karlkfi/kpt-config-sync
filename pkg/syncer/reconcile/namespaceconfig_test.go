@@ -42,10 +42,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// event represents a K8S event.
+// event represents a K8S event that was emitted as result of the reconcile.
 type event struct {
-	kind    string
-	reason  string
+	// corev1.EventTypeNormal/corev1.EventTypeWarning
+	kind   string
+	reason string
+	// set to true if the event was produced with Eventf (in contrast to Event)
 	varargs bool
 }
 
@@ -99,24 +101,40 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		return metav1.Time{Time: time.Unix(0, 0)}
 	}
 	testCases := []struct {
-		name                string
-		namespaceConfig     *v1.NamespaceConfig
-		namespace           *corev1.Namespace
-		declared            runtime.Object
-		actual              runtime.Object
+		name string
+		// What the namespace config looks like for the namespace, set to nil if
+		// there is no config.
+		namespaceConfig *v1.NamespaceConfig
+		// What the namespace resource looks like on the cluster before the
+		// reconcile. Set to nil if the namespace is not present.
+		namespace *corev1.Namespace
+		// The object declared in this namespace config.
+		declared runtime.Object
+		// The objects present in the corresponding namespace on the cluster.
+		actual []runtime.Object
+		// If set, forces the setup of expectations for mockCache.
+		requireListActual bool
+		// What the namespace should look like after an update.
 		wantNamespaceUpdate *corev1.Namespace
-		wantApply           *application
-		wantCreate          runtime.Object
-		wantDelete          runtime.Object
-		wantStatusUpdate    *v1.NamespaceConfig
-		wantEvent           *event
+		// What changes are made to existing objects in the namespace.
+		wantApply *application
+		// The objects that got created in the namespace.
+		wantCreate runtime.Object
+		// The objects that got deleted in the namespace.
+		wantDelete runtime.Object
+		// This is what the NamespaceConfig resource should look like (with
+		// updated Status field) on the cluster.
+		wantStatusUpdate *v1.NamespaceConfig
+		// The events that are expected to be emitted as the result of the
+		// operation.
+		wantEvent *event
 	}{
 		{
 			name:                "update actual resource to declared state",
 			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
 			namespace:           managedNamespace("eng"),
 			declared:            deployment(appsv1.RollingUpdateDeploymentStrategyType),
-			actual:              managedDeployment(appsv1.RecreateDeploymentStrategyType, "eng"),
+			actual:              []runtime.Object{managedDeployment(appsv1.RecreateDeploymentStrategyType, "eng")},
 			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
 			wantApply: &application{
 				intended: managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
@@ -130,7 +148,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token), syncToken(token)),
 			namespace:       managedNamespace("eng"),
 			declared:        deployment(appsv1.RollingUpdateDeploymentStrategyType),
-			actual:          managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+			actual:          []runtime.Object{managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng")},
 			wantApply: &application{
 				intended: managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
 				current:  managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
@@ -159,7 +177,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
 			namespace:           managedNamespace("eng"),
 			declared:            deployment(appsv1.RecreateDeploymentStrategyType),
-			actual:              deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace("eng"), unmanaged),
+			actual:              []runtime.Object{deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace("eng"), unmanaged)},
 			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
 			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
 		},
@@ -168,7 +186,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token)),
 			namespace:       managedNamespace("eng"),
 			declared:        deployment(appsv1.RecreateDeploymentStrategyType),
-			actual:          deployment(appsv1.RollingUpdateDeploymentStrategyType),
+			actual:          []runtime.Object{deployment(appsv1.RollingUpdateDeploymentStrategyType)},
 			wantApply: &application{
 				intended: managedDeployment(appsv1.RecreateDeploymentStrategyType, "eng"),
 				current:  deployment(appsv1.RollingUpdateDeploymentStrategyType),
@@ -182,8 +200,8 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token)),
 			namespace:       managedNamespace("eng", managedQuotaLabels),
 			declared:        deployment(appsv1.RecreateDeploymentStrategyType),
-			actual: deployment(appsv1.RollingUpdateDeploymentStrategyType,
-				object.Annotation(v1.ResourceManagementKey, "invalid")),
+			actual: []runtime.Object{deployment(appsv1.RollingUpdateDeploymentStrategyType,
+				object.Annotation(v1.ResourceManagementKey, "invalid"))},
 			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
 			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
 			wantEvent: &event{
@@ -206,7 +224,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			name:                "delete resource according to declared state",
 			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
 			namespace:           managedNamespace("eng"),
-			actual:              managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+			actual:              []runtime.Object{managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng")},
 			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
 			wantDelete:          managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
 			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
@@ -217,7 +235,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			namespaceConfig:  namespaceConfig("eng", v1.StateSynced, importToken(token)),
 			namespace:        namespace("eng", unmanaged),
 			declared:         deployment(appsv1.RecreateDeploymentStrategyType),
-			actual:           managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng"),
+			actual:           []runtime.Object{managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng")},
 			wantStatusUpdate: namespaceConfig("eng", v1.StateError, importToken(token), syncTime(now()), syncToken(token), namespaceSyncError(v1.NamespaceConfigSyncError{ErrorMessage: unmanagedError()})),
 			wantEvent: &event{
 				kind:   corev1.EventTypeWarning,
@@ -239,9 +257,51 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			name:                "don't delete resource with unset management",
 			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
 			namespace:           managedNamespace("eng"),
-			actual:              deployment(appsv1.RecreateDeploymentStrategyType),
+			actual:              []runtime.Object{deployment(appsv1.RecreateDeploymentStrategyType)},
 			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
 			wantStatusUpdate:    namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+		},
+		{
+			name: "default namespace is not deleted when namespace config is removed",
+			namespace: namespace("default", object.Annotations(
+				map[string]string{
+					v1.ClusterNameAnnotationKey:       "cluster-name",
+					v1.ClusterSelectorAnnotationKey:   "some-selector",
+					v1.NamespaceSelectorAnnotationKey: "some-selector",
+					v1.ResourceManagementKey:          v1.ResourceManagementEnabled,
+					v1.SourcePathAnnotationKey:        "some-path",
+					v1.SyncTokenAnnotationKey:         "sync-token",
+					"some-user-annotation":            "some-annotation-value",
+				},
+			),
+				object.Labels(
+					map[string]string{
+						labeling.ConfigManagementQuotaKey:  "some-quota",
+						labeling.ConfigManagementSystemKey: "not-used",
+						"some-user-label":                  "some-label-value",
+					},
+				),
+			),
+			wantNamespaceUpdate: namespace("default", object.Annotation(
+				"some-user-annotation", "some-annotation-value",
+			),
+				object.Label(
+					"some-user-label", "some-label-value",
+				),
+			),
+			requireListActual: true,
+			actual: []runtime.Object{
+				managedDeployment(
+					appsv1.RecreateDeploymentStrategyType, "default",
+					object.Name("my-deployment")),
+				deployment(appsv1.RecreateDeploymentStrategyType,
+					object.Namespace("default"),
+					object.Name("your-deployment")),
+			},
+			wantDelete: managedDeployment(
+				appsv1.RecreateDeploymentStrategyType, "default",
+				object.Name("my-deployment")),
+			wantEvent: reconcileComplete,
 		},
 	}
 
@@ -264,15 +324,21 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			testReconciler := NewNamespaceConfigReconciler(ctx,
 				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, toSync)
 
-			var name string
+			// TODO(filmil): Do not use general expectations (one that has all
+			// args set to Any() like the one just below.  Because the order of
+			// evaluation of multiple EXPECT() calls is not defined, then a
+			// more general expectation may mask a less general one, causing
+			// the less general one to fail.
+
+			var nsName string
 			// Get NamespaceConfig from cache.
 			if tc.namespaceConfig == nil {
-				name = tc.namespace.GetName()
+				nsName = tc.namespace.GetName()
 				mockCache.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(errors.NewNotFound(schema.GroupResource{}, ""))
 			} else {
-				name = tc.namespaceConfig.GetName()
+				nsName = tc.namespaceConfig.GetName()
 				mockCache.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any()).
 					SetArg(2, *tc.namespaceConfig)
@@ -286,45 +352,46 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			if ns := tc.wantNamespaceUpdate; ns != nil {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Any())
+					Get(gomock.Any(), gomock.Any(), NameAndTypeEq(ns.Name, ns.Namespace, ns))
 				mockClient.EXPECT().
 					Update(gomock.Any(), Eq(t, ns))
 			}
 
 			// List actual resources on the cluster.
-			if tc.namespaceConfig != nil {
+			if tc.namespaceConfig != nil || tc.requireListActual {
 				mockCache.EXPECT().
 					UnstructuredList(gomock.Any(), gomock.Any()).
-					Return(toUnstructureds(t, converter, tc.actual), nil)
+					Return(toUnstructuredList(t, converter, tc.actual), nil)
 			}
 
 			// Check for expected creates, applies and deletes.
-			if tc.wantCreate != nil {
+			if wc := tc.wantCreate; wc != nil {
 				mockApplier.EXPECT().
-					Create(gomock.Any(), NewUnstructuredMatcher(t, toUnstructured(t, converter, tc.wantCreate)))
+					Create(gomock.Any(),
+						NewUnstructuredMatcher(t, toUnstructured(t, converter, wc)))
 			}
-			if tc.wantApply != nil {
+			if wa := tc.wantApply; wa != nil {
 				mockApplier.EXPECT().
 					ApplyNamespace(
-						Eq(t, tc.namespaceConfig.Name),
-						Eq(t, toUnstructured(t, converter, tc.wantApply.intended)),
-						Eq(t, toUnstructured(t, converter, tc.wantApply.current)))
+						Eq(t, nsName),
+						Eq(t, toUnstructured(t, converter, wa.intended)),
+						Eq(t, toUnstructured(t, converter, wa.current)))
 			}
-			if tc.wantDelete != nil {
+			if wd := tc.wantDelete; wd != nil {
 				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)))
+					Get(gomock.Any(), gomock.Any(), Eq(t, toUnstructured(t, converter, wd)))
 				mockClient.EXPECT().
-					Delete(gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)))
+					Delete(gomock.Any(), Eq(t, toUnstructured(t, converter, wd)))
 			}
 
-			if tc.wantStatusUpdate != nil {
+			if wsu := tc.wantStatusUpdate; wsu != nil {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Any())
+					Get(gomock.Any(), gomock.Any(),
+						NameAndTypeEq(wsu.Name, wsu.Namespace, wsu))
 				mockStatusClient := syncertesting.NewMockStatusWriter(mockCtrl)
 				mockClient.EXPECT().Status().Return(mockStatusClient)
-				mockStatusClient.EXPECT().
-					Update(gomock.Any(), Eq(t, tc.wantStatusUpdate))
+				mockStatusClient.EXPECT().Update(gomock.Any(), Eq(t, wsu))
 			}
 
 			// Check for events with warning or status.
@@ -341,7 +408,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
-						Name: name,
+						Name: nsName,
 					},
 				})
 			if err != nil {
@@ -367,6 +434,14 @@ func toUnstructureds(t *testing.T, converter runtime.UnstructuredConverter, obj 
 		return nil
 	}
 	return []*unstructured.Unstructured{toUnstructured(t, converter, obj)}
+}
+
+func toUnstructuredList(t *testing.T, converter runtime.UnstructuredConverter,
+	objs []runtime.Object) (us []*unstructured.Unstructured) {
+	for _, obj := range objs {
+		us = append(us, toUnstructured(t, converter, obj))
+	}
+	return
 }
 
 // unstructuredMatcher ignores fields with randomly ordered values in unstructured.Unstructured when comparing.
@@ -400,18 +475,48 @@ type cmpDiffMatcher struct {
 	expected interface{}
 }
 
+// Eq creates a mathcher that compares to expected and prints a diff in case a
+// mismatch is found.
 func Eq(t *testing.T, expected interface{}) gomock.Matcher {
 	return &cmpDiffMatcher{t: t, expected: expected}
 }
 
 func (m *cmpDiffMatcher) String() string {
-	return fmt.Sprintf("cmpDiffMatcher Matcher: %v", m.expected)
+	return fmt.Sprintf("is equal to %v", m.expected)
 }
 
 func (m *cmpDiffMatcher) Matches(actual interface{}) bool {
 	if diff := cmp.Diff(m.expected, actual); diff != "" {
-		m.t.Log(diff)
+		m.t.Logf("This matcher has a diff (expected- +actual):%v\n\n", diff)
 		return false
 	}
 	return true
+}
+
+// typeNameNamespaceMatcher matches an object by type and name/namespace
+type typedNameMatcher struct {
+	name, namespace string
+	typeMatch       gomock.Matcher
+	t               interface{}
+}
+
+// NameAndTypeEq matches an object by name, namespace and type. The type must
+// be the same go type as the supplied parameter t.
+func NameAndTypeEq(name, namespace string, t interface{}) gomock.Matcher {
+	return &typedNameMatcher{name: name, namespace: namespace, t: t, typeMatch: gomock.AssignableToTypeOf(t)}
+}
+
+func (m *typedNameMatcher) String() string {
+	return fmt.Sprintf("is a %T named %q in namespace %q", m.t, m.name, m.namespace)
+}
+
+func (m *typedNameMatcher) Matches(x interface{}) bool {
+	if !m.typeMatch.Matches(x) {
+		return false
+	}
+	o, ok := x.(metav1.Object)
+	if !ok {
+		return false
+	}
+	return o.GetName() == m.name && o.GetNamespace() == m.namespace
 }
