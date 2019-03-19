@@ -178,7 +178,6 @@ upload-release:
 	gsutil -m rsync -r -p -x ".*bespin.*" $(BIN_DIR) \
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil -m cp -R \
-		$(STAGING_DIR)/nomos-docs.zip  \
 		$(STAGING_DIR)/kubectl-oidc/kubectl-oidc-plugin.zip  \
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil -m iam ch -R $(READ_ACCESS_LIST) $(RELEASE_BUCKET)/$(VERSION)
