@@ -9,7 +9,7 @@ import (
 const IllegalSubdirectoryErrorCode = "1018"
 
 func init() {
-	register(IllegalSubdirectoryErrorCode)
+	status.Register(IllegalSubdirectoryErrorCode, IllegalSubdirectoryError{})
 }
 
 // IllegalSubdirectoryError reports that the directory has an illegal subdirectory.

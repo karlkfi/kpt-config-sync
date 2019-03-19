@@ -9,7 +9,7 @@ import (
 const InvalidDirectoryNameErrorCode = "1028"
 
 func init() {
-	register(InvalidDirectoryNameErrorCode)
+	status.Register(InvalidDirectoryNameErrorCode, InvalidDirectoryNameError{})
 }
 
 // InvalidDirectoryNameError represents an illegal usage of a reserved name.

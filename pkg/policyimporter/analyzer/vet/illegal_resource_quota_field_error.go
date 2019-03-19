@@ -12,7 +12,7 @@ import (
 const IllegalResourceQuotaFieldErrorCode = "1008"
 
 func init() {
-	register(IllegalResourceQuotaFieldErrorCode)
+	status.Register(IllegalResourceQuotaFieldErrorCode, IllegalResourceQuotaFieldError{})
 }
 
 // IllegalResourceQuotaFieldError represents illegal fields set on ResourceQuota objects.

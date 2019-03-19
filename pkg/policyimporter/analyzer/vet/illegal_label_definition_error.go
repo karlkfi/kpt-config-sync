@@ -14,7 +14,7 @@ import (
 const IllegalLabelDefinitionErrorCode = "1011"
 
 func init() {
-	register(IllegalLabelDefinitionErrorCode)
+	status.Register(IllegalLabelDefinitionErrorCode, IllegalLabelDefinitionError{})
 }
 
 // IllegalLabelDefinitionError represent a set of illegal label definitions.

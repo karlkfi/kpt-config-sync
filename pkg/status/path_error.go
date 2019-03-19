@@ -7,6 +7,10 @@ import (
 // PathErrorCode is the error code for a generic PathError.
 const PathErrorCode = "2001"
 
+func init() {
+	Register(PathErrorCode, pathError{})
+}
+
 // pathError almost always results from an OS-level function involving the file system.
 type pathError struct {
 	err      error

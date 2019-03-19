@@ -8,6 +8,10 @@ import (
 // MissingResourceErrorCode is the error code for a MissingResourceError.
 const MissingResourceErrorCode = "2011"
 
+func init() {
+	status.Register(MissingResourceErrorCode, MissingResourceError{})
+}
+
 // MissingResourceError reports that one or more Resources were not found by the API server.
 type MissingResourceError struct {
 	err       error

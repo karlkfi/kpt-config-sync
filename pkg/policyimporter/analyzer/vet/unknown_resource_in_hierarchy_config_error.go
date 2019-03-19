@@ -9,7 +9,7 @@ import (
 const UnknownResourceInHierarchyConfigErrorCode = "1040"
 
 func init() {
-	register(UnknownResourceInHierarchyConfigErrorCode)
+	status.Register(UnknownResourceInHierarchyConfigErrorCode, UnknownResourceInHierarchyConfigError{})
 }
 
 // UnknownResourceInHierarchyConfigError reports that a Resource defined in a HierarchyConfig does not have a definition in

@@ -7,6 +7,10 @@ import (
 // UndocumentedErrorCode is the error code for Undocumented.
 const UndocumentedErrorCode = "9999"
 
+func init() {
+	Register(UndocumentedErrorCode, Undocumented{})
+}
+
 // Undocumented errors represent error conditions which we should document but have not yet.
 // These should be avoided in changes that are adding a new error condition. This is purely for
 // cleanup of existing code.

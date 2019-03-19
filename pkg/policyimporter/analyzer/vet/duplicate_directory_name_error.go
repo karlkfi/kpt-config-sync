@@ -12,7 +12,7 @@ import (
 const DuplicateDirectoryNameErrorCode = "1002"
 
 func init() {
-	register(DuplicateDirectoryNameErrorCode)
+	status.Register(DuplicateDirectoryNameErrorCode, DuplicateDirectoryNameError{})
 }
 
 // DuplicateDirectoryNameError represents an illegal duplication of directory names.

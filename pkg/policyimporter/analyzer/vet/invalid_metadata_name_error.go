@@ -9,7 +9,7 @@ import (
 const InvalidMetadataNameErrorCode = "1036"
 
 func init() {
-	register(InvalidMetadataNameErrorCode)
+	status.Register(InvalidMetadataNameErrorCode, InvalidMetadataNameError{})
 }
 
 // InvalidMetadataNameError represents the usage of a non-RFC1123 compliant metadata.name

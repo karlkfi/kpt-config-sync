@@ -10,7 +10,7 @@ import (
 const IllegalKindInNamespacesErrorCode = "1038"
 
 func init() {
-	register(IllegalKindInNamespacesErrorCode)
+	status.Register(IllegalKindInNamespacesErrorCode, IllegalKindInNamespacesError{})
 }
 
 // IllegalKindInNamespacesError reports that an object has been illegally defined in namespaces/

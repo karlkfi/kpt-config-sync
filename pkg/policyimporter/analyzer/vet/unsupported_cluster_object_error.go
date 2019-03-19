@@ -9,7 +9,7 @@ import (
 const UnsupportedObjectErrorCode = "1043"
 
 func init() {
-	register(UnsupportedObjectErrorCode)
+	status.Register(UnsupportedObjectErrorCode, UnsupportedObjectError{})
 }
 
 // UnsupportedObjectError reports than an unsupported object is in the namespaces/ sub-directories or clusters/ directory.

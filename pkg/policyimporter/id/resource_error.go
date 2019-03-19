@@ -10,6 +10,10 @@ import (
 // ResourceErrorCode is the error code for a generic ResourceError.
 const ResourceErrorCode = "2010"
 
+func init() {
+	status.Register(ResourceErrorCode, resourceError{})
+}
+
 // ResourceError defines a status error related to one or more k8s resources.
 type ResourceError interface {
 	status.Error

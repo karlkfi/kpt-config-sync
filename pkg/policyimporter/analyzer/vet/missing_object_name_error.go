@@ -9,7 +9,7 @@ import (
 const MissingObjectNameErrorCode = "1031"
 
 func init() {
-	register(MissingObjectNameErrorCode)
+	status.Register(MissingObjectNameErrorCode, MissingObjectNameError{})
 }
 
 // MissingObjectNameError reports that an object has no name.

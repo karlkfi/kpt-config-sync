@@ -5,6 +5,10 @@ import "github.com/pkg/errors"
 // APIServerErrorCode is the error code for a status Error originating from the kubernetes API server.
 const APIServerErrorCode = "2002"
 
+func init() {
+	Register(APIServerErrorCode, apiServerError{})
+}
+
 // apiServerError results from a high level call to the API server (eg not involving a resource) that fails.
 type apiServerError struct {
 	err error

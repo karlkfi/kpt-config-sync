@@ -9,7 +9,7 @@ import (
 const IllegalMetadataNamespaceDeclarationErrorCode = "1009"
 
 func init() {
-	register(IllegalMetadataNamespaceDeclarationErrorCode)
+	status.Register(IllegalMetadataNamespaceDeclarationErrorCode, IllegalMetadataNamespaceDeclarationError{})
 }
 
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace

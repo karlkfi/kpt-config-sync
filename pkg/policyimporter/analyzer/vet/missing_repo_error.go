@@ -9,7 +9,7 @@ import (
 const MissingRepoErrorCode = "1017"
 
 func init() {
-	register(MissingRepoErrorCode)
+	status.Register(MissingRepoErrorCode, MissingRepoError{})
 }
 
 // MissingRepoError reports that there is no Repo definition in system/

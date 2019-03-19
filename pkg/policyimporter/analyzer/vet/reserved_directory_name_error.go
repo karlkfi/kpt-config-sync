@@ -9,7 +9,7 @@ import (
 const ReservedDirectoryNameErrorCode = "1001"
 
 func init() {
-	register(ReservedDirectoryNameErrorCode)
+	status.Register(ReservedDirectoryNameErrorCode, ReservedDirectoryNameError{})
 }
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.

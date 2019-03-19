@@ -10,7 +10,7 @@ import (
 const IllegalKindInSystemErrorCode = "1024"
 
 func init() {
-	register(IllegalKindInSystemErrorCode)
+	status.Register(IllegalKindInSystemErrorCode, IllegalKindInSystemError{})
 }
 
 // IllegalKindInSystemError reports that an object has been illegally defined in system/

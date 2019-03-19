@@ -10,7 +10,7 @@ import (
 const PolicyManagementNotInstalledErrorCode = "1016"
 
 func init() {
-	register(PolicyManagementNotInstalledErrorCode)
+	status.Register(PolicyManagementNotInstalledErrorCode, PolicyManagementNotInstalledError{})
 }
 
 // PolicyManagementNotInstalledError reports that Nomos has not been installed properly.

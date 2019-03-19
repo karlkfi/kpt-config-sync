@@ -14,7 +14,7 @@ import (
 const IllegalAnnotationDefinitionErrorCode = "1010"
 
 func init() {
-	register(IllegalAnnotationDefinitionErrorCode)
+	status.Register(IllegalAnnotationDefinitionErrorCode, IllegalAnnotationDefinitionError{})
 }
 
 // IllegalAnnotationDefinitionError represents a set of illegal annotation definitions.

@@ -1,7 +1,7 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
@@ -11,7 +11,7 @@ import (
 const IllegalNamespaceAnnotationErrorCode = "1004"
 
 func init() {
-	register(IllegalNamespaceAnnotationErrorCode)
+	status.Register(IllegalNamespaceAnnotationErrorCode, IllegalNamespaceAnnotationError{})
 }
 
 // IllegalNamespaceAnnotationError represents an illegal usage of the namespace selector annotation.

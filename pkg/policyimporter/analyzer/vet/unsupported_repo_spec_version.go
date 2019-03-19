@@ -15,7 +15,7 @@ type UnsupportedRepoSpecVersion struct {
 const UnsupportedRepoSpecVersionCode = "1027"
 
 func init() {
-	register(UnsupportedRepoSpecVersionCode)
+	status.Register(UnsupportedRepoSpecVersionCode, UnsupportedRepoSpecVersion{})
 }
 
 var _ id.ResourceError = &UnsupportedRepoSpecVersion{}

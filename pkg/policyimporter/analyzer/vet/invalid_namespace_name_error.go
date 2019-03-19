@@ -10,7 +10,7 @@ import (
 const InvalidNamespaceNameErrorCode = "1020"
 
 func init() {
-	register(InvalidNamespaceNameErrorCode)
+	status.Register(InvalidNamespaceNameErrorCode, InvalidNamespaceNameError{})
 }
 
 // InvalidNamespaceNameError reports that a Namespace has an invalid name.
