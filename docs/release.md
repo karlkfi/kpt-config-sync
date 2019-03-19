@@ -1,73 +1,64 @@
-# Releasing
+# Release Overview
 
-The release process promotes an already-built release candidate from the
-continuous deployment (CD) pipeline. It is mostly automated but requires a human
-to bless a release candidate at the very end.
+CSP Config Management is an on-prem, enterprise security software. As such, we
+want to make sure that the release process is well-documented and easy to
+follow. At a high level, the oncall performs the following steps to do a
+release:
 
-## Setup
+1.  Announce the intent to bless "latest"
+2.  Baking in the "latest"
+3.  The Blessing
+4.  Announce the blessed
 
-Set up a nomos repo.
+Each step is discussed below.
 
-Ensure that your remote is named `origin`. `make bless-release` assumes that.
+# 1. Announce the intent to bless "latest"
 
-## Basic manual test
+Send an email to nomos-team@google.com with subject `Nomos Release Candidate
+2019/XX/YY`.
 
-*This duplicates the e2e tests, so it's not expected to be comprehensive. This
-only covers the possibility that e2e tests are so badly broken that they fail to
-run at all but still report passing. It also tests that our documentation is
-accurate (which can't be automated).*
+# 2. Baking in the "latest"
 
-Follow [installation instructions](../user/installation.md), BUT instead of
-downloading the `operator-stable` release as instructed, use the latest release
-at
-https://storage.cloud.google.com/nomos-release/operator-latest/nomos-operator.yaml
+Allow at least 24 hours for this step. During this period, the team has a chance
+to try out "latest". Note that currently "latest" is a floating tag and may
+refer to different binaries depending on when it's pulled (This will be improved
+in the future).
 
-Follow instructions for [Git config](../user/config.md). Use the Nomos YAML from
-those instructions, for the foo-corp repo. You will most likely have memorized
-these steps, but try to follow the documentation. This is our only regular
-review of the documentation.
+Depending on the features being released, importance of the launch, and state of
+the docs, we may want to set up a fishfooding session. However, fishfooding is
+not a substition for automated testing. Features (including related docs) should
+be tested by their authors before check-in, and they should be covered
+sufficiently by automated tests.
 
-After installation completes, check that the foo-corp namespaces are installed:
+# 3. The Blessing
 
-```console
-$ kubectl get ns
-NAME                      STATUS    AGE
-audit                     Active    1m
-default                   Active    2d
-kube-public               Active    2d
-kube-system               Active    2d
-config-management-system  Active    1m
-shipping-dev              Active    1m
-shipping-prod             Active    1m
-shipping-staging          Active    1m
-```
+Blessing process will release an RC to the end user.
 
-Check that rolebindings are applied:
-
-```console
-$ kubectl get ns --as=cheryl@foo-corp.com
-(expect same output as above)
-```
-
-### Feature QA
-
-Generally, features should be tested by their authors before check-in, and they
-should be covered sufficiently by automated tests. If we develop a feature that
-can't be verified by tests, we will need a documented process for manual
-verification before release. For now, automated tests, plus the above sanity
-test, are sufficient.
-
-## Blessing
-
-After you have completed release candidate testing, it is time to bless the
-release. This will convert an existing release candidate into a version that has
-its own (non-rc) version number and will replace the version of the operator
-bundle at `operator-stable`. For example, blessing v0.2.4-rc.6 will release
-version v0.2.4 and mark it as the current stable version. The Nomos Operator and
-Nomos binary codebases are in separate repositories, but the two are currently
+Blessing will convert an existing release candidate into a version that has its
+own (non-rc) version number and will replace the version of the operator bundle
+at `operator-stable`. For example, blessing v0.2.4-rc.6 will release version
+v0.2.4 and mark it as the current stable version. The Nomos Operator and Nomos
+binary codebases are in separate repositories, but the two are currently
 released together because the Nomos Operator must include the Nomos binaries in
 its image (this is a limitation of the operator frameork that will change in the
 Q1 2019 timeframe). The two binaries are versioned separately, however.
+
+### FYI: How CD Pipeline works
+
+These are the steps performed by the CD pipeline running on Prow:
+
+1.  Once a day, the CD pipeline adds a "release candidate" git tag to the
+    then-current head revision of the nomos `master` branch. The tag is of the
+    form `v1.2.3-rc.4` which means "4th release candidate for a release
+    `v1.2.3`".
+1.  The CD pipeline runs unit and end-to-end tests based off of the candidate
+    release code.
+1.  If the release candidate fails the tests, the CD pipeline stops here.
+1.  If the release candidate passes the tests, it is copied out to
+    `nomos-release` project and becomes available as an unblessed release
+    `v1.2.3-rc.4`.
+1.  When the release engineer runs `make bless-autorelease`, it looks for the
+    latest tag.
 
 ### Anatomy of a Blessed Release
 
@@ -168,11 +159,6 @@ c79426d4 Fri Sep 7 .. Filip Filmar            buildenv: upgrade buildenv to v0.1
 e15b4b28 Thu Sep 6 .. Erik Kitson             Fix broken links in documentation and add monitor pod.
 ```
 
--   Send an email to nomos-team@google.com with subject `Nomos binary Release
-    ${RELEASE_VERSION}` (where `RELEASE_VERSION` is the tag you chose for the
-    release). Copy the above changelog into the body. Copy using `Copy as HTML`
-    to retain formatting.
-
 ### Nomos Operator
 
 #### Prerequisites
@@ -196,8 +182,6 @@ dep:
  platform    : linux/amd64
  features    : ImportDuringSolve=false
 ```
-
-#### Bless relase process
 
 Switch to the `nomos-operator`
 [repository](https://g3doc.corp.google.com/company/teams/nomos-team/dev_guide.md#operator).
@@ -240,33 +224,19 @@ $ rm -fr ../.vendor-new  # this removes a dep artifact
 You might need to remove also the directory `$GOPATH/pkg/dep/sources` which
 contains the packages cached by dep.
 
-## Check the build artifacts (optional)
+### Check the build artifacts (optional)
 
 In case you're interested:
 
 The artifacts will be
 [available here](https://console.cloud.google.com/storage/browser/nomos-release/stable/?project=nomos-release).
 
-Publicly-accessible docs will be
-[available here](https://storage.googleapis.com/nomos-release/stable/nomos-docs.zip)
+# 4. Announce the blessed
 
-## Appendix: what the CD pipeline does
+Reply to the email sent in step #1, announcing the RC was blessed with the body:
 
-This is what the release process looks like:
+```
+Nomos binary blessed: ${RELEASE_VERSION}
 
--   Once a day, the CD pipeline adds a "release candidate" git tag to the
-    then-current head revision of the nomos `master` branch. The tag is of the
-    form `v1.2.3-rc.4` which means "4th release candidate for a release
-    `v1.2.3`".
-
--   The CD pipeline runs unit and end-to-end tests based off of the candidate
-    release code.
-
--   If the release candidate fails the tests, the CD pipeline stops here.
-
--   If the release candidate passes the tests, it is copied out to
-    `nomos-release` project and becomes available as an unblessed release
-    `v1.2.3-rc.4`.
-
--   When the release engineer runs `make bless-autorelease`, it looks for the
-    latest tag.
+${Changelong in HTML format}
+```
