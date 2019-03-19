@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Client implements meta.Interface with fake clientsets.
@@ -39,6 +40,7 @@ type Client struct {
 	KubernetesClientset      *fakekubernetes.Clientset
 	PolicyhierarchyClientset *fakepolicyhierarchy.Clientset
 	APIExtensionsClientset   *fakeapiextensions.Clientset
+	RuntimeClient            client.Client
 
 	PolicyHierarchyInformers phinformers.SharedInformerFactory
 	KubernetesInformers      informers.SharedInformerFactory
@@ -49,14 +51,14 @@ var _ meta.Interface = &Client{}
 
 // NewClient creates a FakeClient with default simple clientsets and empty
 // storage.
-func NewClient() *Client {
-	return NewClientWithStorage([]runtime.Object{})
+func NewClient(runtimeClient client.Client) *Client {
+	return NewClientWithStorage([]runtime.Object{}, runtimeClient)
 }
 
 // NewClientWithStorage creates a fake meta-client and injects objects from
 // kubernetesStorage as kubernetes objects, and policyHierarchyStorage as
 // objects from policy hierarchy.
-func NewClientWithStorage(storage []runtime.Object) *Client {
+func NewClientWithStorage(storage []runtime.Object, runtimeClient client.Client) *Client {
 	scheme := runtime.NewScheme()
 	if err := v1.AddToScheme(scheme); err != nil {
 		panic(err)
@@ -86,6 +88,7 @@ func NewClientWithStorage(storage []runtime.Object) *Client {
 		KubernetesClientset:      kubernetesClientset,
 		PolicyhierarchyClientset: policyhierarchyClientset,
 		APIExtensionsClientset:   apiExtensionsClientset,
+		RuntimeClient:            runtimeClient,
 		KubernetesInformers:      informers.NewSharedInformerFactory(kubernetesClientset, time.Second*2),
 		PolicyHierarchyInformers: phinformers.NewSharedInformerFactory(policyhierarchyClientset, time.Second*2),
 	}
@@ -104,4 +107,9 @@ func (c *Client) PolicyHierarchy() apis.Interface {
 // APIExtensions implements meta.Interface
 func (c *Client) APIExtensions() apiextensions.Interface {
 	return c.APIExtensionsClientset
+}
+
+// Runtime returns the kubernetes runtime client for CRUD operations.
+func (c *Client) Runtime() client.Client {
+	return c.RuntimeClient
 }
