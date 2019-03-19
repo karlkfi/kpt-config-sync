@@ -29,9 +29,9 @@ spec:
 
 ## Sync
 
-CSP Configuration Management allows for syncing arbitrary kubernetes types from Git to
-a Kubernetes cluster. Sync is configured by placing a Sync resource in the
-`system/` directory. The following example configures syncing RBAC types.
+CSP Configuration Management allows for syncing arbitrary kubernetes types from
+Git to a Kubernetes cluster. Sync is configured by placing a Sync resource in
+the `system/` directory. The following example configures syncing RBAC types.
 
 When syncing resources from Git and comparing them with the current cluster, we
 need some criteria to determine if a resource in Git matches what is on the
@@ -83,9 +83,9 @@ spec:
 
 ### Inheritance
 
-CSP Configuration Management allows `RoleBindings` and `ResourceQuota` to be placed in
-Abstract Namespace directories, and have those policies instantiated in
-descendant Namespaces.
+CSP Configuration Management allows `RoleBindings` and `ResourceQuota` to be
+placed in Abstract Namespace directories, and have those policies instantiated
+in descendant Namespaces.
 
 #### RoleBinding inheritance
 
@@ -141,10 +141,10 @@ disallows that. I.e., it is an error for a `RoleBinding` to have the same name
 as another `RoleBinding` either in the same directory or in any ancestor
 Abstract Namespace.
 
-Note that CSP Configuration Management is intended to be non-destructive to resources
-that are created outside of the system which means a user may be able to edit
-resources outside of CSP Configuration Management (e.g. using kubectl) or create
-RoleBindings subject to
+Note that CSP Configuration Management is intended to be non-destructive to
+resources that are created outside of the system which means a user may be able
+to edit resources outside of CSP Configuration Management (e.g. using kubectl)
+or create RoleBindings subject to
 [privilege escalation prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping)
 in Kubernetes.
 

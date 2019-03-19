@@ -3,8 +3,8 @@
 By default, most namespace-scoped resources must be placed in Namespace
 directories and are not allowed in Abstract Namespace directories. The two
 exceptions are `RoleBindings` and `ResourceQuota`, as described in
-[CSP Configuration Management System Configuration](system_config.md). It's possible to
-change this inheritance behavior.
+[CSP Configuration Management System Configuration](system_config.md). It's
+possible to change this inheritance behavior.
 
 ## Example
 

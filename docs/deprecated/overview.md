@@ -1,8 +1,8 @@
 # Overview
 
-CSP Configuration Management supports using Git to centrally manage Namespaces and
-Kubernetes resources across Kubernetes clusters. This *Policy as Code* approach
-ensures policy configurations are:
+CSP Configuration Management supports using Git to centrally manage Namespaces
+and Kubernetes resources across Kubernetes clusters. This *Policy as Code*
+approach ensures policy configurations are:
 
 *   __Immutable:__ A Git commit is an exact declaration of the desired state of
     policies.
@@ -31,9 +31,9 @@ sophisticated pipelines for vetting and deploying at scale.
 
 ## Filesystem Standard
 
-CSP Configuration Management Filesystem Standard defines the directory structure and
-file contents. This is analogous to the Linux Filesystem Hierarchy Standard, and
-is a natural way to operate on hierarchical resources without requiring a
+CSP Configuration Management Filesystem Standard defines the directory structure
+and file contents. This is analogous to the Linux Filesystem Hierarchy Standard,
+and is a natural way to operate on hierarchical resources without requiring a
 complicated domain specific language.
 
 For example, we can have such a directory structure
@@ -80,8 +80,8 @@ We define the semantics of each directory below:
 namespace-scoped resources (e.g. RBAC RoleBindings).
 
 Kubernetes does not natively provide a hierarchy of namespaces (namespaces are
-flat). CSP Configuration Management implements a hierarchy of namespaces to enable
-management of a large number of resources across many teams.
+flat). CSP Configuration Management implements a hierarchy of namespaces to
+enable management of a large number of resources across many teams.
 
 There are two types of sub-directories in `namespaces`:
 
@@ -133,8 +133,8 @@ during [validation](#vet):
     automatically.
 1.  All directory names MUST be valid Kubernetes namespace names (i.e.
     [DNS Label](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/identifiers.md)).
-    In addition a name MUST NOT be `default`, `config-management-system`, or have `kube-`
-    prefix. This topic is discussed in depth in
+    In addition a name MUST NOT be `default`, `config-management-system`, or
+    have `kube-` prefix. This topic is discussed in depth in
     [Management Flow](management_flow.md).
 1.  All directory names MUST be unique in the hierarchy.
 
@@ -152,8 +152,8 @@ The following constraints apply to `cluster` directory and are enforced during
 
 ### system/
 
-`system` directory contains resources for configuring the CSP Configuration Management
-system.
+`system` directory contains resources for configuring the CSP Configuration
+Management system.
 
 The `system` directory MUST only contain the `nomos.dev` objects. See
 [CSP Configuration Management System Configuration](system_config.md).
@@ -165,8 +165,8 @@ The `system` directory MUST only contain the `nomos.dev` objects. See
 When a valid namespace hierarchy is committed to Git and synced, GKE Policy
 Management controllers automatically create namespaces and corresponding
 Kubernetes resources to enforce hierarchical resource syncing. In the foo-corp
-example, CSP Configuration Management automatically creates `audit`, `shipping-dev`,
-`shipping-staging` and `shipping-prod` namespaces.
+example, CSP Configuration Management automatically creates `audit`,
+`shipping-dev`, `shipping-staging` and `shipping-prod` namespaces.
 
 Note that when using Git as source of truth, it is up to the repo owners to set
 proper access control mechanism (e.g. using OWNERS or CODEOWNER files) to ensure
@@ -200,8 +200,8 @@ resources.
 
 ## Nomos CLI
 
-The `nomos` CLI provides tools for creating and managing a CSP Configuration Management
-directory.
+The `nomos` CLI provides tools for creating and managing a CSP Configuration
+Management directory.
 
 To install nomos:
 
@@ -234,9 +234,9 @@ $ nomos --help
 
 ### init
 
-Use `nomos init` to begin a new CSP Configuration Management directory. Given an empty
-directory, populates it with required files and a few commonly-needed objects to
-get you started.
+Use `nomos init` to begin a new CSP Configuration Management directory. Given an
+empty directory, populates it with required files and a few commonly-needed
+objects to get you started.
 
 ```console
 $ mkdir newrepo
@@ -283,8 +283,8 @@ You can also integrate this into your CI/CD setup, e.g. when using GitHub
 ### view
 
 As discussed in [System Overview](system_overview.md), contents of the Git repo
-are converted to ClusterConfig and NamespaceConfig CRDs during the import process. To
-print the generated CRD resources in JSON:
+are converted to ClusterConfig and NamespaceConfig CRDs during the import
+process. To print the generated CRD resources in JSON:
 
 ```console
 $ cd foo-corp

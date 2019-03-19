@@ -38,11 +38,12 @@ $ kubectl logs -l app=git-policy-importer -c git-sync -n config-management-syste
 
 ## Monitoring
 
-CSP Configuration Management uses [Prometheus](https://prometheus.io/) to monitor the
-various processes that comprise a CSP Configuration Management deployment. These
-processes include the NamespaceController, ResourceQuotaAdmissionController, and
-others. Each process exports certain metrics that are available for you to
-scrape from the configured port using Prometheus or any other tools you wish.
+CSP Configuration Management uses [Prometheus](https://prometheus.io/) to
+monitor the various processes that comprise a CSP Configuration Management
+deployment. These processes include the NamespaceController,
+ResourceQuotaAdmissionController, and others. Each process exports certain
+metrics that are available for you to scrape from the configured port using
+Prometheus or any other tools you wish.
 
 ### CSP Configuration Management Metrics
 
@@ -72,8 +73,8 @@ nomos_syncer_action_duration_seconds                 | Histogram | namespace, re
 All metrics are available for scraping at port 8675. Prometheus includes a
 process that you can optionally choose to
 [run on your cluster](https://prometheus.io/docs/prometheus/latest/getting_started/)
-alongside the CSP Configuration Management processes. This process must be configured
-to scrape the metrics which you are interested in.
+alongside the CSP Configuration Management processes. This process must be
+configured to scrape the metrics which you are interested in.
 
 Alternatively you can use
 [Prometheus Operator](https://coreos.com/operators/prometheus/docs/latest/)

@@ -1,8 +1,8 @@
 # CSP Configuration Management Quickstart
 
-This quickstart shows a step-by-step guide to install CSP Configuration Management on
-Kubernetes clusters and create and synchronize hierarchical policies from a Git
-repository.
+This quickstart shows a step-by-step guide to install CSP Configuration
+Management on Kubernetes clusters and create and synchronize hierarchical
+policies from a Git repository.
 
 ## Installation
 
@@ -11,8 +11,8 @@ Management on one or more Kubernetes clusters.
 
 ## Creating hierarchical policies
 
-Once CSP Configuration Management components are deployed and running in a cluster,
-namespaces will be automatically created. For the
+Once CSP Configuration Management components are deployed and running in a
+cluster, namespaces will be automatically created. For the
 [foo-corp example](installation.md#create-the-nomos-config-file):
 
 ```console

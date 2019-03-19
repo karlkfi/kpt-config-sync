@@ -5,8 +5,8 @@ Management in a Kubernetes cluster. It consumes a Custom Resource Definition
 (CRD) called Nomos, which specifies the paramaters of an installation of GKE
 Policy Management.
 
-Follow these instructions to install CSP Configuration Management into your cluster
-using the Nomos Operator.
+Follow these instructions to install CSP Configuration Management into your
+cluster using the Nomos Operator.
 
 This setup takes about 30 minutes.
 
@@ -21,11 +21,11 @@ Prerequisites:
 ### Kubernetes
 
 You need to have up and running Kubernetes clusters that you intend to install
-CSP Configuration Management on. You must be able to contact these clusters using
-`kubectl` from the installation environment.
+CSP Configuration Management on. You must be able to contact these clusters
+using `kubectl` from the installation environment.
 
-In order to run CSP Configuration Management components, the cluster has to meet these
-requirements:
+In order to run CSP Configuration Management components, the cluster has to meet
+these requirements:
 
 Requirement                               | kube-apiserver flag
 ----------------------------------------- | -------------------
@@ -37,9 +37,9 @@ Minimum required Kubernetes Server Version: **1.10**
 
 Note that GKE running K8S 1.10 satisfies all these requirements.
 
-**Warning:** In the current release of CSP Configuration Management, we require that
-all namespaces be managed by CSP Configuration Management. It is recommended to create
-a new cluster for use with CSP Configuration Management.
+**Warning:** In the current release of CSP Configuration Management, we require
+that all namespaces be managed by CSP Configuration Management. It is
+recommended to create a new cluster for use with CSP Configuration Management.
 
 The easiest way to get all of these is to follow the
 [GKE quick start guide](https://cloud.google.com/kubernetes-engine/docs/quickstart).
@@ -59,8 +59,8 @@ On GKE clusters, `<user>` would be the GSuite account (e.g.
 
 ### Deploy the Operator
 
-Apply the operator bundle in order to create the Nomos Operator and config-management-system
-namespace into your cluster.
+Apply the operator bundle in order to create the Nomos Operator and
+config-management-system namespace into your cluster.
 
 ```console
 $ kubectl apply --filename https://storage.googleapis.com/nomos-release/operator-stable/nomos-operator.yaml
@@ -82,8 +82,9 @@ config-management-system Active 1m
 
 ### Create the git-creds Secret
 
-Note that these secrets are deployed into the config-management-system namespace, so it is
-necessary to have that namespace created before creating the secret.
+Note that these secrets are deployed into the config-management-system
+namespace, so it is necessary to have that namespace created before creating the
+secret.
 
 Choose the correct authentication method for your Git repository from the
 options below. The method chosen will determine the value you use for
@@ -207,8 +208,8 @@ $ kubectl apply -f nomos2.yaml --context=cluster-2
 
 ### Verify Installation
 
-To verify that CSP Configuration Management components are correctly installed, issue
-the following command and verify that all deployments listed have status
+To verify that CSP Configuration Management components are correctly installed,
+issue the following command and verify that all deployments listed have status
 displayed as "Running."
 
 Check running components:
@@ -234,11 +235,12 @@ $ kubectl -n=config-management-system delete nomos --all
 
 The affected components are:
 
-*   Everything inside namespace `config-management-system`, with the exception of the
-    created `git-creds` secret.
+*   Everything inside namespace `config-management-system`, with the exception
+    of the created `git-creds` secret.
 *   Any cluster level roles and role bindings installed by GKE Policy
     Management.
-*   Any admission controller configurations installed by CSP Configuration Management.
+*   Any admission controller configurations installed by CSP Configuration
+    Management.
 
 ### Uninstalling the Operator
 

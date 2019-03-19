@@ -10,11 +10,11 @@ make
 
 ## E2E Tests
 
-end-to-end tests deploy CSP Configuration Management components on a Kubernetes cluster
-from your current context, and then verify functionality through Git commits.
-Running the tests requires local kubeconfig set up properly with Nomos cluster;
-the cluster's service account needs storage.objectViewer role on the GCP project
-that holds Docker images in Google Container Registry.
+end-to-end tests deploy CSP Configuration Management components on a Kubernetes
+cluster from your current context, and then verify functionality through Git
+commits. Running the tests requires local kubeconfig set up properly with Nomos
+cluster; the cluster's service account needs storage.objectViewer role on the
+GCP project that holds Docker images in Google Container Registry.
 
 ```console
 make test-e2e-git
@@ -70,8 +70,8 @@ The e2e test suite starts with a suite setup, then runs tests, and finally does
 a cleanup. (The setup also contains a clean step.) You can run these stages
 individually using the `test-e2e-dev-git` target.
 
-1- Build CSP Configuration Management and end to end images. You must do this each time
-you make changes to .go code.
+1- Build CSP Configuration Management and end to end images. You must do this
+each time you make changes to .go code.
 
 ```console
 make e2e-image-all
@@ -101,13 +101,13 @@ make test-e2e-dev-git E2E_FLAGS="--clean"
 
 ### E2E_FLAGS
 
-Name          | Value                                                                                                                        | Example
-------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------
+Name          | Value                                                                                                                               | Example
+------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------
 --clean       | boolean, uninstalls CSP Configuration Management and test infra from cluster at end of execution                                    | E2E_FLAGS="--clean"
---file_filter | the filter for test files as a regex                                                                                         | The following filters for a file containing 'acme-foo' E2E_FLAGS="--file_filter acme-foo"
+--file_filter | the filter for test files as a regex                                                                                                | The following filters for a file containing 'acme-foo' E2E_FLAGS="--file_filter acme-foo"
 --preclean    | boolean, uninstalls CSP Configuration Management prior to setup/test, useful for making a 'clean slate' without doing anything else | E2E_FLAGS="--preclean"
 --setup       | boolean, sets up CSP Configuration Management and test infra on cluster                                                             | E2E_FLAGS="--setup"
---tap         | boolean, emit tap output while tests are running, useful for debugging                                                       | E2E_FLAGS="--tap"
---test        | boolean, run e2e tests                                                                                                       | E2E_FLAGS="--test"
---test_filter | the filter for test cases as a regex                                                                                         | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
---timing      | boolean, print timing info for each test. Also turns on --tap.                                                               | E2E_FLAGS="--timing"
+--tap         | boolean, emit tap output while tests are running, useful for debugging                                                              | E2E_FLAGS="--tap"
+--test        | boolean, run e2e tests                                                                                                              | E2E_FLAGS="--test"
+--test_filter | the filter for test cases as a regex                                                                                                | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
+--timing      | boolean, print timing info for each test. Also turns on --tap.                                                                      | E2E_FLAGS="--timing"
