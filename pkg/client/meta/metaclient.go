@@ -18,15 +18,11 @@ limitations under the License.
 package meta
 
 import (
-	"time"
-
 	"github.com/google/nomos/clientgen/apis"
 	"github.com/pkg/errors"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // Interface specifies the interface for Client.
@@ -34,7 +30,6 @@ type Interface interface {
 	Kubernetes() kubernetes.Interface
 	PolicyHierarchy() apis.Interface
 	APIExtensions() apiextensions.Interface
-	Runtime() client.Client
 }
 
 // Client is a container for the kubernetes Clientset and the policyhierarchy clientset.
@@ -42,7 +37,6 @@ type Client struct {
 	kubernetesClientset      *kubernetes.Clientset
 	policyHierarchyClientset *apis.Clientset
 	apiExtensionsClientset   *apiextensions.Clientset
-	runtimeClient            client.Client
 }
 
 var _ Interface = &Client{}
@@ -62,27 +56,20 @@ func (c *Client) APIExtensions() apiextensions.Interface {
 	return c.apiExtensionsClientset
 }
 
-// Runtime returns the kubernetes runtime client for CRUD operations.
-func (c *Client) Runtime() client.Client {
-	return c.runtimeClient
-}
-
 // New creates a new Client directly from member client sets.
 func New(
 	kubernetesClientset *kubernetes.Clientset,
 	policyHierarchyClientset *apis.Clientset,
-	apiExtensionsClientset *apiextensions.Clientset,
-	runtimeClient client.Client) *Client {
+	apiExtensionsClientset *apiextensions.Clientset) *Client {
 	return &Client{
 		kubernetesClientset:      kubernetesClientset,
 		policyHierarchyClientset: policyHierarchyClientset,
 		apiExtensionsClientset:   apiExtensionsClientset,
-		runtimeClient:            runtimeClient,
 	}
 }
 
 // NewForConfig will r
-func NewForConfig(cfg *rest.Config, syncPeriod *time.Duration) (*Client, error) {
+func NewForConfig(cfg *rest.Config) (*Client, error) {
 	kubernetesClientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to create kubernetes clientset")
@@ -98,12 +85,7 @@ func NewForConfig(cfg *rest.Config, syncPeriod *time.Duration) (*Client, error) 
 		return nil, errors.Wrapf(err, "Failed to create apiextensions clientset")
 	}
 
-	mgr, err := manager.New(cfg, manager.Options{SyncPeriod: syncPeriod})
-	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to create manager")
-	}
-
-	return New(kubernetesClientset, policyHierarchyClientSet, apiExtensionsClientset, mgr.GetClient()), nil
+	return New(kubernetesClientset, policyHierarchyClientSet, apiExtensionsClientset), nil
 }
 
 // NewForConfigOrDie creates a new Client from the given config and panics if there is an error.

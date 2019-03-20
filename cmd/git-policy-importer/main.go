@@ -18,7 +18,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"flag"
 	"path"
 	"time"
@@ -38,7 +37,6 @@ var (
 	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directly has changed")
-	resyncPeriod      = flag.Duration("resync-period", time.Minute, "The resync period for the importer system")
 )
 
 func main() {
@@ -50,7 +48,7 @@ func main() {
 		glog.Fatalf("Failed to create rest config: %+v", err)
 	}
 
-	client, err := meta.NewForConfig(config, resyncPeriod)
+	client, err := meta.NewForConfig(config)
 	if err != nil {
 		glog.Fatalf("Failed to create client: %+v", err)
 	}
@@ -71,7 +69,7 @@ func main() {
 
 	c := filesystem.NewController(policyDir, *pollPeriod, parser, client, stopChan)
 	go service.WaitForShutdownSignalCb(stopChan)
-	if err := c.Run(context.Background()); err != nil {
+	if err := c.Run(); err != nil {
 		glog.Fatalf("Failure running controller: %+v", err)
 	}
 	glog.Info("Exiting")

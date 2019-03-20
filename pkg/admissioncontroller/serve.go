@@ -178,8 +178,8 @@ func ServeFunc(controller Admitter) http.HandlerFunc {
 }
 
 // SetupHierarchicalQuotaInformer returns a newly configured HierarchicalQuotaInformer.
-func SetupHierarchicalQuotaInformer(config *rest.Config, syncPeriod *time.Duration) (informersv1.HierarchicalQuotaInformer, error) {
-	hierarchicalQuotaClient, err := namespaceconfigmeta.NewForConfig(config, syncPeriod)
+func SetupHierarchicalQuotaInformer(config *rest.Config) (informersv1.HierarchicalQuotaInformer, error) {
+	hierarchicalQuotaClient, err := namespaceconfigmeta.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}

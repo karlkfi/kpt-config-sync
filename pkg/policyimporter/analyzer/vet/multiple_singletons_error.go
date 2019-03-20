@@ -9,8 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// TODO(ekitson): Replace usage of this error with id.MultipleSingletonsError instead
-
 // MultipleSingletonsErrorCode is the error code for MultipleSingletonsError
 const MultipleSingletonsErrorCode = "1030"
 

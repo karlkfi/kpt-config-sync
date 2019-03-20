@@ -428,13 +428,10 @@ type Repo struct {
 
 	// Standard object's metadata.
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// +optional
-	Spec RepoSpec `json:"spec,omitempty"`
-
-	// +optional
-	Status RepoStatus `json:"status,omitempty"`
+	Spec RepoSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // RepoSpec contains spec fields for Repo.

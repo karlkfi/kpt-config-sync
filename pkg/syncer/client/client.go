@@ -54,7 +54,7 @@ func New(client client.Client) *Client {
 type clientUpdateFn func(ctx context.Context, obj runtime.Object) error
 
 // Create saves the object obj in the Kubernetes cluster and records prometheus metrics.
-func (c *Client) Create(ctx context.Context, obj runtime.Object) id.ResourceError {
+func (c *Client) Create(ctx context.Context, obj runtime.Object) error {
 	description, kind := resourceInfo(obj)
 	glog.V(1).Infof("Creating %s", description)
 	operation := string(action.CreateOperation)
@@ -63,7 +63,7 @@ func (c *Client) Create(ctx context.Context, obj runtime.Object) id.ResourceErro
 	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
 	defer timer.ObserveDuration()
 	if err := c.Client.Create(ctx, obj); err != nil {
-		return id.ResourceWrap(err, "failed to create "+description, ast.ParseFileObject(obj))
+		return errors.Wrapf(err, "failed to create %s", description)
 	}
 	glog.V(1).Infof("Create OK for %s", description)
 	return nil

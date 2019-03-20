@@ -16,25 +16,22 @@ limitations under the License.
 package filesystem
 
 import (
-	"context"
 	"path/filepath"
 	"time"
+
+	"github.com/google/nomos/pkg/client/action"
 
 	"github.com/golang/glog"
 	policyhierarchyscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
 	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/policyimporter/git"
-	syncclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"github.com/google/nomos/pkg/util/repo"
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -52,7 +49,7 @@ type Controller struct {
 	namespaceConfigLister listersv1.NamespaceConfigLister
 	clusterConfigLister   listersv1.ClusterConfigLister
 	syncLister            listersv1.SyncLister
-	repoClient            *repo.Client
+	repoLister            listersv1.RepoLister
 	stopChan              chan struct{}
 	client                meta.Interface
 }
@@ -70,7 +67,6 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 			informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
 			informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
 			informerFactory.Configmanagement().V1().Syncs().Lister()))
-	repoClient := repo.New(syncclient.New(client.Runtime()))
 
 	return &Controller{
 		policyDir:             policyDir,
@@ -82,7 +78,7 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		namespaceConfigLister: informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
 		clusterConfigLister:   informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
 		syncLister:            informerFactory.Configmanagement().V1().Syncs().Lister(),
-		repoClient:            repoClient,
+		repoLister:            informerFactory.Configmanagement().V1().Repos().Lister(),
 		stopChan:              stopChan,
 		client:                client,
 	}
@@ -97,7 +93,7 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 //   * Gets the policies currently stored in Kubernetes API server.
 //   * Compares current and desired policies.
 //   * Writes updates to make current match desired.
-func (c *Controller) Run(ctx context.Context) error {
+func (c *Controller) Run() error {
 	// Start informers
 	c.informerFactory.Start(c.stopChan)
 	glog.Infof("Waiting for cache to sync")
@@ -110,23 +106,17 @@ func (c *Controller) Run(ctx context.Context) error {
 	}
 	glog.Infof("Caches synced")
 
-	c.pollDir(ctx)
+	c.pollDir()
 	return nil
 }
 
-func (c *Controller) pollDir(ctx context.Context) {
+func (c *Controller) pollDir() {
 	currentDir := ""
 	ticker := time.NewTicker(c.pollPeriod)
 
 	for {
 		select {
 		case <-ticker.C:
-			var err error // golang does not handle interface assignment well
-			repoObj, err := c.repoClient.GetOrCreateRepo(ctx)
-			if err != nil {
-				glog.Errorf("failed to get Repo: %v", err)
-			}
-
 			// Detect whether symlink has changed.
 			newDir, err := filepath.EvalSymlinks(c.policyDir)
 			if err != nil {
@@ -134,14 +124,13 @@ func (c *Controller) pollDir(ctx context.Context) {
 				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
 				continue
 			}
-
 			if currentDir == newDir {
 				// No new commits, nothing to do.
 				continue
 			}
 			glog.Infof("Resolved policy dir: %s. Polling policy dir: %s", newDir, c.policyDir)
 
-			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
+			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister, c.repoLister)
 			if err != nil {
 				glog.Errorf("failed to list current policies: %v", err)
 				policyimporter.Metrics.PolicyStates.WithLabelValues("failed").Inc()
@@ -157,14 +146,6 @@ func (c *Controller) pollDir(ctx context.Context) {
 			}
 
 			loadTime := time.Now()
-
-			repoObj.Status.Source.Token = token
-			if newRepo, err := c.repoClient.UpdateSourceStatus(ctx, repoObj); err != nil {
-				glog.Errorf("failed to update Repo source status: %v", err)
-			} else {
-				repoObj = newRepo
-			}
-
 			// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
 			desiredPolicies, mErr := c.parser.Parse(newDir, token, loadTime)
 			if mErr != nil {
@@ -180,12 +161,6 @@ func (c *Controller) pollDir(ctx context.Context) {
 				desiredPolicies.NamespaceConfigs[n] = pn
 			}
 			desiredPolicies.ClusterConfig.Status.SyncState = v1.StateStale
-
-			repoObj.Status.Import.Token = token
-			repoObj.Status.Import.LastUpdate = metav1.NewTime(loadTime)
-			if _, err = c.repoClient.UpdateImportStatus(ctx, repoObj); err != nil {
-				glog.Errorf("failed to update Repo import status: %v", err)
-			}
 
 			if err := c.updatePolicies(currentPolicies, desiredPolicies); err != nil {
 				glog.Warningf("Failed to apply actions: %v", err)

@@ -21,13 +21,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	"github.com/golang/mock/gomock"
+
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/google/nomos/clientgen/informer"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/client/meta/fake"
-	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -225,11 +225,7 @@ func (t *ReflectiveActionTest) PrePopulate() {
 		}
 		storage = append(storage, resource.DeepCopyObject())
 	}
-	mockCtrl := gomock.NewController(t.t)
-	defer mockCtrl.Finish()
-
-	mockClient := syncertesting.NewMockClient(mockCtrl)
-	t.client = fake.NewClientWithStorage(storage, mockClient)
+	t.client = fake.NewClientWithStorage(storage)
 
 	for idx := range t.testcases {
 		t.testcases[idx].client = t.client
