@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filter"
 	"github.com/google/nomos/pkg/importer/mutate"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -87,14 +88,14 @@ var Cmd = &cobra.Command{
 		}
 
 		infoOut.Printfln("Filtering out system resources")
-		objects = filter.Objects(objects, filter.Any(
+		objects = object.Filter(objects, object.Any(
 			ignoreSystemNameGroups,
 			ignoreSystemNamespaces(infoOut),
 			ignoreKubernetesSystemLabels,
 			ignoreCriticalPriorityClasses,
 		))
 
-		mutate.Build(
+		object.Mutate(
 			mutate.Unapply(infoOut),
 			removeNomosLables,
 			removeNomosAnnotations,
@@ -161,7 +162,7 @@ var ignoredGroupKinds = map[schema.GroupKind]bool{
 
 // ignoreSystemNameGroups ignores resources in name groups indicating they are a critical part of
 // Kubernetes or Nomos functionality.
-var ignoreSystemNameGroups = filter.Any(
+var ignoreSystemNameGroups = object.Any(
 	// system: resources are part of the Kubernetes system.
 	filter.NameGroup("system"),
 	// gce: resources are part of Google Compute Engine.
@@ -174,20 +175,20 @@ var ignoreSystemNameGroups = filter.Any(
 
 // ignoreSystemNamespaces ignores all of the Namespaces which have internal Kubernetes and Nomos
 // resources. We don't support syncing any of these namespaces.
-func ignoreSystemNamespaces(out importer.InfoOutput) filter.Predicate {
+func ignoreSystemNamespaces(out importer.InfoOutput) object.Predicate {
 	ignoredNamespaces := []string{"default", "kube-public", "kube-system", policyhierarchy.ControllerNamespace}
-	var namespaceFilters []filter.Predicate
+	var namespaceFilters []object.Predicate
 	for _, n := range ignoredNamespaces {
 		out.Printfln("  Ignoring %s Namespace", n)
 		namespaceFilters = append(namespaceFilters, filter.Namespace(n))
 	}
 
-	return filter.Any(namespaceFilters...)
+	return object.Any(namespaceFilters...)
 }
 
 // ignoreKubernetesSystemLabels returns true for resources which have Kubernetes system labels
 // set.
-var ignoreKubernetesSystemLabels = filter.Any(
+var ignoreKubernetesSystemLabels = object.Any(
 	// addonmanager.kubernetes.io/mode indicates the resource is managed by an addon.
 	filter.Label("addonmanager.kubernetes.io/mode"),
 	//config.gke.io/system indicates the resource is part of the Nomos installation
@@ -205,9 +206,9 @@ var ignoreKubernetesSystemLabels = filter.Any(
 // ignoreCriticalPriorityClasses returns false for resources which are the default critical
 // priority classes, which are essential to clusters and nodes functioning. Modifying these can
 // cause processes critical to cluster functioning to get preempted.
-var ignoreCriticalPriorityClasses = filter.All(
+var ignoreCriticalPriorityClasses = object.All(
 	filter.GroupKind(schema.GroupKind{Group: "scheduling.k8s.io", Kind: "PriorityClass"}),
-	filter.Any(filter.Name("system-cluster-critical"), filter.Name("system-node-critical")),
+	object.Any(filter.Name("system-cluster-critical"), filter.Name("system-node-critical")),
 )
 
 // removeNomosLables removes all Nomos labels.
@@ -221,7 +222,7 @@ var removeNomosAnnotations = mutate.RemoveAnnotationGroup(policyhierarchy.GroupN
 var removeAppliedConfig = mutate.RemoveAnnotation(mutate.AppliedConfiguration)
 
 // cleanNamespaces removes the kubernetes finalizer and the status.phase from Namespaces.
-var cleanNamespaces = mutate.Build(
+var cleanNamespaces = object.Mutate(
 	// Kubernetes manages this finalizer on Namespaces.
 	mutate.Remove(mutate.Key("spec", "finalizers").Value("kubernetes")),
 	// transient Namespace state managed by Kubernetes
@@ -232,7 +233,7 @@ var cleanNamespaces = mutate.Build(
 // kubernetes/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go.
 // Simply setting them to empty string in the meta object doesn't remove them; we have to directly
 // modify the underlying Unstructured.
-var exportObjectMeta = mutate.Build(
+var exportObjectMeta = object.Mutate(
 	// creationTimestamp tracks when an object was creates in Kubernetes, and shouldn't be managed by Nomos.
 	mutate.Remove(mutate.Key("metadata", "creationTimestamp")),
 	// deletionTimestamp tracks when the request to delete the resources was received, and shouldn't be managed in version control.

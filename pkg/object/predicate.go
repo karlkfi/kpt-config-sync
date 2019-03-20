@@ -1,4 +1,4 @@
-package filter
+package object
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
@@ -52,9 +52,9 @@ func Not(p Predicate) Predicate {
 	}
 }
 
-// Objects returns a list of the passed FileObjects for which p returns false.
+// Filter returns a list of the passed FileObjects for which p returns false.
 // Preserves the relative order of passed objects.
-func Objects(objects []ast.FileObject, p Predicate) []ast.FileObject {
+func Filter(objects []ast.FileObject, p Predicate) []ast.FileObject {
 	var result []ast.FileObject
 	for _, object := range objects {
 		if p(object) {

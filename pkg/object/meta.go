@@ -3,21 +3,21 @@ package object
 import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 
 // Namespace replaces the metadata.namesapce of the FileObject under test.
-func Namespace(namespace string) BuildOpt {
+func Namespace(namespace string) Mutator {
 	return func(o *ast.FileObject) {
 		o.MetaObject().SetNamespace(namespace)
 	}
 }
 
 // Name replaces the metadata.name of the FileObject under test.
-func Name(name string) BuildOpt {
+func Name(name string) Mutator {
 	return func(o *ast.FileObject) {
 		o.MetaObject().SetName(name)
 	}
 }
 
 // Label adds label=value to the metadata.labels of the FileObject under test.
-func Label(label, value string) BuildOpt {
+func Label(label, value string) Mutator {
 	return func(o *ast.FileObject) {
 		labels := o.MetaObject().GetLabels()
 		if labels == nil {
@@ -31,14 +31,14 @@ func Label(label, value string) BuildOpt {
 // Labels sets the object's labels to a copy of the passed map.
 // Setting to nil causes a call to SetLabels(nil), but the underlying implementation may set Labels
 // to empty map.
-func Labels(labels map[string]string) BuildOpt {
+func Labels(labels map[string]string) Mutator {
 	return func(o *ast.FileObject) {
 		o.MetaObject().SetLabels(copyMap(labels))
 	}
 }
 
 // Annotation adds annotation=value to the metadata.annotations of the FileObject under test.
-func Annotation(annotation, value string) BuildOpt {
+func Annotation(annotation, value string) Mutator {
 	return func(o *ast.FileObject) {
 		annotations := o.MetaObject().GetAnnotations()
 		if annotations == nil {
@@ -52,7 +52,7 @@ func Annotation(annotation, value string) BuildOpt {
 // Annotations sets the object's annotations to a copy of the passed map.
 // Setting to nil causes a call to SetAnnotations(nil), but the underlying implementation may set
 // Annotations to empty map.
-func Annotations(annotations map[string]string) BuildOpt {
+func Annotations(annotations map[string]string) Mutator {
 	return func(o *ast.FileObject) {
 		o.MetaObject().SetAnnotations(copyMap(annotations))
 	}

@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/testing/object"
+	"github.com/google/nomos/pkg/testing/fake"
 )
 
 func TestGroup(t *testing.T) {
@@ -16,12 +17,12 @@ func TestGroup(t *testing.T) {
 	}{
 		{
 			name:     "foo matches foo",
-			obj:      object.Build(object.GVK(kinds.Role(), object.Group("foo"))),
+			obj:      fake.Build(fake.GVK(kinds.Role(), fake.Group("foo"))),
 			expected: true,
 		},
 		{
 			name: "foo does not match bar",
-			obj:  object.Build(object.GVK(kinds.Role(), object.Group("bar"))),
+			obj:  fake.Build(fake.GVK(kinds.Role(), fake.Group("bar"))),
 		},
 	}
 
@@ -44,12 +45,12 @@ func TestKind(t *testing.T) {
 	}{
 		{
 			name:     "Role matches Role",
-			obj:      object.Build(object.GVK(kinds.Role(), object.Kind("Role"))),
+			obj:      fake.Build(fake.GVK(kinds.Role(), fake.Kind("Role"))),
 			expected: true,
 		},
 		{
 			name: "Role does not match RoleBinding",
-			obj:  object.Build(object.GVK(kinds.Role(), object.Kind("RoleBinding"))),
+			obj:  fake.Build(fake.GVK(kinds.Role(), fake.Kind("RoleBinding"))),
 		},
 	}
 
@@ -72,16 +73,16 @@ func TestNamespace(t *testing.T) {
 	}{
 		{
 			name:     "prod matches prod",
-			obj:      object.Build(kinds.Role(), object.Namespace("prod")),
+			obj:      fake.Build(kinds.Role(), object.Namespace("prod")),
 			expected: true,
 		},
 		{
 			name: "prod does not match dev",
-			obj:  object.Build(kinds.Role(), object.Namespace("dev")),
+			obj:  fake.Build(kinds.Role(), object.Namespace("dev")),
 		},
 		{
 			name:     "prod matches Namespace prod",
-			obj:      object.Build(kinds.Namespace(), object.Name("prod")),
+			obj:      fake.Build(kinds.Namespace(), object.Name("prod")),
 			expected: true,
 		},
 	}
@@ -107,13 +108,13 @@ func TestName(t *testing.T) {
 		{
 			name:     "admin matches admin",
 			filter:   "admin",
-			obj:      object.Build(kinds.Role(), object.Name("admin")),
+			obj:      fake.Build(kinds.Role(), object.Name("admin")),
 			expected: true,
 		},
 		{
 			name:   "admin does not match user",
 			filter: "admin",
-			obj:    object.Build(kinds.Role(), object.Name("user")),
+			obj:    fake.Build(kinds.Role(), object.Name("user")),
 		},
 	}
 
@@ -138,13 +139,13 @@ func TestNameGroup(t *testing.T) {
 		{
 			name:     "prod matches prod:admin",
 			group:    "prod",
-			obj:      object.Build(kinds.Role(), object.Name("prod:admin")),
+			obj:      fake.Build(kinds.Role(), object.Name("prod:admin")),
 			expected: true,
 		},
 		{
 			name:  "prod does not match dev:admin",
 			group: "prod",
-			obj:   object.Build(kinds.Role(), object.Name("dev:admin")),
+			obj:   fake.Build(kinds.Role(), object.Name("dev:admin")),
 		},
 	}
 
@@ -169,13 +170,13 @@ func TestLabel(t *testing.T) {
 		{
 			name:     "version matches version",
 			label:    "version",
-			obj:      object.Build(kinds.Role(), object.Label("version", "")),
+			obj:      fake.Build(kinds.Role(), object.Label("version", "")),
 			expected: true,
 		},
 		{
 			name:  "version does not match instance",
 			label: "version",
-			obj:   object.Build(kinds.Role(), object.Label("instance", "")),
+			obj:   fake.Build(kinds.Role(), object.Label("instance", "")),
 		},
 	}
 

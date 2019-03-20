@@ -5,9 +5,10 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/testing/asttest"
-	"github.com/google/nomos/pkg/testing/object"
+	"github.com/google/nomos/pkg/testing/fake"
 )
 
 const (
@@ -21,32 +22,32 @@ func TestAnnotationValidator(t *testing.T) {
 		vet.IllegalAnnotationDefinitionErrorCode,
 
 		asttest.Pass("no annotations",
-			object.Build(kinds.Role()),
+			fake.Build(kinds.Role()),
 		),
 		asttest.Pass("one legal annotation",
-			object.Build(kinds.Role(),
+			fake.Build(kinds.Role(),
 				object.Annotation(legalAnnotation, "")),
 		),
 		asttest.Fail("one illegal annotation",
-			object.Build(kinds.Role(),
+			fake.Build(kinds.Role(),
 				object.Annotation(illegalAnnotation, "")),
 		),
 		asttest.Fail("two illegal annotations",
-			object.Build(kinds.Role(),
+			fake.Build(kinds.Role(),
 				object.Annotation(illegalAnnotation, ""),
 				object.Annotation(illegalAnnotation2, "")),
 		),
 		asttest.Fail("one legal and one illegal annotation",
-			object.Build(kinds.Role(),
+			fake.Build(kinds.Role(),
 				object.Annotation(legalAnnotation, ""),
 				object.Annotation(illegalAnnotation, "")),
 		),
 		asttest.Pass("namespaceselector annotation",
-			object.Build(kinds.Role(),
+			fake.Build(kinds.Role(),
 				object.Annotation(v1.NamespaceSelectorAnnotationKey, "")),
 		),
 		asttest.Pass("clusterselector annotation",
-			object.Build(kinds.Role(),
+			fake.Build(kinds.Role(),
 				object.Annotation(v1.ClusterSelectorAnnotationKey, "")),
 		),
 	)

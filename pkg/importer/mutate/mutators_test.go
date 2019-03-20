@@ -5,8 +5,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/testing/object"
+	"github.com/google/nomos/pkg/testing/fake"
 )
 
 func TestRemoveAnnotation(t *testing.T) {
@@ -18,15 +19,15 @@ func TestRemoveAnnotation(t *testing.T) {
 	}{
 		{
 			name:       "foo removes annotation foo",
-			object:     object.Build(kinds.Role(), object.Annotation("foo", "")),
+			object:     fake.Build(kinds.Role(), object.Annotation("foo", "")),
 			annotation: "foo",
-			expected:   object.Build(kinds.Role()),
+			expected:   fake.Build(kinds.Role()),
 		},
 		{
 			name:       "foo does not remove annotation bar",
-			object:     object.Build(kinds.Role(), object.Annotation("bar", "")),
+			object:     fake.Build(kinds.Role(), object.Annotation("bar", "")),
 			annotation: "foo",
-			expected:   object.Build(kinds.Role(), object.Annotation("bar", "")),
+			expected:   fake.Build(kinds.Role(), object.Annotation("bar", "")),
 		},
 	}
 
@@ -52,15 +53,15 @@ func TestRemoveAnnotationGroup(t *testing.T) {
 	}{
 		{
 			name:     "foo removes annotation foo/bar",
-			object:   object.Build(kinds.Role(), object.Annotation("foo/bar", "")),
+			object:   fake.Build(kinds.Role(), object.Annotation("foo/bar", "")),
 			group:    "foo",
-			expected: object.Build(kinds.Role()),
+			expected: fake.Build(kinds.Role()),
 		},
 		{
 			name:     "foo does not remove annotation bar/foo",
-			object:   object.Build(kinds.Role(), object.Annotation("bar/foo", "")),
+			object:   fake.Build(kinds.Role(), object.Annotation("bar/foo", "")),
 			group:    "foo",
-			expected: object.Build(kinds.Role(), object.Annotation("bar/foo", "")),
+			expected: fake.Build(kinds.Role(), object.Annotation("bar/foo", "")),
 		},
 	}
 
@@ -86,15 +87,15 @@ func TestRemoveLabel(t *testing.T) {
 	}{
 		{
 			name:     "foo removes label foo",
-			object:   object.Build(kinds.Role(), object.Label("foo", "")),
+			object:   fake.Build(kinds.Role(), object.Label("foo", "")),
 			label:    "foo",
-			expected: object.Build(kinds.Role()),
+			expected: fake.Build(kinds.Role()),
 		},
 		{
 			name:     "foo does not remove label bar",
-			object:   object.Build(kinds.Role(), object.Label("bar", "")),
+			object:   fake.Build(kinds.Role(), object.Label("bar", "")),
 			label:    "foo",
-			expected: object.Build(kinds.Role(), object.Label("bar", "")),
+			expected: fake.Build(kinds.Role(), object.Label("bar", "")),
 		},
 	}
 
@@ -120,15 +121,15 @@ func TestRemoveLabelGroup(t *testing.T) {
 	}{
 		{
 			name:     "foo removes label foo/bar",
-			object:   object.Build(kinds.Role(), object.Label("foo/bar", "")),
+			object:   fake.Build(kinds.Role(), object.Label("foo/bar", "")),
 			group:    "foo",
-			expected: object.Build(kinds.Role()),
+			expected: fake.Build(kinds.Role()),
 		},
 		{
 			name:     "foo does not remove label bar/foo",
-			object:   object.Build(kinds.Role(), object.Label("bar/foo", "")),
+			object:   fake.Build(kinds.Role(), object.Label("bar/foo", "")),
 			group:    "foo",
-			expected: object.Build(kinds.Role(), object.Label("bar/foo", "")),
+			expected: fake.Build(kinds.Role(), object.Label("bar/foo", "")),
 		},
 	}
 

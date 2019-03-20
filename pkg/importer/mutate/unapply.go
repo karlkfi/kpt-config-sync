@@ -2,6 +2,7 @@ package mutate
 
 import (
 	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -12,7 +13,7 @@ const AppliedConfiguration = "kubectl.kubernetes.io/last-applied-configuration"
 
 // Unapply extracts the applied configuration and replaces the Object with the applied configuration.
 // Has no effect if the value in the applied configuration is not parseable.
-func Unapply(out importer.InfoOutput) Mutator {
+func Unapply(out importer.InfoOutput) object.Mutator {
 	return func(object *ast.FileObject) {
 		if applied := object.MetaObject().GetAnnotations()[AppliedConfiguration]; applied != "" {
 			obj, _, err := unstructured.UnstructuredJSONScheme.Decode([]byte(applied), nil, nil)

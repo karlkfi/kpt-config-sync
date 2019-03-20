@@ -1,13 +1,14 @@
 package mutate
 
 import (
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Prune recursively removes empty maps and arrays from unstructured.Unstructured.
-func Prune() Mutator {
+func Prune() object.Mutator {
 	return func(object *ast.FileObject) {
 		switch o := object.Object.(type) {
 		case *unstructured.Unstructured:

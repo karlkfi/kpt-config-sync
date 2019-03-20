@@ -1,6 +1,7 @@
 package mutate
 
 import (
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -40,7 +41,7 @@ func (kv KeyValue) next() string {
 
 // Remove returns a Mutator which removes all YAML paths matching key in an unstructured.Unstructured.
 // key must have a length of at least 1.
-func Remove(key KeyValue) Mutator {
+func Remove(key KeyValue) object.Mutator {
 	return func(object *ast.FileObject) {
 		switch o := object.Object.(type) {
 		case *unstructured.Unstructured:

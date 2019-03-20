@@ -25,10 +25,11 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/syncer/client"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
-	"github.com/google/nomos/pkg/testing/object"
+	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
@@ -48,7 +49,7 @@ var (
 	}
 )
 
-func importToken(t string) object.BuildOpt {
+func importToken(t string) object.Mutator {
 	return func(o *ast.FileObject) {
 		switch obj := o.Object.(type) {
 		case *v1.ClusterConfig:
@@ -61,7 +62,7 @@ func importToken(t string) object.BuildOpt {
 	}
 }
 
-func syncTime(t metav1.Time) object.BuildOpt {
+func syncTime(t metav1.Time) object.Mutator {
 	return func(o *ast.FileObject) {
 		switch obj := o.Object.(type) {
 		case *v1.ClusterConfig:
@@ -74,7 +75,7 @@ func syncTime(t metav1.Time) object.BuildOpt {
 	}
 }
 
-func syncToken(t string) object.BuildOpt {
+func syncToken(t string) object.Mutator {
 	return func(o *ast.FileObject) {
 		switch obj := o.Object.(type) {
 		case *v1.ClusterConfig:
@@ -87,7 +88,7 @@ func syncToken(t string) object.BuildOpt {
 	}
 }
 
-func clusterSyncError(err v1.ClusterConfigSyncError) object.BuildOpt {
+func clusterSyncError(err v1.ClusterConfigSyncError) object.Mutator {
 	return func(o *ast.FileObject) {
 		o.Object.(*v1.ClusterConfig).Status.SyncErrors = append(o.Object.(*v1.ClusterConfig).Status.SyncErrors, err)
 	}
@@ -95,21 +96,21 @@ func clusterSyncError(err v1.ClusterConfigSyncError) object.BuildOpt {
 
 var unmanaged = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
 
-func clusterConfig(state v1.PolicySyncState, opts ...object.BuildOpt) *v1.ClusterConfig {
+func clusterConfig(state v1.PolicySyncState, opts ...object.Mutator) *v1.ClusterConfig {
 	opts = append(opts, func(o *ast.FileObject) {
 		o.Object.(*v1.ClusterConfig).Status.SyncState = state
 	})
-	return object.Build(kinds.ClusterConfig(), opts...).Object.(*v1.ClusterConfig)
+	return fake.Build(kinds.ClusterConfig(), opts...).Object.(*v1.ClusterConfig)
 }
 
-func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.BuildOpt) *corev1.PersistentVolume {
+func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.Mutator) *corev1.PersistentVolume {
 	opts = append(opts, func(o *ast.FileObject) {
 		o.Object.(*corev1.PersistentVolume).Spec.PersistentVolumeReclaimPolicy = reclaimPolicy
 	})
-	return object.Build(kinds.PersistentVolume(), opts...).Object.(*corev1.PersistentVolume)
+	return fake.Build(kinds.PersistentVolume(), opts...).Object.(*corev1.PersistentVolume)
 }
 
-func managedPersistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.BuildOpt) *corev1.PersistentVolume {
+func managedPersistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.Mutator) *corev1.PersistentVolume {
 	opts = append(opts,
 		object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 		object.Annotation(v1.SyncTokenAnnotationKey, token))

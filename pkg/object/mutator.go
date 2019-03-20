@@ -1,8 +1,8 @@
-package mutate
+package object
 
 import (
-	"github.com/google/nomos/pkg/importer/filter"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 )
 
 // Mutator modifies an ast.FileObject.
@@ -19,7 +19,7 @@ func (m Mutator) Apply(objects []ast.FileObject) {
 }
 
 // If returns a Mutator which only runs on objects where f returns true.
-func (m Mutator) If(p filter.Predicate) Mutator {
+func (m Mutator) If(p Predicate) Mutator {
 	if m == nil {
 		return nil
 	}
@@ -30,8 +30,8 @@ func (m Mutator) If(p filter.Predicate) Mutator {
 	}
 }
 
-// Build returns a Mutator that applies all underlying mutations.
-func Build(ms ...Mutator) Mutator {
+// Mutate returns a Mutator that applies all underlying mutations.
+func Mutate(ms ...Mutator) Mutator {
 	return func(object *ast.FileObject) {
 		for _, m := range ms {
 			if m == nil {
@@ -39,5 +39,12 @@ func Build(ms ...Mutator) Mutator {
 			}
 			m(object)
 		}
+	}
+}
+
+// Path replaces the path with the provided slash-delimited path from nomos root.
+func Path(path string) Mutator {
+	return func(o *ast.FileObject) {
+		o.Path = cmpath.FromSlash(path)
 	}
 }

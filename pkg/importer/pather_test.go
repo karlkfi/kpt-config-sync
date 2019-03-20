@@ -7,14 +7,15 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/testing/apiresource"
-	"github.com/google/nomos/pkg/testing/object"
+	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func withoutPath() object.BuildOpt {
+func withoutPath() object.Mutator {
 	return func(o *ast.FileObject) {
 		o.Path = cmpath.Path{}
 	}
@@ -31,42 +32,42 @@ func TestPatherSingleObject(t *testing.T) {
 		},
 		{
 			name:     "Repo",
-			object:   object.Build(kinds.Repo(), withoutPath()),
+			object:   fake.Build(kinds.Repo(), withoutPath()),
 			expected: cmpath.FromSlash(repo.SystemDir).Join(repoBasePath),
 		},
 		{
 			name:     "HierarchyConfig",
-			object:   object.Build(kinds.HierarchyConfig(), object.Name("hc"), withoutPath()),
+			object:   fake.Build(kinds.HierarchyConfig(), object.Name("hc"), withoutPath()),
 			expected: cmpath.FromSlash(repo.SystemDir).Join(strings.ToLower(kinds.HierarchyConfig().Kind) + "_hc.yaml"),
 		},
 		{
 			name:     "Clusters",
-			object:   object.Build(kinds.Cluster(), object.Name("us-east-1"), withoutPath()),
+			object:   fake.Build(kinds.Cluster(), object.Name("us-east-1"), withoutPath()),
 			expected: cmpath.FromSlash(repo.ClusterRegistryDir).Join(strings.ToLower(kinds.Cluster().Kind) + "_us-east-1.yaml"),
 		},
 		{
 			name:     "ClusterSelector",
-			object:   object.Build(kinds.ClusterSelector(), object.Name("cs"), withoutPath()),
+			object:   fake.Build(kinds.ClusterSelector(), object.Name("cs"), withoutPath()),
 			expected: cmpath.FromSlash(repo.ClusterRegistryDir).Join(strings.ToLower(kinds.ClusterSelector().Kind) + "_cs.yaml"),
 		},
 		{
 			name:     "Namespace prod",
-			object:   object.Build(kinds.Namespace(), object.Name("prod"), withoutPath()),
+			object:   fake.Build(kinds.Namespace(), object.Name("prod"), withoutPath()),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("prod").Join(namespaceBasePath),
 		},
 		{
 			name:     "Namespace dev",
-			object:   object.Build(kinds.Namespace(), object.Name("dev"), withoutPath()),
+			object:   fake.Build(kinds.Namespace(), object.Name("dev"), withoutPath()),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join(namespaceBasePath),
 		},
 		{
 			name:     "Namespaced kind",
-			object:   object.Build(kinds.Role(), object.Namespace("dev"), object.Name("admin"), withoutPath()),
+			object:   fake.Build(kinds.Role(), object.Namespace("dev"), object.Name("admin"), withoutPath()),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join("role_admin.yaml"),
 		},
 		{
 			name:     "Clusters kind",
-			object:   object.Build(kinds.ClusterRole(), object.Name("admin"), withoutPath()),
+			object:   fake.Build(kinds.ClusterRole(), object.Name("admin"), withoutPath()),
 			expected: cmpath.FromSlash(repo.ClusterDir).Join("clusterrole_admin.yaml"),
 		},
 	}
@@ -86,7 +87,7 @@ func TestPatherSingleObject(t *testing.T) {
 }
 
 func TestPatherMultipleObjects(t *testing.T) {
-	other := object.Build(object.GVK(kinds.Role(), object.Group("bar")), object.Name("admin"), object.Namespace("dev"), withoutPath())
+	other := fake.Build(fake.GVK(kinds.Role(), fake.Group("bar")), object.Name("admin"), object.Namespace("dev"), withoutPath())
 
 	testCases := []struct {
 		name     string
@@ -95,19 +96,19 @@ func TestPatherMultipleObjects(t *testing.T) {
 	}{
 		{
 			name: "kind/name conflict",
-			object: object.Build(object.GVK(kinds.Role(), object.Group("foo")),
+			object: fake.Build(fake.GVK(kinds.Role(), fake.Group("foo")),
 				object.Name("admin"), object.Namespace("dev")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join("role_foo_admin.yaml"),
 		},
 		{
 			name: "different namespace",
-			object: object.Build(object.GVK(kinds.Role(), object.Group("foo")),
+			object: fake.Build(fake.GVK(kinds.Role(), fake.Group("foo")),
 				object.Name("admin"), object.Namespace("prod")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("prod").Join("role_admin.yaml"),
 		},
 		{
 			name: "different kind",
-			object: object.Build(object.GVK(kinds.RoleBinding(), object.Group("foo")),
+			object: fake.Build(fake.GVK(kinds.RoleBinding(), fake.Group("foo")),
 				object.Name("admin"), object.Namespace("dev")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join("rolebinding_admin.yaml"),
 		},
@@ -117,9 +118,9 @@ func TestPatherMultipleObjects(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p := Pather{
 				namespaced: map[schema.GroupVersionKind]bool{
-					object.GVK(kinds.Role(), object.Group("bar")):        true,
-					object.GVK(kinds.Role(), object.Group("foo")):        true,
-					object.GVK(kinds.RoleBinding(), object.Group("foo")): true,
+					fake.GVK(kinds.Role(), fake.Group("bar")):        true,
+					fake.GVK(kinds.Role(), fake.Group("foo")):        true,
+					fake.GVK(kinds.RoleBinding(), fake.Group("foo")): true,
 				},
 			}
 

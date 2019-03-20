@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/testing/fake"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/testing/asttest"
-	"github.com/google/nomos/pkg/testing/object"
 	"github.com/google/nomos/pkg/util/discovery"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -50,11 +50,11 @@ func TestKnownResourceValidator(t *testing.T) {
 		vet.UnknownResourceInHierarchyConfigErrorCode,
 
 		asttest.Fail("ResourceQuota throws error if not known",
-			object.Build(kinds.HierarchyConfig(),
+			fake.Build(kinds.HierarchyConfig(),
 				HierarchyConfigResource(kinds.ResourceQuota(), v1.HierarchyModeDefault)),
 		),
 		asttest.Pass("RoleBinding valid if known",
-			object.Build(kinds.HierarchyConfig(),
+			fake.Build(kinds.HierarchyConfig(),
 				HierarchyConfigResource(kinds.RoleBinding(), v1.HierarchyModeDefault)),
 		),
 	).With(APIInfo(apiInfo))

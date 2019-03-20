@@ -25,11 +25,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
-	"github.com/google/nomos/pkg/testing/object"
+	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -56,14 +57,14 @@ type application struct {
 	intended, current runtime.Object
 }
 
-func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...object.BuildOpt) *appsv1.Deployment {
+func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...object.Mutator) *appsv1.Deployment {
 	opts = append(opts, func(o *ast.FileObject) {
 		o.Object.(*appsv1.Deployment).Spec.Strategy.Type = deploymentStrategy
 	})
-	return object.Build(kinds.Deployment(), opts...).Object.(*appsv1.Deployment)
+	return fake.Build(kinds.Deployment(), opts...).Object.(*appsv1.Deployment)
 }
 
-func managedDeployment(deploymentStrategy appsv1.DeploymentStrategyType, namespace string, opts ...object.BuildOpt) *appsv1.Deployment {
+func managedDeployment(deploymentStrategy appsv1.DeploymentStrategyType, namespace string, opts ...object.Mutator) *appsv1.Deployment {
 	opts = append(opts,
 		object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 		object.Annotation(v1.SyncTokenAnnotationKey, token),
@@ -71,24 +72,24 @@ func managedDeployment(deploymentStrategy appsv1.DeploymentStrategyType, namespa
 	return deployment(deploymentStrategy, opts...)
 }
 
-func namespaceConfig(name string, state v1.PolicySyncState, opts ...object.BuildOpt) *v1.NamespaceConfig {
+func namespaceConfig(name string, state v1.PolicySyncState, opts ...object.Mutator) *v1.NamespaceConfig {
 	opts = append(opts, object.Name(name), func(o *ast.FileObject) {
 		o.Object.(*v1.NamespaceConfig).Status.SyncState = state
 	})
-	return object.Build(kinds.NamespaceConfig(), opts...).Object.(*v1.NamespaceConfig)
+	return fake.Build(kinds.NamespaceConfig(), opts...).Object.(*v1.NamespaceConfig)
 }
 
-func namespace(name string, opts ...object.BuildOpt) *corev1.Namespace {
+func namespace(name string, opts ...object.Mutator) *corev1.Namespace {
 	opts = append(opts, object.Name(name))
-	return object.Build(kinds.Namespace(), opts...).Object.(*corev1.Namespace)
+	return fake.Build(kinds.Namespace(), opts...).Object.(*corev1.Namespace)
 }
 
-func managedNamespace(name string, opts ...object.BuildOpt) *corev1.Namespace {
+func managedNamespace(name string, opts ...object.Mutator) *corev1.Namespace {
 	opts = append(opts, object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
 	return namespace(name, opts...)
 }
 
-func namespaceSyncError(err v1.NamespaceConfigSyncError) object.BuildOpt {
+func namespaceSyncError(err v1.NamespaceConfigSyncError) object.Mutator {
 	return func(o *ast.FileObject) {
 		o.Object.(*v1.NamespaceConfig).Status.SyncErrors = append(o.Object.(*v1.NamespaceConfig).Status.SyncErrors, err)
 	}

@@ -3,11 +3,12 @@ package mutate
 import (
 	"strings"
 
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 
 // RemoveAnnotation removes the annotation matching annotation if it exists.
-func RemoveAnnotation(annotation string) Mutator {
+func RemoveAnnotation(annotation string) object.Mutator {
 	return func(object *ast.FileObject) {
 		annotations := object.MetaObject().GetAnnotations()
 		delete(annotations, annotation)
@@ -17,7 +18,7 @@ func RemoveAnnotation(annotation string) Mutator {
 }
 
 // RemoveAnnotationGroup removes all annotations in group.
-func RemoveAnnotationGroup(group string) Mutator {
+func RemoveAnnotationGroup(group string) object.Mutator {
 	return func(object *ast.FileObject) {
 		annotations := object.MetaObject().GetAnnotations()
 		var toRemove []string
@@ -35,7 +36,7 @@ func RemoveAnnotationGroup(group string) Mutator {
 }
 
 // RemoveLabel removes the label matching label if it exists.
-func RemoveLabel(label string) Mutator {
+func RemoveLabel(label string) object.Mutator {
 	return func(object *ast.FileObject) {
 		labels := object.MetaObject().GetLabels()
 		delete(labels, label)
@@ -45,7 +46,7 @@ func RemoveLabel(label string) Mutator {
 }
 
 // RemoveLabelGroup removes all labels in group.
-func RemoveLabelGroup(group string) Mutator {
+func RemoveLabelGroup(group string) object.Mutator {
 	return func(object *ast.FileObject) {
 		labels := object.MetaObject().GetLabels()
 		var toRemove []string
