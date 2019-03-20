@@ -9,7 +9,7 @@ import (
 const InternalErrorCode = "1000"
 
 func init() {
-	status.Register(InternalErrorCode, Internal{})
+	status.Register(InternalErrorCode, Internal{err: errors.New("some internal error")})
 }
 
 // Internal errors represent conditions that should ever happen, but that we check for so that

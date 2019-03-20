@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -13,7 +14,14 @@ import (
 const MetadataNameCollisionErrorCode = "1029"
 
 func init() {
-	status.Register(MetadataNameCollisionErrorCode, MetadataNameCollisionError{})
+	r1 := role()
+	r1.Path = cmpath.FromSlash("namespaces/foo/r1.yaml")
+	r2 := role()
+	r2.Path = cmpath.FromSlash("namespaces/foo/r2.yaml")
+	status.Register(MetadataNameCollisionErrorCode, MetadataNameCollisionError{
+		Name:       "role",
+		Duplicates: []id.Resource{r1, r2},
+	})
 }
 
 // MetadataNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.

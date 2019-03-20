@@ -9,7 +9,8 @@ import (
 const MissingResourceErrorCode = "2011"
 
 func init() {
-	status.Register(MissingResourceErrorCode, MissingResourceError{})
+	// TODO: add a way to generate valid error without dependency cycle.
+	//status.Register(MissingResourceErrorCode, MissingResourceError{})
 }
 
 // MissingResourceError reports that one or more Resources were not found by the API server.

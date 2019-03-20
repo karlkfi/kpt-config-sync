@@ -1,6 +1,7 @@
 package status
 
 import (
+	"errors"
 	"strings"
 )
 
@@ -8,7 +9,10 @@ import (
 const PathErrorCode = "2001"
 
 func init() {
-	Register(PathErrorCode, pathError{})
+	Register(PathErrorCode, pathError{
+		err:      errors.New("some error"),
+		relPaths: []string{"namespaces/ns.yaml"},
+	})
 }
 
 // pathError almost always results from an OS-level function involving the file system.

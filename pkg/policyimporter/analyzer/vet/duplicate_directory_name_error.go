@@ -12,7 +12,7 @@ import (
 const DuplicateDirectoryNameErrorCode = "1002"
 
 func init() {
-	status.Register(DuplicateDirectoryNameErrorCode, DuplicateDirectoryNameError{})
+	status.Register(DuplicateDirectoryNameErrorCode, DuplicateDirectoryNameError{Duplicates: []cmpath.Path{cmpath.FromSlash("namespaces/foo/bar"), cmpath.FromSlash("namespaces/qux/bar")}})
 }
 
 // DuplicateDirectoryNameError represents an illegal duplication of directory names.
