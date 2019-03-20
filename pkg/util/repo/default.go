@@ -7,7 +7,7 @@ import (
 )
 
 // CurrentVersion is the version of the format for the ConfigManagement Repo.
-const CurrentVersion = "0.2.0"
+const CurrentVersion = "0.1.0"
 
 // Default returns a default Repo in case one is not defined in the source of truth.
 func Default() *v1.Repo {

@@ -1,7 +1,7 @@
 Found issues: 1 error(s)
 
 
-[1] KNV1027: Unsupported Repo spec.version: "0.0.0". Must use version "0.2.0"
+[1] KNV1027: Unsupported Repo spec.version: "0.0.0". Must use version "0.1.0"
 
 source: system/repo.yaml
 metadata.name: repo

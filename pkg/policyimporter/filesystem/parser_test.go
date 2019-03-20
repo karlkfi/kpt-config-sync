@@ -242,7 +242,7 @@ spec:
 kind: Repo
 apiVersion: configmanagement.gke.io/v1
 spec:
-  version: "0.2.0"
+  version: "0.1.0"
 metadata:
   name: repo
 `
