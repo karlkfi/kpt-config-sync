@@ -19,7 +19,7 @@ set -x
 
 # This remote branch needs to already exist.
 # Manually create it if necessary.
-REPO_VERSION=0.1.0
+REPO_VERSION=0.2.0
 
 version=$(git describe --tags --always --dirty)
 repo="/tmp/foo-corp-example"
