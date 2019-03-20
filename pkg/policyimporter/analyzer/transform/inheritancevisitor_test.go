@@ -24,7 +24,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -64,11 +64,11 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 				ClusterRegistryObjects: vt.Helper.ClusterRegistry(),
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
-					Path: nomospath.FromSlash("namespaces"),
+					Path: cmpath.FromSlash("namespaces"),
 					Children: []*ast.TreeNode{
 						{
 							Type:        node.Namespace,
-							Path:        nomospath.FromSlash("namespaces/frontend"),
+							Path:        cmpath.FromSlash("namespaces/frontend"),
 							Labels:      map[string]string{"environment": "prod"},
 							Annotations: map[string]string{"has-waffles": "true"},
 							Objects: vt.ObjectSets(
@@ -81,7 +81,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 						},
 						{
 							Type:        node.Namespace,
-							Path:        nomospath.FromSlash("namespaces/frontend-test"),
+							Path:        cmpath.FromSlash("namespaces/frontend-test"),
 							Labels:      map[string]string{"environment": "test"},
 							Annotations: map[string]string{"has-waffles": "false"},
 							Objects: vt.ObjectSets(
@@ -106,12 +106,12 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 					Children: []*ast.TreeNode{
 						{
 							Type:   node.Namespace,
-							Path:   nomospath.FromSlash("namespaces/frontend"),
+							Path:   cmpath.FromSlash("namespaces/frontend"),
 							Labels: map[string]string{"env": "prod"},
 						},
 						{
 							Type:   node.Namespace,
-							Path:   nomospath.FromSlash("namespaces/frontend-test"),
+							Path:   cmpath.FromSlash("namespaces/frontend-test"),
 							Labels: map[string]string{"env": "test"},
 						},
 					},
@@ -123,7 +123,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 					Children: []*ast.TreeNode{
 						{
 							Type:   node.Namespace,
-							Path:   nomospath.FromSlash("namespaces/frontend"),
+							Path:   cmpath.FromSlash("namespaces/frontend"),
 							Labels: map[string]string{"env": "prod"},
 							Objects: vt.ObjectSets(
 								withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
@@ -131,7 +131,7 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 						},
 						{
 							Type:   node.Namespace,
-							Path:   nomospath.FromSlash("namespaces/frontend-test"),
+							Path:   cmpath.FromSlash("namespaces/frontend-test"),
 							Labels: map[string]string{"env": "test"},
 						},
 					},

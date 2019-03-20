@@ -2,7 +2,7 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/api/core/v1"
@@ -18,7 +18,7 @@ func init() {
 // IllegalResourceQuotaFieldError represents illegal fields set on ResourceQuota objects.
 type IllegalResourceQuotaFieldError struct {
 	// Path is the repository directory where the quota is located.
-	Path nomospath.Path
+	Path cmpath.Path
 	// ResourceQuota is the quota with the illegal field.
 	ResourceQuota v1.ResourceQuota
 	// Field is the illegal field set.

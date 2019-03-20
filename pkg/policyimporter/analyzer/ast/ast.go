@@ -22,7 +22,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,14 +33,14 @@ import (
 type FileObject struct {
 	runtime.Object
 	// Path is the path this object has relative to Nomos Root, if known.
-	nomospath.Path
+	cmpath.Path
 }
 
 var _ id.Resource = &FileObject{}
 
 // NewFileObject returns an ast.FileObject with the specified underlying runtime.Object and the
 // designated source file.
-func NewFileObject(object runtime.Object, source nomospath.Path) FileObject {
+func NewFileObject(object runtime.Object, source cmpath.Path) FileObject {
 	return FileObject{Object: object, Path: source}
 }
 
@@ -48,7 +48,7 @@ func NewFileObject(object runtime.Object, source nomospath.Path) FileObject {
 // path parsed from its annotations.
 func ParseFileObject(object runtime.Object) *FileObject {
 	mo := object.(metav1.Object)
-	srcPath := nomospath.FromSlash(mo.GetAnnotations()[v1.SourcePathAnnotationKey])
+	srcPath := cmpath.FromSlash(mo.GetAnnotations()[v1.SourcePathAnnotationKey])
 	return &FileObject{Object: object, Path: srcPath}
 }
 
@@ -160,7 +160,7 @@ func (o *ClusterObject) DeepCopy() *ClusterObject {
 // TreeNode is analogous to a directory in the policy hierarchy.
 type TreeNode struct {
 	// Path is the path this node has relative to a nomos Root.
-	nomospath.Path
+	cmpath.Path
 
 	// The type of the HierarchyNode
 	Type        node.Type

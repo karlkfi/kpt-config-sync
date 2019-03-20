@@ -23,7 +23,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -266,7 +266,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			SystemObjects: []*ast.SystemObject{
 				{
 					FileObject: ast.FileObject{
-						Path: nomospath.FromSlash("<builtin>"),
+						Path: cmpath.FromSlash("<builtin>"),
 						Object: &v1.Sync{
 							TypeMeta: metav1.TypeMeta{
 								APIVersion: v1.SchemeGroupVersion.String(),

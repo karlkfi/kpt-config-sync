@@ -27,7 +27,7 @@ import (
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -76,7 +76,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Annotations: map[string]string{
 							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
@@ -85,7 +85,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 				ExpectOutput: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Annotations: map[string]string{
 							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
@@ -98,14 +98,14 @@ func TestClusterSelectorVisitor(t *testing.T) {
 					ClusterObjects: vt.ClusterObjectSets(vt.Helper.NomosAdminClusterRole()),
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 					},
 				},
 				ExpectOutput: &ast.Root{
 					ClusterObjects: vt.ClusterObjectSets(vt.Helper.NomosAdminClusterRole()),
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 					},
 				},
 			},
@@ -117,7 +117,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 					),
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-1"),
 						),
@@ -132,7 +132,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 					),
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withClusterSelector(
 								vt.Helper.AdminRoleBinding(),
@@ -148,7 +148,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							vt.Helper.AdminRoleBinding(),
 						),
@@ -160,7 +160,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 				ExpectOutput: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							vt.Helper.AdminRoleBinding()),
 						Annotations: map[string]string{
@@ -177,7 +177,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 					),
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-2"),
 						),
@@ -190,7 +190,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 					// "sel-2" annotation not applied.
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Annotations: map[string]string{
 							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
@@ -202,7 +202,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-1"),
 						),

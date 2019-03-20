@@ -20,7 +20,7 @@ import (
 
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 )
 
 // builder handles constructing an ast.TreeNode tree from directory paths.
@@ -28,15 +28,15 @@ type builder struct {
 	// root is the root node of the tree
 	root *ast.TreeNode
 	// namespaceDirs is a map of relative UNIX-style directory path to node
-	nodes map[nomospath.Path]*ast.TreeNode
+	nodes map[cmpath.Path]*ast.TreeNode
 }
 
 // newDirectoryTree returns a new tree generator
 func newDirectoryTree() *builder {
-	return &builder{nodes: map[nomospath.Path]*ast.TreeNode{}}
+	return &builder{nodes: map[cmpath.Path]*ast.TreeNode{}}
 }
 
-func newNode(p nomospath.Path) *ast.TreeNode {
+func newNode(p cmpath.Path) *ast.TreeNode {
 	return &ast.TreeNode{
 		Path: p,
 		Type: node.AbstractNamespace,
@@ -44,9 +44,9 @@ func newNode(p nomospath.Path) *ast.TreeNode {
 }
 
 // addDir adds a node at the the given path.
-// p is the nomospath.Relative of the new ast.TreeNode.
+// p is the cmpath.Relative of the new ast.TreeNode.
 // Recursively adds parent nodes as necessary until it reaches the policy hierarchy root.
-func (t *builder) addDir(dir nomospath.Path) {
+func (t *builder) addDir(dir cmpath.Path) {
 	if t.nodes[dir] != nil {
 		return
 	}

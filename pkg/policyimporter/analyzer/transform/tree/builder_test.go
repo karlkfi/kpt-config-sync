@@ -23,7 +23,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -36,7 +36,7 @@ type directoryTreeTestcase struct {
 func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	tg := newDirectoryTree()
 	for _, dir := range tc.inputs {
-		tg.addDir(nomospath.FromSlash(dir))
+		tg.addDir(cmpath.FromSlash(dir))
 	}
 	eb := status.ErrorBuilder{}
 	tr := tg.build()
@@ -56,7 +56,7 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "only root",
 			inputs: []string{"a"},
 			expect: &ast.TreeNode{
-				Path: nomospath.FromSlash("a"),
+				Path: cmpath.FromSlash("a"),
 				Type: node.AbstractNamespace,
 			},
 		},
@@ -64,11 +64,11 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "root second",
 			inputs: []string{"a/b", "a"},
 			expect: &ast.TreeNode{
-				Path: nomospath.FromSlash("a"),
+				Path: cmpath.FromSlash("a"),
 				Type: node.AbstractNamespace,
 				Children: []*ast.TreeNode{
 					{
-						Path: nomospath.FromSlash("a/b"),
+						Path: cmpath.FromSlash("a/b"),
 						Type: node.AbstractNamespace,
 					},
 				},
@@ -78,11 +78,11 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "missing root",
 			inputs: []string{"a/b"},
 			expect: &ast.TreeNode{
-				Path: nomospath.FromSlash("a"),
+				Path: cmpath.FromSlash("a"),
 				Type: node.AbstractNamespace,
 				Children: []*ast.TreeNode{
 					{
-						Path: nomospath.FromSlash("a/b"),
+						Path: cmpath.FromSlash("a/b"),
 						Type: node.AbstractNamespace,
 					},
 				},
@@ -92,15 +92,15 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "small out of order tree",
 			inputs: []string{"a", "a/b/c", "a/b"},
 			expect: &ast.TreeNode{
-				Path: nomospath.FromSlash("a"),
+				Path: cmpath.FromSlash("a"),
 				Type: node.AbstractNamespace,
 				Children: []*ast.TreeNode{
 					{
-						Path: nomospath.FromSlash("a/b"),
+						Path: cmpath.FromSlash("a/b"),
 						Type: node.AbstractNamespace,
 						Children: []*ast.TreeNode{
 							{
-								Path: nomospath.FromSlash("a/b/c"),
+								Path: cmpath.FromSlash("a/b/c"),
 								Type: node.AbstractNamespace,
 							},
 						},
@@ -112,15 +112,15 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "two children",
 			inputs: []string{"a", "a/b", "a/c"},
 			expect: &ast.TreeNode{
-				Path: nomospath.FromSlash("a"),
+				Path: cmpath.FromSlash("a"),
 				Type: node.AbstractNamespace,
 				Children: []*ast.TreeNode{
 					{
-						Path: nomospath.FromSlash("a/b"),
+						Path: cmpath.FromSlash("a/b"),
 						Type: node.AbstractNamespace,
 					},
 					{
-						Path: nomospath.FromSlash("a/c"),
+						Path: cmpath.FromSlash("a/c"),
 						Type: node.AbstractNamespace,
 					},
 				},
@@ -130,15 +130,15 @@ func TestDirectoryTree(t *testing.T) {
 			name:   "missing node",
 			inputs: []string{"a", "a/b/c"},
 			expect: &ast.TreeNode{
-				Path: nomospath.FromSlash("a"),
+				Path: cmpath.FromSlash("a"),
 				Type: node.AbstractNamespace,
 				Children: []*ast.TreeNode{
 					{
-						Path: nomospath.FromSlash("a/b"),
+						Path: cmpath.FromSlash("a/b"),
 						Type: node.AbstractNamespace,
 						Children: []*ast.TreeNode{
 							{
-								Path: nomospath.FromSlash("a/b/c"),
+								Path: cmpath.FromSlash("a/b/c"),
 								Type: node.AbstractNamespace,
 							},
 						},

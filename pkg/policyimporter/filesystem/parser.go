@@ -30,7 +30,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
@@ -106,7 +106,7 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 // * namespaces/ (recursive, optional)
 func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*namespaceconfig.AllPolicies, *status.MultiError) {
 	p.errors = &status.ErrorBuilder{}
-	rootPath, err := nomospath.NewRoot(nomospath.FromOS(root))
+	rootPath, err := cmpath.NewRoot(cmpath.FromOS(root))
 	p.errors.Add(err)
 
 	// Always make sure we're getting the freshest data.
@@ -166,24 +166,24 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) {
 	}
 }
 
-func (p *Parser) readSystemResources(root nomospath.Root) []ast.FileObject {
-	return p.readResources(root.Join(nomospath.FromSlash(repo.SystemDir)))
+func (p *Parser) readSystemResources(root cmpath.Root) []ast.FileObject {
+	return p.readResources(root.Join(cmpath.FromSlash(repo.SystemDir)))
 }
 
-func (p *Parser) readNamespaceResources(root nomospath.Root) []ast.FileObject {
-	return p.readResources(root.Join(nomospath.FromSlash(p.opts.Extension.NamespacesDir())))
+func (p *Parser) readNamespaceResources(root cmpath.Root) []ast.FileObject {
+	return p.readResources(root.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())))
 }
 
-func (p *Parser) readClusterResources(root nomospath.Root) []ast.FileObject {
-	return p.readResources(root.Join(nomospath.FromSlash(repo.ClusterDir)))
+func (p *Parser) readClusterResources(root cmpath.Root) []ast.FileObject {
+	return p.readResources(root.Join(cmpath.FromSlash(repo.ClusterDir)))
 }
 
-func (p *Parser) readClusterRegistryResources(root nomospath.Root) []ast.FileObject {
-	return p.readResources(root.Join(nomospath.FromSlash(repo.ClusterRegistryDir)))
+func (p *Parser) readClusterRegistryResources(root cmpath.Root) []ast.FileObject {
+	return p.readResources(root.Join(cmpath.FromSlash(repo.ClusterRegistryDir)))
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
+func (p *Parser) readResources(dir cmpath.Relative) []ast.FileObject {
 	// If there aren't any resources, skip builder, because builder treats that as an error.
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		// Return empty list if unable to read directory
@@ -219,7 +219,7 @@ func (p *Parser) readResources(dir nomospath.Relative) []ast.FileObject {
 		p.errors.Add(status.APIServerWrapf(err, "failed to get resource infos"))
 		for _, info := range fileInfos {
 			// Assign relative path since that's what we actually need.
-			source, err := dir.Root().Rel(nomospath.FromOS(info.Source))
+			source, err := dir.Root().Rel(cmpath.FromOS(info.Source))
 			p.errors.Add(err)
 			if err != nil {
 				continue

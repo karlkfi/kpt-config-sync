@@ -2,7 +2,7 @@ package asttesting
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -15,7 +15,7 @@ import (
 func NewFakeFileObject(gvk schema.GroupVersionKind, path string) ast.FileObject {
 	return ast.FileObject{
 		Object: NewFakeObject(gvk),
-		Path:   nomospath.FromSlash(path),
+		Path:   cmpath.FromSlash(path),
 	}
 }
 

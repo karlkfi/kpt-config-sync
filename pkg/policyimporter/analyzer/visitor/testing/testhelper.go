@@ -24,7 +24,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -369,7 +369,7 @@ func (t *TestHelper) AcmeTree() *ast.TreeNode {
 func (t *TestHelper) acmeTree() *ast.TreeNode {
 	return &ast.TreeNode{
 		Type: node.AbstractNamespace,
-		Path: nomospath.FromSlash("namespaces"),
+		Path: cmpath.FromSlash("namespaces"),
 		Objects: ObjectSets(
 			// TODO: remove RoleBinding once flattening transform is written.
 			t.AdminRoleBinding(),
@@ -378,7 +378,7 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 		Children: []*ast.TreeNode{
 			{
 				Type:        node.Namespace,
-				Path:        nomospath.FromSlash("namespaces/frontend"),
+				Path:        cmpath.FromSlash("namespaces/frontend"),
 				Labels:      map[string]string{"environment": "prod"},
 				Annotations: map[string]string{"has-waffles": "true"},
 				Objects: ObjectSets(
@@ -389,7 +389,7 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 			},
 			{
 				Type:        node.Namespace,
-				Path:        nomospath.FromSlash("namespaces/frontend-test"),
+				Path:        cmpath.FromSlash("namespaces/frontend-test"),
 				Labels:      map[string]string{"environment": "test"},
 				Annotations: map[string]string{"has-waffles": "false"},
 				Objects: ObjectSets(

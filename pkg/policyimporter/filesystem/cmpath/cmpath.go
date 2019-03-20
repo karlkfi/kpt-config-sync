@@ -1,4 +1,4 @@
-package nomospath
+package cmpath
 
 import (
 	"os/user"

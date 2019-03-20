@@ -8,7 +8,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -16,13 +16,13 @@ import (
 // BuilderVisitor populates the nodes in the hierarchy tree with their corresponding objects.
 type BuilderVisitor struct {
 	*visitor.Base
-	objects map[nomospath.Path][]ast.FileObject
+	objects map[cmpath.Path][]ast.FileObject
 }
 
 // NewBuilderVisitor initializes an BuilderVisitor with the set of objects to use to
 // populate the policy hierarchy tree.
 func NewBuilderVisitor(objects []ast.FileObject) *BuilderVisitor {
-	v := &BuilderVisitor{Base: visitor.NewBase(), objects: make(map[nomospath.Path][]ast.FileObject)}
+	v := &BuilderVisitor{Base: visitor.NewBase(), objects: make(map[cmpath.Path][]ast.FileObject)}
 	v.SetImpl(v)
 
 	for _, object := range objects {

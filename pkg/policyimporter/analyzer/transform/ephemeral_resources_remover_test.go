@@ -8,7 +8,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree/treetesting"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -27,11 +27,11 @@ func TestEphemeralResourceRemover(t *testing.T) {
 			objects: []ast.FileObject{fake.Namespace("namespaces/bar/ns.yaml")},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Path: nomospath.FromSlash("namespaces"),
+					Path: cmpath.FromSlash("namespaces"),
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Path: nomospath.FromSlash("namespaces/bar"),
+							Path: cmpath.FromSlash("namespaces/bar"),
 							Type: node.Namespace,
 						},
 					},
@@ -43,7 +43,7 @@ func TestEphemeralResourceRemover(t *testing.T) {
 			objects: []ast.FileObject{fake.NamespaceSelector("namespaces/ns.yaml")},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Path: nomospath.FromSlash("namespaces"),
+					Path: cmpath.FromSlash("namespaces"),
 					Type: node.AbstractNamespace,
 					Selectors: map[string]*v1.NamespaceSelector{
 						"": fake.NamespaceSelector("namespaces/ns.yaml").Object.(*v1.NamespaceSelector),
@@ -61,11 +61,11 @@ func TestEphemeralResourceRemover(t *testing.T) {
 			objects: []ast.FileObject{fake.Namespace("namespaces/bar/ns.yaml"), fake.Role("namespaces/bar/role.yaml")},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Path: nomospath.FromSlash("namespaces"),
+					Path: cmpath.FromSlash("namespaces"),
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Path:    nomospath.FromSlash("namespaces/bar"),
+							Path:    cmpath.FromSlash("namespaces/bar"),
 							Type:    node.Namespace,
 							Objects: []*ast.NamespaceObject{{FileObject: fake.Role("namespaces/bar/role.yaml")}},
 						},

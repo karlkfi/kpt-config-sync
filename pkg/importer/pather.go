@@ -7,7 +7,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -81,19 +81,19 @@ func longBase(o ast.FileObject) string {
 }
 
 // directory returns the relative directory to write the object to.
-func (p Pather) directory(o ast.FileObject) nomospath.Path {
+func (p Pather) directory(o ast.FileObject) cmpath.Path {
 	gvk := o.GroupVersionKind()
 	switch {
 	case systemKinds[gvk]:
-		return nomospath.FromSlash(repo.SystemDir)
+		return cmpath.FromSlash(repo.SystemDir)
 	case clusterRegistryKinds[gvk]:
-		return nomospath.FromSlash(repo.ClusterRegistryDir)
+		return cmpath.FromSlash(repo.ClusterRegistryDir)
 	case gvk == kinds.Namespace():
-		return nomospath.FromSlash(repo.NamespacesDir).Join(o.MetaObject().GetName())
+		return cmpath.FromSlash(repo.NamespacesDir).Join(o.MetaObject().GetName())
 	case p.namespaced[gvk]:
-		return nomospath.FromSlash(repo.NamespacesDir).Join(o.MetaObject().GetNamespace())
+		return cmpath.FromSlash(repo.NamespacesDir).Join(o.MetaObject().GetNamespace())
 	default:
-		return nomospath.FromSlash(repo.ClusterDir)
+		return cmpath.FromSlash(repo.ClusterDir)
 	}
 }
 
@@ -101,7 +101,7 @@ func (p Pather) directory(o ast.FileObject) nomospath.Path {
 // unique for a valid collection of objects. Behavior undefined for collections of objects which
 // could not validly be in a single cluster.
 func (p Pather) AddPaths(objects []ast.FileObject) {
-	shortPathCounts := make(map[nomospath.Path]int)
+	shortPathCounts := make(map[cmpath.Path]int)
 
 	for i, object := range objects {
 		if object.Object == nil {

@@ -23,7 +23,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/resourcequota"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -118,7 +118,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				ClusterRegistryObjects: vt.Helper.ClusterRegistry(),
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
-					Path: nomospath.FromSlash("namespaces"),
+					Path: cmpath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(
 						vt.Helper.AdminRoleBinding(),
 						modQuota(
@@ -132,7 +132,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Children: []*ast.TreeNode{
 						{
 							Type:        node.Namespace,
-							Path:        nomospath.FromSlash("namespaces/frontend"),
+							Path:        cmpath.FromSlash("namespaces/frontend"),
 							Labels:      map[string]string{"environment": "prod"},
 							Annotations: map[string]string{"has-waffles": "true"},
 							Objects: vt.ObjectSets(
@@ -150,7 +150,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 						},
 						{
 							Type:        node.Namespace,
-							Path:        nomospath.FromSlash("namespaces/frontend-test"),
+							Path:        cmpath.FromSlash("namespaces/frontend-test"),
 							Labels:      map[string]string{"environment": "test"},
 							Annotations: map[string]string{"has-waffles": "false"},
 							Objects: vt.ObjectSets(
@@ -174,16 +174,16 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:    node.AbstractNamespace,
-					Path:    nomospath.FromSlash("namespaces"),
+					Path:    cmpath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 					Children: []*ast.TreeNode{
 						{
 							Type: node.AbstractNamespace,
-							Path: nomospath.FromSlash("namespaces/eng"),
+							Path: cmpath.FromSlash("namespaces/eng"),
 							Children: []*ast.TreeNode{
 								{
 									Type: node.Namespace,
-									Path: nomospath.FromSlash("namespaces/eng/frontend"),
+									Path: cmpath.FromSlash("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
 										vt.Helper.FrontendResourceQuota(),
 									),
@@ -226,7 +226,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					nil),
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
-					Path: nomospath.FromSlash("namespaces"),
+					Path: cmpath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(
 						modQuota(
 							vt.Helper.AcmeResourceQuota(),
@@ -239,11 +239,11 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Children: []*ast.TreeNode{
 						{
 							Type: node.AbstractNamespace,
-							Path: nomospath.FromSlash("namespaces/eng"),
+							Path: cmpath.FromSlash("namespaces/eng"),
 							Children: []*ast.TreeNode{
 								{
 									Type: node.Namespace,
-									Path: nomospath.FromSlash("namespaces/eng/frontend"),
+									Path: cmpath.FromSlash("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
 										modQuota(
 											vt.Helper.AcmeResourceQuota(),
@@ -266,16 +266,16 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:    node.AbstractNamespace,
-					Path:    nomospath.FromSlash("namespaces"),
+					Path:    cmpath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 					Children: []*ast.TreeNode{
 						{
 							Type: node.AbstractNamespace,
-							Path: nomospath.FromSlash("namespaces/eng"),
+							Path: cmpath.FromSlash("namespaces/eng"),
 							Children: []*ast.TreeNode{
 								{
 									Type: node.Namespace,
-									Path: nomospath.FromSlash("namespaces/eng/frontend"),
+									Path: cmpath.FromSlash("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
 										modQuota(
 											vt.Helper.FrontendResourceQuota(),
@@ -340,7 +340,7 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					nil),
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
-					Path: nomospath.FromSlash("namespaces"),
+					Path: cmpath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(
 						modQuota(
 							vt.Helper.AcmeResourceQuota(),
@@ -353,11 +353,11 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 					Children: []*ast.TreeNode{
 						{
 							Type: node.AbstractNamespace,
-							Path: nomospath.FromSlash("namespaces/eng"),
+							Path: cmpath.FromSlash("namespaces/eng"),
 							Children: []*ast.TreeNode{
 								{
 									Type: node.Namespace,
-									Path: nomospath.FromSlash("namespaces/eng/frontend"),
+									Path: cmpath.FromSlash("namespaces/eng/frontend"),
 									Objects: vt.ObjectSets(
 										modQuota(
 											vt.Helper.AcmeResourceQuota(),
@@ -381,17 +381,17 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
 					Type:    node.AbstractNamespace,
-					Path:    nomospath.FromSlash("namespaces"),
+					Path:    cmpath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(vt.Helper.AdminRoleBinding()),
 					Children: []*ast.TreeNode{
 						{
 							Type:    node.Namespace,
-							Path:    nomospath.FromSlash("namespaces/frontend"),
+							Path:    cmpath.FromSlash("namespaces/frontend"),
 							Objects: vt.ObjectSets(vt.Helper.PodReaderRoleBinding(), vt.Helper.PodReaderRole()),
 						},
 						{
 							Type:    node.Namespace,
-							Path:    nomospath.FromSlash("namespaces/frontend-test"),
+							Path:    cmpath.FromSlash("namespaces/frontend-test"),
 							Objects: vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
 						},
 					},
@@ -412,17 +412,17 @@ var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 				}), nil),
 				Tree: &ast.TreeNode{
 					Type:    node.AbstractNamespace,
-					Path:    nomospath.FromSlash("namespaces"),
+					Path:    cmpath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(vt.Helper.AdminRoleBinding()),
 					Children: []*ast.TreeNode{
 						{
 							Type:    node.Namespace,
-							Path:    nomospath.FromSlash("namespaces/frontend"),
+							Path:    cmpath.FromSlash("namespaces/frontend"),
 							Objects: vt.ObjectSets(vt.Helper.PodReaderRoleBinding(), vt.Helper.PodReaderRole()),
 						},
 						{
 							Type:    node.Namespace,
-							Path:    nomospath.FromSlash("namespaces/frontend-test"),
+							Path:    cmpath.FromSlash("namespaces/frontend-test"),
 							Objects: vt.ObjectSets(vt.Helper.DeploymentReaderRoleBinding(), vt.Helper.DeploymentReaderRole()),
 						},
 					},

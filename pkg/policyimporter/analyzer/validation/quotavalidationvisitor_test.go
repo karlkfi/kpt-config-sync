@@ -9,7 +9,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,16 +53,16 @@ func makeTree(rq *corev1.ResourceQuota) *ast.Root {
 	return &ast.Root{
 		Tree: &ast.TreeNode{
 			Type:    node.AbstractNamespace,
-			Path:    nomospath.FromSlash("namespaces"),
+			Path:    cmpath.FromSlash("namespaces"),
 			Objects: vt.ObjectSets(vt.Helper.AcmeResourceQuota()),
 			Children: []*ast.TreeNode{
 				{
 					Type: node.AbstractNamespace,
-					Path: nomospath.FromSlash("namespaces/eng"),
+					Path: cmpath.FromSlash("namespaces/eng"),
 					Children: []*ast.TreeNode{
 						{
 							Type: node.Namespace,
-							Path: nomospath.FromSlash("namespaces/eng/frontend"),
+							Path: cmpath.FromSlash("namespaces/eng/frontend"),
 							Objects: vt.ObjectSets(
 								rq,
 							),

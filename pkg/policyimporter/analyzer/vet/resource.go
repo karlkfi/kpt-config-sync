@@ -1,7 +1,7 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -23,12 +23,12 @@ func (r resourceID) SlashPath() string {
 
 // OSPath implements Resource.
 func (r resourceID) OSPath() string {
-	return nomospath.FromSlash(r.source).OSPath()
+	return cmpath.FromSlash(r.source).OSPath()
 }
 
 // Dir implements Resource.
-func (r resourceID) Dir() nomospath.Path {
-	return nomospath.FromSlash(r.source).Dir()
+func (r resourceID) Dir() cmpath.Path {
+	return cmpath.FromSlash(r.source).Dir()
 }
 
 // Name implements Resource.

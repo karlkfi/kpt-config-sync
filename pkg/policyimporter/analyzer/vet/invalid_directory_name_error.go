@@ -1,7 +1,7 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -14,7 +14,7 @@ func init() {
 
 // InvalidDirectoryNameError represents an illegal usage of a reserved name.
 type InvalidDirectoryNameError struct {
-	Dir nomospath.Path
+	Dir cmpath.Path
 }
 
 var _ status.PathError = &InvalidDirectoryNameError{}

@@ -28,7 +28,7 @@ import (
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors/seltest"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -104,7 +104,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 						),
@@ -114,7 +114,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				ExpectOutput: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 						),
@@ -127,7 +127,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 							withNamespaceSelector(vt.Helper.PodReaderRole(), "prod"),
@@ -142,7 +142,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				ExpectOutput: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 							withNamespaceSelector(vt.Helper.PodReaderRole(), toJSON(seltest.ProdNamespaceSelector)),
@@ -160,7 +160,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 						),
@@ -168,7 +168,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						Children: []*ast.TreeNode{
 							{
 								Type: node.AbstractNamespace,
-								Path: nomospath.FromSlash("namespaces/frontend"),
+								Path: cmpath.FromSlash("namespaces/frontend"),
 								Objects: vt.ObjectSets(
 									withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 								),
@@ -180,7 +180,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				ExpectOutput: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 						),
@@ -188,7 +188,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 						Children: []*ast.TreeNode{
 							{
 								Type: node.AbstractNamespace,
-								Path: nomospath.FromSlash("namespaces/frontend"),
+								Path: cmpath.FromSlash("namespaces/frontend"),
 								Objects: vt.ObjectSets(
 									withNamespaceSelector(vt.Helper.AdminRoleBinding(), toJSON(seltest.ProdNamespaceSelector)),
 								),
@@ -203,7 +203,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 						),
@@ -216,12 +216,12 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type:      node.AbstractNamespace,
-						Path:      nomospath.FromSlash("namespaces"),
+						Path:      cmpath.FromSlash("namespaces"),
 						Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 						Children: []*ast.TreeNode{
 							{
 								Type: node.AbstractNamespace,
-								Path: nomospath.FromSlash("namespaces/frontend"),
+								Path: cmpath.FromSlash("namespaces/frontend"),
 								Objects: vt.ObjectSets(
 									withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 								),
@@ -236,14 +236,14 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 						),
 						Children: []*ast.TreeNode{
 							{
 								Type:      node.AbstractNamespace,
-								Path:      nomospath.FromSlash("namespaces/frontend"),
+								Path:      cmpath.FromSlash("namespaces/frontend"),
 								Selectors: map[string]*v1.NamespaceSelector{"prod": &seltest.ProdNamespaceSelector},
 							},
 						},
@@ -256,7 +256,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							vt.Helper.AdminRoleBinding(),
 						),
@@ -266,7 +266,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				ExpectOutput: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							vt.Helper.AdminRoleBinding(),
 						),
@@ -279,7 +279,7 @@ func annotationInlinerVisitorTestcases(t *testing.T) vt.MutatingVisitorTestcases
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.Namespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withNamespaceSelector(vt.Helper.AdminRoleBinding(), "prod"),
 						),
@@ -320,7 +320,7 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Annotations: map[string]string{
 							v1.ClusterSelectorAnnotationKey: "sel-1",
 						},
@@ -329,7 +329,7 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 				ExpectOutput: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Annotations: map[string]string{
 							v1.ClusterSelectorAnnotationKey: toJSON(selectors[0]),
 							v1.ClusterNameAnnotationKey:     "cluster-1",
@@ -342,7 +342,7 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-1"),
 						),
@@ -354,7 +354,7 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 				ExpectOutput: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withClusterName(
 								withClusterSelector(
@@ -374,7 +374,7 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 				Input: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withClusterSelector(vt.Helper.AdminRoleBinding(), "sel-1"),
 							withClusterSelector(vt.Helper.PodReaderRole(), "sel-1"),
@@ -387,7 +387,7 @@ func TestClusterSelectorAnnotationInlinerVisitor(t *testing.T) {
 				ExpectOutput: &ast.Root{
 					Tree: &ast.TreeNode{
 						Type: node.AbstractNamespace,
-						Path: nomospath.FromSlash("namespaces"),
+						Path: cmpath.FromSlash("namespaces"),
 						Objects: vt.ObjectSets(
 							withClusterName(withClusterSelector(
 								vt.Helper.AdminRoleBinding(), toJSON(selectors[0])), "cluster-1"),

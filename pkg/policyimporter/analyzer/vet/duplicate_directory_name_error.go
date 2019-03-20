@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -17,7 +17,7 @@ func init() {
 
 // DuplicateDirectoryNameError represents an illegal duplication of directory names.
 type DuplicateDirectoryNameError struct {
-	Duplicates []nomospath.Path
+	Duplicates []cmpath.Path
 }
 
 var _ status.PathError = &DuplicateDirectoryNameError{}

@@ -6,7 +6,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -72,6 +72,6 @@ func Build(gvk schema.GroupVersionKind, opts ...BuildOpt) ast.FileObject {
 // Path replaces the path with the provided slash-delimited path from nomos root.
 func Path(path string) BuildOpt {
 	return func(o *ast.FileObject) {
-		o.Path = nomospath.FromSlash(path)
+		o.Path = cmpath.FromSlash(path)
 	}
 }

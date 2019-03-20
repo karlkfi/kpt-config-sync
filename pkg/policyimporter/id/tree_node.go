@@ -3,13 +3,13 @@ package id
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 )
 
 // TreeNode represents a named node in the policy hierarchy.
 type TreeNode interface {
 	// Sourced is the embedded interface providing path information to this node.
-	nomospath.Sourced
+	cmpath.Sourced
 	// Name returns the name of this node.
 	Name() string
 }

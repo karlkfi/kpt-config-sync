@@ -1,7 +1,7 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -15,7 +15,7 @@ func init() {
 // IllegalSubdirectoryError reports that the directory has an illegal subdirectory.
 type IllegalSubdirectoryError struct {
 	BaseDir string
-	SubDir  nomospath.Path
+	SubDir  cmpath.Path
 }
 
 var _ status.PathError = &IllegalSubdirectoryError{}

@@ -22,7 +22,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/validation"
 	vt "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	ft "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
 	"github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,7 +31,7 @@ import (
 func withPath(o runtime.Object, path string) ast.FileObject {
 	return ast.FileObject{
 		Object: o,
-		Path:   nomospath.FromSlash(path),
+		Path:   cmpath.FromSlash(path),
 	}
 }
 

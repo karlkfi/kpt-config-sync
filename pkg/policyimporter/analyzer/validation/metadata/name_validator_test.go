@@ -8,7 +8,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	visitortesting "github.com/google/nomos/pkg/policyimporter/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -16,7 +16,7 @@ func fakeNamedObject(gvk schema.GroupVersionKind, name string) ast.FileObject {
 	object := asttesting.NewFakeObject(gvk)
 	object.SetName(name)
 	return ast.FileObject{
-		Path:   nomospath.FromSlash("namespaces/role.yaml"),
+		Path:   cmpath.FromSlash("namespaces/role.yaml"),
 		Object: object,
 	}
 }

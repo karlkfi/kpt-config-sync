@@ -3,7 +3,7 @@ package id
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -11,7 +11,7 @@ import (
 // Unique so long as no single file illegally declares two Resources of the same Name and Group/Version/Kind.
 type Resource interface {
 	// Sourced is the embedded interface providing path information to this Resource.
-	nomospath.Sourced
+	cmpath.Sourced
 	// Name returns the metadata.name of the Resource.
 	Name() string
 	// GroupVersionKind returns the K8S Group/Version/Kind of the Resource.

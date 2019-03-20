@@ -4,7 +4,7 @@ import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,7 +26,7 @@ This directory contains system configs such as the repo version and how resource
 )
 
 var defaultRepo = ast.FileObject{
-	Path: nomospath.FromSlash("system/repo.yaml"),
+	Path: cmpath.FromSlash("system/repo.yaml"),
 	Object: &v1.Repo{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       kinds.Repo().Kind,

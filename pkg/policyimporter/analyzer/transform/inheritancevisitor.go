@@ -22,7 +22,7 @@ import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/visitor"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/nomospath"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -30,7 +30,7 @@ import (
 // nodeContext keeps track of objects during the tree traversal for purposes of inheriting values.
 type nodeContext struct {
 	nodeType  node.Type              // the type of node being processed
-	nodePath  nomospath.Path         // the node's path, used for annotating inherited objects
+	nodePath  cmpath.Path            // the node's path, used for annotating inherited objects
 	inherited []*ast.NamespaceObject // the objects that are inherited from the node.
 }
 
