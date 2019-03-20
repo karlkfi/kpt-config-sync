@@ -11,7 +11,7 @@ import (
 const IllegalNamespaceAnnotationErrorCode = "1004"
 
 func init() {
-	status.Register(IllegalNamespaceAnnotationErrorCode, IllegalNamespaceAnnotationError{})
+	status.Register(IllegalNamespaceAnnotationErrorCode, IllegalNamespaceAnnotationError{Resource: role()})
 }
 
 // IllegalNamespaceAnnotationError represents an illegal usage of the namespace selector annotation.

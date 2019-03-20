@@ -9,7 +9,10 @@ import (
 const InvalidSelectorErrorCode = "1014" // TODO: Must refactor to use properly
 
 func init() {
-	status.Register(InvalidSelectorErrorCode, InvalidSelectorError{})
+	status.Register(InvalidSelectorErrorCode, InvalidSelectorError{
+		Name:  "name",
+		Cause: errors.New("problem with selector"),
+	})
 }
 
 // InvalidSelectorError is a validation error.

@@ -2,6 +2,7 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -10,7 +11,12 @@ import (
 const InvalidNamespaceNameErrorCode = "1020"
 
 func init() {
-	status.Register(InvalidNamespaceNameErrorCode, InvalidNamespaceNameError{})
+	ns := namespace(cmpath.FromSlash("namespaces/foo/ns.yaml"))
+	ns.MetaObject().SetName("bar")
+	status.Register(InvalidNamespaceNameErrorCode, InvalidNamespaceNameError{
+		Resource: ns,
+		Expected: "foo",
+	})
 }
 
 // InvalidNamespaceNameError reports that a Namespace has an invalid name.

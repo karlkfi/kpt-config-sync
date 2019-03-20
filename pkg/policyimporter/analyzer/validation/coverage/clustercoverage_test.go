@@ -5,7 +5,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/testing/object"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -16,7 +19,7 @@ func TestValidateObject(t *testing.T) {
 		clusters  []clusterregistry.Cluster
 		selectors []v1.ClusterSelector
 		errors    []status.Error
-		objects   []metav1.Object
+		objects   []ast.FileObject
 	}{
 		{
 			name:      "basic",
@@ -59,13 +62,9 @@ func TestValidateObject(t *testing.T) {
 					},
 				},
 			},
-			objects: []metav1.Object{
-				&metav1.ObjectMeta{
-					Name: "object",
-					Annotations: map[string]string{
-						v1.ClusterSelectorAnnotationKey: "sel-1",
-					},
-				},
+			objects: []ast.FileObject{
+				object.Build(kinds.Role(),
+					object.Annotation(v1.ClusterSelectorAnnotationKey, "sel-1")),
 			},
 		},
 	}
@@ -75,7 +74,7 @@ func TestValidateObject(t *testing.T) {
 			var b status.ErrorBuilder
 			cov := NewForCluster(test.clusters, test.selectors, &b)
 			for _, o := range test.objects {
-				cov.ValidateObject(o, &b)
+				cov.ValidateObject(&o, &b)
 			}
 			rawE := b.Build()
 			var actual []status.Error

@@ -8,7 +8,9 @@ import (
 const UndocumentedErrorCode = "9999"
 
 func init() {
-	Register(UndocumentedErrorCode, Undocumented{})
+	Register(UndocumentedErrorCode, Undocumented{
+		err: errors.New("some error"),
+	})
 }
 
 // Undocumented errors represent error conditions which we should document but have not yet.

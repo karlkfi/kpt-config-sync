@@ -10,10 +10,13 @@ import (
 const IllegalAbstractNamespaceObjectKindErrorCode = "1007"
 
 func init() {
-	status.Register(IllegalAbstractNamespaceObjectKindErrorCode, IllegalAbstractNamespaceObjectKindError{})
+	status.Register(IllegalAbstractNamespaceObjectKindErrorCode, IllegalAbstractNamespaceObjectKindError{
+		Resource: role(),
+	})
 }
 
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
+// TODO(willbeason): Consolidate Illegal{X}ObjectKindErrors
 type IllegalAbstractNamespaceObjectKindError struct {
 	id.Resource
 }

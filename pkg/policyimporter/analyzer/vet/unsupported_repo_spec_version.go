@@ -1,8 +1,11 @@
 package vet
 
 import (
+	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/util/repo"
 )
 
 // UnsupportedRepoSpecVersion reports that the repo version is not supported.
@@ -15,7 +18,11 @@ type UnsupportedRepoSpecVersion struct {
 const UnsupportedRepoSpecVersionCode = "1027"
 
 func init() {
-	status.Register(UnsupportedRepoSpecVersionCode, UnsupportedRepoSpecVersion{})
+	o := ast.NewFileObject(repo.Default(), cmpath.FromSlash("system/repo/yaml"))
+	status.Register(UnsupportedRepoSpecVersionCode, UnsupportedRepoSpecVersion{
+		Resource: &o,
+		Version:  "0.0.0",
+	})
 }
 
 var _ id.ResourceError = &UnsupportedRepoSpecVersion{}
