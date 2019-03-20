@@ -38,12 +38,20 @@ func IsInvalid(name string) bool {
 	return len(ve) != 0
 }
 
+// IsSystem returns true if the namespace name denotes a system namespace
+func IsSystem(ns string) bool {
+	return ns == "kube-system"
+}
+
 // IsReserved returns true if the namespace is reserved.
 func IsReserved(name string) bool {
 	if reservedNamespaces[name] {
 		return true
 	}
-
+	if name == "kube-system" {
+		// Cut kube-system out from the reserved namespaces.
+		return false
+	}
 	if strings.HasPrefix(name, reservedPrefix) {
 		return true
 	}
@@ -51,7 +59,8 @@ func IsReserved(name string) bool {
 	return false
 }
 
-// IsDefault returns true if ns is the default namespace.
-func IsDefault(ns string) bool {
-	return ns == "default"
+// IsManageable returns true if ns is a system namespace that may be managed by
+// Nomos.
+func IsManageable(ns string) bool {
+	return ns == "default" || ns == "kube-system"
 }

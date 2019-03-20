@@ -116,32 +116,42 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   clean_test_configmaps
 }
 
-@test "Namespace default can be managed" {
+function manage_namespace() {
+  local ns="${1}"
   debug::log "Add an unmanaged resource into the namespace as a control"
   wait::for -t 5 -- \
-    kubectl apply -f ${YAML_DIR}/reserved_namespaces/unmanaged-service.yaml
+    kubectl apply -f "${YAML_DIR}/reserved_namespaces/unmanaged-service.${ns}.yaml"
 
   debug::log "Start managing the namespace"
-  git::add ${YAML_DIR}/reserved_namespaces/service.yaml \
-    acme/namespaces/default/service.yaml
-  git::add ${YAML_DIR}/reserved_namespaces/namespace.yaml \
-    acme/namespaces/default/namespace.yaml
+  git::add "${YAML_DIR}/reserved_namespaces/service.yaml" \
+    "acme/namespaces/${ns}/service.yaml"
+  git::add "${YAML_DIR}/reserved_namespaces/namespace.${ns}.yaml" \
+    "acme/namespaces/${ns}/namespace.yaml"
   git::commit -m "Start managing the namespace"
 
   debug::log "Wait until service appears on the cluster"
-  wait::for -t 30 -- kubectl get services "some-service"
+  wait::for -t 30 -- kubectl get services "some-service" --namespace="${ns}"
 
   debug::log "Remove the namespace from managed set"
-  git::rm acme/namespaces/default/namespace.yaml
+  git::rm "acme/namespaces/${ns}/namespace.yaml"
   git::commit -m "Remove the namespace from the managed set of namespaces"
 
   debug::log "Wait until the managed resource disappears from the cluster"
-  wait::for -f -t 10 -- kubectl get services "some-service"
+  wait::for -f -t 10 -- kubectl get services "some-service" --namespace="${ns}"
 
   debug::log "Ensure that the unmanaged service remained"
   wait::for -t 10 -- \
-    kubectl get services "some-other-service"
-  kubectl delete service "some-other-service" --ignore-not-found
+    kubectl get services "some-other-service" --namespace="${ns}"
+  kubectl delete service "some-other-service" \
+    --ignore-not-found --namespace="${ns}"
+}
+
+@test "Namespace default can be managed" {
+  manage_namespace "default"
+}
+
+@test "Namespace kube-system can be managed" {
+  manage_namespace "kube-system"
 }
 
 function clean_test_configmaps() {

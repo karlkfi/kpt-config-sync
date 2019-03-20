@@ -210,11 +210,11 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	}
 	switch cfgState {
 	case namespaceConfigStateNotFound:
-		if namespaceutil.IsDefault(name) {
-			// Special handling for the default namespace: do not remove
-			// the namespace itself as that is not allowed.  Instead,
-			// manage all policies inside as if the namespace has no
-			// managed resources.
+		if namespaceutil.IsManageable(name) {
+			// Special handling for manageable system namespaces: do not remove
+			// the namespace itself as that is not allowed.  Instead, manage
+			// all policies inside as if the namespace has no managed
+			// resources.
 			if err := r.managePolicies(
 				ctx, name, reservedNamespaceConfig, syncErrs); err != nil {
 				return err
@@ -494,9 +494,13 @@ func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 
 func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 	namespace.SetGroupVersionKind(kinds.Namespace())
-	// Mark the namespace as supporting the management of hierarchical quota.
-	labels := labeling.ManageQuota.AddDeepCopy(namespaceConfig.Labels)
-	namespace.Labels = labels
+	if !namespaceutil.IsSystem(namespace.GetName()) {
+		// Mark the namespace as supporting the management of hierarchical quota.
+		// But don't interfere with system namespaces, since that could lock us
+		// out of the cluster.
+		labels := labeling.ManageQuota.AddDeepCopy(namespaceConfig.Labels)
+		namespace.Labels = labels
+	}
 
 	if namespace.Annotations == nil {
 		namespace.Annotations = make(map[string]string)

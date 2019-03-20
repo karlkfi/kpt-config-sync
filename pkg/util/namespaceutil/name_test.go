@@ -53,7 +53,7 @@ func TestIsReserved(t *testing.T) {
 		reserved bool
 	}{
 		{"foo-bar", false},
-		{"kube-system", true},
+		{"kube-system", false},
 		{"kube-public", true},
 		{"kube-foo", true},
 		{"default", false},

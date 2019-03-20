@@ -23,6 +23,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
@@ -304,6 +305,55 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				object.Name("my-deployment")),
 			wantEvent: reconcileComplete,
 		},
+		{
+			name: "kube-system namespace is not deleted when namespace config is removed",
+			namespace: namespace("kube-system", object.Annotations(
+				map[string]string{
+					v1.ClusterNameAnnotationKey:       "cluster-name",
+					v1.ClusterSelectorAnnotationKey:   "some-selector",
+					v1.NamespaceSelectorAnnotationKey: "some-selector",
+					v1.ResourceManagementKey:          v1.ResourceManagementEnabled,
+					v1.SourcePathAnnotationKey:        "some-path",
+					v1.SyncTokenAnnotationKey:         "sync-token",
+					"some-user-annotation":            "some-annotation-value",
+				},
+			),
+				object.Labels(
+					map[string]string{
+						labeling.ConfigManagementQuotaKey:  "some-quota",
+						labeling.ConfigManagementSystemKey: "not-used",
+						"some-user-label":                  "some-label-value",
+					},
+				),
+			),
+			wantNamespaceUpdate: namespace("kube-system", object.Annotation(
+				"some-user-annotation", "some-annotation-value",
+			),
+				object.Label(
+					"some-user-label", "some-label-value",
+				),
+			),
+			requireListActual: true,
+			actual: []runtime.Object{
+				managedDeployment(
+					appsv1.RecreateDeploymentStrategyType, "kube-system",
+					object.Name("my-deployment")),
+				deployment(appsv1.RecreateDeploymentStrategyType,
+					object.Namespace("kube-system"),
+					object.Name("your-deployment")),
+			},
+			wantDelete: managedDeployment(
+				appsv1.RecreateDeploymentStrategyType, "kube-system",
+				object.Name("my-deployment")),
+			wantEvent: reconcileComplete,
+		},
+		{
+			name:                "do not add quota enforcement label on managed kube-system",
+			namespaceConfig:     namespaceConfig("kube-system", v1.StateSynced, importToken(token)),
+			namespace:           namespace("kube-system"),
+			wantNamespaceUpdate: managedNamespace("kube-system"),
+			wantStatusUpdate:    namespaceConfig("kube-system", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+		},
 	}
 
 	converter := runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
@@ -487,7 +537,8 @@ func (m *cmpDiffMatcher) String() string {
 }
 
 func (m *cmpDiffMatcher) Matches(actual interface{}) bool {
-	if diff := cmp.Diff(m.expected, actual); diff != "" {
+	opt := cmpopts.EquateEmpty() // Disregard empty map vs nil.
+	if diff := cmp.Diff(m.expected, actual, opt); diff != "" {
 		m.t.Logf("This matcher has a diff (expected- +actual):%v\n\n", diff)
 		return false
 	}
