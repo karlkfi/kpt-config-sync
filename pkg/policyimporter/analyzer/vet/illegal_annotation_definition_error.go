@@ -14,10 +14,7 @@ import (
 const IllegalAnnotationDefinitionErrorCode = "1010"
 
 func init() {
-	status.Register(IllegalAnnotationDefinitionErrorCode, IllegalAnnotationDefinitionError{
-		Resource:    role(),
-		Annotations: []string{v1.ResourceManagementKey, v1.SyncTokenAnnotationKey},
-	})
+	status.Register(IllegalAnnotationDefinitionErrorCode, IllegalAnnotationDefinitionError{})
 }
 
 // IllegalAnnotationDefinitionError represents a set of illegal annotation definitions.

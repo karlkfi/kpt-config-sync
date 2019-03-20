@@ -14,10 +14,7 @@ import (
 const IllegalLabelDefinitionErrorCode = "1011"
 
 func init() {
-	status.Register(IllegalLabelDefinitionErrorCode, IllegalLabelDefinitionError{
-		Resource: role(),
-		Labels:   []string{v1.SyncTokenAnnotationKey, v1.ResourceManagementKey},
-	})
+	status.Register(IllegalLabelDefinitionErrorCode, IllegalLabelDefinitionError{})
 }
 
 // IllegalLabelDefinitionError represent a set of illegal label definitions.

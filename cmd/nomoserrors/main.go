@@ -17,7 +17,6 @@ var rootCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		printErrorCodes()
-		printErrors()
 	},
 }
 
@@ -33,7 +32,7 @@ type errEntry struct {
 	err  status.Error
 }
 
-func sortedErrors() []errEntry {
+func printErrorCodes() {
 	var errs []errEntry
 	for code, err := range status.Registry() {
 		errs = append(errs, errEntry{code: code, err: err})
@@ -41,27 +40,12 @@ func sortedErrors() []errEntry {
 	sort.Slice(errs, func(i, j int) bool {
 		return errs[i].code < errs[j].code
 	})
-	return errs
-}
 
-func printErrorCodes() {
-	fmt.Println("=== ERROR CODES ===")
-	for _, err := range sortedErrors() {
+	for _, err := range errs {
 		if err.err == nil {
 			fmt.Printf("%s: RESERVED\n", err.code)
 		} else {
 			fmt.Printf("%s: %T\n", err.code, err.err)
-		}
-	}
-	fmt.Println()
-}
-
-func printErrors() {
-	fmt.Println("=== SAMPLE ERRORS ===")
-	for _, err := range sortedErrors() {
-		if err.err != nil {
-			fmt.Println(err.err.Error())
-			fmt.Println()
 		}
 	}
 }

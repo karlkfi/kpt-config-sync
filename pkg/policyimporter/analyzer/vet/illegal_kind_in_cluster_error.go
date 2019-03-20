@@ -10,9 +10,7 @@ import (
 const IllegalKindInClusterErrorCode = "1039"
 
 func init() {
-	status.Register(IllegalKindInClusterErrorCode, IllegalKindInClusterError{
-		Resource: role(),
-	})
+	status.Register(IllegalKindInClusterErrorCode, IllegalKindInClusterError{})
 }
 
 // IllegalKindInClusterError reports that an object has been illegally defined in cluster/

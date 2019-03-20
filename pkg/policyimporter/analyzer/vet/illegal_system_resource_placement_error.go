@@ -2,21 +2,15 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
-	utilrepo "github.com/google/nomos/pkg/util/repo"
 )
 
 // IllegalSystemResourcePlacementErrorCode is the error code for IllegalSystemResourcePlacementError
 const IllegalSystemResourcePlacementErrorCode = "1033"
 
 func init() {
-	r := ast.NewFileObject(utilrepo.Default(), cmpath.FromSlash("namespaces/foo/repo.yaml"))
-	status.Register(IllegalSystemResourcePlacementErrorCode, IllegalSystemResourcePlacementError{
-		Resource: &r,
-	})
+	status.Register(IllegalSystemResourcePlacementErrorCode, IllegalSystemResourcePlacementError{})
 }
 
 // IllegalSystemResourcePlacementError reports that a configmanagement.gke.io object has been defined outside of system/

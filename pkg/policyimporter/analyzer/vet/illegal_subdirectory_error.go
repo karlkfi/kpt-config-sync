@@ -9,10 +9,7 @@ import (
 const IllegalSubdirectoryErrorCode = "1018"
 
 func init() {
-	status.Register(IllegalSubdirectoryErrorCode, IllegalSubdirectoryError{
-		BaseDir: "system",
-		SubDir:  cmpath.FromSlash("system/foo"),
-	})
+	status.Register(IllegalSubdirectoryErrorCode, IllegalSubdirectoryError{})
 }
 
 // IllegalSubdirectoryError reports that the directory has an illegal subdirectory.

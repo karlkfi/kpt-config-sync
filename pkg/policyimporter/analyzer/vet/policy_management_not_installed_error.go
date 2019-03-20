@@ -10,9 +10,7 @@ import (
 const PolicyManagementNotInstalledErrorCode = "1016"
 
 func init() {
-	status.Register(PolicyManagementNotInstalledErrorCode, PolicyManagementNotInstalledError{
-		Err: errors.New("cluster doesn't have required CRD"),
-	})
+	status.Register(PolicyManagementNotInstalledErrorCode, PolicyManagementNotInstalledError{})
 }
 
 // PolicyManagementNotInstalledError reports that Nomos has not been installed properly.

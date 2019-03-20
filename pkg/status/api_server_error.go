@@ -6,9 +6,7 @@ import "github.com/pkg/errors"
 const APIServerErrorCode = "2002"
 
 func init() {
-	Register(APIServerErrorCode, apiServerError{
-		err: errors.New("api server error"),
-	})
+	Register(APIServerErrorCode, apiServerError{})
 }
 
 // apiServerError results from a high level call to the API server (eg not involving a resource) that fails.

@@ -11,8 +11,7 @@ import (
 const ResourceErrorCode = "2010"
 
 func init() {
-	// TODO: add a way to generate valid error without dependency cycle.
-	//status.Register(ResourceErrorCode, resourceError{})
+	status.Register(ResourceErrorCode, resourceError{})
 }
 
 // ResourceError defines a status error related to one or more k8s resources.

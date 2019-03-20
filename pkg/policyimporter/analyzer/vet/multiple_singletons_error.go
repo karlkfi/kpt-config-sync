@@ -4,7 +4,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -16,17 +15,7 @@ import (
 const MultipleSingletonsErrorCode = "1030"
 
 func init() {
-	rq1 := resourceQuota()
-	rq1.Path = cmpath.FromSlash("namespaces/foo/rq1.yaml")
-	rq1.MetaObject().SetName("quota-1")
-	rq2 := resourceQuota()
-	rq2.Path = cmpath.FromSlash("namespaces/foo/rq2.yaml")
-	rq2.MetaObject().SetName("quota-2")
-	status.Register(MultipleSingletonsErrorCode, MultipleSingletonsError{
-		Duplicates: []id.Resource{
-			rq1, rq2,
-		},
-	})
+	status.Register(MultipleSingletonsErrorCode, MultipleSingletonsError{})
 }
 
 // MultipleSingletonsError reports that multiple singletons are defined in the same directory.

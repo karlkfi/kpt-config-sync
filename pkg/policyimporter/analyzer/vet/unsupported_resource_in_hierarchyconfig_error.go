@@ -1,7 +1,6 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -10,12 +9,7 @@ import (
 const UnsupportedResourceInHierarchyConfigErrorCode = "1041"
 
 func init() {
-	status.Register(UnsupportedResourceInHierarchyConfigErrorCode, UnsupportedResourceInHierarchyConfigError{
-		HierarchyConfig: fakeHierarchyConfig{
-			Resource: hierarhcyConfig(),
-			gk:       kinds.Repo().GroupKind(),
-		},
-	})
+	status.Register(UnsupportedResourceInHierarchyConfigErrorCode, UnsupportedResourceInHierarchyConfigError{})
 }
 
 // UnsupportedResourceInHierarchyConfigError reports that policy management is unsupported for a Resource defined in a HierarchyConfig.

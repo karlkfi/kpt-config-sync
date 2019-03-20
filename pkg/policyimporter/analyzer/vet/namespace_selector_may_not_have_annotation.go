@@ -9,11 +9,7 @@ import (
 const NamespaceSelectorMayNotHaveAnnotationCode = "1012"
 
 func init() {
-	r := role()
-	r.MetaObject().SetName("selector")
-	status.Register(NamespaceSelectorMayNotHaveAnnotationCode, NamespaceSelectorMayNotHaveAnnotation{
-		Object: r.MetaObject(),
-	})
+	status.Register(NamespaceSelectorMayNotHaveAnnotationCode, NamespaceSelectorMayNotHaveAnnotation{})
 }
 
 // NamespaceSelectorMayNotHaveAnnotation reports that a namespace selector has

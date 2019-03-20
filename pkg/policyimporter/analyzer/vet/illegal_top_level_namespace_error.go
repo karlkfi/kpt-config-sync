@@ -3,7 +3,6 @@ package vet
 import (
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -12,9 +11,7 @@ import (
 const IllegalTopLevelNamespaceErrorCode = "1019"
 
 func init() {
-	status.Register(IllegalTopLevelNamespaceErrorCode, IllegalTopLevelNamespaceError{
-		Resource: namespace(cmpath.FromSlash("namespaces/ns.yaml")),
-	})
+	status.Register(IllegalTopLevelNamespaceErrorCode, IllegalTopLevelNamespaceError{})
 }
 
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/

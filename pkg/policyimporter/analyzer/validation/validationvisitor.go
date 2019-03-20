@@ -117,7 +117,7 @@ func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1.NamespaceSelect
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	if v.coverage != nil {
-		v.coverage.ValidateObject(&o.FileObject, &v.errs)
+		v.coverage.ValidateObject(o.MetaObject(), &v.errs)
 	}
 	return v.Base.VisitClusterObject(o)
 }
@@ -136,7 +136,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	}
 
 	if v.coverage != nil {
-		v.coverage.ValidateObject(&o.FileObject, &v.errs)
+		v.coverage.ValidateObject(o.MetaObject(), &v.errs)
 	}
 
 	return v.Base.VisitObject(o)

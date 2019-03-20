@@ -9,11 +9,7 @@ import (
 const InvalidMetadataNameErrorCode = "1036"
 
 func init() {
-	r := role()
-	r.MetaObject().SetName("a`b.c")
-	status.Register(InvalidMetadataNameErrorCode, InvalidMetadataNameError{
-		Resource: r,
-	})
+	status.Register(InvalidMetadataNameErrorCode, InvalidMetadataNameError{})
 }
 
 // InvalidMetadataNameError represents the usage of a non-RFC1123 compliant metadata.name

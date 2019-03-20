@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -13,14 +12,7 @@ import (
 const IllegalHierarchyModeErrorCode = "1042"
 
 func init() {
-	status.Register(IllegalHierarchyModeErrorCode, IllegalHierarchyModeError{
-		HierarchyConfig: fakeHierarchyConfig{
-			Resource: hierarhcyConfig(),
-			gk:       kinds.Role().GroupKind(),
-		},
-		HierarchyMode: "invalid mode",
-		Allowed:       map[v1.HierarchyModeType]bool{v1.HierarchyModeNone: true},
-	})
+	status.Register(IllegalHierarchyModeErrorCode, IllegalHierarchyModeError{})
 }
 
 // IllegalHierarchyModeError reports that a HierarchyConfig is defined with a disallowed hierarchyMode.

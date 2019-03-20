@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	sels "github.com/google/nomos/pkg/policyimporter/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/status"
@@ -60,13 +59,13 @@ func NewForCluster(
 // ValidateObject validates the coverage of the object with clusters and selectors. An object
 // may not have an annotation, but if it does, it has to map to a valid selector.  Also if an
 // object has a selector in the annotation, that annotation must refer to a valid selector.
-func (c ForCluster) ValidateObject(o *ast.FileObject, errs *status.ErrorBuilder) {
-	a := v1.GetClusterSelectorAnnotation(o.MetaObject().GetAnnotations())
+func (c ForCluster) ValidateObject(o metav1.Object, errs *status.ErrorBuilder) {
+	a := v1.GetClusterSelectorAnnotation(o.GetAnnotations())
 	if a == "" {
 		return
 	}
 	if !c.selectorNames[a] {
-		errs.Add(vet.ObjectHasUnknownClusterSelector{Resource: o, Annotation: a})
+		errs.Add(vet.ObjectHasUnknownClusterSelector{Object: o, Annotation: a})
 	}
 }
 

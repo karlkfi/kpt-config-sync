@@ -9,9 +9,7 @@ import (
 const MissingObjectNameErrorCode = "1031"
 
 func init() {
-	r := role()
-	r.MetaObject().SetName("")
-	status.Register(MissingObjectNameErrorCode, MissingObjectNameError{Resource: r})
+	status.Register(MissingObjectNameErrorCode, MissingObjectNameError{})
 }
 
 // MissingObjectNameError reports that an object has no name.

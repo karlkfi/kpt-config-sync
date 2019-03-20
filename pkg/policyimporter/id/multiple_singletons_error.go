@@ -8,8 +8,7 @@ import (
 const MultipleSingletonsErrorCode = "2012"
 
 func init() {
-	// TODO: add a way to generate valid error without dependency cycle.
-	//status.Register(MultipleSingletonsErrorCode, MultipleSingletonsError{})
+	status.Register(MultipleSingletonsErrorCode, MultipleSingletonsError{})
 }
 
 // MultipleSingletonsError reports that multiple singleton resources were found on the cluster.

@@ -1,9 +1,7 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/node"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -12,16 +10,12 @@ import (
 const IllegalNamespaceSubdirectoryErrorCode = "1003"
 
 func init() {
-	status.Register(IllegalNamespaceSubdirectoryErrorCode, IllegalNamespaceSubdirectoryError{
-		Child:  &ast.TreeNode{Path: cmpath.FromSlash("namespaces/foo/bar")},
-		Parent: &ast.TreeNode{Path: cmpath.FromSlash("namespaces/foo")},
-	})
+	status.Register(IllegalNamespaceSubdirectoryErrorCode, IllegalNamespaceSubdirectoryError{})
 }
 
 // IllegalNamespaceSubdirectoryError represents an illegal child directory of a namespace directory.
 type IllegalNamespaceSubdirectoryError struct {
-	Child id.TreeNode
-	// TODO: We don't really need the parent node since it can be inferred from the Child.
+	Child  id.TreeNode
 	Parent id.TreeNode
 }
 

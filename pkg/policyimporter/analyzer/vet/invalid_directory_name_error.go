@@ -9,9 +9,7 @@ import (
 const InvalidDirectoryNameErrorCode = "1028"
 
 func init() {
-	status.Register(InvalidDirectoryNameErrorCode, InvalidDirectoryNameError{
-		Dir: cmpath.FromSlash("namespaces/a.b`c"),
-	})
+	status.Register(InvalidDirectoryNameErrorCode, InvalidDirectoryNameError{})
 }
 
 // InvalidDirectoryNameError represents an illegal usage of a reserved name.

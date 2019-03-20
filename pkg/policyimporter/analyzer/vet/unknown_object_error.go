@@ -9,9 +9,7 @@ import (
 const UnknownObjectErrorCode = "1021" // Impossible to create consistent example.
 
 func init() {
-	status.Register(UnknownObjectErrorCode, UnknownObjectError{
-		Resource: role(),
-	})
+	status.Register(UnknownObjectErrorCode, UnknownObjectError{})
 }
 
 // UnknownObjectError reports that an object declared in the repo does not have a definition in the cluster.
