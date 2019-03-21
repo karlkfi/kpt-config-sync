@@ -36,7 +36,7 @@ function install() {
 
 function cleanup() {
   echo "cleaning up"
-  kubectl delete nomos nomos --ignore-not-found -n config-management-system
+  kubectl delete configmanagement config-management --ignore-not-found
   wait::for -s -t 180 -- install::nomos_uninstalled
   echo "Nomos uninstalled"
 
