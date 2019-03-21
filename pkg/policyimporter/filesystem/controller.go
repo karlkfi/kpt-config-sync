@@ -30,7 +30,6 @@ import (
 	"github.com/google/nomos/pkg/policyimporter"
 	"github.com/google/nomos/pkg/policyimporter/actions"
 	"github.com/google/nomos/pkg/policyimporter/git"
-	syncclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/repo"
 	"github.com/pkg/errors"
@@ -70,7 +69,7 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 			informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
 			informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
 			informerFactory.Configmanagement().V1().Syncs().Lister()))
-	repoClient := repo.New(syncclient.New(client.Runtime()), informerFactory.Configmanagement().V1().Repos().Lister())
+	repoClient := repo.NewForImporter(client.PolicyHierarchy().ConfigmanagementV1().Repos(), informerFactory.Configmanagement().V1().Repos().Lister())
 
 	return &Controller{
 		policyDir:             policyDir,
