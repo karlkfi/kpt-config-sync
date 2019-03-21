@@ -112,19 +112,7 @@ function set_up_env_minimal() {
 
 function clean_up_test_resources() {
   kubectl delete --ignore-not-found ns -l "configmanagement.gke.io/testdata=true"
-  # TODO(125862145): Remove as part of rename cleanup
-  resource::delete -r ns -a nomos.dev/managed=enabled
   resource::delete -r ns -a configmanagement.gke.io/managed=enabled
-
-  # TODO: this is to work around the label to annotation switch, delete this
-  # sometime after 2018-02-28
-  local i
-  for i in clusterrolebinding clusterrole podsecuritypolicy; do
-    # TODO(125862145): Remove as part of rename cleanup
-    resource::delete -r $i -a nomos.dev/managed=enabled
-    resource::delete -r $i -a configmanagement.gke.io/managed=enabled
-    kubectl delete -l nomos.dev/managed=enabled $i
-  done
 
   echo "killing kubectl port forward..."
   pkill -f "kubectl -n=config-management-system-test port-forward.*${FWD_SSH_PORT}:22" || true

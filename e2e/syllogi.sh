@@ -41,8 +41,6 @@ function cleanup() {
   echo "Nomos uninstalled"
 
   kubectl delete --ignore-not-found ns -l "configmanagement.gke.io/testdata=true"
-  # TODO(125862145): Remove as part of rename cleanup
-  resource::delete -r ns -a nomos.dev/managed=enabled
   resource::delete -r ns -a configmanagement.gke.io/managed=enabled
 
   echo "killing kubectl port forward..."
