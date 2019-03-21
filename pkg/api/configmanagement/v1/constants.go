@@ -19,7 +19,7 @@ package v1
 import "github.com/google/nomos/pkg/api/configmanagement"
 
 // ClusterConfigName is the name of the singleton ClusterConfig resource.
-const ClusterConfigName = "nomos-cluster-policy"
+const ClusterConfigName = "config-management-cluster-config"
 
 // PolicySyncState represents the states that a namespaceconfig or clusterconfig can be in with regards
 // to the source of truth.
