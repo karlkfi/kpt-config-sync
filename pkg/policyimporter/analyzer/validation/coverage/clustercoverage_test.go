@@ -6,9 +6,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/object"
+	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -63,7 +64,7 @@ func TestValidateObject(t *testing.T) {
 				},
 			},
 			objects: []ast.FileObject{
-				object.Build(kinds.Role(),
+				fake.Build(kinds.Role(),
 					object.Annotation(v1.ClusterSelectorAnnotationKey, "sel-1")),
 			},
 		},
