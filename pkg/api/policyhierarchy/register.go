@@ -23,8 +23,8 @@ const (
 	// MetricsNamespace is the namespace that metrics are held in.
 	MetricsNamespace = "gkeconfig"
 
-	// OperatorKind is the Kind of the Operator object.
-	OperatorKind = "Nomos"
+	// OperatorKind is the Kind of the Operator config object.
+	OperatorKind = "ConfigManagement"
 
 	// GroupName is the name of the group of policyhierarchy resources.
 	GroupName = "configmanagement.gke.io"
