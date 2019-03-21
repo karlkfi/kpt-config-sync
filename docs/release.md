@@ -30,6 +30,17 @@ not a substition for automated testing. Features (including related docs) should
 be tested by their authors before check-in, and they should be covered
 sufficiently by automated tests.
 
+### Fishfood Candidate
+
+Fishfood should be done off the current latest release. Usually this is the
+release candidate that was produced last night, so no manual action is required
+to create this candidate.
+
+If it is desired to manually create a latest release, run `make release` in the
+`nomos-operator` subdirectory of the nomos-operator repo. See the section on
+[Working with the Operator](source.md#working-with-the-operator) for more
+information.
+
 # 3. The Blessing
 
 Blessing process will release an RC to the end user.
