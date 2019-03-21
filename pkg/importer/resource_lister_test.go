@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/nomos/pkg/kinds"
@@ -28,22 +29,41 @@ func (l errorLister) List(_ metav1.ListOptions) (*unstructured.UnstructuredList,
 }
 
 type successLister struct {
-	objects []unstructured.Unstructured
+	objects map[string]*unstructured.UnstructuredList
 }
 
-func (l successLister) List(_ metav1.ListOptions) (*unstructured.UnstructuredList, error) {
-	return &unstructured.UnstructuredList{Items: l.objects}, nil
+func (l successLister) List(o metav1.ListOptions) (*unstructured.UnstructuredList, error) {
+	result, found := l.objects[o.Continue]
+	if !found {
+		return &unstructured.UnstructuredList{}, nil
+	}
+	return result, nil
 }
 
 func newSuccessLister(t *testing.T, objects ...ast.FileObject) successLister {
-	result := successLister{}
+	result := successLister{
+		objects: make(map[string]*unstructured.UnstructuredList),
+	}
 
-	for _, o := range objects {
-		out, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.Object)
+	result.objects[""] = &unstructured.UnstructuredList{}
+
+	listSize := 5
+	listNum := 0
+	token := ""
+	for i, o := range objects {
+		if i%listSize == 0 && i > 0 {
+			listNum++
+			newToken := fmt.Sprintf("%d", listNum)
+			result.objects[newToken] = &unstructured.UnstructuredList{}
+			result.objects[token].SetContinue(newToken)
+			token = newToken
+		}
+		out, err :=
+			runtime.DefaultUnstructuredConverter.ToUnstructured(o.Object)
 		if err != nil {
 			t.Fatal(err)
 		}
-		result.objects = append(result.objects, unstructured.Unstructured{Object: out})
+		result.objects[token].Items = append(result.objects[token].Items, unstructured.Unstructured{Object: out})
 	}
 
 	return result
@@ -119,11 +139,18 @@ func TestResourceLister(t *testing.T) {
 				roleBinding: newSuccessLister(t, fake.Build(kinds.RoleBinding()), fake.Build(kinds.RoleBinding())),
 			}},
 		},
+		{
+			name:        "returns all objects if paged",
+			apiResource: apiresource.Roles(),
+			resourcer: fakeResourcer{resources: map[schema.GroupVersionResource]Lister{
+				role: newSuccessLister(t, fake.Build(kinds.Role()), fake.Build(kinds.Role()), fake.Build(kinds.Role()), fake.Build(kinds.Role()), fake.Build(kinds.Role()), fake.Build(kinds.Role())),
+			}},
+			expectedLength: 6,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			resourceLister := NewResourceLister(tc.resourcer)
 
 			eb := &status.ErrorBuilder{}

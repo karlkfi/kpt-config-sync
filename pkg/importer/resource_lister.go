@@ -44,18 +44,23 @@ func (l ResourceLister) List(apiResource metav1.APIResource, errs ErrorAdder) []
 		Resource: apiResource.Name,
 	}
 
-	resources, err := l.resourcer.Resource(gvr).List(metav1.ListOptions{})
-	errs.Add(status.APIServerWrapf(err, "unable to read %q resources", gvr.String()))
-	if err != nil {
-		return nil
-	}
-	// TODO(b/126702932): Check for resources.GetContinue value since there could be >500 resources.
-	if resources.GetContinue() != "" {
-		errs.Add(status.APIServerWrapf(err, "more than 500 %q resources; only exporting first 500", gvr.String()))
+	var items []unstructured.Unstructured
+	for ok, token := true, ""; ok; ok = token != "" {
+		// The token empty string gets the first page of 500, and we always want to request it.
+		// We know we are at the last page when GetContinue() returns empty string.
+		resources, err := l.resourcer.Resource(gvr).List(metav1.ListOptions{
+			Continue: token,
+		})
+		if err != nil {
+			errs.Add(status.APIServerWrapf(err, "unable to read %q resources", gvr.String()))
+			return nil
+		}
+		items = append(items, resources.Items...)
+		token = resources.GetContinue()
 	}
 
 	var result []ast.FileObject
-	for _, r := range resources.Items {
+	for _, r := range items {
 		o := ast.FileObject{Object: r.DeepCopyObject()}
 		result = append(result, o)
 	}
