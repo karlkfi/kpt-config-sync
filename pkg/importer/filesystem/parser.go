@@ -35,6 +35,7 @@ import (
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -274,6 +275,12 @@ func validateInstallation(resources discovery.ServerResourcesInterface, eb *stat
 	gv := v1.SchemeGroupVersion.String()
 	_, err := resources.ServerResourcesForGroupVersion(gv)
 	if err != nil {
-		eb.Add(vet.PolicyManagementNotInstalledError{Err: errors.Wrapf(err, "unable to read required %s resources from cluster", gv)})
+		if apierrors.IsNotFound(err) {
+			eb.Add(vet.PolicyManagementNotInstalledError{
+				Err: errors.Errorf("no resources exist on cluster with apiVersion: %s", gv),
+			})
+		} else {
+			eb.Add(vet.PolicyManagementNotInstalledError{Err: err})
+		}
 	}
 }
