@@ -3,9 +3,9 @@ package repo
 import (
 	"context"
 
-	typedv1 "github.com/google/nomos/clientgen/apis/typed/policyhierarchy/v1"
-	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
+	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/id"
 	"github.com/google/nomos/pkg/status"

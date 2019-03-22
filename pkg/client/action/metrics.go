@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2017 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -16,7 +16,7 @@ limitations under the License.
 package action
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -24,7 +24,7 @@ import (
 var Actions = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Help:      "The total count of actions created",
-		Namespace: policyhierarchy.MetricsNamespace,
+		Namespace: configmanagement.MetricsNamespace,
 		Subsystem: "action",
 		Name:      "executed",
 	},
@@ -35,7 +35,7 @@ var Actions = prometheus.NewCounterVec(
 var APICalls = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Help:      "The total count of actual API calls (actions will elide noop API calls)",
-		Namespace: policyhierarchy.MetricsNamespace,
+		Namespace: configmanagement.MetricsNamespace,
 		Subsystem: "action",
 		Name:      "api_calls",
 	},
@@ -46,7 +46,7 @@ var APICalls = prometheus.NewCounterVec(
 var APICallDuration = prometheus.NewHistogramVec(
 	prometheus.HistogramOpts{
 		Help:      "Client action duration distributions",
-		Namespace: policyhierarchy.MetricsNamespace,
+		Namespace: configmanagement.MetricsNamespace,
 		Subsystem: "action",
 		Name:      "api_duration_seconds",
 		Buckets:   []float64{.001, .01, .1, 1},

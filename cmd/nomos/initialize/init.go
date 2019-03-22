@@ -10,7 +10,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/repo"
 	"github.com/google/nomos/cmd/nomos/util"
-	v1repo "github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
+	v1repo "github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

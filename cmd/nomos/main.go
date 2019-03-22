@@ -11,7 +11,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/version"
 	"github.com/google/nomos/cmd/nomos/vet"
 	"github.com/google/nomos/cmd/nomos/view"
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	pkgversion "github.com/google/nomos/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -26,7 +26,7 @@ func logging() bool {
 
 var (
 	rootCmd = &cobra.Command{
-		Use: policyhierarchy.CLIName,
+		Use: configmanagement.CLIName,
 		Short: fmt.Sprintf(
 			"Set up and manage a CSP Configuration Management directory (version %v)", pkgversion.VERSION),
 	}

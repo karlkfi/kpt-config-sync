@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2017 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -28,9 +28,9 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyhierarchy"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
@@ -1176,7 +1176,7 @@ spec:
 			&v1.ClusterConfigSpec{
 				Resources: []v1.GenericResources{
 					{
-						Group: policyhierarchy.GroupName,
+						Group: configmanagement.GroupName,
 						Kind:  "HierarchicalQuota",
 						Versions: []v1.GenericVersionResources{
 							{
@@ -1213,7 +1213,7 @@ spec:
 								},
 							}}}}}),
 		expectedSyncs: syncMap(
-			makeSync(policyhierarchy.GroupName, "HierarchicalQuota"),
+			makeSync(configmanagement.GroupName, "HierarchicalQuota"),
 			makeSync("", "ResourceQuota"),
 		),
 	},
@@ -1505,14 +1505,14 @@ spec:
 	{
 		testName: "HierarchyConfig contains a NamespaceConfig",
 		testFiles: fstesting.FileContentMap{
-			"system/config.yaml": templateData{Group: policyhierarchy.GroupName, Kind: "NamespaceConfig"}.apply(aHierarchyConfig),
+			"system/config.yaml": templateData{Group: configmanagement.GroupName, Kind: "NamespaceConfig"}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
 	},
 	{
 		testName: "HierarchyConfig contains a Sync",
 		testFiles: fstesting.FileContentMap{
-			"system/config.yaml": templateData{Group: policyhierarchy.GroupName, Kind: "Sync"}.apply(aHierarchyConfig),
+			"system/config.yaml": templateData{Group: configmanagement.GroupName, Kind: "Sync"}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
 	},

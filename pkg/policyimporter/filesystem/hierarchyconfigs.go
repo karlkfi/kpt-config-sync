@@ -1,7 +1,7 @@
 package filesystem
 
 import (
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 

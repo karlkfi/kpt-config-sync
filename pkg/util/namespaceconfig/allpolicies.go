@@ -1,7 +1,7 @@
 package namespaceconfig
 
 import (
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 )
 
 // AllPolicies holds things that Importer wants to sync. It is only used in-process, not written

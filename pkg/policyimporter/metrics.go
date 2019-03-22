@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Nomos Authors.
+Copyright 2018 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -16,7 +16,7 @@ limitations under the License.
 package policyimporter
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -29,7 +29,7 @@ var Metrics = struct {
 	prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total operations that have been performed to keep policy node hierarchy up-to-date with source of truth",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "policy_importer",
 			Name:      "policy_node_operations_total",
 		},
@@ -39,15 +39,15 @@ var Metrics = struct {
 	prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Help:      "Number of policy nodes in current state",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "policy_importer",
-			Name:      "policy_nodes",
+			Name:      "namespace_configs",
 		},
 	),
 	prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total number of policy state transitions (A state transition can include changes to multiple resources)",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "policy_importer",
 			Name:      "policy_state_transitions_total",
 		},

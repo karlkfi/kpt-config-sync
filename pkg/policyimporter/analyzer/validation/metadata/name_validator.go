@@ -1,8 +1,8 @@
 package metadata
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -46,5 +46,5 @@ func NewNameValidator() *visitor.ValidatorVisitor {
 // This explicitly does not check for Nomos or Application even though they are CRDs because they
 // should never be in a Nomos repository anyway.
 func isDefaultCrdAllowedInNomos(gvk schema.GroupVersionKind) bool {
-	return gvk.Group == policyhierarchy.GroupName || (gvk == kinds.Cluster())
+	return gvk.Group == configmanagement.GroupName || (gvk == kinds.Cluster())
 }

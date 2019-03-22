@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Nomos Authors.
+Copyright 2018 The CSP Config Management Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/davecgh/go-spew/spew"
-	nomosv1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 )
 
 func TestDecodeResources(t *testing.T) {

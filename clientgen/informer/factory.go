@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Nomos Authors.
+Copyright 2019 The CSP Config Management Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ import (
 	time "time"
 
 	apis "github.com/google/nomos/clientgen/apis"
+	configmanagement "github.com/google/nomos/clientgen/informer/configmanagement"
 	internalinterfaces "github.com/google/nomos/clientgen/informer/internalinterfaces"
-	policyhierarchy "github.com/google/nomos/clientgen/informer/policyhierarchy"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -172,9 +172,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Configmanagement() policyhierarchy.Interface
+	Configmanagement() configmanagement.Interface
 }
 
-func (f *sharedInformerFactory) Configmanagement() policyhierarchy.Interface {
-	return policyhierarchy.New(f, f.namespace, f.tweakListOptions)
+func (f *sharedInformerFactory) Configmanagement() configmanagement.Interface {
+	return configmanagement.New(f, f.namespace, f.tweakListOptions)
 }

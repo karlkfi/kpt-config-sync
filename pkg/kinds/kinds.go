@@ -1,7 +1,7 @@
 package kinds
 
 import (
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	oidcconfig "github.com/google/nomos/pkg/oidc/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

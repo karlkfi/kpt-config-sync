@@ -1,7 +1,7 @@
 package state
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -14,8 +14,8 @@ var Metrics = struct {
 }{
 	prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Help:      "Total number of policies (cluster and node) grouped by their sync status; should be similar to config_management_policy_importer_policy_nodes metric",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Help:      "Total number of policies (cluster and node) grouped by their sync status; should be similar to config_management_policy_importer_namespace_configs metric",
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "monitor",
 			Name:      "policies",
 		},
@@ -24,7 +24,7 @@ var Metrics = struct {
 	prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Help:      "Timestamp of the most recent import",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "monitor",
 			Name:      "last_import_timestamp",
 		},
@@ -32,7 +32,7 @@ var Metrics = struct {
 	prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Help:      "Timestamp of the most recent sync",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "monitor",
 			Name:      "last_sync_timestamp",
 		},
@@ -40,7 +40,7 @@ var Metrics = struct {
 	prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Help:      "Distribution of the latencies between importing and syncing each node",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "monitor",
 			Name:      "sync_latency_seconds",
 			Buckets:   prometheus.DefBuckets,

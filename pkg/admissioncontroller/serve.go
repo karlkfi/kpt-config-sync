@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2017 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -25,7 +25,7 @@ import (
 
 	"github.com/golang/glog"
 	namespaceconfigversions "github.com/google/nomos/clientgen/informer"
-	informersv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	informersv1 "github.com/google/nomos/clientgen/informer/configmanagement/v1"
 	namespaceconfigmeta "github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/service"
 	"github.com/pkg/errors"

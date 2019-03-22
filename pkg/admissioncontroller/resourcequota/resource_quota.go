@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2017 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"time"
 
-	informersv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	informersv1 "github.com/google/nomos/clientgen/informer/configmanagement/v1"
 	"github.com/google/nomos/pkg/admissioncontroller"
 	"github.com/google/nomos/pkg/resourcequota"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"

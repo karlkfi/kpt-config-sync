@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2017 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -17,10 +17,10 @@ package resourcequota
 
 import (
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
-	informersv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	informersv1 "github.com/google/nomos/clientgen/informer/configmanagement/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

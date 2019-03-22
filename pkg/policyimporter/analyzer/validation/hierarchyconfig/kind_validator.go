@@ -1,8 +1,8 @@
 package hierarchyconfig
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
@@ -39,7 +39,7 @@ func ValidateKinds(config FileGroupKindHierarchyConfig) *status.MultiError {
 
 // AllowedInHierarchyConfigs returns true if the passed GroupKind is allowed to be declared in HierarchyConfigs.
 func AllowedInHierarchyConfigs(gk schema.GroupKind) bool {
-	return !unsupportedHierarchyConfigResources()[gk] && gk.Group != policyhierarchy.GroupName && gk.Kind != ""
+	return !unsupportedHierarchyConfigResources()[gk] && gk.Group != configmanagement.GroupName && gk.Kind != ""
 }
 
 // unsupportedHierarchyConfigResources returns a map of each type where syncing is explicitly not supported.

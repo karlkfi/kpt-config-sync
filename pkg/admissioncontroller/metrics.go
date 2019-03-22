@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Nomos Authors.
+Copyright 2018 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -16,7 +16,7 @@ limitations under the License.
 package admissioncontroller
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -28,7 +28,7 @@ var Metrics = struct {
 	prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Help:      "Admission duration distributions",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "admission_controller",
 			Name:      "duration_seconds",
 			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
@@ -38,7 +38,7 @@ var Metrics = struct {
 	prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total internal errors that occurred when reviewing admission requests",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "admission_controller",
 			Name:      "error_total",
 		},

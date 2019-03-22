@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2017 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,7 +18,7 @@ package namespaceutil
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 )
 
 type reservedOrInvalidNamespaceTestcase struct {
@@ -57,7 +57,7 @@ func TestIsReserved(t *testing.T) {
 		{"kube-public", true},
 		{"kube-foo", true},
 		{"default", false},
-		{policyhierarchy.ControllerNamespace, true},
+		{configmanagement.ControllerNamespace, true},
 	} {
 		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {

@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2017 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -37,7 +37,7 @@ type Interface interface {
 	Runtime() client.Client
 }
 
-// Client is a container for the kubernetes Clientset and the policyhierarchy clientset.
+// Client is a container for the kubernetes Clientset and the configmanagement clientset.
 type Client struct {
 	kubernetesClientset      *kubernetes.Clientset
 	policyHierarchyClientset *apis.Clientset
@@ -52,7 +52,7 @@ func (c *Client) Kubernetes() kubernetes.Interface {
 	return c.kubernetesClientset
 }
 
-// PolicyHierarchy returns the policyhierarchy clientset
+// PolicyHierarchy returns the configmanagement clientset
 func (c *Client) PolicyHierarchy() apis.Interface {
 	return c.policyHierarchyClientset
 }
@@ -90,7 +90,7 @@ func NewForConfig(cfg *rest.Config, syncPeriod *time.Duration) (*Client, error) 
 
 	policyHierarchyClientSet, err := apis.NewForConfig(cfg)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to create policyhierarchy clientset")
+		return nil, errors.Wrapf(err, "Failed to create configmanagement clientset")
 	}
 
 	apiExtensionsClientset, err := apiextensions.NewForConfig(cfg)

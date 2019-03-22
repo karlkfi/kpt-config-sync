@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Nomos Authors
+Copyright 2018 The CSP Config Management Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -429,7 +429,7 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 	r = append(r, []*restmapper.APIGroupResources{
 		{
 			Group: metav1.APIGroup{
-				Name: policyhierarchy.GroupName,
+				Name: configmanagement.GroupName,
 				Versions: []metav1.GroupVersionForDiscovery{
 					{Version: "v1alpha1"},
 					{Version: "v1"},

@@ -3,7 +3,7 @@ package treetesting
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1/repo"
+	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/util/discovery"

@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2017 The CSP Config Management Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@ import (
 	"time"
 
 	"github.com/google/nomos/clientgen/apis"
-	fakepolicyhierarchy "github.com/google/nomos/clientgen/apis/fake"
+	fakeconfigmanagement "github.com/google/nomos/clientgen/apis/fake"
 	phinformers "github.com/google/nomos/clientgen/informer"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	fakeapiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
@@ -38,7 +38,7 @@ import (
 // Client implements meta.Interface with fake clientsets.
 type Client struct {
 	KubernetesClientset      *fakekubernetes.Clientset
-	PolicyhierarchyClientset *fakepolicyhierarchy.Clientset
+	PolicyhierarchyClientset *fakeconfigmanagement.Clientset
 	APIExtensionsClientset   *fakeapiextensions.Clientset
 	RuntimeClient            client.Client
 
@@ -82,15 +82,15 @@ func NewClientWithStorage(storage []runtime.Object, runtimeClient client.Client)
 	}
 
 	kubernetesClientset := fakekubernetes.NewSimpleClientset(kubernetesStorage...)
-	policyhierarchyClientset := fakepolicyhierarchy.NewSimpleClientset(policyHierarchyStorage...)
+	configmanagementClientset := fakeconfigmanagement.NewSimpleClientset(policyHierarchyStorage...)
 	apiExtensionsClientset := fakeapiextensions.NewSimpleClientset()
 	return &Client{
 		KubernetesClientset:      kubernetesClientset,
-		PolicyhierarchyClientset: policyhierarchyClientset,
+		PolicyhierarchyClientset: configmanagementClientset,
 		APIExtensionsClientset:   apiExtensionsClientset,
 		RuntimeClient:            runtimeClient,
 		KubernetesInformers:      informers.NewSharedInformerFactory(kubernetesClientset, time.Second*2),
-		PolicyHierarchyInformers: phinformers.NewSharedInformerFactory(policyhierarchyClientset, time.Second*2),
+		PolicyHierarchyInformers: phinformers.NewSharedInformerFactory(configmanagementClientset, time.Second*2),
 	}
 }
 

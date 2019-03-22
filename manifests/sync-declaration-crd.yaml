@@ -1,6 +1,6 @@
 # Custom Resource Definition for a declaring the types
 # of resources Nomos should sync from the source of truth
-# See pkg/api/policyhierarchy/v1alpha1/types.go
+# See pkg/api/configmanagement/v1alpha1/types.go
 # for the CRD struct spec.
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition

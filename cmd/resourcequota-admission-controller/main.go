@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2017 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -24,7 +24,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/admissioncontroller"
 	"github.com/google/nomos/pkg/admissioncontroller/resourcequota"
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/util/log"
@@ -41,8 +41,8 @@ import (
 )
 
 const (
-	externalAdmissionHookConfigName = "resource-quota." + policyhierarchy.GroupName
-	controllerNamespace             = policyhierarchy.ControllerNamespace
+	externalAdmissionHookConfigName = "resource-quota." + configmanagement.GroupName
+	controllerNamespace             = configmanagement.ControllerNamespace
 	controllerName                  = "resourcequota-admission-controller"
 )
 

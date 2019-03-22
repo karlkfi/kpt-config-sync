@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	v12 "github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	v12 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/pkg/errors"

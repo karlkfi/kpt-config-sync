@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Nomos Authors.
+Copyright 2018 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -16,7 +16,7 @@ limitations under the License.
 package resourcequota
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -28,7 +28,7 @@ var Metrics = struct {
 	Usage: prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Help:      "Abstract namespace quota usage per resource type",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "admission_controller",
 			Name:      "usage",
 		},
@@ -38,7 +38,7 @@ var Metrics = struct {
 	Violations: prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Abstract namespace quota violations per resource type",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "admission_controller",
 			Name:      "violations_total",
 		},

@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Nomos Authors.
+Copyright 2017 The CSP Config Management Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ limitations under the License.
 package namespaceconfig
 
 import (
-	listersv1 "github.com/google/nomos/clientgen/listers/policyhierarchy/v1"
-	"github.com/google/nomos/pkg/api/policyhierarchy/v1"
+	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
 )

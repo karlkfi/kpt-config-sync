@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Nomos Authors.
+Copyright 2018 The CSP Config Management Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 
 	"github.com/pkg/errors"
 
@@ -130,7 +130,7 @@ func (v *testVisitor) Check(t *testing.T) {
 
 	expectOrder := []string{
 		"Root",
-		fmt.Sprintf("SystemObject %s/v1, Kind=Repo repo", policyhierarchy.GroupName),
+		fmt.Sprintf("SystemObject %s/v1, Kind=Repo repo", configmanagement.GroupName),
 		"ClusterRegistryObject /, Kind= ",
 		fmt.Sprintf("ClusterObject rbac.authorization.k8s.io/v1, Kind=ClusterRole %s", vt.ClusterAdmin),
 		fmt.Sprintf("ClusterObject rbac.authorization.k8s.io/v1, Kind=ClusterRoleBinding %s", vt.ClusterAdminBinding),

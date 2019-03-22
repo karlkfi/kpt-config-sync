@@ -6,7 +6,7 @@ import (
 	"github.com/golang/glog"
 	pnfake "github.com/google/nomos/clientgen/apis/fake"
 	"github.com/google/nomos/clientgen/informer"
-	informersv1 "github.com/google/nomos/clientgen/informer/policyhierarchy/v1"
+	informersv1 "github.com/google/nomos/clientgen/informer/configmanagement/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	corev1 "k8s.io/client-go/informers/core/v1"

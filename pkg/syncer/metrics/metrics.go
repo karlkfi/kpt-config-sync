@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Nomos Authors.
+Copyright 2018 The CSP Config Management Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -16,7 +16,7 @@ limitations under the License.
 package metrics
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -25,7 +25,7 @@ var (
 	ErrTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total errors that occurred when executing syncer actions",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "syncer",
 			Name:      "error_total",
 		},
@@ -34,7 +34,7 @@ var (
 	EventTimes = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Help:      "Timestamps when syncer events occurred",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "syncer",
 			Name:      "event_timestamps",
 		},
@@ -43,7 +43,7 @@ var (
 	ClusterReconcileDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Help:      "Syncer cluster reconciliation duration distributions",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "syncer",
 			Name:      "syncer_clusterconfig_reconcile_seconds",
 			Buckets:   []float64{.001, .01, .1, 1, 10, 100},
@@ -53,7 +53,7 @@ var (
 	NamespaceReconcileDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Help:      "Syncer namespace reconcile duration distributions",
-			Namespace: policyhierarchy.MetricsNamespace,
+			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "syncer",
 			Name:      "namespace_reconcile_duration_seconds",
 			Buckets:   []float64{.001, .01, .1, 1, 10, 100},

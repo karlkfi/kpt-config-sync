@@ -1,7 +1,7 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
@@ -23,7 +23,7 @@ type PolicyManagementNotInstalledError struct {
 // Error implements error.
 func (e PolicyManagementNotInstalledError) Error() string {
 	return status.Format(e, errors.Wrapf(e.Err, "%s is not properly installed. Apply a %s config to enable config management.",
-		policyhierarchy.ProductName, policyhierarchy.OperatorKind).Error())
+		configmanagement.ProductName, configmanagement.OperatorKind).Error())
 }
 
 // Code implements Error.

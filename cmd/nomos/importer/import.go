@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/util"
-	"github.com/google/nomos/pkg/api/policyhierarchy"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filter"
@@ -170,13 +170,13 @@ var ignoreSystemNameGroups = object.Any(
 	// metrics-server: resources are background processes collecing metrics on resource usage.
 	filter.NameGroup("metrics-server"),
 	// configmanagement.gke.io: resources are part of the Nomos installation.
-	filter.NameGroup(policyhierarchy.GroupName),
+	filter.NameGroup(configmanagement.GroupName),
 )
 
 // ignoreSystemNamespaces ignores all of the Namespaces which have internal Kubernetes and Nomos
 // resources. We don't support syncing any of these namespaces.
 func ignoreSystemNamespaces(out importer.InfoOutput) object.Predicate {
-	ignoredNamespaces := []string{"default", "kube-public", "kube-system", policyhierarchy.ControllerNamespace}
+	ignoredNamespaces := []string{"default", "kube-public", "kube-system", configmanagement.ControllerNamespace}
 	var namespaceFilters []object.Predicate
 	for _, n := range ignoredNamespaces {
 		out.Printfln("  Ignoring %s Namespace", n)
@@ -192,7 +192,7 @@ var ignoreKubernetesSystemLabels = object.Any(
 	// addonmanager.kubernetes.io/mode indicates the resource is managed by an addon.
 	filter.Label("addonmanager.kubernetes.io/mode"),
 	//config.gke.io/system indicates the resource is part of the Nomos installation
-	filter.Label(policyhierarchy.GroupName+"/system"),
+	filter.Label(configmanagement.GroupName+"/system"),
 	// k8s-app indicates the resource is part of a Kubernetes app.
 	filter.Label("k8s-app"),
 	// kube-aggregator.kubernetes.io/automanaged indicates the resource is automatically managed by Kubernetes.
@@ -212,10 +212,10 @@ var ignoreCriticalPriorityClasses = object.All(
 )
 
 // removeNomosLables removes all Nomos labels.
-var removeNomosLables = mutate.RemoveLabelGroup(policyhierarchy.GroupName)
+var removeNomosLables = mutate.RemoveLabelGroup(configmanagement.GroupName)
 
 // removeNomosAnnotations removes non-input Nomos annotations.
-var removeNomosAnnotations = mutate.RemoveAnnotationGroup(policyhierarchy.GroupName)
+var removeNomosAnnotations = mutate.RemoveAnnotationGroup(configmanagement.GroupName)
 
 // removeAppliedConfig removes the annotation holding a JSON representation of the last call to
 // kubectl apply on the resource.
