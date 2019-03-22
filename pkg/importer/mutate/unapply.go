@@ -2,8 +2,8 @@ package mutate
 
 import (
 	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/object"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 

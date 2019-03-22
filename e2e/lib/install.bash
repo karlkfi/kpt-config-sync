@@ -42,7 +42,7 @@ function install::available_replicas() {
 # otherwise.
 function install::nomos_running() {
   local deployments
-  deployments=("git-policy-importer" "syncer")
+  deployments=("git-importer" "syncer")
   for deployment in "${deployments[@]}"; do
     local res
     res="$(install::available_replicas config-management-system "${deployment}")"

@@ -114,7 +114,7 @@ function check_metrics_pages() {
   resource::check -n newer-prj resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
 
   local services=(
-    git-policy-importer
+    git-importer
     resourcequota-admission-controller
     syncer
   )

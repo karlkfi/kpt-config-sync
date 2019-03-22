@@ -3,10 +3,10 @@ package fake
 import (
 	"strings"
 
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast/asttesting"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 

@@ -23,7 +23,7 @@ ENV PATH="/opt/nomos/bin:${PATH}"
 WORKDIR /opt/nomos/bin
 
 # Nomos binaries.
-COPY git-policy-importer git-policy-importer
+COPY git-importer git-importer
 COPY monitor monitor
 COPY nomos nomos
 COPY resourcequota-admission-controller resourcequota-admission-controller

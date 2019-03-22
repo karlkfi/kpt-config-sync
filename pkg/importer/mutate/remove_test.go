@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 

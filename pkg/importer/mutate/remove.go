@@ -1,9 +1,9 @@
 package mutate
 
 import (
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/object"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 

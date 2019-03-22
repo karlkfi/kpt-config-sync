@@ -1,8 +1,8 @@
 package object
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 )
 
 // Mutator modifies an ast.FileObject.

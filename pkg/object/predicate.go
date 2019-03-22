@@ -1,7 +1,7 @@
 package object
 
 import (
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 )
 
 // Predicate is a function that accepts a FileObject and returns true or false.

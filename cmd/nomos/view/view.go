@@ -7,7 +7,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/cmd/nomos/util"
-	"github.com/google/nomos/pkg/policyimporter/filesystem"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )

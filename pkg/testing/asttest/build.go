@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/transform/tree"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
+	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/status"
 )
 

@@ -17,7 +17,7 @@ package discovery
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"

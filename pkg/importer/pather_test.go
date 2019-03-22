@@ -6,10 +6,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/filesystem/cmpath"
 	"github.com/google/nomos/pkg/testing/apiresource"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"

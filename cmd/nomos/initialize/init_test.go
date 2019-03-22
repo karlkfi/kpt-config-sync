@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/cmd/nomos/repo"
-	fstesting "github.com/google/nomos/pkg/policyimporter/filesystem/testing"
+	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/pkg/errors"
 )
 

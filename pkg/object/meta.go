@@ -1,6 +1,6 @@
 package object
 
-import "github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+import "github.com/google/nomos/pkg/importer/analyzer/ast"
 
 // Namespace replaces the metadata.namesapce of the FileObject under test.
 func Namespace(namespace string) Mutator {

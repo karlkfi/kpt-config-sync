@@ -37,7 +37,7 @@ teardown() {
 }
 
 @test "Changing TheNomos target branch takes effect" {
-  local configMapPrefix="git-policy-importer"
+  local configMapPrefix="git-importer"
   # Create a new git branch and make a change there
   cd "${TEST_REPO}"
   echo "git checkout branch"

@@ -5,8 +5,8 @@ import (
 	"os"
 	"sort"
 
-	_ "github.com/google/nomos/pkg/policyimporter/analyzer/vet" // required for vet errors
-	_ "github.com/google/nomos/pkg/policyimporter/id"           // required for id errors
+	_ "github.com/google/nomos/pkg/importer/analyzer/vet" // required for vet errors
+	_ "github.com/google/nomos/pkg/importer/id"           // required for id errors
 	"github.com/google/nomos/pkg/status"
 	"github.com/spf13/cobra"
 )

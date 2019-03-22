@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/apiresource"
 	"github.com/google/nomos/pkg/testing/fake"

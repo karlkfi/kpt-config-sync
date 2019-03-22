@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"k8s.io/cli-runtime/pkg/genericclioptions/printers"
 )
 

@@ -3,8 +3,8 @@ package mutate
 import (
 	"strings"
 
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/object"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
 )
 
 // RemoveAnnotation removes the annotation matching annotation if it exists.

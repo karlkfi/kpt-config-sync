@@ -36,11 +36,11 @@ function add_clusterregistry_data() {
 }
 
 # Echoes to stdout the current cluster name, based on the content of the configmap
-# from the git-policy-importer deployment.
+# from the git-importer deployment.
 function get_cluster_name() {
   local cluster_name_config_map_name
   cluster_name_config_map_name=$(kubectl get deployments \
-    -n=config-management-system git-policy-importer -o yaml \
+    -n=config-management-system git-importer -o yaml \
     --output='jsonpath={.spec.template.spec.containers[0].envFrom[1].configMapRef.name}')
   local cluster_name
   cluster_name=$(kubectl get configmaps \

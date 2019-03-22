@@ -3,8 +3,8 @@ package asttest
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/policyimporter/analyzer/ast"
-	"github.com/google/nomos/pkg/policyimporter/analyzer/vet/vettesting"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 )
 
 // ValidatorTestCase defines an individual FileObject to validate with the validator, and
