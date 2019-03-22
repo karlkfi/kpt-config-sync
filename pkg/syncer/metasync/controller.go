@@ -81,6 +81,14 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 	if err = c.Watch(&source.Kind{Type: &v1.Sync{}}, unaryHandler); err != nil {
 		return errors.Wrap(err, "could not watch Syncs in the controller")
 	}
+	// Watch all changes to NamespaceConfigs.
+	// There is a corner case, where a user creates a repo with only namespaces in it.
+	// In order for the NamespaceConfig reconciler to start reconciling NamespaceConfigs,
+	// a Sync needed to be created to cause us to start the NamespaceConfig controller.
+	// We watch NamespaceConfigs so we can reconcile namespaces for this specific scenario.
+	if err = c.Watch(&source.Kind{Type: &v1.NamespaceConfig{}}, unaryHandler); err != nil {
+		return errors.Wrap(err, "could not watch NamespaceConfigs in the controller")
+	}
 
 	managerRestartCh := make(chan event.GenericEvent)
 	managerRestartSource := &source.Channel{Source: managerRestartCh}
@@ -98,6 +106,7 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 			if startErr != nil {
 				// genericResourceManager could not successfully start, so we must clear its internal state before restarting.
 				glog.Errorf("Error starting GenericResource controllers, restarting: %v", startErr)
+
 				reconciler.genericResourceManager.Clear()
 				// We always list all of the Syncs, so we can just send an empty event without a named resource.
 				managerRestartCh <- event.GenericEvent{Meta: &metav1.ObjectMeta{}}

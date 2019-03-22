@@ -41,7 +41,7 @@ import (
 type RestartableManager interface {
 	// UpdateSyncResources checks if the resources in Syncs have changed since last time we checked.
 	// If they have, we stop the old manager and brings up a new one with controllers for sync-enabled resources.
-	UpdateSyncResources(syncs []*v1.Sync, apirs *discovery.APIInfo, startErrCh chan error) error
+	UpdateSyncResources(syncs []*v1.Sync, apirs *discovery.APIInfo, startErrCh chan error, forceRestart bool) error
 	// Clear clears out the set of resource types ResourceManger is managing, without restarting the manager.
 	Clear()
 }
@@ -59,7 +59,7 @@ type GenericResourceManager struct {
 	syncEnabled map[schema.GroupVersionKind]bool
 	// ctx is a cancelable ambient context used where necessary
 	ctx context.Context
-	// cancel is a cancelation function for ctx. May be nil if ctx is unavailable
+	// cancel is a cancellation function for ctx. May be nil if ctx is unavailable
 	cancel context.CancelFunc
 }
 
@@ -84,9 +84,9 @@ func (r *GenericResourceManager) initCtx() {
 
 // UpdateSyncResources implements RestartableManager.
 func (r *GenericResourceManager) UpdateSyncResources(syncs []*v1.Sync, apirs *discovery.APIInfo,
-	startErrCh chan error) error {
+	startErrCh chan error, forceRestart bool) error {
 	actual := apirs.GroupVersionKinds(syncs...)
-	if reflect.DeepEqual(actual, r.syncEnabled) {
+	if !forceRestart && reflect.DeepEqual(actual, r.syncEnabled) {
 		// The set of sync-enabled resources hasn't changed. There is no need to restart.
 		return nil
 	}

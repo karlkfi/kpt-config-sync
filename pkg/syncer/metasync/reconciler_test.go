@@ -178,7 +178,7 @@ func TestReconcile(t *testing.T) {
 					},
 				}, nil)
 
-			mockManager.EXPECT().UpdateSyncResources(gomock.Any(), gomock.Any(), gomock.Any())
+			mockManager.EXPECT().UpdateSyncResources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 			for _, wantUpdateListDelete := range tc.wantUpdateList {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().

@@ -62,6 +62,8 @@ type MetaReconciler struct {
 	mgrStartErrCh chan error
 	// clientFactory returns a new dynamic client.
 	clientFactory ClientFactory
+	// subControllersStarted is true when the controllers managed by this reconciler have started.
+	subControllersStarted bool
 }
 
 // NewMetaReconciler returns a new MetaReconciler that reconciles changes in Syncs.
@@ -123,11 +125,12 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	// Check if the set of sync-enabled resources has changed,
 	// restart the GenericResourceManager to sync the appropriate resources.
-	if err := r.genericResourceManager.UpdateSyncResources(enabled, apirs, r.mgrStartErrCh); err != nil {
+	if err := r.genericResourceManager.UpdateSyncResources(enabled, apirs, r.mgrStartErrCh, !r.subControllersStarted); err != nil {
 		r.genericResourceManager.Clear()
 		glog.Errorf("Could not start GenericResourceManager: %v", err)
 		return reconcile.Result{}, err
 	}
+	r.subControllersStarted = true
 
 	var errBuilder status.ErrorBuilder
 	// Finalize Syncs that have not already been finalized.

@@ -51,6 +51,17 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -f -- kubectl get ns dir
 }
 
+@test "Start syncer and only sync namespace" {
+  debug::log "Restarting syncer with an empty repo"
+  kubectl delete pods -n config-management-system -l app=syncer
+  wait::for -f -- kubectl get ns dir
+
+  debug::log "Add only a single namespace"
+  git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
+  git::commit
+  wait::for kubectl get ns dir
+}
+
 @test "RoleBindings updated" {
   git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/namespace.yaml acme/namespaces/eng/backend/namespace.yaml
   git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
