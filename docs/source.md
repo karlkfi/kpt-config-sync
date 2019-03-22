@@ -49,8 +49,8 @@ implied that we are referring to our own types:
 
 ```go
 import (
-    "github.com/google/nomos/pkg/api/policyhierarchy/v1"
-    "github.com/google/nomos/pkg/api/policyhierarchy/v1alpha1"
+    "github.com/google/nomos/pkg/api/configmanagement/v1"
+    "github.com/google/nomos/pkg/api/configmanagement/v1alpha1"
 )
 ```
 

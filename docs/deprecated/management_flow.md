@@ -32,7 +32,7 @@ Examples:
     `foo-corp/cluster/quota-viewer-clusterrole.yaml`. CSP Configuration
     Management will now create the `quota-viewer` ClusterRole matching the one
     in Git. Time passes. Someone deletes the `quota-viewer-clusterrole.yaml`
-    from Git. GKE Policy Management will now remove `quota-viewer` from the
+    from Git. CSP Configuration Management will now remove `quota-viewer` from the
     cluster.
 *   Role `job-creator` exists on the cluster in shipping-dev namespace with a
     `nomos.dev/managed` label applied and exists in Git for
