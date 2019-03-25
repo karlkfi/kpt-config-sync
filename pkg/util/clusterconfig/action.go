@@ -21,7 +21,7 @@ func NewActionSpec(client typedv1.ConfigmanagementV1Interface, lister listersv1.
 }
 
 var cpsIgnore = []cmp.Option{
-	cmpopts.IgnoreFields(v1.ClusterConfigSpec{}, "ImportToken", "ImportTime"),
+	cmpopts.IgnoreFields(v1.ClusterConfigSpec{}, "Token", "ImportTime"),
 }
 
 func clusterConfigsEqual(lhs runtime.Object, rhs runtime.Object) bool {

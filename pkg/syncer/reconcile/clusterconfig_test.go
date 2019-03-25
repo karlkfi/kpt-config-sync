@@ -53,9 +53,9 @@ func importToken(t string) object.Mutator {
 	return func(o *ast.FileObject) {
 		switch obj := o.Object.(type) {
 		case *v1.ClusterConfig:
-			obj.Spec.ImportToken = t
+			obj.Spec.Token = t
 		case *v1.NamespaceConfig:
-			obj.Spec.ImportToken = t
+			obj.Spec.Token = t
 		default:
 			panic(fmt.Sprintf("Invalid type %T", obj))
 		}
@@ -79,9 +79,9 @@ func syncToken(t string) object.Mutator {
 	return func(o *ast.FileObject) {
 		switch obj := o.Object.(type) {
 		case *v1.ClusterConfig:
-			obj.Status.SyncToken = t
+			obj.Status.Token = t
 		case *v1.NamespaceConfig:
-			obj.Status.SyncToken = t
+			obj.Status.Token = t
 		default:
 			panic(fmt.Sprintf("Invalid type %T", obj))
 		}

@@ -53,9 +53,9 @@ type ClusterConfig struct {
 // ClusterConfigSpec defines the policies that will exist at the cluster level.
 // +protobuf=true
 type ClusterConfigSpec struct {
-	// ImportToken indicates the version of the ClusterConfig last imported from the source of truth.
+	// Token indicates the version of the ClusterConfig last imported from the source of truth.
 	// +optional
-	ImportToken string `json:"importToken,omitempty" protobuf:"bytes,4,opt,name=importToken"`
+	Token string `json:"token,omitempty"`
 
 	// ImportTime is the timestamp of when the ClusterConfig was updated by the Importer.
 	// +optional
@@ -69,9 +69,9 @@ type ClusterConfigSpec struct {
 // ClusterConfigStatus contains fields that define the status of a ClusterConfig.
 // +protobuf=true
 type ClusterConfigStatus struct {
-	// SyncToken indicates the version of that policy that the Syncer last attempted to update from.
+	// Token indicates the version of that policy that the Syncer last attempted to update from.
 	// +optional
-	SyncToken string `json:"syncToken,omitempty" protobuf:"bytes,1,opt,name=syncToken"`
+	Token string `json:"token,omitempty"`
 
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
 	// resources from the ClusterConfig specs. This field will be empty on success.
@@ -151,9 +151,9 @@ type NamespaceConfig struct {
 // +protobuf=true
 type NamespaceConfigSpec struct {
 
-	// ImportToken indicates the version of the NamespaceConfig last imported from the source of truth.
+	// Token indicates the version of the NamespaceConfig last imported from the source of truth.
 	// +optional
-	ImportToken string `json:"importToken,omitempty" protobuf:"bytes,6,opt,name=importToken"`
+	Token string `json:"token,omitempty"`
 
 	// ImportTime is the timestamp of when the NamespaceConfig was updated by the Importer.
 	// +optional
@@ -167,9 +167,9 @@ type NamespaceConfigSpec struct {
 // NamespaceConfigStatus contains fields that define the status of a NamespaceConfig.
 // +protobuf=true
 type NamespaceConfigStatus struct {
-	// SyncToken indicates the version of that policy that the Syncer last attempted to update from.
+	// Token indicates the version of that policy that the Syncer last attempted to update from.
 	// +optional
-	SyncToken string `json:"syncToken,omitempty" protobuf:"bytes,1,rep,name=syncToken"`
+	Token string `json:"token,omitempty"`
 
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
 	// resources from the NamespaceConfig specs. This field will be empty on success.

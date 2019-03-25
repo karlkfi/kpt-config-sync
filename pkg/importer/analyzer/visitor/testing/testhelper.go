@@ -97,7 +97,7 @@ func SystemObjectSets(runtimeObjs ...runtime.Object) []*ast.SystemObject {
 	return astObjs
 }
 
-// Helper provides a number of pre-built types for use in testcases.  This does not set an ImportToken
+// Helper provides a number of pre-built types for use in testcases.  This does not set an Token
 // or ImportTime
 var Helper TestHelper
 

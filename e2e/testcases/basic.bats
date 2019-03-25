@@ -69,11 +69,11 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   run kubectl get rolebindings -n backend robert-rolebinding -o yaml
   assert::contains "acme-admin"
 
-  # verify that importToken has been updated from the commit above
-  local itoken="$(kubectl get namespaceconfig backend -ojsonpath='{.spec.importToken}')"
+  # verify that import token has been updated from the commit above
+  local itoken="$(kubectl get namespaceconfig backend -ojsonpath='{.spec.token}')"
   git::check_hash "$itoken"
 
-  # verify that syncToken has been updated as well
+  # verify that sync token has been updated as well
   wait::for -t 30 -- namespaceconfig::sync_token_eq backend "$itoken"
 }
 

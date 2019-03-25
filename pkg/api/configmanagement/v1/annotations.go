@@ -28,7 +28,7 @@ const (
 
 	// SyncTokenAnnotationKey is the annotation key representing the last version token that a Nomos-
 	// managed resource was successfully synced from.
-	SyncTokenAnnotationKey = ConfigManagementPrefix + "sync-token"
+	SyncTokenAnnotationKey = ConfigManagementPrefix + "token"
 
 	// ResourceManagementKey indicates if Nomos will manage the content and lifecycle for the resource.
 	ResourceManagementKey = ConfigManagementPrefix + "managed"

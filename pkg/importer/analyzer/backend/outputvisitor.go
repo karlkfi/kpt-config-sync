@@ -78,8 +78,8 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 				Name: v1.ClusterConfigName,
 			},
 			Spec: v1.ClusterConfigSpec{
-				ImportToken: v.importToken,
-				ImportTime:  v.loadTime,
+				Token:      v.importToken,
+				ImportTime: v.loadTime,
 			},
 		},
 		Repo: g.Repo,
@@ -121,8 +121,8 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 			Labels:      n.Labels,
 		},
 		Spec: v1.NamespaceConfigSpec{
-			ImportToken: v.importToken,
-			ImportTime:  v.loadTime,
+			Token:      v.importToken,
+			ImportTime: v.loadTime,
 		},
 	}
 	v.namespaceConfig = append(v.namespaceConfig, pn)

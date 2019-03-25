@@ -29,7 +29,7 @@ var pnsIgnore = []cmp.Option{
 	// Quantity has a few unexported fields which we need to manually compare. The path is:
 	// NamespaceConfigSpec -> ResourceQuota -> ResourceQuotaSpec -> ResourceList -> Quantity
 	cmp.Comparer(resourceQuantityCmp),
-	cmpopts.IgnoreFields(v1.NamespaceConfigSpec{}, "ImportToken", "ImportTime"),
+	cmpopts.IgnoreFields(v1.NamespaceConfigSpec{}, "Token", "ImportTime"),
 }
 
 func namespaceConfigsEqual(lhs runtime.Object, rhs runtime.Object) bool {

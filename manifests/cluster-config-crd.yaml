@@ -31,7 +31,7 @@ spec:
             # ClusterConfigSpec
             type: object
             properties:
-              importToken:
+              token:
                 type: string
               importTime: # metav1.Time
                 anyOf:
@@ -73,7 +73,7 @@ spec:
             # ClusterConfigStatus
             type: object
             properties:
-              syncToken:
+              token:
                 type: string
               syncErrors:
                 type: array

@@ -73,8 +73,8 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Name: v1.ClusterConfigName,
 				},
 				Spec: v1.ClusterConfigSpec{
-					ImportToken: vt.ImportToken,
-					ImportTime:  metav1.NewTime(vt.ImportTime),
+					Token:      vt.ImportToken,
+					ImportTime: metav1.NewTime(vt.ImportTime),
 				},
 			},
 			[]v1.NamespaceConfig{},
@@ -96,8 +96,8 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Name: v1.ClusterConfigName,
 				},
 				Spec: v1.ClusterConfigSpec{
-					ImportToken: vt.ImportToken,
-					ImportTime:  metav1.NewTime(vt.ImportTime),
+					Token:      vt.ImportToken,
+					ImportTime: metav1.NewTime(vt.ImportTime),
 				},
 			},
 			[]v1.NamespaceConfig{},
@@ -116,8 +116,8 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Name: v1.ClusterConfigName,
 				},
 				Spec: v1.ClusterConfigSpec{
-					ImportToken: vt.ImportToken,
-					ImportTime:  metav1.NewTime(vt.ImportTime),
+					Token:      vt.ImportToken,
+					ImportTime: metav1.NewTime(vt.ImportTime),
 					Resources: []v1.GenericResources{
 						{
 							Group: "rbac.authorization.k8s.io",
@@ -168,8 +168,8 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					Name: v1.ClusterConfigName,
 				},
 				Spec: v1.ClusterConfigSpec{
-					ImportToken: vt.ImportToken,
-					ImportTime:  metav1.NewTime(vt.ImportTime),
+					Token:      vt.ImportToken,
+					ImportTime: metav1.NewTime(vt.ImportTime),
 				},
 			},
 			[]v1.NamespaceConfig{
@@ -184,8 +184,8 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Annotations: map[string]string{"has-waffles": "true"},
 					},
 					Spec: v1.NamespaceConfigSpec{
-						ImportToken: vt.ImportToken,
-						ImportTime:  metav1.NewTime(vt.ImportTime),
+						Token:      vt.ImportToken,
+						ImportTime: metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",
@@ -231,8 +231,8 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 						Annotations: map[string]string{"has-waffles": "false"},
 					},
 					Spec: v1.NamespaceConfigSpec{
-						ImportToken: vt.ImportToken,
-						ImportTime:  metav1.NewTime(vt.ImportTime),
+						Token:      vt.ImportToken,
+						ImportTime: metav1.NewTime(vt.ImportTime),
 						Resources: []v1.GenericResources{
 							{
 								Group: "rbac.authorization.k8s.io",

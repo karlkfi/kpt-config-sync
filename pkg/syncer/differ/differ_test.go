@@ -43,7 +43,7 @@ func (ti TestItem) Object(t *testing.T) *unstructured.Unstructured {
 			Annotations: ti.annotations,
 		},
 		Spec: nomosv1.ClusterConfigSpec{
-			ImportToken: ti.value,
+			Token: ti.value,
 		},
 	}
 	u, err := converter.ToUnstructured(obj)

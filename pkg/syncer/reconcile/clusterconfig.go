@@ -123,7 +123,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
-			annotateManaged(decl, policy.Spec.ImportToken)
+			annotateManaged(decl, policy.Spec.Token)
 		}
 		allDeclaredVersions := allVersionNames(grs, gvk.GroupKind())
 
@@ -165,7 +165,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 
 func (r *ClusterConfigReconciler) setClusterConfigStatus(ctx context.Context, policy *v1.ClusterConfig,
 	errs ...v1.ClusterConfigSyncError) id.ResourceError {
-	freshSyncToken := policy.Status.SyncToken == policy.Spec.ImportToken
+	freshSyncToken := policy.Status.Token == policy.Spec.Token
 	if policy.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for ClusterConfig %q is already up-to-date.", policy.Name)
 		return nil
@@ -173,7 +173,7 @@ func (r *ClusterConfigReconciler) setClusterConfigStatus(ctx context.Context, po
 
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
 		newPolicy := obj.(*v1.ClusterConfig)
-		newPolicy.Status.SyncToken = policy.Spec.ImportToken
+		newPolicy.Status.Token = policy.Spec.Token
 		newPolicy.Status.SyncTime = now()
 		newPolicy.Status.SyncErrors = errs
 		if len(errs) > 0 {

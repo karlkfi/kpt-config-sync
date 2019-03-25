@@ -47,12 +47,12 @@ var namespaceConfigEqualTestcases = []namespaceConfigEqualTestcase{
 		name: "different import token",
 		lhs: &v1.NamespaceConfig{
 			Spec: v1.NamespaceConfigSpec{
-				ImportToken: "1234567890123456789012345678901234567890",
+				Token: "1234567890123456789012345678901234567890",
 			},
 		},
 		rhs: &v1.NamespaceConfig{
 			Spec: v1.NamespaceConfigSpec{
-				ImportToken: "1234567890123456789012345678900000000000",
+				Token: "1234567890123456789012345678900000000000",
 			},
 		},
 		wantEqual: true,

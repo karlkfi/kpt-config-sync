@@ -381,7 +381,7 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 func decorateAsManaged(declaredInstances []*unstructured.Unstructured, node *v1.NamespaceConfig) {
 	for _, decl := range declaredInstances {
 		decl.SetNamespace(node.GetName())
-		annotateManaged(decl, node.Spec.ImportToken)
+		annotateManaged(decl, node.Spec.Token)
 	}
 }
 
@@ -394,7 +394,7 @@ func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 	if node == reservedNamespaceConfig {
 		return nil
 	}
-	freshSyncToken := node.Status.SyncToken == node.Spec.ImportToken
+	freshSyncToken := node.Status.Token == node.Spec.Token
 	if node.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for NamespaceConfig %q is already up-to-date.", node.Name)
 		return nil
@@ -402,7 +402,7 @@ func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
 		newPN := obj.(*v1.NamespaceConfig)
-		newPN.Status.SyncToken = node.Spec.ImportToken
+		newPN.Status.Token = node.Spec.Token
 		newPN.Status.SyncTime = now()
 		newPN.Status.SyncErrors = errs
 		if len(errs) > 0 {

@@ -31,7 +31,7 @@ spec:
             # NamespaceConfigSpec
             type: object
             properties:
-              importToken:
+              token:
                 type: string
               importTime: # metav1.Time
                 anyOf:
@@ -73,8 +73,8 @@ spec:
             # NamespaceConfigStatus
             type: object
             properties:
-              syncTokens:
-                type: object # map[string]string
+              token:
+                type: string
               syncErrors:
                 type: array
                 items:
