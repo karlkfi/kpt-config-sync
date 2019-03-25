@@ -26,7 +26,7 @@ var _ id.ResourceError = &IllegalMetadataNamespaceDeclarationError{}
 // Error implements error.
 func (e IllegalMetadataNamespaceDeclarationError) Error() string {
 	return status.Format(e,
-		"A config MUST either declare a metadata.namespace field exactly matching the directory "+
+		"A config MUST either declare a `metadata.namespace` field exactly matching the directory "+
 			"containing the config, %[1]q, or leave the field blank:\n\n"+
 			"%[2]s",
 		e.ExpectedNamespace, id.PrintResource(e))

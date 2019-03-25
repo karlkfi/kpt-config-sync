@@ -41,9 +41,9 @@ func (e MetadataNameCollisionError) Error() string {
 	sort.Strings(strs)
 
 	return status.Format(e,
-		"Resources of the same Kind MUST have unique names in the same %[1]s and their parent %[3]ss:\n\n"+
+		"Configs of the same Kind MUST have unique names in the same %[1]s and their parent %[3]ss:\n\n"+
 			"%[2]s",
-		node.Namespace, strings.Join(strs, "\n\n"), node.AbstractNamespace)
+		node.Namespace, strings.Join(strs, "\n\n"), strings.ToLower(string(node.AbstractNamespace)))
 }
 
 // Code implements Error

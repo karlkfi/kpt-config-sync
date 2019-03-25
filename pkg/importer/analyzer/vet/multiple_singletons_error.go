@@ -4,6 +4,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/nomos/pkg/kinds"
+
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -49,7 +51,7 @@ func (e MultipleSingletonsError) Error() string {
 	return status.Format(e,
 		"A directory may declare at most one %[1]q Resource:\n\n"+
 			"%[2]s",
-		gvk.String(), strings.Join(strs, "\n\n"))
+		kinds.ResourceString(gvk), strings.Join(strs, "\n\n"))
 }
 
 // Code implements Error

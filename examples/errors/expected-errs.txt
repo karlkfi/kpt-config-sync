@@ -10,7 +10,7 @@ version: v1
 kind: Namespace
 
 
-[2] KNV1007: Resource "illegal-clusterrole" illegally declared in an Abstract Namespace directory. Move this Resource to a Namespace directory:
+[2] KNV1007: Config `illegal-clusterrole` illegally declared in an abstract namespace directory. Move this config to a Namespace directory:
 
 source: namespaces/prod/illegal-resource-kind.yaml
 metadata.name: illegal-clusterrole
@@ -19,7 +19,7 @@ version: v1
 kind: ClusterRole
 
 
-[3] KNV1009: A config MUST either declare a metadata.namespace field exactly matching the directory containing the config, "prod-namespace", or leave the field blank:
+[3] KNV1009: A config MUST either declare a `metadata.namespace` field exactly matching the directory containing the config, "prod-namespace", or leave the field blank:
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
 namespace: illegal-namespace
@@ -29,7 +29,7 @@ version: v1
 kind: RoleBinding
 
 
-[4] KNV1010: Resources MUST NOT declare unsupported annotations starting with "configmanagement.gke.io/". Resource has offending annotations: "configmanagement.gke.io/unsupported"
+[4] KNV1010: Configs MUST NOT declare unsupported annotations starting with "configmanagement.gke.io/". The config has invalid annotations: "configmanagement.gke.io/unsupported"
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
 namespace: illegal-namespace
@@ -49,7 +49,7 @@ version: v1
 kind: RoleBinding
 
 
-[6] KNV1012: The NamespaceSelector Resource "sre-supported" MUST NOT have ClusterSelector annotation
+[6] KNV1012: The NamespaceSelector config "sre-supported" MUST NOT have ClusterSelector annotation
 
 
 [7] KNV1013: Resource "no-such-cluster-selector" MUST refer to an existing ClusterSelector, but has annotation configmanagement.gke.io/cluster-selector="nonexistent-selector" which maps to no declared ClusterSelector
@@ -72,7 +72,7 @@ version: v1
 kind: Namespace
 
 
-[11] KNV1020: A Namespace MUST declare metadata.name that matches the name of its directory.
+[11] KNV1020: A Namespace MUST declare `metadata.name` that matches the name of its directory.
 
 source: namespaces/dev/dev-namespace/namespace.yaml
 metadata.name: incorrect-name
@@ -84,7 +84,7 @@ expected metadata.name: dev-namespace
 
 
 
-[12] KNV1030: A directory may declare at most one "rbac.authorization.k8s.io/v1, Kind=RoleBinding" Resource:
+[12] KNV1030: A directory may declare at most one "apiVersion=rbac.authorization.k8s.io/v1, kind=RoleBinding" Resource:
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
 namespace: illegal-namespace
@@ -101,7 +101,7 @@ version: v1
 kind: RoleBinding
 
 
-[13] KNV1031: Resources must declare metadata.name:
+[13] KNV1031: Configs must declare `metadata.name`:
 
 source: namespaces/prod/prod-namespace/nameless-rolebinding.yaml
 metadata.name:

@@ -25,7 +25,7 @@ type NamespaceSelectorMayNotHaveAnnotation struct {
 // Error implements error.
 func (e NamespaceSelectorMayNotHaveAnnotation) Error() string {
 	// TODO(willbeason): Print information about the object so it can actually be found.
-	return status.Format(e, "The NamespaceSelector Resource %q MUST NOT have ClusterSelector annotation", e.Object.GetName())
+	return status.Format(e, "The NamespaceSelector config %q MUST NOT have ClusterSelector annotation", e.Object.GetName())
 }
 
 // Code implements Error

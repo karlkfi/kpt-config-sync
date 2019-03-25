@@ -13,7 +13,7 @@ const UnknownResourceInHierarchyConfigErrorCode = "1040"
 func init() {
 	status.Register(UnknownResourceInHierarchyConfigErrorCode, UnknownResourceInHierarchyConfigError{
 		HierarchyConfig: fakeHierarchyConfig{
-			Resource: hierarhcyConfig(),
+			Resource: hierarchyConfig(),
 			gk:       kinds.Repo().GroupKind(),
 		},
 	})
@@ -40,8 +40,8 @@ var _ id.ResourceError = &UnknownResourceInHierarchyConfigError{}
 // Error implements error
 func (e UnknownResourceInHierarchyConfigError) Error() string {
 	return status.Format(e,
-		"HierarchyConfig defines a Resource Kind that does not exist on cluster. "+
-			"Ensure the Group and Kind are spelled correctly.\n\n"+
+		"This HierarchyConfig defines a Resource Kind that does not exist on cluster. "+
+			"Ensure the Group and Kind are spelled correctly and any required CRD exists on the cluster.\n\n"+
 			"%[1]s",
 		id.PrintHierarchyConfig(e))
 }

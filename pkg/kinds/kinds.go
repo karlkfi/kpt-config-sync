@@ -1,6 +1,8 @@
 package kinds
 
 import (
+	"fmt"
+
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	oidcconfig "github.com/google/nomos/pkg/oidc/config"
 	appsv1 "k8s.io/api/apps/v1"
@@ -109,4 +111,9 @@ func HierarchyConfig() schema.GroupVersionKind {
 // HierarchicalQuota returns the canonical HierarchyConfig GroupVersionKind
 func HierarchicalQuota() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind("HierarchicalQuota")
+}
+
+// ResourceString returns a string describing the GroupVersionKind using fields specified in Kubernetes Objects.
+func ResourceString(gvk schema.GroupVersionKind) string {
+	return fmt.Sprintf("apiVersion=%s/%s, kind=%s", gvk.Group, gvk.Version, gvk.Kind)
 }

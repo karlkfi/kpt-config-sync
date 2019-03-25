@@ -3,7 +3,7 @@ package vet
 import (
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -15,7 +15,7 @@ const IllegalHierarchyModeErrorCode = "1042"
 func init() {
 	status.Register(IllegalHierarchyModeErrorCode, IllegalHierarchyModeError{
 		HierarchyConfig: fakeHierarchyConfig{
-			Resource: hierarhcyConfig(),
+			Resource: hierarchyConfig(),
 			gk:       kinds.Role().GroupKind(),
 		},
 		HierarchyMode: "invalid mode",

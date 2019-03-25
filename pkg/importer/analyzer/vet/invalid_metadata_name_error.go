@@ -26,7 +26,8 @@ var _ id.ResourceError = &InvalidMetadataNameError{}
 // Error implements error.
 func (e InvalidMetadataNameError) Error() string {
 	return status.Format(e,
-		"Resources MUST define a metadata.name which is a valid RFC1123 DNS subdomain. Rename or remove the Resource:\n\n"+
+		"Configs MUST define a `metadata.name` that is shorter than 254 characters, consists of lower case alphanumeric "+
+			"characters, '-' or '.', and must start and end with an alphanumeric character. Rename or remove the config:\n\n"+
 			"%[1]s",
 		id.PrintResource(e))
 }

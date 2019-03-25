@@ -25,7 +25,7 @@ var _ id.ResourceError = &IllegalKindInSystemError{}
 // Error implements error
 func (e IllegalKindInSystemError) Error() string {
 	return status.Format(e,
-		"Resources of this Kind may not be declared in %[2]s/:\n\n"+
+		"Configs of this Kind may not be declared in the `%[2]s` directory of the repo/:\n\n"+
 			"%[1]s",
 		id.PrintResource(e), repo.SystemDir, e.SlashPath)
 }

@@ -12,7 +12,7 @@ const UnsupportedResourceInHierarchyConfigErrorCode = "1041"
 func init() {
 	status.Register(UnsupportedResourceInHierarchyConfigErrorCode, UnsupportedResourceInHierarchyConfigError{
 		HierarchyConfig: fakeHierarchyConfig{
-			Resource: hierarhcyConfig(),
+			Resource: hierarchyConfig(),
 			gk:       kinds.Repo().GroupKind(),
 		},
 	})

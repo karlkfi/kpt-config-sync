@@ -25,7 +25,7 @@ var _ id.ResourceError = &IllegalKindInNamespacesError{}
 // Error implements error
 func (e IllegalKindInNamespacesError) Error() string {
 	return status.Format(e,
-		"Resources of the below Kind may not be declared in %[2]s/:\n\n"+
+		"Configs of the below Kind may not be declared in `%[2]s`/:\n\n"+
 			"%[1]s",
 		id.PrintResource(e), repo.NamespacesDir)
 }

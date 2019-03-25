@@ -1,7 +1,7 @@
 Found issues: 1 error(s)
 
 
-[1] KNV1024: Resources of this Kind may not be declared in system/:
+[1] KNV1024: Configs of this Kind may not be declared in the `system` directory of the repo/:
 
 source: system/namespace.yaml
 metadata.name: system

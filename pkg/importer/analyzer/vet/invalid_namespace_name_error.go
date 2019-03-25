@@ -30,7 +30,7 @@ var _ id.ResourceError = &InvalidNamespaceNameError{}
 // Error implements error
 func (e InvalidNamespaceNameError) Error() string {
 	return status.Format(e,
-		"A %[1]s MUST declare metadata.name that matches the name of its directory.\n\n"+
+		"A %[1]s MUST declare `metadata.name` that matches the name of its directory.\n\n"+
 			"%[2]s\n\n"+
 			"expected metadata.name: %[3]s\n",
 		node.Namespace, id.PrintResource(e), e.Expected)

@@ -1,7 +1,7 @@
 Found issues: 1 error(s)
 
 
-[1] KNV1030: A directory may declare at most one "configmanagement.gke.io/v1, Kind=Repo" Resource:
+[1] KNV1030: A directory may declare at most one "apiVersion=configmanagement.gke.io/v1, kind=Repo" Resource:
 
 source: system/repo-2.yaml
 metadata.name: repo-2

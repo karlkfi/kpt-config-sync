@@ -1,7 +1,7 @@
 Found issues: 2 error(s)
 
 
-[1] KNV1040: HierarchyConfig defines a Resource Kind that does not exist on cluster. Ensure the Group and Kind are spelled correctly.
+[1] KNV1040: This HierarchyConfig defines a Resource Kind that does not exist on cluster. Ensure the Group and Kind are spelled correctly and any required CRD exists on the cluster.
 
 source: system/invalid.yaml
 group: unknown.group.com

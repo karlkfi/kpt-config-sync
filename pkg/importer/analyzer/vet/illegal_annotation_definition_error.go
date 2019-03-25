@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -38,8 +38,8 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 	}
 	a := strings.Join(annotations2, ", ")
 	return status.Format(e,
-		"Resources MUST NOT declare unsupported annotations starting with %[3]q. "+
-			"Resource has offending annotations: %[1]s\n\n"+
+		"Configs MUST NOT declare unsupported annotations starting with %[3]q. "+
+			"The config has invalid annotations: %[1]s\n\n"+
 			"%[2]s",
 		a, id.PrintResource(e), v1.ConfigManagementPrefix)
 }

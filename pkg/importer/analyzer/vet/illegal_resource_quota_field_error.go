@@ -25,7 +25,7 @@ type IllegalResourceQuotaFieldError struct {
 // Error implements error.
 func (e IllegalResourceQuotaFieldError) Error() string {
 	return status.Format(e,
-		"ResourceQuota objects MUST NOT set scope when hierarchyMode is set to hierarchicalQuota. "+
+		"A ResourceQuota config MUST NOT set scope when hierarchyMode is set to hierarchicalQuota. "+
 			"Remove illegal field %[1]s from:\n\n%[2]s",
 		e.Field, id.PrintResource(e.Resource))
 }

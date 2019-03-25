@@ -6,7 +6,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/rbac/v1alpha1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func clusterRole() *ast.FileObject {
@@ -69,7 +69,7 @@ func namespace(path cmpath.Path) *ast.FileObject {
 	}
 }
 
-func hierarhcyConfig() *ast.FileObject {
+func hierarchyConfig() *ast.FileObject {
 	return &ast.FileObject{
 		Path: cmpath.FromSlash("system/hc.yaml"),
 		Object: &corev1.Namespace{

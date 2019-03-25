@@ -1,6 +1,8 @@
 package vet
 
 import (
+	"strings"
+
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -26,10 +28,10 @@ var _ id.ResourceError = &IllegalAbstractNamespaceObjectKindError{}
 // Error implements error.
 func (e IllegalAbstractNamespaceObjectKindError) Error() string {
 	return status.Format(e,
-		"Resource %[4]q illegally declared in an %[1]s directory. "+
-			"Move this Resource to a %[2]s directory:\n\n"+
+		"Config `%[4]s` illegally declared in an %[1]s directory. "+
+			"Move this config to a %[2]s directory:\n\n"+
 			"%[3]s",
-		node.AbstractNamespace, node.Namespace, id.PrintResource(e), e.Name())
+		strings.ToLower(string(node.AbstractNamespace)), node.Namespace, id.PrintResource(e), e.Name())
 }
 
 // Code implements Error

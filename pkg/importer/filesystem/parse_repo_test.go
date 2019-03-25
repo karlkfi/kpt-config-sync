@@ -86,6 +86,7 @@ func (tc *testCase) Run(t *testing.T) {
 		t.Errorf("diff:\n%v", diff)
 		t.Errorf(`If this change is correct, run:
 make build
-%[1]s vet --path=%[2]v --validate=false 2> %[2]v/expected-errs.txt`, configmanagement.CLIName, *tc)
+.output/go/bin/linux_amd64/%[1]s vet --path=%[2]v --validate=false  2>&1 > /dev/null 2> %[2]v/expected-errs.txt
+`, configmanagement.CLIName, *tc)
 	}
 }

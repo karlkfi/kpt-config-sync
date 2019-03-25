@@ -24,7 +24,8 @@ var _ status.PathError = &InvalidDirectoryNameError{}
 // Error implements error.
 func (e InvalidDirectoryNameError) Error() string {
 	return status.Format(e,
-		"Directories MUST be a valid RFC1123 DNS label. Rename or remove directory:\n\n"+
+		"Directory names must have fewer than 64 characters, consist of lower case alphanumeric characters or '-', and must "+
+			"start and end with an alphanumeric character. Rename or remove directory:\n\n"+
 			"path: %[1]s\n"+
 			"name: %[2]s",
 		e.Dir.SlashPath(), e.Dir.Base())

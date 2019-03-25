@@ -1,6 +1,7 @@
 package vet
 
 import (
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -24,9 +25,9 @@ var _ id.ResourceError = &UnsupportedObjectError{}
 // Error implements error.
 func (e UnsupportedObjectError) Error() string {
 	return status.Format(e,
-		"Syncing is not supported for this resource. To fix, remove this resource from the repo.\n\n"+
+		"%[2]s cannot configure this resource. To fix, remove this resource from the repo.\n\n"+
 			"%[1]s",
-		id.PrintResource(e))
+		id.PrintResource(e), configmanagement.ProductName)
 }
 
 // Code implements Error
