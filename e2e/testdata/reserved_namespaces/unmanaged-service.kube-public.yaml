@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: some-other-service
+  namespace: kube-public
+spec:
+  sessionAffinity: ClientIP
+  selector:
+    app: some-other-service
+  ports:
+  - name: http
+    protocol: TCP
+    port: 81
+    targetPort: 9377

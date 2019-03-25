@@ -210,7 +210,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	}
 	switch cfgState {
 	case namespaceConfigStateNotFound:
-		if namespaceutil.IsManageable(name) {
+		if namespaceutil.IsManageableSystem(name) {
 			// Special handling for manageable system namespaces: do not remove
 			// the namespace itself as that is not allowed.  Instead, manage
 			// all policies inside as if the namespace has no managed

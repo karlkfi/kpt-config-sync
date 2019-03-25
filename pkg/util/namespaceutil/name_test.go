@@ -54,8 +54,8 @@ func TestIsReserved(t *testing.T) {
 	}{
 		{"foo-bar", false},
 		{"kube-system", false},
-		{"kube-public", true},
-		{"kube-foo", true},
+		{"kube-public", false},
+		{"kube-foo", false},
 		{"default", false},
 		{configmanagement.ControllerNamespace, true},
 	} {
@@ -63,6 +63,52 @@ func TestIsReserved(t *testing.T) {
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 			reserved := IsReserved(testcase.name)
+			if reserved != testcase.reserved {
+				t.Errorf("Expected %v got %v", testcase.reserved, reserved)
+			}
+		})
+	}
+}
+
+func TestIsSystem(t *testing.T) {
+	for _, testcase := range []struct {
+		name     string
+		reserved bool
+	}{
+		{"default", false},
+		{"foo-bar", false},
+		{"kube-foo", true},
+		{"kube-public", true},
+		{"kube-system", true},
+		{configmanagement.ControllerNamespace, false},
+	} {
+		testcase := testcase
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			reserved := IsSystem(testcase.name)
+			if reserved != testcase.reserved {
+				t.Errorf("Expected %v got %v", testcase.reserved, reserved)
+			}
+		})
+	}
+}
+
+func TestIsManageableSystem(t *testing.T) {
+	for _, testcase := range []struct {
+		name     string
+		reserved bool
+	}{
+		{"default", true},
+		{"foo-bar", false},
+		{"kube-foo", false},
+		{"kube-public", true},
+		{"kube-system", true},
+		{configmanagement.ControllerNamespace, false},
+	} {
+		testcase := testcase
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			reserved := IsManageableSystem(testcase.name)
 			if reserved != testcase.reserved {
 				t.Errorf("Expected %v got %v", testcase.reserved, reserved)
 			}

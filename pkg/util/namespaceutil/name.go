@@ -28,7 +28,7 @@ var (
 		configmanagement.ControllerNamespace: true,
 	}
 
-	reservedPrefix = "kube-"
+	systemPrefix = "kube-"
 )
 
 // IsInvalid returns an error if the namespace name is reserved by the system
@@ -40,27 +40,19 @@ func IsInvalid(name string) bool {
 
 // IsSystem returns true if the namespace name denotes a system namespace
 func IsSystem(ns string) bool {
-	return ns == "kube-system"
+	return strings.HasPrefix(ns, systemPrefix)
 }
 
 // IsReserved returns true if the namespace is reserved.
 func IsReserved(name string) bool {
-	if reservedNamespaces[name] {
-		return true
-	}
-	if name == "kube-system" {
-		// Cut kube-system out from the reserved namespaces.
-		return false
-	}
-	if strings.HasPrefix(name, reservedPrefix) {
-		return true
-	}
-
-	return false
+	return reservedNamespaces[name]
 }
 
-// IsManageable returns true if ns is a system namespace that may be managed by
-// Nomos.
-func IsManageable(ns string) bool {
-	return ns == "default" || ns == "kube-system"
+// IsManageableSystem returns true if ns is a system namespace that may be
+// managed by Nomos.
+func IsManageableSystem(ns string) bool {
+	// default is the "" namespace.
+	// kube-system runs kubernetes system pods.
+	// kube-public is a namespace created by kubeadm.
+	return ns == "default" || ns == "kube-system" || ns == "kube-public"
 }

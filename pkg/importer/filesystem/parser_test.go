@@ -1318,11 +1318,10 @@ spec:
 		expectedClusterConfig: createClusterConfig(),
 	},
 	{
-		testName: "Dir name reserved 1",
+		testName: "kube-* is a system dir but is allowed",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/kube-something/ns.yaml": templateData{Name: "kube-something"}.apply(aNamespace),
 		},
-		expectedErrorCodes: []string{vet.ReservedDirectoryNameErrorCode},
 	},
 	{
 		testName: "kube-system is a system dir but is allowed",
