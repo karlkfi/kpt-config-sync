@@ -22,6 +22,7 @@ kind: ClusterRole
 [3] KNV1009: A config MUST either declare a metadata.namespace field exactly matching the directory containing the config, "prod-namespace", or leave the field blank:
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+namespace: illegal-namespace
 metadata.name: kesim-rolebinding
 group: rbac.authorization.k8s.io
 version: v1
@@ -31,6 +32,7 @@ kind: RoleBinding
 [4] KNV1010: Resources MUST NOT declare unsupported annotations starting with "configmanagement.gke.io/". Resource has offending annotations: "configmanagement.gke.io/unsupported"
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+namespace: illegal-namespace
 metadata.name: kesim-rolebinding
 group: rbac.authorization.k8s.io
 version: v1
@@ -40,6 +42,7 @@ kind: RoleBinding
 [5] KNV1011: Resources MUST NOT declare labels starting with "configmanagement.gke.io/". Below Resource declares these offending labels: "configmanagement.gke.io/illegal-label", "configmanagement.gke.io/illegal-label-2"
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+namespace: illegal-namespace
 metadata.name: kesim-rolebinding
 group: rbac.authorization.k8s.io
 version: v1
@@ -84,12 +87,14 @@ expected metadata.name: dev-namespace
 [12] KNV1030: A directory may declare at most one "rbac.authorization.k8s.io/v1, Kind=RoleBinding" Resource:
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+namespace: illegal-namespace
 metadata.name: kesim-rolebinding
 group: rbac.authorization.k8s.io
 version: v1
 kind: RoleBinding
 
 source: namespaces/prod/prod-namespace/kesim-rolebinding.yaml
+namespace: illegal-namespace
 metadata.name: kesim-rolebinding
 group: rbac.authorization.k8s.io
 version: v1

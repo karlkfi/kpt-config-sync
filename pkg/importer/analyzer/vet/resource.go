@@ -10,6 +10,7 @@ import (
 // documentation or testing.
 type resourceID struct {
 	source           string
+	namespace        string
 	name             string
 	groupVersionKind schema.GroupVersionKind
 }
@@ -34,6 +35,11 @@ func (r resourceID) Dir() cmpath.Path {
 // Name implements Resource.
 func (r resourceID) Name() string {
 	return r.name
+}
+
+// Namespace implements Resource.
+func (r resourceID) Namespace() string {
+	return r.namespace
 }
 
 // GroupVersionKind implements Resource.

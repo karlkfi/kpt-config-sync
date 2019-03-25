@@ -67,6 +67,11 @@ func (o *FileObject) Name() string {
 	return o.MetaObject().GetName()
 }
 
+// Namespace returns the namespace of the object, or empty string if there is none.
+func (o *FileObject) Namespace() string {
+	return o.MetaObject().GetNamespace()
+}
+
 // Root represents a set of declared policies, configuration for how those policies will be
 // interpreted, and information regarding where those policies came from.
 type Root struct {
