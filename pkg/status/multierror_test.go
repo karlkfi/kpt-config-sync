@@ -7,7 +7,7 @@ import (
 )
 
 var errFoo = UndocumentedError("foo")
-var errBar = apiServerError{errors.New("bar")}
+var errBar = apiServerError{err: errors.New("bar")}
 var errBaz = UndocumentedError("baz")
 
 var errFooRaw = errors.New("raw foo")

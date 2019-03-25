@@ -7,10 +7,14 @@ source: system/invalid.yaml
 group: unknown.group.com
 kind: Unknown
 
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1040
+
 
 [2] KNV1041: This Resource Kind MUST NOT be declared in a HierarchyConfig:
 
 source: system/invalid.yaml
 group: configmanagement.gke.io
 kind: NamespaceConfig
+
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1041
 

@@ -36,7 +36,7 @@ func (e MultipleSingletonsError) Resources() []Resource {
 
 // MultipleSingletonsWrap returns a MultipleSingletonsError wrapping the given Resources.
 func MultipleSingletonsWrap(resources ...Resource) MultipleSingletonsError {
-	return MultipleSingletonsError{resources}
+	return MultipleSingletonsError{Duplicates: resources}
 }
 
 func resourceName(dups []Resource) string {

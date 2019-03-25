@@ -2,7 +2,14 @@ package status
 
 import (
 	"fmt"
+	"strings"
 )
+
+const urlBase = "https://cloud.google.com/csp-config-management/docs/errors#knv"
+
+func url(err Error) string {
+	return urlBase + err.Code()
+}
 
 // Error defines a Kubernetes Nomos Vet error
 // These are GKE Config Management directory errors which are shown to the user and documented.
@@ -20,7 +27,11 @@ var errs = map[string]Error{
 
 // Format formats the start of error messages consistently.
 func Format(err Error, format string, a ...interface{}) string {
-	return fmt.Sprintf("KNV%s: ", err.Code()) + fmt.Sprintf(format, a...)
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("KNV%s: ", err.Code()))
+	sb.WriteString(fmt.Sprintf(format, a...))
+	sb.WriteString(fmt.Sprintf("\n\nFor more information, see %s", url(err)))
+	return sb.String()
 }
 
 // PathError defines a status error associated with one or more path-identifiable locations in the

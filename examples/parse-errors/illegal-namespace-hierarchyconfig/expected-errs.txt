@@ -7,3 +7,5 @@ source: system/config.yaml
 group:
 kind: Namespace
 
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1041
+

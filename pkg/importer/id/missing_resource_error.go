@@ -39,5 +39,5 @@ func (m MissingResourceError) Resources() []Resource {
 
 // MissingResourceWrap returns a MissingResourceError wrapping the given error and Resources.
 func MissingResourceWrap(err error, msg string, resources ...Resource) MissingResourceError {
-	return MissingResourceError{errors.Wrap(err, msg), resources}
+	return MissingResourceError{err: errors.Wrap(err, msg), resources: resources}
 }

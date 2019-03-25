@@ -9,6 +9,8 @@ group:
 version: v1
 kind: Namespace
 
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1004
+
 
 [2] KNV1007: Config `illegal-clusterrole` illegally declared in an abstract namespace directory. Move this config to a Namespace directory:
 
@@ -17,6 +19,8 @@ metadata.name: illegal-clusterrole
 group: rbac.authorization.k8s.io
 version: v1
 kind: ClusterRole
+
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1007
 
 
 [3] KNV1009: A config MUST either declare a `metadata.namespace` field exactly matching the directory containing the config, "prod-namespace", or leave the field blank:
@@ -28,6 +32,8 @@ group: rbac.authorization.k8s.io
 version: v1
 kind: RoleBinding
 
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1009
+
 
 [4] KNV1010: Configs MUST NOT declare unsupported annotations starting with "configmanagement.gke.io/". The config has invalid annotations: "configmanagement.gke.io/unsupported"
 
@@ -37,6 +43,8 @@ metadata.name: kesim-rolebinding
 group: rbac.authorization.k8s.io
 version: v1
 kind: RoleBinding
+
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1010
 
 
 [5] KNV1011: Resources MUST NOT declare labels starting with "configmanagement.gke.io/". Below Resource declares these offending labels: "configmanagement.gke.io/illegal-label", "configmanagement.gke.io/illegal-label-2"
@@ -48,19 +56,29 @@ group: rbac.authorization.k8s.io
 version: v1
 kind: RoleBinding
 
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1011
+
 
 [6] KNV1012: The NamespaceSelector config "sre-supported" MUST NOT have ClusterSelector annotation
+
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1012
 
 
 [7] KNV1013: Resource "no-such-cluster-selector" MUST refer to an existing ClusterSelector, but has annotation configmanagement.gke.io/cluster-selector="nonexistent-selector" which maps to no declared ClusterSelector
 
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1013
+
 
 [8] KNV1013: Resource "sre-supported" MUST refer to an existing ClusterSelector, but has annotation configmanagement.gke.io/cluster-selector="illegal-cluster-selector-annotation" which maps to no declared ClusterSelector
+
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1013
 
 
 [9] KNV1018: cluster/ directory MUST NOT have subdirectories.
 
 path: cluster/illegal-cluster-subdir
+
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1018
 
 
 [10] KNV1019: Namespaces MUST be declared in subdirectories of namespaces/. Create a subdirectory for Namespaces declared in:
@@ -70,6 +88,8 @@ metadata.name: namespaces
 group:
 version: v1
 kind: Namespace
+
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1019
 
 
 [11] KNV1020: A Namespace MUST declare `metadata.name` that matches the name of its directory.
@@ -82,6 +102,8 @@ kind: Namespace
 
 expected metadata.name: dev-namespace
 
+
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1020
 
 
 [12] KNV1030: A directory may declare at most one "apiVersion=rbac.authorization.k8s.io/v1, kind=RoleBinding" Resource:
@@ -100,6 +122,8 @@ group: rbac.authorization.k8s.io
 version: v1
 kind: RoleBinding
 
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1030
+
 
 [13] KNV1031: Configs must declare `metadata.name`:
 
@@ -108,4 +132,6 @@ metadata.name:
 group: rbac.authorization.k8s.io
 version: v1
 kind: RoleBinding
+
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1031
 

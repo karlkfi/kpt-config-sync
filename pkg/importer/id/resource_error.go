@@ -56,5 +56,5 @@ func (r resourceError) Resources() []Resource {
 
 // ResourceWrap returns a ResourceError wrapping the given error and Resources.
 func ResourceWrap(err error, msg string, resources ...Resource) ResourceError {
-	return resourceError{errors.Wrap(err, msg), resources}
+	return resourceError{err: errors.Wrap(err, msg), resources: resources}
 }

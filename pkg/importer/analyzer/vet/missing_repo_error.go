@@ -13,7 +13,8 @@ func init() {
 }
 
 // MissingRepoError reports that there is no Repo definition in system/
-type MissingRepoError struct{}
+type MissingRepoError struct {
+}
 
 var _ status.PathError = &MissingRepoError{}
 
