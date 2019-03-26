@@ -105,9 +105,8 @@ func AddMetaController(mgr manager.Manager, stopCh <-chan struct{}) error {
 			startErr := <-startErrCh
 			if startErr != nil {
 				// genericResourceManager could not successfully start, so we must clear its internal state before restarting.
-				glog.Errorf("Error starting GenericResource controllers, restarting: %v", startErr)
+				glog.Errorf("Error starting NamespaceConfig / ClusterConfig controllers, restarting: %v", startErr)
 
-				reconciler.genericResourceManager.Clear()
 				// We always list all of the Syncs, so we can just send an empty event without a named resource.
 				managerRestartCh <- event.GenericEvent{Meta: &metav1.ObjectMeta{}}
 			}

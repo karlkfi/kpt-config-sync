@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -56,8 +56,8 @@ type MetaReconciler struct {
 	cache cache.Cache
 	// discoveryClient is used to look up versions on the cluster for the GroupKinds in the Syncs being reconciled.
 	discoveryClient discovery.DiscoveryInterface
-	// genericResourceManager is the manager for all sync-enabled resources.
-	genericResourceManager syncermanager.RestartableManager
+	// subManager is responsible for starting/restarting all controllers that depend on Syncs.
+	subManager syncermanager.RestartableManager
 	// mgrStartErrCh is used to listen for errors when (re)starting genericResourceManager.
 	mgrStartErrCh chan error
 	// clientFactory returns a new dynamic client.
@@ -80,17 +80,17 @@ func NewMetaReconciler(
 	}
 
 	return &MetaReconciler{
-		client:                 client,
-		cache:                  cache,
-		clientFactory:          clientFactory,
-		genericResourceManager: syncermanager.NewGenericResourceManager(mgr, cfg),
-		discoveryClient:        dc,
-		mgrStartErrCh:          errCh,
+		client:          client,
+		cache:           cache,
+		clientFactory:   clientFactory,
+		subManager:      syncermanager.NewSubManager(mgr, cfg, syncermanager.NewSyncAwareBuilder(), errCh),
+		discoveryClient: dc,
+		mgrStartErrCh:   errCh,
 	}, nil
 }
 
 // Reconcile is the Reconcile callback for MetaReconciler.
-// It looks at all Syncs in the cluster and restarts the GenericResourceManager if its internal state doesn't match the cluster
+// It looks at all Syncs in the cluster and restarts the SyncAwareBuilder if its internal state doesn't match the cluster
 // state.
 func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
@@ -109,7 +109,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 			// Check for finalizer then finalize if needed.
 			toFinalize = append(toFinalize, &syncs.Items[idx])
 		} else {
-			// Anything not pending delete should be enabled in GenericResourceManager.
+			// Anything not pending delete should be enabled in SyncAwareBuilder.
 			enabled = append(enabled, s.DeepCopy())
 		}
 	}
@@ -124,10 +124,9 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	// Check if the set of sync-enabled resources has changed,
-	// restart the GenericResourceManager to sync the appropriate resources.
-	if err := r.genericResourceManager.UpdateSyncResources(enabled, apirs, r.mgrStartErrCh, !r.subControllersStarted); err != nil {
-		r.genericResourceManager.Clear()
-		glog.Errorf("Could not start GenericResourceManager: %v", err)
+	// restart the SyncAwareBuilder to sync the appropriate resources.
+	if err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), apirs); err != nil {
+		glog.Errorf("Could not start SyncAwareBuilder: %v", err)
 		return reconcile.Result{}, err
 	}
 	r.subControllersStarted = true

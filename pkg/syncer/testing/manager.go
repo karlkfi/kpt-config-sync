@@ -8,8 +8,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	discovery "github.com/google/nomos/pkg/util/discovery"
+	schema "k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // MockRestartableManager is a mock of RestartableManager interface
@@ -35,24 +35,14 @@ func (m *MockRestartableManager) EXPECT() *MockRestartableManagerMockRecorder {
 	return m.recorder
 }
 
-// Clear mocks base method
-func (m *MockRestartableManager) Clear() {
-	m.ctrl.Call(m, "Clear")
-}
-
-// Clear indicates an expected call of Clear
-func (mr *MockRestartableManagerMockRecorder) Clear() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clear", reflect.TypeOf((*MockRestartableManager)(nil).Clear))
-}
-
-// UpdateSyncResources mocks base method
-func (m *MockRestartableManager) UpdateSyncResources(arg0 []*v1.Sync, arg1 *discovery.APIInfo, arg2 chan error, arg3 bool) error {
-	ret := m.ctrl.Call(m, "UpdateSyncResources", arg0, arg1, arg2, arg3)
+// Restart mocks base method
+func (m *MockRestartableManager) Restart(arg0 map[schema.GroupVersionKind]bool, arg1 *discovery.APIInfo) error {
+	ret := m.ctrl.Call(m, "Restart", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// UpdateSyncResources indicates an expected call of UpdateSyncResources
-func (mr *MockRestartableManagerMockRecorder) UpdateSyncResources(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSyncResources", reflect.TypeOf((*MockRestartableManager)(nil).UpdateSyncResources), arg0, arg1, arg2, arg3)
+// Restart indicates an expected call of Restart
+func (mr *MockRestartableManagerMockRecorder) Restart(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockRestartableManager)(nil).Restart), arg0, arg1)
 }

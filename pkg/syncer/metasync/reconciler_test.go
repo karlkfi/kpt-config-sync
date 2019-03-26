@@ -127,10 +127,10 @@ func TestReconcile(t *testing.T) {
 			mockManager := syncertesting.NewMockRestartableManager(mockCtrl)
 
 			testReconciler := &MetaReconciler{
-				client:                 syncerclient.New(mockClient),
-				cache:                  mockCache,
-				discoveryClient:        mockDiscovery,
-				genericResourceManager: mockManager,
+				client:          syncerclient.New(mockClient),
+				cache:           mockCache,
+				discoveryClient: mockDiscovery,
+				subManager:      mockManager,
 				clientFactory: func() (client.Client, error) {
 					return mockClient, nil
 				},
@@ -178,7 +178,7 @@ func TestReconcile(t *testing.T) {
 					},
 				}, nil)
 
-			mockManager.EXPECT().UpdateSyncResources(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+			mockManager.EXPECT().Restart(gomock.Any(), gomock.Any())
 			for _, wantUpdateListDelete := range tc.wantUpdateList {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
