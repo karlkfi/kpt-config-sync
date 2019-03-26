@@ -350,7 +350,7 @@ function resource::delete() {
     return 1
   fi
 
-  local names=""
+  local names=()
   if [[ "$annotation" != "" ]]; then
     local key=""
     local value=""
@@ -363,6 +363,13 @@ function resource::delete() {
 
   if [ ${#names[@]} -eq 0 ]; then
     return 0
+  fi
+
+  if [[ "${resource}" == "namespace" || "${resource}" == "namespaces" ]]; then
+    # Remove "default" and "kube-system" from the list of resources to delete,
+    # because they can't be removed.
+    names=( "${names[@]/default}" )
+    names=( "${names[@]/kube-system}" )
   fi
 
   local deletecmd=("kubectl" "delete" "$resource")

@@ -12,13 +12,29 @@
 FROM golang:1.11-alpine AS build-base
 RUN apk add bash ca-certificates git gcc g++ libc-dev
 
+# We don't use or support modules for the time being.
+ENV GO111MODULE=off
+# Build static binaries only.
+ENV CGO_ENABLED=0
+
 ENV TAP2JUNIT_RELEASE=v0.0.4
 RUN go get github.com/filmil/tap2junit/...
 WORKDIR /go/src/github.com/filmil/tap2junit
 RUN git checkout ${TAP2JUNIT_RELEASE}
+RUN go install github.com/filmil/tap2junit/...
 
-# Produce a binary tap2junit in /go/bin/...
-RUN CGO_ENABLED=0 go install github.com/filmil/tap2junit/...
+ENV GOTOPT2_RELEASE=v0.1.1
+RUN go get github.com/filmil/gotopt2/...
+WORKDIR /go/src/github.com/filmil/gotopt2
+RUN git checkout ${GOTOPT2_RELEASE}
+RUN go install github.com/filmil/gotopt2/...
+
+ENV KIND_RELEASE=0.2.0
+RUN go get -u sigs.k8s.io/kind
+WORKDIR /go/src/sigs.k8s.io/kind
+RUN git checkout ${KIND_RELEASE}
+
+RUN CGO_ENABLED=0 GO111MODULE=off go install sigs.k8s.io/kind
 
 # Build intermediate image for gcloud / kubectl
 FROM ubuntu:16.04 as gcloud-install
