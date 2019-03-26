@@ -108,7 +108,7 @@ RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add 
 COPY --from=gcloud-install /opt/gcloud/google-cloud-sdk /opt/gcloud/google-cloud-sdk
 ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
 
-COPY --from=build-base /go/bin/tap2junit /opt
+COPY --from=build-base /go/bin/* /opt/
 
 ENV GIT_CONFIG_NOGLOBAL 1
 ENV GIT_CONFIG_NOSYSTEM 1

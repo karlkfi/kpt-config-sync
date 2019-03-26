@@ -53,10 +53,13 @@ image-e2e-tests: \
 		-t gcr.io/stolos-dev/e2e-tests:test-e2e-latest \
 		$(DOCKER_BUILD_QUIET)
 
+GOTOPT2_BINARY := docker run -i -u $(UID):$(GID) $(BUILDENV_IMAGE) /bin/gotopt2
+
 test-e2e-run-git:
 	@echo "+++ Running e2e tests: git"
 	@echo $(E2E_FLAGS)
-	@e2e/e2e.sh \
+	@env GOTOPT2_BINARY="$(GOTOPT2_BINARY)" \
+		 e2e/e2e.sh \
 		--TEMP_OUTPUT_DIR "$(TEMP_OUTPUT_DIR)" \
 		--OUTPUT_DIR "$(OUTPUT_DIR)" \
 		$(TEST_E2E_RUN_FLAGS) \

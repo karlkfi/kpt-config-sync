@@ -91,7 +91,8 @@ function set_up_env_minimal() {
   TEST_LOG_REPO=/tmp/nomos-test
   POD_ID=$(kubectl get pods -n=config-management-system-test -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
   mkdir -p ${TEST_LOG_REPO}
-  kubectl -n=config-management-system-test port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > ${TEST_LOG_REPO}/port-forward.log &
+  kubectl -n=config-management-system-test port-forward "${POD_ID}" \
+    "${FWD_SSH_PORT}:22" > ${TEST_LOG_REPO}/port-forward.log &
   local pid=$!
   local start_time
   start_time=$(date +%s)
@@ -180,7 +181,7 @@ function main() {
     export E2E_TEST_FILTER="${testcase_filter}"
   fi
 
-  if [ -n "${timing+x}" ]; then
+  if ${timing}; then
     export TIMING="${timing}"
   fi
 
@@ -245,107 +246,84 @@ setup_prober_cred() {
     "${gcp_cluster_name}" --zone us-central1-a --project stolos-dev
 }
 
-
 echo "e2e/setup.sh: executed with args" "$@"
 
-clean=false
-file_filter=".*"
-preclean=false
-run_tests=false
-setup=false
-stable_channel=false
-tap=false
+# gotopt2 binary is built into the e2e container.
+readonly gotopt2_result=$(/opt/gotopt2 "${@}" << EOF
+flags:
+- name: "tap"
+  type: bool
+  help: "If set, produces test output in TAP format"
+- name: "preclean"
+  type: bool
+  help: "If set, executes the 'preclean' step of the setup"
+- name: "clean"
+  type: bool
+  help: "If set, executes the 'clean' step of the setup"
+- name: "setup"
+  type: bool
+  help: "If set, executes the 'setup' step of the setup - installs Nomos"
+- name: "test"
+  type: bool
+  help: "If set, executes the 'test' step of the setup - runs tests"
+- name: "timing"
+  type: bool
+  help: "If set, prints test timing in the testing output"
+- name: "stable_channel"
+  type: bool
+  help: "If set, uses stable operator channel for testing"
+- name: "test_filter"
+  type: string
+  help: "A regex defining the test names of tests to execute"
+- name: "file_filter"
+  type: string
+  help: "A regex defining the file names of tests to execute"
+  default: ".*"
+- name: "gcp-prober-cred"
+  type: string
+  help: "If set, the supplied credentials file will be used to set up teh identity of the test runner. Otherwise defaults to whatever user is the current default in gcloud and kubectl config."
+- name: "gcp-cluster-name"
+  type: string
+  help: "The name of the GCP cluster to use for testing.  This is used to obtain cluster credentials at the start of the installation process"
+  default: "$USER-cluster-1"
+- name: "skip_installation"
+  type: bool
+  help: "If set, skips the installation step"
+- name: "create-ssh-key"
+  type: bool
+  help: "If set, the setup will create a new ssh key to use in the tests"
+  default: false
+EOF
+)
+eval "${gotopt2_result}"
 
-# If set, the tests will skip the installation.
+readonly tap="${gotopt2_tap:-false}"
+readonly preclean="${gotopt2_preclean:-false}"
+readonly clean="${gotopt2_clean:-false}"
+readonly setup="${gotopt2_setup:-false}"
+readonly timing="${gotopt2_timing:-false}"
+readonly stable_channel="${gotopt2_stable_channel:-false}"
+# TODO(filmil): remove the need to disable lint checks here and elsewhere.
+# shellcheck disable=SC2154
+readonly test_filter="${gotopt2_test_filter}"
+export E2E_TEST_FILTER="${test_filter}"
+readonly skip_installation="${gotopt2_skip_installation:-false}"
+readonly create_ssh_key="${gotopt2_create_ssh_key:-false}"
+# shellcheck disable=SC2154
+readonly gcp_cluster_name="${gotopt2_gcp_cluster_name}"
+# shellcheck disable=SC2154
+readonly gcp_prober_cred="${gotopt2_gcp_prober_cred}"
+readonly run_tests="${gotopt2_test:-false}"
+
 do_installation=true
-
-# If set, the supplied credentials file will be used to set up the identity
-# of the test runner.  Otherwise defaults to whatever user is the current
-# default in gcloud and kubectl config.
-gcp_prober_cred=""
-
-# The name of the cluster to use for testing by default.    This is used to
-# obtain cluster credentials at start of the installation process.
-gcp_cluster_name="$USER-cluster-1"
-
-# If set, the setup will create a new ssh key to use in the tests.
-create_ssh_key=false
-
-while [[ $# -gt 0 ]]; do
-  arg=${1}
-  shift
-  case ${arg} in
-    --tap)
-      tap=true
-    ;;
-
-    --preclean)
-      preclean=true
-    ;;
-
-    --clean)
-      clean=true
-    ;;
-
-    --setup)
-      setup=true
-    ;;
-
-    --test)
-      run_tests=true
-    ;;
-
-    --timing)
-      timing=true
-      tap=true
-    ;;
-
-    --stable_channel)
-      stable_channel=true
-    ;;
-
-    --test_filter)
-      test_filter="${1}"
-      export E2E_TEST_FILTER="${test_filter}"
-      shift
-    ;;
-    --test_filter=*)
-      test_filter="$(sed -e 's/[^=]*=//' <<< "$arg")"
-      export E2E_TEST_FILTER="${test_filter}"
-    ;;
-
-    --file_filter)
-      file_filter="${1}"
-      shift
-    ;;
-    --file_filter=*)
-      file_filter="$(sed -e 's/[^=]*=//' <<< "$arg")"
-    ;;
-
-    --gcp-prober-cred)
-      gcp_prober_cred="${1}"
-      shift
-    ;;
-    --gcp-cluster-name)
-      gcp_cluster_name="${1}"
-      shift
-    ;;
-    --skip-installation)
-      do_installation=false
-    ;;
-    --create-ssh-key)
-      create_ssh_key=true
-    ;;
-    *)
-      echo "setup.sh: unrecognized arg $arg"
-      exit 1
-    ;;
-  esac
-done
-
-if [[ "${gcp_prober_cred}" != "" ]]; then
-  setup_prober_cred "${gcp_prober_cred}"
+if [[ "${skip_installation}" == "true" ]]; then
+  do_installation=true
 fi
+
+if [[ "${gotopt2_gcp_prober_cred}" != "" ]]; then
+  setup_prober_cred "${gotopt2_gcp_prober_cred}"
+fi
+
 
 if ${create_ssh_key}; then
   install::create_keypair
@@ -369,7 +347,8 @@ fi
 trap post_clean EXIT
 
 if $run_tests; then
-  main "${file_filter}"
+  # shellcheck disable=SC2154
+  main "${gotopt2_file_filter}"
 else
   echo "Skipping tests!"
 fi

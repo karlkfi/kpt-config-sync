@@ -6,54 +6,39 @@
 
 set -euo pipefail
 
-# If set, the runner will refrain from importing any files from outside of the
-# container that uses it.
-hermetic=false
+[ -z "${GOTOPT2_BINARY}" ] && (echo "no gotopt2"; exit 1)
+readonly gotopt2_output=$(${GOTOPT2_BINARY} "${@}" <<EOF
+flags:
+- name: "TEMP_OUTPUT_DIR"
+  type: string
+  help: "The directory for temporary output"
+- name: "OUTPUT_DIR"
+  type: string
+  help: "The directory for temporary output"
+- name: "gcs-prober-cred"
+  type: string
+  help: "If set, we will copy the prober creds into the container from gcs.  This is useful in hermetic tests where one can not rely on the credentials being mounted into the container"
+- name: "mounted-prober-cred"
+  type: string
+  help: "If set, we will mount the prober creds path into the test runner from here"
+- name: "hermetic"
+  type: bool
+  help: "If set, the runner will refrain from importing any files from outside of the container that uses it"
+EOF
+)
+eval "${gotopt2_output}"
 
-# If set, we will copy the prober creds into the container from gcs.  This is
-# useful in hermetic tests where one can not rely on the credentials being
-# mounted into the container.
-gcs_prober_cred=""
-
-# If set, we will mount the prober creds path into the test runner from here.
-mounted_prober_cred=""
-
-OUTPUT_DIR=""
-TEMP_OUTPUT_DIR=""
-while (( $# > 0 )); do
-  arg=${1}
-  shift
-  case ${arg} in
-    --TEMP_OUTPUT_DIR)
-      TEMP_OUTPUT_DIR="${1:-}"
-      shift
-    ;;
-    --OUTPUT_DIR)
-      OUTPUT_DIR="${1:-}"
-      shift
-    ;;
-    --gcs-prober-cred)
-      gcs_prober_cred="${1:-}"
-      shift
-    ;;
-    --mounted-prober-cred)
-      mounted_prober_cred="${1:-}"
-      shift
-    ;;
-    --hermetic)
-      hermetic=true
-    ;;
-
-    --)
-      break
-    ;;
-
-    *)
-      echo "e2e.sh: unrecognized arg $arg"
-      exit 1
-    ;;
-  esac
-done
+# TODO(filmil): remove the need to disable lint checks here.
+# shellcheck disable=SC2154
+readonly TEMP_OUTPUT_DIR="${gotopt2_TEMP_OUTPUT_DIR}"
+# shellcheck disable=SC2154
+readonly OUTPUT_DIR="${gotopt2_OUTPUT_DIR}"
+# shellcheck disable=SC2154
+readonly gcs_prober_cred="${gotopt2_gcs_prober_cred}"
+# shellcheck disable=SC2154
+readonly mounted_prober_cred="${gotopt2_mounted_prober_cred}"
+# shellcheck disable=SC2154
+readonly hermetic="${gotopt2_hermetic:-false}"
 
 if [[ "$OUTPUT_DIR" == "" ]]; then
   pushd "$(readlink -f "$(dirname "$0")/..")" > /dev/null
@@ -124,7 +109,7 @@ else
   #
   echo "+++ Executing e2e tests in non-hermetic mode."
   rm -rf "$TEMP_OUTPUT_DIR/config"
-  mkdir -p "$TEMP_OUTPUT_DIR/config"
+  mkdir -p "$TEMP_OUTPUT_DIR/config/.kube"
   rsync -a ~/.kube "$TEMP_OUTPUT_DIR/config"
   rsync -a ~/.config/gcloud "$TEMP_OUTPUT_DIR/config"
   DOCKER_FLAGS+=(-v "$TEMP_OUTPUT_DIR/config/.kube:${HOME}/.kube")
@@ -150,4 +135,5 @@ DOCKER_FLAGS+=(
     "gcr.io/stolos-dev/e2e-tests:test-e2e-latest"
 )
 
-docker run "${DOCKER_FLAGS[@]}" "/opt/testing/e2e/setup.sh" "$@"
+# shellcheck disable=SC2154
+docker run "${DOCKER_FLAGS[@]}" "/opt/testing/e2e/setup.sh" "${gotopt2_args__[@]}"

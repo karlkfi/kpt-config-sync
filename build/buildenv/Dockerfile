@@ -71,6 +71,13 @@ RUN go get ${SEMSORT_REPO}/...
 WORKDIR /go/src/${SEMSORT_REPO}
 RUN git checkout ${SEMSORT_RELEASE} && go install ${SEMSORT_REPO}/...
 
+# gotopt2 knows how to parse command line options
+ARG GOTOPT2_RELEASE="v0.1.2"
+ARG GOTOPT2_REPO="github.com/filmil/gotopt2"
+RUN go get ${GOTOPT2_REPO}/...
+WORKDIR /go/src/${GOTOPT2_REPO}
+RUN git checkout ${GOTOPT2_RELEASE} && go install ${GOTOPT2_REPO}/...
+
 # The build environment docker file.
 FROM ${GOLANG_CONTAINER}
 

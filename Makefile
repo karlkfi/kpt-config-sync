@@ -86,8 +86,7 @@ GCR_PREFIX ?= $(GCP_PROJECT)/$(USER)/$(DATE)
 # NOTE: nomos-public is fully accessible publicly, do not use for anything
 # other than buildenv
 BUILDENV_PROJECT ?= nomos-public
-# TODO(fmil): Remove rc and rebuild before submitting
-BUILDENV_IMAGE_VERSION ?= v0.2.0-rc.0
+BUILDENV_IMAGE_VERSION ?= v0.2.1
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
 # When set to "release", enables these optimizations:
