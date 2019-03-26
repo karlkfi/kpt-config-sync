@@ -73,8 +73,13 @@ if [[ "$REPO" == "" ]]; then
   git clone "$REMOTE" "$REPO"
 fi
 
-git -C "$REPO" checkout -B "$REPO_VERSION"
-rsync -av --delete --exclude='.git' "$(dirname "$0")/../examples/foo-corp-example/foo-corp" "$REPO/foo-corp"
+if ! git -C "$REPO" checkout -t "origin/$REPO_VERSION" &> /dev/null; then
+  git -C "$REPO" checkout -B "$REPO_VERSION"
+fi
+
+EXAMPLE="$(dirname "$0")/../examples/foo-corp-example"
+cp "$EXAMPLE/README.md" "$REPO/README.md"
+rsync -av --delete "$EXAMPLE/foo-corp" "$REPO"
 git -C "$REPO" add .
 git -C "$REPO" commit -m "$COMMIT_MESSAGE"
 git -C "$REPO" push origin "HEAD:$REPO_VERSION"
