@@ -29,8 +29,8 @@ import (
 type Type string
 
 const (
-	// Add indicates the resource is declared, but missing on the API server
-	Add = Type("add")
+	// Create indicates the resource is declared, but missing on the API server
+	Create = Type("create")
 	// Update indicates the resource is declared, but different on the API server
 	Update = Type("update")
 	// Delete indicates the resource is not declared, but exists on the API server
@@ -107,7 +107,7 @@ func Diffs(declared []*unstructured.Unstructured, allDeclaredVersions map[string
 			// in decl, not in actual
 			diffs = append(diffs, &Diff{
 				Name:     name,
-				Type:     Add,
+				Type:     Create,
 				Declared: decl,
 				Actual:   nil,
 			})

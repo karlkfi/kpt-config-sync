@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
+	k8scontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -45,7 +45,7 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 		return err
 	}
 
-	cpc, err := controller.New(clusterConfigControllerName, mgr, controller.Options{
+	cpc, err := k8scontroller.New(clusterConfigControllerName, mgr, k8scontroller.Options{
 		Reconciler: genericreconcile.NewClusterConfigReconciler(
 			ctx,
 			client.New(mgr.GetClient()),

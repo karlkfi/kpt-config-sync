@@ -21,8 +21,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -280,16 +279,6 @@ func (r *NamespaceConfigReconciler) warnUnmanaged(ns *corev1.Namespace) {
 		"namespace is declared in the source of truth but does is unmanaged")
 }
 
-func (r *NamespaceConfigReconciler) warnInvalidAnnotationResource(u *unstructured.Unstructured, msg string) {
-	gvk := u.GroupVersionKind()
-	value := u.GetAnnotations()[v1.ResourceManagementKey]
-	glog.Warningf("%q with name %q is %s in the source of truth but has invalid management annotation %s=%s",
-		gvk, u.GetName(), msg, v1.ResourceManagementKey, value)
-	r.recorder.Eventf(
-		u, corev1.EventTypeWarning, "InvalidAnnotation",
-		"%q is %s in the source of truth but has invalid management annotation %s=%s", gvk, v1.ResourceManagementKey, value)
-}
-
 // removeNomosMeta removes Nomos-specific decorations from the given namespace.
 func (r *NamespaceConfigReconciler) removeNomosMeta(ctx context.Context, ns *corev1.Namespace) error {
 	if !v1.HasNomosAnnotation(ns.GetAnnotations()) && !labeling.HasNomos(ns.GetLabels()) {
@@ -349,7 +338,7 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 
 		diffs := differ.Diffs(declaredInstances, allDeclaredVersions, actualInstances)
 		for _, diff := range diffs {
-			if updated, err := r.handleDiff(ctx, diff); err != nil {
+			if updated, err := handleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 				errBuilder.Add(err)
 				pse := NewSyncError(name, gvk, err)
 				pse.ResourceName = diff.Name
@@ -425,67 +414,6 @@ func NewSyncError(name string, gvk schema.GroupVersionKind, err error) v1.Namesp
 		ResourceAPI:  gvk.GroupVersion().String(),
 		ErrorMessage: err.Error(),
 	}
-}
-
-// handleDiff updates the API Server according to changes reflected in the diff.
-// It returns whether or not an update occurred and the error encountered.
-func (r *NamespaceConfigReconciler) handleDiff(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
-	switch diff.Type {
-	case differ.Add:
-		return r.handleAdd(ctx, diff)
-	case differ.Update:
-		switch diff.ManagementState() {
-		case differ.Managed, differ.Unset:
-			// Manage if managed or management label is unset.
-			return r.handleUpdate(diff)
-		case differ.Unmanaged:
-			return false, nil
-		case differ.Invalid:
-			r.warnInvalidAnnotationResource(diff.Actual, "declared")
-			return false, nil
-		}
-	case differ.Delete:
-		switch diff.ManagementState() {
-		case differ.Managed:
-			return r.handleDelete(ctx, diff)
-		case differ.Unmanaged, differ.Unset:
-			// Don't delete if unmanaged or management label is unset.
-			return false, nil
-		case differ.Invalid:
-			r.warnInvalidAnnotationResource(diff.Actual, "not declared")
-			return false, nil
-		}
-	default:
-		panic(fmt.Errorf("programmatic error, unhandled syncer diff type: %v", diff.Type))
-	}
-	return true, nil
-}
-
-func (r *NamespaceConfigReconciler) handleAdd(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
-	toCreate := diff.Declared
-	if err := r.applier.Create(ctx, toCreate); err != nil {
-		metrics.ErrTotal.WithLabelValues(toCreate.GetNamespace(), toCreate.GetKind(), "create").Inc()
-		return false, id.ResourceWrap(err, fmt.Sprintf("failed to create %q", diff.Name), ast.ParseFileObject(toCreate))
-	}
-	return true, nil
-}
-
-func (r *NamespaceConfigReconciler) handleUpdate(diff *differ.Diff) (bool, id.ResourceError) {
-	ns := diff.Declared.GetNamespace()
-	if err := r.applier.ApplyNamespace(ns, diff.Declared, diff.Actual); err != nil {
-		metrics.ErrTotal.WithLabelValues(ns, diff.Declared.GetKind(), "patch").Inc()
-		return false, id.ResourceWrap(err, fmt.Sprintf("failed to patch %q", diff.Name), ast.ParseFileObject(diff.Declared))
-	}
-	return true, nil
-}
-
-func (r *NamespaceConfigReconciler) handleDelete(ctx context.Context, diff *differ.Diff) (bool, id.ResourceError) {
-	toDelete := diff.Actual
-	if err := r.client.Delete(ctx, toDelete); err != nil {
-		metrics.ErrTotal.WithLabelValues(toDelete.GetNamespace(), toDelete.GetKind(), "delete").Inc()
-		return false, id.ResourceWrap(err, fmt.Sprintf("failed to delete %q", diff.Name), ast.ParseFileObject(toDelete))
-	}
-	return true, nil
 }
 
 func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {

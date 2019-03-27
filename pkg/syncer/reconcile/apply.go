@@ -7,10 +7,14 @@ import (
 	"github.com/golang/glog"
 	v12 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/differ"
+	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,9 +33,9 @@ import (
 
 // Applier updates a resource from its current state to its intended state using apply operations.
 type Applier interface {
-	Create(ctx context.Context, obj *unstructured.Unstructured) error
-	ApplyCluster(intendedState, currentState *unstructured.Unstructured) error
-	ApplyNamespace(namespace string, intendedState, currentState *unstructured.Unstructured) error
+	Create(ctx context.Context, obj *unstructured.Unstructured) (bool, id.ResourceError)
+	Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, id.ResourceError)
+	Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, id.ResourceError)
 }
 
 // ClientApplier does apply operations on resources, client-side, using the same approach as running `kubectl apply`.
@@ -43,6 +47,8 @@ type ClientApplier struct {
 	openAPIResources openapi.Resources
 	client           *client.Client
 }
+
+var _ Applier = &ClientApplier{}
 
 // NewApplier returns a new ClientApplier.
 func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error) {
@@ -69,71 +75,85 @@ func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error)
 	}, nil
 }
 
-// Create creates the resource with the last-applied annotation set.
-func (c *ClientApplier) Create(ctx context.Context, obj *unstructured.Unstructured) error {
-	gvk := obj.GetObjectKind().GroupVersionKind()
-
-	if _, err := lastAppliedConfiguration(obj); err != nil {
-		return errors.Wrapf(err, "could not generate apply annotation for resource %q", gvk)
+// Create implements Applier.
+func (c *ClientApplier) Create(ctx context.Context, obj *unstructured.Unstructured) (bool, id.ResourceError) {
+	if err := c.create(ctx, obj); err != nil {
+		return false, id.ResourceWrap(err, "unable to create resource", ast.ParseFileObject(obj))
 	}
-
-	if err := c.client.Create(ctx, obj); err != nil {
-		_, resourceDescription := nameDescription(obj)
-		return errors.Wrapf(err, "could not create %q", resourceDescription)
-	}
-
-	return nil
+	return true, nil
 }
 
-// ApplyCluster applies a patch to the cluster-scoped resource to move from currentState to intendedState.
-func (c *ClientApplier) ApplyCluster(intendedState, currentState *unstructured.Unstructured) error {
-	return c.apply("", false, intendedState, currentState)
+// Update implements Applier.
+func (c *ClientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, id.ResourceError) {
+	updated, err := c.update(ctx, intendedState, currentState)
+	if err != nil {
+		metrics.ErrTotal.WithLabelValues(intendedState.GetNamespace(), intendedState.GetKind(), string(differ.Update)).Inc()
+		return false, id.ResourceWrap(err, "unable to update resource", ast.ParseFileObject(intendedState))
+	}
+	return updated, nil
 }
 
-// ApplyNamespace applies a patch to the namespace-scoped resource to move from currentState to intendedState.
-func (c *ClientApplier) ApplyNamespace(namespace string, intendedState, currentState *unstructured.Unstructured) error {
-	return c.apply(namespace, true, intendedState, currentState)
+// Delete implements Applier.
+func (c *ClientApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, id.ResourceError) {
+	if err := c.client.Delete(ctx, obj); err != nil {
+		return false, id.ResourceWrap(err, "unable to delete resource", ast.ParseFileObject(obj))
+	}
+	return true, nil
+}
+
+// create creates the resource with the last-applied annotation set.
+func (c *ClientApplier) create(ctx context.Context, obj *unstructured.Unstructured) error {
+	if _, lErr := lastAppliedConfiguration(obj); lErr != nil {
+		return errors.Wrap(lErr, "could not generate apply annotation")
+	}
+
+	return c.client.Create(ctx, obj)
+}
+
+// clientFor returns the client which may interact with the passed object.
+func (c *ClientApplier) clientFor(obj *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
+	gvk := obj.GroupVersionKind()
+	apiResource, rErr := c.resource(gvk)
+	if rErr != nil {
+		return nil, errors.Wrapf(rErr, "unable to get resource client for %q", gvk.String())
+	}
+
+	gvr := gvk.GroupVersion().WithResource(apiResource)
+	// If namespace is the empty string (as is the case for cluster-scoped resources), the
+	// client correctly returns itself.
+	return c.dynamicClient.Resource(gvr).Namespace(obj.GetNamespace()), nil
 }
 
 // apply updates a resource using the same approach as running `kubectl apply`.
 // The implementation here has been mostly extracted from the apply command: k8s.io/kubernetes/pkg/kubectl/cmd/apply.go
-func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedState, currentState *unstructured.Unstructured) error {
+func (c *ClientApplier) update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, error) {
 	// Serialize the current configuration of the object.
 	current, cErr := runtime.Encode(unstructured.UnstructuredJSONScheme, currentState)
 	if cErr != nil {
-		return errors.Errorf("could not serialize current configuration from %v", currentState)
+		return false, errors.Errorf("could not serialize current configuration from %v", currentState)
 	}
 
 	// Retrieve the last applied configuration of the object from the annotation.
 	previous, oErr := kubectl.GetOriginalConfiguration(currentState)
 	if oErr != nil {
-		return errors.Errorf("could not retrieve original configuration from %v", currentState)
+		return false, errors.Errorf("could not retrieve original configuration from %v", currentState)
 	}
 
 	// Serialize the modified configuration of the object, populating the last applied annotation as well.
 	modified, mErr := lastAppliedConfiguration(intendedState)
 	if mErr != nil {
-		return errors.Errorf("could not serialize intended configuration from %v", intendedState)
+		return false, errors.Errorf("could not serialize intended configuration from %v", intendedState)
 	}
 
-	gvk := intendedState.GetObjectKind().GroupVersionKind()
-	resource, rErr := c.resource(gvk)
+	resourceClient, rErr := c.clientFor(intendedState)
 	if rErr != nil {
-		return rErr
-	}
-
-	gvr := gvk.GroupVersion().WithResource(resource)
-	var resourceClient dynamic.ResourceInterface
-	if namespaceable {
-		resourceClient = c.dynamicClient.Resource(gvr).Namespace(namespace)
-	} else {
-		resourceClient = c.dynamicClient.Resource(gvr)
+		return false, nil
 	}
 
 	var patch []byte
 	var patchType types.PatchType
 
-	name, resourceDescription := nameDescription(intendedState)
+	gvk := intendedState.GetObjectKind().GroupVersionKind()
 	versionedObject, sErr := scheme.Scheme.New(gvk)
 	_, unversioned := scheme.Scheme.IsUnversioned(intendedState)
 	switch {
@@ -148,12 +168,12 @@ func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedStat
 		patchType = types.MergePatchType
 		if err != nil {
 			if mergepatch.IsPreconditionFailed(err) {
-				return errors.Errorf("at least one of apiVersion, kind and name was changed for %s", resourceDescription)
+				return false, errors.New("at least one of apiVersion, kind and name was changed")
 			}
-			return errors.Wrapf(err, "could not calculate the patch for %s", resourceDescription)
+			return false, errors.Wrap(err, "could not calculate the patch")
 		}
 	case sErr != nil:
-		return errors.Wrapf(sErr, "could not get an instance of versioned object %s", gvk)
+		return false, errors.Wrapf(sErr, "could not get an instance of versioned object %s", gvk)
 	case sErr == nil:
 		// Compute a three way strategic merge patch to send to server.
 		patchType = types.StrategicMergePatchType
@@ -164,7 +184,7 @@ func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedStat
 			lookupPatchMeta := strategicpatch.PatchMetaFromOpenAPI{Schema: s}
 			openAPIPatch, err := strategicpatch.CreateThreeWayMergePatch(previous, modified, current, lookupPatchMeta, true)
 			if err != nil {
-				glog.Warning(errors.Wrapf(err, "could not calculate the patch from openapi spec for %s", resourceDescription))
+				glog.Warning(errors.Wrap(err, "could not calculate the patch from openapi spec"))
 			} else {
 				patch = openAPIPatch
 			}
@@ -173,30 +193,36 @@ func (c *ClientApplier) apply(namespace string, namespaceable bool, intendedStat
 		if patch == nil {
 			lookupPatchMeta, err := strategicpatch.NewPatchMetaFromStruct(versionedObject)
 			if err != nil {
-				return err
+				return false, err
 			}
 			patch, err = strategicpatch.CreateThreeWayMergePatch(previous, modified, current, lookupPatchMeta, true)
 			if err != nil {
-				return err
+				return false, err
 			}
 		}
 	}
 
 	if string(patch) == "{}" {
 		// Avoid doing a noop patch.
-		return nil
+		return false, nil
 	}
 
+	if ctx.Err() != nil {
+		// We've already encountered an error, so do not attempt update.
+		return false, id.ResourceWrap(ctx.Err(), "unable to continue updating resources")
+	}
+
+	name, resourceDescription := nameDescription(intendedState)
 	action.APICalls.WithLabelValues(name, "patch").Inc()
 	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(name, "patch"))
 	defer timer.ObserveDuration()
 	if _, err := resourceClient.Patch(name, patchType, patch, metav1.UpdateOptions{}); err != nil {
-		return errors.Wrapf(err, "could not patch %s", resourceDescription)
+		return false, errors.Wrap(err, "could not patch")
 	}
 	glog.V(1).Infof("Patched %s", resourceDescription)
 	glog.V(3).Infof("Patched with %s", patch)
 
-	return nil
+	return true, nil
 }
 
 // resource retrieves the plural resource name for the GroupVersionKind.

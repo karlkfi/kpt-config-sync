@@ -418,21 +418,21 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			// Check for expected creates, applies and deletes.
 			if wc := tc.wantCreate; wc != nil {
 				mockApplier.EXPECT().
-					Create(gomock.Any(),
-						NewUnstructuredMatcher(t, toUnstructured(t, converter, wc)))
+					Create(gomock.Any(), NewUnstructuredMatcher(t, toUnstructured(t, converter, wc))).
+					Return(true, nil)
 			}
 			if wa := tc.wantApply; wa != nil {
 				mockApplier.EXPECT().
-					ApplyNamespace(
-						Eq(t, nsName),
+					Update(gomock.Any(),
 						Eq(t, toUnstructured(t, converter, wa.intended)),
-						Eq(t, toUnstructured(t, converter, wa.current)))
+						Eq(t, toUnstructured(t, converter, wa.current))).
+					Return(true, nil)
 			}
 			if wd := tc.wantDelete; wd != nil {
-				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), Eq(t, toUnstructured(t, converter, wd)))
-				mockClient.EXPECT().
-					Delete(gomock.Any(), Eq(t, toUnstructured(t, converter, wd)), gomock.Any())
+				mockApplier.EXPECT().
+					Delete(gomock.Any(),
+						Eq(t, toUnstructured(t, converter, wd))).
+					Return(true, nil)
 			}
 
 			if wsu := tc.wantStatusUpdate; wsu != nil {

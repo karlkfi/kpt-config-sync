@@ -126,7 +126,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		clusterConfig    *v1.ClusterConfig
 		declared         runtime.Object
 		actual           runtime.Object
-		wantApply        *application
+		wantUpdate       *application
 		wantCreate       runtime.Object
 		wantDelete       runtime.Object
 		wantStatusUpdate *v1.ClusterConfig
@@ -137,7 +137,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
 			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimDelete),
-			wantApply: &application{
+			wantUpdate: &application{
 				intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 				current:  managedPersistentVolume(corev1.PersistentVolumeReclaimDelete),
 			},
@@ -149,7 +149,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
 			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			wantApply: &application{
+			wantUpdate: &application{
 				intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 				current:  managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			},
@@ -167,7 +167,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
 			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			actual:        persistentVolume(corev1.PersistentVolumeReclaimDelete),
-			wantApply: &application{
+			wantUpdate: &application{
 				intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
 				current:  persistentVolume(corev1.PersistentVolumeReclaimDelete),
 			},
@@ -250,19 +250,21 @@ func TestClusterConfigReconcile(t *testing.T) {
 			// Check for expected creates, applies and deletes.
 			if tc.wantCreate != nil {
 				mockApplier.EXPECT().
-					Create(gomock.Any(), NewUnstructuredMatcher(t, toUnstructured(t, converter, tc.wantCreate)))
+					Create(gomock.Any(), NewUnstructuredMatcher(t, toUnstructured(t, converter, tc.wantCreate))).
+					Return(true, nil)
 			}
-			if tc.wantApply != nil {
+			if tc.wantUpdate != nil {
 				mockApplier.EXPECT().
-					ApplyCluster(
-						Eq(t, toUnstructured(t, converter, tc.wantApply.intended)),
-						Eq(t, toUnstructured(t, converter, tc.wantApply.current)))
+					Update(gomock.Any(),
+						Eq(t, toUnstructured(t, converter, tc.wantUpdate.intended)),
+						Eq(t, toUnstructured(t, converter, tc.wantUpdate.current))).
+					Return(true, nil)
 			}
 			if tc.wantDelete != nil {
-				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)))
-				mockClient.EXPECT().
-					Delete(gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)), gomock.Any())
+				mockApplier.EXPECT().
+					Delete(gomock.Any(),
+						Eq(t, toUnstructured(t, converter, tc.wantDelete))).
+					Return(true, nil)
 			}
 
 			if tc.wantStatusUpdate != nil {

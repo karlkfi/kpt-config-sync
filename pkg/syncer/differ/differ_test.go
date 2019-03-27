@@ -85,7 +85,7 @@ func TestComparator(t *testing.T) {
 			expect: []*Diff{
 				{
 					Name:     "foo",
-					Type:     Add,
+					Type:     Create,
 					Declared: TestItem{name: "foo", value: "1"}.Object(t),
 					Actual:   nil,
 				},
@@ -160,7 +160,7 @@ func TestComparator(t *testing.T) {
 				},
 				{
 					Name:     "baz",
-					Type:     Add,
+					Type:     Create,
 					Declared: TestItem{name: "baz", value: "3"}.Object(t),
 					Actual:   nil,
 				},
