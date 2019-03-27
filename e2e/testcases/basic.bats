@@ -171,7 +171,7 @@ function manage_namespace() {
 
 @test "Namespace kube-whatever can be managed and has a normal lifecycle" {
   debug::log "Create a system namespace -- it is not required to exist"
-  wait::for -t 5 -- kubectl create ns "kube-whatever"
+  kubectl get ns "kube-whatever" || kubectl create ns "kube-whatever"
   manage_namespace "kube-whatever"
   debug::log "Ensure that the namespace is cleaned up at the end"
   wait::for -f -- kubectl get ns "kube-whatever"
