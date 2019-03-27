@@ -51,6 +51,7 @@ func (n NomosVisitorProvider) Visitors(
 		metadata.NewAnnotationValidator(),
 		metadata.NewLabelValidator(),
 		validation.NewInputValidator(specs, vetEnabled),
+		semantic.NewAbstractResourceValidator(),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree

@@ -970,6 +970,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
+		expectedErrorCodes: []string{vet.UnsyncableResourcesErrorCode},
 	},
 	{
 		testName: "Namespace dir with ClusterRole",
@@ -996,12 +997,20 @@ var parserTestCases = []parserTestCase{
 		expectedErrorCodes: []string{vet.IllegalKindInNamespacesErrorCode},
 	},
 	{
+		testName: "Abstract Namespace dir with Namespace and Abstract namespace children is valid",
+		testFiles: fstesting.FileContentMap{
+			"namespaces/bar/role.yaml":      templateData{Name: "role"}.apply(aRole),
+			"namespaces/bar/baz/nssel.yaml": templateData{Name: "dummy"}.apply(aNamespaceSelector),
+			"namespaces/bar/qux/ns.yaml":    templateData{Name: "qux"}.apply(aNamespace),
+		},
+	},
+	{
 		testName: "Namespace dir with Abstract Namespace child",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml":       templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/baz/role.yaml": templateData{Name: "role"}.apply(aRole),
 		},
-		expectedErrorCodes: []string{vet.IllegalNamespaceSubdirectoryErrorCode},
+		expectedErrorCodes: []string{vet.IllegalNamespaceSubdirectoryErrorCode, vet.UnsyncableResourcesErrorCode},
 	},
 	{
 		testName: "Abstract Namespace dir with ignored file",
@@ -1011,25 +1020,28 @@ var parserTestCases = []parserTestCase{
 		expectedClusterConfig: createClusterConfig(),
 	},
 	{
-		testName: "Abstract Namespace dir with RoleBinding, default inheritance",
+		testName: "Abstract Namespace dir with RoleBinding and no descendants, default inheritance",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
 		expectedNumPolicies: map[string]int{},
+		expectedErrorCodes:  []string{vet.UnsyncableResourcesErrorCode},
 	},
 	{
 		testName: "Abstract Namespace dir with RoleBinding, hierarchicalQuota mode specified",
 		testFiles: fstesting.FileContentMap{
-			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchyConfig),
-			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+			"system/rb.yaml":             templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", HierarchyMode: "hierarchicalQuota"}.apply(aHierarchyConfig),
+			"namespaces/bar/rb1.yaml":    templateData{ID: "1"}.apply(aRoleBinding),
+			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.IllegalHierarchyModeErrorCode},
 	},
 	{
 		testName: "Abstract Namespace dir with RoleBinding, inheritance off",
 		testFiles: fstesting.FileContentMap{
-			"system/rb.yaml":          templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", HierarchyMode: "none"}.apply(aHierarchyConfig),
-			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
+			"system/rb.yaml":             templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", HierarchyMode: "none"}.apply(aHierarchyConfig),
+			"namespaces/bar/rb1.yaml":    templateData{ID: "1"}.apply(aRoleBinding),
+			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
@@ -1065,26 +1077,32 @@ var parserTestCases = []parserTestCase{
 	{
 		testName: "Abstract Namespace dir with uninheritable ResourceQuota, inheritance off",
 		testFiles: fstesting.FileContentMap{
-			"system/rq.yaml":         templateData{Kind: "ResourceQuota", HierarchyMode: "none"}.apply(aHierarchyConfig),
-			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+			"system/rq.yaml":             templateData{Kind: "ResourceQuota", HierarchyMode: "none"}.apply(aHierarchyConfig),
+			"namespaces/bar/rq.yaml":     templateData{}.apply(aQuota),
+			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
 	{
 		testName: "Abstract Namespace dir with ResourceQuota, inherit specified",
 		testFiles: fstesting.FileContentMap{
-			"system/rq.yaml":         templateData{Kind: "ResourceQuota", HierarchyMode: "inherit"}.apply(aHierarchyConfig),
-			"namespaces/bar/rq.yaml": templateData{}.apply(aQuota),
+			"system/rq.yaml":             templateData{Kind: "ResourceQuota", HierarchyMode: "inherit"}.apply(aHierarchyConfig),
+			"namespaces/bar/rq.yaml":     templateData{}.apply(aQuota),
+			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedClusterConfig:    createClusterConfig(),
-		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{},
-		expectedSyncs:            syncMap(),
+		expectedClusterConfig: createClusterConfig(),
+		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
+			"baz": createNamespacePN("namespaces/bar/baz",
+				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", "pod-quota", nil)}),
+		},
+		expectedSyncs: singleSyncMap("", "ResourceQuota"),
 	},
 	{
 		testName: "Abstract Namespace dir with uninheritable Rolebinding",
 		testFiles: fstesting.FileContentMap{
-			"system/rb.yaml":         templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", HierarchyMode: "none"}.apply(aHierarchyConfig),
-			"namespaces/bar/rb.yaml": templateData{}.apply(aRoleBinding),
+			"system/rb.yaml":             templateData{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", HierarchyMode: "none"}.apply(aHierarchyConfig),
+			"namespaces/bar/rb.yaml":     templateData{}.apply(aRoleBinding),
+			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.IllegalAbstractNamespaceObjectKindErrorCode},
 	},
@@ -1092,6 +1110,7 @@ var parserTestCases = []parserTestCase{
 		testName: "Abstract Namespace dir with NamespaceSelector CRD",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns-selector.yaml": templateData{}.apply(aNamespaceSelector),
+			"namespaces/bar/baz/ns.yaml":      templateData{Name: "baz"}.apply(aNamespace),
 		},
 		expectedNumPolicies: map[string]int{},
 	},
@@ -1398,6 +1417,7 @@ spec:
 					"configmanagement.gke.io/stuff": "prod",
 				},
 			}.apply(aRoleBinding),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{
 			vet.IllegalAnnotationDefinitionErrorCode,
@@ -1412,6 +1432,7 @@ spec:
 					"configmanagement.gke.io/stuff": "prod",
 				},
 			}.apply(aRoleBinding),
+			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{
 			vet.IllegalLabelDefinitionErrorCode,
@@ -1482,13 +1503,16 @@ spec:
 		testName: "No name collision in sibling nodes",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/fox/bar/rb-1.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
+			"namespaces/fox/bar/ns.yaml":   templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/fox/qux/rb-2.yaml": templateData{ID: "alice"}.apply(aRoleBinding),
+			"namespaces/fox/qux/ns.yaml":   templateData{Name: "qux"}.apply(aNamespace),
 		},
 	},
 	{
 		testName: "Empty string name is an error",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/foo/bar/role1.yaml": templateData{Name: ""}.apply(aNamedRole),
+			"namespaces/foo/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.MissingObjectNameErrorCode},
 	},
@@ -1496,6 +1520,7 @@ spec:
 		testName: "No name is an error",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/foo/bar/role1.yaml": templateData{}.apply(aNamedRole),
+			"namespaces/foo/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.MissingObjectNameErrorCode},
 	},
@@ -1510,6 +1535,7 @@ spec:
 		testName: "Repo outside system/ is an error",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/foo/repo.yaml": aRepo,
+			"namespaces/foo/ns.yaml":   templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode},
 	},
@@ -1517,6 +1543,7 @@ spec:
 		testName: "HierarchyConfig outside system/ is an error",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/foo/config.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
+			"namespaces/foo/ns.yaml":     templateData{Name: "foo"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.IllegalSystemResourcePlacementErrorCode},
 	},
@@ -2272,6 +2299,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						v1.ClusterSelectorAnnotationKey: "sel-2",
 					},
 				}.apply(aQuota),
+				"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 				// Cluster dir (cluster scoped objects).
 				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
 			},
@@ -2302,7 +2330,15 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
-			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{},
+			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
+				"bar": createPNWithMeta("namespaces/bar",
+					/* Policies */
+					nil,
+					/* Labels */
+					nil,
+					/* Annotations */
+					nil),
+			},
 			expectedSyncs: syncMap(
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
 			),

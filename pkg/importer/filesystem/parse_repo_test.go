@@ -32,6 +32,7 @@ func TestParse(t *testing.T) {
 		"examples/parse-errors/missing-system-dir",
 		"examples/parse-errors/multiple-repos",
 		"examples/parse-errors/unsupported-repo-version",
+		"examples/parse-errors/resources-without-namespace",
 	}
 
 	for _, test := range tests {
