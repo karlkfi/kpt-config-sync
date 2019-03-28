@@ -103,7 +103,6 @@ var Cmd = &cobra.Command{
 			removeAppliedConfig,
 			cleanNamespaces,
 			exportObjectMeta,
-			mutate.Prune(),
 		).Apply(objects)
 
 		pather := importer.NewPather(apiResources...)
