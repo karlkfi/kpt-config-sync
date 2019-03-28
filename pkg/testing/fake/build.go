@@ -30,7 +30,7 @@ func Build(gvk schema.GroupVersionKind, opts ...object.Mutator) ast.FileObject {
 	case kinds.ClusterSelector():
 		o = ClusterSelector("cluster/cs.yaml")
 	case kinds.Deployment():
-		o = Deployment()
+		o = Deployment("namespaces/foo/deployment.yaml")
 	case kinds.HierarchyConfig():
 		o = HierarchyConfig("system/hc.yaml")
 	case kinds.Namespace():
@@ -41,6 +41,8 @@ func Build(gvk schema.GroupVersionKind, opts ...object.Mutator) ast.FileObject {
 		o = NamespaceSelector("namespaces/foo/ns.yaml")
 	case kinds.PersistentVolume():
 		o = PersistentVolume()
+	case kinds.ReplicaSet():
+		o = ReplicaSet("namespaces/foo/replicaset.yaml")
 	case kinds.Repo():
 		o = Repo("system/repo.yaml")
 	case kinds.Role():

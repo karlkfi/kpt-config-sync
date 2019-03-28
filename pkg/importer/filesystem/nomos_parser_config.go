@@ -47,6 +47,7 @@ func (n NomosVisitorProvider) Visitors(
 		syntax.NewDirectoryNameValidator(),
 		visitors.NewUniqueDirectoryValidator(),
 		syntax.NewNamespaceKindValidator(),
+		syntax.NewDisallowedFieldsValidator(),
 		metadata.NewAnnotationValidator(),
 		metadata.NewLabelValidator(),
 		validation.NewInputValidator(specs, vetEnabled),

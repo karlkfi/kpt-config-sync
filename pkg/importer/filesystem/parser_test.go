@@ -224,6 +224,21 @@ metadata:
 {{template "objectmetatemplate" .}}
 `
 
+	aReplicasetWithOwnerRefTemplate = `
+kind: ReplicaSet
+apiVersion: apps/v1
+metadata:
+  name: replicaset{{.ID}}
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: some_deployment
+    uid: some_uid
+{{template "objectmetatemplate" .}}
+spec:
+  replicas: 1
+`
+
 	aNamespaceSelectorTemplate = `
 kind: NamespaceSelector
 apiVersion: configmanagement.gke.io/v1
@@ -360,6 +375,7 @@ var (
 	aClusterRole                       = tpl("aClusterRole", aClusterRoleTemplate)
 	aClusterRoleBinding                = tpl("aClusterRoleBinding", aClusterRoleBindingTemplate)
 	aPodSecurityPolicy                 = tpl("aPodSecurityPolicyTemplate", aPodSecurityPolicyTemplate)
+	aReplicaSetWithOwnerRef            = tpl("aReplicaSetWithOwnerRef", aReplicasetWithOwnerRefTemplate)
 	aConfigMap                         = tpl("aConfigMap", aConfigMapTemplate)
 	aHierarchyConfig                   = tpl("aHierarchyConfig", aHierarchyConfigTemplate)
 	aPhilo                             = tpl("aPhilo", aPhiloTemplate)
@@ -1542,6 +1558,14 @@ spec:
 			"namespaces/foo/namespaceselector.yaml": templateData{}.apply(aNamespaceSelector),
 		},
 		expectedErrorCodes: []string{vet.IllegalKindInNamespacesErrorCode},
+	},
+	{
+		testName: "ReplicaSet with OwnerReferences specified.",
+		testFiles: fstesting.FileContentMap{
+			"namespaces/foo/namespace.yaml":  templateData{Name: "foo"}.apply(aNamespace),
+			"namespaces/foo/replicaset.yaml": templateData{}.apply(aReplicaSetWithOwnerRef),
+		},
+		expectedErrorCodes: []string{vet.IllegalFieldsInConfigErrorCode},
 	},
 }
 

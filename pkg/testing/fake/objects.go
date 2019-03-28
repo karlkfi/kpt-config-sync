@@ -155,10 +155,21 @@ func PersistentVolume() ast.FileObject {
 }
 
 // Deployment returns a default Deployment object.
-func Deployment() ast.FileObject {
+func Deployment(path string) ast.FileObject {
 	return ast.FileObject{
+		Path: cmpath.FromSlash(path),
 		Object: &appsv1.Deployment{
 			TypeMeta: toTypeMeta(kinds.Deployment()),
+		},
+	}
+}
+
+// ReplicaSet returns a default ReplicaSet object.
+func ReplicaSet(path string) ast.FileObject {
+	return ast.FileObject{
+		Path: cmpath.FromSlash(path),
+		Object: &appsv1.ReplicaSet{
+			TypeMeta: toTypeMeta(kinds.ReplicaSet()),
 		},
 	}
 }

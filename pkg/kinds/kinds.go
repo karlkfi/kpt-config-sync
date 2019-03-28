@@ -103,6 +103,11 @@ func Deployment() schema.GroupVersionKind {
 	return appsv1.SchemeGroupVersion.WithKind("Deployment")
 }
 
+// ReplicaSet returns the canonical ReplicaSet GroupVersionKind
+func ReplicaSet() schema.GroupVersionKind {
+	return appsv1.SchemeGroupVersion.WithKind("ReplicaSet")
+}
+
 // HierarchyConfig returns the canonical HierarchyConfig GroupVersionKind
 func HierarchyConfig() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind("HierarchyConfig")
