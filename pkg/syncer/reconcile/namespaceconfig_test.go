@@ -432,7 +432,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				mockClient.EXPECT().
 					Get(gomock.Any(), gomock.Any(), Eq(t, toUnstructured(t, converter, wd)))
 				mockClient.EXPECT().
-					Delete(gomock.Any(), Eq(t, toUnstructured(t, converter, wd)))
+					Delete(gomock.Any(), Eq(t, toUnstructured(t, converter, wd)), gomock.Any())
 			}
 
 			if wsu := tc.wantStatusUpdate; wsu != nil {

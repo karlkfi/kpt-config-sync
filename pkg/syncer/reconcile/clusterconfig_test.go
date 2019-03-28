@@ -262,7 +262,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 				mockClient.EXPECT().
 					Get(gomock.Any(), gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)))
 				mockClient.EXPECT().
-					Delete(gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)))
+					Delete(gomock.Any(), Eq(t, toUnstructured(t, converter, tc.wantDelete)), gomock.Any())
 			}
 
 			if tc.wantStatusUpdate != nil {

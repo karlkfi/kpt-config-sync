@@ -70,6 +70,7 @@ func (c *Client) Create(ctx context.Context, obj runtime.Object) id.ResourceErro
 }
 
 // Delete deletes the given obj from Kubernetes cluster and records prometheus metrics.
+// This automatically sets the propagation policy to always be "Background".
 func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
 	description, kind := resourceInfo(obj)
 	operation := string(action.DeleteOperation)
@@ -89,6 +90,7 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.
 		}
 		return errors.Wrapf(err, "could not look up object we're deleting %s", description)
 	}
+	opts = append(opts, client.PropagationPolicy(metav1.DeletePropagationBackground))
 	if err := c.Client.Delete(ctx, obj, opts...); err != nil {
 		if apierrors.IsNotFound(err) {
 			glog.V(3).Infof("Not found during attempted delete %s", description)
