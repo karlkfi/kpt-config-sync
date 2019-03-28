@@ -225,8 +225,6 @@ var removeAppliedConfig = mutate.RemoveAnnotation(mutate.AppliedConfiguration)
 var cleanNamespaces = object.Mutate(
 	// Kubernetes manages this finalizer on Namespaces.
 	mutate.Remove(mutate.Key("spec", "finalizers").Value("kubernetes")),
-	// transient Namespace state managed by Kubernetes
-	mutate.Remove(mutate.Key("status", "phase")),
 ).If(filter.GroupKind(kinds.Namespace().GroupKind()))
 
 // exportObjectMeta mimics the behavior of exportObjectMeta() from
@@ -246,4 +244,6 @@ var exportObjectMeta = object.Mutate(
 	mutate.Remove(mutate.Key("metadata", "selfLink")),
 	// uid is automatically generated and managed by Kubernetes.
 	mutate.Remove(mutate.Key("metadata", "uid")),
+	// status is transient and shouldn't be checked in.
+	mutate.Remove(mutate.Key("status")),
 )
