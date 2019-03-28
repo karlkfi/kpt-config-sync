@@ -10,12 +10,9 @@ const (
 	readmeFile         = "README.md"
 	rootReadmeContents = `# CSP Configuration Management Directory
 
-This is the root directory for CSP Configuration Management for your cluster.
+This is the root directory for CSP Configuration Management.
 
-* See [system/](system/README.md) for system configuration.
-* See [cluster/](cluster/README.md) for cluster-scoped resources.
-* See [clusterregistry/](clusterregistry/README.md) for clusterregistry-scoped resources.
-* See [namespaces/](namespaces/README.md) for namespace-scoped resources.
+See [our documentation](https://cloud.google.com/csp-config-management/docs/repo) for how to use each subdirectory.
 `
 	systemReadmeContents = `# System
 
