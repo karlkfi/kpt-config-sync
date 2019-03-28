@@ -94,6 +94,7 @@ var Cmd = &cobra.Command{
 			ignoreSystemNamespaces(infoOut),
 			ignoreKubernetesSystemLabels,
 			ignoreCriticalPriorityClasses,
+			filter.Controlled(),
 		))
 
 		pather := importer.NewPather(apiResources...)

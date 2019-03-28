@@ -59,3 +59,16 @@ func Label(label string) object.Predicate {
 		return found
 	}
 }
+
+// Controlled returns true if the object has an entry in metadata.ownerReferences whose
+// controller field is set to true.
+func Controlled() object.Predicate {
+	return func(object ast.FileObject) bool {
+		for _, owner := range object.MetaObject().GetOwnerReferences() {
+			if owner.Controller != nil && *owner.Controller {
+				return true
+			}
+		}
+		return false
+	}
+}

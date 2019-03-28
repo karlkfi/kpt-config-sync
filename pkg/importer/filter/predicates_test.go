@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGroup(t *testing.T) {
@@ -183,6 +184,61 @@ func TestLabel(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := Label(tc.label)(tc.obj)
+
+			if tc.expected != actual {
+				t.Fatalf("expected %v but got %v", tc.expected, actual)
+			}
+		})
+	}
+}
+
+func withOwner(controller *bool) object.Mutator {
+	return func(object *ast.FileObject) {
+		owners := object.MetaObject().GetOwnerReferences()
+		owners = append(owners, v1.OwnerReference{
+			Controller: controller,
+		})
+		object.MetaObject().SetOwnerReferences(owners)
+	}
+}
+
+func TestControlled(t *testing.T) {
+	// Declared because you can't take the address of a constant.
+	trueC := true
+	falseC := false
+
+	testCases := []struct {
+		name     string
+		obj      ast.FileObject
+		expected bool
+	}{
+		{
+			name: "no controller returns false",
+			obj:  fake.Build(kinds.Role()),
+		},
+		{
+			name: "nil controller returns false",
+			obj:  fake.Build(kinds.Role(), withOwner(nil)),
+		},
+		{
+			name: "false controller returns false",
+			obj:  fake.Build(kinds.Role(), withOwner(&falseC)),
+		},
+		{
+			name:     "true controller returns true",
+			obj:      fake.Build(kinds.Role(), withOwner(&trueC)),
+			expected: true,
+		},
+		{
+			name:     "false and true controller returns true",
+			obj:      fake.Build(kinds.Role(), withOwner(&falseC), withOwner(&trueC)),
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := Controlled()(tc.obj)
 
 			if tc.expected != actual {
 				t.Fatalf("expected %v but got %v", tc.expected, actual)
