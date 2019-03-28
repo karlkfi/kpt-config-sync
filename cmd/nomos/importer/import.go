@@ -96,6 +96,9 @@ var Cmd = &cobra.Command{
 			ignoreCriticalPriorityClasses,
 		))
 
+		pather := importer.NewPather(apiResources...)
+		pather.AddPaths(objects)
+
 		object.Mutate(
 			mutate.Unapply(infoOut),
 			removeNomosLables,
@@ -104,9 +107,6 @@ var Cmd = &cobra.Command{
 			cleanNamespaces,
 			exportObjectMeta,
 		).Apply(objects)
-
-		pather := importer.NewPather(apiResources...)
-		pather.AddPaths(objects)
 
 		infoOut.Printfln("Writing %d resources to disk", len(objects))
 		printer := &printers.YAMLPrinter{}
