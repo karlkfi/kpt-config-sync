@@ -35,8 +35,9 @@ func init() {
 
 // Cmd exports resources in the current kubectl context into the specified directory.
 var Cmd = &cobra.Command{
-	Use:   "import",
-	Short: `Downloads all resources from the current kubectl context and formats them into a valid Config Management repository.`,
+	Hidden: true,
+	Use:    "import",
+	Short:  `Downloads all resources from the current kubectl context and formats them into a valid Config Management repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		infoOut := importer.NewStdOutput()
 		if silent {
