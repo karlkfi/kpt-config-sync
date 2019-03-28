@@ -350,7 +350,8 @@ function resource::delete() {
     return 1
   fi
 
-  local names=()
+  local names
+  names=""  # Assigning () makes it an unbound variable.
   if [[ "$annotation" != "" ]]; then
     local key=""
     local value=""
@@ -360,16 +361,22 @@ function resource::delete() {
   else
     mapfile -t names < <(echo "$output" | jq -r '.items[] | .metadata.name')
   fi
-
   if [ ${#names[@]} -eq 0 ]; then
     return 0
   fi
 
-  if [[ "${resource}" == "namespace" || "${resource}" == "namespaces" ]]; then
+  if [[ "${resource}" == "namespace" \
+        || "${resource}" == "namespaces" \
+        || ${resource} == "ns" ]]; then
     # Remove "default" and "kube-system" from the list of resources to delete,
     # because they can't be removed.
     names=( "${names[@]/default}" )
     names=( "${names[@]/kube-system}" )
+  fi
+  names=("${names[@]}")
+  # Can still end up as an unbound var after this :/
+  if [ ${#names[@]} -eq 0 ]; then
+    return 0
   fi
 
   local deletecmd=("kubectl" "delete" "$resource")
