@@ -213,6 +213,16 @@ func TestClusterConfigReconcile(t *testing.T) {
 				varargs: true,
 			},
 		},
+		{
+			name:          "resource with owner reference is ignored",
+			clusterConfig: clusterConfig(v1.StateSynced),
+			actual: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle,
+				object.OwnerReference(
+					"some_operator_config_object",
+					"some_uid",
+					schema.GroupVersionKind{Group: "operator.config.group", Kind: "OperatorConfigObject", Version: "v1"}),
+			),
+		},
 	}
 
 	converter := runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())

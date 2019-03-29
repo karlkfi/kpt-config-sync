@@ -73,6 +73,17 @@ func managedDeployment(deploymentStrategy appsv1.DeploymentStrategyType, namespa
 	return deployment(deploymentStrategy, opts...)
 }
 
+func replicaSet(opts ...object.Mutator) *appsv1.ReplicaSet {
+	return fake.Build(kinds.ReplicaSet(), opts...).Object.(*appsv1.ReplicaSet)
+}
+
+func managedReplicaSet(opts ...object.Mutator) *appsv1.ReplicaSet {
+	opts = append(opts,
+		object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
+		object.Annotation(v1.SyncTokenAnnotationKey, token))
+	return replicaSet(opts...)
+}
+
 func namespaceConfig(name string, state v1.PolicySyncState, opts ...object.Mutator) *v1.NamespaceConfig {
 	opts = append(opts, object.Name(name), func(o *ast.FileObject) {
 		o.Object.(*v1.NamespaceConfig).Status.SyncState = state
@@ -130,6 +141,9 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		// The events that are expected to be emitted as the result of the
 		// operation.
 		wantEvent *event
+		// By default all tests only sync Deployments.
+		// Specify this to override the resources being synced.
+		toSyncOverride schema.GroupVersionKind
 	}{
 		{
 			name:                "update actual resource to declared state",
@@ -354,13 +368,51 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			wantNamespaceUpdate: managedNamespace("kube-system"),
 			wantStatusUpdate:    namespaceConfig("kube-system", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
 		},
+		{
+			name:                "resource with owner reference is ignored",
+			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:           managedNamespace("eng"),
+			wantNamespaceUpdate: managedNamespace("eng", managedQuotaLabels),
+			declared: managedReplicaSet(
+				object.Name("managed"),
+				object.Namespace("eng"),
+			),
+			actual: []runtime.Object{
+				managedReplicaSet(
+					object.Name("unmanaged"),
+					object.Namespace("eng"),
+					object.OwnerReference("some_deployment", "some_uid", kinds.Deployment()),
+				),
+				managedReplicaSet(
+					object.Name("managed"),
+					object.Namespace("eng"),
+				),
+			},
+			wantApply: &application{
+				intended: managedReplicaSet(
+					object.Name("managed"),
+					object.Namespace("eng"),
+				),
+				current: managedReplicaSet(
+					object.Name("managed"),
+					object.Namespace("eng"),
+				),
+			},
+			wantStatusUpdate: namespaceConfig("eng", v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
+			wantEvent:        reconcileComplete,
+			toSyncOverride:   kinds.ReplicaSet(),
+		},
 	}
 
 	converter := runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
-	toSync := []schema.GroupVersionKind{kinds.Deployment()}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			toSync := []schema.GroupVersionKind{kinds.Deployment()}
+			if !tc.toSyncOverride.Empty() {
+				toSync = []schema.GroupVersionKind{tc.toSyncOverride}
+			}
+
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
