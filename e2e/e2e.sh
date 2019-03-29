@@ -60,7 +60,7 @@ fi
 
 # Old-style podutils for go/prow use ${WORKSPACE} as base directory but do not
 # define $ARTIFACTS.
-if [[ -n "${WORKSPACE+x}" && ! -n "${ARTIFACTS+x}" ]]; then
+if [[ -n "${WORKSPACE+x}" && -z "${ARTIFACTS+x}" ]]; then
   ARTIFACTS="${WORKSPACE}/_artifacts"
   echo "+++ Got legacy artifacts directory from workspace: ${ARTIFACTS}"
 fi

@@ -35,8 +35,8 @@ function git::add() {
 
   cd "${TEST_REPO}"
 
-  [ ! -z "$src" ] || (echo "source not provided to git::add" && false)
-  [ ! -z "$dst" ] || (echo "destination not provided to git::add" && false)
+  [ -n "$src" ] || (echo "source not provided to git::add" && false)
+  [ -n "$dst" ] || (echo "destination not provided to git::add" && false)
   [ ! -e "$dst" ] || (echo "$dst already exists but should not" && false)
 
   mkdir -p "$(dirname "$dst")"
@@ -64,8 +64,8 @@ function git::update() {
 
   cd "${TEST_REPO}"
 
-  [ ! -z "$src" ] || (echo "source not provided to git::update" && false)
-  [ ! -z "$dst" ] || (echo "destination not provided to git::update" && false)
+  [ -n "$src" ] || (echo "source not provided to git::update" && false)
+  [ -n "$dst" ] || (echo "destination not provided to git::update" && false)
   [ -f "$dst" ] || (echo "$dst does not already exist but should" && false)
 
   cp "$src" "./$dst"
@@ -90,7 +90,7 @@ function git::rm() {
 
   cd "${TEST_REPO}"
 
-  [ ! -z "$path" ] || (echo "filename not provided to git::rm" && false)
+  [ -n "$path" ] || (echo "filename not provided to git::rm" && false)
   [ -e "$path" ] || (echo "$path does not already exist but should" && false)
 
   echo "git: rm -r $path"

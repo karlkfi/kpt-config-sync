@@ -61,7 +61,7 @@ if (( 0 < ${#check_bats[@]} )); then
   done
 fi
 
-readonly linter=koalaman/shellcheck:v0.5.0
+readonly linter=koalaman/shellcheck:v0.6.0
 
 if ! docker image inspect "$linter" &> /dev/null; then
   docker pull "$linter"
