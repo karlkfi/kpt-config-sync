@@ -8,6 +8,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# *** WARNING ***
+# This image is built once and reused on repeated test runs.  If you make a
+# change here, you *must* rebuild the image and push it to the Nomos container
+# registry so that new test runs see the updated image.  This is not ideal but
+# we don't have a better approach at the moment.
+#
+# To rebuild and push the image, run:
+#     make push-e2e-tests
+
 # Build intermediate image for tools
 # When adding helper binaries, ensure to build from a specific commit ID, rather
 # than a tag or a branch, so that rebuilds are reproducible. See examples below

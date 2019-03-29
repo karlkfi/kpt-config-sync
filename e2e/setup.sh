@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+ls -laR /tmp/user
+
 readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 readonly FWD_SSH_PORT=2222
@@ -35,8 +37,6 @@ EOF
 function install() {
   if $do_installation; then
     echo "+++++ Installing..."
-    # Linter says this is better than "cd -"
-    apply_cluster_admin_binding "$(gcloud config get-value account)"
     kubectl apply -f "${TEST_DIR}/defined-operator-bundle.yaml"
     kubectl create secret generic git-creds -n=config-management-system \
       --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
@@ -79,6 +79,9 @@ function uninstall() {
 
 function set_up_env() {
   echo "++++ Setting up environment"
+  if ${gotopt2_set_admin_role_binding:-false}; then
+    apply_cluster_admin_binding "$(gcloud config get-value account)"
+  fi
   /opt/testing/e2e/init-git-server.sh
 
   install
@@ -295,6 +298,10 @@ flags:
   type: bool
   help: "If set, the setup will create a new ssh key to use in the tests"
   default: false
+- name: "set-admin-role-binding"
+  type: bool
+  help: "If set, the setup will add the admin role binding"
+  default: true
 - name: "testcases-dir"
   type: string
   default: "testcases"

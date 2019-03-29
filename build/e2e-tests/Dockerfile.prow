@@ -1,0 +1,23 @@
+# Dockerfile for the prow test environment
+
+# We'd use the kubekins-e2e straight away, but it's missing the 'kind' binary.
+ARG KUBEKINS_IMAGE=gcr.io/k8s-testimages/kubekins-e2e:v20190117-9a712c1e6-master
+
+FROM golang:1.11-alpine AS build-base
+RUN apk add bash ca-certificates coreutils git gcc g++ libc-dev
+
+# We don't use or support modules for the time being.
+ENV GO111MODULE=off
+# Build static binaries only.
+ENV CGO_ENABLED=0
+
+# kind can run kubernetes clusters in docker
+# v0.2.1
+ARG KIND_RELEASE="5e292845d6d7e736515a8ca4da032acd85e153d1"
+ARG KIND_REPO="sigs.k8s.io/kind"
+RUN go get -u ${KIND_REPO}
+WORKDIR /go/src/${KIND_REPO}
+RUN git checkout ${KIND_RELEASE} && go install ${KIND_REPO}
+
+FROM gcr.io/k8s-testimages/kubekins-e2e:v20190117-9a712c1e6-master
+COPY --from=build-base /go/bin/ /bin/

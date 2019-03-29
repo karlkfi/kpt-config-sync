@@ -6,7 +6,8 @@
 
 set -euo pipefail
 
-[ -z "${GOTOPT2_BINARY}" ] && (echo "no gotopt2"; exit 1)
+[ -z "${GOTOPT2_BINARY}" ] && \
+  (echo "environment is missing the gotopt2 binary"; exit 1)
 readonly gotopt2_output=$(${GOTOPT2_BINARY} "${@}" <<EOF
 flags:
 - name: "TEMP_OUTPUT_DIR"
@@ -24,6 +25,9 @@ flags:
 - name: "hermetic"
   type: bool
   help: "If set, the runner will refrain from importing any files from outside of the container that uses it"
+- name: "use-ephemeral-cluster"
+  type: bool
+  help: "If set, the test runner will start an ephemeral in-docker cluster to run the tests on"
 EOF
 )
 eval "${gotopt2_output}"
@@ -75,6 +79,11 @@ if [ -n "${ARTIFACTS+x}" ]; then
   )
 fi
 
+# This is the directory path to user's home inside the container.
+HOME_IN_CONTAINER="${HOME}"
+# This is the directory path to users' directory outside docker.
+USER_DIR_ON_HOST="${HOME}"
+
 if "${hermetic}"; then
   # In hermetic mode, the e2e tests do most of the setup required to connect to
   # the test environment.
@@ -87,16 +96,18 @@ if "${hermetic}"; then
   # --gcs-prober-cred if the test runner is based off of local file content.
   echo "+++ Executing e2e tests in hermetic mode."
 
-  rm -rf "${TEMP_OUTPUT_DIR}/user"
-  mkdir -p "${TEMP_OUTPUT_DIR}/user"
+  USER_DIR_ON_HOST="${TEMP_OUTPUT_DIR}/user"
+  rm -rf "${USER_DIR_ON_HOST}"
+  mkdir -p "${USER_DIR_ON_HOST}"
 
   # Place the user's home in a writable directory.
-  DOCKER_FLAGS+=(-e "HOME=/tmp/user")
-
-  # Make the currently checked out directory available.
-  DOCKER_FLAGS+=(-e "NOMOS_REPO=/tmp/nomos")
-  DOCKER_FLAGS+=(-v "$(pwd):/tmp/nomos")
-
+  HOME_IN_CONTAINER="/tmp/user"
+  DOCKER_FLAGS+=(
+    -e "HOME=${HOME_IN_CONTAINER}"
+    # Make the currently checked out directory available.
+    -e "NOMOS_REPO=/tmp/nomos"
+    -v "$(pwd):/tmp/nomos"
+  )
 else
   # Copy the gcloud and kubectl configuration into a separate directory then
   # update the gcloud auth provider path to point to the gcloud in the e2e image
@@ -110,16 +121,81 @@ else
   echo "+++ Executing e2e tests in non-hermetic mode."
   rm -rf "$TEMP_OUTPUT_DIR/config"
   mkdir -p "$TEMP_OUTPUT_DIR/config/.kube"
-  rsync -a ~/.kube "$TEMP_OUTPUT_DIR/config"
-  rsync -a ~/.config/gcloud "$TEMP_OUTPUT_DIR/config"
-  DOCKER_FLAGS+=(-v "$TEMP_OUTPUT_DIR/config/.kube:${HOME}/.kube")
-  DOCKER_FLAGS+=(-v "$TEMP_OUTPUT_DIR/config/gcloud:${HOME}/.config/gcloud")
+  rsync -a "${HOME}/.kube" "$TEMP_OUTPUT_DIR/config"
+  rsync -a "${HOME}/.config/gcloud" "$TEMP_OUTPUT_DIR/config"
   sed -i -e \
     's|cmd-path:.*gcloud$|cmd-path: /opt/gcloud/google-cloud-sdk/bin/gcloud|' \
     "$TEMP_OUTPUT_DIR/config/.kube/config"
-  DOCKER_FLAGS+=(-e "HOME=${HOME}")
-  DOCKER_FLAGS+=(-v "${HOME}:${HOME}")
-  DOCKER_FLAGS+=(-e "NOMOS_REPO=$(pwd)")
+  DOCKER_FLAGS+=(
+    -v "${TEMP_OUTPUT_DIR}/config/.kube:${HOME_IN_CONTAINER}/.kube"
+    -v "${TEMP_OUTPUT_DIR}/config/gcloud:${HOME_IN_CONTAINER}/.config/gcloud"
+    -e "HOME=${HOME_IN_CONTAINER}"
+    -v "${HOME}:${HOME_IN_CONTAINER}"
+    -e "NOMOS_REPO=$(pwd)"
+  )
+fi
+
+if ${gotopt2_use_ephemeral_cluster:-false}; then
+
+  # Create one cluster named "kind".  Each cluster created this way gets a
+  # separate kubeconfig file.
+  readonly ephemeral_cluster_name="kind"
+  kind delete cluster --loglevel=debug || true
+  # https://github.com/kubernetes-sigs/kind/issues/426
+  echo "kind" >./product_name
+  cat <<EOF > "./kind-config.yaml"
+kind: Cluster
+apiVersion: kind.sigs.k8s.io/v1alpha3
+nodes:
+- role: control-plane
+  extraMounts:
+  - containerPath: /sys/class/dmi/id/product_name
+    hostPath: ${PWD}/product_name
+EOF
+  kind create cluster \
+    --config=./kind-config.yaml \
+    --retain \
+    --name="${ephemeral_cluster_name}" \
+    --wait=120s --loglevel=debug || kind export logs "${ARTIFACTS}/kind-logs"
+  readonly kind_kubeconfig_path="$(kind get kubeconfig-path)"
+
+  DOCKER_FLAGS+=(
+    "--network=host"
+  )
+
+  if ${hermetic}; then
+    mkdir -p "${USER_DIR_ON_HOST}/.config/kind"
+    cp "${kind_kubeconfig_path}" \
+       "${USER_DIR_ON_HOST}/.config/kind/${ephemeral_cluster_name}.kubeconfig"
+    DOCKER_FLAGS+=(
+      -e "KUBECONFIG=${HOME_IN_CONTAINER}/.config/kind/${ephemeral_cluster_name}.kubeconfig"
+    )
+  else
+    mkdir -p "${TEMP_OUTPUT_DIR}/config/kind"
+    cp "${kind_kubeconfig_path}" \
+       "$TEMP_OUTPUT_DIR/config/kind/${ephemeral_cluster_name}.kubeconfig"
+    DOCKER_FLAGS+=(
+      -e "KUBECONFIG=${TEMP_OUTPUT_DIR}/config/kind/${ephemeral_cluster_name}.kubeconfig"
+    )
+  fi
+
+  # A kind cluster must be started here, as this is the last spot we have access
+  # to the 'docker' binary.
+  for node in \
+    $(kubectl --kubeconfig="${kind_kubeconfig_path}" get nodes -oname); do
+    readonly node_name="${node#node/}"
+    echo "config node: ${node_name}"
+    # TODO(filmil): This will reveal the access token of the current user to
+    # the docker container.  Don't use this with your own account.
+    gcloud auth print-access-token \
+      | docker exec -i "${node_name}" \
+        docker login -u oauth2accesstoken --password-stdin https://gcr.io
+    echo "finished access token setup for node: ${node_name}"
+  done
+  # Ensures that kubelet picks up the access token.  This is a kludge, and will
+  # become unnecessary in future versions of 'kind'.
+  docker exec kind-control-plane cp /root/.docker/config.json /var/lib/kubelet/config.json
+  docker exec kind-control-plane systemctl restart kubelet.service
 fi
 
 if [[ "${gcs_prober_cred}" != "" ]]; then
