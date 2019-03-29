@@ -10,11 +10,19 @@ ifndef OUTPUT_DIR
 $(error OUTPUT_DIR must be set, but is not)
 endif
 
-DEV_BUCKET := gs://nomos-release/operator-latest
+DEV_BUCKET := gs://config-management-release/operator-latest
 DEV_BUCKET_USER ?= gs://${GCP_PROJECT}/${USER}
 GIT_SYNC_TAG := v3.0.1-gke.1__linux_amd64
 GIT_SYNC := git-sync:$(GIT_SYNC_TAG)
-GIT_SYNC_SRC := gcr.io/nomos-release/$(GIT_SYNC)
+GIT_SYNC_SRC := gcr.io/config-management-release/$(GIT_SYNC)
+
+# b/129084668 - this can be removed entirely once we've cut over to
+# using the new GCP project for releasing the product.
+OLD_DEV_BUCKET := gs://nomos-release/operator-latest
+OLD_DEV_BUCKET_USER ?= gs://nomos-release/${USER}
+OLD_GIT_SYNC_SRC := gcr.io/nomos-release/$(GIT_SYNC)
+OLD_GCP_PROJECT := nomos-release
+OLD_GCR_PREFIX := nomos-release
 
 # Download the current latest or stable operator manifest from cloud storage
 # into the location where other targets can use it.
@@ -23,7 +31,7 @@ download-operator-latest:
 	@rm -rf ${OPERATOR_STAGING_DIR}
 	@mkdir -p ${OPERATOR_STAGING_DIR}
 	curl -o ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml \
-		https://storage.googleapis.com/nomos-release/operator-latest/nomos-operator.yaml
+		https://storage.googleapis.com/config-management-release/operator-latest/nomos-operator.yaml
 
 # Operator manifest places all generated and static yaml files into a known
 # directory so the operator can pick them up for manifest generation.
@@ -50,6 +58,9 @@ pull-git-sync:
 # build, use deploy-operator-user.
 .PHONY: prepare-operator
 prepare-operator: push-to-gcr-nomos pull-git-sync
+ifndef GCR_PREFIX
+	$(error GCR_PREFIX must be set, but is not)
+endif
 	@echo "+++ Preparing regular operator"
 	@rm -rf ${OPERATOR_STAGING_DIR}
 	@mkdir -p ${OPERATOR_STAGING_DIR}
@@ -57,11 +68,13 @@ prepare-operator: push-to-gcr-nomos pull-git-sync
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml
 	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
-# TODO(b/119836195): Using sed here because the Prow test environment doesn't
-# have the envsubst command. Once it does, switch back
 	@cat .output/staging/operator/operator-bundle.yaml \
 		| sed 's|private-registry=|private-registry=gcr.io/${GCR_PREFIX}|' \
 		> ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+# b/129084668 - this section can be removed entirely once we've cut over to
+# using the new GCP project for releasing the product.
+	docker tag $(GIT_SYNC_SRC) gcr.io/${OLD_GCR_PREFIX}/$(GIT_SYNC)
+	docker push gcr.io/${OLD_GCR_PREFIX}/$(GIT_SYNC)
 
 # deploy-operator installs the operator prepared with prepare-operator
 .PHONY: deploy-operator
@@ -77,6 +90,9 @@ deploy-operator: prepare-operator
 # not exist and must be created from the operator repository.
 .PHONY: prepare-operator-user
 prepare-operator-user: push-to-gcr-nomos pull-git-sync
+ifndef GCR_PREFIX
+	$(error GCR_PREFIX must be set, but is not)
+endif
 	@echo "+++ Preparing user-specific operator"
 	@rm -rf ${OPERATOR_STAGING_DIR}
 	@mkdir -p ${OPERATOR_STAGING_DIR}
@@ -85,6 +101,10 @@ prepare-operator-user: push-to-gcr-nomos pull-git-sync
 	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	@IMAGE=gcr.io/${GCP_PROJECT}/${USER}/nomos-operator:${IMAGE_TAG} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+# b/129084668 - this section can be removed entirely once we've cut over to
+# using the new GCP project for releasing the product.
+	docker tag $(OLD_GIT_SYNC_SRC) gcr.io/${OLD_GCR_PREFIX}/$(GIT_SYNC)
+	docker push gcr.io/${OLD_GCR_PREFIX}/$(GIT_SYNC)
 
 # deploy-operator-user installs the operator prepared with prepare-operator-user
 .PHONY: deploy-operator-user

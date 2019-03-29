@@ -40,13 +40,19 @@
 PLATFORMS ?= linux-amd64 darwin-amd64 windows-amd64
 
 # GCP project that owns container registry for official releases.
-GCP_PROJECT ?= nomos-release
+GCP_PROJECT ?= config-management-release
 
 # GCR prefix to locate containers. For release it is just the GCP Project name.
 GCR_PREFIX ?= $(GCP_PROJECT)
 
 # The GCS bucket containing official releases.
-RELEASE_BUCKET ?= gs://nomos-release
+RELEASE_BUCKET ?= gs://config-management-release
+
+# b/129084668 - continue publishing to the nomos-release project until
+# we've worked out the kinks in the config-management-release project
+OLD_GCP_PROJECT ?= nomos-release
+OLD_GCR_PREFIX ?= $(OLD_GCP_PROJECT)
+OLD_RELEASE_BUCKET ?= gs://nomos-release
 
 # Use git tags to set version string.
 VERSION = $(shell git describe --tags --always --dirty)
@@ -185,11 +191,25 @@ upload-release:
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil -m iam ch -R $(READ_ACCESS_LIST) $(RELEASE_BUCKET)/$(VERSION)
 	gcloud container images add-tag --quiet \
-		gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG) \
-		gcr.io/$(GCR_PREFIX)/nomos:latest
+		gcr.io/$(GCR_PREFIX)/configmanagement:$(IMAGE_TAG) \
+		gcr.io/$(GCR_PREFIX)/configmanagement:latest
 	gsutil -m rsync -r -d -p \
 			$(RELEASE_BUCKET)/$(VERSION) \
 			$(RELEASE_BUCKET)/latest
+# b/129084668 - continue publishing to the nomos-release project until
+# we've worked out the kinks in the config-management-release project
+	gsutil -m rsync -r -p -x ".*bespin.*" $(BIN_DIR) \
+		$(OLD_RELEASE_BUCKET)/$(VERSION)
+	gsutil -m cp -R \
+		$(STAGING_DIR)/kubectl-oidc/kubectl-oidc-plugin.zip  \
+		$(OLD_RELEASE_BUCKET)/$(VERSION)
+	gsutil -m iam ch -R $(READ_ACCESS_LIST) $(OLD_RELEASE_BUCKET)/$(VERSION)
+	gcloud container images add-tag --quiet \
+		gcr.io/$(OLD_GCR_PREFIX)/nomos:$(IMAGE_TAG) \
+		gcr.io/$(OLD_GCR_PREFIX)/nomos:latest
+	gsutil -m rsync -r -d -p \
+			$(OLD_RELEASE_BUCKET)/$(VERSION) \
+			$(OLD_RELEASE_BUCKET)/latest
 
 ##### Git operations as make targets #####
 
@@ -297,6 +317,8 @@ define bless_autorelease_instructions =
 endef
 
 # Promote the latest release candidate
+# b/129084668 - continue blessing in nomos-release until we've verified
+# that the new config-management-release project has the kinks worked out.
 bless-release: NEXT_RELEASE=$(shell \
 		docker run --rm $(BUILDENV_IMAGE) sembump $(LAST_RC))
 bless-release:
@@ -316,17 +338,29 @@ bless-release:
 			git tag -a $${chosen_release} $${chosen_rc}                                    \
 			   -m "Blessed release $${chosen_release}" ;                                   \
 			gcloud container images add-tag --quiet                                        \
-			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_rc}                                   \
-			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_release} ;                            \
+			   gcr.io/$(GCR_PREFIX)/configmanagement:$${chosen_rc}                                   \
+			   gcr.io/$(GCR_PREFIX)/configmanagement:$${chosen_release} ;                            \
 			gcloud container images add-tag --quiet                                        \
-			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_release}                              \
-			   gcr.io/$(GCR_PREFIX)/nomos:stable ;                                        \
+			   gcr.io/$(GCR_PREFIX)/configmanagement:$${chosen_release}                              \
+			   gcr.io/$(GCR_PREFIX)/configmanagement:stable ;                                        \
 			gsutil -m rsync -r -d -p                                                       \
 			   $(RELEASE_BUCKET)/$${chosen_rc}                                             \
 			   $(RELEASE_BUCKET)/$${chosen_release} ;                                      \
 			gsutil -m rsync -r -d -p                                                       \
 			   $(RELEASE_BUCKET)/$${chosen_release}                                        \
 			   $(RELEASE_BUCKET)/stable ;                                                  \
+			gcloud container images add-tag --quiet                                        \
+			   gcr.io/$(OLD_GCR_PREFIX)/nomos:$${chosen_rc}                                   \
+			   gcr.io/$(OLD_GCR_PREFIX)/nomos:$${chosen_release} ;                            \
+			gcloud container images add-tag --quiet                                        \
+			   gcr.io/$(OLD_GCR_PREFIX)/nomos:$${chosen_release}                              \
+			   gcr.io/$(OLD_GCR_PREFIX)/nomos:stable ;                                        \
+			gsutil -m rsync -r -d -p                                                       \
+			   $(OLD_RELEASE_BUCKET)/$${chosen_rc}                                             \
+			   $(OLD_RELEASE_BUCKET)/$${chosen_release} ;                                      \
+			gsutil -m rsync -r -d -p                                                       \
+			   $(OLD_RELEASE_BUCKET)/$${chosen_release}                                        \
+			   $(OLD_RELEASE_BUCKET)/stable ;                                                  \
 			git push origin $${chosen_release};                                            \
 			echo -e "\nRelease notes $(LAST_RELEASE)..$${chosen_release}:\n"; \
 			TZ=America/Los_Angeles \
