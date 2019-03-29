@@ -9,43 +9,56 @@
 # limitations under the License.
 
 # Build intermediate image for tools
+# When adding helper binaries, ensure to build from a specific commit ID, rather
+# than a tag or a branch, so that rebuilds are reproducible. See examples below
+# on how.
 FROM golang:1.11-alpine AS build-base
-RUN apk add bash ca-certificates git gcc g++ libc-dev
+RUN apk add bash ca-certificates coreutils git gcc g++ libc-dev
 
 # We don't use or support modules for the time being.
 ENV GO111MODULE=off
 # Build static binaries only.
 ENV CGO_ENABLED=0
 
-ENV TAP2JUNIT_RELEASE=v0.0.4
-RUN go get github.com/filmil/tap2junit/...
-WORKDIR /go/src/github.com/filmil/tap2junit
-RUN git checkout ${TAP2JUNIT_RELEASE}
-RUN go install github.com/filmil/tap2junit/...
+# tap2junit converts TAP testing output to jUnit
+# v0.0.4
+ARG TAP2JUNIT_RELEASE="afa095c33668ed9abcaeaee5cf0f27f67e96908c"
+ARG TAP2JUNIT_REPO="github.com/filmil/tap2junit"
+RUN go get ${TAP2JUNIT_REPO}/...
+WORKDIR /go/src/${TAP2JUNIT_REPO}
+RUN git checkout ${TAP2JUNIT_RELEASE} && go install ${TAP2JUNIT_REPO}/...
 
-ENV GOTOPT2_RELEASE=v0.1.1
-RUN go get github.com/filmil/gotopt2/...
-WORKDIR /go/src/github.com/filmil/gotopt2
-RUN git checkout ${GOTOPT2_RELEASE}
-RUN go install github.com/filmil/gotopt2/...
+# gotopt2 parses command line options
+# v0.1.2
+ARG GOTOPT2_RELEASE="484e7f416f00d80d55062b7bd5332fe24659694d"
+ARG GOTOPT2_REPO="github.com/filmil/gotopt2/..."
+RUN go get ${GOTOPT2_REPO}/...
+WORKDIR /go/src/${GOTOPT2_REPO}
+RUN git checkout ${GOTOPT2_RELEASE} && go install ${GOTOPT2_REPO}/...
 
-ENV KIND_RELEASE=0.2.0
-RUN go get -u sigs.k8s.io/kind
-WORKDIR /go/src/sigs.k8s.io/kind
-RUN git checkout ${KIND_RELEASE}
-
-RUN CGO_ENABLED=0 GO111MODULE=off go install sigs.k8s.io/kind
+# kind can run kubernetes clusters in docker
+# v0.2.1
+ARG KIND_RELEASE="5e292845d6d7e736515a8ca4da032acd85e153d1"
+ARG KIND_REPO="sigs.k8s.io/kind"
+RUN go get -u ${KIND_REPO}
+WORKDIR /go/src/${KIND_REPO}
+RUN git checkout ${KIND_RELEASE} && go install ${KIND_REPO}
 
 # Build intermediate image for gcloud / kubectl
 FROM ubuntu:16.04 as gcloud-install
 
 ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
 RUN apt-get update && apt-get install -y curl python
-RUN curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-210.0.0-linux-x86_64.tar.gz > /tmp/google-cloud-sdk.tar.gz
-RUN mkdir -p /opt/gcloud
-RUN tar -C /opt/gcloud -xf /tmp/google-cloud-sdk.tar.gz
-RUN /opt/gcloud/google-cloud-sdk/install.sh --quiet
-RUN gcloud components install alpha beta
+ARG DL_GOOGLE_COM="https://dl.google.com/dl/cloudsdk/channels/rapid/downloads"
+RUN curl ${DL_GOOGLE_COM}/google-cloud-sdk-210.0.0-linux-x86_64.tar.gz \
+	> /tmp/google-cloud-sdk.tar.gz
+# Verify SHA256 sum for the downloaded archive for reproducibility.
+RUN echo "b98c9253e3c45e39a42b4ba8b055dad4d3cb3b3f63d1ec41f617a3478db9fb42 /tmp/google-cloud-sdk.tar.gz" | \
+		sha256sum --check -
+RUN mkdir -p /opt/gcloud && \
+    tar -C /opt/gcloud -xf /tmp/google-cloud-sdk.tar.gz && \
+    /opt/gcloud/google-cloud-sdk/install.sh --quiet && \
+    gcloud components install alpha beta
 
 # Build e2e image
 FROM ubuntu:16.04 as e2e-base
@@ -69,7 +82,7 @@ RUN apt-get update \
 # Add Tini
 ENV TINI_VERSION v0.18.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
+RUN (echo "12d20136605531b09a2c2dac02ccee85e1b874eb322ef6baf7561cd93f93c855 /tini" | sha256sum --check - ) && chmod +x /tini
 
 ARG UNAME
 ARG UID
@@ -85,7 +98,7 @@ RUN bash -c 'echo UID=${UID}; GID=${GID}; UNAME=${UNAME}'
 RUN bash -c '[ $GID == 0 ] || groupadd -or -g $GID grp '
 RUN bash -c '[ $UID == 0 ] || useradd -u $UID -G $GID $UNAME'
 
-# Install kubectl 1.11
+# Install a specific version of kubectl
 RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
   && echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list \
   && apt-get update \
