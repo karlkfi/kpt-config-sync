@@ -93,6 +93,9 @@ IMAGE_TAG := $(VERSION)
 # Enable optimzations.
 BUILD_MODE ?= release
 
+# RleaseNome Webhook URL
+WEBHOOK := "https://chat.googleapis.com/v1/spaces/AAAAoUcpCyQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=Hjj9S6kI_yzZ555Ko4i9K3Pm3WX0WkeKQmsqDke6K6g%3D"
+
 # This is the hash of the last release candidate's revision.  No need to run the
 # release process if this has not changed since the last run.
 LAST_RC_GIT_HASH := $(shell git rev-list -n 1 $(LAST_RC))
@@ -330,8 +333,9 @@ bless-release:
 			  git log \
 			     --pretty="format:%C(yellow)%h %C(cyan)%>(12,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" \
                  --date=local $(LAST_RELEASE)..$${chosen_release} ; \
+			j="{\"text\":\"$${chosen_rc} was blessed!\"}" ; \
+			curl -s -d "$${j}" -H "Content-Type: application/json; charset=UTF-8" -X POST $(WEBHOOK) > /dev/null ; \
 	'
-
 
 #############################################################################
 # Various release info printed for diagnostics.
