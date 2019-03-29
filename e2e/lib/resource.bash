@@ -369,14 +369,18 @@ function resource::delete() {
         || "${resource}" == "namespaces" \
         || ${resource} == "ns" ]]; then
     # Remove "default" and "kube-system" from the list of resources to delete,
-    # because they can't be removed.
-    names=( "${names[@]/default}" )
-    names=( "${names[@]/kube-system}" )
-  fi
-  names=("${names[@]}")
-  # Can still end up as an unbound var after this :/
-  if [ ${#names[@]} -eq 0 ]; then
-    return 0
+    # because they can't be removed.  This is very manual, but is apparently one
+    # of the few recommended ways to do this in bash that I could understand.
+    declare -a tmpnames
+    for ns in "${names[@]}"; do
+      if [[ "${ns}" != "default" && "${ns}" != "kube-system" ]]; then
+        tmpnames+=("${ns}")
+      fi
+    done
+    if [ ${#tmpnames[@]} -eq 0 ]; then
+      return 0
+    fi
+    names=("${tmpnames[@]}")
   fi
 
   local deletecmd=("kubectl" "delete" "$resource")
