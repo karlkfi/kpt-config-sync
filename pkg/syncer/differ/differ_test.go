@@ -18,255 +18,266 @@ package differ
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
-	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var converter = runtime.DefaultUnstructuredConverter
-
-type TestItem struct {
-	name        string
-	value       string
-	annotations map[string]string
+func buildUnstructured(opts ...func(*unstructured.Unstructured)) *unstructured.Unstructured {
+	result := &unstructured.Unstructured{}
+	for _, opt := range opts {
+		opt(result)
+	}
+	return result
 }
 
-func (ti TestItem) Object(t *testing.T) *unstructured.Unstructured {
-	obj := &nomosv1.ClusterConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        ti.name,
-			Annotations: ti.annotations,
-		},
-		Spec: nomosv1.ClusterConfigSpec{
-			Token: ti.value,
-		},
+func name(s string) func(*unstructured.Unstructured) {
+	return func(u *unstructured.Unstructured) {
+		u.SetName(s)
 	}
-	u, err := converter.ToUnstructured(obj)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &unstructured.Unstructured{Object: u}
 }
 
-type TestItems []TestItem
-
-func (ti TestItems) Objects(t *testing.T) []*unstructured.Unstructured {
-	ret := make([]*unstructured.Unstructured, len(ti))
-	for idx, item := range ti {
-		ret[idx] = item.Object(t)
+func managed(s string) func(*unstructured.Unstructured) {
+	return func(u *unstructured.Unstructured) {
+		annotations := u.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations[v1.ResourceManagementKey] = s
+		u.SetAnnotations(annotations)
 	}
-	return ret
-}
-
-type TestCase struct {
-	name              string
-	decls             TestItems
-	otherVersionDecls TestItems
-	actuals           TestItems
-	expect            []*Diff
-	expectPanic       bool
 }
 
 func TestComparator(t *testing.T) {
-	testcases := []TestCase{
+	testcases := []struct {
+		name                string
+		declared            []*unstructured.Unstructured
+		actuals             []*unstructured.Unstructured
+		allDeclaredVersions map[string]bool
+		expect              map[string]*Diff
+		expectTypes         map[string]Type
+		expectPanic         bool
+	}{
 		{
-			name: "Empty sets",
+			name:        "empty returns empty",
+			expect:      map[string]*Diff{},
+			expectTypes: map[string]Type{},
 		},
 		{
-			name: "Only declared",
-			decls: TestItems{
-				TestItem{name: "foo", value: "1"},
+			name: "declared and not in actual returns create",
+			declared: []*unstructured.Unstructured{
+				buildUnstructured(name("foo")),
 			},
-			expect: []*Diff{
-				{
+			allDeclaredVersions: map[string]bool{"foo": true},
+			expect: map[string]*Diff{
+				"foo": {
 					Name:     "foo",
-					Type:     Create,
-					Declared: TestItem{name: "foo", value: "1"}.Object(t),
-					Actual:   nil,
+					Declared: buildUnstructured(name("foo")),
 				},
 			},
+			expectTypes: map[string]Type{
+				"foo": Create,
+			},
 		},
 		{
-			name: "Only actual",
-			actuals: TestItems{
-				TestItem{name: "foo", value: "2"},
+			name: "declared and in actual and management enabled returns update",
+			declared: []*unstructured.Unstructured{
+				buildUnstructured(name("foo")),
 			},
-			expect: []*Diff{
-				{
+			actuals: []*unstructured.Unstructured{
+				buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
+			},
+			allDeclaredVersions: map[string]bool{"foo": true},
+			expect: map[string]*Diff{
+				"foo": {
 					Name:     "foo",
-					Type:     Delete,
-					Declared: nil,
-					Actual:   TestItem{name: "foo", value: "2"}.Object(t),
+					Declared: buildUnstructured(name("foo")),
+					Actual:   buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
 				},
 			},
-		},
-		{
-			name: "Don't delete resources declared in other versions",
-			otherVersionDecls: TestItems{
-				TestItem{name: "foo", value: "2"},
-				TestItem{name: "bar", value: "4"},
-			},
-			actuals: TestItems{
-				TestItem{name: "foo", value: "2"},
-				TestItem{name: "bar", value: "2"},
+			expectTypes: map[string]Type{
+				"foo": Update,
 			},
 		},
 		{
-			name: "Differing element value",
-			decls: TestItems{
-				TestItem{name: "foo", value: "1"},
+			name: "declared and in actual and management diabled returns noop",
+			declared: []*unstructured.Unstructured{
+				buildUnstructured(name("foo")),
 			},
-			actuals: TestItems{
-				TestItem{name: "foo", value: "2"},
+			actuals: []*unstructured.Unstructured{
+				buildUnstructured(name("foo"), managed(v1.ResourceManagementDisabled)),
 			},
-			expect: []*Diff{
-				{
+			allDeclaredVersions: map[string]bool{"foo": true},
+			expect: map[string]*Diff{
+				"foo": {
 					Name:     "foo",
-					Type:     Update,
-					Declared: TestItem{name: "foo", value: "1"}.Object(t),
-					Actual:   TestItem{name: "foo", value: "2"}.Object(t),
+					Declared: buildUnstructured(name("foo")),
+					Actual:   buildUnstructured(name("foo"), managed(v1.ResourceManagementDisabled)),
 				},
 			},
+			expectTypes: map[string]Type{
+				"foo": NoOp,
+			},
 		},
 		{
-			name: "Mixture",
-			decls: TestItems{
-				TestItem{name: "foo", value: "1"},
-				TestItem{name: "bar", value: "2"},
-				TestItem{name: "baz", value: "3"},
+			name: "declared and in actual and management invalid returns error",
+			declared: []*unstructured.Unstructured{
+				buildUnstructured(name("foo")),
 			},
-			actuals: TestItems{
-				TestItem{name: "foo", value: "2"},
-				TestItem{name: "bar", value: "2"},
-				TestItem{name: "buffalo", value: "4"},
+			actuals: []*unstructured.Unstructured{
+				buildUnstructured(name("foo"), managed("error")),
 			},
-			expect: []*Diff{
-				{
+			allDeclaredVersions: map[string]bool{"foo": true},
+			expect: map[string]*Diff{
+				"foo": {
 					Name:     "foo",
-					Type:     Update,
-					Declared: TestItem{name: "foo", value: "1"}.Object(t),
-					Actual:   TestItem{name: "foo", value: "2"}.Object(t),
+					Declared: buildUnstructured(name("foo")),
+					Actual:   buildUnstructured(name("foo"), managed("error")),
 				},
-				{
+			},
+			expectTypes: map[string]Type{
+				"foo": Error,
+			},
+		},
+		{
+			name: "not declared and in actual and management enabled returns delete",
+			actuals: []*unstructured.Unstructured{
+				buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
+			},
+			expect: map[string]*Diff{
+				"foo": {
+					Name:   "foo",
+					Actual: buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
+				},
+			},
+			expectTypes: map[string]Type{
+				"foo": Delete,
+			},
+		},
+		{
+			name: "not declared and in actual and management enabled, but in different version returns no diff",
+			actuals: []*unstructured.Unstructured{
+				buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
+			},
+			allDeclaredVersions: map[string]bool{"foo": true},
+			expect:              map[string]*Diff{},
+			expectTypes:         map[string]Type{},
+		},
+		{
+			name: "not declared and in actual and management disabled returns noop",
+			actuals: []*unstructured.Unstructured{
+				buildUnstructured(name("foo"), managed(v1.ResourceManagementDisabled)),
+			},
+			expect: map[string]*Diff{
+				"foo": {
+					Name:   "foo",
+					Actual: buildUnstructured(name("foo"), managed(v1.ResourceManagementDisabled)),
+				},
+			},
+			expectTypes: map[string]Type{
+				"foo": NoOp,
+			},
+		},
+		{
+			name: "not declared and in actual and management invalid returns error",
+			actuals: []*unstructured.Unstructured{
+				buildUnstructured(name("foo"), managed("error")),
+			},
+			expect: map[string]*Diff{
+				"foo": {
+					Name:   "foo",
+					Actual: buildUnstructured(name("foo"), managed("error")),
+				},
+			},
+			expectTypes: map[string]Type{
+				"foo": Error,
+			},
+		},
+		{
+			name: "multiple diff types works",
+			declared: []*unstructured.Unstructured{
+				buildUnstructured(name("foo")),
+				buildUnstructured(name("bar")),
+				buildUnstructured(name("qux")),
+			},
+			actuals: []*unstructured.Unstructured{
+				buildUnstructured(name("bar"), managed(v1.ResourceManagementEnabled)),
+				buildUnstructured(name("qux"), managed(v1.ResourceManagementDisabled)),
+				buildUnstructured(name("mun"), managed(v1.ResourceManagementEnabled)),
+			},
+			allDeclaredVersions: map[string]bool{
+				"foo": true, "bar": true, "qux": true,
+			},
+			expect: map[string]*Diff{
+				"foo": {
+					Name:     "foo",
+					Declared: buildUnstructured(name("foo")),
+				},
+				"bar": {
 					Name:     "bar",
-					Type:     Update,
-					Declared: TestItem{name: "bar", value: "2"}.Object(t),
-					Actual:   TestItem{name: "bar", value: "2"}.Object(t),
+					Declared: buildUnstructured(name("bar")),
+					Actual:   buildUnstructured(name("bar"), managed(v1.ResourceManagementEnabled)),
 				},
-				{
-					Name:     "baz",
-					Type:     Create,
-					Declared: TestItem{name: "baz", value: "3"}.Object(t),
-					Actual:   nil,
+				"qux": {
+					Name:     "qux",
+					Declared: buildUnstructured(name("qux")),
+					Actual:   buildUnstructured(name("qux"), managed(v1.ResourceManagementDisabled)),
 				},
-				{
-					Name:     "buffalo",
-					Type:     Delete,
-					Declared: nil,
-					Actual:   TestItem{name: "buffalo", value: "4"}.Object(t),
+				"mun": {
+					Name:   "mun",
+					Actual: buildUnstructured(name("mun"), managed(v1.ResourceManagementEnabled)),
 				},
+			},
+			expectTypes: map[string]Type{
+				"foo": Create,
+				"bar": Update,
+				"qux": NoOp,
+				"mun": Delete,
 			},
 		},
 		{
-			name: "panic on duplicate decl names",
-			decls: TestItems{
-				TestItem{name: "pod-creator", value: "2"},
-				TestItem{name: "pod-creator", value: "2"},
-			},
-			actuals: TestItems{
-				TestItem{name: "pod-creator", value: "2"},
+			name: "duplicate declarations panics",
+			declared: []*unstructured.Unstructured{
+				buildUnstructured(name("foo")),
+				buildUnstructured(name("foo")),
 			},
 			expectPanic: true,
 		},
 	}
-	for _, testcase := range testcases {
-		t.Run(testcase.name, func(t *testing.T) {
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if x := recover(); x != nil {
-					if _, ok := x.(invalidInput); ok && testcase.expectPanic {
+					if _, ok := x.(invalidInput); ok && tc.expectPanic {
 						return
 					}
-					panic(x)
+					t.Fatal(x)
 				}
 			}()
 
-			declared := testcase.decls.Objects(t)
-			actuals := testcase.actuals.Objects(t)
-			allVersionsDeclared := map[string]bool{}
-			for _, r := range append(declared, testcase.otherVersionDecls.Objects(t)...) {
-				allVersionsDeclared[r.GetName()] = true
+			diffs := Diffs(tc.declared, tc.actuals, tc.allDeclaredVersions)
+
+			if len(tc.declared) > 0 {
+				fmt.Printf("%v\n", tc.declared[0].Object)
+				fmt.Println("name: ", tc.declared[0].GetName())
 			}
 
-			diff := Diffs(declared, allVersionsDeclared, actuals)
+			diffsMap := make(map[string]*Diff)
+			diffTypesMap := make(map[string]Type)
+			for _, diff := range diffs {
+				fmt.Println(diff)
+				diffsMap[diff.Name] = diff
+				diffTypesMap[diff.Name] = diff.Type()
+			}
 
-			for _, expect := range testcase.expect {
-				var found bool
-				for _, actual := range diff {
-					if reflect.DeepEqual(expect, actual) {
-						found = true
-					}
-				}
-				if !found {
-					t.Errorf("expected diff %#v missing from actual", spew.Sdump(expect))
-					fmt.Printf("expect:\n%s\ndiff:\n%s\n", spew.Sdump(expect), spew.Sdump(diff))
-				}
+			if tDiff := cmp.Diff(tc.expect, diffsMap); tDiff != "" {
+				t.Fatal(tDiff)
 			}
-			if len(diff) != len(testcase.expect) {
-				t.Errorf("Expected was different length than actual")
-			}
-		})
-	}
-}
 
-func TestActualResourceIsManaged(t *testing.T) {
-	testcases := []struct {
-		name        string
-		actualNil   bool
-		annotations map[string]string
-		want        ManagementState
-	}{
-		{
-			name:      "nil actual",
-			actualNil: true,
-			want:      Unmanaged,
-		},
-		{
-			name: "nil annotations",
-			want: Unset,
-		},
-		{
-			name:        "invalid value",
-			annotations: map[string]string{nomosv1.ResourceManagementKey: "invalid"},
-			want:        Invalid,
-		},
-		{
-			name:        "disabled value",
-			annotations: map[string]string{nomosv1.ResourceManagementKey: nomosv1.ResourceManagementDisabled},
-			want:        Unmanaged,
-		},
-		{
-			name:        "enabled value",
-			annotations: map[string]string{nomosv1.ResourceManagementKey: nomosv1.ResourceManagementEnabled},
-			want:        Managed,
-		},
-	}
-
-	for _, testcase := range testcases {
-		t.Run(testcase.name, func(t *testing.T) {
-			d := Diff{
-				Actual: TestItem{annotations: testcase.annotations}.Object(t),
-			}
-			if testcase.actualNil {
-				d.Actual = nil
-			}
-			got := d.ManagementState()
-			if got != testcase.want {
-				t.Errorf("want actual is %s, got %s", testcase.want, got)
+			if tDiff := cmp.Diff(tc.expectTypes, diffTypesMap); tDiff != "" {
+				t.Fatal(tDiff)
 			}
 		})
 	}

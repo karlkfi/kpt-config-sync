@@ -122,7 +122,6 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 		for _, decl := range declaredInstances {
 			annotateManaged(decl, policy.Spec.Token)
 		}
-		allDeclaredVersions := allVersionNames(grs, gvk.GroupKind())
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, "")
 		if err != nil {
@@ -131,7 +130,8 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 			continue
 		}
 
-		diffs := differ.Diffs(declaredInstances, allDeclaredVersions, actualInstances)
+		allDeclaredVersions := allVersionNames(grs, gvk.GroupKind())
+		diffs := differ.Diffs(declaredInstances, actualInstances, allDeclaredVersions)
 		for _, diff := range diffs {
 			if updated, err := handleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 				errBuilder.Add(err)

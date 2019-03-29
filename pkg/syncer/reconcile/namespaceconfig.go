@@ -327,7 +327,6 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		decorateAsManaged(declaredInstances, node)
-		allDeclaredVersions := allVersionNames(grs, gvk.GroupKind())
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, name)
 		if err != nil {
@@ -336,7 +335,8 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 			continue
 		}
 
-		diffs := differ.Diffs(declaredInstances, allDeclaredVersions, actualInstances)
+		allDeclaredVersions := allVersionNames(grs, gvk.GroupKind())
+		diffs := differ.Diffs(declaredInstances, actualInstances, allDeclaredVersions)
 		for _, diff := range diffs {
 			if updated, err := handleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 				errBuilder.Add(err)

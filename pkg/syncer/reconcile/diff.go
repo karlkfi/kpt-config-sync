@@ -16,40 +16,21 @@ import (
 func handleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorder record.EventRecorder) (bool, id.ResourceError) {
 	removeEmptyRulesField(diff.Declared)
 
-	managementState := diff.ManagementState()
-	if managementState == differ.Invalid {
-		// The resource's management state is not valid, so show an error and do nothing.
+	switch diff.Type() {
+	case differ.NoOp:
+		return false, nil
+	case differ.Create:
+		return applier.Create(ctx, diff.Declared)
+	case differ.Update:
+		return applier.Update(ctx, diff.Declared, diff.Actual)
+	case differ.Delete:
+		return applier.Delete(ctx, diff.Actual)
+	case differ.Error:
 		warnInvalidAnnotationResource(recorder, diff.Actual, "declared")
 		return false, nil
 	}
 
-	if diff.Type == differ.Create {
-		// It isn't currently possible for a resource to not exist on the cluster and be explicitly
-		// unmanaged. The logic is currently this way because Diff.ManagementState treats
-		// "the resource does not exist on the cluster" as "the resource is not managed".
-		// This replicates preexisting behavior, but will be changed with b/129358726.
-		return applier.Create(ctx, diff.Declared)
-	}
-
-	if managementState == differ.Unmanaged {
-		// The resource is explicitly marked unmanaged, so do nothing.
-		return false, nil
-	}
-
-	switch diff.Type {
-	case differ.Update:
-		// The resource is either "managed", or has no management annotation and
-		// is in the repo, so update it.
-		return applier.Update(ctx, diff.Declared, diff.Actual)
-
-	case differ.Delete:
-		if managementState == differ.Unset {
-			// Do not delete resource if managed annotation is unset.
-			return false, nil
-		}
-		return applier.Delete(ctx, diff.Actual)
-	}
-	panic(vet.InternalErrorf("programmatic error, unhandled syncer diff type combination: %v and %v", diff.Type, managementState))
+	panic(vet.InternalErrorf("programmatic error, unhandled syncer diff type: %v", diff.Type()))
 }
 
 func warnInvalidAnnotationResource(recorder record.EventRecorder, u *unstructured.Unstructured, msg string) {
