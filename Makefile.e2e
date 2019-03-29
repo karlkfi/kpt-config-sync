@@ -78,6 +78,8 @@ test-e2e-all: banner e2e-image-all
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
 		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
 
+test-e2e-all-ephemeral:
+	$(info "TODO(fmil): implement this target")
 
 # Internal test target that passes flags through, should not be ran directly
 # but rather througn one of the options below.
