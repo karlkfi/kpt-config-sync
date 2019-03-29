@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"strings"
 
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // These comments must remain outside the package docstring.
@@ -480,23 +481,72 @@ type RepoImportStatus struct {
 	// +optional
 	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
 
-	// TODO(ekitson): add importer errors
+	// Errors is a list of any errors that occurred while performing the most recent import indicated
+	// by Token.
+	// +optional
+	Errors []ConfigManagementError `json:"errors,omitempty"`
 }
 
 // RepoSyncStatus contains status fields for the sync of the Repo.
 // +protobuf=true
 type RepoSyncStatus struct {
-	// Most recent version token synced from Nomos CRs to Nomos-managed resources. This token is
-	// updated  once the syncer finishes processing a change, whether or not there were errors during
-	// the sync.
+	// LatestToken is the most recent version token synced from the source of truth to managed K8S
+	// resources. This token is updated as soon as the syncer starts processing a new change, whether
+	// or not it has finished processing or if there were errors during the sync.
 	// +optional
-	Token string `json:"token,omitempty"`
+	LatestToken string `json:"latestToken,omitempty"`
 
 	// LastUpdate is the timestamp of when this status was updated by the Importer.
 	// +optional
 	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
 
-	// TODO(ekitson): add syncer errors
+	// InProgress is a list of changes that are currently being synced. Each change may or may not
+	// have associated errors.
+	// +optional
+	InProgress []RepoSyncChangeStatus `json:"inProgress,omitempty"`
+}
+
+// RepoSyncChangeStatus represents the status of a single change being synced in the Repo.
+type RepoSyncChangeStatus struct {
+	// Token is the version token for the change being synced from the source of truth to managed K8S
+	// resources.
+	// +optional
+	Token string `json:"token,omitempty"`
+
+	// Errors is a list of any errors that occurred while syncing the resources changed for the
+	// version token above.
+	// +optional
+	Errors []ConfigManagementError `json:"errors,omitempty"`
+}
+
+// ConfigManagementError represents an error that occurs during the management of configs. It is
+// typically produced when processing the source of truth, importing a config, or syncing a K8S
+// resource.
+type ConfigManagementError struct {
+	// SourcePath is the repo-relative slash path to where the config is defined. This field may be
+	// empty for errors that are not associated with a specific config file.
+	// +optional
+	SourcePath string `json:"sourcePath,omitempty"`
+
+	// ResourceName is the name of the affected K8S resource. This field may be empty for errors that
+	// are not associated with a specific resource.
+	// +optional
+	ResourceName string `json:"resourceName,omitempty"`
+
+	// ResourceNamespace is the namespace of the affected K8S resource. This field may be empty for
+	// errors that are associated with a cluster-scoped resource or not associated with a specific
+	// resource.
+	// +optional
+	ResourceNamespace string `json:"resourceNamespace,omitempty"`
+
+	// ResourceGVK is the GroupVersionKind of the affected K8S resource. This field may be empty for
+	// errors that are not associated with a specific resource.
+	// +optional
+	ResourceGVK schema.GroupVersionKind `json:"resourceGVK"`
+
+	// ErrorMessage describes the error that occurred.
+	// +optional
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
