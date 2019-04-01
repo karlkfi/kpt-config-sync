@@ -63,6 +63,9 @@ const (
   {{- range $k, $v := .Labels}}
     {{$k}}: '{{$v}}'
   {{- end}}
+{{- end}}
+{{- if .ResourceVersion}}
+  resourceVersion: '{{.ResourceVersion}}'
 {{- end}}`
 
 	aNamespaceTemplate = `
@@ -117,12 +120,12 @@ kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: job-creator{{.ID}}
+{{template "objectmetatemplate" .}}
 rules:
 - apiGroups: ["batch/v1"]
   resources: ["jobs"]
   verbs:
    - "*"
-{{template "objectmetatemplate" .}}
 `
 
 	aNamedRoleTemplate = `
@@ -393,6 +396,7 @@ var (
 type templateData struct {
 	ID, Name, Namespace, Attribute string
 	Group, Version, Kind           string
+	ResourceVersion                string
 	LBPName, HierarchyMode         string
 	Labels, Annotations            map[string]string
 	// Environment is formatted into selectors that have matchLabels sections.
@@ -1494,6 +1498,13 @@ spec:
 			"namespaces/foo/bar/role1.yaml": templateData{}.apply(aNamedRole),
 		},
 		expectedErrorCodes: []string{vet.MissingObjectNameErrorCode},
+	},
+	{
+		testName: "Specifying system generated field is an error",
+		testFiles: fstesting.FileContentMap{
+			"namespaces/foo/bar/role.yaml": templateData{ResourceVersion: "999"}.apply(aRole),
+		},
+		expectedErrorCodes: []string{vet.IllegalFieldsInConfigErrorCode},
 	},
 	{
 		testName: "Repo outside system/ is an error",
