@@ -89,14 +89,13 @@ func (r *ClusterConfigReconciler) Reconcile(request reconcile.Request) (reconcil
 	}
 	clusterConfig.SetGroupVersionKind(kinds.ClusterConfig())
 
-	name := request.Name
 	if request.Name != v1.ClusterConfigName {
-		err := errors.Errorf("ClusterConfig resource has invalid name %q. To fix, delete the ClusterConfig.", name)
+		err := errors.Errorf("ClusterConfig resource has invalid name %q. To fix, delete the ClusterConfig.", request.Name)
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "InvalidClusterConfig", err.Error())
 		glog.Warning(err)
 		// Update the status on a best effort basis. We don't want to retry handling a ClusterConfig
 		// we want to ignore and it's possible it has been deleted by the time we reconcile it.
-		_ = r.setClusterConfigStatus(ctx, clusterConfig, NewClusterConfigSyncError(name, clusterConfig.GroupVersionKind(), err))
+		_ = r.setClusterConfigStatus(ctx, clusterConfig, NewConfigManagementError(clusterConfig, err))
 		return reconcile.Result{}, nil
 	}
 
@@ -113,8 +112,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 		return errors.Wrapf(err, "could not process cluster policy: %q", policy.GetName())
 	}
 
-	name := policy.GetName()
-	var syncErrs []v1.ClusterConfigSyncError
+	var syncErrs []v1.ConfigManagementError
 	var errBuilder status.ErrorBuilder
 	reconcileCount := 0
 	for _, gvk := range r.toSync {
@@ -126,7 +124,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 		actualInstances, err := r.cache.UnstructuredList(gvk, "")
 		if err != nil {
 			errBuilder.Add(status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
-			syncErrs = append(syncErrs, NewClusterConfigSyncError(name, gvk, err))
+			syncErrs = append(syncErrs, NewConfigManagementError(policy, err))
 			continue
 		}
 
@@ -135,9 +133,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 		for _, diff := range diffs {
 			if updated, err := handleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 				errBuilder.Add(err)
-				pse := NewClusterConfigSyncError(name, gvk, err)
-				pse.ResourceName = diff.Name
-				syncErrs = append(syncErrs, pse)
+				syncErrs = append(syncErrs, cmesForResourceError(err)...)
 			} else if updated {
 				reconcileCount++
 			}
@@ -161,7 +157,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 }
 
 func (r *ClusterConfigReconciler) setClusterConfigStatus(ctx context.Context, policy *v1.ClusterConfig,
-	errs ...v1.ClusterConfigSyncError) id.ResourceError {
+	errs ...v1.ConfigManagementError) id.ResourceError {
 	freshSyncToken := policy.Status.Token == policy.Spec.Token
 	if policy.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for ClusterConfig %q is already up-to-date.", policy.Name)
@@ -187,13 +183,14 @@ func (r *ClusterConfigReconciler) setClusterConfigStatus(ctx context.Context, po
 	return err
 }
 
-// NewClusterConfigSyncError returns a ClusterConfigSyncError corresponding to the given error and GroupVersionKind.
-func NewClusterConfigSyncError(name string, gvk schema.GroupVersionKind, err error) v1.ClusterConfigSyncError {
-	return v1.ClusterConfigSyncError{
-		ResourceName: name,
-		ResourceKind: gvk.Kind,
-		ResourceAPI:  gvk.GroupVersion().String(),
-		ErrorMessage: err.Error(),
+// NewConfigManagementError returns a ConfigManagementError corresponding to the given ClusterConfig and error.
+func NewConfigManagementError(config *v1.ClusterConfig, err error) v1.ConfigManagementError {
+	return v1.ConfigManagementError{
+		SourcePath:        config.GetAnnotations()[v1.SourcePathAnnotationKey],
+		ResourceName:      config.GetName(),
+		ResourceNamespace: config.GetNamespace(),
+		ResourceGVK:       config.GroupVersionKind(),
+		ErrorMessage:      err.Error(),
 	}
 }
 

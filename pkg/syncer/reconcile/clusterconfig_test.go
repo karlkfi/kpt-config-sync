@@ -88,7 +88,7 @@ func syncToken(t string) object.Mutator {
 	}
 }
 
-func clusterSyncError(err v1.ClusterConfigSyncError) object.Mutator {
+func clusterSyncError(err v1.ConfigManagementError) object.Mutator {
 	return func(o *ast.FileObject) {
 		o.Object.(*v1.ClusterConfig).Status.SyncErrors = append(o.Object.(*v1.ClusterConfig).Status.SyncErrors, err)
 	}
@@ -200,10 +200,9 @@ func TestClusterConfigReconcile(t *testing.T) {
 			wantStatusUpdate: clusterConfig(v1.StateError,
 				object.Name("some-incorrect-name"),
 				syncTime(now()),
-				clusterSyncError(v1.ClusterConfigSyncError{
+				clusterSyncError(v1.ConfigManagementError{
 					ResourceName: "some-incorrect-name",
-					ResourceKind: "ClusterConfig",
-					ResourceAPI:  "configmanagement.gke.io/v1",
+					ResourceGVK:  v1.SchemeGroupVersion.WithKind("ClusterConfig"),
 					ErrorMessage: `ClusterConfig resource has invalid name "some-incorrect-name". To fix, delete the ClusterConfig.`,
 				}),
 			),

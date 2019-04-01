@@ -101,7 +101,7 @@ func managedNamespace(name string, opts ...object.Mutator) *corev1.Namespace {
 	return namespace(name, opts...)
 }
 
-func namespaceSyncError(err v1.NamespaceConfigSyncError) object.Mutator {
+func namespaceSyncError(err v1.ConfigManagementError) object.Mutator {
 	return func(o *ast.FileObject) {
 		o.Object.(*v1.NamespaceConfig).Status.SyncErrors = append(o.Object.(*v1.NamespaceConfig).Status.SyncErrors, err)
 	}
@@ -173,10 +173,21 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			wantEvent:           reconcileComplete,
 		},
 		{
-			name:                "clean up label for unmanaged namespace",
-			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, importToken(token), syncToken(token), unmanaged),
-			namespace:           namespace("eng", managedQuotaLabels, unmanaged),
-			wantStatusUpdate:    namespaceConfig("eng", v1.StateError, importToken(token), syncTime(now()), syncToken(token), namespaceSyncError(v1.NamespaceConfigSyncError{ErrorMessage: unmanagedError()}), unmanaged),
+			name:            "clean up label for unmanaged namespace",
+			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token), syncToken(token), unmanaged),
+			namespace:       namespace("eng", managedQuotaLabels, unmanaged),
+			wantStatusUpdate: namespaceConfig(
+				"eng",
+				v1.StateError,
+				importToken(token),
+				syncTime(now()),
+				syncToken(token),
+				namespaceSyncError(v1.ConfigManagementError{
+					ResourceName: "eng",
+					ResourceGVK:  corev1.SchemeGroupVersion.WithKind("Namespace"),
+					ErrorMessage: unmanagedError(),
+				}),
+				unmanaged),
 			wantNamespaceUpdate: namespace("eng", unmanaged),
 			wantEvent: &event{
 				kind:   corev1.EventTypeWarning,
@@ -247,12 +258,22 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			wantEvent:           reconcileComplete,
 		},
 		{
-			name:             "unmanaged namespace has resources synced but status error",
-			namespaceConfig:  namespaceConfig("eng", v1.StateSynced, importToken(token)),
-			namespace:        namespace("eng", unmanaged),
-			declared:         deployment(appsv1.RecreateDeploymentStrategyType),
-			actual:           []runtime.Object{managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng")},
-			wantStatusUpdate: namespaceConfig("eng", v1.StateError, importToken(token), syncTime(now()), syncToken(token), namespaceSyncError(v1.NamespaceConfigSyncError{ErrorMessage: unmanagedError()})),
+			name:            "unmanaged namespace has resources synced but status error",
+			namespaceConfig: namespaceConfig("eng", v1.StateSynced, importToken(token)),
+			namespace:       namespace("eng", unmanaged),
+			declared:        deployment(appsv1.RecreateDeploymentStrategyType),
+			actual:          []runtime.Object{managedDeployment(appsv1.RollingUpdateDeploymentStrategyType, "eng")},
+			wantStatusUpdate: namespaceConfig(
+				"eng",
+				v1.StateError,
+				importToken(token),
+				syncTime(now()),
+				syncToken(token),
+				namespaceSyncError(v1.ConfigManagementError{
+					ResourceName: "eng",
+					ResourceGVK:  corev1.SchemeGroupVersion.WithKind("Namespace"),
+					ErrorMessage: unmanagedError(),
+				})),
 			wantEvent: &event{
 				kind:   corev1.EventTypeWarning,
 				reason: "UnmanagedNamespace",

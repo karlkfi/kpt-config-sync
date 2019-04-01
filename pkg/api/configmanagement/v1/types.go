@@ -77,7 +77,7 @@ type ClusterConfigStatus struct {
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
 	// resources from the ClusterConfig specs. This field will be empty on success.
 	// +optional
-	SyncErrors []ClusterConfigSyncError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
+	SyncErrors []ConfigManagementError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
 
 	// SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
 	// +optional
@@ -86,26 +86,6 @@ type ClusterConfigStatus struct {
 	// SyncState is the current state of the policy resources (eg synced, stale, error).
 	// +optional
 	SyncState PolicySyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
-}
-
-// ClusterConfigSyncError represents a failed sync attempt for a ClusterConfig.
-// +protobuf=true
-type ClusterConfigSyncError struct {
-	// ResourceName is the name of the K8S resource that failed to sync.
-	// +optional
-	ResourceName string `json:"resourceName,omitempty" protobuf:"bytes,1,opt,name=resourceName"`
-
-	// ResourceKind is the type of the K8S resource (from TypeMeta.Kind).
-	// +optional
-	ResourceKind string `json:"resourceKind,omitempty" protobuf:"bytes,2,opt,name=resourceKind"`
-
-	// ResourceAPI is the API and version of the K8S resource (from TypeMeta.ApiVersion).
-	// +optional
-	ResourceAPI string `json:"resourceApi,omitempty" protobuf:"bytes,3,opt,name=resourceApi"`
-
-	// ErrorMessage contains the error returned from API server when trying to sync.
-	// +optional
-	ErrorMessage string `json:"errorMessage,omitempty" protobuf:"bytes,4,opt,name=errorMessage"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -175,7 +155,7 @@ type NamespaceConfigStatus struct {
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
 	// resources from the NamespaceConfig specs. This field will be empty on success.
 	// +optional
-	SyncErrors []NamespaceConfigSyncError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
+	SyncErrors []ConfigManagementError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
 
 	// SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
 	// +optional
@@ -184,30 +164,6 @@ type NamespaceConfigStatus struct {
 	// SyncState is the current state of the policy resources (eg synced, stale, error).
 	// +optional
 	SyncState PolicySyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
-}
-
-// NamespaceConfigSyncError represents a failed sync attempt for a NamespaceConfig.
-// +protobuf=true
-type NamespaceConfigSyncError struct {
-	// SourceName is the name of the NamespaceConfig where the resource is defined.
-	// +optional
-	SourceName string `json:"sourceName,omitempty" protobuf:"bytes,1,opt,name=sourceName"`
-
-	// ResourceName is the name of the K8S resource that failed to sync.
-	// +optional
-	ResourceName string `json:"resourceName,omitempty" protobuf:"bytes,2,opt,name=resourceName"`
-
-	// ResourceKind is the type of the K8S resource (from TypeMeta.Kind).
-	// +optional
-	ResourceKind string `json:"resourceKind,omitempty" protobuf:"bytes,3,opt,name=resourceKind"`
-
-	// ResourceAPI is the API and version of the K8S resource (from TypeMeta.ApiVersion).
-	// +optional
-	ResourceAPI string `json:"resourceApi,omitempty" protobuf:"bytes,4,opt,name=resourceApi"`
-
-	// ErrorMessage contains the error returned from API server when trying to sync.
-	// +optional
-	ErrorMessage string `json:"errorMessage,omitempty" protobuf:"bytes,5,opt,name=errorMessage"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
