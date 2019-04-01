@@ -91,13 +91,13 @@ func (r *ClusterConfigReconciler) Reconcile(request reconcile.Request) (reconcil
 
 	name := request.Name
 	if request.Name != v1.ClusterConfigName {
-		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "InvalidClusterConfig",
-			"ClusterConfig resource has invalid name %q", name)
-		err := errors.Errorf("ClusterConfig resource has invalid name %q", name)
+		err := errors.Errorf("ClusterConfig resource has invalid name %q. To fix, delete the ClusterConfig.", name)
+		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "InvalidClusterConfig", err.Error())
 		glog.Warning(err)
-		// Only return an error if we cannot update the status,
-		// since we don't want kubebuilder to enqueue a retry for this object.
-		return reconcile.Result{}, r.setClusterConfigStatus(ctx, clusterConfig, NewClusterConfigSyncError(name, clusterConfig.GroupVersionKind(), err))
+		// Update the status on a best effort basis. We don't want to retry handling a ClusterConfig
+		// we want to ignore and it's possible it has been deleted by the time we reconcile it.
+		_ = r.setClusterConfigStatus(ctx, clusterConfig, NewClusterConfigSyncError(name, clusterConfig.GroupVersionKind(), err))
+		return reconcile.Result{}, nil
 	}
 
 	rErr := r.managePolicies(ctx, clusterConfig)

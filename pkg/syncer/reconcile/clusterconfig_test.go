@@ -204,7 +204,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 					ResourceName: "some-incorrect-name",
 					ResourceKind: "ClusterConfig",
 					ResourceAPI:  "configmanagement.gke.io/v1",
-					ErrorMessage: `ClusterConfig resource has invalid name "some-incorrect-name"`,
+					ErrorMessage: `ClusterConfig resource has invalid name "some-incorrect-name". To fix, delete the ClusterConfig.`,
 				}),
 			),
 			wantEvent: &event{
