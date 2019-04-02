@@ -148,9 +148,11 @@ function main() {
   fi
   GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"; export GIT_SSH_COMMAND
 
-  echo "+++ Starting tests"
+  # TODO(fmil): remove the root reason for this message.
+  # shellcheck disable=SC2154
+  echo "+++ Starting tests from ${gotopt2_testcases_dir}"
   local all_test_files=()
-  mapfile -t all_test_files < <(find "${TEST_DIR}/testcases" -name '*.bats' | sort)
+  mapfile -t all_test_files < <(find "${TEST_DIR}/${gotopt2_testcases_dir}" -name '*.bats' | sort)
 
   local filtered_test_files=()
   if [[ "${file_filter}" == "" ]]; then
@@ -293,6 +295,10 @@ flags:
   type: bool
   help: "If set, the setup will create a new ssh key to use in the tests"
   default: false
+- name: "testcases-dir"
+  type: string
+  default: "testcases"
+  help: "The directory name, relative to testdir to pick e2e tests up from"
 EOF
 )
 eval "${gotopt2_result}"

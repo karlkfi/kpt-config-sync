@@ -30,11 +30,36 @@ ci-test-e2e-local:
 	$(MAKE) $(E2E_PARAMS) \
 	 E2E_FLAGS="\
 		--gcp-prober-cred /tmp/config/prober_runner_client_key.json \
+		$(E2E_FLAGS) \
 	 " \
      TEST_E2E_RUN_FLAGS="\
 		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json \
 	 " \
      ci-test-e2e
+
+
+### Stress tests targets
+
+# The CI target for running stress tests.  Stress tests measure the long-term
+# performance of Nomos.
+ci-stresstest-e2e:
+	$(MAKE) $(E2E_PARAMS) \
+      E2E_FLAGS="\
+	    --timing \
+		--testcases-dir=stresstests \
+		$(E2E_FLAGS) \
+     " \
+     TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)" \
+	 ci-test-e2e
+
+# Same target as above, except it can be ran from a local machine.
+ci-stresstest-e2e-local:
+	$(MAKE) $(E2E_PARAMS) \
+			E2E_FLAGS="\
+			  --testcases-dir=stresstests \
+			" \
+			ci-test-e2e-local
+
 
 # Run ci setup locally against latest
 ci-test-e2e-local-latest:
