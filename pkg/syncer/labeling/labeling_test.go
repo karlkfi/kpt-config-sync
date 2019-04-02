@@ -54,7 +54,7 @@ func TestLabeling(t *testing.T) {
 	}
 }
 
-func TestRemoveNomos(t *testing.T) {
+func TestRemoveQuota(t *testing.T) {
 	tests := []struct {
 		in, out  map[string]string
 		hasNomos bool
@@ -70,9 +70,8 @@ func TestRemoveNomos(t *testing.T) {
 		},
 		{
 			in: map[string]string{
-				"foo":                            "bar",
-				"configmanagement.gke.io/system": "true",
-				"configmanagement.gke.io/quota":  "true",
+				"foo":                           "bar",
+				"configmanagement.gke.io/quota": "true",
 			},
 			out:      map[string]string{"foo": "bar"},
 			hasNomos: true,
@@ -86,13 +85,13 @@ func TestRemoveNomos(t *testing.T) {
 				c[k] = v
 			}
 		}
-		RemoveNomos(c)
+		RemoveQuota(c)
 		if !cmp.Equal(test.out, c) {
-			t.Errorf("RemoveNomos(%+v)=%+v, want: %+v\ndiff:%v\n", test.in, c, test.out, cmp.Diff(test.out, c))
+			t.Errorf("RemoveQuota(%+v)=%+v, want: %+v\ndiff:%v\n", test.in, c, test.out, cmp.Diff(test.out, c))
 		}
-		actualHas := HasNomos(test.in)
+		actualHas := HasQuota(test.in)
 		if actualHas != test.hasNomos {
-			t.Errorf("HasNomos(%+v)=%v, want: %v", test.in, actualHas, test.hasNomos)
+			t.Errorf("HasQuota(%+v)=%v, want: %v", test.in, actualHas, test.hasNomos)
 		}
 	}
 }

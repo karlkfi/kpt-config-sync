@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -50,7 +51,113 @@ func managed(s string) func(*unstructured.Unstructured) {
 	}
 }
 
-func TestComparator(t *testing.T) {
+func owned() func(*unstructured.Unstructured) {
+	return func(u *unstructured.Unstructured) {
+		owners := u.GetOwnerReferences()
+		owners = append(owners, metav1.OwnerReference{})
+		u.SetOwnerReferences(owners)
+	}
+}
+
+func TestDiffType(t *testing.T) {
+	testCases := []struct {
+		name       string
+		declared   *unstructured.Unstructured
+		actual     *unstructured.Unstructured
+		expectType Type
+	}{
+		{
+			name:       "in repo, create",
+			declared:   buildUnstructured(),
+			expectType: Create,
+		},
+		{
+			name:       "in repo only and unmanaged, noop",
+			declared:   buildUnstructured(managed(v1.ResourceManagementDisabled)),
+			expectType: NoOp,
+		},
+		{
+			name:       "in repo only, management invalid error",
+			declared:   buildUnstructured(managed("invalid")),
+			expectType: Error,
+		},
+		{
+			name:       "in repo only, management empty string error",
+			declared:   buildUnstructured(managed("")),
+			expectType: Error,
+		},
+		{
+			name:       "in both, update",
+			declared:   buildUnstructured(),
+			actual:     buildUnstructured(),
+			expectType: Update,
+		},
+		{
+			name:       "in both and owned, update",
+			declared:   buildUnstructured(),
+			actual:     buildUnstructured(owned()),
+			expectType: Update,
+		},
+		{
+			name:       "in both, update even though cluster has invalid annotation",
+			declared:   buildUnstructured(),
+			actual:     buildUnstructured(managed("invalid")),
+			expectType: Update,
+		},
+		{
+			name:       "in both, management disabled unmanage",
+			declared:   buildUnstructured(managed(v1.ResourceManagementDisabled)),
+			actual:     buildUnstructured(managed(v1.ResourceManagementEnabled)),
+			expectType: Unmanage,
+		},
+		{
+			name:       "in both, management disabled noop",
+			declared:   buildUnstructured(managed(v1.ResourceManagementDisabled)),
+			actual:     buildUnstructured(),
+			expectType: NoOp,
+		},
+		{
+			name:       "delete",
+			actual:     buildUnstructured(managed(v1.ResourceManagementEnabled)),
+			expectType: Delete,
+		},
+		{
+			name:       "in cluster only, unset noop",
+			actual:     buildUnstructured(),
+			expectType: NoOp,
+		},
+		{
+			name:       "in cluster only, remove invalid empty string",
+			actual:     buildUnstructured(managed("")),
+			expectType: Unmanage,
+		},
+		{
+			name:       "in cluster only, remove invalid annotation",
+			actual:     buildUnstructured(managed("invalid")),
+			expectType: Unmanage,
+		},
+		{
+			name:       "in cluster only and owned, do nothing",
+			actual:     buildUnstructured(managed(v1.ResourceManagementEnabled), owned()),
+			expectType: NoOp,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			diff := Diff{
+				Declared: tc.declared,
+				Actual:   tc.actual,
+			}
+
+			if d := cmp.Diff(tc.expectType, diff.Type()); d != "" {
+				t.Fatal(d)
+			}
+		})
+	}
+}
+
+func TestMultipleDifftypes(t *testing.T) {
 	testcases := []struct {
 		name                string
 		declared            []*unstructured.Unstructured
@@ -66,97 +173,6 @@ func TestComparator(t *testing.T) {
 			expectTypes: map[string]Type{},
 		},
 		{
-			name: "declared and not in actual returns create",
-			declared: []*unstructured.Unstructured{
-				buildUnstructured(name("foo")),
-			},
-			allDeclaredVersions: map[string]bool{"foo": true},
-			expect: map[string]*Diff{
-				"foo": {
-					Name:     "foo",
-					Declared: buildUnstructured(name("foo")),
-				},
-			},
-			expectTypes: map[string]Type{
-				"foo": Create,
-			},
-		},
-		{
-			name: "declared and in actual and management enabled returns update",
-			declared: []*unstructured.Unstructured{
-				buildUnstructured(name("foo")),
-			},
-			actuals: []*unstructured.Unstructured{
-				buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
-			},
-			allDeclaredVersions: map[string]bool{"foo": true},
-			expect: map[string]*Diff{
-				"foo": {
-					Name:     "foo",
-					Declared: buildUnstructured(name("foo")),
-					Actual:   buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
-				},
-			},
-			expectTypes: map[string]Type{
-				"foo": Update,
-			},
-		},
-		{
-			name: "declared and in actual and management diabled returns noop",
-			declared: []*unstructured.Unstructured{
-				buildUnstructured(name("foo")),
-			},
-			actuals: []*unstructured.Unstructured{
-				buildUnstructured(name("foo"), managed(v1.ResourceManagementDisabled)),
-			},
-			allDeclaredVersions: map[string]bool{"foo": true},
-			expect: map[string]*Diff{
-				"foo": {
-					Name:     "foo",
-					Declared: buildUnstructured(name("foo")),
-					Actual:   buildUnstructured(name("foo"), managed(v1.ResourceManagementDisabled)),
-				},
-			},
-			expectTypes: map[string]Type{
-				"foo": NoOp,
-			},
-		},
-		{
-			name: "declared and in actual and management invalid returns error",
-			declared: []*unstructured.Unstructured{
-				buildUnstructured(name("foo")),
-			},
-			actuals: []*unstructured.Unstructured{
-				buildUnstructured(name("foo"), managed("error")),
-			},
-			allDeclaredVersions: map[string]bool{"foo": true},
-			expect: map[string]*Diff{
-				"foo": {
-					Name:     "foo",
-					Declared: buildUnstructured(name("foo")),
-					Actual:   buildUnstructured(name("foo"), managed("error")),
-				},
-			},
-			expectTypes: map[string]Type{
-				"foo": Error,
-			},
-		},
-		{
-			name: "not declared and in actual and management enabled returns delete",
-			actuals: []*unstructured.Unstructured{
-				buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
-			},
-			expect: map[string]*Diff{
-				"foo": {
-					Name:   "foo",
-					Actual: buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
-				},
-			},
-			expectTypes: map[string]Type{
-				"foo": Delete,
-			},
-		},
-		{
 			name: "not declared and in actual and management enabled, but in different version returns no diff",
 			actuals: []*unstructured.Unstructured{
 				buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
@@ -166,45 +182,15 @@ func TestComparator(t *testing.T) {
 			expectTypes:         map[string]Type{},
 		},
 		{
-			name: "not declared and in actual and management disabled returns noop",
-			actuals: []*unstructured.Unstructured{
-				buildUnstructured(name("foo"), managed(v1.ResourceManagementDisabled)),
-			},
-			expect: map[string]*Diff{
-				"foo": {
-					Name:   "foo",
-					Actual: buildUnstructured(name("foo"), managed(v1.ResourceManagementDisabled)),
-				},
-			},
-			expectTypes: map[string]Type{
-				"foo": NoOp,
-			},
-		},
-		{
-			name: "not declared and in actual and management invalid returns error",
-			actuals: []*unstructured.Unstructured{
-				buildUnstructured(name("foo"), managed("error")),
-			},
-			expect: map[string]*Diff{
-				"foo": {
-					Name:   "foo",
-					Actual: buildUnstructured(name("foo"), managed("error")),
-				},
-			},
-			expectTypes: map[string]Type{
-				"foo": Error,
-			},
-		},
-		{
 			name: "multiple diff types works",
 			declared: []*unstructured.Unstructured{
 				buildUnstructured(name("foo")),
 				buildUnstructured(name("bar")),
-				buildUnstructured(name("qux")),
+				buildUnstructured(name("qux"), managed(v1.ResourceManagementDisabled)),
 			},
 			actuals: []*unstructured.Unstructured{
 				buildUnstructured(name("bar"), managed(v1.ResourceManagementEnabled)),
-				buildUnstructured(name("qux"), managed(v1.ResourceManagementDisabled)),
+				buildUnstructured(name("qux")),
 				buildUnstructured(name("mun"), managed(v1.ResourceManagementEnabled)),
 			},
 			allDeclaredVersions: map[string]bool{
@@ -222,8 +208,8 @@ func TestComparator(t *testing.T) {
 				},
 				"qux": {
 					Name:     "qux",
-					Declared: buildUnstructured(name("qux")),
-					Actual:   buildUnstructured(name("qux"), managed(v1.ResourceManagementDisabled)),
+					Declared: buildUnstructured(name("qux"), managed(v1.ResourceManagementDisabled)),
+					Actual:   buildUnstructured(name("qux")),
 				},
 				"mun": {
 					Name:   "mun",

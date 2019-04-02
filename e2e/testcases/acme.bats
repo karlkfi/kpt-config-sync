@@ -60,7 +60,7 @@ function check_metrics_pages() {
   namespace::check_exists newer-prj \
     -l "configmanagement.gke.io/quota=true" \
     -a "configmanagement.gke.io/managed=enabled"
-  resource::check_count -r validatingwebhookconfigurations -c 1
+  resource::check_count -r validatingwebhookconfigurations -l "configmanagement.gke.io/system=true" -c 1
   resource::check validatingwebhookconfigurations resource-quota.configmanagement.gke.io
   resource::check_count -a "configmanagement.gke.io/managed=enabled" -r clusterrole -c 3
   resource::check clusterrole acme-admin -a "configmanagement.gke.io/managed=enabled"
@@ -88,7 +88,7 @@ function check_metrics_pages() {
   resource::check -n backend rolebinding alice-rolebinding -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n backend -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
   resource::check -n backend resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
-  run kubectl get quota -n backend -o yaml
+  run kubectl get resourcequota -n backend -o yaml
   assert::contains 'pods: "1"'
 
   # frontend

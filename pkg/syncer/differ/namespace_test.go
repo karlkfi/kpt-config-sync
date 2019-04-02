@@ -1,0 +1,109 @@
+package differ
+
+import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/syncer/labeling"
+	"github.com/google/nomos/pkg/testing/fake"
+	corev1 "k8s.io/api/core/v1"
+)
+
+func namespaceConfig(opts ...object.Mutator) *v1.NamespaceConfig {
+	return fake.Build(kinds.NamespaceConfig(), opts...).Object.(*v1.NamespaceConfig)
+}
+
+func namespace(opts ...object.Mutator) *corev1.Namespace {
+	return fake.Build(kinds.Namespace(), opts...).Object.(*corev1.Namespace)
+}
+
+var (
+	managementEnabled  = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+	managementDisabled = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
+	managementInvalid  = object.Annotation(v1.ResourceManagementKey, "invalid")
+)
+
+func TestNamespaceDiffType(t *testing.T) {
+	testCases := []struct {
+		name       string
+		declared   *v1.NamespaceConfig
+		actual     *corev1.Namespace
+		expectType Type
+	}{
+		{
+			name:       "in repo, create",
+			declared:   namespaceConfig(),
+			expectType: Create,
+		},
+		{
+			name:       "in repo only and unmanaged, noop",
+			declared:   namespaceConfig(managementDisabled),
+			expectType: NoOp,
+		},
+		{
+			name:       "in repo only, management invalid error",
+			declared:   namespaceConfig(managementInvalid),
+			expectType: Error,
+		},
+		{
+			name:       "in both, update",
+			declared:   namespaceConfig(),
+			actual:     namespace(),
+			expectType: Update,
+		},
+		{
+			name:       "in both, update even though cluster has invalid annotation",
+			declared:   namespaceConfig(),
+			actual:     namespace(managementInvalid),
+			expectType: Update,
+		},
+		{
+			name:       "in both, management disabled unmanage",
+			declared:   namespaceConfig(managementDisabled),
+			actual:     namespace(managementEnabled),
+			expectType: Unmanage,
+		},
+		{
+			name:       "in both, management disabled noop",
+			declared:   namespaceConfig(managementDisabled),
+			actual:     namespace(),
+			expectType: NoOp,
+		},
+		{
+			name:       "delete",
+			actual:     namespace(managementEnabled),
+			expectType: Delete,
+		},
+		{
+			name:       "in cluster only, unset noop",
+			actual:     namespace(),
+			expectType: NoOp,
+		},
+		{
+			name:       "in cluster only, remove invalid management",
+			actual:     namespace(managementInvalid),
+			expectType: Unmanage,
+		},
+		{
+			name:       "in cluster only, remove quota",
+			actual:     namespace(object.Label(labeling.ConfigManagementQuotaKey, "")),
+			expectType: Unmanage,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			diff := NamespaceDiff{
+				Declared: tc.declared,
+				Actual:   tc.actual,
+			}
+
+			if d := cmp.Diff(tc.expectType, diff.Type()); d != "" {
+				t.Fatal(d)
+			}
+		})
+	}
+}

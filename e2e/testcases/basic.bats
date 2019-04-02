@@ -170,20 +170,22 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 function manage_namespace() {
   local ns="${1}"
   debug::log "Add an unmanaged resource into the namespace as a control"
+  debug::log "We should never modify this resource"
   wait::for -t 5 -- \
     kubectl apply -f "${YAML_DIR}/reserved_namespaces/unmanaged-service.${ns}.yaml"
 
-  debug::log "Start managing the namespace"
+  debug::log "Add resource to manage"
   git::add "${YAML_DIR}/reserved_namespaces/service.yaml" \
     "acme/namespaces/${ns}/service.yaml"
+  debug::log "Start managing the namespace"
   git::add "${YAML_DIR}/reserved_namespaces/namespace.${ns}.yaml" \
     "acme/namespaces/${ns}/namespace.yaml"
   git::commit -m "Start managing the namespace"
 
-  debug::log "Wait until service appears on the cluster"
+  debug::log "Wait until managed service appears on the cluster"
   wait::for -t 30 -- kubectl get services "some-service" --namespace="${ns}"
 
-  debug::log "Remove the namespace directory from managed set"
+  debug::log "Remove the namespace directory from the repo"
   git::rm "acme/namespaces/${ns}"
   git::commit -m "Remove the namespace from the managed set of namespaces"
 

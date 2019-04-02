@@ -24,3 +24,18 @@ func NewAnnotationValidator() ast.Visitor {
 			return nil
 		})
 }
+
+// NewManagedAnnotationValidator validates the value of the management annotation label.
+func NewManagedAnnotationValidator() ast.Visitor {
+	return visitor.NewAllObjectValidator(
+		func(o ast.FileObject) *status.MultiError {
+			value, found := o.MetaObject().GetAnnotations()[v1.ResourceManagementKey]
+			if found && (value != v1.ResourceManagementDisabled) {
+				return status.From(vet.IllegalManagementAnnotationError{
+					Resource: &o,
+					Value:    value,
+				})
+			}
+			return nil
+		})
+}

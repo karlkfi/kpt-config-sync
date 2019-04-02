@@ -50,6 +50,37 @@ func TestAnnotationValidator(t *testing.T) {
 			fake.Build(kinds.Role(),
 				object.Annotation(v1.ClusterSelectorAnnotationKey, "")),
 		),
+		asttest.Pass("management annotation",
+			fake.Build(kinds.Role(),
+				object.Annotation(v1.ResourceManagementKey, "")),
+		),
+	)
+
+	test.RunAll(t)
+}
+
+func TestNewManagedAnnotationValidator(t *testing.T) {
+	test := asttest.Validator(NewManagedAnnotationValidator,
+		vet.IllegalManagementAnnotationErrorCode,
+
+		asttest.Pass("no management annotation",
+			fake.Build(kinds.Role()),
+		),
+		asttest.Pass("disabled management passes",
+			fake.Build(kinds.Role(),
+				object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled),
+			),
+		),
+		asttest.Fail("enabled management fails",
+			fake.Build(kinds.Role(),
+				object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
+			),
+		),
+		asttest.Fail("invalid management fails",
+			fake.Build(kinds.Role(),
+				object.Annotation(v1.ResourceManagementKey, "invalid"),
+			),
+		),
 	)
 
 	test.RunAll(t)

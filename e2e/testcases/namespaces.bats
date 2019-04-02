@@ -70,17 +70,55 @@ function teardown() {
   namespace::check_warning $ns
 }
 
-@test "Namespace warn on invalid management annotation" {
-  local ns=decl-invalid-annotation
-  namespace::create $ns -a "configmanagement.gke.io/managed=a-garbage-annotation"
+@test "Namespace with management disabled gets cleaned" {
+  local ns=unmanage-test
+
+  debug::log "Declare namespace and wait for it to exist"
   namespace::declare $ns
   git::commit
+  wait::for -t 30 -- namespace::check_exists $ns -a "configmanagement.gke.io/managed=enabled"
 
-  wait::for -t 30 -- namespaceconfig::sync_token_eq "$ns" "$(git::hash)"
-  selection=$(kubectl get namespaceconfigs ${ns} -ojson | jq -c ".status.syncState")
-  [[ "${selection}" == "\"error\"" ]] || debug::error "policy node status should be error, not ${selection}"
-  namespace::check_exists $ns -a "configmanagement.gke.io/managed=a-garbage-annotation"
-  namespace::check_warning $ns
+  debug::log "Ensure we added the Nomos-specific annotations and quota label"
+  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/cluster-name"')
+  [[ "${annotationValue}" != "null" ]] || debug::error "cluster name annotation not added"
+  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/managed"')
+  [[ "${annotationValue}" != "null" ]] || debug::error "management annotation not added"
+  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/source-path"')
+  [[ "${annotationValue}" != "null" ]] || debug::error "source path annotation not added"
+  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.labels."configmanagement.gke.io/quota"')
+  [[ "${annotationValue}" != "null" ]] || debug::error "quota annotation not added"
+
+  debug::log "Declare management disabled on Namespace and wait for management to be disabled"
+  namespace::declare $ns -a "configmanagement.gke.io/managed=disabled"
+  git::commit
+  wait::for -f -t 30 -- namespace::check_exists $ns -a "configmanagement.gke.io/managed=enabled"
+
+  debug::log "Ensure we removed the Nomos-specific annotations"
+  namespace::check_exists $ns
+  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/cluster-name"')
+  [[ "${annotationValue}" == "null" ]] || debug::error "cluster name annotation not removed"
+  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/managed"')
+  [[ "${annotationValue}" == "null" ]] || debug::error "management annotation not removed"
+  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/source-path"')
+  [[ "${annotationValue}" == "null" ]] || debug::error "source path annotation not removed"
+  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.labels."configmanagement.gke.io/quota"')
+  [[ "${annotationValue}" == "null" ]] || debug::error "quota annotation not removed"
+}
+
+@test "Namespace with invalid management annotation cleaned" {
+  local validns=valid-annotation
+  local invalidns=invalid-annotation
+
+  namespace::declare $validns
+  namespace::create $invalidns -a "configmanagement.gke.io/managed=a-garbage-annotation"
+  git::commit
+
+  wait::for -t 30 -- namespace::check_exists $validns -a "configmanagement.gke.io/managed=enabled"
+  namespace::check_exists $invalidns
+  managedValue=$(kubectl get ns $invalidns -ojson | jq '.metadata.annotations."configmanagement.gke.io/managed"')
+  [[ "${managedValue}" == "null" ]] || debug::error "invalid management annotation not removed"
+
+  namespace::check_warning $invalidns
 }
 
 @test "Sync labels and annotations from decls" {
@@ -96,4 +134,3 @@ function teardown() {
     -l "foo-corp.com/awesome-controller-flavour=fuzzy" \
     -a "foo-corp.com/awesome-controller-mixin=green"
 }
-

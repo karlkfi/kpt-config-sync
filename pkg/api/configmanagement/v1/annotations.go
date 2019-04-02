@@ -52,6 +52,7 @@ func HasConfigManagementPrefix(s string) bool {
 var inputAnnotations = map[string]bool{
 	NamespaceSelectorAnnotationKey: true,
 	ClusterSelectorAnnotationKey:   true,
+	ResourceManagementKey:          true,
 }
 
 // IsInputAnnotation returns true if the annotation is a Nomos input annotation.
@@ -75,7 +76,7 @@ func IsAnnotation(a string) bool {
 
 // HasNomosAnnotation returns true if the given map has at least one Nomos annotation.
 func HasNomosAnnotation(a map[string]string) bool {
-	for k := range nomosAnnotations {
+	for k := range a {
 		if IsAnnotation(k) {
 			return true
 		}

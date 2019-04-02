@@ -31,6 +31,7 @@ import (
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,10 +43,11 @@ import (
 const token = "b38239ea8f58eaed17af6734bd6a025eeafccda1"
 
 var (
-	reconcileComplete = &event{
+	clusterReconcileComplete = &event{
 		kind:    corev1.EventTypeNormal,
 		reason:  "ReconcileComplete",
 		varargs: true,
+		obj:     clusterCfg,
 	}
 )
 
@@ -94,8 +96,6 @@ func clusterSyncError(err v1.ConfigManagementError) object.Mutator {
 	}
 }
 
-var unmanaged = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
-
 func clusterConfig(state v1.PolicySyncState, opts ...object.Mutator) *v1.ClusterConfig {
 	opts = append(opts, func(o *ast.FileObject) {
 		o.Object.(*v1.ClusterConfig).Status.SyncState = state
@@ -106,94 +106,366 @@ func clusterConfig(state v1.PolicySyncState, opts ...object.Mutator) *v1.Cluster
 func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.Mutator) *corev1.PersistentVolume {
 	opts = append(opts, func(o *ast.FileObject) {
 		o.Object.(*corev1.PersistentVolume).Spec.PersistentVolumeReclaimPolicy = reclaimPolicy
-	})
+	}, herringAnnotation)
 	return fake.Build(kinds.PersistentVolume(), opts...).Object.(*corev1.PersistentVolume)
 }
 
-func managedPersistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.Mutator) *corev1.PersistentVolume {
-	opts = append(opts,
-		object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-		object.Annotation(v1.SyncTokenAnnotationKey, token))
-	return persistentVolume(reclaimPolicy, opts...)
+var (
+	tokenAnnotation = object.Annotation(v1.SyncTokenAnnotationKey, token)
+
+	// herringAnnotation is used when the decoder mangles empty vs. nil map.
+	herringAnnotation = object.Annotation("red", "herring")
+
+	clusterCfg       = clusterConfig(v1.StateSynced, importToken(token))
+	clusterCfgSynced = clusterConfig(v1.StateSynced, importToken(token), syncTime(metav1.Time{Time: time.Unix(0, 0)}), syncToken(token))
+
+	managementEnabled  = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+	managementDisabled = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
+	managementInvalid  = object.Annotation(v1.ResourceManagementKey, "invalid")
+
+	converter = runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
+
+	anyContext = gomock.Any()
+	anyMessage = gomock.Any()
+	anyArgs    = gomock.Any()
+)
+
+func newTestMocks(t *testing.T, mockCtrl *gomock.Controller) testMocks {
+	return testMocks{
+		t:            t,
+		mockCtrl:     mockCtrl,
+		mockClient:   syncertesting.NewMockClient(mockCtrl),
+		mockApplier:  syncertesting.NewMockApplier(mockCtrl),
+		mockCache:    syncertesting.NewMockGenericCache(mockCtrl),
+		mockRecorder: syncertesting.NewMockEventRecorder(mockCtrl),
+	}
+}
+
+type testMocks struct {
+	t            *testing.T
+	mockCtrl     *gomock.Controller
+	mockClient   *syncertesting.MockClient
+	mockApplier  *syncertesting.MockApplier
+	mockCache    *syncertesting.MockGenericCache
+	mockRecorder *syncertesting.MockEventRecorder
+}
+
+func (tm *testMocks) expectClusterCacheGet(config *v1.ClusterConfig) {
+	if config == nil {
+		return
+	}
+	tm.mockCache.EXPECT().Get(
+		anyContext, types.NamespacedName{Name: config.Name}, EqN(tm.t, "ClusterCacheGet", &v1.ClusterConfig{})).
+		SetArg(2, *config)
+}
+
+// expectNamespaceCacheGet organizes the mock calls for first retrieving a NamespaceConfig from the
+// cache, and then supplying the Namespace. Correctly returns the intermediate not found error if
+// supplied nil for a config.
+//
+// Does not yet support missing Namespace.
+func (tm *testMocks) expectNamespaceCacheGet(config *v1.NamespaceConfig, namespace *corev1.Namespace) {
+	if config == nil {
+		tm.mockCache.EXPECT().Get(
+			anyContext, types.NamespacedName{Name: namespace.Name}, EqN(tm.t, "NamespaceConfigCacheGet", &v1.NamespaceConfig{})).
+			Return(errors.NewNotFound(schema.GroupResource{}, ""))
+	} else {
+		tm.mockCache.EXPECT().Get(
+			anyContext, types.NamespacedName{Name: namespace.Name}, EqN(tm.t, "NamespaceConfigCacheGet", &v1.NamespaceConfig{})).
+			SetArg(2, *config)
+	}
+	tm.mockCache.EXPECT().Get(
+		anyContext, types.NamespacedName{Name: namespace.Name}, EqN(tm.t, "NamespaceCacheGet", &corev1.Namespace{})).
+		SetArg(2, *namespace)
+}
+
+func (tm *testMocks) expectNamespaceUpdate(namespace *corev1.Namespace) {
+	if namespace == nil {
+		return
+	}
+	tm.mockClient.EXPECT().Update(
+		anyContext, EqN(tm.t, "NamespaceUpdate", namespace))
+}
+
+func (tm *testMocks) expectClusterClientGet(config *v1.ClusterConfig) {
+	if config == nil {
+		return
+	}
+	tm.mockClient.EXPECT().Get(
+		anyContext, types.NamespacedName{Name: config.Name}, Eq(tm.t, config))
+}
+
+func (tm *testMocks) expectNamespaceConfigClientGet(config *v1.NamespaceConfig) {
+	if config == nil {
+		return
+	}
+	tm.mockClient.EXPECT().Get(
+		anyContext, types.NamespacedName{Name: config.Name}, EqN(tm.t, "NamespaceConfigClientGet", config))
+}
+
+func (tm *testMocks) expectNamespaceClientGet(namespace *corev1.Namespace) {
+	if namespace == nil {
+		return
+	}
+	tm.mockClient.EXPECT().Get(
+		anyContext, types.NamespacedName{Name: namespace.Name}, EqN(tm.t, "NamespaceClientGet", namespace))
+}
+
+func (tm *testMocks) expectCacheList(gvk schema.GroupVersionKind, namespace string, obj ...runtime.Object) {
+	tm.mockCache.EXPECT().
+		UnstructuredList(Eq(tm.t, gvk), Eq(tm.t, namespace)).
+		Return(toUnstructuredList(tm.t, converter, obj...), nil)
+}
+
+func (tm *testMocks) expectCreate(obj runtime.Object) {
+	if obj == nil {
+		return
+	}
+	tm.mockApplier.EXPECT().
+		Create(anyContext, Eq(tm.t, toUnstructured(tm.t, converter, obj))).
+		Return(true, nil)
+}
+
+func (tm *testMocks) expectUpdate(d *diff) {
+	if d == nil {
+		return
+	}
+	declared := toUnstructured(tm.t, converter, d.declared)
+	actual := toUnstructured(tm.t, converter, d.actual)
+
+	tm.mockApplier.EXPECT().
+		Update(anyContext, Eq(tm.t, declared), Eq(tm.t, actual)).
+		Return(true, nil)
+}
+
+func (tm *testMocks) expectDelete(obj runtime.Object) {
+	if obj == nil {
+		return
+	}
+	tm.mockApplier.EXPECT().
+		Delete(anyContext, Eq(tm.t, toUnstructured(tm.t, converter, obj))).
+		Return(true, nil)
+}
+
+func (tm *testMocks) expectEvent(event *event) {
+	if event == nil {
+		return
+	}
+	if event.varargs {
+		tm.mockRecorder.EXPECT().
+			Eventf(Eq(tm.t, event.obj), Eq(tm.t, event.kind), Eq(tm.t, event.reason), anyMessage, anyArgs)
+	} else {
+		tm.mockRecorder.EXPECT().
+			Event(Eq(tm.t, event.obj), Eq(tm.t, event.kind), Eq(tm.t, event.reason), anyMessage)
+	}
+}
+
+func (tm *testMocks) expectClusterStatusUpdate(statusUpdate *v1.ClusterConfig) {
+	if statusUpdate == nil {
+		return
+	}
+	mockStatusClient := syncertesting.NewMockStatusWriter(tm.mockCtrl)
+	tm.mockClient.EXPECT().Status().Return(mockStatusClient)
+	mockStatusClient.EXPECT().Update(anyContext, Eq(tm.t, statusUpdate))
+}
+
+func (tm *testMocks) expectNamespaceStatusUpdate(statusUpdate *v1.NamespaceConfig) {
+	if statusUpdate == nil {
+		return
+	}
+	mockStatusClient := syncertesting.NewMockStatusWriter(tm.mockCtrl)
+	tm.mockClient.EXPECT().Status().Return(mockStatusClient)
+	mockStatusClient.EXPECT().Update(anyContext, Eq(tm.t, statusUpdate))
+}
+
+type diff struct {
+	declared runtime.Object
+	actual   runtime.Object
 }
 
 func TestClusterConfigReconcile(t *testing.T) {
 	now = func() metav1.Time {
 		return metav1.Time{Time: time.Unix(0, 0)}
 	}
+
+	testCases := []struct {
+		name               string
+		actual             runtime.Object
+		declared           runtime.Object
+		expectCreate       runtime.Object
+		expectUpdate       *diff
+		expectDelete       runtime.Object
+		expectStatusUpdate *v1.ClusterConfig
+		expectEvent        *event
+	}{
+		{
+			name:               "create from declared state",
+			declared:           persistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			expectCreate:       persistentVolume(corev1.PersistentVolumeReclaimRecycle, tokenAnnotation, managementEnabled),
+			expectStatusUpdate: clusterCfgSynced,
+			expectEvent:        clusterReconcileComplete,
+		},
+		{
+			name:               "do not create if management disabled",
+			declared:           persistentVolume(corev1.PersistentVolumeReclaimRecycle, managementDisabled),
+			expectStatusUpdate: clusterCfgSynced,
+		},
+		{
+			name:               "do not create if management invalid",
+			declared:           persistentVolume(corev1.PersistentVolumeReclaimRecycle, managementInvalid),
+			expectStatusUpdate: clusterCfgSynced,
+			expectEvent: &event{
+				kind:   corev1.EventTypeWarning,
+				reason: "InvalidAnnotation",
+				obj:    toUnstructured(t, converter, persistentVolume(corev1.PersistentVolumeReclaimRecycle, managementInvalid, tokenAnnotation)),
+			},
+		},
+		{
+			name:     "update to declared state",
+			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, managementEnabled),
+			expectUpdate: &diff{
+				declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, tokenAnnotation, managementEnabled),
+				actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, managementEnabled),
+			},
+			expectStatusUpdate: clusterCfgSynced,
+			expectEvent:        clusterReconcileComplete,
+		},
+		{
+			name:     "update to declared state even if actual managed unset",
+			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete),
+			expectUpdate: &diff{
+				declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, tokenAnnotation, managementEnabled),
+				actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete),
+			},
+			expectStatusUpdate: clusterCfgSynced,
+			expectEvent:        clusterReconcileComplete,
+		},
+		{
+			name:     "update to declared state even if actual managed invalid",
+			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle),
+			actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, managementInvalid),
+			expectUpdate: &diff{
+				declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, tokenAnnotation, managementEnabled),
+				actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, managementInvalid),
+			},
+			expectStatusUpdate: clusterCfgSynced,
+			expectEvent:        clusterReconcileComplete,
+		},
+		{
+			name:               "do not update if declared management invalid",
+			declared:           persistentVolume(corev1.PersistentVolumeReclaimRecycle, managementInvalid),
+			actual:             persistentVolume(corev1.PersistentVolumeReclaimDelete),
+			expectStatusUpdate: clusterCfgSynced,
+			expectEvent: &event{
+				kind:   corev1.EventTypeWarning,
+				reason: "InvalidAnnotation",
+				obj:    toUnstructured(t, converter, persistentVolume(corev1.PersistentVolumeReclaimRecycle, managementInvalid, tokenAnnotation)),
+			},
+		},
+		{
+			name:     "update to unmanaged",
+			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, managementDisabled),
+			actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, managementEnabled),
+			expectUpdate: &diff{
+				declared: persistentVolume(corev1.PersistentVolumeReclaimDelete),
+				actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, managementEnabled),
+			},
+			expectStatusUpdate: clusterCfgSynced,
+			expectEvent:        clusterReconcileComplete,
+		},
+		{
+			name:               "do not update if unmanaged",
+			declared:           persistentVolume(corev1.PersistentVolumeReclaimRecycle, managementDisabled),
+			actual:             persistentVolume(corev1.PersistentVolumeReclaimDelete),
+			expectStatusUpdate: clusterCfgSynced,
+		},
+		{
+			name:               "delete if managed",
+			actual:             persistentVolume(corev1.PersistentVolumeReclaimDelete, managementEnabled),
+			expectDelete:       persistentVolume(corev1.PersistentVolumeReclaimDelete, managementEnabled),
+			expectStatusUpdate: clusterCfgSynced,
+			expectEvent:        clusterReconcileComplete,
+		},
+		{
+			name:               "do not delete if unmanaged",
+			actual:             persistentVolume(corev1.PersistentVolumeReclaimDelete),
+			expectStatusUpdate: clusterCfgSynced,
+		},
+		{
+			name:   "unmanage if invalid",
+			actual: persistentVolume(corev1.PersistentVolumeReclaimDelete, managementInvalid),
+			expectUpdate: &diff{
+				declared: persistentVolume(corev1.PersistentVolumeReclaimDelete),
+				actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, managementInvalid),
+			},
+			expectStatusUpdate: clusterCfgSynced,
+			expectEvent:        clusterReconcileComplete,
+		},
+		{
+			name: "resource with owner reference is ignored",
+			actual: persistentVolume(corev1.PersistentVolumeReclaimRecycle, managementEnabled,
+				object.OwnerReference(
+					"some_operator_config_object",
+					"some_uid",
+					schema.GroupVersionKind{Group: "operator.config.group", Kind: "OperatorConfigObject", Version: "v1"}),
+			),
+			expectStatusUpdate: clusterCfgSynced,
+		},
+	}
+
+	toSync := []schema.GroupVersionKind{kinds.PersistentVolume()}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Run(tc.name, func(t *testing.T) {
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				tm := newTestMocks(t, mockCtrl)
+				fakeDecoder := syncertesting.NewFakeDecoder(toUnstructuredList(t, converter, tc.declared))
+				testReconciler := NewClusterConfigReconciler(ctx,
+					client.New(tm.mockClient), tm.mockApplier, tm.mockCache, tm.mockRecorder, fakeDecoder, toSync)
+
+				tm.expectClusterCacheGet(clusterCfg)
+				tm.expectCacheList(kinds.PersistentVolume(), "", tc.actual)
+
+				tm.expectCreate(tc.expectCreate)
+				tm.expectUpdate(tc.expectUpdate)
+				tm.expectDelete(tc.expectDelete)
+
+				tm.expectClusterClientGet(clusterCfg)
+				tm.expectClusterStatusUpdate(tc.expectStatusUpdate)
+				tm.expectEvent(tc.expectEvent)
+
+				_, err := testReconciler.Reconcile(
+					reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Name: v1.ClusterConfigName,
+						},
+					})
+				if err != nil {
+					t.Errorf("unexpected reconciliation error: %v", err)
+				}
+			})
+		})
+	}
+}
+
+func TestInvalidClusterConfig(t *testing.T) {
+	now = func() metav1.Time {
+		return metav1.Time{Time: time.Unix(0, 0)}
+	}
 	testCases := []struct {
 		name             string
 		clusterConfig    *v1.ClusterConfig
-		declared         runtime.Object
-		actual           runtime.Object
-		wantUpdate       *application
-		wantCreate       runtime.Object
-		wantDelete       runtime.Object
 		wantStatusUpdate *v1.ClusterConfig
 		wantEvent        *event
 	}{
-		{
-			name:          "update actual resource to declared state",
-			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
-			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimDelete),
-			wantUpdate: &application{
-				intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-				current:  managedPersistentVolume(corev1.PersistentVolumeReclaimDelete),
-			},
-			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
-			wantEvent:        reconcileComplete,
-		},
-		{
-			name:          "actual resource already matches declared state",
-			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
-			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			wantUpdate: &application{
-				intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-				current:  managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			},
-			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
-			wantEvent:        reconcileComplete,
-		},
-		{
-			name:          "un-managed resource cannot be synced",
-			clusterConfig: clusterConfig(v1.StateSynced),
-			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			actual:        persistentVolume(corev1.PersistentVolumeReclaimDelete, unmanaged),
-		},
-		{
-			name:          "sync unlabeled resource in repo",
-			clusterConfig: clusterConfig(v1.StateSynced, importToken(token)),
-			declared:      persistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			actual:        persistentVolume(corev1.PersistentVolumeReclaimDelete),
-			wantUpdate: &application{
-				intended: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-				current:  persistentVolume(corev1.PersistentVolumeReclaimDelete),
-			},
-			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
-			wantEvent:        reconcileComplete,
-		},
-		{
-			name:             "create resource from declared state",
-			clusterConfig:    clusterConfig(v1.StateSynced, importToken(token)),
-			declared:         persistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			wantCreate:       managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			wantStatusUpdate: clusterConfig(v1.StateSynced, importToken(token), syncTime(now()), syncToken(token)),
-			wantEvent:        reconcileComplete,
-		},
-		{
-			name:          "delete resource according to declared state",
-			clusterConfig: clusterConfig(v1.StateSynced),
-			actual:        managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			wantDelete:    managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle),
-			wantEvent:     reconcileComplete,
-		},
-		{
-			name:          "don't delete resource with unset management",
-			clusterConfig: clusterConfig(v1.StateSynced),
-			actual:        persistentVolume(corev1.PersistentVolumeReclaimRecycle),
-		},
 		{
 			name:          "error on clusterconfig with invalid name",
 			clusterConfig: clusterConfig(v1.StateSynced, object.Name("some-incorrect-name")),
@@ -210,21 +482,11 @@ func TestClusterConfigReconcile(t *testing.T) {
 				kind:    corev1.EventTypeWarning,
 				reason:  "InvalidClusterConfig",
 				varargs: true,
+				obj:     clusterConfig(v1.StateSynced, object.Name("some-incorrect-name")),
 			},
-		},
-		{
-			name:          "resource with owner reference is ignored",
-			clusterConfig: clusterConfig(v1.StateSynced),
-			actual: managedPersistentVolume(corev1.PersistentVolumeReclaimRecycle,
-				object.OwnerReference(
-					"some_operator_config_object",
-					"some_uid",
-					schema.GroupVersionKind{Group: "operator.config.group", Kind: "OperatorConfigObject", Version: "v1"}),
-			),
 		},
 	}
 
-	converter := runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
 	toSync := []schema.GroupVersionKind{kinds.PersistentVolume()}
 
 	for _, tc := range testCases {
@@ -232,65 +494,19 @@ func TestClusterConfigReconcile(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			mockClient := syncertesting.NewMockClient(mockCtrl)
-			mockApplier := syncertesting.NewMockApplier(mockCtrl)
-			mockCache := syncertesting.NewMockGenericCache(mockCtrl)
-			mockRecorder := syncertesting.NewMockEventRecorder(mockCtrl)
-			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructureds(t, converter, tc.declared))
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
+
+			tm := newTestMocks(t, mockCtrl)
+			fakeDecoder := syncertesting.NewFakeDecoder(toUnstructuredList(t, converter, nil))
 			testReconciler := NewClusterConfigReconciler(ctx,
-				client.New(mockClient), mockApplier, mockCache, mockRecorder, fakeDecoder, toSync)
+				client.New(tm.mockClient), tm.mockApplier, tm.mockCache, tm.mockRecorder, fakeDecoder, toSync)
 
-			// Get ClusterConfig from cache.
-			mockCache.EXPECT().
-				Get(gomock.Any(), gomock.Any(), gomock.Any()).
-				SetArg(2, *tc.clusterConfig)
+			tm.expectClusterCacheGet(tc.clusterConfig)
 
-			// List actual resources on the cluster.
-			if tc.clusterConfig.Name == v1.ClusterConfigName {
-				// No call is made if the cluster config's name is incorrect.
-				mockCache.EXPECT().
-					UnstructuredList(gomock.Any(), Eq(t, "")).
-					Return(toUnstructureds(t, converter, tc.actual), nil)
-			}
-
-			// Check for expected creates, applies and deletes.
-			if tc.wantCreate != nil {
-				mockApplier.EXPECT().
-					Create(gomock.Any(), NewUnstructuredMatcher(t, toUnstructured(t, converter, tc.wantCreate))).
-					Return(true, nil)
-			}
-			if tc.wantUpdate != nil {
-				mockApplier.EXPECT().
-					Update(gomock.Any(),
-						Eq(t, toUnstructured(t, converter, tc.wantUpdate.intended)),
-						Eq(t, toUnstructured(t, converter, tc.wantUpdate.current))).
-					Return(true, nil)
-			}
-			if tc.wantDelete != nil {
-				mockApplier.EXPECT().
-					Delete(gomock.Any(),
-						Eq(t, toUnstructured(t, converter, tc.wantDelete))).
-					Return(true, nil)
-			}
-
-			if tc.wantStatusUpdate != nil {
-				// Updates involve first getting the resource from API Server.
-				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Any())
-				mockStatusClient := syncertesting.NewMockStatusWriter(mockCtrl)
-				mockClient.EXPECT().Status().Return(mockStatusClient)
-				mockStatusClient.EXPECT().
-					Update(gomock.Any(), Eq(t, tc.wantStatusUpdate))
-			}
-
-			// Check for events with warning or status.
-			if tc.wantEvent != nil {
-				mockRecorder.EXPECT().
-					Eventf(gomock.Any(), Eq(t, tc.wantEvent.kind), Eq(t, tc.wantEvent.reason), gomock.Any(), gomock.Any())
-			}
+			tm.expectClusterClientGet(tc.clusterConfig)
+			tm.expectClusterStatusUpdate(tc.wantStatusUpdate)
+			tm.expectEvent(tc.wantEvent)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{

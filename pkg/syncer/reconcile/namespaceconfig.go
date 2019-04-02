@@ -37,7 +37,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
@@ -111,83 +110,45 @@ func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconc
 	return reconcile.Result{}, err
 }
 
-// namespaceConfigState enumerates possible states for NamespaceConfigs
-type namespaceConfigState string
-
-const (
-	namespaceConfigStateNotFound  = namespaceConfigState("notFound")  // the policy node does not exist
-	namespaceConfigStateNamespace = namespaceConfigState("namespace") // the policy node is declared as a namespace
-)
-
-// getNamespaceConfigState normalizes the state of the policy node and returns the node.
-func (r *NamespaceConfigReconciler) getNamespaceConfigState(
+// getNamespaceConfig normalizes the state of the policy node and returns the node.
+func (r *NamespaceConfigReconciler) getNamespaceConfig(
 	ctx context.Context,
 	name string,
-) (namespaceConfigState, *v1.NamespaceConfig) {
+) *v1.NamespaceConfig {
 	node := &v1.NamespaceConfig{}
 	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, node)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return namespaceConfigStateNotFound, nil
+			return nil
 		}
 		panic(errors.Wrap(err, "cache returned error other than not found, this should not happen"))
 	}
 	node.SetGroupVersionKind(kinds.NamespaceConfig())
 
-	return namespaceConfigStateNamespace, node
+	return node
 }
 
-// namespaceState enumerates possible states for the namespace
-type namespaceState string
-
-const (
-	namespaceStateNotFound  = namespaceState("notFound")   // The namespace does not exist.
-	namespaceStateUnset     = namespaceState("exists")     // The namespace exists but the management label is unset.
-	namespaceStateManaged   = namespaceState("manageFull") // Management is enabled for the namespace.
-	namespaceStateUnmanaged = namespaceState("disabled")   // Management is disabled for the Namespace.
-)
-
-// getNamespaceState normalizes the state of the namespace and retrieves the current value.
-func (r *NamespaceConfigReconciler) getNamespaceState(
+// getNamespace normalizes the state of the namespace and retrieves the current value.
+func (r *NamespaceConfigReconciler) getNamespace(
 	ctx context.Context,
 	name string,
 	syncErrs *[]v1.ConfigManagementError,
-) (namespaceState, *corev1.Namespace, error) {
+) (*corev1.Namespace, error) {
 	ns := &corev1.Namespace{}
 	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, ns)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return namespaceStateNotFound, nil, nil
+			return nil, nil
 		}
-		return namespaceStateNotFound, nil, errors.Wrapf(err, "got unhandled lister error")
+		return nil, errors.Wrapf(err, "got unhandled lister error")
 	}
 
-	value, found := ns.Annotations[v1.ResourceManagementKey]
-	switch {
-	case !found:
-		return namespaceStateUnset, ns, nil
-	case value == v1.ResourceManagementEnabled:
-		return namespaceStateManaged, ns, nil
-	case value == v1.ResourceManagementDisabled:
-		return namespaceStateUnmanaged, ns, nil
-	}
-
-	glog.Warningf("Namespace %q has invalid management label %q", name, value)
-	r.recorder.Eventf(
-		ns,
-		corev1.EventTypeWarning,
-		"InvalidManagementLabel",
-		"Namespace %q has invalid management label %q",
-		name, value,
-	)
-	*syncErrs = append(*syncErrs, cmeForNamespace(ns, invalidManagementLabel(value)))
-	return namespaceStateUnmanaged, ns, nil
+	return ns, nil
 }
 
 func invalidManagementLabel(invalid string) string {
-	return fmt.Sprintf("Namespace has invalid management label %s=%s should be in [%s,%s] or unset",
-		v1.ResourceManagementKey, invalid,
-		v1.ResourceManagementEnabled, v1.ResourceManagementDisabled)
+	return fmt.Sprintf("Namespace has invalid management annotation %s=%s should be %q or unset",
+		v1.ResourceManagementKey, invalid, v1.ResourceManagementEnabled)
 }
 
 func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
@@ -195,18 +156,41 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	name string,
 ) error {
 	var syncErrs []v1.ConfigManagementError
-	cfgState, node := r.getNamespaceConfigState(ctx, name)
+	node := r.getNamespaceConfig(ctx, name)
 
-	nsState, ns, nsErr := r.getNamespaceState(ctx, name, &syncErrs)
+	ns, nsErr := r.getNamespace(ctx, name, &syncErrs)
 	if nsErr != nil {
 		return nsErr
 	}
 
-	if glog.V(4) {
-		glog.Warningf("ns:%q: cfgState=%v, nsState=%v", name, cfgState, nsState)
+	diff := differ.NamespaceDiff{
+		Name:     name,
+		Declared: node,
+		Actual:   ns,
 	}
-	switch cfgState {
-	case namespaceConfigStateNotFound:
+
+	if glog.V(4) {
+		glog.Warningf("ns:%q: diffType=%v", name, diff.Type())
+	}
+	switch diff.Type() {
+	case differ.Create:
+		if err := r.createNamespace(ctx, node); err != nil {
+			syncErrs = append(syncErrs, NewSyncError(node, err))
+
+			if err2 := r.setNamespaceConfigStatus(ctx, node, syncErrs); err2 != nil {
+				glog.Warningf("failed to set status on policy node after ns creation error: %s", err2)
+			}
+			return err
+		}
+		return r.managePolicies(ctx, name, node, syncErrs)
+
+	case differ.Update:
+		if err := r.updateNamespace(ctx, node); err != nil {
+			syncErrs = append(syncErrs, NewSyncError(node, err))
+		}
+		return r.managePolicies(ctx, name, node, syncErrs)
+
+	case differ.Delete:
 		if namespaceutil.IsManageableSystem(name) {
 			// Special handling for manageable system namespaces: do not remove
 			// the namespace itself as that is not allowed.  Instead, manage
@@ -217,51 +201,54 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 			}
 			// Remove the metadata from the namespace only after the resources
 			// inside have been processed.
-			return r.removeNomosMeta(ctx, ns)
+			return r.unmanageNamespace(ctx, ns)
 		}
-		switch nsState {
-		case namespaceStateNotFound: // noop
-		case namespaceStateUnmanaged, namespaceStateUnset:
-			// If unmanaged or managed label unset, do not delete.
-			if err := r.cleanUpLabel(ctx, ns); err != nil {
-				glog.Warningf("Failed to remove management label from namespace: %s", err.Error())
-			}
-		case namespaceStateManaged:
-			return r.deleteNamespace(ctx, ns)
-		}
+		return r.deleteNamespace(ctx, ns)
 
-	case namespaceConfigStateNamespace:
-		switch nsState {
-		case namespaceStateNotFound:
-			if err := r.createNamespace(ctx, node); err != nil {
-				syncErrs = append(syncErrs, NewSyncError(node, err))
-				if err2 := r.setNamespaceConfigStatus(ctx, node, syncErrs); err2 != nil {
-					glog.Warningf("failed to set status on policy node after ns creation error: %s", err2)
-				}
-				return err
-			}
-			return r.managePolicies(ctx, name, node, syncErrs)
-		case namespaceStateManaged, namespaceStateUnset:
-			if err := r.updateNamespace(ctx, node); err != nil {
-				syncErrs = append(syncErrs, NewSyncError(node, err))
-			}
-			return r.managePolicies(ctx, name, node, syncErrs)
-		case namespaceStateUnmanaged:
-			if err := r.cleanUpLabel(ctx, ns); err != nil {
-				errMsg := fmt.Sprintf("Failed to remove quota label from namespace: %s", err.Error())
-				syncErrs = append(syncErrs, cmeForNamespace(ns, errMsg))
-			}
+	case differ.Unmanage:
+		// Remove defunct labels and annotations.
+		unmanageErr := r.unmanageNamespace(ctx, ns)
+		if unmanageErr != nil {
+			glog.Warningf("Failed to remove quota label and management annotations from namespace: %s", unmanageErr.Error())
+			return unmanageErr
+		}
+		if node != nil {
 			r.warnUnmanaged(ns)
 			syncErrs = append(syncErrs, cmeForNamespace(ns, unmanagedError()))
-			return r.managePolicies(ctx, name, node, syncErrs)
 		}
+
+		// Return an error if any encountered.
+		if reconcileErr := r.managePolicies(ctx, name, node, syncErrs); reconcileErr != nil {
+			return reconcileErr
+		}
+		return unmanageErr
+
+	case differ.Error:
+		value := node.GetAnnotations()[v1.ResourceManagementKey]
+		glog.Warningf("Namespace %q has invalid management annotation %q", name, value)
+		r.recorder.Eventf(
+			node,
+			corev1.EventTypeWarning,
+			"InvalidManagementLabel",
+			"Namespace %q has invalid management annotation %q",
+			name, value,
+		)
+		syncErrs = append(syncErrs, cmeForNamespace(ns, invalidManagementLabel(value)))
+		return r.managePolicies(ctx, name, node, syncErrs)
+
+	case differ.NoOp:
+		if node != nil {
+			r.warnUnmanaged(ns)
+			syncErrs = append(syncErrs, cmeForNamespace(ns, unmanagedError()))
+		}
+		return r.managePolicies(ctx, name, node, syncErrs)
 	}
-	return nil
+	panic(fmt.Sprintf("unhandled diff type: %v", diff.Type()))
 }
 
 func unmanagedError() string {
-	return fmt.Sprintf("Namespace is labeled unmanaged (%s=%s). Must be labeled (%s=%s) to manage",
-		v1.ResourceManagementKey, v1.ResourceManagementDisabled, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+	return fmt.Sprintf("Namespace annotated unmanaged (%s=%s) in repo. Must not have %s annotation to manage",
+		v1.ResourceManagementKey, v1.ResourceManagementDisabled, v1.ResourceManagementKey)
 }
 
 func (r *NamespaceConfigReconciler) warnUnmanaged(ns *corev1.Namespace) {
@@ -271,45 +258,21 @@ func (r *NamespaceConfigReconciler) warnUnmanaged(ns *corev1.Namespace) {
 		"namespace is declared in the source of truth but does is unmanaged")
 }
 
-// removeNomosMeta removes Nomos-specific decorations from the given namespace.
-func (r *NamespaceConfigReconciler) removeNomosMeta(ctx context.Context, ns *corev1.Namespace) error {
-	if !v1.HasNomosAnnotation(ns.GetAnnotations()) && !labeling.HasNomos(ns.GetLabels()) {
-		// Skip object update if there is nothing to change.
-		return nil
-	}
-	_, err := r.client.Update(ctx, ns, func(o runtime.Object) (runtime.Object, error) {
-		ns := o.(*corev1.Namespace)
-		// Set GVK for ease of logging.
-		ns.SetGroupVersionKind(kinds.Namespace())
-		a := ns.GetAnnotations()
-		v1.RemoveNomos(a)
-		ns.SetAnnotations(a)
-		l := ns.GetLabels()
-		labeling.RemoveNomos(l)
-		ns.SetLabels(l)
-		return ns, nil
-	})
-	return err
-}
-
-// cleanUpLabel removes the nomos quota label from the namespace, if present.
-func (r *NamespaceConfigReconciler) cleanUpLabel(ctx context.Context, ns *corev1.Namespace) error {
-	if _, ok := ns.GetLabels()[labeling.ConfigManagementQuotaKey]; !ok {
-		return nil
-	}
-
+// unmanageNamespace removes the nomos annotations and labels from the Namespace.
+func (r *NamespaceConfigReconciler) unmanageNamespace(ctx context.Context, ns *corev1.Namespace) error {
 	_, err := r.client.Update(ctx, ns, func(o runtime.Object) (runtime.Object, error) {
 		nso := o.(*corev1.Namespace)
-		nso.SetGroupVersionKind(kinds.Namespace())
-		ls := nso.GetLabels()
-		delete(ls, labeling.ConfigManagementQuotaKey)
-		nso.SetLabels(ls)
+		nso.GetObjectKind().SetGroupVersionKind(kinds.Namespace())
+		removeNomosMeta(nso)
 		return nso, nil
 	})
 	return err
 }
 
 func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name string, node *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
+	if node == nil {
+		return nil
+	}
 	var errBuilder status.ErrorBuilder
 	reconcileCount := 0
 	grs, err := r.decoder.DecodeResources(node.Spec.Resources...)
@@ -318,7 +281,10 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 	}
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
-		decorateAsManaged(declaredInstances, node)
+		for _, decl := range declaredInstances {
+			decl.SetNamespace(node.GetName())
+			annotate(decl, kv(v1.SyncTokenAnnotationKey, node.Spec.Token))
+		}
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, name)
 		if err != nil {
@@ -354,14 +320,6 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 		return nil
 	}
 	return bErr
-}
-
-// TODO(sbochins): consolidate common functionality with decorateAsClusterManaged.
-func decorateAsManaged(declaredInstances []*unstructured.Unstructured, node *v1.NamespaceConfig) {
-	for _, decl := range declaredInstances {
-		decl.SetNamespace(node.GetName())
-		annotateManaged(decl, node.Spec.Token)
-	}
 }
 
 // setNamespaceConfigStatus updates the status of the given node.  If the node
@@ -421,14 +379,11 @@ func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.Na
 		namespace.Labels = labels
 	}
 
-	if namespace.Annotations == nil {
-		namespace.Annotations = make(map[string]string)
-	}
 	for k, v := range namespaceConfig.Annotations {
-		namespace.Annotations[k] = v
+		annotate(namespace, kv(k, v))
 	}
+	annotate(namespace, kv(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
 
-	namespace.Annotations[v1.ResourceManagementKey] = v1.ResourceManagementEnabled
 	namespace.Name = namespaceConfig.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())
 	return namespace

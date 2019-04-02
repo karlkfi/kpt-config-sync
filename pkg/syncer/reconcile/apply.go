@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	v12 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
@@ -76,9 +75,9 @@ func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error)
 }
 
 // Create implements Applier.
-func (c *ClientApplier) Create(ctx context.Context, obj *unstructured.Unstructured) (bool, id.ResourceError) {
-	if err := c.create(ctx, obj); err != nil {
-		return false, id.ResourceWrap(err, "unable to create resource", ast.ParseFileObject(obj))
+func (c *ClientApplier) Create(ctx context.Context, intendedState *unstructured.Unstructured) (bool, id.ResourceError) {
+	if err := c.create(ctx, intendedState); err != nil {
+		return false, id.ResourceWrap(err, "unable to create resource", ast.ParseFileObject(intendedState))
 	}
 	return true, nil
 }
@@ -247,18 +246,12 @@ func nameDescription(u *unstructured.Unstructured) (string, string) {
 }
 
 // lastAppliedConfiguration generates the last applied annotation from the object.
-// It removes the entire labels field, if present, from the generated annotation.
 // It populates the object with this annotation as well.
 func lastAppliedConfiguration(original *unstructured.Unstructured) ([]byte, error) {
 	// Create a copy of the object, since we will be deleting the management annotation.
-	c := original.DeepCopy()
-	l := c.GetAnnotations()
-	delete(l, v12.ResourceManagementKey)
-	c.SetAnnotations(l)
-
-	annotation, err := kubectl.GetModifiedConfiguration(c, false, unstructured.UnstructuredJSONScheme)
+	annotation, err := kubectl.GetModifiedConfiguration(original, false, unstructured.UnstructuredJSONScheme)
 	if err != nil {
-		return nil, errors.Errorf("could not serialize resource into json: %v", c)
+		return nil, errors.Errorf("could not serialize resource into json: %v", original)
 	}
 
 	// Set the annotation on the passed in object.
