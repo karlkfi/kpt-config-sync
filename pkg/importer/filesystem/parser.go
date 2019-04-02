@@ -122,6 +122,8 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*na
 		ImportToken: importToken,
 		LoadTime:    loadTime,
 	}
+	astRoot.Data = astRoot.Data.Add(RootPath{}, rootPath)
+
 	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources(rootPath))
 	p.errors.Add(addScope(astRoot, p.discoveryClient))
 	if p.errors.HasErrors() {
