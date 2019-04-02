@@ -191,8 +191,8 @@ upload-release:
 		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil -m iam ch -R $(READ_ACCESS_LIST) $(RELEASE_BUCKET)/$(VERSION)
 	gcloud container images add-tag --quiet \
-		gcr.io/$(GCR_PREFIX)/configmanagement:$(IMAGE_TAG) \
-		gcr.io/$(GCR_PREFIX)/configmanagement:latest
+		gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG) \
+		gcr.io/$(GCR_PREFIX)/nomos:latest
 	gsutil -m rsync -r -d -p \
 			$(RELEASE_BUCKET)/$(VERSION) \
 			$(RELEASE_BUCKET)/latest
@@ -338,11 +338,11 @@ bless-release:
 			git tag -a $${chosen_release} $${chosen_rc}                                    \
 			   -m "Blessed release $${chosen_release}" ;                                   \
 			gcloud container images add-tag --quiet                                        \
-			   gcr.io/$(GCR_PREFIX)/configmanagement:$${chosen_rc}                                   \
-			   gcr.io/$(GCR_PREFIX)/configmanagement:$${chosen_release} ;                            \
+			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_rc}                                   \
+			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_release} ;                            \
 			gcloud container images add-tag --quiet                                        \
-			   gcr.io/$(GCR_PREFIX)/configmanagement:$${chosen_release}                              \
-			   gcr.io/$(GCR_PREFIX)/configmanagement:stable ;                                        \
+			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_release}                              \
+			   gcr.io/$(GCR_PREFIX)/nomos:stable ;                                        \
 			gsutil -m rsync -r -d -p                                                       \
 			   $(RELEASE_BUCKET)/$${chosen_rc}                                             \
 			   $(RELEASE_BUCKET)/$${chosen_release} ;                                      \
