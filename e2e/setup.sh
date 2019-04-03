@@ -1,8 +1,8 @@
 #!/bin/bash
 
-set -euo pipefail
+echo "Start setup.sh"
 
-ls -laR /tmp/user
+set -euo pipefail
 
 readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
