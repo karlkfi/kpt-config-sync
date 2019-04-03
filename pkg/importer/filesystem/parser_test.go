@@ -1528,6 +1528,7 @@ spec:
 		testName: "Specifying system generated field is an error",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/foo/bar/role.yaml": templateData{ResourceVersion: "999"}.apply(aRole),
+			"namespaces/foo/bar/ns.yaml":   templateData{Name: "bar"}.apply(aNamespace),
 		},
 		expectedErrorCodes: []string{vet.IllegalFieldsInConfigErrorCode},
 	},
