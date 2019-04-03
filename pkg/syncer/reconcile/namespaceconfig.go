@@ -293,12 +293,12 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 			continue
 		}
 
-		allDeclaredVersions := allVersionNames(grs, gvk.GroupKind())
+		allDeclaredVersions := AllVersionNames(grs, gvk.GroupKind())
 		diffs := differ.Diffs(declaredInstances, actualInstances, allDeclaredVersions)
 		for _, diff := range diffs {
-			if updated, err := handleDiff(ctx, r.applier, diff, r.recorder); err != nil {
+			if updated, err := HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 				errBuilder.Add(err)
-				syncErrs = append(syncErrs, cmesForResourceError(err)...)
+				syncErrs = append(syncErrs, CmesForResourceError(err)...)
 			} else if updated {
 				reconcileCount++
 			}

@@ -20,7 +20,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/cache"
@@ -33,7 +32,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -73,6 +71,11 @@ func NewClusterConfigReconciler(ctx context.Context, client *client.Client, appl
 
 // Reconcile is the Reconcile callback for ClusterConfigReconciler.
 func (r *ClusterConfigReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	if request.Name == v1.CRDClusterConfigName {
+		// We handle the CRD Cluster Config in the CRD controller, so don't reconcile it here.
+		return reconcile.Result{}, nil
+	}
+
 	metrics.EventTimes.WithLabelValues("cluster-reconcile").Set(float64(now().Unix()))
 	timer := prometheus.NewTimer(metrics.ClusterReconcileDuration.WithLabelValues())
 	defer timer.ObserveDuration()
@@ -95,7 +98,7 @@ func (r *ClusterConfigReconciler) Reconcile(request reconcile.Request) (reconcil
 		glog.Warning(err)
 		// Update the status on a best effort basis. We don't want to retry handling a ClusterConfig
 		// we want to ignore and it's possible it has been deleted by the time we reconcile it.
-		_ = r.setClusterConfigStatus(ctx, clusterConfig, NewConfigManagementError(clusterConfig, err))
+		_ = SetClusterConfigStatus(ctx, r.client, clusterConfig, NewConfigManagementError(clusterConfig, err))
 		return reconcile.Result{}, nil
 	}
 
@@ -128,18 +131,18 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 			continue
 		}
 
-		allDeclaredVersions := allVersionNames(grs, gvk.GroupKind())
+		allDeclaredVersions := AllVersionNames(grs, gvk.GroupKind())
 		diffs := differ.Diffs(declaredInstances, actualInstances, allDeclaredVersions)
 		for _, diff := range diffs {
-			if updated, err := handleDiff(ctx, r.applier, diff, r.recorder); err != nil {
+			if updated, err := HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 				errBuilder.Add(err)
-				syncErrs = append(syncErrs, cmesForResourceError(err)...)
+				syncErrs = append(syncErrs, CmesForResourceError(err)...)
 			} else if updated {
 				reconcileCount++
 			}
 		}
 	}
-	if err := r.setClusterConfigStatus(ctx, policy, syncErrs...); err != nil {
+	if err := SetClusterConfigStatus(ctx, r.client, policy, syncErrs...); err != nil {
 		errBuilder.Add(err)
 		r.recorder.Eventf(policy, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update cluster policy status: %v", err)
@@ -154,33 +157,6 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 		return nil
 	}
 	return bErr
-}
-
-func (r *ClusterConfigReconciler) setClusterConfigStatus(ctx context.Context, policy *v1.ClusterConfig,
-	errs ...v1.ConfigManagementError) id.ResourceError {
-	freshSyncToken := policy.Status.Token == policy.Spec.Token
-	if policy.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
-		glog.Infof("Status for ClusterConfig %q is already up-to-date.", policy.Name)
-		return nil
-	}
-
-	updateFn := func(obj runtime.Object) (runtime.Object, error) {
-		newPolicy := obj.(*v1.ClusterConfig)
-		newPolicy.Status.Token = policy.Spec.Token
-		newPolicy.Status.SyncTime = now()
-		newPolicy.Status.SyncErrors = errs
-		if len(errs) > 0 {
-			newPolicy.Status.SyncState = v1.StateError
-		} else {
-			newPolicy.Status.SyncState = v1.StateSynced
-		}
-		return newPolicy, nil
-	}
-	_, err := r.client.UpdateStatus(ctx, policy, updateFn)
-	if err != nil {
-		metrics.ErrTotal.WithLabelValues("", policy.GroupVersionKind().Kind, "update").Inc()
-	}
-	return err
 }
 
 // NewConfigManagementError returns a ConfigManagementError corresponding to the given ClusterConfig and error.

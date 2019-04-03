@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package metasync
+package sync
 
 import (
 	"testing"
@@ -118,7 +118,7 @@ func TestReconcile(t *testing.T) {
 		},
 		{
 			name:                 "force restart reconcile request restarts SubManager",
-			reconcileRequestName: forceRestart,
+			reconcileRequestName: ForceRestart,
 			actualSyncs: v1.SyncList{
 				Items: []v1.Sync{
 					makeSync("", "Deployment", ""),

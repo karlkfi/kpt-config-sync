@@ -33,7 +33,7 @@ type SyncAwareBuilder struct {
 
 // NewSyncAwareBuilder returns a new SyncAwareBuilder.
 func NewSyncAwareBuilder() *SyncAwareBuilder {
-	return &SyncAwareBuilder{watching: make(map[schema.GroupVersionKind]bool)}
+	return &SyncAwareBuilder{}
 }
 
 // NeedsRestart implements ControllerBuilder.
@@ -54,7 +54,7 @@ func (r *SyncAwareBuilder) UpdateScheme(scheme *runtime.Scheme, gvks map[schema.
 // StartControllers starts all the controllers watching sync-enabled resources.
 func (r *SyncAwareBuilder) StartControllers(ctx context.Context, sm *SubManager,
 	gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo) error {
-	namespace, cluster, err := r.resourceScopes(gvks, sm.GetScheme(), apirs)
+	namespace, cluster, err := resourceScopes(gvks, sm.GetScheme(), apirs)
 	if err != nil {
 		return errors.Wrap(err, "could not get resource scope information from discovery API")
 	}
@@ -69,26 +69,4 @@ func (r *SyncAwareBuilder) StartControllers(ctx context.Context, sm *SubManager,
 
 	r.watching = gvks
 	return nil
-}
-
-// resourceScopes returns two slices representing the namespace and cluster scoped resource types with sync enabled.
-func (r *SyncAwareBuilder) resourceScopes(gvks map[schema.GroupVersionKind]bool, scheme *runtime.Scheme,
-	apirs *discovery.APIInfo) (map[schema.GroupVersionKind]runtime.Object, map[schema.GroupVersionKind]runtime.Object, error) {
-	rts, err := resourceTypes(gvks, scheme)
-	if err != nil {
-		return nil, nil, err
-	}
-	namespace := make(map[schema.GroupVersionKind]runtime.Object)
-	cluster := make(map[schema.GroupVersionKind]runtime.Object)
-	for gvk, obj := range rts {
-		switch apirs.GetScope(gvk) {
-		case discovery.NamespaceScope:
-			namespace[gvk] = obj
-		case discovery.ClusterScope:
-			cluster[gvk] = obj
-		case discovery.UnknownScope:
-			return nil, nil, errors.Errorf("Could not determine resource scope for %s", gvk)
-		}
-	}
-	return namespace, cluster, nil
 }

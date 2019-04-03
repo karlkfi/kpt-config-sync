@@ -1,17 +1,22 @@
 package reconcile
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/metrics"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// allVersionNames returns the set of names of all resources with the specified GroupKind.
-func allVersionNames(resources map[schema.GroupVersionKind][]*unstructured.Unstructured, gk schema.GroupKind) map[string]bool {
+// AllVersionNames returns the set of names of all resources with the specified GroupKind.
+func AllVersionNames(resources map[schema.GroupVersionKind][]*unstructured.Unstructured, gk schema.GroupKind) map[string]bool {
 	names := map[string]bool{}
 	for gvk, rs := range resources {
 		if gvk.GroupKind() != gk {
@@ -40,8 +45,8 @@ func cmeForNamespace(ns *corev1.Namespace, errMsg string) v1.ConfigManagementErr
 	}
 }
 
-// cmesForResourceError returns ConfigManagementErrors built from the given ResourceError.
-func cmesForResourceError(resErr id.ResourceError) []v1.ConfigManagementError {
+// CmesForResourceError returns ConfigManagementErrors built from the given ResourceError.
+func CmesForResourceError(resErr id.ResourceError) []v1.ConfigManagementError {
 	resCount := len(resErr.Resources())
 	if resCount == 0 {
 		return []v1.ConfigManagementError{
@@ -60,4 +65,32 @@ func cmesForResourceError(resErr id.ResourceError) []v1.ConfigManagementError {
 		}
 	}
 	return configErrs
+}
+
+// SetClusterConfigStatus updates the status sub-resource of the ClusterConfig based on reconciling the ClusterConfig.
+func SetClusterConfigStatus(ctx context.Context, client *client.Client, policy *v1.ClusterConfig,
+	errs ...v1.ConfigManagementError) id.ResourceError {
+	freshSyncToken := policy.Status.Token == policy.Spec.Token
+	if policy.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
+		glog.Infof("Status for ClusterConfig %q is already up-to-date.", policy.Name)
+		return nil
+	}
+
+	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+		newPolicy := obj.(*v1.ClusterConfig)
+		newPolicy.Status.Token = policy.Spec.Token
+		newPolicy.Status.SyncTime = now()
+		newPolicy.Status.SyncErrors = errs
+		if len(errs) > 0 {
+			newPolicy.Status.SyncState = v1.StateError
+		} else {
+			newPolicy.Status.SyncState = v1.StateSynced
+		}
+		return newPolicy, nil
+	}
+	_, err := client.UpdateStatus(ctx, policy, updateFn)
+	if err != nil {
+		metrics.ErrTotal.WithLabelValues("", policy.GroupVersionKind().Kind, "update").Inc()
+	}
+	return err
 }

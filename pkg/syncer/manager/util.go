@@ -3,6 +3,7 @@ package manager
 import (
 	"reflect"
 
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -48,4 +49,26 @@ func resourceTypes(gvks map[schema.GroupVersionKind]bool,
 		}
 	}
 	return m, nil
+}
+
+// resourceScopes returns two slices representing the namespace and cluster scoped resource types with sync enabled.
+func resourceScopes(gvks map[schema.GroupVersionKind]bool, scheme *runtime.Scheme,
+	apirs *discovery.APIInfo) (map[schema.GroupVersionKind]runtime.Object, map[schema.GroupVersionKind]runtime.Object, error) {
+	rts, err := resourceTypes(gvks, scheme)
+	if err != nil {
+		return nil, nil, err
+	}
+	namespace := make(map[schema.GroupVersionKind]runtime.Object)
+	cluster := make(map[schema.GroupVersionKind]runtime.Object)
+	for gvk, obj := range rts {
+		switch apirs.GetScope(gvk) {
+		case discovery.NamespaceScope:
+			namespace[gvk] = obj
+		case discovery.ClusterScope:
+			cluster[gvk] = obj
+		case discovery.UnknownScope:
+			return nil, nil, errors.Errorf("Could not determine resource scope for %s", gvk)
+		}
+	}
+	return namespace, cluster, nil
 }

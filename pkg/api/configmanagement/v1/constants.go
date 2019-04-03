@@ -18,8 +18,11 @@ package v1
 
 import "github.com/google/nomos/pkg/api/configmanagement"
 
-// ClusterConfigName is the name of the singleton ClusterConfig resource.
+// ClusterConfigName is the name of the ClusterConfig for all non-CRD cluster resources.
 const ClusterConfigName = "config-management-cluster-config"
+
+// CRDClusterConfigName is the name of the ClusterConfig for CRD resources.
+const CRDClusterConfigName = "config-management-crd-cluster-config"
 
 // PolicySyncState represents the states that a namespaceconfig or clusterconfig can be in with regards
 // to the source of truth.

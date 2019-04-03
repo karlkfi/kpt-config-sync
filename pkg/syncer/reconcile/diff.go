@@ -14,7 +14,8 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-func handleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorder record.EventRecorder) (bool, id.ResourceError) {
+// HandleDiff updates objects on the cluster based on the difference between actual and declared resources.
+func HandleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorder record.EventRecorder) (bool, id.ResourceError) {
 	removeEmptyRulesField(diff.Declared)
 
 	switch diff.Type() {

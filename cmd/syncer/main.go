@@ -23,7 +23,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/service"
-	"github.com/google/nomos/pkg/syncer/metasync"
+	"github.com/google/nomos/pkg/syncer/meta"
 	"github.com/google/nomos/pkg/util/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
@@ -32,6 +32,9 @@ import (
 var (
 	resyncPeriod = flag.Duration(
 		"resync_period", time.Minute, "The resync period for the syncer system")
+	// TODO(129774660): Clean up after launching CRD syncing.
+	enableCRDs = flag.Bool(
+		"enable_crds", false, "When true, enable syncing CRDs")
 )
 
 func main() {
@@ -52,14 +55,13 @@ func main() {
 		glog.Fatalf("Failed to create manager: %+v", err)
 	}
 
-	mgrStopChannel := signals.SetupSignalHandler()
-	// Set up Scheme for generic resources.
-	if err := metasync.AddMetaController(mgr, mgrStopChannel); err != nil {
+	// Set up controllers.
+	if err := meta.AddControllers(mgr, *enableCRDs); err != nil {
 		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 
 	// Start the Manager.
-	if err := mgr.Start(mgrStopChannel); err != nil {
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		glog.Fatalf("Error starting controller: %+v", err)
 	}
 }

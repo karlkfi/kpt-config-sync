@@ -50,11 +50,11 @@ type SubManager struct {
 }
 
 // NewSubManager returns a new SubManager
-func NewSubManager(mgr manager.Manager, cfg *rest.Config, controllerBuilder ControllerBuilder, errCh chan error) *SubManager {
+func NewSubManager(mgr manager.Manager, controllerBuilder ControllerBuilder, errCh chan error) *SubManager {
 	r := &SubManager{
 		Manager:           mgr,
 		controllerBuilder: controllerBuilder,
-		baseCfg:           rest.CopyConfig(cfg),
+		baseCfg:           rest.CopyConfig(mgr.GetConfig()),
 		errCh:             errCh,
 	}
 	return r

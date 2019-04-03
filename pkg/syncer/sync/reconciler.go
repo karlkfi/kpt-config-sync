@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package metasync
+package sync
 
 import (
 	"context"
@@ -40,11 +40,11 @@ import (
 )
 
 const (
-	// forceRestart is an invalid resource name used to signal that during Reoconcile,
+	// ForceRestart is an invalid resource name used to signal that during Reoconcile,
 	// the Sync Controller must restart the Sub Manager. Ensuring that the resource name
 	// is invalid ensures that we don't accidentally reconcile a resource that causes us
 	// to forcefully restart the SubManager.
-	forceRestart     = "@restart"
+	ForceRestart     = "@restart"
 	reconcileTimeout = time.Minute * 5
 )
 
@@ -53,7 +53,7 @@ var _ reconcile.Reconciler = &MetaReconciler{}
 // ClientFactory is a function used for creating new controller-runtime clients.
 type ClientFactory func() (client.Client, error)
 
-// MetaReconciler reconciles Syncs. It responds to changes in Syncs and causes genericResourceManager to stop and start
+// MetaReconciler reconciles Syncs. It responds to changes in Syncs and causes subManager to stop and start
 // controllers based on the resources that are presently sync-enabled.
 type MetaReconciler struct {
 	// client is used to update Sync status fields and finalize Syncs.
@@ -71,22 +71,20 @@ type MetaReconciler struct {
 
 // NewMetaReconciler returns a new MetaReconciler that reconciles changes in Syncs.
 func NewMetaReconciler(
-	client *syncerclient.Client,
-	cache cache.Cache,
-	cfg *rest.Config,
+	mgr manager.Manager,
 	dc discovery.DiscoveryInterface,
 	clientFactory ClientFactory,
 	errCh chan error) (*MetaReconciler, error) {
-	mgr, err := manager.New(cfg, manager.Options{})
+	sm, err := manager.New(rest.CopyConfig(mgr.GetConfig()), manager.Options{})
 	if err != nil {
 		return nil, err
 	}
 
 	return &MetaReconciler{
-		client:          client,
-		cache:           cache,
+		client:          syncerclient.New(mgr.GetClient()),
+		cache:           mgr.GetCache(),
 		clientFactory:   clientFactory,
-		subManager:      syncermanager.NewSubManager(mgr, cfg, syncermanager.NewSyncAwareBuilder(), errCh),
+		subManager:      syncermanager.NewSubManager(sm, syncermanager.NewSyncAwareBuilder(), errCh),
 		discoveryClient: dc,
 	}, nil
 }
@@ -234,5 +232,5 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo
 // restartSubManager returns true if the reconcile request indicates that we need to restart all the controllers that the
 // Sync Controller manages.
 func restartSubManager(request reconcile.Request) bool {
-	return request.Name == forceRestart
+	return request.Name == ForceRestart
 }
