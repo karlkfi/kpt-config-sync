@@ -183,8 +183,8 @@ function manage_namespace() {
   debug::log "Wait until service appears on the cluster"
   wait::for -t 30 -- kubectl get services "some-service" --namespace="${ns}"
 
-  debug::log "Remove the namespace from managed set"
-  git::rm "acme/namespaces/${ns}/namespace.yaml"
+  debug::log "Remove the namespace directory from managed set"
+  git::rm "acme/namespaces/${ns}"
   git::commit -m "Remove the namespace from the managed set of namespaces"
 
   debug::log "Wait until the managed resource disappears from the cluster"
