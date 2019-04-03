@@ -31,7 +31,7 @@ import (
 type RestartableManager interface {
 	// Restart restarts the Manager and all the controllers it manages. The given schema.
 	// GroupVersionKinds will be added to the scheme.
-	Restart(gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo) error
+	Restart(gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo, force bool) error
 }
 
 var _ RestartableManager = &SubManager{}
@@ -64,6 +64,7 @@ func NewSubManager(mgr manager.Manager, cfg *rest.Config, controllerBuilder Cont
 func (m *SubManager) context() context.Context {
 	if m.cancel != nil {
 		m.cancel()
+		glog.Info("Stopping SubManager")
 	}
 	var ctx context.Context
 	ctx, m.cancel = context.WithCancel(context.Background())
@@ -71,18 +72,30 @@ func (m *SubManager) context() context.Context {
 }
 
 // Restart implements RestartableManager.
-func (m *SubManager) Restart(gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo) error {
+func (m *SubManager) Restart(gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo, force bool) error {
+	if !force && !m.controllerBuilder.NeedsRestart(gvks) {
+		return nil
+	}
 	ctx := m.context()
-	glog.Info("Stopping SyncAwareBuilder")
 
 	var err error
 	m.Manager, err = manager.New(rest.CopyConfig(m.baseCfg), manager.Options{})
 	if err != nil {
-		return errors.Wrap(err, "could not start SyncAwareBuilder")
+		return errors.Wrap(err, "could not create the Manager for SubManager")
 	}
 
 	if err := m.controllerBuilder.UpdateScheme(m.GetScheme(), gvks); err != nil {
-		return errors.Wrap(err, "could not start update the scheme")
+		return errors.Wrap(err, "could not update the scheme")
 	}
-	return m.controllerBuilder.StartControllers(ctx, m, gvks, apirs)
+	if err := m.controllerBuilder.StartControllers(ctx, m, gvks, apirs); err != nil {
+		return errors.Wrap(err, "could not start controllers")
+	}
+
+	go func() {
+		// Propagate errors with starting the SubManager up to the parent controller, so we can restart SubManager.
+		m.errCh <- m.Start(ctx.Done())
+	}()
+
+	glog.Info("Starting SubManager")
+	return nil
 }

@@ -39,7 +39,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const reconcileTimeout = time.Minute * 5
+const (
+	// forceRestart is an invalid resource name used to signal that during Reoconcile,
+	// the Sync Controller must restart the Sub Manager. Ensuring that the resource name
+	// is invalid ensures that we don't accidentally reconcile a resource that causes us
+	// to forcefully restart the SubManager.
+	forceRestart     = "@restart"
+	reconcileTimeout = time.Minute * 5
+)
 
 var _ reconcile.Reconciler = &MetaReconciler{}
 
@@ -58,12 +65,8 @@ type MetaReconciler struct {
 	discoveryClient discovery.DiscoveryInterface
 	// subManager is responsible for starting/restarting all controllers that depend on Syncs.
 	subManager syncermanager.RestartableManager
-	// mgrStartErrCh is used to listen for errors when (re)starting genericResourceManager.
-	mgrStartErrCh chan error
 	// clientFactory returns a new dynamic client.
 	clientFactory ClientFactory
-	// subControllersStarted is true when the controllers managed by this reconciler have started.
-	subControllersStarted bool
 }
 
 // NewMetaReconciler returns a new MetaReconciler that reconciles changes in Syncs.
@@ -85,12 +88,11 @@ func NewMetaReconciler(
 		clientFactory:   clientFactory,
 		subManager:      syncermanager.NewSubManager(mgr, cfg, syncermanager.NewSyncAwareBuilder(), errCh),
 		discoveryClient: dc,
-		mgrStartErrCh:   errCh,
 	}, nil
 }
 
 // Reconcile is the Reconcile callback for MetaReconciler.
-// It looks at all Syncs in the cluster and restarts the SyncAwareBuilder if its internal state doesn't match the cluster
+// It looks at all Syncs in the cluster and restarts the SubManager if its internal state doesn't match the cluster
 // state.
 func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
@@ -123,13 +125,10 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	// Check if the set of sync-enabled resources has changed,
-	// restart the SyncAwareBuilder to sync the appropriate resources.
-	if err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), apirs); err != nil {
-		glog.Errorf("Could not start SyncAwareBuilder: %v", err)
+	if err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), apirs, restartSubManager(request)); err != nil {
+		glog.Errorf("Could not start SubManager: %v", err)
 		return reconcile.Result{}, err
 	}
-	r.subControllersStarted = true
 
 	var errBuilder status.ErrorBuilder
 	// Finalize Syncs that have not already been finalized.
@@ -230,4 +229,10 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo
 		}
 	}
 	return errBuilder.Build()
+}
+
+// restartSubManager returns true if the reconcile request indicates that we need to restart all the controllers that the
+// Sync Controller manages.
+func restartSubManager(request reconcile.Request) bool {
+	return request.Name == forceRestart
 }

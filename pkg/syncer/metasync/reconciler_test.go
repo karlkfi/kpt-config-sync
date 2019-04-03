@@ -20,12 +20,13 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	apimachinerytypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -37,10 +38,12 @@ type updateList struct {
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
-		name              string
-		actualSyncs       v1.SyncList
-		wantStatusUpdates []v1.Sync
-		wantUpdateList    []updateList
+		name                 string
+		actualSyncs          v1.SyncList
+		reconcileRequestName string
+		wantStatusUpdates    []v1.Sync
+		wantUpdateList       []updateList
+		wantForceRestart     bool
 	}{
 		{
 			name: "update state for one sync",
@@ -113,6 +116,19 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:                 "force restart reconcile request restarts SubManager",
+			reconcileRequestName: forceRestart,
+			actualSyncs: v1.SyncList{
+				Items: []v1.Sync{
+					makeSync("", "Deployment", ""),
+				},
+			},
+			wantStatusUpdates: []v1.Sync{
+				makeSync("", "Deployment", v1.Syncing),
+			},
+			wantForceRestart: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -178,16 +194,16 @@ func TestReconcile(t *testing.T) {
 					},
 				}, nil)
 
-			mockManager.EXPECT().Restart(gomock.Any(), gomock.Any())
-			for _, wantUpdateListDelete := range tc.wantUpdateList {
+			mockManager.EXPECT().Restart(gomock.Any(), gomock.Any(), gomock.Eq(tc.wantForceRestart))
+			for _, wantUpdateList := range tc.wantUpdateList {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
 					Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockClient.EXPECT().
-					Update(gomock.Any(), gomock.Eq(&wantUpdateListDelete.update))
+					Update(gomock.Any(), gomock.Eq(&wantUpdateList.update))
 
 				mockClient.EXPECT().
-					List(gomock.Any(), gomock.Eq(&client.ListOptions{}), gomock.Eq(&wantUpdateListDelete.list))
+					List(gomock.Any(), gomock.Eq(&client.ListOptions{}), gomock.Eq(&wantUpdateList.list))
 			}
 
 			mockClient.EXPECT().Status().Times(len(tc.wantStatusUpdates)).Return(mockStatusClient)
@@ -199,7 +215,11 @@ func TestReconcile(t *testing.T) {
 					Update(gomock.Any(), gomock.Eq(&tc.wantStatusUpdates[i]))
 			}
 
-			_, err := testReconciler.Reconcile(reconcile.Request{})
+			_, err := testReconciler.Reconcile(reconcile.Request{
+				NamespacedName: apimachinerytypes.NamespacedName{
+					Name: tc.reconcileRequestName,
+				},
+			})
 			if err != nil {
 				t.Errorf("unexpected reconciliation error: %v", err)
 			}

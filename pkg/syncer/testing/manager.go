@@ -36,13 +36,13 @@ func (m *MockRestartableManager) EXPECT() *MockRestartableManagerMockRecorder {
 }
 
 // Restart mocks base method
-func (m *MockRestartableManager) Restart(arg0 map[schema.GroupVersionKind]bool, arg1 *discovery.APIInfo) error {
-	ret := m.ctrl.Call(m, "Restart", arg0, arg1)
+func (m *MockRestartableManager) Restart(arg0 map[schema.GroupVersionKind]bool, arg1 *discovery.APIInfo, arg2 bool) error {
+	ret := m.ctrl.Call(m, "Restart", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Restart indicates an expected call of Restart
-func (mr *MockRestartableManagerMockRecorder) Restart(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockRestartableManager)(nil).Restart), arg0, arg1)
+func (mr *MockRestartableManagerMockRecorder) Restart(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockRestartableManager)(nil).Restart), arg0, arg1, arg2)
 }
