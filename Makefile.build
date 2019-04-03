@@ -44,6 +44,7 @@ image-nomos: build
 	@cp $(BIN_DIR)/linux_amd64/* $(STAGING_DIR)/$(NOMOS_IMAGE)
 	@cp ./LICENSE $(STAGING_DIR)/$(NOMOS_IMAGE)
 	@docker build $(DOCKER_BUILD_QUIET) \
+		-t gcr.io/$(OLD_GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) \
 		-t gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) $(STAGING_DIR)/$(NOMOS_IMAGE)
 
 # Pushes the specified component's docker image to gcr.io.
@@ -52,6 +53,7 @@ push-to-gcr-%: image-%
 	@echo "+++ Using account:"
 	gcloud config get-value account
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
+	@docker push gcr.io/$(OLD_GCR_PREFIX)/$*:$(IMAGE_TAG)
 	@docker push gcr.io/$(GCR_PREFIX)/$*:$(IMAGE_TAG)
 
 ###################################
