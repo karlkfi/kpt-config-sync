@@ -26,9 +26,9 @@ teardown() {
 
 readonly YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
-@test "Create many namespaces at once" {
+function stress::create_many_namespaces() {
   local num_namespaces
-  num_namespaces="1000"
+  num_namespaces="${1:-10}"
 
   local ns_file
   ns_file="$(mktemp)"
@@ -50,10 +50,22 @@ EOF
   for index in $(seq -w 1 "${num_namespaces}"); do
     # Namespaces are not created in order: this may fail if the earlier
     # namespaces are created very late in the process.
-    wait::for -t 1200 -- kubectl get ns "ns-${index}"
+    wait::for -t 1800 -- kubectl get ns "ns-${index}"
     debug::log "Namespace ns-${index} exists"
   done
 
   rm "${ns_file}"
+}
+
+@test "Create 10 namespaces" {
+  stress::create_many_namespaces "10"
+}
+
+@test "Create 100 namespaces" {
+  stress::create_many_namespaces "100"
+}
+
+@test "Create 1000 namespaces" {
+  stress::create_many_namespaces "1000"
 }
 
