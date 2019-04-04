@@ -29,7 +29,6 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/labeling"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
@@ -78,7 +77,7 @@ func namespaceSyncError(err v1.ConfigManagementError) object.Mutator {
 	}
 }
 
-var managedQuotaLabels = object.Labels(labeling.ManageQuota.New())
+var managedQuotaLabels = object.Label(v1.ConfigManagementQuotaKey, v1.ConfigManagementQuotaValue)
 
 var (
 	eng                = "eng"
@@ -470,15 +469,15 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			),
 				object.Labels(
 					map[string]string{
-						labeling.ConfigManagementQuotaKey:  "some-quota",
-						labeling.ConfigManagementSystemKey: "not-used",
-						"some-user-label":                  "some-label-value",
+						v1.ConfigManagementQuotaKey:  "some-quota",
+						v1.ConfigManagementSystemKey: "not-used",
+						"some-user-label":            "some-label-value",
 					},
 				),
 			),
 			wantNamespaceUpdate: namespace("default",
 				object.Annotation("some-user-annotation", "some-annotation-value"),
-				object.Label(labeling.ConfigManagementSystemKey, "not-used"),
+				object.Label(v1.ConfigManagementSystemKey, "not-used"),
 				object.Label("some-user-label", "some-label-value"),
 			),
 			actual: []runtime.Object{
@@ -518,15 +517,15 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			),
 				object.Labels(
 					map[string]string{
-						labeling.ConfigManagementQuotaKey:  "some-quota",
-						labeling.ConfigManagementSystemKey: "not-used",
-						"some-user-label":                  "some-label-value",
+						v1.ConfigManagementQuotaKey:  "some-quota",
+						v1.ConfigManagementSystemKey: "not-used",
+						"some-user-label":            "some-label-value",
 					},
 				),
 			),
 			wantNamespaceUpdate: namespace("kube-system",
 				object.Annotation("some-user-annotation", "some-annotation-value"),
-				object.Label(labeling.ConfigManagementSystemKey, "not-used"),
+				object.Label(v1.ConfigManagementSystemKey, "not-used"),
 				object.Label("some-user-label", "some-label-value"),
 			),
 			actual: []runtime.Object{

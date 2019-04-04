@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	sels "github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -57,11 +58,18 @@ func NewForCluster(
 	return &cov
 }
 
+// getClusterSelectorAnnotation returns the value of the cluster selector annotation
+// among the given annotations.  If the annotation is not there, "" is returned.
+func getClusterSelectorAnnotation(a object.Annotated) string {
+	// Looking up in a nil map will also return "".
+	return a.GetAnnotations()[v1.ClusterSelectorAnnotationKey]
+}
+
 // ValidateObject validates the coverage of the object with clusters and selectors. An object
 // may not have an annotation, but if it does, it has to map to a valid selector.  Also if an
 // object has a selector in the annotation, that annotation must refer to a valid selector.
 func (c ForCluster) ValidateObject(o *ast.FileObject, errs *status.ErrorBuilder) {
-	a := v1.GetClusterSelectorAnnotation(o.MetaObject().GetAnnotations())
+	a := getClusterSelectorAnnotation(o.MetaObject())
 	if a == "" {
 		return
 	}
@@ -74,7 +82,7 @@ func (c ForCluster) ValidateObject(o *ast.FileObject, errs *status.ErrorBuilder)
 // "" in the returned slice means "all clusters".  The output ordering is
 // stable.
 func (c ForCluster) MapToClusters(o metav1.Object) []string {
-	a := v1.GetClusterSelectorAnnotation(o.GetAnnotations())
+	a := getClusterSelectorAnnotation(o)
 	if a == "" {
 		return []string{""}
 	}

@@ -26,6 +26,7 @@ import (
 	sel "github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -127,7 +128,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 	v.nsTransformer.addMappingForKey(v1.NamespaceSelectorAnnotationKey, m)
 
 	v.errs.Add(status.UndocumentedWrapf(v.clusterSelectorTransformer.transform(n), "failed to inline ClusterSelector for node %q", n.SlashPath()))
-	annotatePopulated(n, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
+	setPopulatedAnnotation(n, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return v.Copying.VisitTreeNode(n)
 }
 
@@ -141,7 +142,7 @@ func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) *ast.Name
 		"failed to inline annotation for object %q", m.GetName()))
 	v.errs.Add(status.UndocumentedWrapf(v.clusterSelectorTransformer.transform(m),
 		"failed to inline cluster selector annotations for object %q", m.GetName()))
-	annotatePopulated(m, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
+	setPopulatedAnnotation(m, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject
 }
 
@@ -153,6 +154,15 @@ func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) *ast
 	m := newObject.MetaObject()
 	v.errs.Add(vet.InternalWrapf(v.clusterSelectorTransformer.transform(m),
 		"failed to inline cluster selector annotations for object %q", m.GetName()))
-	annotatePopulated(m, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
+	setPopulatedAnnotation(m, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject
+}
+
+// setPopulatedAnnotation is like object.SetAnnotation, but only populates the annotation if value
+// is not the empty string.
+func setPopulatedAnnotation(obj object.Annotated, annotation, value string) {
+	if value == "" {
+		return
+	}
+	object.SetAnnotation(obj, annotation, value)
 }

@@ -19,8 +19,7 @@ package ast
 import (
 	"time"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -222,17 +221,6 @@ func copyMapInto(from map[string]string, to *map[string]string) {
 		(*to)[k] = v
 	}
 }
-
-// Annotated is anything that has mutable annotations.  This is a subset of
-// the interface metav1.Object, and allows us to manipulate AST objects with
-// the same code that operates on Kubernetes API objects, without the need to
-// implement parts of metav1.Object that don't deal with annotations.
-type Annotated interface {
-	GetAnnotations() map[string]string
-	SetAnnotations(map[string]string)
-}
-
-var _ Annotated = (*TreeNode)(nil)
 
 // GetAnnotations returns the annotations from n.  They are mutable if not nil.
 func (n *TreeNode) GetAnnotations() map[string]string {

@@ -24,12 +24,12 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/syncer/differ"
-	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
@@ -283,7 +283,7 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
 			decl.SetNamespace(node.GetName())
-			annotate(decl, kv(v1.SyncTokenAnnotationKey, node.Spec.Token))
+			object.SetAnnotation(decl, v1.SyncTokenAnnotationKey, node.Spec.Token)
 		}
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, name)
@@ -371,18 +371,23 @@ func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 
 func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 	namespace.SetGroupVersionKind(kinds.Namespace())
+
 	if !namespaceutil.IsSystem(namespace.GetName()) {
 		// Mark the namespace as supporting the management of hierarchical quota.
 		// But don't interfere with system namespaces, since that could lock us
 		// out of the cluster.
-		labels := labeling.ManageQuota.AddDeepCopy(namespaceConfig.Labels)
-		namespace.Labels = labels
+		namespace.SetLabels(nil)
+		for k, v := range namespaceConfig.Labels {
+			object.SetLabel(namespace, k, v)
+		}
+		enableQuota(namespace)
 	}
 
+	namespace.SetAnnotations(nil)
 	for k, v := range namespaceConfig.Annotations {
-		annotate(namespace, kv(k, v))
+		object.SetAnnotation(namespace, k, v)
 	}
-	annotate(namespace, kv(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
+	enableManagement(namespace)
 
 	namespace.Name = namespaceConfig.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())

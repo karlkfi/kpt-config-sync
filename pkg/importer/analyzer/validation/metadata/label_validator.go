@@ -1,7 +1,6 @@
 package metadata
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
@@ -14,7 +13,7 @@ func NewLabelValidator() ast.Visitor {
 		func(o ast.FileObject) *status.MultiError {
 			var errors []string
 			for l := range o.MetaObject().GetLabels() {
-				if v1.HasConfigManagementPrefix(l) {
+				if hasConfigManagementPrefix(l) {
 					errors = append(errors, l)
 				}
 			}

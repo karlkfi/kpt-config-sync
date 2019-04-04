@@ -21,9 +21,6 @@ package differ
 import (
 	"fmt"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/syncer/labeling"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -70,8 +67,7 @@ func (d Diff) Type() Type {
 
 	if d.Declared != nil {
 		// The resource IS in the repository.
-		managed, found := d.Declared.GetAnnotations()[v1.ResourceManagementKey]
-		if !found {
+		if managementUnset(d.Declared) {
 			// The declared resource has no resource management key, so it is manged.
 			if d.Actual != nil {
 				// The resource is also in the cluster, so update it.
@@ -80,7 +76,7 @@ func (d Diff) Type() Type {
 			// The resource is not in the cluster, so create it.
 			return Create
 		}
-		if managed == v1.ResourceManagementDisabled {
+		if managementDisabled(d.Declared) {
 			// The resource is explicitly marked management disabled in the repository.
 			if d.Actual != nil {
 				if hasNomosMeta(d.Actual) {
@@ -117,7 +113,7 @@ func (d Diff) Type() Type {
 		}
 
 		// There are Nomos annotations or labels on the resource.
-		if d.Actual.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementEnabled {
+		if managementEnabled(d.Actual) {
 			// Delete resource with management enabled on API Server.
 			return Delete
 		}
@@ -127,10 +123,6 @@ func (d Diff) Type() Type {
 
 	// The resource is neither on the API Server nor in the repo, so do nothing.
 	return NoOp
-}
-
-func hasNomosMeta(obj metav1.Object) bool {
-	return v1.HasNomosAnnotation(obj.GetAnnotations()) || labeling.HasQuota(obj.GetLabels())
 }
 
 // Diffs returns the diffs between declared and actual state. We generate a diff for each GroupVersionKind.

@@ -24,12 +24,7 @@ func Name(name string) Mutator {
 // Label adds label=value to the metadata.labels of the FileObject under test.
 func Label(label, value string) Mutator {
 	return func(o *ast.FileObject) {
-		labels := o.MetaObject().GetLabels()
-		if labels == nil {
-			labels = make(map[string]string)
-		}
-		labels[label] = value
-		o.MetaObject().SetLabels(labels)
+		SetLabel(o.MetaObject(), label, value)
 	}
 }
 
@@ -38,19 +33,14 @@ func Label(label, value string) Mutator {
 // to empty map.
 func Labels(labels map[string]string) Mutator {
 	return func(o *ast.FileObject) {
-		o.MetaObject().SetLabels(copyMap(labels))
+		SetLabels(o.MetaObject(), labels)
 	}
 }
 
 // Annotation adds annotation=value to the metadata.annotations of the FileObject under test.
 func Annotation(annotation, value string) Mutator {
 	return func(o *ast.FileObject) {
-		annotations := o.MetaObject().GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
-		annotations[annotation] = value
-		o.MetaObject().SetAnnotations(annotations)
+		SetAnnotation(o.MetaObject(), annotation, value)
 	}
 }
 
@@ -59,7 +49,7 @@ func Annotation(annotation, value string) Mutator {
 // Annotations to empty map.
 func Annotations(annotations map[string]string) Mutator {
 	return func(o *ast.FileObject) {
-		o.MetaObject().SetAnnotations(copyMap(annotations))
+		SetAnnotations(o.MetaObject(), annotations)
 	}
 }
 
@@ -74,17 +64,4 @@ func OwnerReference(name, uid string, gvk schema.GroupVersionKind) Mutator {
 			Kind:       kind,
 		}})
 	}
-}
-
-// copyMap returns a copy of the passed map. Otherwise the Labels or Annotations maps will have two
-// owners.
-func copyMap(m map[string]string) map[string]string {
-	if m == nil {
-		return nil
-	}
-	result := make(map[string]string)
-	for k, v := range m {
-		result[k] = v
-	}
-	return result
 }

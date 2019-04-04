@@ -18,34 +18,10 @@ package transform
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/object"
 )
 
 type valueMap map[string]string
-
-// annotate replaces the annotation with 'key' on the annotated object o with
-// the given value.  It avoids re-setting the map if resetting the map is not
-// needed, so won't instantiate unneeded maps.
-func annotate(o ast.Annotated, key, value string) ast.Annotated {
-	a := o.GetAnnotations()
-	wasNil := a == nil
-	if a == nil {
-		a = make(map[string]string)
-	}
-	a[key] = value
-	if wasNil {
-		o.SetAnnotations(a)
-	}
-	return o
-}
-
-// annotatePopulated is like "annotate", except skips annotate if value is empty.
-func annotatePopulated(o ast.Annotated, key, value string) {
-	if value == "" {
-		return
-	}
-	annotate(o, key, value)
-}
 
 // annotationTransformer is a map of annotation keys to a map of old values to new values.
 //
@@ -60,7 +36,7 @@ func (t annotationTransformer) addMappingForKey(key string, mapping valueMap) {
 	t[key] = mapping
 }
 
-func (t annotationTransformer) transform(o ast.Annotated) error {
+func (t annotationTransformer) transform(o object.Annotated) error {
 	a := o.GetAnnotations()
 	for k, vOldToNew := range t {
 		vOld, ok := a[k]

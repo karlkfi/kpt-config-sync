@@ -1,6 +1,8 @@
 package metadata
 
 import (
+	"strings"
+
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
@@ -8,13 +10,31 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
+// inputAnnotations is a map of annotations that are valid to exist on objects when imported from
+// the filesystem.
+var inputAnnotations = map[string]bool{
+	v1.NamespaceSelectorAnnotationKey: true,
+	v1.ClusterSelectorAnnotationKey:   true,
+	v1.ResourceManagementKey:          true,
+}
+
+// isInputAnnotation returns true if the annotation is a Nomos input annotation.
+func isInputAnnotation(s string) bool {
+	return inputAnnotations[s]
+}
+
+// hasConfigManagementPrefix returns true if the string begins with the Nomos annotation prefix.
+func hasConfigManagementPrefix(s string) bool {
+	return strings.HasPrefix(s, v1.ConfigManagementPrefix)
+}
+
 // NewAnnotationValidator validates the annotations of every object.
 func NewAnnotationValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
 		func(o ast.FileObject) *status.MultiError {
 			var errors []string
 			for a := range o.MetaObject().GetAnnotations() {
-				if !v1.IsInputAnnotation(a) && v1.HasConfigManagementPrefix(a) {
+				if !isInputAnnotation(a) && hasConfigManagementPrefix(a) {
 					errors = append(errors, a)
 				}
 			}

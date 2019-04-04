@@ -118,7 +118,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
-			annotate(decl, kv(v1.SyncTokenAnnotationKey, policy.Spec.Token))
+			syncedAt(decl, policy.Spec.Token)
 		}
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, "")

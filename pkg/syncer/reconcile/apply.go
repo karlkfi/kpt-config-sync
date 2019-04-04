@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -255,8 +256,6 @@ func lastAppliedConfiguration(original *unstructured.Unstructured) ([]byte, erro
 	}
 
 	// Set the annotation on the passed in object.
-	annots := original.GetAnnotations()
-	annots[v1.LastAppliedConfigAnnotation] = string(annotation)
-	original.SetAnnotations(annots)
+	object.SetAnnotation(original, v1.LastAppliedConfigAnnotation, string(annotation))
 	return annotation, nil
 }

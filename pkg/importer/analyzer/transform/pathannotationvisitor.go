@@ -1,10 +1,10 @@
 package transform
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/google/nomos/pkg/object"
 )
 
 // PathAnnotationVisitor sets "configmanagement.gke.io/source-path" annotation on CRDs and native objects.
@@ -27,35 +27,20 @@ func NewPathAnnotationVisitor() *PathAnnotationVisitor {
 // VisitTreeNode implements Visitor
 func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	newNode := v.Copying.VisitTreeNode(n)
-	if newNode.Annotations == nil {
-		newNode.Annotations = map[string]string{}
-	}
-	newNode.Annotations[v1.SourcePathAnnotationKey] = n.SlashPath()
+	object.SetAnnotation(newNode, v1.SourcePathAnnotationKey, n.SlashPath())
 	return newNode
 }
 
 // VisitClusterObject implements Visitor
 func (v *PathAnnotationVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	newObject := v.Copying.VisitClusterObject(o)
-	applyPathAnnotation(newObject.FileObject)
+	object.SetAnnotation(newObject.MetaObject(), v1.SourcePathAnnotationKey, o.SlashPath())
 	return newObject
 }
 
 // VisitObject implements Visitor
 func (v *PathAnnotationVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	newObject := v.Copying.VisitObject(o)
-	applyPathAnnotation(newObject.FileObject)
+	object.SetAnnotation(newObject.MetaObject(), v1.SourcePathAnnotationKey, o.SlashPath())
 	return newObject
-}
-
-// applyPathAnnotation applies path annotation to o.
-// dir is a slash-separated path.
-func applyPathAnnotation(fo ast.FileObject) {
-	metaObj := fo.Object.(metav1.Object)
-	a := metaObj.GetAnnotations()
-	if a == nil {
-		a = map[string]string{}
-		metaObj.SetAnnotations(a)
-	}
-	a[v1.SourcePathAnnotationKey] = fo.SlashPath()
 }

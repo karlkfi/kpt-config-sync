@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors/seltest"
+	"github.com/google/nomos/pkg/object"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -32,8 +32,8 @@ type clusterselectorsTestCase struct {
 	clusters           []clusterregistry.Cluster
 	selectors          []v1.ClusterSelector
 	expectedMapping    ClusterSelectors
-	expectedMatches    []ast.Annotated
-	expectedMismatches []ast.Annotated
+	expectedMatches    []object.Annotated
+	expectedMismatches []object.Annotated
 	expectedForEach    map[string]v1.ClusterSelector
 }
 
@@ -75,7 +75,7 @@ func TestVisitor(t *testing.T) {
 				clusterName: "cluster-1",
 				selectors:   map[string]v1.ClusterSelector{},
 			},
-			expectedMatches: []ast.Annotated{
+			expectedMatches: []object.Annotated{
 				// An un-annotated thing matches always.
 				seltest.Annotated(map[string]string{}),
 			},
@@ -87,7 +87,7 @@ func TestVisitor(t *testing.T) {
 				clusterName: "cluster-1",
 				selectors:   map[string]v1.ClusterSelector{},
 			},
-			expectedMatches: []ast.Annotated{
+			expectedMatches: []object.Annotated{
 				seltest.Annotated(map[string]string{}),
 			},
 		},
@@ -120,13 +120,13 @@ func TestVisitor(t *testing.T) {
 					"env": "prod",
 				}),
 			},
-			expectedMatches: []ast.Annotated{
+			expectedMatches: []object.Annotated{
 				seltest.Annotated(map[string]string{}),
 				seltest.Annotated(map[string]string{
 					v1.ClusterSelectorAnnotationKey: "sel-1",
 				}),
 			},
-			expectedMismatches: []ast.Annotated{
+			expectedMismatches: []object.Annotated{
 				seltest.Annotated(map[string]string{
 					v1.ClusterSelectorAnnotationKey: "sel-2",
 				}),
@@ -154,10 +154,10 @@ func TestVisitor(t *testing.T) {
 				}),
 				selectors: map[string]v1.ClusterSelector{},
 			},
-			expectedMatches: []ast.Annotated{
+			expectedMatches: []object.Annotated{
 				seltest.Annotated(map[string]string{}),
 			},
-			expectedMismatches: []ast.Annotated{
+			expectedMismatches: []object.Annotated{
 				seltest.Annotated(map[string]string{
 					v1.ClusterSelectorAnnotationKey: "sel-1",
 				}),

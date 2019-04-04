@@ -17,10 +17,8 @@ type NamespaceDiff struct {
 func (d *NamespaceDiff) Type() Type {
 
 	if d.Declared != nil {
-		// The Namespace IS in the repository.
-		managed, found := d.Declared.GetAnnotations()[v1.ResourceManagementKey]
 		// The NamespaceConfig IS in the repository.
-		if !found {
+		if managementUnset(d.Declared) {
 			// The declared Namespace has no resource management key, so it is managed.
 			if d.Actual != nil {
 				// The Namespace is also in the cluster, so update it.
@@ -29,8 +27,7 @@ func (d *NamespaceDiff) Type() Type {
 			// The Namespace is not in the cluster, so create it.
 			return Create
 		}
-
-		if managed == v1.ResourceManagementDisabled {
+		if managementDisabled(d.Declared) {
 			// The Namespace is explicitly marked management disabled in the repository.
 			if d.Actual != nil {
 				if hasNomosMeta(d.Actual) {
@@ -54,7 +51,7 @@ func (d *NamespaceDiff) Type() Type {
 		}
 
 		// There are Nomos annotations or labels on the Namespace.
-		if d.Actual.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementEnabled {
+		if managementEnabled(d.Actual) {
 			// Delete Namespace with management enabled on API Server.
 			return Delete
 		}

@@ -24,19 +24,14 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/object"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func withSourceAnnotation(o runtime.Object, annotation string) runtime.Object {
-	m := o.(metav1.Object)
-	a := m.GetAnnotations()
-	if a == nil {
-		a = make(map[string]string)
-	}
-	a[v1.SourcePathAnnotationKey] = annotation
-	m.SetAnnotations(a)
+	object.SetAnnotation(o.(metav1.Object), v1.SourcePathAnnotationKey, annotation)
 	return o
 }
 

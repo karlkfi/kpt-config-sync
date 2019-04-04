@@ -8,10 +8,9 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/differ"
-	"github.com/google/nomos/pkg/syncer/labeling"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/record"
 )
@@ -23,10 +22,10 @@ func handleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorde
 	case differ.NoOp:
 		return false, nil
 	case differ.Create:
-		annotate(diff.Declared, kv(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
+		object.SetAnnotation(diff.Declared, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
 		return applier.Create(ctx, diff.Declared)
 	case differ.Update:
-		annotate(diff.Declared, kv(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
+		object.SetAnnotation(diff.Declared, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
 		return applier.Update(ctx, diff.Declared, diff.Actual)
 	case differ.Delete:
 		return applier.Delete(ctx, diff.Actual)
@@ -50,14 +49,4 @@ func warnInvalidAnnotationResource(recorder record.EventRecorder, declared *unst
 	}
 	glog.Warning(err)
 	recorder.Event(declared, corev1.EventTypeWarning, "InvalidAnnotation", err.Error())
-}
-
-func removeNomosMeta(obj metav1.Object) {
-	a := obj.GetAnnotations()
-	v1.RemoveNomos(a)
-	obj.SetAnnotations(a)
-
-	l := obj.GetLabels()
-	labeling.RemoveQuota(l)
-	obj.SetLabels(l)
 }

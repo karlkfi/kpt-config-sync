@@ -25,8 +25,8 @@ import (
 	"github.com/google/nomos/pkg/admissioncontroller"
 	"github.com/google/nomos/pkg/admissioncontroller/resourcequota"
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/service"
-	"github.com/google/nomos/pkg/syncer/labeling"
 	"github.com/google/nomos/pkg/util/log"
 	"github.com/pkg/errors"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -83,8 +83,10 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 	failurePolicy := admissionregistrationv1beta1.Fail
 	webhookConfig := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   externalAdmissionHookConfigName,
-			Labels: labeling.ConfigManagementSystem.New(),
+			Name: externalAdmissionHookConfigName,
+			Labels: map[string]string{
+				v1.ConfigManagementSystemKey: v1.ConfigManagementSystemValue,
+			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: gvk.GroupVersion().String(),
@@ -122,9 +124,9 @@ func selfRegister(clientset *kubernetes.Clientset, caCertFile string) error {
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{
-							Key:      labeling.ConfigManagementQuotaKey,
+							Key:      v1.ConfigManagementQuotaKey,
 							Operator: metav1.LabelSelectorOpIn,
-							Values:   []string{labeling.ConfigManagementQuotaValue},
+							Values:   []string{v1.ConfigManagementQuotaValue},
 						},
 					},
 				},
