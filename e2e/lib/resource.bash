@@ -377,6 +377,9 @@ function resource::delete() {
         tmpnames+=("${ns}")
       fi
     done
+    if [ -z "${tmpnames+x}" ]; then
+      return 0
+    fi
     if [ ${#tmpnames[@]} -eq 0 ]; then
       return 0
     fi
