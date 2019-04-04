@@ -23,8 +23,10 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/util/repo"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -32,6 +34,8 @@ import (
 // RepoStatus is a reconciler for maintaining the status field of the Repo resource based upon
 // updates from the other syncer reconcilers.
 type RepoStatus struct {
+	// ctx is a cancelable ambient context for all reconciler operations.
+	ctx context.Context
 	// client is used to list configs on the cluster when building state for a commit
 	client *syncclient.Client
 	// client is used to perform CRUD operations on the Repo resource
@@ -59,8 +63,9 @@ type configState struct {
 }
 
 // NewRepoStatus returns a reconciler for maintaining the status field of the Repo resource.
-func NewRepoStatus(sClient *syncclient.Client) *RepoStatus {
+func NewRepoStatus(ctx context.Context, sClient *syncclient.Client) *RepoStatus {
 	return &RepoStatus{
+		ctx:     ctx,
 		client:  sClient,
 		rClient: repo.New(sClient),
 		tokens:  make(map[string]bool),
@@ -68,30 +73,41 @@ func NewRepoStatus(sClient *syncclient.Client) *RepoStatus {
 }
 
 // Reconcile is the Reconcile callback for RepoStatus reconciler.
-func (r *RepoStatus) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	glog.Infof("Reconcile triggered by %q.", request.NamespacedName)
-	ctx := context.Background()
+func (r *RepoStatus) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
+	metrics.EventTimes.WithLabelValues("repo-reconcile").Set(float64(now().Unix()))
+	timer := prometheus.NewTimer(metrics.RepoReconcileDuration.WithLabelValues())
+	defer timer.ObserveDuration()
+
 	result := reconcile.Result{}
 
-	repo, sErr := r.rClient.GetOrCreateRepo(ctx)
-	if sErr != nil {
-		glog.Errorf("Failed to fetch Repo: %v", sErr)
-		return result, sErr
+	if err := r.reconcile(); err != nil {
+		metrics.RepoReconcileErrTotal.Inc()
+		return result, err
 	}
 
-	state, err := r.buildState(ctx, repo.Status.Import.Token)
+	return result, nil
+}
+
+func (r *RepoStatus) reconcile() error {
+	repo, sErr := r.rClient.GetOrCreateRepo(r.ctx)
+	if sErr != nil {
+		glog.Errorf("Failed to fetch Repo: %v", sErr)
+		return sErr
+	}
+
+	state, err := r.buildState(r.ctx, repo.Status.Import.Token)
 	if err != nil {
 		glog.Errorf("Failed to build sync state: %v", err)
-		return result, err
+		return err
 	}
 
 	state.merge(&repo.Status, r.latestToken)
 
-	if _, err := r.rClient.UpdateSyncStatus(ctx, repo); err != nil {
+	if _, err := r.rClient.UpdateSyncStatus(r.ctx, repo); err != nil {
 		glog.Errorf("Failed to update RepoSyncStatus: %v", err)
-		return result, err
+		return err
 	}
-	return result, nil
+	return nil
 }
 
 // buildState returns a freshly initialized syncState based upon the current configs on the cluster.
