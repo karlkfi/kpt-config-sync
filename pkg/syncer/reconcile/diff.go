@@ -8,7 +8,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/differ"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -22,10 +21,10 @@ func handleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorde
 	case differ.NoOp:
 		return false, nil
 	case differ.Create:
-		object.SetAnnotation(diff.Declared, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+		enableManagement(diff.Declared)
 		return applier.Create(ctx, diff.Declared)
 	case differ.Update:
-		object.SetAnnotation(diff.Declared, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+		enableManagement(diff.Declared)
 		return applier.Update(ctx, diff.Declared, diff.Actual)
 	case differ.Delete:
 		return applier.Delete(ctx, diff.Actual)

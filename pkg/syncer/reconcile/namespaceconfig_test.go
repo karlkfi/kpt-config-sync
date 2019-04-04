@@ -55,7 +55,7 @@ type event struct {
 func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...object.Mutator) *appsv1.Deployment {
 	opts = append(opts, func(o *ast.FileObject) {
 		o.Object.(*appsv1.Deployment).Spec.Strategy.Type = deploymentStrategy
-	}, herringAnnotation)
+	}, herrings)
 	return fake.Build(kinds.Deployment(), opts...).Object.(*appsv1.Deployment)
 }
 
@@ -597,12 +597,8 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 
 func unmanaged(o *corev1.Namespace) *corev1.Namespace {
 	r := o.DeepCopy()
-	as := r.GetAnnotations()
-	delete(as, v1.ResourceManagementKey)
-	if len(as) == 0 {
-		as = nil
-	}
-	r.SetAnnotations(as)
+	object.RemoveAnnotations(r, v1.ResourceManagementKey)
+	object.RemoveLabels(r, v1.ManagedByKey)
 	return r
 }
 

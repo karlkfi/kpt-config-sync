@@ -106,20 +106,25 @@ func clusterConfig(state v1.PolicySyncState, opts ...object.Mutator) *v1.Cluster
 func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.Mutator) *corev1.PersistentVolume {
 	opts = append(opts, func(o *ast.FileObject) {
 		o.Object.(*corev1.PersistentVolume).Spec.PersistentVolumeReclaimPolicy = reclaimPolicy
-	}, herringAnnotation)
+	}, herrings)
 	return fake.Build(kinds.PersistentVolume(), opts...).Object.(*corev1.PersistentVolume)
 }
 
 var (
 	tokenAnnotation = object.Annotation(v1.SyncTokenAnnotationKey, token)
 
-	// herringAnnotation is used when the decoder mangles empty vs. nil map.
-	herringAnnotation = object.Annotation("red", "herring")
+	// herrings is used when the decoder mangles empty vs. nil map.
+	herrings = object.Mutate(
+		object.Annotation("red", "herring"),
+		object.Label("red", "herring"),
+	)
 
 	clusterCfg       = clusterConfig(v1.StateSynced, importToken(token))
 	clusterCfgSynced = clusterConfig(v1.StateSynced, importToken(token), syncTime(metav1.Time{Time: time.Unix(0, 0)}), syncToken(token))
 
-	managementEnabled  = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+	managementEnabled object.Mutator = func(object *ast.FileObject) {
+		enableManagement(object.MetaObject())
+	}
 	managementDisabled = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
 	managementInvalid  = object.Annotation(v1.ResourceManagementKey, "invalid")
 

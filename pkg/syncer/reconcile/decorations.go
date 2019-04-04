@@ -12,8 +12,9 @@ func syncedAt(obj object.Annotated, token string) {
 }
 
 // enableManagement marks the resource as Nomos-manged.
-func enableManagement(obj object.Annotated) {
+func enableManagement(obj metav1.Object) {
 	object.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+	object.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
 }
 
 // enableQuota enables quota management for the resource.
