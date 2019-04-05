@@ -155,15 +155,15 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -- kubectl get rolebinding -n backend alice-rolebinding
   wait::for -- kubectl get clusterrole acme-admin
 
-  run kubectl get pods -n backend --as bob@acme.com
-  assert::contains "No resources"
-  run kubectl get pods -n backend --as alice@acme.com
-  assert::contains "No resources"
-
-  run kubectl get pods -n frontend --as bob@acme.com
-  assert::contains "forbidden"
-  run kubectl get pods -n frontend --as alice@acme.com
-  assert::contains "No resources"
+  debug::log "Verify that bob@ and alice@ have their permissions enforced"
+  wait::for -o "No resources found." -t 10 -- \
+    kubectl get pods -n backend --as bob@acme.com
+  wait::for -o "No resources found." -t 10 -- \
+    kubectl get pods -n backend --as alice@acme.com
+  wait::for -f -t 10 -- \
+    kubectl get pods -n frontend --as bob@acme.com
+  wait::for -o "No resources found." -t 10 -- \
+    kubectl get pods -n frontend --as alice@acme.com
 }
 
 @test "ResourceQuota enforced" {
