@@ -7,12 +7,17 @@ metadata:
     configmanagement.gke.io/system: "true"
 spec:
   group: configmanagement.gke.io
-  version: v1
   scope: Cluster
   names:
     plural: repos
     singular: repo
     kind: Repo
+  subresources:
+    status: {}
+  versions:
+    - name: v1
+      served: true
+      storage: true
   validation:
     # openAPIV3Schema is the schema for validating custom objects
     # TODO(phillipao): Complete and test when 1.11 beta is out.
@@ -29,3 +34,37 @@ spec:
             version:
               type: string
           # /RepoSpec
+        status:
+          # RepoStatus
+          type: object
+          properties:
+            source:
+              type: object
+              properties:
+                token:
+                  type: string
+            import:
+              type: object
+              properties:
+                token:
+                  type: string
+                lastUpdate: # metav1.Time
+                  anyOf:
+                  - format: date-time
+                    type: string
+                  - {}
+                errors:
+                  type: array
+            sync:
+              type: object
+              properties:
+                latestToken:
+                  type: string
+                lastUpdate: # metav1.Time
+                  anyOf:
+                  - format: date-time
+                    type: string
+                  - {}
+                inProgress:
+                  type: array
+          # /RepoStatus

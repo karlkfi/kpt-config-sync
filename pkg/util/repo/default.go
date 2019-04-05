@@ -11,16 +11,22 @@ const CurrentVersion = "0.1.0"
 
 // Default returns a default Repo in case one is not defined in the source of truth.
 func Default() *v1.Repo {
-	return &v1.Repo{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       kinds.Repo().Kind,
-			APIVersion: kinds.Repo().GroupVersion().String(),
-		},
+	return setTypeMeta(&v1.Repo{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "repo",
 		},
 		Spec: v1.RepoSpec{
 			Version: CurrentVersion,
 		},
+	})
+}
+
+// setTypeMeta sets the fields for TypeMeta since they are usually unset when fetching a Repo from
+// kubebuilder cache for some reason.
+func setTypeMeta(r *v1.Repo) *v1.Repo {
+	r.TypeMeta = metav1.TypeMeta{
+		Kind:       kinds.Repo().Kind,
+		APIVersion: kinds.Repo().GroupVersion().String(),
 	}
+	return r
 }

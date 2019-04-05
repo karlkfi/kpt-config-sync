@@ -17,12 +17,14 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/service"
+	"github.com/google/nomos/pkg/syncer/controller"
 	"github.com/google/nomos/pkg/syncer/meta"
 	"github.com/google/nomos/pkg/util/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -60,8 +62,23 @@ func main() {
 		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 
+	mgrStopChannel := signals.SetupSignalHandler()
+	ctx := stoppableContext(mgrStopChannel)
+	if err := controller.AddRepoStatus(ctx, mgr); err != nil {
+		glog.Fatalf("Error adding RepoStatus controller: %+v", err)
+	}
+
 	// Start the Manager.
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(mgrStopChannel); err != nil {
 		glog.Fatalf("Error starting controller: %+v", err)
 	}
+}
+
+func stoppableContext(stopChannel <-chan struct{}) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-stopChannel
+		cancel()
+	}()
+	return ctx
 }

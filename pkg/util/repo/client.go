@@ -2,7 +2,9 @@ package repo
 
 import (
 	"context"
+	"time"
 
+	"github.com/golang/glog"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -10,6 +12,8 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	syncclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,7 +54,7 @@ func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 		return nil, id.MultipleSingletonsWrap(resList...)
 	}
 	if len(repoList.Items) == 1 {
-		return repoList.Items[0].DeepCopy(), nil
+		return setTypeMeta(repoList.Items[0].DeepCopy()), nil
 	}
 
 	repo, cErr := c.CreateRepo(ctx)
@@ -136,12 +140,12 @@ type genClient struct {
 	lister listersv1.RepoLister
 }
 
-func (c *genClient) getOrCreateRepo() (*v1.Repo, status.Error) {
+func (c *genClient) getRepo() (*v1.Repo, status.Error) {
 	repos, err := c.lister.List(labels.Everything())
 	if err != nil {
 		return nil, status.APIServerWrapf(err, "failed to list Repos")
 	}
-	// Repo is a singlteon so there should not be more than one.
+	// Repo is a singleton so there should not be more than one.
 	if len(repos) > 1 {
 		resList := make([]id.Resource, len(repos))
 		for i, r := range repos {
@@ -150,12 +154,23 @@ func (c *genClient) getOrCreateRepo() (*v1.Repo, status.Error) {
 		return nil, id.MultipleSingletonsWrap(resList...)
 	}
 	if len(repos) == 1 {
-		return repos[0].DeepCopy(), nil
+		return setTypeMeta(repos[0].DeepCopy()), nil
+	}
+	return nil, nil
+}
+
+func (c *genClient) getOrCreateRepo() (*v1.Repo, status.Error) {
+	repo, err := c.getRepo()
+	if err != nil {
+		return nil, err
+	}
+	if repo != nil {
+		return repo, nil
 	}
 
-	repo, cErr := c.createRepo()
-	if cErr != nil {
-		return nil, cErr
+	repo, err = c.createRepo()
+	if err != nil {
+		return nil, err
 	}
 	return repo, nil // return explicit nil due to golang interfaces
 }
@@ -166,13 +181,37 @@ func (c *genClient) createRepo() (*v1.Repo, id.ResourceError) {
 	if err != nil {
 		return nil, id.ResourceWrap(err, "failed to create Repo", ast.ParseFileObject(repoObj))
 	}
-	return createdObj, nil
+	return setTypeMeta(createdObj), nil
 }
 
 func (c *genClient) updateRepo(repoObj *v1.Repo) (*v1.Repo, id.ResourceError) {
-	newObj, err := c.client.Update(repoObj)
-	if err != nil {
-		return nil, id.ResourceWrap(err, "failed to update Repo", ast.ParseFileObject(repoObj))
+	var lastError id.ResourceError
+	retryBackoff := 1 * time.Millisecond
+	maxTries := 5
+
+	for tryNum := 0; tryNum < maxTries; tryNum++ {
+		existingRepo, sErr := c.getRepo()
+		if sErr != nil {
+			return nil, id.MissingResourceWrap(sErr, "failed to get repo to update", ast.ParseFileObject(repoObj))
+		}
+		if existingRepo == nil {
+			return nil, id.MissingResourceWrap(errors.New("failed to get repo to update"), "", ast.ParseFileObject(repoObj))
+		}
+
+		existingRepo.Status.Source = repoObj.Status.Source
+		existingRepo.Status.Import = repoObj.Status.Import
+		newObj, err := c.client.UpdateStatus(existingRepo)
+		if err == nil {
+			return setTypeMeta(newObj), nil
+		}
+
+		lastError = id.ResourceWrap(err, "failed to update repo", ast.ParseFileObject(existingRepo))
+		if !apierrors.IsConflict(err) {
+			return nil, lastError
+		}
+		glog.Infof("Conflict on update: %v", err)
+		<-time.After(retryBackoff)
+		retryBackoff += 1 * time.Millisecond
 	}
-	return newObj, nil
+	return nil, lastError
 }

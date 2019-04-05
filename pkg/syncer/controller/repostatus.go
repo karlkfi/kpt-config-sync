@@ -33,7 +33,8 @@ import (
 const repoStatusControllerName = "repo-status"
 
 // AddRepoStatus adds RepoStatus sync controller to the Manager.
-func AddRepoStatus(ctx context.Context, mgr manager.Manager, syncClient *client.Client) error {
+func AddRepoStatus(ctx context.Context, mgr manager.Manager) error {
+	syncClient := client.New(mgr.GetClient())
 	rsc, err := k8scontroller.New(repoStatusControllerName, mgr, k8scontroller.Options{
 		Reconciler: genericreconcile.NewRepoStatus(ctx, syncClient),
 	})

@@ -123,13 +123,6 @@ func (c *Controller) pollDir(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			glog.V(4).Infof("pollDir: run")
-			var err error // golang does not handle interface assignment well
-			repoObj, err := c.repoClient.GetOrCreateRepo(ctx)
-			if err != nil {
-				glog.Errorf("failed to get Repo: %v", err)
-				continue
-			}
-
 			// Detect whether symlink has changed.
 			newDir, err := filepath.EvalSymlinks(c.policyDir)
 			if err != nil {
@@ -161,13 +154,6 @@ func (c *Controller) pollDir(ctx context.Context) {
 			}
 			glog.Infof("Resolved policy dir: %s. Polling policy dir: %s", newDir, c.policyDir)
 
-			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
-			if err != nil {
-				glog.Errorf("failed to list current policies: %v", err)
-				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
-				continue
-			}
-
 			// Parse the commit hash from the new directory to use as an import token.
 			token, err := git.CommitHash(newDir)
 			if err != nil {
@@ -176,15 +162,27 @@ func (c *Controller) pollDir(ctx context.Context) {
 				continue
 			}
 
-			loadTime := time.Now()
-
-			repoObj.Status.Source.Token = token
-			if newRepo, err := c.repoClient.UpdateSourceStatus(ctx, repoObj); err != nil {
-				glog.Errorf("failed to update Repo source status: %v", err)
-			} else {
-				repoObj = newRepo
+			// Before we start parsing the new directory, update the source token to reflect that this
+			// cluster has seen the change even if it runs into issues parsing/importing it.
+			repoObj, err := c.repoClient.GetOrCreateRepo(ctx)
+			if err != nil {
+				glog.Errorf("failed to get Repo: %v", err)
+				continue
 			}
 
+			repoObj.Status.Source.Token = token
+			if _, err := c.repoClient.UpdateSourceStatus(ctx, repoObj); err != nil {
+				glog.Errorf("failed to update Repo source status: %v", err)
+			}
+
+			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
+			if err != nil {
+				glog.Errorf("failed to list current policies: %v", err)
+				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				continue
+			}
+
+			loadTime := time.Now()
 			// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
 			desiredPolicies, mErr := c.parser.Parse(newDir, token, loadTime)
 			if mErr != nil {
@@ -200,6 +198,14 @@ func (c *Controller) pollDir(ctx context.Context) {
 				desiredPolicies.NamespaceConfigs[n] = pn
 			}
 			desiredPolicies.ClusterConfig.Status.SyncState = v1.StateStale
+
+			// Try to get a fresh copy of Repo since it is has high contention with syncer.
+			freshRepoObj, err := c.repoClient.GetOrCreateRepo(ctx)
+			if err != nil {
+				glog.Errorf("failed to get fresh Repo: %v", err)
+			} else {
+				repoObj = freshRepoObj
+			}
 
 			repoObj.Status.Import.Token = token
 			repoObj.Status.Import.LastUpdate = metav1.NewTime(loadTime)
