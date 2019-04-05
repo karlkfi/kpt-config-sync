@@ -116,9 +116,6 @@ func (c *Controller) Run(ctx context.Context) error {
 func (c *Controller) pollDir(ctx context.Context) {
 	currentDir := ""
 	ticker := time.NewTicker(c.pollPeriod)
-	// lastSyncs are the syncs that were present during the previous poll loop.
-	var lastSyncs map[string]v1.Sync
-
 	for {
 		select {
 		case <-ticker.C:
@@ -149,10 +146,28 @@ func (c *Controller) pollDir(ctx context.Context) {
 				continue
 			}
 
+			// Parse the commit hash from the new directory to use as an import token.
+			token, err := git.CommitHash(newDir)
+			if err != nil {
+				glog.Warningf("Failed to parse commit hash: %v", err)
+				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				continue
+			}
+
+			loadTime := time.Now()
+
+			// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
+			desiredPolicies, mErr := c.parser.Parse(newDir, token, loadTime)
+			if mErr != nil {
+				glog.Warningf("Failed to parse: %v", mErr)
+				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				continue
+			}
+
 			// If last syncs has more sync than current on-cluster sync
 			// content, this means that syncs have been removed on the cluster
 			// without our intention.
-			unchangedSyncs := len(c.differ.SyncsInFirstOnly(lastSyncs, currentSyncs)) == 0
+			unchangedSyncs := len(c.differ.SyncsInFirstOnly(desiredPolicies.Syncs, currentSyncs)) == 0
 			unchangedDir := currentDir == newDir
 
 			if unchangedDir && unchangedSyncs {
@@ -168,29 +183,11 @@ func (c *Controller) pollDir(ctx context.Context) {
 				continue
 			}
 
-			// Parse the commit hash from the new directory to use as an import token.
-			token, err := git.CommitHash(newDir)
-			if err != nil {
-				glog.Warningf("Failed to parse commit hash: %v", err)
-				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
-				continue
-			}
-
-			loadTime := time.Now()
-
 			repoObj.Status.Source.Token = token
 			if newRepo, err := c.repoClient.UpdateSourceStatus(ctx, repoObj); err != nil {
 				glog.Errorf("failed to update Repo source status: %v", err)
 			} else {
 				repoObj = newRepo
-			}
-
-			// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-			desiredPolicies, mErr := c.parser.Parse(newDir, token, loadTime)
-			if mErr != nil {
-				glog.Warningf("Failed to parse: %v", mErr)
-				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
-				continue
 			}
 
 			// Update the SyncState for all policy nodes and cluster policy.
@@ -216,8 +213,6 @@ func (c *Controller) pollDir(ctx context.Context) {
 			currentDir = newDir
 			importer.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
 			importer.Metrics.Nodes.Set(float64(len(desiredPolicies.NamespaceConfigs)))
-
-			lastSyncs = desiredPolicies.Syncs
 			glog.V(4).Infof("pollDir: completed")
 
 		case <-c.stopChan:
