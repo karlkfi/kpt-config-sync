@@ -36,18 +36,18 @@ EOF
 # Runs the installer process to set up the cluster under test.
 function install() {
   if $do_installation; then
-    echo "+++++ Installing..."
+    echo "+++++ Installing"
     kubectl apply -f "${TEST_DIR}/defined-operator-bundle.yaml"
     kubectl create secret generic git-creds -n=config-management-system \
       --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
     if $stable_channel; then
-      echo "+++++ Applying Nomos using stable channel"
+      echo "++++++ Applying Nomos using stable channel"
       kubectl apply -f "${TEST_DIR}/operator-config-git-stable.yaml"
     else
-      echo "+++++ Applying Nomos using dev channel"
+      echo "++++++ Applying Nomos using dev channel"
       kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
     fi
-    echo "+++++   Waiting for config-management-system deployments to be up"
+    echo "++++++ Waiting for config-management-system deployments to be up"
     wait::for -s -t 180 -- install::nomos_running
 
     local image
@@ -62,11 +62,15 @@ function install() {
 function uninstall() {
   if $do_installation; then
     # If we did the installation, then we should uninstall as well.
-    echo "+++++ Uninstalling..."
+    echo "+++++ Uninstalling"
+
     if kubectl get configmanagement &> /dev/null; then
+      echo "++++++ Removing configmanagement"
       kubectl -n=config-management-system delete configmanagement --all
     fi
+    echo "++++++ Wait to confirm shutdown"
     wait::for -s -t 300 -- install::nomos_uninstalled
+    echo "++++++ Delete operator bundle"
     kubectl delete --ignore-not-found -f defined-operator-bundle.yaml
 
     # make sure that config-management-system is no longer existant

@@ -116,10 +116,13 @@ func (c *Controller) Run(ctx context.Context) error {
 func (c *Controller) pollDir(ctx context.Context) {
 	currentDir := ""
 	ticker := time.NewTicker(c.pollPeriod)
+	// lastSyncs are the syncs that were present during the previous poll loop.
+	var lastSyncs map[string]v1.Sync
 
 	for {
 		select {
 		case <-ticker.C:
+			glog.V(4).Infof("pollDir: run")
 			var err error // golang does not handle interface assignment well
 			repoObj, err := c.repoClient.GetOrCreateRepo(ctx)
 			if err != nil {
@@ -135,8 +138,25 @@ func (c *Controller) pollDir(ctx context.Context) {
 				continue
 			}
 
-			if currentDir == newDir {
-				// No new commits, nothing to do.
+			// Check if Syncs have changed on the cluster.  We need to
+			// reconcile in case the user removed Syncs that should be there.
+			// We don't have a watcher for this event, but rely instead on the
+			// poll period to trigger a reconcile.
+			currentSyncs, err := namespaceconfig.ListSyncs(c.syncLister)
+			if err != nil {
+				glog.Errorf("failed quick check of current syncs: %v", err)
+				importer.Metrics.PolicyStates.WithLabelValues("list_syncs_failed").Inc()
+				continue
+			}
+
+			// If last syncs has more sync than current on-cluster sync
+			// content, this means that syncs have been removed on the cluster
+			// without our intention.
+			unchangedSyncs := len(c.differ.SyncsInFirstOnly(lastSyncs, currentSyncs)) == 0
+			unchangedDir := currentDir == newDir
+
+			if unchangedDir && unchangedSyncs {
+				glog.V(4).Info("pollDir: no new changes, nothing to do.")
 				continue
 			}
 			glog.Infof("Resolved policy dir: %s. Polling policy dir: %s", newDir, c.policyDir)
@@ -196,6 +216,9 @@ func (c *Controller) pollDir(ctx context.Context) {
 			currentDir = newDir
 			importer.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
 			importer.Metrics.Nodes.Set(float64(len(desiredPolicies.NamespaceConfigs)))
+
+			lastSyncs = desiredPolicies.Syncs
+			glog.V(4).Infof("pollDir: completed")
 
 		case <-c.stopChan:
 			glog.Info("Stop polling")

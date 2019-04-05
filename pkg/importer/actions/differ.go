@@ -130,16 +130,18 @@ func (d *Differ) syncActions(current, desired namespaceconfig.AllPolicies) []act
 	return actions
 }
 
-// SyncDeletes returns a list of names of Syncs to be deleted.
-// The caller must delete all these syncs and wait for them to be finalized before processing other
-// actions.
-func (d *Differ) SyncDeletes(current, desired map[string]v1.Sync) []string {
-	var toDelete []string
-	for _, sync := range current {
-		if _, exists := desired[sync.Name]; !exists {
-			toDelete = append(toDelete, sync.Name)
+// SyncsInFirstOnly returns a list of sync names that are present in first, but
+// not in second sync map.
+func (d *Differ) SyncsInFirstOnly(first, second map[string]v1.Sync) []string {
+	var inFirstOnly []string
+	for _, sync := range first {
+		if _, exists := second[sync.Name]; !exists {
+			inFirstOnly = append(inFirstOnly, sync.Name)
 		}
 	}
-	glog.Infof("Sync operations: %d deletes", len(toDelete))
-	return toDelete
+	glog.V(4).Infof("Sync operations: %d deletes", len(inFirstOnly))
+	if glog.V(8) {
+		glog.Infof("first: %v, second: %v\ninFirstOnly: %v", first, second, inFirstOnly)
+	}
+	return inFirstOnly
 }

@@ -26,7 +26,7 @@ var Metrics = struct {
 	Nodes        prometheus.Gauge
 	PolicyStates *prometheus.CounterVec
 }{
-	prometheus.NewCounterVec(
+	Operations: prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total operations that have been performed to keep policy node hierarchy up-to-date with source of truth",
 			Namespace: configmanagement.MetricsNamespace,
@@ -36,7 +36,7 @@ var Metrics = struct {
 		// e.g. create, update, delete
 		[]string{"operation"},
 	),
-	prometheus.NewGauge(
+	Nodes: prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Help:      "Number of policy nodes in current state",
 			Namespace: configmanagement.MetricsNamespace,
@@ -44,7 +44,7 @@ var Metrics = struct {
 			Name:      "namespace_configs",
 		},
 	),
-	prometheus.NewCounterVec(
+	PolicyStates: prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total number of policy state transitions (A state transition can include changes to multiple resources)",
 			Namespace: configmanagement.MetricsNamespace,

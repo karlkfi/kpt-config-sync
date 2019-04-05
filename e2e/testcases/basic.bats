@@ -26,6 +26,22 @@ teardown() {
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
+@test "Recreate a sync deleted by the user" {
+  debug::log "Add a deployment to a directory"
+  git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
+  git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
+  git::commit -m "Add a deployment to a directory"
+
+  debug::log "Ensure that the system created a sync for the deployment"
+  wait::for -t 10 -- kubectl get sync deployment.apps
+
+  debug::log "Force-delete the sync from the cluster"
+  wait::for -t 10 -- kubectl delete sync deployment.apps
+
+  debug::log "Ensure that the system re-created the force-deleted sync"
+  wait::for -t 60 -- kubectl get sync deployment.apps
+}
+
 @test "Namespace garbage collection" {
   mkdir -p acme/namespaces/accounting
   git::add ${YAML_DIR}/accounting-namespace.yaml acme/namespaces/accounting/namespace.yaml
@@ -225,3 +241,4 @@ function clean_test_configmaps() {
   wait::for -f -- kubectl -n new-prj configmaps map1
   wait::for -f -- kubectl -n newer-prj configmaps map2
 }
+

@@ -61,16 +61,22 @@ func ListPolicies(namespaceConfigLister listersv1.NamespaceConfigLister,
 	}
 
 	// Syncs
+	policies.Syncs, err = ListSyncs(syncLister)
+	return &policies, err
+}
+
+// ListSyncs gets a map-by-name of Syncs currently present in the cluster from
+// the provided lister.
+func ListSyncs(syncLister listersv1.SyncLister) (ret map[string]v1.Sync, err error) {
 	syncs, err := syncLister.List(labels.Everything())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list Syncs")
 	}
 	if len(syncs) > 0 {
-		policies.Syncs = make(map[string]v1.Sync)
+		ret = make(map[string]v1.Sync, len(syncs))
 	}
 	for _, s := range syncs {
-		policies.Syncs[s.Name] = *s.DeepCopy()
+		ret[s.Name] = *s.DeepCopy()
 	}
-
-	return &policies, nil
+	return ret, err
 }
