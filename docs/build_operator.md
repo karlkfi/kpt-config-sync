@@ -2,7 +2,7 @@
 
 The instructions for configuring and installing Nomos with an operator are
 described in the [Operator Installation Guide](../user/installation.md).
-*However*, `nomos-operator.yaml` uses a released build of Nomos. In order to
+*However*, `config-management-operator.yaml` uses a released build of Nomos. In order to
 deploy your local tree with the latest operator release candidate run
 
 ```$bash

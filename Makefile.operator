@@ -1,6 +1,6 @@
 # Rules for deploying the nomos via the operator-based installer.
 # Note that the rules for creating and deploying the operator-bundle.yaml
-# and operator image are in the nomos-operator repo, available at:
+# and operator image are in the config-management-operator repo, available at:
 # https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/nomos-operator/
 
 ifndef GCP_PROJECT
@@ -31,7 +31,7 @@ download-operator-latest:
 	@rm -rf ${OPERATOR_STAGING_DIR}
 	@mkdir -p ${OPERATOR_STAGING_DIR}
 	curl -o ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml \
-		https://storage.googleapis.com/config-management-release/operator-latest/nomos-operator.yaml
+		https://storage.googleapis.com/config-management-release/operator-latest/config-management-operator.yaml
 
 # Operator manifest places all generated and static yaml files into a known
 # directory so the operator can pick them up for manifest generation.
@@ -64,7 +64,7 @@ endif
 	@echo "+++ Preparing regular operator"
 	@rm -rf ${OPERATOR_STAGING_DIR}
 	@mkdir -p ${OPERATOR_STAGING_DIR}
-	@gsutil cp ${DEV_BUCKET}/nomos-operator.yaml \
+	@gsutil cp ${DEV_BUCKET}/config-management-operator.yaml \
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml
 	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
@@ -99,7 +99,7 @@ endif
 	@gsutil cp ${DEV_BUCKET_USER}/operator-bundle.yaml ${OPERATOR_STAGING_DIR}/
 	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
-	@IMAGE=gcr.io/${GCP_PROJECT}/${USER}/nomos-operator:${IMAGE_TAG} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
+	@IMAGE=gcr.io/${GCP_PROJECT}/${USER}/config-management-operator:${IMAGE_TAG} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
 # b/129084668 - this section can be removed entirely once we've cut over to
 # using the new GCP project for releasing the product.

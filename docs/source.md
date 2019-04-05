@@ -26,7 +26,7 @@ generate a new set of manifests in the Operator repository should be released as
 the latest Release Candidate for the Operator. This can be done by running `make
 release` in the `nomos-operator` directory of the `nomos-operator` repository.
 This target will create a new Release Canidate, replacing the previous
-[operator-latest](https://storage.googleapis.com/nomos-release/operator-latest/nomos-operator.yaml)
+[operator-latest](https://storage.googleapis.com/nomos-release/operator-latest/config-management-operator.yaml)
 release. This is documented in the
 [Releasing section of the Operator Readme](https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/nomos-operator/README.md#releasing).
 The CI job will likely be broken until this is done, as it will be using an old

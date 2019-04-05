@@ -63,7 +63,7 @@ Apply the operator bundle in order to create the Nomos Operator and
 config-management-system namespace into your cluster.
 
 ```console
-$ kubectl apply --filename https://storage.googleapis.com/nomos-release/operator-stable/nomos-operator.yaml
+$ kubectl apply --filename https://storage.googleapis.com/nomos-release/operator-stable/config-management-operator.yaml
 ```
 
 You can verify that the Nomos Operator was deployed correctly:

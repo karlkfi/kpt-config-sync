@@ -6,7 +6,7 @@ Syllogi (GKE On Prem) is a version of GKE that customers can install on their
 on-prem VMs. Syllogi comes with the Nomos Operator pre-bundled, meaning that
 when users install Syllogi, the nomos-operator is already running, and the
 config-management-system namespace exists. You might recognize that as
-essentially the `nomos-operator.yaml` artifact deployed
+essentially the `config-management-operator.yaml` artifact deployed
 [here](release.md#anatomy-of-a-blessed-release).
 
 # Integration
@@ -30,7 +30,7 @@ The Nomos integration is currently located in the following places:
     defined by gcr.io/%s/Nomos:<version>. This is used by a script that copies
     this binary to a private registry if the customer is using one.
 
-*   The nomos-operator.yaml contents located at
+*   The config-management-operator.yaml contents located at
     https://gke-internal.git.corp.google.com/syllogi/cluster-management/+/master/gkectl/pkg/bundle/addonsdata.go
     (under `# Nomos` comment). This is the template for the yamls that get
     deployed with Syllogi by default.
@@ -56,7 +56,7 @@ has milestone releases that we want to hop on.
 *   Edit `gkectl/pkg/bundle/versions.go` and update `gcr.io/%s/Nomos:<version>`
     to the latest blessed version of the Nomos binary.
 *   Ensure that the contents of `gkectl/pkg/bundle/addonsdata.go` match the
-    contents of `nomos-operator.yaml`:
+    contents of `config-management-operator.yaml`:
     *   Check out and cd to the
         [Operator repo](https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/nomos-operator).
     *   `make ADDONS_FILE=<path-to>/gkectl/pkg/bundle/addonsdata.go

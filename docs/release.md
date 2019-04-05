@@ -75,11 +75,11 @@ These are the steps performed by the CD pipeline running on Prow:
 
 A blessed release consists of three distinct pieces:
 
-*   **`nomos-operator.yaml` manifest** | a yaml bundle that specifies the
+*   **`config-management-operator.yaml` manifest** | a yaml bundle that specifies the
     operator deployment and the roles and role bindings necessary to run it.
     This file specifies a version of the nomos operator image to use. The
     current stable (blessed) version of this file is at
-    https://storage.cloud.google.com/nomos-release/operator-stable/nomos-operator.yaml
+    https://storage.cloud.google.com/nomos-release/operator-stable/config-management-operator.yaml
 *   **`nomos-operator` image** | the container image of Nomos Operator. The
     current stable version is at gcr.io/nomos-release/nomos-operator:stable .
     The operator manifest (above) specifies which version of this image to use.
