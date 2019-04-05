@@ -73,6 +73,13 @@ function teardown() {
   wait::for -t 30 -- kubectl get anvil ${resname} -n backend
   resource::check_count -n backend -r anvil -c 1
   resource::check -n backend anvil ${resname} -a "configmanagement.gke.io/managed=enabled"
+  resource::check -n backend anvil ${resname} -l "app.kubernetes.io/managed-by=configmanagement.gke.io"
+
+  debug::log "Ensure we added the Nomos-specific labels and annotations"
+  annotationValue=$(kubectl get anvil ${resname} -n backend -ojson | jq '.metadata.annotations."configmanagement.gke.io/cluster-name"')
+  [[ "${annotationValue}" != "null" ]] || debug::error "cluster name annotation not added"
+  annotationValue=$(kubectl get anvil ${resname} -n backend -ojson | jq '.metadata.annotations."configmanagement.gke.io/source-path"')
+  [[ "${annotationValue}" != "null" ]] || debug::error "source path annotation not added"
 
   debug::log "Modify custom resource in repo"
   oldresver=$(resource::resource_version anvil ${resname} -n backend)
@@ -106,13 +113,15 @@ function teardown() {
   selection=$(kubectl get anvil ${resname} -n new-prj -ojson | jq -c ".spec.lbs")
   [[ "${selection}" == "10" ]] || debug::error "unmanaged custom resource weight should be 10, not ${selection}"
 
-  debug::log "Ensure we removed the Nomos-specific annotations"
+  debug::log "Ensure we removed the Nomos-specific labels and annotations"
   annotationValue=$(kubectl get -n new-prj anvil ${resname} -ojson | jq '.metadata.annotations."configmanagement.gke.io/managed"')
   [[ "${annotationValue}" == "null" ]] || debug::error "management annotation not removed"
   annotationValue=$(kubectl get -n new-prj anvil ${resname} -ojson | jq '.metadata.annotations."configmanagement.gke.io/source-path"')
   [[ "${annotationValue}" == "null" ]] || debug::error "source path annotation not removed"
-  annotationValue=$(kubectl get -n new-prj anvil ${resname} -ojson | jq '.metadata.annotations."configmanagement.gke.io/token"')
-  [[ "${annotationValue}" == "null" ]] || debug::error "token annotation not removed"
+  labelValue=$(kubectl get -n new-prj anvil ${resname} -ojson | jq '.metadata.annotations."configmanagement.gke.io/token"')
+  [[ "${labelValue}" == "null" ]] || debug::error "token annotation not removed"
+  labelValue=$(kubectl get -n new-prj anvil ${resname} -ojson | jq '.metadata.labels."app.kubernetes.io/managed-by"')
+  [[ "${labelValue}" == "null" ]] || debug::error "managed-by annotation not removed"
 
   debug::log "Remove all custom resources from cluster"
   git::rm acme/namespaces/rnd/new-prj/anvil.yaml
