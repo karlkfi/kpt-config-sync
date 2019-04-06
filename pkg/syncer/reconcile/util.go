@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -68,7 +69,7 @@ func CmesForResourceError(resErr status.ResourceError) []v1.ConfigManagementErro
 }
 
 // SetClusterConfigStatus updates the status sub-resource of the ClusterConfig based on reconciling the ClusterConfig.
-func SetClusterConfigStatus(ctx context.Context, client *client.Client, policy *v1.ClusterConfig,
+func SetClusterConfigStatus(ctx context.Context, client *client.Client, policy *v1.ClusterConfig, now func() metav1.Time,
 	errs ...v1.ConfigManagementError) status.ResourceError {
 	freshSyncToken := policy.Status.Token == policy.Spec.Token
 	if policy.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {

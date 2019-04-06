@@ -171,7 +171,7 @@ func TestSyncStateBuilding(t *testing.T) {
 func TestSyncStateMerging(t *testing.T) {
 	currentTime := metav1.Now()
 	updatedTime := metav1.Time{Time: time.Unix(123, 456)}
-	now = func() metav1.Time {
+	now := func() metav1.Time {
 		return updatedTime
 	}
 
@@ -275,7 +275,7 @@ func TestSyncStateMerging(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.state.merge(tc.status, commit2)
+			tc.state.merge(tc.status, commit2, now)
 			if diff := cmp.Diff(tc.want, tc.status); diff != "" {
 				t.Errorf("RepoStatus does not match expectation:\n%v", diff)
 			}

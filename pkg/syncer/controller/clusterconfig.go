@@ -18,12 +18,13 @@ package controller
 import (
 	"context"
 
-	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,13 +54,14 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
 			&CancelFilteringRecorder{mgr.GetRecorder(clusterConfigControllerName)},
 			decoder,
+			metav1.Now,
 			extractGVKs(resourceTypes),
 		),
 	})
 	if err != nil {
 		return errors.Wrapf(err, "could not create %q controller", clusterConfigControllerName)
 	}
-	if err = cpc.Watch(&source.Kind{Type: &nomosv1.ClusterConfig{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = cpc.Watch(&source.Kind{Type: &v1.ClusterConfig{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", clusterConfigControllerName)
 	}
 
@@ -82,7 +84,7 @@ func genericResourceToClusterConfig(_ handler.MapObject) []reconcile.Request {
 	return []reconcile.Request{{
 		NamespacedName: types.NamespacedName{
 			// There is only one ClusterConfig potentially managing generic resources.
-			Name: nomosv1.ClusterConfigName,
+			Name: v1.ClusterConfigName,
 		},
 	}}
 }

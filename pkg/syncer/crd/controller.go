@@ -2,11 +2,16 @@ package crd
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	syncercache "github.com/google/nomos/pkg/syncer/cache"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/decode"
+	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
+	"github.com/google/nomos/pkg/syncer/sync"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	k8scontroller "sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -16,15 +21,26 @@ import (
 const crdControllerName = "crd-resources"
 
 // AddCRDController adds the CRD controller to the Manager.
-func AddCRDController(mgr manager.Manager, managerRestartCh chan event.GenericEvent) error {
+func AddCRDController(mgr manager.Manager, signal sync.RestartSignal) error {
 	if err := v1beta1.AddToScheme(mgr.GetScheme()); err != nil {
 		return err
 	}
 
-	reconciler, err := NewReconciler(mgr, managerRestartCh)
+	resourceClient := syncerclient.New(mgr.GetClient())
+	applier, err := syncerreconcile.NewApplier(mgr.GetConfig(), resourceClient)
 	if err != nil {
-		return errors.Wrapf(err, "could not create %q reconciler", crdControllerName)
+		return err
 	}
+
+	reconciler := NewReconciler(
+		resourceClient,
+		applier,
+		syncercache.NewGenericResourceCache(mgr.GetCache()),
+		mgr.GetRecorder(crdControllerName),
+		decode.NewGenericResourceDecoder(mgr.GetScheme()),
+		metav1.Now,
+		signal,
+	)
 
 	cpc, err := k8scontroller.New(crdControllerName, mgr, k8scontroller.Options{
 		Reconciler: reconciler,

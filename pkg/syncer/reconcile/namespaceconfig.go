@@ -65,6 +65,7 @@ type NamespaceConfigReconciler struct {
 	cache    cache.GenericCache
 	recorder record.EventRecorder
 	decoder  decode.Decoder
+	now      func() metav1.Time
 	toSync   []schema.GroupVersionKind
 	// A cancelable ambient context for all reconciler operations.
 	ctx context.Context
@@ -72,7 +73,7 @@ type NamespaceConfigReconciler struct {
 
 // NewNamespaceConfigReconciler returns a new NamespaceConfigReconciler.
 func NewNamespaceConfigReconciler(ctx context.Context, client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
-	decoder decode.Decoder, toSync []schema.GroupVersionKind) *NamespaceConfigReconciler {
+	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind) *NamespaceConfigReconciler {
 	return &NamespaceConfigReconciler{
 		client:   client,
 		applier:  applier,
@@ -80,13 +81,14 @@ func NewNamespaceConfigReconciler(ctx context.Context, client *client.Client, ap
 		recorder: recorder,
 		decoder:  decoder,
 		toSync:   toSync,
+		now:      now,
 		ctx:      ctx,
 	}
 }
 
 // Reconcile is the Reconcile callback for NamespaceConfigReconciler.
 func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	metrics.EventTimes.WithLabelValues("reconcileNamespaceConfig").Set(float64(now().Unix()))
+	metrics.EventTimes.WithLabelValues("reconcileNamespaceConfig").Set(float64(r.now().Unix()))
 	reconcileTimer := prometheus.NewTimer(
 		metrics.NamespaceReconcileDuration.WithLabelValues(request.Name))
 	defer reconcileTimer.ObserveDuration()
@@ -334,7 +336,7 @@ func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
 		newPN := obj.(*v1.NamespaceConfig)
 		newPN.Status.Token = node.Spec.Token
-		newPN.Status.SyncTime = now()
+		newPN.Status.SyncTime = r.now()
 		newPN.Status.SyncErrors = errs
 		if len(errs) > 0 {
 			newPN.Status.SyncState = v1.StateError

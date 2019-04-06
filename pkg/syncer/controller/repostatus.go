@@ -22,6 +22,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/client"
 	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	k8scontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -36,7 +37,7 @@ const repoStatusControllerName = "repo-status"
 func AddRepoStatus(ctx context.Context, mgr manager.Manager) error {
 	syncClient := client.New(mgr.GetClient())
 	rsc, err := k8scontroller.New(repoStatusControllerName, mgr, k8scontroller.Options{
-		Reconciler: genericreconcile.NewRepoStatus(ctx, syncClient),
+		Reconciler: genericreconcile.NewRepoStatus(ctx, syncClient, metav1.Now),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not create RepoStatus controller")

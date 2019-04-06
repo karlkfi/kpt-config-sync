@@ -27,6 +27,7 @@ import (
 	"github.com/google/nomos/pkg/util/repo"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -44,6 +45,8 @@ type RepoStatus struct {
 	tokens map[string]bool
 	// latestToken indicates the most recent version token received by the RepoStatus reconciler
 	latestToken string
+	// now returns the current time.
+	now func() metav1.Time
 }
 
 // syncState represents the current status of the syncer and all commits that it is reconciling.
@@ -66,12 +69,13 @@ type configState struct {
 }
 
 // NewRepoStatus returns a reconciler for maintaining the status field of the Repo resource.
-func NewRepoStatus(ctx context.Context, sClient *syncclient.Client) *RepoStatus {
+func NewRepoStatus(ctx context.Context, sClient *syncclient.Client, now func() metav1.Time) *RepoStatus {
 	return &RepoStatus{
 		ctx:     ctx,
 		client:  sClient,
 		rClient: repo.New(sClient),
 		tokens:  make(map[string]bool),
+		now:     now,
 	}
 }
 
@@ -79,7 +83,7 @@ func NewRepoStatus(ctx context.Context, sClient *syncclient.Client) *RepoStatus 
 // Reconcile is the Reconcile callback for RepoStatus reconciler.
 // nolint
 func (r *RepoStatus) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
-	metrics.EventTimes.WithLabelValues("repo-reconcile").Set(float64(now().Unix()))
+	metrics.EventTimes.WithLabelValues("repo-reconcile").Set(float64(r.now().Unix()))
 	timer := prometheus.NewTimer(metrics.RepoReconcileDuration.WithLabelValues())
 	defer timer.ObserveDuration()
 
@@ -105,7 +109,7 @@ func (r *RepoStatus) reconcile() (reconcile.Result, error) {
 		return reconcile.Result{Requeue: true}, sErr
 	}
 
-	state.merge(&repoObj.Status, r.latestToken)
+	state.merge(&repoObj.Status, r.latestToken, r.now)
 
 	updatedRepo, err := r.rClient.UpdateSyncStatus(r.ctx, repoObj)
 	if err != nil {
@@ -189,7 +193,7 @@ func (s *syncState) addConfigToCommit(name, importToken, syncToken string, errs 
 }
 
 // merge updates the given RepoStatus with current configs and commits in the syncState.
-func (s syncState) merge(repoStatus *v1.RepoStatus, latestToken string) {
+func (s syncState) merge(repoStatus *v1.RepoStatus, latestToken string, now func() metav1.Time) {
 	if repoStatus.Sync.LatestToken != repoStatus.Import.Token && latestToken != "" {
 		repoStatus.Sync.LatestToken = latestToken
 	}

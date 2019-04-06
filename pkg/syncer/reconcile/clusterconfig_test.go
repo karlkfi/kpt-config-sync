@@ -19,7 +19,6 @@ package reconcile
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -31,7 +30,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -74,10 +72,6 @@ var (
 )
 
 func TestClusterConfigReconcile(t *testing.T) {
-	now = func() metav1.Time {
-		return metav1.Time{Time: time.Unix(0, 0)}
-	}
-
 	testCases := []struct {
 		name               string
 		actual             runtime.Object
@@ -222,7 +216,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 				tm := syncertesting.NewTestMocks(t, mockCtrl)
 				fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 				testReconciler := NewClusterConfigReconciler(ctx,
-					client.New(tm.MockClient), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, toSync)
+					client.New(tm.MockClient), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 				tm.ExpectClusterCacheGet(clusterCfg)
 				tm.ExpectCacheList(kinds.PersistentVolume(), "", tc.actual)
@@ -250,9 +244,6 @@ func TestClusterConfigReconcile(t *testing.T) {
 }
 
 func TestInvalidClusterConfig(t *testing.T) {
-	now = func() metav1.Time {
-		return metav1.Time{Time: time.Unix(0, 0)}
-	}
 	testCases := []struct {
 		name             string
 		clusterConfig    *v1.ClusterConfig
@@ -293,7 +284,7 @@ func TestInvalidClusterConfig(t *testing.T) {
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
 			testReconciler := NewClusterConfigReconciler(ctx,
-				client.New(tm.MockClient), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, toSync)
+				client.New(tm.MockClient), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			tm.ExpectClusterCacheGet(tc.clusterConfig)
 

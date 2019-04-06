@@ -26,6 +26,7 @@ import (
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,6 +56,7 @@ func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
 			&CancelFilteringRecorder{mgr.GetRecorder(namespaceConfigControllerName)},
 			decoder,
+			metav1.Now,
 			extractGVKs(resourceTypes),
 		),
 	})

@@ -39,9 +39,6 @@ import (
 
 var _ reconcile.Reconciler = &ClusterConfigReconciler{}
 
-// now is stubbed out in unit tests.
-var now = metav1.Now
-
 // ClusterConfigReconciler reconciles a ClusterConfig object.
 type ClusterConfigReconciler struct {
 	client   *client.Client
@@ -50,6 +47,7 @@ type ClusterConfigReconciler struct {
 	recorder record.EventRecorder
 	decoder  decode.Decoder
 	toSync   []schema.GroupVersionKind
+	now      func() metav1.Time
 	// A cancelable ambient context for all reconciler operations.
 	ctx context.Context
 }
@@ -57,7 +55,7 @@ type ClusterConfigReconciler struct {
 // NewClusterConfigReconciler returns a new ClusterConfigReconciler.  ctx is the ambient context
 // to use for all reconciler operations.
 func NewClusterConfigReconciler(ctx context.Context, client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
-	decoder decode.Decoder, toSync []schema.GroupVersionKind) *ClusterConfigReconciler {
+	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind) *ClusterConfigReconciler {
 	return &ClusterConfigReconciler{
 		client:   client,
 		applier:  applier,
@@ -65,6 +63,7 @@ func NewClusterConfigReconciler(ctx context.Context, client *client.Client, appl
 		recorder: recorder,
 		decoder:  decoder,
 		toSync:   toSync,
+		now:      now,
 		ctx:      ctx,
 	}
 }
@@ -76,7 +75,7 @@ func (r *ClusterConfigReconciler) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, nil
 	}
 
-	metrics.EventTimes.WithLabelValues("cluster-reconcile").Set(float64(now().Unix()))
+	metrics.EventTimes.WithLabelValues("cluster-reconcile").Set(float64(r.now().Unix()))
 	timer := prometheus.NewTimer(metrics.ClusterReconcileDuration.WithLabelValues())
 	defer timer.ObserveDuration()
 
@@ -98,7 +97,7 @@ func (r *ClusterConfigReconciler) Reconcile(request reconcile.Request) (reconcil
 		glog.Warning(err)
 		// Update the status on a best effort basis. We don't want to retry handling a ClusterConfig
 		// we want to ignore and it's possible it has been deleted by the time we reconcile it.
-		_ = SetClusterConfigStatus(ctx, r.client, clusterConfig, NewConfigManagementError(clusterConfig, err))
+		_ = SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, NewConfigManagementError(clusterConfig, err))
 		return reconcile.Result{}, nil
 	}
 
@@ -142,7 +141,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 			}
 		}
 	}
-	if err := SetClusterConfigStatus(ctx, r.client, policy, syncErrs...); err != nil {
+	if err := SetClusterConfigStatus(ctx, r.client, policy, r.now, syncErrs...); err != nil {
 		errBuilder = status.Append(errBuilder, err)
 		r.recorder.Eventf(policy, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update cluster policy status: %v", err)

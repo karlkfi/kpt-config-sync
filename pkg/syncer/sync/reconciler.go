@@ -39,14 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	// ForceRestart is an invalid resource name used to signal that during Reoconcile,
-	// the Sync Controller must restart the Sub Manager. Ensuring that the resource name
-	// is invalid ensures that we don't accidentally reconcile a resource that causes us
-	// to forcefully restart the SubManager.
-	ForceRestart     = "@restart"
-	reconcileTimeout = time.Minute * 5
-)
+const reconcileTimeout = time.Minute * 5
 
 var _ reconcile.Reconciler = &MetaReconciler{}
 

@@ -31,12 +31,12 @@ func AddControllers(mgr manager.Manager, enableCRDs bool) error {
 		return err
 	}
 
-	managerRestartCh := make(chan event.GenericEvent)
-	if err := sync.AddController(mgr, managerRestartCh); err != nil {
+	rc := sync.NewRestartChannel(make(chan event.GenericEvent))
+	if err := sync.AddController(mgr, rc); err != nil {
 		return err
 	}
 	if enableCRDs {
-		return crd.AddCRDController(mgr, managerRestartCh)
+		return crd.AddCRDController(mgr, sync.RestartSignal(rc))
 	}
 	return nil
 }

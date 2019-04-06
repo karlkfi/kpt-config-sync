@@ -4,14 +4,12 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -27,7 +25,7 @@ var unaryHandler = &handler.EnqueueRequestsFromMapFunc{
 }
 
 // AddController adds the Sync controller to the manager.
-func AddController(mgr manager.Manager, managerRestartCh chan event.GenericEvent) error {
+func AddController(mgr manager.Manager, rc *RestartChannel) error {
 	dc, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		return errors.Wrapf(err, "failed to create discoveryclient")
@@ -71,7 +69,7 @@ func AddController(mgr manager.Manager, managerRestartCh chan event.GenericEvent
 	}
 
 	// Create a watch for errors when starting the subManager and force a reconciliation.
-	managerRestartSource := &source.Channel{Source: managerRestartCh}
+	managerRestartSource := &source.Channel{Source: rc.Channel()}
 	if err = c.Watch(managerRestartSource, &handler.EnqueueRequestForObject{}); err != nil {
 		return errors.Wrapf(err, "could not watch manager initialization errors in the %q controller", syncControllerName)
 	}
@@ -82,9 +80,8 @@ func AddController(mgr manager.Manager, managerRestartCh chan event.GenericEvent
 			if startErr != nil {
 				// subManager could not successfully start, so we must force it to restart next reconcile.
 				glog.Errorf("Error starting NamespaceConfig / ClusterConfig controllers, restarting: %v", startErr)
-
-				// Send an event that forces the subManager to restart.
-				managerRestartCh <- event.GenericEvent{Meta: &metav1.ObjectMeta{Name: ForceRestart}}
+				// Signal the SubManager to restart.
+				rc.Restart()
 			}
 		}
 	}()
