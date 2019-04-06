@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package testing
+package mocks
 
 import (
 	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"

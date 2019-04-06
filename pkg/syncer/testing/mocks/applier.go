@@ -2,7 +2,7 @@
 // Source: pkg/syncer/reconcile/apply.go
 
 // Package testing is a generated GoMock package.
-package testing
+package mocks
 
 import (
 	context "context"

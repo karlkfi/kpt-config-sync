@@ -2,7 +2,7 @@
 // Source: k8s.io/client-go/discovery (interfaces: DiscoveryInterface)
 
 // Package testing is a generated GoMock package.
-package testing
+package mocks
 
 import (
 	reflect "reflect"

@@ -6,13 +6,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// syncedAt marks the resource as synced at the passed sync token.
-func syncedAt(obj object.Annotated, token string) {
+// SyncedAt marks the resource as synced at the passed sync token.
+func SyncedAt(obj object.Annotated, token string) {
 	object.SetAnnotation(obj, v1.SyncTokenAnnotationKey, token)
 }
 
-// enableManagement marks the resource as Nomos-manged.
-func enableManagement(obj metav1.Object) {
+// EnableManagement marks the resource as Nomos-manged.
+func EnableManagement(obj metav1.Object) {
 	object.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
 	object.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
 }

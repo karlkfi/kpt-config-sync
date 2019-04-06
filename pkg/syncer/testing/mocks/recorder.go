@@ -2,7 +2,7 @@
 // Source: k8s.io/client-go/tools/record (interfaces: EventRecorder)
 
 // Package testing is a generated GoMock package.
-package testing
+package mocks
 
 import (
 	reflect "reflect"

@@ -27,7 +27,7 @@ import (
 	"github.com/google/nomos/clientgen/informer"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/meta/fake"
-	syncertesting "github.com/google/nomos/pkg/syncer/testing"
+	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -228,7 +228,7 @@ func (t *ReflectiveActionTest) PrePopulate() {
 	mockCtrl := gomock.NewController(t.t)
 	defer mockCtrl.Finish()
 
-	mockClient := syncertesting.NewMockClient(mockCtrl)
+	mockClient := mocks.NewMockClient(mockCtrl)
 	t.client = fake.NewClientWithStorage(storage, mockClient)
 
 	for idx := range t.testcases {

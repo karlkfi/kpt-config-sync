@@ -2,7 +2,7 @@
 // Source: sigs.k8s.io/controller-runtime/pkg/client (interfaces: StatusWriter)
 
 // Package testing is a generated GoMock package.
-package testing
+package mocks
 
 import (
 	context "context"

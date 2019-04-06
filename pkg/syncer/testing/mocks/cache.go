@@ -17,7 +17,7 @@ limitations under the License.
 // Source: sigs.k8s.io/controller-runtime/pkg/cache (interfaces: Cache)
 
 // Package testing is a generated GoMock package.
-package testing
+package mocks
 
 import (
 	context "context"

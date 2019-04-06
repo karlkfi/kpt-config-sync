@@ -2,7 +2,7 @@
 // Source: github.com/google/nomos/pkg/syncer/cache (interfaces: GenericCache)
 
 // Package testing is a generated GoMock package.
-package testing
+package mocks
 
 import (
 	context "context"

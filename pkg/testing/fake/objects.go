@@ -9,6 +9,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -96,6 +97,16 @@ func ClusterConfig() ast.FileObject {
 			ObjectMeta: v1.ObjectMeta{
 				Name: nomosv1.ClusterConfigName,
 			},
+		},
+	}
+}
+
+// CustomResourceDefinition returns a K8S CustomResourceDefinition resource at the specified path.
+func CustomResourceDefinition(path string) ast.FileObject {
+	return ast.FileObject{
+		Path: cmpath.FromSlash(path),
+		Object: &v1beta1.CustomResourceDefinition{
+			TypeMeta: toTypeMeta(kinds.CustomResourceDefinition()),
 		},
 	}
 }

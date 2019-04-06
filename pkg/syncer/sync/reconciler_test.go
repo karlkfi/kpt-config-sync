@@ -22,7 +22,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	syncertesting "github.com/google/nomos/pkg/syncer/testing"
+	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -136,11 +136,11 @@ func TestReconcile(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			mockClient := syncertesting.NewMockClient(mockCtrl)
-			mockStatusClient := syncertesting.NewMockStatusWriter(mockCtrl)
-			mockCache := syncertesting.NewMockCache(mockCtrl)
-			mockDiscovery := syncertesting.NewMockDiscoveryInterface(mockCtrl)
-			mockManager := syncertesting.NewMockRestartableManager(mockCtrl)
+			mockClient := mocks.NewMockClient(mockCtrl)
+			mockStatusClient := mocks.NewMockStatusWriter(mockCtrl)
+			mockCache := mocks.NewMockCache(mockCtrl)
+			mockDiscovery := mocks.NewMockDiscoveryInterface(mockCtrl)
+			mockManager := mocks.NewMockRestartableManager(mockCtrl)
 
 			testReconciler := &MetaReconciler{
 				client:          syncerclient.New(mockClient),

@@ -2,7 +2,7 @@
 // Source: github.com/google/nomos/pkg/syncer/manager (interfaces: RestartableManager)
 
 // Package testing is a generated GoMock package.
-package testing
+package mocks
 
 import (
 	reflect "reflect"

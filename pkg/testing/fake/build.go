@@ -29,6 +29,8 @@ func Build(gvk schema.GroupVersionKind, opts ...object.Mutator) ast.FileObject {
 		o = ClusterRole("cluster/cr.yaml")
 	case kinds.ClusterSelector():
 		o = ClusterSelector("cluster/cs.yaml")
+	case kinds.CustomResourceDefinition():
+		o = CustomResourceDefinition("cluster/crd.yaml")
 	case kinds.Deployment():
 		o = Deployment("namespaces/foo/deployment.yaml")
 	case kinds.HierarchyConfig():
