@@ -251,8 +251,9 @@ setup_prober_cred() {
   # Installs gcloud as an auth helper for kubectl with the credentials that
   # were set with the service account activation above.
   # Needs cloud.containers.get permission.
-  gcloud --quiet container clusters get-credentials \
-    "${gcp_cluster_name}" --zone us-central1-a --project stolos-dev
+  # shellcheck disable=SC2154
+  gcloud --quiet container clusters get-credentials "${gcp_cluster_name}" \
+    --zone="${gotopt2_zone}" --project="${gotopt2_project}"
 }
 
 echo "e2e/setup.sh: executed with args" "$@"
@@ -310,6 +311,14 @@ flags:
   type: string
   default: "testcases"
   help: "The directory name, relative to testdir to pick e2e tests up from"
+- name: "zone"
+  type: string
+  default: "us-central1-a"
+  help: "The zone in which the test cluster is situated"
+- name: "project"
+  type: string
+  default: "stolos-dev"
+  help: "The project in which the test cluster was created"
 EOF
 )
 eval "${gotopt2_result}"
