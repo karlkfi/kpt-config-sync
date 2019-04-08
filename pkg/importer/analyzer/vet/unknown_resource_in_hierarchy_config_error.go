@@ -35,7 +35,7 @@ type UnknownResourceInHierarchyConfigError struct {
 	id.HierarchyConfig
 }
 
-var _ id.ResourceError = &UnknownResourceInHierarchyConfigError{}
+var _ status.ResourceError = &UnknownResourceInHierarchyConfigError{}
 
 // Error implements error
 func (e UnknownResourceInHierarchyConfigError) Error() string {

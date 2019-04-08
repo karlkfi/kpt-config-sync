@@ -7,7 +7,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
-	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -15,7 +15,7 @@ import (
 )
 
 // HandleDiff updates objects on the cluster based on the difference between actual and declared resources.
-func HandleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorder record.EventRecorder) (bool, id.ResourceError) {
+func HandleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorder record.EventRecorder) (bool, status.ResourceError) {
 	removeEmptyRulesField(diff.Declared)
 
 	switch diff.Type() {

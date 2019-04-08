@@ -6,7 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	corev1 "k8s.io/api/core/v1"
@@ -46,7 +46,7 @@ func cmeForNamespace(ns *corev1.Namespace, errMsg string) v1.ConfigManagementErr
 }
 
 // CmesForResourceError returns ConfigManagementErrors built from the given ResourceError.
-func CmesForResourceError(resErr id.ResourceError) []v1.ConfigManagementError {
+func CmesForResourceError(resErr status.ResourceError) []v1.ConfigManagementError {
 	resCount := len(resErr.Resources())
 	if resCount == 0 {
 		return []v1.ConfigManagementError{
@@ -69,7 +69,7 @@ func CmesForResourceError(resErr id.ResourceError) []v1.ConfigManagementError {
 
 // SetClusterConfigStatus updates the status sub-resource of the ClusterConfig based on reconciling the ClusterConfig.
 func SetClusterConfigStatus(ctx context.Context, client *client.Client, policy *v1.ClusterConfig,
-	errs ...v1.ConfigManagementError) id.ResourceError {
+	errs ...v1.ConfigManagementError) status.ResourceError {
 	freshSyncToken := policy.Status.Token == policy.Spec.Token
 	if policy.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for ClusterConfig %q is already up-to-date.", policy.Name)

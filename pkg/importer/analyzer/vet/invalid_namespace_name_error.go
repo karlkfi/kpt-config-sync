@@ -25,7 +25,7 @@ type InvalidNamespaceNameError struct {
 	Expected string
 }
 
-var _ id.ResourceError = &InvalidNamespaceNameError{}
+var _ status.ResourceError = &InvalidNamespaceNameError{}
 
 // Error implements error
 func (e InvalidNamespaceNameError) Error() string {

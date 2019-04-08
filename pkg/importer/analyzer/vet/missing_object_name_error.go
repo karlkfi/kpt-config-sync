@@ -19,7 +19,7 @@ type MissingObjectNameError struct {
 	id.Resource
 }
 
-var _ id.ResourceError = &MissingObjectNameError{}
+var _ status.ResourceError = &MissingObjectNameError{}
 
 // Error implements error
 func (e MissingObjectNameError) Error() string {

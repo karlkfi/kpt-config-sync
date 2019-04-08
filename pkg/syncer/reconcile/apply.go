@@ -7,8 +7,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -33,9 +33,9 @@ import (
 
 // Applier updates a resource from its current state to its intended state using apply operations.
 type Applier interface {
-	Create(ctx context.Context, obj *unstructured.Unstructured) (bool, id.ResourceError)
-	Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, id.ResourceError)
-	Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, id.ResourceError)
+	Create(ctx context.Context, obj *unstructured.Unstructured) (bool, status.ResourceError)
+	Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.ResourceError)
+	Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.ResourceError)
 }
 
 // ClientApplier does apply operations on resources, client-side, using the same approach as running `kubectl apply`.
@@ -76,27 +76,27 @@ func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error)
 }
 
 // Create implements Applier.
-func (c *ClientApplier) Create(ctx context.Context, intendedState *unstructured.Unstructured) (bool, id.ResourceError) {
+func (c *ClientApplier) Create(ctx context.Context, intendedState *unstructured.Unstructured) (bool, status.ResourceError) {
 	if err := c.create(ctx, intendedState); err != nil {
-		return false, id.ResourceWrap(err, "unable to create resource", ast.ParseFileObject(intendedState))
+		return false, status.ResourceWrap(err, "unable to create resource", ast.ParseFileObject(intendedState))
 	}
 	return true, nil
 }
 
 // Update implements Applier.
-func (c *ClientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, id.ResourceError) {
+func (c *ClientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.ResourceError) {
 	updated, err := c.update(ctx, intendedState, currentState)
 	if err != nil {
 		metrics.ErrTotal.WithLabelValues(intendedState.GetNamespace(), intendedState.GetKind(), string(differ.Update)).Inc()
-		return false, id.ResourceWrap(err, "unable to update resource", ast.ParseFileObject(intendedState))
+		return false, status.ResourceWrap(err, "unable to update resource", ast.ParseFileObject(intendedState))
 	}
 	return updated, nil
 }
 
 // Delete implements Applier.
-func (c *ClientApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, id.ResourceError) {
+func (c *ClientApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.ResourceError) {
 	if err := c.client.Delete(ctx, obj); err != nil {
-		return false, id.ResourceWrap(err, "unable to delete resource", ast.ParseFileObject(obj))
+		return false, status.ResourceWrap(err, "unable to delete resource", ast.ParseFileObject(obj))
 	}
 	return true, nil
 }
@@ -209,7 +209,7 @@ func (c *ClientApplier) update(ctx context.Context, intendedState, currentState 
 
 	if ctx.Err() != nil {
 		// We've already encountered an error, so do not attempt update.
-		return false, id.ResourceWrap(ctx.Err(), "unable to continue updating resources")
+		return false, status.ResourceWrap(ctx.Err(), "unable to continue updating resources")
 	}
 
 	name, resourceDescription := nameDescription(intendedState)

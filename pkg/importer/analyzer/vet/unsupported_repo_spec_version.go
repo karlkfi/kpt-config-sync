@@ -25,7 +25,7 @@ func init() {
 	})
 }
 
-var _ id.ResourceError = &UnsupportedRepoSpecVersion{}
+var _ status.ResourceError = &UnsupportedRepoSpecVersion{}
 
 // Error implements error
 func (e UnsupportedRepoSpecVersion) Error() string {

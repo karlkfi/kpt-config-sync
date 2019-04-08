@@ -21,7 +21,7 @@ type IllegalMetadataNamespaceDeclarationError struct {
 	ExpectedNamespace string
 }
 
-var _ id.ResourceError = &IllegalMetadataNamespaceDeclarationError{}
+var _ status.ResourceError = &IllegalMetadataNamespaceDeclarationError{}
 
 // Error implements error.
 func (e IllegalMetadataNamespaceDeclarationError) Error() string {

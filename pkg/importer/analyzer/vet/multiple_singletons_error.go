@@ -36,7 +36,7 @@ type MultipleSingletonsError struct {
 	Duplicates []id.Resource
 }
 
-var _ id.ResourceError = &MultipleSingletonsError{}
+var _ status.ResourceError = &MultipleSingletonsError{}
 
 // Error implements error
 func (e MultipleSingletonsError) Error() string {

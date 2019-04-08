@@ -21,7 +21,7 @@ type IllegalFieldsInConfigError struct {
 	Field id.DisallowedField
 }
 
-var _ id.ResourceError = &IllegalFieldsInConfigError{}
+var _ status.ResourceError = &IllegalFieldsInConfigError{}
 
 // Error implements error
 func (e IllegalFieldsInConfigError) Error() string {

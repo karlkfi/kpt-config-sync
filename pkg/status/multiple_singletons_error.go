@@ -1,8 +1,6 @@
-package id
+package status
 
-import (
-	"github.com/google/nomos/pkg/status"
-)
+import "github.com/google/nomos/pkg/importer/id"
 
 // MultipleSingletonsErrorCode is the error code for MultipleSingletonsError
 const MultipleSingletonsErrorCode = "2012"
@@ -14,14 +12,14 @@ func init() {
 
 // MultipleSingletonsError reports that multiple singleton resources were found on the cluster.
 type MultipleSingletonsError struct {
-	Duplicates []Resource
+	Duplicates []id.Resource
 }
 
 var _ ResourceError = &MultipleSingletonsError{}
 
 // Error implements error
 func (e MultipleSingletonsError) Error() string {
-	return status.Format(e, "Found more than one %[1]s:\n%[2]s", resourceName(e.Duplicates), FormatResources(e))
+	return Format(e, "Found more than one %[1]s:\n%[2]s", resourceName(e.Duplicates), formatResources(e))
 }
 
 // Code implements Error
@@ -30,16 +28,16 @@ func (e MultipleSingletonsError) Code() string {
 }
 
 // Resources implements ResourceError
-func (e MultipleSingletonsError) Resources() []Resource {
+func (e MultipleSingletonsError) Resources() []id.Resource {
 	return e.Duplicates
 }
 
 // MultipleSingletonsWrap returns a MultipleSingletonsError wrapping the given Resources.
-func MultipleSingletonsWrap(resources ...Resource) MultipleSingletonsError {
+func MultipleSingletonsWrap(resources ...id.Resource) MultipleSingletonsError {
 	return MultipleSingletonsError{Duplicates: resources}
 }
 
-func resourceName(dups []Resource) string {
+func resourceName(dups []id.Resource) string {
 	if len(dups) == 0 {
 		return "singleton"
 	}

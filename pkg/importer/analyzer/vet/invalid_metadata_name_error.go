@@ -21,7 +21,7 @@ type InvalidMetadataNameError struct {
 	id.Resource
 }
 
-var _ id.ResourceError = &InvalidMetadataNameError{}
+var _ status.ResourceError = &InvalidMetadataNameError{}
 
 // Error implements error.
 func (e InvalidMetadataNameError) Error() string {

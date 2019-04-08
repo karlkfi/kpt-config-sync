@@ -26,7 +26,7 @@ type IllegalLabelDefinitionError struct {
 	Labels []string
 }
 
-var _ id.ResourceError = &IllegalLabelDefinitionError{}
+var _ status.ResourceError = &IllegalLabelDefinitionError{}
 
 // Error implements error.
 func (e IllegalLabelDefinitionError) Error() string {

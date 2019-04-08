@@ -20,7 +20,7 @@ type IllegalKindInSystemError struct {
 	id.Resource
 }
 
-var _ id.ResourceError = &IllegalKindInSystemError{}
+var _ status.ResourceError = &IllegalKindInSystemError{}
 
 // Error implements error
 func (e IllegalKindInSystemError) Error() string {

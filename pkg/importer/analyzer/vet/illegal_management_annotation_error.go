@@ -22,7 +22,7 @@ type IllegalManagementAnnotationError struct {
 	Value string
 }
 
-var _ id.ResourceError = IllegalManagementAnnotationError{}
+var _ status.ResourceError = IllegalManagementAnnotationError{}
 
 // Error implements error.
 func (e IllegalManagementAnnotationError) Error() string {

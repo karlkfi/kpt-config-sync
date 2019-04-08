@@ -2,6 +2,7 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -25,16 +26,14 @@ var _ status.PathError = &InvalidDirectoryNameError{}
 func (e InvalidDirectoryNameError) Error() string {
 	return status.Format(e,
 		"Directory names must have fewer than 64 characters, consist of lower case alphanumeric characters or '-', and must "+
-			"start and end with an alphanumeric character. Rename or remove directory:\n\n"+
-			"path: %[1]s\n"+
-			"name: %[2]s",
-		e.Dir.SlashPath(), e.Dir.Base())
+			"start and end with an alphanumeric character. Rename or remove the %q directory:",
+		e.Dir.Base())
 }
 
 // Code implements Error
 func (e InvalidDirectoryNameError) Code() string { return InvalidDirectoryNameErrorCode }
 
 // RelativePaths implements PathError
-func (e InvalidDirectoryNameError) RelativePaths() []string {
-	return []string{e.Dir.SlashPath()}
+func (e InvalidDirectoryNameError) RelativePaths() []id.Path {
+	return []id.Path{e.Dir}
 }

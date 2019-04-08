@@ -20,7 +20,7 @@ type UnsupportedObjectError struct {
 	id.Resource
 }
 
-var _ id.ResourceError = &UnsupportedObjectError{}
+var _ status.ResourceError = &UnsupportedObjectError{}
 
 // Error implements error.
 func (e UnsupportedObjectError) Error() string {

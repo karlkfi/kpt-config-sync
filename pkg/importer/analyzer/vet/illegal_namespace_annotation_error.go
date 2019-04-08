@@ -19,7 +19,7 @@ type IllegalNamespaceAnnotationError struct {
 	id.Resource
 }
 
-var _ id.ResourceError = &IllegalNamespaceAnnotationError{}
+var _ status.ResourceError = &IllegalNamespaceAnnotationError{}
 
 // Error implements error.
 func (e IllegalNamespaceAnnotationError) Error() string {

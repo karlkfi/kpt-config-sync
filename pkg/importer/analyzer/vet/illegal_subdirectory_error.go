@@ -2,6 +2,7 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -26,14 +27,13 @@ var _ status.PathError = &IllegalSubdirectoryError{}
 // Error implements error
 func (e IllegalSubdirectoryError) Error() string {
 	return status.Format(e,
-		"%s/ directory MUST NOT have subdirectories.\n\n"+
-			"path: %[2]s", e.BaseDir, e.SubDir.SlashPath())
+		"The %s/ directory MUST NOT have subdirectories.", e.BaseDir)
 }
 
 // Code implements Error
 func (e IllegalSubdirectoryError) Code() string { return IllegalSubdirectoryErrorCode }
 
 // RelativePaths implements PathError
-func (e IllegalSubdirectoryError) RelativePaths() []string {
-	return []string{e.BaseDir, e.SubDir.SlashPath()}
+func (e IllegalSubdirectoryError) RelativePaths() []id.Path {
+	return []id.Path{e.SubDir}
 }

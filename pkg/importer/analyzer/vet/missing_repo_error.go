@@ -2,6 +2,8 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -21,13 +23,13 @@ var _ status.PathError = &MissingRepoError{}
 // Error implements error
 func (e MissingRepoError) Error() string {
 	return status.Format(e,
-		"%s/ directory must declare a Repo Resource.", repo.SystemDir)
+		"The %s/ directory must declare a Repo Resource.", repo.SystemDir)
 }
 
 // Code implements Error
 func (e MissingRepoError) Code() string { return MissingRepoErrorCode }
 
 // RelativePaths implements PathError
-func (e MissingRepoError) RelativePaths() []string {
-	return []string{repo.SystemDir}
+func (e MissingRepoError) RelativePaths() []id.Path {
+	return []id.Path{cmpath.FromSlash(repo.SystemDir)}
 }

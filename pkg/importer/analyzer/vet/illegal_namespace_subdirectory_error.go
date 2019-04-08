@@ -40,6 +40,6 @@ func (e IllegalNamespaceSubdirectoryError) Error() string {
 func (e IllegalNamespaceSubdirectoryError) Code() string { return IllegalNamespaceSubdirectoryErrorCode }
 
 // RelativePaths implements PathError
-func (e IllegalNamespaceSubdirectoryError) RelativePaths() []string {
-	return []string{e.Child.SlashPath(), e.Parent.SlashPath()}
+func (e IllegalNamespaceSubdirectoryError) RelativePaths() []id.Path {
+	return []id.Path{e.Child, e.Parent}
 }

@@ -1,10 +1,8 @@
 package vet
 
 import (
-	"sort"
-	"strings"
-
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -24,26 +22,18 @@ var _ status.PathError = &DuplicateDirectoryNameError{}
 
 // Error implements error.
 func (e DuplicateDirectoryNameError) Error() string {
-	// Ensure deterministic node printing order.
-	duplicates := make([]string, len(e.Duplicates))
-	for i, duplicate := range e.Duplicates {
-		duplicates[i] = duplicate.SlashPath()
-	}
-	sort.Strings(duplicates)
 	return status.Format(e,
-		"Directory names MUST be unique. Rename one of these directories:\n\n"+
-			"%[1]s",
-		strings.Join(duplicates, "\n"))
+		"Directory names MUST be unique. Rename one of these directories:")
 }
 
 // Code implements Error
 func (e DuplicateDirectoryNameError) Code() string { return DuplicateDirectoryNameErrorCode }
 
 // RelativePaths implements PathError
-func (e DuplicateDirectoryNameError) RelativePaths() []string {
-	paths := make([]string, len(e.Duplicates))
-	for i, dup := range e.Duplicates {
-		paths[i] = dup.SlashPath()
+func (e DuplicateDirectoryNameError) RelativePaths() []id.Path {
+	paths := make([]id.Path, len(e.Duplicates))
+	for i, path := range e.Duplicates {
+		paths[i] = path
 	}
 	return paths
 }

@@ -22,7 +22,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
@@ -327,7 +326,7 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 	ctx context.Context,
 	node *v1.NamespaceConfig,
-	errs []v1.ConfigManagementError) id.ResourceError {
+	errs []v1.ConfigManagementError) status.ResourceError {
 	if node == reservedNamespaceConfig {
 		return nil
 	}

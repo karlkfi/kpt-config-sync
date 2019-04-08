@@ -20,7 +20,7 @@ type IllegalKindInClusterregistryError struct {
 	id.Resource
 }
 
-var _ id.ResourceError = &IllegalKindInClusterregistryError{}
+var _ status.ResourceError = &IllegalKindInClusterregistryError{}
 
 // Error implements error
 func (e IllegalKindInClusterregistryError) Error() string {

@@ -19,7 +19,7 @@ type UnknownObjectError struct {
 	id.Resource
 }
 
-var _ id.ResourceError = &UnknownObjectError{}
+var _ status.ResourceError = &UnknownObjectError{}
 
 // Error implements error
 func (e UnknownObjectError) Error() string {

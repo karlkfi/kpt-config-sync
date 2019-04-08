@@ -4,15 +4,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // Resource identifies a Resource in a Nomos repository.
 // Unique so long as no single file illegally declares two Resources of the same Name and Group/Version/Kind.
 type Resource interface {
-	// Sourced is the embedded interface providing path information to this Resource.
-	cmpath.Sourced
+	// Path is the embedded interface providing path information to this Resource.
+	Path
 	// Namespace returns the namespace containing this resource.
 	// If the resource is not namespaced, returns empty string.
 	Namespace() string

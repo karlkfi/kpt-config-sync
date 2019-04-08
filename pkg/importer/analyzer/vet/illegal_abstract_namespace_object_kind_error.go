@@ -23,7 +23,7 @@ type IllegalAbstractNamespaceObjectKindError struct {
 	id.Resource
 }
 
-var _ id.ResourceError = &IllegalAbstractNamespaceObjectKindError{}
+var _ status.ResourceError = &IllegalAbstractNamespaceObjectKindError{}
 
 // Error implements error.
 func (e IllegalAbstractNamespaceObjectKindError) Error() string {

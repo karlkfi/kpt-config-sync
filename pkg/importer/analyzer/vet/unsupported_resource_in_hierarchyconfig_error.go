@@ -23,7 +23,7 @@ type UnsupportedResourceInHierarchyConfigError struct {
 	id.HierarchyConfig
 }
 
-var _ id.ResourceError = &UnsupportedResourceInHierarchyConfigError{}
+var _ status.ResourceError = &UnsupportedResourceInHierarchyConfigError{}
 
 // Error implements error
 func (e UnsupportedResourceInHierarchyConfigError) Error() string {

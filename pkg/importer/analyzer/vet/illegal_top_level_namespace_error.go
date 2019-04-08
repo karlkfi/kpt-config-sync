@@ -22,7 +22,7 @@ type IllegalTopLevelNamespaceError struct {
 	id.Resource
 }
 
-var _ id.ResourceError = &IllegalTopLevelNamespaceError{}
+var _ status.ResourceError = &IllegalTopLevelNamespaceError{}
 
 // Error implements error
 func (e IllegalTopLevelNamespaceError) Error() string {

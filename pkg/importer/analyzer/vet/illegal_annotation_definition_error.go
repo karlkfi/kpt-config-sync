@@ -26,7 +26,7 @@ type IllegalAnnotationDefinitionError struct {
 	Annotations []string
 }
 
-var _ id.ResourceError = &IllegalAnnotationDefinitionError{}
+var _ status.ResourceError = &IllegalAnnotationDefinitionError{}
 
 // Error implements error.
 func (e IllegalAnnotationDefinitionError) Error() string {

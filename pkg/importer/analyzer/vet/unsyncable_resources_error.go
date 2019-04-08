@@ -33,23 +33,21 @@ func (e UnsyncableResourcesError) Error() string {
 			"An %[1]s directory with configs MUST have at least one %[2]s subdirectory. "+
 				"To fix, do one of the following: add a %[2]s directory below %[3]q, "+
 				"convert a directory below to a %[2]s directory, "+
-				"or remove the configs in %[3]q:\n\n"+
-				"%[4]s",
-			node.AbstractNamespace, node.Namespace, e.Dir.Name(), id.PrintTreeNode(e.Dir))
+				"or remove the configs in %[3]q:",
+			node.AbstractNamespace, node.Namespace, e.Dir.Name())
 	}
 	return status.Format(e,
 		"An %[1]s directory with configs MUST have at least one %[2]s subdirectory. "+
 			"To fix, do one of the following: add a %[2]s directory below %[3]q, "+
-			"Add a Namespace config to %[3]q, "+
-			"or remove the configs in %[3]q:\n\n"+
-			"%[4]s",
-		node.AbstractNamespace, node.Namespace, e.Dir.Name(), id.PrintTreeNode(e.Dir))
+			"add a Namespace config to %[3]q, "+
+			"or remove the configs in %[3]q:",
+		node.AbstractNamespace, node.Namespace, e.Dir.Name())
 }
 
 // Code implements Error
 func (e UnsyncableResourcesError) Code() string { return UnsyncableResourcesErrorCode }
 
 // RelativePaths implements PathError
-func (e UnsyncableResourcesError) RelativePaths() []string {
-	return []string{e.Dir.SlashPath()}
+func (e UnsyncableResourcesError) RelativePaths() []id.Path {
+	return []id.Path{e.Dir}
 }

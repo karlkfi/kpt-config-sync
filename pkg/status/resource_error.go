@@ -1,9 +1,9 @@
-package id
+package status
 
 import (
 	"strings"
 
-	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/pkg/errors"
 )
 
@@ -17,15 +17,15 @@ func init() {
 
 // ResourceError defines a status error related to one or more k8s resources.
 type ResourceError interface {
-	status.Error
-	Resources() []Resource
+	Error
+	Resources() []id.Resource
 }
 
-// FormatResources returns a formatted string containing all Resources in the ResourceError.
-func FormatResources(err ResourceError) string {
+// formatResources returns a formatted string containing all Resources in the ResourceError.
+func formatResources(err ResourceError) string {
 	resStrs := make([]string, len(err.Resources()))
 	for i, res := range err.Resources() {
-		resStrs[i] = PrintResource(res)
+		resStrs[i] = id.PrintResource(res)
 	}
 	return strings.Join(resStrs, "\n")
 }
@@ -33,15 +33,15 @@ func FormatResources(err ResourceError) string {
 // resourceError almost always results from an API server call involving one or more resources.
 type resourceError struct {
 	err       error
-	resources []Resource
+	resources []id.Resource
 }
 
 var _ ResourceError = &resourceError{}
 
 // Error implements status.Error
 func (r resourceError) Error() string {
-	return status.Format(r, "%[1]s\nAffected resources:\n%[2]s",
-		r.err.Error(), FormatResources(r))
+	return Format(r, "%[1]s\nAffected resources:\n%[2]s",
+		r.err.Error(), formatResources(r))
 }
 
 // Code implements status.Error
@@ -50,12 +50,12 @@ func (r resourceError) Code() string {
 }
 
 // Resources implements ResourceError
-func (r resourceError) Resources() []Resource {
+func (r resourceError) Resources() []id.Resource {
 	return r.resources
 }
 
 // ResourceWrap returns a ResourceError wrapping the given error and Resources.
-func ResourceWrap(err error, msg string, resources ...Resource) ResourceError {
+func ResourceWrap(err error, msg string, resources ...id.Resource) ResourceError {
 	if err == nil {
 		return nil
 	}

@@ -3,6 +3,8 @@ package status
 import (
 	"fmt"
 	"strings"
+
+	"github.com/google/nomos/pkg/importer/id"
 )
 
 const urlBase = "https://cloud.google.com/csp-config-management/docs/errors#knv"
@@ -14,7 +16,9 @@ func url(err Error) string {
 // Error defines a Kubernetes Nomos Vet error
 // These are GKE Config Management directory errors which are shown to the user and documented.
 type Error interface {
+	// Error is the text errors display.
 	Error() string
+	// Code is the unique identifier of the error to help users find documentation.
 	Code() string
 }
 
@@ -30,6 +34,15 @@ func Format(err Error, format string, a ...interface{}) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("KNV%s: ", err.Code()))
 	sb.WriteString(fmt.Sprintf(format, a...))
+
+	switch e := err.(type) {
+	case ResourceError:
+		// TODO: auto format resources
+	case PathError:
+		sb.WriteString("\n\n")
+		sb.WriteString(formatPaths(e))
+	}
+
 	sb.WriteString(fmt.Sprintf("\n\nFor more information, see %s", url(err)))
 	return sb.String()
 }
@@ -38,7 +51,7 @@ func Format(err Error, format string, a ...interface{}) string {
 // repo.
 type PathError interface {
 	Error
-	RelativePaths() []string
+	RelativePaths() []id.Path
 }
 
 // Register marks the passed error code as used.

@@ -51,7 +51,7 @@ func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 		for i, r := range repoList.Items {
 			resList[i] = ast.ParseFileObject(&r)
 		}
-		return nil, id.MultipleSingletonsWrap(resList...)
+		return nil, status.MultipleSingletonsWrap(resList...)
 	}
 	if len(repoList.Items) == 1 {
 		return setTypeMeta(repoList.Items[0].DeepCopy()), nil
@@ -67,7 +67,7 @@ func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 // CreateRepo creates a new Repo resource for the cluster. Currently we don't do anything with the
 // Repo object if a user has defined it in their source of truth so this is harmless/correct. If we
 // start using it to drive logic then we may not want to be creating one here.
-func (c *Client) CreateRepo(ctx context.Context) (*v1.Repo, id.ResourceError) {
+func (c *Client) CreateRepo(ctx context.Context) (*v1.Repo, status.ResourceError) {
 	if c.importerClient != nil {
 		return c.importerClient.createRepo()
 	}
@@ -82,7 +82,7 @@ func (c *Client) CreateRepo(ctx context.Context) (*v1.Repo, id.ResourceError) {
 // chances of conflict/collision/overwrite.
 
 // UpdateImportStatus updates the portion of the RepoStatus related to the importer.
-func (c *Client) UpdateImportStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, id.ResourceError) {
+func (c *Client) UpdateImportStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.ResourceError) {
 	if c.importerClient != nil {
 		return c.importerClient.updateRepo(repo)
 	}
@@ -99,7 +99,7 @@ func (c *Client) UpdateImportStatus(ctx context.Context, repo *v1.Repo) (*v1.Rep
 }
 
 // UpdateSourceStatus updates the portion of the RepoStatus related to the source of truth.
-func (c *Client) UpdateSourceStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, id.ResourceError) {
+func (c *Client) UpdateSourceStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.ResourceError) {
 	if c.importerClient != nil {
 		return c.importerClient.updateRepo(repo)
 	}
@@ -116,7 +116,7 @@ func (c *Client) UpdateSourceStatus(ctx context.Context, repo *v1.Repo) (*v1.Rep
 }
 
 // UpdateSyncStatus updates the portion of the RepoStatus related to the syncer.
-func (c *Client) UpdateSyncStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, id.ResourceError) {
+func (c *Client) UpdateSyncStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.ResourceError) {
 	if c.importerClient != nil {
 		return c.importerClient.updateRepo(repo)
 	}
@@ -151,7 +151,7 @@ func (c *genClient) getRepo() (*v1.Repo, status.Error) {
 		for i, r := range repos {
 			resList[i] = ast.ParseFileObject(r)
 		}
-		return nil, id.MultipleSingletonsWrap(resList...)
+		return nil, status.MultipleSingletonsWrap(resList...)
 	}
 	if len(repos) == 1 {
 		return setTypeMeta(repos[0].DeepCopy()), nil
@@ -175,27 +175,27 @@ func (c *genClient) getOrCreateRepo() (*v1.Repo, status.Error) {
 	return repo, nil // return explicit nil due to golang interfaces
 }
 
-func (c *genClient) createRepo() (*v1.Repo, id.ResourceError) {
+func (c *genClient) createRepo() (*v1.Repo, status.ResourceError) {
 	repoObj := Default()
 	createdObj, err := c.client.Create(repoObj)
 	if err != nil {
-		return nil, id.ResourceWrap(err, "failed to create Repo", ast.ParseFileObject(repoObj))
+		return nil, status.ResourceWrap(err, "failed to create Repo", ast.ParseFileObject(repoObj))
 	}
 	return setTypeMeta(createdObj), nil
 }
 
-func (c *genClient) updateRepo(repoObj *v1.Repo) (*v1.Repo, id.ResourceError) {
-	var lastError id.ResourceError
+func (c *genClient) updateRepo(repoObj *v1.Repo) (*v1.Repo, status.ResourceError) {
+	var lastError status.ResourceError
 	retryBackoff := 1 * time.Millisecond
 	maxTries := 5
 
 	for tryNum := 0; tryNum < maxTries; tryNum++ {
 		existingRepo, sErr := c.getRepo()
 		if sErr != nil {
-			return nil, id.MissingResourceWrap(sErr, "failed to get repo to update", ast.ParseFileObject(repoObj))
+			return nil, status.MissingResourceWrap(sErr, "failed to get repo to update", ast.ParseFileObject(repoObj))
 		}
 		if existingRepo == nil {
-			return nil, id.MissingResourceWrap(errors.New("failed to get repo to update"), "", ast.ParseFileObject(repoObj))
+			return nil, status.MissingResourceWrap(errors.New("failed to get repo to update"), "", ast.ParseFileObject(repoObj))
 		}
 
 		existingRepo.Status.Source = repoObj.Status.Source
@@ -205,7 +205,7 @@ func (c *genClient) updateRepo(repoObj *v1.Repo) (*v1.Repo, id.ResourceError) {
 			return setTypeMeta(newObj), nil
 		}
 
-		lastError = id.ResourceWrap(err, "failed to update repo", ast.ParseFileObject(existingRepo))
+		lastError = status.ResourceWrap(err, "failed to update repo", ast.ParseFileObject(existingRepo))
 		if !apierrors.IsConflict(err) {
 			return nil, lastError
 		}

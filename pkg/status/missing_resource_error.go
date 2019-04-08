@@ -1,7 +1,7 @@
-package id
+package status
 
 import (
-	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/pkg/errors"
 )
 
@@ -16,15 +16,15 @@ func init() {
 // MissingResourceError reports that one or more Resources were not found by the API server.
 type MissingResourceError struct {
 	err       error
-	resources []Resource
+	resources []id.Resource
 }
 
 var _ ResourceError = &MissingResourceError{}
 
 // Error implements status.Error
 func (m MissingResourceError) Error() string {
-	return status.Format(m, "%[1]s\nExpected resources were not found:\n%[2]s",
-		m.err.Error(), FormatResources(m))
+	return Format(m, "%[1]s\nExpected resources were not found:\n%[2]s",
+		m.err.Error(), formatResources(m))
 }
 
 // Code implements status.Error
@@ -33,11 +33,11 @@ func (m MissingResourceError) Code() string {
 }
 
 // Resources implements ResourceError
-func (m MissingResourceError) Resources() []Resource {
+func (m MissingResourceError) Resources() []id.Resource {
 	return m.resources
 }
 
 // MissingResourceWrap returns a MissingResourceError wrapping the given error and Resources.
-func MissingResourceWrap(err error, msg string, resources ...Resource) MissingResourceError {
+func MissingResourceWrap(err error, msg string, resources ...id.Resource) MissingResourceError {
 	return MissingResourceError{err: errors.Wrap(err, msg), resources: resources}
 }

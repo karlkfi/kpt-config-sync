@@ -30,7 +30,7 @@ type IllegalHierarchyModeError struct {
 	Allowed       map[v1.HierarchyModeType]bool
 }
 
-var _ id.ResourceError = &IllegalHierarchyModeError{}
+var _ status.ResourceError = &IllegalHierarchyModeError{}
 
 // Error implements error
 func (e IllegalHierarchyModeError) Error() string {

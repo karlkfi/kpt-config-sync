@@ -26,7 +26,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,7 +54,7 @@ func New(client client.Client) *Client {
 type clientUpdateFn func(ctx context.Context, obj runtime.Object) error
 
 // Create saves the object obj in the Kubernetes cluster and records prometheus metrics.
-func (c *Client) Create(ctx context.Context, obj runtime.Object) id.ResourceError {
+func (c *Client) Create(ctx context.Context, obj runtime.Object) status.ResourceError {
 	description, kind := resourceInfo(obj)
 	glog.V(1).Infof("Creating %s", description)
 	operation := string(action.CreateOperation)
@@ -63,7 +63,7 @@ func (c *Client) Create(ctx context.Context, obj runtime.Object) id.ResourceErro
 	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
 	defer timer.ObserveDuration()
 	if err := c.Client.Create(ctx, obj); err != nil {
-		return id.ResourceWrap(err, "failed to create "+description, ast.ParseFileObject(obj))
+		return status.ResourceWrap(err, "failed to create "+description, ast.ParseFileObject(obj))
 	}
 	glog.V(1).Infof("Create OK for %s", description)
 	return nil
@@ -103,12 +103,12 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.
 }
 
 // Update updates the given obj in the Kubernetes cluster.
-func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, id.ResourceError) {
+func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, status.ResourceError) {
 	return c.update(ctx, obj, updateFn, c.Client.Update)
 }
 
 // UpdateStatus updates the given obj's status in the Kubernetes cluster.
-func (c *Client) UpdateStatus(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, id.ResourceError) {
+func (c *Client) UpdateStatus(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, status.ResourceError) {
 	return c.update(ctx, obj, updateFn, c.Client.Status().Update)
 }
 
@@ -117,7 +117,7 @@ func (c *Client) UpdateStatus(ctx context.Context, obj runtime.Object, updateFn 
 // This operation always involves retrieving the resource from API Server before actually updating it.
 // Refer to action package for expected return values for updateFn.
 func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action.Update,
-	clientUpdateFn clientUpdateFn) (runtime.Object, id.ResourceError) {
+	clientUpdateFn clientUpdateFn) (runtime.Object, status.ResourceError) {
 	// We only want to modify the argument after successfully making an update to API Server.
 	workingObj := obj.DeepCopyObject()
 	description, kind := resourceInfo(workingObj)
@@ -128,7 +128,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 	var oldObj runtime.Object
 	for tryNum := 0; tryNum < c.MaxTries; tryNum++ {
 		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
-			return nil, id.MissingResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
+			return nil, status.MissingResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
 		}
 		oldV := resourceVersion(workingObj)
 		newObj, err := updateFn(workingObj.DeepCopyObject())
@@ -136,7 +136,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 			if action.IsNoUpdateNeeded(err) {
 				return newObj, nil
 			}
-			return nil, id.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
+			return nil, status.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
 		}
 
 		action.APICalls.WithLabelValues(kind, operation).Inc()
@@ -167,11 +167,11 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 			oldObj = workingObj.DeepCopyObject()
 		}
 		if !apierrors.IsConflict(err) {
-			return nil, id.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
+			return nil, status.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
 		}
 		<-time.After(100 * time.Millisecond) // Back off on retry a bit.
 	}
-	return nil, id.ResourceWrap(lastErr, "exceeded max tries to update "+description, ast.ParseFileObject(obj))
+	return nil, status.ResourceWrap(lastErr, "exceeded max tries to update "+description, ast.ParseFileObject(obj))
 }
 
 // Upsert creates or updates the given obj in the Kubernetes cluster and records prometheus metrics.

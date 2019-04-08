@@ -20,7 +20,7 @@ type IllegalKindInNamespacesError struct {
 	id.Resource
 }
 
-var _ id.ResourceError = &IllegalKindInNamespacesError{}
+var _ status.ResourceError = &IllegalKindInNamespacesError{}
 
 // Error implements error
 func (e IllegalKindInNamespacesError) Error() string {

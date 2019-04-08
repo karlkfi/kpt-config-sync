@@ -7,17 +7,9 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
-
-// Sourced represents an object associated with a path in a Nomos repository.
-type Sourced interface {
-	// SlashPath returns the slash-delimited path.
-	SlashPath() string
-
-	// OSPath returns the OS-specific path.
-	OSPath() string
-}
 
 // Root is a path to a directory holding a Nomos repository.
 // Robust to changes in the working directory.
@@ -120,7 +112,7 @@ type Path struct {
 	path string
 }
 
-var _ Sourced = Path{}
+var _ id.Path = Path{}
 
 // FromSlash returns a Path from a slash-delimited path.
 func FromSlash(p string) Path {
