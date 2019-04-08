@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/google/nomos/pkg/status"
+
 	"github.com/golang/glog"
 	configmanagementscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
@@ -188,6 +190,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			if mErr != nil {
 				glog.Warningf("Failed to parse: %v", mErr)
 				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				c.updateImportStatus(ctx, repoObj, token, loadTime, cmesForMultiError(mErr))
 				continue
 			}
 
@@ -199,29 +202,19 @@ func (c *Controller) pollDir(ctx context.Context) {
 			}
 			desiredPolicies.ClusterConfig.Status.SyncState = v1.StateStale
 
-			// Try to get a fresh copy of Repo since it is has high contention with syncer.
-			freshRepoObj, err := c.repoClient.GetOrCreateRepo(ctx)
-			if err != nil {
-				glog.Errorf("failed to get fresh Repo: %v", err)
-			} else {
-				repoObj = freshRepoObj
-			}
-
-			repoObj.Status.Import.Token = token
-			repoObj.Status.Import.LastUpdate = metav1.NewTime(loadTime)
-			if _, err = c.repoClient.UpdateImportStatus(ctx, repoObj); err != nil {
-				glog.Errorf("failed to update Repo import status: %v", err)
-			}
-
 			if err := c.updatePolicies(currentPolicies, desiredPolicies); err != nil {
 				glog.Warningf("Failed to apply actions: %v", err)
 				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				// TODO(b/126598308): Inspect the actual error type and fully populate the CME fields.
+				cme := v1.ConfigManagementError{ErrorMessage: err.Error()}
+				c.updateImportStatus(ctx, repoObj, token, loadTime, []v1.ConfigManagementError{cme})
 				continue
 			}
 
 			currentDir = newDir
 			importer.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
 			importer.Metrics.Nodes.Set(float64(len(desiredPolicies.NamespaceConfigs)))
+			c.updateImportStatus(ctx, repoObj, token, loadTime, nil)
 
 			lastSyncs = desiredPolicies.Syncs
 			glog.V(4).Infof("pollDir: completed")
@@ -230,6 +223,35 @@ func (c *Controller) pollDir(ctx context.Context) {
 			glog.Info("Stop polling")
 			return
 		}
+	}
+}
+
+// cmesForMultiError converts a MultiError into one or more ConfigManagmentErrors.
+func cmesForMultiError(mErr *status.MultiError) []v1.ConfigManagementError {
+	var cmes []v1.ConfigManagementError
+	for _, err := range mErr.Errors() {
+		// TODO(b/126598308): Inspect the actual error types and fully populate the CME fields.
+		cmes = append(cmes, v1.ConfigManagementError{ErrorMessage: err.Error()})
+	}
+	return cmes
+}
+
+// updateImportStatus write an updated RepoImportStatus based upon the given arguments.
+func (c *Controller) updateImportStatus(ctx context.Context, repoObj *v1.Repo, token string, loadTime time.Time, errs []v1.ConfigManagementError) {
+	// Try to get a fresh copy of Repo since it is has high contention with syncer.
+	freshRepoObj, err := c.repoClient.GetOrCreateRepo(ctx)
+	if err != nil {
+		glog.Errorf("failed to get fresh Repo: %v", err)
+	} else {
+		repoObj = freshRepoObj
+	}
+
+	repoObj.Status.Import.Token = token
+	repoObj.Status.Import.LastUpdate = metav1.NewTime(loadTime)
+	repoObj.Status.Import.Errors = errs
+
+	if _, err = c.repoClient.UpdateImportStatus(ctx, repoObj); err != nil {
+		glog.Errorf("failed to update Repo import status: %v", err)
 	}
 }
 
