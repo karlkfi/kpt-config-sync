@@ -95,6 +95,8 @@ func (r *RepoStatus) reconcile() error {
 		return sErr
 	}
 
+	r.checkLatestToken(repo.Status.Import.Token)
+
 	state, err := r.buildState(r.ctx, repo.Status.Import.Token)
 	if err != nil {
 		glog.Errorf("Failed to build sync state: %v", err)
@@ -108,6 +110,16 @@ func (r *RepoStatus) reconcile() error {
 		return err
 	}
 	return nil
+}
+
+// checkLatestToken handles a race condition where ImportToken gets updated after we have already
+// calculated latestToken and RepoSyncStatus gets written based upon an outdated ImportToken. In
+// that case, the reconciler will be triggered again and the updated ImportToken will be present in
+// the "in progress tokens" and we can update latestToken based upon that.
+func (r *RepoStatus) checkLatestToken(importToken string) {
+	if r.latestToken != importToken && r.tokens[importToken] {
+		r.latestToken = importToken
+	}
 }
 
 // buildState returns a freshly initialized syncState based upon the current configs on the cluster.
