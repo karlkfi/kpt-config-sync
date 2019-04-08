@@ -56,7 +56,7 @@ spec:
               name: cluster-name
               optional: true  # If cluster naming is not used, this config map will be missing.
       - name: git-sync
-        image: gcr.io/nomos-release/git-sync:v3.1.1-gke.2__linux_amd64
+        image: gcr.io/config-management-release/git-sync:v3.1.1-gke.2__linux_amd64
         # Do not put "rev-" in the root arg or you will break our parsing of commit hashes. See
         # pkg/policyimporter/git/git.go to see where we depend on that magic string from git-sync.
         args: ["--root=/repo", "--dest=rev"]
