@@ -85,6 +85,8 @@ function teardown() {
   [[ "${annotationValue}" != "null" ]] || debug::error "management annotation not added"
   annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/source-path"')
   [[ "${annotationValue}" != "null" ]] || debug::error "source path annotation not added"
+  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/token"')
+  [[ "${annotationValue}" != "null" ]] || debug::error "sync token annotation not added"
   annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.labels."configmanagement.gke.io/quota"')
   [[ "${annotationValue}" != "null" ]] || debug::error "quota annotation not added"
 
@@ -101,6 +103,8 @@ function teardown() {
   [[ "${annotationValue}" == "null" ]] || debug::error "management annotation not removed"
   annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/source-path"')
   [[ "${annotationValue}" == "null" ]] || debug::error "source path annotation not removed"
+  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/token"')
+  [[ "${annotationValue}" == "null" ]] || debug::error "sync token annotation not removed"
   annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.labels."configmanagement.gke.io/quota"')
   [[ "${annotationValue}" == "null" ]] || debug::error "quota annotation not removed"
 }

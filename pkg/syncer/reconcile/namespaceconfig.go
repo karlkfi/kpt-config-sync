@@ -384,6 +384,7 @@ func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.Na
 		object.SetAnnotation(namespace, k, v)
 	}
 	EnableManagement(namespace)
+	object.SetAnnotation(namespace, v1.SyncTokenAnnotationKey, namespaceConfig.Spec.Token)
 
 	namespace.Name = namespaceConfig.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())

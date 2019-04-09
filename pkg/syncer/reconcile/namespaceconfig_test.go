@@ -65,7 +65,7 @@ var managedQuotaLabels = object.Label(v1.ConfigManagementQuotaKey, v1.ConfigMana
 
 var (
 	eng                = "eng"
-	managedNamespace   = namespace(eng, syncertesting.ManagementEnabled, managedQuotaLabels)
+	managedNamespace   = namespace(eng, syncertesting.ManagementEnabled, managedQuotaLabels, syncertesting.TokenAnnotation)
 	unmanagedNamespace = namespace(eng)
 
 	namespaceCfg       = namespaceConfig(eng, v1.StateSynced, syncertesting.ImportToken(syncertesting.Token))
@@ -360,7 +360,7 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 			name:                "do not add quota enforcement label on managed kube-system",
 			namespaceConfig:     namespaceConfig("kube-system", v1.StateSynced, syncertesting.ImportToken(syncertesting.Token)),
 			namespace:           namespace("kube-system", syncertesting.ManagementEnabled),
-			wantNamespaceUpdate: namespace("kube-system", syncertesting.ManagementEnabled),
+			wantNamespaceUpdate: namespace("kube-system", syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 			wantStatusUpdate: namespaceConfig("kube-system", v1.StateSynced, syncertesting.ImportToken(syncertesting.Token),
 				syncertesting.SyncTime(), syncertesting.SyncToken()),
 		},
