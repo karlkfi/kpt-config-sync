@@ -82,6 +82,32 @@ func newConfigFromPath(path string) (*rest.Config, error) {
 	return config, nil
 }
 
+// AllKubectlConfigs creates a config for every context available in the kubeconfig. The configs are
+// mapped by context name.
+func AllKubectlConfigs() (map[string]*rest.Config, error) {
+	configPath, err := newConfigPath()
+	if err != nil {
+		return nil, errors.Wrap(err, "while getting config path")
+	}
+	rules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath}
+	clientCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
+	apiCfg, err := clientCfg.RawConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "while building client config")
+	}
+	configs := map[string]*rest.Config{}
+	for ctxName := range apiCfg.Contexts {
+		cfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			rules, &clientcmd.ConfigOverrides{CurrentContext: ctxName})
+		restCfg, err := cfg.ClientConfig()
+		if err != nil {
+			return nil, errors.Wrapf(err, "while building config for %q context", ctxName)
+		}
+		configs[ctxName] = restCfg
+	}
+	return configs, nil
+}
+
 // NewKubectlConfig creates a config for whichever context is active in kubectl.
 func NewKubectlConfig() (*rest.Config, error) {
 	if *flagKubectlContext != "" {
