@@ -29,7 +29,7 @@ func NewHierarchyConfigKindValidator() ast.Visitor {
 
 // ValidateKinds ensures that only supported Resource Kinds are declared in HierarchyConfigs.
 func ValidateKinds(config FileGroupKindHierarchyConfig) status.MultiError {
-	if AllowedInHierarchyConfigs(config.GroupKind()) {
+	if AllowedInHierarchyConfigs(config.GroupKind(), false) {
 		return nil
 	}
 	return status.From(vet.UnsupportedResourceInHierarchyConfigError{
@@ -38,14 +38,16 @@ func ValidateKinds(config FileGroupKindHierarchyConfig) status.MultiError {
 }
 
 // AllowedInHierarchyConfigs returns true if the passed GroupKind is allowed to be declared in HierarchyConfigs.
-func AllowedInHierarchyConfigs(gk schema.GroupKind) bool {
-	return !unsupportedHierarchyConfigResources()[gk] && gk.Group != configmanagement.GroupName && gk.Kind != ""
+func AllowedInHierarchyConfigs(gk schema.GroupKind, enableCRDs bool) bool {
+	return !unsupportedHierarchyConfigResources(enableCRDs)[gk] && gk.Group != configmanagement.GroupName && gk.Kind != ""
 }
 
+// TODO(130247902): Don't allow cluster-scoped resources in hierarchyconfigs.
 // unsupportedHierarchyConfigResources returns a map of each type where syncing is explicitly not supported.
-func unsupportedHierarchyConfigResources() map[schema.GroupKind]bool {
-	return map[schema.GroupKind]bool{
-		kinds.CustomResourceDefinition().GroupKind(): true,
-		kinds.Namespace().GroupKind():                true,
+func unsupportedHierarchyConfigResources(enableCRDs bool) map[schema.GroupKind]bool {
+	m := map[schema.GroupKind]bool{kinds.Namespace().GroupKind(): true}
+	if !enableCRDs {
+		m[kinds.CustomResourceDefinition().GroupKind()] = true
 	}
+	return m
 }

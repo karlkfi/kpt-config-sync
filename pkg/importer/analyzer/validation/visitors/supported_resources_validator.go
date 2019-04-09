@@ -10,9 +10,9 @@ import (
 
 // NewSupportedClusterResourcesValidator initializes a ValidatorVisitor that ensures all ClusterObjects are supported
 // resources.
-func NewSupportedClusterResourcesValidator() *visitor.ValidatorVisitor {
+func NewSupportedClusterResourcesValidator(enableCRDs bool) *visitor.ValidatorVisitor {
 	ensureSupported := func(o *ast.ClusterObject) status.MultiError {
-		if !hierarchyconfig.AllowedInHierarchyConfigs(o.GroupVersionKind().GroupKind()) {
+		if !hierarchyconfig.AllowedInHierarchyConfigs(o.GroupVersionKind().GroupKind(), enableCRDs) {
 			return status.From(vet.UnsupportedObjectError{Resource: o})
 		}
 		return nil

@@ -7,10 +7,12 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/kinds"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 )
 
@@ -82,7 +84,16 @@ func TestAddScope(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			root := &ast.Root{}
 
-			err := addScope(root, newFakeDiscoveryClient(tc.resources))
+			// TODO: test w/ CRDs
+			p, pErr := NewParserWithFactory(fstesting.NewTestFactory(t), ParserOpt{EnableCRDs: false})
+			if pErr != nil {
+				t.Fatal(errors.Wrap(pErr, "should have succeeded"))
+			}
+			rp, rErr := cmpath.NewRoot(cmpath.FromOS("/"))
+			if rErr != nil {
+				t.Fatal(errors.Wrap(rErr, "should have succeeded"))
+			}
+			err := p.addScope(root, newFakeDiscoveryClient(tc.resources), rp)
 			if err != nil {
 				t.Fatal(errors.Wrap(err, "should have succeeded"))
 			}
@@ -142,7 +153,16 @@ func TestFailAddScope(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			root := &ast.Root{}
 
-			err := addScope(root, tc.client)
+			// TODO: test w/ CRDs
+			p, pErr := NewParserWithFactory(fstesting.NewTestFactory(t), ParserOpt{EnableCRDs: false})
+			if pErr != nil {
+				t.Fatal(errors.Wrap(pErr, "should have succeeded"))
+			}
+			rp, rErr := cmpath.NewRoot(cmpath.FromOS("/"))
+			if rErr != nil {
+				t.Fatal(errors.Wrap(rErr, "should have succeeded"))
+			}
+			err := p.addScope(root, tc.client, rp)
 
 			if err == nil {
 				t.Fatal("Should have failed.")

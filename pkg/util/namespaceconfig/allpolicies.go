@@ -9,8 +9,10 @@ import (
 type AllPolicies struct {
 	// Map of names to NamespaceConfigs.
 	NamespaceConfigs map[string]v1.NamespaceConfig
-	// Singleton config for the cluster.
+	// Singleton config for non-CRD cluster-scoped resources.
 	ClusterConfig *v1.ClusterConfig
+	// Config with declared state for CRDs.
+	CRDClusterConfig *v1.ClusterConfig
 	// Map of names to Syncs.
 	Syncs map[string]v1.Sync
 	// Singleton Repo for the cluster.

@@ -51,7 +51,7 @@ type OutputVisitorTestcase struct {
 }
 
 func (tc *OutputVisitorTestcase) Run(t *testing.T) {
-	ov := NewOutputVisitor()
+	ov := NewOutputVisitor(false)
 	tc.input.Accept(ov)
 	actual := ov.AllPolicies()
 	if diff := cmp.Diff(tc.expect, actual, resourcequota.ResourceQuantityEqual()); diff != "" {

@@ -3,7 +3,7 @@ package hierarchyconfig
 import (
 	"testing"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/asttest"

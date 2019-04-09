@@ -19,6 +19,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/pkg/errors"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -70,6 +71,50 @@ func NewAPIInfo(resourceLists []*metav1.APIResourceList) (*APIInfo, error) {
 		}
 	}
 	return &APIInfo{resources: resources, groupKindVersions: groupKindVersions}, nil
+}
+
+// AddCustomResources updates APIInfo with custom resource metadata from the provided CustomResourceDefinitions.
+// It does not replace anything that already exists in APIInfo.
+func (a *APIInfo) AddCustomResources(crds ...*v1beta1.CustomResourceDefinition) {
+	for _, crd := range crds {
+		crSpec := crd.Spec
+		crNames := crSpec.Names
+		group := crSpec.Group
+		kind := crSpec.Names.Kind
+		apiResourceTemplate := metav1.APIResource{
+			Name:         crNames.Plural,
+			SingularName: crNames.Singular,
+			Namespaced:   crSpec.Scope == v1beta1.NamespaceScoped,
+			Group:        group,
+			Kind:         kind,
+			ShortNames:   crNames.ShortNames,
+			// TODO(sbochins): consider non-empty defaults for Categories and Verbs
+		}
+
+		gk := schema.GroupKind{Group: group, Kind: kind}
+		setVersion := func(version string) {
+			gvk := gk.WithVersion(version)
+			if _, ok := a.resources[gvk]; ok {
+				// We've already added information for this GroupVersionKind; don't add duplicate info.
+				return
+			}
+			a.groupKindVersions[gk] = append(a.groupKindVersions[gk], version)
+
+			apiResource := *apiResourceTemplate.DeepCopy()
+			apiResource.Version = version
+			a.resources[gk.WithVersion(version)] = apiResource
+		}
+
+		for _, v := range crSpec.Versions {
+			if !v.Served {
+				continue
+			}
+			setVersion(v.Name)
+		}
+		if version := crSpec.Version; version != "" {
+			setVersion(version)
+		}
+	}
 }
 
 // GetScope returns the scope for the object.  If not found, UnknownScope will be returned.

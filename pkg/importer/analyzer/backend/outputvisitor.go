@@ -21,6 +21,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,13 +36,14 @@ type OutputVisitor struct {
 	allPolicies     *namespaceconfig.AllPolicies
 	namespaceConfig []*v1.NamespaceConfig
 	syncs           []*v1.Sync
+	enableCRDs      bool
 }
 
 var _ ast.Visitor = &OutputVisitor{}
 
 // NewOutputVisitor creates a new output visitor.
-func NewOutputVisitor() *OutputVisitor {
-	v := &OutputVisitor{Base: visitor.NewBase()}
+func NewOutputVisitor(enableCRDs bool) *OutputVisitor {
+	v := &OutputVisitor{Base: visitor.NewBase(), enableCRDs: enableCRDs}
 	v.SetImpl(v)
 	return v
 }
@@ -72,7 +74,7 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 		ClusterConfig: &v1.ClusterConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       "ClusterConfig",
+				Kind:       kinds.ClusterConfig().Kind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: v1.ClusterConfigName,
@@ -84,6 +86,23 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 		},
 		Repo: g.Repo,
 	}
+
+	if v.enableCRDs {
+		v.allPolicies.CRDClusterConfig = &v1.ClusterConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1.SchemeGroupVersion.String(),
+				Kind:       kinds.ClusterConfig().Kind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: v1.CRDClusterConfigName,
+			},
+			Spec: v1.ClusterConfigSpec{
+				Token:      v.importToken,
+				ImportTime: v.loadTime,
+			},
+		}
+	}
+
 	v.Base.VisitRoot(g)
 	return nil
 }
@@ -137,7 +156,12 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 
 // VisitClusterObject implements Visitor
 func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
-	spec := &v.allPolicies.ClusterConfig.Spec
+	var spec *v1.ClusterConfigSpec
+	if o.GroupVersionKind() == kinds.CustomResourceDefinition() {
+		spec = &v.allPolicies.CRDClusterConfig.Spec
+	} else {
+		spec = &v.allPolicies.ClusterConfig.Spec
+	}
 	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }

@@ -1,7 +1,7 @@
 package filesystem
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
@@ -16,6 +16,8 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 )
 
+var _ ParserConfig = NomosVisitorProvider{}
+
 // NomosVisitorProvider is the default visitor provider.  It handles
 // plain vanilla nomos configs.
 type NomosVisitorProvider struct {
@@ -24,7 +26,8 @@ type NomosVisitorProvider struct {
 // Visitors implements ParserConfig
 func (n NomosVisitorProvider) Visitors(
 	configs []*v1.HierarchyConfig,
-	vetEnabled bool) []ast.Visitor {
+	vetEnabled bool,
+	enableCRDs bool) []ast.Visitor {
 
 	specs := toInheritanceSpecs(configs)
 	v := []ast.Visitor{
@@ -36,7 +39,7 @@ func (n NomosVisitorProvider) Visitors(
 		hierarchyconfig.NewHierarchyConfigKindValidator(),
 		hierarchyconfig.NewKnownResourceValidator(),
 		hierarchyconfig.NewInheritanceValidator(),
-		visitors.NewSupportedClusterResourcesValidator(),
+		visitors.NewSupportedClusterResourcesValidator(enableCRDs),
 		syntax.NewClusterRegistryKindValidator(),
 		syntax.NewFlatNodeValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Namespace()),

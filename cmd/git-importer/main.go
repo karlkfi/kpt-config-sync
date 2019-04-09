@@ -39,6 +39,8 @@ var (
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directory has changed")
 	resyncPeriod      = flag.Duration("resync-period", time.Minute, "The resync period for the importer system")
+	// TODO(129774660): Clean up after launching CRD syncing.
+	enableCRDs = flag.Bool("enable_crds", false, "When true, enable syncing CRDs")
 )
 
 func main() {
@@ -60,7 +62,7 @@ func main() {
 
 	parser, err := filesystem.NewParser(
 		&genericclioptions.ConfigFlags{},
-		filesystem.ParserOpt{Validate: true, Extension: &filesystem.NomosVisitorProvider{}})
+		filesystem.ParserOpt{Validate: true, Extension: &filesystem.NomosVisitorProvider{}, EnableCRDs: *enableCRDs})
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %+v", err)
 	}

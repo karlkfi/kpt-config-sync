@@ -23,7 +23,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/backend"
@@ -31,10 +31,12 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -71,7 +73,8 @@ type ParserOpt struct {
 	Validate bool
 	// Extension is the ParserConfig object that the parser will consume for configuring various
 	// aspects of the execution (see ParserConfig).
-	Extension ParserConfig
+	Extension  ParserConfig
+	EnableCRDs bool
 }
 
 // NewParser creates a new Parser.
@@ -125,7 +128,7 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*na
 	astRoot.Data = astRoot.Data.Add(RootPath{}, rootPath)
 
 	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources(rootPath))
-	p.errors = status.Append(p.errors, addScope(astRoot, p.discoveryClient))
+	p.errors = status.Append(p.errors, p.addScope(astRoot, p.discoveryClient, rootPath))
 	if p.errors != nil {
 		return nil, p.errors
 	}
@@ -136,9 +139,9 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*na
 		tree.NewClusterRegistryBuilderVisitor(p.readClusterRegistryResources(rootPath)),
 		tree.NewBuilderVisitor(p.readNamespaceResources(rootPath)),
 	}
-	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet)...)
+	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet, p.opts.EnableCRDs)...)
 
-	outputVisitor := backend.NewOutputVisitor()
+	outputVisitor := backend.NewOutputVisitor(p.opts.EnableCRDs)
 	visitors = append(visitors,
 		transform.NewSyncGenerator(),
 		outputVisitor)
@@ -235,7 +238,7 @@ func (p *Parser) readResources(dir cmpath.Relative) []ast.FileObject {
 	return fileObjects
 }
 
-func addScope(root *ast.Root, client discovery.ServerResourcesInterface) status.Error {
+func (p *Parser) addScope(root *ast.Root, client discovery.ServerResourcesInterface, rootPath cmpath.Root) status.Error {
 	resources, discoveryErr := client.ServerResources()
 	if discoveryErr != nil {
 		return status.APIServerWrapf(discoveryErr, "failed to get server resources")
@@ -245,6 +248,15 @@ func addScope(root *ast.Root, client discovery.ServerResourcesInterface) status.
 	apiInfo, err := utildiscovery.NewAPIInfo(resources)
 	if err != nil {
 		return status.APIServerWrapf(err, "discovery failed for server resources")
+	}
+	// TODO(129150859): Move this to a visitor.
+	if p.opts.EnableCRDs {
+		for _, cr := range p.readClusterResources(rootPath) {
+			if cr.GroupVersionKind() != kinds.CustomResourceDefinition() {
+				continue
+			}
+			apiInfo.AddCustomResources(cr.Object.(*v1beta1.CustomResourceDefinition))
+		}
 	}
 	utildiscovery.AddAPIInfo(root, apiInfo)
 	return nil

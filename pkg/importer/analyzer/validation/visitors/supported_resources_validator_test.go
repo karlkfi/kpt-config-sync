@@ -3,6 +3,8 @@ package visitors
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+
 	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
@@ -10,8 +12,12 @@ import (
 )
 
 func TestSupportedClusterResourcesValidator(t *testing.T) {
+	// TODO: enable CRDs
+	newSupportedClusterResourcesValidator := func() *visitor.ValidatorVisitor {
+		return NewSupportedClusterResourcesValidator(false)
+	}
 	test := visitortesting.ObjectValidatorTest{
-		Validator: NewSupportedClusterResourcesValidator,
+		Validator: newSupportedClusterResourcesValidator,
 		ErrorCode: vet.UnsupportedObjectErrorCode,
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{
