@@ -24,10 +24,9 @@ var _ status.ResourceError = &IllegalNamespaceAnnotationError{}
 // Error implements error.
 func (e IllegalNamespaceAnnotationError) Error() string {
 	return status.Format(e,
-		"A %[3]s MUST NOT use the annotation %[2]s. "+
-			"Remove metadata.annotations.%[2]s from:\n\n"+
-			"%[1]s",
-		id.PrintResource(e.Resource), v1.NamespaceSelectorAnnotationKey, node.Namespace)
+		"A %s MUST NOT use the annotation %s. "+
+			"Remove metadata.annotations.%[2]s from:",
+		node.Namespace, v1.NamespaceSelectorAnnotationKey)
 }
 
 // Code implements Error

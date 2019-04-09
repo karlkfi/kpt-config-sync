@@ -25,9 +25,8 @@ var _ status.ResourceError = &IllegalKindInClusterError{}
 // Error implements error
 func (e IllegalKindInClusterError) Error() string {
 	return status.Format(e,
-		"Namespace-scoped configs of the below Kind must not be declared in `%[2]s`/:\n\n"+
-			"%[1]s",
-		id.PrintResource(e), repo.ClusterDir)
+		"Namespace-scoped configs of the below Kind must not be declared in `%s`/:",
+		repo.ClusterDir)
 }
 
 // Code implements Error

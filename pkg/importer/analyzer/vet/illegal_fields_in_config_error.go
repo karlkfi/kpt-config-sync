@@ -26,10 +26,9 @@ var _ status.ResourceError = &IllegalFieldsInConfigError{}
 // Error implements error
 func (e IllegalFieldsInConfigError) Error() string {
 	return status.Format(e,
-		"Configs with %[2]q specified are not allowed. "+
-			"To fix, either remove the config or remove the %[2]q field in the config:\n\n"+
-			"%[1]s",
-		id.PrintResource(e), e.Field)
+		"Configs with %[1]q specified are not allowed. "+
+			"To fix, either remove the config or remove the %[1]q field in the config:",
+		e.Field)
 }
 
 // Code implements Error

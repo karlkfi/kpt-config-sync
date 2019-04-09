@@ -26,8 +26,8 @@ var _ status.ResourceError = IllegalManagementAnnotationError{}
 
 // Error implements error.
 func (e IllegalManagementAnnotationError) Error() string {
-	return status.Format(e, "Config has invalid management annotation %s=%s. Must be %s or unset.\n\n%s",
-		v1.ResourceManagementKey, e.Value, v1.ResourceManagementDisabled, id.PrintResource(e.Resource))
+	return status.Format(e, "Config has invalid management annotation %s=%s. Must be %s or unset.",
+		v1.ResourceManagementKey, e.Value, v1.ResourceManagementDisabled)
 }
 
 // Code implements Error.

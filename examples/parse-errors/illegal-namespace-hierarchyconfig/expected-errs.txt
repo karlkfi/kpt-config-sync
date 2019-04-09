@@ -1,11 +1,13 @@
 Found issues: 1 error(s)
 
 
-[1] KNV1041: This Resource Kind MUST NOT be declared in a HierarchyConfig:
+[1] KNV1041: The "Namespace" APIResource MUST NOT be declared in a HierarchyConfig:
 
 source: system/config.yaml
-group:
-kind: Namespace
+metadata.name: namespace
+group: configmanagement.gke.io
+version: v1
+kind: HierarchyConfig
 
 For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1041
 

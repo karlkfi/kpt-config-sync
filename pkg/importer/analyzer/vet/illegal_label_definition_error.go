@@ -38,10 +38,9 @@ func (e IllegalLabelDefinitionError) Error() string {
 	}
 	l := strings.Join(labels2, ", ")
 	return status.Format(e,
-		"Resources MUST NOT declare labels starting with %[3]q. "+
-			"Below Resource declares these offending labels: %[1]s\n\n"+
-			"%[2]s",
-		l, id.PrintResource(e), v1.ConfigManagementPrefix)
+		"Resources MUST NOT declare labels starting with %q. "+
+			"Below Resource declares these offending labels: %s",
+		v1.ConfigManagementPrefix, l)
 }
 
 // Code implements Error

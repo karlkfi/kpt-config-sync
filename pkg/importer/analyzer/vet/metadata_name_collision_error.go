@@ -1,7 +1,6 @@
 package vet
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
@@ -34,16 +33,9 @@ var _ status.ResourceError = &MetadataNameCollisionError{}
 
 // Error implements error
 func (e MetadataNameCollisionError) Error() string {
-	var strs []string
-	for _, duplicate := range e.Duplicates {
-		strs = append(strs, id.PrintResource(duplicate))
-	}
-	sort.Strings(strs)
-
 	return status.Format(e,
-		"Configs of the same Kind MUST have unique names in the same %[1]s and their parent %[3]ss:\n\n"+
-			"%[2]s",
-		node.Namespace, strings.Join(strs, "\n\n"), strings.ToLower(string(node.AbstractNamespace)))
+		"Configs of the same Kind MUST have unique names in the same %[1]s and their parent %[2]ss:",
+		node.Namespace, strings.ToLower(string(node.AbstractNamespace)))
 }
 
 // Code implements Error

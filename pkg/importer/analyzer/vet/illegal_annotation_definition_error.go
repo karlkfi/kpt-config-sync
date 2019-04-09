@@ -38,10 +38,9 @@ func (e IllegalAnnotationDefinitionError) Error() string {
 	}
 	a := strings.Join(annotations2, ", ")
 	return status.Format(e,
-		"Configs MUST NOT declare unsupported annotations starting with %[3]q. "+
-			"The config has invalid annotations: %[1]s\n\n"+
-			"%[2]s",
-		a, id.PrintResource(e), v1.ConfigManagementPrefix)
+		"Configs MUST NOT declare unsupported annotations starting with %q. "+
+			"The config has invalid annotations: %s",
+		v1.ConfigManagementPrefix, a)
 }
 
 // Code implements Error

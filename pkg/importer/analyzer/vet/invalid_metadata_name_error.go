@@ -27,9 +27,7 @@ var _ status.ResourceError = &InvalidMetadataNameError{}
 func (e InvalidMetadataNameError) Error() string {
 	return status.Format(e,
 		"Configs MUST define a `metadata.name` that is shorter than 254 characters, consists of lower case alphanumeric "+
-			"characters, '-' or '.', and must start and end with an alphanumeric character. Rename or remove the config:\n\n"+
-			"%[1]s",
-		id.PrintResource(e))
+			"characters, '-' or '.', and must start and end with an alphanumeric character. Rename or remove the config:")
 }
 
 // Code implements Error

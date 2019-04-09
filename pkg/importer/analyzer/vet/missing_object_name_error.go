@@ -24,9 +24,7 @@ var _ status.ResourceError = &MissingObjectNameError{}
 // Error implements error
 func (e MissingObjectNameError) Error() string {
 	return status.Format(e,
-		"Configs must declare `metadata.name`:\n\n"+
-			"%[1]s",
-		id.PrintResource(e))
+		"Configs must declare `metadata.name`:")
 }
 
 // Code implements Error

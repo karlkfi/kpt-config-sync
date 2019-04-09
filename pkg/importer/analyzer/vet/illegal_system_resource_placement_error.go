@@ -29,9 +29,8 @@ var _ status.ResourceError = &IllegalSystemResourcePlacementError{}
 // Error implements error
 func (e IllegalSystemResourcePlacementError) Error() string {
 	return status.Format(e,
-		"A config of the below kind MUST NOT be declared outside %[1]s/:\n"+
-			"%[2]s",
-		repo.SystemDir, id.PrintResource(e))
+		"A config of the below kind MUST NOT be declared outside %[1]s/:",
+		repo.SystemDir)
 }
 
 // Code implements Error

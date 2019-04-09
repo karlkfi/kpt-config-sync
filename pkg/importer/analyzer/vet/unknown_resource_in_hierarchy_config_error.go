@@ -39,11 +39,11 @@ var _ status.ResourceError = &UnknownResourceInHierarchyConfigError{}
 
 // Error implements error
 func (e UnknownResourceInHierarchyConfigError) Error() string {
+	gk := e.GroupKind()
 	return status.Format(e,
-		"This HierarchyConfig defines a Resource Kind that does not exist on cluster. "+
-			"Ensure the Group and Kind are spelled correctly and any required CRD exists on the cluster.\n\n"+
-			"%[1]s",
-		id.PrintHierarchyConfig(e))
+		"This HierarchyConfig defines the APIResource %q which does not exist on cluster. "+
+			"Ensure the Group and Kind are spelled correctly and any required CRD exists on the cluster.",
+		gk.String())
 }
 
 // Code implements Error

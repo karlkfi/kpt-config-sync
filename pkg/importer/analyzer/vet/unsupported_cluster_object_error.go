@@ -25,9 +25,8 @@ var _ status.ResourceError = &UnsupportedObjectError{}
 // Error implements error.
 func (e UnsupportedObjectError) Error() string {
 	return status.Format(e,
-		"%[2]s cannot configure this resource. To fix, remove this resource from the repo.\n\n"+
-			"%[1]s",
-		id.PrintResource(e), configmanagement.ProductName)
+		"%s cannot configure this resource. To fix, remove this resource from the repo.",
+		configmanagement.ProductName)
 }
 
 // Code implements Error

@@ -1,8 +1,6 @@
 package id
 
 import (
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -13,11 +11,4 @@ type HierarchyConfig interface {
 	Resource
 	// GroupKind returns the K8S Group/Kind the HierarchyConfig defines.
 	GroupKind() schema.GroupKind
-}
-
-// PrintHierarchyConfig returns a human-readable output for the HierarchyConfig.
-func PrintHierarchyConfig(c HierarchyConfig) string {
-	return fmt.Sprintf("source: %[1]s\n"+
-		"%[2]s",
-		c.SlashPath(), printGroupKind(c.GroupKind()))
 }

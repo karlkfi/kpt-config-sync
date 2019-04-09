@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/pkg/errors"
+	"k8s.io/kubernetes/pkg/util/slice"
 )
 
 // ResourceErrorCode is the error code for a generic ResourceError.
@@ -27,7 +28,9 @@ func formatResources(err ResourceError) string {
 	for i, res := range err.Resources() {
 		resStrs[i] = id.PrintResource(res)
 	}
-	return strings.Join(resStrs, "\n")
+	// Sort to ensure deterministic resource printing order.
+	slice.SortStrings(resStrs)
+	return strings.Join(resStrs, "\n\n")
 }
 
 // resourceError almost always results from an API server call involving one or more resources.

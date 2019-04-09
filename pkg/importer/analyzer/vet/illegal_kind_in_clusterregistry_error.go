@@ -25,9 +25,8 @@ var _ status.ResourceError = &IllegalKindInClusterregistryError{}
 // Error implements error
 func (e IllegalKindInClusterregistryError) Error() string {
 	return status.Format(e,
-		"Configs of the below Kind may not be declared in `%[2]s`/:\n\n"+
-			"%[1]s",
-		id.PrintResource(e), repo.ClusterRegistryDir)
+		"Configs of the below Kind may not be declared in `%s`/:",
+		repo.ClusterRegistryDir)
 }
 
 // Code implements Error

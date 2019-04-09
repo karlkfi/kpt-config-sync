@@ -27,10 +27,10 @@ var _ status.ResourceError = &UnsupportedResourceInHierarchyConfigError{}
 
 // Error implements error
 func (e UnsupportedResourceInHierarchyConfigError) Error() string {
+	gk := e.GroupKind()
 	return status.Format(e,
-		"This Resource Kind MUST NOT be declared in a HierarchyConfig:\n\n"+
-			"%[1]s",
-		id.PrintHierarchyConfig(e))
+		"The %q APIResource MUST NOT be declared in a HierarchyConfig:",
+		gk.String())
 }
 
 // Code implements Error

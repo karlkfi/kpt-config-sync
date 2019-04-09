@@ -38,10 +38,10 @@ func (e IllegalHierarchyModeError) Error() string {
 	for a := range e.Allowed {
 		allowedStr = append(allowedStr, string(a))
 	}
+	gk := e.GroupKind()
 	return status.Format(e,
-		"HierarchyMode %[1]q is not a valid value for this Resource. Allowed values are [%[2]s].\n\n"+
-			"%[3]s",
-		e.HierarchyMode, strings.Join(allowedStr, ","), id.PrintHierarchyConfig(e))
+		"HierarchyMode %q is not a valid value for the APIResource %q. Allowed values are [%s].",
+		e.HierarchyMode, gk.String(), strings.Join(allowedStr, ","))
 }
 
 // Code implements Error

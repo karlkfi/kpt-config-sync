@@ -25,8 +25,7 @@ var _ status.ResourceError = &UnknownObjectError{}
 func (e UnknownObjectError) Error() string {
 	return status.Format(e,
 		"No CustomResourceDefinition is defined for the resource in the cluster. "+
-			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.\n\n%s",
-		id.PrintResource(e))
+			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.")
 }
 
 // Code implements Error

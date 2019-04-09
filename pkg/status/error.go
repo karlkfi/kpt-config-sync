@@ -37,7 +37,8 @@ func Format(err Error, format string, a ...interface{}) string {
 
 	switch e := err.(type) {
 	case ResourceError:
-		// TODO: auto format resources
+		sb.WriteString("\n\n")
+		sb.WriteString(formatResources(e))
 	case PathError:
 		sb.WriteString("\n\n")
 		sb.WriteString(formatPaths(e))

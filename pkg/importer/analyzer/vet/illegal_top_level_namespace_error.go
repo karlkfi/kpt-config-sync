@@ -27,9 +27,8 @@ var _ status.ResourceError = &IllegalTopLevelNamespaceError{}
 // Error implements error
 func (e IllegalTopLevelNamespaceError) Error() string {
 	return status.Format(e,
-		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:\n\n"+
-			"%[3]s",
-		repo.NamespacesDir, node.Namespace, id.PrintResource(e))
+		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:",
+		repo.NamespacesDir, node.Namespace)
 }
 
 // Code implements Error

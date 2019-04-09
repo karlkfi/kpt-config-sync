@@ -28,10 +28,9 @@ var _ status.ResourceError = &IllegalAbstractNamespaceObjectKindError{}
 // Error implements error.
 func (e IllegalAbstractNamespaceObjectKindError) Error() string {
 	return status.Format(e,
-		"Config `%[4]s` illegally declared in an %[1]s directory. "+
-			"Move this config to a %[2]s directory:\n\n"+
-			"%[3]s",
-		strings.ToLower(string(node.AbstractNamespace)), node.Namespace, id.PrintResource(e), e.Name())
+		"Config `%[3]s` illegally declared in an %[1]s directory. "+
+			"Move this config to a %[2]s directory:",
+		strings.ToLower(string(node.AbstractNamespace)), node.Namespace, e.Name())
 }
 
 // Code implements Error

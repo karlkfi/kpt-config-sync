@@ -30,9 +30,8 @@ var _ status.ResourceError = &UnsupportedRepoSpecVersion{}
 // Error implements error
 func (e UnsupportedRepoSpecVersion) Error() string {
 	return status.Format(e,
-		"Unsupported Repo spec.version: %[2]q. Must use version \"0.1.0\"\n\n"+
-			"%[1]s",
-		id.PrintResource(e), e.Version)
+		"Unsupported Repo spec.version: %q. Must use version \"0.1.0\"",
+		e.Version)
 }
 
 // Code implements Error

@@ -1,13 +1,9 @@
 package vet
 
 import (
-	"sort"
-	"strings"
-
-	"github.com/google/nomos/pkg/kinds"
-
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -40,18 +36,14 @@ var _ status.ResourceError = &MultipleSingletonsError{}
 
 // Error implements error
 func (e MultipleSingletonsError) Error() string {
-	var strs []string
 	var gvk schema.GroupVersionKind
-	for _, duplicate := range e.Duplicates {
-		strs = append(strs, id.PrintResource(duplicate))
-		gvk = duplicate.GroupVersionKind()
+	if len(e.Duplicates) > 0 {
+		gvk = e.Duplicates[0].GroupVersionKind()
 	}
-	sort.Strings(strs)
 
 	return status.Format(e,
-		"A directory may declare at most one %[1]q Resource:\n\n"+
-			"%[2]s",
-		kinds.ResourceString(gvk), strings.Join(strs, "\n\n"))
+		"A directory may declare at most one %[1]q Resource:",
+		kinds.ResourceString(gvk))
 }
 
 // Code implements Error
