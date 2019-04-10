@@ -42,25 +42,39 @@ func AddRepoStatus(ctx context.Context, mgr manager.Manager) error {
 		return errors.Wrap(err, "could not create RepoStatus controller")
 	}
 
-	muxObjects := &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(constantMapper),
+	configHandler := &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: handler.ToRequestsFunc(configMapper),
 	}
-	if err = rsc.Watch(&source.Kind{Type: &v1.NamespaceConfig{}}, muxObjects); err != nil {
+	if err = rsc.Watch(&source.Kind{Type: &v1.NamespaceConfig{}}, configHandler); err != nil {
 		return errors.Wrapf(err, "could not watch NamespaceConfigs in the %q controller", repoStatusControllerName)
 	}
-	if err = rsc.Watch(&source.Kind{Type: &v1.ClusterConfig{}}, muxObjects); err != nil {
+	if err = rsc.Watch(&source.Kind{Type: &v1.ClusterConfig{}}, configHandler); err != nil {
 		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", repoStatusControllerName)
 	}
-	if err = rsc.Watch(&source.Kind{Type: &v1.Repo{}}, muxObjects); err != nil {
+
+	repoHandler := &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: handler.ToRequestsFunc(repoMapper),
+	}
+	if err = rsc.Watch(&source.Kind{Type: &v1.Repo{}}, repoHandler); err != nil {
 		return errors.Wrapf(err, "could not watch Repos in the %q controller", repoStatusControllerName)
 	}
 
 	return nil
 }
 
-// Maps all objects into a single request that the RepoStatus controller just treats as an
+// Maps all configs into a single request that the RepoStatus controller just treats as an
 // "invalidate" signal for the entire RepoStatus.
-func constantMapper(_ handler.MapObject) []reconcile.Request {
+func configMapper(_ handler.MapObject) []reconcile.Request {
+	return []reconcile.Request{{
+		NamespacedName: types.NamespacedName{
+			Name: "invalidate-configs",
+		},
+	}}
+}
+
+// Maps the repo into a separate request to avoid race conditions between the importer and syncer
+// when they are both updating configs and RepoStatus at the same time.
+func repoMapper(_ handler.MapObject) []reconcile.Request {
 	return []reconcile.Request{{
 		NamespacedName: types.NamespacedName{
 			Name: "invalidate-repo-status",

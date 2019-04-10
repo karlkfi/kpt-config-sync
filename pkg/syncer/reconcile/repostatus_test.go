@@ -82,7 +82,8 @@ func TestSyncStateBuilding(t *testing.T) {
 				},
 			},
 			wantState: &syncState{
-				commits: map[string][]string{
+				reconciledCommits: map[string]bool{},
+				unreconciledCommits: map[string][]string{
 					commit2: {clusterPrefix(v1.ClusterConfigName), namespacePrefix("shipping-dev")},
 					commit3: {namespacePrefix("audit")},
 				},
@@ -107,7 +108,8 @@ func TestSyncStateBuilding(t *testing.T) {
 				},
 			},
 			wantState: &syncState{
-				commits: map[string][]string{
+				reconciledCommits: map[string]bool{},
+				unreconciledCommits: map[string][]string{
 					commit1: {clusterPrefix(v1.ClusterConfigName)},
 					commit2: {namespacePrefix("shipping-dev")},
 					commit3: {namespacePrefix("audit")},
@@ -133,7 +135,11 @@ func TestSyncStateBuilding(t *testing.T) {
 				},
 			},
 			wantState: &syncState{
-				commits: map[string][]string{
+				reconciledCommits: map[string]bool{
+					commit1: true,
+					commit2: true,
+				},
+				unreconciledCommits: map[string][]string{
 					commit3: {namespacePrefix("audit")},
 				},
 				configs: map[string]configState{
@@ -178,7 +184,7 @@ func TestSyncStateMerging(t *testing.T) {
 		{
 			name: "merge state into RepoStatus",
 			state: &syncState{
-				commits: map[string][]string{
+				unreconciledCommits: map[string][]string{
 					commit1: {namespacePrefix("shipping-dev")},
 					commit2: {namespacePrefix("audit")},
 				},
@@ -224,7 +230,7 @@ func TestSyncStateMerging(t *testing.T) {
 		{
 			name: "merge state and ignore out-of-date version token",
 			state: &syncState{
-				commits: map[string][]string{
+				unreconciledCommits: map[string][]string{
 					commit1: {namespacePrefix("shipping-dev")},
 				},
 				configs: map[string]configState{

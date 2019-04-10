@@ -48,8 +48,11 @@ type RepoStatus struct {
 
 // syncState represents the current status of the syncer and all commits that it is reconciling.
 type syncState struct {
-	// commits is a map of commit token to list of configs currently being reconciled for that commit
-	commits map[string][]string
+	// reconciledCommits is a map of commit tokens that have configs that are already reconciled
+	reconciledCommits map[string]bool
+	// unreconciledCommits is a map of commit token to list of configs currently being reconciled for
+	// that commit
+	unreconciledCommits map[string][]string
 	// configs is a map of config name to the state of the config being reconciled
 	configs map[string]configState
 }
@@ -78,48 +81,40 @@ func (r *RepoStatus) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
 	timer := prometheus.NewTimer(metrics.RepoReconcileDuration.WithLabelValues())
 	defer timer.ObserveDuration()
 
-	result := reconcile.Result{}
-
-	if err := r.reconcile(); err != nil {
-		metrics.RepoReconcileErrTotal.Inc()
+	result, err := r.reconcile()
+	if err != nil {
 		return result, err
 	}
-
+	// Return explicit nil for error just to avoid golang type weirdness.
 	return result, nil
 }
 
-func (r *RepoStatus) reconcile() error {
-	repo, sErr := r.rClient.GetOrCreateRepo(r.ctx)
+func (r *RepoStatus) reconcile() (reconcile.Result, error) {
+	repoObj, sErr := r.rClient.GetOrCreateRepo(r.ctx)
 	if sErr != nil {
 		glog.Errorf("Failed to fetch Repo: %v", sErr)
-		return sErr
+		return reconcile.Result{Requeue: true}, sErr
 	}
 
-	r.checkLatestToken(repo.Status.Import.Token)
-
-	state, err := r.buildState(r.ctx, repo.Status.Import.Token)
+	state, err := r.buildState(r.ctx, repoObj.Status.Import.Token)
 	if err != nil {
 		glog.Errorf("Failed to build sync state: %v", err)
-		return err
+		return reconcile.Result{Requeue: true}, sErr
 	}
 
-	state.merge(&repo.Status, r.latestToken)
+	state.merge(&repoObj.Status, r.latestToken)
 
-	if _, err := r.rClient.UpdateSyncStatus(r.ctx, repo); err != nil {
+	updatedRepo, err := r.rClient.UpdateSyncStatus(r.ctx, repoObj)
+	if err != nil {
 		glog.Errorf("Failed to update RepoSyncStatus: %v", err)
-		return err
+		return reconcile.Result{Requeue: true}, sErr
 	}
-	return nil
-}
 
-// checkLatestToken handles a race condition where ImportToken gets updated after we have already
-// calculated latestToken and RepoSyncStatus gets written based upon an outdated ImportToken. In
-// that case, the reconciler will be triggered again and the updated ImportToken will be present in
-// the "in progress tokens" and we can update latestToken based upon that.
-func (r *RepoStatus) checkLatestToken(importToken string) {
-	if r.latestToken != importToken && r.tokens[importToken] {
-		r.latestToken = importToken
-	}
+	// If the ImportToken is different in the updated repo, it means that the importer made a change
+	// in the middle of this reconcile. In that case we tell the controller to requeue the request so
+	// that we can recalculate sync status with up-to-date information.
+	requeue := updatedRepo.Status.Import.Token != repoObj.Status.Import.Token
+	return reconcile.Result{Requeue: requeue}, sErr
 }
 
 // buildState returns a freshly initialized syncState based upon the current configs on the cluster.
@@ -139,8 +134,9 @@ func (r *RepoStatus) buildState(ctx context.Context, importToken string) (*syncS
 // processConfigs is broken out to make unit testing easier.
 func (r *RepoStatus) processConfigs(ccList *v1.ClusterConfigList, ncList *v1.NamespaceConfigList, importToken string) *syncState {
 	state := &syncState{
-		commits: make(map[string][]string),
-		configs: make(map[string]configState),
+		reconciledCommits:   make(map[string]bool),
+		unreconciledCommits: make(map[string][]string),
+		configs:             make(map[string]configState),
 	}
 
 	for _, cc := range ccList.Items {
@@ -150,8 +146,14 @@ func (r *RepoStatus) processConfigs(ccList *v1.ClusterConfigList, ncList *v1.Nam
 		state.addConfigToCommit(namespacePrefix(nc.Name), nc.Spec.Token, nc.Status.Token, nc.Status.SyncErrors)
 	}
 
+	if state.reconciledCommits[importToken] {
+		r.latestToken = importToken
+	} else if _, ok := state.unreconciledCommits[importToken]; ok {
+		r.latestToken = importToken
+	}
+
 	newTokens := make(map[string]bool)
-	for token := range state.commits {
+	for token := range state.unreconciledCommits {
 		newTokens[token] = true
 		// If we haven't seen a token before, our best guess is that it's the latest token. We compare
 		// against the importToken because that is guaranteed to be the latest (but we don't know if the
@@ -173,12 +175,13 @@ func (s *syncState) addConfigToCommit(name, importToken, syncToken string, errs 
 		commitHash = syncToken
 	} else if importToken == syncToken {
 		// If the tokens match and there are no errors, then the config is already done being processed.
+		s.reconciledCommits[syncToken] = true
 		return
 	} else {
 		// If there are no errors and the tokens do not match, then the importToken indicates the unreconciled commit
 		commitHash = importToken
 	}
-	s.commits[commitHash] = append(s.commits[commitHash], name)
+	s.unreconciledCommits[commitHash] = append(s.unreconciledCommits[commitHash], name)
 	s.configs[name] = configState{commit: commitHash, errors: errs}
 }
 
@@ -189,7 +192,7 @@ func (s syncState) merge(repoStatus *v1.RepoStatus, latestToken string) {
 	}
 
 	var inProgress []v1.RepoSyncChangeStatus
-	for token, configNames := range s.commits {
+	for token, configNames := range s.unreconciledCommits {
 		changeStatus := v1.RepoSyncChangeStatus{Token: token}
 		for _, name := range configNames {
 			config := s.configs[name]
