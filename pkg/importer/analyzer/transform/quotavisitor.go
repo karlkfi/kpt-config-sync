@@ -86,7 +86,7 @@ func NewQuotaVisitor() *QuotaVisitor {
 }
 
 // Error implements Visitor
-func (v *QuotaVisitor) Error() *status.MultiError {
+func (v *QuotaVisitor) Error() status.MultiError {
 	return nil
 }
 

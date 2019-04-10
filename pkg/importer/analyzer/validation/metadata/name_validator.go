@@ -15,7 +15,7 @@ import (
 // NewNameValidator validates the value of metadata.name
 func NewNameValidator() *visitor.ValidatorVisitor {
 	return visitor.NewAllObjectValidator(
-		func(o ast.FileObject) *status.MultiError {
+		func(o ast.FileObject) status.MultiError {
 			gvk := o.GroupVersionKind()
 
 			if o.Name() == "" {

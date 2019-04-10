@@ -5,11 +5,6 @@ import (
 	"os"
 )
 
-// ErrorAdder consumes errors.
-type ErrorAdder interface {
-	Add(err error)
-}
-
 // NewStandardErrorOutput initializes an ErrorOutput with os.Stderr.
 func NewStandardErrorOutput() *ErrorOutput {
 	return &ErrorOutput{out: os.Stderr}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/apiresource"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
@@ -153,10 +152,8 @@ func TestResourceLister(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			resourceLister := NewResourceLister(tc.resourcer)
 
-			eb := &status.ErrorBuilder{}
-			actual := resourceLister.List(tc.apiResource, eb)
+			actual, err := resourceLister.List(tc.apiResource)
 
-			err := eb.Build()
 			switch {
 			case tc.shouldFail && (err == nil):
 				t.Fatal("expected error")

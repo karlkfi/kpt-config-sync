@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 )
@@ -44,15 +43,14 @@ func TestPolicyManagementNotInstalled(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			eb := status.ErrorBuilder{}
-			validateInstallation(tc.resources, &eb)
+			eb := validateInstallation(tc.resources)
 
 			if tc.shouldFail {
-				if eb.Build() == nil {
+				if eb == nil {
 					t.Fatal("Should have failed.")
 				}
 			} else {
-				if eb.Build() != nil {
+				if eb != nil {
 					t.Fatal("Should not have failed.")
 				}
 			}

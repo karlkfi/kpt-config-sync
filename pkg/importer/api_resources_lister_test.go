@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/apiresource"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -118,10 +117,8 @@ func TestScanAPIResources(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			eb := &status.ErrorBuilder{}
-			actual := ListResources(tc.lister, eb)
+			actual, err := ListResources(tc.lister)
 
-			err := eb.Build()
 			switch {
 			case tc.shouldReturnError && (err == nil):
 				t.Fatal("expected error")

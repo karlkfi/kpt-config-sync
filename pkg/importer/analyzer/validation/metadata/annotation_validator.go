@@ -31,7 +31,7 @@ func hasConfigManagementPrefix(s string) bool {
 // NewAnnotationValidator validates the annotations of every object.
 func NewAnnotationValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
-		func(o ast.FileObject) *status.MultiError {
+		func(o ast.FileObject) status.MultiError {
 			var errors []string
 			for a := range o.MetaObject().GetAnnotations() {
 				if !isInputAnnotation(a) && hasConfigManagementPrefix(a) {
@@ -48,7 +48,7 @@ func NewAnnotationValidator() ast.Visitor {
 // NewManagedAnnotationValidator validates the value of the management annotation label.
 func NewManagedAnnotationValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
-		func(o ast.FileObject) *status.MultiError {
+		func(o ast.FileObject) status.MultiError {
 			value, found := o.MetaObject().GetAnnotations()[v1.ResourceManagementKey]
 			if found && (value != v1.ResourceManagementDisabled) {
 				return status.From(vet.IllegalManagementAnnotationError{

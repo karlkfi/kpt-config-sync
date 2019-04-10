@@ -48,7 +48,7 @@ type InheritanceVisitor struct {
 	// treeContext is a stack that tracks ancestry and inherited objects during the tree traversal.
 	treeContext []nodeContext
 	// cumulative errors encountered by the visitor
-	errs status.ErrorBuilder
+	errs status.MultiError
 }
 
 var _ ast.Visitor = &InheritanceVisitor{}
@@ -64,7 +64,7 @@ func NewInheritanceVisitor(specs map[schema.GroupKind]*InheritanceSpec) *Inherit
 }
 
 // Error implements Visitor
-func (v *InheritanceVisitor) Error() *status.MultiError {
+func (v *InheritanceVisitor) Error() status.MultiError {
 	return nil
 }
 
@@ -80,7 +80,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		for _, ctx := range v.treeContext {
 			for _, inherited := range ctx.inherited {
 				isApplicable, err := sel.IsPolicyApplicableToNamespace(n.Labels, inherited.MetaObject())
-				v.errs.Add(err)
+				v.errs = status.Append(v.errs, err)
 				if err != nil {
 					continue
 				}

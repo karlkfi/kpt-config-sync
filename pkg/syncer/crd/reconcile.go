@@ -78,8 +78,8 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
-	if errs := r.reconcile(ctx); errs.HasErrors() {
-		err := errs.Build()
+	if errs := r.reconcile(ctx); errs != nil {
+		err := errs
 		glog.Errorf("Could not reconcile CRD ClusterConfig: %v", err)
 		return reconcile.Result{}, err
 	}
@@ -87,15 +87,15 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) reconcile(ctx context.Context) status.ErrorBuilder {
-	var errBuilder status.ErrorBuilder
+func (r *Reconciler) reconcile(ctx context.Context) status.MultiError {
+	var errBuilder status.MultiError
 	clusterConfig := &v1.ClusterConfig{}
 	if err := r.cache.Get(ctx, types.NamespacedName{Name: v1.CRDClusterConfigName}, clusterConfig); err != nil {
 		if apierrors.IsNotFound(err) {
 			// CRDs may be changing on the cluster, but we don't have any CRD ClusterConfig to reconcile with.
-			return status.ErrorBuilder{}
+			return nil
 		}
-		errBuilder.Add(errors.Wrapf(err, "could not retrieve ClusterConfig %q", v1.CRDClusterConfigName))
+		errBuilder = status.Append(errBuilder, errors.Wrapf(err, "could not retrieve ClusterConfig %q", v1.CRDClusterConfigName))
 		return errBuilder
 	}
 	clusterConfig.SetGroupVersionKind(kinds.ClusterConfig())
@@ -107,7 +107,7 @@ func (r *Reconciler) reconcile(ctx context.Context) status.ErrorBuilder {
 
 	grs, err := r.decoder.DecodeResources(clusterConfig.Spec.Resources...)
 	if err != nil {
-		errBuilder.Add(errors.Wrap(err, "could not decode ClusterConfig"))
+		errBuilder = status.Append(errBuilder, errors.Wrap(err, "could not decode ClusterConfig"))
 		return errBuilder
 	}
 
@@ -117,9 +117,9 @@ func (r *Reconciler) reconcile(ctx context.Context) status.ErrorBuilder {
 	var syncErrs []v1.ConfigManagementError
 	actualInstances, err := r.cache.UnstructuredList(gvk, "")
 	if err != nil {
-		errBuilder.Add(status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
+		errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
 		syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
-		errBuilder.Add(syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, syncErrs...))
+		errBuilder = status.Append(errBuilder, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, syncErrs...))
 		return errBuilder
 	}
 
@@ -128,7 +128,7 @@ func (r *Reconciler) reconcile(ctx context.Context) status.ErrorBuilder {
 	var reconcileCount int
 	for _, diff := range diffs {
 		if updated, err := syncerreconcile.HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
-			errBuilder.Add(err)
+			errBuilder = status.Append(errBuilder, err)
 			syncErrs = append(syncErrs, syncerreconcile.CmesForResourceError(err)...)
 		} else if updated {
 			reconcileCount++
@@ -145,7 +145,7 @@ func (r *Reconciler) reconcile(ctx context.Context) status.ErrorBuilder {
 	if err := syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, syncErrs...); err != nil {
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update cluster policy status: %v", err)
-		errBuilder.Add(err)
+		errBuilder = status.Append(errBuilder, err)
 	}
 
 	return errBuilder

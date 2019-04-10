@@ -68,8 +68,8 @@ var Cmd = &cobra.Command{
 		errOutput.AddAndDie(errors.Wrap(err, "failed to get discovery client"))
 
 		infoOut.Printfln("Listing available APIResources")
-		apiResources := importer.ListResources(discoveryClient, errOutput)
-		errOutput.DieIfPrintedErrors("failed to list available API objects")
+		apiResources, errs := importer.ListResources(discoveryClient)
+		errOutput.AddAndDie(errs)
 
 		dynamicClient, err := factory.DynamicClient()
 		errOutput.AddAndDie(errors.Wrap(err, "failed to get dynamic client"))
@@ -84,7 +84,8 @@ var Cmd = &cobra.Command{
 				infoOut.Printfln("  Ignoring %s", gk.String())
 				continue
 			}
-			resources := lister.List(apiResource, errOutput)
+			resources, errs := lister.List(apiResource)
+			errOutput.Add(errs)
 			objects = append(objects, resources...)
 		}
 

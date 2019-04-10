@@ -12,7 +12,7 @@ import (
 // NewSingletonResourceValidator returns a ValidatorVisitor which ensures every TreeNode has
 // at most one of the passed GroupVersionKind.
 func NewSingletonResourceValidator(gvk schema.GroupVersionKind) *visitor.ValidatorVisitor {
-	return visitor.NewAllNodesValidator(func(objects []ast.FileObject) *status.MultiError {
+	return visitor.NewAllNodesValidator(func(objects []ast.FileObject) status.MultiError {
 		var duplicates []id.Resource
 		for _, object := range objects {
 			if object.GroupVersionKind() == gvk {

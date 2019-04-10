@@ -20,7 +20,7 @@ type ClusterSelectorAdder struct {
 	clusters  []clusterregistry.Cluster
 	selectors []v1.ClusterSelector
 
-	errs status.ErrorBuilder
+	errs status.MultiError
 }
 
 var _ ast.Visitor = &ClusterSelectorAdder{}
@@ -54,14 +54,14 @@ func (v *ClusterSelectorAdder) VisitRoot(r *ast.Root) *ast.Root {
 	r.Data = r.Data.Add(selectorsKey{}, v.selectors)
 
 	cs, err := NewClusterSelectors(v.clusters, v.selectors, os.Getenv("CLUSTER_NAME"))
-	v.errs.Add(err)
+	v.errs = status.Append(v.errs, err)
 	SetClusterSelector(cs, r)
 
 	return r
 }
 
-func (v *ClusterSelectorAdder) Error() *status.MultiError {
-	return v.errs.Build()
+func (v *ClusterSelectorAdder) Error() status.MultiError {
+	return v.errs
 }
 
 func getClusters(objects []*ast.ClusterRegistryObject) []clusterregistry.Cluster {

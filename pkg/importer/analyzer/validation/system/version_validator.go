@@ -15,7 +15,7 @@ const AllowedRepoVersion = repo.CurrentVersion
 // NewRepoVersionValidator returns a Validator that ensures any Repo objects in sytem/ have the
 // correct version.
 func NewRepoVersionValidator() *visitor.ValidatorVisitor {
-	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) *status.MultiError {
+	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
 		switch repoObj := o.Object.(type) {
 		case *v1.Repo:
 			if version := repoObj.Spec.Version; version != AllowedRepoVersion {

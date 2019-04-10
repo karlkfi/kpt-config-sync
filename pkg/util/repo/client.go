@@ -57,11 +57,7 @@ func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 		return setTypeMeta(repoList.Items[0].DeepCopy()), nil
 	}
 
-	repo, cErr := c.CreateRepo(ctx)
-	if cErr != nil {
-		return nil, cErr
-	}
-	return repo, nil // return explicit nil due to golang interfaces
+	return c.CreateRepo(ctx)
 }
 
 // CreateRepo creates a new Repo resource for the cluster. Currently we don't do anything with the
@@ -168,11 +164,7 @@ func (c *genClient) getOrCreateRepo() (*v1.Repo, status.Error) {
 		return repo, nil
 	}
 
-	repo, err = c.createRepo()
-	if err != nil {
-		return nil, err
-	}
-	return repo, nil // return explicit nil due to golang interfaces
+	return c.createRepo()
 }
 
 func (c *genClient) createRepo() (*v1.Repo, status.ResourceError) {

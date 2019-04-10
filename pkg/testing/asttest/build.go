@@ -27,7 +27,7 @@ func Build(t *testing.T, opts ...ast.BuildOpt) *ast.Root {
 // recognized top-level directory.
 func Objects(objects ...ast.FileObject) ast.BuildOpt {
 	var systemObjects []ast.FileObject
-	return func(root *ast.Root) *status.MultiError {
+	return func(root *ast.Root) status.MultiError {
 		var clusterObjects []ast.FileObject
 		var clusterRegistryObjects []ast.FileObject
 		var namespaceObjects []ast.FileObject

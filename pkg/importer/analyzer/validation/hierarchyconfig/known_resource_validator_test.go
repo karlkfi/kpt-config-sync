@@ -31,7 +31,7 @@ func toAPIInfo(known ...schema.GroupVersionKind) (*discovery.APIInfo, error) {
 
 // APIInfo adds an APIInfo to the AST.
 func APIInfo(apiInfo *discovery.APIInfo) ast.BuildOpt {
-	return func(root *ast.Root) *status.MultiError {
+	return func(root *ast.Root) status.MultiError {
 		if apiInfo == nil {
 			return nil
 		}

@@ -27,7 +27,7 @@ import (
 // the tree meets various conditions before we set it on the API server.
 type Scope struct {
 	*visitor.Base
-	errs    status.ErrorBuilder
+	errs    status.MultiError
 	apiInfo *discovery.APIInfo
 }
 
@@ -45,8 +45,8 @@ func NewScope() *Scope {
 }
 
 // Error returns any errors encountered during processing
-func (p *Scope) Error() *status.MultiError {
-	return p.errs.Build()
+func (p *Scope) Error() status.MultiError {
+	return p.errs
 }
 
 // VisitRoot implement ast.Visitor.
@@ -61,9 +61,9 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 
 	switch p.apiInfo.GetScope(gvk) {
 	case discovery.NamespaceScope:
-		p.errs.Add(vet.IllegalKindInClusterError{Resource: o})
+		p.errs = status.Append(p.errs, vet.IllegalKindInClusterError{Resource: o})
 	case discovery.UnknownScope:
-		p.errs.Add(vet.UnknownObjectError{Resource: &o.FileObject})
+		p.errs = status.Append(p.errs, vet.UnknownObjectError{Resource: &o.FileObject})
 	}
 
 	return o
@@ -75,9 +75,9 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 
 	switch p.apiInfo.GetScope(gvk) {
 	case discovery.ClusterScope:
-		p.errs.Add(vet.IllegalKindInNamespacesError{Resource: o})
+		p.errs = status.Append(p.errs, vet.IllegalKindInNamespacesError{Resource: o})
 	case discovery.UnknownScope:
-		p.errs.Add(vet.UnknownObjectError{Resource: &o.FileObject})
+		p.errs = status.Append(p.errs, vet.UnknownObjectError{Resource: &o.FileObject})
 	}
 
 	return o

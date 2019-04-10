@@ -11,7 +11,7 @@ import (
 // NewDirectoryNameValidator validates that directory names are valid and not reserved.
 func NewDirectoryNameValidator() *visitor.ValidatorVisitor {
 	return visitor.NewTreeNodeValidator(
-		func(n *ast.TreeNode) *status.MultiError {
+		func(n *ast.TreeNode) status.MultiError {
 			name := n.Base()
 			if namespaceutil.IsInvalid(name) {
 				return status.From(vet.InvalidDirectoryNameError{Dir: n.Path})

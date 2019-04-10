@@ -14,7 +14,7 @@ import (
 // NewHierarchyConfigKindValidator returns a Visitor that ensures only supported Resource Kinds are declared in
 // HierarchyConfigs.
 func NewHierarchyConfigKindValidator() ast.Visitor {
-	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) *status.MultiError {
+	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
 		switch h := o.Object.(type) {
 		case *v1.HierarchyConfig:
 			for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
@@ -28,7 +28,7 @@ func NewHierarchyConfigKindValidator() ast.Visitor {
 }
 
 // ValidateKinds ensures that only supported Resource Kinds are declared in HierarchyConfigs.
-func ValidateKinds(config FileGroupKindHierarchyConfig) *status.MultiError {
+func ValidateKinds(config FileGroupKindHierarchyConfig) status.MultiError {
 	if AllowedInHierarchyConfigs(config.GroupKind()) {
 		return nil
 	}

@@ -163,7 +163,7 @@ func (vb *Base) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 }
 
 // Error implements Visitor.
-func (vb *Base) Error() *status.MultiError {
+func (vb *Base) Error() status.MultiError {
 	return nil
 }
 

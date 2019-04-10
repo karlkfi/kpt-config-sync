@@ -272,7 +272,7 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 	if node == nil {
 		return nil
 	}
-	var errBuilder status.ErrorBuilder
+	var errBuilder status.MultiError
 	reconcileCount := 0
 	grs, err := r.decoder.DecodeResources(node.Spec.Resources...)
 	if err != nil {
@@ -287,7 +287,7 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, name)
 		if err != nil {
-			errBuilder.Add(status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
+			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
 			syncErrs = append(syncErrs, NewSyncError(node, err))
 			continue
 		}
@@ -296,7 +296,7 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 		diffs := differ.Diffs(declaredInstances, actualInstances, allDeclaredVersions)
 		for _, diff := range diffs {
 			if updated, err := HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
-				errBuilder.Add(err)
+				errBuilder = status.Append(errBuilder, err)
 				syncErrs = append(syncErrs, CmesForResourceError(err)...)
 			} else if updated {
 				reconcileCount++
@@ -304,21 +304,16 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 		}
 	}
 	if err := r.setNamespaceConfigStatus(ctx, node, syncErrs); err != nil {
-		errBuilder.Add(errors.Wrapf(err, "failed to set status for %q", name))
+		errBuilder = status.Append(errBuilder, errors.Wrapf(err, "failed to set status for %q", name))
 		metrics.ErrTotal.WithLabelValues(node.GetName(), node.GroupVersionKind().Kind, "update").Inc()
 		r.recorder.Eventf(node, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update policy node status: %s", err)
 	}
-	if errBuilder.Len() == 0 && reconcileCount > 0 && len(syncErrs) == 0 {
+	if errBuilder == nil && reconcileCount > 0 && len(syncErrs) == 0 {
 		r.recorder.Eventf(node, corev1.EventTypeNormal, "ReconcileComplete",
 			"policy node %q was successfully reconciled: %d changes", name, reconcileCount)
 	}
-	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
-	bErr := errBuilder.Build()
-	if bErr == nil {
-		return nil
-	}
-	return bErr
+	return errBuilder
 }
 
 // setNamespaceConfigStatus updates the status of the given node.  If the node

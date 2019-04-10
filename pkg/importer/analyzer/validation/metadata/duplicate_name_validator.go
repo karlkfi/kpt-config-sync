@@ -25,7 +25,7 @@ func NewDuplicateNameValidator() ast.Visitor {
 	return visitor.NewValidator(&duplicateNameValidator{})
 }
 
-func checkDuplicates(objects []id.Resource) *status.MultiError {
+func checkDuplicates(objects []id.Resource) status.MultiError {
 	duplicateMap := make(map[groupKindName][]id.Resource)
 
 	for _, o := range objects {
@@ -37,17 +37,17 @@ func checkDuplicates(objects []id.Resource) *status.MultiError {
 		duplicateMap[gkn] = append(duplicateMap[gkn], o)
 	}
 
-	errs := &status.ErrorBuilder{}
+	var errs status.MultiError
 	for _, duplicates := range duplicateMap {
 		if len(duplicates) > 1 {
-			errs.Add(vet.MetadataNameCollisionError{Duplicates: duplicates})
+			errs = status.Append(errs, vet.MetadataNameCollisionError{Duplicates: duplicates})
 		}
 	}
-	return errs.Build()
+	return errs
 }
 
 // ValidateTreeNode ensures Namespace policy nodes contain no duplicates.
-func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) *status.MultiError {
+func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) status.MultiError {
 	if n.Type != node.Namespace {
 		return nil
 	}
@@ -60,7 +60,7 @@ func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) *status.Multi
 }
 
 // ValidateCluster ensures the Cluster policy node contains no duplicates.
-func (v *duplicateNameValidator) ValidateCluster(c []*ast.ClusterObject) *status.MultiError {
+func (v *duplicateNameValidator) ValidateCluster(c []*ast.ClusterObject) status.MultiError {
 	resources := make([]id.Resource, len(c))
 	for i, object := range c {
 		resources[i] = object

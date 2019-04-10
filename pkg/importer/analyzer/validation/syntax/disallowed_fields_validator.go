@@ -10,7 +10,7 @@ import (
 
 // NewDisallowedFieldsValidator validates that imported objects do not contain disallowed fields.
 func NewDisallowedFieldsValidator() *visitor.ValidatorVisitor {
-	return visitor.NewAllObjectValidator(func(o ast.FileObject) *status.MultiError {
+	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
 		m := o.MetaObject()
 		if len(m.GetOwnerReferences()) > 0 {
 			return status.From(vet.IllegalFieldsInConfigError{Resource: &o, Field: id.OwnerReference})

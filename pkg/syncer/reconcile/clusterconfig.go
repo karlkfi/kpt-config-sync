@@ -116,7 +116,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 	}
 
 	var syncErrs []v1.ConfigManagementError
-	var errBuilder status.ErrorBuilder
+	var errBuilder status.MultiError
 	reconcileCount := 0
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
@@ -126,7 +126,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, "")
 		if err != nil {
-			errBuilder.Add(status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
+			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
 			syncErrs = append(syncErrs, NewConfigManagementError(policy, err))
 			continue
 		}
@@ -135,7 +135,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 		diffs := differ.Diffs(declaredInstances, actualInstances, allDeclaredVersions)
 		for _, diff := range diffs {
 			if updated, err := HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
-				errBuilder.Add(err)
+				errBuilder = status.Append(errBuilder, err)
 				syncErrs = append(syncErrs, CmesForResourceError(err)...)
 			} else if updated {
 				reconcileCount++
@@ -143,20 +143,15 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 		}
 	}
 	if err := SetClusterConfigStatus(ctx, r.client, policy, syncErrs...); err != nil {
-		errBuilder.Add(err)
+		errBuilder = status.Append(errBuilder, err)
 		r.recorder.Eventf(policy, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update cluster policy status: %v", err)
 	}
-	if errBuilder.Len() == 0 && reconcileCount > 0 {
+	if errBuilder == nil && reconcileCount > 0 {
 		r.recorder.Eventf(policy, corev1.EventTypeNormal, "ReconcileComplete",
 			"cluster policy was successfully reconciled: %d changes", reconcileCount)
 	}
-	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
-	bErr := errBuilder.Build()
-	if bErr == nil {
-		return nil
-	}
-	return bErr
+	return errBuilder
 }
 
 // NewConfigManagementError returns a ConfigManagementError corresponding to the given ClusterConfig and error.

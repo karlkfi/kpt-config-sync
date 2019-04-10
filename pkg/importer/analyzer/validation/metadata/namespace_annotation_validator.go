@@ -12,7 +12,7 @@ import (
 // NewNamespaceAnnotationValidator returns errors if a Namespace has the NamespaceSelector annotation.
 func NewNamespaceAnnotationValidator() *visitor.ValidatorVisitor {
 	return visitor.NewAllObjectValidator(
-		func(o ast.FileObject) *status.MultiError {
+		func(o ast.FileObject) status.MultiError {
 			if o.GroupVersionKind() == kinds.Namespace() {
 				if _, found := o.MetaObject().GetAnnotations()[v1.NamespaceSelectorAnnotationKey]; found {
 					return status.From(vet.IllegalNamespaceAnnotationError{Resource: &o})

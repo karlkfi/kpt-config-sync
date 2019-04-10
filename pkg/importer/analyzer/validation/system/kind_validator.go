@@ -11,7 +11,7 @@ import (
 // NewKindValidator returns a validator that ensures only allowed resource kinds are defined in
 // system/.
 func NewKindValidator() *visitor.ValidatorVisitor {
-	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) *status.MultiError {
+	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
 		switch o.Object.(type) {
 		case *v1.Repo:
 		case *v1.HierarchyConfig:

@@ -21,13 +21,13 @@ func NewKnownResourceValidator() ast.Visitor {
 }
 
 // ValidateRoot implement ast.Visitor.
-func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) *status.MultiError {
+func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) status.MultiError {
 	k.apiInfo = discovery.GetAPIInfo(r)
 	return nil
 }
 
 // ValidateSystemObject implements Visitor.
-func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) *status.MultiError {
+func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) status.MultiError {
 	switch h := o.Object.(type) {
 	case *v1.HierarchyConfig:
 		for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {

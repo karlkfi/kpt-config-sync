@@ -72,12 +72,10 @@ func TestValidateObject(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var b status.ErrorBuilder
-			cov := NewForCluster(test.clusters, test.selectors, &b)
+			cov, rawE := NewForCluster(test.clusters, test.selectors)
 			for _, o := range test.objects {
-				cov.ValidateObject(&o, &b)
+				rawE = status.Append(rawE, cov.ValidateObject(&o))
 			}
-			rawE := b.Build()
 			var actual []status.Error
 			if rawE != nil {
 				actual = rawE.Errors()
@@ -197,10 +195,9 @@ func TestMapToClusters(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var b status.ErrorBuilder
-			cov := NewForCluster(test.clusters, test.selectors, &b)
-			if b.Build() != nil {
-				t.Fatalf("unexpected error: %v", b.Build())
+			cov, b := NewForCluster(test.clusters, test.selectors)
+			if b != nil {
+				t.Fatalf("unexpected error: %v", b)
 			}
 			actual := cov.MapToClusters(test.object)
 			if !cmp.Equal(test.expected, actual) {

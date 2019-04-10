@@ -26,7 +26,7 @@ var (
 // NewInheritanceValidator returns a visitor that validates the inheritance setting
 // of all GroupKinds defined across HierarchyConfigs.
 func NewInheritanceValidator() ast.Visitor {
-	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) *status.MultiError {
+	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
 		switch h := o.Object.(type) {
 		case *v1.HierarchyConfig:
 			for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
@@ -41,7 +41,7 @@ func NewInheritanceValidator() ast.Visitor {
 
 // ValidateInheritance returns an error if the HierarchyModeType is invalid for the GroupKind in the
 // FileGroupKindHierarchyConfig
-func ValidateInheritance(config FileGroupKindHierarchyConfig) *status.MultiError {
+func ValidateInheritance(config FileGroupKindHierarchyConfig) status.MultiError {
 	if config.GroupKind() == kinds.ResourceQuota().GroupKind() {
 		return errIfNotAllowed(config, resourceQuotaModes)
 	}
@@ -49,7 +49,7 @@ func ValidateInheritance(config FileGroupKindHierarchyConfig) *status.MultiError
 }
 
 // errIfNotAllowed returns an error if the kindHierarchyConfig has an inheritance mode which is not allowed for that Kind.
-func errIfNotAllowed(config FileGroupKindHierarchyConfig, allowed map[v1.HierarchyModeType]bool) *status.MultiError {
+func errIfNotAllowed(config FileGroupKindHierarchyConfig, allowed map[v1.HierarchyModeType]bool) status.MultiError {
 	if allowed[config.HierarchyMode] {
 		return nil
 	}

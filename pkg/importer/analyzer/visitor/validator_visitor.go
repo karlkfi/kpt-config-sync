@@ -40,7 +40,7 @@ type ValidatorVisitor struct {
 	*Base
 	prerequisites []ast.Visitor
 	validator     Validator
-	errors        status.ErrorBuilder
+	errors        status.MultiError
 }
 
 var _ ast.Visitor = &ValidatorVisitor{}
@@ -68,44 +68,44 @@ func (v *ValidatorVisitor) VisitRoot(g *ast.Root) *ast.Root {
 	for _, prerequisite := range v.prerequisites {
 		g.Accept(prerequisite)
 	}
-	v.errors.Add(v.validator.ValidateRoot(g))
-	v.errors.Add(v.validator.ValidateSystem(g.SystemObjects))
-	v.errors.Add(v.validator.ValidateCluster(g.ClusterObjects))
-	v.errors.Add(v.validator.ValidateClusterRegistry(g.ClusterRegistryObjects))
+	v.errors = status.Append(v.errors, v.validator.ValidateRoot(g))
+	v.errors = status.Append(v.errors, v.validator.ValidateSystem(g.SystemObjects))
+	v.errors = status.Append(v.errors, v.validator.ValidateCluster(g.ClusterObjects))
+	v.errors = status.Append(v.errors, v.validator.ValidateClusterRegistry(g.ClusterRegistryObjects))
 	return v.Base.VisitRoot(g)
 }
 
 // VisitSystemObject implements Visitor.
 func (v *ValidatorVisitor) VisitSystemObject(o *ast.SystemObject) *ast.SystemObject {
-	v.errors.Add(v.validator.ValidateSystemObject(o))
+	v.errors = status.Append(v.errors, v.validator.ValidateSystemObject(o))
 	return v.Base.VisitSystemObject(o)
 }
 
 // VisitClusterRegistryObject implements Visitor.
 func (v *ValidatorVisitor) VisitClusterRegistryObject(o *ast.ClusterRegistryObject) *ast.ClusterRegistryObject {
-	v.errors.Add(v.validator.ValidateClusterRegistryObject(o))
+	v.errors = status.Append(v.errors, v.validator.ValidateClusterRegistryObject(o))
 	return v.Base.VisitClusterRegistryObject(o)
 }
 
 // VisitClusterObject implements Visitor.
 func (v *ValidatorVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
-	v.errors.Add(v.validator.ValidateClusterObject(o))
+	v.errors = status.Append(v.errors, v.validator.ValidateClusterObject(o))
 	return v.Base.VisitClusterObject(o)
 }
 
 // VisitTreeNode implements Visitor.
 func (v *ValidatorVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	v.errors.Add(v.validator.ValidateTreeNode(n))
+	v.errors = status.Append(v.errors, v.validator.ValidateTreeNode(n))
 	return v.Base.VisitTreeNode(n)
 }
 
 // VisitObject implements Visitor.
 func (v *ValidatorVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
-	v.errors.Add(v.validator.ValidateObject(o))
+	v.errors = status.Append(v.errors, v.validator.ValidateObject(o))
 	return v.Base.VisitObject(o)
 }
 
 // Error implements Visitor.
-func (v *ValidatorVisitor) Error() *status.MultiError {
-	return v.errors.Build()
+func (v *ValidatorVisitor) Error() status.MultiError {
+	return v.errors
 }

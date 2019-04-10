@@ -18,21 +18,21 @@ func NewFlatNodeValidator() ast.Visitor {
 }
 
 // ValidateSystemObject implements visitor.Validator.
-func (v *flatNodeValidator) ValidateSystemObject(o *ast.SystemObject) *status.MultiError {
+func (v *flatNodeValidator) ValidateSystemObject(o *ast.SystemObject) status.MultiError {
 	return errIfNotTopLevel(o.FileObject)
 }
 
 // ValidateClusterRegistryObject implements visitor.Validator.
-func (v *flatNodeValidator) ValidateClusterRegistryObject(o *ast.ClusterRegistryObject) *status.MultiError {
+func (v *flatNodeValidator) ValidateClusterRegistryObject(o *ast.ClusterRegistryObject) status.MultiError {
 	return errIfNotTopLevel(o.FileObject)
 }
 
 // ValidateClusterObject implements visitor.Validator.
-func (v *flatNodeValidator) ValidateClusterObject(o *ast.ClusterObject) *status.MultiError {
+func (v *flatNodeValidator) ValidateClusterObject(o *ast.ClusterObject) status.MultiError {
 	return errIfNotTopLevel(o.FileObject)
 }
 
-func errIfNotTopLevel(o ast.FileObject) *status.MultiError {
+func errIfNotTopLevel(o ast.FileObject) status.MultiError {
 	parts := o.Dir().Split()
 	if !(len(parts) == 1) {
 		return status.From(vet.IllegalSubdirectoryError{BaseDir: parts[0], SubDir: o.Dir()})

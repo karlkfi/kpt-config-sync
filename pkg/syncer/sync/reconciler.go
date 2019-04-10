@@ -128,11 +128,11 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
-	var errBuilder status.ErrorBuilder
+	var errBuilder status.MultiError
 	// Finalize Syncs that have not already been finalized.
 	for _, tf := range toFinalize {
 		// Make sure to delete all Sync-managed resource before finalizing the Sync.
-		errBuilder.Add(r.finalizeSync(ctx, tf, apirs))
+		errBuilder = status.Append(errBuilder, r.finalizeSync(ctx, tf, apirs))
 	}
 
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
@@ -149,20 +149,17 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 			}
 			sync.SetGroupVersionKind(kinds.Sync())
 			_, err := r.client.UpdateStatus(ctx, sync, updateFn)
-			errBuilder.Add(status.APIServerWrapf(err, "could not update sync status"))
+			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "could not update sync status"))
 		}
 	}
 
-	if errBuilder.HasErrors() {
-		err := errBuilder.Build()
-		glog.Errorf("Could not reconcile syncs: %v", err)
-		return reconcile.Result{}, err
+	if errBuilder != nil {
+		glog.Errorf("Could not reconcile syncs: %v", errBuilder)
 	}
-	// We need to return an explicit nil here to avoid Golang's nil-type-interface insanity.
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, errBuilder
 }
 
-func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) *status.MultiError {
+func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) status.MultiError {
 	var newFinalizers []string
 	var needsFinalize bool
 	for _, f := range sync.Finalizers {
@@ -189,7 +186,7 @@ func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, apiInf
 	return status.From(status.APIServerWrapf(err, "could not finalize sync pending delete"))
 }
 
-func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) *status.MultiError {
+func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) status.MultiError {
 	// It doesn't matter which version we choose when deleting.
 	// Deletes to a resource of a particular version affect all versions with the same group and kind.
 	gvks := apiInfo.GroupVersionKinds(sync)
@@ -202,20 +199,20 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo
 		gvk = k
 		break
 	}
-	var errBuilder status.ErrorBuilder
+	var errBuilder status.MultiError
 	// Create a new dynamic client since it's possible that the manager client is reading from the
 	// cache.
 	cl, err := r.clientFactory()
 	if err != nil {
-		errBuilder.Add(status.APIServerWrapf(err, "failed to create dynamic client during gc"))
-		return errBuilder.Build()
+		errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to create dynamic client during gc"))
+		return errBuilder
 	}
 	gvk.Kind += "List"
 	ul := &unstructured.UnstructuredList{}
 	ul.SetGroupVersionKind(gvk)
 	if err := cl.List(ctx, &client.ListOptions{}, ul); err != nil {
-		errBuilder.Add(status.APIServerWrapf(err, "could not list %s resources", gvk))
-		return errBuilder.Build()
+		errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "could not list %s resources", gvk))
+		return errBuilder
 	}
 	for _, u := range ul.Items {
 		annots := u.GetAnnotations()
@@ -223,10 +220,10 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo
 			continue
 		}
 		if err := cl.Delete(ctx, &u); err != nil {
-			errBuilder.Add(status.APIServerWrapf(err, "could not delete %s resource: %v", gvk, u))
+			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "could not delete %s resource: %v", gvk, u))
 		}
 	}
-	return errBuilder.Build()
+	return errBuilder
 }
 
 // restartSubManager returns true if the reconcile request indicates that we need to restart all the controllers that the

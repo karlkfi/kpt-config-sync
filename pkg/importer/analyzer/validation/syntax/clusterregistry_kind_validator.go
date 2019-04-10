@@ -11,7 +11,7 @@ import (
 
 // NewClusterRegistryKindValidator ensures only the allowed set of types appear in clusterregistry/
 func NewClusterRegistryKindValidator() *visitor.ValidatorVisitor {
-	return visitor.NewClusterRegistryObjectValidator(func(object *ast.ClusterRegistryObject) *status.MultiError {
+	return visitor.NewClusterRegistryObjectValidator(func(object *ast.ClusterRegistryObject) status.MultiError {
 		switch object.Object.(type) {
 		case *v1.ClusterSelector:
 		case *clusterregistry.Cluster:

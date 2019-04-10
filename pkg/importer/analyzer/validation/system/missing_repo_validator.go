@@ -9,7 +9,7 @@ import (
 
 // NewMissingRepoValidator returns a validator which fails if Root.Repo is unset.
 func NewMissingRepoValidator() ast.Visitor {
-	return visitor.NewRootValidator(func(g *ast.Root) *status.MultiError {
+	return visitor.NewRootValidator(func(g *ast.Root) status.MultiError {
 		if g.Repo == nil {
 			return status.From(vet.MissingRepoError{})
 		}

@@ -91,7 +91,7 @@ func (tc *extensionTestcase) runOp(t *testing.T, d *Extension, idx int) *Extensi
 		}
 		return d
 	}
-	if nd.Len() == 0 && nd != nil {
+	if nd == nil && nd != nil {
 		t.Errorf("data should be nil if emtpy")
 	}
 

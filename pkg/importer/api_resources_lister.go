@@ -20,24 +20,25 @@ type APIResourcesLister interface {
 // APIResources which support the "list" verb.
 //
 // Currently unused; will be used once `clone` is implemented.
-func ListResources(lister APIResourcesLister, errs ErrorAdder) []metav1.APIResource {
+func ListResources(lister APIResourcesLister) ([]metav1.APIResource, status.MultiError) {
 	apiResources, err := lister.ServerResources()
-	errs.Add(status.APIServerWrapf(err, "unable to list supported API resources"))
+	errs := status.From(status.APIServerWrapf(err, "unable to list supported API resources"))
 	if err != nil {
-		return nil
+		return nil, errs
 	}
 
-	return flatten(apiResources, errs)
+	return flatten(apiResources)
 }
 
 // flatten returns a list of the listable APIResources contained in the list of list of
 // APIResources. If a given group/resource has multiple versions, returns the most recent.
-func flatten(lists []*metav1.APIResourceList, errs ErrorAdder) []metav1.APIResource {
+func flatten(lists []*metav1.APIResourceList) ([]metav1.APIResource, status.MultiError) {
 	grs := make(map[schema.GroupKind][]metav1.APIResource)
 
+	var errs status.MultiError
 	for _, list := range lists {
 		gv, err := schema.ParseGroupVersion(list.GroupVersion)
-		errs.Add(status.APIServerWrapf(err, "error parsing apiVersion"))
+		errs = status.Append(errs, status.APIServerWrapf(err, "error parsing apiVersion"))
 		if err != nil {
 			// Encountering an error parsing this list doesn't prevent parsing the other lists.
 			continue
@@ -62,5 +63,5 @@ func flatten(lists []*metav1.APIResourceList, errs ErrorAdder) []metav1.APIResou
 		})
 		result = append(result, resources[0])
 	}
-	return result
+	return result, errs
 }

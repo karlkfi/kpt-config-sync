@@ -10,7 +10,7 @@ import (
 // NewLabelValidator validates the labels declared in metadata
 func NewLabelValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
-		func(o ast.FileObject) *status.MultiError {
+		func(o ast.FileObject) status.MultiError {
 			var errors []string
 			for l := range o.MetaObject().GetLabels() {
 				if hasConfigManagementPrefix(l) {

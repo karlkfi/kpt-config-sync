@@ -185,7 +185,7 @@ func appendResource(resources []v1.GenericResources, o runtime.Object) []v1.Gene
 	return resources
 }
 
-func (v *OutputVisitor) Error() *status.MultiError {
+func (v *OutputVisitor) Error() status.MultiError {
 	return nil
 }
 

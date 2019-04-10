@@ -10,7 +10,7 @@ import (
 // NewNamespaceValidator validates the value of metadata.namespace
 func NewNamespaceValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
-		func(o ast.FileObject) *status.MultiError {
+		func(o ast.FileObject) status.MultiError {
 			expected := o.Dir().Base()
 			actual := o.MetaObject().GetNamespace()
 			if actual != "" && actual != expected {

@@ -33,9 +33,9 @@ func NewResourceLister(resourcer Resourcer) ResourceLister {
 // List returns all resources on the cluster of a given APIResource. If the APIResource is not
 // listable, silently returns the empty list. Returns an error and the empty list if any were
 // encountered listing the APIResource.
-func (l ResourceLister) List(apiResource metav1.APIResource, errs ErrorAdder) []ast.FileObject {
+func (l ResourceLister) List(apiResource metav1.APIResource) ([]ast.FileObject, status.MultiError) {
 	if !listable(apiResource) {
-		return nil
+		return nil, nil
 	}
 
 	gvr := schema.GroupVersionResource{
@@ -52,8 +52,7 @@ func (l ResourceLister) List(apiResource metav1.APIResource, errs ErrorAdder) []
 			Continue: token,
 		})
 		if err != nil {
-			errs.Add(status.APIServerWrapf(err, "unable to read %q resources", gvr.String()))
-			return nil
+			return nil, status.From(status.APIServerWrapf(err, "unable to read %q resources", gvr.String()))
 		}
 		items = append(items, resources.Items...)
 		token = resources.GetContinue()
@@ -64,7 +63,7 @@ func (l ResourceLister) List(apiResource metav1.APIResource, errs ErrorAdder) []
 		o := ast.FileObject{Object: r.DeepCopyObject()}
 		result = append(result, o)
 	}
-	return result
+	return result, nil
 }
 
 // listable returns true if it is valid to use the "list" verb on the APIResource.

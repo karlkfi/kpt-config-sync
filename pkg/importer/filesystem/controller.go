@@ -227,7 +227,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 }
 
 // cmesForMultiError converts a MultiError into one or more ConfigManagmentErrors.
-func cmesForMultiError(mErr *status.MultiError) []v1.ConfigManagementError {
+func cmesForMultiError(mErr status.MultiError) []v1.ConfigManagementError {
 	var cmes []v1.ConfigManagementError
 	for _, err := range mErr.Errors() {
 		// TODO(b/126598308): Inspect the actual error types and fully populate the CME fields.

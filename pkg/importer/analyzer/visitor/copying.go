@@ -59,7 +59,7 @@ func (v *Copying) SetImpl(impl ast.Visitor) {
 }
 
 // Error implements Visitor
-func (v *Copying) Error() *status.MultiError {
+func (v *Copying) Error() status.MultiError {
 	return nil
 }
 

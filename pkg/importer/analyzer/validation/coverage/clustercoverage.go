@@ -28,8 +28,7 @@ type ForCluster struct {
 func NewForCluster(
 	clusters []clusterregistry.Cluster,
 	selectors []v1.ClusterSelector,
-	errs *status.ErrorBuilder,
-) *ForCluster {
+) (*ForCluster, status.MultiError) {
 	cov := ForCluster{
 		selectorNames:     strSet{},
 		selectorToCluster: map[string]strSet{},
@@ -37,12 +36,13 @@ func NewForCluster(
 	for _, s := range selectors {
 		cov.selectorNames[s.ObjectMeta.Name] = true
 	}
+	var errs status.MultiError
 	for _, s := range selectors {
 		sn := s.ObjectMeta.Name
 		selector, err := sels.AsPopulatedSelector(&s.Spec.Selector)
 		if err != nil {
 			// TODO(b/120229144): Impossible to get here.
-			errs.Add(vet.InvalidSelectorError{Name: sn, Cause: err})
+			errs = status.Append(errs, vet.InvalidSelectorError{Name: sn, Cause: err})
 			continue
 		}
 		for _, c := range clusters {
@@ -55,7 +55,7 @@ func NewForCluster(
 			}
 		}
 	}
-	return &cov
+	return &cov, errs
 }
 
 // getClusterSelectorAnnotation returns the value of the cluster selector annotation
@@ -68,14 +68,15 @@ func getClusterSelectorAnnotation(a object.Annotated) string {
 // ValidateObject validates the coverage of the object with clusters and selectors. An object
 // may not have an annotation, but if it does, it has to map to a valid selector.  Also if an
 // object has a selector in the annotation, that annotation must refer to a valid selector.
-func (c ForCluster) ValidateObject(o *ast.FileObject, errs *status.ErrorBuilder) {
+func (c ForCluster) ValidateObject(o *ast.FileObject) status.MultiError {
 	a := getClusterSelectorAnnotation(o.MetaObject())
 	if a == "" {
-		return
+		return nil
 	}
 	if !c.selectorNames[a] {
-		errs.Add(vet.ObjectHasUnknownClusterSelector{Resource: o, Annotation: a})
+		return status.From(vet.ObjectHasUnknownClusterSelector{Resource: o, Annotation: a})
 	}
+	return nil
 }
 
 // MapToClusters returns the names of the clusters that this object maps to.

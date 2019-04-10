@@ -60,7 +60,7 @@ type Parser struct {
 	opts            ParserOpt
 	factory         cmdutil.Factory
 	discoveryClient discovery.CachedDiscoveryInterface
-	errors          *status.ErrorBuilder
+	errors          status.MultiError
 }
 
 // ParserOpt has often customized parser options. Use for example in NewParser.
@@ -105,17 +105,17 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 // * cluster/ (flat, optional)
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
-func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*namespaceconfig.AllPolicies, *status.MultiError) {
-	p.errors = &status.ErrorBuilder{}
+func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*namespaceconfig.AllPolicies, status.MultiError) {
+	p.errors = nil
 	rootPath, err := cmpath.NewRoot(cmpath.FromOS(root))
-	p.errors.Add(err)
+	p.errors = status.Append(p.errors, err)
 
 	// Always make sure we're getting the freshest data.
 	p.discoveryClient.Invalidate()
-	validateInstallation(p.discoveryClient, p.errors)
+	p.errors = status.Append(p.errors, validateInstallation(p.discoveryClient))
 
-	if p.errors.HasErrors() {
-		return nil, p.errors.Build()
+	if p.errors != nil {
+		return nil, p.errors
 	}
 
 	astRoot := &ast.Root{
@@ -125,9 +125,9 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*na
 	astRoot.Data = astRoot.Data.Add(RootPath{}, rootPath)
 
 	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources(rootPath))
-	p.errors.Add(addScope(astRoot, p.discoveryClient))
-	if p.errors.HasErrors() {
-		return nil, p.errors.Build()
+	p.errors = status.Append(p.errors, addScope(astRoot, p.discoveryClient))
+	if p.errors != nil {
+		return nil, p.errors
 	}
 
 	visitors := []ast.Visitor{
@@ -144,8 +144,8 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*na
 		outputVisitor)
 
 	p.runVisitors(astRoot, visitors)
-	if p.errors.HasErrors() {
-		return nil, p.errors.Build()
+	if p.errors != nil {
+		return nil, p.errors
 	}
 
 	policies := outputVisitor.AllPolicies()
@@ -158,11 +158,11 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*na
 
 func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) {
 	for _, visitor := range visitors {
-		if p.errors.HasErrors() && visitor.RequiresValidState() {
+		if p.errors != nil && visitor.RequiresValidState() {
 			return
 		}
 		root = root.Accept(visitor)
-		p.errors.Add(visitor.Error())
+		p.errors = status.Append(p.errors, visitor.Error())
 		if visitor.Fatal() {
 			return
 		}
@@ -193,14 +193,14 @@ func (p *Parser) readResources(dir cmpath.Relative) []ast.FileObject {
 		return nil
 	} else if err != nil {
 		// If there was another error reading the directory, give up parsing the dir
-		p.errors.Add(status.PathWrapf(err, dir.AbsoluteOSPath()))
+		p.errors = status.Append(p.errors, status.PathWrapf(err, dir.AbsoluteOSPath()))
 		return nil
 	}
 
 	visitors, err := resource.ExpandPathsToFileVisitors(
 		nil, dir.AbsoluteOSPath(), true, resource.FileExtensions, kubevalidation.NullSchema{})
 	if err != nil {
-		p.errors.Add(status.PathWrapf(err, dir.AbsoluteOSPath()))
+		p.errors = status.Append(p.errors, status.PathWrapf(err, dir.AbsoluteOSPath()))
 		return nil
 	}
 
@@ -208,7 +208,7 @@ func (p *Parser) readResources(dir cmpath.Relative) []ast.FileObject {
 	if len(visitors) > 0 {
 		s, err := p.factory.Validator(p.opts.Validate)
 		if err != nil {
-			p.errors.Add(status.APIServerWrapf(err, "failed to get schema"))
+			p.errors = status.Append(p.errors, status.APIServerWrapf(err, "failed to get schema"))
 			return nil
 		}
 		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
@@ -219,11 +219,11 @@ func (p *Parser) readResources(dir cmpath.Relative) []ast.FileObject {
 			FilenameParam(false, options).
 			Do()
 		fileInfos, err := result.Infos()
-		p.errors.Add(status.APIServerWrapf(err, "failed to get resource infos"))
+		p.errors = status.Append(p.errors, status.APIServerWrapf(err, "failed to get resource infos"))
 		for _, info := range fileInfos {
 			// Assign relative path since that's what we actually need.
 			source, err := dir.Root().Rel(cmpath.FromOS(info.Source))
-			p.errors.Add(err)
+			p.errors = status.Append(p.errors, err)
 			if err != nil {
 				continue
 			}
@@ -273,16 +273,16 @@ func toInheritanceSpecs(configs []*v1.HierarchyConfig) map[schema.GroupKind]*tra
 
 // validateInstallation checks to see if Nomos is installed properly.
 // TODO(b/123598820): Server-side validation for this check.
-func validateInstallation(resources discovery.ServerResourcesInterface, eb *status.ErrorBuilder) {
+func validateInstallation(resources discovery.ServerResourcesInterface) status.MultiError {
 	gv := v1.SchemeGroupVersion.String()
 	_, err := resources.ServerResourcesForGroupVersion(gv)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			eb.Add(vet.PolicyManagementNotInstalledError{
+			return status.From(vet.PolicyManagementNotInstalledError{
 				Err: errors.Errorf("no resources exist on cluster with apiVersion: %s", gv),
 			})
-		} else {
-			eb.Add(vet.PolicyManagementNotInstalledError{Err: err})
 		}
+		return status.From(vet.PolicyManagementNotInstalledError{Err: err})
 	}
+	return nil
 }

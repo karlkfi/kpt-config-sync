@@ -14,7 +14,7 @@ type disallowSystemObjectsValidator struct {
 }
 
 // ValidateClusterRegistryObject implements visitor.Validator.
-func (v *disallowSystemObjectsValidator) ValidateClusterRegistryObject(o *ast.ClusterRegistryObject) *status.MultiError {
+func (v *disallowSystemObjectsValidator) ValidateClusterRegistryObject(o *ast.ClusterRegistryObject) status.MultiError {
 	if IsSystemOnly(o.GroupVersionKind()) {
 		return status.From(vet.IllegalSystemResourcePlacementError{Resource: o})
 	}
@@ -22,7 +22,7 @@ func (v *disallowSystemObjectsValidator) ValidateClusterRegistryObject(o *ast.Cl
 }
 
 // ValidateClusterObject implements visitor.Validator.
-func (v *disallowSystemObjectsValidator) ValidateClusterObject(o *ast.ClusterObject) *status.MultiError {
+func (v *disallowSystemObjectsValidator) ValidateClusterObject(o *ast.ClusterObject) status.MultiError {
 	if IsSystemOnly(o.GroupVersionKind()) {
 		return status.From(vet.IllegalSystemResourcePlacementError{Resource: o})
 	}
@@ -30,7 +30,7 @@ func (v *disallowSystemObjectsValidator) ValidateClusterObject(o *ast.ClusterObj
 }
 
 // ValidateObject implements visitor.Validator.
-func (v *disallowSystemObjectsValidator) ValidateObject(o *ast.NamespaceObject) *status.MultiError {
+func (v *disallowSystemObjectsValidator) ValidateObject(o *ast.NamespaceObject) status.MultiError {
 	if IsSystemOnly(o.GroupVersionKind()) {
 		return status.From(vet.IllegalSystemResourcePlacementError{Resource: o})
 	}

@@ -43,7 +43,7 @@ func ErrorCodes(err error) []string {
 		return []string{}
 	case status.Error:
 		return []string{e.Code()}
-	case *status.MultiError:
+	case status.MultiError:
 		if e == nil {
 			return []string{}
 		}

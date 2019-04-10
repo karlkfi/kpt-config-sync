@@ -9,7 +9,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
-func testError() *status.MultiError {
+func testError() status.MultiError {
 	return status.From(status.UndocumentedError("error"))
 }
 
@@ -17,46 +17,46 @@ func fakeObject() ast.FileObject {
 	return asttesting.NewFakeFileObject(kinds.Role(), "")
 }
 
-func failRoot(_ *ast.Root) *status.MultiError {
+func failRoot(_ *ast.Root) status.MultiError {
 	return testError()
 }
 
-func failSystem(_ []*ast.SystemObject) *status.MultiError {
+func failSystem(_ []*ast.SystemObject) status.MultiError {
 	return testError()
 }
 
-func failSystemObject(_ *ast.SystemObject) *status.MultiError {
+func failSystemObject(_ *ast.SystemObject) status.MultiError {
 	return testError()
 }
 
-func failClusterRegistry(_ []*ast.ClusterRegistryObject) *status.MultiError {
+func failClusterRegistry(_ []*ast.ClusterRegistryObject) status.MultiError {
 	return testError()
 }
 
-func failClusterRegistryObject(_ *ast.ClusterRegistryObject) *status.MultiError {
+func failClusterRegistryObject(_ *ast.ClusterRegistryObject) status.MultiError {
 	return testError()
 }
 
-func failCluster(_ []*ast.ClusterObject) *status.MultiError {
+func failCluster(_ []*ast.ClusterObject) status.MultiError {
 	return testError()
 }
 
-func failClusterObject(_ *ast.ClusterObject) *status.MultiError {
+func failClusterObject(_ *ast.ClusterObject) status.MultiError {
 	return testError()
 }
 
-func failTreeNode(_ *ast.TreeNode) *status.MultiError {
+func failTreeNode(_ *ast.TreeNode) status.MultiError {
 	return testError()
 }
 
-func failLeafTreeNode(n *ast.TreeNode) *status.MultiError {
+func failLeafTreeNode(n *ast.TreeNode) status.MultiError {
 	if len(n.Children) == 0 {
 		return testError()
 	}
 	return nil
 }
 
-func failObject(_ *ast.NamespaceObject) *status.MultiError {
+func failObject(_ *ast.NamespaceObject) status.MultiError {
 	return testError()
 }
 

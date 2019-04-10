@@ -35,7 +35,7 @@ import (
 // and what is required to fix it.
 type InputValidator struct {
 	*visitor.Base
-	errs             status.ErrorBuilder
+	errs             status.MultiError
 	nodes            []*ast.TreeNode
 	vet              bool
 	coverage         *coverage.ForCluster
@@ -65,8 +65,8 @@ func NewInputValidator(
 }
 
 // Error returns any errors encountered during processing
-func (v *InputValidator) Error() *status.MultiError {
-	return v.errs.Build()
+func (v *InputValidator) Error() status.MultiError {
+	return v.errs
 }
 
 // VisitRoot gets the clusters and selectors stored in Root.Data and constructs coverage if vet is
@@ -75,7 +75,7 @@ func (v *InputValidator) VisitRoot(r *ast.Root) *ast.Root {
 	if v.vet {
 		clusters := selectors.GetClusters(r)
 		sels := selectors.GetSelectors(r)
-		v.coverage = coverage.NewForCluster(clusters, sels, &v.errs)
+		v.coverage, v.errs = coverage.NewForCluster(clusters, sels)
 	}
 
 	return v.Base.VisitRoot(r)
@@ -90,7 +90,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		// If len == 1, this is a child of namespaces/ and so it cannot be the child of a Namespace directory.
 		// We check for the two cases above elsewhere, so adding errors here adds noise and incorrect advice.
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == node.Namespace {
-			v.errs.Add(vet.IllegalNamespaceSubdirectoryError{Child: n, Parent: parent})
+			v.errs = status.Append(v.errs, vet.IllegalNamespaceSubdirectoryError{Child: n, Parent: parent})
 		}
 	}
 	for _, s := range n.Selectors {
@@ -109,7 +109,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1.NamespaceSelector) {
 	if a := s.GetAnnotations(); a != nil {
 		if _, ok := a[v1.ClusterSelectorAnnotationKey]; ok {
-			v.errs.Add(vet.NamespaceSelectorMayNotHaveAnnotation{Object: s})
+			v.errs = status.Append(v.errs, vet.NamespaceSelectorMayNotHaveAnnotation{Object: s})
 		}
 	}
 }
@@ -117,7 +117,7 @@ func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1.NamespaceSelect
 // VisitClusterObject implements Visitor
 func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	if v.coverage != nil {
-		v.coverage.ValidateObject(&o.FileObject, &v.errs)
+		v.errs = status.Append(v.errs, v.coverage.ValidateObject(&o.FileObject))
 	}
 	return v.Base.VisitClusterObject(o)
 }
@@ -131,12 +131,12 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	if n.Type == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[gvk.GroupKind()]
 		if (found && spec.Mode == v1.HierarchyModeNone) && !transform.IsEphemeral(gvk) && !syntax.IsSystemOnly(gvk) {
-			v.errs.Add(vet.IllegalAbstractNamespaceObjectKindError{Resource: o})
+			v.errs = status.Append(v.errs, vet.IllegalAbstractNamespaceObjectKindError{Resource: o})
 		}
 	}
 
 	if v.coverage != nil {
-		v.coverage.ValidateObject(&o.FileObject, &v.errs)
+		v.errs = status.Append(v.errs, v.coverage.ValidateObject(&o.FileObject))
 	}
 
 	return v.Base.VisitObject(o)

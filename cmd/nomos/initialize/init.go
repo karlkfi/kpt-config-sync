@@ -57,7 +57,7 @@ func Initialize(dir repo.FilePath) error {
 		}
 	}
 
-	repoDir := repoDirectoryBuilder{dir, status.ErrorBuilder{}}
+	repoDir := repoDirectoryBuilder{root: dir}
 	repoDir.createFile("", readmeFile, rootReadmeContents)
 
 	// Create system/
@@ -81,36 +81,31 @@ func Initialize(dir repo.FilePath) error {
 	// TODO: Add readme.
 	repoDir.createDir(v1repo.NamespacesDir)
 
-	// TODO(ekitson): Update this function to return MultiError instead of returning explicit nil.
-	bErr := repoDir.errors.Build()
-	if bErr == nil {
-		return nil
-	}
-	return bErr
+	return repoDir.errors
 }
 
 type repoDirectoryBuilder struct {
 	root   repo.FilePath
-	errors status.ErrorBuilder
+	errors status.MultiError
 }
 
 func (d repoDirectoryBuilder) createDir(dir string) {
 	newDir := filepath.Join(d.root.String(), dir)
 	err := os.Mkdir(newDir, os.ModePerm)
 	if err != nil {
-		d.errors.Add(status.PathWrapf(err, newDir))
+		d.errors = status.Append(d.errors, status.PathWrapf(err, newDir))
 	}
 }
 
 func (d repoDirectoryBuilder) createFile(dir string, path string, contents string) {
 	file, err := os.Create(filepath.Join(d.root.String(), dir, path))
 	if err != nil {
-		d.errors.Add(status.PathWrapf(err, path))
+		d.errors = status.Append(d.errors, status.PathWrapf(err, path))
 		return
 	}
 	_, err = file.WriteString(contents)
 	if err != nil {
-		d.errors.Add(status.PathWrapf(err, path))
+		d.errors = status.Append(d.errors, status.PathWrapf(err, path))
 	}
 }
 

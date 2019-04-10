@@ -23,77 +23,71 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
-// ErrorBuilder builds MultiErrors. Instantiate directly as:
-//
-//     b := &status.ErrorBuilder{}
-type ErrorBuilder struct {
-	errs []Error
+// MultiError represents a collection of errors.
+type MultiError interface {
+	error
+	Errors() []Error
 }
 
-// From returns a MultiError from one or more Errors.
-func From(errors ...Error) *MultiError {
-	var builder ErrorBuilder
-	for _, err := range errors {
-		builder.Add(err)
+// From creates a MultiError from one or more errors.
+// If err is nil, returns nil.
+func From(errs ...error) MultiError {
+	return Append(nil, errs...)
+}
+
+// Append adds one or more errors to an existing MultiError.
+// If m and err are nil, returns nil.
+func Append(m MultiError, errs ...error) MultiError {
+	result := &multiError{}
+
+	switch m.(type) {
+	case nil:
+		// No errors to begin with.
+	case *multiError:
+		result.errs = m.Errors()
+	default:
+		for _, e := range m.Errors() {
+			result.add(e)
+		}
 	}
-	return builder.Build()
+
+	for _, e := range errs {
+		result.add(e)
+	}
+
+	if len(result.errs) == 0 {
+		return nil
+	}
+	return result
+}
+
+// MultiError is an error that contains multiple errors.
+type multiError struct {
+	errs []Error
 }
 
 // Add adds error to the builder.
 // If the type is known to contain an array of error, adds all of the contained errors.
 // If the error is nil, do nothing.
-func (b *ErrorBuilder) Add(err error) {
+func (m *multiError) add(err error) {
 	switch e := err.(type) {
 	case nil:
 		// No error to add if nil.
 	case Error:
-		b.errs = append(b.errs, e)
+		m.errs = append(m.errs, e)
 	case utilerrors.Aggregate:
-		for _, err := range e.Errors() {
-			b.Add(err)
+		for _, er := range e.Errors() {
+			m.add(er)
 		}
 	case MultiError:
-		b.errs = append(b.errs, e.errs...)
-	case *MultiError:
-		if e == nil {
-			// No error to add if nil, and Go handling of nil is insane.
-			return
-		}
-		b.errs = append(b.errs, e.errs...)
+		m.errs = append(m.errs, e.Errors()...)
 	default:
-		b.errs = append(b.errs, UndocumentedWrapf(err, ""))
+		m.errs = append(m.errs, UndocumentedWrapf(err, ""))
 	}
-}
-
-// Build builds the error or returns nil if no errors were added
-func (b *ErrorBuilder) Build() *MultiError {
-	if len(b.errs) == 0 {
-		return nil
-	}
-	return &MultiError{errs: b.errs}
-}
-
-// Len returns the number of errors in the builder.
-func (b *ErrorBuilder) Len() int {
-	return len(b.errs)
-}
-
-// HasErrors returns true if there are errors in the builder.
-func (b *ErrorBuilder) HasErrors() bool {
-	return b.Len() > 0
-}
-
-func (b *ErrorBuilder) Error() string {
-	return b.Build().Error()
-}
-
-// MultiError is an error that contains multiple errors.
-type MultiError struct {
-	errs []Error
 }
 
 // Error implements error
-func (m MultiError) Error() string {
+func (m *multiError) Error() string {
 	// sort errors alphabetically by their message.
 	sort.Slice(m.errs, func(i, j int) bool {
 		return m.errs[i].Error() < m.errs[j].Error()
@@ -118,6 +112,6 @@ func (m MultiError) Error() string {
 }
 
 // Errors returns a list of the contained errors
-func (m MultiError) Errors() []Error {
+func (m *multiError) Errors() []Error {
 	return m.errs
 }

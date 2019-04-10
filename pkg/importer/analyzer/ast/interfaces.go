@@ -38,7 +38,7 @@ type Visitor interface {
 	VisitObject(o *NamespaceObject) *NamespaceObject
 
 	// Error allows the visitor to emit errors that may have occurred while operating.
-	Error() *status.MultiError
+	Error() status.MultiError
 
 	// Fatal returns if the Visitor has determined that Parser should stop processing immediately.
 	Fatal() bool

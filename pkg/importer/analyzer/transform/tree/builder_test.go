@@ -38,10 +38,10 @@ func (tc *directoryTreeTestcase) Run(t *testing.T) {
 	for _, dir := range tc.inputs {
 		tg.addDir(cmpath.FromSlash(dir))
 	}
-	eb := status.ErrorBuilder{}
+	var eb status.MultiError
 	tr := tg.build()
 
-	vettesting.ExpectErrors(nil, eb.Build(), t)
+	vettesting.ExpectErrors(nil, eb, t)
 
 	if diff := cmp.Diff(tc.expect, tr); diff != "" {
 		_, err := spew.Printf("%#v\n", tr)
