@@ -75,7 +75,9 @@ func NewRepoStatus(ctx context.Context, sClient *syncclient.Client) *RepoStatus 
 	}
 }
 
+// TODO(b/130295620): Enable linting once we use error interfaces instead of structs.
 // Reconcile is the Reconcile callback for RepoStatus reconciler.
+// nolint
 func (r *RepoStatus) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
 	metrics.EventTimes.WithLabelValues("repo-reconcile").Set(float64(now().Unix()))
 	timer := prometheus.NewTimer(metrics.RepoReconcileDuration.WithLabelValues())
@@ -85,7 +87,8 @@ func (r *RepoStatus) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
 	if err != nil {
 		return result, err
 	}
-	// Return explicit nil for error just to avoid golang type weirdness.
+	// Linting is disabled for this function so that we can return explicit nil for error, which
+	// avoids golang type weirdness.
 	return result, nil
 }
 
