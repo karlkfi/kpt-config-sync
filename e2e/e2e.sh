@@ -10,6 +10,10 @@ set -euo pipefail
   (echo "environment is missing the gotopt2 binary"; exit 1)
 readonly gotopt2_output=$(${GOTOPT2_BINARY} "${@}" <<EOF
 flags:
+- name: "e2e-container"
+  type: string
+  help: "The container used as the test fixture environment"
+  default: "gcr.io/stolos-dev/e2e-tests:test-e2e-latest"
 - name: "TEMP_OUTPUT_DIR"
   type: string
   help: "The directory for temporary output"
@@ -208,7 +212,7 @@ DOCKER_FLAGS+=(
     -v "${TEMP_OUTPUT_DIR}:/tmp"
     -v "${OUTPUT_DIR}/e2e":/opt/testing/e2e
     -v "${OUTPUT_DIR}/go/bin":/opt/testing/go/bin
-    "gcr.io/stolos-dev/e2e-tests:test-e2e-latest"
+    "${gotopt2_e2e_container}"
 )
 
 # shellcheck disable=SC2154
