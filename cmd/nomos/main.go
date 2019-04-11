@@ -65,6 +65,8 @@ func main() {
 	if logging() {
 		pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	}
+	// glog gripes if you don't parse flags before making any logging statements.
+	flag.CommandLine.Parse([]string{}) // nolint:errcheck
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 	"k8s.io/client-go/rest"
@@ -83,8 +84,9 @@ func newConfigFromPath(path string) (*rest.Config, error) {
 }
 
 // AllKubectlConfigs creates a config for every context available in the kubeconfig. The configs are
-// mapped by context name.
-func AllKubectlConfigs() (map[string]*rest.Config, error) {
+// mapped by context name. There is no way to detect unhealthy clusters specified by a context, so
+// timeout can be used to prevent calls to those clusters from hanging for long periods of time.
+func AllKubectlConfigs(timeout time.Duration) (map[string]*rest.Config, error) {
 	configPath, err := newConfigPath()
 	if err != nil {
 		return nil, errors.Wrap(err, "while getting config path")
@@ -102,6 +104,9 @@ func AllKubectlConfigs() (map[string]*rest.Config, error) {
 		restCfg, err := cfg.ClientConfig()
 		if err != nil {
 			return nil, errors.Wrapf(err, "while building config for %q context", ctxName)
+		}
+		if timeout > 0 {
+			restCfg.Timeout = timeout
 		}
 		configs[ctxName] = restCfg
 	}
