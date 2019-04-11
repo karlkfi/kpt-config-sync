@@ -118,6 +118,16 @@ func HierarchicalQuota() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind("HierarchicalQuota")
 }
 
+// ConfigManagement returns the GroupVersionKind for ConfigManagement, an object
+// that does not have other representation than a CRD in the operator library.
+func ConfigManagement() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   "addons.sigs.k8s.io",
+		Version: "v1alpha1",
+		Kind:    "ConfigManagement",
+	}
+}
+
 // ResourceString returns a string describing the GroupVersionKind using fields specified in Kubernetes Objects.
 func ResourceString(gvk schema.GroupVersionKind) string {
 	return fmt.Sprintf("apiVersion=%s/%s, kind=%s", gvk.Group, gvk.Version, gvk.Kind)

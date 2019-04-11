@@ -11,6 +11,7 @@ import (
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -98,6 +99,16 @@ func ClusterConfig() ast.FileObject {
 				Name: nomosv1.ClusterConfigName,
 			},
 		},
+	}
+}
+
+// ConfigManagement returns a fake ConfigManagement.
+func ConfigManagement(path string) ast.FileObject {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(kinds.ConfigManagement())
+	return ast.FileObject{
+		Path:   cmpath.FromSlash(path),
+		Object: u,
 	}
 }
 

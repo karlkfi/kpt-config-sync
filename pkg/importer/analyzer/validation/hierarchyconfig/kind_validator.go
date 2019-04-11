@@ -45,7 +45,10 @@ func AllowedInHierarchyConfigs(gk schema.GroupKind, enableCRDs bool) bool {
 // TODO(130247902): Don't allow cluster-scoped resources in hierarchyconfigs.
 // unsupportedHierarchyConfigResources returns a map of each type where syncing is explicitly not supported.
 func unsupportedHierarchyConfigResources(enableCRDs bool) map[schema.GroupKind]bool {
-	m := map[schema.GroupKind]bool{kinds.Namespace().GroupKind(): true}
+	m := map[schema.GroupKind]bool{
+		kinds.Namespace().GroupKind():        true,
+		kinds.ConfigManagement().GroupKind(): true,
+	}
 	if !enableCRDs {
 		m[kinds.CustomResourceDefinition().GroupKind()] = true
 	}
