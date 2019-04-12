@@ -86,9 +86,11 @@ function set_up_env() {
   if ${gotopt2_set_admin_role_binding:-false}; then
     apply_cluster_admin_binding "$(gcloud config get-value account)"
   fi
-  /opt/testing/e2e/init-git-server.sh
-
-  install
+  declare -a waitpids
+  /opt/testing/e2e/init-git-server.sh & waitpids+=("${!}")
+  install & waitpids+=("${!}")
+  echo "++++ Waiting for setup to finish"
+  wait "${waitpids[@]}"
 }
 
 function set_up_env_minimal() {
@@ -133,9 +135,11 @@ function clean_up() {
 
   echo "++++ Cleaning up environment"
 
-  uninstall
-
-  clean_up_test_resources
+  declare -a waitpids
+  uninstall & waitpids+=("${!}")
+  clean_up_test_resources & waitpids+=("${!}")
+  echo "++++ Waiting for environment cleanup to finish"
+  wait "${waitpids[@]}"
 }
 
 function post_clean() {
