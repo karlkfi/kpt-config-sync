@@ -118,6 +118,22 @@ func CustomResourceDefinition(path string) ast.FileObject {
 		Path: cmpath.FromSlash(path),
 		Object: &v1beta1.CustomResourceDefinition{
 			TypeMeta: toTypeMeta(kinds.CustomResourceDefinition()),
+			ObjectMeta: v1.ObjectMeta{
+				Name: "crd",
+			},
+		},
+	}
+}
+
+// Anvil returns an Anvil Custom Resource.
+func Anvil(path string) ast.FileObject {
+	return ast.FileObject{
+		Path: cmpath.FromSlash(path),
+		Object: &v1beta1.CustomResourceDefinition{
+			TypeMeta: toTypeMeta(kinds.Anvil()),
+			ObjectMeta: v1.ObjectMeta{
+				Name: "anvil",
+			},
 		},
 	}
 }

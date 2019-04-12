@@ -1652,7 +1652,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		t.Fatalf("unexpected error: %#v", err)
 	}
 
-	actualPolicies, mErr := p.Parse(d.rootDir, "", time.Time{})
+	actualPolicies, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllPolicies{}, time.Time{})
 
 	vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
 	if mErr != nil {
@@ -2507,7 +2507,7 @@ func TestEmptyDirectories(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			actualPolicies, mErr := p.Parse(d.rootDir, "", time.Time{})
+			actualPolicies, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllPolicies{}, time.Time{})
 			if mErr != nil {
 				t.Fatalf("unexpected error: %v", mErr)
 			}

@@ -1,7 +1,7 @@
 package filesystem
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
@@ -57,6 +57,7 @@ func (n NomosVisitorProvider) Visitors(
 		metadata.NewLabelValidator(),
 		validation.NewInputValidator(specs, vetEnabled),
 		semantic.NewAbstractResourceValidator(),
+		semantic.NewCRDRemovalValidator(enableCRDs),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree

@@ -32,7 +32,7 @@ func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllPoli
 		return nil, errors.Wrap(err, "Failed to create parser")
 	}
 
-	resources, mErr := p.Parse(dir, "", time.Time{})
+	resources, mErr := p.Parse(dir, "", &namespaceconfig.AllPolicies{}, time.Time{})
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}

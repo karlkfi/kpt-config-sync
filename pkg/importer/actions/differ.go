@@ -87,15 +87,23 @@ func (d *Differ) namespaceConfigActions(current, desired namespaceconfig.AllPoli
 
 func (d *Differ) clusterConfigActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
 	var actions []action.Interface
-	if current.ClusterConfig == nil && desired.ClusterConfig == nil {
+	actions = append(actions, d.nonCRDClusterConfigActions(current.ClusterConfig, desired.ClusterConfig)...)
+	actions = append(actions, d.nonCRDClusterConfigActions(current.CRDClusterConfig, desired.CRDClusterConfig)...)
+
+	return actions
+}
+
+func (d *Differ) nonCRDClusterConfigActions(current, desired *v1.ClusterConfig) []action.Interface {
+	var actions []action.Interface
+	if current == nil && desired == nil {
 		return actions
 	}
-	if current.ClusterConfig == nil {
-		actions = []action.Interface{d.factories.ClusterConfigAction.NewCreate(desired.ClusterConfig)}
-	} else if desired.ClusterConfig == nil {
-		actions = []action.Interface{d.factories.ClusterConfigAction.NewDelete(current.ClusterConfig.Name)}
-	} else if !d.factories.ClusterConfigAction.Equal(desired.ClusterConfig, current.ClusterConfig) {
-		actions = []action.Interface{d.factories.ClusterConfigAction.NewUpdate(desired.ClusterConfig)}
+	if current == nil {
+		actions = []action.Interface{d.factories.ClusterConfigAction.NewCreate(desired)}
+	} else if desired == nil {
+		actions = []action.Interface{d.factories.ClusterConfigAction.NewDelete(current.Name)}
+	} else if !d.factories.ClusterConfigAction.Equal(desired, current) {
+		actions = []action.Interface{d.factories.ClusterConfigAction.NewUpdate(desired)}
 	}
 	return actions
 }

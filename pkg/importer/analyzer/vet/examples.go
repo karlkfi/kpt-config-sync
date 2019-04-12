@@ -10,6 +10,21 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func customResourceDefinition() *ast.FileObject {
+	return &ast.FileObject{
+		Path: cmpath.FromSlash("cluster/crd.yaml"),
+		Object: &v1alpha1.ClusterRole{
+			TypeMeta: v1.TypeMeta{
+				APIVersion: kinds.CustomResourceDefinition().GroupVersion().String(),
+				Kind:       kinds.CustomResourceDefinition().Kind,
+			},
+			ObjectMeta: v1.ObjectMeta{
+				Name: "customResourceDefinition",
+			},
+		},
+	}
+}
+
 func clusterRole() *ast.FileObject {
 	return &ast.FileObject{
 		Path: cmpath.FromSlash("cluster/cr.yaml"),
@@ -19,7 +34,7 @@ func clusterRole() *ast.FileObject {
 				Kind:       kinds.ClusterRole().Kind,
 			},
 			ObjectMeta: v1.ObjectMeta{
-				Name: "role",
+				Name: "clusterRole",
 			},
 		},
 	}
@@ -64,7 +79,7 @@ func resourceQuota() *ast.FileObject {
 				Kind:       kinds.ResourceQuota().Kind,
 			},
 			ObjectMeta: v1.ObjectMeta{
-				Name: "role",
+				Name: "resourceQuota",
 			},
 		},
 	}

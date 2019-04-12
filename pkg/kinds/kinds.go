@@ -13,6 +13,15 @@ import (
 	"k8s.io/client-go/scale/scheme/extensionsv1beta1"
 )
 
+// Anvil returns the GroupVersionKind for Anvil Custom Resource used in tests.
+func Anvil() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   "com.acme",
+		Version: "v1",
+		Kind:    "Anvil",
+	}
+}
+
 // Sync returns the canonical Sync GroupVersionKind
 func Sync() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind("Sync")

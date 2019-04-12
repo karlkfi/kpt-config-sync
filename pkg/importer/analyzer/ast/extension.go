@@ -80,12 +80,12 @@ func Add(d *Extension, key, value interface{}) (*Extension, status.Error) {
 // Get returns the value at the requested key, or an error if the key is not present.
 func Get(d *Extension, key interface{}) (interface{}, status.Error) {
 	if d == nil {
-		return nil, status.InternalError("tried to get %#v from nil Extension")
+		return nil, status.InternalErrorf("tried to get %#v from nil Extension", key)
 	}
 
 	value, found := d.items[key]
 	if !found {
-		return nil, status.InternalError("extension missing key %#v")
+		return nil, status.InternalErrorf("extension missing key %#v", key)
 	}
 	return value, nil
 }

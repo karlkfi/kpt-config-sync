@@ -22,6 +22,8 @@ import (
 func Build(gvk schema.GroupVersionKind, opts ...object.Mutator) ast.FileObject {
 	var o ast.FileObject
 	switch gvk {
+	case kinds.Anvil():
+		o = Anvil("namespaces/anvil.yaml")
 	case kinds.Cluster():
 		o = Cluster("clusterregistry/cluster.yaml")
 	case kinds.ClusterConfig():

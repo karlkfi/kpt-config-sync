@@ -1,4 +1,4 @@
-package filesystem
+package tree_test
 
 import (
 	"testing"
@@ -6,12 +6,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
+	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 )
@@ -63,7 +61,7 @@ func roleResourceList() []*v1.APIResourceList {
 	}
 }
 
-func TestAddScope(t *testing.T) {
+func TestAPIInfoVisitor(t *testing.T) {
 	testCases := []struct {
 		name      string
 		resources []*v1.APIResourceList
@@ -82,22 +80,11 @@ func TestAddScope(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			client := newFakeDiscoveryClient(tc.resources)
+
 			root := &ast.Root{}
-
-			// TODO: test w/ CRDs
-			p, pErr := NewParserWithFactory(fstesting.NewTestFactory(t), ParserOpt{EnableCRDs: false})
-			if pErr != nil {
-				t.Fatal(errors.Wrap(pErr, "should have succeeded"))
-			}
-			rp, rErr := cmpath.NewRoot(cmpath.FromOS("/"))
-			if rErr != nil {
-				t.Fatal(errors.Wrap(rErr, "should have succeeded"))
-			}
-			err := p.addScope(root, newFakeDiscoveryClient(tc.resources), rp)
-			if err != nil {
-				t.Fatal(errors.Wrap(err, "should have succeeded"))
-			}
-
+			// TODO(sbochins): add tests with CRDs enabled
+			root.Accept(tree.NewAPIInfoBuilderVisitor(client, transform.EphemeralResources(), false))
 			actual, err := utildiscovery.GetAPIInfo(root)
 			if err != nil {
 				t.Fatal(err)
@@ -137,17 +124,17 @@ func (c *invalidServerResourcesDiscoveryClient) ServerResources() ([]*v1.APIReso
 	}, nil
 }
 
-func TestFailAddScope(t *testing.T) {
+func TestAPIInfoVisitorError(t *testing.T) {
 	testCases := []struct {
 		name   string
 		client discovery.ServerResourcesInterface
 	}{
 		{
-			name:   "returns error if fail to get server resources",
+			name:   "no server resources returns ephemeral resources",
 			client: &failGetServerResourcesDiscoveryClient{},
 		},
 		{
-			name:   "returns invalid server resources",
+			name:   "server resource adds to ephemeral resources",
 			client: &invalidServerResourcesDiscoveryClient{},
 		},
 	}
@@ -155,20 +142,12 @@ func TestFailAddScope(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			root := &ast.Root{}
+			// TODO(sbochins): add tests with CRDs enabled
+			v := tree.NewAPIInfoBuilderVisitor(tc.client, transform.EphemeralResources(), false)
+			root.Accept(v)
 
-			// TODO: test w/ CRDs
-			p, pErr := NewParserWithFactory(fstesting.NewTestFactory(t), ParserOpt{EnableCRDs: false})
-			if pErr != nil {
-				t.Fatal(errors.Wrap(pErr, "should have succeeded"))
-			}
-			rp, rErr := cmpath.NewRoot(cmpath.FromOS("/"))
-			if rErr != nil {
-				t.Fatal(errors.Wrap(rErr, "should have succeeded"))
-			}
-			err := p.addScope(root, tc.client, rp)
-
-			if err == nil {
-				t.Fatal("Should have failed.")
+			if v.Error() == nil {
+				t.Fatal("should have failed")
 			}
 		})
 	}

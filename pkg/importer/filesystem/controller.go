@@ -194,7 +194,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			}
 
 			// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-			desiredPolicies, mErr := c.parser.Parse(newDir, token, startTime)
+			desiredPolicies, mErr := c.parser.Parse(newDir, token, currentPolicies, startTime)
 			if mErr != nil {
 				glog.Warningf("Failed to parse: %v", mErr)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())

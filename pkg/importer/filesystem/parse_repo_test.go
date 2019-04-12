@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 )
 
@@ -75,7 +76,7 @@ func (tc *testCase) Run(t *testing.T) {
 		t.Fatalf("unexpected error: %#v", err2)
 	}
 
-	_, actualErrors := p.Parse(tc.Root(), "", time.Time{})
+	_, actualErrors := p.Parse(tc.Root(), "", &namespaceconfig.AllPolicies{}, time.Time{})
 	if actualErrors == nil {
 		t.Fatal("expected error(s), got none")
 	}
