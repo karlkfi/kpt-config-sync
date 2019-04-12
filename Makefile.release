@@ -94,7 +94,7 @@ IMAGE_TAG := $(VERSION)
 BUILD_MODE ?= release
 
 # RleaseNome Webhook URL
-WEBHOOK := "https://chat.googleapis.com/v1/spaces/AAAAoUcpCyQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=Hjj9S6kI_yzZ555Ko4i9K3Pm3WX0WkeKQmsqDke6K6g%3D"
+WEBHOOK := "https://chat.googleapis.com/v1/spaces/AAAABmM05cM/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=1jimDwRyaLMJ7nKELjYGNTJVHYHILzHg5LG8DhRce0M%3D"
 
 # This is the hash of the last release candidate's revision.  No need to run the
 # release process if this has not changed since the last run.
