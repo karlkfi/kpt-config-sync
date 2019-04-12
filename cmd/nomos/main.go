@@ -43,12 +43,22 @@ func init() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVar(&flags.Validate, flags.ValidateFlag, true,
+	pf := rootCmd.PersistentFlags()
+	pf.BoolVar(&flags.Validate, flags.ValidateFlag, true,
 		`If true, use a schema to validate the CSP Configuration Management directory.
 `)
-	rootCmd.PersistentFlags().Var(&flags.Path, flags.PathFlag,
+	pf.Var(&flags.Path, flags.PathFlag,
 		`The path to use as a CSP Configuration Management directory. Defaults to the working directory.
 `)
+	pf.StringSliceVar(&flags.Clusters, flags.ClustersName, nil,
+		`The comma-separated list of clusters to use in multi-cluster commands.
+`)
+	_ = pf.MarkHidden(flags.ClustersName)
+	pf.BoolVar(&flags.AllClusters, flags.AllClustersName, false,
+		`If set, applies a multi-cluster command to every cluster accessible to the user.  --clusters=... flag is disregarded then.
+`)
+	_ = pf.MarkHidden(flags.AllClustersName)
+
 }
 
 func main() {
