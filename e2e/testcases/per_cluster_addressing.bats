@@ -187,7 +187,7 @@ function get_cluster_name() {
   wait::for -f -- kubectl get rolebindings -n backend bob-rolebinding
 
   debug::log "Change the cluster name"
-  wait::for -- kubectl patch configmanagement -n=config-management-system config-management --type=merge \
+  wait::for -- kubectl patch configmanagement config-management --type=merge \
     -p '{"spec":{"clusterName": "test-cluster-env-test"}}'
 
   debug::log "Change the cluster and selector to point to test"
@@ -210,7 +210,7 @@ function get_cluster_name() {
 #   $1: new cluster name (string)
 function rename_cluster() {
   local new_name="${1}"
-  kubectl patch configmanagement -n=config-management-system config-management --type=merge \
+  kubectl patch configmanagement config-management --type=merge \
     -p "{\"spec\":{\"clusterName\": \"${new_name}\"}}"
 }
 
