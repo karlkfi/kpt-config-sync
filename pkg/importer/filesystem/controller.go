@@ -130,6 +130,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			if err != nil {
 				glog.Errorf("failed to resolve policydir: %v", err)
 				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				c.updateSourceStatus(ctx, nil, cmesForMultiError(status.From(err)))
 				continue
 			}
 
@@ -161,6 +162,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			if err != nil {
 				glog.Warningf("Failed to parse commit hash: %v", err)
 				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				c.updateSourceStatus(ctx, nil, cmesForMultiError(status.From(err)))
 				continue
 			}
 
@@ -173,9 +175,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			}
 
 			repoObj.Status.Source.Token = token
-			if _, err := c.repoClient.UpdateSourceStatus(ctx, repoObj); err != nil {
-				glog.Errorf("failed to update Repo source status: %v", err)
-			}
+			c.updateSourceStatus(ctx, &token, nil)
 
 			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
 			if err != nil {
@@ -252,6 +252,26 @@ func (c *Controller) updateImportStatus(ctx context.Context, repoObj *v1.Repo, t
 
 	if _, err = c.repoClient.UpdateImportStatus(ctx, repoObj); err != nil {
 		glog.Errorf("failed to update Repo import status: %v", err)
+	}
+}
+
+// updateSourceStatus writes the updated Repo.Source.Status field.  A new repo
+// is loaded every time before updating.  If errs is nil,
+// Repo.Source.Status.Errors will be cleared.  if token is nil, it will not be
+// updated so as to preserve any prior content.
+func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs []v1.ConfigManagementError) {
+	r, err := c.repoClient.GetOrCreateRepo(ctx)
+	if err != nil {
+		glog.Errorf("failed to get fresh Repo: %v", err)
+		return
+	}
+	if token != nil {
+		r.Status.Source.Token = *token
+	}
+	r.Status.Source.Errors = errs
+
+	if _, err = c.repoClient.UpdateSourceStatus(ctx, r); err != nil {
+		glog.Errorf("failed to update Repo source status: %v", err)
 	}
 }
 

@@ -422,6 +422,10 @@ type RepoSourceStatus struct {
 	// soon as the policy importer sees a new change in the repo.
 	// +optional
 	Token string `json:"token,omitempty"`
+
+	// Errors is a list of any errors that occurred while performing the most recent import.
+	// +optional
+	Errors []ConfigManagementError `json:"errors,omitempty"`
 }
 
 // RepoImportStatus contains status fields for the import of the Repo.

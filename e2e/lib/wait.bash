@@ -13,8 +13,11 @@
 #   -d [deadline]      The deadline in seconds since the epoch
 #   -e [exit code]     Wait for specific integer exit code
 #   -f                 Wait for failure (exit nonzero)
-#   -o [output]        The expected output at the end of the wait. If omitted,
+#   -o [output]        The expected exact output at the end of the wait. If omitted,
 #                      output is not checked.  Default: ""
+#   -c [output]        The expected substring of output ("contains") at the end
+#                      of the wait. If omitted, output is not checked.
+#                      Default: ""
 #   -p [poll interval] The amount of time to wait between executions
 #   -s                 Wait for success (exit 0)
 #   -t [timeout]       The timeout in seconds (default 300 seconds)
@@ -28,6 +31,7 @@ function wait::for() {
   local timeout=300
   local deadline="$(( $(date +%s) + timeout ))"
   local expected_output=""
+  local contained_output=""
 
   local parse_args=false
   for i in "$@"; do
@@ -69,6 +73,10 @@ function wait::for() {
           expected_output=${1:-}
           shift
         ;;
+        -c)
+          contained_output=${1:-}
+          shift
+        ;;
         --)
           break
         ;;
@@ -90,6 +98,10 @@ function wait::for() {
       sleep "${sleeptime}"
       continue
     fi
+    if [[ -n "${contained_output}" ]] && [[ "${out}" != *"${contained_output}"* ]]; then
+      sleep "${sleeptime}"
+      continue
+    fi
     if "${exitf[@]}" "${status}"; then
       return 0
     fi
@@ -97,7 +109,7 @@ function wait::for() {
   done
 
   echo "Command timed out after ${timeout} sec:" \
-    "${args[@]}" "status: ${status} last output: ${out}"
+    "${args[@]}" "status: ${status} last output: '${out}'"
   return 1
 }
 
