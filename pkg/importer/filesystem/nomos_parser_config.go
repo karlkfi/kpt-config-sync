@@ -31,6 +31,7 @@ func (n NomosVisitorProvider) Visitors(
 
 	specs := toInheritanceSpecs(configs)
 	v := []ast.Visitor{
+		&mustSucceed{Visitor: syntax.NewParseValidator()},
 		selectors.NewClusterSelectorAdder(),
 		system.NewRepoVersionValidator(),
 		system.NewKindValidator(),
@@ -69,6 +70,19 @@ func (n NomosVisitorProvider) Visitors(
 		v = append(v, transform.NewQuotaVisitor())
 	}
 	return v
+}
+
+// mustSucceed wraps a Visitor, allowing NomosVisitorProvider to specify whether a visitor should
+// be fatal if it returns errors.
+type mustSucceed struct {
+	ast.Visitor
+}
+
+var _ ast.Visitor = &mustSucceed{}
+
+// Fatal returns true if the Visitor encountered any errors.
+func (m mustSucceed) Fatal() bool {
+	return m.Error() != nil
 }
 
 // NamespacesDir implements ParserConfig

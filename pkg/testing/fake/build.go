@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -68,6 +69,16 @@ func Build(gvk schema.GroupVersionKind, opts ...object.Mutator) ast.FileObject {
 
 	opts = append(defaults, opts...)
 
+	object.Mutate(opts...)(&o)
+	return o
+}
+
+// Unstructured returns an Unstructured with the specified gvk.
+func Unstructured(gvk schema.GroupVersionKind, opts ...object.Mutator) ast.FileObject {
+	o := ast.FileObject{
+		Object: &unstructured.Unstructured{},
+	}
+	o.GetObjectKind().SetGroupVersionKind(gvk)
 	object.Mutate(opts...)(&o)
 	return o
 }
