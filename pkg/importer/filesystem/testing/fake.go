@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -111,7 +111,7 @@ func (d *FakeCachedDiscoveryClient) ServerResourcesForGroupVersion(groupVersion 
 			return list, nil
 		}
 	}
-	return nil, vet.InternalErrorf("%T wasn't given any %s resources", d, groupVersion)
+	return nil, status.InternalErrorf("%T wasn't given any %s resources", d, groupVersion)
 }
 
 // TestFactory is a cmdutil.Factory that can be used in tests to avoid requiring talking

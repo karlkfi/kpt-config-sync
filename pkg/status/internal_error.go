@@ -1,7 +1,6 @@
-package vet
+package status
 
 import (
-	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
 
@@ -9,7 +8,7 @@ import (
 const InternalErrorCode = "1000"
 
 func init() {
-	status.Register(InternalErrorCode, Internal{err: errors.New("some internal error")})
+	Register(InternalErrorCode, Internal{err: errors.New("some internal error")})
 }
 
 // Internal errors represent conditions that should ever happen, but that we check for so that
@@ -24,7 +23,7 @@ type Internal struct {
 
 // Error implements error
 func (i Internal) Error() string {
-	return status.Format(i, "internal error: %s", i.err.Error())
+	return Format(i, "internal error: %s", i.err.Error())
 }
 
 // Code implements Error
@@ -33,17 +32,25 @@ func (i Internal) Code() string {
 }
 
 // InternalError returns an Internal with the string representation of the passed object.
-func InternalError(message string) status.Error {
+func InternalError(message string) Error {
 	return Internal{err: errors.New(message)}
 }
 
 // InternalErrorf returns an Internal with a formatted message.
-func InternalErrorf(format string, args ...interface{}) status.Error {
+func InternalErrorf(format string, args ...interface{}) Error {
 	return Internal{err: errors.Errorf(format, args...)}
 }
 
+// InternalWrap returns an Internal wrapping an error.
+func InternalWrap(err error) Error {
+	if err == nil {
+		return nil
+	}
+	return Internal{err: err}
+}
+
 // InternalWrapf returns an Internal wrapping an error with a formatted message.
-func InternalWrapf(err error, format string, args ...interface{}) status.Error {
+func InternalWrapf(err error, format string, args ...interface{}) Error {
 	if err == nil {
 		return nil
 	}

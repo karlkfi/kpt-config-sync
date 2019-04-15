@@ -52,15 +52,20 @@ var csKey = clusterSelectorKeyType{}
 
 // SetClusterSelector extends root with the cluster selector.  Use
 // GetClusterSelectors() to get it back.
-func SetClusterSelector(stc *ClusterSelectors, root *ast.Root) *ast.Root {
-	root.Data = root.Data.Add(csKey, stc)
-	return root
+func SetClusterSelector(stc *ClusterSelectors, root *ast.Root) status.Error {
+	var err status.Error
+	root.Data, err = ast.Add(root.Data, csKey, stc)
+	return err
 }
 
 // GetClusterSelectors gets the cluster selectors object from the root.  Panics
 // if not found.
-func GetClusterSelectors(root *ast.Root) *ClusterSelectors {
-	return root.Data.Get(csKey).(*ClusterSelectors)
+func GetClusterSelectors(root *ast.Root) (*ClusterSelectors, status.Error) {
+	cs, err := ast.Get(root.Data, csKey)
+	if err != nil {
+		return nil, err
+	}
+	return cs.(*ClusterSelectors), nil
 }
 
 // ForEachSelector runs f on each name and selector pair in this collection of

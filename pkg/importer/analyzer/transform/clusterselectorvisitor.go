@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	sel "github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/status"
 )
 
 // ClusterSelectorVisitor filters out tree elements and objects that do not match
@@ -13,6 +14,8 @@ type ClusterSelectorVisitor struct {
 	*visitor.Copying
 	// Unset until VisitRoot returns.
 	selectors *sel.ClusterSelectors
+
+	errs status.MultiError
 }
 
 var _ ast.Visitor = (*ClusterSelectorVisitor)(nil)
@@ -29,7 +32,10 @@ func NewClusterSelectorVisitor() *ClusterSelectorVisitor {
 
 // VisitRoot implements ast.Visitor.
 func (v *ClusterSelectorVisitor) VisitRoot(r *ast.Root) *ast.Root {
-	v.selectors = sel.GetClusterSelectors(r)
+	var err error
+	v.selectors, err = sel.GetClusterSelectors(r)
+	v.errs = status.Append(v.errs, status.InternalWrap(err))
+
 	return v.Copying.VisitRoot(r)
 }
 
@@ -72,4 +78,9 @@ func (v *ClusterSelectorVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.C
 		return nil
 	}
 	return o
+}
+
+// Error implements Visitor
+func (v *ClusterSelectorVisitor) Error() status.MultiError {
+	return v.errs
 }

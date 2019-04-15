@@ -125,7 +125,8 @@ func (p *Parser) Parse(root string, importToken string, loadTime time.Time) (*na
 		ImportToken: importToken,
 		LoadTime:    loadTime,
 	}
-	astRoot.Data = astRoot.Data.Add(RootPath{}, rootPath)
+	astRoot.Data, err = ast.Add(astRoot.Data, RootPath{}, rootPath)
+	p.errors = status.Append(p.errors, err)
 
 	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources(rootPath))
 	p.errors = status.Append(p.errors, p.addScope(astRoot, p.discoveryClient, rootPath))
@@ -258,8 +259,7 @@ func (p *Parser) addScope(root *ast.Root, client discovery.ServerResourcesInterf
 			apiInfo.AddCustomResources(cr.Object.(*v1beta1.CustomResourceDefinition))
 		}
 	}
-	utildiscovery.AddAPIInfo(root, apiInfo)
-	return nil
+	return utildiscovery.AddAPIInfo(root, apiInfo)
 }
 
 // toInheritanceSpecs converts HierarchyConfigs to InheritanceSpecs. It also evaluates defaults so that later

@@ -2,8 +2,8 @@ package mutate
 
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -47,7 +47,7 @@ func Remove(key KeyValue) object.Mutator {
 		case *unstructured.Unstructured:
 			removeFromMap(key, o.Object)
 		default:
-			panic(vet.InternalErrorf("unrecognized type %T", o))
+			panic(status.InternalErrorf("unrecognized type %T", o))
 		}
 	}
 }

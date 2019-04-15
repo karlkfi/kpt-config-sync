@@ -6,7 +6,6 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -42,7 +41,7 @@ func Objects(objects ...ast.FileObject) ast.BuildOpt {
 			case repo.NamespacesDir:
 				namespaceObjects = append(namespaceObjects, object)
 			default:
-				return status.From(vet.InternalErrorf("test resource not in known top-level directory: %s", object.SlashPath()))
+				return status.From(status.InternalErrorf("test resource not in known top-level directory: %s", object.SlashPath()))
 			}
 		}
 

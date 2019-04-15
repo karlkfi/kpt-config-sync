@@ -16,8 +16,9 @@ limitations under the License.
 package discovery
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,13 +41,19 @@ type apiInfoKey struct{}
 
 // AddAPIInfo returns a copy of the Extension with the APIInfo set.
 // The value is only accessible with GetAPIInfo.
-func AddAPIInfo(r *ast.Root, apiInfo *APIInfo) {
-	r.Data = r.Data.Add(apiInfoKey{}, apiInfo)
+func AddAPIInfo(r *ast.Root, apiInfo *APIInfo) status.Error {
+	var err status.Error
+	r.Data, err = ast.Add(r.Data, apiInfoKey{}, apiInfo)
+	return err
 }
 
 // GetAPIInfo gets the APIInfo from the Extension.
-func GetAPIInfo(r *ast.Root) *APIInfo {
-	return r.Data.Get(apiInfoKey{}).(*APIInfo)
+func GetAPIInfo(r *ast.Root) (*APIInfo, status.Error) {
+	result, err := ast.Get(r.Data, apiInfoKey{})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*APIInfo), nil
 }
 
 // APIInfo allows for looking up the discovery metav1.APIResource information by group version kind

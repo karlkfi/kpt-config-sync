@@ -39,7 +39,7 @@ func HandleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorde
 		return false, nil
 	}
 
-	panic(vet.InternalErrorf("programmatic error, unhandled syncer diff type: %v", diff.Type()))
+	panic(status.InternalErrorf("programmatic error, unhandled syncer diff type: %v", diff.Type()))
 }
 
 func warnInvalidAnnotationResource(recorder record.EventRecorder, declared *unstructured.Unstructured) {

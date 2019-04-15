@@ -6,10 +6,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,15 +25,15 @@ func (c *fakeDiscoveryClient) ServerResources() ([]*v1.APIResourceList, error) {
 }
 
 func (c *fakeDiscoveryClient) ServerResourcesForGroupVersion(groupVersion string) (*v1.APIResourceList, error) {
-	return nil, vet.InternalError("fakeDiscoveryClient only defines ServerResources()")
+	return nil, status.InternalError("fakeDiscoveryClient only defines ServerResources()")
 }
 
 func (c *fakeDiscoveryClient) ServerPreferredResources() ([]*v1.APIResourceList, error) {
-	return nil, vet.InternalError("fakeDiscoveryClient only defines ServerResources()")
+	return nil, status.InternalError("fakeDiscoveryClient only defines ServerResources()")
 }
 
 func (c *fakeDiscoveryClient) ServerPreferredNamespacedResources() ([]*v1.APIResourceList, error) {
-	return nil, vet.InternalError("fakeDiscoveryClient only defines ServerResources()")
+	return nil, status.InternalError("fakeDiscoveryClient only defines ServerResources()")
 }
 
 func newFakeDiscoveryClient(resources []*v1.APIResourceList) discovery.ServerResourcesInterface {
@@ -98,7 +98,10 @@ func TestAddScope(t *testing.T) {
 				t.Fatal(errors.Wrap(err, "should have succeeded"))
 			}
 
-			actual := utildiscovery.GetAPIInfo(root)
+			actual, err := utildiscovery.GetAPIInfo(root)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			if diff := cmp.Diff(tc.expected, actual, cmp.AllowUnexported(utildiscovery.APIInfo{})); diff != "" {
 				t.Fatal(diff)
@@ -112,7 +115,7 @@ type failGetServerResourcesDiscoveryClient struct {
 }
 
 func (c *failGetServerResourcesDiscoveryClient) ServerResources() ([]*v1.APIResourceList, error) {
-	return nil, vet.InternalError("expected error")
+	return nil, status.InternalError("expected error")
 }
 
 type invalidServerResourcesDiscoveryClient struct {

@@ -80,7 +80,8 @@ func (v *AnnotationInlinerVisitor) Error() status.MultiError {
 func (v *AnnotationInlinerVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	glog.V(5).Infof("VisitRoot(): ENTER")
 	defer glog.V(6).Infof("VisitRoot(): EXIT")
-	cs := sel.GetClusterSelectors(r)
+	cs, err := sel.GetClusterSelectors(r)
+	v.errs = status.Append(v.errs, err)
 	v.selectors = cs
 	// Add inliner map for cluster annotations.
 	t := annotationTransformer{}
@@ -152,7 +153,7 @@ func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) *ast
 	defer glog.V(6).Infof("VisitClusterObject(): EXIT")
 	newObject := o.DeepCopy()
 	m := newObject.MetaObject()
-	v.errs = status.Append(v.errs, vet.InternalWrapf(v.clusterSelectorTransformer.transform(m),
+	v.errs = status.Append(v.errs, status.InternalWrapf(v.clusterSelectorTransformer.transform(m),
 		"failed to inline cluster selector annotations for object %q", m.GetName()))
 	setPopulatedAnnotation(m, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject

@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/kinds"
@@ -15,14 +14,14 @@ import (
 
 func newFailAll() *visitor.ValidatorVisitor {
 	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
-		return status.From(vet.InternalError("test error"))
+		return status.From(status.InternalError("test error"))
 	})
 }
 
 func TestNewAllObjectValidator(t *testing.T) {
 	test := visitortesting.ObjectValidatorTest{
 		Validator: newFailAll,
-		ErrorCode: vet.InternalErrorCode,
+		ErrorCode: status.InternalErrorCode,
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{
 				Name:       "ValidateSystemObject",

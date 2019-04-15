@@ -3,7 +3,7 @@ package selectors
 import (
 	"os"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/status"
@@ -26,13 +26,21 @@ type ClusterSelectorAdder struct {
 var _ ast.Visitor = &ClusterSelectorAdder{}
 
 // GetClusters retrieves the selectors stored in Root.Data.
-func GetClusters(r *ast.Root) []clusterregistry.Cluster {
-	return r.Data.Get(clustersKey{}).([]clusterregistry.Cluster)
+func GetClusters(r *ast.Root) ([]clusterregistry.Cluster, status.Error) {
+	c, err := ast.Get(r.Data, clustersKey{})
+	if err != nil {
+		return nil, err
+	}
+	return c.([]clusterregistry.Cluster), nil
 }
 
 // GetSelectors retrieves the selectors stored in Root.Data.
-func GetSelectors(r *ast.Root) []v1.ClusterSelector {
-	return r.Data.Get(selectorsKey{}).([]v1.ClusterSelector)
+func GetSelectors(r *ast.Root) ([]v1.ClusterSelector, status.Error) {
+	s, err := ast.Get(r.Data, selectorsKey{})
+	if err != nil {
+		return nil, err
+	}
+	return s.([]v1.ClusterSelector), nil
 }
 
 // NewClusterSelectorAdder initializes a ClusterSelectorAdder.
@@ -50,12 +58,16 @@ func (v *ClusterSelectorAdder) VisitRoot(r *ast.Root) *ast.Root {
 	v.selectors = getSelectors(r.ClusterRegistryObjects)
 	v.Base.VisitRoot(r)
 
-	r.Data = r.Data.Add(clustersKey{}, v.clusters)
-	r.Data = r.Data.Add(selectorsKey{}, v.selectors)
+	var err error
+	r.Data, err = ast.Add(r.Data, clustersKey{}, v.clusters)
+	v.errs = status.Append(v.errs, err)
+	r.Data, err = ast.Add(r.Data, selectorsKey{}, v.selectors)
+	v.errs = status.Append(v.errs, err)
 
 	cs, err := NewClusterSelectors(v.clusters, v.selectors, os.Getenv("CLUSTER_NAME"))
 	v.errs = status.Append(v.errs, err)
-	SetClusterSelector(cs, r)
+	err = SetClusterSelector(cs, r)
+	v.errs = status.Append(v.errs, err)
 
 	return r
 }

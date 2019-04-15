@@ -20,7 +20,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -96,7 +95,7 @@ func NewBase() *Base {
 // object to set the impl value.
 func (vb *Base) SetImpl(impl ast.Visitor) {
 	if vb == nil {
-		panic(vet.InternalError("Base is nil. Allocate Base before using it."))
+		panic(status.InternalError("Base is nil. Allocate Base before using it."))
 	}
 	vb.impl = impl
 }

@@ -3,7 +3,7 @@ package filesystem
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 )
@@ -21,7 +21,7 @@ type failServerResourcesInterface struct {
 }
 
 func (f failServerResourcesInterface) ServerResourcesForGroupVersion(gv string) (*v1.APIResourceList, error) {
-	return nil, vet.InternalError("error")
+	return nil, status.InternalError("error")
 }
 
 func TestPolicyManagementNotInstalled(t *testing.T) {

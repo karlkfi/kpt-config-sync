@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	visitorpkg "github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/resourcequota"
+	"github.com/google/nomos/pkg/util/discovery"
 )
 
 // MutatingVisitorTestcase is a struct that halps for testing
@@ -42,7 +43,7 @@ func (tc *MutatingVisitorTestcase) Runf(
 	visitor ast.Visitor,
 	initRoot func(*ast.Root),
 	options func() []cmp.Option) func(t *testing.T) {
-	opts := []cmp.Option{resourcequota.ResourceQuantityEqual()}
+	opts := []cmp.Option{resourcequota.ResourceQuantityEqual(), cmp.AllowUnexported(ast.Extension{}, discovery.APIInfo{})}
 	if options != nil {
 		opts = append(opts, options()...)
 	}

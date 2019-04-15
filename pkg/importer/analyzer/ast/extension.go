@@ -17,9 +17,7 @@ limitations under the License.
 package ast
 
 import (
-	"reflect"
-
-	"github.com/pkg/errors"
+	"github.com/google/nomos/pkg/status"
 )
 
 // Extension holds visitor specific data for iterative transform passes.  Extension handles calls to a nil
@@ -54,103 +52,62 @@ type Extension struct {
 // newExtension returns a new data object.
 func newExtension() *Extension {
 	return &Extension{
-		items: map[interface{}]interface{}{},
+		items: make(map[interface{}]interface{}),
 	}
 }
 
-// Equal returns true if e and other are exactly equal.  Used in the "cmp" test
-// comparisons.
-func (d *Extension) Equal(other *Extension) bool {
-	if d == nil && other != nil {
-		return false
-	}
-	if d != nil && other == nil {
-		return false
-	}
-	if d == nil && other == nil {
-		return true
-	}
-	return reflect.DeepEqual(d.items, other.items)
-}
-
-// Copy creates a copy of Extension.  If data is nil, it will return nil.
-func (d *Extension) Copy() *Extension {
-	if d == nil {
-		return nil
-	}
+// Add returns a shallow copy of Extension with key set to value, or an error if the key is already
+// present.
+func Add(d *Extension, key, value interface{}) (*Extension, status.Error) {
 	nd := newExtension()
-	for k, v := range d.items {
-		nd.items[k] = v
+	if d != nil {
+		// Ensure key does not already exist.
+		_, found := d.items[key]
+		if found {
+			return nil, status.InternalError("key %#v already present in Extension")
+		}
+
+		// Copy items from d into new Extension.
+		for k, v := range d.items {
+			nd.items[k] = v
+		}
 	}
-	return nd
+
+	nd.items[key] = value
+	return nd, nil
 }
 
-// Len returns the number of items in Extension.
-func (d *Extension) Len() int {
+// Get returns the value at the requested key, or an error if the key is not present.
+func Get(d *Extension, key interface{}) (interface{}, status.Error) {
 	if d == nil {
-		return 0
+		return nil, status.InternalError("tried to get %#v from nil Extension")
 	}
-	return len(d.items)
+
+	value, found := d.items[key]
+	if !found {
+		return nil, status.InternalError("extension missing key %#v")
+	}
+	return value, nil
 }
 
-// Add creates a copy of Extension with the new item.  If the key already exists, Add will panic.
+// Add creates a copy of Extension with key set to value.
+//
+// Deprecated: Use ast.Add.
 func (d *Extension) Add(key, value interface{}) *Extension {
-	if d == nil {
-		return newExtension().Add(key, value)
+	result, err := Add(d, key, value)
+	if err != nil {
+		panic(err)
 	}
-	if v, found := d.items[key]; found {
-		//TODO(b/122740271) Don't panic!
-		panic(errors.Errorf("programmer error: key %s already added with value %#v while trying to add %#v", key, v, value))
-	}
-
-	nd := d.Copy()
-	nd.items[key] = value
-	return nd
-}
-
-// Update creates a copy of Extension with a new value for an existing key.  If the key does
-// not exist, Update will panic.
-func (d *Extension) Update(key, value interface{}) *Extension {
-	if d == nil {
-		return newExtension().Update(key, value)
-	}
-	if _, found := d.items[key]; !found {
-		//TODO(b/122740271) Don't panic!
-		panic(errors.Errorf("programmer error: key %s does not exist when trying to update to value %#v", key, value))
-	}
-	nd := d.Copy()
-	nd.items[key] = value
-	return nd
+	return result
 }
 
 // Get returns the data from the object.  If the key does not exist, Get will panic.
+//
+// Deprecated: Use ast.Get.
 func (d *Extension) Get(key interface{}) interface{} {
-	if d == nil {
-		return newExtension().Get(key)
-	}
-	value, found := d.items[key]
-	if !found {
-		//TODO(b/122740271) Don't panic!
-		panic(errors.Errorf("programmer error: key %s does not exist, unable to get value", key))
+	value, err := Get(d, key)
+	if err != nil {
+		panic(err)
 	}
 	return value
-}
-
-// Remove removes the data from the object, returns an updated copy and returns a boolean to indicate
-// if the value existed.  If the value did not exist in the map, Remove will panic.  If the last
-// item is deleted from Extension, then nil will be returned.
-func (d *Extension) Remove(key interface{}) *Extension {
-	if d == nil {
-		return newExtension().Remove(key)
-	}
-	if _, found := d.items[key]; !found {
-		//TODO(b/122740271) Don't panic!
-		panic(errors.Errorf("programmer error: unable to delete key %s, does not exist in map", key))
-	}
-	if len(d.items) == 1 {
-		return nil
-	}
-	nd := d.Copy()
-	delete(nd.items, key)
-	return nd
 }

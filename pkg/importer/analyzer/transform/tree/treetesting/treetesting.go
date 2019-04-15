@@ -23,7 +23,10 @@ func BuildTreeWithAPIInfo(t *testing.T, apiInfo *discovery.APIInfo, objects ...a
 	t.Helper()
 
 	root := &ast.Root{}
-	discovery.AddAPIInfo(root, apiInfo)
+	err := discovery.AddAPIInfo(root, apiInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	return buildTree(t, root, objects...)
 }

@@ -20,16 +20,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/pkg/errors"
 )
-
-const (
-	add    = "add"
-	update = "update"
-	get    = "get"
-	remove = "remove"
-)
-
-var cmpOpt = cmp.AllowUnexported(Extension{})
 
 type key1Type struct{}
 type key2Type struct{}
@@ -37,190 +29,132 @@ type key2Type struct{}
 var key1 key1Type
 var key2 key2Type
 
-type extensionOperation struct {
-	typ  string
-	key  interface{}
-	item string
+var value1 = "value1"
+var value2 = "value2"
 
-	expectPanic bool
-	expectItem  string
-}
+func TestAdd(t *testing.T) {
+	testCases := []struct {
+		name       string
+		extension  *Extension
+		addKey     interface{}
+		shouldFail bool
+	}{
+		{
+			name:   "set on nil works",
+			addKey: key1,
+		},
+		{
+			name: "set duplicate key returns error",
+			extension: &Extension{items: map[interface{}]interface{}{
+				key1: value1,
+			}},
+			addKey:     key1,
+			shouldFail: true,
+		},
+		{
+			name: "set different key works",
+			extension: &Extension{items: map[interface{}]interface{}{
+				key2: value1,
+			}},
+			addKey: key1,
+		},
+	}
 
-type extensionTestcase struct {
-	name string
-	ops  []extensionOperation
-}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Add(tc.extension, tc.addKey, value1)
 
-func (tc *extensionTestcase) runOp(t *testing.T, d *Extension, idx int) *Extension {
-	op := tc.ops[idx]
-	defer func() {
-		if v := recover(); v != nil {
-			if !op.expectPanic {
-				t.Fatalf("idx %d: did not expect panic, got panic: %v", idx, v)
+			if tc.shouldFail {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
 			}
-		}
-	}()
-
-	var nd *Extension
-	var val interface{}
-
-	inCopy := d.Copy()
-	switch op.typ {
-	case add:
-		nd = d.Add(op.key, op.item)
-	case update:
-		nd = d.Update(op.key, op.item)
-	case get:
-		val = d.Get(op.key)
-	case remove:
-		nd = d.Remove(op.key)
-	default:
-		t.Fatalf("invalid op type: %s", op.typ)
-	}
-	if !cmp.Equal(d, inCopy, cmpOpt) {
-		t.Errorf("Extension was modified during operation %s", cmp.Diff(d, inCopy, cmpOpt))
-	}
-	if op.expectPanic {
-		// we should not get here.
-		t.Fatalf("Expected panic.")
-	}
-
-	if op.typ == get {
-		if !cmp.Equal(val, op.expectItem, cmpOpt) {
-			t.Errorf("idx %d: Wrong item returned: %s", idx, cmp.Diff(op.expectItem, val, cmpOpt))
-		}
-		return d
-	}
-	if nd == nil && nd != nil {
-		t.Errorf("data should be nil if emtpy")
-	}
-
-	return nd
-}
-
-func (tc *extensionTestcase) Run(t *testing.T) {
-	var d *Extension
-	for idx := range tc.ops {
-		d = tc.runOp(t, d, idx)
+			if err != nil {
+				t.Fatal(errors.Wrap(err, "unexpected error"))
+			}
+		})
 	}
 }
 
-var extensionTestcases = []extensionTestcase{
-	{
-		name: "Add get update get remove get",
-		ops: []extensionOperation{
-			{
-				typ:  add,
-				key:  key1,
-				item: "value1",
-			},
-			{
-				typ:        get,
-				key:        key1,
-				expectItem: "value1",
-			},
-			{
-				typ:  update,
-				key:  key1,
-				item: "value2",
-			},
-			{
-				typ:        get,
-				key:        key1,
-				expectItem: "value2",
-			},
-			{
-				typ: remove,
-				key: key1,
-			},
-			{
-				typ:         get,
-				key:         key1,
-				expectPanic: true,
-			},
+func TestGet(t *testing.T) {
+	testCases := []struct {
+		name        string
+		extension   *Extension
+		getKey      interface{}
+		expectValue interface{}
+		shouldFail  bool
+	}{
+		{
+			name:       "get from nil returns error",
+			getKey:     key1,
+			shouldFail: true,
 		},
-	},
-	{
-		name: "Add existing value",
-		ops: []extensionOperation{
-			{
-				typ:  add,
-				key:  key1,
-				item: "value1",
-			},
-			{
-				typ:        get,
-				key:        key1,
-				expectItem: "value1",
-			},
-			{
-				typ:         add,
-				key:         key1,
-				item:        "value2",
-				expectPanic: true,
-			},
+		{
+			name: "get with key returns value",
+			extension: &Extension{items: map[interface{}]interface{}{
+				key1: value1,
+			}},
+			getKey:      key1,
+			expectValue: value1,
 		},
-	},
-	{
-		name: "Update non existent value",
-		ops: []extensionOperation{
-			{
-				typ:         update,
-				key:         key1,
-				item:        "value",
-				expectPanic: true,
-			},
+		{
+			name: "get with wrong key returns error",
+			extension: &Extension{items: map[interface{}]interface{}{
+				key1: value1,
+			}},
+			getKey:     key2,
+			shouldFail: true,
 		},
-	},
-	{
-		name: "get not found",
-		ops: []extensionOperation{
-			{
-				typ:         get,
-				key:         key1,
-				expectPanic: true,
-			},
-		},
-	},
-	{
-		name: "Remove non existent value",
-		ops: []extensionOperation{
-			{
-				typ:         remove,
-				key:         key1,
-				expectPanic: true,
-			},
-		},
-	},
-	{
-		name: "Handle two struct keys",
-		ops: []extensionOperation{
-			{
-				typ:  add,
-				key:  key1,
-				item: "key1-value",
-			},
-			{
-				typ:  add,
-				key:  key2,
-				item: "key2-value",
-			},
-			{
-				typ:        get,
-				key:        key1,
-				expectItem: "key1-value",
-			},
-			{
-				typ:        get,
-				key:        key2,
-				expectItem: "key2-value",
-			},
-		},
-	},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			val, err := Get(tc.extension, tc.getKey)
+
+			if tc.shouldFail {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(errors.Wrap(err, "unexpected error"))
+			}
+
+			if diff := cmp.Diff(tc.expectValue, val); diff != "" {
+				t.Fatal(diff)
+			}
+		})
+	}
 }
 
-func TestExtension(t *testing.T) {
-	for _, tc := range extensionTestcases {
-		t.Run(tc.name, tc.Run)
+func TestAddTwice(t *testing.T) {
+	// Ensure Add does not lose previously set keys.
+	var extension *Extension
+	extension, err := Add(extension, key1, value1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	extension, err = Add(extension, key2, value2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	val, err := Get(extension, key1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(value1, val); diff != "" {
+		t.Fatal(diff)
+	}
+
+	val2, err := Get(extension, key2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(value2, val2); diff != "" {
+		t.Fatal(diff)
 	}
 }

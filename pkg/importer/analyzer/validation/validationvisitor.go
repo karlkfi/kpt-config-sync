@@ -73,8 +73,10 @@ func (v *InputValidator) Error() status.MultiError {
 // enabled.
 func (v *InputValidator) VisitRoot(r *ast.Root) *ast.Root {
 	if v.vet {
-		clusters := selectors.GetClusters(r)
-		sels := selectors.GetSelectors(r)
+		clusters, err := selectors.GetClusters(r)
+		v.errs = status.Append(v.errs, err)
+		sels, err := selectors.GetSelectors(r)
+		v.errs = status.Append(v.errs, err)
 		v.coverage, v.errs = coverage.NewForCluster(clusters, sels)
 	}
 

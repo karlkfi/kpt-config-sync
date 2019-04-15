@@ -22,8 +22,9 @@ func NewKnownResourceValidator() ast.Visitor {
 
 // ValidateRoot implement ast.Visitor.
 func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) status.MultiError {
-	k.apiInfo = discovery.GetAPIInfo(r)
-	return nil
+	var err error
+	k.apiInfo, err = discovery.GetAPIInfo(r)
+	return status.From(err)
 }
 
 // ValidateSystemObject implements Visitor.

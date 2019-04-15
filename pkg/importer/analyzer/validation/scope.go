@@ -51,7 +51,9 @@ func (p *Scope) Error() status.MultiError {
 
 // VisitRoot implement ast.Visitor.
 func (p *Scope) VisitRoot(r *ast.Root) *ast.Root {
-	p.apiInfo = discovery.GetAPIInfo(r)
+	var err error
+	p.apiInfo, err = discovery.GetAPIInfo(r)
+	p.errs = status.Append(p.errs, err)
 	return p.Base.VisitRoot(r)
 }
 
