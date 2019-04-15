@@ -40,8 +40,10 @@ teardown() {
     --type=merge \
     --patch '{"spec":{"git":{"policyDir":"some-nonexistent-policydir"}}}'
 
+  # Increased timeout from initial 30 to 60 for flakiness.  git-importer
+  # gets restarted on each object change.
   debug::log "Expect an error to be present in status.source.errors"
-  wait::for -t 30 -c "some-nonexistent-policydir" -- \
+  wait::for -t 60 -c "some-nonexistent-policydir" -- \
     kubectl get repo repo -o=yaml \
       --output='jsonpath={.status.source.errors[0].errorMessage}'
 
@@ -51,6 +53,6 @@ teardown() {
     --patch '{"spec":{"git":{"policyDir":"acme"}}}'
 
   debug::log "Expect repo to recover from the error in source message"
-  wait::for -t 30 -o "" -- kubectl get repo repo \
+  wait::for -t 60 -o "" -- kubectl get repo repo \
     --output='jsonpath={.status.source.errors[0].errorMessage}'
 }
