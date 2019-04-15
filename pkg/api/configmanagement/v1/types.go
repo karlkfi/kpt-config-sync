@@ -423,7 +423,7 @@ type RepoSourceStatus struct {
 	// +optional
 	Token string `json:"token,omitempty"`
 
-	// Errors is a list of any errors that occurred while performing the most recent import.
+	// Errors is a list of any errors that occurred while reading from the source of truth.
 	// +optional
 	Errors []ConfigManagementError `json:"errors,omitempty"`
 }

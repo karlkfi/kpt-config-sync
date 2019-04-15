@@ -168,14 +168,11 @@ func (c *Controller) pollDir(ctx context.Context) {
 
 			// Before we start parsing the new directory, update the source token to reflect that this
 			// cluster has seen the change even if it runs into issues parsing/importing it.
-			repoObj, err := c.repoClient.GetOrCreateRepo(ctx)
-			if err != nil {
-				glog.Errorf("failed to get Repo: %v", err)
+			repoObj := c.updateSourceStatus(ctx, &token, nil)
+			if repoObj == nil {
+				// If we failed to get the Repo, restart the controller loop to try to fetch it again.
 				continue
 			}
-
-			repoObj.Status.Source.Token = token
-			c.updateSourceStatus(ctx, &token, nil)
 
 			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
 			if err != nil {
@@ -259,11 +256,11 @@ func (c *Controller) updateImportStatus(ctx context.Context, repoObj *v1.Repo, t
 // is loaded every time before updating.  If errs is nil,
 // Repo.Source.Status.Errors will be cleared.  if token is nil, it will not be
 // updated so as to preserve any prior content.
-func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs []v1.ConfigManagementError) {
+func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs []v1.ConfigManagementError) *v1.Repo {
 	r, err := c.repoClient.GetOrCreateRepo(ctx)
 	if err != nil {
 		glog.Errorf("failed to get fresh Repo: %v", err)
-		return
+		return nil
 	}
 	if token != nil {
 		r.Status.Source.Token = *token
@@ -273,6 +270,7 @@ func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs
 	if _, err = c.repoClient.UpdateSourceStatus(ctx, r); err != nil {
 		glog.Errorf("failed to update Repo source status: %v", err)
 	}
+	return r
 }
 
 // updatePolicies calculates and applies the actions needed to go from current to desired.
