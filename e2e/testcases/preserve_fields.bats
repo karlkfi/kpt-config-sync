@@ -207,7 +207,7 @@ function validate_configmap_annotations() {
   default_keys="${nested_default_keys},\"kubectl.kubernetes.io/last-applied-configuration\""
   local annotations
   annotations=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c "${selector}")
-  [[ "${annotations}" == "${default_keys}${additional_keys}]" ]] || debug::error "${selector} was not synced, got: ${annotations}"
+  [[ "${annotations}" == "${default_keys}${additional_keys}]" ]] || debug::error "${selector} for keys '${default_keys}${additional_keys}' was not synced, got: ${annotations}"
 
   local config
   config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."kubectl.kubernetes.io/last-applied-configuration"' | sed  's/^.\(.*\).$/\1/' | xargs -0 printf '%b')
