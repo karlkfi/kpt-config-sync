@@ -34,7 +34,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(initialize.InitCmd)
+	rootCmd.AddCommand(initialize.Cmd)
 	rootCmd.AddCommand(vet.VetCmd)
 	rootCmd.AddCommand(view.PrintCmd)
 	rootCmd.AddCommand(importer.Cmd)
