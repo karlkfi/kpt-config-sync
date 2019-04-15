@@ -1009,12 +1009,13 @@
   revision = "11047e25a94a7eaa541b92a8bbfd3e1243607219"
 
 [[projects]]
-  digest = "1:928884043466dedd4c9258a0fa1fa99f666c425eed97c0a662aaf2aa0a3570ed"
+  digest = "1:2d807e8a81460b0280b14f0c2d8f8f14f0fad401f55a4f52a8e6262c3d4cea8a"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
     "discovery/fake",
     "dynamic",
+    "dynamic/fake",
     "informers",
     "informers/admissionregistration",
     "informers/admissionregistration/v1alpha1",
@@ -1474,6 +1475,7 @@
     "k8s.io/api/policy/v1beta1",
     "k8s.io/api/rbac/v1",
     "k8s.io/api/rbac/v1alpha1",
+    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
     "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset",
     "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake",
     "k8s.io/apimachinery/pkg/api/errors",
@@ -1504,6 +1506,7 @@
     "k8s.io/client-go/discovery",
     "k8s.io/client-go/discovery/fake",
     "k8s.io/client-go/dynamic",
+    "k8s.io/client-go/dynamic/fake",
     "k8s.io/client-go/informers",
     "k8s.io/client-go/informers/core/v1",
     "k8s.io/client-go/kubernetes",
@@ -1535,6 +1538,7 @@
     "k8s.io/kubernetes/pkg/quota",
     "k8s.io/kubernetes/pkg/quota/generic",
     "k8s.io/kubernetes/pkg/quota/install",
+    "k8s.io/kubernetes/pkg/util/slice",
     "sigs.k8s.io/controller-runtime/pkg/cache",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/apiutil",
