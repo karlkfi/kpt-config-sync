@@ -35,8 +35,7 @@ func IsPolicyApplicableToNamespace(namespaceLabels map[string]string, policy met
 	}
 	var ns v1.NamespaceSelector
 	if err := json.Unmarshal([]byte(ls), &ns); err != nil {
-		// TODO(b/122738890)
-		return false, status.UndocumentedWrapf(err, "failed to unmarshal NamespaceSelector in object %q", policy.GetName())
+		return false, vet.InvalidSelectorError{Name: policy.GetName(), Cause: err}
 	}
 	selector, err := AsPopulatedSelector(&ns.Spec.Selector)
 	if err != nil {
