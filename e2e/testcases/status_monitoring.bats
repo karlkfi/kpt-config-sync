@@ -56,3 +56,18 @@ teardown() {
   wait::for -t 60 -o "" -- kubectl get repo repo \
     --output='jsonpath={.status.source.errors[0].errorMessage}'
 }
+
+@test "Version populated in ConfigManagement.status.configManagementVersion" {
+  debug::log "Ensure that the repo is error-free at the start of the test"
+  git::commit -a -m "Commit the repo contents."
+  wait::for -t 30 -o "true" -- kubectl get configmanagement config-management \
+    --output='jsonpath={.status.healthy}'
+
+  run kubectl get configmanagement config-management \
+    --output='jsonpath={.status.configManagementVersion}'
+  # shellcheck disable=SC2154
+  if [[ "${output}" == "" ]]; then
+    debug::error ".status.ConfigManagementVersion is not filled in."
+    debug::error "$(kubectl get configmanagement config-management -o yaml)"
+  fi 
+}
