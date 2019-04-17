@@ -50,15 +50,12 @@ var (
 
 	// dynamicCLient obtains a client based on the supplied REST config.  Can
 	// be overridden in tests.
-	dynamicClient = func(c *rest.Config) (dynamic.Interface, error) {
-		c.Timeout = 30 * time.Second
-		return dynamic.NewForConfig(c)
-	}
+	dynamicClient = dynamic.NewForConfig
 )
 
 // versionInternal allows stubbing out the config for tests.
 func versionInternal(
-	configs func() (map[string]*rest.Config, error),
+	configs func(time.Duration) (map[string]*rest.Config, error),
 	w io.Writer, clusters []string, allClusters bool) {
 	if len(clusters) == 0 && !allClusters {
 		// Old behavior is to print the version of the local command and exit.
@@ -67,7 +64,7 @@ func versionInternal(
 		return
 	}
 	// See go/nomos-cli-version-design for the output below.
-	allCfgs, err := configs()
+	allCfgs, err := configs(30 * time.Second)
 	if err != nil {
 		// nolint:errcheck
 		fmt.Fprintf(w, "could not get kubernetes config file: %v", err)
