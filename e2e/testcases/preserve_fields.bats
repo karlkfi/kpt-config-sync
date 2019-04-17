@@ -107,7 +107,7 @@ teardown() {
   resource::check -n ${ns} configmap ${resname} -a "configmanagement.gke.io/managed=enabled"
 
   debug::log "Checking that no user labels specified"
-  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io"}'
+  wait::for -t 30 -- validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io"}'
 
   debug::log "Add labels to configmap in repo"
   oldresver=$(resource::resource_version configmap ${resname} -n ${ns})
@@ -116,7 +116,7 @@ teardown() {
 
   debug::log "Checking that label is added after syncing an update"
   resource::wait_for_update -n ${ns} -t 30 configmaps "${resname}" "${oldresver}"
-  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io","foo":"bar"}'
+  wait::for -t 30 -- validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io","foo":"bar"}'
 
   debug::log "Update label for configmap in repo"
   oldresver=$(resource::resource_version configmap ${resname} -n ${ns})
@@ -125,7 +125,7 @@ teardown() {
 
   debug::log "Checking that label is updated after syncing an update"
   resource::wait_for_update -n ${ns} -t 30 configmaps "${resname}" "${oldresver}"
-  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io","baz":"qux"}'
+  wait::for -t 30 -- validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io","baz":"qux"}'
 
   debug::log "Delete label for configmap in repo"
   oldresver=$(resource::resource_version configmap ${resname} -n ${ns})
@@ -134,7 +134,7 @@ teardown() {
 
   debug::log "Checking that label is updated after syncing an update"
   resource::wait_for_update -n ${ns} -t 30 configmaps "${resname}" "${oldresver}"
-  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io"}'
+  wait::for -t 30 -- validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io"}'
 }
 
 function validate_configmap_labels() {
@@ -167,7 +167,7 @@ function validate_configmap_labels() {
   resource::check -n ${ns} configmap ${resname} -a "configmanagement.gke.io/managed=enabled"
 
   debug::log "Checking that no annotations specified"
-  validate_configmap_annotations ${resname} ${ns}
+  wait::for -t 30 -- validate_configmap_annotations ${resname} ${ns}
 
   debug::log "Add annotations to configmap in repo"
   oldresver=$(resource::resource_version configmap ${resname} -n ${ns})
@@ -176,7 +176,7 @@ function validate_configmap_labels() {
 
   debug::log "Checking that annotation is added after syncing an update"
   resource::wait_for_update -n ${ns} -t 30 configmaps "${resname}" "${oldresver}"
-  validate_configmap_annotations ${resname} ${ns} ',"zoo"'
+  wait::for -t 30 -- validate_configmap_annotations ${resname} ${ns} ',"zoo"'
 
   debug::log "Update annotation for configmap in repo"
   oldresver=$(resource::resource_version configmap ${resname} -n ${ns})
@@ -185,7 +185,7 @@ function validate_configmap_labels() {
 
   debug::log "Checking that annotation is updated after syncing an update"
   resource::wait_for_update -n ${ns} -t 30 configmaps "${resname}" "${oldresver}"
-  validate_configmap_annotations ${resname} ${ns} ',"zaz"'
+  wait::for -t 30 -- validate_configmap_annotations ${resname} ${ns} ',"zaz"'
 
   debug::log "Delete annotation for configmap in repo"
   oldresver=$(resource::resource_version configmap ${resname} -n ${ns})
@@ -194,7 +194,7 @@ function validate_configmap_labels() {
 
   debug::log "Checking that annotation is updated after syncing an update"
   resource::wait_for_update -n ${ns} -t 30 configmaps "${resname}" "${oldresver}"
-  validate_configmap_annotations ${resname} ${ns}
+  wait::for -t 30 -- validate_configmap_annotations ${resname} ${ns}
 }
 
 function validate_configmap_annotations() {
