@@ -153,9 +153,7 @@ func TestSyncStateBuilding(t *testing.T) {
 		cmp.AllowUnexported(syncState{}),
 		cmp.AllowUnexported(configState{}),
 	}
-	repoStatus := &RepoStatus{
-		tokens: make(map[string]bool),
-	}
+	repoStatus := &RepoStatus{}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -182,7 +180,7 @@ func TestSyncStateMerging(t *testing.T) {
 		want   *v1.RepoStatus
 	}{
 		{
-			name: "merge state into RepoStatus",
+			name: "merge unreconciled state into RepoStatus",
 			state: &syncState{
 				unreconciledCommits: map[string][]string{
 					commit1: {namespacePrefix("shipping-dev")},
@@ -218,7 +216,7 @@ func TestSyncStateMerging(t *testing.T) {
 					LastUpdate: currentTime,
 				},
 				Sync: v1.RepoSyncStatus{
-					LatestToken: commit2,
+					LatestToken: commit1,
 					LastUpdate:  updatedTime,
 					InProgress: []v1.RepoSyncChangeStatus{
 						{Token: commit1},
@@ -228,46 +226,38 @@ func TestSyncStateMerging(t *testing.T) {
 			},
 		},
 		{
-			name: "merge state and ignore out-of-date version token",
+			name: "merge reconciled state into RepoStatus",
 			state: &syncState{
-				unreconciledCommits: map[string][]string{
-					commit1: {namespacePrefix("shipping-dev")},
-				},
-				configs: map[string]configState{
-					namespacePrefix("shipping-dev"): {commit: commit1, errors: []v1.ConfigManagementError{err1}},
-				},
+				unreconciledCommits: map[string][]string{},
+				configs:             map[string]configState{},
 			},
 			status: &v1.RepoStatus{
 				Source: v1.RepoSourceStatus{
-					Token: commit3,
+					Token: commit2,
 				},
 				Import: v1.RepoImportStatus{
-					Token:      commit3,
+					Token:      commit2,
 					LastUpdate: currentTime,
 				},
 				Sync: v1.RepoSyncStatus{
-					LatestToken: commit3,
+					LatestToken: commit1,
 					LastUpdate:  currentTime,
 					InProgress: []v1.RepoSyncChangeStatus{
 						{Token: commit1},
-						{Token: commit2},
 					},
 				},
 			},
 			want: &v1.RepoStatus{
 				Source: v1.RepoSourceStatus{
-					Token: commit3,
+					Token: commit2,
 				},
 				Import: v1.RepoImportStatus{
-					Token:      commit3,
+					Token:      commit2,
 					LastUpdate: currentTime,
 				},
 				Sync: v1.RepoSyncStatus{
-					LatestToken: commit3,
+					LatestToken: commit2,
 					LastUpdate:  updatedTime,
-					InProgress: []v1.RepoSyncChangeStatus{
-						{Token: commit1, Errors: []v1.ConfigManagementError{err1}},
-					},
 				},
 			},
 		},
@@ -275,7 +265,7 @@ func TestSyncStateMerging(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.state.merge(tc.status, commit2, now)
+			tc.state.merge(tc.status, now)
 			if diff := cmp.Diff(tc.want, tc.status); diff != "" {
 				t.Errorf("RepoStatus does not match expectation:\n%v", diff)
 			}
