@@ -1,11 +1,11 @@
 package status
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/pkg/errors"
-	"k8s.io/kubernetes/pkg/util/slice"
 )
 
 // ResourceErrorCode is the error code for a generic ResourceError.
@@ -29,7 +29,7 @@ func formatResources(err ResourceError) string {
 		resStrs[i] = id.PrintResource(res)
 	}
 	// Sort to ensure deterministic resource printing order.
-	slice.SortStrings(resStrs)
+	sort.Strings(resStrs)
 	return strings.Join(resStrs, "\n\n")
 }
 
