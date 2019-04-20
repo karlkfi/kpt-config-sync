@@ -15,8 +15,7 @@ func init() {
 
 // MissingResourceError reports that one or more Resources were not found by the API server.
 type MissingResourceError struct {
-	err       error
-	resources []id.Resource
+	resourceError
 }
 
 var _ ResourceError = &MissingResourceError{}
@@ -39,5 +38,9 @@ func (m MissingResourceError) Resources() []id.Resource {
 
 // MissingResourceWrap returns a MissingResourceError wrapping the given error and Resources.
 func MissingResourceWrap(err error, msg string, resources ...id.Resource) MissingResourceError {
-	return MissingResourceError{err: errors.Wrap(err, msg), resources: resources}
+	return MissingResourceError{
+		resourceError{
+			err:       errors.Wrap(err, msg),
+			resources: resources},
+	}
 }

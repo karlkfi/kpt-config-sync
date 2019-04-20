@@ -1,14 +1,15 @@
 package status
 
-import "github.com/pkg/errors"
+import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/pkg/errors"
+)
 
 // APIServerErrorCode is the error code for a status Error originating from the kubernetes API server.
 const APIServerErrorCode = "2002"
 
 func init() {
-	Register(APIServerErrorCode, apiServerError{
-		err: errors.New("api server error"),
-	})
+	Register(APIServerErrorCode, apiServerError{errors.New("api server error")})
 }
 
 // apiServerError results from a high level call to the API server (eg not involving a resource) that fails.
@@ -33,5 +34,9 @@ func APIServerWrapf(err error, format string, args ...interface{}) Error {
 	if err == nil {
 		return nil
 	}
-	return apiServerError{err: errors.Wrapf(err, format, args...)}
+	return apiServerError{errors.Wrapf(err, format, args...)}
+}
+
+func (p apiServerError) ToCME() v1.ConfigManagementError {
+	return FromError(p)
 }

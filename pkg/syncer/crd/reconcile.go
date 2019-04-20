@@ -121,7 +121,7 @@ func (r *Reconciler) reconcile(ctx context.Context, clusterConfig *v1.ClusterCon
 	for _, diff := range diffs {
 		if updated, err := syncerreconcile.HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 			errBuilder = status.Append(errBuilder, err)
-			syncErrs = append(syncErrs, syncerreconcile.CmesForResourceError(err)...)
+			syncErrs = append(syncErrs, status.FromResourceError(err))
 		} else if updated {
 			reconcileCount++
 		}

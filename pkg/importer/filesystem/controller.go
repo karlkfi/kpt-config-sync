@@ -140,7 +140,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			if err != nil {
 				glog.Errorf("failed to resolve policydir: %v", err)
 				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
-				c.updateSourceStatus(ctx, nil, cmesForMultiError(status.From(err)))
+				c.updateSourceStatus(ctx, nil, status.From(err).ToCME())
 				continue
 			}
 
@@ -172,7 +172,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			if err != nil {
 				glog.Warningf("Failed to parse commit hash: %v", err)
 				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
-				c.updateSourceStatus(ctx, nil, cmesForMultiError(status.From(err)))
+				c.updateSourceStatus(ctx, nil, status.From(err).ToCME())
 				continue
 			}
 
@@ -197,7 +197,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			if mErr != nil {
 				glog.Warningf("Failed to parse: %v", mErr)
 				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
-				c.updateImportStatus(ctx, repoObj, token, loadTime, cmesForMultiError(mErr))
+				c.updateImportStatus(ctx, repoObj, token, loadTime, mErr.ToCME())
 				continue
 			}
 
@@ -231,16 +231,6 @@ func (c *Controller) pollDir(ctx context.Context) {
 			return
 		}
 	}
-}
-
-// cmesForMultiError converts a MultiError into one or more ConfigManagmentErrors.
-func cmesForMultiError(mErr status.MultiError) []v1.ConfigManagementError {
-	var cmes []v1.ConfigManagementError
-	for _, err := range mErr.Errors() {
-		// TODO(b/126598308): Inspect the actual error types and fully populate the CME fields.
-		cmes = append(cmes, v1.ConfigManagementError{ErrorMessage: err.Error()})
-	}
-	return cmes
 }
 
 // updateImportStatus write an updated RepoImportStatus based upon the given arguments.

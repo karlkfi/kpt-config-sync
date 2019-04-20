@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -37,35 +37,17 @@ func AllVersionNames(resources map[schema.GroupVersionKind][]*unstructured.Unstr
 
 // cmeForNamespace returns a ConfigManagementError for the given Namespace and error message.
 func cmeForNamespace(ns *corev1.Namespace, errMsg string) v1.ConfigManagementError {
-	return v1.ConfigManagementError{
+	e := v1.ErrorResource{
 		SourcePath:        ns.GetAnnotations()[v1.SourcePathAnnotationKey],
 		ResourceName:      ns.GetName(),
 		ResourceNamespace: ns.GetNamespace(),
 		ResourceGVK:       ns.GroupVersionKind(),
-		ErrorMessage:      errMsg,
 	}
-}
-
-// CmesForResourceError returns ConfigManagementErrors built from the given ResourceError.
-func CmesForResourceError(resErr status.ResourceError) []v1.ConfigManagementError {
-	resCount := len(resErr.Resources())
-	if resCount == 0 {
-		return []v1.ConfigManagementError{
-			{ErrorMessage: resErr.Error()},
-		}
+	cme := v1.ConfigManagementError{
+		ErrorMessage: errMsg,
 	}
-
-	configErrs := make([]v1.ConfigManagementError, resCount)
-	for i, res := range resErr.Resources() {
-		configErrs[i] = v1.ConfigManagementError{
-			SourcePath:        res.SlashPath(),
-			ResourceName:      res.Name(),
-			ResourceNamespace: res.Namespace(),
-			ResourceGVK:       res.GroupVersionKind(),
-			ErrorMessage:      resErr.Error(),
-		}
-	}
-	return configErrs
+	cme.ErrorResources = append(cme.ErrorResources, e)
+	return cme
 }
 
 // SetClusterConfigStatus updates the status sub-resource of the ClusterConfig based on reconciling the ClusterConfig.

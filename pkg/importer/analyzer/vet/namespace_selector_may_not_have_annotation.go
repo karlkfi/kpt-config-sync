@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -31,4 +32,9 @@ func (e NamespaceSelectorMayNotHaveAnnotation) Error() string {
 // Code implements Error
 func (e NamespaceSelectorMayNotHaveAnnotation) Code() string {
 	return NamespaceSelectorMayNotHaveAnnotationCode
+}
+
+// ToCME implements ToCMEr.
+func (e NamespaceSelectorMayNotHaveAnnotation) ToCME() v1.ConfigManagementError {
+	return status.FromError(e)
 }

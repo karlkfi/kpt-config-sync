@@ -257,8 +257,12 @@ func TestInvalidClusterConfig(t *testing.T) {
 				object.Name("some-incorrect-name"),
 				syncertesting.SyncTime(),
 				clusterSyncError(v1.ConfigManagementError{
-					ResourceName: "some-incorrect-name",
-					ResourceGVK:  v1.SchemeGroupVersion.WithKind("ClusterConfig"),
+					ErrorResources: []v1.ErrorResource{
+						{
+							ResourceName: "some-incorrect-name",
+							ResourceGVK:  v1.SchemeGroupVersion.WithKind("ClusterConfig"),
+						},
+					},
 					ErrorMessage: `ClusterConfig resource has invalid name "some-incorrect-name". To fix, delete the ClusterConfig.`,
 				}),
 			),

@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -20,7 +21,7 @@ type IllegalKindInNamespacesError struct {
 	id.Resource
 }
 
-var _ status.ResourceError = &IllegalKindInNamespacesError{}
+var _ status.ResourceError = IllegalKindInNamespacesError{}
 
 // Error implements error
 func (e IllegalKindInNamespacesError) Error() string {
@@ -37,4 +38,9 @@ func (e IllegalKindInNamespacesError) Code() string {
 // Resources implements ResourceError
 func (e IllegalKindInNamespacesError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalKindInNamespacesError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

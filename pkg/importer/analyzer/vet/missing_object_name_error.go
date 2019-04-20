@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -33,4 +34,9 @@ func (e MissingObjectNameError) Code() string { return MissingObjectNameErrorCod
 // Resources implements ResourceError
 func (e MissingObjectNameError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e MissingObjectNameError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/pkg/errors"
 )
@@ -12,8 +13,7 @@ import (
 const ResourceErrorCode = "2010"
 
 func init() {
-	// TODO: add a way to generate valid error without dependency cycle.
-	//status.Register(ResourceErrorCode, resourceError{})
+	Register(ResourceErrorCode, resourceError{})
 }
 
 // ResourceError defines a status error related to one or more k8s resources.
@@ -39,7 +39,7 @@ type resourceError struct {
 	resources []id.Resource
 }
 
-var _ ResourceError = &resourceError{}
+var _ ResourceError = resourceError{}
 
 // Error implements status.Error
 func (r resourceError) Error() string {
@@ -62,5 +62,13 @@ func ResourceWrap(err error, msg string, resources ...id.Resource) ResourceError
 	if err == nil {
 		return nil
 	}
-	return resourceError{err: errors.Wrap(err, msg), resources: resources}
+	return resourceError{
+		err:       errors.Wrap(err, msg),
+		resources: resources,
+	}
+}
+
+// ToCME implements ToCMEr.
+func (r resourceError) ToCME() v1.ConfigManagementError {
+	return FromResourceError(r)
 }

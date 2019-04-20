@@ -483,6 +483,25 @@ type RepoSyncChangeStatus struct {
 // typically produced when processing the source of truth, importing a config, or syncing a K8S
 // resource.
 type ConfigManagementError struct {
+	// ErrorResource is unused and should be removed when we uprev the API version.
+	ErrorResource `json:"inline"`
+
+	// Code is the error code of this particualr error.  Error codes are numeric strings,
+	// like "1012".
+	// +optional
+	Code string `json:"code"`
+
+	// ErrorMessage describes the error that occurred.
+	// +optional
+	ErrorMessage string `json:"errorMessage,omitempty"`
+
+	// ErrorResourcs describes the resources associated with this error, if any.
+	ErrorResources []ErrorResource `json:"errorResources,omitempty"`
+}
+
+// ErrorResource contains the identification bits of a single resource that is involved in
+// a resource error.
+type ErrorResource struct {
 	// SourcePath is the repo-relative slash path to where the config is defined. This field may be
 	// empty for errors that are not associated with a specific config file.
 	// +optional
@@ -503,10 +522,6 @@ type ConfigManagementError struct {
 	// errors that are not associated with a specific resource.
 	// +optional
 	ResourceGVK schema.GroupVersionKind `json:"resourceGVK"`
-
-	// ErrorMessage describes the error that occurred.
-	// +optional
-	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

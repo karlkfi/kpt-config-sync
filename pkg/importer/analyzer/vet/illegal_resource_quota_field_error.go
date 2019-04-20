@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -14,6 +15,8 @@ func init() {
 		Field:    "scopes",
 	})
 }
+
+var _ status.ResourceError = IllegalResourceQuotaFieldError{}
 
 // IllegalResourceQuotaFieldError represents illegal fields set on ResourceQuota objects.
 type IllegalResourceQuotaFieldError struct {
@@ -36,4 +39,9 @@ func (e IllegalResourceQuotaFieldError) Code() string { return IllegalResourceQu
 // Resources implements ResourceError
 func (e IllegalResourceQuotaFieldError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalResourceQuotaFieldError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

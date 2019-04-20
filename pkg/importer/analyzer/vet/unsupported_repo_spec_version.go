@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -25,7 +26,7 @@ func init() {
 	})
 }
 
-var _ status.ResourceError = &UnsupportedRepoSpecVersion{}
+var _ status.ResourceError = UnsupportedRepoSpecVersion{}
 
 // Error implements error
 func (e UnsupportedRepoSpecVersion) Error() string {
@@ -40,4 +41,9 @@ func (e UnsupportedRepoSpecVersion) Code() string { return UnsupportedRepoSpecVe
 // Resources implements ResourceError
 func (e UnsupportedRepoSpecVersion) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e UnsupportedRepoSpecVersion) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

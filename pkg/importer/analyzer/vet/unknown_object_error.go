@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -19,7 +20,7 @@ type UnknownObjectError struct {
 	id.Resource
 }
 
-var _ status.ResourceError = &UnknownObjectError{}
+var _ status.ResourceError = UnknownObjectError{}
 
 // Error implements error
 func (e UnknownObjectError) Error() string {
@@ -34,4 +35,9 @@ func (e UnknownObjectError) Code() string { return UnknownObjectErrorCode }
 // Resources implements ResourceError
 func (e UnknownObjectError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e UnknownObjectError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

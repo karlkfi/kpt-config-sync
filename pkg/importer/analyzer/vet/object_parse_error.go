@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -33,4 +34,9 @@ func (e ObjectParseError) Code() string { return ObjectParseErrorCode }
 // Resources implements ResourceError.
 func (e ObjectParseError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e ObjectParseError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

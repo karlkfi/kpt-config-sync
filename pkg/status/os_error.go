@@ -1,14 +1,16 @@
 package status
 
-import "errors"
+import (
+	"errors"
+
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+)
 
 // OSErrorCode is the error code for a status Error originating from an OS-level function call.
 const OSErrorCode = "2003"
 
 func init() {
-	Register(OSErrorCode, osError{
-		err: errors.New("some os error"),
-	})
+	Register(OSErrorCode, osError{errors.New("some os error")})
 }
 
 // osError results from an OS-level function call (eg fetching the current user) that fails.
@@ -33,5 +35,9 @@ func OSWrapf(err error) Error {
 	if err == nil {
 		return nil
 	}
-	return osError{err: err}
+	return osError{err}
+}
+
+func (p osError) ToCME() v1.ConfigManagementError {
+	return FromError(p)
 }

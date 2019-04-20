@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -18,7 +19,7 @@ type ReservedDirectoryNameError struct {
 	Dir cmpath.Path
 }
 
-var _ status.PathError = &ReservedDirectoryNameError{}
+var _ status.PathError = ReservedDirectoryNameError{}
 
 // Error implements error.
 func (e ReservedDirectoryNameError) Error() string {
@@ -33,4 +34,9 @@ func (e ReservedDirectoryNameError) Code() string { return ReservedDirectoryName
 // RelativePaths implements PathError
 func (e ReservedDirectoryNameError) RelativePaths() []id.Path {
 	return []id.Path{e.Dir}
+}
+
+// ToCME implements ToCMEr.
+func (e ReservedDirectoryNameError) ToCME() v1.ConfigManagementError {
+	return status.FromPathError(e)
 }

@@ -5,7 +5,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -18,7 +18,7 @@ func NewUniqueDirectoryValidator() ast.Visitor {
 }
 
 func validateUniqueDirectories(nodes []*ast.TreeNode) status.MultiError {
-	names := make(map[string][]cmpath.Path, len(nodes))
+	names := make(map[string][]id.Path, len(nodes))
 	for _, n := range nodes {
 		if n.Type == node.AbstractNamespace {
 			continue

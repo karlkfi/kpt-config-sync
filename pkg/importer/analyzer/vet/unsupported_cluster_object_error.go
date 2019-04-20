@@ -2,6 +2,7 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -20,7 +21,7 @@ type UnsupportedObjectError struct {
 	id.Resource
 }
 
-var _ status.ResourceError = &UnsupportedObjectError{}
+var _ status.ResourceError = UnsupportedObjectError{}
 
 // Error implements error.
 func (e UnsupportedObjectError) Error() string {
@@ -35,4 +36,9 @@ func (e UnsupportedObjectError) Code() string { return UnsupportedObjectErrorCod
 // Resources implements ResourceError
 func (e UnsupportedObjectError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e UnsupportedObjectError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 )
 
@@ -13,11 +14,24 @@ func url(err Error) string {
 	return urlBase + err.Code()
 }
 
+func prefixErr(err Error) string {
+	return fmt.Sprintf("KNV%s", err.Code())
+}
+
+// ToCMEr knows how to serialize itself to a ConfigManagementError.
+type ToCMEr interface {
+	// ToCME converts the implementor into ConfigManagementError, preserving
+	// structured information.
+	ToCME() v1.ConfigManagementError
+}
+
 // Error defines a Kubernetes Nomos Vet error
 // These are GKE Config Management directory errors which are shown to the user and documented.
 type Error interface {
-	// Error is the text errors display.
-	Error() string
+	// error is the standard error interface.
+	error
+	// ToCMEr knows how to convert itself to a ConfigManagementError.
+	ToCMEr
 	// Code is the unique identifier of the error to help users find documentation.
 	Code() string
 }
@@ -30,10 +44,11 @@ var errs = map[string]Error{
 }
 
 // Format formats the start of error messages consistently.
+// nolint:errcheck
 func Format(err Error, format string, a ...interface{}) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("KNV%s: ", err.Code()))
-	sb.WriteString(fmt.Sprintf(format, a...))
+	fmt.Fprintf(&sb, "%s: ", prefixErr(err))
+	fmt.Fprintf(&sb, format, a...)
 
 	switch e := err.(type) {
 	case ResourceError:
@@ -44,7 +59,7 @@ func Format(err Error, format string, a ...interface{}) string {
 		sb.WriteString(formatPaths(e))
 	}
 
-	sb.WriteString(fmt.Sprintf("\n\nFor more information, see %s", url(err)))
+	fmt.Fprintf(&sb, "\n\nFor more information, see %s", url(err))
 	return sb.String()
 }
 
@@ -70,4 +85,42 @@ func Registry() map[string]Error {
 		result[code] = err
 	}
 	return result
+}
+
+// ToErrorResource converts a Resource into a v1.ErrorResource.
+func ToErrorResource(r id.Resource) v1.ErrorResource {
+	return v1.ErrorResource{
+		SourcePath:        r.SlashPath(),
+		ResourceName:      r.Name(),
+		ResourceNamespace: r.Namespace(),
+		ResourceGVK:       r.GroupVersionKind(),
+	}
+}
+
+// FromError embeds the error message and error code into a ConfigManagementError.
+func FromError(err Error) v1.ConfigManagementError {
+	return v1.ConfigManagementError{
+		ErrorMessage: err.Error(),
+		Code:         prefixErr(err),
+	}
+}
+
+// FromPathError converts a PathError to a ConfigManagementError.
+func FromPathError(err PathError) v1.ConfigManagementError {
+	cme := FromError(err)
+	for _, path := range err.RelativePaths() {
+		cme.ErrorResources = append(
+			cme.ErrorResources,
+			v1.ErrorResource{SourcePath: path.SlashPath()})
+	}
+	return cme
+}
+
+// FromResourceError converts a ResourceError to a ConfigManagementError.
+func FromResourceError(err ResourceError) v1.ConfigManagementError {
+	cme := FromError(err)
+	for _, r := range err.Resources() {
+		cme.ErrorResources = append(cme.ErrorResources, ToErrorResource(r))
+	}
+	return cme
 }

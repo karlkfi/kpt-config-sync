@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -27,6 +28,8 @@ import (
 type MultiError interface {
 	error
 	Errors() []Error
+	// ToCME converts a MultiError to ConfigManagementError.
+	ToCME() []v1.ConfigManagementError
 }
 
 // From creates a MultiError from one or more errors.
@@ -60,6 +63,8 @@ func Append(m MultiError, errs ...error) MultiError {
 	}
 	return result
 }
+
+var _ MultiError = (*multiError)(nil)
 
 // MultiError is an error that contains multiple errors.
 type multiError struct {
@@ -114,4 +119,13 @@ func (m *multiError) Error() string {
 // Errors returns a list of the contained errors
 func (m *multiError) Errors() []Error {
 	return m.errs
+}
+
+// ToCME implements MultiError.
+func (m *multiError) ToCME() []v1.ConfigManagementError {
+	var cmes []v1.ConfigManagementError
+	for _, err := range m.errs {
+		cmes = append(cmes, err.ToCME())
+	}
+	return cmes
 }

@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
@@ -32,7 +33,7 @@ type MultipleSingletonsError struct {
 	Duplicates []id.Resource
 }
 
-var _ status.ResourceError = &MultipleSingletonsError{}
+var _ status.ResourceError = MultipleSingletonsError{}
 
 // Error implements error
 func (e MultipleSingletonsError) Error() string {
@@ -52,4 +53,9 @@ func (e MultipleSingletonsError) Code() string { return MultipleSingletonsErrorC
 // Resources implements ResourceError
 func (e MultipleSingletonsError) Resources() []id.Resource {
 	return e.Duplicates
+}
+
+// ToCME implements ToCMEr.
+func (e MultipleSingletonsError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

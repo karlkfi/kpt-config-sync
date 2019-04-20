@@ -1,6 +1,7 @@
 package status
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 )
 
@@ -8,9 +9,7 @@ import (
 const UndocumentedErrorCode = "9999"
 
 func init() {
-	Register(UndocumentedErrorCode, Undocumented{
-		err: errors.New("some error"),
-	})
+	Register(UndocumentedErrorCode, Undocumented{errors.New("some error")})
 }
 
 // Undocumented errors represent error conditions which we should document but have not yet.
@@ -33,12 +32,12 @@ func (i Undocumented) Code() string {
 
 // UndocumentedError returns a Undocumented with the string representation of the passed object.
 func UndocumentedError(message string) Error {
-	return Undocumented{err: errors.New(message)}
+	return Undocumented{errors.New(message)}
 }
 
 // UndocumentedErrorf returns an Undocumented with a formatted message.
 func UndocumentedErrorf(format string, args ...interface{}) Error {
-	return Undocumented{err: errors.Errorf(format, args...)}
+	return Undocumented{errors.Errorf(format, args...)}
 }
 
 // UndocumentedWrapf returns an Undocumented wrapping an error with a formatted message.
@@ -46,5 +45,10 @@ func UndocumentedWrapf(err error, format string, args ...interface{}) Error {
 	if err == nil {
 		return nil
 	}
-	return Undocumented{err: errors.Wrapf(err, format, args...)}
+	return Undocumented{errors.Wrapf(err, format, args...)}
+}
+
+// ToCME implements ToCMEr.
+func (i Undocumented) ToCME() v1.ConfigManagementError {
+	return FromError(i)
 }

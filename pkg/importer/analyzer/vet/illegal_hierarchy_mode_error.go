@@ -51,3 +51,8 @@ func (e IllegalHierarchyModeError) Code() string { return IllegalHierarchyModeEr
 func (e IllegalHierarchyModeError) Resources() []id.Resource {
 	return []id.Resource{e.HierarchyConfig}
 }
+
+// ToCME implements ToCMEr.
+func (e IllegalHierarchyModeError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
+}

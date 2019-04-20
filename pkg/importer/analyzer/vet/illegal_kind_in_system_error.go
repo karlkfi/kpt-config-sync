@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -20,7 +21,7 @@ type IllegalKindInSystemError struct {
 	id.Resource
 }
 
-var _ status.ResourceError = &IllegalKindInSystemError{}
+var _ status.ResourceError = IllegalKindInSystemError{}
 
 // Error implements error
 func (e IllegalKindInSystemError) Error() string {
@@ -37,4 +38,9 @@ func (e IllegalKindInSystemError) Code() string {
 // Resources implements ResourceError
 func (e IllegalKindInSystemError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalKindInSystemError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

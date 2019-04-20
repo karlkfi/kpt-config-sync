@@ -1,7 +1,7 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -19,7 +19,7 @@ type IllegalNamespaceAnnotationError struct {
 	id.Resource
 }
 
-var _ status.ResourceError = &IllegalNamespaceAnnotationError{}
+var _ status.ResourceError = IllegalNamespaceAnnotationError{}
 
 // Error implements error.
 func (e IllegalNamespaceAnnotationError) Error() string {
@@ -37,4 +37,9 @@ func (e IllegalNamespaceAnnotationError) Code() string {
 // Resources implements ResourceError
 func (e IllegalNamespaceAnnotationError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalNamespaceAnnotationError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

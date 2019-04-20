@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -22,7 +23,7 @@ type IllegalSubdirectoryError struct {
 	SubDir  cmpath.Path
 }
 
-var _ status.PathError = &IllegalSubdirectoryError{}
+var _ status.PathError = IllegalSubdirectoryError{}
 
 // Error implements error
 func (e IllegalSubdirectoryError) Error() string {
@@ -36,4 +37,9 @@ func (e IllegalSubdirectoryError) Code() string { return IllegalSubdirectoryErro
 // RelativePaths implements PathError
 func (e IllegalSubdirectoryError) RelativePaths() []id.Path {
 	return []id.Path{e.SubDir}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalSubdirectoryError) ToCME() v1.ConfigManagementError {
+	return status.FromPathError(e)
 }

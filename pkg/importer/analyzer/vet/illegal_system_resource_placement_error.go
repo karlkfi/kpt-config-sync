@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -41,4 +42,9 @@ func (e IllegalSystemResourcePlacementError) Code() string {
 // Resources implements ResourceError
 func (e IllegalSystemResourcePlacementError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalSystemResourcePlacementError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

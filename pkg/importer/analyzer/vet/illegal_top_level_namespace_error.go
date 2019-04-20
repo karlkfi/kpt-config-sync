@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -37,4 +38,9 @@ func (e IllegalTopLevelNamespaceError) Code() string { return IllegalTopLevelNam
 // Resources implements ResourceError
 func (e IllegalTopLevelNamespaceError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalTopLevelNamespaceError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

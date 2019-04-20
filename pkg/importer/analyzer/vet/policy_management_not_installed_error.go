@@ -2,6 +2,7 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
@@ -14,6 +15,8 @@ func init() {
 		Err: errors.New("cluster doesn't have required CRD"),
 	})
 }
+
+var _ status.Error = PolicyManagementNotInstalledError{}
 
 // PolicyManagementNotInstalledError reports that Nomos has not been installed properly.
 type PolicyManagementNotInstalledError struct {
@@ -29,4 +32,9 @@ func (e PolicyManagementNotInstalledError) Error() string {
 // Code implements Error.
 func (e PolicyManagementNotInstalledError) Code() string {
 	return PolicyManagementNotInstalledErrorCode
+}
+
+// ToCME implements ToCMEr.
+func (e PolicyManagementNotInstalledError) ToCME() v1.ConfigManagementError {
+	return status.FromError(e)
 }

@@ -135,7 +135,7 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 		for _, diff := range diffs {
 			if updated, err := HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 				errBuilder = status.Append(errBuilder, err)
-				syncErrs = append(syncErrs, CmesForResourceError(err)...)
+				syncErrs = append(syncErrs, status.FromResourceError(err))
 			} else if updated {
 				reconcileCount++
 			}
@@ -155,13 +155,17 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 
 // NewConfigManagementError returns a ConfigManagementError corresponding to the given ClusterConfig and error.
 func NewConfigManagementError(config *v1.ClusterConfig, err error) v1.ConfigManagementError {
-	return v1.ConfigManagementError{
+	e := v1.ErrorResource{
 		SourcePath:        config.GetAnnotations()[v1.SourcePathAnnotationKey],
 		ResourceName:      config.GetName(),
 		ResourceNamespace: config.GetNamespace(),
 		ResourceGVK:       config.GroupVersionKind(),
-		ErrorMessage:      err.Error(),
 	}
+	cme := v1.ConfigManagementError{
+		ErrorMessage: err.Error(),
+	}
+	cme.ErrorResources = append(cme.ErrorResources, e)
+	return cme
 }
 
 // removeEmptyRulesField removes the Rules field from ClusterRole when it's an empty list.

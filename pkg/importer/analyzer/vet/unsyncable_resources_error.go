@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -24,7 +25,7 @@ type UnsyncableResourcesError struct {
 	Ancestor bool
 }
 
-var _ status.PathError = &UnsyncableResourcesError{}
+var _ status.PathError = UnsyncableResourcesError{}
 
 // Error implements error.
 func (e UnsyncableResourcesError) Error() string {
@@ -50,4 +51,9 @@ func (e UnsyncableResourcesError) Code() string { return UnsyncableResourcesErro
 // RelativePaths implements PathError
 func (e UnsyncableResourcesError) RelativePaths() []id.Path {
 	return []id.Path{e.Dir}
+}
+
+// ToCME implements ToCMEr.
+func (e UnsyncableResourcesError) ToCME() v1.ConfigManagementError {
+	return status.FromPathError(e)
 }

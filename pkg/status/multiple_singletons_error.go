@@ -1,13 +1,15 @@
 package status
 
-import "github.com/google/nomos/pkg/importer/id"
+import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/importer/id"
+)
 
 // MultipleSingletonsErrorCode is the error code for MultipleSingletonsError
 const MultipleSingletonsErrorCode = "2012"
 
 func init() {
-	// TODO: add a way to generate valid error without dependency cycle.
-	//status.Register(MultipleSingletonsErrorCode, MultipleSingletonsError{})
+	Register(MultipleSingletonsErrorCode, MultipleSingletonsError{})
 }
 
 // MultipleSingletonsError reports that multiple singleton resources were found on the cluster.
@@ -15,7 +17,7 @@ type MultipleSingletonsError struct {
 	Duplicates []id.Resource
 }
 
-var _ ResourceError = &MultipleSingletonsError{}
+var _ ResourceError = MultipleSingletonsError{}
 
 // Error implements error
 func (e MultipleSingletonsError) Error() string {
@@ -32,9 +34,14 @@ func (e MultipleSingletonsError) Resources() []id.Resource {
 	return e.Duplicates
 }
 
+// ToCME implements ToCMEr.
+func (e MultipleSingletonsError) ToCME() v1.ConfigManagementError {
+	return FromResourceError(e)
+}
+
 // MultipleSingletonsWrap returns a MultipleSingletonsError wrapping the given Resources.
 func MultipleSingletonsWrap(resources ...id.Resource) MultipleSingletonsError {
-	return MultipleSingletonsError{Duplicates: resources}
+	return MultipleSingletonsError{resources}
 }
 
 func resourceName(dups []id.Resource) string {

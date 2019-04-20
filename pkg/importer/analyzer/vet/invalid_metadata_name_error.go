@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -21,7 +22,7 @@ type InvalidMetadataNameError struct {
 	id.Resource
 }
 
-var _ status.ResourceError = &InvalidMetadataNameError{}
+var _ status.ResourceError = InvalidMetadataNameError{}
 
 // Error implements error.
 func (e InvalidMetadataNameError) Error() string {
@@ -36,4 +37,9 @@ func (e InvalidMetadataNameError) Code() string { return InvalidMetadataNameErro
 // Resources implements ResourceError
 func (e InvalidMetadataNameError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e InvalidMetadataNameError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

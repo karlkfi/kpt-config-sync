@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -21,7 +22,7 @@ type IllegalFieldsInConfigError struct {
 	Field id.DisallowedField
 }
 
-var _ status.ResourceError = &IllegalFieldsInConfigError{}
+var _ status.ResourceError = IllegalFieldsInConfigError{}
 
 // Error implements error
 func (e IllegalFieldsInConfigError) Error() string {
@@ -39,4 +40,9 @@ func (e IllegalFieldsInConfigError) Code() string {
 // Resources implements ResourceError
 func (e IllegalFieldsInConfigError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalFieldsInConfigError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

@@ -1,7 +1,7 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -38,4 +38,9 @@ func (e IllegalManagementAnnotationError) Code() string {
 // Resources implements ResourceError.
 func (e IllegalManagementAnnotationError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalManagementAnnotationError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

@@ -3,6 +3,7 @@ package vet
 import (
 	"strings"
 
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -44,4 +45,9 @@ func (e MetadataNameCollisionError) Code() string { return MetadataNameCollision
 // Resources implements ResourceError
 func (e MetadataNameCollisionError) Resources() []id.Resource {
 	return e.Duplicates
+}
+
+// ToCME implements ToCMEr.
+func (e MetadataNameCollisionError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

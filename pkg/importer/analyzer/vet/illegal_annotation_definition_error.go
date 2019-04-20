@@ -26,7 +26,7 @@ type IllegalAnnotationDefinitionError struct {
 	Annotations []string
 }
 
-var _ status.ResourceError = &IllegalAnnotationDefinitionError{}
+var _ status.ResourceError = IllegalAnnotationDefinitionError{}
 
 // Error implements error.
 func (e IllegalAnnotationDefinitionError) Error() string {
@@ -49,4 +49,9 @@ func (e IllegalAnnotationDefinitionError) Code() string { return IllegalAnnotati
 // Resources implements ResourceError
 func (e IllegalAnnotationDefinitionError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalAnnotationDefinitionError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

@@ -1,6 +1,7 @@
 package status
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 )
 
@@ -8,7 +9,7 @@ import (
 const InternalErrorCode = "1000"
 
 func init() {
-	Register(InternalErrorCode, Internal{err: errors.New("some internal error")})
+	Register(InternalErrorCode, Internal{errors.New("some internal error")})
 }
 
 // Internal errors represent conditions that should ever happen, but that we check for so that
@@ -46,7 +47,7 @@ func InternalWrap(err error) Error {
 	if err == nil {
 		return nil
 	}
-	return Internal{err: err}
+	return Internal{err}
 }
 
 // InternalWrapf returns an Internal wrapping an error with a formatted message.
@@ -54,5 +55,10 @@ func InternalWrapf(err error, format string, args ...interface{}) Error {
 	if err == nil {
 		return nil
 	}
-	return Internal{err: errors.Wrapf(err, format, args...)}
+	return Internal{errors.Wrapf(err, format, args...)}
+}
+
+// ToCME implements ToCMEr.
+func (i Internal) ToCME() v1.ConfigManagementError {
+	return FromError(i)
 }

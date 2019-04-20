@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -41,4 +42,9 @@ func (e UnsupportedResourceInHierarchyConfigError) Code() string {
 // Resources implements ResourceError
 func (e UnsupportedResourceInHierarchyConfigError) Resources() []id.Resource {
 	return []id.Resource{e.HierarchyConfig}
+}
+
+// ToCME implements ToCMEr.
+func (e UnsupportedResourceInHierarchyConfigError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -37,4 +38,9 @@ func (e IllegalKindInClusterError) Code() string {
 // Resources implements ResourceError
 func (e IllegalKindInClusterError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalKindInClusterError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

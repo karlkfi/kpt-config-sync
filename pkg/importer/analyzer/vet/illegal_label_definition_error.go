@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -26,7 +26,7 @@ type IllegalLabelDefinitionError struct {
 	Labels []string
 }
 
-var _ status.ResourceError = &IllegalLabelDefinitionError{}
+var _ status.ResourceError = IllegalLabelDefinitionError{}
 
 // Error implements error.
 func (e IllegalLabelDefinitionError) Error() string {
@@ -49,4 +49,9 @@ func (e IllegalLabelDefinitionError) Code() string { return IllegalLabelDefiniti
 // Resources implements ResourceError
 func (e IllegalLabelDefinitionError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalLabelDefinitionError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

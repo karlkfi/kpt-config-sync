@@ -1,7 +1,7 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -29,3 +29,8 @@ func (e ObjectHasUnknownClusterSelector) Error() string {
 
 // Code implements Error
 func (e ObjectHasUnknownClusterSelector) Code() string { return ObjectHasUnknownClusterSelectorCode }
+
+// ToCME implements ToCMEr.
+func (e ObjectHasUnknownClusterSelector) ToCME() v1.ConfigManagementError {
+	return status.FromError(e)
+}

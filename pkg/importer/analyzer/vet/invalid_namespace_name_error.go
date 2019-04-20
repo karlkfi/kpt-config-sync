@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -25,7 +26,7 @@ type InvalidNamespaceNameError struct {
 	Expected string
 }
 
-var _ status.ResourceError = &InvalidNamespaceNameError{}
+var _ status.ResourceError = InvalidNamespaceNameError{}
 
 // Error implements error
 func (e InvalidNamespaceNameError) Error() string {
@@ -41,4 +42,9 @@ func (e InvalidNamespaceNameError) Code() string { return InvalidNamespaceNameEr
 // Resources implements ResourceError
 func (e InvalidNamespaceNameError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e InvalidNamespaceNameError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 )
 
@@ -82,4 +83,9 @@ func PathWrapf(err error, slashPaths ...string) PathError {
 		paths[i] = path{slashPath: p}
 	}
 	return pathError{err: err, relPaths: paths}
+}
+
+// ToCME implements Error.
+func (p pathError) ToCME() v1.ConfigManagementError {
+	return FromPathError(p)
 }

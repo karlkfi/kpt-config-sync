@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -20,7 +21,7 @@ type InvalidDirectoryNameError struct {
 	Dir cmpath.Path
 }
 
-var _ status.PathError = &InvalidDirectoryNameError{}
+var _ status.PathError = InvalidDirectoryNameError{}
 
 // Error implements error.
 func (e InvalidDirectoryNameError) Error() string {
@@ -36,4 +37,9 @@ func (e InvalidDirectoryNameError) Code() string { return InvalidDirectoryNameEr
 // RelativePaths implements PathError
 func (e InvalidDirectoryNameError) RelativePaths() []id.Path {
 	return []id.Path{e.Dir}
+}
+
+// ToCME implements ToCMEr.
+func (e InvalidDirectoryNameError) ToCME() v1.ConfigManagementError {
+	return status.FromPathError(e)
 }

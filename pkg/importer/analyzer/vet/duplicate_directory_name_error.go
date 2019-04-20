@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -10,15 +11,18 @@ import (
 const DuplicateDirectoryNameErrorCode = "1002"
 
 func init() {
-	status.Register(DuplicateDirectoryNameErrorCode, DuplicateDirectoryNameError{Duplicates: []cmpath.Path{cmpath.FromSlash("namespaces/foo/bar"), cmpath.FromSlash("namespaces/qux/bar")}})
+	status.Register(DuplicateDirectoryNameErrorCode, DuplicateDirectoryNameError{
+		Duplicates: []id.Path{
+			cmpath.FromSlash("namespaces/foo/bar"),
+			cmpath.FromSlash("namespaces/qux/bar")}})
 }
 
 // DuplicateDirectoryNameError represents an illegal duplication of directory names.
 type DuplicateDirectoryNameError struct {
-	Duplicates []cmpath.Path
+	Duplicates []id.Path
 }
 
-var _ status.PathError = &DuplicateDirectoryNameError{}
+var _ status.PathError = DuplicateDirectoryNameError{}
 
 // Error implements error.
 func (e DuplicateDirectoryNameError) Error() string {
@@ -31,9 +35,12 @@ func (e DuplicateDirectoryNameError) Code() string { return DuplicateDirectoryNa
 
 // RelativePaths implements PathError
 func (e DuplicateDirectoryNameError) RelativePaths() []id.Path {
-	paths := make([]id.Path, len(e.Duplicates))
-	for i, path := range e.Duplicates {
-		paths[i] = path
-	}
+	var paths []id.Path
+	copy(paths, e.Duplicates)
 	return paths
+}
+
+// ToCME implements ToCMEr.
+func (e DuplicateDirectoryNameError) ToCME() v1.ConfigManagementError {
+	return status.FromPathError(e)
 }

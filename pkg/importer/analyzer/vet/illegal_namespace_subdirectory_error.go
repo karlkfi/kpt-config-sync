@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -25,7 +26,7 @@ type IllegalNamespaceSubdirectoryError struct {
 	Parent id.TreeNode
 }
 
-var _ status.PathError = &IllegalNamespaceSubdirectoryError{}
+var _ status.PathError = IllegalNamespaceSubdirectoryError{}
 
 // Error implements error.
 func (e IllegalNamespaceSubdirectoryError) Error() string {
@@ -42,4 +43,9 @@ func (e IllegalNamespaceSubdirectoryError) Code() string { return IllegalNamespa
 // RelativePaths implements PathError
 func (e IllegalNamespaceSubdirectoryError) RelativePaths() []id.Path {
 	return []id.Path{e.Child, e.Parent}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalNamespaceSubdirectoryError) ToCME() v1.ConfigManagementError {
+	return status.FromPathError(e)
 }

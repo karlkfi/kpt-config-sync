@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -21,7 +22,7 @@ type IllegalMetadataNamespaceDeclarationError struct {
 	ExpectedNamespace string
 }
 
-var _ status.ResourceError = &IllegalMetadataNamespaceDeclarationError{}
+var _ status.ResourceError = IllegalMetadataNamespaceDeclarationError{}
 
 // Error implements error.
 func (e IllegalMetadataNamespaceDeclarationError) Error() string {
@@ -39,4 +40,9 @@ func (e IllegalMetadataNamespaceDeclarationError) Code() string {
 // Resources implements ResourceError
 func (e IllegalMetadataNamespaceDeclarationError) Resources() []id.Resource {
 	return []id.Resource{e.Resource}
+}
+
+// ToCME implements ToCMEr.
+func (e IllegalMetadataNamespaceDeclarationError) ToCME() v1.ConfigManagementError {
+	return status.FromResourceError(e)
 }

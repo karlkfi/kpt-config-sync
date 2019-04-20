@@ -263,8 +263,12 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			wantNamespaceUpdate: namespace("eng"),
 			wantStatusUpdate: namespaceConfig("eng", v1.StateError, syncertesting.ImportToken(syncertesting.Token), syncertesting.SyncTime(), syncertesting.SyncToken(),
 				namespaceSyncError(v1.ConfigManagementError{
-					ResourceName: "eng",
-					ResourceGVK:  corev1.SchemeGroupVersion.WithKind("Namespace"),
+					ErrorResources: []v1.ErrorResource{
+						{
+							ResourceName: "eng",
+							ResourceGVK:  corev1.SchemeGroupVersion.WithKind("Namespace"),
+						},
+					},
 					ErrorMessage: unmanagedError(),
 				}), syncertesting.ManagementDisabled),
 			wantEvent: &syncertesting.Event{
@@ -286,8 +290,12 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			actual:          deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace("eng"), syncertesting.TokenAnnotation),
 			wantStatusUpdate: namespaceConfig("eng", v1.StateError, syncertesting.ImportToken(syncertesting.Token), syncertesting.SyncTime(), syncertesting.SyncToken(),
 				namespaceSyncError(v1.ConfigManagementError{
-					ResourceName: "eng",
-					ResourceGVK:  corev1.SchemeGroupVersion.WithKind("Namespace"),
+					ErrorResources: []v1.ErrorResource{
+						{
+							ResourceName: "eng",
+							ResourceGVK:  corev1.SchemeGroupVersion.WithKind("Namespace"),
+						},
+					},
 					ErrorMessage: unmanagedError(),
 				}), syncertesting.ManagementDisabled),
 			wantEvent: &syncertesting.Event{

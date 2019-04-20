@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
@@ -28,3 +29,8 @@ func (e InvalidSelectorError) Error() string {
 
 // Code implements Error
 func (e InvalidSelectorError) Code() string { return InvalidSelectorErrorCode }
+
+// ToCME implements ToCMEr.
+func (e InvalidSelectorError) ToCME() v1.ConfigManagementError {
+	return status.FromError(e)
+}

@@ -1,6 +1,7 @@
 package vet
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -18,7 +19,7 @@ func init() {
 type MissingRepoError struct {
 }
 
-var _ status.PathError = &MissingRepoError{}
+var _ status.PathError = MissingRepoError{}
 
 // Error implements error
 func (e MissingRepoError) Error() string {
@@ -32,4 +33,9 @@ func (e MissingRepoError) Code() string { return MissingRepoErrorCode }
 // RelativePaths implements PathError
 func (e MissingRepoError) RelativePaths() []id.Path {
 	return []id.Path{cmpath.FromSlash(repo.SystemDir)}
+}
+
+// ToCME implements ToCMEr.
+func (e MissingRepoError) ToCME() v1.ConfigManagementError {
+	return status.FromPathError(e)
 }

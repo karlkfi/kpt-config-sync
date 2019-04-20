@@ -299,7 +299,7 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 		for _, diff := range diffs {
 			if updated, err := HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 				errBuilder = status.Append(errBuilder, err)
-				syncErrs = append(syncErrs, CmesForResourceError(err)...)
+				syncErrs = append(syncErrs, status.FromResourceError(err))
 			} else if updated {
 				reconcileCount++
 			}
@@ -352,13 +352,17 @@ func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 
 // NewSyncError returns a ConfigManagementError corresponding to the given NamespaceConfig and error
 func NewSyncError(config *v1.NamespaceConfig, err error) v1.ConfigManagementError {
-	return v1.ConfigManagementError{
+	e := v1.ErrorResource{
 		SourcePath:        config.GetAnnotations()[v1.SourcePathAnnotationKey],
 		ResourceName:      config.GetName(),
 		ResourceNamespace: config.GetNamespace(),
 		ResourceGVK:       config.GroupVersionKind(),
-		ErrorMessage:      err.Error(),
 	}
+	cme := v1.ConfigManagementError{
+		ErrorMessage: err.Error(),
+	}
+	cme.ErrorResources = append(cme.ErrorResources, e)
+	return cme
 }
 
 func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
