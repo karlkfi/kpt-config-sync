@@ -57,17 +57,37 @@ teardown() {
     --output='jsonpath={.status.source.errors[0].errorMessage}'
 }
 
-@test "Version populated in ConfigManagement.status.configManagementVersion" {
+function examine_token() {
+  local resource_type="${1}"
+  local resource_name="${2}"
+  local token_name=${3}
   debug::log "Ensure that the repo is error-free at the start of the test"
   git::commit -a -m "Commit the repo contents."
   wait::for -t 30 -o "true" -- kubectl get configmanagement config-management \
     --output='jsonpath={.status.healthy}'
 
-  run kubectl get configmanagement config-management \
-    --output='jsonpath={.status.configManagementVersion}'
+  run kubectl get "${resource_type}" "${resource_name}" \
+    --output="jsonpath={${token_name}}"
   # shellcheck disable=SC2154
   if [[ "${output}" == "" ]]; then
-    debug::error ".status.ConfigManagementVersion is not filled in."
-    debug::error "$(kubectl get configmanagement config-management -o yaml)"
-  fi 
+    debug::error \
+      "${resource_type} ${resource_type} ${resource_name} is not filled in."
+    debug::error "$(kubectl get "${resource_type}" "${resource_name}" -o yaml)"
+  fi
+}
+
+@test "Version populated in ConfigManagement.status.configManagementVersion" {
+  examine_token "configmanagement" "config-management" ".status.configManagementVersion"
+}
+
+@test "repo .status.import.token is populated" {
+  examine_token "repo" "repo" ".status.import.token"
+}
+
+@test "repo .status.source.token is populated" {
+  examine_token "repo" "repo" ".status.source.token"
+}
+
+@test "repo .status.sync.latestToken is populated" {
+  examine_token "repo" "repo" ".status.sync.latestToken"
 }
